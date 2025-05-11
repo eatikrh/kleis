@@ -128,6 +128,14 @@ operation scalar_divide : (Object, Scalar) -> Object
 - Formalize the Mass-Residue derivation.
 - Plan for future handling of duals, higher categories, adjunctions.
 
+## Further work
+- Formal Kleis DSL sketch
+- Wrapping rendering pipeline
+- Chunking Theory learning (for simplifier)
+- Kolmogorov Complexity applied (for simplifier)
+- Simplifier vs Evaluator clean split
+- Recording all major philosophical insights cleanly
+- 
 ---
 
 **Note:** Kleis Grammar v0.2 is a living specification. Adjustments are expected as deeper mathematical structures are encoded.
