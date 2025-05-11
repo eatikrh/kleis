@@ -1,0 +1,27 @@
+// Kleis PEG Grammar (for use with pest or similar)
+
+program         = { SOI ~ statement* ~ EOI }
+
+statement       = _{ object_decl | morphism_decl | const_decl | operation_decl | define_stmt | assert_stmt }
+
+object_decl     = { "object" ~ type ~ ident ~ ("{" ~ property* ~ "}")? }
+morphism_decl   = { "narrow" ~ expression ~ "->" ~ expression ~ "[" ~ ident ~ "]" ~ annotation? }
+const_decl      = { "const" ~ ident ~ ("=" ~ expression)? }
+operation_decl  = { "operation" ~ ident ~ ":" ~ "(" ~ type_list ~ ")" ~ "->" ~ type }
+define_stmt     = { "define" ~ ident ~ "=" ~ expression }
+assert_stmt     = { "assert" ~ expression ~ "==" ~ expression }
+
+expression      = _{ ident | number | "(" ~ expression ~ ")" | expression ~ binary_op ~ expression }
+
+type_list       = { type ~ ("," ~ type)* }
+type            = { ident ~ ("[" ~ type_list ~ "]")? }
+
+property        = { ident ~ ("=" ~ expression)? }
+
+annotation      = { "@{" ~ annotation_pair* ~ "}" }
+annotation_pair = { ident ~ "=" ~ "[" ~ ident* ~ "]" }
+
+binary_op       = _{ "+" | "-" | "*" | "/" | "×" | "·" }
+
+ident           = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+number          = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }

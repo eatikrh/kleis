@@ -1,0 +1,41 @@
+(* Kleis Grammar v0.2 - EBNF Specification *)
+
+program         ::= { statement } ;
+
+statement       ::= objectDecl
+                  | morphismDecl
+                  | constDecl
+                  | operationDecl
+                  | defineStmt
+                  | assertStmt
+                  ;
+
+objectDecl      ::= "object" type identifier [ "{" { property } "}" ] ;
+morphismDecl    ::= "narrow" expression "->" expression "[" identifier "]" [ annotation ] ;
+constDecl       ::= "const" identifier [ "=" expression ] ;
+operationDecl   ::= "operation" identifier ":" "(" typeList ")" "->" type ;
+defineStmt      ::= "define" identifier "=" expression ;
+assertStmt      ::= "assert" expression "==" expression ;
+
+expression      ::= identifier
+                  | number
+                  | expression binaryOp expression
+                  | "(" expression ")"
+                  ;
+
+typeList        ::= type { "," type } ;
+
+type            ::= identifier [ "[" typeList "]" ] ;
+
+property        ::= identifier [ "=" expression ] ;
+
+annotation      ::= "@{" { annotationPair } "}" ;
+annotationPair  ::= identifier "=" "[" { identifier } "]" ;
+
+binaryOp        ::= "+" | "-" | "*" | "/" | "×" | "·" ;
+
+identifier      ::= letter { letter | digit | "_" } ;
+number          ::= digit { digit | "." } ;
+
+letter          ::= "a".."z" | "A".."Z" ;
+digit           ::= "0".."9" ;
