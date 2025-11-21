@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kleis Equation Editor - Demo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .panel h2 {
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 1.3em;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .preview-box {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 30px;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+        
+        .button-group {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .secondary {
+            background: #6c757d;
+        }
+        
+        .secondary:hover {
+            background: #5a6268;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .gallery-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .gallery-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .gallery-title {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        /* Symbol Palette Styles */
+        .symbol-palette {
+            background: #ffffff;
+            border: 2px solid #d0d0d0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .palette-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        
+        .palette-tab {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.2s;
+        }
+        
+        .palette-tab:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .palette-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .symbol-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 8px;
+        }
+        
+        .symbol-btn {
+            padding: 12px;
+            background: white;
+            border: 2px solid #d0d0d0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.4em;
+            text-align: center;
+            transition: all 0.2s;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2d3748;
+            font-weight: 600;
+        }
+        
+        .symbol-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .symbol-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .template-btn {
+            padding: 10px 14px;
+            background: white;
+            border: 2px solid #d0d0d0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+            color: #2d3748;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .template-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 Kleis Equation Editor</h1>
+            <p class="subtitle">Mathematical Notation Renderer - Demo</p>
+        </header>
+        
+        <div class="main-content">
+            <!-- LaTeX Input -->
+            <div class="panel">
+                <h2>📝 LaTeX Input</h2>
+                <textarea id="latexInput" placeholder="Enter LaTeX equation here...
+Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx">\frac{1}{2} \sqrt{\pi}</textarea>
+                
+                <!-- Symbol Palette -->
+                <div class="symbol-palette">
+                    <div class="palette-tabs">
+                        <button class="palette-tab active" onclick="showPalette('greek')">Greek</button>
+                        <button class="palette-tab" onclick="showPalette('operators')">Operators</button>
+                        <button class="palette-tab" onclick="showPalette('relations')">Relations</button>
+                        <button class="palette-tab" onclick="showPalette('calculus')">Calculus</button>
+                        <button class="palette-tab" onclick="showPalette('templates')">Templates</button>
+                    </div>
+                    
+                    <!-- Greek Letters -->
+                    <div id="palette-greek" class="symbol-grid">
+                        <button class="symbol-btn" onclick="insertSymbol('\\alpha')">α</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\beta')">β</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\gamma')">γ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\delta')">δ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\epsilon')">ε</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\theta')">θ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\lambda')">λ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\mu')">μ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\nu')">ν</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\pi')">π</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\rho')">ρ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\sigma')">σ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\tau')">τ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\phi')">φ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\psi')">ψ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\omega')">ω</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Gamma')">Γ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Delta')">Δ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Theta')">Θ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Lambda')">Λ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Sigma')">Σ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Phi')">Φ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Psi')">Ψ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Omega')">Ω</button>
+                    </div>
+                    
+                    <!-- Operators -->
+                    <div id="palette-operators" class="symbol-grid" style="display:none;">
+                        <button class="symbol-btn" onclick="insertSymbol('+')">+</button>
+                        <button class="symbol-btn" onclick="insertSymbol('-')">−</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\times')">×</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\div')">÷</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\pm')">±</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\mp')">∓</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\cdot')">·</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\ast')">∗</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\oplus')">⊕</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\otimes')">⊗</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\nabla')">∇</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\partial')">∂</button>
+                    </div>
+                    
+                    <!-- Relations -->
+                    <div id="palette-relations" class="symbol-grid" style="display:none;">
+                        <button class="symbol-btn" onclick="insertSymbol('=')">=</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\neq')">≠</button>
+                        <button class="symbol-btn" onclick="insertSymbol('<')"><</button>
+                        <button class="symbol-btn" onclick="insertSymbol('>')">></button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\leq')">≤</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\geq')">≥</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\approx')">≈</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\equiv')">≡</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\propto')">∝</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\in')">∈</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\subset')">⊂</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\subseteq')">⊆</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\cup')">∪</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\cap')">∩</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Rightarrow')">⇒</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Leftrightarrow')">⇔</button>
+                    </div>
+                    
+                    <!-- Calculus -->
+                    <div id="palette-calculus" class="symbol-grid" style="display:none;">
+                        <button class="symbol-btn" onclick="insertSymbol('\\int')">∫</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\iint')">∬</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\iiint')">∭</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\oint')">∮</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\sum')">Σ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\prod')">∏</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\lim')">lim</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\infty')">∞</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\forall')">∀</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\exists')">∃</button>
+                    </div>
+                    
+                    <!-- Templates -->
+                    <div id="palette-templates" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
+                        <button class="template-btn" onclick="insertTemplate('\\frac{□}{□}')">📐 Fraction</button>
+                        <button class="template-btn" onclick="insertTemplate('\\sqrt{□}')">√ Square Root</button>
+                        <button class="template-btn" onclick="insertTemplate('\\sqrt[□]{□}')">ⁿ√ Nth Root</button>
+                        <button class="template-btn" onclick="insertTemplate('x^{□}')">x^n Power</button>
+                        <button class="template-btn" onclick="insertTemplate('x_{□}')">x_n Subscript</button>
+                        <button class="template-btn" onclick="insertTemplate('\\int_{□}^{□} □ \\, dx')">∫ Integral</button>
+                        <button class="template-btn" onclick="insertTemplate('\\sum_{□}^{□} □')">Σ Sum</button>
+                        <button class="template-btn" onclick="insertTemplate('\\prod_{□}^{□} □')">∏ Product</button>
+                        <button class="template-btn" onclick="insertTemplate('\\lim_{□ \\to □} □')">lim Limit</button>
+                        <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}')">[  ] Matrix</button>
+                        <button class="template-btn" onclick="insertTemplate('\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}')">(  ) Pmatrix</button>
+                        <button class="template-btn" onclick="insertTemplate('|□\\rangle')">|ψ⟩ Ket</button>
+                        <button class="template-btn" onclick="insertTemplate('\\langle□|')">⟨φ| Bra</button>
+                        <button class="template-btn" onclick="insertTemplate('[□, □]')">[A,B] Comm.</button>
+                        <button class="template-btn" onclick="insertTemplate('\\hat{□}')">x̂ Hat</button>
+                        <button class="template-btn" onclick="insertTemplate('\\nabla \\cdot □')">∇· Div</button>
+                        <button class="template-btn" onclick="insertTemplate('\\nabla \\times □')">∇× Curl</button>
+                        <button class="template-btn" onclick="insertTemplate('\\nabla^2 □')">∇² Laplace</button>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button onclick="renderEquation()">🎨 Render</button>
+                    <button class="secondary" onclick="clearInput()">🗑️ Clear</button>
+                </div>
+                <div id="status"></div>
+            </div>
+            
+            <!-- Preview -->
+            <div class="panel">
+                <h2>👁️ Preview</h2>
+                <div class="preview-box" id="preview">
+                    Enter LaTeX and click Render
+                </div>
+            </div>
+            
+            <!-- Gallery -->
+            <div class="panel full-width">
+                <h2>🎨 Gallery (Click to Load)</h2>
+                <button onclick="loadGallery()">📚 Load Gallery Examples</button>
+                <div class="gallery-grid" id="gallery"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base URL
+        const API_BASE = 'http://localhost:3000/api';
+        
+        // Render equation
+        async function renderEquation() {
+            const latex = document.getElementById('latexInput').value;
+            const statusDiv = document.getElementById('status');
+            const previewDiv = document.getElementById('preview');
+            
+            if (!latex.trim()) {
+                showStatus('Please enter a LaTeX equation', 'error');
+                return;
+            }
+            
+            try {
+                // For now, just render with MathJax
+                previewDiv.innerHTML = `\\[${latex}\\]`;
+                
+                if (window.MathJax) {
+                    MathJax.typesetPromise([previewDiv]).then(() => {
+                        showStatus('✅ Rendered successfully!', 'success');
+                    }).catch((err) => {
+                        showStatus('❌ MathJax error: ' + err.message, 'error');
+                    });
+                }
+                
+                // Also call our API (for future integration)
+                const response = await fetch(`${API_BASE}/render`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latex, format: 'latex' })
+                });
+                
+                const data = await response.json();
+                console.log('Server response:', data);
+                
+            } catch (error) {
+                showStatus('❌ Error: ' + error.message, 'error');
+            }
+        }
+        
+        // Load gallery examples
+        async function loadGallery() {
+            const galleryDiv = document.getElementById('gallery');
+            galleryDiv.innerHTML = '<p style="padding: 20px; text-align: center;">Loading...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/gallery`);
+                const data = await response.json();
+                
+                galleryDiv.innerHTML = '';
+                
+                data.examples.forEach((example, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item';
+                    item.onclick = () => loadExample(example.latex);
+                    
+                    const title = document.createElement('div');
+                    title.className = 'gallery-title';
+                    title.textContent = example.title;
+                    
+                    const equation = document.createElement('div');
+                    equation.innerHTML = `\\[${example.latex}\\]`;
+                    equation.style.fontSize = '0.9em';
+                    
+                    item.appendChild(title);
+                    item.appendChild(equation);
+                    galleryDiv.appendChild(item);
+                });
+                
+                // Render all MathJax in gallery
+                if (window.MathJax) {
+                    MathJax.typesetPromise([galleryDiv]);
+                }
+                
+            } catch (error) {
+                galleryDiv.innerHTML = `<p style="padding: 20px; color: red;">Error loading gallery: ${error.message}</p>`;
+            }
+        }
+        
+        // Load example into input
+        function loadExample(latex) {
+            document.getElementById('latexInput').value = latex;
+            renderEquation();
+        }
+        
+        // Clear input
+        function clearInput() {
+            document.getElementById('latexInput').value = '';
+            document.getElementById('preview').innerHTML = 'Enter LaTeX and click Render';
+            document.getElementById('status').innerHTML = '';
+        }
+        
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = message;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        // Keyboard shortcut: Ctrl/Cmd + Enter to render
+        document.getElementById('latexInput').addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                renderEquation();
+            }
+        });
+        
+        // Symbol Palette Functions
+        
+        // Show selected palette
+        function showPalette(name) {
+            // Hide all palettes
+            document.querySelectorAll('[id^="palette-"]').forEach(p => p.style.display = 'none');
+            // Show selected
+            document.getElementById(`palette-${name}`).style.display = 'grid';
+            
+            // Update active tab
+            document.querySelectorAll('.palette-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        // Insert symbol at cursor position
+        function insertSymbol(latex) {
+            const textarea = document.getElementById('latexInput');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            
+            // Insert symbol at cursor
+            const before = text.substring(0, start);
+            const after = text.substring(end);
+            textarea.value = before + latex + after;
+            
+            // Move cursor after inserted symbol
+            const newPos = start + latex.length;
+            textarea.setSelectionRange(newPos, newPos);
+            textarea.focus();
+            
+            // Auto-render
+            renderEquation();
+        }
+        
+        // Insert template with placeholders (□)
+        function insertTemplate(template) {
+            const textarea = document.getElementById('latexInput');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            
+            // Insert template at cursor
+            const before = text.substring(0, start);
+            const after = text.substring(end);
+            textarea.value = before + template + after;
+            
+            // Try to position cursor at first placeholder
+            const firstPlaceholder = before.length + template.indexOf('□');
+            if (firstPlaceholder > before.length) {
+                textarea.setSelectionRange(firstPlaceholder, firstPlaceholder + 1);
+            } else {
+                textarea.setSelectionRange(before.length + template.length, before.length + template.length);
+            }
+            textarea.focus();
+        }
+        
+        // Auto-load gallery on page load
+        window.addEventListener('load', () => {
+            setTimeout(loadGallery, 500);
+        });
+    </script>
+</body>
+</html>
+

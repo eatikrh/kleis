@@ -1,0 +1,93 @@
+% Quantum Mechanics Notation
+% Standard notation from Sakurai, Griffiths, Nielsen & Chuang
+
+% === BRA-KET NOTATION ===
+
+% Ket vector
+|\psi\rangle
+
+% Bra vector
+\langle\phi|
+
+% Inner product
+\langle\phi|\psi\rangle
+
+% Outer product
+|\psi\rangle\langle\phi|
+
+% Expectation value
+\langle\psi| \hat{A} |\psi\rangle
+
+% Matrix element
+\langle\phi| \hat{A} |\psi\rangle
+
+% === OPERATORS ===
+
+% Hamiltonian
+\hat{H} = \frac{\hat{p}^2}{2m} + V(\hat{x})
+
+% Position operator
+\hat{x}
+
+% Momentum operator
+\hat{p} = -i\hbar \frac{\partial}{\partial x}
+
+% Commutation relation
+[\hat{x}, \hat{p}] = i\hbar
+
+% Time evolution
+|\psi(t)\rangle = e^{-i\hat{H}t/\hbar} |\psi(0)\rangle
+
+% === SCHRODINGER EQUATION ===
+
+% Time-dependent
+i\hbar \frac{\partial}{\partial t} |\psi(t)\rangle = \hat{H} |\psi(t)\rangle
+
+% Time-independent  
+\hat{H} |\psi\rangle = E |\psi\rangle
+
+% Position representation
+-\frac{\hbar^2}{2m} \frac{d^2\psi}{dx^2} + V(x)\psi(x) = E\psi(x)
+
+% === ANGULAR MOMENTUM ===
+
+% Commutation relations
+[\hat{L}_i, \hat{L}_j] = i\hbar \epsilon_{ijk} \hat{L}_k
+
+% Eigenvalue equations
+\hat{L}^2 |l,m\rangle = \hbar^2 l(l+1) |l,m\rangle
+
+\hat{L}_z |l,m\rangle = \hbar m |l,m\rangle
+
+% === SPIN ===
+
+% Pauli matrices
+\sigma_x = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}, \quad
+\sigma_y = \begin{pmatrix} 0 & -i \\ i & 0 \end{pmatrix}, \quad
+\sigma_z = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}
+
+% Spin operator
+\hat{S} = \frac{\hbar}{2} \boldsymbol{\sigma}
+
+% === DENSITY MATRIX ===
+
+% Pure state
+\hat{\rho} = |\psi\rangle\langle\psi|
+
+% Mixed state
+\hat{\rho} = \sum_i p_i |\psi_i\rangle\langle\psi_i|
+
+% Expectation with density matrix
+\langle \hat{A} \rangle = \mathrm{Tr}(\hat{\rho} \hat{A})
+
+% === QUANTUM INFORMATION ===
+
+% Bell state
+|\Phi^+\rangle = \frac{1}{\sqrt{2}} (|00\rangle + |11\rangle)
+
+% Fidelity
+F(\rho, \sigma) = \left( \mathrm{Tr}\sqrt{\sqrt{\rho}\sigma\sqrt{\rho}} \right)^2
+
+% von Neumann entropy
+S(\rho) = -\mathrm{Tr}(\rho \log \rho)
+

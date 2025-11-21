@@ -1,0 +1,41 @@
+[package]
+name = "kleis"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Web server
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[[bin]]
+name = "gallery"
+path = "src/bin/gallery.rs"
+
+[[bin]]
+name = "server"
+path = "src/bin/server.rs"
+
+[[bin]]
+name = "test_parser"
+path = "src/bin/test_parser.rs"
+
+[[bin]]
+name = "check_parser"
+path = "src/bin/check_parser.rs"
+
+[[bin]]
+name = "roundtrip_test"
+path = "src/bin/roundtrip_test.rs"
+
+[[bin]]
+name = "test_guide_examples"
+path = "src/bin/test_guide_examples.rs"
+
+[[bin]]
+name = "test_top5"
+path = "src/bin/test_top5.rs"
