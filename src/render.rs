@@ -1,12 +1,7 @@
 use std::collections::HashMap;
 
 // === Symbolic Model ===
-#[derive(Debug, Clone)]
-enum Expression {
-    Const(String),
-    Object(String),
-    Operation { name: String, args: Vec<Expression> },
-}
+use crate::ast::Expression;
 #[derive(PartialEq)]
 pub enum RenderTarget {
     Unicode,
@@ -517,13 +512,18 @@ fn latex_to_unicode(input: &str) -> String {
         .replace("\\alpha", "α").replace("\\beta", "β").replace("\\gamma", "γ").replace("\\delta", "δ")
         .replace("\\epsilon", "ε").replace("\\zeta", "ζ").replace("\\eta", "η").replace("\\theta", "θ")
         .replace("\\iota", "ι").replace("\\kappa", "κ").replace("\\lambda", "λ").replace("\\mu", "μ")
-        .replace("\\nu", "ν").replace("\\xi", "ξ").replace("\\pi", "π")
+        .replace("\\nu", "ν").replace("\\xi", "ξ").replace("\\omicron", "ο").replace("\\pi", "π")
         .replace("\\rho", "ρ").replace("\\sigma", "σ").replace("\\tau", "τ").replace("\\upsilon", "υ")
         .replace("\\phi", "φ").replace("\\chi", "χ").replace("\\psi", "ψ").replace("\\omega", "ω")
         // uppercase Greek
         .replace("\\Gamma", "Γ").replace("\\Delta", "Δ").replace("\\Theta", "Θ").replace("\\Lambda", "Λ")
         .replace("\\Xi", "Ξ").replace("\\Pi", "Π").replace("\\Sigma", "Σ").replace("\\Upsilon", "Υ")
         .replace("\\Phi", "Φ").replace("\\Psi", "Ψ").replace("\\Omega", "Ω")
+        // Hebrew letters
+        .replace("\\aleph", "ℵ").replace("\\beth", "ℶ").replace("\\gimel", "ℷ").replace("\\daleth", "ℸ")
+        // Greek variants
+        .replace("\\varepsilon", "ε").replace("\\vartheta", "ϑ").replace("\\varkappa", "ϰ")
+        .replace("\\varpi", "ϖ").replace("\\varrho", "ϱ").replace("\\varsigma", "ς").replace("\\varphi", "ϕ")
         // Number sets (blackboard bold)
         .replace("\\mathbb{R}", "ℝ").replace("\\mathbb{C}", "ℂ").replace("\\mathbb{N}", "ℕ")
         .replace("\\mathbb{Z}", "ℤ").replace("\\mathbb{Q}", "ℚ").replace("\\mathbb{H}", "ℍ")
@@ -1079,7 +1079,7 @@ mod tests {
 
     #[test]
     fn renders_f_tensor_from_potential() {
-        // F_{\mu\nu} = \partial_{\mu} A_{\nu} - \partial_{\nu} A_{\mu}
+        // F^{\mu}_{\nu} = \partial_{\mu} A_{\nu} - \partial_{\nu} A_{\mu}
         let ctx = build_default_context();
         let mu = o("μ");
         let nu = o("ν");
@@ -1090,22 +1090,22 @@ mod tests {
         let dA_nu = partial_apply(A_nu, mu.clone());
         let dA_mu = partial_apply(A_mu, nu.clone());
         let rhs = minus(dA_nu, dA_mu);
-        let F_mn = index_pair(F, mu.clone(), nu.clone());
+        let F_mn = index_mixed(F, mu.clone(), nu.clone());
         let eq = equals(F_mn, rhs);
         let out = render_expression(&eq, &ctx, &RenderTarget::LaTeX);
-        assert_eq!(out, r"F_{{\mu\nu}} = \partial_{{\mu}} A_{{\nu}} - \partial_{{\nu}} A_{{\mu}}" );
+        assert_eq!(out, r"F^{{\mu}}_{{\nu}} = \partial_{{\mu}} A_{{\nu}} - \partial_{{\nu}} A_{{\mu}}" );
     }
 
     #[test]
     fn renders_kk_metric_ansatz_block() {
-        // \begin{bmatrix} g_{\mu\nu} + \phi A_{\mu}A_{\nu} & \phi A_{\mu} \\\\ \phi A_{\nu} & \phi \end{bmatrix}
+        // \begin{bmatrix} g^{\mu}_{\nu} + \phi A_{\mu}A_{\nu} & \phi A_{\mu} \\\\ \phi A_{\nu} & \phi \end{bmatrix}
         let ctx = build_default_context();
         let mu = o("μ");
         let nu = o("ν");
         let g = o("g");
         let A = o("A");
         let phi = o("\u{03C6}");
-        let g_mn = index_pair(g, mu.clone(), nu.clone());
+        let g_mn = index_mixed(g, mu.clone(), nu.clone());
         let A_mu = sub_e(A.clone(), mu.clone());
         let A_nu = sub_e(A.clone(), nu.clone());
         let phi_A_mu = times(phi.clone(), A_mu.clone());
@@ -2100,15 +2100,18 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     let A_nu = sub_e(o("A"), nu.clone());
     let A_mu = sub_e(o("A"), mu.clone());
     let rhs_max = minus(partial_apply(A_nu, mu.clone()), partial_apply(A_mu, nu.clone()));
-    let F_mn = sub_e(o("F"), index_mixed(o(""), mu.clone(), nu.clone()));
+    let F_mn = index_mixed(o("F"), mu.clone(), nu.clone());
     let maxwell = equals(F_mn, rhs_max);
     out.push(("Maxwell tensor from potential".into(), render_expression(&maxwell, &ctx, &RenderTarget::LaTeX)));
 
     // Kaluza–Klein metric block (2x2)
+    // Matrix: [g^μ_ν + φA_μA_ν,  φA_μ]
+    //         [φA_ν,             φ    ]
     let A_mu2 = sub_e(o("A"), mu.clone());
     let A_nu2 = sub_e(o("A"), nu.clone());
     let phi = o("\u{03C6}");
-    let kk_tl = plus(sub_e(o("g"), index_mixed(o(""), mu.clone(), nu.clone())), times(phi.clone(), times(A_mu2.clone(), A_nu2.clone())));
+    let g_mn = index_mixed(o("g"), mu.clone(), nu.clone());
+    let kk_tl = plus(g_mn, times(phi.clone(), times(A_mu2.clone(), A_nu2.clone())));
     let kk_tr = times(phi.clone(), A_mu2.clone());
     let kk_bl = times(phi.clone(), A_nu2.clone());
     let kk_br = phi.clone();

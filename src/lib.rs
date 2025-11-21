@@ -1,4 +1,19 @@
+pub mod ast;
 pub mod render;
 pub mod parser;
+
+/// Convenience function: Parse LaTeX and render to Unicode
+pub fn latex_to_unicode(latex: &str) -> Result<String, parser::ParseError> {
+    let expr = parser::parse_latex(latex)?;
+    let ctx = render::build_default_context();
+    Ok(render::render_expression(&expr, &ctx, &render::RenderTarget::Unicode))
+}
+
+/// Convenience function: Parse LaTeX and render to LaTeX
+pub fn latex_to_latex(latex: &str) -> Result<String, parser::ParseError> {
+    let expr = parser::parse_latex(latex)?;
+    let ctx = render::build_default_context();
+    Ok(render::render_expression(&expr, &ctx, &render::RenderTarget::LaTeX))
+}
 
 

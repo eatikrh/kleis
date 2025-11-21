@@ -2,13 +2,7 @@
 // This validates that our 56 operations can represent real LaTeX notation
 
 use std::fmt;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Expression {
-    Const(String),
-    Object(String),
-    Operation { name: String, args: Vec<Expression> },
-}
+use crate::ast::Expression;
 
 #[derive(Debug)]
 pub struct ParseError {
@@ -402,7 +396,32 @@ impl Parser {
                         _ => {
                             // Not a multiplicative operator, backtrack
                             self.pos = saved_pos;
-                            break;
+                            // Check if it's a command that starts a new term (for implicit multiplication)
+                            // Parse command again to check
+                            if let Ok(cmd2) = self.parse_command() {
+                                // Commands that start new terms (functions, roots, fractions, etc.)
+                                let is_term_starter = matches!(cmd2.as_str(),
+                                    "sqrt" | "frac" | "sin" | "cos" | "tan" | "sec" | "csc" | "cot" |
+                                    "arcsin" | "arccos" | "arctan" | "sinh" | "cosh" | "tanh" |
+                                    "ln" | "log" | "exp" | "int" | "sum" | "prod" | "lim" |
+                                    "alpha" | "beta" | "gamma" | "delta" | "epsilon" | "zeta" | "eta" |
+                                    "theta" | "iota" | "kappa" | "lambda" | "mu" | "nu" | "xi" |
+                                    "pi" | "rho" | "sigma" | "tau" | "upsilon" | "phi" | "chi" | "psi" | "omega" |
+                                    "Gamma" | "Delta" | "Theta" | "Lambda" | "Xi" | "Pi" | "Sigma" |
+                                    "Upsilon" | "Phi" | "Psi" | "Omega" | "aleph" | "beth" | "gimel" | "daleth" |
+                                    "mathbb" | "boldsymbol" | "vec" | "hat" | "overline" | "partial" | "nabla" |
+                                    "begin" | "left"
+                                );
+                                self.pos = saved_pos; // Backtrack again
+                                if is_term_starter {
+                                    "scalar_multiply"
+                                } else {
+                                    break;
+                                }
+                            } else {
+                                self.pos = saved_pos;
+                                break;
+                            }
                         }
                     }
                 } else {
@@ -411,9 +430,9 @@ impl Parser {
                 }
             } else {
                 // Addition 3: Check for implicit multiplication
-                // If next char could start a term (letter, digit, \, {, (, |, [)
+                // If next char could start a term (letter, digit, {, (, |, [)
                 match self.peek() {
-                    Some(ch) if ch.is_alphanumeric() || ch == '\\' || ch == '{' 
+                    Some(ch) if ch.is_alphanumeric() || ch == '{' 
                                || ch == '(' || ch == '|' || ch == '[' => {
                         // Implicit multiplication!
                         "scalar_multiply"
@@ -636,6 +655,169 @@ impl Parser {
         }
     }
 
+    fn parse_cases_environment(&mut self) -> Result<Expression, ParseError> {
+        // Parse cases environment: \begin{cases} expr1 & cond1 \\ expr2 & cond2 \\ ... \end{cases}
+        // Cases always have 2 columns: expression & condition
+        let mut rows: Vec<Vec<Expression>> = vec![vec![]];
+        let mut current_row = 0;
+
+        loop {
+            self.skip_whitespace();
+            
+            // Check for end of input
+            if self.peek().is_none() {
+                return Err(ParseError {
+                    message: "Unexpected end of input while parsing cases environment".to_string(),
+                    position: self.pos,
+                });
+            }
+            
+            // Check for \end or \\ (new row)
+            if self.peek() == Some('\\') {
+                self.advance(); // consume first \
+                
+                // Check if it's \\ (double backslash = new row)
+                if self.peek() == Some('\\') {
+                    self.advance(); // consume second \
+                    current_row += 1;
+                    rows.push(vec![]);
+                    continue;
+                }
+                
+                // Otherwise it's a command like \end
+                let mut cmd_name = String::new();
+                while let Some(ch) = self.peek() {
+                    if ch.is_alphanumeric() {
+                        cmd_name.push(ch);
+                        self.advance();
+                    } else {
+                        break;
+                    }
+                }
+                
+                if cmd_name == "end" {
+                    // Parse {cases}
+                    self.parse_text_group()?;
+                    break;
+                } else {
+                    // Unknown command - just skip
+                    continue;
+                }
+            }
+
+            // Check for column separator
+            if self.peek() == Some('&') {
+                self.advance();
+                continue;
+            }
+
+            // Parse cell expression with brace depth tracking
+            let mut cell_content = String::new();
+            let start_pos = self.pos;
+            let mut brace_depth = 0;
+            
+            while let Some(ch) = self.peek() {
+                // Track brace depth
+                if ch == '{' {
+                    brace_depth += 1;
+                } else if ch == '}' {
+                    brace_depth -= 1;
+                }
+                
+                // Only break on & or \\ when NOT inside braces
+                if brace_depth == 0 {
+                    if ch == '&' {
+                        break;
+                    }
+                    if ch == '\\' {
+                        // Check if it's \\ (row sep) or \command
+                        let next_pos = self.pos + 1;
+                        if next_pos < self.input.len() && self.input[next_pos] == '\\' {
+                            // It's \\, end cell
+                            break;
+                        }
+                        // Check for \end command
+                        let mut is_end = true;
+                        for (i, c) in "end".chars().enumerate() {
+                            if next_pos + i >= self.input.len() || self.input[next_pos + i] != c {
+                                is_end = false;
+                                break;
+                            }
+                        }
+                        if is_end {
+                            break;
+                        }
+                    }
+                }
+                
+                cell_content.push(ch);
+                self.advance();
+            }
+
+            // Parse the cell content as an expression
+            if !cell_content.trim().is_empty() {
+                // Try to parse the cell content as a proper expression
+                match parse_latex(cell_content.trim()) {
+                    Ok(expr) => rows[current_row].push(expr),
+                    Err(_) => {
+                        // Fallback: store as object if parsing fails
+                        rows[current_row].push(o(cell_content.trim()))
+                    }
+                }
+            } else if self.pos > start_pos {
+                // Empty cell
+                rows[current_row].push(o(""));
+            }
+        }
+
+        // Filter out empty rows
+        let rows: Vec<Vec<Expression>> = rows.into_iter()
+            .filter(|row| !row.is_empty())
+            .collect();
+
+        // Validate: cases should have exactly 2 columns per row
+        for (i, row) in rows.iter().enumerate() {
+            if row.len() != 2 {
+                return Err(ParseError {
+                    message: format!("Cases environment row {} has {} columns, expected 2 (expression & condition)", i, row.len()),
+                    position: self.pos,
+                });
+            }
+        }
+
+        // Convert to appropriate cases operation based on number of rows
+        match rows.len() {
+            2 => {
+                // cases2: expr1, cond1, expr2, cond2
+                Ok(op("cases2", vec![
+                    rows[0][0].clone(), rows[0][1].clone(),
+                    rows[1][0].clone(), rows[1][1].clone(),
+                ]))
+            }
+            3 => {
+                // cases3: expr1, cond1, expr2, cond2, expr3, cond3
+                Ok(op("cases3", vec![
+                    rows[0][0].clone(), rows[0][1].clone(),
+                    rows[1][0].clone(), rows[1][1].clone(),
+                    rows[2][0].clone(), rows[2][1].clone(),
+                ]))
+            }
+            n if n > 3 => {
+                // Generic cases with more rows - flatten all
+                let all_elements: Vec<Expression> = rows.into_iter()
+                    .flat_map(|row| row.into_iter())
+                    .collect();
+                Ok(op("cases", all_elements))
+            }
+            _ => {
+                Err(ParseError {
+                    message: "Cases environment must have at least 2 rows".to_string(),
+                    position: self.pos,
+                })
+            }
+        }
+    }
+
     fn parse_latex_command(&mut self) -> Result<Expression, ParseError> {
         let cmd = self.parse_command()?;
 
@@ -651,11 +833,7 @@ impl Parser {
                         self.parse_matrix_environment(&env_name)
                     }
                     "cases" => {
-                        // TODO: Parse cases environment
-                        Err(ParseError {
-                            message: "Cases environment not yet supported".to_string(),
-                            position: self.pos,
-                        })
+                        self.parse_cases_environment()
                     }
                     _ => Err(ParseError {
                         message: format!("Unknown environment: {}", env_name),
@@ -727,33 +905,59 @@ impl Parser {
                 }
             }
 
-            // Greek letters (lowercase)
+            // Greek letters (lowercase) - complete alphabet
             "alpha" => Ok(o("\\alpha")),
             "beta" => Ok(o("\\beta")),
             "gamma" => Ok(o("\\gamma")),
             "delta" => Ok(o("\\delta")),
             "epsilon" => Ok(o("\\epsilon")),
+            "zeta" => Ok(o("\\zeta")),
+            "eta" => Ok(o("\\eta")),
             "theta" => Ok(o("\\theta")),
+            "iota" => Ok(o("\\iota")),
+            "kappa" => Ok(o("\\kappa")),
             "lambda" => Ok(o("\\lambda")),
             "mu" => Ok(o("\\mu")),
             "nu" => Ok(o("\\nu")),
+            "xi" => Ok(o("\\xi")),
+            "omicron" => Ok(o("\\omicron")),
             "pi" => Ok(o("\\pi")),
             "rho" => Ok(o("\\rho")),
             "sigma" => Ok(o("\\sigma")),
             "tau" => Ok(o("\\tau")),
+            "upsilon" => Ok(o("\\upsilon")),
             "phi" => Ok(o("\\phi")),
+            "chi" => Ok(o("\\chi")),
             "psi" => Ok(o("\\psi")),
             "omega" => Ok(o("\\omega")),
+
+            // Greek letter variants
+            "varepsilon" => Ok(o("\\varepsilon")),
+            "vartheta" => Ok(o("\\vartheta")),
+            "varkappa" => Ok(o("\\varkappa")),
+            "varpi" => Ok(o("\\varpi")),
+            "varrho" => Ok(o("\\varrho")),
+            "varsigma" => Ok(o("\\varsigma")),
+            "varphi" => Ok(o("\\varphi")),
 
             // Greek letters (uppercase)
             "Gamma" => Ok(o("\\Gamma")),
             "Delta" => Ok(o("\\Delta")),
             "Theta" => Ok(o("\\Theta")),
             "Lambda" => Ok(o("\\Lambda")),
+            "Xi" => Ok(o("\\Xi")),
+            "Pi" => Ok(o("\\Pi")),
             "Sigma" => Ok(o("\\Sigma")),
+            "Upsilon" => Ok(o("\\Upsilon")),
             "Phi" => Ok(o("\\Phi")),
             "Psi" => Ok(o("\\Psi")),
             "Omega" => Ok(o("\\Omega")),
+            
+            // Hebrew letters
+            "aleph" => Ok(o("\\aleph")),
+            "beth" => Ok(o("\\beth")),
+            "gimel" => Ok(o("\\gimel")),
+            "daleth" => Ok(o("\\daleth")),
 
             // Operators
             "cdot" => Ok(o("\\cdot")),
@@ -1023,6 +1227,53 @@ mod tests {
     }
 
     #[test]
+    fn parses_all_lowercase_greek() {
+        let letters = vec![
+            "\\alpha", "\\beta", "\\gamma", "\\delta", "\\epsilon", "\\zeta",
+            "\\eta", "\\theta", "\\iota", "\\kappa", "\\lambda", "\\mu",
+            "\\nu", "\\xi", "\\omicron", "\\pi", "\\rho", "\\sigma",
+            "\\tau", "\\upsilon", "\\phi", "\\chi", "\\psi", "\\omega"
+        ];
+        for letter in letters {
+            let result = parse_latex(letter);
+            assert!(result.is_ok(), "Failed to parse {}", letter);
+        }
+    }
+
+    #[test]
+    fn parses_all_uppercase_greek() {
+        let letters = vec![
+            "\\Gamma", "\\Delta", "\\Theta", "\\Lambda", "\\Xi", "\\Pi",
+            "\\Sigma", "\\Upsilon", "\\Phi", "\\Psi", "\\Omega"
+        ];
+        for letter in letters {
+            let result = parse_latex(letter);
+            assert!(result.is_ok(), "Failed to parse {}", letter);
+        }
+    }
+
+    #[test]
+    fn parses_greek_variants() {
+        let variants = vec![
+            "\\varepsilon", "\\vartheta", "\\varkappa", "\\varpi",
+            "\\varrho", "\\varsigma", "\\varphi"
+        ];
+        for variant in variants {
+            let result = parse_latex(variant);
+            assert!(result.is_ok(), "Failed to parse {}", variant);
+        }
+    }
+
+    #[test]
+    fn parses_hebrew_letters() {
+        let letters = vec!["\\aleph", "\\beth", "\\gimel", "\\daleth"];
+        for letter in letters {
+            let result = parse_latex(letter);
+            assert!(result.is_ok(), "Failed to parse {}", letter);
+        }
+    }
+
+    #[test]
     fn parses_trig_function() {
         let result = parse_latex("\\sin{x}");
         assert!(result.is_ok());
@@ -1104,6 +1355,34 @@ mod tests {
                 assert_eq!(name, "matrix2x2");
             }
             _ => panic!("Expected matrix operation"),
+        }
+    }
+
+    #[test]
+    fn parses_cases_2() {
+        let result = parse_latex("\\begin{cases}x^{2} & x \\geq 0\\\\0 & x < 0\\end{cases}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "cases2");
+                assert_eq!(args.len(), 4); // expr1, cond1, expr2, cond2
+            }
+            _ => panic!("Expected cases2 operation"),
+        }
+    }
+
+    #[test]
+    fn parses_cases_3() {
+        let result = parse_latex("\\begin{cases}-1 & x < 0\\\\0 & x = 0\\\\1 & x > 0\\end{cases}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "cases3");
+                assert_eq!(args.len(), 6); // expr1, cond1, expr2, cond2, expr3, cond3
+            }
+            _ => panic!("Expected cases3 operation"),
         }
     }
 
