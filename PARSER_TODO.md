@@ -157,12 +157,14 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 ## 🧪 **Testing**
 
 ### Current Test Suite
-- **110 total tests** passing ✅
-  - **34 parser unit tests** in `parser.rs`
+- **204 total tests** passing ✅
+  - **91 parser unit tests** in `parser.rs`
   - **76 renderer tests** in `render.rs`
   - **37 golden tests** (end-to-end integration)
 - **Test binaries:** `test_parser`, `check_parser`, `test_guide_examples`, `test_top5`, etc.
 - **Coverage:** Run `cargo llvm-cov --lib --summary-only` for current metrics
+
+**📖 See [TEST_GUIDE.md](TEST_GUIDE.md) for comprehensive test documentation**
 
 ### Test Coverage
 ```rust
