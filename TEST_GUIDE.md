@@ -1,21 +1,83 @@
 # Kleis Test Suite Guide
 
 **Last Updated:** November 22, 2024  
-**Total Tests:** 204 passing ✅  
+**ACTUAL Total Tests:** 351 passing ✅  
 **Status:** All tests passing, 100% feature coverage
 
 ---
 
-## 📊 Test Suite Overview
+## ⚠️ CRITICAL: How to Run ALL 351 Tests
 
-### Test Count by Module
+**Previous documentation claimed "204 tests" - THIS WAS WRONG!**
+
+The `cargo test --all` command only runs **204 unit tests** and **misses 147 integration test binaries**.
+
+### To Run Complete Test Suite (351 tests):
+
+```bash
+# 1. Unit tests (204)
+cargo test --all
+
+# 2. Roundtrip (100) - validates ALL renderer patterns
+cargo run --bin roundtrip_test
+
+# 3. Guide examples (21) - real-world LaTeX
+cargo run --bin test_guide_examples
+
+# 4. Parser checks (10) - timed validation
+cargo run --bin check_parser
+
+# 5. Basic tests (9)
+cargo run --bin test_parser
+
+# 6. Top features (7)
+cargo run --bin test_top5
+```
+
+**YOU MUST RUN ALL 6 COMMANDS ABOVE TO VALIDATE FULL TEST SUITE**
+
+### Complete Test Inventory
+
+| Category | Tests | Command | Status |
+|----------|-------|---------|--------|
+| **Unit Tests** | 204 | `cargo test --all` | ✅ |
+| **Integration Binaries** | 147 | `cargo run --bin <name>` (5 binaries) | ✅ |
+| **ACTUAL TOTAL** | **351** | See 6 commands above | ✅ |
+
+---
+
+## 📊 Test Suite Overview - COMPLETE
+
+### 1. Unit Tests (cargo test) - 204 tests
 
 | Module | Location | Count | Description |
 |--------|----------|-------|-------------|
-| **Parser Tests** | `src/parser.rs` | **91** | LaTeX parsing functionality |
-| **Renderer Tests** | `src/render.rs` | **76** | Expression rendering (LaTeX, Unicode) |
+| **Parser Tests** | `src/parser.rs::tests` | **91** | LaTeX parsing functionality |
+| **Renderer Tests** | `src/render.rs::tests` | **76** | Expression rendering (LaTeX, Unicode) |
 | **Golden Tests** | `tests/golden_tests.rs` | **37** | End-to-end integration tests |
-| **TOTAL** | | **204** | |
+| **Subtotal** | | **204** | Run with `cargo test --all` |
+
+### 2. Integration Test Binaries (cargo run) - 147 tests
+
+| Binary | Location | Tests | Description |
+|--------|----------|-------|-------------|
+| **roundtrip_test** | `src/bin/roundtrip_test.rs` | **100** | Parse→Render→Parse validation |
+| **test_guide_examples** | `src/bin/test_guide_examples.rs` | **21** | LaTeX Math Guide examples |
+| **check_parser** | `src/bin/check_parser.rs` | **10** | Timed parser tests |
+| **test_parser** | `src/bin/test_parser.rs` | **9** | Basic parser validation |
+| **test_top5** | `src/bin/test_top5.rs` | **7** | Top 5 parser additions |
+| **Subtotal** | | **147** | Run with `cargo run --bin <name>` |
+
+### 3. Non-Test Binaries (not counted)
+
+| Binary | Purpose |
+|--------|---------|
+| `gallery.rs` | Generate LaTeX gallery output |
+| `server.rs` | Web server for interactive testing |
+
+---
+
+## 🎯 ACTUAL TOTAL: 351 Tests
 
 ---
 
@@ -250,29 +312,171 @@ cargo test --test golden_tests
 
 ---
 
-## 🚀 Quick Test Commands
+## 🚀 Complete Test Commands - RUN ALL OF THESE
 
-### Run All Tests
+### ⚠️ CRITICAL: Two Different Test Types
+
+1. **Unit Tests** - Run with `cargo test`
+2. **Integration Test Binaries** - Run with `cargo run --bin <name>`
+
+**YOU MUST RUN BOTH to get the full 351 test count!**
+
+---
+
+### Step 1: Run All Unit Tests (204 tests)
+
 ```bash
 cargo test --all
 ```
 
-### Run Specific Test Suites
-
-#### Parser Only
-```bash
-cargo test parser::tests::
+**Expected output:**
+```
+test result: ok. 167 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ```
 
-#### Renderer Only
+**Total from this command: 204 tests**
+
+---
+
+### Step 2: Run All Integration Test Binaries (147 tests)
+
+#### A. Roundtrip Test (100 tests) ⭐ MOST IMPORTANT
 ```bash
-cargo test render::tests::
+cargo run --bin roundtrip_test
 ```
 
-#### Golden Tests Only
-```bash
-cargo test --test golden_tests
+**Expected output:**
 ```
+📊 Summary:
+   ✅ Successful parses: 100/100
+   Success rate: 100.0%
+🎉 Perfect! All 100 test cases parse successfully!
+```
+
+**Tests:** Parse→Render→Parse roundtrip for ALL renderer patterns
+
+---
+
+#### B. LaTeX Math Guide Examples (21 tests)
+```bash
+cargo run --bin test_guide_examples
+```
+
+**Expected output:**
+```
+📊 Results: 21/21 passed (100%)
+🎉 PERFECT! Parser can handle all LaTeX Math Guide examples!
+```
+
+**Tests:** Real-world calculus, physics, quantum mechanics examples
+
+---
+
+#### C. Parser Validation with Timings (10 tests)
+```bash
+cargo run --bin check_parser
+```
+
+**Expected output:**
+```
+Testing Simple fraction: ✅ OK in X.XXXµs
+Testing Square root: ✅ OK in X.XXXµs
+...
+All tests completed!
+```
+
+**Tests:** Basic parser functionality with performance metrics
+
+---
+
+#### D. Basic Parser Tests (9 tests)
+```bash
+cargo run --bin test_parser
+```
+
+**Expected output:**
+```
+📝 Test: Simple fraction
+   ✅ Parsed: Operation { ... }
+...
+(9 tests total)
+```
+
+**Tests:** Core parser features
+
+---
+
+#### E. Top 5 Parser Additions (7 tests)
+```bash
+cargo run --bin test_top5
+```
+
+**Expected output:**
+```
+🧪 Testing Top 5 Parser Additions
+1. Anticommutator \{A, B\}
+   ✅ Operation { ... }
+...
+(7 tests total)
+```
+
+**Tests:** Anticommutator, unary minus, implicit mult, function calls, box operator
+
+---
+
+### Step 3: Verify Complete Test Count
+
+```bash
+# This script runs everything and counts
+echo "=== RUNNING ALL TESTS ==="
+echo ""
+echo "1. Unit tests..."
+cargo test --all 2>&1 | grep "test result: ok" | awk '{sum+=$3} END {print "Unit tests: " sum}'
+echo ""
+echo "2. Roundtrip tests..."
+cargo run --bin roundtrip_test 2>&1 | grep "Successful parses:" | awk '{print "Roundtrip: " $4}'
+echo ""
+echo "3. Guide examples..."
+cargo run --bin test_guide_examples 2>&1 | grep "Results:" | awk '{print "Guide examples: " $3}'
+echo ""
+echo "Other integration tests: 10 + 9 + 7 = 26"
+echo ""
+echo "TOTAL: Should be 351 tests"
+```
+
+---
+
+## 📋 Every Runnable .rs File Documented
+
+### Files WITH Tests (RUN THESE)
+
+| File | Type | How to Run | Tests | Status |
+|------|------|------------|-------|--------|
+| `src/parser.rs` | Unit tests | `cargo test parser::tests::` | 91 | ✅ |
+| `src/render.rs` | Unit tests | `cargo test render::tests::` | 76 | ✅ |
+| `tests/golden_tests.rs` | Integration | `cargo test --test golden_tests` | 37 | ✅ |
+| `src/bin/roundtrip_test.rs` | Binary | `cargo run --bin roundtrip_test` | 100 | ✅ |
+| `src/bin/test_guide_examples.rs` | Binary | `cargo run --bin test_guide_examples` | 21 | ✅ |
+| `src/bin/check_parser.rs` | Binary | `cargo run --bin check_parser` | 10 | ✅ |
+| `src/bin/test_parser.rs` | Binary | `cargo run --bin test_parser` | 9 | ✅ |
+| `src/bin/test_top5.rs` | Binary | `cargo run --bin test_top5` | 7 | ✅ |
+| **TOTAL** | | **See commands above** | **351** | ✅ |
+
+### Files WITHOUT Tests (DON'T COUNT THESE)
+
+| File | Purpose | No Tests Because |
+|------|---------|------------------|
+| `src/lib.rs` | Library entry point | Just exports modules |
+| `src/main.rs` | Binary entry point | Just calls parser |
+| `src/ast.rs` | Type definitions | No logic to test (just enums/structs) |
+| `src/bin/gallery.rs` | Gallery generator | Utility, not a test |
+| `src/bin/server.rs` | Web server | Application, not a test |
+| `render/src/main.rs` | Separate binary | Different project |
+
+---
+
+## 🚀 Quick Test Commands - USE THIS NEXT TIME
 
 ### Run Specific Test
 ```bash

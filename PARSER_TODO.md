@@ -156,15 +156,20 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 
 ## 🧪 **Testing**
 
-### Current Test Suite
-- **204 total tests** passing ✅
-  - **91 parser unit tests** in `parser.rs`
-  - **76 renderer tests** in `render.rs`
-  - **37 golden tests** (end-to-end integration)
-- **Test binaries:** `test_parser`, `check_parser`, `test_guide_examples`, `test_top5`, etc.
-- **Coverage:** Run `cargo llvm-cov --lib --summary-only` for current metrics
+### Current Test Suite - COMPLETE COUNT
+- **351 total tests** passing ✅ (NOT 204 - see note below)
+  - **204 unit tests** (`cargo test --all`)
+    - **91 parser unit tests** in `parser.rs`
+    - **76 renderer tests** in `render.rs`
+    - **37 golden tests** (end-to-end integration)
+  - **147 integration test binaries** (`cargo run --bin <name>`)
+    - **100 roundtrip tests** (parse→render→parse validation)
+    - **21 guide examples** (real-world LaTeX patterns)
+    - **26 other tests** (basic parser validation, top features, timings)
 
-**📖 See [TEST_GUIDE.md](TEST_GUIDE.md) for comprehensive test documentation**
+**⚠️ IMPORTANT:** `cargo test --all` only runs 204 tests. You MUST also run the 5 test binaries to get all 351 tests!
+
+**📖 See [TEST_GUIDE.md](TEST_GUIDE.md) for complete commands and documentation**
 
 ### Test Coverage
 ```rust
