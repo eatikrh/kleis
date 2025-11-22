@@ -9,7 +9,7 @@ fn test_parse(_name: &str, latex: &str) -> bool {
 
 fn main() {
     println!("🔄 Comprehensive Roundtrip Parser Test\n");
-    println!("Testing all patterns from render.rs (76 test categories)");
+    println!("Testing all patterns including new features (109 test cases)");
     println!("{}", "=".repeat(80));
     println!();
     
@@ -153,6 +153,19 @@ fn main() {
         // ===== PIECEWISE FUNCTIONS =====
         ("Piecewise 2 cases", r"\begin{cases}x^{2} & x \geq 0\\0 & x < 0\end{cases}"),
         ("Piecewise 3 cases", r"\begin{cases}-1 & x < 0\\0 & x = 0\\1 & x > 0\end{cases}"),
+        
+        // ===== TEXT MODE =====
+        ("Text simple", r"\text{hello}"),
+        ("Text with spaces", r"\text{if }"),
+        ("Text in equation", r"x \text{ for all } y"),
+        
+        // ===== ACCENT COMMANDS =====
+        ("Bar accent", r"\bar{x}"),
+        ("Tilde accent", r"\tilde{x}"),
+        ("Overline", r"\overline{z}"),
+        ("Dot accent", r"\dot{x}"),
+        ("Double dot accent", r"\ddot{x}"),
+        ("Newton 2nd law", r"F = m\ddot{x}"),
     ];
     
     let mut success_count = 0;

@@ -409,7 +409,7 @@ impl Parser {
                                     "pi" | "rho" | "sigma" | "tau" | "upsilon" | "phi" | "chi" | "psi" | "omega" |
                                     "Gamma" | "Delta" | "Theta" | "Lambda" | "Xi" | "Pi" | "Sigma" |
                                     "Upsilon" | "Phi" | "Psi" | "Omega" | "aleph" | "beth" | "gimel" | "daleth" |
-                                    "mathbb" | "boldsymbol" | "vec" | "hat" | "overline" | "partial" | "nabla" |
+                                    "mathbb" | "boldsymbol" | "vec" | "hat" | "bar" | "tilde" | "overline" | "dot" | "ddot" | "partial" | "nabla" |
                                     "begin" | "left"
                                 );
                                 self.pos = saved_pos; // Backtrack again
@@ -1060,10 +1060,30 @@ impl Parser {
             }
             "rangle" => Ok(o("\\rangle")),
 
-            // Hat
+            // Accent commands
             "hat" => {
                 let arg = self.parse_group()?;
                 Ok(op("hat", vec![arg]))
+            }
+            "bar" => {
+                let arg = self.parse_group()?;
+                Ok(op("bar", vec![arg]))
+            }
+            "tilde" => {
+                let arg = self.parse_group()?;
+                Ok(op("tilde", vec![arg]))
+            }
+            "overline" => {
+                let arg = self.parse_group()?;
+                Ok(op("overline", vec![arg]))
+            }
+            "dot" => {
+                let arg = self.parse_group()?;
+                Ok(op("dot_accent", vec![arg]))
+            }
+            "ddot" => {
+                let arg = self.parse_group()?;
+                Ok(op("ddot_accent", vec![arg]))
             }
 
             // Number sets
@@ -2057,6 +2077,94 @@ mod tests {
     fn parses_euler_formula() {
         let result = parse_latex("e^{i\\pi} + 1 = 0");
         assert!(result.is_ok());
+    }
+
+    // === Accent Commands ===
+    
+    #[test]
+    fn parses_bar_accent() {
+        let result = parse_latex("\\bar{x}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "bar");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected bar operation"),
+        }
+    }
+
+    #[test]
+    fn parses_tilde_accent() {
+        let result = parse_latex("\\tilde{x}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "tilde");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected tilde operation"),
+        }
+    }
+
+    #[test]
+    fn parses_overline_accent() {
+        let result = parse_latex("\\overline{xy}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "overline");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected overline operation"),
+        }
+    }
+
+    #[test]
+    fn parses_dot_accent() {
+        let result = parse_latex("\\dot{x}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "dot_accent");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected dot_accent operation"),
+        }
+    }
+
+    #[test]
+    fn parses_ddot_accent() {
+        let result = parse_latex("\\ddot{x}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "ddot_accent");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected ddot_accent operation"),
+        }
+    }
+
+    #[test]
+    fn parses_accents_in_equations() {
+        // Common physics notation: \bar{p} = m\bar{v}
+        let result = parse_latex("\\bar{p} = m\\bar{v}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_time_derivatives() {
+        // \dot{x}, \ddot{x} for velocity and acceleration
+        let result1 = parse_latex("\\dot{x}");
+        let result2 = parse_latex("\\ddot{x}");
+        assert!(result1.is_ok());
+        assert!(result2.is_ok());
     }
 
     // === Text Mode Support ===

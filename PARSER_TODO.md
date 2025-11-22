@@ -15,13 +15,13 @@ This document tracks the current state and roadmap of the Kleis LaTeX parser.
   - 92.82% function coverage (181 functions, 13 missed)
 - **Overall:** 80.22% line coverage, 80.45% region coverage
 
-**Test Suite:** 177 tests passing (96 parser unit tests + 81 render tests)
+**Test Suite:** 398 tests passing (195 unit + 47 golden + 156 integration)
 
 The parser handles most common LaTeX mathematical expressions from standard math guides.
 
 ---
 
-## ✅ **Fully Working (31+ patterns)**
+## ✅ **Fully Working (36+ patterns)**
 
 ### Core Parsing
 - [x] **Fractions:** `\frac{a}{b}`
@@ -91,6 +91,14 @@ The parser handles most common LaTeX mathematical expressions from standard math
 - [x] **Text in piecewise:** `\begin{cases}x^2 & \text{if } x \geq 0\\0 & \text{otherwise}\end{cases}`
 - [x] **Text with punctuation:** `\text{for all } x \in \mathbb{R}`
 
+### Accent Commands
+- [x] **Bar accent:** `\bar{x}` for average/mean values
+- [x] **Tilde accent:** `\tilde{x}` for approximation/equivalence
+- [x] **Overline:** `\overline{z}` for complex conjugate or closure
+- [x] **Dot accent:** `\dot{x}` for time derivatives (velocity)
+- [x] **Double dot:** `\ddot{x}` for second derivatives (acceleration)
+- [x] **Hat accent:** `\hat{H}` for operators (already supported)
+
 ---
 
 ## ❌ **Not Yet Supported (Known Gaps)**
@@ -133,12 +141,13 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 
 **Achieved:** **80.2% measured line coverage** (78.5% parser, 82.2% renderer)
 
-### Phase 2: Remaining Features (1-2 days)
+### Phase 2: Remaining Features (**COMPLETE!**)
 1. ✅ **Text mode** - Support `\text{...}` for annotations (**DONE**)
-2. **Matrix cell parsing** - Full expression parsing inside matrix cells (partially done)
-3. **More environments** - Variants like Bmatrix, Vmatrix (low priority)
+2. ✅ **Accent commands** - `\bar`, `\tilde`, `\overline`, `\dot`, `\ddot` (**DONE**)
+3. **Matrix cell parsing** - Full expression parsing inside matrix cells (partially done)
+4. **More environments** - Variants like Bmatrix, Vmatrix (low priority)
 
-**Target:** 80% → 85% coverage
+**Target:** 80% → 85% coverage (on track)
 
 ### Phase 3: Polish (1-2 days)
 4. **Advanced delimiters** - Better `\left`, `\middle`, `\right` handling
@@ -186,6 +195,11 @@ parse_latex(r"\varepsilon")                    // ✅ (Greek variants)
 parse_latex(r"E = mc^{2}")                     // ✅ (equations)
 parse_latex(r"\text{if } x > 0")               // ✅ (text mode)
 parse_latex(r"\begin{cases}x^2 & \text{if } x \geq 0\\0 & \text{otherwise}\end{cases}")  // ✅ (text in cases)
+parse_latex(r"\bar{x}")                        // ✅ (bar accent - average)
+parse_latex(r"\dot{x}")                        // ✅ (dot - velocity)
+parse_latex(r"\ddot{x}")                       // ✅ (double dot - acceleration)
+parse_latex(r"\tilde{x}")                      // ✅ (tilde accent)
+parse_latex(r"\overline{z}")                   // ✅ (overline - conjugate)
 
 // Not working
 ```
@@ -277,6 +291,7 @@ To add parser support for a new LaTeX construct:
 
 **Last Updated:** November 22, 2024  
 **Parser Version:** 0.1.0  
-**Status:** Phase 1 complete + Text Mode added, **80.2% measured coverage**, 177/177 tests passing ✅  
+**Status:** Phase 2 features complete (Text Mode + Accents), **80.2% measured coverage**, 398/398 tests passing ✅  
 **Coverage Detail:** Parser 78.5% | Renderer 82.2% | 95.2% function coverage  
+**Test Breakdown:** 195 unit (103 parser + 92 renderer) | 47 golden | 156 integration (109 roundtrip + 47 validation)  
 **Maintainer:** Kleis Development Team

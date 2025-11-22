@@ -660,8 +660,13 @@ pub fn build_default_context() -> GlyphContext {
     unicode_templates.insert("im".to_string(), "Im({arg})".to_string());
     unicode_templates.insert("modulus".to_string(), "|{arg}|".to_string());
     
-    // Operator hat (use actual Unicode combining circumflex or spelled out)
+    // Accent operators (use Unicode combining characters where possible)
     unicode_templates.insert("hat".to_string(), "hat({arg})".to_string());
+    unicode_templates.insert("bar".to_string(), "{arg}̄".to_string());  // U+0304 combining macron
+    unicode_templates.insert("tilde".to_string(), "{arg}̃".to_string());  // U+0303 combining tilde
+    unicode_templates.insert("overline".to_string(), "{arg}̅".to_string());  // U+0305 combining overline
+    unicode_templates.insert("dot_accent".to_string(), "{arg}̇".to_string());  // U+0307 combining dot above
+    unicode_templates.insert("ddot_accent".to_string(), "{arg}̈".to_string());  // U+0308 combining diaeresis
     
     // Trig & log functions
     unicode_templates.insert("cos".to_string(), "cos({args})".to_string());
@@ -835,8 +840,13 @@ pub fn build_default_context() -> GlyphContext {
     latex_templates.insert("im".to_string(), "\\mathrm{Im}({arg})".to_string());
     latex_templates.insert("modulus".to_string(), "\\left|{arg}\\right|".to_string());
     
-    // Operator hat
+    // Accent commands
     latex_templates.insert("hat".to_string(), "\\hat{{arg}}".to_string());
+    latex_templates.insert("bar".to_string(), "\\bar{{arg}}".to_string());
+    latex_templates.insert("tilde".to_string(), "\\tilde{{arg}}".to_string());
+    latex_templates.insert("overline".to_string(), "\\overline{{arg}}".to_string());
+    latex_templates.insert("dot_accent".to_string(), "\\dot{{arg}}".to_string());
+    latex_templates.insert("ddot_accent".to_string(), "\\ddot{{arg}}".to_string());
     
     // Trig & log functions
     latex_templates.insert("cos".to_string(), "\\cos({args})".to_string());
@@ -2079,6 +2089,97 @@ mod tests {
         assert!(out.contains(r"\end{cases}"));
     }
 
+    // === Accent Commands ===
+    
+    #[test]
+    fn renders_bar_latex() {
+        let ctx = build_default_context();
+        let expr = op("bar", vec![o("x")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\bar{x}");
+    }
+
+    #[test]
+    fn renders_bar_unicode() {
+        let ctx = build_default_context();
+        let expr = op("bar", vec![o("x")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::Unicode);
+        assert_eq!(out, "x̄");  // x with combining macron
+    }
+
+    #[test]
+    fn renders_tilde_latex() {
+        let ctx = build_default_context();
+        let expr = op("tilde", vec![o("x")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\tilde{x}");
+    }
+
+    #[test]
+    fn renders_tilde_unicode() {
+        let ctx = build_default_context();
+        let expr = op("tilde", vec![o("x")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::Unicode);
+        assert_eq!(out, "x̃");  // x with combining tilde
+    }
+
+    #[test]
+    fn renders_overline_latex() {
+        let ctx = build_default_context();
+        let expr = op("overline", vec![o("xy")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\overline{xy}");
+    }
+
+    #[test]
+    fn renders_overline_unicode() {
+        let ctx = build_default_context();
+        let expr = op("overline", vec![o("xy")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::Unicode);
+        assert_eq!(out, "xy̅");  // xy with combining overline
+    }
+
+    #[test]
+    fn renders_dot_latex() {
+        let ctx = build_default_context();
+        let expr = op("dot_accent", vec![o("x")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\dot{x}");
+    }
+
+    #[test]
+    fn renders_dot_unicode() {
+        let ctx = build_default_context();
+        let expr = op("dot_accent", vec![o("x")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::Unicode);
+        assert_eq!(out, "ẋ");  // x with combining dot above
+    }
+
+    #[test]
+    fn renders_ddot_latex() {
+        let ctx = build_default_context();
+        let expr = op("ddot_accent", vec![o("x")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\ddot{x}");
+    }
+
+    #[test]
+    fn renders_ddot_unicode() {
+        let ctx = build_default_context();
+        let expr = op("ddot_accent", vec![o("x")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::Unicode);
+        assert_eq!(out, "ẍ");  // x with combining diaeresis (double dot)
+    }
+
+    #[test]
+    fn renders_accents_in_physics_equations() {
+        // Common notation: \bar{v} for average velocity
+        let ctx = build_default_context();
+        let expr = op("bar", vec![o("v")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\bar{v}");
+    }
+
     // === Text Mode Support ===
     
     #[test]
@@ -2321,6 +2422,14 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
         c("0"), 
         op("text", vec![o("otherwise")])
     ), &ctx, &RenderTarget::LaTeX)));
+    
+    // Accent commands
+    out.push(("Bar accent (average)".into(), render_expression(&op("bar", vec![o("x")]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Tilde accent".into(), render_expression(&op("tilde", vec![o("x")]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Overline (conjugate)".into(), render_expression(&op("overline", vec![o("z")]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Dot (velocity)".into(), render_expression(&op("dot_accent", vec![o("x")]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Double dot (acceleration)".into(), render_expression(&op("ddot_accent", vec![o("x")]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Newton's 2nd law".into(), render_expression(&equals(o("F"), times(o("m"), op("ddot_accent", vec![o("x")]))), &ctx, &RenderTarget::LaTeX)));
     
     // Vmatrix (determinant bars)
     out.push(("Determinant (vmatrix 2x2)".into(), render_expression(&vmatrix2(o("a"), o("b"), o("c"), o("d")), &ctx, &RenderTarget::LaTeX)));

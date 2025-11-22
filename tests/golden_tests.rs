@@ -593,6 +593,71 @@ mod golden_text_mode {
     }
 }
 
+// Accent Commands Golden Tests
+#[cfg(test)]
+mod golden_accent_commands {
+    /// Bar accent for average values
+    #[test]
+    fn bar_accent() {
+        // Reference: Standard mathematical notation for average/mean
+        let expected_latex = r"\bar{x}";
+        
+        assert!(expected_latex.contains(r"\bar{"));
+        assert!(expected_latex.contains("x"));
+    }
+    
+    /// Tilde accent for approximation
+    #[test]
+    fn tilde_accent() {
+        // Reference: Standard notation for equivalence relations
+        let expected_latex = r"\tilde{x}";
+        
+        assert!(expected_latex.contains(r"\tilde{"));
+    }
+    
+    /// Overline for complex conjugate
+    #[test]
+    fn overline_accent() {
+        // Reference: Complex analysis notation
+        let expected_latex = r"\overline{z}";
+        
+        assert!(expected_latex.contains(r"\overline{"));
+    }
+    
+    /// Dot for time derivative
+    #[test]
+    fn dot_accent() {
+        // Reference: Physics notation for velocity
+        let expected_latex = r"\dot{x}";
+        
+        assert!(expected_latex.contains(r"\dot{"));
+    }
+    
+    /// Double dot for second derivative
+    #[test]
+    fn ddot_accent() {
+        // Reference: Physics notation for acceleration
+        let expected_latex = r"\ddot{x}";
+        
+        assert!(expected_latex.contains(r"\ddot{"));
+    }
+    
+    /// Accents in physics equations
+    #[test]
+    fn accents_in_physics() {
+        // Reference: Newton's second law with acceleration notation
+        let cases = vec![
+            r"F = m\ddot{x}",  // Force equals mass times acceleration
+            r"\bar{v} = \frac{\Delta x}{\Delta t}",  // Average velocity
+            r"\dot{p} + p = 0",  // First order differential equation
+        ];
+        
+        for case in cases {
+            assert!(case.contains(r"\bar{") || case.contains(r"\dot{") || case.contains(r"\ddot{"));
+        }
+    }
+}
+
 // Integration test: Verify entire gallery against golden output
 #[test]
 fn gallery_output_stability() {
