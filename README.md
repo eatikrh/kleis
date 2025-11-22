@@ -17,7 +17,7 @@ cargo run --bin server
 Then open **http://localhost:3000** in your browser for a beautiful web interface with:
 - LaTeX input with syntax highlighting
 - Live MathJax preview
-- **71 gallery examples** (click to load)
+- **86 gallery examples** (click to load)
 - Symbol palettes (Greek, operators, calculus, etc.)
 - Template library (fractions, matrices, integrals, etc.)
 
@@ -27,7 +27,7 @@ Then open **http://localhost:3000** in your browser for a beautiful web interfac
 cargo test
 ```
 
-**Current status:** 193+ tests passing across renderer, parser, and golden tests.
+**Current status:** 412 tests passing across renderer, parser, and golden tests.
 
 ### Generate PDF Gallery
 
@@ -35,7 +35,7 @@ cargo test
 cargo run --bin gallery
 ```
 
-Creates `tmp_gallery.pdf` with all 71 rendered examples.
+Creates `tmp_gallery.pdf` with all 86 rendered examples.
 
 ---
 

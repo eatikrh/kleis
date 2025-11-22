@@ -966,6 +966,13 @@ impl Parser {
             "pm" => Ok(o("\\pm")),
             "nabla" => Ok(o("\\nabla")),
             "partial" => Ok(o("\\partial")),
+            
+            // Ellipsis (dots)
+            "cdots" => Ok(o("\\cdots")),
+            "ldots" => Ok(o("\\ldots")),
+            "vdots" => Ok(o("\\vdots")),
+            "ddots" => Ok(o("\\ddots")),
+            "iddots" => Ok(o("\\iddots")),
 
             // Relations
             "neq" => Ok(o("\\neq")),
@@ -2204,6 +2211,62 @@ mod tests {
     #[test]
     fn parses_text_with_punctuation() {
         let result = parse_latex("\\text{for all } x \\text{, we have:}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_all_ellipsis_commands() {
+        let ellipsis = vec!["\\cdots", "\\ldots", "\\vdots", "\\ddots", "\\iddots"];
+        for dots in ellipsis {
+            let result = parse_latex(dots);
+            assert!(result.is_ok(), "Failed to parse {}", dots);
+            // Verify it's an Object containing the command
+            if let Ok(Expression::Object(s)) = result {
+                assert_eq!(s, dots);
+            } else {
+                panic!("Expected Object for {}", dots);
+            }
+        }
+    }
+
+    #[test]
+    fn parses_cdots() {
+        let result = parse_latex("\\cdots");
+        assert!(result.is_ok());
+        if let Ok(Expression::Object(s)) = result {
+            assert_eq!(s, "\\cdots");
+        }
+    }
+
+    #[test]
+    fn parses_vdots() {
+        let result = parse_latex("\\vdots");
+        assert!(result.is_ok());
+        if let Ok(Expression::Object(s)) = result {
+            assert_eq!(s, "\\vdots");
+        }
+    }
+
+    #[test]
+    fn parses_ddots() {
+        let result = parse_latex("\\ddots");
+        assert!(result.is_ok());
+        if let Ok(Expression::Object(s)) = result {
+            assert_eq!(s, "\\ddots");
+        }
+    }
+
+    #[test]
+    fn parses_ellipsis_in_matrix() {
+        // Common use case: ellipsis in matrices
+        let result = parse_latex("\\begin{bmatrix}a_{11} & \\cdots & a_{1n}\\\\\\vdots & \\ddots & \\vdots\\\\a_{m1} & \\cdots & a_{mn}\\end{bmatrix}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_ldots_in_sequence() {
+        // Ellipsis in sequence: 1, 2, 3, \ldots, n
+        let result = parse_latex("1, 2, 3, \\ldots, n");
         assert!(result.is_ok());
     }
 }

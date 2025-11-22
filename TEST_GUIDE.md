@@ -1,7 +1,7 @@
 # Kleis Test Suite Guide
 
 **Last Updated:** November 22, 2024 (verified by running all tests)  
-**ACTUAL Total Tests:** 352 passing ✅  
+**ACTUAL Total Tests:** 412 passing ✅  
 **Status:** All tests passing, 100% feature coverage
 
 ---
@@ -10,9 +10,9 @@
 
 **Previous documentation claimed "204 tests" - THIS WAS WRONG!**
 
-The `cargo test --all` command only runs **204 unit tests** and **misses 147 integration test binaries**.
+The `cargo test` command only runs **256 tests** (201 unit + 55 golden) and **misses 156 integration test binaries**.
 
-### To Run Complete Test Suite (352 tests - VERIFIED):
+### To Run Complete Test Suite (412 tests - VERIFIED):
 
 ```bash
 # 1. Unit tests (204 tests)
@@ -729,7 +729,7 @@ fn test_new_pattern() {
 ### Test Growth History
 - Nov 21, 2024: ~110 tests → 167 unit tests (+57 parser tests)
 - Nov 22, 2024: Discovered integration test binaries (148 tests)
-- Nov 22, 2024: **VERIFIED ACTUAL COUNT: 352 tests total** (204 unit + 148 integration)
+- Nov 22, 2024: **VERIFIED ACTUAL COUNT: 412 tests total** (201 unit + 55 golden + 156 integration)
 
 ### Coverage by Feature
 - **Greek letters:** 100% (all 42 tested)

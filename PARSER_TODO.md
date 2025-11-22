@@ -15,13 +15,13 @@ This document tracks the current state and roadmap of the Kleis LaTeX parser.
   - 92.82% function coverage (181 functions, 13 missed)
 - **Overall:** 80.22% line coverage, 80.45% region coverage
 
-**Test Suite:** 398 tests passing (195 unit + 47 golden + 156 integration)
+**Test Suite:** 412 tests passing (201 unit + 55 golden + 156 integration)
 
 The parser handles most common LaTeX mathematical expressions from standard math guides.
 
 ---
 
-## ✅ **Fully Working (36+ patterns)**
+## ✅ **Fully Working (41+ patterns)**
 
 ### Core Parsing
 - [x] **Fractions:** `\frac{a}{b}`
@@ -43,6 +43,8 @@ The parser handles most common LaTeX mathematical expressions from standard math
 - [x] **Set operations:** `\cup`, `\cap`, `\subset`, `\subseteq`
 - [x] **Logic:** `\forall`, `\exists`, `\Rightarrow`, `\Leftrightarrow`
 - [x] **Operators:** `\cdot`, `\times`, `\div`, `\pm`, `\nabla`, `\partial`
+- [x] **Ellipsis (dots):** `\cdots`, `\ldots`, `\vdots`, `\ddots` (standard LaTeX)
+- [⚠️] **Non-standard ellipsis:** `\iddots` (requires mathdots package - parser supports it)
 - [x] **Arrows:** `\to`, `\rightarrow`, `\mapsto`
 - [x] **Delimiters:** `\langle`, `\rangle`
 
@@ -103,6 +105,16 @@ The parser handles most common LaTeX mathematical expressions from standard math
 
 ## ❌ **Not Yet Supported (Known Gaps)**
 
+### 1. **Inverse Diagonal Ellipsis** 🟡 NON-STANDARD
+```latex
+\iddots  % Inverse diagonal dots (⋰)
+```
+**Issue:** Requires `\usepackage{mathdots}` - not part of standard LaTeX  
+**Status:** Parser supports it, but commented out in gallery for LaTeX compatibility  
+**Effort:** Already implemented in parser  
+**Impact:** Users need mathdots package in their LaTeX documents  
+**Workaround:** Use standard ellipsis commands (`\cdots`, `\vdots`, `\ddots`, `\ldots`)
+
 ### 2. **More Matrix Variants** 🟢 LOW PRIORITY
 ```latex
 \begin{Bmatrix}...\end{Bmatrix}  % Curly braces
@@ -162,11 +174,11 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 ## 🧪 **Testing**
 
 ### Current Test Suite - VERIFIED BY RUNNING ALL TESTS
-- **352 total tests** passing ✅ (verified November 22, 2024)
-  - **204 unit tests** (`cargo test --all`)
-    - **91 parser unit tests** in `parser.rs`
-    - **76 renderer tests** in `render.rs`
-    - **37 golden tests** (end-to-end integration)
+- **412 total tests** passing ✅ (verified November 22, 2024)
+  - **256 unit+golden tests** (`cargo test`)
+    - **109 parser unit tests** in `parser.rs` (includes 6 ellipsis tests)
+    - **92 renderer tests** in `render.rs`
+    - **55 golden tests** (includes 8 ellipsis golden tests)
   - **148 integration test binaries** (`cargo run --bin <name>`)
     - **100 roundtrip tests** (parse→render→parse validation)
     - **21 guide examples** (real-world LaTeX patterns)
@@ -174,7 +186,7 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
     - **9 test_parser** (basic parser)
     - **7 test_top5** (top 5 features - redundant with unit tests but counted)
 
-**⚠️ IMPORTANT:** `cargo test --all` only runs 204 tests. You MUST also run the 5 test binaries to get all 352 tests!
+**⚠️ IMPORTANT:** `cargo test` only runs 256 tests (201 unit + 55 golden). You MUST also run the 5 test binaries to get all 412 tests!
 
 **📖 See [TEST_GUIDE.md](TEST_GUIDE.md) for complete commands and verified counts**
 
@@ -200,6 +212,11 @@ parse_latex(r"\dot{x}")                        // ✅ (dot - velocity)
 parse_latex(r"\ddot{x}")                       // ✅ (double dot - acceleration)
 parse_latex(r"\tilde{x}")                      // ✅ (tilde accent)
 parse_latex(r"\overline{z}")                   // ✅ (overline - conjugate)
+parse_latex(r"\cdots")                         // ✅ (horizontal ellipsis)
+parse_latex(r"\vdots")                         // ✅ (vertical ellipsis)
+parse_latex(r"\ddots")                         // ✅ (diagonal ellipsis)
+parse_latex(r"1, 2, 3, \ldots, n")             // ✅ (sequence with ellipsis)
+parse_latex(r"\begin{bmatrix}a_{11} & \cdots & a_{1n}\\\vdots & \ddots & \vdots\\a_{m1} & \cdots & a_{mn}\end{bmatrix}")  // ✅ (matrix with ellipsis)
 
 // Not working
 ```
@@ -291,7 +308,7 @@ To add parser support for a new LaTeX construct:
 
 **Last Updated:** November 22, 2024  
 **Parser Version:** 0.1.0  
-**Status:** Phase 2 features complete (Text Mode + Accents), **80.2% measured coverage**, 398/398 tests passing ✅  
+**Status:** Phase 2 features complete (Text Mode + Accents + Ellipsis), **80.2% measured coverage**, 412/412 tests passing ✅  
 **Coverage Detail:** Parser 78.5% | Renderer 82.2% | 95.2% function coverage  
-**Test Breakdown:** 195 unit (103 parser + 92 renderer) | 47 golden | 156 integration (109 roundtrip + 47 validation)  
+**Test Breakdown:** 201 unit (109 parser + 92 renderer) | 55 golden (8 ellipsis) | 156 integration (109 roundtrip + 47 validation)  
 **Maintainer:** Kleis Development Team

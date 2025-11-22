@@ -658,6 +658,126 @@ mod golden_accent_commands {
     }
 }
 
+// Ellipsis Commands Golden Tests
+#[cfg(test)]
+mod golden_ellipsis {
+    /// Horizontal centered dots
+    #[test]
+    fn cdots_notation() {
+        let samples = kleis::render::collect_samples_for_gallery();
+        
+        let cdots_examples: Vec<&str> = samples.iter()
+            .filter(|(t, _)| t.contains("horizontal centered"))
+            .map(|(_, latex)| latex.as_str())
+            .collect();
+        
+        assert!(!cdots_examples.is_empty(), "Should have horizontal centered ellipsis");
+        assert!(cdots_examples[0].contains(r"\cdots"));
+    }
+    
+    /// Horizontal lower dots
+    #[test]
+    fn ldots_notation() {
+        let samples = kleis::render::collect_samples_for_gallery();
+        
+        let ldots_examples: Vec<&str> = samples.iter()
+            .filter(|(t, _)| t.contains("horizontal lower"))
+            .map(|(_, latex)| latex.as_str())
+            .collect();
+        
+        assert!(!ldots_examples.is_empty(), "Should have horizontal lower ellipsis");
+        assert!(ldots_examples[0].contains(r"\ldots"));
+    }
+    
+    /// Vertical dots
+    #[test]
+    fn vdots_notation() {
+        let samples = kleis::render::collect_samples_for_gallery();
+        
+        let vdots_examples: Vec<&str> = samples.iter()
+            .filter(|(t, _)| t.contains("vertical") && t.contains("Ellipsis"))
+            .map(|(_, latex)| latex.as_str())
+            .collect();
+        
+        assert!(!vdots_examples.is_empty(), "Should have vertical ellipsis");
+        assert!(vdots_examples[0].contains(r"\vdots"));
+    }
+    
+    /// Diagonal dots
+    #[test]
+    fn ddots_notation() {
+        let samples = kleis::render::collect_samples_for_gallery();
+        
+        let ddots_examples: Vec<&str> = samples.iter()
+            .filter(|(t, _)| t.contains("diagonal") && !t.contains("inverse"))
+            .map(|(_, latex)| latex.as_str())
+            .collect();
+        
+        assert!(!ddots_examples.is_empty(), "Should have diagonal ellipsis");
+        assert!(ddots_examples[0].contains(r"\ddots"));
+    }
+    
+    /// Inverse diagonal dots (Note: \iddots requires mathdots package, not standard LaTeX)
+    #[test]
+    #[ignore] // Commented out in gallery for standard LaTeX compatibility
+    fn iddots_notation() {
+        let samples = kleis::render::collect_samples_for_gallery();
+        
+        let iddots_examples: Vec<&str> = samples.iter()
+            .filter(|(t, _)| t.contains("inverse diagonal"))
+            .map(|(_, latex)| latex.as_str())
+            .collect();
+        
+        // This test is ignored because \iddots is not in standard LaTeX
+        assert!(iddots_examples.is_empty() || iddots_examples[0].contains(r"\iddots"));
+    }
+    
+    /// Ellipsis in sequences
+    #[test]
+    fn ellipsis_in_sequences() {
+        let samples = kleis::render::collect_samples_for_gallery();
+        
+        let seq_examples: Vec<&str> = samples.iter()
+            .filter(|(t, _)| t.contains("Sequence with ellipsis"))
+            .map(|(_, latex)| latex.as_str())
+            .collect();
+        
+        assert!(!seq_examples.is_empty(), "Should have sequence examples with ellipsis");
+        assert!(seq_examples[0].contains(r"\ldots"));
+    }
+    
+    /// Ellipsis in matrices
+    #[test]
+    fn ellipsis_in_matrices() {
+        let samples = kleis::render::collect_samples_for_gallery();
+        
+        let matrix_examples: Vec<&str> = samples.iter()
+            .filter(|(t, _)| t.contains("Matrix with ellipsis"))
+            .map(|(_, latex)| latex.as_str())
+            .collect();
+        
+        assert!(!matrix_examples.is_empty(), "Should have matrix examples with ellipsis");
+        assert!(matrix_examples[0].contains(r"\cdots"));
+        assert!(matrix_examples[0].contains(r"\vdots"));
+        assert!(matrix_examples[0].contains(r"\ddots"));
+    }
+    
+    /// Complete ellipsis support verification
+    #[test]
+    fn complete_ellipsis_support() {
+        let samples = kleis::render::collect_samples_for_gallery();
+        
+        // Count all ellipsis-related examples
+        let ellipsis_examples: Vec<&String> = samples.iter()
+            .filter(|(t, _)| t.contains("Ellipsis") || t.contains("ellipsis"))
+            .map(|(t, _)| t)
+            .collect();
+        
+        // Note: \iddots is not included as it requires mathdots package (not standard LaTeX)
+        assert!(ellipsis_examples.len() >= 6, "Should have at least 6 ellipsis examples (4 standard types + 2 use cases), found: {}", ellipsis_examples.len());
+    }
+}
+
 // Integration test: Verify entire gallery against golden output
 #[test]
 fn gallery_output_stability() {

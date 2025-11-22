@@ -531,6 +531,10 @@ fn latex_to_unicode(input: &str) -> String {
         // Other common symbols
         .replace("\\hbar", "ℏ").replace("\\infty", "∞")
         .replace("\\emptyset", "∅").replace("\\varnothing", "∅")
+        // Ellipsis (dots)
+        .replace("\\cdots", "⋯").replace("\\ldots", "…")
+        .replace("\\vdots", "⋮").replace("\\ddots", "⋱")
+        .replace("\\iddots", "⋰")
         // Note: \mathbf and \boldsymbol are left as-is for now
         // Keep backslashes for unknown commands
 }
@@ -551,6 +555,10 @@ fn escape_latex_text(input: &str) -> String {
         .replace("Γ", "\\Gamma").replace("Δ", "\\Delta").replace("Θ", "\\Theta").replace("Λ", "\\Lambda")
         .replace("Ξ", "\\Xi").replace("Π", "\\Pi").replace("Σ", "\\Sigma").replace("Υ", "\\Upsilon")
         .replace("Φ", "\\Phi").replace("Ψ", "\\Psi").replace("Ω", "\\Omega")
+        // Ellipsis back to LaTeX
+        .replace("⋯", "\\cdots").replace("…", "\\ldots")
+        .replace("⋮", "\\vdots").replace("⋱", "\\ddots")
+        .replace("⋰", "\\iddots")
         // underscores in identifiers should be escaped
         .replace("_", "\\_")
 }
@@ -2443,6 +2451,18 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     out.push(("Variance and covariance".into(), format!("{}\\quad{}", 
         render_expression(&variance(o("X")), &ctx, &RenderTarget::LaTeX),
         render_expression(&covariance(o("X"), o("Y")), &ctx, &RenderTarget::LaTeX))));
+
+    // Ellipsis (dots) - horizontal, vertical, and diagonal
+    out.push(("Ellipsis: horizontal centered".into(), render_expression(&o("\\cdots"), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Ellipsis: horizontal lower".into(), render_expression(&o("\\ldots"), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Ellipsis: vertical".into(), render_expression(&o("\\vdots"), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Ellipsis: diagonal".into(), render_expression(&o("\\ddots"), &ctx, &RenderTarget::LaTeX)));
+    // Note: \iddots requires \usepackage{mathdots} - commented out for standard LaTeX compatibility
+    // out.push(("Ellipsis: inverse diagonal".into(), render_expression(&o("\\iddots"), &ctx, &RenderTarget::LaTeX)));
+    
+    // Ellipsis in sequences and matrices
+    out.push(("Sequence with ellipsis".into(), "1, 2, 3, \\ldots, n".to_string()));
+    out.push(("Matrix with ellipsis".into(), "\\begin{bmatrix}a_{11} & \\cdots & a_{1n}\\\\\\vdots & \\ddots & \\vdots\\\\a_{m1} & \\cdots & a_{mn}\\end{bmatrix}".to_string()));
 
     out
 }
