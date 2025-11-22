@@ -123,7 +123,7 @@ Added **32 missing template buttons** to the Kleis Equation Editor (localhost:30
 
 **Changes:**
 1. **Lines 405-471:** Expanded template palette from 18 to 50 templates
-2. **Line 283:** Updated subtitle to reflect "50 Templates • 86 Gallery Examples"
+2. **Line 283:** Updated subtitle to reflect "50 Templates • 91 Gallery Examples"
 
 **Organization:**
 - Grouped templates by category (Basic, Calculus, Matrices, etc.)

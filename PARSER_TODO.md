@@ -15,13 +15,13 @@ This document tracks the current state and roadmap of the Kleis LaTeX parser.
   - 92.82% function coverage (181 functions, 13 missed)
 - **Overall:** 80.22% line coverage, 80.45% region coverage
 
-**Test Suite:** 417 tests passing (206 unit + 54 golden + 157 integration binaries)
+**Test Suite:** 426 tests passing (215 unit + 54 golden + 157 integration binaries)
 
 The parser handles most common LaTeX mathematical expressions from standard math guides.
 
 ---
 
-## ✅ **Fully Working (41+ patterns)**
+## ✅ **Fully Working (44+ patterns)**
 
 ### Core Parsing
 - [x] **Fractions:** `\frac{a}{b}`
@@ -57,7 +57,7 @@ The parser handles most common LaTeX mathematical expressions from standard math
 
 ### Environments
 - [x] **Matrices:** `\begin{bmatrix}a&b\\c&d\end{bmatrix}` (2x2, 3x3, and general)
-- [x] **Matrix variants:** `\begin{pmatrix}`, `\begin{vmatrix}`, `\begin{matrix}`
+- [x] **Matrix variants:** `\begin{pmatrix}` (parentheses), `\begin{vmatrix}` (determinant bars), `\begin{matrix}` (plain)
 - [x] **Row separator:** `\\` correctly handled inside matrices
 
 ### Quantum Mechanics
@@ -88,6 +88,11 @@ The parser handles most common LaTeX mathematical expressions from standard math
 - [x] **Trig with parentheses:** `\sin(x)`, `\cos(x)`, `\tan(x)` now work alongside `\sin{x}`
 - [x] **Nested functions:** `\sin(\cos(x))` fully supported
 
+### Combinatorics & Number Theory
+- [x] **Binomial coefficient:** `\binom{n}{k}`
+- [x] **Floor function:** `\lfloor x \rfloor`
+- [x] **Ceiling function:** `\lceil x \rceil`
+
 ### Text Mode
 - [x] **Text annotations:** `\text{if } x > 0`
 - [x] **Text in piecewise:** `\begin{cases}x^2 & \text{if } x \geq 0\\0 & \text{otherwise}\end{cases}`
@@ -115,14 +120,14 @@ The parser handles most common LaTeX mathematical expressions from standard math
 **Impact:** Users need mathdots package in their LaTeX documents  
 **Workaround:** Use standard ellipsis commands (`\cdots`, `\vdots`, `\ddots`, `\ldots`)
 
-### 2. **More Matrix Variants** 🟢 LOW PRIORITY
+### 2. **Additional Matrix Variants** 🟢 LOW PRIORITY
 ```latex
-\begin{Bmatrix}...\end{Bmatrix}  % Curly braces
-\begin{Vmatrix}...\end{Vmatrix}  % Double bars
+\begin{Bmatrix}...\end{Bmatrix}  % Curly braces (uppercase B)
+\begin{Vmatrix}...\end{Vmatrix}  % Double bars (uppercase V)
 ```
-**Issue:** Not all environment variants implemented  
+**Issue:** Uppercase variants not implemented (lowercase `bmatrix`, `pmatrix`, `vmatrix` work fine)  
 **Effort:** 30 minutes  
-**Impact:** bmatrix, pmatrix, vmatrix cover most use cases
+**Impact:** Lowercase variants cover most use cases
 
 ---
 
@@ -159,7 +164,7 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 1. ✅ **Text mode** - Support `\text{...}` for annotations (**DONE**)
 2. ✅ **Accent commands** - `\bar`, `\tilde`, `\overline`, `\dot`, `\ddot` (**DONE**)
 3. ✅ **Matrix cell parsing** - Full expression parsing inside matrix cells (**DONE - November 22, 2024**)
-4. **More environments** - Variants like Bmatrix, Vmatrix (low priority)
+4. **More environments** - Uppercase variants like `Bmatrix`, `Vmatrix` (low priority, lowercase variants already work)
 
 **Target:** 80% → 85% coverage (**achieved!**)
 
@@ -189,6 +194,11 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
     - **7 test_top5 tests** (top 5 feature additions)
 
 **Coverage Detail:** The test suite covers all documented LaTeX patterns with unit tests, golden file tests, and comprehensive integration validation.
+
+**Recent Additions (November 22, 2024):**
+- Binomial coefficient: `\binom{n}{k}` (3 tests)
+- Floor function: `\lfloor x \rfloor` (4 tests)
+- Ceiling function: `\lceil x \rceil` (2 tests)
 
 **📖 See [TEST_GUIDE.md](TEST_GUIDE.md) for complete commands and verified counts**
 
@@ -223,6 +233,10 @@ parse_latex(r"\begin{bmatrix}\frac{a}{b}&c\\d&e\end{bmatrix}")  // ✅ (matrix w
 parse_latex(r"\begin{bmatrix}\sqrt{2}&\sqrt{3}\\\sqrt{5}&\sqrt{7}\end{bmatrix}")  // ✅ (matrix with sqrt)
 parse_latex(r"\begin{bmatrix}\sin{x}&\cos{x}\\-\cos{x}&\sin{x}\end{bmatrix}")  // ✅ (matrix with trig)
 parse_latex(r"\begin{bmatrix}\frac{1}{\sqrt{2}}&0\\0&\frac{1}{\sqrt{2}}\end{bmatrix}")  // ✅ (complex nested in matrix)
+parse_latex(r"\binom{n}{k}")                   // ✅ (binomial coefficient)
+parse_latex(r"\lfloor x \rfloor")              // ✅ (floor function)
+parse_latex(r"\lceil x \rceil")                // ✅ (ceiling function)
+parse_latex(r"\lfloor \frac{n}{2} \rfloor")    // ✅ (floor with fraction)
 
 // Not working
 ```
@@ -314,8 +328,8 @@ To add parser support for a new LaTeX construct:
 
 **Last Updated:** November 22, 2024  
 **Parser Version:** 0.1.0  
-**Status:** Phase 2 features complete (Text Mode + Accents + Ellipsis + **Matrix Cell Parsing**), **80.2% measured coverage**, 417/417 tests passing ✅  
+**Status:** Phase 2 features complete (Text Mode + Accents + Ellipsis + **Matrix Cell Parsing** + **Combinatorics**), **80.2% measured coverage**, 426/426 tests passing ✅  
 **Coverage Detail:** Parser 78.5% | Renderer 82.2% | 95.2% function coverage  
-**Test Breakdown:** 206 unit (114 parser + 92 renderer) | 54 golden | 157 integration (109 roundtrip + 21 guide + 11 check + 9 parser + 7 top5)  
-**Recent Fix:** Matrix cells now parse as full expressions (fractions, sqrt, trig, etc.) - Nov 22, 2024  
+**Test Breakdown:** 215 unit (123 parser + 92 renderer) | 54 golden | 157 integration (109 roundtrip + 21 guide + 11 check + 9 parser + 7 top5)  
+**Recent Additions:** Binomial coefficient, floor & ceiling functions (Nov 22, 2024)  
 **Maintainer:** Kleis Development Team

@@ -12,7 +12,7 @@
 
 The `cargo test` command only runs **256 tests** (201 unit + 55 golden) and **misses 156 integration test binaries**.
 
-### To Run Complete Test Suite (412 tests - VERIFIED):
+### To Run Complete Test Suite (269 tests - VERIFIED):
 
 ```bash
 # 1. Unit tests (204 tests)
@@ -729,7 +729,7 @@ fn test_new_pattern() {
 ### Test Growth History
 - Nov 21, 2024: ~110 tests → 167 unit tests (+57 parser tests)
 - Nov 22, 2024: Discovered integration test binaries (148 tests)
-- Nov 22, 2024: **VERIFIED ACTUAL COUNT: 412 tests total** (201 unit + 55 golden + 156 integration)
+- Nov 22, 2024: **VERIFIED ACTUAL COUNT: 269 tests total** (215 unit + 54 golden)
 
 ### Coverage by Feature
 - **Greek letters:** 100% (all 42 tested)

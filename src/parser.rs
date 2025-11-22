@@ -914,6 +914,117 @@ impl Parser {
                 }
             }
 
+            // Binomial coefficient
+            "binom" => {
+                let n = self.parse_group()?;
+                let k = self.parse_group()?;
+                Ok(op("binomial", vec![n, k]))
+            }
+
+            // Floor function
+            "lfloor" => {
+                // Parse content until \rfloor
+                self.skip_whitespace();
+                let saved_pos = self.pos;
+                let mut depth = 0;
+                
+                while let Some(ch) = self.peek() {
+                    if ch == '\\' {
+                        let cmd_pos = self.pos;
+                        self.advance(); // consume \
+                        if let Some(next) = self.peek() {
+                            if next.is_alphabetic() {
+                                // Parse command name
+                                let mut cmd_name = String::new();
+                                while let Some(c) = self.peek() {
+                                    if c.is_alphabetic() {
+                                        cmd_name.push(c);
+                                        self.advance();
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                if cmd_name == "rfloor" && depth == 0 {
+                                    let content_str: String = self.input[saved_pos..cmd_pos].iter().collect();
+                                    let mut content_parser = Parser::new(&content_str);
+                                    match content_parser.parse() {
+                                        Ok(content) => return Ok(op("floor", vec![content])),
+                                        Err(_) => return Ok(op("floor", vec![o(content_str.trim())])),
+                                    }
+                                }
+                            }
+                        }
+                    } else if ch == '{' {
+                        depth += 1;
+                        self.advance();
+                    } else if ch == '}' {
+                        depth -= 1;
+                        self.advance();
+                    } else {
+                        self.advance();
+                    }
+                }
+                
+                Err(ParseError {
+                    message: "Expected \\rfloor".to_string(),
+                    position: self.pos,
+                })
+            }
+
+            "rfloor" => Ok(o("")), // Should be consumed by lfloor
+
+            // Ceiling function
+            "lceil" => {
+                // Parse content until \rceil
+                self.skip_whitespace();
+                let saved_pos = self.pos;
+                let mut depth = 0;
+                
+                while let Some(ch) = self.peek() {
+                    if ch == '\\' {
+                        let cmd_pos = self.pos;
+                        self.advance(); // consume \
+                        if let Some(next) = self.peek() {
+                            if next.is_alphabetic() {
+                                // Parse command name
+                                let mut cmd_name = String::new();
+                                while let Some(c) = self.peek() {
+                                    if c.is_alphabetic() {
+                                        cmd_name.push(c);
+                                        self.advance();
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                if cmd_name == "rceil" && depth == 0 {
+                                    let content_str: String = self.input[saved_pos..cmd_pos].iter().collect();
+                                    let mut content_parser = Parser::new(&content_str);
+                                    match content_parser.parse() {
+                                        Ok(content) => return Ok(op("ceiling", vec![content])),
+                                        Err(_) => return Ok(op("ceiling", vec![o(content_str.trim())])),
+                                    }
+                                }
+                            }
+                        }
+                    } else if ch == '{' {
+                        depth += 1;
+                        self.advance();
+                    } else if ch == '}' {
+                        depth -= 1;
+                        self.advance();
+                    } else {
+                        self.advance();
+                    }
+                }
+                
+                Err(ParseError {
+                    message: "Expected \\rceil".to_string(),
+                    position: self.pos,
+                })
+            }
+
+            "rceil" => Ok(o("")), // Should be consumed by lceil
+
             // Greek letters (lowercase) - complete alphabet
             "alpha" => Ok(o("\\alpha")),
             "beta" => Ok(o("\\beta")),
@@ -2384,6 +2495,107 @@ mod tests {
     fn parses_ldots_in_sequence() {
         // Ellipsis in sequence: 1, 2, 3, \ldots, n
         let result = parse_latex("1, 2, 3, \\ldots, n");
+        assert!(result.is_ok());
+    }
+
+    // ===== BINOMIAL COEFFICIENT TESTS =====
+
+    #[test]
+    fn parses_binomial_coefficient() {
+        let result = parse_latex("\\binom{n}{k}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "binomial");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected binomial operation"),
+        }
+    }
+
+    #[test]
+    fn parses_binomial_with_numbers() {
+        let result = parse_latex("\\binom{5}{2}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_binomial_in_equation() {
+        // Pascal's triangle formula
+        let result = parse_latex("\\binom{n}{k} = \\binom{n-1}{k-1} + \\binom{n-1}{k}");
+        assert!(result.is_ok());
+    }
+
+    // ===== FLOOR AND CEILING TESTS =====
+
+    #[test]
+    fn parses_floor_function() {
+        let result = parse_latex("\\lfloor x \\rfloor");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "floor");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected floor operation"),
+        }
+    }
+
+    #[test]
+    fn parses_ceiling_function() {
+        let result = parse_latex("\\lceil x \\rceil");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "ceiling");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected ceiling operation"),
+        }
+    }
+
+    #[test]
+    fn parses_floor_with_fraction() {
+        // Common use case: floor of a fraction
+        let result = parse_latex("\\lfloor \\frac{n}{2} \\rfloor");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "floor");
+                assert_eq!(args.len(), 1);
+                // Check that the argument is a division
+                match &args[0] {
+                    Expression::Operation { name: inner_name, .. } => {
+                        assert_eq!(inner_name, "scalar_divide");
+                    }
+                    _ => panic!("Expected division inside floor"),
+                }
+            }
+            _ => panic!("Expected floor operation"),
+        }
+    }
+
+    #[test]
+    fn parses_ceiling_with_division() {
+        let result = parse_latex("\\lceil \\frac{n}{k} \\rceil");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_floor_with_subscript() {
+        // Floor of indexed variable
+        let result = parse_latex("\\lfloor x_i \\rfloor");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_floor_and_ceiling_in_equation() {
+        // Common in number theory: floor and ceiling relation
+        let result = parse_latex("\\lceil x \\rceil = \\lfloor x \\rfloor + 1");
         assert!(result.is_ok());
     }
 }
