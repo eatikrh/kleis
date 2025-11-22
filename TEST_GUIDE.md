@@ -1,48 +1,54 @@
 # Kleis Test Suite Guide
 
-**Last Updated:** November 22, 2024  
-**ACTUAL Total Tests:** 351 passing ✅  
+**Last Updated:** November 22, 2024 (verified by running all tests)  
+**ACTUAL Total Tests:** 352 passing ✅  
 **Status:** All tests passing, 100% feature coverage
 
 ---
 
-## ⚠️ CRITICAL: How to Run ALL 351 Tests
+## ⚠️ CRITICAL: How to Run ALL 352 Tests
 
 **Previous documentation claimed "204 tests" - THIS WAS WRONG!**
 
 The `cargo test --all` command only runs **204 unit tests** and **misses 147 integration test binaries**.
 
-### To Run Complete Test Suite (351 tests):
+### To Run Complete Test Suite (352 tests - VERIFIED):
 
 ```bash
-# 1. Unit tests (204)
+# 1. Unit tests (204 tests)
 cargo test --all
+# Output: "167 passed" + "37 passed" = 204
 
-# 2. Roundtrip (100) - validates ALL renderer patterns
+# 2. Roundtrip (100 tests) - validates ALL renderer patterns
 cargo run --bin roundtrip_test
+# Output: "Successful parses: 100/100"
 
-# 3. Guide examples (21) - real-world LaTeX
+# 3. Guide examples (21 tests) - real-world LaTeX
 cargo run --bin test_guide_examples
+# Output: "Results: 21/21 passed (100%)"
 
-# 4. Parser checks (10) - timed validation
+# 4. Parser checks (11 tests) - timed validation
 cargo run --bin check_parser
+# Output: 11 "Testing X: ✅" lines
 
-# 5. Basic tests (9)
+# 5. Basic tests (9 tests)
 cargo run --bin test_parser
+# Output: 9 "📝 Test:" lines
 
-# 6. Top features (7)
+# 6. Top 5 features (7 tests)
 cargo run --bin test_top5
+# Output: 7 numbered tests (1-7)
 ```
 
 **YOU MUST RUN ALL 6 COMMANDS ABOVE TO VALIDATE FULL TEST SUITE**
 
-### Complete Test Inventory
+### Complete Test Inventory (VERIFIED COUNTS)
 
-| Category | Tests | Command | Status |
-|----------|-------|---------|--------|
-| **Unit Tests** | 204 | `cargo test --all` | ✅ |
-| **Integration Binaries** | 147 | `cargo run --bin <name>` (5 binaries) | ✅ |
-| **ACTUAL TOTAL** | **351** | See 6 commands above | ✅ |
+| Category | Tests | Command | Verified |
+|----------|-------|---------|----------|
+| **Unit Tests** | 204 | `cargo test --all` | ✅ Ran: 167+37=204 |
+| **Integration Binaries** | 148 | `cargo run --bin <name>` (5 binaries) | ✅ Ran: 100+21+11+9+7=148 |
+| **ACTUAL TOTAL** | **352** | See 6 commands above | ✅ All ran and counted |
 
 ---
 
@@ -57,16 +63,16 @@ cargo run --bin test_top5
 | **Golden Tests** | `tests/golden_tests.rs` | **37** | End-to-end integration tests |
 | **Subtotal** | | **204** | Run with `cargo test --all` |
 
-### 2. Integration Test Binaries (cargo run) - 147 tests
+### 2. Integration Test Binaries (cargo run) - 148 tests (VERIFIED)
 
 | Binary | Location | Tests | Description |
 |--------|----------|-------|-------------|
 | **roundtrip_test** | `src/bin/roundtrip_test.rs` | **100** | Parse→Render→Parse validation |
 | **test_guide_examples** | `src/bin/test_guide_examples.rs` | **21** | LaTeX Math Guide examples |
-| **check_parser** | `src/bin/check_parser.rs` | **10** | Timed parser tests |
+| **check_parser** | `src/bin/check_parser.rs` | **11** | Timed parser tests (VERIFIED: was 10, actually 11) |
 | **test_parser** | `src/bin/test_parser.rs` | **9** | Basic parser validation |
-| **test_top5** | `src/bin/test_top5.rs` | **7** | Top 5 parser additions |
-| **Subtotal** | | **147** | Run with `cargo run --bin <name>` |
+| **test_top5** | `src/bin/test_top5.rs` | **7** | Top 5 parser additions (redundant but kept) |
+| **Subtotal** | | **148** | Run with `cargo run --bin <name>` |
 
 ### 3. Non-Test Binaries (not counted)
 
@@ -457,11 +463,13 @@ echo "TOTAL: Should be 351 tests"
 | `src/render.rs` | Unit tests | `cargo test render::tests::` | 76 | ✅ |
 | `tests/golden_tests.rs` | Integration | `cargo test --test golden_tests` | 37 | ✅ |
 | `src/bin/roundtrip_test.rs` | Binary | `cargo run --bin roundtrip_test` | 100 | ✅ |
-| `src/bin/test_guide_examples.rs` | Binary | `cargo run --bin test_guide_examples` | 21 | ✅ |
-| `src/bin/check_parser.rs` | Binary | `cargo run --bin check_parser` | 10 | ✅ |
-| `src/bin/test_parser.rs` | Binary | `cargo run --bin test_parser` | 9 | ✅ |
-| `src/bin/test_top5.rs` | Binary | `cargo run --bin test_top5` | 7 | ✅ |
-| **TOTAL** | | **See commands above** | **351** | ✅ |
+| `src/bin/test_guide_examples.rs` | Binary | `cargo run --bin test_guide_examples` | 21 | ✅ VERIFIED |
+| `src/bin/check_parser.rs` | Binary | `cargo run --bin check_parser` | 11 | ✅ VERIFIED (was 10, actually 11) |
+| `src/bin/test_parser.rs` | Binary | `cargo run --bin test_parser` | 9 | ✅ VERIFIED |
+| `src/bin/test_top5.rs` | Binary | `cargo run --bin test_top5` | 7 | ✅ VERIFIED (redundant with unit tests but kept) |
+| **TOTAL** | | **See commands above** | **352** | ✅ ALL VERIFIED BY RUNNING |
+
+**Note:** test_top5.rs has redundant coverage (same patterns tested in parser.rs unit tests) but included in count since it runs successfully.
 
 ### Files WITHOUT Tests (DON'T COUNT THESE)
 
@@ -711,16 +719,17 @@ fn test_new_pattern() {
 
 ## 📊 Test Statistics
 
-### Current State
-- **Total Tests:** 204
-- **Passing:** 204 (100%)
+### Current State (VERIFIED by running all tests)
+- **Total Tests:** 352
+- **Passing:** 352 (100%)
 - **Failing:** 0
 - **Ignored:** 0
 - **Coverage:** 80.2% line, 91.5% function
 
 ### Test Growth History
-- Nov 21, 2024: 110 tests → 167 tests (+57 parser tests)
-- Nov 22, 2024: 167 tests → 204 tests (discovered additional tests)
+- Nov 21, 2024: ~110 tests → 167 unit tests (+57 parser tests)
+- Nov 22, 2024: Discovered integration test binaries (148 tests)
+- Nov 22, 2024: **VERIFIED ACTUAL COUNT: 352 tests total** (204 unit + 148 integration)
 
 ### Coverage by Feature
 - **Greek letters:** 100% (all 42 tested)

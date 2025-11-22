@@ -156,20 +156,22 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 
 ## 🧪 **Testing**
 
-### Current Test Suite - COMPLETE COUNT
-- **351 total tests** passing ✅ (NOT 204 - see note below)
+### Current Test Suite - VERIFIED BY RUNNING ALL TESTS
+- **352 total tests** passing ✅ (verified November 22, 2024)
   - **204 unit tests** (`cargo test --all`)
     - **91 parser unit tests** in `parser.rs`
     - **76 renderer tests** in `render.rs`
     - **37 golden tests** (end-to-end integration)
-  - **147 integration test binaries** (`cargo run --bin <name>`)
+  - **148 integration test binaries** (`cargo run --bin <name>`)
     - **100 roundtrip tests** (parse→render→parse validation)
     - **21 guide examples** (real-world LaTeX patterns)
-    - **26 other tests** (basic parser validation, top features, timings)
+    - **11 check_parser** (timed validation)
+    - **9 test_parser** (basic parser)
+    - **7 test_top5** (top 5 features - redundant with unit tests but counted)
 
-**⚠️ IMPORTANT:** `cargo test --all` only runs 204 tests. You MUST also run the 5 test binaries to get all 351 tests!
+**⚠️ IMPORTANT:** `cargo test --all` only runs 204 tests. You MUST also run the 5 test binaries to get all 352 tests!
 
-**📖 See [TEST_GUIDE.md](TEST_GUIDE.md) for complete commands and documentation**
+**📖 See [TEST_GUIDE.md](TEST_GUIDE.md) for complete commands and verified counts**
 
 ### Test Coverage
 ```rust
