@@ -1,0 +1,19 @@
+# Cursor AI Rules for this Project
+
+## Git Repository Rules
+
+**CRITICAL: NEVER push to any git repository without explicit user permission.**
+
+- You may stage files (`git add`)
+- You may commit files (`git commit`)
+- You must ALWAYS ask before running `git push`
+- Stop after committing and ask: "The changes are committed. Would you like me to push to GitHub now?"
+- Wait for explicit "yes" or "push" command from the user before executing any `git push` operation
+- This rule applies to ALL branches and ALL remotes
+
+## General Guidelines
+
+- Follow user instructions carefully
+- Ask for clarification when uncertain
+- Be respectful of the user's workflow and preferences
+
