@@ -1,0 +1,33 @@
+% Complex Matrix Cell Parsing Test
+% Tests that matrix cells with complex LaTeX expressions are properly parsed
+
+% Matrix with fractions
+\begin{bmatrix}\frac{a}{b}&c\\d&e\end{bmatrix}
+
+% Matrix with square roots
+\begin{bmatrix}\sqrt{2}&\sqrt{3}\\\sqrt{5}&\sqrt{7}\end{bmatrix}
+
+% Matrix with trigonometric functions
+\begin{bmatrix}\sin{x}&\cos{x}\\-\cos{x}&\sin{x}\end{bmatrix}
+
+% Matrix with nested expressions (fraction containing sqrt)
+\begin{bmatrix}\frac{1}{\sqrt{2}}&0\\0&\frac{1}{\sqrt{2}}\end{bmatrix}
+
+% Matrix with ellipsis (dots)
+\begin{bmatrix}a_{11} & \cdots & a_{1n}\\\vdots & \ddots & \vdots\\a_{m1} & \cdots & a_{mn}\end{bmatrix}
+
+% Matrix with superscripts
+\begin{bmatrix}x^{2}&y^{2}\\z^{2}&w^{2}\end{bmatrix}
+
+% Matrix with subscripts and operations
+\begin{bmatrix}a_{11} + b_{11} & a_{12} + b_{12}\\a_{21} + b_{21} & a_{22} + b_{22}\end{bmatrix}
+
+% Identity matrix with fractions
+\begin{bmatrix}\frac{1}{1}&\frac{0}{1}\\\frac{0}{1}&\frac{1}{1}\end{bmatrix}
+
+% Rotation matrix
+\begin{bmatrix}\cos{\theta}&-\sin{\theta}\\\sin{\theta}&\cos{\theta}\end{bmatrix}
+
+% Matrix with mixed operations
+\begin{bmatrix}\frac{a^{2}}{b}&c \cdot d\\e + f&\sqrt{g}\end{bmatrix}
+

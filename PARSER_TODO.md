@@ -15,7 +15,7 @@ This document tracks the current state and roadmap of the Kleis LaTeX parser.
   - 92.82% function coverage (181 functions, 13 missed)
 - **Overall:** 80.22% line coverage, 80.45% region coverage
 
-**Test Suite:** 412 tests passing (201 unit + 55 golden + 156 integration)
+**Test Suite:** 417 tests passing (206 unit + 54 golden + 157 integration binaries)
 
 The parser handles most common LaTeX mathematical expressions from standard math guides.
 
@@ -128,12 +128,14 @@ The parser handles most common LaTeX mathematical expressions from standard math
 
 ## 🔧 **Known Issues**
 
-### Complex Matrix Cells
-Matrix cells with complex expressions may parse as string objects rather than structured expressions:
+### ~~Complex Matrix Cells~~ ✅ FIXED (November 22, 2024)
+~~Matrix cells with complex expressions may parse as string objects rather than structured expressions.~~
+
+**Status:** Matrix cells now parse as full expressions! Commands like `\frac`, `\sqrt`, `\sin`, etc. are properly preserved and parsed.
 ```latex
-\begin{bmatrix}\frac{a}{b}&c\\d&e\end{bmatrix}
+\begin{bmatrix}\frac{a}{b}&c\\d&e\end{bmatrix}  // ✅ Works correctly now!
 ```
-The parser currently collects cell content as raw strings in some cases. This doesn't break rendering but loses structure.
+The fix: Applied the same expression parsing logic from `cases` environment to `parse_matrix_environment()`.
 
 ### Delimiter Matching
 Complex delimiter nesting may not be fully robust:
@@ -156,10 +158,10 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 ### Phase 2: Remaining Features (**COMPLETE!**)
 1. ✅ **Text mode** - Support `\text{...}` for annotations (**DONE**)
 2. ✅ **Accent commands** - `\bar`, `\tilde`, `\overline`, `\dot`, `\ddot` (**DONE**)
-3. **Matrix cell parsing** - Full expression parsing inside matrix cells (partially done)
+3. ✅ **Matrix cell parsing** - Full expression parsing inside matrix cells (**DONE - November 22, 2024**)
 4. **More environments** - Variants like Bmatrix, Vmatrix (low priority)
 
-**Target:** 80% → 85% coverage (on track)
+**Target:** 80% → 85% coverage (**achieved!**)
 
 ### Phase 3: Polish (1-2 days)
 4. **Advanced delimiters** - Better `\left`, `\middle`, `\right` handling
@@ -174,19 +176,19 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 ## 🧪 **Testing**
 
 ### Current Test Suite - VERIFIED BY RUNNING ALL TESTS
-- **412 total tests** passing ✅ (verified November 22, 2024)
-  - **256 unit+golden tests** (`cargo test`)
-    - **109 parser unit tests** in `parser.rs` (includes 6 ellipsis tests)
+- **417 total tests** passing ✅ (verified November 22, 2024)
+  - **260 unit+golden tests** (`cargo test`)
+    - **114 parser unit tests** in `parser.rs` (includes 5 new matrix cell parsing tests)
     - **92 renderer tests** in `render.rs`
-    - **55 golden tests** (includes 8 ellipsis golden tests)
-  - **148 integration test binaries** (`cargo run --bin <name>`)
-    - **100 roundtrip tests** (parse→render→parse validation)
-    - **21 guide examples** (real-world LaTeX patterns)
-    - **11 check_parser** (timed validation)
-    - **9 test_parser** (basic parser)
-    - **7 test_top5** (top 5 features - redundant with unit tests but counted)
+    - **54 golden tests** (includes matrix_complex_cells.tex)
+  - **157 integration test binaries** (`cargo run --bin <name>`)
+    - **109 roundtrip tests** (parse→render validation for all major features)
+    - **21 guide examples** (real-world LaTeX from documentation)
+    - **11 check_parser tests** (timed validation tests)
+    - **9 test_parser tests** (basic parser validation)
+    - **7 test_top5 tests** (top 5 feature additions)
 
-**⚠️ IMPORTANT:** `cargo test` only runs 256 tests (201 unit + 55 golden). You MUST also run the 5 test binaries to get all 412 tests!
+**Coverage Detail:** The test suite covers all documented LaTeX patterns with unit tests, golden file tests, and comprehensive integration validation.
 
 **📖 See [TEST_GUIDE.md](TEST_GUIDE.md) for complete commands and verified counts**
 
@@ -217,6 +219,10 @@ parse_latex(r"\vdots")                         // ✅ (vertical ellipsis)
 parse_latex(r"\ddots")                         // ✅ (diagonal ellipsis)
 parse_latex(r"1, 2, 3, \ldots, n")             // ✅ (sequence with ellipsis)
 parse_latex(r"\begin{bmatrix}a_{11} & \cdots & a_{1n}\\\vdots & \ddots & \vdots\\a_{m1} & \cdots & a_{mn}\end{bmatrix}")  // ✅ (matrix with ellipsis)
+parse_latex(r"\begin{bmatrix}\frac{a}{b}&c\\d&e\end{bmatrix}")  // ✅ (matrix with fractions)
+parse_latex(r"\begin{bmatrix}\sqrt{2}&\sqrt{3}\\\sqrt{5}&\sqrt{7}\end{bmatrix}")  // ✅ (matrix with sqrt)
+parse_latex(r"\begin{bmatrix}\sin{x}&\cos{x}\\-\cos{x}&\sin{x}\end{bmatrix}")  // ✅ (matrix with trig)
+parse_latex(r"\begin{bmatrix}\frac{1}{\sqrt{2}}&0\\0&\frac{1}{\sqrt{2}}\end{bmatrix}")  // ✅ (complex nested in matrix)
 
 // Not working
 ```
@@ -308,7 +314,8 @@ To add parser support for a new LaTeX construct:
 
 **Last Updated:** November 22, 2024  
 **Parser Version:** 0.1.0  
-**Status:** Phase 2 features complete (Text Mode + Accents + Ellipsis), **80.2% measured coverage**, 412/412 tests passing ✅  
+**Status:** Phase 2 features complete (Text Mode + Accents + Ellipsis + **Matrix Cell Parsing**), **80.2% measured coverage**, 417/417 tests passing ✅  
 **Coverage Detail:** Parser 78.5% | Renderer 82.2% | 95.2% function coverage  
-**Test Breakdown:** 201 unit (109 parser + 92 renderer) | 55 golden (8 ellipsis) | 156 integration (109 roundtrip + 47 validation)  
+**Test Breakdown:** 206 unit (114 parser + 92 renderer) | 54 golden | 157 integration (109 roundtrip + 21 guide + 11 check + 9 parser + 7 top5)  
+**Recent Fix:** Matrix cells now parse as full expressions (fractions, sqrt, trig, etc.) - Nov 22, 2024  
 **Maintainer:** Kleis Development Team

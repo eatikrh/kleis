@@ -2412,6 +2412,12 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     out.push(("Maxwell divergence law".into(), render_expression(&equals(div_e(o("\\mathbf{E}")), over(o("\\rho"), sub_e(o("\\epsilon"), c("0")))), &ctx, &RenderTarget::LaTeX)));
     out.push(("Wave equation".into(), render_expression(&equals(minus(laplacian(o("\\phi")), over(d2_part(o("\\phi"), o("t")), pow_e(o("c"), c("2")))), c("0")), &ctx, &RenderTarget::LaTeX)));
 
+    // === Matrix Complex Cells (NEW - showcasing parser fix) ===
+    out.push(("Matrix with fractions".into(), render_expression(&op("matrix2x2", vec![over(o("a"), o("b")), o("c"), o("d"), o("e")]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Matrix with sqrt".into(), render_expression(&op("matrix2x2", vec![sqrt_e(c("2")), sqrt_e(c("3")), sqrt_e(c("5")), sqrt_e(c("7"))]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Rotation matrix".into(), render_expression(&op("matrix2x2", vec![cos_e(o("\\theta")), minus(c("0"), func("sin", vec![o("\\theta")])), func("sin", vec![o("\\theta")]), cos_e(o("\\theta"))]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Normalized state (QM)".into(), render_expression(&op("matrix2x2", vec![over(c("1"), sqrt_e(c("2"))), c("0"), c("0"), over(c("1"), sqrt_e(c("2")))]), &ctx, &RenderTarget::LaTeX)));
+
     // === Batch 4: Polish & Edge Cases ===
     
     // Number sets (improved Unicode rendering)

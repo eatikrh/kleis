@@ -531,8 +531,9 @@ impl Parser {
                 });
             }
             
-            // Check for \end or \\ (new row)
+            // Check for \end or \\ (new row) - but DON'T consume other commands
             if self.peek() == Some('\\') {
+                let saved_pos = self.pos;
                 self.advance(); // consume first \
                 
                 // Check if it's \\ (double backslash = new row)
@@ -543,7 +544,7 @@ impl Parser {
                     continue;
                 }
                 
-                // Otherwise it's a command like \end
+                // Otherwise it's a command - check if it's \end
                 let mut cmd_name = String::new();
                 while let Some(ch) = self.peek() {
                     if ch.is_alphanumeric() {
@@ -559,8 +560,9 @@ impl Parser {
                     self.parse_text_group()?;
                     break;
                 } else {
-                    // Unknown command in matrix - just skip
-                    continue;
+                    // It's some other command (\frac, \sqrt, etc.)
+                    // Restore position and let it be part of cell content
+                    self.pos = saved_pos;
                 }
             }
 
@@ -614,11 +616,18 @@ impl Parser {
                 self.advance();
             }
 
-            // Always push something for the cell (even if empty)
+            // Parse the cell content as an expression (same as cases environment)
             if !cell_content.trim().is_empty() {
-                rows[current_row].push(o(cell_content.trim()));
+                // Try to parse the cell content as a proper expression
+                match parse_latex(cell_content.trim()) {
+                    Ok(expr) => rows[current_row].push(expr),
+                    Err(_) => {
+                        // Fallback: store as object if parsing fails
+                        rows[current_row].push(o(cell_content.trim()))
+                    }
+                }
             } else if self.pos > start_pos {
-                // We collected nothing but moved - empty cell
+                // Empty cell
                 rows[current_row].push(o(""));
             }
         }
@@ -1386,6 +1395,114 @@ mod tests {
         match expr {
             Expression::Operation { name, .. } => {
                 assert_eq!(name, "matrix2x2");
+            }
+            _ => panic!("Expected matrix operation"),
+        }
+    }
+
+    #[test]
+    fn parses_matrix_with_fractions() {
+        let result = parse_latex("\\begin{bmatrix}\\frac{a}{b}&c\\\\d&e\\end{bmatrix}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "matrix2x2");
+                // First cell should be a scalar_divide operation, not a string
+                match &args[0] {
+                    Expression::Operation { name, .. } => {
+                        assert_eq!(name, "scalar_divide");
+                    }
+                    _ => panic!("Expected first cell to be scalar_divide operation"),
+                }
+            }
+            _ => panic!("Expected matrix operation"),
+        }
+    }
+
+    #[test]
+    fn parses_matrix_with_sqrt() {
+        let result = parse_latex("\\begin{bmatrix}\\sqrt{2}&\\sqrt{3}\\\\\\sqrt{5}&\\sqrt{7}\\end{bmatrix}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "matrix2x2");
+                // First cell should be a sqrt operation
+                match &args[0] {
+                    Expression::Operation { name, .. } => {
+                        assert_eq!(name, "sqrt");
+                    }
+                    _ => panic!("Expected first cell to be sqrt operation"),
+                }
+            }
+            _ => panic!("Expected matrix operation"),
+        }
+    }
+
+    #[test]
+    fn parses_matrix_with_trig() {
+        let result = parse_latex("\\begin{bmatrix}\\sin{x}&\\cos{x}\\\\-\\cos{x}&\\sin{x}\\end{bmatrix}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "matrix2x2");
+                // First cell should be sin operation
+                match &args[0] {
+                    Expression::Operation { name, .. } => {
+                        assert_eq!(name, "sin");
+                    }
+                    _ => panic!("Expected first cell to be sin operation"),
+                }
+            }
+            _ => panic!("Expected matrix operation"),
+        }
+    }
+
+    #[test]
+    fn parses_matrix_with_complex_nested() {
+        let result = parse_latex("\\begin{bmatrix}\\frac{1}{\\sqrt{2}}&0\\\\0&\\frac{1}{\\sqrt{2}}\\end{bmatrix}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "matrix2x2");
+                // First cell should be scalar_divide with sqrt in denominator
+                match &args[0] {
+                    Expression::Operation { name, args: inner_args } => {
+                        assert_eq!(name, "scalar_divide");
+                        // Check denominator is sqrt
+                        match &inner_args[1] {
+                            Expression::Operation { name, .. } => {
+                                assert_eq!(name, "sqrt");
+                            }
+                            _ => panic!("Expected denominator to be sqrt"),
+                        }
+                    }
+                    _ => panic!("Expected first cell to be scalar_divide operation"),
+                }
+            }
+            _ => panic!("Expected matrix operation"),
+        }
+    }
+
+    #[test]
+    fn parses_matrix_with_ellipsis() {
+        let result = parse_latex("\\begin{bmatrix}a_{11} & \\cdots & a_{1n}\\\\\\vdots & \\ddots & \\vdots\\\\a_{m1} & \\cdots & a_{mn}\\end{bmatrix}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "matrix3x3");
+                // Check that ellipsis symbols are preserved
+                // args[1] should be \cdots
+                match &args[1] {
+                    Expression::Object(s) => {
+                        assert_eq!(s, "\\cdots");
+                    }
+                    _ => panic!("Expected second cell to contain \\cdots"),
+                }
             }
             _ => panic!("Expected matrix operation"),
         }
