@@ -1595,5 +1595,462 @@ mod tests {
             _ => panic!("Expected equals operation"),
         }
     }
+
+    // === COMPREHENSIVE COVERAGE TESTS ===
+    // Tests for all implemented features to achieve 100% case coverage
+
+    // Untested lowercase Greek letters
+    #[test]
+    fn parses_remaining_lowercase_greek() {
+        let letters = vec!["\\zeta", "\\eta", "\\iota", "\\xi", "\\omicron", "\\upsilon", "\\chi"];
+        for letter in letters {
+            let result = parse_latex(letter);
+            assert!(result.is_ok(), "Failed to parse {}", letter);
+        }
+    }
+
+    // Untested uppercase Greek letters  
+    #[test]
+    fn parses_remaining_uppercase_greek() {
+        let letters = vec!["\\Xi", "\\Pi", "\\Upsilon"];
+        for letter in letters {
+            let result = parse_latex(letter);
+            assert!(result.is_ok(), "Failed to parse {}", letter);
+        }
+    }
+
+    // Relations: approx, equiv, propto
+    #[test]
+    fn parses_approximate() {
+        let result = parse_latex("x \\approx y");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, .. } => {
+                assert_eq!(name, "approx");
+            }
+            _ => panic!("Expected approx operation"),
+        }
+    }
+
+    #[test]
+    fn parses_equivalent() {
+        let result = parse_latex("x \\equiv y");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, .. } => {
+                assert_eq!(name, "equiv");
+            }
+            _ => panic!("Expected equiv operation"),
+        }
+    }
+
+    #[test]
+    fn parses_proportional() {
+        let result = parse_latex("x \\propto y");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, .. } => {
+                assert_eq!(name, "proportional");
+            }
+            _ => panic!("Expected proportional operation"),
+        }
+    }
+
+    // Set operations: intersection (union already tested)
+    #[test]
+    fn parses_intersection() {
+        let result = parse_latex("A \\cap B");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, .. } => {
+                assert_eq!(name, "intersection");
+            }
+            _ => panic!("Expected intersection operation"),
+        }
+    }
+
+    // Logical implications
+    #[test]
+    fn parses_implies() {
+        let result = parse_latex("P \\Rightarrow Q");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_iff() {
+        let result = parse_latex("P \\Leftrightarrow Q");
+        assert!(result.is_ok());
+    }
+
+    // Logarithmic and exponential functions
+    #[test]
+    fn parses_natural_log() {
+        let result = parse_latex("\\ln{x}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, .. } => {
+                assert_eq!(name, "ln");
+            }
+            _ => panic!("Expected ln operation"),
+        }
+    }
+
+    #[test]
+    fn parses_log() {
+        let result = parse_latex("\\log{x}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, .. } => {
+                assert_eq!(name, "log");
+            }
+            _ => panic!("Expected log operation"),
+        }
+    }
+
+    #[test]
+    fn parses_exponential() {
+        let result = parse_latex("\\exp{x}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, .. } => {
+                assert_eq!(name, "exp");
+            }
+            _ => panic!("Expected exp operation"),
+        }
+    }
+
+    // Functions with parentheses (in addition to braces)
+    #[test]
+    fn parses_ln_with_parentheses() {
+        let result = parse_latex("\\ln(x)");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_log_with_parentheses() {
+        let result = parse_latex("\\log(x+1)");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_exp_with_parentheses() {
+        let result = parse_latex("\\exp(i\\pi)");
+        assert!(result.is_ok());
+    }
+
+    // Hat operator
+    #[test]
+    fn parses_hat_operator() {
+        let result = parse_latex("\\hat{H}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, .. } => {
+                assert_eq!(name, "hat");
+            }
+            _ => panic!("Expected hat operation"),
+        }
+    }
+
+    // Number sets (mathbb)
+    #[test]
+    fn parses_number_sets() {
+        let sets = vec![
+            "\\mathbb{R}",
+            "\\mathbb{C}",
+            "\\mathbb{N}",
+            "\\mathbb{Z}",
+            "\\mathbb{Q}",
+        ];
+        for set in sets {
+            let result = parse_latex(set);
+            assert!(result.is_ok(), "Failed to parse {}", set);
+        }
+    }
+
+    // Min/max functions
+    #[test]
+    fn parses_min_function() {
+        let result = parse_latex("\\min");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_max_function() {
+        let result = parse_latex("\\max");
+        assert!(result.is_ok());
+    }
+
+    // Text formatting
+    #[test]
+    fn parses_mathbf() {
+        let result = parse_latex("\\mathbf{x}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_boldsymbol() {
+        let result = parse_latex("\\boldsymbol{v}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_mathrm() {
+        let result = parse_latex("\\mathrm{d}x");
+        assert!(result.is_ok());
+    }
+
+    // Calculus symbols
+    #[test]
+    fn parses_integral_symbol() {
+        let result = parse_latex("\\int f(x)");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_sum_symbol() {
+        let result = parse_latex("\\sum_{i=1}^{n} i");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_product_symbol() {
+        let result = parse_latex("\\prod_{i=1}^{n} i");
+        assert!(result.is_ok());
+    }
+
+    // Integral with bounds
+    #[test]
+    fn parses_definite_integral() {
+        let result = parse_latex("\\int_{0}^{1} x");
+        assert!(result.is_ok());
+    }
+
+    // Arrow symbols
+    #[test]
+    fn parses_to_arrow() {
+        let result = parse_latex("x \\to y");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_rightarrow() {
+        let result = parse_latex("x \\rightarrow y");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_mapsto() {
+        let result = parse_latex("x \\mapsto y");
+        assert!(result.is_ok());
+    }
+
+    // Plain matrix environment
+    #[test]
+    fn parses_plain_matrix() {
+        let result = parse_latex("\\begin{matrix}a&b\\\\c&d\\end{matrix}");
+        assert!(result.is_ok());
+    }
+
+    // Nth root (sqrt with index)
+    #[test]
+    fn parses_nth_root() {
+        let result = parse_latex("\\sqrt[3]{x}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "nth_root");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected nth_root operation"),
+        }
+    }
+
+    #[test]
+    fn parses_cube_root() {
+        let result = parse_latex("\\sqrt[3]{8}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_fourth_root() {
+        let result = parse_latex("\\sqrt[4]{16}");
+        assert!(result.is_ok());
+    }
+
+    // Operators in expressions
+    #[test]
+    fn parses_cdot_operator() {
+        let result = parse_latex("a \\cdot b");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_times_operator() {
+        let result = parse_latex("a \\times b");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_div_operator() {
+        let result = parse_latex("a \\div b");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_pm_operator() {
+        let result = parse_latex("x = 1 \\pm 0.1");
+        assert!(result.is_ok());
+    }
+
+    // Differential operators
+    #[test]
+    fn parses_nabla() {
+        let result = parse_latex("\\nabla f");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_partial() {
+        let result = parse_latex("\\partial f");
+        assert!(result.is_ok());
+    }
+
+    // Delimiters
+    #[test]
+    fn parses_left_right_parentheses() {
+        let result = parse_latex("\\left(x\\right)");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_left_right_braces() {
+        let result = parse_latex("\\left\\{x\\right\\}");
+        assert!(result.is_ok());
+    }
+
+    // Spacing commands (should be handled gracefully)
+    #[test]
+    fn parses_thin_space() {
+        let result = parse_latex("a \\, b");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_medium_space() {
+        let result = parse_latex("a \\; b");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_quad_space() {
+        let result = parse_latex("a \\quad b");
+        assert!(result.is_ok());
+    }
+
+    // Complex nested expressions (edge cases)
+    #[test]
+    fn parses_deeply_nested_fractions() {
+        let result = parse_latex("\\frac{\\frac{a}{b}}{\\frac{c}{d}}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_nested_roots() {
+        let result = parse_latex("\\sqrt{\\sqrt{x}}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_mixed_subscript_superscript() {
+        let result = parse_latex("x_{i}^{2}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_complex_tensor_indices() {
+        let result = parse_latex("T^{\\mu\\nu}_{\\rho\\sigma}");
+        assert!(result.is_ok());
+    }
+
+    // Matrix variants
+    #[test]
+    fn parses_pmatrix_3x3() {
+        let result = parse_latex("\\begin{pmatrix}1&2&3\\\\4&5&6\\\\7&8&9\\end{pmatrix}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_vmatrix_2x2() {
+        let result = parse_latex("\\begin{vmatrix}a&b\\\\c&d\\end{vmatrix}");
+        assert!(result.is_ok());
+    }
+
+    // Forall and exists
+    #[test]
+    fn parses_forall() {
+        let result = parse_latex("\\forall x");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_exists() {
+        let result = parse_latex("\\exists x");
+        assert!(result.is_ok());
+    }
+
+    // Ket vector (we have bra tested, ensure ket is too)
+    #[test]
+    fn parses_ket_vector() {
+        let result = parse_latex("|\\psi\\rangle");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, .. } => {
+                assert_eq!(name, "ket");
+            }
+            _ => panic!("Expected ket operation"),
+        }
+    }
+
+    // Inner product notation
+    #[test]
+    fn parses_inner_product() {
+        let result = parse_latex("\\langle u, v \\rangle");
+        assert!(result.is_ok());
+    }
+
+    // Real-world complex expressions
+    #[test]
+    fn parses_einstein_notation() {
+        let result = parse_latex("G_{\\mu\\nu} = \\kappa T_{\\mu\\nu}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_schrodinger_equation() {
+        let result = parse_latex("i\\hbar\\frac{\\partial}{\\partial t}|\\psi\\rangle = \\hat{H}|\\psi\\rangle");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_maxwell_equation() {
+        let result = parse_latex("\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_euler_formula() {
+        let result = parse_latex("e^{i\\pi} + 1 = 0");
+        assert!(result.is_ok());
+    }
 }
 
