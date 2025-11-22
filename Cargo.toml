@@ -12,6 +12,14 @@ tower-http = { version = "0.5", features = ["fs", "cors"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
+# Math layout engine
+typst = "0.12"
+typst-svg = "0.12"
+typst-assets = { version = "0.12", features = ["fonts"] }
+comemo = "0.4"
+regex = "1.10"
+time = { version = "0.3", features = ["macros"] }
+
 [[bin]]
 name = "gallery"
 path = "src/bin/gallery.rs"
@@ -39,3 +47,7 @@ path = "src/bin/test_guide_examples.rs"
 [[bin]]
 name = "test_top5"
 path = "src/bin/test_top5.rs"
+
+[[example]]
+name = "typst_demo"
+path = "examples/typst_demo.rs"

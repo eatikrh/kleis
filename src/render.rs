@@ -7,6 +7,7 @@ pub enum RenderTarget {
     Unicode,
     LaTeX,
     HTML,
+    Typst,  // Typst markup for math layout engine
 }
 
 
@@ -17,6 +18,10 @@ pub struct GlyphContext {
     unicode_templates: HashMap<String, String>,
     latex_glyphs: HashMap<String, String>,
     latex_templates: HashMap<String, String>,
+    html_glyphs: HashMap<String, String>,
+    html_templates: HashMap<String, String>,
+    typst_glyphs: HashMap<String, String>,
+    typst_templates: HashMap<String, String>,
 }
 
 // === Expression Builders (ergonomic helpers) ===
@@ -309,6 +314,7 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 RenderTarget::Unicode => name.clone(),
                 RenderTarget::LaTeX => escape_latex_constant(name),
                 RenderTarget::HTML => format!(r#"<span class="math-const">{}</span>"#, escape_html(name)),
+                RenderTarget::Typst => name.clone(),  // Constants are the same in Typst
             }
         }
         Expression::Object(name) => {
@@ -316,6 +322,7 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 RenderTarget::Unicode => latex_to_unicode(name),
                 RenderTarget::LaTeX => escape_latex_text(name),
                 RenderTarget::HTML => format!(r#"<span class="math-object">{}</span>"#, escape_html(&latex_to_unicode(name))),
+                RenderTarget::Typst => latex_to_typst_symbol(name),  // Convert LaTeX symbols to Typst
             }
         }
         Expression::Placeholder { id, hint } => {
@@ -323,9 +330,10 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 RenderTarget::Unicode => "□".to_string(),
                 RenderTarget::LaTeX => r"\square".to_string(),
                 RenderTarget::HTML => format!(
-                    r#"<span class="placeholder" data-id="{}" data-hint="{}" title="{}" contenteditable="true" onclick="editPlaceholder({})">□</span>"#,
+                    r#"<span class="placeholder" data-id="{}" data-hint="{}" title="Click to fill: {}" onclick="selectPlaceholder({})">□</span>"#,
                     id, escape_html(hint), escape_html(hint), id
                 ),
+                RenderTarget::Typst => "#sym.square".to_string(), // Typst's square symbol (# for code in math)
             }
         }
         Expression::Operation { name, args } => {
@@ -347,11 +355,20 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                     (template, glyph)
                 },
                 RenderTarget::HTML => {
-                    // For HTML, use LaTeX and let MathJax handle rendering
-                    let template = ctx.latex_templates.get(name)
+                    // Use proper HTML templates for WYSIWYG rendering
+                    let template = ctx.html_templates.get(name)
                         .cloned()
                         .unwrap_or_else(|| format!("{}({})", name, "{args}"));
-                    let glyph = ctx.latex_glyphs.get(name)
+                    let glyph = ctx.html_glyphs.get(name)
+                        .unwrap_or(name);
+                    (template, glyph)
+                },
+                RenderTarget::Typst => {
+                    // Use Typst templates for math layout engine
+                    let template = ctx.typst_templates.get(name)
+                        .cloned()
+                        .unwrap_or_else(|| format!("{}({})", name, "{args}"));
+                    let glyph = ctx.typst_glyphs.get(name)
                         .unwrap_or(name);
                     (template, glyph)
                 },
@@ -559,6 +576,36 @@ fn latex_to_unicode(input: &str) -> String {
         .replace("\\iddots", "⋰")
         // Note: \mathbf and \boldsymbol are left as-is for now
         // Keep backslashes for unknown commands
+}
+
+fn latex_to_typst_symbol(input: &str) -> String {
+    // Convert LaTeX commands to Typst/Unicode symbols
+    // Typst uses Unicode directly, so this is similar to latex_to_unicode
+    input
+        // lowercase Greek
+        .replace("\\alpha", "α").replace("\\beta", "β").replace("\\gamma", "γ").replace("\\delta", "δ")
+        .replace("\\epsilon", "ε").replace("\\zeta", "ζ").replace("\\eta", "η").replace("\\theta", "θ")
+        .replace("\\iota", "ι").replace("\\kappa", "κ").replace("\\lambda", "λ").replace("\\mu", "μ")
+        .replace("\\nu", "ν").replace("\\xi", "ξ").replace("\\omicron", "ο").replace("\\pi", "π")
+        .replace("\\rho", "ρ").replace("\\sigma", "σ").replace("\\tau", "τ").replace("\\upsilon", "υ")
+        .replace("\\phi", "φ").replace("\\chi", "χ").replace("\\psi", "ψ").replace("\\omega", "ω")
+        // uppercase Greek
+        .replace("\\Gamma", "Γ").replace("\\Delta", "Δ").replace("\\Theta", "Θ").replace("\\Lambda", "Λ")
+        .replace("\\Xi", "Ξ").replace("\\Pi", "Π").replace("\\Sigma", "Σ").replace("\\Upsilon", "Υ")
+        .replace("\\Phi", "Φ").replace("\\Psi", "Ψ").replace("\\Omega", "Ω")
+        // Hebrew letters
+        .replace("\\aleph", "ℵ").replace("\\beth", "ℶ").replace("\\gimel", "ℷ").replace("\\daleth", "ℸ")
+        // Greek variants
+        .replace("\\varepsilon", "ε").replace("\\vartheta", "ϑ").replace("\\varkappa", "ϰ")
+        .replace("\\varpi", "ϖ").replace("\\varrho", "ϱ").replace("\\varsigma", "ς").replace("\\varphi", "ϕ")
+        // Number sets
+        .replace("\\mathbb{R}", "ℝ").replace("\\mathbb{C}", "ℂ").replace("\\mathbb{N}", "ℕ")
+        .replace("\\mathbb{Z}", "ℤ").replace("\\mathbb{Q}", "ℚ").replace("\\mathbb{H}", "ℍ")
+        // Other symbols
+        .replace("\\hbar", "ℏ").replace("\\infty", "∞")
+        .replace("\\emptyset", "∅").replace("\\varnothing", "∅")
+        .replace("\\partial", "∂").replace("\\nabla", "∇")
+        // If not converted, return as-is (Typst might understand it)
 }
 
 fn escape_latex_constant(constant: &str) -> String { escape_latex_text(constant) }
@@ -944,7 +991,251 @@ pub fn build_default_context() -> GlyphContext {
     latex_templates.insert("variance".to_string(), "\\mathrm{Var}({arg})".to_string());
     latex_templates.insert("covariance".to_string(), "\\mathrm{Cov}({left}, {right})".to_string());
 
-    GlyphContext { unicode_glyphs, unicode_templates, latex_glyphs, latex_templates }
+    // === HTML Templates (WYSIWYG with proper HTML elements) ===
+    let html_glyphs = HashMap::new();
+    let mut html_templates = HashMap::new();
+    
+    // Basic arithmetic with proper HTML structure
+    html_templates.insert("scalar_divide".to_string(), 
+        r#"<div class="math-frac"><div class="math-frac-num">{left}</div><div class="math-frac-line"></div><div class="math-frac-den">{right}</div></div>"#.to_string());
+    html_templates.insert("plus".to_string(), r#"{left} <span class="math-op">+</span> {right}"#.to_string());
+    html_templates.insert("minus".to_string(), r#"{left} <span class="math-op">−</span> {right}"#.to_string());
+    html_templates.insert("scalar_multiply".to_string(), r#"{left} <span class="math-op">·</span> {right}"#.to_string());
+    html_templates.insert("equals".to_string(), r#"{left} <span class="math-op">=</span> {right}"#.to_string());
+    
+    // Superscripts and subscripts
+    html_templates.insert("sup".to_string(), r#"{base}<sup class="math-sup">{right}</sup>"#.to_string());
+    html_templates.insert("sub".to_string(), r#"{base}<sub class="math-sub">{right}</sub>"#.to_string());
+    html_templates.insert("index_mixed".to_string(), r#"{base}<sup class="math-sup">{idx1}</sup><sub class="math-sub">{idx2}</sub>"#.to_string());
+    html_templates.insert("index_pair".to_string(), r#"{base}<sub class="math-sub">{idx1}{idx2}</sub>"#.to_string());
+    html_templates.insert("power".to_string(), r#"{base}<sup class="math-sup">{exponent}</sup>"#.to_string());
+    
+    // Square roots
+    html_templates.insert("sqrt".to_string(), r#"<span class="math-sqrt">√<span class="math-sqrt-content">{arg}</span></span>"#.to_string());
+    
+    // Integrals, sums, products
+    html_templates.insert("int_bounds".to_string(), 
+        r#"<span class="math-large-op">∫<sub class="math-sub">{from}</sub><sup class="math-sup">{to}</sup></span> {integrand} <span class="math-op">d</span>{var}"#.to_string());
+    html_templates.insert("sum_bounds".to_string(), 
+        r#"<span class="math-large-op">Σ<sub class="math-sub">{from}</sub><sup class="math-sup">{to}</sup></span> {body}"#.to_string());
+    html_templates.insert("sum_index".to_string(), 
+        r#"<span class="math-large-op">Σ<sub class="math-sub">{from}</sub></span> {body}"#.to_string());
+    html_templates.insert("prod_bounds".to_string(), 
+        r#"<span class="math-large-op">Π<sub class="math-sub">{from}</sub><sup class="math-sup">{to}</sup></span> {body}"#.to_string());
+    html_templates.insert("prod_index".to_string(), 
+        r#"<span class="math-large-op">Π<sub class="math-sub">{from}</sub></span> {body}"#.to_string());
+    
+    // Derivatives
+    html_templates.insert("d_dt".to_string(), 
+        r#"<div class="math-frac"><div class="math-frac-num">d{num}</div><div class="math-frac-line"></div><div class="math-frac-den">d{den}</div></div>"#.to_string());
+    html_templates.insert("d_part".to_string(), 
+        r#"<div class="math-frac"><div class="math-frac-num">∂{num}</div><div class="math-frac-line"></div><div class="math-frac-den">∂{den}</div></div>"#.to_string());
+    html_templates.insert("d2_part".to_string(), 
+        r#"<div class="math-frac"><div class="math-frac-num">∂<sup>2</sup>{num}</div><div class="math-frac-line"></div><div class="math-frac-den">∂{den}<sup>2</sup></div></div>"#.to_string());
+    
+    // Quantum mechanics (bra-ket notation)
+    html_templates.insert("ket".to_string(), r#"|{arg}⟩"#.to_string());
+    html_templates.insert("bra".to_string(), r#"⟨{arg}|"#.to_string());
+    html_templates.insert("inner".to_string(), r#"⟨{left}|{right}⟩"#.to_string());
+    html_templates.insert("outer_product".to_string(), r#"|{left}⟩⟨{right}|"#.to_string());
+    
+    // Brackets and norms
+    html_templates.insert("norm".to_string(), r#"‖{arg}‖"#.to_string());
+    html_templates.insert("abs".to_string(), r#"|{arg}|"#.to_string());
+    html_templates.insert("commutator".to_string(), r#"[{left}, {right}]"#.to_string());
+    html_templates.insert("anticommutator".to_string(), r#"{{left}, {right}}"#.to_string());
+    
+    // Dot and cross products
+    html_templates.insert("dot".to_string(), r#"{left} <span class="math-op">·</span> {right}"#.to_string());
+    html_templates.insert("cross".to_string(), r#"{left} <span class="math-op">×</span> {right}"#.to_string());
+    
+    // Limits
+    html_templates.insert("limit".to_string(), 
+        r#"<span class="math-large-op">lim<sub class="math-sub">{target}→{to}</sub></span> {body}"#.to_string());
+    html_templates.insert("limsup".to_string(), 
+        r#"<span class="math-large-op">lim sup<sub class="math-sub">{target}→{to}</sub></span> {body}"#.to_string());
+    html_templates.insert("liminf".to_string(), 
+        r#"<span class="math-large-op">lim inf<sub class="math-sub">{target}→{to}</sub></span> {body}"#.to_string());
+    
+    // Set theory and logic
+    html_templates.insert("in".to_string(), r#"{left} <span class="math-op">∈</span> {right}"#.to_string());
+    html_templates.insert("subset".to_string(), r#"{left} <span class="math-op">⊂</span> {right}"#.to_string());
+    html_templates.insert("subseteq".to_string(), r#"{left} <span class="math-op">⊆</span> {right}"#.to_string());
+    html_templates.insert("union".to_string(), r#"{left} <span class="math-op">∪</span> {right}"#.to_string());
+    html_templates.insert("intersection".to_string(), r#"{left} <span class="math-op">∩</span> {right}"#.to_string());
+    html_templates.insert("forall".to_string(), r#"∀{left}: {right}"#.to_string());
+    html_templates.insert("exists".to_string(), r#"∃{left}: {right}"#.to_string());
+    html_templates.insert("implies".to_string(), r#"{left} <span class="math-op">⇒</span> {right}"#.to_string());
+    html_templates.insert("iff".to_string(), r#"{left} <span class="math-op">⇔</span> {right}"#.to_string());
+    
+    // Comparisons
+    html_templates.insert("lt".to_string(), r#"{left} <span class="math-op">&lt;</span> {right}"#.to_string());
+    html_templates.insert("gt".to_string(), r#"{left} <span class="math-op">&gt;</span> {right}"#.to_string());
+    html_templates.insert("leq".to_string(), r#"{left} <span class="math-op">≤</span> {right}"#.to_string());
+    html_templates.insert("geq".to_string(), r#"{left} <span class="math-op">≥</span> {right}"#.to_string());
+    html_templates.insert("neq".to_string(), r#"{left} <span class="math-op">≠</span> {right}"#.to_string());
+    html_templates.insert("approx".to_string(), r#"{left} <span class="math-op">≈</span> {right}"#.to_string());
+    html_templates.insert("propto".to_string(), r#"{left} <span class="math-op">∝</span> {right}"#.to_string());
+    
+    // Trig functions
+    html_templates.insert("sin".to_string(), r#"<span class="math-func">sin</span>({arg})"#.to_string());
+    html_templates.insert("cos".to_string(), r#"<span class="math-func">cos</span>({arg})"#.to_string());
+    html_templates.insert("tan".to_string(), r#"<span class="math-func">tan</span>({arg})"#.to_string());
+    
+    // Grad and nabla
+    html_templates.insert("grad".to_string(), r#"∇{arg}"#.to_string());
+    html_templates.insert("nabla_sub".to_string(), r#"∇<sub class="math-sub">{sub}</sub> {arg}"#.to_string());
+    
+    // Christoffel and Riemann tensors
+    html_templates.insert("gamma".to_string(), r#"Γ<sup class="math-sup">{idx1}</sup><sub class="math-sub">{idx2} {idx3}</sub>"#.to_string());
+    html_templates.insert("riemann".to_string(), r#"R<sup class="math-sup">{idx1}</sup><sub class="math-sub">{idx2} {idx3} {idx4}</sub>"#.to_string());
+    
+    // Transpose and determinant  
+    html_templates.insert("transpose".to_string(), r#"{arg}<sup class="math-sup">T</sup>"#.to_string());
+    html_templates.insert("det".to_string(), r#"det({arg})"#.to_string());
+    
+    // Vectors
+    html_templates.insert("vector_arrow".to_string(), r#"<span class="math-vector">{arg}⃗</span>"#.to_string());
+    html_templates.insert("vector_bold".to_string(), r#"<span class="math-vector-bold">{arg}</span>"#.to_string());
+    
+    // === Additional missing HTML templates (52 operations) ===
+    
+    // Accents and decorations
+    html_templates.insert("hat".to_string(), r#"{arg}̂"#.to_string());
+    html_templates.insert("bar".to_string(), r#"{arg}̄"#.to_string());
+    html_templates.insert("tilde".to_string(), r#"{arg}̃"#.to_string());
+    html_templates.insert("overline".to_string(), r#"<span style="text-decoration: overline;">{arg}</span>"#.to_string());
+    html_templates.insert("dot_accent".to_string(), r#"{arg}̇"#.to_string());
+    html_templates.insert("ddot_accent".to_string(), r#"{arg}̈"#.to_string());
+    
+    // More trig functions
+    html_templates.insert("arcsin".to_string(), r#"<span class="math-func">arcsin</span>({args})"#.to_string());
+    html_templates.insert("arccos".to_string(), r#"<span class="math-func">arccos</span>({args})"#.to_string());
+    html_templates.insert("arctan".to_string(), r#"<span class="math-func">arctan</span>({args})"#.to_string());
+    html_templates.insert("sec".to_string(), r#"<span class="math-func">sec</span>({args})"#.to_string());
+    html_templates.insert("csc".to_string(), r#"<span class="math-func">csc</span>({args})"#.to_string());
+    html_templates.insert("cot".to_string(), r#"<span class="math-func">cot</span>({args})"#.to_string());
+    html_templates.insert("sinh".to_string(), r#"<span class="math-func">sinh</span>({args})"#.to_string());
+    html_templates.insert("cosh".to_string(), r#"<span class="math-func">cosh</span>({args})"#.to_string());
+    
+    // Logarithms and exponentials
+    html_templates.insert("exp".to_string(), r#"<span class="math-func">exp</span>({args})"#.to_string());
+    html_templates.insert("log".to_string(), r#"<span class="math-func">log</span>({args})"#.to_string());
+    html_templates.insert("ln".to_string(), r#"<span class="math-func">ln</span>({args})"#.to_string());
+    
+    // Complex numbers
+    html_templates.insert("conjugate".to_string(), r#"{arg}*"#.to_string());
+    html_templates.insert("re".to_string(), r#"<span class="math-func">Re</span>({arg})"#.to_string());
+    html_templates.insert("im".to_string(), r#"<span class="math-func">Im</span>({arg})"#.to_string());
+    html_templates.insert("modulus".to_string(), r#"|{arg}|"#.to_string());
+    
+    // Matrices - 2x2 and 3x3
+    html_templates.insert("matrix2x2".to_string(), 
+        r#"<table class="math-matrix"><tr><td>{a11}</td><td>{a12}</td></tr><tr><td>{a21}</td><td>{a22}</td></tr></table>"#.to_string());
+    html_templates.insert("matrix3x3".to_string(), 
+        r#"<table class="math-matrix"><tr><td>{a11}</td><td>{a12}</td><td>{a13}</td></tr><tr><td>{a21}</td><td>{a22}</td><td>{a23}</td></tr><tr><td>{a31}</td><td>{a32}</td><td>{a33}</td></tr></table>"#.to_string());
+    html_templates.insert("pmatrix2x2".to_string(), 
+        r#"<span class="math-pmatrix">(</span><table class="math-matrix"><tr><td>{a11}</td><td>{a12}</td></tr><tr><td>{a21}</td><td>{a22}</td></tr></table><span class="math-pmatrix">)</span>"#.to_string());
+    html_templates.insert("pmatrix3x3".to_string(), 
+        r#"<span class="math-pmatrix">(</span><table class="math-matrix"><tr><td>{a11}</td><td>{a12}</td><td>{a13}</td></tr><tr><td>{a21}</td><td>{a22}</td><td>{a23}</td></tr><tr><td>{a31}</td><td>{a32}</td><td>{a33}</td></tr></table><span class="math-pmatrix">)</span>"#.to_string());
+    html_templates.insert("vmatrix2x2".to_string(), 
+        r#"<span class="math-vmatrix">|</span><table class="math-matrix"><tr><td>{a11}</td><td>{a12}</td></tr><tr><td>{a21}</td><td>{a22}</td></tr></table><span class="math-vmatrix">|</span>"#.to_string());
+    html_templates.insert("vmatrix3x3".to_string(), 
+        r#"<span class="math-vmatrix">|</span><table class="math-matrix"><tr><td>{a11}</td><td>{a12}</td><td>{a13}</td></tr><tr><td>{a21}</td><td>{a22}</td><td>{a23}</td></tr><tr><td>{a31}</td><td>{a32}</td><td>{a33}</td></tr></table><span class="math-vmatrix">|</span>"#.to_string());
+    
+    // Cases and piecewise
+    html_templates.insert("cases2".to_string(), 
+        r#"<span class="math-cases">{<br>&nbsp;&nbsp;{cond1}, &nbsp;{body1}<br>&nbsp;&nbsp;{cond2}, &nbsp;{body2}<br>}</span>"#.to_string());
+    html_templates.insert("cases3".to_string(), 
+        r#"<span class="math-cases">{<br>&nbsp;&nbsp;{cond1}, &nbsp;{body1}<br>&nbsp;&nbsp;{cond2}, &nbsp;{body2}<br>&nbsp;&nbsp;{cond3}, &nbsp;{body3}<br>}</span>"#.to_string());
+    html_templates.insert("piecewise".to_string(), 
+        r#"<span class="math-cases">{<br>&nbsp;&nbsp;{args}<br>}</span>"#.to_string());
+    
+    // Floor, ceiling, factorial
+    html_templates.insert("floor".to_string(), r#"⌊{arg}⌋"#.to_string());
+    html_templates.insert("ceiling".to_string(), r#"⌈{arg}⌉"#.to_string());
+    html_templates.insert("factorial".to_string(), r#"{arg}!"#.to_string());
+    
+    // Nth root
+    html_templates.insert("nth_root".to_string(), 
+        r#"<span class="math-nthroot"><sup class="math-root-index">{right}</sup>√<span class="math-sqrt-content">{left}</span></span>"#.to_string());
+    
+    // Multiple integrals
+    html_templates.insert("double_integral".to_string(), 
+        r#"<span class="math-large-op">∬<sub class="math-sub">{right}</sub></span> {left} <span class="math-op">d</span>{idx2} <span class="math-op">d</span>{idx3}"#.to_string());
+    html_templates.insert("triple_integral".to_string(), 
+        r#"<span class="math-large-op">∭<sub class="math-sub">{right}</sub></span> {left} <span class="math-op">d</span>{idx2} <span class="math-op">d</span>{idx3} <span class="math-op">d</span>{idx4}"#.to_string());
+    html_templates.insert("surface_integral_over".to_string(), 
+        r#"<span class="math-large-op">∮<sub class="math-sub">{surface}</sub></span> {field} <span class="math-op">dS</span>"#.to_string());
+    
+    // Linear algebra operations
+    html_templates.insert("trace".to_string(), r#"<span class="math-func">Tr</span>({arg})"#.to_string());
+    html_templates.insert("inverse".to_string(), r#"{arg}<sup class="math-sup">−1</sup>"#.to_string());
+    
+    // Index operations
+    html_templates.insert("index".to_string(), r#"{base}<sup class="math-sup">{sup}</sup><sub class="math-sub">{sub}</sub>"#.to_string());
+    html_templates.insert("partial_apply".to_string(), r#"∂<sub class="math-sub">{sub}</sub> {arg}"#.to_string());
+    
+    // Box and other operators
+    html_templates.insert("box".to_string(), r#"□{arg}"#.to_string());
+    html_templates.insert("min_over".to_string(), 
+        r#"<span class="math-large-op">min<sub class="math-sub">{sub}</sub></span> { {body} }"#.to_string());
+    
+    // Text in math
+    html_templates.insert("text".to_string(), r#"<span class="math-text">{arg}</span>"#.to_string());
+    
+    // Special functions (single letter - physics notation)
+    html_templates.insert("H".to_string(), r#"<span class="math-func">H</span>({args})"#.to_string());
+    html_templates.insert("S".to_string(), r#"<span class="math-func">S</span>({args})"#.to_string());
+    html_templates.insert("V".to_string(), r#"<span class="math-func">V</span>({args})"#.to_string());
+    html_templates.insert("F".to_string(), r#"<span class="math-func">F</span>({args})"#.to_string());
+    html_templates.insert("C".to_string(), r#"<span class="math-func">C</span>({args})"#.to_string());
+    html_templates.insert("D".to_string(), r#"<span class="math-func">D</span>({args})"#.to_string());
+    
+    // Greek letter functions
+    html_templates.insert("Gamma".to_string(), r#"<span class="math-func">Γ</span>({args})"#.to_string());
+    html_templates.insert("zeta".to_string(), r#"<span class="math-func">ζ</span>({args})"#.to_string());
+    
+    // Final 7 missing templates
+    html_templates.insert("binomial".to_string(), 
+        r#"<span class="math-binomial">(<table class="math-binomial-content"><tr><td>{left}</td></tr><tr><td>{right}</td></tr></table>)</span>"#.to_string());
+    html_templates.insert("div".to_string(), r#"∇ <span class="math-op">·</span> {arg}"#.to_string());
+    html_templates.insert("curl".to_string(), r#"∇ <span class="math-op">×</span> {arg}"#.to_string());
+    html_templates.insert("laplacian".to_string(), r#"∇<sup class="math-sup">2</sup> {arg}"#.to_string());
+    html_templates.insert("congruent_mod".to_string(), r#"{left} <span class="math-op">≡</span> {right} <span class="math-pmod">(mod {idx2})</span>"#.to_string());
+    html_templates.insert("variance".to_string(), r#"<span class="math-func">Var</span>({arg})"#.to_string());
+    html_templates.insert("covariance".to_string(), r#"<span class="math-func">Cov</span>({left}, {right})"#.to_string());
+    
+    // === TYPST Templates (for math layout engine) ===
+    let typst_glyphs = HashMap::new();
+    let mut typst_templates = HashMap::new();
+    
+    // Basic operations - simple templates for now
+    typst_templates.insert("scalar_divide".to_string(), "({left})/({right})".to_string());
+    typst_templates.insert("scalar_multiply".to_string(), "{left} dot {right}".to_string());
+    typst_templates.insert("plus".to_string(), "{left} + {right}".to_string());
+    typst_templates.insert("minus".to_string(), "{left} - {right}".to_string());
+    
+    // Superscript/subscript
+    typst_templates.insert("sup".to_string(), "{base}^{exponent}".to_string());
+    typst_templates.insert("sub".to_string(), "{base}_{subscript}".to_string());
+    
+    // Square root
+    typst_templates.insert("sqrt".to_string(), "sqrt({arg})".to_string());
+    
+    // Calculus
+    typst_templates.insert("int_bounds".to_string(), "integral_({lower})^({upper}) {integrand} dif {variable}".to_string());
+    typst_templates.insert("sum_bounds".to_string(), "sum_({from})^({to}) {body}".to_string());
+    typst_templates.insert("prod_bounds".to_string(), "product_({from})^({to}) {body}".to_string());
+    
+    // TODO: Add more Typst templates as needed
+    
+    GlyphContext { 
+        unicode_glyphs, unicode_templates, 
+        latex_glyphs, latex_templates,
+        html_glyphs, html_templates,
+        typst_glyphs, typst_templates,
+    }
 }
 
 pub fn demo_render() {
