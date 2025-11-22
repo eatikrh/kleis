@@ -1403,10 +1403,16 @@ Users don't just edit equations - they **define new mathematical languages** and
 
 ## References
 
-- **adr-006-template-grammar-duality.md** - Templates ARE grammar structure
-- **adr-005-visual-authoring.md** - Visual authoring for symbolic systems
-- **adr-004-input-visualization.md** - Visual input methods
-- **kleis_vision_executable_math.md** - Living, extensible mathematical structure
+### Architecture Documents
+- **[adr-006-template-grammar-duality.md](adr-006-template-grammar-duality.md)** - Templates ARE grammar structure
+- **[adr-005-visual-authoring.md](adr-005-visual-authoring.md)** - Visual authoring for symbolic systems
+- **[adr-004-input-visualization.md](adr-004-input-visualization.md)** - Visual input methods
+- **[kleis_vision_executable_math.md](kleis_vision_executable_math.md)** - Living, extensible mathematical structure
+
+### Implementation Guides
+- **[template-implementation-strategy.md](template-implementation-strategy.md)** - Detailed implementation strategy for template system, placeholder rendering, palette generation, and AST traversal strategies
+
+### Code References
 - **src/ast.rs** - Unified Expression type (NEW)
 - **src/render.rs** - Template system (GlyphContext)
 - **static/index.html** - Current web UI (foundation for structural version)
