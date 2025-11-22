@@ -212,13 +212,13 @@
 **Workaround:** None  
 **Estimated effort:** 2 hours
 
-### 8. Binomials
+### ~~8. Binomials~~ ✅ IMPLEMENTED (November 22, 2024)
+~~Binomial coefficients are now fully supported!~~
 ```latex
 \binom{n}{k}
 ```
-**Impact:** Low - can write as fraction  
-**Workaround:** `\frac{n}{k}` or write explicitly  
-**Estimated effort:** 15 minutes
+**Status:** ✅ COMPLETE - Parser and renderer both support binomial coefficients  
+**See:** `src/parser.rs` binomial parsing, tests at lines 2413-2434
 
 ### 9. Multiple Alignment
 ```latex
@@ -352,7 +352,7 @@ f(x, y, z)                                   ✅
 \bar{x}, \tilde{y}, \dot{v}                  ✅ All accents supported
 
 % Binomials
-\binom{n}{k} = \frac{n!}{k!(n-k)!}           ❌ \binom not supported (but can write as fraction)
+\binom{n}{k} = \frac{n!}{k!(n-k)!}           ✅ \binom fully supported
 
 % Multiline alignment
 \begin{align}
@@ -389,9 +389,10 @@ The 10% gap is:
 2. Test and document advanced trig functions that might already work
 
 **Priority 2 (Medium Impact):**
-3. Add accent commands (`\bar`, `\tilde`, `\dot`, `\ddot`)
+3. ✅ Add accent commands (`\bar`, `\tilde`, `\dot`, `\ddot`) - **DONE**
 4. Add limit notation support
-5. Add binomial coefficient support
+5. ✅ Add binomial coefficient support - **DONE**
+6. ✅ Add floor/ceiling functions - **DONE**
 
 **Priority 3 (Nice to Have):**
 6. Matrix variants (Bmatrix, Vmatrix)
@@ -427,8 +428,9 @@ Based on typical usage in mathematical/physics papers:
 | Piecewise (`\cases`) | Medium | ✅ |
 | Text mode (`\text`) | Medium | ❌ |
 | Limits (`\lim`) | Medium | ⚠️ Partial |
-| Accents (`\bar`, etc.) | Medium | ⚠️ Only `\hat` |
-| Binomials (`\binom`) | Low | ❌ |
+| Accents (`\bar`, etc.) | Medium | ✅ Full |
+| Binomials (`\binom`) | Low | ✅ Full |
+| Floor/Ceiling | Low | ✅ Full |
 | Multiline (`align`) | Low | ❌ |
 
 **Coverage of "Very High" + "High" frequency features: 95%+**  
