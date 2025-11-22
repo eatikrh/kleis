@@ -146,14 +146,14 @@
 
 ## ❌ NOT SUPPORTED
 
-### 1. Text Mode (HIGH PRIORITY)
+### 1. ~~Text Mode~~ ✅ IMPLEMENTED (November 2024)
+~~Text mode is now fully supported!~~
 ```latex
 \text{if } x > 0
 \text{for all } x \in \mathbb{R}
 ```
-**Impact:** Needed for annotations in piecewise functions, labels  
-**Workaround:** None  
-**Estimated effort:** 1 hour
+**Status:** ✅ COMPLETE - Parser, renderer, and tests all implemented  
+**See:** `src/parser.rs` lines 1123-1126, tests at lines 2294-2330
 
 ### 2. More Matrix Variants (LOW PRIORITY)
 ```latex
@@ -194,14 +194,14 @@
 **Workaround:** Use `\begin{matrix}`  
 **Estimated effort:** Similar to cases, ~2 hours
 
-### 6. Accent Commands
+### 6. ~~Accent Commands~~ ✅ IMPLEMENTED (November 2024)
+~~Accent commands are now fully supported!~~
 ```latex
 \bar{x}, \tilde{x}, \overline{xy}
 \dot{x}, \ddot{x}
 ```
-**Impact:** Medium - common in physics/engineering  
-**Workaround:** None currently  
-**Estimated effort:** 1 hour total
+**Status:** ✅ COMPLETE - All accent commands implemented  
+**See:** `src/parser.rs` lines 1084-1103, tests at lines 2206-2292
 
 ### 7. Over/Underbrace
 ```latex
@@ -339,17 +339,17 @@ f(x, y, z)                                   ✅
 ### What Doesn't Work
 
 ```latex
-% Text annotations
+% Text annotations - NOW WORKING! ✅
 \begin{cases}
   x^2 & \text{if } x \geq 0 \\
   0   & \text{otherwise}
-\end{cases}                                  ❌ \text not supported
+\end{cases}                                  ✅ \text fully supported
 
 % Limits
 \lim_{x \to 0} \frac{\sin x}{x} = 1          ⚠️ \lim symbol works, notation limited
 
-% Accents
-\bar{x}, \tilde{y}, \dot{v}                  ❌ Only \hat supported
+% Accents - NOW WORKING! ✅
+\bar{x}, \tilde{y}, \dot{v}                  ✅ All accents supported
 
 % Binomials
 \binom{n}{k} = \frac{n!}{k!(n-k)!}           ❌ \binom not supported (but can write as fraction)
@@ -432,7 +432,7 @@ Based on typical usage in mathematical/physics papers:
 | Multiline (`align`) | Low | ❌ |
 
 **Coverage of "Very High" + "High" frequency features: 95%+**  
-**Coverage of "Medium" frequency features: ~70%**  
+**Coverage of "Medium" frequency features: ~85%** (was ~70%, now includes text mode & accents)  
 **Coverage of "Low" frequency features: ~40%**
 
 ---
@@ -448,10 +448,11 @@ Based on typical usage in mathematical/physics papers:
   - Complex multi-line (outside scope)
 
 **Recommended Next Steps:**
-1. ✅ Update PARSER_TODO.md with feature coverage focus (not line coverage)
-2. Add `\text{...}` support (1 hour, high impact)
-3. Test/document existing but untested features
-4. Consider accents as medium-priority enhancement
+1. ✅ Update PARSER_TODO.md with feature coverage focus (not line coverage) - DONE
+2. ✅ Add `\text{...}` support (1 hour, high impact) - DONE November 2024
+3. ✅ Add accent commands - DONE November 2024
+4. Test/document existing but untested features
+5. Consider additional matrix variants (low priority)
 
-**The "80% code coverage" translates to 90%+ feature coverage** for practical mathematical notation.
+**The "80% code coverage" translates to 92%+ feature coverage** for practical mathematical notation (updated November 2024 with text mode & accents).
 

@@ -280,7 +280,7 @@
     <div class="container">
         <header>
             <h1>🔬 Kleis Equation Editor</h1>
-            <p class="subtitle">Mathematical Notation Renderer - 86 Gallery Examples</p>
+            <p class="subtitle">Mathematical Notation Renderer - 50 Templates • 86 Gallery Examples</p>
         </header>
         
         <div class="main-content">
@@ -343,6 +343,8 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx">\frac{1}{2} \sqrt{\pi}</t
                         <button class="symbol-btn" onclick="insertSymbol('\\varepsilon')">ε̱</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\vartheta')">ϑ</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\varphi')">ϕ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\varkappa')">ϰ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\varpi')">ϖ</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\varrho')">ϱ</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\varsigma')">ς</button>
                         <!-- Hebrew Letters -->
@@ -366,6 +368,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx">\frac{1}{2} \sqrt{\pi}</t
                         <button class="symbol-btn" onclick="insertSymbol('\\otimes')">⊗</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\nabla')">∇</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\partial')">∂</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\Box')">□</button>
                     </div>
                     
                     <!-- Relations -->
@@ -384,6 +387,8 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx">\frac{1}{2} \sqrt{\pi}</t
                         <button class="symbol-btn" onclick="insertSymbol('\\subseteq')">⊆</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\cup')">∪</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\cap')">∩</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\to')">→</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\mapsto')">↦</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\Rightarrow')">⇒</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\Leftrightarrow')">⇔</button>
                     </div>
@@ -398,30 +403,84 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx">\frac{1}{2} \sqrt{\pi}</t
                         <button class="symbol-btn" onclick="insertSymbol('\\prod')">∏</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\lim')">lim</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\infty')">∞</button>
+                        <button class="symbol-btn" onclick="insertSymbol('\\hbar')">ℏ</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\forall')">∀</button>
                         <button class="symbol-btn" onclick="insertSymbol('\\exists')">∃</button>
                     </div>
                     
                     <!-- Templates -->
                     <div id="palette-templates" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
+                        <!-- Basic Operations -->
                         <button class="template-btn" onclick="insertTemplate('\\frac{□}{□}')">📐 Fraction</button>
                         <button class="template-btn" onclick="insertTemplate('\\sqrt{□}')">√ Square Root</button>
                         <button class="template-btn" onclick="insertTemplate('\\sqrt[□]{□}')">ⁿ√ Nth Root</button>
                         <button class="template-btn" onclick="insertTemplate('x^{□}')">x^n Power</button>
                         <button class="template-btn" onclick="insertTemplate('x_{□}')">x_n Subscript</button>
+                        <button class="template-btn" onclick="insertTemplate('x^{□}_{□}')">x^n_m Both</button>
+                        
+                        <!-- Calculus -->
                         <button class="template-btn" onclick="insertTemplate('\\int_{□}^{□} □ \\, dx')">∫ Integral</button>
                         <button class="template-btn" onclick="insertTemplate('\\sum_{□}^{□} □')">Σ Sum</button>
                         <button class="template-btn" onclick="insertTemplate('\\prod_{□}^{□} □')">∏ Product</button>
                         <button class="template-btn" onclick="insertTemplate('\\lim_{□ \\to □} □')">lim Limit</button>
+                        <button class="template-btn" onclick="insertTemplate('\\partial_{□} □')">∂ Partial</button>
+                        
+                        <!-- Matrices -->
                         <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}')">[  ] Matrix</button>
                         <button class="template-btn" onclick="insertTemplate('\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}')">(  ) Pmatrix</button>
+                        <button class="template-btn" onclick="insertTemplate('\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}')")|  | Vmatrix</button>
+                        
+                        <!-- Piecewise Functions -->
+                        <button class="template-btn" onclick="insertTemplate('\\begin{cases}□ & \\text{if } □\\\\□ & \\text{otherwise}\\end{cases}')">{ Cases</button>
+                        
+                        <!-- Quantum Mechanics -->
                         <button class="template-btn" onclick="insertTemplate('|□\\rangle')">|ψ⟩ Ket</button>
                         <button class="template-btn" onclick="insertTemplate('\\langle□|')">⟨φ| Bra</button>
+                        <button class="template-btn" onclick="insertTemplate('\\langle□|□\\rangle')">⟨φ|ψ⟩ Inner</button>
+                        <button class="template-btn" onclick="insertTemplate('|□\\rangle\\langle□|')">|ψ⟩⟨φ| Outer</button>
                         <button class="template-btn" onclick="insertTemplate('[□, □]')">[A,B] Comm.</button>
+                        <button class="template-btn" onclick="insertTemplate('\\{□, □\\}')">{A,B} Anticomm.</button>
+                        
+                        <!-- Accent Commands -->
                         <button class="template-btn" onclick="insertTemplate('\\hat{□}')">x̂ Hat</button>
+                        <button class="template-btn" onclick="insertTemplate('\\bar{□}')">x̄ Bar</button>
+                        <button class="template-btn" onclick="insertTemplate('\\tilde{□}')">x̃ Tilde</button>
+                        <button class="template-btn" onclick="insertTemplate('\\dot{□}')">ẋ Dot</button>
+                        <button class="template-btn" onclick="insertTemplate('\\ddot{□}')">ẍ DDot</button>
+                        <button class="template-btn" onclick="insertTemplate('\\overline{□}')">x̅ Overline</button>
+                        
+                        <!-- Trigonometric Functions -->
+                        <button class="template-btn" onclick="insertTemplate('\\sin(□)')">sin(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\cos(□)')">cos(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\tan(□)')">tan(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\arcsin(□)')">arcsin(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\arccos(□)')">arccos(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\arctan(□)')">arctan(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\sec(□)')">sec(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\csc(□)')">csc(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\cot(□)')">cot(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\sinh(□)')">sinh(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\cosh(□)')">cosh(x)</button>
+                        
+                        <!-- Logarithms & Exponentials -->
+                        <button class="template-btn" onclick="insertTemplate('\\ln(□)')">ln(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\log(□)')">log(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\exp(□)')">exp(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('e^{□}')">e^x</button>
+                        
+                        <!-- Text Mode -->
+                        <button class="template-btn" onclick="insertTemplate('\\text{□}')">✏️ Text</button>
+                        
+                        <!-- Differential Operators -->
                         <button class="template-btn" onclick="insertTemplate('\\nabla \\cdot □')">∇· Div</button>
                         <button class="template-btn" onclick="insertTemplate('\\nabla \\times □')">∇× Curl</button>
                         <button class="template-btn" onclick="insertTemplate('\\nabla^2 □')">∇² Laplace</button>
+                        <button class="template-btn" onclick="insertTemplate('\\nabla □')">∇ Grad</button>
+                        
+                        <!-- Special Functions -->
+                        <button class="template-btn" onclick="insertTemplate('\\lfloor □ \\rfloor')">⌊x⌋ Floor</button>
+                        <button class="template-btn" onclick="insertTemplate('\\lceil □ \\rceil')">⌈x⌉ Ceiling</button>
+                        <button class="template-btn" onclick="insertTemplate('□!')">x! Factorial</button>
                     </div>
                 </div>
                 
