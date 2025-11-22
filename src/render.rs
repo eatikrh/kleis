@@ -6,6 +6,7 @@ use crate::ast::Expression;
 pub enum RenderTarget {
     Unicode,
     LaTeX,
+    HTML,
 }
 
 
@@ -307,12 +308,24 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
             match target {
                 RenderTarget::Unicode => name.clone(),
                 RenderTarget::LaTeX => escape_latex_constant(name),
+                RenderTarget::HTML => format!(r#"<span class="math-const">{}</span>"#, escape_html(name)),
             }
         }
         Expression::Object(name) => {
             match target {
                 RenderTarget::Unicode => latex_to_unicode(name),
                 RenderTarget::LaTeX => escape_latex_text(name),
+                RenderTarget::HTML => format!(r#"<span class="math-object">{}</span>"#, escape_html(&latex_to_unicode(name))),
+            }
+        }
+        Expression::Placeholder { id, hint } => {
+            match target {
+                RenderTarget::Unicode => "□".to_string(),
+                RenderTarget::LaTeX => r"\square".to_string(),
+                RenderTarget::HTML => format!(
+                    r#"<span class="placeholder" data-id="{}" data-hint="{}" title="{}" contenteditable="true" onclick="editPlaceholder({})">□</span>"#,
+                    id, escape_html(hint), escape_html(hint), id
+                ),
             }
         }
         Expression::Operation { name, args } => {
@@ -326,6 +339,15 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                     (template, glyph)
                 },
                 RenderTarget::LaTeX => {
+                    let template = ctx.latex_templates.get(name)
+                        .cloned()
+                        .unwrap_or_else(|| format!("{}({})", name, "{args}"));
+                    let glyph = ctx.latex_glyphs.get(name)
+                        .unwrap_or(name);
+                    (template, glyph)
+                },
+                RenderTarget::HTML => {
+                    // For HTML, use LaTeX and let MathJax handle rendering
                     let template = ctx.latex_templates.get(name)
                         .cloned()
                         .unwrap_or_else(|| format!("{}({})", name, "{args}"));
@@ -561,6 +583,16 @@ fn escape_latex_text(input: &str) -> String {
         .replace("⋰", "\\iddots")
         // underscores in identifiers should be escaped
         .replace("_", "\\_")
+}
+
+fn escape_html(input: &str) -> String {
+    // Basic HTML escaping for safety
+    input
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
 }
 
 pub fn build_default_context() -> GlyphContext {

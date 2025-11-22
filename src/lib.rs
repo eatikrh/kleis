@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod render;
 pub mod parser;
+pub mod templates;
 
 /// Convenience function: Parse LaTeX and render to Unicode
 pub fn latex_to_unicode(latex: &str) -> Result<String, parser::ParseError> {

@@ -45,6 +45,83 @@
             font-size: 1.1em;
         }
         
+        .mode-toggle {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .mode-btn {
+            padding: 8px 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .mode-btn.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+        }
+        
+        .structural-editor {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 30px;
+            min-height: 150px;
+            font-size: 1.5em;
+            cursor: text;
+        }
+        
+        .structural-editor:focus-within {
+            border-color: #667eea;
+        }
+        
+        .placeholder {
+            display: inline-block;
+            min-width: 30px;
+            min-height: 30px;
+            border: 2px dashed #667eea;
+            background: #f0f4ff;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin: 0 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .placeholder:hover {
+            background: #e0e8ff;
+            border-color: #5568d3;
+        }
+        
+        .placeholder.active {
+            border-color: #ff6b6b;
+            background: #fff5f5;
+            animation: pulse 1s infinite;
+        }
+        
+        .placeholder::after {
+            content: '□';
+            color: #667eea;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .math-expr {
+            display: inline-block;
+        }
+        
         .main-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -281,6 +358,10 @@
         <header>
             <h1>🔬 Kleis Equation Editor</h1>
             <p class="subtitle">Mathematical Notation Renderer - 50 Templates • 91 Gallery Examples</p>
+            <div class="mode-toggle">
+                <button class="mode-btn active" onclick="setEditorMode('text')">📝 Text Mode</button>
+                <button class="mode-btn" onclick="setEditorMode('structural')">🔧 Structural Mode</button>
+            </div>
         </header>
         
         <div class="main-content">
@@ -289,6 +370,11 @@
                 <h2>📝 LaTeX Input</h2>
                 <textarea id="latexInput" placeholder="Enter LaTeX equation here...
 Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
+                <div id="structuralEditor" class="structural-editor" style="display:none;" 
+                     onclick="focusStructuralEditor(event)" 
+                     onkeydown="handleStructuralKeydown(event)">
+                    <span style="color: #999;">Click a template button to start building...</span>
+                </div>
                 
                 <!-- Symbol Palette -->
                 <div class="symbol-palette">
@@ -678,6 +764,356 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         window.addEventListener('load', () => {
             setTimeout(loadGallery, 500);
         });
+        
+        // ========== STRUCTURAL EDITOR ==========
+        
+        let editorMode = 'text'; // 'text' or 'structural'
+        let currentAST = null; // Current expression AST
+        let activePlaceholderId = null; // Currently focused placeholder
+        let placeholderCounter = 0; // For generating unique IDs
+        
+        // Switch editor mode
+        function setEditorMode(mode) {
+            editorMode = mode;
+            const textarea = document.getElementById('latexInput');
+            const structural = document.getElementById('structuralEditor');
+            const modeBtns = document.querySelectorAll('.mode-btn');
+            
+            modeBtns.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (mode === 'text') {
+                textarea.style.display = 'block';
+                structural.style.display = 'none';
+            } else {
+                textarea.style.display = 'none';
+                structural.style.display = 'block';
+                if (!currentAST) {
+                    resetStructuralEditor();
+                }
+            }
+        }
+        
+        // Reset structural editor to empty state
+        function resetStructuralEditor() {
+            currentAST = null;
+            activePlaceholderId = null;
+            placeholderCounter = 0;
+            const structural = document.getElementById('structuralEditor');
+            structural.innerHTML = '<span style="color: #999;">Click a template button to start building...</span>';
+        }
+        
+        // Template definitions (mirroring the Rust templates module)
+        const structuralTemplates = {
+            'fraction': { name: 'scalar_divide', placeholders: ['numerator', 'denominator'] },
+            'power': { name: 'sup', placeholders: ['base', 'exponent'] },
+            'sqrt': { name: 'sqrt', placeholders: ['radicand'] },
+            'subscript': { name: 'sub', placeholders: ['base', 'subscript'] },
+            'plus': { name: 'plus', placeholders: ['left', 'right'] },
+            'minus': { name: 'minus', placeholders: ['left', 'right'] },
+            'times': { name: 'scalar_multiply', placeholders: ['left', 'right'] },
+            'equals': { name: 'equals', placeholders: ['left', 'right'] },
+            'integral': { name: 'int_bounds', placeholders: ['integrand', 'lower', 'upper', 'variable'] },
+            'sum': { name: 'sum_bounds', placeholders: ['body', 'from', 'to'] },
+            'product': { name: 'prod_bounds', placeholders: ['body', 'from', 'to'] },
+            'partial': { name: 'd_part', placeholders: ['function', 'variable'] },
+            'derivative': { name: 'd_dt', placeholders: ['function', 'variable'] },
+            'gradient': { name: 'grad', placeholders: ['function'] },
+            'matrix2x2': { name: 'matrix2x2', placeholders: ['a11', 'a12', 'a21', 'a22'] },
+            'matrix3x3': { name: 'matrix3x3', placeholders: ['a11', 'a12', 'a13', 'a21', 'a22', 'a23', 'a31', 'a32', 'a33'] },
+            'vector_bold': { name: 'vector_bold', placeholders: ['vector'] },
+            'vector_arrow': { name: 'vector_arrow', placeholders: ['vector'] },
+            'dot': { name: 'dot', placeholders: ['left', 'right'] },
+            'cross': { name: 'cross', placeholders: ['left', 'right'] },
+            'norm': { name: 'norm', placeholders: ['vector'] },
+            'abs': { name: 'abs', placeholders: ['value'] },
+            'ket': { name: 'ket', placeholders: ['state'] },
+            'bra': { name: 'bra', placeholders: ['state'] },
+            'inner': { name: 'inner', placeholders: ['bra', 'ket'] },
+            'outer': { name: 'outer', placeholders: ['ket', 'bra'] },
+            'commutator': { name: 'commutator', placeholders: ['A', 'B'] },
+            'tensor_mixed': { name: 'index_mixed', placeholders: ['base', 'upper', 'lower'] },
+            'sin': { name: 'sin', placeholders: ['argument'] },
+            'cos': { name: 'cos', placeholders: ['argument'] },
+            'tan': { name: 'tan', placeholders: ['argument'] },
+            'limit': { name: 'lim', placeholders: ['body', 'var', 'target'] },
+        };
+        
+        // Insert a structural template
+        function insertStructuralTemplate(templateName) {
+            const template = structuralTemplates[templateName];
+            if (!template) {
+                console.error('Unknown template:', templateName);
+                return;
+            }
+            
+            // Create AST with placeholders
+            const args = template.placeholders.map((hint, index) => ({
+                type: 'placeholder',
+                id: placeholderCounter++,
+                hint: hint
+            }));
+            
+            const newExpr = {
+                type: 'operation',
+                name: template.name,
+                args: args
+            };
+            
+            if (!currentAST) {
+                currentAST = newExpr;
+            } else if (activePlaceholderId !== null) {
+                // Replace the active placeholder with the new expression
+                replacePlaceholder(currentAST, activePlaceholderId, newExpr);
+            } else {
+                // No active placeholder, replace entire expression
+                currentAST = newExpr;
+            }
+            
+            // Render and focus first placeholder
+            renderStructuralEditor();
+            focusFirstPlaceholder();
+        }
+        
+        // Replace a placeholder in the AST with a new expression
+        function replacePlaceholder(ast, placeholderId, newExpr) {
+            if (!ast) return false;
+            
+            if (ast.type === 'operation') {
+                for (let i = 0; i < ast.args.length; i++) {
+                    if (ast.args[i].type === 'placeholder' && ast.args[i].id === placeholderId) {
+                        ast.args[i] = newExpr;
+                        return true;
+                    } else if (replacePlaceholder(ast.args[i], placeholderId, newExpr)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        // Render the structural editor AST to HTML
+        async function renderStructuralEditor() {
+            const structural = document.getElementById('structuralEditor');
+            
+            if (!currentAST) {
+                structural.innerHTML = '<span style="color: #999;">Click a template button to start building...</span>';
+                return;
+            }
+            
+            // Convert AST to LaTeX first, then render with MathJax
+            const latex = astToLaTeX(currentAST);
+            
+            // For now, use MathJax rendering
+            // TODO: Later implement custom HTML rendering with interactive placeholders
+            structural.innerHTML = `\\[${latex}\\]`;
+            
+            if (window.MathJax) {
+                await MathJax.typesetPromise([structural]);
+            }
+            
+            // Also update preview
+            document.getElementById('preview').innerHTML = `\\[${latex}\\]`;
+            if (window.MathJax) {
+                await MathJax.typesetPromise([document.getElementById('preview')]);
+            }
+        }
+        
+        // Convert AST to LaTeX string (simplified version)
+        function astToLaTeX(ast) {
+            if (!ast) return '';
+            
+            if (ast.type === 'const') {
+                return ast.value;
+            } else if (ast.type === 'object') {
+                return ast.value;
+            } else if (ast.type === 'placeholder') {
+                // Just show box symbol
+                // TODO Phase 3: Add visual feedback for active placeholder with custom HTML rendering
+                return '\\square';
+            } else if (ast.type === 'operation') {
+                const args = ast.args.map(arg => astToLaTeX(arg));
+                
+                // Template mappings (simplified)
+                const templates = {
+                    'scalar_divide': `\\frac{${args[0]}}{${args[1]}}`,
+                    'sup': `{${args[0]}}^{${args[1]}}`,
+                    'sqrt': `\\sqrt{${args[0]}}`,
+                    'sub': `{${args[0]}}_{${args[1]}}`,
+                    'plus': `${args[0]} + ${args[1]}`,
+                    'minus': `${args[0]} - ${args[1]}`,
+                    'scalar_multiply': `${args[0]} \\cdot ${args[1]}`,
+                    'equals': `${args[0]} = ${args[1]}`,
+                    'int_bounds': `\\int_{${args[1]}}^{${args[2]}} ${args[0]} \\, d${args[3]}`,
+                    'sum_bounds': `\\sum_{${args[1]}}^{${args[2]}} ${args[0]}`,
+                    'prod_bounds': `\\prod_{${args[1]}}^{${args[2]}} ${args[0]}`,
+                    'd_part': `\\frac{\\partial ${args[0]}}{\\partial ${args[1]}}`,
+                    'd_dt': `\\frac{d ${args[0]}}{d ${args[1]}}`,
+                    'grad': `\\nabla ${args[0]}`,
+                    'matrix2x2': `\\begin{bmatrix}${args[0]}&${args[1]}\\\\${args[2]}&${args[3]}\\end{bmatrix}`,
+                    'dot': `${args[0]} \\cdot ${args[1]}`,
+                    'cross': `${args[0]} \\times ${args[1]}`,
+                    'norm': `\\|${args[0]}\\|`,
+                    'abs': `|${args[0]}|`,
+                    'ket': `|${args[0]}\\rangle`,
+                    'bra': `\\langle${args[0]}|`,
+                    'inner': `\\langle${args[0]}|${args[1]}\\rangle`,
+                    'sin': `\\sin(${args[0]})`,
+                    'cos': `\\cos(${args[0]})`,
+                    'tan': `\\tan(${args[0]})`,
+                };
+                
+                return templates[ast.name] || `${ast.name}(${args.join(', ')})`;
+            }
+            
+            return '';
+        }
+        
+        // Focus first placeholder
+        function focusFirstPlaceholder() {
+            const placeholder = findFirstPlaceholder(currentAST);
+            if (placeholder) {
+                activePlaceholderId = placeholder.id;
+                renderStructuralEditor();
+            }
+        }
+        
+        // Find first placeholder in AST
+        function findFirstPlaceholder(ast) {
+            if (!ast) return null;
+            
+            if (ast.type === 'placeholder') {
+                return ast;
+            } else if (ast.type === 'operation') {
+                for (let arg of ast.args) {
+                    const found = findFirstPlaceholder(arg);
+                    if (found) return found;
+                }
+            }
+            
+            return null;
+        }
+        
+        // Find all placeholders in AST
+        function findAllPlaceholders(ast, result = []) {
+            if (!ast) return result;
+            
+            if (ast.type === 'placeholder') {
+                result.push(ast);
+            } else if (ast.type === 'operation') {
+                for (let arg of ast.args) {
+                    findAllPlaceholders(arg, result);
+                }
+            }
+            
+            return result;
+        }
+        
+        // Navigate to next placeholder (Tab)
+        function navigateToNextPlaceholder() {
+            const placeholders = findAllPlaceholders(currentAST);
+            if (placeholders.length === 0) return;
+            
+            const currentIndex = placeholders.findIndex(p => p.id === activePlaceholderId);
+            const nextIndex = (currentIndex + 1) % placeholders.length;
+            activePlaceholderId = placeholders[nextIndex].id;
+            
+            renderStructuralEditor();
+        }
+        
+        // Navigate to previous placeholder (Shift+Tab)
+        function navigateToPrevPlaceholder() {
+            const placeholders = findAllPlaceholders(currentAST);
+            if (placeholders.length === 0) return;
+            
+            const currentIndex = placeholders.findIndex(p => p.id === activePlaceholderId);
+            const prevIndex = currentIndex <= 0 ? placeholders.length - 1 : currentIndex - 1;
+            activePlaceholderId = placeholders[prevIndex].id;
+            
+            renderStructuralEditor();
+        }
+        
+        // Handle keydown in structural editor
+        function handleStructuralKeydown(event) {
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                if (event.shiftKey) {
+                    navigateToPrevPlaceholder();
+                } else {
+                    navigateToNextPlaceholder();
+                }
+            } else if (event.key === 'Escape') {
+                activePlaceholderId = null;
+                renderStructuralEditor();
+            } else if (event.key.length === 1 || event.key === 'Backspace') {
+                // Handle text input into active placeholder
+                editActivePlaceholder(event);
+            }
+        }
+        
+        // Edit active placeholder
+        function editActivePlaceholder(event) {
+            if (activePlaceholderId === null) return;
+            
+            const input = prompt('Enter value for placeholder:');
+            if (input !== null && input.trim() !== '') {
+                // Parse input and replace placeholder
+                const newExpr = parseSimpleInput(input.trim());
+                replacePlaceholder(currentAST, activePlaceholderId, newExpr);
+                navigateToNextPlaceholder();
+            }
+        }
+        
+        // Parse simple input (constants, objects, or nested expressions)
+        function parseSimpleInput(input) {
+            // Check if it's a number
+            if (/^-?\d+(\.\d+)?$/.test(input)) {
+                return { type: 'const', value: input };
+            }
+            
+            // Otherwise treat as an object (variable/symbol)
+            return { type: 'object', value: input };
+        }
+        
+        // Focus structural editor
+        function focusStructuralEditor(event) {
+            if (editorMode !== 'structural') return;
+            
+            // Click on structural editor - could implement click-to-edit here
+            const structural = document.getElementById('structuralEditor');
+            structural.focus();
+        }
+        
+        // Enhanced insertTemplate to work with both modes
+        const originalInsertTemplate = insertTemplate;
+        insertTemplate = function(template) {
+            if (editorMode === 'structural') {
+                // Extract template name from LaTeX pattern
+                // This is a simplified mapping - ideally we'd parse the template
+                const templateMap = {
+                    '\\frac{□}{□}': 'fraction',
+                    '\\sqrt{□}': 'sqrt',
+                    'x^{□}': 'power',
+                    'x_{□}': 'subscript',
+                    '\\int_{□}^{□} □ \\, dx': 'integral',
+                    '\\sum_{□}^{□} □': 'sum',
+                    '\\prod_{□}^{□} □': 'product',
+                    '|□\\rangle': 'ket',
+                    '\\langle□|': 'bra',
+                    '\\sin(□)': 'sin',
+                    '\\cos(□)': 'cos',
+                };
+                
+                const templateName = templateMap[template];
+                if (templateName) {
+                    insertStructuralTemplate(templateName);
+                } else {
+                    console.warn('Template not yet mapped for structural mode:', template);
+                }
+            } else {
+                originalInsertTemplate(template);
+            }
+        };
     </script>
 </body>
 </html>

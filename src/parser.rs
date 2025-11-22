@@ -1332,6 +1332,7 @@ impl Expression {
             Expression::Const(s) => s.clone(),
             Expression::Object(s) => s.clone(),
             Expression::Operation { .. } => "".to_string(),
+            Expression::Placeholder { hint, .. } => hint.clone(),
         }
     }
 }

@@ -21,6 +21,15 @@ pub enum Expression {
         name: String,
         args: Vec<Expression>,
     },
+    
+    /// Placeholder for structural editing
+    /// Used to represent empty slots that need to be filled
+    /// id: unique identifier for this placeholder
+    /// hint: user-friendly description of what should go here (e.g., "numerator", "exponent")
+    Placeholder {
+        id: usize,
+        hint: String,
+    },
 }
 
 impl Expression {
@@ -40,6 +49,55 @@ impl Expression {
             name: name.into(),
             args,
         }
+    }
+    
+    /// Create a placeholder expression
+    pub fn placeholder(id: usize, hint: impl Into<String>) -> Self {
+        Expression::Placeholder {
+            id,
+            hint: hint.into(),
+        }
+    }
+    
+    /// Traverse the expression tree to find all placeholders
+    pub fn find_placeholders(&self) -> Vec<(usize, String)> {
+        let mut placeholders = Vec::new();
+        self.collect_placeholders(&mut placeholders);
+        placeholders
+    }
+    
+    fn collect_placeholders(&self, acc: &mut Vec<(usize, String)>) {
+        match self {
+            Expression::Placeholder { id, hint } => {
+                acc.push((*id, hint.clone()));
+            }
+            Expression::Operation { args, .. } => {
+                for arg in args {
+                    arg.collect_placeholders(acc);
+                }
+            }
+            _ => {}
+        }
+    }
+    
+    /// Get the next placeholder ID after the given one
+    pub fn next_placeholder(&self, current_id: usize) -> Option<usize> {
+        let placeholders = self.find_placeholders();
+        placeholders
+            .iter()
+            .map(|(id, _)| *id)
+            .filter(|id| *id > current_id)
+            .min()
+    }
+    
+    /// Get the previous placeholder ID before the given one
+    pub fn prev_placeholder(&self, current_id: usize) -> Option<usize> {
+        let placeholders = self.find_placeholders();
+        placeholders
+            .iter()
+            .map(|(id, _)| *id)
+            .filter(|id| *id < current_id)
+            .max()
     }
 }
 
