@@ -1083,6 +1083,12 @@ impl Parser {
                 Ok(o(" "))
             }
 
+            // Text mode - plain text within math
+            "text" => {
+                let text_content = self.parse_text_group()?;
+                Ok(op("text", vec![o(text_content)]))
+            }
+
             // Text formatting (pass through)
             "mathbf" | "boldsymbol" | "mathrm" => {
                 let arg = self.parse_group()?;
@@ -2050,6 +2056,46 @@ mod tests {
     #[test]
     fn parses_euler_formula() {
         let result = parse_latex("e^{i\\pi} + 1 = 0");
+        assert!(result.is_ok());
+    }
+
+    // === Text Mode Support ===
+    
+    #[test]
+    fn parses_text_simple() {
+        let result = parse_latex("\\text{hello}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "text");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected text operation"),
+        }
+    }
+
+    #[test]
+    fn parses_text_with_spaces() {
+        let result = parse_latex("\\text{if } x > 0");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_text_in_piecewise() {
+        let result = parse_latex("\\begin{cases}x^{2} & \\text{if } x \\geq 0\\\\0 & \\text{otherwise}\\end{cases}");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_text_annotation() {
+        let result = parse_latex("\\forall x \\in \\mathbb{R}\\text{, we have } x^{2} \\geq 0");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parses_text_with_punctuation() {
+        let result = parse_latex("\\text{for all } x \\text{, we have:}");
         assert!(result.is_ok());
     }
 }

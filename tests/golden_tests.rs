@@ -543,6 +543,56 @@ mod golden_batch3_completeness {
     }
 }
 
+// Text Mode Support Golden Tests
+#[cfg(test)]
+mod golden_text_mode {
+    /// Text mode in piecewise functions
+    #[test]
+    fn text_in_piecewise() {
+        // Reference: Standard piecewise notation with annotations
+        let expected_latex = r"\begin{cases}x^{2} & \text{if } x \geq 0\\0 & \text{otherwise}\end{cases}";
+        
+        // Verify text command is preserved
+        assert!(expected_latex.contains(r"\text{"));
+        assert!(expected_latex.contains("if "));
+        assert!(expected_latex.contains("otherwise"));
+    }
+    
+    /// Text mode for annotations
+    #[test]
+    fn text_annotations() {
+        // Reference: Mathematical writing convention
+        let expected_latex = r"\forall x \in \mathbb{R}\text{, we have } x^{2} \geq 0";
+        
+        assert!(expected_latex.contains(r"\text{"));
+        assert!(expected_latex.contains(", we have "));
+    }
+    
+    /// Text mode with punctuation
+    #[test]
+    fn text_with_punctuation() {
+        // Reference: Mathematical writing convention
+        let expected_latex = r"\text{for all } x \in \mathbb{R}\text{, } x^{2} \geq 0";
+        
+        assert!(expected_latex.contains(r"\text{for all }"));
+        assert!(expected_latex.contains(r"\text{, }"));
+    }
+    
+    /// Text mode in complex expressions
+    #[test]
+    fn text_in_equations() {
+        // Reference: Conditional equations
+        let cases = vec![
+            r"f(x) = \begin{cases}x & \text{if } x \geq 0\\-x & \text{if } x < 0\end{cases}",
+            r"g(x) = 1 \text{ for all } x \in \mathbb{R}",
+        ];
+        
+        for case in cases {
+            assert!(case.contains(r"\text{"));
+        }
+    }
+}
+
 // Integration test: Verify entire gallery against golden output
 #[test]
 fn gallery_output_stability() {

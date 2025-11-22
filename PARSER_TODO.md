@@ -15,13 +15,13 @@ This document tracks the current state and roadmap of the Kleis LaTeX parser.
   - 92.82% function coverage (181 functions, 13 missed)
 - **Overall:** 80.22% line coverage, 80.45% region coverage
 
-**Test Suite:** 110 tests passing (34 parser unit tests + 76 render tests)
+**Test Suite:** 177 tests passing (96 parser unit tests + 81 render tests)
 
 The parser handles most common LaTeX mathematical expressions from standard math guides.
 
 ---
 
-## ✅ **Fully Working (30+ patterns)**
+## ✅ **Fully Working (31+ patterns)**
 
 ### Core Parsing
 - [x] **Fractions:** `\frac{a}{b}`
@@ -86,18 +86,14 @@ The parser handles most common LaTeX mathematical expressions from standard math
 - [x] **Trig with parentheses:** `\sin(x)`, `\cos(x)`, `\tan(x)` now work alongside `\sin{x}`
 - [x] **Nested functions:** `\sin(\cos(x))` fully supported
 
+### Text Mode
+- [x] **Text annotations:** `\text{if } x > 0`
+- [x] **Text in piecewise:** `\begin{cases}x^2 & \text{if } x \geq 0\\0 & \text{otherwise}\end{cases}`
+- [x] **Text with punctuation:** `\text{for all } x \in \mathbb{R}`
+
 ---
 
 ## ❌ **Not Yet Supported (Known Gaps)**
-
-### 1. **Text Mode** 🟡 MEDIUM PRIORITY
-```latex
-\text{if } x > 0
-\text{for all } x \in \mathbb{R}
-```
-**Issue:** `\text{}` command not implemented  
-**Effort:** 1 hour  
-**Impact:** Labels in piecewise functions and annotations
 
 ### 2. **More Matrix Variants** 🟢 LOW PRIORITY
 ```latex
@@ -138,7 +134,7 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 **Achieved:** **80.2% measured line coverage** (78.5% parser, 82.2% renderer)
 
 ### Phase 2: Remaining Features (1-2 days)
-1. **Text mode** - Support `\text{...}` for annotations
+1. ✅ **Text mode** - Support `\text{...}` for annotations (**DONE**)
 2. **Matrix cell parsing** - Full expression parsing inside matrix cells (partially done)
 3. **More environments** - Variants like Bmatrix, Vmatrix (low priority)
 
@@ -188,9 +184,10 @@ parse_latex(r"\begin{cases}x^2&x\geq 0\\0&x<0\end{cases}")  // ✅ (cases)
 parse_latex(r"\sin(\cos(x))")                  // ✅ (nested with parens)
 parse_latex(r"\varepsilon")                    // ✅ (Greek variants)
 parse_latex(r"E = mc^{2}")                     // ✅ (equations)
+parse_latex(r"\text{if } x > 0")               // ✅ (text mode)
+parse_latex(r"\begin{cases}x^2 & \text{if } x \geq 0\\0 & \text{otherwise}\end{cases}")  // ✅ (text in cases)
 
 // Not working
-parse_latex(r"\text{if } x > 0")               // ❌ (text mode)
 ```
 
 ### Run Tests
@@ -280,6 +277,6 @@ To add parser support for a new LaTeX construct:
 
 **Last Updated:** November 22, 2024  
 **Parser Version:** 0.1.0  
-**Status:** Phase 1 complete, **80.2% measured coverage**, 110/110 tests passing ✅  
+**Status:** Phase 1 complete + Text Mode added, **80.2% measured coverage**, 177/177 tests passing ✅  
 **Coverage Detail:** Parser 78.5% | Renderer 82.2% | 95.2% function coverage  
 **Maintainer:** Kleis Development Team

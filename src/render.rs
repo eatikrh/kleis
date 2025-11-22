@@ -671,6 +671,9 @@ pub fn build_default_context() -> GlyphContext {
     unicode_templates.insert("log".to_string(), "log({args})".to_string());
     unicode_templates.insert("ln".to_string(), "ln({args})".to_string());
     
+    // Text mode (plain text within math)
+    unicode_templates.insert("text".to_string(), "{arg}".to_string());
+    
     // Matrix operations
     unicode_templates.insert("trace".to_string(), "Tr({arg})".to_string());
     unicode_templates.insert("inverse".to_string(), "({arg})⁻¹".to_string());
@@ -842,6 +845,9 @@ pub fn build_default_context() -> GlyphContext {
     latex_templates.insert("cosh".to_string(), "\\cosh({args})".to_string());
     latex_templates.insert("log".to_string(), "\\log({args})".to_string());
     latex_templates.insert("ln".to_string(), "\\ln({args})".to_string());
+    
+    // Text mode (plain text within math)
+    latex_templates.insert("text".to_string(), "\\text{{arg}}".to_string());
     
     // Matrix operations
     latex_templates.insert("trace".to_string(), "\\mathrm{Tr}({arg})".to_string());
@@ -2072,6 +2078,49 @@ mod tests {
         assert!(out.contains("-1"));
         assert!(out.contains(r"\end{cases}"));
     }
+
+    // === Text Mode Support ===
+    
+    #[test]
+    fn renders_text_latex() {
+        let ctx = build_default_context();
+        let expr = op("text", vec![o("hello")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\text{hello}");
+    }
+
+    #[test]
+    fn renders_text_unicode() {
+        let ctx = build_default_context();
+        let expr = op("text", vec![o("hello")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::Unicode);
+        assert_eq!(out, "hello");
+    }
+
+    #[test]
+    fn renders_text_with_spaces_latex() {
+        let ctx = build_default_context();
+        let expr = op("text", vec![o("if ")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\text{if }");
+    }
+
+    #[test]
+    fn renders_text_with_punctuation_latex() {
+        let ctx = build_default_context();
+        let expr = op("text", vec![o("for all ")]);
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\text{for all }");
+    }
+
+    #[test]
+    fn renders_text_in_context_latex() {
+        let ctx = build_default_context();
+        // \forall x \in \mathbb{R} \text{, we have } x^2 \geq 0
+        let text_expr = op("text", vec![o(", we have ")]);
+        let out = render_expression(&text_expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "\\text{, we have }");
+    }
 }
 
 // === Gallery collector ===
@@ -2262,6 +2311,16 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     // Piecewise functions
     out.push(("Absolute value (piecewise)".into(), render_expression(&cases2(o("x"), geq(o("x"), c("0")), o("-x"), less_than(o("x"), c("0"))), &ctx, &RenderTarget::LaTeX)));
     out.push(("Sign function".into(), render_expression(&cases3(c("-1"), less_than(o("x"), c("0")), c("0"), equals(o("x"), c("0")), c("1"), greater_than(o("x"), c("0"))), &ctx, &RenderTarget::LaTeX)));
+    
+    // Text mode annotations
+    out.push(("Text mode (simple)".into(), render_expression(&op("text", vec![o("hello world")]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Text mode (with spaces)".into(), render_expression(&op("text", vec![o("if ")]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Text in piecewise".into(), render_expression(&cases2(
+        pow_e(o("x"), c("2")), 
+        op("text", vec![o("if ")]),
+        c("0"), 
+        op("text", vec![o("otherwise")])
+    ), &ctx, &RenderTarget::LaTeX)));
     
     // Vmatrix (determinant bars)
     out.push(("Determinant (vmatrix 2x2)".into(), render_expression(&vmatrix2(o("a"), o("b"), o("c"), o("d")), &ctx, &RenderTarget::LaTeX)));
