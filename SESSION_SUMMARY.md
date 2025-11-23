@@ -126,13 +126,20 @@ git push origin main
 
 ### Immediate (High Priority)
 
-1. **Test in browser**
+1. **Review edit marker placement** ⚠️ IMPORTANT
+   - Typst code location: `/Users/eatik_1/Documents/git/cee/typst`
+   - Need to review how bounding boxes map to clickable regions
+   - Verify placeholder positions are accurate
+   - Test argument extraction from layout tree
+   - This is critical for structural editing UX
+
+2. **Test in browser**
    - Verify tabs work (hard refresh if needed)
    - Test text → structural conversion
    - Test structural → text conversion
    - Verify template inference works end-to-end
 
-2. **Fix any UI issues**
+3. **Fix any UI issues**
    - Tab switching
    - Symbol insertion
    - Mode conversion
@@ -163,7 +170,14 @@ git push origin main
 
 ---
 
-## Important Notes
+## Critical Information
+
+### Typst Source Code Location
+- **Path:** `/Users/eatik_1/Documents/git/cee/typst`
+- **Purpose:** Typst library source (not the kleis repo)
+- **Why important:** We use Typst's layout engine for bounding box extraction
+- **Next review:** Edit marker placement logic needs review
+- **Related code:** `src/math_layout/typst_compiler.rs` (our integration)
 
 ### comparison_report.html
 - **DO NOT DELETE** - This is our verification tool
@@ -268,4 +282,5 @@ git push origin backup-before-push
 **Issues Fixed:** 50+  
 **Status:** Production Ready ✅  
 **Next Action:** PUSH TO GITHUB
+
 
