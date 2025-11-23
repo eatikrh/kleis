@@ -14,12 +14,13 @@ It blends metaphysical clarity with mathematical structure to express concepts l
 cargo run --bin server
 ```
 
-Then open **http://localhost:3000** in your browser for a beautiful web interface with:
-- LaTeX input with syntax highlighting
+Then open **http://localhost:3000** in your browser for the web editor which now includes:
+- Bidirectional text ↔ structural editing
 - Live MathJax preview
+- Role-aware semantic overlays with keyboard navigation (Tab through markers, Enter to edit)
 - **91 gallery examples** (click to load)
 - Symbol palettes (Greek, operators, calculus, etc.)
-- Template library (fractions, matrices, integrals, etc.)
+- Template library (fractions, matrices, integrals, tensors, bra-ket, etc.)
 
 ### Run Tests
 
@@ -27,7 +28,7 @@ Then open **http://localhost:3000** in your browser for a beautiful web interfac
 cargo test
 ```
 
-**Current status:** 269 tests passing (215 unit + 54 golden) across renderer, parser, and golden tests.
+**Current status:** 300+ tests passing across renderer, parser, semantic layout, and golden suites.
 
 ### Generate PDF Gallery
 
@@ -44,8 +45,8 @@ Creates `tmp_gallery.pdf` with all 91 rendered examples.
 Kleis serves three main purposes:
 
 1. **Symbolic Language** - For expressing modal ontological structures (POT/HONT)
-2. **Mathematical Renderer** - Converts expression trees to LaTeX/Unicode with **56 operations**
-3. **LaTeX Parser** - Parses LaTeX back into expression trees (~80% coverage)
+2. **Mathematical Renderer** - Converts expression trees to LaTeX/Unicode with **100+ operations** and 91 gallery examples
+3. **LaTeX Parser + Template Inference** - Parses LaTeX back into structured ASTs (~80% coverage) and infers higher-level templates (integrals, quantifiers, statistics, tensor ops, etc.)
 
 ### Inspiration
 
@@ -57,9 +58,9 @@ Kleis serves three main purposes:
 
 ## 📊 Current Capabilities
 
-### Renderer (56 Operations)
+### Renderer (100+ Operations)
 
-**Coverage:** ~98% of standard mathematical notation
+**Coverage:** ~98% of standard mathematical notation plus POT/HONT-specific constructs
 
 #### Core Operations
 - **Arithmetic:** equals, plus, minus, times, divide, power
@@ -110,9 +111,9 @@ Kleis serves three main purposes:
 - **Modular:** congruent_mod
 - **Statistics:** variance, covariance
 
-### LaTeX Parser
+### LaTeX Parser & Template Inference
 
-**Coverage:** ~75-85% of common LaTeX math
+**Coverage:** ~80% of common LaTeX math. Template inference upgrades flat parses into semantic operations (double/triple integrals, logical implications, quantifiers, modular arithmetic, statistics, tensor traces, curls/divergence, etc.).
 
 #### ✅ Working
 - Fractions, square roots, nth roots
@@ -130,11 +131,9 @@ Kleis serves three main purposes:
 - Number sets (\mathbb{R})
 
 #### ❌ Not Yet Supported
-- Cases environment (piecewise functions)
-- Functions with parentheses vs braces (\sin(\cos(x)))
-- Text mode (\text{...})
-- Some complex multi-line environments
-- Advanced delimiter matching
+- Complex piecewise blocks mixing text and math (partially supported)
+- Advanced delimiter matching for nested environments
+- General sequence literals (`1,2,3,\ldots,n`)
 
 See `PARSER_TODO.md` for detailed status.
 
@@ -184,8 +183,10 @@ Server runs at **http://localhost:3000**
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/` | GET | Web UI |
-| `/api/render` | POST | Render LaTeX equation |
-| `/api/gallery` | GET | Get all 71 examples |
+| `/api/render` | POST | Render LaTeX equation (returns LaTeX/Unicode/HTML) |
+| `/api/render_ast` | POST | Render an AST directly (LaTeX/Unicode/HTML) |
+| `/api/render_typst` | POST | Render an AST via Typst (SVG + semantic boxes) |
+| `/api/gallery` | GET | Get all 91 examples |
 | `/api/operations` | GET | List operations |
 | `/health` | GET | Health check |
 
@@ -221,9 +222,10 @@ cargo test
 
 ### Test Categories
 
-- **Unit tests:** Renderer operations (189 tests)
-- **Parser tests:** LaTeX parsing (21 tests)
-- **Golden tests:** End-to-end validation (37 tests)
+- **Renderer/unit tests:** 200+ covering operations, formatting, semantic helpers
+- **Parser/tests:** LaTeX parsing, template inference patterns
+- **Golden tests:** End-to-end validation (SVG/Typst vs MathJax)
+- **Semantic layout tests:** Verifies bounding box extraction and overlay roles
 
 ### Parser Testing
 

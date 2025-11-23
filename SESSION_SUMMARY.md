@@ -49,6 +49,11 @@
    - Safe AST preservation on parse failure
    - Square symbol added to palette
    - convertTextToStructural and convertStructuralToText functions
+7. **Semantic Overlay & Accessibility Enhancements** (Dec 2)
+   - Backend now tags every argument slot with a semantic role (base, superscript, subscript)
+   - Frontend renders role-aware bounding boxes with proportional sizing, centering, and offsets
+   - Overlay rectangles scale with zoom, reduce overlap, and share top edges between base/superscript pairs
+   - Keyboard navigation supported: Tab through overlays, Enter/Space to edit, focus outlines added
 
 6. **Documentation** (4 new docs)
    - `docs/adr-009-wysiwyg-structural-editor.md` - Updated with architectural decisions
@@ -129,9 +134,9 @@ git push origin main
 1. **Review edit marker placement** ⚠️ IMPORTANT
    - Typst code location: `/Users/eatik_1/Documents/git/cee/typst`
    - Need to review how bounding boxes map to clickable regions
-   - Verify placeholder positions are accurate
+   - Verify placeholder positions are accurate (new semantics mostly solved overlap)
    - Test argument extraction from layout tree
-   - This is critical for structural editing UX
+   - Further fine-tuning still possible (e.g., additional roles, bezier shapes)
 
 2. **Test in browser**
    - Verify tabs work (hard refresh if needed)
