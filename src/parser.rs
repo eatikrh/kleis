@@ -193,7 +193,7 @@ impl Parser {
             if self.peek() == Some('\\') {
                 let saved_pos = self.pos;
                 if let Ok(cmd) = self.parse_command() {
-                    if matches!(cmd.as_str(), "," | ";" | "!" | "quad" | "qquad") {
+                    if matches!(cmd.as_str(), "," | ";" | "!" | "quad" | "qquad" | "colon") {
                         continue;
                     }
                 }
@@ -1303,8 +1303,6 @@ impl Parser {
             "subseteq" => Ok(o("\\subseteq")),
 
             // Logic
-            "forall" => Ok(o("\\forall")),
-            "exists" => Ok(o("\\exists")),
             "Rightarrow" => Ok(o("\\Rightarrow")),
             "Leftrightarrow" => Ok(o("\\Leftrightarrow")),
 
@@ -1455,7 +1453,7 @@ impl Parser {
             }
 
             // Spacing commands (return empty marker to be skipped)
-            "," | ";" | "!" | "quad" | "qquad" => {
+            "," | ";" | "!" | "quad" | "qquad" | "colon" => {
                 Ok(o("__SPACE__"))
             }
 
