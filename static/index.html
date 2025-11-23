@@ -99,6 +99,11 @@
             stroke-width: 2.5px;
             fill: rgba(40, 167, 69, 0.2);
         }
+        .arg-overlay:focus {
+            stroke-width: 3px;
+            stroke: #ff9800;
+            outline: none;
+        }
         .placeholder-overlay {
             fill: rgba(102, 126, 234, 0.1);
             stroke: #667eea;
@@ -739,6 +744,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                             let rectX, rectY, rectWidth, rectHeight;
                             let foundPosition = false;
                             let currentNodeId = null;  // Store node_id for this slot
+                            const role = slot.role || null;
                             
                             // 1. Try placeholder position (SVG coords)
                             const ph = data.placeholders && data.placeholders.find(p => p.id === slot.id);
@@ -766,6 +772,19 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                             }
                             
                             if (foundPosition) {
+                                const padding = 3;
+                                rectX += padding;
+                                rectY += padding;
+                                rectWidth = Math.max(6, rectWidth - padding * 2);
+                                rectHeight = Math.max(6, rectHeight - padding * 2);
+
+                                if (role === 'superscript') {
+                                    rectY -= 6;
+                                    rectHeight = Math.max(6, rectHeight - 4);
+                                } else if (role === 'subscript') {
+                                    rectY += 6;
+                                    rectHeight = Math.max(6, rectHeight - 4);
+                                }
                                 const color = slot.is_placeholder ? '#667eea' : '#28a745';
                                 const fillColor = slot.is_placeholder ? 'rgba(240, 244, 255, 0.3)' : 'rgba(40, 167, 69, 0.2)';
                                 
@@ -777,7 +796,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                     fill="${fillColor}" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" rx="3"
                                     class="arg-overlay" data-slot-id="${slot.id}" data-path="${pathStr}" data-node-id="${nodeId}"
                                     style="cursor: pointer;"
-                                    onclick="handleSlotClick(${slot.id}, ${pathStr}, '${nodeId}')" />`;
+                                    tabindex="0" focusable="true"
+                                    onclick="handleSlotClick(${slot.id}, ${pathStr}, '${nodeId}')"
+                                    onkeydown="handleSlotKeydown(event, ${slot.id}, ${pathStr}, '${nodeId}')" />`;
                                 overlayElements.push(rect);
                             }
                         });
@@ -839,6 +860,13 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 const newNode = parseSimpleInput(input);
                 setNodeAtPath(currentAST, path, newNode);
                 renderStructuralEditor();
+            }
+        };
+
+        window.handleSlotKeydown = function(event, id, path, nodeId) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleSlotClick(id, path, nodeId);
             }
         };
         
