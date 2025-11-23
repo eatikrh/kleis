@@ -336,14 +336,6 @@ async fn render_typst_handler(
 ) -> impl IntoResponse {
     match json_to_expression(&req.ast) {
         Ok(expr) => {
-            // Render to Typst markup
-            let ctx = kleis::render::build_default_context();
-            let typst_markup = kleis::render::render_expression(
-                &expr,
-                &ctx,
-                &kleis::render::RenderTarget::Typst
-            );
-            
             // Collect ALL argument slots with their info (empty or filled)
             let arg_slots = collect_argument_slots(&expr);
             eprintln!("Argument slots: {} total", arg_slots.len());
@@ -354,8 +346,8 @@ async fn render_typst_handler(
                 .map(|s| s.id)
                 .collect();
             
-            // Compile with Typst to get SVG
-            match kleis::math_layout::compile_math_to_svg_with_ids(&typst_markup, &unfilled_ids) {
+            // Compile with Typst using semantic bounding box extraction
+            match kleis::math_layout::compile_with_semantic_boxes(&expr, &unfilled_ids) {
                 Ok(output) => {
                     let response = serde_json::json!({
                         "svg": output.svg,
@@ -371,6 +363,7 @@ async fn render_typst_handler(
                         "argument_bounding_boxes": output.argument_bounding_boxes.iter().map(|b| {
                             serde_json::json!({
                                 "arg_index": b.arg_index,
+                                "node_id": b.node_id,
                                 "x": b.x,
                                 "y": b.y,
                                 "width": b.width,
