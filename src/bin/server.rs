@@ -404,13 +404,14 @@ struct ArgumentSlot {
     path: Vec<usize>,     // Path in AST (e.g., [0] = first arg of root operation)
     hint: String,         // Description of this slot
     is_placeholder: bool, // True if empty placeholder, false if filled
+    role: Option<String>, // Semantic role (e.g., superscript, subscript, base)
 }
 
 // Collect ALL argument slots from expression (both empty and filled)
 fn collect_argument_slots(expr: &kleis::ast::Expression) -> Vec<ArgumentSlot> {
     let mut slots = Vec::new();
     let mut next_auto_id = 1000; // Auto IDs for filled args start at 1000
-    collect_slots_recursive(expr, &mut slots, &mut next_auto_id, vec![]);
+    collect_slots_recursive(expr, &mut slots, &mut next_auto_id, vec![], None);
     slots
 }
 
@@ -419,6 +420,7 @@ fn collect_slots_recursive(
     slots: &mut Vec<ArgumentSlot>,
     next_auto_id: &mut usize,
     path: Vec<usize>,
+    role: Option<String>,
 ) {
     use kleis::ast::Expression;
 
@@ -430,6 +432,7 @@ fn collect_slots_recursive(
                 path: path.clone(),
                 hint: hint.clone(),
                 is_placeholder: true,
+                role: role.clone(),
             });
         }
         Expression::Const(value) | Expression::Object(value) => {
@@ -439,17 +442,41 @@ fn collect_slots_recursive(
                 path: path.clone(),
                 hint: format!("value: {}", value),
                 is_placeholder: false,
+                role: role.clone(),
             });
             *next_auto_id += 1;
         }
-        Expression::Operation { args, .. } => {
+        Expression::Operation { name, args } => {
             // Each arg is a slot
             for (i, arg) in args.iter().enumerate() {
                 let mut child_path = path.clone();
                 child_path.push(i);
-                collect_slots_recursive(arg, slots, next_auto_id, child_path);
+                let child_role = determine_arg_role(name, i);
+                collect_slots_recursive(arg, slots, next_auto_id, child_path, child_role);
             }
         }
+    }
+}
+
+fn determine_arg_role(op_name: &str, arg_index: usize) -> Option<String> {
+    match op_name {
+        "sup" | "power" => match arg_index {
+            0 => Some("base".to_string()),
+            1 => Some("superscript".to_string()),
+            _ => None,
+        },
+        "sub" => match arg_index {
+            0 => Some("base".to_string()),
+            1 => Some("subscript".to_string()),
+            _ => None,
+        },
+        "index" | "index_mixed" | "tensor_mixed" => match arg_index {
+            0 => Some("base".to_string()),
+            1 => Some("superscript".to_string()),
+            2 => Some("subscript".to_string()),
+            _ => None,
+        },
+        _ => None,
     }
 }
 
