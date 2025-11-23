@@ -4204,6 +4204,95 @@ pub fn layout_expression(expr: &Expression) -> LayoutBox
 
 ---
 
+## Architectural Decision: LaTeX Parsing vs. Template-Based Semantic Inference
+
+**Date:** 2024-11-23  
+**Decision:** Treat quantifiers (`\forall`, `\exists`) and similar constructs as **flat symbols** in the parser, not structural operators.
+
+### The Problem
+
+LaTeX math notation is inherently **flat/linear**: `\forall x \colon x \in S` is a sequence of symbols.  
+Structural editors need **tree-based AST**: `forall(variable: x, body: in_set(x, S))`.
+
+### Parsing Approaches Considered
+
+**Option A: Structural Parsing**  
+Parse `\forall x \colon P(x)` as `Operation("forall", [x, P(x)])`.
+
+*Pros:*
+- Semantically rich AST
+- Editor knows `x` is bound by `\forall`
+- Enables scope-aware operations
+
+*Cons:*
+- **Ambiguous scope**: Where does `\forall` end? `\forall x P(x) \land Q(x)` could mean `(\forall x P(x)) \land Q(x)` or `\forall x (P(x) \land Q(x))`
+- **Rigid syntax**: Requires specific separators (`:`, `.`)
+- **Parsing complexity**: Must handle operator precedence for logical connectives
+- **Fragile**: Breaks on non-standard LaTeX like `\forall x` (incomplete statement)
+
+**Option B: Flat Symbol Parsing (CHOSEN)**  
+Parse `\forall` as `Object("\\forall")`, let implicit multiplication chain symbols.
+
+*Pros:*
+- **Simple and robust**: No ambiguity about scope
+- **Flexible**: Users can type symbols in any order during editing
+- **Visually correct**: Renders properly regardless of structure
+- **Predictable**: Matches LaTeX's flat nature
+
+*Cons:*
+- **Semantically weak**: Editor doesn't know `x` is bound by `\forall`
+- **Limited structural operations**: Can't auto-rename bound variables
+
+### Decision Rationale
+
+1. **LaTeX is fundamentally flat.** Forcing tree structure on ambiguous syntax creates more problems than it solves.
+
+2. **Structural editing is for TEMPLATES, not arbitrary LaTeX.** The editor palette provides structured templates like `forall(var, body)` that users insert. These have clear boundaries.
+
+3. **Parsing arbitrary LaTeX is a convenience feature**, not the primary workflow. The structural editor works with programmatically constructed ASTs.
+
+4. **We can have both:** 
+   - **Editor palette**: Provides `forall(var, body)` template with clear structure
+   - **LaTeX import**: Parses `\forall x` as flat symbols (best effort)
+   - **Future enhancement**: Pattern-match LaTeX against template outputs to infer structure
+
+### Template-Based Semantic Inference (Future Work)
+
+**Concept:** If LaTeX text matches what a template would generate, infer the semantic structure.
+
+Example:
+- Template: `forall` renders as `\forall {var} \colon {body}`
+- Input: `\forall x \colon x \in S`
+- **Pattern match:** This looks like `forall(x, x \in S)`
+- **Infer AST:** Parse as `Operation("forall", [x, in_set(x, S)])`
+
+This allows:
+- **Simple parsing** for most cases (flat symbols)
+- **Smart inference** when LaTeX matches template patterns
+- **Best of both worlds**: Flexibility + semantic richness
+
+Implementation approach:
+1. Parse LaTeX as flat symbols (current behavior)
+2. Post-process AST to detect template patterns
+3. Upgrade matched patterns to structured operations
+4. Preserve flat structure for non-matching cases
+
+This is deferred to future work as it requires:
+- Pattern matching engine
+- Template output analysis
+- Heuristics for ambiguous cases
+
+### Current Implementation
+
+- **Parser:** Treats `\forall`, `\exists` as objects (symbols)
+- **Renderer:** Has templates for `forall(var, body)` and `exists(var, body)` operations
+- **Editor Palette:** Will provide structured templates for insertion
+- **LaTeX Import:** Parses as flat symbols, renders correctly
+
+This architecture allows the structural editor to work with clean ASTs while gracefully handling arbitrary LaTeX input.
+
+---
+
 **Status:** Architecture validated, foundation complete, layout engine selected (Typst), ready for implementation  
 **Date Updated:** 2024-11-22  
 **Layout Engine:** Typst (Rust library)  

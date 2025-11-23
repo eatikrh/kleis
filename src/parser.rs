@@ -1303,6 +1303,8 @@ impl Parser {
             "subseteq" => Ok(o("\\subseteq")),
 
             // Logic
+            "forall" => Ok(o("\\forall")),
+            "exists" => Ok(o("\\exists")),
             "Rightarrow" => Ok(o("\\Rightarrow")),
             "Leftrightarrow" => Ok(o("\\Leftrightarrow")),
 
