@@ -772,18 +772,34 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                             }
                             
                             if (foundPosition) {
-                                const padding = 3;
-                                rectX += padding;
-                                rectY += padding;
-                                rectWidth = Math.max(6, rectWidth - padding * 2);
-                                rectHeight = Math.max(6, rectHeight - padding * 2);
+                                const widthFactor = role === 'base' ? 0.6 : 0.5;
+                                const heightFactor = role === 'base' ? 0.65 : 0.5;
+
+                                const originalWidth = rectWidth;
+                                const originalHeight = rectHeight;
+
+                                rectWidth = Math.max(6, rectWidth * widthFactor);
+                                rectHeight = Math.max(6, rectHeight * heightFactor);
+
+                                const centerShiftX = (originalWidth - rectWidth) / 2;
+                                let centerShiftY = (originalHeight - rectHeight) / 2;
+
+                                rectX += centerShiftX;
+                                rectY += centerShiftY;
 
                                 if (role === 'superscript') {
-                                    rectY -= 6;
-                                    rectHeight = Math.max(6, rectHeight - 4);
+                                    const shift = Math.max(4, rectHeight * 0.4);
+                                    rectY -= shift;
+                                    rectHeight = Math.max(6, rectHeight * 0.8);
                                 } else if (role === 'subscript') {
-                                    rectY += 6;
-                                    rectHeight = Math.max(6, rectHeight - 4);
+                                    const shift = Math.max(4, rectHeight * 0.4);
+                                    rectY += shift;
+                                    rectHeight = Math.max(6, rectHeight * 0.8);
+                                } else if (role === 'base') {
+                                    const superscriptShift = Math.max(4, rectHeight * 0.4);
+                                    // align top edge with superscript top
+                                    rectY -= superscriptShift;
+                                    rectHeight = Math.max(6, rectHeight + superscriptShift);
                                 }
                                 const color = slot.is_placeholder ? '#667eea' : '#28a745';
                                 const fillColor = slot.is_placeholder ? 'rgba(240, 244, 255, 0.3)' : 'rgba(40, 167, 69, 0.2)';
