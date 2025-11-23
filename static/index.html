@@ -901,14 +901,48 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             }
         }
         
-        window.loadExample = function(latex) {
-            if (editorMode === 'structural') {
-                alert('Loading LaTeX into structural editor not yet implemented. Switch to Text Mode.');
-                setEditorMode('text');
-            }
+        window.loadExample = async function(latex) {
+            // Always update text input regardless of mode
             const input = document.getElementById('latexInput');
             if(input) input.value = latex;
-            renderEquation();
+            
+            if (editorMode === 'structural') {
+                // Parse LaTeX to AST via server
+                try {
+                    // Show loading state in editor
+                    const container = document.getElementById('structuralEditor');
+                    container.innerHTML = '<div style="text-align:center">🔄 Parsing LaTeX...</div>';
+                    
+                    const response = await fetch(`${API_BASE}/parse`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ latex })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.ast) {
+                        currentAST = data.ast;
+                        // Reset placeholder counter to avoid ID collisions with any existing IDs (though parsed AST usually has none)
+                        // We start higher to avoid conflict with any 0-indexed ones if they exist
+                        nextPlaceholderId = 10000; 
+                        
+                        renderStructuralEditor();
+                        showStatus('✅ Loaded into Structural Editor', 'success');
+                    } else {
+                        showStatus('❌ Parse failed: ' + (data.error || 'Unknown error'), 'error');
+                        // Fallback to text mode after short delay
+                        setTimeout(() => {
+                            setEditorMode('text');
+                            renderEquation();
+                        }, 1000);
+                    }
+                } catch (e) {
+                    showStatus('❌ Network error: ' + e.message, 'error');
+                }
+            } else {
+                renderEquation();
+            }
         };
         
         window.clearInput = function() {
