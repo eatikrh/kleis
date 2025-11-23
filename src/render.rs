@@ -689,6 +689,7 @@ fn latex_to_typst_symbol(input: &str) -> String {
         .replace("\\hbar", "ℏ").replace("\\infty", "∞")
         .replace("\\emptyset", "∅").replace("\\varnothing", "∅")
         .replace("\\partial", "∂").replace("\\nabla", "∇")
+        .replace("\\Box", "square").replace("\\square", "square")
         // Math operators (remove backslash for Typst)
         .replace("\\min", "min").replace("\\max", "max")
         .replace("\\sup", "sup").replace("\\inf", "inf")
