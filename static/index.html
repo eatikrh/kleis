@@ -766,11 +766,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                 
                                 const pathStr = JSON.stringify(slot.path).replace(/"/g, '&quot;');
                                 
+                                const nodeId = bbox.node_id || `0.${bbox.arg_index}`;
                                 const rect = `<rect x="${rectX}" y="${rectY}" width="${rectWidth}" height="${rectHeight}"
                                     fill="${fillColor}" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" rx="3"
-                                    class="arg-overlay" data-slot-id="${slot.id}" data-path="${pathStr}"
+                                    class="arg-overlay" data-slot-id="${slot.id}" data-path="${pathStr}" data-node-id="${nodeId}"
                                     style="cursor: pointer;"
-                                    onclick="handleSlotClick(${slot.id}, ${pathStr})" />`;
+                                    onclick="handleSlotClick(${slot.id}, ${pathStr}, '${nodeId}')" />`;
                                 overlayElements.push(rect);
                             }
                         });
@@ -790,8 +791,29 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             }
         }
 
-        window.handleSlotClick = function(id, path) {
-            const node = getNodeAtPath(currentAST, path);
+        function getNodeById(ast, nodeId) {
+            // Parse node ID like "0.1.2" into path [0, 1, 2]
+            const pathParts = nodeId.split('.').map(Number);
+            
+            // Navigate AST following the path
+            let node = ast;
+            for (let i = 1; i < pathParts.length; i++) {  // Skip first "0" (root)
+                if (node.Operation && node.Operation.args) {
+                    node = node.Operation.args[pathParts[i]];
+                } else {
+                    console.warn('Could not navigate to node:', nodeId);
+                    return ast;  // Fallback to root
+                }
+            }
+            return node;
+        }
+        
+        window.handleSlotClick = function(id, path, nodeId) {
+            console.log('Clicked slot:', { id, path, nodeId });
+            
+            // Use nodeId to navigate AST if available
+            const node = nodeId ? getNodeById(currentAST, nodeId) : getNodeAtPath(currentAST, path);
+            
             let val = "";
             if (node.Const) val = node.Const;
             if (node.Object) val = node.Object;
