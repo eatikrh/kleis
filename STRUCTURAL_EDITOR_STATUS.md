@@ -14,14 +14,16 @@
 
 ### 2. Full Template Coverage
 - **Implemented:** All 34 palette templates (Calculus, Linear Algebra, Physics, etc.).
-- **Verified:** 100% pass rate in `test_all_templates.rs`.
+- **Verified:** 100% pass rate in `test_comparison.rs`.
 - **Robustness:** Layout grouping logic handles nested structures.
+- **Visual Parity:** Verified against MathJax reference rendering.
 
 ### 3. Main UI Integration
 - **Merged:** `structural_test.html` logic moved to `static/index.html`.
 - **Toggle:** Seamless switching between Text (LaTeX) and Structural modes.
 - **Palette:** All templates insert structured AST nodes.
 - **Interaction:** Click-to-edit works with pixel-perfect overlays.
+- **LaTeX Import:** `/api/parse` endpoint allows loading gallery examples into structural mode.
 
 ---
 
@@ -44,7 +46,7 @@
 - Manages `currentAST` state.
 - Renders SVG and overlays.
 - Maps overlays to AST paths (`[0, 1, ...]`).
-- Handles edits via simple prompt (for now).
+- Handles edits via simple prompt.
 
 ---
 
@@ -54,12 +56,7 @@
    - For deeply nested fractions like `x / (y / (z / w))`, the "Group by Y" logic might split the denominator into multiple boxes visually.
    - **Impact:** Minor visual glitch (multiple green boxes), but editing still works if any box is clicked.
 
-2. **LaTeX Import:**
-   - Structural Mode starts empty.
-   - Loading a gallery example (LaTeX) switches to Text Mode.
-   - **Future Work:** Implement LaTeX → AST parser in `loadExample`.
-
-3. **Keyboard Navigation:**
+2. **Keyboard Navigation:**
    - Tab navigation works for placeholders.
    - Arrow key navigation through the tree is not yet implemented.
 
