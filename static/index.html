@@ -868,9 +868,44 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 structEditor.style.display = 'flex';
                 structControls.style.display = 'block';
                 inputLabel.textContent = '🔧 Structural Editor';
-                if (!currentAST) resetStructuralEditor();
+                
+                // Convert LaTeX from text mode to structural AST
+                const latex = latexInput.value.trim();
+                if (latex && !currentAST) {
+                    convertTextToStructural(latex);
+                } else if (!currentAST) {
+                    resetStructuralEditor();
+                }
             }
         };
+        
+        async function convertTextToStructural(latex) {
+            try {
+                showStatus('Converting LaTeX to structural format...', 'info');
+                
+                // Parse LaTeX to AST via API
+                const response = await fetch(`${API_BASE}/parse`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latex })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to parse LaTeX');
+                }
+                
+                const data = await response.json();
+                currentAST = data.ast;
+                
+                // Render the structural editor with the parsed AST
+                await renderStructuralEditor();
+                showStatus('✅ Converted to structural mode!', 'success');
+            } catch (error) {
+                showStatus('❌ Error converting: ' + error.message, 'error');
+                console.error('Conversion error:', error);
+                resetStructuralEditor();
+            }
+        }
         
         window.showPalette = function(name, btn) {
             document.querySelectorAll('[id^="palette-"]').forEach(p => p.style.display = 'none');
