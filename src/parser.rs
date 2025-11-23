@@ -185,7 +185,23 @@ impl Parser {
 
     fn parse_group_or_parens(&mut self) -> Result<Expression, ParseError> {
         // Parse {content} or (content) - for functions that accept both
-        self.skip_whitespace();
+        
+        // Skip whitespace and spacing commands
+        loop {
+            self.skip_whitespace();
+            
+            if self.peek() == Some('\\') {
+                let saved_pos = self.pos;
+                if let Ok(cmd) = self.parse_command() {
+                    if matches!(cmd.as_str(), "," | ";" | "!" | "quad" | "qquad") {
+                        continue;
+                    }
+                }
+                // Not a spacing command, restore position
+                self.pos = saved_pos;
+            }
+            break;
+        }
         
         match self.peek() {
             Some('{') => {
@@ -1413,6 +1429,10 @@ impl Parser {
                 let arg = self.parse_group()?;
                 Ok(op("vector_bold", vec![arg]))
             }
+            "mathrm" => {
+                let arg = self.parse_group()?;
+                Ok(op("mathrm", vec![arg]))
+            }
             "dot" => {
                 let arg = self.parse_group()?;
                 Ok(op("dot_accent", vec![arg]))
@@ -1446,11 +1466,8 @@ impl Parser {
             }
 
             // Text formatting (pass through)
-            "mathbf" | "boldsymbol" | "mathrm" => {
-                let arg = self.parse_group()?;
-                Ok(o(format!("\\{}{{{}}}",cmd, arg.as_string())))
-            }
-
+            // "mathbf" | "boldsymbol" | "mathrm" handled above as operations
+            
             // Integrals
             "int" => {
                 // Could have limits with _ and ^
