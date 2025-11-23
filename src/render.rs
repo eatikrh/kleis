@@ -426,8 +426,11 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 result = result.replace("{operator}", first);
                 result = result.replace("{argument}", first);
                 result = result.replace("{value}", first);
-                result = result.replace("{bra}", first); // for inner product
-                result = result.replace("{ket}", first); // for outer product
+                result = result.replace("{bra}", first); // for inner product (arg 0)
+                // For outer product, {ket} is arg 0, but for inner product, {ket} is arg 1
+                if name != "inner" {
+                    result = result.replace("{ket}", first); // for outer product
+                }
             }
             if let Some(second) = rendered_args.get(1) {
                 result = result.replace("{right}", second);
@@ -463,7 +466,10 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                     result = result.replace("{upper}", second); // mixed tensor: arg 1 is upper index
                 }
                 result = result.replace("{ket}", second); // for inner product
-                result = result.replace("{bra}", second); // for outer product
+                // For outer product, {bra} is arg 1, but for inner product, {bra} is arg 0
+                if name != "inner" {
+                    result = result.replace("{bra}", second); // for outer product
+                }
                 result = result.replace("{B}", second);
             }
             if let Some(third) = rendered_args.get(2) {
