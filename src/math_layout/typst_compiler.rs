@@ -10,7 +10,7 @@ use typst::syntax::{Source, FileId, VirtualPath};
 use typst::text::{Font, FontBook};
 use typst::utils::LazyHash;
 use typst::{Library, World};
-use typst::layout::{Frame, FrameItem, Point};
+use typst::layout::{Frame, FrameItem, Point, Transform};
 
 /// Minimal World implementation for Typst compilation
 /// 
@@ -95,11 +95,12 @@ pub fn compile_math_to_svg_with_ids(markup: &str, placeholder_ids: &[usize]) -> 
     eprintln!("Expected {} placeholders", expected_placeholders);
     
     // Create Typst document with math mode
+    // Use 0pt margin and top-left alignment to ensure coordinates are deterministic
+    // We use a box around the math to prevent block-level centering
     let typst_doc = format!(
-        r#"#set page(width: auto, height: auto, margin: 10pt)
+        r#"#set page(width: auto, height: auto, margin: 0pt)
 #set text(size: 24pt)
-
-$ {} $
+#box($ {} $)
 "#,
         markup
     );
@@ -135,8 +136,25 @@ $ {} $
     
     // Extract bounding boxes from layout
     let mut all_boxes = Vec::new();
-    extract_bounding_boxes_from_frame(frame, Point::zero(), &mut all_boxes);
+    extract_bounding_boxes_from_frame(frame, typst::layout::Transform::identity(), &mut all_boxes);
     eprintln!("Extracted {} bounding boxes from layout tree", all_boxes.len());
+    
+    // Normalize coordinates: typst-svg shifts content so min_x/min_y is at 0 (plus padding)
+    // We need to replicate this shift to match SVG coordinates
+    if !all_boxes.is_empty() {
+        let min_x = all_boxes.iter().map(|b| b.x).fold(f64::INFINITY, |a, b| a.min(b));
+        let min_y = all_boxes.iter().map(|b| b.y).fold(f64::INFINITY, |a, b| a.min(b));
+        
+        eprintln!("Layout bounds: min_x={:.2}, min_y={:.2}", min_x, min_y);
+        
+        // Apply shift to align with SVG (which starts at 0,0)
+        // SVG likely adds a small padding even with margin:0pt, or maybe 0
+        // Let's shift so min becomes 0
+        for bbox in &mut all_boxes {
+            bbox.x -= min_x;
+            bbox.y -= min_y;
+        }
+    }
     
     // Convert page to SVG (not document - typst_svg::svg takes a Page)
     let svg = typst_svg::svg(page);
@@ -146,31 +164,77 @@ $ {} $
     let placeholder_positions = extract_placeholder_positions_by_symbol(&svg, placeholder_ids)?;
     eprintln!("Extracted {} placeholder positions", placeholder_positions.len());
     
-    // Map bounding boxes to argument slots
-    // For now, return placeholder positions (will enhance with full bounding boxes)
+    // CALIBRATE COORDINATES
+    // Calculate offset between Layout coordinates and SVG coordinates using the first placeholder
+    let mut offset_x = 0.0;
+    let mut offset_y = 0.0;
+    
+    if let Some(first_ph) = placeholder_positions.first() {
+        // Find corresponding box in layout tree (Text element with similar size/position relative to others)
+        // The square symbol in Typst is a text glyph
+        // We look for a text box with width ~18pt
+        
+        // Find text boxes with width between 10 and 25
+        let candidates: Vec<&LayoutBoundingBox> = all_boxes.iter()
+            .filter(|b| b.content_type == "text" && b.width > 10.0 && b.width < 25.0)
+            .collect();
+            
+        if let Some(match_box) = candidates.first() {
+            // Calculate offset
+            // SVG = Layout + Offset
+            // Offset = SVG - Layout
+            offset_x = first_ph.x - match_box.x;
+            offset_y = first_ph.y - match_box.y;
+            
+            // Y-coordinate might be inverted or shifted differently
+            // But let's try simple translation first
+            eprintln!("Calibrated offset: ({:.2}, {:.2}) using placeholder ID {}", 
+                     offset_x, offset_y, first_ph.id);
+        }
+    }
+    
+    // Apply offset to all layout boxes
+    let calibrated_boxes: Vec<LayoutBoundingBox> = all_boxes.iter().map(|b| LayoutBoundingBox {
+        x: b.x + offset_x,
+        y: b.y + offset_y,
+        width: b.width,
+        height: b.height,
+        content_type: b.content_type.clone(),
+    }).collect();
+    
+    // Extract argument bounding boxes by grouping content boxes from layout tree
+    // Use the CALIBRATED boxes
+    let argument_bounding_boxes = group_content_into_arguments(&svg, &calibrated_boxes, &placeholder_positions)?;
+    eprintln!("Extracted {} argument bounding boxes", argument_bounding_boxes.len());
     
     Ok(CompiledOutput {
         svg,
         placeholder_positions,
-        argument_bounding_boxes: all_boxes,
+        argument_bounding_boxes,
     })
 }
+
 
 /// Extract bounding boxes from Typst layout frame (recursive)
 ///
 /// Traverses the layout tree and collects bounding boxes for all items.
+/// Tracks the accumulated transform matrix to give absolute page coordinates.
 fn extract_bounding_boxes_from_frame(
     frame: &Frame,
-    offset: Point,
+    ts: Transform,
     boxes: &mut Vec<LayoutBoundingBox>
 ) {
     for (pos, item) in frame.items() {
-        let item_pos = offset + *pos;
+        // Apply item position to current transform
+        // Transform::pre_concat applies the transformation *before* the current one
+        // But here we want to translate the coordinate system origin
+        let item_ts = ts.pre_concat(Transform::translate(pos.x, pos.y));
         
         match item {
             FrameItem::Group(group) => {
-                // Recursively process nested frames
-                extract_bounding_boxes_from_frame(&group.frame, item_pos, boxes);
+                // Apply group's transform
+                let group_ts = item_ts.pre_concat(group.transform);
+                extract_bounding_boxes_from_frame(&group.frame, group_ts, boxes);
             }
             FrameItem::Text(text) => {
                 // Text element - calculate bounding box from glyphs
@@ -185,9 +249,12 @@ fn extract_bounding_boxes_from_frame(
                 // Height is the font size
                 let height = text.size.to_pt();
                 
+                // Transform the top-left (0,0) point to get absolute bounding box
+                let tl = Point::zero().transform(item_ts);
+                
                 boxes.push(LayoutBoundingBox {
-                    x: item_pos.x.to_pt(),
-                    y: item_pos.y.to_pt(),
+                    x: tl.x.to_pt(),
+                    y: tl.y.to_pt(),
                     width,
                     height,
                     content_type: "text".to_string(),
@@ -196,9 +263,11 @@ fn extract_bounding_boxes_from_frame(
             FrameItem::Shape(shape, _) => {
                 // Shape element - get geometry size
                 let bbox_size = shape.geometry.bbox_size();
+                let tl = Point::zero().transform(item_ts);
+                
                 boxes.push(LayoutBoundingBox {
-                    x: item_pos.x.to_pt(),
-                    y: item_pos.y.to_pt(),
+                    x: tl.x.to_pt(),
+                    y: tl.y.to_pt(),
                     width: bbox_size.x.to_pt(),
                     height: bbox_size.y.to_pt(),
                     content_type: "shape".to_string(),
@@ -206,9 +275,11 @@ fn extract_bounding_boxes_from_frame(
             }
             FrameItem::Image(_, size, _) => {
                 // Image element
+                let tl = Point::zero().transform(item_ts);
+                
                 boxes.push(LayoutBoundingBox {
-                    x: item_pos.x.to_pt(),
-                    y: item_pos.y.to_pt(),
+                    x: tl.x.to_pt(),
+                    y: tl.y.to_pt(),
                     width: size.x.to_pt(),
                     height: size.y.to_pt(),
                     content_type: "image".to_string(),
@@ -216,9 +287,11 @@ fn extract_bounding_boxes_from_frame(
             }
             FrameItem::Link(_, size) => {
                 // Link element (hyperlinks, etc.) - record bounding box
+                let tl = Point::zero().transform(item_ts);
+                
                 boxes.push(LayoutBoundingBox {
-                    x: item_pos.x.to_pt(),
-                    y: item_pos.y.to_pt(),
+                    x: tl.x.to_pt(),
+                    y: tl.y.to_pt(),
                     width: size.x.to_pt(),
                     height: size.y.to_pt(),
                     content_type: "link".to_string(),
@@ -338,8 +411,8 @@ pub struct CompiledOutput {
     /// Positions of placeholders in the SVG
     pub placeholder_positions: Vec<PlaceholderPosition>,
     
-    /// All bounding boxes extracted from layout tree
-    pub argument_bounding_boxes: Vec<LayoutBoundingBox>,
+    /// Bounding boxes for each argument (extracted from invisible markers)
+    pub argument_bounding_boxes: Vec<ArgumentBoundingBox>,
 }
 
 /// Bounding box extracted from Typst layout tree
@@ -359,6 +432,25 @@ pub struct LayoutBoundingBox {
     
     /// Type of content (text, shape, etc.)
     pub content_type: String,
+}
+
+/// Bounding box for a specific argument (extracted from invisible markers)
+#[derive(Debug, Clone)]
+pub struct ArgumentBoundingBox {
+    /// Argument index (0, 1, 2, etc.)
+    pub arg_index: usize,
+    
+    /// X position in SVG coordinates (pt)
+    pub x: f64,
+    
+    /// Y position in SVG coordinates (pt)
+    pub y: f64,
+    
+    /// Width (pt)
+    pub width: f64,
+    
+    /// Height (pt)
+    pub height: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -447,6 +539,149 @@ fn extract_placeholder_positions_by_symbol(svg: &str, placeholder_ids: &[usize])
     eprintln!("Total placeholders extracted: {}", positions.len());
     
     Ok(positions)
+}
+
+/// Group content bounding boxes into argument-level boxes
+///
+/// Uses the layout boxes extracted from the Typst frame (absolute coordinates).
+/// Groups by y-position to separate lines (e.g. numerator vs denominator).
+fn group_content_into_arguments(
+    _svg: &str,
+    layout_boxes: &[LayoutBoundingBox],
+    _placeholder_positions: &[PlaceholderPosition],
+) -> Result<Vec<ArgumentBoundingBox>, String> {
+    eprintln!("Grouping {} layout boxes into arguments...", layout_boxes.len());
+    
+    let mut argument_boxes = Vec::new();
+    
+    // Filter for text content only
+    let content_boxes: Vec<&LayoutBoundingBox> = layout_boxes.iter()
+        .filter(|b| b.content_type == "text")
+        .collect();
+    
+    eprintln!("  Found {} text elements", content_boxes.len());
+    
+    // Sort by Y position first
+    let mut sorted_boxes = content_boxes.clone();
+    sorted_boxes.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
+    
+    // Group by Y-position (lines)
+    let mut lines: Vec<Vec<&LayoutBoundingBox>> = Vec::new();
+    
+    for bbox in sorted_boxes {
+        // Find if this box belongs to an existing line
+        let mut placed = false;
+        for line in &mut lines {
+            if let Some(first) = line.first() {
+                // If Y centers are close (within 10pt), it's the same line
+                let center_y = bbox.y + bbox.height/2.0;
+                let line_y = first.y + first.height/2.0;
+                if (center_y - line_y).abs() < 10.0 {
+                    line.push(bbox);
+                    placed = true;
+                    break;
+                }
+            }
+        }
+        if !placed {
+            lines.push(vec![bbox]);
+        }
+    }
+    
+    // Create a bounding box for each line (argument)
+    for (index, line) in lines.iter().enumerate() {
+        if line.is_empty() { continue; }
+        
+        let min_x = line.iter().map(|b| b.x).fold(f64::INFINITY, |a, b| a.min(b));
+        let min_y = line.iter().map(|b| b.y).fold(f64::INFINITY, |a, b| a.min(b));
+        let max_x = line.iter().map(|b| b.x + b.width).fold(f64::NEG_INFINITY, |a, b| a.max(b));
+        let max_y = line.iter().map(|b| b.y + b.height).fold(f64::NEG_INFINITY, |a, b| a.max(b));
+        
+        let width = (max_x - min_x).max(20.0);
+        let height = (max_y - min_y).max(20.0);
+        
+        // Add padding
+        let padding = 4.0;
+        
+        eprintln!("  Line {}: bbox ({:.1}, {:.1}) size {:.1}x{:.1}", 
+                 index, min_x, min_y, width, height);
+        
+        argument_boxes.push(ArgumentBoundingBox {
+            arg_index: index,
+            x: min_x - padding,
+            y: min_y - padding,
+            width: width + padding * 2.0,
+            height: height + padding * 2.0,
+        });
+    }
+    
+    Ok(argument_boxes)
+}
+
+/// Extract argument bounding boxes from invisible markers (OLD APPROACH - not used)
+///
+/// Looks for white-filled text groups (our invisible markers) and pairs them up
+/// to create bounding boxes for each argument.
+fn extract_argument_bounding_boxes_markers(svg: &str) -> Result<Vec<ArgumentBoundingBox>, String> {
+    eprintln!("Extracting argument bounding boxes from invisible markers...");
+    
+    let mut argument_boxes = Vec::new();
+    
+    // Pattern to find translate transforms with white-filled text (our markers)
+    // The markers are rendered with fill="#ffffff"
+    let pattern_str = r###"<g[^>]*transform="translate\(([\d.]+) ([\d.]+)\)"[^>]*>[\s\S]*?fill="#ffffff""###;
+    let transform_pattern = regex::Regex::new(pattern_str)
+        .map_err(|e| format!("Regex error: {}", e))?;
+    
+    // Collect all white-filled text positions (these are our markers)
+    let mut marker_positions: Vec<(f64, f64)> = Vec::new();
+    
+    for cap in transform_pattern.captures_iter(svg) {
+        if let (Some(x_str), Some(y_str)) = (cap.get(1), cap.get(2)) {
+            if let (Ok(x), Ok(y)) = (x_str.as_str().parse::<f64>(), y_str.as_str().parse::<f64>()) {
+                marker_positions.push((x, y));
+                eprintln!("  Found white marker at ({:.1}, {:.1})", x, y);
+            }
+        }
+    }
+    
+    eprintln!("  Total markers found: {}", marker_positions.len());
+    
+    // Markers come in pairs: start and end for each argument
+    // For N arguments, we expect 2*N markers
+    // Pair them up: (0,1), (2,3), (4,5), etc.
+    let mut arg_index = 0;
+    let mut i = 0;
+    
+    while i + 1 < marker_positions.len() {
+        let (start_x, start_y) = marker_positions[i];
+        let (end_x, end_y) = marker_positions[i + 1];
+        
+        // Create bounding box from start to end marker
+        let x = start_x.min(end_x);
+        let y = start_y.min(end_y);
+        let max_x = start_x.max(end_x);
+        let max_y = start_y.max(end_y);
+        let width = (max_x - x).max(20.0);  // Minimum width
+        let height = (max_y - y).max(20.0);  // Minimum height
+        
+        eprintln!("  Arg {}: bbox ({:.1}, {:.1}) size {:.1}x{:.1}", arg_index, x, y, width, height);
+        
+        argument_boxes.push(ArgumentBoundingBox {
+            arg_index,
+            x,
+            y,
+            width,
+            height,
+        });
+        
+        arg_index += 1;
+        i += 2;  // Move to next pair
+    }
+    
+    eprintln!("  Created {} argument bounding boxes", argument_boxes.len());
+    
+    Ok(argument_boxes)
 }
 
 /// Extract bounding boxes of colored argument boxes from Typst SVG

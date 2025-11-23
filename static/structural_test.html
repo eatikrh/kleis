@@ -580,51 +580,63 @@
                     // Create clickable overlays for ALL argument slots
                     log(`Argument slots: ${(data.argument_slots || []).length}`);
                     log(`Placeholder positions: ${(data.placeholders || []).length}`);
+                    log(`Argument bounding boxes: ${(data.argument_bounding_boxes || []).length}`);
                     
                     let overlayElements = [];
                     
                     // For each argument slot, create clickable region
                     if (data.argument_slots && data.argument_slots.length > 0) {
+                        // Get global SVG transform offset (usually padding/margins)
+                        let globalOffsetX = 0;
+                        let globalOffsetY = 0;
+                        
+                        // Try to find the root group transform
+                        // SVG structure: <svg> <g transform="translate(X Y)"> ...
+                        // We need to wait for the DOM to update or parse the SVG string
+                        const svgMatch = /<g[^>]*transform="translate\(([\d.-]+)[ ,]+([\d.-]+)\)"/.exec(svg);
+                        if (svgMatch) {
+                            globalOffsetX = parseFloat(svgMatch[1]);
+                            globalOffsetY = parseFloat(svgMatch[2]);
+                            log(`  Detected SVG global transform from string: translate(${globalOffsetX}, ${globalOffsetY})`);
+                        }
+
                         data.argument_slots.forEach((slot, index) => {
                             log(`  Slot ${index}: ID=${slot.id}, Path=${JSON.stringify(slot.path)}, ${slot.is_placeholder ? 'EMPTY' : 'FILLED'} (${slot.hint})`);
                             
                             let rectX, rectY, rectWidth, rectHeight;
+                            let foundPosition = false;
                             
-                            if (slot.is_placeholder) {
-                                // Empty placeholder - use extracted position
-                                const ph = data.placeholders.find(p => p.id === slot.id);
-                                if (ph) {
-                                    rectX = ph.x - 3;
-                                    rectY = ph.y - ph.height - 3;
-                                    rectWidth = ph.width + 6;
-                                    rectHeight = ph.height + 6;
-                                }
+                            // Try placeholder position first (for empty slots)
+                            const ph = data.placeholders && data.placeholders.find(p => p.id === slot.id);
+                            
+                            if (ph) {
+                                // Empty placeholder - use exact square position (already transformed)
+                                rectX = ph.x - 3;
+                                rectY = ph.y - ph.height - 3;
+                                rectWidth = ph.width + 6;
+                                rectHeight = ph.height + 6;
+                                foundPosition = true;
                             } else {
-                                // Filled value - use template-based estimates
-                                // TODO: Need better approach to get actual bounding boxes per argument
-                                const slotIndex = index;
-                                if (slotIndex === 0) {
-                                    // First arg - assume top region
-                                    rectX = 10;
-                                    rectY = 10;
-                                    rectWidth = 80;
-                                    rectHeight = 25;
-                                } else if (slotIndex === 1) {
-                                    // Second arg - assume bottom region  
-                                    rectX = 10;
-                                    rectY = 45;
-                                    rectWidth = 80;
-                                    rectHeight = 25;
-                                } else {
-                                    // Additional args - stack vertically
-                                    rectX = 10;
-                                    rectY = 10 + (slotIndex * 30);
-                                    rectWidth = 80;
-                                    rectHeight = 25;
+                                // Filled value - use grouped argument bounding box (absolute layout coords)
+                                const slotPath = slot.path[0]; // Argument index
+                                const bbox = data.argument_bounding_boxes && 
+                                            data.argument_bounding_boxes.find(b => b.arg_index === slotPath);
+                                
+                                if (bbox) {
+                                    // Use absolute page coordinates from backend
+                                    // Backend now correctly calculates absolute position using Transform matrix
+                                    
+                                    rectX = bbox.x - 3;
+                                    rectY = bbox.y - 3;
+                                    
+                                    rectWidth = bbox.width + 6;
+                                    rectHeight = bbox.height + 6;
+                                    foundPosition = true;
+                                    log(`  Using grouped bbox: (${bbox.x.toFixed(1)}, ${bbox.y.toFixed(1)}) size ${bbox.width.toFixed(1)}x${bbox.height.toFixed(1)}`);
                                 }
                             }
                             
-                            if (rectX !== undefined) {
+                            if (foundPosition) {
                                 // Create clickable overlay (green for filled, blue for empty)
                                 const color = slot.is_placeholder ? '#667eea' : '#28a745';
                                 const fillColor = slot.is_placeholder ? 'rgba(240, 244, 255, 0.3)' : 'rgba(40, 167, 69, 0.2)';
@@ -638,6 +650,8 @@
                                     onclick="handleArgumentSlotClick(${slot.id}, ${JSON.stringify(slot.path).replace(/"/g, '&quot;')})" />`;
                                 
                                 overlayElements.push(overlayRect);
+                            } else {
+                                log(`  Warning: No position found for slot ${index}`);
                             }
                         });
                         

@@ -368,6 +368,15 @@ async fn render_typst_handler(
                                 "height": p.height,
                             })
                         }).collect::<Vec<_>>(),
+                        "argument_bounding_boxes": output.argument_bounding_boxes.iter().map(|b| {
+                            serde_json::json!({
+                                "arg_index": b.arg_index,
+                                "x": b.x,
+                                "y": b.y,
+                                "width": b.width,
+                                "height": b.height,
+                            })
+                        }).collect::<Vec<_>>(),
                         "argument_slots": arg_slots,  // Return ALL slots (for frontend to make clickable)
                         "success": true,
                     });
