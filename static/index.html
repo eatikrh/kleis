@@ -708,13 +708,16 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             container.innerHTML = '<div style="text-align:center">🔄 Rendering...</div>';
             
             try {
+                console.log('renderStructuralEditor: sending AST to /api/render_typst', currentAST);
                 const response = await fetch(`${API_BASE}/render_typst`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ast: currentAST })
                 });
+                console.log('renderStructuralEditor: response status', response.status);
                 
                 const data = await response.json();
+                console.log('renderStructuralEditor: response payload', data);
                 
                 if (data.success) {
                     let svg = data.svg;
@@ -746,21 +749,19 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                 rectHeight = ph.height + 6;
                                 foundPosition = true;
                             } else {
-                                // 2. Try layout bounding box
-                                const slotPath = slot.path[0];
+                                // 2. Try semantic bounding box matched by node path
+                                const nodePathId = nodeIdFromPath(slot.path || []);
                                 const bbox = data.argument_bounding_boxes && 
-                                            data.argument_bounding_boxes.find(b => b.arg_index === slotPath);
+                                            data.argument_bounding_boxes.find(b => b.node_id === nodePathId);
                                 
                                 if (bbox) {
-                                    // Absolute coordinates from backend (normalized) matches SVG (normalized)
                                     rectX = bbox.x - 3;
                                     rectY = bbox.y - 3;
                                     rectWidth = bbox.width + 6;
                                     rectHeight = bbox.height + 6;
                                     foundPosition = true;
                                     
-                                    // Store node_id for this bbox
-                                    currentNodeId = bbox.node_id || `0.${bbox.arg_index}`;
+                                    currentNodeId = bbox.node_id;
                                 }
                             }
                             
@@ -770,8 +771,8 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                 
                                 const pathStr = JSON.stringify(slot.path).replace(/"/g, '&quot;');
                                 
-                                // Use stored node_id or generate from path
-                                const nodeId = currentNodeId || `0.${slot.path[0]}`;
+                                // Use stored node_id or compute from path
+                                const nodeId = currentNodeId || nodeIdFromPath(slot.path || []);
                                 const rect = `<rect x="${rectX}" y="${rectY}" width="${rectWidth}" height="${rectHeight}"
                                     fill="${fillColor}" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" rx="3"
                                     class="arg-overlay" data-slot-id="${slot.id}" data-path="${pathStr}" data-node-id="${nodeId}"
@@ -790,10 +791,20 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     preview.innerHTML = svg;
                 } else {
                     showStatus('Render failed: ' + data.error, 'error');
+                    console.error('renderStructuralEditor: backend reported failure', data);
                 }
             } catch (e) {
                 showStatus('Network error: ' + e.message, 'error');
+                console.error('renderStructuralEditor: fetch threw error', e);
             }
+        }
+
+        function nodeIdFromPath(pathArray) {
+            const segments = [0];
+            if (Array.isArray(pathArray)) {
+                pathArray.forEach((idx) => segments.push(idx));
+            }
+            return segments.join('.');
         }
 
         function getNodeById(ast, nodeId) {
@@ -918,12 +929,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 showStatus('Converting to LaTeX...', 'info');
                 
                 // Render AST to LaTeX via API
-                const response = await fetch(`${API_BASE}/render`, {
+                const response = await fetch(`${API_BASE}/render_ast`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         ast: currentAST,
-                        target: 'latex'
+                        format: 'latex'
                     })
                 });
                 
