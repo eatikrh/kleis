@@ -535,6 +535,7 @@ impl Parser {
                                     "Upsilon" | "Phi" | "Psi" | "Omega" | "aleph" | "beth" | "gimel" | "daleth" |
                                     "mathbb" | "boldsymbol" | "vec" | "hat" | "bar" | "tilde" | "overline" | "dot" | "ddot" | "partial" | "nabla" |
                                     "hbar" | "infty" | "emptyset" | "mathrm" |
+                                    "Rightarrow" | "Leftarrow" | "Leftrightarrow" |
                                     "begin" | "left"
                                 );
                                 self.pos = saved_pos; // Backtrack again

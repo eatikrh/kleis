@@ -21,6 +21,7 @@ pub fn infer_templates(expr: Expression) -> Expression {
     
     try_infer_double_integral(&expr)
         .or_else(|| try_infer_triple_integral(&expr))
+        .or_else(|| try_infer_logical_implication(&expr))
         // Add more pattern matchers here as needed:
         // .or_else(|| try_infer_limit(&expr))
         // .or_else(|| try_infer_sum_bounds(&expr))
@@ -64,6 +65,48 @@ fn try_infer_double_integral(expr: &Expression) -> Option<Expression> {
     } else {
         None
     }
+}
+
+/// Attempt to infer logical implication structure
+/// 
+/// Pattern: left * \Rightarrow * right
+/// Also handles: \Leftarrow, \Leftrightarrow
+fn try_infer_logical_implication(expr: &Expression) -> Option<Expression> {
+    let terms = flatten_multiply(expr);
+    
+    // Need at least 3 terms: left, arrow, right
+    if terms.len() < 3 {
+        return None;
+    }
+    
+    // Look for \Rightarrow, \Leftarrow, or \Leftrightarrow in the chain
+    for i in 1..terms.len()-1 {
+        let (op_name, arrow_symbol) = match &terms[i] {
+            Expression::Object(s) if s == "\\Rightarrow" => ("implies", "\\Rightarrow"),
+            Expression::Object(s) if s == "\\Leftarrow" => ("implied_by", "\\Leftarrow"),
+            Expression::Object(s) if s == "\\Leftrightarrow" => ("iff", "\\Leftrightarrow"),
+            _ => continue,
+        };
+        
+        // Found an arrow! Everything before is left, everything after is right
+        let left_terms = &terms[0..i];
+        let right_terms = &terms[i+1..];
+        
+        if left_terms.is_empty() || right_terms.is_empty() {
+            continue; // Invalid pattern
+        }
+        
+        // Reconstruct left and right from their term chains
+        let left = rebuild_multiply(left_terms);
+        let right = rebuild_multiply(right_terms);
+        
+        return Some(Expression::Operation {
+            name: op_name.to_string(),
+            args: vec![left, right],
+        });
+    }
+    
+    None
 }
 
 /// Attempt to infer triple_integral structure
@@ -111,6 +154,29 @@ fn try_infer_triple_integral(expr: &Expression) -> Option<Expression> {
 }
 
 // === Helper Functions ===
+
+/// Rebuild a multiplication chain from a list of terms
+/// 
+/// Inverse of flatten_multiply: [a, b, c] -> scalar_multiply(scalar_multiply(a, b), c)
+fn rebuild_multiply(terms: &[Expression]) -> Expression {
+    if terms.is_empty() {
+        return Expression::Object("".to_string());
+    }
+    
+    if terms.len() == 1 {
+        return terms[0].clone();
+    }
+    
+    // Build left-associative chain: ((a * b) * c) * d
+    let mut result = terms[0].clone();
+    for term in &terms[1..] {
+        result = Expression::Operation {
+            name: "scalar_multiply".to_string(),
+            args: vec![result, term.clone()],
+        };
+    }
+    result
+}
 
 /// Flatten a nested scalar_multiply chain into a list of terms
 /// 
@@ -202,6 +268,41 @@ mod tests {
                 assert_eq!(args.len(), 5);
             }
             _ => panic!("Expected triple_integral operation"),
+        }
+    }
+    
+    #[test]
+    fn test_infer_logical_implication() {
+        let latex = r"P \Rightarrow Q";
+        let flat_ast = parse_latex(latex).unwrap();
+        let inferred = infer_templates(flat_ast);
+        
+        match &inferred {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "implies");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected implies operation"),
+        }
+        
+        // Verify it renders correctly
+        let ctx = build_default_context();
+        let latex_out = render_expression(&inferred, &ctx, &RenderTarget::LaTeX);
+        assert!(latex_out.contains("\\Rightarrow"));
+    }
+    
+    #[test]
+    fn test_infer_iff() {
+        let latex = r"P \Leftrightarrow Q";
+        let flat_ast = parse_latex(latex).unwrap();
+        let inferred = infer_templates(flat_ast);
+        
+        match &inferred {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "iff");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected iff operation"),
         }
     }
     
