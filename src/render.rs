@@ -1207,54 +1207,28 @@ pub fn build_default_context() -> GlyphContext {
     html_templates.insert("covariance".to_string(), r#"<span class="math-func">Cov</span>({left}, {right})"#.to_string());
     
     // === TYPST Templates (for math layout engine) ===
-    // Note: Zero-width invisible markers are added around arguments to enable
-    // accurate bounding box extraction from the rendered SVG
+    // Templates are clean (no invisible markers) as we use layout tree analysis
+    // for bounding box extraction
     let typst_glyphs = HashMap::new();
     let mut typst_templates = HashMap::new();
     
-    // Helper to create zero-width invisible marker
-    // Uses box(width: 0pt) so marker doesn't affect layout spacing
-    let marker = |n: usize, end: bool| -> String {
-        if end {
-            format!("#box(width: 0pt)[#text(fill: white)[◀/{}▶]]", n)
-        } else {
-            format!("#box(width: 0pt)[#text(fill: white)[◀{}▶]]", n)
-        }
-    };
-    
-    // Basic operations - with zero-width invisible markers
-    typst_templates.insert("scalar_divide".to_string(), 
-        format!("({}{{left}}{})/({}{{right}}{})", marker(0, false), marker(0, true), marker(1, false), marker(1, true)));
-    typst_templates.insert("scalar_multiply".to_string(), 
-        format!("{}{{left}}{} dot {}{{right}}{}", marker(0, false), marker(0, true), marker(1, false), marker(1, true)));
-    typst_templates.insert("plus".to_string(), 
-        format!("{}{{left}}{} + {}{{right}}{}", marker(0, false), marker(0, true), marker(1, false), marker(1, true)));
-    typst_templates.insert("minus".to_string(), 
-        format!("{}{{left}}{} - {}{{right}}{}", marker(0, false), marker(0, true), marker(1, false), marker(1, true)));
+    // Basic operations
+    typst_templates.insert("scalar_divide".to_string(), "({left})/({right})".to_string());
+    typst_templates.insert("scalar_multiply".to_string(), "{left} dot {right}".to_string());
+    typst_templates.insert("plus".to_string(), "{left} + {right}".to_string());
+    typst_templates.insert("minus".to_string(), "{left} - {right}".to_string());
     
     // Superscript/subscript
-    typst_templates.insert("sup".to_string(), 
-        format!("{}{{base}}{}^{}{{exponent}}{}", marker(0, false), marker(0, true), marker(1, false), marker(1, true)));
-    typst_templates.insert("sub".to_string(), 
-        format!("{}{{base}}{}_{}{{subscript}}{}", marker(0, false), marker(0, true), marker(1, false), marker(1, true)));
+    typst_templates.insert("sup".to_string(), "{base}^{exponent}".to_string());
+    typst_templates.insert("sub".to_string(), "{base}_{subscript}".to_string());
     
     // Square root
-    typst_templates.insert("sqrt".to_string(), 
-        format!("sqrt({}{{arg}}{})", marker(0, false), marker(0, true)));
+    typst_templates.insert("sqrt".to_string(), "sqrt({arg})".to_string());
     
     // Calculus
-    typst_templates.insert("int_bounds".to_string(), 
-        format!("integral_({}{{lower}}{})^({}{{upper}}{}) {}{{integrand}}{} dif {}{{variable}}{}", 
-            marker(0, false), marker(0, true), marker(1, false), marker(1, true),
-            marker(2, false), marker(2, true), marker(3, false), marker(3, true)));
-    typst_templates.insert("sum_bounds".to_string(), 
-        format!("sum_({}{{from}}{})^({}{{to}}{}) {}{{body}}{}", 
-            marker(0, false), marker(0, true), marker(1, false), marker(1, true),
-            marker(2, false), marker(2, true)));
-    typst_templates.insert("prod_bounds".to_string(), 
-        format!("product_({}{{from}}{})^({}{{to}}{}) {}{{body}}{}", 
-            marker(0, false), marker(0, true), marker(1, false), marker(1, true),
-            marker(2, false), marker(2, true)));
+    typst_templates.insert("int_bounds".to_string(), "integral_({lower})^({upper}) {integrand} dif {variable}".to_string());
+    typst_templates.insert("sum_bounds".to_string(), "sum_({from})^({to}) {body}".to_string());
+    typst_templates.insert("prod_bounds".to_string(), "product_({from})^({to}) {body}".to_string());
     
     // TODO: Add more Typst templates as needed
     
