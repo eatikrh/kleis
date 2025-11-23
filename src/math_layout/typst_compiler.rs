@@ -559,8 +559,6 @@ fn group_content_into_arguments(
         .filter(|b| b.content_type == "text")
         .collect();
     
-    eprintln!("  Found {} text elements", content_boxes.len());
-    
     // Sort by Y position first
     let mut sorted_boxes = content_boxes.clone();
     sorted_boxes.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
@@ -571,12 +569,16 @@ fn group_content_into_arguments(
     for bbox in sorted_boxes {
         // Find if this box belongs to an existing line
         let mut placed = false;
-        for line in &mut lines {
+        for (line_idx, line) in lines.iter_mut().enumerate() {
             if let Some(first) = line.first() {
-                // If Y centers are close (within 10pt), it's the same line
+                // If Y centers are close, it's the same line
+                // Tolerance increased to 20.0 to handle nested fractions (e.g. 3/x in denominator)
+                // which might have components shifted vertically
                 let center_y = bbox.y + bbox.height/2.0;
                 let line_y = first.y + first.height/2.0;
-                if (center_y - line_y).abs() < 10.0 {
+                let diff = (center_y - line_y).abs();
+                
+                if diff < 20.0 {
                     line.push(bbox);
                     placed = true;
                     break;
