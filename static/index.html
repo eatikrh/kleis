@@ -862,6 +862,11 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 structEditor.style.display = 'none';
                 structControls.style.display = 'none';
                 inputLabel.textContent = '📝 LaTeX Input';
+                
+                // Convert structural AST back to LaTeX
+                if (currentAST) {
+                    convertStructuralToText();
+                }
             } else {
                 textControls.style.display = 'none';
                 latexInput.style.display = 'none';
@@ -878,6 +883,39 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 }
             }
         };
+        
+        async function convertStructuralToText() {
+            try {
+                showStatus('Converting to LaTeX...', 'info');
+                
+                // Render AST to LaTeX via API
+                const response = await fetch(`${API_BASE}/render`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        ast: currentAST,
+                        target: 'latex'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to render AST to LaTeX');
+                }
+                
+                const data = await response.json();
+                
+                // Update text input with rendered LaTeX
+                const latexInput = document.getElementById('latexInput');
+                latexInput.value = data.output;
+                
+                // Render preview
+                await renderEquation();
+                showStatus('✅ Converted to text mode!', 'success');
+            } catch (error) {
+                showStatus('❌ Error converting: ' + error.message, 'error');
+                console.error('Conversion error:', error);
+            }
+        }
         
         async function convertTextToStructural(latex) {
             try {
