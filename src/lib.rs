@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod render;
 pub mod parser;
+pub mod template_inference;
 pub mod templates;
 pub mod math_layout;
 

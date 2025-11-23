@@ -1573,7 +1573,13 @@ impl Expression {
 // Public API
 pub fn parse_latex(input: &str) -> Result<Expression, ParseError> {
     let mut parser = Parser::new(input);
-    parser.parse()
+    let flat_ast = parser.parse()?;
+    
+    // Apply template-based semantic inference
+    // If inference fails, returns the original flat AST (graceful fallback)
+    let structured_ast = crate::template_inference::infer_templates(flat_ast);
+    
+    Ok(structured_ast)
 }
 
 #[cfg(test)]
