@@ -685,7 +685,15 @@ fn latex_to_typst_symbol(input: &str) -> String {
         .replace("\\sup", "sup").replace("\\inf", "inf")
         .replace("\\lim", "lim").replace("\\limsup", "limsup").replace("\\liminf", "liminf")
         .replace("\\sum", "sum").replace("\\prod", "product")
+        .replace("\\iiint", "integral.triple").replace("\\iint", "integral.double")
         .replace("\\int", "integral")
+        // Trig functions
+        .replace("\\sin", "sin").replace("\\cos", "cos").replace("\\tan", "tan")
+        .replace("\\sec", "sec").replace("\\csc", "csc").replace("\\cot", "cot")
+        .replace("\\arcsin", "arcsin").replace("\\arccos", "arccos").replace("\\arctan", "arctan")
+        .replace("\\sinh", "sinh").replace("\\cosh", "cosh").replace("\\tanh", "tanh")
+        // Other math functions
+        .replace("\\ln", "ln").replace("\\log", "log").replace("\\exp", "exp")
         // Set theory and logic symbols
         .replace("\\forall", "forall").replace("\\exists", "exists")
         .replace("\\in", "in").replace("\\notin", "in.not")
@@ -1318,14 +1326,27 @@ pub fn build_default_context() -> GlyphContext {
     
     // Square root
     typst_templates.insert("sqrt".to_string(), "sqrt({arg})".to_string());
+    typst_templates.insert("nth_root".to_string(), "root({right}, {left})".to_string());
     
     // Calculus
     typst_templates.insert("int_bounds".to_string(), "integral _({lower})^({upper}) {integrand} dif {variable}".to_string());
+    typst_templates.insert("double_integral".to_string(), "integral.double _({right}) {left} dif {idx2} dif {idx3}".to_string());
+    typst_templates.insert("triple_integral".to_string(), "integral.triple _({right}) {left} dif {idx2} dif {idx3} dif {idx4}".to_string());
     typst_templates.insert("sum_bounds".to_string(), "sum _({from})^({to}) {body}".to_string());
     typst_templates.insert("prod_bounds".to_string(), "product _({from})^({to}) {body}".to_string());
-    typst_templates.insert("d_part".to_string(), "(partial {function})/(partial {variable})".to_string());
+    typst_templates.insert("sum_index".to_string(), "sum _({from}) {body}".to_string());
+    typst_templates.insert("prod_index".to_string(), "product _({from}) {body}".to_string());
+    
+    typst_templates.insert("d_part".to_string(), "(diff {function})/(diff {variable})".to_string());
+    typst_templates.insert("d2_part".to_string(), "(diff^2 {function})/(diff {variable}^2)".to_string());
+    typst_templates.insert("partial_apply".to_string(), "diff _({sub}) {arg}".to_string());
     typst_templates.insert("d_dt".to_string(), "(d {function})/(d {variable})".to_string()); // using d for derivative? or upright d?
     typst_templates.insert("grad".to_string(), "nabla {function}".to_string());
+    typst_templates.insert("div".to_string(), "nabla dot {function}".to_string());
+    typst_templates.insert("curl".to_string(), "nabla times {function}".to_string());
+    typst_templates.insert("laplacian".to_string(), "nabla^2 {function}".to_string());
+    typst_templates.insert("box".to_string(), "square {arg}".to_string()); // d'Alembertian
+    typst_templates.insert("surface_integral_over".to_string(), "integral _({surface}) {field} dot dif S".to_string());
     
     // Linear Algebra
     // Use generous spacing to ensure #sym.square identifiers don't merge with commas
@@ -1343,6 +1364,10 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("cross".to_string(), "{left} times {right}".to_string());
     typst_templates.insert("norm".to_string(), "norm({vector})".to_string());
     typst_templates.insert("abs".to_string(), "abs({value})".to_string());
+    typst_templates.insert("det".to_string(), "det({arg})".to_string());
+    typst_templates.insert("transpose".to_string(), "{arg}^T".to_string());
+    typst_templates.insert("inverse".to_string(), "{arg}^(-1)".to_string());
+    typst_templates.insert("outer_product".to_string(), "lr(| {ket} angle.r angle.l {bra} |)".to_string());
     
     // Quantum
     // Use lr(...) to ensure brackets scale with content
@@ -1351,6 +1376,7 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("inner".to_string(), "lr(angle.l {bra} | {ket} angle.r)".to_string());
     typst_templates.insert("outer".to_string(), "lr(| {ket} angle.r angle.l {bra} |)".to_string());
     typst_templates.insert("commutator".to_string(), "lr([ {A}, {B} ])".to_string());
+    typst_templates.insert("anticommutator".to_string(), "lr({ {A}, {B} })".to_string());
     typst_templates.insert("expectation".to_string(), "lr(angle.l {operator} angle.r)".to_string());
     
     // Tensors
@@ -1361,9 +1387,28 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("sin".to_string(), "sin({argument})".to_string());
     typst_templates.insert("cos".to_string(), "cos({argument})".to_string());
     typst_templates.insert("tan".to_string(), "tan({argument})".to_string());
+    typst_templates.insert("sec".to_string(), "sec({argument})".to_string());
+    typst_templates.insert("csc".to_string(), "csc({argument})".to_string());
+    typst_templates.insert("cot".to_string(), "cot({argument})".to_string());
+    typst_templates.insert("arcsin".to_string(), "arcsin({argument})".to_string());
+    typst_templates.insert("arccos".to_string(), "arccos({argument})".to_string());
+    typst_templates.insert("arctan".to_string(), "arctan({argument})".to_string());
+    typst_templates.insert("sinh".to_string(), "sinh({argument})".to_string());
+    typst_templates.insert("cosh".to_string(), "cosh({argument})".to_string());
+    typst_templates.insert("tanh".to_string(), "tanh({argument})".to_string());
     
     // Exponential
     typst_templates.insert("exp".to_string(), "e^({argument})".to_string());
+    typst_templates.insert("ln".to_string(), "ln({argument})".to_string());
+    typst_templates.insert("log".to_string(), "log({argument})".to_string());
+    typst_templates.insert("factorial".to_string(), "{arg}!".to_string());
+    typst_templates.insert("floor".to_string(), "floor({arg})".to_string());
+    typst_templates.insert("ceiling".to_string(), "ceil({arg})".to_string());
+    typst_templates.insert("conjugate".to_string(), "overline({arg})".to_string());
+    typst_templates.insert("re".to_string(), "Re({arg})".to_string());
+    typst_templates.insert("im".to_string(), "Im({arg})".to_string());
+    typst_templates.insert("modulus".to_string(), "mod {arg}".to_string());
+    typst_templates.insert("congruent_mod".to_string(), "{left} equiv {right} (mod {to})".to_string());
     
     // Limits
     typst_templates.insert("lim".to_string(), "lim _({var} -> {target}) {body}".to_string());
@@ -1372,9 +1417,50 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("liminf".to_string(), "liminf _({var} -> {target}) {body}".to_string());
     typst_templates.insert("equals".to_string(), "{left} = {right}".to_string());
     
+    // Comparison operators
+    typst_templates.insert("leq".to_string(), "{left} <= {right}".to_string());
+    typst_templates.insert("geq".to_string(), "{left} >= {right}".to_string());
+    typst_templates.insert("less_than".to_string(), "{left} < {right}".to_string());
+    typst_templates.insert("greater_than".to_string(), "{left} > {right}".to_string());
+    typst_templates.insert("neq".to_string(), "{left} != {right}".to_string());
+    typst_templates.insert("not_equal".to_string(), "{left} != {right}".to_string());
+    typst_templates.insert("approx".to_string(), "{left} approx {right}".to_string());
+    typst_templates.insert("propto".to_string(), "{left} prop {right}".to_string());
+    typst_templates.insert("proportional".to_string(), "{left} prop {right}".to_string());
+    
+    // Piecewise functions
+    typst_templates.insert("cases2".to_string(), "cases({left} & \"if\" {right}, {from} & \"if\" {to})".to_string());
+    typst_templates.insert("cases3".to_string(), "cases({left} & \"if\" {right}, {from} & \"if\" {to}, {body} & \"if\" {idx2})".to_string());
+    
+    // Accents
+    typst_templates.insert("hat".to_string(), "hat({arg})".to_string());
+    typst_templates.insert("bar".to_string(), "overline({arg})".to_string());
+    typst_templates.insert("tilde".to_string(), "tilde({arg})".to_string());
+    typst_templates.insert("overline".to_string(), "overline({arg})".to_string());
+    typst_templates.insert("dot_accent".to_string(), "dot({arg})".to_string());
+    typst_templates.insert("ddot_accent".to_string(), "dot.double({arg})".to_string());
+    
+    // Text mode
+    typst_templates.insert("text".to_string(), "\"{arg}\"".to_string());
+    typst_templates.insert("mathrm".to_string(), "upright(\"{arg}\")".to_string());
+    
+    // Statistics and linear algebra functions
+    typst_templates.insert("variance".to_string(), "op(\"Var\")({arg})".to_string());
+    typst_templates.insert("covariance".to_string(), "op(\"Cov\")({left}, {right})".to_string());
+    typst_templates.insert("trace".to_string(), "op(\"Tr\")({arg})".to_string());
+    
     // Set theory and logic
     typst_templates.insert("in".to_string(), "{left} in {right}".to_string());
     typst_templates.insert("in_set".to_string(), "{left} in {right}".to_string());
+    typst_templates.insert("subset".to_string(), "{left} subset {right}".to_string());
+    typst_templates.insert("lt".to_string(), "{left} < {right}".to_string());
+    typst_templates.insert("gt".to_string(), "{left} > {right}".to_string());
+    
+    typst_templates.insert("riemann".to_string(), "R^({idx1})_({idx2} {idx3} {idx4})".to_string());
+    typst_templates.insert("zeta".to_string(), "zeta({arg})".to_string());
+    typst_templates.insert("gamma".to_string(), "Gamma({arg})".to_string());
+    typst_templates.insert("power".to_string(), "{base}^({exponent})".to_string());
+    typst_templates.insert("index".to_string(), "{base}_({subscript})".to_string());
     typst_templates.insert("subseteq".to_string(), "{left} subset.eq {right}".to_string());
     typst_templates.insert("union".to_string(), "{left} union {right}".to_string());
     typst_templates.insert("intersection".to_string(), "{left} sect {right}".to_string());
