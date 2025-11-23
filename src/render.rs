@@ -398,6 +398,17 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 result = result.replace("{integrand}", first);
                 result = result.replace("{num}", first);
                 result = result.replace("{base}", first);
+                // Added for coverage
+                result = result.replace("{function}", first);
+                result = result.replace("{a11}", first);
+                result = result.replace("{vector}", first);
+                result = result.replace("{state}", first);
+                result = result.replace("{A}", first);
+                result = result.replace("{operator}", first);
+                result = result.replace("{argument}", first);
+                result = result.replace("{value}", first);
+                result = result.replace("{bra}", first); // for inner product
+                result = result.replace("{ket}", first); // for outer product
             }
             if let Some(second) = rendered_args.get(1) {
                 result = result.replace("{right}", second);
@@ -413,6 +424,17 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 result = result.replace("{idx1}", second);
                 result = result.replace("{target}", second);
                 result = result.replace("{sub}", second);
+                // Added for coverage
+                result = result.replace("{lower}", second);
+                result = result.replace("{variable}", second); // for derivatives
+                result = result.replace("{var}", second); // for limits
+                result = result.replace("{subscript}", second);
+                result = result.replace("{a12}", second);
+                result = result.replace("{idx2}", second); // general index
+                result = result.replace("{upper}", second); // mixed tensor
+                result = result.replace("{ket}", second); // for inner product
+                result = result.replace("{bra}", second); // for outer product
+                result = result.replace("{B}", second);
             }
             if let Some(third) = rendered_args.get(2) {
                 // Extended placeholder aliases for arg2
@@ -428,6 +450,13 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 if rendered_args.len() < 6 {
                     result = result.replace("{idx2}", third);
                 }
+                // Added for coverage
+                result = result.replace("{upper}", third); // integral upper bound? No, wait.
+                // int_bounds: 0=integrand, 1=lower, 2=upper, 3=variable
+                result = result.replace("{upper}", third); 
+                result = result.replace("{lower}", third); // mixed tensor
+                result = result.replace("{a13}", third); // matrix3x3
+                result = result.replace("{a21}", third); // matrix2x2
             }
             if let Some(fourth) = rendered_args.get(3) {
                 // Extended placeholder aliases for arg3
@@ -436,13 +465,19 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                     result = result.replace("{to}", fourth);
                 }
                 result = result.replace("{idx3}", fourth);
+                // Added for coverage
+                result = result.replace("{variable}", fourth); // int_bounds variable
+                result = result.replace("{a22}", fourth); // matrix2x2
+                result = result.replace("{a21}", fourth); // matrix3x3
             }
+            // Add more for Matrix3x3
             if let Some(fifth) = rendered_args.get(4) {
                 result = result.replace("{idx4}", fifth);
                 // For 6-arg operations (cases3), use arg4 as {body}
                 if rendered_args.len() == 6 {
                     result = result.replace("{body}", fifth);
                 }
+                result = result.replace("{a22}", fifth);
             }
             if let Some(sixth) = rendered_args.get(5) {
                 result = result.replace("{idx5}", sixth);
@@ -450,6 +485,16 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 if rendered_args.len() == 6 {
                     result = result.replace("{idx2}", sixth);
                 }
+                result = result.replace("{a23}", sixth);
+            }
+            if let Some(seventh) = rendered_args.get(6) {
+                result = result.replace("{a31}", seventh);
+            }
+            if let Some(eighth) = rendered_args.get(7) {
+                result = result.replace("{a32}", eighth);
+            }
+            if let Some(ninth) = rendered_args.get(8) {
+                result = result.replace("{a33}", ninth);
             }
             // After generic replacements, restore single-braced LaTeX placeholders for vector wrappers
             if *target == RenderTarget::LaTeX && (name == "vector_arrow" || name == "vector_bold") {
@@ -1219,16 +1264,52 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("minus".to_string(), "{left} - {right}".to_string());
     
     // Superscript/subscript
-    typst_templates.insert("sup".to_string(), "{base}^{exponent}".to_string());
-    typst_templates.insert("sub".to_string(), "{base}_{subscript}".to_string());
+    typst_templates.insert("sup".to_string(), "{base}^({exponent})".to_string());
+    typst_templates.insert("sub".to_string(), "{base} _({subscript})".to_string());
     
     // Square root
     typst_templates.insert("sqrt".to_string(), "sqrt({arg})".to_string());
     
     // Calculus
-    typst_templates.insert("int_bounds".to_string(), "integral_({lower})^({upper}) {integrand} dif {variable}".to_string());
-    typst_templates.insert("sum_bounds".to_string(), "sum_({from})^({to}) {body}".to_string());
-    typst_templates.insert("prod_bounds".to_string(), "product_({from})^({to}) {body}".to_string());
+    typst_templates.insert("int_bounds".to_string(), "integral _({lower})^({upper}) {integrand} dif {variable}".to_string());
+    typst_templates.insert("sum_bounds".to_string(), "sum _({from})^({to}) {body}".to_string());
+    typst_templates.insert("prod_bounds".to_string(), "product _({from})^({to}) {body}".to_string());
+    typst_templates.insert("d_part".to_string(), "(partial {function})/(partial {variable})".to_string());
+    typst_templates.insert("d_dt".to_string(), "(d {function})/(d {variable})".to_string()); // using d for derivative? or upright d?
+    typst_templates.insert("grad".to_string(), "nabla {function}".to_string());
+    
+    // Linear Algebra
+    typst_templates.insert("matrix2x2".to_string(), "mat({a11}, {a12}; {a21}, {a22})".to_string());
+    typst_templates.insert("matrix3x3".to_string(), "mat({a11}, {a12}, {a13}; {a21}, {a22}, {a23}; {a31}, {a32}, {a33})".to_string());
+    typst_templates.insert("vector_bold".to_string(), "bold({vector})".to_string());
+    typst_templates.insert("vector_arrow".to_string(), "arrow({vector})".to_string());
+    typst_templates.insert("dot".to_string(), "{left} dot {right}".to_string());
+    typst_templates.insert("cross".to_string(), "{left} times {right}".to_string());
+    typst_templates.insert("norm".to_string(), "norm({vector})".to_string());
+    typst_templates.insert("abs".to_string(), "abs({value})".to_string());
+    
+    // Quantum
+    // Typst doesn't have built-in bra/ket? We can construct them.
+    // |psi> = | psi angle.r
+    typst_templates.insert("ket".to_string(), "| {state} angle.r".to_string());
+    typst_templates.insert("bra".to_string(), "angle.l {state} |".to_string());
+    typst_templates.insert("inner".to_string(), "angle.l {bra} | {ket} angle.r".to_string());
+    typst_templates.insert("outer".to_string(), "| {ket} angle.r angle.l {bra} |".to_string());
+    typst_templates.insert("commutator".to_string(), "[{A}, {B}]".to_string());
+    typst_templates.insert("expectation".to_string(), "angle.l {operator} angle.r".to_string());
+    
+    // Tensors
+    typst_templates.insert("index_mixed".to_string(), "{base}^({upper}) _({lower})".to_string());
+    typst_templates.insert("index_pair".to_string(), "{base}^({idx1} {idx2})".to_string()); // or separate?
+    
+    // Trig
+    typst_templates.insert("sin".to_string(), "sin({argument})".to_string());
+    typst_templates.insert("cos".to_string(), "cos({argument})".to_string());
+    typst_templates.insert("tan".to_string(), "tan({argument})".to_string());
+    
+    // Limits
+    typst_templates.insert("lim".to_string(), "lim _({var} -> {target}) {body}".to_string());
+    typst_templates.insert("equals".to_string(), "{left} = {right}".to_string());
     
     // TODO: Add more Typst templates as needed
     
