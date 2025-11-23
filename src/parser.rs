@@ -1,8 +1,8 @@
 // LaTeX Parser - Converts LaTeX strings to Kleis Expression AST
 // This validates that our 56 operations can represent real LaTeX notation
 
-use std::fmt;
 use crate::ast::Expression;
+use std::fmt;
 
 #[derive(Debug)]
 pub struct ParseError {
@@ -12,17 +12,28 @@ pub struct ParseError {
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Parse error at position {}: {}", self.position, self.message)
+        write!(
+            f,
+            "Parse error at position {}: {}",
+            self.position, self.message
+        )
     }
 }
 
 impl std::error::Error for ParseError {}
 
 // Convenience constructors
-fn c(s: impl Into<String>) -> Expression { Expression::Const(s.into()) }
-fn o(s: impl Into<String>) -> Expression { Expression::Object(s.into()) }
+fn c(s: impl Into<String>) -> Expression {
+    Expression::Const(s.into())
+}
+fn o(s: impl Into<String>) -> Expression {
+    Expression::Object(s.into())
+}
 fn op(name: impl Into<String>, args: Vec<Expression>) -> Expression {
-    Expression::Operation { name: name.into(), args }
+    Expression::Operation {
+        name: name.into(),
+        args,
+    }
 }
 
 pub struct Parser {
@@ -76,7 +87,7 @@ impl Parser {
         }
 
         let start = self.pos;
-        
+
         // Check for special single-character commands
         if let Some(ch) = self.peek() {
             if !ch.is_alphanumeric() && ch != ' ' {
@@ -85,7 +96,7 @@ impl Parser {
                 return Ok(ch.to_string());
             }
         }
-        
+
         // Parse multi-character command
         while let Some(ch) = self.peek() {
             if ch.is_alphanumeric() {
@@ -127,69 +138,18 @@ impl Parser {
     }
 
     fn parse_script_group(&mut self) -> Result<Expression, ParseError> {
-        // Parse {content} for subscripts/superscripts
-        // Treats adjacent single-letter identifiers as juxtaposition, not multiplication
-        if self.advance() != Some('{') {
-            return Err(ParseError {
-                message: "Expected '{'".to_string(),
-                position: self.pos,
-            });
-        }
-
-        // Collect all content until closing brace
-        let mut content = String::new();
-        let mut brace_depth = 0;
-        
-        loop {
-            match self.peek() {
-                None => {
-                    return Err(ParseError {
-                        message: "Unclosed brace in script".to_string(),
-                        position: self.pos,
-                    });
-                }
-                Some('{') => {
-                    content.push('{');
-                    brace_depth += 1;
-                    self.advance();
-                }
-                Some('}') => {
-                    if brace_depth == 0 {
-                        self.advance(); // consume closing brace
-                        break;
-                    } else {
-                        content.push('}');
-                        brace_depth -= 1;
-                        self.advance();
-                    }
-                }
-                Some(ch) => {
-                    content.push(ch);
-                    self.advance();
-                }
-            }
-        }
-
-        // Parse the content - for now, just return as object to avoid implicit multiplication
-        // This treats μμ as a single identifier rather than μ*μ
-        if content.trim().is_empty() {
-            Ok(o(""))
-        } else {
-            // Parse normally but as a single unit
-            match parse_latex(content.trim()) {
-                Ok(expr) => Ok(expr),
-                Err(_) => Ok(o(content.trim())),
-            }
-        }
+        // Scripts use standard group parsing but collapse simple literal chains
+        let expr = self.parse_group()?;
+        Ok(collapse_script_literals(expr))
     }
 
     fn parse_group_or_parens(&mut self) -> Result<Expression, ParseError> {
         // Parse {content} or (content) - for functions that accept both
-        
+
         // Skip whitespace and spacing commands
         loop {
             self.skip_whitespace();
-            
+
             if self.peek() == Some('\\') {
                 let saved_pos = self.pos;
                 if let Ok(cmd) = self.parse_command() {
@@ -202,7 +162,7 @@ impl Parser {
             }
             break;
         }
-        
+
         match self.peek() {
             Some('{') => {
                 // Use standard group parsing
@@ -284,7 +244,7 @@ impl Parser {
             let expr = self.parse_primary()?;
             return Ok(op("minus", vec![c("0"), expr])); // -x = 0 - x
         }
-        
+
         // Handle unary plus (just skip it)
         if self.peek() == Some('+') {
             self.advance();
@@ -299,7 +259,7 @@ impl Parser {
                 self.advance();
                 let first_expr = self.parse_additive()?;
                 self.skip_whitespace();
-                
+
                 // Check for comma-separated arguments (function call)
                 if self.peek() == Some(',') {
                     let mut args = vec![first_expr];
@@ -317,7 +277,7 @@ impl Parser {
                     // Failed to parse as function, return what we have
                     return Ok(args.into_iter().next().unwrap_or(o("")));
                 }
-                
+
                 // Single expression in parentheses
                 if self.peek() == Some(')') {
                     self.advance();
@@ -378,7 +338,7 @@ impl Parser {
                 let mut text = String::new();
                 text.push(ch);
                 self.advance();
-                
+
                 // For implicit multiplication: single lowercase letters = variables
                 // Multi-letter: functions or constants (Sin, cos, Gamma, etc.)
                 if ch.is_uppercase() {
@@ -393,13 +353,13 @@ impl Parser {
                     }
                 }
                 // Lowercase: single letter (for implicit mult: ab → a*b)
-                
+
                 // Check if followed by parentheses (function call)
                 self.skip_whitespace();
                 if self.peek() == Some('(') {
                     self.advance(); // consume (
                     let mut args = vec![o(text)]; // function name as first arg
-                    
+
                     // Parse comma-separated arguments
                     loop {
                         self.skip_whitespace();
@@ -407,10 +367,10 @@ impl Parser {
                             self.advance();
                             break;
                         }
-                        
+
                         args.push(self.parse_additive()?);
                         self.skip_whitespace();
-                        
+
                         if self.peek() == Some(',') {
                             self.advance();
                         } else if self.peek() == Some(')') {
@@ -423,7 +383,7 @@ impl Parser {
                             });
                         }
                     }
-                    
+
                     Ok(op("function_call", args))
                 } else {
                     Ok(o(text))
@@ -446,7 +406,7 @@ impl Parser {
                 Some('_') => {
                     self.advance();
                     let sub = if self.peek() == Some('{') {
-                        self.parse_group()?
+                        self.parse_script_group()?
                     } else {
                         // Single character subscript
                         let ch = self.advance().ok_or(ParseError {
@@ -482,6 +442,13 @@ impl Parser {
                     let prime_str = "'".repeat(prime_count);
                     expr = op("sup", vec![expr, o(prime_str)]);
                 }
+                Some('!') => {
+                    // Factorial postfix: allow repeated !! notation
+                    while self.peek() == Some('!') {
+                        self.advance();
+                        expr = op("factorial", vec![expr]);
+                    }
+                }
                 _ => break,
             }
         }
@@ -495,7 +462,7 @@ impl Parser {
 
         loop {
             self.skip_whitespace();
-            
+
             // Check for explicit operators first
             let op_name = if self.peek() == Some('*') {
                 self.advance();
@@ -517,27 +484,99 @@ impl Parser {
                             // Parse command again to check
                             if let Ok(cmd2) = self.parse_command() {
                                 // Check if it's a spacing command - if so, skip it and continue
-                                let is_spacing = matches!(cmd2.as_str(), "," | ";" | "!" | "quad" | "qquad");
+                                let is_spacing =
+                                    matches!(cmd2.as_str(), "," | ";" | "!" | "quad" | "qquad");
                                 if is_spacing {
                                     // Skip the spacing command and continue the loop
                                     continue;
                                 }
-                                
+
                                 // Commands that start new terms (functions, roots, fractions, etc.)
-                                let is_term_starter = matches!(cmd2.as_str(),
-                                    "sqrt" | "frac" | "sin" | "cos" | "tan" | "sec" | "csc" | "cot" |
-                                    "arcsin" | "arccos" | "arctan" | "sinh" | "cosh" | "tanh" |
-                                    "ln" | "log" | "exp" | "int" | "sum" | "prod" | "lim" |
-                                    "alpha" | "beta" | "gamma" | "delta" | "epsilon" | "zeta" | "eta" |
-                                    "theta" | "iota" | "kappa" | "lambda" | "mu" | "nu" | "xi" |
-                                    "pi" | "rho" | "sigma" | "tau" | "upsilon" | "phi" | "chi" | "psi" | "omega" |
-                                    "Gamma" | "Delta" | "Theta" | "Lambda" | "Xi" | "Pi" | "Sigma" |
-                                    "Upsilon" | "Phi" | "Psi" | "Omega" | "aleph" | "beth" | "gimel" | "daleth" |
-                                    "mathbb" | "boldsymbol" | "vec" | "hat" | "bar" | "tilde" | "overline" | "dot" | "ddot" | "partial" | "nabla" |
-                                    "hbar" | "infty" | "emptyset" | "mathrm" |
-                                    "Rightarrow" | "Leftarrow" | "Leftrightarrow" | "colon" |
-                                    "forall" | "exists" | "pmod" |
-                                    "begin" | "left"
+                                let is_term_starter = matches!(
+                                    cmd2.as_str(),
+                                    "sqrt"
+                                        | "frac"
+                                        | "sin"
+                                        | "cos"
+                                        | "tan"
+                                        | "sec"
+                                        | "csc"
+                                        | "cot"
+                                        | "arcsin"
+                                        | "arccos"
+                                        | "arctan"
+                                        | "sinh"
+                                        | "cosh"
+                                        | "tanh"
+                                        | "ln"
+                                        | "log"
+                                        | "exp"
+                                        | "int"
+                                        | "sum"
+                                        | "prod"
+                                        | "lim"
+                                        | "alpha"
+                                        | "beta"
+                                        | "gamma"
+                                        | "delta"
+                                        | "epsilon"
+                                        | "zeta"
+                                        | "eta"
+                                        | "theta"
+                                        | "iota"
+                                        | "kappa"
+                                        | "lambda"
+                                        | "mu"
+                                        | "nu"
+                                        | "xi"
+                                        | "pi"
+                                        | "rho"
+                                        | "sigma"
+                                        | "tau"
+                                        | "upsilon"
+                                        | "phi"
+                                        | "chi"
+                                        | "psi"
+                                        | "omega"
+                                        | "Gamma"
+                                        | "Delta"
+                                        | "Theta"
+                                        | "Lambda"
+                                        | "Xi"
+                                        | "Pi"
+                                        | "Sigma"
+                                        | "Upsilon"
+                                        | "Phi"
+                                        | "Psi"
+                                        | "Omega"
+                                        | "aleph"
+                                        | "beth"
+                                        | "gimel"
+                                        | "daleth"
+                                        | "mathbb"
+                                        | "boldsymbol"
+                                        | "vec"
+                                        | "hat"
+                                        | "bar"
+                                        | "tilde"
+                                        | "overline"
+                                        | "dot"
+                                        | "ddot"
+                                        | "partial"
+                                        | "nabla"
+                                        | "hbar"
+                                        | "infty"
+                                        | "emptyset"
+                                        | "mathrm"
+                                        | "Rightarrow"
+                                        | "Leftarrow"
+                                        | "Leftrightarrow"
+                                        | "colon"
+                                        | "forall"
+                                        | "exists"
+                                        | "pmod"
+                                        | "begin"
+                                        | "left"
                                 );
                                 self.pos = saved_pos; // Backtrack again
                                 if is_term_starter {
@@ -559,8 +598,13 @@ impl Parser {
                 // Addition 3: Check for implicit multiplication
                 // If next char could start a term (letter, digit, {, (, |, [)
                 match self.peek() {
-                    Some(ch) if ch.is_alphanumeric() || ch == '{' 
-                               || ch == '(' || ch == '|' || ch == '[' => {
+                    Some(ch)
+                        if ch.is_alphanumeric()
+                            || ch == '{'
+                            || ch == '('
+                            || ch == '|'
+                            || ch == '[' =>
+                    {
                         // Implicit multiplication!
                         "scalar_multiply"
                     }
@@ -581,7 +625,7 @@ impl Parser {
 
         loop {
             self.skip_whitespace();
-            
+
             let op_name = match self.peek() {
                 Some('+') => {
                     self.advance();
@@ -623,7 +667,7 @@ impl Parser {
             }
 
             self.skip_whitespace();
-            
+
             // Check if we hit the end
             if self.peek() == Some(end) {
                 break;
@@ -649,20 +693,23 @@ impl Parser {
 
         loop {
             self.skip_whitespace();
-            
+
             // Check for end of input
             if self.peek().is_none() {
                 return Err(ParseError {
-                    message: format!("Unexpected end of input while parsing {} environment", env_name),
+                    message: format!(
+                        "Unexpected end of input while parsing {} environment",
+                        env_name
+                    ),
                     position: self.pos,
                 });
             }
-            
+
             // Check for \end or \\ (new row) - but DON'T consume other commands
             if self.peek() == Some('\\') {
                 let saved_pos = self.pos;
                 self.advance(); // consume first \
-                
+
                 // Check if it's \\ (double backslash = new row)
                 if self.peek() == Some('\\') {
                     self.advance(); // consume second \
@@ -670,7 +717,7 @@ impl Parser {
                     rows.push(vec![]);
                     continue;
                 }
-                
+
                 // Otherwise it's a command - check if it's \end
                 let mut cmd_name = String::new();
                 while let Some(ch) = self.peek() {
@@ -681,7 +728,7 @@ impl Parser {
                         break;
                     }
                 }
-                
+
                 if cmd_name == "end" {
                     // Parse {bmatrix} or whatever
                     self.parse_text_group()?;
@@ -704,7 +751,7 @@ impl Parser {
             let mut cell_content = String::new();
             let start_pos = self.pos;
             let mut brace_depth = 0;
-            
+
             while let Some(ch) = self.peek() {
                 // Track brace depth
                 if ch == '{' {
@@ -712,7 +759,7 @@ impl Parser {
                 } else if ch == '}' {
                     brace_depth -= 1;
                 }
-                
+
                 // Only break on & or \\ when NOT inside braces
                 if brace_depth == 0 {
                     if ch == '&' {
@@ -738,7 +785,7 @@ impl Parser {
                         }
                     }
                 }
-                
+
                 cell_content.push(ch);
                 self.advance();
             }
@@ -767,26 +814,39 @@ impl Parser {
                 "vmatrix" => "vmatrix2x2",
                 _ => "matrix2x2",
             };
-            Ok(op(op_name, vec![
-                rows[0][0].clone(), rows[0][1].clone(),
-                rows[1][0].clone(), rows[1][1].clone(),
-            ]))
+            Ok(op(
+                op_name,
+                vec![
+                    rows[0][0].clone(),
+                    rows[0][1].clone(),
+                    rows[1][0].clone(),
+                    rows[1][1].clone(),
+                ],
+            ))
         } else if rows.len() == 3 && rows[0].len() == 3 {
             let op_name = match env_name {
                 "pmatrix" => "pmatrix3x3",
                 "vmatrix" => "vmatrix3x3",
                 _ => "matrix3x3",
             };
-            Ok(op(op_name, vec![
-                rows[0][0].clone(), rows[0][1].clone(), rows[0][2].clone(),
-                rows[1][0].clone(), rows[1][1].clone(), rows[1][2].clone(),
-                rows[2][0].clone(), rows[2][1].clone(), rows[2][2].clone(),
-            ]))
+            Ok(op(
+                op_name,
+                vec![
+                    rows[0][0].clone(),
+                    rows[0][1].clone(),
+                    rows[0][2].clone(),
+                    rows[1][0].clone(),
+                    rows[1][1].clone(),
+                    rows[1][2].clone(),
+                    rows[2][0].clone(),
+                    rows[2][1].clone(),
+                    rows[2][2].clone(),
+                ],
+            ))
         } else {
             // Generic matrix - store as operation with all elements
-            let all_elements: Vec<Expression> = rows.into_iter()
-                .flat_map(|row| row.into_iter())
-                .collect();
+            let all_elements: Vec<Expression> =
+                rows.into_iter().flat_map(|row| row.into_iter()).collect();
             Ok(op("matrix", all_elements))
         }
     }
@@ -799,7 +859,7 @@ impl Parser {
 
         loop {
             self.skip_whitespace();
-            
+
             // Check for end of input
             if self.peek().is_none() {
                 return Err(ParseError {
@@ -807,11 +867,11 @@ impl Parser {
                     position: self.pos,
                 });
             }
-            
+
             // Check for \end or \\ (new row)
             if self.peek() == Some('\\') {
                 self.advance(); // consume first \
-                
+
                 // Check if it's \\ (double backslash = new row)
                 if self.peek() == Some('\\') {
                     self.advance(); // consume second \
@@ -819,7 +879,7 @@ impl Parser {
                     rows.push(vec![]);
                     continue;
                 }
-                
+
                 // Otherwise it's a command like \end
                 let mut cmd_name = String::new();
                 while let Some(ch) = self.peek() {
@@ -830,7 +890,7 @@ impl Parser {
                         break;
                     }
                 }
-                
+
                 if cmd_name == "end" {
                     // Parse {cases}
                     self.parse_text_group()?;
@@ -851,7 +911,7 @@ impl Parser {
             let mut cell_content = String::new();
             let start_pos = self.pos;
             let mut brace_depth = 0;
-            
+
             while let Some(ch) = self.peek() {
                 // Track brace depth
                 if ch == '{' {
@@ -859,7 +919,7 @@ impl Parser {
                 } else if ch == '}' {
                     brace_depth -= 1;
                 }
-                
+
                 // Only break on & or \\ when NOT inside braces
                 if brace_depth == 0 {
                     if ch == '&' {
@@ -885,7 +945,7 @@ impl Parser {
                         }
                     }
                 }
-                
+
                 cell_content.push(ch);
                 self.advance();
             }
@@ -907,15 +967,17 @@ impl Parser {
         }
 
         // Filter out empty rows
-        let rows: Vec<Vec<Expression>> = rows.into_iter()
-            .filter(|row| !row.is_empty())
-            .collect();
+        let rows: Vec<Vec<Expression>> = rows.into_iter().filter(|row| !row.is_empty()).collect();
 
         // Validate: cases should have exactly 2 columns per row
         for (i, row) in rows.iter().enumerate() {
             if row.len() != 2 {
                 return Err(ParseError {
-                    message: format!("Cases environment row {} has {} columns, expected 2 (expression & condition)", i, row.len()),
+                    message: format!(
+                        "Cases environment row {} has {} columns, expected 2 (expression & condition)",
+                        i,
+                        row.len()
+                    ),
                     position: self.pos,
                 });
             }
@@ -925,32 +987,40 @@ impl Parser {
         match rows.len() {
             2 => {
                 // cases2: expr1, cond1, expr2, cond2
-                Ok(op("cases2", vec![
-                    rows[0][0].clone(), rows[0][1].clone(),
-                    rows[1][0].clone(), rows[1][1].clone(),
-                ]))
+                Ok(op(
+                    "cases2",
+                    vec![
+                        rows[0][0].clone(),
+                        rows[0][1].clone(),
+                        rows[1][0].clone(),
+                        rows[1][1].clone(),
+                    ],
+                ))
             }
             3 => {
                 // cases3: expr1, cond1, expr2, cond2, expr3, cond3
-                Ok(op("cases3", vec![
-                    rows[0][0].clone(), rows[0][1].clone(),
-                    rows[1][0].clone(), rows[1][1].clone(),
-                    rows[2][0].clone(), rows[2][1].clone(),
-                ]))
+                Ok(op(
+                    "cases3",
+                    vec![
+                        rows[0][0].clone(),
+                        rows[0][1].clone(),
+                        rows[1][0].clone(),
+                        rows[1][1].clone(),
+                        rows[2][0].clone(),
+                        rows[2][1].clone(),
+                    ],
+                ))
             }
             n if n > 3 => {
                 // Generic cases with more rows - flatten all
-                let all_elements: Vec<Expression> = rows.into_iter()
-                    .flat_map(|row| row.into_iter())
-                    .collect();
+                let all_elements: Vec<Expression> =
+                    rows.into_iter().flat_map(|row| row.into_iter()).collect();
                 Ok(op("cases", all_elements))
             }
-            _ => {
-                Err(ParseError {
-                    message: "Cases environment must have at least 2 rows".to_string(),
-                    position: self.pos,
-                })
-            }
+            _ => Err(ParseError {
+                message: "Cases environment must have at least 2 rows".to_string(),
+                position: self.pos,
+            }),
         }
     }
 
@@ -963,14 +1033,12 @@ impl Parser {
             // Environments
             "begin" => {
                 let env_name = self.parse_text_group()?;
-                
+
                 match env_name.as_str() {
                     "bmatrix" | "pmatrix" | "vmatrix" | "matrix" => {
                         self.parse_matrix_environment(&env_name)
                     }
-                    "cases" => {
-                        self.parse_cases_environment()
-                    }
+                    "cases" => self.parse_cases_environment(),
                     _ => Err(ParseError {
                         message: format!("Unknown environment: {}", env_name),
                         position: self.pos,
@@ -984,12 +1052,10 @@ impl Parser {
                 self.advance();
                 Ok(o(""))
             }
-            
+
             // Box operator (d'Alembertian) - Addition 5
-            "Box" | "square" => {
-                Ok(o("\\Box"))
-            }
-            
+            "Box" | "square" => Ok(o("\\Box")),
+
             // Escaped braces for anticommutator - Addition 1
             "{" => {
                 // \{ - parse as anticommutator start
@@ -1018,7 +1084,7 @@ impl Parser {
                 // Closing brace - shouldn't appear alone
                 Ok(o(""))
             }
-            
+
             // Arrow symbols
             "to" | "rightarrow" => Ok(o("\\to")),
             "mapsto" => Ok(o("\\mapsto")),
@@ -1054,7 +1120,7 @@ impl Parser {
                 self.skip_whitespace();
                 let saved_pos = self.pos;
                 let mut depth = 0;
-                
+
                 while let Some(ch) = self.peek() {
                     if ch == '\\' {
                         let cmd_pos = self.pos;
@@ -1072,11 +1138,14 @@ impl Parser {
                                     }
                                 }
                                 if cmd_name == "rfloor" && depth == 0 {
-                                    let content_str: String = self.input[saved_pos..cmd_pos].iter().collect();
+                                    let content_str: String =
+                                        self.input[saved_pos..cmd_pos].iter().collect();
                                     let mut content_parser = Parser::new(&content_str);
                                     match content_parser.parse() {
                                         Ok(content) => return Ok(op("floor", vec![content])),
-                                        Err(_) => return Ok(op("floor", vec![o(content_str.trim())])),
+                                        Err(_) => {
+                                            return Ok(op("floor", vec![o(content_str.trim())]));
+                                        }
                                     }
                                 }
                             }
@@ -1091,7 +1160,7 @@ impl Parser {
                         self.advance();
                     }
                 }
-                
+
                 Err(ParseError {
                     message: "Expected \\rfloor".to_string(),
                     position: self.pos,
@@ -1106,7 +1175,7 @@ impl Parser {
                 self.skip_whitespace();
                 let saved_pos = self.pos;
                 let mut depth = 0;
-                
+
                 while let Some(ch) = self.peek() {
                     if ch == '\\' {
                         let cmd_pos = self.pos;
@@ -1124,11 +1193,14 @@ impl Parser {
                                     }
                                 }
                                 if cmd_name == "rceil" && depth == 0 {
-                                    let content_str: String = self.input[saved_pos..cmd_pos].iter().collect();
+                                    let content_str: String =
+                                        self.input[saved_pos..cmd_pos].iter().collect();
                                     let mut content_parser = Parser::new(&content_str);
                                     match content_parser.parse() {
                                         Ok(content) => return Ok(op("ceiling", vec![content])),
-                                        Err(_) => return Ok(op("ceiling", vec![o(content_str.trim())])),
+                                        Err(_) => {
+                                            return Ok(op("ceiling", vec![o(content_str.trim())]));
+                                        }
                                     }
                                 }
                             }
@@ -1143,7 +1215,7 @@ impl Parser {
                         self.advance();
                     }
                 }
-                
+
                 Err(ParseError {
                     message: "Expected \\rceil".to_string(),
                     position: self.pos,
@@ -1164,17 +1236,17 @@ impl Parser {
                 if self.peek() == Some('(') {
                     self.advance(); // consume (
                     let mut args = vec![o("\\zeta")];
-                    
+
                     loop {
                         self.skip_whitespace();
                         if self.peek() == Some(')') {
                             self.advance();
                             break;
                         }
-                        
+
                         args.push(self.parse_relational()?);
                         self.skip_whitespace();
-                        
+
                         if self.peek() == Some(',') {
                             self.advance();
                         } else if self.peek() == Some(')') {
@@ -1187,7 +1259,7 @@ impl Parser {
                             });
                         }
                     }
-                    
+
                     Ok(op("function_call", args))
                 } else {
                     Ok(o("\\zeta"))
@@ -1228,17 +1300,17 @@ impl Parser {
                 if self.peek() == Some('(') {
                     self.advance(); // consume (
                     let mut args = vec![o("\\Gamma")];
-                    
+
                     loop {
                         self.skip_whitespace();
                         if self.peek() == Some(')') {
                             self.advance();
                             break;
                         }
-                        
+
                         args.push(self.parse_relational()?);
                         self.skip_whitespace();
-                        
+
                         if self.peek() == Some(',') {
                             self.advance();
                         } else if self.peek() == Some(')') {
@@ -1251,7 +1323,7 @@ impl Parser {
                             });
                         }
                     }
-                    
+
                     Ok(op("function_call", args))
                 } else {
                     Ok(o("\\Gamma"))
@@ -1267,7 +1339,7 @@ impl Parser {
             "Phi" => Ok(o("\\Phi")),
             "Psi" => Ok(o("\\Psi")),
             "Omega" => Ok(o("\\Omega")),
-            
+
             // Hebrew letters
             "aleph" => Ok(o("\\aleph")),
             "beth" => Ok(o("\\beth")),
@@ -1281,7 +1353,7 @@ impl Parser {
             "pm" => Ok(o("\\pm")),
             "nabla" => Ok(o("\\nabla")),
             "partial" => Ok(o("\\partial")),
-            
+
             // Ellipsis (dots)
             "cdots" => Ok(o("\\cdots")),
             "ldots" => Ok(o("\\ldots")),
@@ -1381,25 +1453,27 @@ impl Parser {
                 // or \langle ... | (bra)
                 self.skip_whitespace();
                 let start = self.pos;
-                
+
                 let mut p_pos = None;
                 let mut r_pos = None;
                 let mut depth = 0;
-                
+
                 let mut i = start;
                 while i < self.input.len() {
                     let ch = self.input[i];
                     if ch == '\\' {
                         // Check for rangle
                         if i + 6 < self.input.len() {
-                            let cmd: String = self.input[i+1..i+7].iter().collect();
+                            let cmd: String = self.input[i + 1..i + 7].iter().collect();
                             if cmd == "rangle" && depth == 0 {
                                 r_pos = Some(i);
                                 break;
                             }
                         }
                     } else if ch == '|' && depth == 0 {
-                        if p_pos.is_none() { p_pos = Some(i); }
+                        if p_pos.is_none() {
+                            p_pos = Some(i);
+                        }
                     } else if ch == '{' {
                         depth += 1;
                     } else if ch == '}' {
@@ -1407,36 +1481,38 @@ impl Parser {
                     }
                     i += 1;
                 }
-                
+
                 if let Some(r_idx) = r_pos {
                     if let Some(p_idx) = p_pos {
                         // Inner product: < u | v >
                         let bra_str: String = self.input[start..p_idx].iter().collect();
-                        let ket_str: String = self.input[p_idx+1..r_idx].iter().collect();
-                        
+                        let ket_str: String = self.input[p_idx + 1..r_idx].iter().collect();
+
                         self.pos = r_idx + 7; // skip \rangle
-                        
+
                         let bra_expr = parse_latex(bra_str.trim()).unwrap_or(o(bra_str.trim()));
                         let ket_expr = parse_latex(ket_str.trim()).unwrap_or(o(ket_str.trim()));
-                        
+
                         return Ok(op("inner", vec![bra_expr, ket_expr]));
                     } else {
                         // Expectation: < A >
                         let content_str: String = self.input[start..r_idx].iter().collect();
                         self.pos = r_idx + 7; // skip \rangle
-                        
-                        let content_expr = parse_latex(content_str.trim()).unwrap_or(o(content_str.trim()));
+
+                        let content_expr =
+                            parse_latex(content_str.trim()).unwrap_or(o(content_str.trim()));
                         return Ok(op("expectation", vec![content_expr]));
                     }
                 } else if let Some(p_idx) = p_pos {
                     // Bra: < u |
                     let content_str: String = self.input[start..p_idx].iter().collect();
                     self.pos = p_idx + 1; // skip |
-                    
-                    let content_expr = parse_latex(content_str.trim()).unwrap_or(o(content_str.trim()));
+
+                    let content_expr =
+                        parse_latex(content_str.trim()).unwrap_or(o(content_str.trim()));
                     return Ok(op("bra", vec![content_expr]));
                 }
-                
+
                 // Just \langle
                 Ok(o("\\langle"))
             }
@@ -1493,9 +1569,7 @@ impl Parser {
             }
 
             // Spacing commands (return empty marker to be skipped)
-            "," | ";" | "!" | "quad" | "qquad" | "colon" => {
-                Ok(o("__SPACE__"))
-            }
+            "," | ";" | "!" | "quad" | "qquad" | "colon" => Ok(o("__SPACE__")),
 
             // Text mode - plain text within math
             "text" => {
@@ -1505,7 +1579,7 @@ impl Parser {
 
             // Text formatting (pass through)
             // "mathbf" | "boldsymbol" | "mathrm" handled above as operations
-            
+
             // Integrals
             "int" => {
                 // Could have limits with _ and ^
@@ -1513,9 +1587,7 @@ impl Parser {
             }
 
             // Sum/Product
-            "sum" | "prod" => {
-                Ok(o(format!("\\{}", cmd)))
-            }
+            "sum" | "prod" => Ok(o(format!("\\{}", cmd))),
 
             // Limit operators
             "lim" | "limsup" | "liminf" => {
@@ -1597,6 +1669,35 @@ impl Parser {
     }
 }
 
+fn collapse_script_literals(expr: Expression) -> Expression {
+    match expr {
+        Expression::Operation { ref name, .. } if name == "scalar_multiply" => {
+            if let Some(tokens) = extract_literal_tokens(&expr) {
+                Expression::Operation {
+                    name: "literal_chain".to_string(),
+                    args: tokens,
+                }
+            } else {
+                expr
+            }
+        }
+        _ => expr,
+    }
+}
+
+fn extract_literal_tokens(expr: &Expression) -> Option<Vec<Expression>> {
+    match expr {
+        Expression::Const(_) | Expression::Object(_) => Some(vec![expr.clone()]),
+        Expression::Operation { name, args } if name == "scalar_multiply" && args.len() == 2 => {
+            let mut left_tokens = extract_literal_tokens(&args[0])?;
+            let mut right_tokens = extract_literal_tokens(&args[1])?;
+            left_tokens.append(&mut right_tokens);
+            Some(left_tokens)
+        }
+        _ => None,
+    }
+}
+
 impl Expression {
     fn as_string(&self) -> String {
         match self {
@@ -1612,11 +1713,11 @@ impl Expression {
 pub fn parse_latex(input: &str) -> Result<Expression, ParseError> {
     let mut parser = Parser::new(input);
     let flat_ast = parser.parse()?;
-    
+
     // Apply template-based semantic inference
     // If inference fails, returns the original flat AST (graceful fallback)
     let structured_ast = crate::template_inference::infer_templates(flat_ast);
-    
+
     Ok(structured_ast)
 }
 
@@ -1660,10 +1761,30 @@ mod tests {
     #[test]
     fn parses_all_lowercase_greek() {
         let letters = vec![
-            "\\alpha", "\\beta", "\\gamma", "\\delta", "\\epsilon", "\\zeta",
-            "\\eta", "\\theta", "\\iota", "\\kappa", "\\lambda", "\\mu",
-            "\\nu", "\\xi", "\\omicron", "\\pi", "\\rho", "\\sigma",
-            "\\tau", "\\upsilon", "\\phi", "\\chi", "\\psi", "\\omega"
+            "\\alpha",
+            "\\beta",
+            "\\gamma",
+            "\\delta",
+            "\\epsilon",
+            "\\zeta",
+            "\\eta",
+            "\\theta",
+            "\\iota",
+            "\\kappa",
+            "\\lambda",
+            "\\mu",
+            "\\nu",
+            "\\xi",
+            "\\omicron",
+            "\\pi",
+            "\\rho",
+            "\\sigma",
+            "\\tau",
+            "\\upsilon",
+            "\\phi",
+            "\\chi",
+            "\\psi",
+            "\\omega",
         ];
         for letter in letters {
             let result = parse_latex(letter);
@@ -1674,8 +1795,17 @@ mod tests {
     #[test]
     fn parses_all_uppercase_greek() {
         let letters = vec![
-            "\\Gamma", "\\Delta", "\\Theta", "\\Lambda", "\\Xi", "\\Pi",
-            "\\Sigma", "\\Upsilon", "\\Phi", "\\Psi", "\\Omega"
+            "\\Gamma",
+            "\\Delta",
+            "\\Theta",
+            "\\Lambda",
+            "\\Xi",
+            "\\Pi",
+            "\\Sigma",
+            "\\Upsilon",
+            "\\Phi",
+            "\\Psi",
+            "\\Omega",
         ];
         for letter in letters {
             let result = parse_latex(letter);
@@ -1686,8 +1816,13 @@ mod tests {
     #[test]
     fn parses_greek_variants() {
         let variants = vec![
-            "\\varepsilon", "\\vartheta", "\\varkappa", "\\varpi",
-            "\\varrho", "\\varsigma", "\\varphi"
+            "\\varepsilon",
+            "\\vartheta",
+            "\\varkappa",
+            "\\varpi",
+            "\\varrho",
+            "\\varsigma",
+            "\\varphi",
         ];
         for variant in variants {
             let result = parse_latex(variant);
@@ -1740,6 +1875,40 @@ mod tests {
                 assert_eq!(name, "sup");
             }
             _ => panic!("Expected superscript operation"),
+        }
+    }
+
+    #[test]
+    fn parses_factorial_operator() {
+        let expr = parse_latex("n!").expect("should parse factorial");
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "factorial");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected factorial operation"),
+        }
+    }
+
+    #[test]
+    fn preserves_literal_subscripts() {
+        let expr = parse_latex("a_{1n}").expect("should parse subscript");
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "sub");
+                match &args[1] {
+                    Expression::Operation {
+                        name,
+                        args: chain_args,
+                    } if name == "literal_chain" => {
+                        assert_eq!(chain_args.len(), 2);
+                        assert!(matches!(&chain_args[0], Expression::Const(s) if s == "1"));
+                        assert!(matches!(&chain_args[1], Expression::Object(s) if s == "n"));
+                    }
+                    other => panic!("Expected literal_chain, got {:?}", other),
+                }
+            }
+            _ => panic!("Expected subscript operation"),
         }
     }
 
@@ -1811,7 +1980,8 @@ mod tests {
 
     #[test]
     fn parses_matrix_with_sqrt() {
-        let result = parse_latex("\\begin{bmatrix}\\sqrt{2}&\\sqrt{3}\\\\\\sqrt{5}&\\sqrt{7}\\end{bmatrix}");
+        let result =
+            parse_latex("\\begin{bmatrix}\\sqrt{2}&\\sqrt{3}\\\\\\sqrt{5}&\\sqrt{7}\\end{bmatrix}");
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
@@ -1831,7 +2001,8 @@ mod tests {
 
     #[test]
     fn parses_matrix_with_trig() {
-        let result = parse_latex("\\begin{bmatrix}\\sin{x}&\\cos{x}\\\\-\\cos{x}&\\sin{x}\\end{bmatrix}");
+        let result =
+            parse_latex("\\begin{bmatrix}\\sin{x}&\\cos{x}\\\\-\\cos{x}&\\sin{x}\\end{bmatrix}");
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
@@ -1851,7 +2022,9 @@ mod tests {
 
     #[test]
     fn parses_matrix_with_complex_nested() {
-        let result = parse_latex("\\begin{bmatrix}\\frac{1}{\\sqrt{2}}&0\\\\0&\\frac{1}{\\sqrt{2}}\\end{bmatrix}");
+        let result = parse_latex(
+            "\\begin{bmatrix}\\frac{1}{\\sqrt{2}}&0\\\\0&\\frac{1}{\\sqrt{2}}\\end{bmatrix}",
+        );
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
@@ -1859,7 +2032,10 @@ mod tests {
                 assert_eq!(name, "matrix2x2");
                 // First cell should be scalar_divide with sqrt in denominator
                 match &args[0] {
-                    Expression::Operation { name, args: inner_args } => {
+                    Expression::Operation {
+                        name,
+                        args: inner_args,
+                    } => {
                         assert_eq!(name, "scalar_divide");
                         // Check denominator is sqrt
                         match &inner_args[1] {
@@ -1878,7 +2054,9 @@ mod tests {
 
     #[test]
     fn parses_matrix_with_ellipsis() {
-        let result = parse_latex("\\begin{bmatrix}a_{11} & \\cdots & a_{1n}\\\\\\vdots & \\ddots & \\vdots\\\\a_{m1} & \\cdots & a_{mn}\\end{bmatrix}");
+        let result = parse_latex(
+            "\\begin{bmatrix}a_{11} & \\cdots & a_{1n}\\\\\\vdots & \\ddots & \\vdots\\\\a_{m1} & \\cdots & a_{mn}\\end{bmatrix}",
+        );
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
@@ -2141,14 +2319,22 @@ mod tests {
     // Untested lowercase Greek letters
     #[test]
     fn parses_remaining_lowercase_greek() {
-        let letters = vec!["\\zeta", "\\eta", "\\iota", "\\xi", "\\omicron", "\\upsilon", "\\chi"];
+        let letters = vec![
+            "\\zeta",
+            "\\eta",
+            "\\iota",
+            "\\xi",
+            "\\omicron",
+            "\\upsilon",
+            "\\chi",
+        ];
         for letter in letters {
             let result = parse_latex(letter);
             assert!(result.is_ok(), "Failed to parse {}", letter);
         }
     }
 
-    // Untested uppercase Greek letters  
+    // Untested uppercase Greek letters
     #[test]
     fn parses_remaining_uppercase_greek() {
         let letters = vec!["\\Xi", "\\Pi", "\\Upsilon"];
@@ -2576,13 +2762,17 @@ mod tests {
 
     #[test]
     fn parses_schrodinger_equation() {
-        let result = parse_latex("i\\hbar\\frac{\\partial}{\\partial t}|\\psi\\rangle = \\hat{H}|\\psi\\rangle");
+        let result = parse_latex(
+            "i\\hbar\\frac{\\partial}{\\partial t}|\\psi\\rangle = \\hat{H}|\\psi\\rangle",
+        );
         assert!(result.is_ok());
     }
 
     #[test]
     fn parses_maxwell_equation() {
-        let result = parse_latex("\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}");
+        let result = parse_latex(
+            "\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}",
+        );
         assert!(result.is_ok());
     }
 
@@ -2593,7 +2783,7 @@ mod tests {
     }
 
     // === Accent Commands ===
-    
+
     #[test]
     fn parses_bar_accent() {
         let result = parse_latex("\\bar{x}");
@@ -2681,7 +2871,7 @@ mod tests {
     }
 
     // === Text Mode Support ===
-    
+
     #[test]
     fn parses_text_simple() {
         let result = parse_latex("\\text{hello}");
@@ -2704,7 +2894,9 @@ mod tests {
 
     #[test]
     fn parses_text_in_piecewise() {
-        let result = parse_latex("\\begin{cases}x^{2} & \\text{if } x \\geq 0\\\\0 & \\text{otherwise}\\end{cases}");
+        let result = parse_latex(
+            "\\begin{cases}x^{2} & \\text{if } x \\geq 0\\\\0 & \\text{otherwise}\\end{cases}",
+        );
         assert!(result.is_ok());
     }
 
@@ -2765,7 +2957,9 @@ mod tests {
     #[test]
     fn parses_ellipsis_in_matrix() {
         // Common use case: ellipsis in matrices
-        let result = parse_latex("\\begin{bmatrix}a_{11} & \\cdots & a_{1n}\\\\\\vdots & \\ddots & \\vdots\\\\a_{m1} & \\cdots & a_{mn}\\end{bmatrix}");
+        let result = parse_latex(
+            "\\begin{bmatrix}a_{11} & \\cdots & a_{1n}\\\\\\vdots & \\ddots & \\vdots\\\\a_{m1} & \\cdots & a_{mn}\\end{bmatrix}",
+        );
         assert!(result.is_ok());
     }
 
@@ -2847,7 +3041,9 @@ mod tests {
                 assert_eq!(args.len(), 1);
                 // Check that the argument is a division
                 match &args[0] {
-                    Expression::Operation { name: inner_name, .. } => {
+                    Expression::Operation {
+                        name: inner_name, ..
+                    } => {
                         assert_eq!(inner_name, "scalar_divide");
                     }
                     _ => panic!("Expected division inside floor"),
@@ -2877,4 +3073,3 @@ mod tests {
         assert!(result.is_ok());
     }
 }
-

@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Write, BufWriter};
+use std::io::{BufWriter, Write};
 use std::process::Command;
 
 fn main() {
@@ -30,15 +30,21 @@ fn main() {
     match pdflatex {
         Ok(out) => {
             if !out.status.success() {
-                eprintln!("pdflatex failed: status={:?}\nstdout:\n{}\nstderr:\n{}", out.status, String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+                eprintln!(
+                    "pdflatex failed: status={:?}\nstdout:\n{}\nstderr:\n{}",
+                    out.status,
+                    String::from_utf8_lossy(&out.stdout),
+                    String::from_utf8_lossy(&out.stderr)
+                );
             } else {
                 println!("Gallery PDF generated at: {}", pdf_path);
             }
         }
         Err(err) => {
-            eprintln!("Could not run pdflatex ({}). You can compile {} manually.", err, tex_path);
+            eprintln!(
+                "Could not run pdflatex ({}). You can compile {} manually.",
+                err, tex_path
+            );
         }
     }
 }
-
-

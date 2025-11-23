@@ -1,14 +1,17 @@
 use kleis::math_layout::compile_math_to_svg_with_ids;
-use kleis::render::{render_expression, build_default_context, RenderTarget, collect_samples_for_gallery};
-use kleis::templates::get_all_templates;
 use kleis::parser::parse_latex;
+use kleis::render::{
+    RenderTarget, build_default_context, collect_samples_for_gallery, render_expression,
+};
+use kleis::templates::get_all_templates;
 use std::fs::File;
 use std::io::Write;
 
 fn main() {
     println!("=== Generating Typst vs MathJax Comparison Report ===\n");
 
-    let mut html_output = String::from(r#"
+    let mut html_output = String::from(
+        r#"
 <!DOCTYPE html>
 <html>
 <head>
@@ -38,26 +41,31 @@ fn main() {
             </tr>
         </thead>
         <tbody>
-"#);
+"#,
+    );
 
     let ctx = build_default_context();
 
     // 1. Test Templates
-    html_output.push_str(r#"<tr><td colspan="3" class="section-header">Templates (Palette)</td></tr>"#);
-    
+    html_output
+        .push_str(r#"<tr><td colspan="3" class="section-header">Templates (Palette)</td></tr>"#);
+
     let templates = get_all_templates();
     for (name, template_fn) in templates {
         println!("Processing template: {}", name);
         let expr = template_fn();
-        
+
         // Render to Typst
         let typst_markup = render_expression(&expr, &ctx, &RenderTarget::Typst);
         // Render to LaTeX (for MathJax)
         let latex_markup = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
-        
+
         let typst_cell = match compile_math_to_svg_with_ids(&typst_markup, &[]) {
             Ok(output) => output.svg,
-            Err(e) => format!(r#"<div class="error">Typst Error: {}<br>Markup: {}</div>"#, e, typst_markup),
+            Err(e) => format!(
+                r#"<div class="error">Typst Error: {}<br>Markup: {}</div>"#,
+                e, typst_markup
+            ),
         };
 
         html_output.push_str(&format!(
@@ -76,20 +84,24 @@ fn main() {
     }
 
     // 2. Test Gallery Examples
-    html_output.push_str(r#"<tr><td colspan="3" class="section-header">Gallery Examples</td></tr>"#);
-    
+    html_output
+        .push_str(r#"<tr><td colspan="3" class="section-header">Gallery Examples</td></tr>"#);
+
     let gallery = collect_samples_for_gallery();
     for (title, latex) in gallery {
         println!("Processing gallery: {}", title);
-        
+
         let typst_cell = match parse_latex(&latex) {
             Ok(expr) => {
                 let typst_markup = render_expression(&expr, &ctx, &RenderTarget::Typst);
                 match compile_math_to_svg_with_ids(&typst_markup, &[]) {
                     Ok(output) => output.svg,
-                    Err(e) => format!(r#"<div class="error">Typst Compilation Error: {}<br>Markup: {}</div>"#, e, typst_markup),
+                    Err(e) => format!(
+                        r#"<div class="error">Typst Compilation Error: {}<br>Markup: {}</div>"#,
+                        e, typst_markup
+                    ),
                 }
-            },
+            }
             Err(e) => format!(r#"<div class="error">Parse Error: {:?}</div>"#, e),
         };
 
@@ -108,15 +120,17 @@ fn main() {
         ));
     }
 
-    html_output.push_str(r#"
+    html_output.push_str(
+        r#"
         </tbody>
     </table>
 </body>
 </html>
-"#);
+"#,
+    );
 
     let mut file = File::create("comparison_report.html").expect("Unable to create file");
-    file.write_all(html_output.as_bytes()).expect("Unable to write data");
+    file.write_all(html_output.as_bytes())
+        .expect("Unable to write data");
     println!("\nDone! Report written to comparison_report.html");
 }
-

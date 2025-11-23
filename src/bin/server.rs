@@ -1,9 +1,9 @@
 use axum::{
+    Router,
     extract::State,
     http::StatusCode,
     response::{Html, IntoResponse, Json},
     routing::{get, post},
-    Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -116,7 +116,7 @@ async fn index_handler() -> impl IntoResponse {
         Ok(content) => (StatusCode::OK, Html(content)),
         Err(_) => (
             StatusCode::NOT_FOUND,
-            Html("<h1>index.html not found. Make sure static/ directory exists.</h1>".to_string())
+            Html("<h1>index.html not found. Make sure static/ directory exists.</h1>".to_string()),
         ),
     }
 }
@@ -135,10 +135,10 @@ async fn render_handler(
                 "html" => kleis::render::RenderTarget::HTML,
                 _ => kleis::render::RenderTarget::LaTeX,
             };
-            
+
             let ctx = kleis::render::build_default_context();
             let output = kleis::render::render_expression(&expr, &ctx, &target);
-            
+
             let response = RenderResponse {
                 output,
                 format: format.to_string(),
@@ -190,7 +190,7 @@ async fn parse_handler(
 fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
     use kleis::ast::Expression;
     use serde_json::json;
-    
+
     match expr {
         Expression::Const(s) => json!({"Const": s}),
         Expression::Object(s) => json!({"Object": s}),
@@ -205,7 +205,7 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
 // Convert JSON back to Expression
 fn json_to_expression(json: &serde_json::Value) -> Result<kleis::ast::Expression, String> {
     use kleis::ast::Expression;
-    
+
     if let Some(obj) = json.as_object() {
         if let Some(const_val) = obj.get("Const") {
             if let Some(s) = const_val.as_str() {
@@ -217,10 +217,12 @@ fn json_to_expression(json: &serde_json::Value) -> Result<kleis::ast::Expression
             }
         } else if let Some(placeholder_val) = obj.get("Placeholder") {
             if let Some(placeholder_obj) = placeholder_val.as_object() {
-                let id = placeholder_obj.get("id")
+                let id = placeholder_obj
+                    .get("id")
                     .and_then(|v| v.as_u64())
                     .ok_or("Missing or invalid placeholder id")? as usize;
-                let hint = placeholder_obj.get("hint")
+                let hint = placeholder_obj
+                    .get("hint")
                     .and_then(|v| v.as_str())
                     .ok_or("Missing or invalid placeholder hint")?
                     .to_string();
@@ -228,22 +230,22 @@ fn json_to_expression(json: &serde_json::Value) -> Result<kleis::ast::Expression
             }
         } else if let Some(op_val) = obj.get("Operation") {
             if let Some(op_obj) = op_val.as_object() {
-                let name = op_obj.get("name")
+                let name = op_obj
+                    .get("name")
                     .and_then(|v| v.as_str())
                     .ok_or("Missing or invalid operation name")?
                     .to_string();
-                let args_json = op_obj.get("args")
+                let args_json = op_obj
+                    .get("args")
                     .and_then(|v| v.as_array())
                     .ok_or("Missing or invalid operation args")?;
-                let args: Result<Vec<Expression>, String> = args_json
-                    .iter()
-                    .map(json_to_expression)
-                    .collect();
+                let args: Result<Vec<Expression>, String> =
+                    args_json.iter().map(json_to_expression).collect();
                 return Ok(Expression::Operation { name, args: args? });
             }
         }
     }
-    
+
     Err(format!("Invalid expression JSON: {:?}", json))
 }
 
@@ -260,10 +262,10 @@ async fn render_ast_handler(
                 "latex" => kleis::render::RenderTarget::LaTeX,
                 _ => kleis::render::RenderTarget::HTML,
             };
-            
+
             let ctx = kleis::render::build_default_context();
             let output = kleis::render::render_expression(&expr, &ctx, &target);
-            
+
             let response = RenderASTResponse {
                 output,
                 format: format.to_string(),
@@ -320,7 +322,7 @@ async fn operations_handler() -> impl IntoResponse {
 // Handler for gallery examples
 async fn gallery_handler() -> impl IntoResponse {
     let samples = kleis::render::collect_samples_for_gallery();
-    
+
     let examples: Vec<GalleryExample> = samples
         .into_iter()
         .map(|(title, latex)| GalleryExample { title, latex })
@@ -339,13 +341,14 @@ async fn render_typst_handler(
             // Collect ALL argument slots with their info (empty or filled)
             let arg_slots = collect_argument_slots(&expr);
             eprintln!("Argument slots: {} total", arg_slots.len());
-            
+
             // Get unfilled placeholder IDs for Typst square rendering
-            let unfilled_ids: Vec<usize> = arg_slots.iter()
+            let unfilled_ids: Vec<usize> = arg_slots
+                .iter()
                 .filter(|s| s.is_placeholder)
                 .map(|s| s.id)
                 .collect();
-            
+
             // Compile with Typst using semantic bounding box extraction
             match kleis::math_layout::compile_with_semantic_boxes(&expr, &unfilled_ids) {
                 Ok(output) => {
@@ -397,9 +400,9 @@ async fn render_typst_handler(
 // Argument slot info (for tracking editable regions)
 #[derive(Debug, Clone, serde::Serialize)]
 struct ArgumentSlot {
-    id: usize,           // Placeholder ID if unfilled, or auto-assigned ID
-    path: Vec<usize>,    // Path in AST (e.g., [0] = first arg of root operation)
-    hint: String,        // Description of this slot
+    id: usize,            // Placeholder ID if unfilled, or auto-assigned ID
+    path: Vec<usize>,     // Path in AST (e.g., [0] = first arg of root operation)
+    hint: String,         // Description of this slot
     is_placeholder: bool, // True if empty placeholder, false if filled
 }
 
@@ -415,10 +418,10 @@ fn collect_slots_recursive(
     expr: &kleis::ast::Expression,
     slots: &mut Vec<ArgumentSlot>,
     next_auto_id: &mut usize,
-    path: Vec<usize>
+    path: Vec<usize>,
 ) {
     use kleis::ast::Expression;
-    
+
     match expr {
         Expression::Placeholder { id, hint } => {
             // Empty placeholder - use its ID
@@ -454,4 +457,3 @@ fn collect_slots_recursive(
 async fn health_handler() -> &'static str {
     "OK"
 }
-

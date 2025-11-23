@@ -1,5 +1,5 @@
 //! Template insertion functions for structural editor
-//! 
+//!
 //! This module provides functions to create mathematical operations with placeholders.
 //! Each function corresponds to a template that can be inserted via the palette.
 
@@ -26,290 +26,341 @@ pub fn reset_placeholder_counter() {
 
 /// Fraction: numerator / denominator
 pub fn template_fraction() -> Expression {
-    Expression::operation("scalar_divide", vec![
-        Expression::placeholder(next_id(), "numerator"),
-        Expression::placeholder(next_id(), "denominator"),
-    ])
+    Expression::operation(
+        "scalar_divide",
+        vec![
+            Expression::placeholder(next_id(), "numerator"),
+            Expression::placeholder(next_id(), "denominator"),
+        ],
+    )
 }
 
 /// Power: base^exponent
 pub fn template_power() -> Expression {
-    Expression::operation("sup", vec![
-        Expression::placeholder(next_id(), "base"),
-        Expression::placeholder(next_id(), "exponent"),
-    ])
+    Expression::operation(
+        "sup",
+        vec![
+            Expression::placeholder(next_id(), "base"),
+            Expression::placeholder(next_id(), "exponent"),
+        ],
+    )
 }
 
 /// Square root: √x
 pub fn template_sqrt() -> Expression {
-    Expression::operation("sqrt", vec![
-        Expression::placeholder(next_id(), "radicand"),
-    ])
+    Expression::operation("sqrt", vec![Expression::placeholder(next_id(), "radicand")])
 }
 
 /// Subscript: base_sub
 pub fn template_subscript() -> Expression {
-    Expression::operation("sub", vec![
-        Expression::placeholder(next_id(), "base"),
-        Expression::placeholder(next_id(), "subscript"),
-    ])
+    Expression::operation(
+        "sub",
+        vec![
+            Expression::placeholder(next_id(), "base"),
+            Expression::placeholder(next_id(), "subscript"),
+        ],
+    )
 }
 
 /// Sum (addition): a + b
 pub fn template_plus() -> Expression {
-    Expression::operation("plus", vec![
-        Expression::placeholder(next_id(), "left"),
-        Expression::placeholder(next_id(), "right"),
-    ])
+    Expression::operation(
+        "plus",
+        vec![
+            Expression::placeholder(next_id(), "left"),
+            Expression::placeholder(next_id(), "right"),
+        ],
+    )
 }
 
 /// Difference (subtraction): a - b
 pub fn template_minus() -> Expression {
-    Expression::operation("minus", vec![
-        Expression::placeholder(next_id(), "left"),
-        Expression::placeholder(next_id(), "right"),
-    ])
+    Expression::operation(
+        "minus",
+        vec![
+            Expression::placeholder(next_id(), "left"),
+            Expression::placeholder(next_id(), "right"),
+        ],
+    )
 }
 
 /// Product: a × b
 pub fn template_times() -> Expression {
-    Expression::operation("scalar_multiply", vec![
-        Expression::placeholder(next_id(), "left"),
-        Expression::placeholder(next_id(), "right"),
-    ])
+    Expression::operation(
+        "scalar_multiply",
+        vec![
+            Expression::placeholder(next_id(), "left"),
+            Expression::placeholder(next_id(), "right"),
+        ],
+    )
 }
 
 /// Equals: a = b
 pub fn template_equals() -> Expression {
-    Expression::operation("equals", vec![
-        Expression::placeholder(next_id(), "left"),
-        Expression::placeholder(next_id(), "right"),
-    ])
+    Expression::operation(
+        "equals",
+        vec![
+            Expression::placeholder(next_id(), "left"),
+            Expression::placeholder(next_id(), "right"),
+        ],
+    )
 }
 
 // === Calculus ===
 
 /// Integral with bounds: ∫ₐᵇ f(x) dx
 pub fn template_integral() -> Expression {
-    Expression::operation("int_bounds", vec![
-        Expression::placeholder(next_id(), "integrand"),
-        Expression::placeholder(next_id(), "lower"),
-        Expression::placeholder(next_id(), "upper"),
-        Expression::placeholder(next_id(), "variable"),
-    ])
+    Expression::operation(
+        "int_bounds",
+        vec![
+            Expression::placeholder(next_id(), "integrand"),
+            Expression::placeholder(next_id(), "lower"),
+            Expression::placeholder(next_id(), "upper"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
 }
 
 /// Summation with bounds: Σᵢ₌ₙᵐ expr
 pub fn template_sum() -> Expression {
-    Expression::operation("sum_bounds", vec![
-        Expression::placeholder(next_id(), "body"),
-        Expression::placeholder(next_id(), "from"),
-        Expression::placeholder(next_id(), "to"),
-    ])
+    Expression::operation(
+        "sum_bounds",
+        vec![
+            Expression::placeholder(next_id(), "body"),
+            Expression::placeholder(next_id(), "from"),
+            Expression::placeholder(next_id(), "to"),
+        ],
+    )
 }
 
 /// Product with bounds: Πᵢ₌ₙᵐ expr
 pub fn template_product() -> Expression {
-    Expression::operation("prod_bounds", vec![
-        Expression::placeholder(next_id(), "body"),
-        Expression::placeholder(next_id(), "from"),
-        Expression::placeholder(next_id(), "to"),
-    ])
+    Expression::operation(
+        "prod_bounds",
+        vec![
+            Expression::placeholder(next_id(), "body"),
+            Expression::placeholder(next_id(), "from"),
+            Expression::placeholder(next_id(), "to"),
+        ],
+    )
 }
 
 /// Partial derivative: ∂f/∂x
 pub fn template_partial() -> Expression {
-    Expression::operation("d_part", vec![
-        Expression::placeholder(next_id(), "function"),
-        Expression::placeholder(next_id(), "variable"),
-    ])
+    Expression::operation(
+        "d_part",
+        vec![
+            Expression::placeholder(next_id(), "function"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
 }
 
 /// Time derivative: df/dt
 pub fn template_derivative_time() -> Expression {
-    Expression::operation("d_dt", vec![
-        Expression::placeholder(next_id(), "function"),
-        Expression::placeholder(next_id(), "variable"),
-    ])
+    Expression::operation(
+        "d_dt",
+        vec![
+            Expression::placeholder(next_id(), "function"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
 }
 
 /// Gradient: ∇f
 pub fn template_gradient() -> Expression {
-    Expression::operation("grad", vec![
-        Expression::placeholder(next_id(), "function"),
-    ])
+    Expression::operation("grad", vec![Expression::placeholder(next_id(), "function")])
 }
 
 // === Linear Algebra ===
 
 /// 2×2 Matrix
 pub fn template_matrix_2x2() -> Expression {
-    Expression::operation("matrix2x2", vec![
-        Expression::placeholder(next_id(), "a11"),
-        Expression::placeholder(next_id(), "a12"),
-        Expression::placeholder(next_id(), "a21"),
-        Expression::placeholder(next_id(), "a22"),
-    ])
+    Expression::operation(
+        "matrix2x2",
+        vec![
+            Expression::placeholder(next_id(), "a11"),
+            Expression::placeholder(next_id(), "a12"),
+            Expression::placeholder(next_id(), "a21"),
+            Expression::placeholder(next_id(), "a22"),
+        ],
+    )
 }
 
 /// 3×3 Matrix
 pub fn template_matrix_3x3() -> Expression {
-    Expression::operation("matrix3x3", vec![
-        Expression::placeholder(next_id(), "a11"),
-        Expression::placeholder(next_id(), "a12"),
-        Expression::placeholder(next_id(), "a13"),
-        Expression::placeholder(next_id(), "a21"),
-        Expression::placeholder(next_id(), "a22"),
-        Expression::placeholder(next_id(), "a23"),
-        Expression::placeholder(next_id(), "a31"),
-        Expression::placeholder(next_id(), "a32"),
-        Expression::placeholder(next_id(), "a33"),
-    ])
+    Expression::operation(
+        "matrix3x3",
+        vec![
+            Expression::placeholder(next_id(), "a11"),
+            Expression::placeholder(next_id(), "a12"),
+            Expression::placeholder(next_id(), "a13"),
+            Expression::placeholder(next_id(), "a21"),
+            Expression::placeholder(next_id(), "a22"),
+            Expression::placeholder(next_id(), "a23"),
+            Expression::placeholder(next_id(), "a31"),
+            Expression::placeholder(next_id(), "a32"),
+            Expression::placeholder(next_id(), "a33"),
+        ],
+    )
 }
 
 /// Vector (bold): 𝐯
 pub fn template_vector_bold() -> Expression {
-    Expression::operation("vector_bold", vec![
-        Expression::placeholder(next_id(), "vector"),
-    ])
+    Expression::operation(
+        "vector_bold",
+        vec![Expression::placeholder(next_id(), "vector")],
+    )
 }
 
 /// Vector (arrow): v⃗
 pub fn template_vector_arrow() -> Expression {
-    Expression::operation("vector_arrow", vec![
-        Expression::placeholder(next_id(), "vector"),
-    ])
+    Expression::operation(
+        "vector_arrow",
+        vec![Expression::placeholder(next_id(), "vector")],
+    )
 }
 
 /// Dot product: a · b
 pub fn template_dot_product() -> Expression {
-    Expression::operation("dot", vec![
-        Expression::placeholder(next_id(), "left"),
-        Expression::placeholder(next_id(), "right"),
-    ])
+    Expression::operation(
+        "dot",
+        vec![
+            Expression::placeholder(next_id(), "left"),
+            Expression::placeholder(next_id(), "right"),
+        ],
+    )
 }
 
 /// Cross product: a × b
 pub fn template_cross_product() -> Expression {
-    Expression::operation("cross", vec![
-        Expression::placeholder(next_id(), "left"),
-        Expression::placeholder(next_id(), "right"),
-    ])
+    Expression::operation(
+        "cross",
+        vec![
+            Expression::placeholder(next_id(), "left"),
+            Expression::placeholder(next_id(), "right"),
+        ],
+    )
 }
 
 /// Norm: ‖v‖
 pub fn template_norm() -> Expression {
-    Expression::operation("norm", vec![
-        Expression::placeholder(next_id(), "vector"),
-    ])
+    Expression::operation("norm", vec![Expression::placeholder(next_id(), "vector")])
 }
 
 /// Absolute value: |x|
 pub fn template_abs() -> Expression {
-    Expression::operation("abs", vec![
-        Expression::placeholder(next_id(), "value"),
-    ])
+    Expression::operation("abs", vec![Expression::placeholder(next_id(), "value")])
 }
 
 // === Quantum Mechanics ===
 
 /// Ket vector: |ψ⟩
 pub fn template_ket() -> Expression {
-    Expression::operation("ket", vec![
-        Expression::placeholder(next_id(), "state"),
-    ])
+    Expression::operation("ket", vec![Expression::placeholder(next_id(), "state")])
 }
 
 /// Bra vector: ⟨ψ|
 pub fn template_bra() -> Expression {
-    Expression::operation("bra", vec![
-        Expression::placeholder(next_id(), "state"),
-    ])
+    Expression::operation("bra", vec![Expression::placeholder(next_id(), "state")])
 }
 
 /// Inner product: ⟨ψ|φ⟩
 pub fn template_inner() -> Expression {
-    Expression::operation("inner", vec![
-        Expression::placeholder(next_id(), "bra"),
-        Expression::placeholder(next_id(), "ket"),
-    ])
+    Expression::operation(
+        "inner",
+        vec![
+            Expression::placeholder(next_id(), "bra"),
+            Expression::placeholder(next_id(), "ket"),
+        ],
+    )
 }
 
 /// Outer product: |ψ⟩⟨φ|
 pub fn template_outer() -> Expression {
-    Expression::operation("outer", vec![
-        Expression::placeholder(next_id(), "ket"),
-        Expression::placeholder(next_id(), "bra"),
-    ])
+    Expression::operation(
+        "outer",
+        vec![
+            Expression::placeholder(next_id(), "ket"),
+            Expression::placeholder(next_id(), "bra"),
+        ],
+    )
 }
 
 /// Commutator: [A, B]
 pub fn template_commutator() -> Expression {
-    Expression::operation("commutator", vec![
-        Expression::placeholder(next_id(), "A"),
-        Expression::placeholder(next_id(), "B"),
-    ])
+    Expression::operation(
+        "commutator",
+        vec![
+            Expression::placeholder(next_id(), "A"),
+            Expression::placeholder(next_id(), "B"),
+        ],
+    )
 }
 
 /// Expectation value: ⟨Â⟩
 pub fn template_expectation() -> Expression {
-    Expression::operation("expectation", vec![
-        Expression::placeholder(next_id(), "operator"),
-    ])
+    Expression::operation(
+        "expectation",
+        vec![Expression::placeholder(next_id(), "operator")],
+    )
 }
 
 // === Tensor Operations ===
 
 /// Tensor with mixed indices: T^μ_ν
 pub fn template_tensor_mixed() -> Expression {
-    Expression::operation("index_mixed", vec![
-        Expression::placeholder(next_id(), "base"),
-        Expression::placeholder(next_id(), "upper"),
-        Expression::placeholder(next_id(), "lower"),
-    ])
+    Expression::operation(
+        "index_mixed",
+        vec![
+            Expression::placeholder(next_id(), "base"),
+            Expression::placeholder(next_id(), "upper"),
+            Expression::placeholder(next_id(), "lower"),
+        ],
+    )
 }
 
 /// Tensor with double upper indices: T^μν
 pub fn template_tensor_upper_pair() -> Expression {
-    Expression::operation("index_pair", vec![
-        Expression::placeholder(next_id(), "base"),
-        Expression::placeholder(next_id(), "idx1"),
-        Expression::placeholder(next_id(), "idx2"),
-    ])
+    Expression::operation(
+        "index_pair",
+        vec![
+            Expression::placeholder(next_id(), "base"),
+            Expression::placeholder(next_id(), "idx1"),
+            Expression::placeholder(next_id(), "idx2"),
+        ],
+    )
 }
 
 // === Trigonometry ===
 
 /// Sine: sin(x)
 pub fn template_sin() -> Expression {
-    Expression::operation("sin", vec![
-        Expression::placeholder(next_id(), "argument"),
-    ])
+    Expression::operation("sin", vec![Expression::placeholder(next_id(), "argument")])
 }
 
 /// Cosine: cos(x)
 pub fn template_cos() -> Expression {
-    Expression::operation("cos", vec![
-        Expression::placeholder(next_id(), "argument"),
-    ])
+    Expression::operation("cos", vec![Expression::placeholder(next_id(), "argument")])
 }
 
 /// Tangent: tan(x)
 pub fn template_tan() -> Expression {
-    Expression::operation("tan", vec![
-        Expression::placeholder(next_id(), "argument"),
-    ])
+    Expression::operation("tan", vec![Expression::placeholder(next_id(), "argument")])
 }
 
 // === Limits ===
 
 /// Limit: lim_{x→a} f(x)
 pub fn template_limit() -> Expression {
-    Expression::operation("lim", vec![
-        Expression::placeholder(next_id(), "body"),
-        Expression::placeholder(next_id(), "var"),
-        Expression::placeholder(next_id(), "target"),
-    ])
+    Expression::operation(
+        "lim",
+        vec![
+            Expression::placeholder(next_id(), "body"),
+            Expression::placeholder(next_id(), "var"),
+            Expression::placeholder(next_id(), "target"),
+        ],
+    )
 }
 
 // === Template Registry ===
@@ -422,9 +473,8 @@ mod tests {
         reset_placeholder_counter();
         let frac = get_template("fraction");
         assert!(frac.is_some());
-        
+
         let unknown = get_template("unknown_template");
         assert!(unknown.is_none());
     }
 }
-

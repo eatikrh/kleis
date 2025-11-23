@@ -8,28 +8,22 @@
 pub enum Expression {
     /// Numeric constant (e.g., "1", "2", "3.14")
     Const(String),
-    
+
     /// Named object/variable (e.g., "x", "\\alpha", "\\pi")
     Object(String),
-    
+
     /// Operation with a name and arguments
     /// Examples:
     /// - plus(a, b) for addition
     /// - sqrt(x) for square root
     /// - frac(num, den) for fractions
-    Operation {
-        name: String,
-        args: Vec<Expression>,
-    },
-    
+    Operation { name: String, args: Vec<Expression> },
+
     /// Placeholder for structural editing
     /// Used to represent empty slots that need to be filled
     /// id: unique identifier for this placeholder
     /// hint: user-friendly description of what should go here (e.g., "numerator", "exponent")
-    Placeholder {
-        id: usize,
-        hint: String,
-    },
+    Placeholder { id: usize, hint: String },
 }
 
 impl Expression {
@@ -37,12 +31,12 @@ impl Expression {
     pub fn constant(s: impl Into<String>) -> Self {
         Expression::Const(s.into())
     }
-    
+
     /// Create an object/variable expression
     pub fn object(s: impl Into<String>) -> Self {
         Expression::Object(s.into())
     }
-    
+
     /// Create an operation expression
     pub fn operation(name: impl Into<String>, args: Vec<Expression>) -> Self {
         Expression::Operation {
@@ -50,7 +44,7 @@ impl Expression {
             args,
         }
     }
-    
+
     /// Create a placeholder expression
     pub fn placeholder(id: usize, hint: impl Into<String>) -> Self {
         Expression::Placeholder {
@@ -58,14 +52,14 @@ impl Expression {
             hint: hint.into(),
         }
     }
-    
+
     /// Traverse the expression tree to find all placeholders
     pub fn find_placeholders(&self) -> Vec<(usize, String)> {
         let mut placeholders = Vec::new();
         self.collect_placeholders(&mut placeholders);
         placeholders
     }
-    
+
     fn collect_placeholders(&self, acc: &mut Vec<(usize, String)>) {
         match self {
             Expression::Placeholder { id, hint } => {
@@ -79,7 +73,7 @@ impl Expression {
             _ => {}
         }
     }
-    
+
     /// Get the next placeholder ID after the given one
     pub fn next_placeholder(&self, current_id: usize) -> Option<usize> {
         let placeholders = self.find_placeholders();
@@ -89,7 +83,7 @@ impl Expression {
             .filter(|id| *id > current_id)
             .min()
     }
-    
+
     /// Get the previous placeholder ID before the given one
     pub fn prev_placeholder(&self, current_id: usize) -> Option<usize> {
         let placeholders = self.find_placeholders();
@@ -100,4 +94,3 @@ impl Expression {
             .max()
     }
 }
-
