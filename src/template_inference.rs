@@ -22,10 +22,10 @@ pub fn infer_templates(expr: Expression) -> Expression {
     try_infer_double_integral(&expr)
         .or_else(|| try_infer_triple_integral(&expr))
         .or_else(|| try_infer_logical_implication(&expr))
+        .or_else(|| try_infer_quantifier(&expr))
         // Add more pattern matchers here as needed:
         // .or_else(|| try_infer_limit(&expr))
         // .or_else(|| try_infer_sum_bounds(&expr))
-        // .or_else(|| try_infer_quantifier(&expr))
         .unwrap_or(expr) // Fallback: keep flat if no pattern matches
 }
 
@@ -107,6 +107,78 @@ fn try_infer_logical_implication(expr: &Expression) -> Option<Expression> {
     }
     
     None
+}
+
+/// Attempt to infer quantifier structure
+/// 
+/// Pattern: The quantifier might be nested in the left operand of a relational operation
+/// Example: in_set((\exists * var * separator * ...), ...)
+/// 
+/// Strategy: Check if a relational operation has a quantifier in its left operand
+fn try_infer_quantifier(expr: &Expression) -> Option<Expression> {
+    // Check if top-level is a relational operation (in_set, equals, etc.)
+    match expr {
+        Expression::Operation { name, args } if is_relational_op(name) && args.len() == 2 => {
+            // Check if left operand contains quantifier pattern
+            let left_terms = flatten_multiply(&args[0]);
+            
+            if left_terms.len() < 2 {
+                return None;
+            }
+            
+            // Check if first term is \forall or \exists
+            let op_name = match &left_terms[0] {
+                Expression::Object(s) if s == "\\forall" => "forall",
+                Expression::Object(s) if s == "\\exists" => "exists",
+                _ => return None,
+            };
+            
+            // Second term is the bound variable
+            let var = left_terms[1].clone();
+            
+            // Skip optional separator (__SPACE__ from \colon)
+            let body_start = if left_terms.len() > 2 {
+                match &left_terms[2] {
+                    Expression::Object(s) if s == "__SPACE__" => 3,
+                    _ => 2,
+                }
+            } else {
+                2
+            };
+            
+            // Body is: remaining left terms + the original relational operation
+            // Example: [\exists, x, __SPACE__, x] in in_set(..., S)
+            // Body should be: in_set(x, S)
+            
+            if body_start < left_terms.len() {
+                // Reconstruct the body: remaining left terms + relational op
+                let remaining_left = rebuild_multiply(&left_terms[body_start..]);
+                
+                // Reconstruct the relational operation with cleaned left side
+                let body = Expression::Operation {
+                    name: name.clone(),
+                    args: vec![remaining_left, args[1].clone()],
+                };
+                
+                return Some(Expression::Operation {
+                    name: op_name.to_string(),
+                    args: vec![var, body],
+                });
+            }
+        }
+        _ => {}
+    }
+    
+    None
+}
+
+/// Check if an operation name is a relational operator
+fn is_relational_op(name: &str) -> bool {
+    matches!(name, 
+        "equals" | "not_equal" | "less_than" | "greater_than" | 
+        "leq" | "geq" | "approx" | "equiv" | "in_set" | 
+        "subset" | "subseteq" | "union" | "intersection"
+    )
 }
 
 /// Attempt to infer triple_integral structure
@@ -303,6 +375,38 @@ mod tests {
                 assert_eq!(args.len(), 2);
             }
             _ => panic!("Expected iff operation"),
+        }
+    }
+    
+    #[test]
+    fn test_infer_exists_quantifier() {
+        let latex = r"\exists x \colon x \in S";
+        let flat_ast = parse_latex(latex).unwrap();
+        let inferred = infer_templates(flat_ast);
+        
+        match &inferred {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "exists");
+                assert_eq!(args.len(), 2);
+                // args[0] should be the variable
+                // args[1] should be the body (in_set operation)
+            }
+            _ => panic!("Expected exists operation"),
+        }
+    }
+    
+    #[test]
+    fn test_infer_forall_quantifier() {
+        let latex = r"\forall x \colon x \in S";
+        let flat_ast = parse_latex(latex).unwrap();
+        let inferred = infer_templates(flat_ast);
+        
+        match &inferred {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "forall");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected forall operation"),
         }
     }
     
