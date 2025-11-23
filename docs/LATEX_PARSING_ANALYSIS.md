@@ -335,9 +335,279 @@ The flat symbol parsing approach is **architecturally sound** for handling arbit
 
 ---
 
+## Proof of Concept: Template-Based Inference for Double Integrals
+
+**Date:** 2024-11-23  
+**Status:** Feasibility demonstrated, implementation deferred
+
+### The Challenge
+
+LaTeX: `\iint_{D} f(x,y) \, \mathrm{d}x \, \mathrm{d}y`
+
+**Flat parsing produces:**
+```
+scalar_multiply(
+  scalar_multiply(
+    scalar_multiply(
+      scalar_multiply(
+        scalar_multiply(
+          sub(\iint, D),
+          function_call(f, x, y)
+        ),
+        mathrm(d)
+      ),
+      x
+    ),
+    mathrm(d)
+  ),
+  y
+)
+```
+
+**Desired structured AST:**
+```
+double_integral(
+  integrand: function_call(f, x, y),
+  region: D,
+  var1: x,
+  var2: y
+)
+```
+
+### Pattern Matching Algorithm
+
+**Step 1: Flatten multiplication chain**
+```rust
+fn flatten_multiply(expr: &Expression) -> Vec<Expression> {
+    match expr {
+        Operation { name: "scalar_multiply", args } if args.len() == 2 => {
+            let mut result = flatten_multiply(&args[0]);
+            result.extend(flatten_multiply(&args[1]));
+            result
+        }
+        _ => vec![expr.clone()],
+    }
+}
+```
+
+Result: `[sub(\iint, D), f(x,y), mathrm(d), x, mathrm(d), y]` (6 terms)
+
+**Step 2: Pattern match**
+```rust
+fn infer_double_integral(expr: &Expression) -> Option<Expression> {
+    let terms = flatten_multiply(expr);
+    
+    // Pattern: sub(\iint, region) * integrand * mathrm(d) * var1 * mathrm(d) * var2
+    
+    // 1. Check first term is sub(\iint, region)
+    let region = match &terms[0] {
+        Operation { name: "sub", args } if args.len() == 2 => {
+            match &args[0] {
+                Object(s) if s == "\\iint" => args[1].clone(),
+                _ => return None,
+            }
+        }
+        _ => return None,
+    };
+    
+    // 2. Integrand is term 1
+    let integrand = terms[1].clone();
+    
+    // 3. Extract variables: look for mathrm(d) * var pattern
+    let mut variables = Vec::new();
+    let mut i = 2;
+    
+    while i + 1 < terms.len() {
+        let is_diff = matches!(&terms[i], 
+            Operation { name: "mathrm", args } 
+            if args.len() == 1 && matches!(&args[0], Object(s) if s == "d")
+        );
+        
+        if is_diff {
+            variables.push(terms[i + 1].clone());
+            i += 2;
+        } else {
+            break;
+        }
+    }
+    
+    // 4. Verify we have exactly 2 variables
+    if variables.len() == 2 {
+        Some(Operation {
+            name: "double_integral".to_string(),
+            args: vec![integrand, region, variables[0].clone(), variables[1].clone()],
+        })
+    } else {
+        None
+    }
+}
+```
+
+**Step 3: Apply inference**
+```rust
+match parse_latex(latex) {
+    Ok(flat_ast) => {
+        let structured_ast = infer_double_integral(&flat_ast)
+            .unwrap_or(flat_ast);
+        // Use structured_ast for rendering
+    }
+}
+```
+
+### Results
+
+**Input:** `\iint_{D} f(x,y) \, \mathrm{d}x \, \mathrm{d}y`
+
+**Flat parse:** 6-term multiplication chain (as shown above)
+
+**Pattern match:** ✓ Success
+- Detected: `sub(\iint, D)` at start
+- Extracted: region = `D`, integrand = `f(x,y)`
+- Found: 2 differential patterns (`mathrm(d) * x`, `mathrm(d) * y`)
+
+**Inferred AST:** `double_integral(f(x,y), D, x, y)`
+
+**Re-rendered LaTeX:** `\iint_{D} f(x, y) \, \mathrm{d}x \, \mathrm{d}y` ✓
+
+### Feasibility Assessment
+
+**Difficulty: MEDIUM (Definitely Achievable)**
+
+**Pros:**
+- ✅ Pattern is unambiguous (`\iint` + 2 differentials = double integral)
+- ✅ ~80 lines of code for proof-of-concept
+- ✅ Successfully reconstructs structure
+- ✅ Generalizable to triple integrals, limits, etc.
+
+**Cons:**
+- Requires flattening multiplication chains
+- Need to handle edge cases (missing differentials, extra terms)
+- Must maintain pattern matchers for each template
+
+**Estimated Implementation Effort:**
+
+| Component | Lines of Code | Time Estimate |
+|-----------|---------------|---------------|
+| Core infrastructure (flatten, match framework) | ~200 | 4-6 hours |
+| Double/triple integral patterns | ~100 | 2-3 hours |
+| Limit patterns (lim, limsup, liminf) | ~150 | 3-4 hours |
+| Sum/product with bounds | ~100 | 2-3 hours |
+| Quantifiers (forall, exists) | ~100 | 2-3 hours |
+| Testing & edge cases | ~200 | 4-6 hours |
+| **Total** | **~850 lines** | **2-3 days** |
+
+### Generalization to Other Templates
+
+**Similar patterns that would benefit:**
+
+1. **Triple integral:** `\iiint_{V} ... \mathrm{d}x \mathrm{d}y \mathrm{d}z`
+   - Pattern: `sub(\iiint, region) * integrand * (mathrm(d) * var){3}`
+   - Complexity: Same as double integral
+
+2. **Limits:** `\lim_{x \to 0} f(x)`
+   - Pattern: `sub(\lim, x) * f(x)` + unparsed `\to 0`
+   - Complexity: Higher (need to handle unparsed remainder)
+   - Alternative: Fix parser to handle `\to` in subscripts
+
+3. **Sum with bounds:** `\sum_{n=1}^{\infty} a_n`
+   - Pattern: `sup(sub(\sum, equals(n, 1)), \infty) * a_n`
+   - Complexity: Medium (already have subscript/superscript structure)
+
+4. **Quantifiers:** `\forall x \colon P(x)`
+   - Pattern: `\forall * x * \colon * P(x)`
+   - Complexity: Medium (need to determine where predicate ends)
+
+### Implementation Strategy
+
+**Phase 1: Infrastructure (Day 1)**
+```rust
+// src/parser_inference.rs (new file)
+
+pub fn infer_templates(expr: Expression) -> Expression {
+    // Try each pattern matcher in priority order
+    try_infer_double_integral(&expr)
+        .or_else(|| try_infer_triple_integral(&expr))
+        .or_else(|| try_infer_limit(&expr))
+        .or_else(|| try_infer_sum_bounds(&expr))
+        .or_else(|| try_infer_quantifier(&expr))
+        .unwrap_or(expr) // Keep flat if no pattern matches
+}
+
+fn flatten_multiply(expr: &Expression) -> Vec<Expression> { ... }
+fn is_mathrm_d(expr: &Expression) -> bool { ... }
+fn extract_differential_vars(terms: &[Expression], start: usize) -> Vec<Expression> { ... }
+```
+
+**Phase 2: Pattern Matchers (Days 1-2)**
+```rust
+fn try_infer_double_integral(expr: &Expression) -> Option<Expression> {
+    // Pattern: sub(\iint, region) * integrand * mathrm(d) * var1 * mathrm(d) * var2
+    // (Implemented in POC above)
+}
+
+fn try_infer_triple_integral(expr: &Expression) -> Option<Expression> {
+    // Pattern: sub(\iiint, region) * integrand * (mathrm(d) * var){3}
+    // Nearly identical to double integral
+}
+
+fn try_infer_limit(expr: &Expression) -> Option<Expression> {
+    // Pattern: sub(\lim, var) * body
+    // Challenge: Need to extract target from subscript (requires fixing \to parsing)
+}
+```
+
+**Phase 3: Integration (Day 2-3)**
+```rust
+// In parse_latex()
+pub fn parse_latex(input: &str) -> Result<Expression, ParseError> {
+    let mut parser = Parser::new(input);
+    let flat_ast = parser.parse()?;
+    
+    // Apply template inference
+    let structured_ast = infer_templates(flat_ast);
+    
+    Ok(structured_ast)
+}
+```
+
+**Phase 4: Testing (Day 3)**
+- Test each pattern with variations
+- Handle edge cases (missing differentials, extra terms)
+- Ensure no false positives
+
+### Advantages of This Approach
+
+1. **Non-breaking**: Flat parsing still works, inference is optional post-processing
+2. **Incremental**: Can add pattern matchers one at a time
+3. **Testable**: Each pattern matcher is independent
+4. **Fallback**: If inference fails, keep flat structure (graceful degradation)
+5. **Extensible**: Users could define custom patterns for their templates
+
+### Limitations
+
+1. **Heuristic-based**: Might misidentify patterns in edge cases
+2. **Maintenance**: Each new template needs a pattern matcher
+3. **Performance**: Extra pass over AST (negligible for typical expressions)
+4. **Ambiguity**: Some patterns might match multiple templates (need priority order)
+
+### Recommendation
+
+**Implement template inference for high-value cases:**
+- ✅ Double/triple integrals (unambiguous pattern)
+- ✅ Sum/product with bounds (already have sub/sup structure)
+- ⚠️ Limits (need to fix `\to` in subscripts first)
+- ❌ Quantifiers (scope ambiguity, defer to future)
+
+**Priority 1:** Integrals (demonstrated feasibility, clear benefit)  
+**Priority 2:** Limits (after fixing subscript parsing)  
+**Priority 3:** Quantifiers (requires scope resolution heuristics)
+
+---
+
 **Analysis Date:** 2024-11-23  
 **Analyzed Items:** ~100 gallery expressions  
 **Issues Found:** 28 (28%)  
 **Critical Issues:** 3 (text mode, factorial, outer_product)  
-**Acceptable Limitations:** 25 (semantic loss with visual correctness)
+**Acceptable Limitations:** 25 (semantic loss with visual correctness)  
+**POC Status:** Template inference proven feasible (~80 LOC, 2-3 days for full implementation)
 
