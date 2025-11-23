@@ -1470,6 +1470,7 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("forall".to_string(), "forall {left} : {right}".to_string());
     typst_templates.insert("exists".to_string(), "exists {left} : {right}".to_string());
     typst_templates.insert("implies".to_string(), "{left} => {right}".to_string());
+    typst_templates.insert("implied_by".to_string(), "{left} <= {right}".to_string());
     typst_templates.insert("iff".to_string(), "{left} <=> {right}".to_string());
     
     // TODO: Add more Typst templates as needed
