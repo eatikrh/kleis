@@ -24,6 +24,7 @@ pub fn infer_templates(expr: Expression) -> Expression {
         .or_else(|| try_infer_logical_implication(&expr))
         .or_else(|| try_infer_quantifier(&expr))
         .or_else(|| try_infer_modular_congruence(&expr))
+        .or_else(|| try_infer_statistics_functions(&expr))
         // Add more pattern matchers here as needed:
         // .or_else(|| try_infer_limit(&expr))
         // .or_else(|| try_infer_sum_bounds(&expr))
@@ -273,6 +274,63 @@ fn try_infer_modular_congruence(expr: &Expression) -> Option<Expression> {
     None
 }
 
+/// Attempt to infer statistics functions
+/// 
+/// Pattern: mathrm(Var) * function_call(X) -> variance(X)
+/// Pattern: mathrm(Cov) * function_call(X, Y) -> covariance(X, Y)
+/// Pattern: mathrm(Tr) * function_call(A) -> trace(A)
+fn try_infer_statistics_functions(expr: &Expression) -> Option<Expression> {
+    // Check if this is a multiplication of mathrm and function_call
+    match expr {
+        Expression::Operation { name, args } if name == "scalar_multiply" && args.len() == 2 => {
+            // Check if left is mathrm(function_name)
+            let func_name = match &args[0] {
+                Expression::Operation { name, args: inner_args } 
+                    if name == "mathrm" && inner_args.len() == 1 => {
+                    match &inner_args[0] {
+                        Expression::Object(s) => s.clone(),
+                        _ => return None,
+                    }
+                }
+                _ => return None,
+            };
+            
+            // Check if right is function_call or just an argument
+            let (op_name, new_args) = match func_name.as_str() {
+                "Var" => {
+                    // variance(X)
+                    ("variance", vec![args[1].clone()])
+                }
+                "Cov" => {
+                    // covariance(X, Y) - right side should be function_call(X, Y)
+                    match &args[1] {
+                        Expression::Operation { name, args: func_args} 
+                            if name == "function_call" && func_args.len() == 2 => {
+                            // func_args[0] is X (treated as func name), [1] is Y
+                            // This is actually (X, Y) parsed as function call
+                            ("covariance", vec![func_args[0].clone(), func_args[1].clone()])
+                        }
+                        _ => return None,
+                    }
+                }
+                "Tr" => {
+                    // trace(A)
+                    ("trace", vec![args[1].clone()])
+                }
+                _ => return None,
+            };
+            
+            return Some(Expression::Operation {
+                name: op_name.to_string(),
+                args: new_args,
+            });
+        }
+        _ => {}
+    }
+    
+    None
+}
+
 // === Helper Functions ===
 
 /// Rebuild a multiplication chain from a list of terms
@@ -477,6 +535,36 @@ mod tests {
         let latex_out = render_expression(&inferred, &ctx, &RenderTarget::LaTeX);
         assert!(latex_out.contains("\\equiv"));
         assert!(latex_out.contains("\\pmod"));
+    }
+    
+    #[test]
+    fn test_infer_variance() {
+        let latex = r"\mathrm{Var}(X)";
+        let flat_ast = parse_latex(latex).unwrap();
+        let inferred = infer_templates(flat_ast);
+        
+        match &inferred {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "variance");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected variance operation"),
+        }
+    }
+    
+    #[test]
+    fn test_infer_covariance() {
+        let latex = r"\mathrm{Cov}(X, Y)";
+        let flat_ast = parse_latex(latex).unwrap();
+        let inferred = infer_templates(flat_ast);
+        
+        match &inferred {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "covariance");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected covariance operation"),
+        }
     }
     
     #[test]

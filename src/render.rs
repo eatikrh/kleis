@@ -705,6 +705,9 @@ fn latex_to_typst_symbol(input: &str) -> String {
         .replace("\\cup", "union").replace("\\cap", "sect")
         .replace("\\Rightarrow", "=>").replace("\\Leftarrow", "<=")
         .replace("\\Leftrightarrow", "<=>")
+        // Ellipsis
+        .replace("\\cdots", "dots.c").replace("\\ldots", "dots")
+        .replace("\\vdots", "dots.v").replace("\\ddots", "dots.down")
         // If not converted, return as-is (Typst might understand it)
 }
 
