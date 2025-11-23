@@ -126,6 +126,63 @@ impl Parser {
         Ok(expr)
     }
 
+    fn parse_script_group(&mut self) -> Result<Expression, ParseError> {
+        // Parse {content} for subscripts/superscripts
+        // Treats adjacent single-letter identifiers as juxtaposition, not multiplication
+        if self.advance() != Some('{') {
+            return Err(ParseError {
+                message: "Expected '{'".to_string(),
+                position: self.pos,
+            });
+        }
+
+        // Collect all content until closing brace
+        let mut content = String::new();
+        let mut brace_depth = 0;
+        
+        loop {
+            match self.peek() {
+                None => {
+                    return Err(ParseError {
+                        message: "Unclosed brace in script".to_string(),
+                        position: self.pos,
+                    });
+                }
+                Some('{') => {
+                    content.push('{');
+                    brace_depth += 1;
+                    self.advance();
+                }
+                Some('}') => {
+                    if brace_depth == 0 {
+                        self.advance(); // consume closing brace
+                        break;
+                    } else {
+                        content.push('}');
+                        brace_depth -= 1;
+                        self.advance();
+                    }
+                }
+                Some(ch) => {
+                    content.push(ch);
+                    self.advance();
+                }
+            }
+        }
+
+        // Parse the content - for now, just return as object to avoid implicit multiplication
+        // This treats μμ as a single identifier rather than μ*μ
+        if content.trim().is_empty() {
+            Ok(o(""))
+        } else {
+            // Parse normally but as a single unit
+            match parse_latex(content.trim()) {
+                Ok(expr) => Ok(expr),
+                Err(_) => Ok(o(content.trim())),
+            }
+        }
+    }
+
     fn parse_group_or_parens(&mut self) -> Result<Expression, ParseError> {
         // Parse {content} or (content) - for functions that accept both
         self.skip_whitespace();
@@ -321,7 +378,40 @@ impl Parser {
                 }
                 // Lowercase: single letter (for implicit mult: ab → a*b)
                 
-                Ok(o(text))
+                // Check if followed by parentheses (function call)
+                self.skip_whitespace();
+                if self.peek() == Some('(') {
+                    self.advance(); // consume (
+                    let mut args = vec![o(text)]; // function name as first arg
+                    
+                    // Parse comma-separated arguments
+                    loop {
+                        self.skip_whitespace();
+                        if self.peek() == Some(')') {
+                            self.advance();
+                            break;
+                        }
+                        
+                        args.push(self.parse_additive()?);
+                        self.skip_whitespace();
+                        
+                        if self.peek() == Some(',') {
+                            self.advance();
+                        } else if self.peek() == Some(')') {
+                            self.advance();
+                            break;
+                        } else {
+                            return Err(ParseError {
+                                message: "Expected ',' or ')' in function call".to_string(),
+                                position: self.pos,
+                            });
+                        }
+                    }
+                    
+                    Ok(op("function_call", args))
+                } else {
+                    Ok(o(text))
+                }
             }
             _ => Err(ParseError {
                 message: format!("Unexpected character: {:?}", self.peek()),
@@ -331,7 +421,7 @@ impl Parser {
     }
 
     fn parse_postfix(&mut self) -> Result<Expression, ParseError> {
-        // Handle subscripts and superscripts
+        // Handle subscripts, superscripts, and prime notation
         let mut expr = self.parse_primary()?;
 
         loop {
@@ -364,6 +454,17 @@ impl Parser {
                         o(ch.to_string())
                     };
                     expr = op("sup", vec![expr, sup]);
+                }
+                Some('\'') => {
+                    // Prime notation (derivative): y', y'', etc.
+                    let mut prime_count = 0;
+                    while self.peek() == Some('\'') {
+                        self.advance();
+                        prime_count += 1;
+                    }
+                    // Represent as superscript with prime symbols
+                    let prime_str = "'".repeat(prime_count);
+                    expr = op("sup", vec![expr, o(prime_str)]);
                 }
                 _ => break,
             }
@@ -399,6 +500,13 @@ impl Parser {
                             // Check if it's a command that starts a new term (for implicit multiplication)
                             // Parse command again to check
                             if let Ok(cmd2) = self.parse_command() {
+                                // Check if it's a spacing command - if so, skip it and continue
+                                let is_spacing = matches!(cmd2.as_str(), "," | ";" | "!" | "quad" | "qquad");
+                                if is_spacing {
+                                    // Skip the spacing command and continue the loop
+                                    continue;
+                                }
+                                
                                 // Commands that start new terms (functions, roots, fractions, etc.)
                                 let is_term_starter = matches!(cmd2.as_str(),
                                     "sqrt" | "frac" | "sin" | "cos" | "tan" | "sec" | "csc" | "cot" |
@@ -410,6 +518,7 @@ impl Parser {
                                     "Gamma" | "Delta" | "Theta" | "Lambda" | "Xi" | "Pi" | "Sigma" |
                                     "Upsilon" | "Phi" | "Psi" | "Omega" | "aleph" | "beth" | "gimel" | "daleth" |
                                     "mathbb" | "boldsymbol" | "vec" | "hat" | "bar" | "tilde" | "overline" | "dot" | "ddot" | "partial" | "nabla" |
+                                    "hbar" | "infty" | "emptyset" |
                                     "begin" | "left"
                                 );
                                 self.pos = saved_pos; // Backtrack again
@@ -483,8 +592,8 @@ impl Parser {
                 break;
             }
 
-            // Try to parse an additive expression (highest level)
-            match self.parse_additive() {
+            // Try to parse a relational expression (highest level, includes =, <, >, etc.)
+            match self.parse_relational() {
                 Ok(expr) => parts.push(expr),
                 Err(_) => {
                     // Skip unknown character and continue
@@ -1031,7 +1140,41 @@ impl Parser {
             "gamma" => Ok(o("\\gamma")),
             "delta" => Ok(o("\\delta")),
             "epsilon" => Ok(o("\\epsilon")),
-            "zeta" => Ok(o("\\zeta")),
+            "zeta" => {
+                // Check if followed by parentheses (function call)
+                self.skip_whitespace();
+                if self.peek() == Some('(') {
+                    self.advance(); // consume (
+                    let mut args = vec![o("\\zeta")];
+                    
+                    loop {
+                        self.skip_whitespace();
+                        if self.peek() == Some(')') {
+                            self.advance();
+                            break;
+                        }
+                        
+                        args.push(self.parse_relational()?);
+                        self.skip_whitespace();
+                        
+                        if self.peek() == Some(',') {
+                            self.advance();
+                        } else if self.peek() == Some(')') {
+                            self.advance();
+                            break;
+                        } else {
+                            return Err(ParseError {
+                                message: "Expected ',' or ')' in function call".to_string(),
+                                position: self.pos,
+                            });
+                        }
+                    }
+                    
+                    Ok(op("function_call", args))
+                } else {
+                    Ok(o("\\zeta"))
+                }
+            }
             "eta" => Ok(o("\\eta")),
             "theta" => Ok(o("\\theta")),
             "iota" => Ok(o("\\iota")),
@@ -1061,7 +1204,41 @@ impl Parser {
             "varphi" => Ok(o("\\varphi")),
 
             // Greek letters (uppercase)
-            "Gamma" => Ok(o("\\Gamma")),
+            "Gamma" => {
+                // Check if followed by parentheses (function call)
+                self.skip_whitespace();
+                if self.peek() == Some('(') {
+                    self.advance(); // consume (
+                    let mut args = vec![o("\\Gamma")];
+                    
+                    loop {
+                        self.skip_whitespace();
+                        if self.peek() == Some(')') {
+                            self.advance();
+                            break;
+                        }
+                        
+                        args.push(self.parse_relational()?);
+                        self.skip_whitespace();
+                        
+                        if self.peek() == Some(',') {
+                            self.advance();
+                        } else if self.peek() == Some(')') {
+                            self.advance();
+                            break;
+                        } else {
+                            return Err(ParseError {
+                                message: "Expected ',' or ')' in function call".to_string(),
+                                position: self.pos,
+                            });
+                        }
+                    }
+                    
+                    Ok(op("function_call", args))
+                } else {
+                    Ok(o("\\Gamma"))
+                }
+            }
             "Delta" => Ok(o("\\Delta")),
             "Theta" => Ok(o("\\Theta")),
             "Lambda" => Ok(o("\\Lambda")),
@@ -1145,44 +1322,68 @@ impl Parser {
 
             // Bra-ket
             "langle" => {
-                // Check if this is a bra vector: \langle φ |
+                // Check for \langle ... | ... \rangle (inner)
+                // or \langle ... \rangle (expectation)
+                // or \langle ... | (bra)
                 self.skip_whitespace();
-                let saved_pos = self.pos;
+                let start = self.pos;
                 
-                // Try to parse content until |
+                let mut p_pos = None;
+                let mut r_pos = None;
                 let mut depth = 0;
-                let mut found_pipe = false;
-                while let Some(ch) = self.peek() {
-                    if ch == '|' && depth == 0 {
-                        found_pipe = true;
-                        break;
-                    }
-                    if ch == '{' {
+                
+                let mut i = start;
+                while i < self.input.len() {
+                    let ch = self.input[i];
+                    if ch == '\\' {
+                        // Check for rangle
+                        if i + 6 < self.input.len() {
+                            let cmd: String = self.input[i+1..i+7].iter().collect();
+                            if cmd == "rangle" && depth == 0 {
+                                r_pos = Some(i);
+                                break;
+                            }
+                        }
+                    } else if ch == '|' && depth == 0 {
+                        if p_pos.is_none() { p_pos = Some(i); }
+                    } else if ch == '{' {
                         depth += 1;
                     } else if ch == '}' {
                         depth -= 1;
                     }
-                    self.advance();
+                    i += 1;
                 }
                 
-                if found_pipe {
-                    // It's a bra! Parse the content
-                    let content_str: String = self.input[saved_pos..self.pos].iter().collect();
-                    self.advance(); // consume |
-                    
-                    // Parse the content as an expression
-                    let mut content_parser = Parser::new(&content_str);
-                    match content_parser.parse() {
-                        Ok(content) => return Ok(op("bra", vec![content])),
-                        Err(_) => {
-                            // If content parsing fails, treat as object
-                            return Ok(op("bra", vec![o(content_str.trim())]));
-                        }
+                if let Some(r_idx) = r_pos {
+                    if let Some(p_idx) = p_pos {
+                        // Inner product: < u | v >
+                        let bra_str: String = self.input[start..p_idx].iter().collect();
+                        let ket_str: String = self.input[p_idx+1..r_idx].iter().collect();
+                        
+                        self.pos = r_idx + 7; // skip \rangle
+                        
+                        let bra_expr = parse_latex(bra_str.trim()).unwrap_or(o(bra_str.trim()));
+                        let ket_expr = parse_latex(ket_str.trim()).unwrap_or(o(ket_str.trim()));
+                        
+                        return Ok(op("inner", vec![bra_expr, ket_expr]));
+                    } else {
+                        // Expectation: < A >
+                        let content_str: String = self.input[start..r_idx].iter().collect();
+                        self.pos = r_idx + 7; // skip \rangle
+                        
+                        let content_expr = parse_latex(content_str.trim()).unwrap_or(o(content_str.trim()));
+                        return Ok(op("expectation", vec![content_expr]));
                     }
+                } else if let Some(p_idx) = p_pos {
+                    // Bra: < u |
+                    let content_str: String = self.input[start..p_idx].iter().collect();
+                    self.pos = p_idx + 1; // skip |
+                    
+                    let content_expr = parse_latex(content_str.trim()).unwrap_or(o(content_str.trim()));
+                    return Ok(op("bra", vec![content_expr]));
                 }
                 
-                // Not a bra, just return langle
-                self.pos = saved_pos;
+                // Just \langle
                 Ok(o("\\langle"))
             }
             "rangle" => Ok(o("\\rangle")),
@@ -1204,6 +1405,14 @@ impl Parser {
                 let arg = self.parse_group()?;
                 Ok(op("overline", vec![arg]))
             }
+            "vec" => {
+                let arg = self.parse_group()?;
+                Ok(op("vector_arrow", vec![arg]))
+            }
+            "boldsymbol" | "mathbf" => {
+                let arg = self.parse_group()?;
+                Ok(op("vector_bold", vec![arg]))
+            }
             "dot" => {
                 let arg = self.parse_group()?;
                 Ok(op("dot_accent", vec![arg]))
@@ -1219,15 +1428,15 @@ impl Parser {
                 Ok(o(format!("\\mathbb{{{}}}", arg.as_string())))
             }
 
-            // Math functions
-            "min" | "max" => {
-                // Could have subscript already parsed
+            // Math operators with optional subscripts (min_u, max_x, etc.)
+            "min" | "max" | "sup" | "inf" => {
+                // Return as object - subscript will be handled by parse_postfix
                 Ok(o(format!("\\{}", cmd)))
             }
 
-            // Spacing commands (ignore)
+            // Spacing commands (return empty marker to be skipped)
             "," | ";" | "!" | "quad" | "qquad" => {
-                Ok(o(" "))
+                Ok(o("__SPACE__"))
             }
 
             // Text mode - plain text within math
@@ -1250,6 +1459,13 @@ impl Parser {
 
             // Sum/Product
             "sum" | "prod" => {
+                Ok(o(format!("\\{}", cmd)))
+            }
+
+            // Limit operators
+            "lim" | "limsup" | "liminf" => {
+                // Return as object - subscript will be handled by parse_postfix
+                // The subscript should contain "var \to target"
                 Ok(o(format!("\\{}", cmd)))
             }
 

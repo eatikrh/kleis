@@ -337,6 +337,25 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
             }
         }
         Expression::Operation { name, args } => {
+            // Special handling for function_call: render as funcname(arg1, arg2, ...)
+            if name == "function_call" && !args.is_empty() {
+                let func_name = render_expression(&args[0], ctx, target);
+                let func_args: Vec<String> = args[1..].iter()
+                    .map(|arg| render_expression(arg, ctx, target))
+                    .collect();
+                return format!("{}({})", func_name, func_args.join(", "));
+            }
+            
+            // Special handling for unary minus: minus(0, x) -> -x
+            if name == "minus" && args.len() == 2 {
+                if let Expression::Const(val) = &args[0] {
+                    if val == "0" {
+                        let operand = render_expression(&args[1], ctx, target);
+                        return format!("-{}", operand);
+                    }
+                }
+            }
+            
             let (template, glyph) = match target {
                 RenderTarget::Unicode => {
                     let template = ctx.unicode_templates.get(name)
@@ -422,16 +441,24 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 }
                 result = result.replace("{sup}", second);
                 result = result.replace("{idx1}", second);
-                result = result.replace("{target}", second);
+                // For limits, {target} is arg 2, not arg 1
+                if name != "lim" && name != "limit" && name != "limsup" && name != "liminf" {
+                    result = result.replace("{target}", second);
+                }
                 result = result.replace("{sub}", second);
                 // Added for coverage
-                result = result.replace("{lower}", second);
-                result = result.replace("{variable}", second); // for derivatives
+                if name == "int_bounds" {
+                    result = result.replace("{lower}", second); // for int_bounds: arg 1 is lower bound
+                } else {
+                    result = result.replace("{variable}", second); // for derivatives
+                }
                 result = result.replace("{var}", second); // for limits
                 result = result.replace("{subscript}", second);
                 result = result.replace("{a12}", second);
                 result = result.replace("{idx2}", second); // general index
-                result = result.replace("{upper}", second); // mixed tensor
+                if name == "index_mixed" {
+                    result = result.replace("{upper}", second); // mixed tensor: arg 1 is upper index
+                }
                 result = result.replace("{ket}", second); // for inner product
                 result = result.replace("{bra}", second); // for outer product
                 result = result.replace("{B}", second);
@@ -451,10 +478,13 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                     result = result.replace("{idx2}", third);
                 }
                 // Added for coverage
-                result = result.replace("{upper}", third); // integral upper bound? No, wait.
-                // int_bounds: 0=integrand, 1=lower, 2=upper, 3=variable
-                result = result.replace("{upper}", third); 
-                result = result.replace("{lower}", third); // mixed tensor
+                if name == "int_bounds" {
+                    result = result.replace("{upper}", third); // integral upper bound: arg 2
+                } else if name == "index_mixed" {
+                    result = result.replace("{lower}", third); // mixed tensor: arg 2 is lower index
+                } else if name == "lim" || name == "limit" || name == "limsup" || name == "liminf" {
+                    result = result.replace("{target}", third); // limit target: arg 2
+                }
                 result = result.replace("{a13}", third); // matrix3x3
                 result = result.replace("{a21}", third); // matrix2x2
             }
@@ -581,7 +611,7 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
             // Special handling for integral var position: int_bounds(integrand, from, to, var)
             if name == "int_bounds" {
                 if let Some(var) = rendered_args.get(3) {
-                    result = result.replace("{var}", var);
+                    result = result.replace("{int_var}", var);
                 }
             }
             result
@@ -650,6 +680,20 @@ fn latex_to_typst_symbol(input: &str) -> String {
         .replace("\\hbar", "ℏ").replace("\\infty", "∞")
         .replace("\\emptyset", "∅").replace("\\varnothing", "∅")
         .replace("\\partial", "∂").replace("\\nabla", "∇")
+        // Math operators (remove backslash for Typst)
+        .replace("\\min", "min").replace("\\max", "max")
+        .replace("\\sup", "sup").replace("\\inf", "inf")
+        .replace("\\lim", "lim").replace("\\limsup", "limsup").replace("\\liminf", "liminf")
+        .replace("\\sum", "sum").replace("\\prod", "product")
+        .replace("\\int", "integral")
+        // Set theory and logic symbols
+        .replace("\\forall", "forall").replace("\\exists", "exists")
+        .replace("\\in", "in").replace("\\notin", "in.not")
+        .replace("\\subset", "subset").replace("\\subseteq", "subset.eq")
+        .replace("\\supset", "supset").replace("\\supseteq", "supset.eq")
+        .replace("\\cup", "union").replace("\\cap", "sect")
+        .replace("\\Rightarrow", "=>").replace("\\Leftarrow", "<=")
+        .replace("\\Leftrightarrow", "<=>")
         // If not converted, return as-is (Typst might understand it)
 }
 
@@ -715,10 +759,10 @@ pub fn build_default_context() -> GlyphContext {
     unicode_templates.insert("prod_bounds".to_string(), "Π_{ {from} }^{ {to} } {body}".to_string());
     unicode_templates.insert("prod_index".to_string(), "Π_{ {from} } {body}".to_string());
     // limits
-    unicode_templates.insert("limit".to_string(), "lim_{ {target}→{to} } {body}".to_string());
-    unicode_templates.insert("limsup".to_string(), "lim sup_{ {target}→{to} } {body}".to_string());
-    unicode_templates.insert("liminf".to_string(), "lim inf_{ {target}→{to} } {body}".to_string());
-    unicode_templates.insert("int_bounds".to_string(), "∫_{ {from} }^{ {to} } {integrand} d{var}".to_string());
+    unicode_templates.insert("limit".to_string(), "lim_{ {var}→{target} } {body}".to_string());
+    unicode_templates.insert("limsup".to_string(), "lim sup_{ {var}→{target} } {body}".to_string());
+    unicode_templates.insert("liminf".to_string(), "lim inf_{ {var}→{target} } {body}".to_string());
+    unicode_templates.insert("int_bounds".to_string(), "∫_{ {from} }^{ {to} } {integrand} d{int_var}".to_string());
     unicode_templates.insert("transpose".to_string(), "{arg}ᵀ".to_string());
     unicode_templates.insert("det".to_string(), "|{arg}|".to_string());
     unicode_templates.insert("matrix2x2".to_string(), "[[{a11}, {a12}]; [{a21}, {a22}]]".to_string());
@@ -884,10 +928,11 @@ pub fn build_default_context() -> GlyphContext {
     latex_templates.insert("prod_bounds".to_string(), "\\prod_{ {from} }^{ {to} } {body}".to_string());
     latex_templates.insert("prod_index".to_string(), "\\prod_{ {from} } {body}".to_string());
     // limits
-    latex_templates.insert("limit".to_string(), "\\lim_{ {target} \\to {to} } {body}".to_string());
-    latex_templates.insert("limsup".to_string(), "\\limsup_{ {target} \\to {to} } {body}".to_string());
-    latex_templates.insert("liminf".to_string(), "\\liminf_{ {target} \\to {to} } {body}".to_string());
-    latex_templates.insert("int_bounds".to_string(), "\\int_{ {from} }^{ {to} } {integrand} \\, \\mathrm{d}{var}".to_string());
+    latex_templates.insert("lim".to_string(), "\\lim_{ {var} \\to {target} } {body}".to_string());
+    latex_templates.insert("limit".to_string(), "\\lim_{ {var} \\to {target} } {body}".to_string());
+    latex_templates.insert("limsup".to_string(), "\\limsup_{ {var} \\to {target} } {body}".to_string());
+    latex_templates.insert("liminf".to_string(), "\\liminf_{ {var} \\to {target} } {body}".to_string());
+    latex_templates.insert("int_bounds".to_string(), "\\int_{ {from} }^{ {to} } {integrand} \\, \\mathrm{d}{int_var}".to_string());
     latex_templates.insert("transpose".to_string(), "{arg}^{\\mathsf{T}}".to_string());
     latex_templates.insert("det".to_string(), "\\det\\!\\left({arg}\\right)".to_string());
     latex_templates.insert("matrix2x2".to_string(), "\\begin{bmatrix}{a11}&{a12}\\\\{a21}&{a22}\\end{bmatrix}".to_string());
@@ -904,7 +949,7 @@ pub fn build_default_context() -> GlyphContext {
     // partial derivative apply and mixed index wrapper
     latex_templates.insert("partial_apply".to_string(), "\\partial_{{{sub}}} {arg}".to_string());
     latex_templates.insert("index_mixed".to_string(), "{base}^{{{idx1}}}_{{{idx2}}}".to_string());
-    latex_templates.insert("index_pair".to_string(), "{base}_{{{idx1}{idx2}}}".to_string());
+    latex_templates.insert("index_pair".to_string(), "{base}^{{{idx1}{idx2}}}".to_string());
     // Gamma (Christoffel) and Riemann tensors
     latex_templates.insert("gamma".to_string(), "\\Gamma^{{{idx1}}}_{{{idx2} {idx3}}}".to_string());
     latex_templates.insert("riemann".to_string(), "R^{{{idx1}}}_{{{idx2} {idx3} {idx4}}}".to_string());
@@ -1062,7 +1107,7 @@ pub fn build_default_context() -> GlyphContext {
     
     // Integrals, sums, products
     html_templates.insert("int_bounds".to_string(), 
-        r#"<span class="math-large-op">∫<sub class="math-sub">{from}</sub><sup class="math-sup">{to}</sup></span> {integrand} <span class="math-op">d</span>{var}"#.to_string());
+        r#"<span class="math-large-op">∫<sub class="math-sub">{from}</sub><sup class="math-sup">{to}</sup></span> {integrand} <span class="math-op">d</span>{int_var}"#.to_string());
     html_templates.insert("sum_bounds".to_string(), 
         r#"<span class="math-large-op">Σ<sub class="math-sub">{from}</sub><sup class="math-sup">{to}</sup></span> {body}"#.to_string());
     html_templates.insert("sum_index".to_string(), 
@@ -1097,12 +1142,14 @@ pub fn build_default_context() -> GlyphContext {
     html_templates.insert("cross".to_string(), r#"{left} <span class="math-op">×</span> {right}"#.to_string());
     
     // Limits
+    html_templates.insert("lim".to_string(), 
+        r#"<span class="math-large-op">lim<sub class="math-sub">{var}→{target}</sub></span> {body}"#.to_string());
     html_templates.insert("limit".to_string(), 
-        r#"<span class="math-large-op">lim<sub class="math-sub">{target}→{to}</sub></span> {body}"#.to_string());
+        r#"<span class="math-large-op">lim<sub class="math-sub">{var}→{target}</sub></span> {body}"#.to_string());
     html_templates.insert("limsup".to_string(), 
-        r#"<span class="math-large-op">lim sup<sub class="math-sub">{target}→{to}</sub></span> {body}"#.to_string());
+        r#"<span class="math-large-op">lim sup<sub class="math-sub">{var}→{target}</sub></span> {body}"#.to_string());
     html_templates.insert("liminf".to_string(), 
-        r#"<span class="math-large-op">lim inf<sub class="math-sub">{target}→{to}</sub></span> {body}"#.to_string());
+        r#"<span class="math-large-op">lim inf<sub class="math-sub">{var}→{target}</sub></span> {body}"#.to_string());
     
     // Set theory and logic
     html_templates.insert("in".to_string(), r#"{left} <span class="math-op">∈</span> {right}"#.to_string());
@@ -1261,7 +1308,7 @@ pub fn build_default_context() -> GlyphContext {
     
     // Basic operations
     typst_templates.insert("scalar_divide".to_string(), "({left})/({right})".to_string());
-    typst_templates.insert("scalar_multiply".to_string(), "{left} dot {right}".to_string());
+    typst_templates.insert("scalar_multiply".to_string(), "{left} {right}".to_string());
     typst_templates.insert("plus".to_string(), "{left} + {right}".to_string());
     typst_templates.insert("minus".to_string(), "{left} - {right}".to_string());
     
@@ -1281,30 +1328,30 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("grad".to_string(), "nabla {function}".to_string());
     
     // Linear Algebra
-    typst_templates.insert("matrix2x2".to_string(), "mat({a11}, {a12}; {a21}, {a22})".to_string());
-    typst_templates.insert("matrix3x3".to_string(), "mat({a11}, {a12}, {a13}; {a21}, {a22}, {a23}; {a31}, {a32}, {a33})".to_string());
-    typst_templates.insert("pmatrix2x2".to_string(), "mat(delim: \"(\", {a11}, {a12}; {a21}, {a22})".to_string());
-    typst_templates.insert("pmatrix3x3".to_string(), "mat(delim: \"(\", {a11}, {a12}, {a13}; {a21}, {a22}, {a23}; {a31}, {a32}, {a33})".to_string());
-    typst_templates.insert("vmatrix2x2".to_string(), "mat(delim: \"|\", {a11}, {a12}; {a21}, {a22})".to_string());
-    typst_templates.insert("vmatrix3x3".to_string(), "mat(delim: \"|\", {a11}, {a12}, {a13}; {a21}, {a22}, {a23}; {a31}, {a32}, {a33})".to_string());
+    // Use generous spacing to ensure #sym.square identifiers don't merge with commas
+    typst_templates.insert("matrix2x2".to_string(), "mat(delim: \"[\", {a11} , {a12} ; {a21} , {a22})".to_string());
+    typst_templates.insert("matrix3x3".to_string(), "mat(delim: \"[\", {a11} , {a12} , {a13} ; {a21} , {a22} , {a23} ; {a31} , {a32} , {a33})".to_string());
+    typst_templates.insert("pmatrix2x2".to_string(), "mat(delim: \"(\", {a11} , {a12} ; {a21} , {a22})".to_string());
+    typst_templates.insert("pmatrix3x3".to_string(), "mat(delim: \"(\", {a11} , {a12} , {a13} ; {a21} , {a22} , {a23} ; {a31} , {a32} , {a33})".to_string());
+    typst_templates.insert("vmatrix2x2".to_string(), "mat(delim: \"|\", {a11} , {a12} ; {a21} , {a22})".to_string());
+    typst_templates.insert("vmatrix3x3".to_string(), "mat(delim: \"|\", {a11} , {a12} , {a13} ; {a21} , {a22} , {a23} ; {a31} , {a32} , {a33})".to_string());
     typst_templates.insert("binomial".to_string(), "binom({left}, {right})".to_string());
     
-    typst_templates.insert("vector_bold".to_string(), "bold({vector})".to_string());
-    typst_templates.insert("vector_arrow".to_string(), "arrow({vector})".to_string());
+    typst_templates.insert("vector_bold".to_string(), "bold({arg})".to_string());
+    typst_templates.insert("vector_arrow".to_string(), "arrow({arg})".to_string());
     typst_templates.insert("dot".to_string(), "{left} dot {right}".to_string());
     typst_templates.insert("cross".to_string(), "{left} times {right}".to_string());
     typst_templates.insert("norm".to_string(), "norm({vector})".to_string());
     typst_templates.insert("abs".to_string(), "abs({value})".to_string());
     
     // Quantum
-    // Typst doesn't have built-in bra/ket? We can construct them.
-    // |psi> = | psi angle.r
-    typst_templates.insert("ket".to_string(), "| {state} angle.r".to_string());
-    typst_templates.insert("bra".to_string(), "angle.l {state} |".to_string());
-    typst_templates.insert("inner".to_string(), "angle.l {bra} | {ket} angle.r".to_string());
-    typst_templates.insert("outer".to_string(), "| {ket} angle.r angle.l {bra} |".to_string());
-    typst_templates.insert("commutator".to_string(), "[{A}, {B}]".to_string());
-    typst_templates.insert("expectation".to_string(), "angle.l {operator} angle.r".to_string());
+    // Use lr(...) to ensure brackets scale with content
+    typst_templates.insert("ket".to_string(), "lr(| {state} angle.r)".to_string());
+    typst_templates.insert("bra".to_string(), "lr(angle.l {state} |)".to_string());
+    typst_templates.insert("inner".to_string(), "lr(angle.l {bra} | {ket} angle.r)".to_string());
+    typst_templates.insert("outer".to_string(), "lr(| {ket} angle.r angle.l {bra} |)".to_string());
+    typst_templates.insert("commutator".to_string(), "lr([ {A}, {B} ])".to_string());
+    typst_templates.insert("expectation".to_string(), "lr(angle.l {operator} angle.r)".to_string());
     
     // Tensors
     typst_templates.insert("index_mixed".to_string(), "{base}^({upper}) _({lower})".to_string());
@@ -1315,9 +1362,26 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("cos".to_string(), "cos({argument})".to_string());
     typst_templates.insert("tan".to_string(), "tan({argument})".to_string());
     
+    // Exponential
+    typst_templates.insert("exp".to_string(), "e^({argument})".to_string());
+    
     // Limits
     typst_templates.insert("lim".to_string(), "lim _({var} -> {target}) {body}".to_string());
+    typst_templates.insert("limit".to_string(), "lim _({var} -> {target}) {body}".to_string());
+    typst_templates.insert("limsup".to_string(), "limsup _({var} -> {target}) {body}".to_string());
+    typst_templates.insert("liminf".to_string(), "liminf _({var} -> {target}) {body}".to_string());
     typst_templates.insert("equals".to_string(), "{left} = {right}".to_string());
+    
+    // Set theory and logic
+    typst_templates.insert("in".to_string(), "{left} in {right}".to_string());
+    typst_templates.insert("in_set".to_string(), "{left} in {right}".to_string());
+    typst_templates.insert("subseteq".to_string(), "{left} subset.eq {right}".to_string());
+    typst_templates.insert("union".to_string(), "{left} union {right}".to_string());
+    typst_templates.insert("intersection".to_string(), "{left} sect {right}".to_string());
+    typst_templates.insert("forall".to_string(), "forall {left} : {right}".to_string());
+    typst_templates.insert("exists".to_string(), "exists {left} : {right}".to_string());
+    typst_templates.insert("implies".to_string(), "{left} => {right}".to_string());
+    typst_templates.insert("iff".to_string(), "{left} <=> {right}".to_string());
     
     // TODO: Add more Typst templates as needed
     
@@ -2653,11 +2717,17 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
 
     // Basic linear algebra and vectors
     out.push(("Inner product ⟨u,v⟩".into(), render_expression(&inner_e(o("u"), o("v")), &ctx, &RenderTarget::LaTeX)));
-    out.push(("Matrix 2x2".into(), render_expression(&m2(o("a_{11}"), o("a_{12}"), o("a_{21}"), o("a_{22}")), &ctx, &RenderTarget::LaTeX)));
-    out.push(("Matrix 3x3".into(), render_expression(&m3(o("a_{11}"), o("a_{12}"), o("a_{13}"), o("a_{21}"), o("a_{22}"), o("a_{23}"), o("a_{31}"), o("a_{32}"), o("a_{33}")), &ctx, &RenderTarget::LaTeX)));
-    out.push(("Vector styles".into(), format!("{}\\quad{}",
-        render_expression(&vector_arrow_e(o("v")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&vector_bold_e(o("v")), &ctx, &RenderTarget::LaTeX))));
+    out.push(("Matrix 2x2".into(), render_expression(&m2(
+        sub_e(o("a"), c("11")), sub_e(o("a"), c("12")), 
+        sub_e(o("a"), c("21")), sub_e(o("a"), c("22"))
+    ), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Matrix 3x3".into(), render_expression(&m3(
+        sub_e(o("a"), c("11")), sub_e(o("a"), c("12")), sub_e(o("a"), c("13")),
+        sub_e(o("a"), c("21")), sub_e(o("a"), c("22")), sub_e(o("a"), c("23")),
+        sub_e(o("a"), c("31")), sub_e(o("a"), c("32")), sub_e(o("a"), c("33"))
+    ), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Vector arrow".into(), render_expression(&vector_arrow_e(o("v")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Vector bold".into(), render_expression(&vector_bold_e(o("v")), &ctx, &RenderTarget::LaTeX)));
 
     // Einstein Field Equations core
     let mu = o("μ");
@@ -2677,11 +2747,11 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     out.push(("Maxwell tensor from potential".into(), render_expression(&maxwell, &ctx, &RenderTarget::LaTeX)));
 
     // Kaluza–Klein metric block (2x2)
-    // Matrix: [g^μ_ν + φA_μA_ν,  φA_μ]
-    //         [φA_ν,             φ    ]
+    // Matrix: [g^μ_ν + ΦA_μA_ν,  ΦA_μ]
+    //         [ΦA_ν,             Φ    ]
     let A_mu2 = sub_e(o("A"), mu.clone());
     let A_nu2 = sub_e(o("A"), nu.clone());
-    let phi = o("\u{03C6}");
+    let phi = o("\\Phi");
     let g_mn = index_mixed(o("g"), mu.clone(), nu.clone());
     let kk_tl = plus(g_mn, times(phi.clone(), times(A_mu2.clone(), A_nu2.clone())));
     let kk_tr = times(phi.clone(), A_mu2.clone());
@@ -2717,12 +2787,17 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     let diffusion = times(over(pow_e(sigma.clone(), c("2")), c("2")), d2V_dx2);
     out.push(("HJB (stochastic diffusion term)".into(), render_expression(&diffusion, &ctx, &RenderTarget::LaTeX)));
 
-    // Zeta forms
-    let zeta_series = equals(func("zeta", vec![s.clone()]), op("sum_bounds", vec![over(c("1"), pow_e(o("n"), s.clone())), o("n=1"), o("\\infty")]));
+    // Zeta forms (use lowercase s for zeta function parameter)
+    let zeta_s = o("s");
+    let zeta_x = o("x");
+    let zeta_series = equals(func("zeta", vec![zeta_s.clone()]), op("sum_bounds", vec![over(c("1"), pow_e(o("n"), zeta_s.clone())), o("n=1"), o("\\infty")]));
     out.push(("Riemann zeta (Dirichlet series)".into(), render_expression(&zeta_series, &ctx, &RenderTarget::LaTeX)));
-    let euler_prod = equals(func("zeta", vec![s.clone()]), op("prod_index", vec![over(c("1"), minus(c("1"), pow_e(o("p"), o("-s")))), o("p\\,\\text{prime}")]));
+    let euler_prod = equals(func("zeta", vec![zeta_s.clone()]), op("prod_index", vec![over(c("1"), minus(c("1"), pow_e(o("p"), o("-s")))), o("p\\,\\text{prime}")]));
     out.push(("Riemann zeta (Euler product)".into(), render_expression(&euler_prod, &ctx, &RenderTarget::LaTeX)));
-    let mellin = equals(func("zeta", vec![s.clone()]), over(op("int_bounds", vec![over(pow_e(x.clone(), minus(s.clone(), c("1"))), minus(func("exp", vec![x.clone()]), c("1"))) , c("0"), o("\\infty"), x.clone()]), func("Gamma", vec![s.clone()])));
+    // Mellin integral: ζ(s) = 1/Γ(s) * ∫₀^∞ x^(s-1)/(e^x - 1) dx
+    let mellin_integrand = over(pow_e(zeta_x.clone(), minus(zeta_s.clone(), c("1"))), minus(func("exp", vec![zeta_x.clone()]), c("1")));
+    let mellin_integral = op("int_bounds", vec![mellin_integrand, c("0"), o("\\infty"), zeta_x.clone()]);
+    let mellin = equals(func("zeta", vec![zeta_s.clone()]), times(over(c("1"), func("Gamma", vec![zeta_s.clone()])), mellin_integral));
     out.push(("Riemann zeta (Mellin-type integral)".into(), render_expression(&mellin, &ctx, &RenderTarget::LaTeX)));
 
     // Limits
@@ -2741,9 +2816,8 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     // 2. Set theory & logic
     out.push(("Set membership".into(), render_expression(&in_set(o("x"), o("\\mathbb{R}")), &ctx, &RenderTarget::LaTeX)));
     out.push(("Subset relation".into(), render_expression(&subseteq(o("A"), o("B")), &ctx, &RenderTarget::LaTeX)));
-    out.push(("Set operations (union, intersection)".into(), format!("{}\\quad {}", 
-        render_expression(&union(o("A"), o("B")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&intersection(o("A"), o("B")), &ctx, &RenderTarget::LaTeX))));
+    out.push(("Set union".into(), render_expression(&union(o("A"), o("B")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Set intersection".into(), render_expression(&intersection(o("A"), o("B")), &ctx, &RenderTarget::LaTeX)));
     out.push(("Universal quantifier".into(), render_expression(&forall(o("x"), in_set(o("x"), o("S"))), &ctx, &RenderTarget::LaTeX)));
     out.push(("Existential quantifier".into(), render_expression(&exists(o("x"), in_set(o("x"), o("S"))), &ctx, &RenderTarget::LaTeX)));
     out.push(("Logical implication".into(), render_expression(&implies(o("P"), o("Q")), &ctx, &RenderTarget::LaTeX)));
