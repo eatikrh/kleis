@@ -1323,6 +1323,42 @@ impl Parser {
                 let arg = self.parse_group_or_parens()?;
                 Ok(op("tan", vec![arg]))
             }
+            "sec" => {
+                let arg = self.parse_group_or_parens()?;
+                Ok(op("sec", vec![arg]))
+            }
+            "csc" => {
+                let arg = self.parse_group_or_parens()?;
+                Ok(op("csc", vec![arg]))
+            }
+            "cot" => {
+                let arg = self.parse_group_or_parens()?;
+                Ok(op("cot", vec![arg]))
+            }
+            "arcsin" => {
+                let arg = self.parse_group_or_parens()?;
+                Ok(op("arcsin", vec![arg]))
+            }
+            "arccos" => {
+                let arg = self.parse_group_or_parens()?;
+                Ok(op("arccos", vec![arg]))
+            }
+            "arctan" => {
+                let arg = self.parse_group_or_parens()?;
+                Ok(op("arctan", vec![arg]))
+            }
+            "sinh" => {
+                let arg = self.parse_group_or_parens()?;
+                Ok(op("sinh", vec![arg]))
+            }
+            "cosh" => {
+                let arg = self.parse_group_or_parens()?;
+                Ok(op("cosh", vec![arg]))
+            }
+            "tanh" => {
+                let arg = self.parse_group_or_parens()?;
+                Ok(op("tanh", vec![arg]))
+            }
 
             // More functions (accept both braces and parentheses)
             "ln" => {
