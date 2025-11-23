@@ -1283,6 +1283,12 @@ pub fn build_default_context() -> GlyphContext {
     // Linear Algebra
     typst_templates.insert("matrix2x2".to_string(), "mat({a11}, {a12}; {a21}, {a22})".to_string());
     typst_templates.insert("matrix3x3".to_string(), "mat({a11}, {a12}, {a13}; {a21}, {a22}, {a23}; {a31}, {a32}, {a33})".to_string());
+    typst_templates.insert("pmatrix2x2".to_string(), "mat(delim: \"(\", {a11}, {a12}; {a21}, {a22})".to_string());
+    typst_templates.insert("pmatrix3x3".to_string(), "mat(delim: \"(\", {a11}, {a12}, {a13}; {a21}, {a22}, {a23}; {a31}, {a32}, {a33})".to_string());
+    typst_templates.insert("vmatrix2x2".to_string(), "mat(delim: \"|\", {a11}, {a12}; {a21}, {a22})".to_string());
+    typst_templates.insert("vmatrix3x3".to_string(), "mat(delim: \"|\", {a11}, {a12}, {a13}; {a21}, {a22}, {a23}; {a31}, {a32}, {a33})".to_string());
+    typst_templates.insert("binomial".to_string(), "binom({left}, {right})".to_string());
+    
     typst_templates.insert("vector_bold".to_string(), "bold({vector})".to_string());
     typst_templates.insert("vector_arrow".to_string(), "arrow({vector})".to_string());
     typst_templates.insert("dot".to_string(), "{left} dot {right}".to_string());
