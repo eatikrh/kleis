@@ -307,7 +307,18 @@ fn covariance(x: Expression, y: Expression) -> Expression { op("covariance", vec
 
 
 // === Renderer ===
+/// Render expression with semantic markers (public entry point)
 pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderTarget) -> String {
+    render_expression_internal(expr, ctx, target, "0")
+}
+
+/// Internal rendering with path tracking for semantic markers
+fn render_expression_internal(
+    expr: &Expression, 
+    ctx: &GlyphContext, 
+    target: &RenderTarget,
+    node_id: &str
+) -> String {
     match expr {
         Expression::Const(name) => {
             match target {
@@ -393,8 +404,14 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 },
             };
 
-            let rendered_args: Vec<String> = args.iter()
-                .map(|arg| render_expression(arg, ctx, target)) // RECURSION
+            let rendered_args: Vec<String> = args.iter().enumerate()
+                .map(|(i, arg)| {
+                    // Generate child node ID: parent.index
+                    let child_id = format!("{}.{}", node_id, i);
+                    render_expression_internal(arg, ctx, target, &child_id) // RECURSION
+                    // Note: Metadata markers don't work in Typst math mode
+                    // We'll use two-pass rendering instead for semantic grouping
+                })
                 .collect();
 
             let mut result = template.clone();

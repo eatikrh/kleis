@@ -83,6 +83,183 @@ impl World for MinimalWorld {
     }
 }
 
+/// Compile with semantic bounding boxes using two-pass rendering
+///
+/// This function uses AST structure to create accurate bounding boxes for each argument.
+/// It renders each argument separately, then matches boxes in the full rendering.
+pub fn compile_with_semantic_boxes(
+    ast: &crate::ast::Expression,
+    placeholder_ids: &[usize]
+) -> Result<CompiledOutput, String> {
+    use crate::render::{build_default_context, render_expression, RenderTarget};
+    use crate::ast::Expression;
+    
+    eprintln!("=== compile_with_semantic_boxes (Two-Pass Rendering) ===");
+    
+    let ctx = build_default_context();
+    
+    // Pass 1: Count boxes for each argument by rendering separately
+    let box_counts = match ast {
+        Expression::Operation { args, .. } => {
+            let mut counts = Vec::new();
+            for (i, arg) in args.iter().enumerate() {
+                let arg_markup = render_expression(arg, &ctx, &RenderTarget::Typst);
+                eprintln!("  Arg {} markup: {}", i, arg_markup);
+                
+                // Compile arg separately and extract its layout boxes
+                let arg_doc = format!(
+                    r#"#set page(width: auto, height: auto, margin: 0pt)
+#set text(size: 24pt)
+#box($ {} $)
+"#,
+                    arg_markup
+                );
+                
+                let world = MinimalWorld::new(&arg_doc);
+                match typst::compile(&world).output {
+                    Ok(document) => {
+                        if let Some(page) = document.pages.first() {
+                            let mut arg_boxes = Vec::new();
+                            extract_bounding_boxes_from_frame(&page.frame, Transform::identity(), &mut arg_boxes);
+                            
+                            // Count text boxes only
+                            let text_count = arg_boxes.iter().filter(|b| b.content_type == "text").count();
+                            eprintln!("  Arg {} produces {} text boxes", i, text_count);
+                            counts.push(text_count);
+                        } else {
+                            counts.push(0);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("  Warning: Could not compile arg {}: {:?}", i, e);
+                        counts.push(0);
+                    }
+                }
+            }
+            counts
+        }
+        _ => vec![],  // Leaf nodes have no arguments
+    };
+    
+    // Pass 2: Render full expression and assign boxes to arguments
+    let full_markup = render_expression(ast, &ctx, &RenderTarget::Typst);
+    eprintln!("Full markup: {}", full_markup);
+    
+    let mut output = compile_math_to_svg_with_ids(&full_markup, placeholder_ids)?;
+    
+    // Replace spatial grouping with semantic grouping based on box counts
+    if !box_counts.is_empty() {
+        output.argument_bounding_boxes = extract_semantic_argument_boxes(
+            &output.svg,
+            box_counts,
+            ast
+        )?;
+    }
+    
+    Ok(output)
+}
+
+/// Count text boxes in SVG (helper for two-pass rendering)
+fn count_text_boxes_in_svg(svg: &str) -> usize {
+    // Count <text> elements in SVG
+    svg.matches("<text").count()
+}
+
+/// Extract argument bounding boxes using semantic information from AST
+fn extract_semantic_argument_boxes(
+    _svg: &str,
+    box_counts: Vec<usize>,
+    ast: &crate::ast::Expression
+) -> Result<Vec<ArgumentBoundingBox>, String> {
+    eprintln!("Extracting semantic boxes with counts: {:?}", box_counts);
+    
+    // We need to extract layout boxes from the full rendering
+    // and assign them to arguments based on box_counts
+    
+    // For now, compile the full expression again to get layout boxes
+    use crate::render::{build_default_context, render_expression, RenderTarget};
+    
+    let ctx = build_default_context();
+    let full_markup = render_expression(ast, &ctx, &RenderTarget::Typst);
+    
+    let full_doc = format!(
+        r#"#set page(width: auto, height: auto, margin: 0pt)
+#set text(size: 24pt)
+#box($ {} $)
+"#,
+        full_markup
+    );
+    
+    let world = MinimalWorld::new(&full_doc);
+    let document = typst::compile(&world).output
+        .map_err(|e| format!("Compilation failed: {:?}", e))?;
+    
+    let page = document.pages.first()
+        .ok_or("No pages in document")?;
+    
+    // Extract all layout boxes
+    let mut all_boxes = Vec::new();
+    extract_bounding_boxes_from_frame(&page.frame, Transform::identity(), &mut all_boxes);
+    
+    // Normalize coordinates
+    if !all_boxes.is_empty() {
+        let min_x = all_boxes.iter().map(|b| b.x).fold(f64::INFINITY, |a, b| a.min(b));
+        let min_y = all_boxes.iter().map(|b| b.y).fold(f64::INFINITY, |a, b| a.min(b));
+        for bbox in &mut all_boxes {
+            bbox.x -= min_x;
+            bbox.y -= min_y;
+        }
+    }
+    
+    // Filter to text boxes only
+    let text_boxes: Vec<&LayoutBoundingBox> = all_boxes.iter()
+        .filter(|b| b.content_type == "text")
+        .collect();
+    
+    eprintln!("Full expression has {} text boxes", text_boxes.len());
+    
+    // Assign boxes to arguments based on counts
+    let mut result = Vec::new();
+    let mut box_index = 0;
+    
+    for (arg_idx, &count) in box_counts.iter().enumerate() {
+        if count == 0 {
+            continue;  // Skip arguments with no boxes
+        }
+        
+        if box_index + count > text_boxes.len() {
+            eprintln!("Warning: Not enough boxes for arg {}", arg_idx);
+            break;
+        }
+        
+        // Get boxes for this argument
+        let arg_boxes = &text_boxes[box_index..box_index + count];
+        
+        // Create bounding box encompassing all boxes for this argument
+        let min_x = arg_boxes.iter().map(|b| b.x).fold(f64::INFINITY, |a, b| a.min(b));
+        let min_y = arg_boxes.iter().map(|b| b.y).fold(f64::INFINITY, |a, b| a.min(b));
+        let max_x = arg_boxes.iter().map(|b| b.x + b.width).fold(f64::NEG_INFINITY, |a, b| a.max(b));
+        let max_y = arg_boxes.iter().map(|b| b.y + b.height).fold(f64::NEG_INFINITY, |a, b| a.max(b));
+        
+        let padding = 4.0;
+        
+        result.push(ArgumentBoundingBox {
+            arg_index: arg_idx,
+            node_id: format!("0.{}", arg_idx),
+            x: min_x - padding,
+            y: min_y - padding,
+            width: (max_x - min_x) + padding * 2.0,
+            height: (max_y - min_y) + padding * 2.0,
+        });
+        
+        box_index += count;
+    }
+    
+    eprintln!("Created {} semantic argument boxes", result.len());
+    
+    Ok(result)
+}
+
 /// Compile Typst math markup to SVG with placeholder tracking (with known IDs)
 ///
 /// Uses Typst library API to compile math to professional SVG with layout tree access
@@ -440,6 +617,9 @@ pub struct ArgumentBoundingBox {
     /// Argument index (0, 1, 2, etc.)
     pub arg_index: usize,
     
+    /// Unique node ID in the AST (e.g., "0.1.2" for path through tree)
+    pub node_id: String,
+    
     /// X position in SVG coordinates (pt)
     pub x: f64,
     
@@ -610,6 +790,7 @@ fn group_content_into_arguments(
         
         argument_boxes.push(ArgumentBoundingBox {
             arg_index: index,
+            node_id: format!("0.{}", index),  // Generate node ID from index
             x: min_x - padding,
             y: min_y - padding,
             width: width + padding * 2.0,
@@ -671,6 +852,7 @@ fn extract_argument_bounding_boxes_markers(svg: &str) -> Result<Vec<ArgumentBoun
         
         argument_boxes.push(ArgumentBoundingBox {
             arg_index,
+            node_id: format!("0.{}", arg_index),  // Generate node ID from index
             x,
             y,
             width,
