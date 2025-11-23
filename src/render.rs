@@ -2939,25 +2939,21 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     
     // Complex numbers
     out.push(("Complex conjugate".into(), render_expression(&conjugate(o("z")), &ctx, &RenderTarget::LaTeX)));
-    out.push(("Real and imaginary parts".into(), format!("{}\\quad{}", 
-        render_expression(&re(o("z")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&im(o("z")), &ctx, &RenderTarget::LaTeX))));
+    out.push(("Real part".into(), render_expression(&re(o("z")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Imaginary part".into(), render_expression(&im(o("z")), &ctx, &RenderTarget::LaTeX)));
     
     // Operator hat (Quantum mechanics)
     out.push(("Hamiltonian operator".into(), render_expression(&hat(o("H")), &ctx, &RenderTarget::LaTeX)));
     out.push(("Schrodinger equation".into(), render_expression(&equals(times(hat(o("H")), ket(o("\\psi"))), times(o("E"), ket(o("\\psi")))), &ctx, &RenderTarget::LaTeX)));
     
     // Trig & log functions
-    out.push(("Trigonometric functions".into(), format!("{}\\quad{}\\quad{}", 
-        render_expression(&cos_e(o("x")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&tan_e(o("x")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&func("sin", vec![o("x")]), &ctx, &RenderTarget::LaTeX))));
-    out.push(("Hyperbolic functions".into(), format!("{}\\quad{}", 
-        render_expression(&sinh_e(o("x")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&cosh_e(o("x")), &ctx, &RenderTarget::LaTeX))));
-    out.push(("Logarithms".into(), format!("{}\\quad{}", 
-        render_expression(&ln_e(o("x")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&log_e(o("x")), &ctx, &RenderTarget::LaTeX))));
+    out.push(("Cosine".into(), render_expression(&cos_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Tangent".into(), render_expression(&tan_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Sine".into(), render_expression(&func("sin", vec![o("x")]), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Hyperbolic sine".into(), render_expression(&sinh_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Hyperbolic cosine".into(), render_expression(&cosh_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Natural logarithm".into(), render_expression(&ln_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Logarithm".into(), render_expression(&log_e(o("x")), &ctx, &RenderTarget::LaTeX)));
     out.push(("Euler formula".into(), render_expression(&equals(pow_e(o("e"), times(o("i"), o("\\theta"))), plus(cos_e(o("\\theta")), times(o("i"), func("sin", vec![o("\\theta")])))), &ctx, &RenderTarget::LaTeX)));
     
     // Matrix operations
@@ -2968,17 +2964,14 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     
     // Phase A: Quick wins
     out.push(("Factorial".into(), render_expression(&equals(prod_e(o("i"), o("i=1"), o("n")), factorial(o("n"))), &ctx, &RenderTarget::LaTeX)));
-    out.push(("Floor and ceiling".into(), format!("{}\\quad{}", 
-        render_expression(&floor(o("x")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&ceiling(o("x")), &ctx, &RenderTarget::LaTeX))));
-    out.push(("Inverse trigonometric".into(), format!("{}\\quad{}\\quad{}", 
-        render_expression(&arcsin_e(o("x")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&arccos_e(o("x")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&arctan_e(o("x")), &ctx, &RenderTarget::LaTeX))));
-    out.push(("Reciprocal trigonometric".into(), format!("{}\\quad{}\\quad{}", 
-        render_expression(&sec_e(o("x")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&csc_e(o("x")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&cot_e(o("x")), &ctx, &RenderTarget::LaTeX))));
+    out.push(("Floor function".into(), render_expression(&floor(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Ceiling function".into(), render_expression(&ceiling(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Arcsine".into(), render_expression(&arcsin_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Arccosine".into(), render_expression(&arccos_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Arctangent".into(), render_expression(&arctan_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Secant".into(), render_expression(&sec_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Cosecant".into(), render_expression(&csc_e(o("x")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Cotangent".into(), render_expression(&cot_e(o("x")), &ctx, &RenderTarget::LaTeX)));
     
     // Phase B: Quantum focus
     out.push(("Pauli matrix (sigma x)".into(), render_expression(&equals(sub_e(o("\\sigma"), o("x")), pmatrix2(c("0"), c("1"), c("1"), c("0"))), &ctx, &RenderTarget::LaTeX)));
@@ -3035,9 +3028,8 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     out.push(("Fermat little theorem".into(), render_expression(&congruent_mod(pow_e(o("a"), minus(o("p"), c("1"))), c("1"), o("p")), &ctx, &RenderTarget::LaTeX)));
     
     // Statistics
-    out.push(("Variance and covariance".into(), format!("{}\\quad{}", 
-        render_expression(&variance(o("X")), &ctx, &RenderTarget::LaTeX),
-        render_expression(&covariance(o("X"), o("Y")), &ctx, &RenderTarget::LaTeX))));
+    out.push(("Variance".into(), render_expression(&variance(o("X")), &ctx, &RenderTarget::LaTeX)));
+    out.push(("Covariance".into(), render_expression(&covariance(o("X"), o("Y")), &ctx, &RenderTarget::LaTeX)));
 
     // Ellipsis (dots) - horizontal, vertical, and diagonal
     out.push(("Ellipsis: horizontal centered".into(), render_expression(&o("\\cdots"), &ctx, &RenderTarget::LaTeX)));
