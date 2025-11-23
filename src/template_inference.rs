@@ -317,6 +317,14 @@ fn try_infer_statistics_functions(expr: &Expression) -> Option<Expression> {
                     // trace(A)
                     ("trace", vec![args[1].clone()])
                 }
+                "Re" => {
+                    // real part: re(z)
+                    ("re", vec![args[1].clone()])
+                }
+                "Im" => {
+                    // imaginary part: im(z)
+                    ("im", vec![args[1].clone()])
+                }
                 _ => return None,
             };
             
