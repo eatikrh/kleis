@@ -455,7 +455,10 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 result = result.replace("{var}", second); // for limits
                 result = result.replace("{subscript}", second);
                 result = result.replace("{a12}", second);
-                result = result.replace("{idx2}", second); // general index
+                // Don't replace {idx2} here for double/triple integrals (they use arg 2 for idx2)
+                if name != "double_integral" && name != "triple_integral" {
+                    result = result.replace("{idx2}", second); // general index
+                }
                 if name == "index_mixed" {
                     result = result.replace("{upper}", second); // mixed tensor: arg 1 is upper index
                 }
