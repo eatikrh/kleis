@@ -23,6 +23,7 @@ pub fn infer_templates(expr: Expression) -> Expression {
         .or_else(|| try_infer_triple_integral(&expr))
         .or_else(|| try_infer_logical_implication(&expr))
         .or_else(|| try_infer_quantifier(&expr))
+        .or_else(|| try_infer_modular_congruence(&expr))
         // Add more pattern matchers here as needed:
         // .or_else(|| try_infer_limit(&expr))
         // .or_else(|| try_infer_sum_bounds(&expr))
@@ -225,6 +226,53 @@ fn try_infer_triple_integral(expr: &Expression) -> Option<Expression> {
     }
 }
 
+/// Attempt to infer modular congruence structure
+/// 
+/// Pattern: equiv(a, b * \pmod * n) -> congruent_mod(a, b, n)
+fn try_infer_modular_congruence(expr: &Expression) -> Option<Expression> {
+    // Check if top-level is equiv operation
+    match expr {
+        Expression::Operation { name, args } if name == "equiv" && args.len() == 2 => {
+            let left = &args[0];
+            let right = &args[1];
+            
+            // Check if right side is a multiplication chain containing \pmod
+            let right_terms = flatten_multiply(right);
+            
+            // Look for \pmod in the chain
+            let pmod_pos = right_terms.iter().position(|term| {
+                matches!(term, Expression::Object(s) if s == "\\pmod")
+            })?;
+            
+            // Pattern: value * \pmod * modulus
+            // Everything before \pmod is the value (should be just b)
+            // Everything after \pmod is the modulus (should be just n)
+            
+            if pmod_pos == 0 || pmod_pos >= right_terms.len() - 1 {
+                return None; // Invalid pattern
+            }
+            
+            let value_terms = &right_terms[0..pmod_pos];
+            let modulus_terms = &right_terms[pmod_pos + 1..];
+            
+            if modulus_terms.is_empty() {
+                return None;
+            }
+            
+            let value = rebuild_multiply(value_terms);
+            let modulus = rebuild_multiply(modulus_terms);
+            
+            return Some(Expression::Operation {
+                name: "congruent_mod".to_string(),
+                args: vec![left.clone(), value, modulus],
+            });
+        }
+        _ => {}
+    }
+    
+    None
+}
+
 // === Helper Functions ===
 
 /// Rebuild a multiplication chain from a list of terms
@@ -408,6 +456,27 @@ mod tests {
             }
             _ => panic!("Expected forall operation"),
         }
+    }
+    
+    #[test]
+    fn test_infer_modular_congruence() {
+        let latex = r"a \equiv b \pmod{n}";
+        let flat_ast = parse_latex(latex).unwrap();
+        let inferred = infer_templates(flat_ast);
+        
+        match &inferred {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "congruent_mod");
+                assert_eq!(args.len(), 3); // left, right, modulus
+            }
+            _ => panic!("Expected congruent_mod operation"),
+        }
+        
+        // Verify it renders correctly
+        let ctx = build_default_context();
+        let latex_out = render_expression(&inferred, &ctx, &RenderTarget::LaTeX);
+        assert!(latex_out.contains("\\equiv"));
+        assert!(latex_out.contains("\\pmod"));
     }
     
     #[test]

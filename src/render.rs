@@ -455,8 +455,8 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
                 result = result.replace("{var}", second); // for limits
                 result = result.replace("{subscript}", second);
                 result = result.replace("{a12}", second);
-                // Don't replace {idx2} here for double/triple integrals (they use arg 2 for idx2)
-                if name != "double_integral" && name != "triple_integral" {
+                // Don't replace {idx2} here for operations that use arg 2 for idx2
+                if name != "double_integral" && name != "triple_integral" && name != "congruent_mod" {
                     result = result.replace("{idx2}", second); // general index
                 }
                 if name == "index_mixed" {

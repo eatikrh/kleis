@@ -536,7 +536,7 @@ impl Parser {
                                     "mathbb" | "boldsymbol" | "vec" | "hat" | "bar" | "tilde" | "overline" | "dot" | "ddot" | "partial" | "nabla" |
                                     "hbar" | "infty" | "emptyset" | "mathrm" |
                                     "Rightarrow" | "Leftarrow" | "Leftrightarrow" | "colon" |
-                                    "forall" | "exists" |
+                                    "forall" | "exists" | "pmod" |
                                     "begin" | "left"
                                 );
                                 self.pos = saved_pos; // Backtrack again
