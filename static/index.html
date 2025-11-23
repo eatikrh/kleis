@@ -735,6 +735,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         data.argument_slots.forEach((slot, index) => {
                             let rectX, rectY, rectWidth, rectHeight;
                             let foundPosition = false;
+                            let currentNodeId = null;  // Store node_id for this slot
                             
                             // 1. Try placeholder position (SVG coords)
                             const ph = data.placeholders && data.placeholders.find(p => p.id === slot.id);
@@ -757,6 +758,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                     rectWidth = bbox.width + 6;
                                     rectHeight = bbox.height + 6;
                                     foundPosition = true;
+                                    
+                                    // Store node_id for this bbox
+                                    currentNodeId = bbox.node_id || `0.${bbox.arg_index}`;
                                 }
                             }
                             
@@ -766,7 +770,8 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                 
                                 const pathStr = JSON.stringify(slot.path).replace(/"/g, '&quot;');
                                 
-                                const nodeId = bbox.node_id || `0.${bbox.arg_index}`;
+                                // Use stored node_id or generate from path
+                                const nodeId = currentNodeId || `0.${slot.path[0]}`;
                                 const rect = `<rect x="${rectX}" y="${rectY}" width="${rectWidth}" height="${rectHeight}"
                                     fill="${fillColor}" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" rx="3"
                                     class="arg-overlay" data-slot-id="${slot.id}" data-path="${pathStr}" data-node-id="${nodeId}"
