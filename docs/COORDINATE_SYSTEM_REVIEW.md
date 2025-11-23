@@ -2,7 +2,64 @@
 
 **Date:** 2024-11-23  
 **Priority:** HIGH - Critical for structural editor UX  
-**Status:** Needs Review and Testing
+**Status:** ROOT CAUSE IDENTIFIED ✅
+
+## CRITICAL FINDING
+
+The coordinate transformation logic is **CORRECT** ✅  
+The grouping logic is **INCORRECT** ❌
+
+**Evidence:**
+```
+Layout boxes extracted: x=2.4, y=10.6 (matches SVG translate)
+After shift: x=0.0, y=0.0 (correct normalization)
+After grouping: Creates NEW boxes with wrong coordinates!
+```
+
+**The bug is in `group_boxes_into_arguments()`, not coordinate transforms.**
+
+## VERIFICATION FROM TYPST SOURCE CODE
+
+**Checked:** `/Users/eatik_1/Documents/git/cee/typst/crates/typst-svg/src/lib.rs`
+
+### Typst SVG Generation (lines 196-207)
+```rust
+for (pos, item) in frame.items() {
+    let x = pos.x.to_pt();
+    let y = pos.y.to_pt();
+    self.xml.start_element("g");
+    self.xml.write_attribute_fmt("transform", format_args!("translate({x} {y})"));
+    // ... render item ...
+}
+```
+
+### Our Extraction (typst_compiler.rs line 231)
+```rust
+let item_ts = ts.pre_concat(Transform::translate(pos.x, pos.y));
+// ... then transform Point::zero() ...
+let tl = Point::zero().transform(item_ts);
+```
+
+**VERDICT: Our logic MATCHES Typst's logic exactly** ✅
+
+We accumulate transforms the same way Typst does. Our coordinates should be correct.
+
+### The Real Problem
+
+**Lines 597-617 in `group_content_into_arguments()`:**
+```rust
+// Recalculate bounding box from grouped boxes
+let min_x = line.iter().map(|b| b.x).fold(f64::INFINITY, |a, b| a.min(b));
+let min_y = line.iter().map(|b| b.y).fold(f64::INFINITY, |a, b| a.min(b));
+// Creates NEW aggregate box
+```
+
+This creates boxes that encompass multiple glyphs, causing:
+- Overlapping (boxes too large)
+- Missing args (horizontal layouts grouped as one line)
+- Imprecise clicking (can't select individual elements)
+
+**Solution:** Don't aggregate. Use individual glyph boxes or use smarter grouping.
 
 ---
 
