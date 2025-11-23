@@ -918,6 +918,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         }
         
         async function convertTextToStructural(latex) {
+            // Save the current AST in case parsing fails
+            const previousAST = currentAST;
+            
             try {
                 showStatus('Converting LaTeX to structural format...', 'info');
                 
@@ -939,9 +942,16 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 await renderStructuralEditor();
                 showStatus('✅ Converted to structural mode!', 'success');
             } catch (error) {
-                showStatus('❌ Error converting: ' + error.message, 'error');
+                showStatus('❌ Error parsing LaTeX: ' + error.message + ' (keeping previous AST)', 'error');
                 console.error('Conversion error:', error);
-                resetStructuralEditor();
+                
+                // Restore previous AST if it existed, otherwise reset
+                if (previousAST) {
+                    currentAST = previousAST;
+                    await renderStructuralEditor();
+                } else {
+                    resetStructuralEditor();
+                }
             }
         }
         
