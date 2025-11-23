@@ -929,7 +929,9 @@ pub fn build_default_context() -> GlyphContext {
     // 1. Bra-ket notation
     latex_templates.insert("ket".to_string(), "|{arg}\\rangle".to_string());
     latex_templates.insert("bra".to_string(), "\\langle{arg}|".to_string());
-    latex_templates.insert("outer_product".to_string(), "|{left}\\rangle\\langle{right}|".to_string());
+    latex_templates.insert("inner".to_string(), "\\langle {left}|{right} \\rangle".to_string());
+    latex_templates.insert("outer".to_string(), "|{left}\\rangle\\langle{right}|".to_string());
+    latex_templates.insert("expectation".to_string(), "\\langle {arg} \\rangle".to_string());
     
     // 2. Set theory and logic
     latex_templates.insert("in".to_string(), "{left} \\in {right}".to_string());
