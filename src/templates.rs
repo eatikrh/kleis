@@ -363,6 +363,158 @@ pub fn template_limit() -> Expression {
     )
 }
 
+// === Additional Functions ===
+
+/// Arcsine: arcsin(x)
+pub fn template_arcsin() -> Expression {
+    Expression::operation("arcsin", vec![Expression::placeholder(next_id(), "argument")])
+}
+
+/// Arccosine: arccos(x)
+pub fn template_arccos() -> Expression {
+    Expression::operation("arccos", vec![Expression::placeholder(next_id(), "argument")])
+}
+
+/// Arctangent: arctan(x)
+pub fn template_arctan() -> Expression {
+    Expression::operation("arctan", vec![Expression::placeholder(next_id(), "argument")])
+}
+
+/// Natural logarithm: ln(x)
+pub fn template_ln() -> Expression {
+    Expression::operation("ln", vec![Expression::placeholder(next_id(), "argument")])
+}
+
+/// Logarithm: log(x)
+pub fn template_log() -> Expression {
+    Expression::operation("log", vec![Expression::placeholder(next_id(), "argument")])
+}
+
+/// Exponential: exp(x)
+pub fn template_exp() -> Expression {
+    Expression::operation("exp", vec![Expression::placeholder(next_id(), "argument")])
+}
+
+// === Accents ===
+
+/// Dot accent: ẋ (velocity, time derivative)
+pub fn template_dot_accent() -> Expression {
+    Expression::operation("dot_accent", vec![Expression::placeholder(next_id(), "variable")])
+}
+
+/// Double dot accent: ẍ (acceleration, second derivative)
+pub fn template_ddot_accent() -> Expression {
+    Expression::operation("ddot_accent", vec![Expression::placeholder(next_id(), "variable")])
+}
+
+/// Hat accent: x̂
+pub fn template_hat() -> Expression {
+    Expression::operation("hat", vec![Expression::placeholder(next_id(), "variable")])
+}
+
+/// Bar accent: x̄
+pub fn template_bar() -> Expression {
+    Expression::operation("bar", vec![Expression::placeholder(next_id(), "variable")])
+}
+
+/// Tilde accent: x̃
+pub fn template_tilde() -> Expression {
+    Expression::operation("tilde", vec![Expression::placeholder(next_id(), "variable")])
+}
+
+// === Advanced Tensors ===
+
+/// Christoffel symbol: Γ^μ_{νσ}
+pub fn template_christoffel() -> Expression {
+    Expression::operation(
+        "gamma",
+        vec![
+            Expression::placeholder(next_id(), "dummy"), // First arg is empty in render
+            Expression::placeholder(next_id(), "upper"),
+            Expression::placeholder(next_id(), "lower1"),
+            Expression::placeholder(next_id(), "lower2"),
+        ],
+    )
+}
+
+/// Riemann tensor: R^ρ_{σμν}
+pub fn template_riemann() -> Expression {
+    Expression::operation(
+        "riemann",
+        vec![
+            Expression::placeholder(next_id(), "dummy"), // First arg is empty in render
+            Expression::placeholder(next_id(), "upper"),
+            Expression::placeholder(next_id(), "lower1"),
+            Expression::placeholder(next_id(), "lower2"),
+            Expression::placeholder(next_id(), "lower3"),
+        ],
+    )
+}
+
+// === Additional Matrix Types ===
+
+/// 2×2 Matrix with parentheses
+pub fn template_pmatrix_2x2() -> Expression {
+    Expression::operation(
+        "pmatrix2x2",
+        vec![
+            Expression::placeholder(next_id(), "a11"),
+            Expression::placeholder(next_id(), "a12"),
+            Expression::placeholder(next_id(), "a21"),
+            Expression::placeholder(next_id(), "a22"),
+        ],
+    )
+}
+
+/// 3×3 Matrix with parentheses
+pub fn template_pmatrix_3x3() -> Expression {
+    Expression::operation(
+        "pmatrix3x3",
+        vec![
+            Expression::placeholder(next_id(), "a11"),
+            Expression::placeholder(next_id(), "a12"),
+            Expression::placeholder(next_id(), "a13"),
+            Expression::placeholder(next_id(), "a21"),
+            Expression::placeholder(next_id(), "a22"),
+            Expression::placeholder(next_id(), "a23"),
+            Expression::placeholder(next_id(), "a31"),
+            Expression::placeholder(next_id(), "a32"),
+            Expression::placeholder(next_id(), "a33"),
+        ],
+    )
+}
+
+/// 2×2 Determinant matrix (vertical bars)
+pub fn template_vmatrix_2x2() -> Expression {
+    Expression::operation(
+        "vmatrix2x2",
+        vec![
+            Expression::placeholder(next_id(), "a11"),
+            Expression::placeholder(next_id(), "a12"),
+            Expression::placeholder(next_id(), "a21"),
+            Expression::placeholder(next_id(), "a22"),
+        ],
+    )
+}
+
+/// 3×3 Determinant matrix (vertical bars)
+pub fn template_vmatrix_3x3() -> Expression {
+    Expression::operation(
+        "vmatrix3x3",
+        vec![
+            Expression::placeholder(next_id(), "a11"),
+            Expression::placeholder(next_id(), "a12"),
+            Expression::placeholder(next_id(), "a13"),
+            Expression::placeholder(next_id(), "a21"),
+            Expression::placeholder(next_id(), "a22"),
+            Expression::placeholder(next_id(), "a23"),
+            Expression::placeholder(next_id(), "a31"),
+            Expression::placeholder(next_id(), "a32"),
+            Expression::placeholder(next_id(), "a33"),
+        ],
+    )
+}
+
 // === Template Registry ===
 
 /// Get all available templates as (name, function) pairs
@@ -387,6 +539,10 @@ pub fn get_all_templates() -> Vec<(&'static str, fn() -> Expression)> {
         // Linear Algebra
         ("matrix2x2", template_matrix_2x2),
         ("matrix3x3", template_matrix_3x3),
+        ("pmatrix2x2", template_pmatrix_2x2),
+        ("pmatrix3x3", template_pmatrix_3x3),
+        ("vmatrix2x2", template_vmatrix_2x2),
+        ("vmatrix3x3", template_vmatrix_3x3),
         ("vector_bold", template_vector_bold),
         ("vector_arrow", template_vector_arrow),
         ("dot", template_dot_product),
@@ -403,10 +559,24 @@ pub fn get_all_templates() -> Vec<(&'static str, fn() -> Expression)> {
         // Tensors
         ("tensor_mixed", template_tensor_mixed),
         ("tensor_upper_pair", template_tensor_upper_pair),
-        // Trig
+        ("christoffel", template_christoffel),
+        ("riemann", template_riemann),
+        // Trig & Functions
         ("sin", template_sin),
         ("cos", template_cos),
         ("tan", template_tan),
+        ("arcsin", template_arcsin),
+        ("arccos", template_arccos),
+        ("arctan", template_arctan),
+        ("ln", template_ln),
+        ("log", template_log),
+        ("exp", template_exp),
+        // Accents
+        ("dot_accent", template_dot_accent),
+        ("ddot_accent", template_ddot_accent),
+        ("hat", template_hat),
+        ("bar", template_bar),
+        ("tilde", template_tilde),
         // Limits
         ("limit", template_limit),
     ]

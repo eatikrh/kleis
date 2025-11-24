@@ -336,11 +336,21 @@ async fn render_typst_handler(
     State(_state): State<Arc<AppState>>,
     Json(req): Json<RenderASTRequest>,
 ) -> impl IntoResponse {
+    eprintln!("=== render_typst_handler called ===");
+    eprintln!("Received AST JSON: {:?}", req.ast);
+    
     match json_to_expression(&req.ast) {
         Ok(expr) => {
+            eprintln!("Parsed Expression: {:#?}", expr);
+            
             // Collect ALL argument slots with their info (empty or filled)
             let arg_slots = collect_argument_slots(&expr);
             eprintln!("Argument slots: {} total", arg_slots.len());
+            
+            for (i, slot) in arg_slots.iter().enumerate() {
+                eprintln!("  Slot {}: id={}, is_placeholder={}, hint='{}'", 
+                    i, slot.id, slot.is_placeholder, slot.hint);
+            }
 
             // Get unfilled placeholder IDs for Typst square rendering
             let unfilled_ids: Vec<usize> = arg_slots

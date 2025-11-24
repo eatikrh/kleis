@@ -596,7 +596,7 @@ fn render_expression_internal(
                     escape_html(hint),
                     id
                 ),
-                RenderTarget::Typst => "#sym.square".to_string(), // Typst's square symbol (# for code in math)
+                RenderTarget::Typst => "square.stroked".to_string(), // Typst's square symbol - valid as function argument
             }
         }
         Expression::Operation { name, args } => {

@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kleis Equation Editor - Demo</title>
+    <title>Kleis Equation Editor - Demo v2.0</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
     <style>
         * {
@@ -354,7 +357,7 @@
     <div class="container">
         <header>
             <h1>🔬 Kleis Equation Editor</h1>
-            <p class="subtitle">Mathematical Notation Renderer - 50 Templates • 91 Gallery Examples</p>
+            <p class="subtitle">Mathematical Notation Renderer - 54 Templates • Enhanced Structural Mode v2.1</p>
             <div class="mode-toggle">
                 <button class="mode-btn active" onclick="setEditorMode('text')">📝 Text Mode</button>
                 <button class="mode-btn" onclick="setEditorMode('structural')">🔧 Structural Mode</button>
@@ -500,8 +503,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="template-btn" onclick="insertTemplate('\\nabla □')">∇ Grad</button>
                         
                         <!-- Matrices -->
-                        <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}')">[  ] Matrix 2x2</button>
-                        <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}3x3\\end{bmatrix}')">[  ] Matrix 3x3</button>
+                        <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}')">[  ] Matrix 2×2</button>
+                        <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{bmatrix}')">[  ] Matrix 3×3</button>
+                        <button class="template-btn" onclick="insertTemplate('\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}')">(  ) Matrix 2×2</button>
+                        <button class="template-btn" onclick="insertTemplate('\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}')">(  ) Matrix 3×3</button>
+                        <button class="template-btn" onclick="insertTemplate('\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}')">|  | Det 2×2</button>
+                        <button class="template-btn" onclick="insertTemplate('\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}')">|  | Det 3×3</button>
                         
                         <!-- Physics/Quantum -->
                         <button class="template-btn" onclick="insertTemplate('|□\\rangle')">|ψ⟩ Ket</button>
@@ -519,10 +526,35 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="template-btn" onclick="insertTemplate('\\|v\\|')">‖v‖ Norm</button>
                         <button class="template-btn" onclick="insertTemplate('|x|')">|x| Abs</button>
                         
-                        <!-- Trig -->
+                        <!-- Trig & Functions -->
                         <button class="template-btn" onclick="insertTemplate('\\sin(□)')">sin(x)</button>
                         <button class="template-btn" onclick="insertTemplate('\\cos(□)')">cos(x)</button>
                         <button class="template-btn" onclick="insertTemplate('\\tan(□)')">tan(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\arcsin(□)')">arcsin(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\arccos(□)')">arccos(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\arctan(□)')">arctan(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\ln(□)')">ln(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\log(□)')">log(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('\\exp(□)')">exp(x)</button>
+                        <button class="template-btn" onclick="insertTemplate('e^{□}')">e^x</button>
+                        
+                        <!-- Accents & Derivatives -->
+                        <button class="template-btn" onclick="insertTemplate('\\dot{□}')">ẋ Dot</button>
+                        <button class="template-btn" onclick="insertTemplate('\\ddot{□}')">ẍ Double Dot</button>
+                        <button class="template-btn" onclick="insertTemplate('\\hat{□}')">x̂ Hat</button>
+                        <button class="template-btn" onclick="insertTemplate('\\bar{□}')">x̄ Bar</button>
+                        <button class="template-btn" onclick="insertTemplate('\\tilde{□}')">x̃ Tilde</button>
+                        
+                        <!-- Additional Operations -->
+                        <button class="template-btn" onclick="insertTemplate('\\sqrt[□]{□}')">ⁿ√x Nth Root</button>
+                        <button class="template-btn" onclick="insertTemplate('\\binom{□}{□}')">⎛n⎞ Binomial</button>
+                        <button class="template-btn" onclick="insertTemplate('□!')">n! Factorial</button>
+                        <button class="template-btn" onclick="insertTemplate('\\lfloor □ \\rfloor')">⌊x⌋ Floor</button>
+                        <button class="template-btn" onclick="insertTemplate('\\lceil □ \\rceil')">⌈x⌉ Ceiling</button>
+                        
+                        <!-- Tensor Operations -->
+                        <button class="template-btn" onclick="insertTemplate('\\Gamma^{□}_{□ □}')">Γ Christoffel</button>
+                        <button class="template-btn" onclick="insertTemplate('R^{□}_{□ □ □}')">R Riemann</button>
                     </div>
                 </div>
                 
@@ -627,11 +659,19 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         
         // Map palette templates to AST templates
         const templateMap = {
+            // Basic
             '\\frac{□}{□}': 'fraction',
             '\\sqrt{□}': 'sqrt',
+            '\\sqrt[□]{□}': 'nthroot',
             'x^{□}': 'power',
             'x_{□}': 'subscript',
             'x^{□}_{□}': 'tensor_mixed',
+            '\\binom{□}{□}': 'binomial',
+            '□!': 'factorial',
+            '\\lfloor □ \\rfloor': 'floor',
+            '\\lceil □ \\rceil': 'ceiling',
+            
+            // Calculus
             '\\int_{□}^{□} □ \\, dx': 'integral',
             '\\sum_{□}^{□} □': 'sum',
             '\\prod_{□}^{□} □': 'product',
@@ -639,40 +679,135 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             '\\partial_{□} □': 'partial',
             '\\frac{d □}{d □}': 'derivative',
             '\\nabla □': 'gradient',
+            
+            // Matrices
             '\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}': 'matrix2x2',
-            '\\begin{bmatrix}3x3\\end{bmatrix}': 'matrix3x3',
+            '\\begin{bmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{bmatrix}': 'matrix3x3',
+            '\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}': 'pmatrix2x2',
+            '\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}': 'pmatrix3x3',
+            '\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}': 'vmatrix2x2',
+            '\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}': 'vmatrix3x3',
+            
+            // Quantum
             '|□\\rangle': 'ket',
             '\\langle□|': 'bra',
             '\\langle□|□\\rangle': 'inner',
             '|□\\rangle\\langle□|': 'outer',
             '[□, □]': 'commutator',
             '\\langle □ \\rangle': 'expectation',
+            
+            // Vectors
             '\\mathbf{v}': 'vector_bold',
             '\\vec{v}': 'vector_arrow',
             'a \\cdot b': 'dot',
             'a \\times b': 'cross',
             '\\|v\\|': 'norm',
             '|x|': 'abs',
+            
+            // Functions
             '\\sin(□)': 'sin',
             '\\cos(□)': 'cos',
-            '\\tan(□)': 'tan'
+            '\\tan(□)': 'tan',
+            '\\arcsin(□)': 'arcsin',
+            '\\arccos(□)': 'arccos',
+            '\\arctan(□)': 'arctan',
+            '\\ln(□)': 'ln',
+            '\\log(□)': 'log',
+            '\\exp(□)': 'exp',
+            'e^{□}': 'exp_e',
+            
+            // Accents
+            '\\dot{□}': 'dot_accent',
+            '\\ddot{□}': 'ddot_accent',
+            '\\hat{□}': 'hat',
+            '\\bar{□}': 'bar',
+            '\\tilde{□}': 'tilde',
+            
+            // Tensors
+            '\\Gamma^{□}_{□ □}': 'christoffel',
+            'R^{□}_{□ □ □}': 'riemann'
         };
 
         // AST Templates definitions (simplified for client-side creation)
         // Ideally these should come from server, but hardcoding for responsiveness
         const astTemplates = {
+            // Basic
             fraction: { Operation: { name: 'scalar_divide', args: [{Placeholder:{id:0,hint:'numerator'}}, {Placeholder:{id:1,hint:'denominator'}}] } },
             power: { Operation: { name: 'sup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'exponent'}}] } },
             subscript: { Operation: { name: 'sub', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}] } },
             sqrt: { Operation: { name: 'sqrt', args: [{Placeholder:{id:0,hint:'radicand'}}] } },
+            nthroot: { Operation: { name: 'nthroot', args: [{Placeholder:{id:0,hint:'index'}}, {Placeholder:{id:1,hint:'radicand'}}] } },
+            binomial: { Operation: { name: 'binomial', args: [{Placeholder:{id:0,hint:'n'}}, {Placeholder:{id:1,hint:'k'}}] } },
+            factorial: { Operation: { name: 'factorial', args: [{Placeholder:{id:0,hint:'n'}}] } },
+            floor: { Operation: { name: 'floor', args: [{Placeholder:{id:0,hint:'x'}}] } },
+            ceiling: { Operation: { name: 'ceiling', args: [{Placeholder:{id:0,hint:'x'}}] } },
+            tensor_mixed: { Operation: { name: 'index_mixed', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower'}}] } },
+            
+            // Calculus
             integral: { Operation: { name: 'int_bounds', args: [{Placeholder:{id:0,hint:'integrand'}}, {Placeholder:{id:1,hint:'lower'}}, {Placeholder:{id:2,hint:'upper'}}, {Placeholder:{id:3,hint:'variable'}}] } },
             sum: { Operation: { name: 'sum_bounds', args: [{Placeholder:{id:0,hint:'body'}}, {Placeholder:{id:1,hint:'from'}}, {Placeholder:{id:2,hint:'to'}}] } },
+            product: { Operation: { name: 'prod_bounds', args: [{Placeholder:{id:0,hint:'body'}}, {Placeholder:{id:1,hint:'from'}}, {Placeholder:{id:2,hint:'to'}}] } },
+            limit: { Operation: { name: 'lim', args: [{Placeholder:{id:0,hint:'body'}}, {Placeholder:{id:1,hint:'var'}}, {Placeholder:{id:2,hint:'target'}}] } },
+            partial: { Operation: { name: 'd_part', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            derivative: { Operation: { name: 'd_dt', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            gradient: { Operation: { name: 'grad', args: [{Placeholder:{id:0,hint:'function'}}] } },
+            
+            // Matrices
+            matrix2x2: { Operation: { name: 'matrix2x2', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
+            matrix3x3: { Operation: { name: 'matrix3x3', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
+            pmatrix2x2: { Operation: { name: 'pmatrix2x2', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
+            pmatrix3x3: { Operation: { name: 'pmatrix3x3', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
+            vmatrix2x2: { Operation: { name: 'vmatrix2x2', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
+            vmatrix3x3: { Operation: { name: 'vmatrix3x3', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
+            
+            // Quantum
+            ket: { Operation: { name: 'ket', args: [{Placeholder:{id:0,hint:'state'}}] } },
+            bra: { Operation: { name: 'bra', args: [{Placeholder:{id:0,hint:'state'}}] } },
+            inner: { Operation: { name: 'inner', args: [{Placeholder:{id:0,hint:'bra'}}, {Placeholder:{id:1,hint:'ket'}}] } },
+            outer: { Operation: { name: 'outer', args: [{Placeholder:{id:0,hint:'ket'}}, {Placeholder:{id:1,hint:'bra'}}] } },
+            commutator: { Operation: { name: 'commutator', args: [{Placeholder:{id:0,hint:'A'}}, {Placeholder:{id:1,hint:'B'}}] } },
+            expectation: { Operation: { name: 'expectation', args: [{Placeholder:{id:0,hint:'operator'}}] } },
+            
+            // Vectors
+            vector_bold: { Operation: { name: 'vector_bold', args: [{Placeholder:{id:0,hint:'vector'}}] } },
+            vector_arrow: { Operation: { name: 'vector_arrow', args: [{Placeholder:{id:0,hint:'vector'}}] } },
+            dot: { Operation: { name: 'dot', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            cross: { Operation: { name: 'cross', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            norm: { Operation: { name: 'norm', args: [{Placeholder:{id:0,hint:'vector'}}] } },
+            abs: { Operation: { name: 'abs', args: [{Placeholder:{id:0,hint:'value'}}] } },
+            
+            // Functions
+            sin: { Operation: { name: 'sin', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            cos: { Operation: { name: 'cos', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            tan: { Operation: { name: 'tan', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            arcsin: { Operation: { name: 'arcsin', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            arccos: { Operation: { name: 'arccos', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            arctan: { Operation: { name: 'arctan', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            ln: { Operation: { name: 'ln', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            log: { Operation: { name: 'log', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            exp: { Operation: { name: 'exp', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            exp_e: { Operation: { name: 'sup', args: [{Object: 'e'}, {Placeholder:{id:0,hint:'exponent'}}] } },
+            
+            // Accents
+            dot_accent: { Operation: { name: 'dot_accent', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            ddot_accent: { Operation: { name: 'ddot_accent', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            hat: { Operation: { name: 'hat', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            bar: { Operation: { name: 'bar', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            tilde: { Operation: { name: 'tilde', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            
+            // Tensors
+            christoffel: { Operation: { name: 'gamma', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
+            riemann: { Operation: { name: 'riemann', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}, {Placeholder:{id:3,hint:'lower3'}}] } },
+            
             // Fallback for others - creates empty placeholder
             default: { Placeholder: { id: 0, hint: 'expression' } }
         };
 
         function insertStructuralTemplate(latexTemplate) {
             const name = templateMap[latexTemplate];
+            console.log('insertStructuralTemplate called with:', latexTemplate);
+            console.log('Mapped to template name:', name);
+            
             if (!name) {
                 alert('Template not implemented in structural mode yet.');
                 return;
@@ -680,23 +815,38 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             
             // Use specific AST or generic
             let ast = astTemplates[name];
+            console.log('AST template before clone:', ast);
             
             if (!ast) {
+                console.log('No AST template found, using fallback');
                 ast = { Placeholder: { id: nextPlaceholderId++, hint: name } };
             } else {
                 ast = JSON.parse(JSON.stringify(ast));
+                console.log('AST after clone:', ast);
                 renumberPlaceholders(ast);
+                console.log('AST after renumber:', ast);
             }
             
             currentAST = ast;
+            console.log('Final currentAST:', currentAST);
             renderStructuralEditor();
         }
 
         function renumberPlaceholders(node) {
+            console.log('renumberPlaceholders called on:', node);
             if (node.Placeholder) {
+                const oldId = node.Placeholder.id;
                 node.Placeholder.id = nextPlaceholderId++;
+                console.log(`  Renumbered placeholder: ${oldId} → ${node.Placeholder.id}`);
             } else if (node.Operation) {
+                console.log(`  Processing operation: ${node.Operation.name} with ${node.Operation.args.length} args`);
                 node.Operation.args.forEach(renumberPlaceholders);
+            } else if (node.Object !== undefined) {
+                console.log(`  Found Object: "${node.Object}"`);
+            } else if (node.Const !== undefined) {
+                console.log(`  Found Const: "${node.Const}"`);
+            } else {
+                console.log('  Unknown node type:', node);
             }
         }
 
@@ -750,10 +900,11 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                             const ph = data.placeholders && data.placeholders.find(p => p.id === slot.id);
                             if (ph) {
                                 rectX = ph.x - 3;
-                                rectY = ph.y - ph.height - 3;
+                                rectY = ph.y - 3;  // Don't subtract height - backend gives correct Y
                                 rectWidth = ph.width + 6;
                                 rectHeight = ph.height + 6;
                                 foundPosition = true;
+                                console.log(`Using placeholder position: x=${ph.x}, y=${ph.y}, w=${ph.width}, h=${ph.height}`);
                             } else {
                                 // 2. Try semantic bounding box matched by node path
                                 const nodePathId = nodeIdFromPath(slot.path || []);
@@ -820,12 +971,28 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         });
                         
                         if (overlayElements.length > 0) {
+                            console.log(`Creating ${overlayElements.length} overlay elements`);
                             svg = svg.replace('</svg>', `<g id="arg-overlays" visibility="visible">${overlayElements.join('')}</g></svg>`);
+                            console.log('Overlays injected into SVG');
+                        } else {
+                            console.warn('No overlay elements created!');
                         }
                     }
                     
+                    console.log('Setting container.innerHTML with SVG');
                     container.innerHTML = svg;
                     preview.innerHTML = svg;
+                    console.log('SVG rendered to DOM');
+                    
+                    // Verify overlays are in DOM
+                    setTimeout(() => {
+                        const overlayGroup = document.querySelector('#arg-overlays');
+                        if (overlayGroup) {
+                            console.log(`✅ Overlay group found with ${overlayGroup.children.length} children`);
+                        } else {
+                            console.error('❌ Overlay group not found in DOM!');
+                        }
+                    }, 100);
                 } else {
                     showStatus('Render failed: ' + data.error, 'error');
                     console.error('renderStructuralEditor: backend reported failure', data);
@@ -1121,6 +1288,18 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
 
         window.onload = () => {
             loadGallery();
+            
+            // Verify new code loaded
+            const templateCount = Object.keys(astTemplates).length;
+            console.log(`✅ Kleis Editor v2.1 loaded with ${templateCount} AST templates`);
+            
+            if (templateCount < 50) {
+                console.error(`⚠️ WARNING: Only ${templateCount} templates loaded! Expected 54. Browser cache issue!`);
+                alert(`⚠️ OLD VERSION LOADED!\n\nOnly ${templateCount} templates found.\nExpected: 54 templates\n\nPlease:\n1. Close this tab\n2. Open in incognito mode (Cmd+Shift+N)\n3. Or clear browser cache completely`);
+            } else {
+                console.log('✅ All templates loaded correctly');
+                console.log('sqrt template:', astTemplates.sqrt);
+            }
         };
     </script>
 </body>

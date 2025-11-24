@@ -55,17 +55,17 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
         }
 
         Expression::Placeholder { id, hint } => {
-            // CRITICAL: Insert unique marker for this placeholder
-            let marker = ctx.create_marker(*id);
+            // Render as Typst square symbol
+            // Typst will render square.stroked as a hollow square glyph
+            // We track the placeholder ID so we can find it later in the SVG
             ctx.placeholder_positions.push(PlaceholderInfo {
                 id: *id,
                 hint: hint.clone(),
-                marker: marker.clone(),
+                marker: format!("square.stroked_{}", id), // Track for debugging
             });
 
-            // Use the marker in output
-            // Typst will render it, we'll find and replace with interactive element
-            marker
+            // Render as Typst square symbol (hollow square)
+            "square.stroked".to_string()
         }
 
         Expression::Operation { name, args } => operation_to_typst(name, args, ctx),
