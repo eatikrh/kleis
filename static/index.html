@@ -122,6 +122,18 @@
             fill: rgba(102, 126, 234, 0.2);
         }
         
+        .arg-overlay.active-marker, .placeholder-overlay.active-marker {
+            stroke: #ff6b6b !important;
+            stroke-width: 3px !important;
+            fill: rgba(255, 107, 107, 0.3) !important;
+            animation: pulse-marker 1s infinite;
+        }
+        
+        @keyframes pulse-marker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
         .main-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -383,7 +395,11 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <input type="checkbox" id="showBoundingBoxes" checked onchange="toggleBoundingBoxes()" style="margin-right: 8px;">
                         <span style="font-size: 0.9em; color: #666;">Show Interactive Overlays</span>
                     </label>
-                    <button class="secondary" style="float: right; padding: 6px 12px; font-size: 12px;" onclick="resetStructuralEditor()">Clear</button>
+                    <div style="float: right; display: flex; gap: 5px;">
+                        <button id="undoBtn" class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="undo()" disabled title="Undo (Cmd+Z)">↶ Undo</button>
+                        <button id="redoBtn" class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="redo()" disabled title="Redo (Cmd+Shift+Z)">↷ Redo</button>
+                        <button class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="resetStructuralEditor()">Clear</button>
+                    </div>
                 </div>
                 
                 <!-- Symbol Palette -->
@@ -593,6 +609,14 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         // Set to 'placeholder' to prefer placeholder positions (current behavior)
         const COORDINATE_PREFERENCE = 'semantic';  // TESTING: Using semantic boxes first
         
+        // Active edit marker tracking
+        let activeEditMarker = null;  // {id, path, nodeId}
+        
+        // Undo/Redo stacks
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_UNDO_HISTORY = 50;
+        
         function log(msg) { console.log(msg); }
         function showStatus(msg, type) {
             const el = document.getElementById('status');
@@ -601,6 +625,89 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 el.className = `status ${type}`;
             }
         }
+        
+        // === Undo/Redo System ===
+        
+        function saveToUndoStack() {
+            if (currentAST) {
+                // Deep clone the current state
+                const state = JSON.parse(JSON.stringify(currentAST));
+                undoStack.push(state);
+                
+                // Limit stack size
+                if (undoStack.length > MAX_UNDO_HISTORY) {
+                    undoStack.shift();
+                }
+                
+                // Clear redo stack on new action
+                redoStack = [];
+                
+                updateUndoRedoButtons();
+            }
+        }
+        
+        function undo() {
+            if (undoStack.length === 0) {
+                showStatus('Nothing to undo', 'error');
+                return;
+            }
+            
+            // Save current state to redo stack
+            if (currentAST) {
+                redoStack.push(JSON.parse(JSON.stringify(currentAST)));
+            }
+            
+            // Restore previous state
+            currentAST = undoStack.pop();
+            renderStructuralEditor();
+            updateUndoRedoButtons();
+            showStatus('✅ Undo', 'success');
+        }
+        
+        function redo() {
+            if (redoStack.length === 0) {
+                showStatus('Nothing to redo', 'error');
+                return;
+            }
+            
+            // Save current state to undo stack
+            if (currentAST) {
+                undoStack.push(JSON.parse(JSON.stringify(currentAST)));
+            }
+            
+            // Restore next state
+            currentAST = redoStack.pop();
+            renderStructuralEditor();
+            updateUndoRedoButtons();
+            showStatus('✅ Redo', 'success');
+        }
+        
+        function updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+            
+            if (undoBtn) {
+                undoBtn.disabled = undoStack.length === 0;
+                undoBtn.title = `Undo (${undoStack.length} actions)`;
+            }
+            if (redoBtn) {
+                redoBtn.disabled = redoStack.length === 0;
+                redoBtn.title = `Redo (${redoStack.length} actions)`;
+            }
+        }
+        
+        // Keyboard shortcuts for undo/redo
+        document.addEventListener('keydown', (e) => {
+            if (editorMode === 'structural') {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    undo();
+                } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
+                    e.preventDefault();
+                    redo();
+                }
+            }
+        });
 
         // --- Text Mode Functions ---
         async function renderEquation() {
@@ -645,7 +752,13 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
 
         function insertTemplate(template) {
             if (editorMode === 'structural') {
-                insertStructuralTemplate(template);
+                if (activeEditMarker) {
+                    // INSERT AT ACTIVE MARKER
+                    insertStructuralTemplateAt(template, activeEditMarker.path);
+                } else {
+                    // NO MARKER SELECTED - Replace whole AST
+                    insertStructuralTemplate(template);
+                }
             } else {
                 const textarea = document.getElementById('latexInput');
                 const start = textarea.selectionStart;
@@ -658,6 +771,37 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 textarea.setSelectionRange(newPos, newPos + (placeholderIdx >= 0 ? 1 : 0));
                 textarea.focus();
             }
+        }
+        
+        function insertStructuralTemplateAt(latexTemplate, path) {
+            console.log('insertStructuralTemplateAt:', latexTemplate, 'at path:', path);
+            
+            const name = templateMap[latexTemplate];
+            if (!name) {
+                alert('Template not implemented in structural mode yet.');
+                return;
+            }
+            
+            let ast = astTemplates[name];
+            if (!ast) {
+                ast = { Placeholder: { id: nextPlaceholderId++, hint: name } };
+            } else {
+                ast = JSON.parse(JSON.stringify(ast));
+                renumberPlaceholders(ast);
+            }
+            
+            // Insert at the specified path
+            setNodeAtPath(currentAST, path, ast);
+            
+            // Clear active marker
+            activeEditMarker = null;
+            document.querySelectorAll('.arg-overlay').forEach(el => {
+                el.classList.remove('active-marker');
+            });
+            
+            // Re-render
+            renderStructuralEditor();
+            showStatus('✅ Template inserted', 'success');
         }
 
         // --- Structural Mode Functions ---
@@ -817,6 +961,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 alert('Template not implemented in structural mode yet.');
                 return;
             }
+            
+            // Save to undo stack before modifying
+            saveToUndoStack();
             
             // Use specific AST or generic
             let ast = astTemplates[name];
@@ -1069,19 +1216,36 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         window.handleSlotClick = function(id, path, nodeId) {
             console.log('Clicked slot:', { id, path, nodeId });
             
-            // Use nodeId to navigate AST if available
-            const node = nodeId ? getNodeById(currentAST, nodeId) : getNodeAtPath(currentAST, path);
+            // Save to undo stack before any modification
+            saveToUndoStack();
             
+            // Set as active marker
+            activeEditMarker = {id, path, nodeId};
+            
+            // Highlight active marker
+            document.querySelectorAll('.arg-overlay').forEach(el => {
+                el.classList.remove('active-marker');
+            });
+            event.target.classList.add('active-marker');
+            
+            // Get current value
+            const node = nodeId ? getNodeById(currentAST, nodeId) : getNodeAtPath(currentAST, path);
             let val = "";
             if (node.Const) val = node.Const;
             if (node.Object) val = node.Object;
             
-            const input = prompt("Enter value:", val);
+            // Show status
+            showStatus('📍 Marker selected. Type a value or click a template/symbol to insert here.', 'info');
+            
+            // For now, still show prompt (will be replaced with modal later)
+            const input = prompt("Enter value (or click Cancel to insert template from palette):", val);
             if (input !== null) {
                 const newNode = parseSimpleInput(input);
                 setNodeAtPath(currentAST, path, newNode);
+                activeEditMarker = null;
                 renderStructuralEditor();
             }
+            // If cancelled, activeEditMarker stays set for palette insertion
         };
 
         window.handleSlotKeydown = function(event, id, path, nodeId) {
