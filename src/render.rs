@@ -2414,9 +2414,9 @@ pub fn build_default_context() -> GlyphContext {
 
     // Accents
     typst_templates.insert("hat".to_string(), "hat({arg})".to_string());
-    typst_templates.insert("bar".to_string(), "overline({arg})".to_string());
+    typst_templates.insert("bar".to_string(), "macron({arg})".to_string());  // Use macron for short bar (like LaTeX \bar)
     typst_templates.insert("tilde".to_string(), "tilde({arg})".to_string());
-    typst_templates.insert("overline".to_string(), "overline({arg})".to_string());
+    typst_templates.insert("overline".to_string(), "overline({arg})".to_string());  // Keep overline for full overline
     typst_templates.insert("dot_accent".to_string(), "dot({arg})".to_string());
     typst_templates.insert("ddot_accent".to_string(), "dot.double({arg})".to_string());
 
