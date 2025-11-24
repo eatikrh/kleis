@@ -438,7 +438,21 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     <div style="clear: both; margin-top: 10px; font-size: 0.85em; color: #999;">
                         💡 <strong>Navigation:</strong> ↓/→ next marker • ↑/← prev marker • Enter to edit • Esc to deselect<br>
                         💡 <strong>Editing:</strong> Cmd+Z undo • Cmd+Shift+Z redo • Click marker then palette to insert<br>
-                        💡 <strong>View:</strong> Drag corner to resize • Cmd+/− to zoom • Canvas scrollable
+                        💡 <strong>View:</strong> Drag corner to resize • Cmd+/− to zoom • Canvas scrollable<br>
+                        <button class="secondary" style="padding: 4px 12px; font-size: 11px; margin-top: 8px;" onclick="toggleDebugPanel()">🐛 Debug AST</button>
+                    </div>
+                    
+                    <!-- Debug Panel -->
+                    <div id="debugPanel" style="display:none; margin-top: 15px; padding: 15px; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <strong style="font-family: sans-serif; color: #667eea;">🐛 AST Debug View</strong>
+                            <div>
+                                <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="copyASTToClipboard()">📋 Copy</button>
+                                <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="downloadAST()">💾 Download</button>
+                                <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="toggleDebugPanel()">✖</button>
+                            </div>
+                        </div>
+                        <pre id="debugASTContent" style="margin: 0; white-space: pre-wrap; word-wrap: break-word; background: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;"></pre>
                     </div>
                 </div>
                 
@@ -847,7 +861,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             if (activeEditMarker) {
                 // Find currently active marker
                 currentIndex = markers.findIndex(m => 
-                    m.getAttribute('data-slot-id') == activeEditMarker.id
+                    parseInt(m.getAttribute('data-slot-id')) === activeEditMarker.id
                 );
             }
             
@@ -855,9 +869,23 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             const nextIndex = (currentIndex + 1) % markers.length;
             const nextMarker = markers[nextIndex];
             
-            // Simulate click on next marker
-            nextMarker.click();
+            // Extract data from marker
+            const slotId = parseInt(nextMarker.getAttribute('data-slot-id'));
+            const pathStr = nextMarker.getAttribute('data-path');
+            const nodeId = nextMarker.getAttribute('data-node-id');
+            const path = pathStr ? JSON.parse(pathStr.replace(/&quot;/g, '"')) : [];
+            
+            // Set as active without showing prompt
+            activeEditMarker = {id: slotId, path: path, nodeId: nodeId};
+            
+            // Update visual state
+            document.querySelectorAll('.arg-overlay, .placeholder-overlay').forEach(el => {
+                el.classList.remove('active-marker');
+            });
+            nextMarker.classList.add('active-marker');
             nextMarker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            showStatus(`📍 Marker ${slotId} selected. Press Enter to edit, or click template to insert.`, 'info');
         }
         
         function focusPrevMarker() {
@@ -870,7 +898,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             let currentIndex = -1;
             if (activeEditMarker) {
                 currentIndex = markers.findIndex(m => 
-                    m.getAttribute('data-slot-id') == activeEditMarker.id
+                    parseInt(m.getAttribute('data-slot-id')) === activeEditMarker.id
                 );
             }
             
@@ -878,9 +906,23 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             const prevIndex = currentIndex <= 0 ? markers.length - 1 : currentIndex - 1;
             const prevMarker = markers[prevIndex];
             
-            // Simulate click on previous marker
-            prevMarker.click();
+            // Extract data from marker
+            const slotId = parseInt(prevMarker.getAttribute('data-slot-id'));
+            const pathStr = prevMarker.getAttribute('data-path');
+            const nodeId = prevMarker.getAttribute('data-node-id');
+            const path = pathStr ? JSON.parse(pathStr.replace(/&quot;/g, '"')) : [];
+            
+            // Set as active without showing prompt
+            activeEditMarker = {id: slotId, path: path, nodeId: nodeId};
+            
+            // Update visual state
+            document.querySelectorAll('.arg-overlay, .placeholder-overlay').forEach(el => {
+                el.classList.remove('active-marker');
+            });
+            prevMarker.classList.add('active-marker');
             prevMarker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            showStatus(`📍 Marker ${slotId} selected. Press Enter to edit, or click template to insert.`, 'info');
         }
         
         function editActiveMarker() {
@@ -911,6 +953,125 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 el.classList.remove('active-marker');
             });
             showStatus('Selection cleared', 'info');
+        }
+        
+        // === Debug Panel ===
+        
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debugPanel');
+            const content = document.getElementById('debugASTContent');
+            
+            if (panel.style.display === 'none') {
+                // Show panel and update content
+                panel.style.display = 'block';
+                updateDebugPanel();
+            } else {
+                // Hide panel
+                panel.style.display = 'none';
+            }
+        }
+        
+        function updateDebugPanel() {
+            const content = document.getElementById('debugASTContent');
+            
+            if (!currentAST) {
+                content.textContent = 'No AST available. Create an expression first.';
+                return;
+            }
+            
+            // Format AST as readable JSON with syntax highlighting
+            const astJSON = JSON.stringify(currentAST, null, 2);
+            
+            // Add tree visualization
+            const treeView = formatASTAsTree(currentAST, 0);
+            
+            content.textContent = '=== JSON Format ===\n\n' + astJSON + '\n\n' + 
+                                  '=== Tree View ===\n\n' + treeView + '\n\n' +
+                                  '=== Statistics ===\n\n' +
+                                  `Placeholders: ${countPlaceholdersInAST(currentAST)}\n` +
+                                  `Operations: ${countOperationsInAST(currentAST)}\n` +
+                                  `Depth: ${getASTDepth(currentAST)}\n` +
+                                  `Total nodes: ${countNodesInAST(currentAST)}`;
+        }
+        
+        function formatASTAsTree(node, depth) {
+            const indent = '  '.repeat(depth);
+            
+            if (node.Placeholder) {
+                return `${indent}□ Placeholder(id=${node.Placeholder.id}, hint="${node.Placeholder.hint}")`;
+            } else if (node.Const) {
+                return `${indent}# Const("${node.Const}")`;
+            } else if (node.Object) {
+                return `${indent}○ Object("${node.Object}")`;
+            } else if (node.Operation) {
+                let result = `${indent}⊕ Operation("${node.Operation.name}")\n`;
+                node.Operation.args.forEach((arg, i) => {
+                    result += `${indent}├─[${i}] ${formatASTAsTree(arg, depth + 1).trim()}\n`;
+                });
+                return result.trimEnd();
+            }
+            return `${indent}? Unknown`;
+        }
+        
+        function countPlaceholdersInAST(node) {
+            if (node.Placeholder) return 1;
+            if (node.Operation) {
+                return node.Operation.args.reduce((sum, arg) => sum + countPlaceholdersInAST(arg), 0);
+            }
+            return 0;
+        }
+        
+        function countOperationsInAST(node) {
+            if (node.Operation) {
+                return 1 + node.Operation.args.reduce((sum, arg) => sum + countOperationsInAST(arg), 0);
+            }
+            return 0;
+        }
+        
+        function getASTDepth(node) {
+            if (node.Operation) {
+                return 1 + Math.max(...node.Operation.args.map(arg => getASTDepth(arg)), 0);
+            }
+            return 1;
+        }
+        
+        function countNodesInAST(node) {
+            if (node.Operation) {
+                return 1 + node.Operation.args.reduce((sum, arg) => sum + countNodesInAST(arg), 0);
+            }
+            return 1;
+        }
+        
+        function copyASTToClipboard() {
+            if (!currentAST) {
+                alert('No AST to copy');
+                return;
+            }
+            
+            const astJSON = JSON.stringify(currentAST, null, 2);
+            navigator.clipboard.writeText(astJSON).then(() => {
+                showStatus('✅ AST copied to clipboard', 'success');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showStatus('❌ Failed to copy', 'error');
+            });
+        }
+        
+        function downloadAST() {
+            if (!currentAST) {
+                alert('No AST to download');
+                return;
+            }
+            
+            const astJSON = JSON.stringify(currentAST, null, 2);
+            const blob = new Blob([astJSON], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kleis_ast_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showStatus('✅ AST downloaded', 'success');
         }
 
         // --- Text Mode Functions ---
@@ -1382,6 +1543,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                             console.error('❌ Overlay group not found in DOM!');
                         }
                     }, 100);
+                    
+                    // Update debug panel if visible
+                    const debugPanel = document.getElementById('debugPanel');
+                    if (debugPanel && debugPanel.style.display !== 'none') {
+                        updateDebugPanel();
+                    }
                 } else {
                     showStatus('Render failed: ' + data.error, 'error');
                     console.error('renderStructuralEditor: backend reported failure', data);
