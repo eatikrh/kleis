@@ -436,7 +436,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="resetStructuralEditor()">Clear</button>
                     </div>
                     <div style="clear: both; margin-top: 10px; font-size: 0.85em; color: #999;">
-                        💡 Tip: Drag corner to resize canvas • Use +/− buttons or Cmd+/Cmd− to zoom • Canvas is scrollable
+                        💡 <strong>Navigation:</strong> ↓/→ next marker • ↑/← prev marker • Enter to edit • Esc to deselect<br>
+                        💡 <strong>Editing:</strong> Cmd+Z undo • Cmd+Shift+Z redo • Click marker then palette to insert<br>
+                        💡 <strong>View:</strong> Drag corner to resize • Cmd+/− to zoom • Canvas scrollable
                     </div>
                 </div>
                 
@@ -734,16 +736,24 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             }
         }
         
-        // Keyboard shortcuts for undo/redo and zoom
+        // Keyboard shortcuts for undo/redo, zoom, and navigation
         document.addEventListener('keydown', (e) => {
             if (editorMode === 'structural') {
+                // Don't intercept if user is typing in an input field
+                if (e.target.matches('input, textarea')) {
+                    return;
+                }
+                
+                // Undo/Redo
                 if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
                     e.preventDefault();
                     undo();
                 } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
                     e.preventDefault();
                     redo();
-                } else if ((e.metaKey || e.ctrlKey) && e.key === '=' || e.key === '+') {
+                }
+                // Zoom
+                else if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
                     e.preventDefault();
                     zoomIn();
                 } else if ((e.metaKey || e.ctrlKey) && e.key === '-') {
@@ -752,6 +762,33 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 } else if ((e.metaKey || e.ctrlKey) && e.key === '0') {
                     e.preventDefault();
                     zoomReset();
+                }
+                // Arrow key navigation between markers (like MathType)
+                else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    focusNextMarker();
+                } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    focusPrevMarker();
+                }
+                // Tab also works (existing feature, keep it)
+                else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        focusPrevMarker();
+                    } else {
+                        focusNextMarker();
+                    }
+                }
+                // Enter to edit active marker
+                else if (e.key === 'Enter' && activeEditMarker) {
+                    e.preventDefault();
+                    editActiveMarker();
+                }
+                // Escape to clear selection
+                else if (e.key === 'Escape' && activeEditMarker) {
+                    e.preventDefault();
+                    clearActiveMarker();
                 }
             }
         });
@@ -791,6 +828,89 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             });
             
             showStatus(`🔍 Zoom: ${(currentZoom * 100).toFixed(0)}%`, 'info');
+        }
+        
+        // === Marker Navigation (MathType-style) ===
+        
+        function getAllMarkers() {
+            return Array.from(document.querySelectorAll('.arg-overlay, .placeholder-overlay'));
+        }
+        
+        function focusNextMarker() {
+            const markers = getAllMarkers();
+            if (markers.length === 0) {
+                showStatus('No markers available', 'error');
+                return;
+            }
+            
+            let currentIndex = -1;
+            if (activeEditMarker) {
+                // Find currently active marker
+                currentIndex = markers.findIndex(m => 
+                    m.getAttribute('data-slot-id') == activeEditMarker.id
+                );
+            }
+            
+            // Move to next marker (wrap around)
+            const nextIndex = (currentIndex + 1) % markers.length;
+            const nextMarker = markers[nextIndex];
+            
+            // Simulate click on next marker
+            nextMarker.click();
+            nextMarker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        function focusPrevMarker() {
+            const markers = getAllMarkers();
+            if (markers.length === 0) {
+                showStatus('No markers available', 'error');
+                return;
+            }
+            
+            let currentIndex = -1;
+            if (activeEditMarker) {
+                currentIndex = markers.findIndex(m => 
+                    m.getAttribute('data-slot-id') == activeEditMarker.id
+                );
+            }
+            
+            // Move to previous marker (wrap around)
+            const prevIndex = currentIndex <= 0 ? markers.length - 1 : currentIndex - 1;
+            const prevMarker = markers[prevIndex];
+            
+            // Simulate click on previous marker
+            prevMarker.click();
+            prevMarker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        function editActiveMarker() {
+            if (!activeEditMarker) {
+                showStatus('No marker selected', 'error');
+                return;
+            }
+            
+            // Trigger the edit prompt for active marker
+            const node = getNodeAtPath(currentAST, activeEditMarker.path);
+            let val = "";
+            if (node.Const) val = node.Const;
+            if (node.Object) val = node.Object;
+            
+            const input = prompt("Enter value:", val);
+            if (input !== null) {
+                saveToUndoStack();
+                const newNode = parseSimpleInput(input);
+                setNodeAtPath(currentAST, activeEditMarker.path, newNode);
+                activeEditMarker = null;
+                renderStructuralEditor();
+            }
+        }
+        
+        function clearActiveMarker() {
+            activeEditMarker = null;
+            document.querySelectorAll('.arg-overlay, .placeholder-overlay').forEach(el => {
+                el.classList.remove('active-marker');
+            });
+            showStatus('Selection cleared', 'info');
         }
 
         // --- Text Mode Functions ---
