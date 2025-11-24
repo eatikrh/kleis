@@ -91,6 +91,11 @@ impl World for MinimalWorld {
     }
 }
 
+// FEATURE FLAG: Enable/disable calibration
+// Set to false to skip calibration and use layout boxes as-is
+// Set to true to use calibration (current behavior)
+const USE_CALIBRATION: bool = true;
+
 /// Compile with semantic bounding boxes using two-pass rendering
 ///
 /// This function uses AST structure to create accurate bounding boxes for each argument.
@@ -100,6 +105,7 @@ pub fn compile_with_semantic_boxes(
     placeholder_ids: &[usize],
 ) -> Result<CompiledOutput, String> {
     eprintln!("=== compile_with_semantic_boxes (Two-Pass Rendering) ===");
+    eprintln!("USE_CALIBRATION = {}", USE_CALIBRATION);
 
     let ctx = build_default_context();
     let full_markup = render_expression(ast, &ctx, &RenderTarget::Typst);
@@ -454,46 +460,85 @@ pub fn compile_math_to_svg_with_ids(
     let mut offset_x = 0.0;
     let mut offset_y = 0.0;
 
-    if let Some(first_ph) = placeholder_positions.first() {
+    if USE_CALIBRATION {
+        eprintln!("Calibration enabled - attempting to match layout boxes to SVG coordinates");
+    } else {
+        eprintln!("Calibration disabled - using layout boxes as-is (may not align with SVG)");
+    }
+
+    if USE_CALIBRATION {
+        if let Some(first_ph) = placeholder_positions.first() {
         // Find corresponding box in layout tree (Text element with similar size/position relative to others)
         // The square symbol in Typst is a text glyph
-        // We look for a text box with width ~18pt
+        // We look for a text box with width ~18pt (square.stroked size)
 
-        // Find text boxes with width between 10 and 25
+        // Find text boxes with width between 10 and 25 (likely squares)
         let candidates: Vec<&LayoutBoundingBox> = all_boxes
             .iter()
             .filter(|b| b.content_type == "text" && b.width > 10.0 && b.width < 25.0)
             .collect();
 
-        if let Some(match_box) = candidates.first() {
+        eprintln!("Found {} candidate boxes for calibration (width 10-25pt)", candidates.len());
+
+        // IMPROVED: Find the box closest to the first placeholder's relative position
+        // Instead of just taking first(), find the one with similar relative position
+        let match_box = if candidates.len() > 1 {
+            // If we have multiple candidates, find the best match by position
+            // The first placeholder in SVG should correspond to first square in layout
+            // They should have similar relative positions within their coordinate systems
+            candidates.iter()
+                .min_by(|a, b| {
+                    // Prefer boxes closer to origin (likely the first one)
+                    let dist_a = (a.x * a.x + a.y * a.y).sqrt();
+                    let dist_b = (b.x * b.x + b.y * b.y).sqrt();
+                    dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .copied()
+        } else {
+            candidates.first().copied()
+        };
+
+        if let Some(match_box) = match_box {
             // Calculate offset
             // SVG = Layout + Offset
             // Offset = SVG - Layout
             offset_x = first_ph.x - match_box.x;
             offset_y = first_ph.y - match_box.y;
 
-            // Y-coordinate might be inverted or shifted differently
-            // But let's try simple translation first
             eprintln!(
-                "Calibrated offset: ({:.2}, {:.2}) using placeholder ID {}",
-                offset_x, offset_y, first_ph.id
+                "Calibrated offset: ({:.2}, {:.2}) using placeholder ID {} matched to layout box at ({:.2}, {:.2})",
+                offset_x, offset_y, first_ph.id, match_box.x, match_box.y
             );
+            
+            // Sanity check: offset shouldn't be too large
+            if offset_x.abs() > 50.0 || offset_y.abs() > 50.0 {
+                eprintln!("⚠️ WARNING: Large calibration offset detected! This may indicate matching error.");
+                eprintln!("   First placeholder SVG: ({:.2}, {:.2})", first_ph.x, first_ph.y);
+                eprintln!("   Matched layout box: ({:.2}, {:.2})", match_box.x, match_box.y);
+            }
         }
-    }
+        }  // End of if let Some(first_ph)
+    }  // End of if USE_CALIBRATION
 
-    // Apply offset to all layout boxes
-    let calibrated_boxes: Vec<LayoutBoundingBox> = all_boxes
-        .iter()
-        .map(|b| LayoutBoundingBox {
-            x: b.x + offset_x,
-            y: b.y + offset_y,
-            width: b.width,
-            height: b.height,
-            content_type: b.content_type.clone(),
-            text: b.text.clone(),
-            glyph_ids: b.glyph_ids.clone(),
-        })
-        .collect();
+    // Apply offset to all layout boxes (if calibration enabled)
+    let calibrated_boxes: Vec<LayoutBoundingBox> = if USE_CALIBRATION {
+        eprintln!("Applying calibration offset ({:.2}, {:.2}) to {} layout boxes", offset_x, offset_y, all_boxes.len());
+        all_boxes
+            .iter()
+            .map(|b| LayoutBoundingBox {
+                x: b.x + offset_x,
+                y: b.y + offset_y,
+                width: b.width,
+                height: b.height,
+                content_type: b.content_type.clone(),
+                text: b.text.clone(),
+                glyph_ids: b.glyph_ids.clone(),
+            })
+            .collect()
+    } else {
+        eprintln!("Skipping calibration - using layout boxes as-is");
+        all_boxes.clone()
+    };
 
     // Extract argument bounding boxes by grouping content boxes from layout tree
     // Use the CALIBRATED boxes
