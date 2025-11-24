@@ -971,6 +971,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             }
         }
         
+        // Store last render response for debug panel
+        let lastRenderResponse = null;
+        
         function updateDebugPanel() {
             const content = document.getElementById('debugASTContent');
             
@@ -979,19 +982,57 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 return;
             }
             
-            // Format AST as readable JSON with syntax highlighting
+            // Format AST as readable JSON
             const astJSON = JSON.stringify(currentAST, null, 2);
             
             // Add tree visualization
             const treeView = formatASTAsTree(currentAST, 0);
             
-            content.textContent = '=== JSON Format ===\n\n' + astJSON + '\n\n' + 
+            // Format marker placement info
+            let markerInfo = '=== Marker Placement Info ===\n\n';
+            if (lastRenderResponse) {
+                markerInfo += '--- Placeholders (from square glyph extraction) ---\n';
+                if (lastRenderResponse.placeholders && lastRenderResponse.placeholders.length > 0) {
+                    lastRenderResponse.placeholders.forEach(ph => {
+                        markerInfo += `  ID ${ph.id}: (x=${ph.x.toFixed(2)}, y=${ph.y.toFixed(2)}, w=${ph.width}, h=${ph.height})\n`;
+                    });
+                } else {
+                    markerInfo += '  (none)\n';
+                }
+                
+                markerInfo += '\n--- Argument Bounding Boxes (semantic) ---\n';
+                if (lastRenderResponse.argument_bounding_boxes && lastRenderResponse.argument_bounding_boxes.length > 0) {
+                    lastRenderResponse.argument_bounding_boxes.forEach(bbox => {
+                        markerInfo += `  Arg ${bbox.arg_index} [${bbox.node_id}]: (x=${bbox.x.toFixed(2)}, y=${bbox.y.toFixed(2)}, w=${bbox.width.toFixed(2)}, h=${bbox.height.toFixed(2)})\n`;
+                    });
+                } else {
+                    markerInfo += '  (none)\n';
+                }
+                
+                markerInfo += '\n--- Argument Slots (all editable positions) ---\n';
+                if (lastRenderResponse.argument_slots && lastRenderResponse.argument_slots.length > 0) {
+                    lastRenderResponse.argument_slots.forEach(slot => {
+                        markerInfo += `  Slot ${slot.id}: is_placeholder=${slot.is_placeholder}, hint="${slot.hint}", path=[${slot.path}], role=${slot.role || 'null'}\n`;
+                    });
+                } else {
+                    markerInfo += '  (none)\n';
+                }
+                
+                markerInfo += '\n--- Coordinate System Used ---\n';
+                markerInfo += `  COORDINATE_PREFERENCE = '${COORDINATE_PREFERENCE}'\n`;
+                markerInfo += `  (semantic-first uses argument_bounding_boxes primarily)\n`;
+            } else {
+                markerInfo += '(Render the expression first to see marker data)\n';
+            }
+            
+            content.textContent = '=== AST Structure ===\n\n' + astJSON + '\n\n' + 
                                   '=== Tree View ===\n\n' + treeView + '\n\n' +
                                   '=== Statistics ===\n\n' +
                                   `Placeholders: ${countPlaceholdersInAST(currentAST)}\n` +
                                   `Operations: ${countOperationsInAST(currentAST)}\n` +
                                   `Depth: ${getASTDepth(currentAST)}\n` +
-                                  `Total nodes: ${countNodesInAST(currentAST)}`;
+                                  `Total nodes: ${countNodesInAST(currentAST)}\n\n` +
+                                  markerInfo;
         }
         
         function formatASTAsTree(node, depth) {
@@ -1390,6 +1431,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 
                 const data = await response.json();
                 console.log('renderStructuralEditor: response payload', data);
+                
+                // Store for debug panel
+                lastRenderResponse = data;
                 
                 if (data.success) {
                     let svg = data.svg;
