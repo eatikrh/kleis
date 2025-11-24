@@ -18,9 +18,11 @@ Then open **http://localhost:3000** in your browser for the web editor which now
 - Bidirectional text ↔ structural editing
 - Live MathJax preview
 - Role-aware semantic overlays with keyboard navigation (Tab through markers, Enter to edit)
+- **54 template library** with 98% perfect edit marker alignment
 - **91 gallery examples** (click to load)
 - Symbol palettes (Greek, operators, calculus, etc.)
-- Template library (fractions, matrices, integrals, tensors, bra-ket, etc.)
+- Full support for tensors (Christoffel, Riemann), derivatives (ẋ, ẍ), all matrix types
+- Semantic-first coordinate system for accurate overlay positioning
 
 ### Run Tests
 
@@ -347,6 +349,23 @@ Mathematicians define new algebras with notation, glyphs, and laws. Kleis unders
 ## 📝 License
 
 See `LICENSE` file for details.
+
+---
+
+## 📚 Documentation
+
+### Main Guides
+- **[PALETTE_COMPLETE_GUIDE.md](PALETTE_COMPLETE_GUIDE.md)** - Complete palette guide (54 templates, usage, troubleshooting)
+- **[TECHNICAL_REFERENCE.md](TECHNICAL_REFERENCE.md)** - Technical implementation details (architecture, API, debugging)
+- **[SESSION_FINAL_SUMMARY.md](SESSION_FINAL_SUMMARY.md)** - Recent improvements and accomplishments
+
+### Specific Topics
+- **[ARBITRARY_MATRIX_SOLUTION.md](ARBITRARY_MATRIX_SOLUTION.md)** - Matrix handling and arbitrary sizes
+- **[SERVER_README.md](SERVER_README.md)** - Server API documentation
+- **[TEST_GUIDE.md](TEST_GUIDE.md)** - Testing guide
+
+### Architecture Decision Records
+- See `docs/adr-*.md` for design decisions
 
 ---
 
