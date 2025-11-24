@@ -77,15 +77,45 @@
             border: 2px solid #e0e0e0;
             border-radius: 6px;
             padding: 20px;
-            min-height: 200px;
+            min-height: 400px;
+            max-height: 800px;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: auto;
+            position: relative;
+            resize: both;  /* Allow manual resizing */
         }
         
         .structural-editor:focus-within {
             border-color: #667eea;
+        }
+        
+        .structural-editor svg {
+            transform-origin: center center;
+            transition: transform 0.2s;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            padding: 4px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         /* Typst Overlays */
@@ -387,6 +417,11 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 
                 <!-- Structural Mode Editor -->
                 <div id="structuralEditor" class="structural-editor" style="display:none;">
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoomIn()" title="Zoom In (Cmd +)">+</button>
+                        <button class="zoom-btn" onclick="zoomReset()" title="Reset Zoom (Cmd 0)">⊙</button>
+                        <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out (Cmd -)">−</button>
+                    </div>
                     <span style="color: #999;">Click a template button to start building...</span>
                 </div>
                 
@@ -399,6 +434,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button id="undoBtn" class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="undo()" disabled title="Undo (Cmd+Z)">↶ Undo</button>
                         <button id="redoBtn" class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="redo()" disabled title="Redo (Cmd+Shift+Z)">↷ Redo</button>
                         <button class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="resetStructuralEditor()">Clear</button>
+                    </div>
+                    <div style="clear: both; margin-top: 10px; font-size: 0.85em; color: #999;">
+                        💡 Tip: Drag corner to resize canvas • Use +/− buttons or Cmd+/Cmd− to zoom • Canvas is scrollable
                     </div>
                 </div>
                 
@@ -696,7 +734,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             }
         }
         
-        // Keyboard shortcuts for undo/redo
+        // Keyboard shortcuts for undo/redo and zoom
         document.addEventListener('keydown', (e) => {
             if (editorMode === 'structural') {
                 if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
@@ -705,9 +743,55 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
                     e.preventDefault();
                     redo();
+                } else if ((e.metaKey || e.ctrlKey) && e.key === '=' || e.key === '+') {
+                    e.preventDefault();
+                    zoomIn();
+                } else if ((e.metaKey || e.ctrlKey) && e.key === '-') {
+                    e.preventDefault();
+                    zoomOut();
+                } else if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+                    e.preventDefault();
+                    zoomReset();
                 }
             }
         });
+        
+        // === Zoom Controls ===
+        
+        let currentZoom = 1.0;
+        const ZOOM_STEP = 0.2;
+        const MIN_ZOOM = 0.5;
+        const MAX_ZOOM = 3.0;
+        
+        function zoomIn() {
+            currentZoom = Math.min(MAX_ZOOM, currentZoom + ZOOM_STEP);
+            applyZoom();
+        }
+        
+        function zoomOut() {
+            currentZoom = Math.max(MIN_ZOOM, currentZoom - ZOOM_STEP);
+            applyZoom();
+        }
+        
+        function zoomReset() {
+            currentZoom = 1.0;
+            applyZoom();
+        }
+        
+        function applyZoom() {
+            const svg = document.querySelector('#structuralEditor svg');
+            if (svg) {
+                svg.style.transform = `scale(${currentZoom})`;
+            }
+            
+            // Also scale overlays
+            const overlays = document.querySelectorAll('#arg-overlays rect');
+            overlays.forEach(rect => {
+                // Overlays are inside SVG, so they scale automatically
+            });
+            
+            showStatus(`🔍 Zoom: ${(currentZoom * 100).toFixed(0)}%`, 'info');
+        }
 
         // --- Text Mode Functions ---
         async function renderEquation() {
