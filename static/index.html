@@ -588,6 +588,11 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         let currentAST = null;
         let nextPlaceholderId = 0;
         
+        // FEATURE FLAG: Coordinate system preference
+        // Set to 'semantic' to prefer semantic bounding boxes (better for complex layouts)
+        // Set to 'placeholder' to prefer placeholder positions (current behavior)
+        const COORDINATE_PREFERENCE = 'semantic';  // TESTING: Using semantic boxes first
+        
         function log(msg) { console.log(msg); }
         function showStatus(msg, type) {
             const el = document.getElementById('status');
@@ -736,7 +741,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             power: { Operation: { name: 'sup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'exponent'}}] } },
             subscript: { Operation: { name: 'sub', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}] } },
             sqrt: { Operation: { name: 'sqrt', args: [{Placeholder:{id:0,hint:'radicand'}}] } },
-            nthroot: { Operation: { name: 'nthroot', args: [{Placeholder:{id:0,hint:'index'}}, {Placeholder:{id:1,hint:'radicand'}}] } },
+            nthroot: { Operation: { name: 'nth_root', args: [{Placeholder:{id:0,hint:'index'}}, {Placeholder:{id:1,hint:'radicand'}}] } },
             binomial: { Operation: { name: 'binomial', args: [{Placeholder:{id:0,hint:'n'}}, {Placeholder:{id:1,hint:'k'}}] } },
             factorial: { Operation: { name: 'factorial', args: [{Placeholder:{id:0,hint:'n'}}] } },
             floor: { Operation: { name: 'floor', args: [{Placeholder:{id:0,hint:'x'}}] } },
@@ -896,17 +901,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                             let currentNodeId = null;  // Store node_id for this slot
                             const role = slot.role || null;
                             
-                            // 1. Try placeholder position (SVG coords)
-                            const ph = data.placeholders && data.placeholders.find(p => p.id === slot.id);
-                            if (ph) {
-                                rectX = ph.x - 3;
-                                rectY = ph.y - 3;  // Don't subtract height - backend gives correct Y
-                                rectWidth = ph.width + 6;
-                                rectHeight = ph.height + 6;
-                                foundPosition = true;
-                                console.log(`Using placeholder position: x=${ph.x}, y=${ph.y}, w=${ph.width}, h=${ph.height}`);
-                            } else {
-                                // 2. Try semantic bounding box matched by node path
+                            // Use coordinate system based on COORDINATE_PREFERENCE flag
+                            if (COORDINATE_PREFERENCE === 'semantic') {
+                                // NEW APPROACH: Try semantic bounding box FIRST
                                 const nodePathId = nodeIdFromPath(slot.path || []);
                                 const bbox = data.argument_bounding_boxes && 
                                             data.argument_bounding_boxes.find(b => b.node_id === nodePathId);
@@ -917,8 +914,49 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                     rectWidth = bbox.width + 6;
                                     rectHeight = bbox.height + 6;
                                     foundPosition = true;
-                                    
                                     currentNodeId = bbox.node_id;
+                                    console.log(`✅ Slot ${slot.id}: Using semantic bbox (x=${bbox.x.toFixed(1)}, y=${bbox.y.toFixed(1)}) node=${nodePathId}`);
+                                } else {
+                                    // Fallback to placeholder position
+                                    const ph = data.placeholders && data.placeholders.find(p => p.id === slot.id);
+                                    if (ph) {
+                                        rectX = ph.x - 3;
+                                        rectY = ph.y - 3;
+                                        rectWidth = ph.width + 6;
+                                        rectHeight = ph.height + 6;
+                                        foundPosition = true;
+                                        console.log(`⚠️ Slot ${slot.id}: Fallback to placeholder (x=${ph.x.toFixed(1)}, y=${ph.y.toFixed(1)})`);
+                                    } else {
+                                        console.error(`❌ Slot ${slot.id}: No position found!`);
+                                    }
+                                }
+                            } else {
+                                // CURRENT APPROACH: Try placeholder position FIRST (default)
+                                const ph = data.placeholders && data.placeholders.find(p => p.id === slot.id);
+                                if (ph) {
+                                    rectX = ph.x - 3;
+                                    rectY = ph.y - 3;
+                                    rectWidth = ph.width + 6;
+                                    rectHeight = ph.height + 6;
+                                    foundPosition = true;
+                                    console.log(`✅ Slot ${slot.id}: Using placeholder (x=${ph.x.toFixed(1)}, y=${ph.y.toFixed(1)})`);
+                                } else {
+                                    // Fallback to semantic bounding box
+                                    const nodePathId = nodeIdFromPath(slot.path || []);
+                                    const bbox = data.argument_bounding_boxes && 
+                                                data.argument_bounding_boxes.find(b => b.node_id === nodePathId);
+                                    
+                                    if (bbox) {
+                                        rectX = bbox.x - 3;
+                                        rectY = bbox.y - 3;
+                                        rectWidth = bbox.width + 6;
+                                        rectHeight = bbox.height + 6;
+                                        foundPosition = true;
+                                        currentNodeId = bbox.node_id;
+                                        console.log(`⚠️ Slot ${slot.id}: Using semantic bbox (x=${bbox.x.toFixed(1)}, y=${bbox.y.toFixed(1)}) node=${nodePathId}`);
+                                    } else {
+                                        console.error(`❌ Slot ${slot.id}: No position found!`);
+                                    }
                                 }
                             }
                             
