@@ -532,7 +532,18 @@ fn covariance(x: Expression, y: Expression) -> Expression {
 // === Renderer ===
 /// Render expression with semantic markers (public entry point)
 pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderTarget) -> String {
-    render_expression_internal(expr, ctx, target, "0")
+    let empty_map = std::collections::HashMap::new();
+    render_expression_internal(expr, ctx, target, "0", &empty_map)
+}
+
+/// Render expression with UUID labels for position tracking
+pub fn render_expression_with_ids(
+    expr: &Expression, 
+    ctx: &GlyphContext, 
+    target: &RenderTarget,
+    node_id_to_uuid: &std::collections::HashMap<String, String>
+) -> String {
+    render_expression_internal(expr, ctx, target, "0", node_id_to_uuid)
 }
 
 fn render_literal_chain(
@@ -540,13 +551,23 @@ fn render_literal_chain(
     ctx: &GlyphContext,
     target: &RenderTarget,
     node_id: &str,
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
 ) -> String {
     let rendered_segments: Vec<String> = args
         .iter()
         .enumerate()
         .map(|(i, arg)| {
             let child_id = format!("{}.{}", node_id, i);
-            render_expression_internal(arg, ctx, target, &child_id)
+            let rendered = render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
+            
+            // For Typst: wrap each child with UUID label so they're individually editable
+            if *target == RenderTarget::Typst {
+                if let Some(uuid) = node_id_to_uuid.get(&child_id) {
+                    return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+                }
+            }
+            
+            rendered
         })
         .collect();
 
@@ -562,6 +583,7 @@ fn render_expression_internal(
     ctx: &GlyphContext,
     target: &RenderTarget,
     node_id: &str,
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
 ) -> String {
     match expr {
         Expression::Const(name) => {
@@ -596,20 +618,43 @@ fn render_expression_internal(
                     escape_html(hint),
                     id
                 ),
-                RenderTarget::Typst => "square.stroked".to_string(), // Typst's square symbol - valid as function argument
+                // Use labeled box for SVG extraction via data-typst-label attribute
+                // The syntax #[#box[...]<label>] switches to markup mode where labels work
+                // This produces <g data-typst-label="ph0"> in the SVG output
+                RenderTarget::Typst => format!("#[#box[$square.stroked$]<ph{}>]", id),
             }
         }
         Expression::Operation { name, args } => {
             if name == "literal_chain" {
-                return render_literal_chain(args, ctx, target, node_id);
+                return render_literal_chain(args, ctx, target, node_id, node_id_to_uuid);
             }
             // Special handling for function_call: render as funcname(arg1, arg2, ...)
+            // Wrap arguments (not function name) with UUID for deterministic positioning
             if name == "function_call" && !args.is_empty() {
-                let func_name = render_expression(&args[0], ctx, target);
+                let func_name_id = format!("{}.0", node_id);
+                let func_name = render_expression_internal(&args[0], ctx, target, &func_name_id, node_id_to_uuid);
+                
+                // NOTE: Cannot wrap function name with #[#box[$f$]<id>](...) - breaks Typst syntax
+                // With Option B filtering, function name is hidden anyway (child of function_call parent)
+                
                 let func_args: Vec<String> = args[1..]
                     .iter()
-                    .map(|arg| render_expression(arg, ctx, target))
+                    .enumerate()
+                    .map(|(i, arg)| {
+                        let arg_id = format!("{}.{}", node_id, i + 1);
+                        let rendered = render_expression_internal(arg, ctx, target, &arg_id, node_id_to_uuid);
+                        
+                        // For Typst: wrap each argument with UUID label inside the parentheses
+                        if *target == RenderTarget::Typst {
+                            if let Some(uuid) = node_id_to_uuid.get(&arg_id) {
+                                return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+                            }
+                        }
+                        rendered
+                    })
                     .collect();
+                    
+                // Return function call with individually-labeled arguments
                 return format!("{}({})", func_name, func_args.join(", "));
             }
 
@@ -664,15 +709,48 @@ fn render_expression_internal(
                 }
             };
 
+            // Determine which argument indices should NOT be wrapped with box labels
+            // because they appear in special Typst contexts where #[#box[...]<label>] breaks
+            let skip_wrap_indices: Vec<usize> = match name.as_str() {
+                // int_bounds: arg 3 is the variable which appears after "dif"
+                "int_bounds" => vec![3],
+                // double_integral, triple_integral: UUID wrapping works with dif
+                "double_integral" => vec![],
+                "triple_integral" => vec![],
+                // mathrm: uses upright("arg") - wrapping goes inside string, renders as literal text
+                "mathrm" => vec![0],
+                // text: similar issue
+                "text" => vec![0],
+                _ => vec![],
+            };
+            
             let rendered_args: Vec<String> = args
                 .iter()
                 .enumerate()
                 .map(|(i, arg)| {
                     // Generate child node ID: parent.index
                     let child_id = format!("{}.{}", node_id, i);
-                    render_expression_internal(arg, ctx, target, &child_id) // RECURSION
-                    // Note: Metadata markers don't work in Typst math mode
-                    // We'll use two-pass rendering instead for semantic grouping
+                    let rendered = render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
+                    
+                    // For Typst: wrap arguments with labeled boxes for position tracking
+                    // This enables edit markers on ALL filled content (Const, Object, Operations)
+                    // Skip wrapping for arguments in special positions (like after "dif")
+                    // Also skip if the child already handled its own wrapping (function_call, literal_chain)
+                    let child_handles_own_wrapping = matches!(arg, Expression::Operation { name, .. } 
+                        if name == "function_call" || name == "literal_chain");
+                    
+                    if *target == RenderTarget::Typst && !skip_wrap_indices.contains(&i) && !child_handles_own_wrapping {
+                        // Check if this node has a UUID in the map
+                        if let Some(uuid) = node_id_to_uuid.get(&child_id) {
+                            // Wrap with UUID label for deterministic position tracking
+                            format!("#[#box[${}$]<id{}>]", rendered, uuid)
+                        } else {
+                            // No UUID available, return unwrapped
+                            rendered
+                        }
+                    } else {
+                        rendered
+                    }
                 })
                 .collect();
 
@@ -737,7 +815,9 @@ fn render_expression_internal(
                 result = result.replace("{var}", second); // for limits
                 result = result.replace("{subscript}", second);
                 // Don't replace {idx2} here for operations that use arg 2 for idx2
+                // riemann and gamma use {idx2} for arg[2], not arg[1]
                 if name != "double_integral" && name != "triple_integral" && name != "congruent_mod"
+                    && name != "riemann" && name != "gamma"
                 {
                     result = result.replace("{idx2}", second); // general index
                 }
@@ -2444,7 +2524,8 @@ pub fn build_default_context() -> GlyphContext {
         "R^({idx1})_({idx2} {idx3} {idx4})".to_string(),
     );
     typst_templates.insert("zeta".to_string(), "zeta({arg})".to_string());
-    typst_templates.insert("gamma".to_string(), "Gamma({arg})".to_string());
+    // Christoffel symbol: Γ^idx1_{idx2 idx3}
+    typst_templates.insert("gamma".to_string(), "Gamma^({idx1})_({idx2} {idx3})".to_string());
     typst_templates.insert("power".to_string(), "{base}^({exponent})".to_string());
     typst_templates.insert("index".to_string(), "{base}_({subscript})".to_string());
     typst_templates.insert(

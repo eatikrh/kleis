@@ -80,9 +80,11 @@
             min-height: 400px;
             max-height: 800px;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            align-items: flex-start;  /* Changed from center to top-align */
+            justify-content: flex-start;  /* Changed from center to left-align */
             overflow: auto;
+            overflow-x: auto;  /* Explicit horizontal scroll */
+            overflow-y: auto;  /* Explicit vertical scroll */
             position: relative;
             resize: both;  /* Allow manual resizing */
         }
@@ -94,6 +96,10 @@
         .structural-editor svg {
             transform-origin: center center;
             transition: transform 0.2s;
+            min-width: 300px;
+            min-height: 100px;
+            max-width: 100%;
+            height: auto;
         }
         
         .zoom-controls {
@@ -661,7 +667,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         // FEATURE FLAG: Coordinate system preference
         // Set to 'semantic' to prefer semantic bounding boxes (better for complex layouts)
         // Set to 'placeholder' to prefer placeholder positions (current behavior)
-        const COORDINATE_PREFERENCE = 'semantic';  // TESTING: Using semantic boxes first
+        const COORDINATE_PREFERENCE = 'placeholder';  // Use placeholder positions (span-based IDs)
         
         // Active edit marker tracking
         let activeEditMarker = null;  // {id, path, nodeId}
@@ -859,9 +865,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             
             let currentIndex = -1;
             if (activeEditMarker) {
-                // Find currently active marker
+                // Find currently active marker (compare as strings)
                 currentIndex = markers.findIndex(m => 
-                    parseInt(m.getAttribute('data-slot-id')) === activeEditMarker.id
+                    m.getAttribute('data-slot-id') === activeEditMarker.id
                 );
             }
             
@@ -870,7 +876,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             const nextMarker = markers[nextIndex];
             
             // Extract data from marker
-            const slotId = parseInt(nextMarker.getAttribute('data-slot-id'));
+            const slotId = nextMarker.getAttribute('data-slot-id'); // Keep as string (UUID or ph{number})
             const pathStr = nextMarker.getAttribute('data-path');
             const nodeId = nextMarker.getAttribute('data-node-id');
             const path = pathStr ? JSON.parse(pathStr.replace(/&quot;/g, '"')) : [];
@@ -897,8 +903,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             
             let currentIndex = -1;
             if (activeEditMarker) {
+                // Compare as strings
                 currentIndex = markers.findIndex(m => 
-                    parseInt(m.getAttribute('data-slot-id')) === activeEditMarker.id
+                    m.getAttribute('data-slot-id') === activeEditMarker.id
                 );
             }
             
@@ -907,7 +914,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             const prevMarker = markers[prevIndex];
             
             // Extract data from marker
-            const slotId = parseInt(prevMarker.getAttribute('data-slot-id'));
+            const slotId = prevMarker.getAttribute('data-slot-id'); // Keep as string (UUID or ph{number})
             const pathStr = prevMarker.getAttribute('data-path');
             const nodeId = prevMarker.getAttribute('data-node-id');
             const path = pathStr ? JSON.parse(pathStr.replace(/&quot;/g, '"')) : [];
@@ -1451,7 +1458,34 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                             globalOffsetY = parseFloat(svgMatch[2]);
                         }
                         
+                        // Check if this is a matrix operation - if so, infer grid positions
+                const isMatrix = currentAST.Operation && 
+                               (currentAST.Operation.name.startsWith('matrix') || 
+                                currentAST.Operation.name.startsWith('pmatrix') ||
+                                currentAST.Operation.name.startsWith('vmatrix'));
+                
+                        // OPTION B IMPLEMENTATION: Only show markers for leaf nodes (not parent operations)
+                        // Build a set of parent node IDs (nodes that have children)
+                        const parentNodeIds = new Set();
+                        data.argument_slots.forEach(slot => {
+                            const nodeId = nodeIdFromPath(slot.path || []);
+                            // If any slot's path is longer and starts with this nodeId, it's a parent
+                            data.argument_slots.forEach(otherSlot => {
+                                const otherNodeId = nodeIdFromPath(otherSlot.path || []);
+                                if (otherNodeId.startsWith(nodeId + '.')) {
+                                    parentNodeIds.add(nodeId);
+                                }
+                            });
+                        });
+                        console.log(`Identified ${parentNodeIds.size} parent nodes (will hide their markers)`);
+                
                         data.argument_slots.forEach((slot, index) => {
+                            // FILTER: Skip parent operations, only show leaf nodes
+                            const nodeId = nodeIdFromPath(slot.path || []);
+                            if (parentNodeIds.has(nodeId)) {
+                                console.log(`  Skipping parent node ${nodeId} (has children)`);
+                                return; // Skip this slot
+                            }
                             let rectX, rectY, rectWidth, rectHeight;
                             let foundPosition = false;
                             let currentNodeId = null;  // Store node_id for this slot
@@ -1487,8 +1521,17 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                     }
                                 }
                             } else {
-                                // CURRENT APPROACH: Try placeholder position FIRST (default)
-                                const ph = data.placeholders && data.placeholders.find(p => p.id === slot.id);
+                // CURRENT APPROACH: Try placeholder position FIRST (default)
+                // For placeholder slots, extract numeric ID from "ph{number}" format
+                // For filled slots (UUID), try matching by position in placeholder array
+                let searchId = null;
+                if (slot.is_placeholder && typeof slot.id === 'string' && slot.id.startsWith('ph')) {
+                    searchId = parseInt(slot.id.substring(2));
+                } else if (typeof slot.id === 'number') {
+                    searchId = slot.id;
+                }
+                
+                const ph = searchId !== null && data.placeholders && data.placeholders.find(p => p.id === searchId);
                                 if (ph) {
                                     rectX = ph.x - 3;
                                     rectY = ph.y - 3;
@@ -1503,15 +1546,103 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                                 data.argument_bounding_boxes.find(b => b.node_id === nodePathId);
                                     
                                     if (bbox) {
-                                        rectX = bbox.x - 3;
-                                        rectY = bbox.y - 3;
-                                        rectWidth = bbox.width + 6;
-                                        rectHeight = bbox.height + 6;
+                                        // Add more padding to prevent bunching
+                                        const padding = 5;
+                                        rectX = bbox.x - padding;
+                                        rectY = bbox.y - padding;
+                                        rectWidth = bbox.width + (padding * 2);
+                                        rectHeight = bbox.height + (padding * 2);
                                         foundPosition = true;
                                         currentNodeId = bbox.node_id;
                                         console.log(`⚠️ Slot ${slot.id}: Using semantic bbox (x=${bbox.x.toFixed(1)}, y=${bbox.y.toFixed(1)}) node=${nodePathId}`);
                                     } else {
-                                        console.error(`❌ Slot ${slot.id}: No position found!`);
+                                        // Last resort: infer position from grid structure
+                                        // For matrix cells, use existing placeholder positions to infer grid
+                                        if (data.placeholders && data.placeholders.length >= 2) {
+                                            const xCoords = [...new Set(data.placeholders.map(p => Math.round(p.x / 10) * 10))].sort((a,b) => a-b);
+                                            const yCoords = [...new Set(data.placeholders.map(p => Math.round(p.y / 10) * 10))].sort((a,b) => a-b);
+                                            
+                                            if (xCoords.length > 0 && yCoords.length > 0) {
+                                                // Assume row-major order based on slot path
+                                                const pathIdx = slot.path && slot.path.length > 0 ? slot.path[slot.path.length - 1] : index;
+                                                const cols = xCoords.length;
+                                                const rowIdx = Math.floor(pathIdx / cols);
+                                                const colIdx = pathIdx % cols;
+                                                
+                                                if (colIdx < xCoords.length && rowIdx < yCoords.length) {
+                                                    // Find actual x/y from nearest placeholder in that grid position
+                                                    const nearestPh = data.placeholders.find(p => 
+                                                        Math.abs(Math.round(p.x / 10) * 10 - xCoords[colIdx]) < 5 &&
+                                                        Math.abs(Math.round(p.y / 10) * 10 - yCoords[rowIdx]) < 5
+                                                    );
+                                                    
+                                                    if (nearestPh) {
+                                                        rectX = nearestPh.x - 3;
+                                                        rectY = nearestPh.y - 3;
+                                                    } else {
+                                                        rectX = xCoords[colIdx] - 3;
+                                                        rectY = yCoords[rowIdx] - 3;
+                                                    }
+                                                    rectWidth = 24;
+                                                    rectHeight = 24;
+                                                    foundPosition = true;
+                                                    console.log(`🔧 Slot ${slot.id}: Inferred from grid (row=${rowIdx}, col=${colIdx})`);
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (!foundPosition) {
+                                            console.error(`❌ Slot ${slot.id}: No position found!`);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Matrix-specific fix: If position seems wrong or missing, infer from grid
+                            if (isMatrix && (!foundPosition || (foundPosition && index >= 2))) {
+                                // For matrix2x2: 4 args (2 rows × 2 cols)
+                                // For matrix3x3: 9 args (3 rows × 3 cols)
+                                const isMatrix2x2 = currentAST.Operation.name.includes('2x2');
+                                const isMatrix3x3 = currentAST.Operation.name.includes('3x3');
+                                const cols = isMatrix2x2 ? 2 : (isMatrix3x3 ? 3 : 2);
+                                
+                                // Get first arg's nested path to understand matrix structure
+                                const firstArg = data.argument_slots[0];
+                                const hasNestedOps = firstArg && firstArg.path && firstArg.path.length > 1;
+                                
+                                if (hasNestedOps) {
+                                    // Matrix contains nested operations (like sub)
+                                    // Use first few known-good bounding boxes to establish grid
+                                    const knownGoodBoxes = data.argument_bounding_boxes
+                                        .filter(b => b.node_id.match(/^0\.\d+\.0$/));  // Top-level args
+                                    
+                                    if (knownGoodBoxes.length >= 2) {
+                                        // Calculate cell matrix index from slot path
+                                        const cellIndex = slot.path[0];  // Matrix arg index
+                                        const row = Math.floor(cellIndex / cols);
+                                        const col = cellIndex % cols;
+                                        
+                                        // Use first cell as anchor
+                                        const anchor = knownGoodBoxes[0];
+                                        const colSpacing = knownGoodBoxes.length > 1 ? 
+                                                         knownGoodBoxes[1].x - knownGoodBoxes[0].x : 43;
+                                        const rowSpacing = 28.7;  // Typical Typst matrix row spacing
+                                        
+                                        rectX = anchor.x + (col * colSpacing);
+                                        rectY = anchor.y + (row * rowSpacing);
+                                        rectWidth = anchor.width;
+                                        rectHeight = anchor.height;
+                                        
+                                        // Adjust for subscript role
+                                        if (role === 'subscript') {
+                                            rectX += 13;
+                                            rectY += 6;
+                                            rectWidth *= 0.5;
+                                            rectHeight *= 0.5;
+                                        }
+                                        
+                                        foundPosition = true;
+                                        console.log(`🔧 Slot ${slot.id}: Matrix grid inference (row=${row}, col=${col}, x=${rectX.toFixed(1)}, y=${rectY.toFixed(1)})`);
                                     }
                                 }
                             }
@@ -1558,8 +1689,8 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                     class="arg-overlay" data-slot-id="${slot.id}" data-path="${pathStr}" data-node-id="${nodeId}"
                                     style="cursor: pointer;"
                                     tabindex="0" focusable="true"
-                                    onclick="handleSlotClick(${slot.id}, ${pathStr}, '${nodeId}')"
-                                    onkeydown="handleSlotKeydown(event, ${slot.id}, ${pathStr}, '${nodeId}')" />`;
+                                    onclick="handleSlotClick('${slot.id}', ${pathStr}, '${nodeId}')"
+                                    onkeydown="handleSlotKeydown(event, '${slot.id}', ${pathStr}, '${nodeId}')" />`;
                                 overlayElements.push(rect);
                             }
                         });
