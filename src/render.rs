@@ -662,7 +662,16 @@ fn render_expression_internal(
             if name == "minus" && args.len() == 2 {
                 if let Expression::Const(val) = &args[0] {
                     if val == "0" {
-                        let operand = render_expression(&args[1], ctx, target);
+                        let operand_id = format!("{}.1", node_id);
+                        let operand = render_expression_internal(&args[1], ctx, target, &operand_id, node_id_to_uuid);
+                        
+                        // For Typst: wrap the negated operand with UUID if available
+                        if *target == RenderTarget::Typst {
+                            if let Some(uuid) = node_id_to_uuid.get(&operand_id) {
+                                return format!("-#[#box[${}$]<id{}>]", operand, uuid);
+                            }
+                        }
+                        
                         return format!("-{}", operand);
                     }
                 }
