@@ -353,14 +353,63 @@ async fn render_typst_handler(
             }
 
             // Get unfilled placeholder IDs for Typst square rendering
+            // Parse "ph{number}" format back to usize
             let unfilled_ids: Vec<usize> = arg_slots
                 .iter()
                 .filter(|s| s.is_placeholder)
-                .map(|s| s.id)
+                .filter_map(|s| {
+                    if s.id.starts_with("ph") {
+                        s.id[2..].parse::<usize>().ok()
+                    } else {
+                        None
+                    }
+                })
                 .collect();
+            
+            // For all_slot_ids, we only care about placeholders (which have numeric IDs)
+            // Filled slots have UUIDs which don't map to Typst placeholder positions
+            let all_slot_ids = unfilled_ids.clone();
+
+            // Build node_id -> UUID map from argument slots
+            // Truncate UUIDs with collision detection and regeneration
+            let mut node_id_to_uuid = std::collections::HashMap::new();
+            let mut used_truncated = std::collections::HashSet::new();
+            
+            for slot in &arg_slots {
+                let node_id = slot.path.iter().enumerate()
+                    .map(|(depth, &idx)| if depth == 0 { format!("{}", idx) } else { format!(".{}", idx) })
+                    .collect::<String>();
+                let node_id = if node_id.is_empty() { "0".to_string() } else { format!("0.{}", node_id) };
+                
+                // Only process filled slots (not placeholders)
+                if !slot.is_placeholder {
+                    // Truncate UUID to first 8 chars
+                    let mut truncated = slot.id.chars().take(8).collect::<String>();
+                    
+                    // Check for collision - regenerate if needed
+                    let mut attempts = 0;
+                    while used_truncated.contains(&truncated) && attempts < 100 {
+                        eprintln!("⚠️  UUID collision detected for {}, regenerating...", truncated);
+                        let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
+                        truncated = new_uuid.chars().take(8).collect::<String>();
+                        attempts += 1;
+                    }
+                    
+                    if attempts >= 100 {
+                        eprintln!("❌ Failed to generate unique 8-char UUID after 100 attempts, using full UUID");
+                        truncated = uuid::Uuid::new_v4().to_string().replace("-", "");
+                    }
+                    
+                    used_truncated.insert(truncated.clone());
+                    node_id_to_uuid.insert(node_id, truncated);
+                }
+            }
+            
+            eprintln!("Built node_id->UUID map with {} entries", node_id_to_uuid.len());
 
             // Compile with Typst using semantic bounding box extraction
-            match kleis::math_layout::compile_with_semantic_boxes(&expr, &unfilled_ids) {
+            // Pass both unfilled_ids (for placeholder squares) and all_slot_ids (for filled content)
+            match kleis::math_layout::compile_with_semantic_boxes_and_slots(&expr, &unfilled_ids, &all_slot_ids, &node_id_to_uuid) {
                 Ok(output) => {
                     let response = serde_json::json!({
                         "svg": output.svg,
@@ -410,7 +459,7 @@ async fn render_typst_handler(
 // Argument slot info (for tracking editable regions)
 #[derive(Debug, Clone, serde::Serialize)]
 struct ArgumentSlot {
-    id: usize,            // Placeholder ID if unfilled, or auto-assigned ID
+    id: String,           // UUID for filled values, or placeholder ID as string
     path: Vec<usize>,     // Path in AST (e.g., [0] = first arg of root operation)
     hint: String,         // Description of this slot
     is_placeholder: bool, // True if empty placeholder, false if filled
@@ -420,15 +469,13 @@ struct ArgumentSlot {
 // Collect ALL argument slots from expression (both empty and filled)
 fn collect_argument_slots(expr: &kleis::ast::Expression) -> Vec<ArgumentSlot> {
     let mut slots = Vec::new();
-    let mut next_auto_id = 1000; // Auto IDs for filled args start at 1000
-    collect_slots_recursive(expr, &mut slots, &mut next_auto_id, vec![], None);
+    collect_slots_recursive(expr, &mut slots, vec![], None);
     slots
 }
 
 fn collect_slots_recursive(
     expr: &kleis::ast::Expression,
     slots: &mut Vec<ArgumentSlot>,
-    next_auto_id: &mut usize,
     path: Vec<usize>,
     role: Option<String>,
 ) {
@@ -436,9 +483,9 @@ fn collect_slots_recursive(
 
     match expr {
         Expression::Placeholder { id, hint } => {
-            // Empty placeholder - use its ID
+            // Empty placeholder - convert ID to string
             slots.push(ArgumentSlot {
-                id: *id,
+                id: format!("ph{}", id),  // Prefix with "ph" to distinguish from UUIDs
                 path: path.clone(),
                 hint: hint.clone(),
                 is_placeholder: true,
@@ -446,23 +493,33 @@ fn collect_slots_recursive(
             });
         }
         Expression::Const(value) | Expression::Object(value) => {
-            // Filled value - assign auto ID
+            // Filled value - generate UUID without dashes
+            let uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
             slots.push(ArgumentSlot {
-                id: *next_auto_id,
+                id: uuid,
                 path: path.clone(),
                 hint: format!("value: {}", value),
                 is_placeholder: false,
                 role: role.clone(),
             });
-            *next_auto_id += 1;
         }
         Expression::Operation { name, args } => {
-            // Each arg is a slot
+            // Create a slot for the operation itself (for bounding box positioning)
+            let uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
+            slots.push(ArgumentSlot {
+                id: uuid,
+                path: path.clone(),
+                hint: format!("operation: {}", name),
+                is_placeholder: false,
+                role: role.clone(),
+            });
+            
+            // Recursively process each argument
             for (i, arg) in args.iter().enumerate() {
                 let mut child_path = path.clone();
                 child_path.push(i);
                 let child_role = determine_arg_role(name, i);
-                collect_slots_recursive(arg, slots, next_auto_id, child_path, child_role);
+                collect_slots_recursive(arg, slots, child_path, child_role);
             }
         }
     }
