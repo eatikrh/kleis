@@ -1328,7 +1328,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             minus: { Operation: { name: 'minus', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             times: { Operation: { name: 'scalar_multiply', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             negate: { Operation: { name: 'minus', args: [{Const:'0'}, {Placeholder:{id:0,hint:'value'}}] } },
-            plus_minus_literal: { Object: '±' },
+            plus_minus_literal: { Object: '\\pm' },
             
             // Calculus
             integral: { Operation: { name: 'int_bounds', args: [{Placeholder:{id:0,hint:'integrand'}}, {Placeholder:{id:1,hint:'lower'}}, {Placeholder:{id:2,hint:'upper'}}, {Placeholder:{id:3,hint:'variable'}}] } },

@@ -439,13 +439,118 @@ impl Expression {
 
 ---
 
+## Multi-Valued Operations: The ± Problem
+
+### The Challenge
+
+The quadratic formula notation presents a fundamental semantic issue:
+
+```
+x = (-b ± √(b² - 4ac)) / (2a)
+```
+
+The `±` operator is **syntactic sugar** for two separate equations:
+```
+x₁ = (-b + √(b² - 4ac)) / (2a)
+x₂ = (-b - √(b² - 4ac)) / (2a)
+```
+
+**Design question**: How does Kleis represent multi-valued results?
+
+### Option 1: Multi-Valued Type
+
+Extend the `Value` enum to support solution sets:
+
+```rust
+pub enum Value {
+    Scalar(f64),
+    Complex(f64, f64),
+    Vector(Vec<Value>),
+    Matrix(Vec<Vec<Value>>),
+    MultiValue(Vec<Value>),  // For ± results
+    Set(HashSet<Value>),      // For solution sets
+    Field(FieldData),
+    Symbolic(Expression),
+}
+```
+
+Evaluation semantics:
+```rust
+Operation("plus_minus", [a, b]) → MultiValue([
+    eval(a) + eval(b),
+    eval(a) - eval(b)
+])
+```
+
+**Issue**: What does `x = MultiValue([3, 2])` mean?
+- Is `x` a set `{2, 3}`?
+- Is it two separate bindings `x₁=2, x₂=3`?
+- Is it a constraint `x ∈ {2, 3}`?
+
+### Option 2: Solver Expansion
+
+Treat equations with `±` as **constraints to solve**, not direct assignments:
+
+```rust
+solve(x, equation_with_pm) → Context {
+    x: MultiValue([root1, root2])
+}
+```
+
+The `±` operator only has meaning in a **solving context**, not general evaluation.
+
+### Option 3: Indexed Expansion
+
+Parser/evaluator automatically expands:
+```
+x = expr with ±
+```
+Into:
+```
+x₁ = expr with +
+x₂ = expr with -
+```
+
+Returns a `Context` with multiple bindings.
+
+### Recommended Approach
+
+**Two-phase interpretation**:
+
+1. **Parsing**: Recognize `\pm` as `Operation("plus_minus", [a, b])`
+2. **Evaluation**:
+   - Direct eval: `plus_minus(a, b) → MultiValue([a+b, a-b])`
+   - In equation context: Recognize as constraint, invoke solver
+   - Type system: `x: Scalar | MultiValue<Scalar>`
+
+### Parser Requirements
+
+To support `x = \frac{-b \pm \sqrt{...}}{2a}`:
+
+1. Add `\pm` token recognition
+2. Parse as binary operator: `plus_minus(left, right)`
+3. Handle precedence (binds tighter than `+`, looser than unary `-`)
+4. Extend equation solver to detect and expand multi-valued operations
+
+### Future Work
+
+- Define semantics for `MultiValue` in arithmetic (distribute? error? symbolic?)
+- Extend type system to track solution multiplicity
+- Add `solve()` operation that returns all roots/solutions
+- Consider constraint satisfaction vs direct evaluation
+
+**Status**: Design exploration - awaiting decision on Kleis equation semantics
+
+---
+
 ## Next Steps
 
 1. **Implement minimal eval** - Just `substitute`, `eval`, `typecheck`
 2. **Add Context struct** - Bindings + type information
 3. **Test with physics examples** - E = mc², F = ma, etc.
-4. **Add simplifier later** - Per ADR-002, keep it separate
-5. **Extend as needed** - `apply`, `hold`, etc. when use cases emerge
+4. **Design multi-valued semantics** - Decide on ± operator behavior
+5. **Add simplifier later** - Per ADR-002, keep it separate
+6. **Extend as needed** - `apply`, `hold`, etc. when use cases emerge
 
 This gives Kleis a **clean, type-first evaluation model** that's familiar to users of existing CAS systems but more principled about types and evaluation control.
 
