@@ -1,0 +1,19 @@
+use kleis::ast::Expression;
+use kleis::render::{RenderTarget, build_default_context, render_expression};
+
+fn main() {
+    // Test fraction with metadata markers
+    let frac = Expression::Operation {
+        name: "frac".to_string(),
+        args: vec![
+            Expression::Object("a".to_string()),
+            Expression::Object("b".to_string()),
+        ],
+    };
+
+    let ctx = build_default_context();
+    let typst = render_expression(&frac, &ctx, &RenderTarget::Typst);
+
+    println!("Typst with metadata markers:");
+    println!("{}", typst);
+}

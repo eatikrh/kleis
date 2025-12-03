@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kleis Template Test Suite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .summary {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 15px;
+        }
+        
+        .stat {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .stat.success { color: #28a745; }
+        .stat.error { color: #dc3545; }
+        .stat.warning { color: #ffc107; }
+        
+        .stat-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            display: block;
+            margin-top: 5px;
+        }
+        
+        .test-section {
+            padding: 20px;
+        }
+        
+        .category {
+            margin-bottom: 30px;
+        }
+        
+        .category-title {
+            font-size: 1.3em;
+            color: #667eea;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .test-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+        
+        .test-card.success {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        .test-card.error {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .test-card.warning {
+            border-color: #ffc107;
+            background: #fffbf0;
+        }
+        
+        .template-name {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .template-latex {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75em;
+            color: #6c757d;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+        
+        .test-result {
+            font-size: 0.85em;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        
+        .test-result.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .test-result.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .test-result.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-indicator.success { background: #28a745; }
+        .status-indicator.error { background: #dc3545; }
+        .status-indicator.warning { background: #ffc107; }
+        
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 10px;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        .progress {
+            margin: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧪 Kleis Template Test Suite</h1>
+            <p>Automated testing of all 54 palette templates</p>
+            <button onclick="runAllTests()">▶️ Run All Tests</button>
+            <button onclick="location.reload()">🔄 Reset</button>
+        </header>
+        
+        <div class="summary" id="summary">
+            <h2>Test Results</h2>
+            <div class="stats">
+                <div>
+                    <span class="stat success" id="passCount">0</span>
+                    <span class="stat-label">Passed</span>
+                </div>
+                <div>
+                    <span class="stat error" id="failCount">0</span>
+                    <span class="stat-label">Failed</span>
+                </div>
+                <div>
+                    <span class="stat warning" id="warnCount">0</span>
+                    <span class="stat-label">Warnings</span>
+                </div>
+                <div>
+                    <span class="stat" id="totalCount">54</span>
+                    <span class="stat-label">Total</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="progress" id="progress" style="display:none;">
+            Testing... <span id="currentTest"></span>
+        </div>
+        
+        <div class="test-section">
+            <div class="category">
+                <h2 class="category-title">📐 Basic Operations</h2>
+                <div class="test-grid" id="basic-tests"></div>
+            </div>
+            
+            <div class="category">
+                <h2 class="category-title">∫ Calculus</h2>
+                <div class="test-grid" id="calculus-tests"></div>
+            </div>
+            
+            <div class="category">
+                <h2 class="category-title">🔢 Matrices</h2>
+                <div class="test-grid" id="matrix-tests"></div>
+            </div>
+            
+            <div class="category">
+                <h2 class="category-title">⚛️ Quantum Mechanics</h2>
+                <div class="test-grid" id="quantum-tests"></div>
+            </div>
+            
+            <div class="category">
+                <h2 class="category-title">➡️ Vectors</h2>
+                <div class="test-grid" id="vector-tests"></div>
+            </div>
+            
+            <div class="category">
+                <h2 class="category-title">📊 Functions</h2>
+                <div class="test-grid" id="function-tests"></div>
+            </div>
+            
+            <div class="category">
+                <h2 class="category-title">🎨 Accents</h2>
+                <div class="test-grid" id="accent-tests"></div>
+            </div>
+            
+            <div class="category">
+                <h2 class="category-title">📐 Tensors</h2>
+                <div class="test-grid" id="tensor-tests"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        
+        const templates = {
+            'basic': [
+                { name: 'Fraction', template: '\\frac{□}{□}', astName: 'fraction' },
+                { name: 'Square Root', template: '\\sqrt{□}', astName: 'sqrt' },
+                { name: 'Nth Root', template: '\\sqrt[□]{□}', astName: 'nthroot' },
+                { name: 'Power', template: 'x^{□}', astName: 'power' },
+                { name: 'Subscript', template: 'x_{□}', astName: 'subscript' },
+                { name: 'Mixed Index', template: 'x^{□}_{□}', astName: 'tensor_mixed' },
+                { name: 'Binomial', template: '\\binom{□}{□}', astName: 'binomial' },
+                { name: 'Factorial', template: '□!', astName: 'factorial' },
+                { name: 'Floor', template: '\\lfloor □ \\rfloor', astName: 'floor' },
+                { name: 'Ceiling', template: '\\lceil □ \\rceil', astName: 'ceiling' },
+            ],
+            'calculus': [
+                { name: 'Integral', template: '\\int_{□}^{□} □ \\, dx', astName: 'integral' },
+                { name: 'Sum', template: '\\sum_{□}^{□} □', astName: 'sum' },
+                { name: 'Product', template: '\\prod_{□}^{□} □', astName: 'product' },
+                { name: 'Limit', template: '\\lim_{□ \\to □} □', astName: 'limit' },
+                { name: 'Partial', template: '\\partial_{□} □', astName: 'partial' },
+                { name: 'Derivative', template: '\\frac{d □}{d □}', astName: 'derivative' },
+                { name: 'Gradient', template: '\\nabla □', astName: 'gradient' },
+            ],
+            'matrix': [
+                { name: 'Matrix 2×2 [brackets]', template: '\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}', astName: 'matrix2x2' },
+                { name: 'Matrix 3×3 [brackets]', template: '\\begin{bmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{bmatrix}', astName: 'matrix3x3' },
+                { name: 'Matrix 2×2 (parens)', template: '\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}', astName: 'pmatrix2x2' },
+                { name: 'Matrix 3×3 (parens)', template: '\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}', astName: 'pmatrix3x3' },
+                { name: 'Determinant 2×2', template: '\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}', astName: 'vmatrix2x2' },
+                { name: 'Determinant 3×3', template: '\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}', astName: 'vmatrix3x3' },
+            ],
+            'quantum': [
+                { name: 'Ket', template: '|□\\rangle', astName: 'ket' },
+                { name: 'Bra', template: '\\langle□|', astName: 'bra' },
+                { name: 'Inner Product', template: '\\langle□|□\\rangle', astName: 'inner' },
+                { name: 'Outer Product', template: '|□\\rangle\\langle□|', astName: 'outer' },
+                { name: 'Commutator', template: '[□, □]', astName: 'commutator' },
+                { name: 'Expectation', template: '\\langle □ \\rangle', astName: 'expectation' },
+            ],
+            'vector': [
+                { name: 'Bold Vector', template: '\\mathbf{v}', astName: 'vector_bold' },
+                { name: 'Vector Arrow', template: '\\vec{v}', astName: 'vector_arrow' },
+                { name: 'Dot Product', template: 'a \\cdot b', astName: 'dot' },
+                { name: 'Cross Product', template: 'a \\times b', astName: 'cross' },
+                { name: 'Norm', template: '\\|v\\|', astName: 'norm' },
+                { name: 'Absolute Value', template: '|x|', astName: 'abs' },
+            ],
+            'function': [
+                { name: 'Sine', template: '\\sin(□)', astName: 'sin' },
+                { name: 'Cosine', template: '\\cos(□)', astName: 'cos' },
+                { name: 'Tangent', template: '\\tan(□)', astName: 'tan' },
+                { name: 'Arcsine', template: '\\arcsin(□)', astName: 'arcsin' },
+                { name: 'Arccosine', template: '\\arccos(□)', astName: 'arccos' },
+                { name: 'Arctangent', template: '\\arctan(□)', astName: 'arctan' },
+                { name: 'Natural Log', template: '\\ln(□)', astName: 'ln' },
+                { name: 'Logarithm', template: '\\log(□)', astName: 'log' },
+                { name: 'Exponential', template: '\\exp(□)', astName: 'exp' },
+                { name: 'e to power', template: 'e^{□}', astName: 'exp_e' },
+            ],
+            'accent': [
+                { name: 'Dot', template: '\\dot{□}', astName: 'dot_accent' },
+                { name: 'Double Dot', template: '\\ddot{□}', astName: 'ddot_accent' },
+                { name: 'Hat', template: '\\hat{□}', astName: 'hat' },
+                { name: 'Bar', template: '\\bar{□}', astName: 'bar' },
+                { name: 'Tilde', template: '\\tilde{□}', astName: 'tilde' },
+            ],
+            'tensor': [
+                { name: 'Christoffel', template: '\\Gamma^{□}_{□ □}', astName: 'christoffel' },
+                { name: 'Riemann', template: 'R^{□}_{□ □ □}', astName: 'riemann' },
+            ],
+        };
+        
+        let passCount = 0;
+        let failCount = 0;
+        let warnCount = 0;
+        let testResults = [];
+        
+        async function testTemplate(category, template) {
+            const card = document.createElement('div');
+            card.className = 'test-card';
+            
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'template-name';
+            nameDiv.textContent = template.name;
+            
+            const latexDiv = document.createElement('div');
+            latexDiv.className = 'template-latex';
+            latexDiv.textContent = template.template;
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-result';
+            
+            card.appendChild(nameDiv);
+            card.appendChild(latexDiv);
+            card.appendChild(resultDiv);
+            
+            document.getElementById(category + '-tests').appendChild(card);
+            
+            try {
+                // Test 1: Check AST template exists
+                if (!window.astTemplates || !window.astTemplates[template.astName]) {
+                    throw new Error(`AST template '${template.astName}' not found`);
+                }
+                
+                const astTemplate = window.astTemplates[template.astName];
+                
+                // Test 2: Verify structure
+                if (!astTemplate.Operation && !astTemplate.Placeholder) {
+                    throw new Error('Invalid AST structure');
+                }
+                
+                // Test 3: Check for placeholders
+                let placeholderCount = 0;
+                if (astTemplate.Operation && astTemplate.Operation.args) {
+                    placeholderCount = countPlaceholders(astTemplate.Operation.args);
+                }
+                
+                // Test 4: Send to backend
+                const response = await fetch(`${API_BASE}/render_typst`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ast: astTemplate })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const hasOverlays = data.argument_slots && data.argument_slots.length > 0;
+                    const hasPlaceholders = data.placeholders && data.placeholders.length > 0;
+                    
+                    if (hasOverlays || hasPlaceholders) {
+                        card.classList.add('success');
+                        const indicator = document.createElement('span');
+                        indicator.className = 'status-indicator success';
+                        nameDiv.prepend(indicator);
+                        resultDiv.className = 'test-result success';
+                        resultDiv.textContent = `✅ PASS - ${placeholderCount} placeholders, ${data.argument_slots.length} slots`;
+                        passCount++;
+                    } else {
+                        card.classList.add('warning');
+                        const indicator = document.createElement('span');
+                        indicator.className = 'status-indicator warning';
+                        nameDiv.prepend(indicator);
+                        resultDiv.className = 'test-result warning';
+                        resultDiv.textContent = `⚠️ WARNING - Renders but no overlays`;
+                        warnCount++;
+                    }
+                    
+                    testResults.push({
+                        name: template.name,
+                        status: 'pass',
+                        placeholders: placeholderCount,
+                        slots: data.argument_slots.length
+                    });
+                } else {
+                    throw new Error(data.error || 'Backend rendering failed');
+                }
+            } catch (error) {
+                card.classList.add('error');
+                const indicator = document.createElement('span');
+                indicator.className = 'status-indicator error';
+                nameDiv.prepend(indicator);
+                resultDiv.className = 'test-result error';
+                resultDiv.textContent = `❌ FAIL - ${error.message}`;
+                failCount++;
+                
+                testResults.push({
+                    name: template.name,
+                    status: 'fail',
+                    error: error.message
+                });
+            }
+            
+            updateSummary();
+        }
+        
+        function countPlaceholders(args) {
+            let count = 0;
+            for (const arg of args) {
+                if (arg.Placeholder) {
+                    count++;
+                } else if (arg.Operation && arg.Operation.args) {
+                    count += countPlaceholders(arg.Operation.args);
+                }
+            }
+            return count;
+        }
+        
+        function updateSummary() {
+            document.getElementById('passCount').textContent = passCount;
+            document.getElementById('failCount').textContent = failCount;
+            document.getElementById('warnCount').textContent = warnCount;
+        }
+        
+        async function runAllTests() {
+            passCount = 0;
+            failCount = 0;
+            warnCount = 0;
+            testResults = [];
+            
+            // Clear previous results
+            for (const category in templates) {
+                document.getElementById(category + '-tests').innerHTML = '';
+            }
+            
+            document.getElementById('progress').style.display = 'block';
+            
+            for (const [category, categoryTemplates] of Object.entries(templates)) {
+                for (const template of categoryTemplates) {
+                    document.getElementById('currentTest').textContent = template.name;
+                    await testTemplate(category, template);
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for visibility
+                }
+            }
+            
+            document.getElementById('progress').style.display = 'none';
+            
+            // Generate report
+            console.log('=== Test Results ===');
+            console.log(`Total: ${passCount + failCount + warnCount}`);
+            console.log(`Passed: ${passCount}`);
+            console.log(`Failed: ${failCount}`);
+            console.log(`Warnings: ${warnCount}`);
+            console.log('\nDetailed results:', testResults);
+            
+            if (failCount === 0) {
+                alert(`🎉 All tests passed!\n\n✅ ${passCount} templates working\n⚠️ ${warnCount} warnings`);
+            } else {
+                alert(`⚠️ Tests complete\n\n✅ ${passCount} passed\n❌ ${failCount} failed\n⚠️ ${warnCount} warnings\n\nCheck console for details.`);
+            }
+        }
+        
+        // AST Templates definitions (standalone copy from index.html)
+        window.astTemplates = {
+            // Basic
+            fraction: { Operation: { name: 'scalar_divide', args: [{Placeholder:{id:0,hint:'numerator'}}, {Placeholder:{id:1,hint:'denominator'}}] } },
+            power: { Operation: { name: 'sup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'exponent'}}] } },
+            subscript: { Operation: { name: 'sub', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}] } },
+            sqrt: { Operation: { name: 'sqrt', args: [{Placeholder:{id:0,hint:'radicand'}}] } },
+            nthroot: { Operation: { name: 'nth_root', args: [{Placeholder:{id:0,hint:'index'}}, {Placeholder:{id:1,hint:'radicand'}}] } },
+            binomial: { Operation: { name: 'binomial', args: [{Placeholder:{id:0,hint:'n'}}, {Placeholder:{id:1,hint:'k'}}] } },
+            factorial: { Operation: { name: 'factorial', args: [{Placeholder:{id:0,hint:'n'}}] } },
+            floor: { Operation: { name: 'floor', args: [{Placeholder:{id:0,hint:'x'}}] } },
+            ceiling: { Operation: { name: 'ceiling', args: [{Placeholder:{id:0,hint:'x'}}] } },
+            tensor_mixed: { Operation: { name: 'index_mixed', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower'}}] } },
+            
+            // Calculus
+            integral: { Operation: { name: 'int_bounds', args: [{Placeholder:{id:0,hint:'integrand'}}, {Placeholder:{id:1,hint:'lower'}}, {Placeholder:{id:2,hint:'upper'}}, {Placeholder:{id:3,hint:'variable'}}] } },
+            sum: { Operation: { name: 'sum_bounds', args: [{Placeholder:{id:0,hint:'body'}}, {Placeholder:{id:1,hint:'from'}}, {Placeholder:{id:2,hint:'to'}}] } },
+            product: { Operation: { name: 'prod_bounds', args: [{Placeholder:{id:0,hint:'body'}}, {Placeholder:{id:1,hint:'from'}}, {Placeholder:{id:2,hint:'to'}}] } },
+            limit: { Operation: { name: 'lim', args: [{Placeholder:{id:0,hint:'body'}}, {Placeholder:{id:1,hint:'var'}}, {Placeholder:{id:2,hint:'target'}}] } },
+            partial: { Operation: { name: 'd_part', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            derivative: { Operation: { name: 'd_dt', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            gradient: { Operation: { name: 'grad', args: [{Placeholder:{id:0,hint:'function'}}] } },
+            
+            // Matrices
+            matrix2x2: { Operation: { name: 'matrix2x2', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
+            matrix3x3: { Operation: { name: 'matrix3x3', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
+            pmatrix2x2: { Operation: { name: 'pmatrix2x2', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
+            pmatrix3x3: { Operation: { name: 'pmatrix3x3', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
+            vmatrix2x2: { Operation: { name: 'vmatrix2x2', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
+            vmatrix3x3: { Operation: { name: 'vmatrix3x3', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
+            
+            // Quantum
+            ket: { Operation: { name: 'ket', args: [{Placeholder:{id:0,hint:'state'}}] } },
+            bra: { Operation: { name: 'bra', args: [{Placeholder:{id:0,hint:'state'}}] } },
+            inner: { Operation: { name: 'inner', args: [{Placeholder:{id:0,hint:'bra'}}, {Placeholder:{id:1,hint:'ket'}}] } },
+            outer: { Operation: { name: 'outer', args: [{Placeholder:{id:0,hint:'ket'}}, {Placeholder:{id:1,hint:'bra'}}] } },
+            commutator: { Operation: { name: 'commutator', args: [{Placeholder:{id:0,hint:'A'}}, {Placeholder:{id:1,hint:'B'}}] } },
+            expectation: { Operation: { name: 'expectation', args: [{Placeholder:{id:0,hint:'operator'}}] } },
+            
+            // Vectors
+            vector_bold: { Operation: { name: 'vector_bold', args: [{Placeholder:{id:0,hint:'vector'}}] } },
+            vector_arrow: { Operation: { name: 'vector_arrow', args: [{Placeholder:{id:0,hint:'vector'}}] } },
+            dot: { Operation: { name: 'dot', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            cross: { Operation: { name: 'cross', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            norm: { Operation: { name: 'norm', args: [{Placeholder:{id:0,hint:'vector'}}] } },
+            abs: { Operation: { name: 'abs', args: [{Placeholder:{id:0,hint:'value'}}] } },
+            
+            // Functions
+            sin: { Operation: { name: 'sin', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            cos: { Operation: { name: 'cos', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            tan: { Operation: { name: 'tan', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            arcsin: { Operation: { name: 'arcsin', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            arccos: { Operation: { name: 'arccos', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            arctan: { Operation: { name: 'arctan', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            ln: { Operation: { name: 'ln', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            log: { Operation: { name: 'log', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            exp: { Operation: { name: 'exp', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            exp_e: { Operation: { name: 'sup', args: [{Object: 'e'}, {Placeholder:{id:0,hint:'exponent'}}] } },
+            
+            // Accents
+            dot_accent: { Operation: { name: 'dot_accent', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            ddot_accent: { Operation: { name: 'ddot_accent', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            hat: { Operation: { name: 'hat', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            bar: { Operation: { name: 'bar', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            tilde: { Operation: { name: 'tilde', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            
+            // Tensors
+            christoffel: { Operation: { name: 'gamma', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
+            riemann: { Operation: { name: 'riemann', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}, {Placeholder:{id:3,hint:'lower3'}}] } },
+        };
+        
+        console.log('✅ astTemplates loaded with', Object.keys(window.astTemplates).length, 'templates');
+    </script>
+</body>
+</html>
+

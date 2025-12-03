@@ -97,6 +97,12 @@ The palette needs to let users **create** matrices of arbitrary size. We have se
 - More complex implementation
 - Extra click for users
 
+### Reference: How MathType’s Builder Works
+- The MathType panel shows a **size grid** (up to 6×6) plus numeric inputs for rows/cols so users can pick a quick preset or type any number.
+- Fence controls sit beside the grid, letting users choose start/end symbols (parentheses, brackets, braces, mixed, or none) with one-sided support.
+- After insertion, placing the cursor inside the matrix reveals a **context toolbar** with structural actions: insert/remove rows or columns, delete the matrix, toggle fences/borders, adjust alignment (horizontal, vertical, matrix-wide), and force equal column widths or row heights.
+- This flow keeps the palette uncluttered while still allowing arbitrary sizes and post-insert resizing, which is the model we should emulate in Kleis.
+
 **Implementation:**
 
 ### HTML (Modal Dialog)

@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kleis - Improved Palette Design</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .palette-section {
+            padding: 30px;
+        }
+        
+        .palette-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .palette-tab {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.2s;
+        }
+        
+        .palette-tab:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .palette-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .palette-content {
+            display: none;
+        }
+        
+        .palette-content.active {
+            display: block;
+        }
+        
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+        }
+        
+        .template-btn {
+            padding: 15px;
+            background: white;
+            border: 2px solid #d0d0d0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-height: 80px;
+        }
+        
+        .template-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .template-label {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: #6c757d;
+            text-align: center;
+        }
+        
+        .template-btn:hover .template-label {
+            color: white;
+        }
+        
+        .template-preview {
+            font-size: 1.3em;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .category-subtitle {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 Improved Palette Design</h1>
+            <p class="subtitle">Organized, visual, and comprehensive template collection</p>
+        </header>
+        
+        <div class="palette-section">
+            <div class="palette-tabs">
+                <button class="palette-tab active" onclick="showTab('basic')">Basic</button>
+                <button class="palette-tab" onclick="showTab('calculus')">Calculus</button>
+                <button class="palette-tab" onclick="showTab('matrices')">Matrices</button>
+                <button class="palette-tab" onclick="showTab('quantum')">Quantum</button>
+                <button class="palette-tab" onclick="showTab('vectors')">Vectors</button>
+                <button class="palette-tab" onclick="showTab('functions')">Functions</button>
+                <button class="palette-tab" onclick="showTab('logic')">Logic</button>
+                <button class="palette-tab" onclick="showTab('accents')">Accents</button>
+            </div>
+            
+            <!-- Basic Operations -->
+            <div id="tab-basic" class="palette-content active">
+                <p class="category-subtitle">Fundamental mathematical operations</p>
+                <div class="template-grid">
+                    <button class="template-btn" onclick="insertTemplate('\\frac{□}{□}')">
+                        <div class="template-preview">\(\frac{a}{b}\)</div>
+                        <div class="template-label">Fraction</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\sqrt{□}')">
+                        <div class="template-preview">\(\sqrt{x}\)</div>
+                        <div class="template-label">Square Root</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\sqrt[□]{□}')">
+                        <div class="template-preview">\(\sqrt[n]{x}\)</div>
+                        <div class="template-label">Nth Root</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('x^{□}')">
+                        <div class="template-preview">\(x^{n}\)</div>
+                        <div class="template-label">Power</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('x_{□}')">
+                        <div class="template-preview">\(x_{i}\)</div>
+                        <div class="template-label">Subscript</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('x^{□}_{□}')">
+                        <div class="template-preview">\(T^{i}_{j}\)</div>
+                        <div class="template-label">Mixed Index</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('|□|')">
+                        <div class="template-preview">\(|x|\)</div>
+                        <div class="template-label">Absolute Value</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\binom{□}{□}')">
+                        <div class="template-preview">\(\binom{n}{k}\)</div>
+                        <div class="template-label">Binomial</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('□!')">
+                        <div class="template-preview">\(n!\)</div>
+                        <div class="template-label">Factorial</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\lfloor □ \\rfloor')">
+                        <div class="template-preview">\(\lfloor x \rfloor\)</div>
+                        <div class="template-label">Floor</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\lceil □ \\rceil')">
+                        <div class="template-preview">\(\lceil x \rceil\)</div>
+                        <div class="template-label">Ceiling</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Calculus -->
+            <div id="tab-calculus" class="palette-content">
+                <p class="category-subtitle">Derivatives, integrals, and limits</p>
+                <div class="template-grid">
+                    <button class="template-btn" onclick="insertTemplate('\\int □ \\, dx')">
+                        <div class="template-preview">\(\int f \, dx\)</div>
+                        <div class="template-label">Integral</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\int_{□}^{□} □ \\, dx')">
+                        <div class="template-preview">\(\int_{a}^{b} f \, dx\)</div>
+                        <div class="template-label">Definite Integral</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\iint_{□} □ \\, dA')">
+                        <div class="template-preview">\(\iint_{D} f \, dA\)</div>
+                        <div class="template-label">Double Integral</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\iiint_{□} □ \\, dV')">
+                        <div class="template-preview">\(\iiint_{V} f \, dV\)</div>
+                        <div class="template-label">Triple Integral</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\oint □ \\, ds')">
+                        <div class="template-preview">\(\oint f \, ds\)</div>
+                        <div class="template-label">Contour Integral</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\frac{d□}{d□}')">
+                        <div class="template-preview">\(\frac{dy}{dx}\)</div>
+                        <div class="template-label">Derivative</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\frac{\\partial □}{\\partial □}')">
+                        <div class="template-preview">\(\frac{\partial f}{\partial x}\)</div>
+                        <div class="template-label">Partial</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\frac{\\partial^{2} □}{\\partial □^{2}}')">
+                        <div class="template-preview">\(\frac{\partial^{2} f}{\partial x^{2}}\)</div>
+                        <div class="template-label">2nd Partial</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\nabla □')">
+                        <div class="template-preview">\(\nabla f\)</div>
+                        <div class="template-label">Gradient</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\nabla \\cdot □')">
+                        <div class="template-preview">\(\nabla \cdot F\)</div>
+                        <div class="template-label">Divergence</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\nabla \\times □')">
+                        <div class="template-preview">\(\nabla \times F\)</div>
+                        <div class="template-label">Curl</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\nabla^{2} □')">
+                        <div class="template-preview">\(\nabla^{2} \phi\)</div>
+                        <div class="template-label">Laplacian</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\sum_{□}^{□} □')">
+                        <div class="template-preview">\(\sum_{i=1}^{n} a_i\)</div>
+                        <div class="template-label">Sum</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\prod_{□}^{□} □')">
+                        <div class="template-preview">\(\prod_{i=1}^{n} a_i\)</div>
+                        <div class="template-label">Product</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\lim_{□ \\to □} □')">
+                        <div class="template-preview">\(\lim_{x \to a} f(x)\)</div>
+                        <div class="template-label">Limit</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Matrices -->
+            <div id="tab-matrices" class="palette-content">
+                <p class="category-subtitle">Matrices and linear algebra</p>
+                <div class="template-grid">
+                    <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}')">
+                        <div class="template-preview">\(\begin{bmatrix}a&b\\c&d\end{bmatrix}\)</div>
+                        <div class="template-label">Matrix 2×2 [ ]</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}')">
+                        <div class="template-preview">\(\begin{pmatrix}a&b\\c&d\end{pmatrix}\)</div>
+                        <div class="template-label">Matrix 2×2 ( )</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}')">
+                        <div class="template-preview">\(\begin{vmatrix}a&b\\c&d\end{vmatrix}\)</div>
+                        <div class="template-label">Determinant 2×2</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{bmatrix}')">
+                        <div class="template-preview">\(\begin{bmatrix}a&b&c\\d&e&f\\g&h&i\end{bmatrix}\)</div>
+                        <div class="template-label">Matrix 3×3 [ ]</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}')">
+                        <div class="template-preview">\(\begin{pmatrix}a&b&c\\d&e&f\\g&h&i\end{pmatrix}\)</div>
+                        <div class="template-label">Matrix 3×3 ( )</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}')">
+                        <div class="template-preview">\(\begin{vmatrix}a&b&c\\d&e&f\\g&h&i\end{vmatrix}\)</div>
+                        <div class="template-label">Determinant 3×3</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('A^{\\mathsf{T}}')">
+                        <div class="template-preview">\(A^{\mathsf{T}}\)</div>
+                        <div class="template-label">Transpose</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('A^{-1}')">
+                        <div class="template-preview">\(A^{-1}\)</div>
+                        <div class="template-label">Inverse</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\det(□)')">
+                        <div class="template-preview">\(\det(A)\)</div>
+                        <div class="template-label">Determinant</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\mathrm{Tr}(□)')">
+                        <div class="template-preview">\(\mathrm{Tr}(A)\)</div>
+                        <div class="template-label">Trace</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quantum Mechanics -->
+            <div id="tab-quantum" class="palette-content">
+                <p class="category-subtitle">Quantum mechanics notation</p>
+                <div class="template-grid">
+                    <button class="template-btn" onclick="insertTemplate('|□\\rangle')">
+                        <div class="template-preview">\(|\psi\rangle\)</div>
+                        <div class="template-label">Ket</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\langle□|')">
+                        <div class="template-preview">\(\langle\phi|\)</div>
+                        <div class="template-label">Bra</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\langle□|□\\rangle')">
+                        <div class="template-preview">\(\langle\phi|\psi\rangle\)</div>
+                        <div class="template-label">Inner Product</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('|□\\rangle\\langle□|')">
+                        <div class="template-preview">\(|\psi\rangle\langle\phi|\)</div>
+                        <div class="template-label">Outer Product</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('[□, □]')">
+                        <div class="template-preview">\([A, B]\)</div>
+                        <div class="template-label">Commutator</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\{□, □\\}')">
+                        <div class="template-preview">\(\{A, B\}\)</div>
+                        <div class="template-label">Anticommutator</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\langle □ \\rangle')">
+                        <div class="template-preview">\(\langle A \rangle\)</div>
+                        <div class="template-label">Expectation</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\hat{□}')">
+                        <div class="template-preview">\(\hat{H}\)</div>
+                        <div class="template-label">Operator</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Vectors -->
+            <div id="tab-vectors" class="palette-content">
+                <p class="category-subtitle">Vector operations and notation</p>
+                <div class="template-grid">
+                    <button class="template-btn" onclick="insertTemplate('\\vec{□}')">
+                        <div class="template-preview">\(\vec{v}\)</div>
+                        <div class="template-label">Vector Arrow</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\mathbf{□}')">
+                        <div class="template-preview">\(\mathbf{v}\)</div>
+                        <div class="template-label">Bold Vector</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\hat{□}')">
+                        <div class="template-preview">\(\hat{n}\)</div>
+                        <div class="template-label">Unit Vector</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('□ \\cdot □')">
+                        <div class="template-preview">\(a \cdot b\)</div>
+                        <div class="template-label">Dot Product</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('□ \\times □')">
+                        <div class="template-preview">\(a \times b\)</div>
+                        <div class="template-label">Cross Product</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\|□\\|')">
+                        <div class="template-preview">\(\|v\|\)</div>
+                        <div class="template-label">Norm</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\langle □, □ \\rangle')">
+                        <div class="template-preview">\(\langle u, v \rangle\)</div>
+                        <div class="template-label">Inner Product</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Functions -->
+            <div id="tab-functions" class="palette-content">
+                <p class="category-subtitle">Common mathematical functions</p>
+                <div class="template-grid">
+                    <button class="template-btn" onclick="insertTemplate('\\sin(□)')">
+                        <div class="template-preview">\(\sin(x)\)</div>
+                        <div class="template-label">Sine</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\cos(□)')">
+                        <div class="template-preview">\(\cos(x)\)</div>
+                        <div class="template-label">Cosine</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\tan(□)')">
+                        <div class="template-preview">\(\tan(x)\)</div>
+                        <div class="template-label">Tangent</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\arcsin(□)')">
+                        <div class="template-preview">\(\arcsin(x)\)</div>
+                        <div class="template-label">Arcsine</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\arccos(□)')">
+                        <div class="template-preview">\(\arccos(x)\)</div>
+                        <div class="template-label">Arccosine</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\arctan(□)')">
+                        <div class="template-preview">\(\arctan(x)\)</div>
+                        <div class="template-label">Arctangent</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\sinh(□)')">
+                        <div class="template-preview">\(\sinh(x)\)</div>
+                        <div class="template-label">Hyperbolic Sine</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\cosh(□)')">
+                        <div class="template-preview">\(\cosh(x)\)</div>
+                        <div class="template-label">Hyperbolic Cosine</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\tanh(□)')">
+                        <div class="template-preview">\(\tanh(x)\)</div>
+                        <div class="template-label">Hyperbolic Tangent</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\ln(□)')">
+                        <div class="template-preview">\(\ln(x)\)</div>
+                        <div class="template-label">Natural Log</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\log(□)')">
+                        <div class="template-preview">\(\log(x)\)</div>
+                        <div class="template-label">Logarithm</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\log_{□}(□)')">
+                        <div class="template-preview">\(\log_{b}(x)\)</div>
+                        <div class="template-label">Log Base b</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\exp(□)')">
+                        <div class="template-preview">\(\exp(x)\)</div>
+                        <div class="template-label">Exponential</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('e^{□}')">
+                        <div class="template-preview">\(e^{x}\)</div>
+                        <div class="template-label">e to the power</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Logic & Sets -->
+            <div id="tab-logic" class="palette-content">
+                <p class="category-subtitle">Logic and set theory</p>
+                <div class="template-grid">
+                    <button class="template-btn" onclick="insertTemplate('\\forall □ \\colon □')">
+                        <div class="template-preview">\(\forall x : P(x)\)</div>
+                        <div class="template-label">For All</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\exists □ \\colon □')">
+                        <div class="template-preview">\(\exists x : P(x)\)</div>
+                        <div class="template-label">Exists</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('□ \\Rightarrow □')">
+                        <div class="template-preview">\(P \Rightarrow Q\)</div>
+                        <div class="template-label">Implies</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('□ \\Leftrightarrow □')">
+                        <div class="template-preview">\(P \Leftrightarrow Q\)</div>
+                        <div class="template-label">If and Only If</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('□ \\in □')">
+                        <div class="template-preview">\(x \in S\)</div>
+                        <div class="template-label">Element Of</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('□ \\subset □')">
+                        <div class="template-preview">\(A \subset B\)</div>
+                        <div class="template-label">Subset</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('□ \\cup □')">
+                        <div class="template-preview">\(A \cup B\)</div>
+                        <div class="template-label">Union</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('□ \\cap □')">
+                        <div class="template-preview">\(A \cap B\)</div>
+                        <div class="template-label">Intersection</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\emptyset')">
+                        <div class="template-preview">\(\emptyset\)</div>
+                        <div class="template-label">Empty Set</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Accents & Decorations -->
+            <div id="tab-accents" class="palette-content">
+                <p class="category-subtitle">Accents and decorations</p>
+                <div class="template-grid">
+                    <button class="template-btn" onclick="insertTemplate('\\hat{□}')">
+                        <div class="template-preview">\(\hat{x}\)</div>
+                        <div class="template-label">Hat</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\bar{□}')">
+                        <div class="template-preview">\(\bar{x}\)</div>
+                        <div class="template-label">Bar</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\overline{□}')">
+                        <div class="template-preview">\(\overline{x}\)</div>
+                        <div class="template-label">Overline</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\tilde{□}')">
+                        <div class="template-preview">\(\tilde{x}\)</div>
+                        <div class="template-label">Tilde</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\dot{□}')">
+                        <div class="template-preview">\(\dot{x}\)</div>
+                        <div class="template-label">Dot</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\ddot{□}')">
+                        <div class="template-preview">\(\ddot{x}\)</div>
+                        <div class="template-label">Double Dot</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\vec{□}')">
+                        <div class="template-preview">\(\vec{x}\)</div>
+                        <div class="template-label">Vector Arrow</div>
+                    </button>
+                    <button class="template-btn" onclick="insertTemplate('\\underline{□}')">
+                        <div class="template-preview">\(\underline{x}\)</div>
+                        <div class="template-label">Underline</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.palette-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.palette-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById('tab-' + tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function insertTemplate(template) {
+            alert('Template: ' + template + '\n\nIn the actual editor, this would insert the template into your equation.');
+        }
+        
+        // Render all MathJax when page loads
+        window.onload = () => {
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        };
+    </script>
+</body>
+</html>
+

@@ -2001,20 +2001,27 @@ fn expand_viewbox_for_markers(svg: &str, boxes: &[LayoutBoundingBox]) -> Result<
         return Ok(svg.to_string());
     }
     
-    // Calculate actual content bounds
+    // Calculate actual content bounds from all bounding boxes
     let min_x = boxes.iter().map(|b| b.x).fold(f64::INFINITY, f64::min);
     let min_y = boxes.iter().map(|b| b.y).fold(f64::INFINITY, f64::min);
     let max_x = boxes.iter().map(|b| b.x + b.width).fold(f64::NEG_INFINITY, f64::max);
     let max_y = boxes.iter().map(|b| b.y + b.height).fold(f64::NEG_INFINITY, f64::max);
     
-    // Add generous padding to prevent any clipping
-    let padding = 10.0;
-    let new_x = (min_x - padding).max(0.0);
-    let new_y = min_y - padding;
-    let new_width = (max_x - new_x) + padding;
-    let new_height = (max_y - new_y) + padding;
+    // Calculate content dimensions
+    let content_width = max_x - min_x;
+    let content_height = max_y - min_y;
     
-    // Parse current viewBox
+    // Compute proportional padding: 10% of each dimension, with minimum 20pt
+    let padding_x = (content_width * 0.1).max(20.0);
+    let padding_y = (content_height * 0.1).max(20.0);
+    
+    // Apply padding (allow negative x/y if content requires it)
+    let new_x = min_x - padding_x;
+    let new_y = min_y - padding_y;
+    let new_width = content_width + (2.0 * padding_x);
+    let new_height = content_height + (2.0 * padding_y);
+    
+    // Parse current viewBox and always replace with content-aware bounds
     let viewbox_regex = regex::Regex::new(r#"viewBox="([^"]+)""#).unwrap();
     if let Some(captures) = viewbox_regex.captures(svg) {
         let old_vb = captures.get(1).unwrap().as_str();
@@ -2023,18 +2030,13 @@ fn expand_viewbox_for_markers(svg: &str, boxes: &[LayoutBoundingBox]) -> Result<
             .collect();
         
         if old_parts.len() == 4 {
-            let old_height = old_parts[3];
+            let new_viewbox = format!("{} {} {} {}", new_x, new_y, new_width, new_height);
+            let expanded = viewbox_regex.replace(svg, format!(r#"viewBox="{}""#, new_viewbox));
             
-            // Only expand if needed
-            if new_height > old_height || new_y < 0.0 {
-                let new_viewbox = format!("{} {} {} {}", new_x, new_y, new_width, new_height);
-                let expanded = viewbox_regex.replace(svg, format!(r#"viewBox="{}""#, new_viewbox));
-                
-                eprintln!("📐 Expanded viewBox: {} × {} → {} × {}", 
-                         old_parts[2], old_height, new_width, new_height);
-                
-                return Ok(expanded.to_string());
-            }
+            eprintln!("📐 Content-aware viewBox: [{:.1}, {:.1}] to [{:.1}, {:.1}] → viewBox({:.1}, {:.1}, {:.1}, {:.1})", 
+                     min_x, min_y, max_x, max_y, new_x, new_y, new_width, new_height);
+            
+            return Ok(expanded.to_string());
         }
     }
     
