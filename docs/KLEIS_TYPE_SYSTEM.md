@@ -483,6 +483,327 @@ pub enum TypeError {
 
 ---
 
+## Extensible Type System Architecture
+
+### Design Philosophy
+
+The Kleis type system must support **advanced mathematical structures** beyond basic scalars and vectors:
+
+- **Algebra**: Groups, Rings, Fields (algebraic structures)
+- **Category Theory**: Categories, Functors, Natural Transformations, Monads
+- **Topology**: Topological Spaces, Manifolds, Fiber Bundles
+- **Groupoids**: Higher categorical structures
+- **Homotopy Type Theory**: ∞-groupoids, identity types
+
+**Key requirement**: Extensible without modifying core type enum.
+
+### Plugin Architecture
+
+```rust
+// Core type system (built-in)
+pub enum CoreType {
+    Scalar,
+    Complex,
+    Vector(usize),
+    Matrix(usize, usize),
+    Tensor(Vec<usize>),
+    Field { space: SpaceType, value_type: Box<Type> },
+    Function(Box<Type>, Box<Type>),
+    Set(Box<Type>),
+    MultiValue(Box<Type>),
+}
+
+// Extensible wrapper
+pub enum Type {
+    Core(CoreType),
+    Extended(Box<dyn TypeClass>),  // Plugin types
+}
+
+// Type class trait
+pub trait TypeClass: Send + Sync {
+    fn name(&self) -> &str;
+    fn check(&self, value: &Value) -> bool;
+    fn infer_operation(&self, op: &str, arg_types: &[Type]) -> Result<Type, TypeError>;
+    fn dispatch_eval(&self, expr: &Expression, context: &Context) -> Result<Value, EvalError>;
+}
+```
+
+### Example: Group Type
+
+```rust
+pub struct GroupType {
+    pub element_type: Box<Type>,
+    pub operation: String,  // e.g., "plus" for additive group
+    pub identity: Expression,
+    pub inverse_op: String,
+}
+
+impl TypeClass for GroupType {
+    fn name(&self) -> &str { "Group" }
+    
+    fn check(&self, value: &Value) -> bool {
+        // Verify group axioms: closure, associativity, identity, inverse
+        // (This could be symbolic verification or runtime checking)
+        true  // Placeholder
+    }
+    
+    fn infer_operation(&self, op: &str, arg_types: &[Type]) -> Result<Type, TypeError> {
+        match op {
+            // Group operation: G × G → G
+            op if op == self.operation => {
+                if arg_types.len() == 2 && arg_types[0] == arg_types[1] {
+                    Ok(Type::Extended(Box::new(self.clone())))
+                } else {
+                    Err(TypeError::InvalidGroupOperation)
+                }
+            }
+            // Inverse: G → G
+            op if op == self.inverse_op => {
+                if arg_types.len() == 1 {
+                    Ok(Type::Extended(Box::new(self.clone())))
+                } else {
+                    Err(TypeError::InvalidInverse)
+                }
+            }
+            _ => Err(TypeError::NoMatchingOverload(op.to_string(), arg_types.to_vec()))
+        }
+    }
+}
+
+// Usage
+let additive_group = GroupType {
+    element_type: Box::new(Type::Core(CoreType::Scalar)),
+    operation: "plus".to_string(),
+    identity: Const("0"),
+    inverse_op: "negate".to_string(),
+};
+
+context.register_type("AdditiveGroup", Type::Extended(Box::new(additive_group)));
+```
+
+### Example: Category Type
+
+```rust
+pub struct CategoryType {
+    pub objects: Vec<Type>,
+    pub morphisms: HashMap<(Type, Type), Type>,  // Hom(A, B)
+    pub composition: String,  // Morphism composition operation
+    pub identity_morphisms: HashMap<Type, Expression>,
+}
+
+impl TypeClass for CategoryType {
+    fn name(&self) -> &str { "Category" }
+    
+    fn infer_operation(&self, op: &str, arg_types: &[Type]) -> Result<Type, TypeError> {
+        if op == self.composition && arg_types.len() == 2 {
+            // Compose f: A → B with g: B → C to get g∘f: A → C
+            // Check composition compatibility
+            // Return morphism type
+            unimplemented!("Category composition")
+        } else {
+            Err(TypeError::InvalidCategoryOperation)
+        }
+    }
+}
+```
+
+### Example: Fiber Bundle Type
+
+```rust
+pub struct FiberBundleType {
+    pub base_space: SpaceType,      // Base manifold M
+    pub fiber: Box<Type>,            // Fiber F
+    pub structure_group: Box<Type>,  // Structure group G
+    pub projection: Expression,      // π: E → M
+}
+
+impl TypeClass for FiberBundleType {
+    fn name(&self) -> &str { "FiberBundle" }
+    
+    fn infer_operation(&self, op: &str, arg_types: &[Type]) -> Result<Type, TypeError> {
+        match op {
+            // Projection
+            "project" => Ok(Type::Core(CoreType::Field {
+                space: self.base_space.clone(),
+                value_type: self.fiber.clone()
+            })),
+            // Parallel transport
+            "parallel_transport" => {
+                // Transport fiber along curve in base space
+                unimplemented!()
+            }
+            // Connection
+            "covariant_derivative" => {
+                unimplemented!()
+            }
+            _ => Err(TypeError::NoMatchingOverload(op.to_string(), arg_types.to_vec()))
+        }
+    }
+}
+
+// Usage: Define gauge field as section of fiber bundle
+let gauge_field = FiberBundleType {
+    base_space: SpaceType::Real4D,  // Spacetime
+    fiber: Box::new(Type::Extended(Box::new(LieGroupType { /* U(1) */ }))),
+    structure_group: Box::new(Type::Extended(Box::new(LieGroupType { /* U(1) */ }))),
+    projection: /* ... */,
+};
+```
+
+### Example: Monad Type (Category Theory)
+
+```rust
+pub struct MonadType {
+    pub base_category: Box<Type>,
+    pub functor: String,           // T: C → C
+    pub unit: Expression,          // η: Id → T (natural transformation)
+    pub multiplication: Expression, // μ: T∘T → T (natural transformation)
+}
+
+impl TypeClass for MonadType {
+    fn name(&self) -> &str { "Monad" }
+    
+    fn infer_operation(&self, op: &str, arg_types: &[Type]) -> Result<Type, TypeError> {
+        match op {
+            // Functor application (fmap)
+            "map" if arg_types.len() == 2 => {
+                // map: (A → B) → T(A) → T(B)
+                unimplemented!()
+            }
+            // Monad bind (>>=)
+            "bind" if arg_types.len() == 2 => {
+                // bind: T(A) → (A → T(B)) → T(B)
+                unimplemented!()
+            }
+            _ => Err(TypeError::NoMatchingOverload(op.to_string(), arg_types.to_vec()))
+        }
+    }
+}
+```
+
+### Type Registry
+
+```rust
+pub struct TypeRegistry {
+    builtin_types: HashMap<String, CoreType>,
+    extended_types: HashMap<String, Box<dyn TypeClass>>,
+}
+
+impl TypeRegistry {
+    pub fn register(&mut self, name: &str, typ: Box<dyn TypeClass>) {
+        self.extended_types.insert(name.to_string(), typ);
+    }
+    
+    pub fn lookup(&self, name: &str) -> Option<Type> {
+        if let Some(core) = self.builtin_types.get(name) {
+            Some(Type::Core(core.clone()))
+        } else if let Some(ext) = self.extended_types.get(name) {
+            Some(Type::Extended(ext.clone_box()))
+        } else {
+            None
+        }
+    }
+    
+    pub fn infer_operation(
+        &self, 
+        op: &str, 
+        arg_types: &[Type]
+    ) -> Result<Type, TypeError> {
+        // Try core type inference first
+        if let Ok(typ) = infer_core_operation(op, arg_types) {
+            return Ok(typ);
+        }
+        
+        // Try extended types
+        for (_, type_class) in &self.extended_types {
+            if let Ok(typ) = type_class.infer_operation(op, arg_types) {
+                return Ok(typ);
+            }
+        }
+        
+        Err(TypeError::NoMatchingOverload(op.to_string(), arg_types.to_vec()))
+    }
+}
+```
+
+### Axiomatic Type Definitions
+
+For advanced structures, define axioms that must be satisfied:
+
+```rust
+pub struct AxiomaticType {
+    pub name: String,
+    pub base_types: Vec<Type>,
+    pub operations: Vec<OperationSignature>,
+    pub axioms: Vec<Expression>,  // Equations that must hold
+}
+
+// Example: Group axioms
+let group_axioms = AxiomaticType {
+    name: "Group".to_string(),
+    base_types: vec![Type::Core(CoreType::Set(Box::new(Type::Unknown)))],
+    operations: vec![
+        OperationSignature {
+            name: "op".to_string(),
+            signature: vec![Type::This, Type::This],
+            result: Type::This,
+        },
+        OperationSignature {
+            name: "inverse".to_string(),
+            signature: vec![Type::This],
+            result: Type::This,
+        },
+    ],
+    axioms: vec![
+        // Associativity: (a·b)·c = a·(b·c)
+        equals(
+            op(op(var("a"), var("b")), var("c")),
+            op(var("a"), op(var("b"), var("c")))
+        ),
+        // Identity: ∃e. ∀a. e·a = a·e = a
+        exists(
+            var("e"),
+            forall(var("a"),
+                and(
+                    equals(op(var("e"), var("a")), var("a")),
+                    equals(op(var("a"), var("e")), var("a"))
+                )
+            )
+        ),
+        // Inverse: ∀a. ∃a⁻¹. a·a⁻¹ = a⁻¹·a = e
+        forall(var("a"),
+            equals(
+                op(var("a"), inverse(var("a"))),
+                identity()
+            )
+        ),
+    ],
+};
+```
+
+### Integration with Context
+
+```rust
+impl Context {
+    pub fn register_type_class(&mut self, name: &str, type_class: Box<dyn TypeClass>) {
+        self.type_registry.register(name, type_class);
+    }
+    
+    pub fn define_axiomatic_type(&mut self, axioms: AxiomaticType) {
+        // Store axioms for verification
+        self.axiomatic_types.insert(axioms.name.clone(), axioms);
+    }
+    
+    pub fn verify_axioms(&self, typ: &Type, value: &Value) -> Result<(), TypeError> {
+        // Check if value satisfies type's axioms
+        // This could be symbolic or runtime verification
+        unimplemented!()
+    }
+}
+```
+
+---
+
 ## Future Extensions
 
 ### Dependent Types
@@ -505,6 +826,23 @@ Type::Quantity {
 ### Probabilistic Types
 ```rust
 Type::Random(Box<Type>, Distribution)  // Random variable
+```
+
+### Higher Structures
+```rust
+// ∞-Groupoid (HoTT)
+Type::InfinityGroupoid {
+    objects: Box<Type>,
+    paths: Box<Type>,  // Paths between objects
+    higher_paths: Vec<Box<Type>>,  // Paths between paths, etc.
+}
+
+// Topos
+Type::Topos {
+    objects: Vec<Type>,
+    morphisms: HashMap<(Type, Type), Type>,
+    subobject_classifier: Type,
+}
 ```
 
 ---
