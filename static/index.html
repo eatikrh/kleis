@@ -483,6 +483,138 @@
         .math-btn mjx-container svg {
             fill: #333 !important;
         }
+        
+        /* ===== Inline Editing Styles ===== */
+        
+        /* Inline editor input field */
+        .inline-edit-input {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #4CAF50;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-family: 'Latin Modern Math', 'Cambria Math', 'STIX Two Math', serif;
+            font-size: 18px;
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+            outline: none;
+            color: #333;
+        }
+
+        .inline-edit-input:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
+        }
+        
+        .inline-edit-input.error {
+            border-color: #f44336;
+            box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
+        }
+        
+        /* Marker being edited inline */
+        .arg-overlay.editing-inline {
+            fill: rgba(76, 175, 80, 0.3) !important;
+            stroke: #4CAF50 !important;
+            stroke-width: 3px !important;
+        }
+        
+        /* Button state indicators during inline editing */
+        body.inline-editing .math-btn[data-button-type="symbol"] {
+            /* Symbols are safe - subtle green tint */
+            background: linear-gradient(to bottom, #f0fff0, #e8f5e8);
+        }
+        
+        body.inline-editing .math-btn[data-button-type="template"],
+        body.inline-editing .math-btn[data-button-type="function"] {
+            /* Templates will replace - orange border */
+            border-color: #FF9800;
+            border-style: dashed;
+        }
+        
+        /* Confirmation modal */
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .confirm-modal.show {
+            display: flex;
+        }
+        
+        .confirm-modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            animation: modalSlideIn 0.2s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .confirm-modal h3 {
+            margin: 0 0 12px 0;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .confirm-modal p {
+            margin: 0 0 20px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .confirm-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        .btn-primary, .btn-secondary {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #45a049;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -513,6 +645,31 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out (Cmd -)">−</button>
                     </div>
                     <span style="color: #999;">Click a template button to start building...</span>
+                    
+                    <!-- Inline editor (foreignObject - added dynamically to SVG) -->
+                    <!-- This template is cloned into SVG when needed -->
+                    <template id="inline-editor-template">
+                        <foreignObject id="inline-editor-foreign" x="0" y="0" width="200" height="40" style="display:none; overflow:visible;">
+                            <input type="text" 
+                                   id="inline-input"
+                                   class="inline-edit-input"
+                                   autocomplete="off"
+                                   spellcheck="false"
+                                   placeholder="Type or click symbols..." />
+                        </foreignObject>
+                    </template>
+                </div>
+                
+                <!-- Confirmation Modal for Template Insertion -->
+                <div id="replace-confirm-modal" class="confirm-modal">
+                    <div class="confirm-modal-content">
+                        <h3>Replace with template?</h3>
+                        <p id="replace-message">You've typed text. Insert template instead?</p>
+                        <div class="confirm-modal-buttons">
+                            <button id="replace-confirm-no" class="btn-secondary">Keep Typing</button>
+                            <button id="replace-confirm-yes" class="btn-primary">Insert Template</button>
+                        </div>
+                    </div>
                 </div>
                 
                 <div id="structuralControls" style="display:none; margin-top: 10px;">
@@ -1244,6 +1401,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
 
         function insertSymbol(latex) {
             if (editorMode === 'structural') {
+                // If inline editor is active, append symbol to input
+                if (isInlineEditorActive()) {
+                    appendToInlineEditor(latex);
+                    return;
+                }
+                
                 // In structural mode, insert symbol into active placeholder
                 if (activeEditMarker) {
                     // Replace the placeholder at the active path with a Const node
@@ -1281,6 +1444,19 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
 
         function insertTemplate(template) {
             if (editorMode === 'structural') {
+                // If inline editor is active, check if user has typed something
+                if (isInlineEditorActive()) {
+                    const currentInput = inlineEditorState.input.value.trim();
+                    if (currentInput) {
+                        // Show confirmation before replacing
+                        showReplaceConfirmation(currentInput, template);
+                        return;
+                    } else {
+                        // Empty input - just close and insert template
+                        hideInlineEditor(false);
+                    }
+                }
+                
                 if (activeEditMarker) {
                     // INSERT AT ACTIVE MARKER
                     insertStructuralTemplateAt(template, activeEditMarker.path);
@@ -1572,6 +1748,297 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             }
         }
 
+        // ===== INLINE EDITING SYSTEM =====
+        
+        let inlineEditorState = {
+            active: false,
+            foreignObject: null,
+            input: null,
+            marker: null,
+            pendingTemplate: null
+        };
+        
+        // Classify button types (symbol vs template)
+        function classifyButtonType(latex) {
+            // Single character symbols
+            if (/^[a-zA-Z0-9+\-=×÷±∓·∗∞<>]$/.test(latex)) return 'symbol';
+            
+            // Greek letters
+            if (/^\\(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega)$/.test(latex)) return 'symbol';
+            if (/^\\(Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)$/.test(latex)) return 'symbol';
+            
+            // Logic and set symbols
+            if (/^\\(leq|geq|neq|approx|equiv|in|notin|subset|subseteq|cup|cap|emptyset|to|Rightarrow|Leftrightarrow|forall|exists|neg|land|lor)$/.test(latex)) return 'symbol';
+            
+            // Math symbols
+            if (/^\\(times|div|cdot|pm|mp|ast|partial|nabla|infty|square)$/.test(latex)) return 'symbol';
+            
+            // Functions with arguments
+            if (/\\(sin|cos|tan|arcsin|arccos|arctan|ln|log|exp)\(/.test(latex)) return 'function';
+            
+            // Templates with placeholders or structure
+            if (latex.includes('□') || latex.includes('\\frac') || latex.includes('\\begin') ||
+                latex.includes('\\sqrt') || latex.includes('\\int') || latex.includes('\\sum') ||
+                latex.includes('\\left') || latex.includes('\\langle') || latex.includes('\\binom')) {
+                return 'template';
+            }
+            
+            // Default to symbol (safer)
+            return 'symbol';
+        }
+        
+        function isInlineEditorActive() {
+            return inlineEditorState.active && inlineEditorState.foreignObject && 
+                   inlineEditorState.foreignObject.style.display !== 'none';
+        }
+        
+        function showInlineEditor(marker) {
+            console.log('showInlineEditor called with marker:', marker);
+            inlineEditorState.marker = marker;
+            inlineEditorState.active = true;
+            
+            // Find or create foreignObject in the SVG
+            const svg = document.querySelector('#structuralEditor svg');
+            console.log('Found SVG:', svg);
+            if (!svg) {
+                console.error('No SVG found! Cannot show inline editor.');
+                return;
+            }
+            
+            let foreignObject = svg.querySelector('#inline-editor-foreign');
+            console.log('Existing foreignObject:', foreignObject);
+            
+            if (!foreignObject) {
+                console.log('Creating new foreignObject');
+                // Create foreignObject
+                foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+                foreignObject.id = 'inline-editor-foreign';
+                svg.appendChild(foreignObject);
+                console.log('ForeignObject appended to SVG');
+                
+                // Create wrapper div (foreignObject needs HTML content in proper namespace)
+                const wrapper = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+                wrapper.style.width = '100%';
+                wrapper.style.height = '100%';
+                
+                // Create input inside wrapper
+                const input = document.createElementNS('http://www.w3.org/1999/xhtml', 'input');
+                input.setAttribute('type', 'text');
+                input.setAttribute('id', 'inline-input');
+                input.setAttribute('class', 'inline-edit-input');
+                input.setAttribute('autocomplete', 'off');
+                input.setAttribute('spellcheck', 'false');
+                input.setAttribute('placeholder', 'Type or click symbols...');
+                input.style.width = '100%';
+                input.style.height = '100%';
+                input.style.boxSizing = 'border-box';
+                
+                wrapper.appendChild(input);
+                foreignObject.appendChild(wrapper);
+                console.log('Input element created in XHTML wrapper');
+                
+                // Setup keyboard handlers
+                setupInlineEditorHandlers(input);
+                console.log('Keyboard handlers setup');
+            }
+            
+            inlineEditorState.foreignObject = foreignObject;
+            inlineEditorState.input = foreignObject.querySelector('input') || document.getElementById('inline-input');
+            console.log('State updated. Input:', inlineEditorState.input);
+            
+            if (!inlineEditorState.input) {
+                console.error('ERROR: Could not find input element!');
+                return;
+            }
+            
+            // Position at marker location (ensure it stays within SVG viewport)
+            const bbox = marker.bbox;
+            console.log('Marker bbox:', bbox);
+            
+            // Ensure position is not negative
+            const posX = Math.max(0, bbox.x - 10);
+            const posY = Math.max(0, bbox.y - 5);
+            const width = Math.max(200, bbox.width + 40);
+            const height = Math.max(40, bbox.height + 10);
+            
+            foreignObject.setAttribute('x', posX);
+            foreignObject.setAttribute('y', posY);
+            foreignObject.setAttribute('width', width);
+            foreignObject.setAttribute('height', height);
+            console.log('ForeignObject positioned at:', { x: posX, y: posY, width, height });
+            
+            foreignObject.style.display = 'block';
+            foreignObject.style.overflow = 'visible';
+            foreignObject.style.pointerEvents = 'all';
+            foreignObject.setAttribute('visibility', 'visible');
+            console.log('ForeignObject display set to block, visibility ensured');
+            
+            // Get current value if any
+            const currentValue = getNodeValueAtPath(currentAST, marker.path);
+            inlineEditorState.input.value = currentValue || '';
+            console.log('Input value set to:', currentValue);
+            
+            // Focus and select
+            setTimeout(() => {
+                inlineEditorState.input.focus();
+                inlineEditorState.input.select();
+                console.log('Input focused and selected');
+            }, 10);
+            
+            // Visual feedback
+            marker.element.classList.add('editing-inline');
+            document.body.classList.add('inline-editing');
+            console.log('Visual feedback added. Editor should be visible now!');
+            
+            // Enable click-outside handler after editor is shown
+            if (window.enableClickOutside) {
+                window.enableClickOutside();
+            }
+        }
+        
+        function hideInlineEditor(commit = true) {
+            console.log('hideInlineEditor called, commit:', commit);
+            console.trace('hideInlineEditor call stack');
+            if (!inlineEditorState.active) {
+                console.log('Inline editor not active, returning');
+                return;
+            }
+            
+            if (commit && inlineEditorState.marker) {
+                const value = inlineEditorState.input.value.trim();
+                if (value) {
+                    try {
+                        const node = parseSimpleInput(value);
+                        setNodeAtPath(currentAST, inlineEditorState.marker.path, node);
+                        renderStructuralEditor();
+                        showStatus('✅ Value updated', 'success');
+                    } catch (error) {
+                        console.error('Inline edit error:', error);
+                        showStatus('⚠️ Invalid input', 'error');
+                        return; // Don't close on error
+                    }
+                }
+            }
+            
+            // Clean up
+            if (inlineEditorState.foreignObject) {
+                inlineEditorState.foreignObject.style.display = 'none';
+            }
+            if (inlineEditorState.input) {
+                inlineEditorState.input.value = '';
+                inlineEditorState.input.classList.remove('error');
+            }
+            if (inlineEditorState.marker && inlineEditorState.marker.element) {
+                inlineEditorState.marker.element.classList.remove('editing-inline');
+            }
+            
+            document.body.classList.remove('inline-editing');
+            inlineEditorState.active = false;
+            inlineEditorState.marker = null;
+        }
+        
+        function appendToInlineEditor(text) {
+            if (!isInlineEditorActive()) return;
+            
+            const input = inlineEditorState.input;
+            const start = input.selectionStart || 0;
+            const end = input.selectionEnd || 0;
+            const currentValue = input.value;
+            
+            input.value = currentValue.substring(0, start) + text + currentValue.substring(end);
+            
+            const newPos = start + text.length;
+            input.setSelectionRange(newPos, newPos);
+            input.focus();
+        }
+        
+        function setupInlineEditorHandlers(input) {
+            // Keyboard shortcuts
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    hideInlineEditor(true); // Commit
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    hideInlineEditor(false); // Cancel
+                } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    hideInlineEditor(true); // Commit and move to next
+                    // TODO: Focus next placeholder
+                }
+            });
+            
+            // Click outside to commit (with debounce to prevent immediate firing)
+            let clickOutsideEnabled = false;
+            document.addEventListener('click', (e) => {
+                if (!clickOutsideEnabled) return;
+                
+                if (isInlineEditorActive()) {
+                    const foreignObject = inlineEditorState.foreignObject;
+                    const modal = document.getElementById('replace-confirm-modal');
+                    
+                    // Don't close if clicking inside editor or modal or SVG overlays
+                    if (foreignObject && !foreignObject.contains(e.target) &&
+                        !modal.contains(e.target) &&
+                        !e.target.closest('.math-btn') &&
+                        !e.target.closest('.arg-overlay')) {
+                        console.log('Click outside detected, hiding inline editor');
+                        hideInlineEditor(true);
+                    }
+                }
+            });
+            
+            // Enable click-outside handler after a short delay
+            window.enableClickOutside = function() {
+                setTimeout(() => {
+                    clickOutsideEnabled = true;
+                    console.log('Click outside handler enabled');
+                }, 100);
+            };
+        }
+        
+        function getNodeValueAtPath(ast, path) {
+            if (!ast || path.length === 0) return '';
+            
+            let current = ast;
+            for (let i = 0; i < path.length; i++) {
+                if (current.Operation) {
+                    current = current.Operation.args[path[i]];
+                } else {
+                    return '';
+                }
+            }
+            
+            if (current.Const) return current.Const;
+            if (current.Object) return current.Object;
+            return '';
+        }
+        
+        function showReplaceConfirmation(currentText, template) {
+            inlineEditorState.pendingTemplate = template;
+            
+            const modal = document.getElementById('replace-confirm-modal');
+            const message = document.getElementById('replace-message');
+            
+            message.textContent = `Replace "${currentText}" with template?`;
+            modal.classList.add('show');
+            
+            // Setup button handlers
+            document.getElementById('replace-confirm-yes').onclick = () => {
+                modal.classList.remove('show');
+                const marker = inlineEditorState.marker;
+                hideInlineEditor(false); // Don't commit text
+                insertTemplate(template); // Insert template at marker
+            };
+            
+            document.getElementById('replace-confirm-no').onclick = () => {
+                modal.classList.remove('show');
+                if (inlineEditorState.input) {
+                    inlineEditorState.input.focus();
+                }
+            };
+        }
+        
         async function renderStructuralEditor() {
             const container = document.getElementById('structuralEditor');
             const preview = document.getElementById('preview');
@@ -1846,7 +2313,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                     class="arg-overlay" data-slot-id="${slot.id}" data-path="${pathStr}" data-node-id="${nodeId}"
                                     style="cursor: pointer;"
                                     tabindex="0" focusable="true"
-                                    onclick="handleSlotClick('${slot.id}', ${pathStr}, '${nodeId}')"
+                                    onclick="handleSlotClick(event, '${slot.id}', ${pathStr}, '${nodeId}')"
                                     onkeydown="handleSlotKeydown(event, '${slot.id}', ${pathStr}, '${nodeId}')" />`;
                                 overlayElements.push(rect);
                             }
@@ -1862,9 +2329,23 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     }
                     
                     console.log('Setting container.innerHTML with SVG');
+                    
+                    // Save foreignObject if it exists (to preserve inline editor)
+                    const existingForeignObject = container.querySelector('#inline-editor-foreign');
+                    console.log('Existing foreignObject before render:', existingForeignObject);
+                    
                     container.innerHTML = svg;
                     preview.innerHTML = svg;
                     console.log('SVG rendered to DOM');
+                    
+                    // Restore foreignObject after innerHTML replacement
+                    if (existingForeignObject) {
+                        const newSvg = container.querySelector('svg');
+                        if (newSvg) {
+                            newSvg.appendChild(existingForeignObject);
+                            console.log('ForeignObject restored after render');
+                        }
+                    }
                     
                     // Reset zoom to 1.0 (natural size) - content-aware viewBox handles sizing
                     currentZoom = 1.0;
@@ -1930,37 +2411,76 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             return node;
         }
         
-        window.handleSlotClick = function(id, path, nodeId) {
+        window.handleSlotClick = function(event, id, path, nodeId) {
             console.log('Clicked slot:', { id, path, nodeId });
+            console.log('Event object:', event);
             
-            // Save to undo stack before any modification
-            saveToUndoStack();
+            // Stop propagation to prevent document click handler from firing
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
             
-            // Set as active marker
-            activeEditMarker = {id, path, nodeId};
-            
-            // Highlight active marker
-            document.querySelectorAll('.arg-overlay').forEach(el => {
-                el.classList.remove('active-marker');
-            });
-            event.target.classList.add('active-marker');
-            
-            // Get current value
-            const node = nodeId ? getNodeById(currentAST, nodeId) : getNodeAtPath(currentAST, path);
-            let val = "";
-            if (node.Const) val = node.Const;
-            if (node.Object) val = node.Object;
-            
-            // Show status
-            showStatus('📍 Marker selected. Type a value or click a template/symbol to insert here.', 'info');
-            
-            // For now, still show prompt (will be replaced with modal later)
-            const input = prompt("Enter value (or click Cancel to insert template from palette):", val);
-            if (input !== null) {
-                const newNode = parseSimpleInput(input);
-                setNodeAtPath(currentAST, path, newNode);
-                activeEditMarker = null;
-                renderStructuralEditor();
+            try {
+                // Check if modifier key was pressed
+                const isModifierClick = event && (event.shiftKey || event.ctrlKey || event.metaKey);
+                console.log('Modifier click?', isModifierClick);
+                
+                // Save to undo stack before any modification
+                saveToUndoStack();
+                console.log('Undo stack saved');
+                
+                // Set as active marker
+                activeEditMarker = {
+                    id: id, 
+                    path: path, 
+                    nodeId: nodeId,
+                    element: event.target,
+                    bbox: {
+                        x: parseFloat(event.target.getAttribute('x')),
+                        y: parseFloat(event.target.getAttribute('y')),
+                        width: parseFloat(event.target.getAttribute('width')),
+                        height: parseFloat(event.target.getAttribute('height'))
+                    }
+                };
+                console.log('Active marker set:', activeEditMarker);
+                
+                // Highlight active marker
+                document.querySelectorAll('.arg-overlay').forEach(el => {
+                    el.classList.remove('active-marker');
+                });
+                if (event.target) event.target.classList.add('active-marker');
+                console.log('Marker highlighted');
+                
+                // Get current value
+                const node = nodeId ? getNodeById(currentAST, nodeId) : getNodeAtPath(currentAST, path);
+                let val = "";
+                if (node && node.Const) val = node.Const;
+                if (node && node.Object) val = node.Object;
+                console.log('Current value:', val);
+                
+                if (isModifierClick) {
+                    // Shift/Ctrl+Click → Show dialog (existing behavior)
+                    console.log('Opening dialog mode');
+                    showStatus('📍 Marker selected (dialog mode).', 'info');
+                    const input = prompt("Enter value (or click Cancel to insert template from palette):", val);
+                    if (input !== null) {
+                        const newNode = parseSimpleInput(input);
+                        setNodeAtPath(currentAST, path, newNode);
+                        activeEditMarker = null;
+                        renderStructuralEditor();
+                    }
+                } else {
+                    // Regular click → Show inline editor (NEW!)
+                    console.log('Opening inline editor mode');
+                    showStatus('✨ Inline edit mode. Type directly or click symbols.', 'info');
+                    console.log('About to call showInlineEditor with:', activeEditMarker);
+                    showInlineEditor(activeEditMarker);
+                    console.log('showInlineEditor returned');
+                }
+            } catch (error) {
+                console.error('Error in handleSlotClick:', error);
+                alert('Error: ' + error.message);
             }
             // If cancelled, activeEditMarker stays set for palette insertion
         };
@@ -2221,13 +2741,46 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             }
         };
         
+        // Classify all palette buttons by type
+        function classifyAllButtons() {
+            document.querySelectorAll('.math-btn').forEach(btn => {
+                const onclick = btn.getAttribute('onclick');
+                if (!onclick) return;
+                
+                // Extract latex template from onclick
+                const match = onclick.match(/insert(Symbol|Template)\('([^']+)'\)/);
+                if (!match) return;
+                
+                const [_, funcType, latex] = match;
+                const buttonType = funcType === 'Symbol' ? 'symbol' : classifyButtonType(latex);
+                
+                btn.setAttribute('data-button-type', buttonType);
+                console.log(`Button "${latex.substring(0, 20)}" classified as: ${buttonType}`);
+            });
+            console.log('✓ All palette buttons classified');
+        }
+        
+        // Initialize inline editing system
+        function initializeInlineEditing() {
+            // Classify buttons
+            classifyAllButtons();
+            
+            // Setup keyboard shortcuts are already in setupInlineEditorHandlers
+            console.log('✓ Inline editing system initialized');
+        }
+        
         // Render MathJax in palette buttons
         if (window.MathJax) {
             MathJax.typesetPromise(document.querySelectorAll('.math-btn'))
                 .then(() => {
                     console.log('✓ Palette buttons rendered with MathJax');
+                    // Initialize inline editing after MathJax renders
+                    initializeInlineEditing();
                 })
                 .catch(err => console.error('MathJax rendering failed:', err));
+        } else {
+            // Initialize even if MathJax isn't available
+            initializeInlineEditing();
         }
     </script>
 </body>
