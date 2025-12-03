@@ -353,11 +353,18 @@ arxiv_submission_20251203.tar.gz
   - Re-verify proofs in browser
   - Modify parameters and re-evaluate
 
-### Phase 4: Native Format (Long-term)
-- Submit `.kleis` directly (no LaTeX needed)
-- arXiv generates PDF + HTML + interactive viewer
-- Verification runs on arXiv servers
-- Papers with type errors flagged before acceptance
+### Phase 4: Native Format (Long-term) **← PRIMARY GOAL**
+- **Submit `.kleis` directly** (no LaTeX needed)
+- **arXiv runs Kleis verification on upload** (server-side type checking)
+- **Automatic rejection/flagging** of papers with type errors
+- arXiv generates multiple formats from source:
+  - PDF (for traditional readers)
+  - HTML5 (with interactive formulas)
+  - LaTeX (for those who want it)
+- **Built-in quality control** via type system
+- Papers displayed with verification status
+
+**Key advantage:** arXiv becomes a **verified mathematics repository**, not just a document archive. Type-checking is built into the submission process, raising quality standards automatically.
 
 ### Example: Interactive arXiv Paper
 
@@ -786,13 +793,69 @@ proof {
 - Made preprints freely accessible
 - Democratized physics/math knowledge
 - Changed how research is shared
+- **2.4 million papers** across physics, math, CS, bio, econ
+- Document archive (stores papers)
 
 **arXiv 2.0 (Kleis Era):**
 - Makes mathematics formally verifiable
 - Democratizes formal methods
 - Changes what "published mathematics" means
+- **Verified mathematics repository** (guarantees correctness)
+- Built-in type checking on submission
+- Interactive, explorable formulas
 
 Just as arXiv made papers **accessible**, Kleis makes them **trustworthy**.
+
+### The Transformation
+
+**From: Document Archive**
+- Stores LaTeX/PDF files
+- Checks compilation only
+- No semantic validation
+- Errors propagate to literature
+
+**To: Verified Knowledge Base**
+- Accepts `.kleis` format natively
+- Type-checks on submission
+- Rejects papers with verification errors
+- **Guarantees mathematical correctness**
+- Generates multiple formats (PDF, HTML, LaTeX) from verified source
+- Enables interactive exploration
+
+### arXiv Server Infrastructure
+
+**Future arXiv submission pipeline:**
+
+```
+User uploads: gauge_theory.kleis
+  ↓
+arXiv server runs:
+  1. kleis verify gauge_theory.kleis
+  2. Check: All types ✓, All axioms ✓
+  3. If ✓: Generate PDF + HTML + LaTeX
+     If ❌: Reject with detailed error report
+  ↓
+Paper published with verification badge:
+  "Type-verified • 0 errors • 47 formulas checked"
+```
+
+**Technical requirements:**
+- arXiv runs open-source Kleis verification engine
+- Sandboxed execution (safety)
+- Resource limits (prevent DOS)
+- Reproducible verification (deterministic)
+- Version pinning (kleis v2.0.5 verified this)
+
+### Why arXiv Would Adopt This
+
+**Current challenge:** With ~2.4 million papers and growing, arXiv cannot manually verify mathematical correctness.
+
+**Kleis solution:**
+- **Automated quality control** at scale
+- **No additional human reviewers** needed
+- **Higher standards** without higher costs
+- **Competitive advantage** over traditional journals
+- **Future-proof** for AI-generated papers flood
 
 ---
 
