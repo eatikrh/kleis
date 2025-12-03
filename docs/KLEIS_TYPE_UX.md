@@ -763,5 +763,193 @@ This balances **power** (explicit control) with **convenience** (smart inference
 
 ---
 
+## Key Use Case: AI-Generated Mathematics Verification
+
+### The Problem with LLM-Generated Formulas
+
+Large Language Models can generate mathematical formulas that:
+- **Look plausible** (correct notation, proper LaTeX)
+- **Are semantically nonsense** (type mismatches, dimension errors, structure violations)
+- **Fool human reviewers** (especially in unfamiliar domains)
+
+**Example**: LLM generates projection formula for ontological physics:
+
+```
+"The projection kernel from Ontological Hilbert space ℋ_ont to R⁴ is:
+
+P: ℋ_ont → R⁴
+P = ∫_Σ ψ(x) ⟨φ|x⟩ d⁴x
+```
+
+**Human reaction**: "Looks reasonable... I think?" 🤔
+
+### Kleis as Verification Layer
+
+**Workflow:**
+
+```
+1. LLM generates formula
+   ↓
+2. Paste into Kleis
+   ↓
+3. Kleis type-checks
+   ↓
+4. If ❌: Show errors → Ask LLM to fix → Repeat
+   If ✅: Formula is structurally sound
+```
+
+**Kleis analysis of LLM output:**
+
+```kleis
+context ontology {
+    ℋ_ont: HilbertSpace<ℂ>
+    R4: VectorSpace<ℝ, ℝ⁴>
+    
+    ψ: ℋ_ont → ℂ      // Wave function
+    φ: R4 → ℂ         // 4D field
+    Σ: Manifold       // Integration domain
+}
+
+// LLM's formula
+P = ∫_Σ ψ(x) ⟨φ|x⟩ d⁴x
+
+// Type checker runs:
+┌────────────────────────────────────────────────────────┐
+│ ❌ Type Error: Invalid inner product                   │
+├────────────────────────────────────────────────────────┤
+│ Expression: ⟨φ|x⟩                                      │
+│                                                        │
+│ Issue: Inner product ⟨·|·⟩ requires both arguments    │
+│        to be elements of the same Hilbert space       │
+│                                                        │
+│ Found:                                                 │
+│   φ: R4 → ℂ  (function from R⁴ to ℂ)                  │
+│   x: ?       (unknown, likely ∈ R⁴)                   │
+│                                                        │
+│ Expected:                                              │
+│   φ, x ∈ ℋ_ont                                         │
+│                                                        │
+│ Possible fixes:                                        │
+│   • If φ is a basis function: φ ∈ ℋ_ont, not R4 → ℂ   │
+│   • If x ∈ R⁴: Use ⟨ψ|φ_x⟩ where φ_x ∈ ℋ_ont          │
+│   • Clarify domain and codomain of projection         │
+└────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────┐
+│ ⚠️  Dimension Warning: Integration measure              │
+├────────────────────────────────────────────────────────┤
+│ Expression: ∫_Σ ... d⁴x                                │
+│                                                        │
+│ d⁴x suggests 4-dimensional integration, but:           │
+│   Σ: Manifold (dimension not specified)               │
+│                                                        │
+│ Clarify: Is Σ a 4-manifold, hypersurface, or other?   │
+└────────────────────────────────────────────────────────┘
+```
+
+### Real-World Example: Catching Hallucinations
+
+**LLM Output:**
+```
+"The gauge field strength tensor is:
+F_μν = ∂_μ A_ν - ∂_ν A_μ + [A_μ, A_ν]"
+```
+
+**Kleis Type Check:**
+```kleis
+context gauge_theory {
+    A_μ: CovectorField(R4, LieAlgebra(G))  // Gauge potential
+    F_μν: TensorField(R4, Tensor(0,2) ⊗ LieAlgebra(G))
+}
+
+// Type check
+∂_μ A_ν: CovectorField(R4, LieAlgebra(G))  ✓
+∂_ν A_μ: CovectorField(R4, LieAlgebra(G))  ✓
+[A_μ, A_ν]: LieAlgebra(G) × LieAlgebra(G) → LieAlgebra(G)  ✓
+
+// All types compatible! ✅
+// This formula is structurally sound
+```
+
+**But if LLM hallucinates:**
+```
+"The gauge field is:
+F_μν = ∂_μ A_ν + A_μ × A_ν"
+```
+
+**Kleis catches it:**
+```
+❌ Type Error: × operator undefined for Lie algebra elements
+   A_μ: LieAlgebra(G)
+   A_ν: LieAlgebra(G)
+   × : Not defined (did you mean [A_μ, A_ν] commutator?)
+```
+
+### Benefits
+
+**For researchers:**
+- Paste LLM-generated formulas into Kleis
+- Get instant structural verification
+- Catch type mismatches before using in papers/code
+
+**For students:**
+- Verify homework help from ChatGPT
+- Learn correct mathematical structure
+- Understand why "plausible" formulas are wrong
+
+**For developers:**
+- Validate AI-generated physics equations before simulation
+- Ensure dimensional consistency
+- Prevent runtime errors from type mismatches
+
+### The Trust Model
+
+```
+┌──────────────┐
+│   LLM Gen    │  Fast, creative, often wrong
+└──────┬───────┘
+       ↓
+┌──────────────┐
+│ Kleis Check  │  Rigorous, type-safe, catches nonsense
+└──────┬───────┘
+       ↓
+┌──────────────┐
+│ Human Review │  Final judgment on correctness
+└──────────────┘
+```
+
+**LLMs are great at:**
+- Pattern matching from training data
+- Generating plausible-looking formulas
+- Quickly exploring solution spaces
+
+**LLMs are terrible at:**
+- Type consistency
+- Dimensional analysis
+- Respecting mathematical structure
+- Catching subtle semantic errors
+
+**Kleis bridges this gap**: Let LLMs generate, let Kleis verify, let humans decide.
+
+### Future: Interactive AI + Kleis Loop
+
+```
+Human: "Derive the projection from Hilbert space to R⁴"
+  ↓
+LLM: [generates formula with type error]
+  ↓
+Kleis: ❌ Type error: [detailed explanation]
+  ↓
+LLM: [sees error, generates corrected version]
+  ↓
+Kleis: ✅ Types check out
+  ↓
+Human: [reviews and accepts]
+```
+
+**This makes AI-assisted mathematics actually reliable.**
+
+---
+
 **Next Step:** Prototype the context panel UI in the structural editor?
 
