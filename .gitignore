@@ -1,5 +1,13 @@
 /target
 
+# LaTeX auxiliary files
+*.aux
+*.log
+
+# Temporary LaTeX output files
+tmp_*.pdf
+tmp_*.tex
+
 # Funding and business documents (private)
 /funding/
 FUNDING_*.md
