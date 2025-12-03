@@ -726,6 +726,354 @@ impl TypeRegistry {
 }
 ```
 
+### Foundational Algebraic Structures
+
+Before defining advanced types, we must establish the **algebraic hierarchy** that underlies all mathematics. Even "Scalar" is not primitive—it's a Field, defined axiomatically.
+
+#### Hierarchy of Algebraic Structures
+
+```
+Magma (closure)
+  ↓
+Semigroup (+ associativity)
+  ↓
+Monoid (+ identity)
+  ↓
+Group (+ inverse)
+  ↓
+Abelian Group (+ commutativity)
+  ↓
+Ring (two operations: +, ·)
+  ↓
+Field (+ multiplicative inverse)
+```
+
+#### Monoid Axioms
+
+```rust
+let monoid = AxiomaticType {
+    name: "Monoid".to_string(),
+    base_types: vec![
+        TypeParam { 
+            name: "M".to_string(), 
+            constraint: Type::Core(CoreType::Set(Box::new(Type::Unknown)))
+        }
+    ],
+    operations: vec![
+        OperationSignature {
+            name: "op".to_string(),
+            signature: vec![Type::Var("M"), Type::Var("M")],
+            result: Type::Var("M"),
+        },
+    ],
+    axioms: vec![
+        // Associativity: (a · b) · c = a · (b · c)
+        forall(["a", "b", "c"], Type::Var("M"),
+            equals(
+                op(op(var("a"), var("b")), var("c")),
+                op(var("a"), op(var("b"), var("c")))
+            )
+        ),
+        // Identity: ∃e ∈ M. ∀a ∈ M. e · a = a · e = a
+        exists(var("e"), Type::Var("M"),
+            forall(var("a"), Type::Var("M"),
+                and(
+                    equals(op(var("e"), var("a")), var("a")),
+                    equals(op(var("a"), var("e")), var("a"))
+                )
+            )
+        ),
+    ],
+};
+```
+
+#### Group Axioms
+
+```rust
+let group = AxiomaticType {
+    name: "Group".to_string(),
+    base_types: vec![
+        TypeParam { 
+            name: "G".to_string(), 
+            constraint: Type::Core(CoreType::Set(Box::new(Type::Unknown)))
+        }
+    ],
+    operations: vec![
+        OperationSignature {
+            name: "op".to_string(),
+            signature: vec![Type::Var("G"), Type::Var("G")],
+            result: Type::Var("G"),
+        },
+        OperationSignature {
+            name: "inverse".to_string(),
+            signature: vec![Type::Var("G")],
+            result: Type::Var("G"),
+        },
+    ],
+    axioms: vec![
+        // Inherits Monoid axioms (associativity + identity)
+        // Plus:
+        
+        // Inverse: ∀a ∈ G. ∃a⁻¹ ∈ G. a · a⁻¹ = a⁻¹ · a = e
+        forall(var("a"), Type::Var("G"),
+            equals(
+                op(var("a"), inverse(var("a"))),
+                identity()
+            )
+        ),
+    ],
+};
+```
+
+#### Ring Axioms
+
+```rust
+let ring = AxiomaticType {
+    name: "Ring".to_string(),
+    base_types: vec![
+        TypeParam { 
+            name: "R".to_string(), 
+            constraint: Type::Core(CoreType::Set(Box::new(Type::Unknown)))
+        }
+    ],
+    operations: vec![
+        // Addition
+        OperationSignature {
+            name: "add".to_string(),
+            signature: vec![Type::Var("R"), Type::Var("R")],
+            result: Type::Var("R"),
+        },
+        OperationSignature {
+            name: "neg".to_string(),
+            signature: vec![Type::Var("R")],
+            result: Type::Var("R"),
+        },
+        // Multiplication
+        OperationSignature {
+            name: "mul".to_string(),
+            signature: vec![Type::Var("R"), Type::Var("R")],
+            result: Type::Var("R"),
+        },
+    ],
+    axioms: vec![
+        // (R, +, 0) is an Abelian group
+        
+        // Associativity of addition: (a + b) + c = a + (b + c)
+        forall(["a", "b", "c"], Type::Var("R"),
+            equals(
+                add(add(var("a"), var("b")), var("c")),
+                add(var("a"), add(var("b"), var("c")))
+            )
+        ),
+        
+        // Commutativity of addition: a + b = b + a
+        forall(["a", "b"], Type::Var("R"),
+            equals(
+                add(var("a"), var("b")),
+                add(var("b"), var("a"))
+            )
+        ),
+        
+        // Additive identity: ∃0 ∈ R. ∀a ∈ R. a + 0 = a
+        exists(var("zero"), Type::Var("R"),
+            forall(var("a"), Type::Var("R"),
+                equals(add(var("a"), var("zero")), var("a"))
+            )
+        ),
+        
+        // Additive inverse: ∀a ∈ R. ∃(-a) ∈ R. a + (-a) = 0
+        forall(var("a"), Type::Var("R"),
+            equals(
+                add(var("a"), neg(var("a"))),
+                zero()
+            )
+        ),
+        
+        // (R, ·, 1) is a Monoid
+        
+        // Associativity of multiplication: (ab)c = a(bc)
+        forall(["a", "b", "c"], Type::Var("R"),
+            equals(
+                mul(mul(var("a"), var("b")), var("c")),
+                mul(var("a"), mul(var("b"), var("c")))
+            )
+        ),
+        
+        // Multiplicative identity: ∃1 ∈ R. ∀a ∈ R. a · 1 = 1 · a = a
+        exists(var("one"), Type::Var("R"),
+            forall(var("a"), Type::Var("R"),
+                and(
+                    equals(mul(var("a"), var("one")), var("a")),
+                    equals(mul(var("one"), var("a")), var("a"))
+                )
+            )
+        ),
+        
+        // Distributivity (left and right)
+        forall(["a", "b", "c"], Type::Var("R"),
+            and(
+                // Left: a(b + c) = ab + ac
+                equals(
+                    mul(var("a"), add(var("b"), var("c"))),
+                    add(mul(var("a"), var("b")), mul(var("a"), var("c")))
+                ),
+                // Right: (a + b)c = ac + bc
+                equals(
+                    mul(add(var("a"), var("b")), var("c")),
+                    add(mul(var("a"), var("c")), mul(var("b"), var("c")))
+                )
+            )
+        ),
+    ],
+};
+
+// Integers are a Ring
+ℤ: Ring<ℤ>
+```
+
+#### Field Axioms
+
+```rust
+let field = AxiomaticType {
+    name: "Field".to_string(),
+    base_types: vec![
+        TypeParam { 
+            name: "F".to_string(), 
+            constraint: Type::Core(CoreType::Set(Box::new(Type::Unknown)))
+        }
+    ],
+    operations: vec![
+        // Inherits Ring operations (add, mul, neg)
+        // Plus:
+        OperationSignature {
+            name: "inv".to_string(),
+            signature: vec![Type::Var("F")],  // Excluding 0
+            result: Type::Var("F"),
+        },
+    ],
+    axioms: vec![
+        // Inherits ALL Ring axioms
+        // Plus:
+        
+        // Commutativity of multiplication: ab = ba
+        forall(["a", "b"], Type::Var("F"),
+            equals(
+                mul(var("a"), var("b")),
+                mul(var("b"), var("a"))
+            )
+        ),
+        
+        // Multiplicative inverse: ∀a ∈ F\{0}. ∃a⁻¹ ∈ F. a · a⁻¹ = 1
+        forall(var("a"), Type::Var("F"),
+            implies(
+                not_equals(var("a"), zero()),
+                equals(
+                    mul(var("a"), inv(var("a"))),
+                    one()
+                )
+            )
+        ),
+    ],
+};
+
+// Real numbers form a Field
+ℝ: Field<ℝ>
+
+// Complex numbers form a Field
+ℂ: Field<ℂ>
+
+// Now Scalar is formally defined
+type Scalar = Field<ℝ>  // Or Field<ℂ> for complex analysis
+```
+
+#### Type Hierarchy in Kleis
+
+```kleis
+// Everything is axiomatic from the ground up!
+
+Magma<M> {
+    op: M × M → M
+}
+
+Semigroup<S> extends Magma<S> {
+    axiom associative: ∀a,b,c. (ab)c = a(bc)
+}
+
+Monoid<M> extends Semigroup<M> {
+    identity: M
+    axiom has_identity: ∀a. e·a = a·e = a
+}
+
+Group<G> extends Monoid<G> {
+    inverse: G → G
+    axiom has_inverse: ∀a. a·a⁻¹ = e
+}
+
+AbelianGroup<G> extends Group<G> {
+    axiom commutative: ∀a,b. a·b = b·a
+}
+
+Ring<R> {
+    // (R, +, 0) is AbelianGroup
+    // (R, ·, 1) is Monoid
+    // Distributivity connects them
+    axiom distributive: ∀a,b,c. a(b+c) = ab + ac
+}
+
+Field<F> extends Ring<F> {
+    // (F\{0}, ·, 1) is AbelianGroup (not just Monoid)
+    axiom mul_commutative: ∀a,b. ab = ba
+    axiom mul_inverse: ∀a≠0. ∃a⁻¹. a·a⁻¹ = 1
+}
+
+// Concrete instances
+ℤ: Ring<ℤ>        // Integers
+ℚ: Field<ℚ>       // Rationals
+ℝ: Field<ℝ>       // Reals
+ℂ: Field<ℂ>       // Complex
+
+// Scalar is just an alias
+type Scalar = ℝ
+```
+
+### Why This Matters
+
+When you write simple arithmetic like `2 + 3 × 4`, the type system knows:
+
+1. `2, 3, 4: ℝ` (which is a Field)
+2. `+` satisfies commutativity → can rewrite `2 + x` as `x + 2`
+3. `×` distributes over `+` → can expand `3(2 + 4)` to `3·2 + 3·4`
+4. `×` is associative → can regroup `(2·3)·4` as `2·(3·4)`
+
+**Every simplification rule is justified by field axioms**, not arbitrary pattern matching!
+
+### Catching False Statements
+
+```kleis
+// FALSE CLAIM: "Integers have multiplicative inverses"
+∀n ∈ ℤ. ∃n⁻¹ ∈ ℤ. n · n⁻¹ = 1
+
+// Type checker:
+// ℤ: Ring<ℤ>  ✓
+// Ring does NOT require multiplicative inverse
+// Trying to use .inv() on ℤ:
+3.inv()  // ❌ Type error: Ring<ℤ> has no inverse operation
+         //    (Field<ℝ>.inv() exists, but ℤ is not a Field)
+
+// Counter-example: 3 ∈ ℤ has no integer inverse
+// (3⁻¹ = 1/3 ∉ ℤ)
+```
+
+```kleis
+// FALSE CLAIM: "Division always works in integers"
+∀a,b ∈ ℤ. a / b ∈ ℤ
+
+// Type checker:
+scalar_divide(ℤ, ℤ) → ℚ  // Division leaves ℤ!
+// ❌ Type error: 5 / 2 = 2.5 ∉ ℤ
+// Correct: scalar_divide: ℤ × ℤ → ℚ
+```
+
 ### Axiomatic Type Definitions
 
 For advanced structures, define axioms that must be satisfied:
