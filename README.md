@@ -1,8 +1,51 @@
 # Kleis
 
-**Kleis** is a symbolic language and computational framework for formalizing **Projected Ontology Theory (POT)** and **Hilbert Ontology (HONT)**.
+**Kleis** is a **formal mathematical reasoning engine** with:
+- **Structural equation editor** - Build formulas visually with WYSIWYG editing and deterministic positioning
+- **Type system** - Algebraic foundations (Groups, Rings, Fields) through advanced structures (Fiber Bundles, Categories, Monads)
+- **Evaluation engine** - Type-safe symbolic computation with polymorphic dispatch
+- **Universal verification** - Check mathematical correctness AND business rules, legal constraints, medical protocols
+- **AI verification layer** - Catch LLM hallucinations by type-checking generated formulas
 
-It blends metaphysical clarity with mathematical structure to express concepts like modal flow, projection, residue, bifurcation, and emergent phenomena. Kleis aims to unify ontological reasoning, physics-inspired structure, and symbolic computation under a single formal umbrella.
+Originally designed for **Projected Ontology Theory (POT)** and **Hilbert Ontology (HONT)**, Kleis has evolved into a general-purpose formal reasoning system that unifies mathematics, ontological structure, and real-world domain modeling under a single type-theoretic framework.
+
+---
+
+## ✨ Key Features
+
+### 🎨 Structural Equation Editor
+- **WYSIWYG editing** - Build formulas visually, see exactly what you get
+- **Deterministic positioning** - UUID-based marker placement (92.7% of gallery examples use zero heuristics)
+- **Content-aware layout** - Equations render perfectly without clipping, adaptive sizing
+- **Primitive templates** - Build complex formulas from scratch (equality, +, −, ×, fractions, roots)
+- **MathType-level UX** - 8 balanced palette tabs, intuitive navigation, keyboard shortcuts
+
+### 🔬 Type System
+- **Complete algebraic foundations** - Magma → Semigroup → Monoid → Group → Abelian Group → Ring → Field
+- **Vector space axioms** - All 8 axioms formally expressed and verifiable
+- **Polymorphic operations** - Same AST node, different semantics (scalar×scalar vs scalar×vector vs matrix×matrix)
+- **Extensible architecture** - Add Groups, Categories, Fiber Bundles, Monads via plugin system
+- **Exception handling** - Type-level errors (structure) vs value-level errors (division by zero)
+
+### 🧮 Evaluation Engine *(Designed)*
+- **Context management** - Hierarchical scoping, bindings with types
+- **Type-directed dispatch** - Routes operations based on inferred types
+- **Multi-valued operations** - Handles ± and solution sets correctly
+- **Symbolic computation** - Substitute, eval, typecheck, simplify
+
+### 🤖 AI Verification
+- **LLM output checking** - Paste AI-generated formulas, get instant type verification
+- **Catches hallucinations** - Detects incompatible types, dimension mismatches, axiom violations
+- **Trust-but-verify** - LLM generates → Kleis verifies → Human reviews
+- **Universal applicability** - Math formulas, business rules, legal contracts, medical protocols
+
+### 🌍 Universal Verification *(Vision)*
+- Same type system for mathematics AND real-world domains
+- Business: PurchaseOrder with inventory/credit axioms
+- Legal: Contract with consent/consideration axioms
+- Medical: Prescription with safety/interaction axioms
+- Engineering: Design with stress/deflection axioms
+- **Any structured domain with rules**
 
 ---
 
@@ -14,15 +57,33 @@ It blends metaphysical clarity with mathematical structure to express concepts l
 cargo run --bin server
 ```
 
-Then open **http://localhost:3000** in your browser for the web editor which now includes:
-- Bidirectional text ↔ structural editing
-- Live MathJax preview
-- Role-aware semantic overlays with keyboard navigation (Tab through markers, Enter to edit)
-- **54 template library** with 98% perfect edit marker alignment
-- **91 gallery examples** (click to load)
-- Symbol palettes (Greek, operators, calculus, etc.)
-- Full support for tensors (Christoffel, Riemann), derivatives (ẋ, ẍ), all matrix types
-- Semantic-first coordinate system for accurate overlay positioning
+Then open **http://localhost:3000** in your browser for the web editor:
+
+**Structural Mode:**
+- Build formulas from primitives (□ = □, □ + □, □ − □, □·□, fractions, roots)
+- 8 balanced palette tabs (Basics, Fences, Accents, Calculus, Linear Algebra, Greek, Logic, Physics)
+- UUID-based deterministic marker positioning (no spatial heuristics)
+- Content-aware viewBox (proportional padding, handles negative coordinates)
+- Keyboard navigation (arrows/Tab between markers, Enter to edit, Cmd+Z undo)
+- Click-to-edit with visual feedback
+- Auto-generated bounding boxes from Typst rendering
+
+**Text Mode:**
+- LaTeX input with live MathJax preview
+- Bidirectional conversion (LaTeX ↔ structural AST)
+- Parser with template inference (~80% coverage)
+
+**Gallery:**
+- **100+ templates** across all domains
+- **91 curated examples** (physics, quantum, calculus, tensor ops)
+- Click to load, instant structural editing
+
+**Features:**
+- Real-time type inference (hover to see types)
+- Debug panel (AST visualization, bounding box info)
+- Undo/redo with full history
+- Zoom controls (Cmd +/−)
+- Scrollable canvas for large equations
 
 ### Run Tests
 
@@ -44,17 +105,66 @@ Creates `tmp_gallery.pdf` with all 91 rendered examples.
 
 ## 🧠 What is Kleis?
 
-Kleis serves three main purposes:
+Kleis is a **formal reasoning platform** that bridges visual editing, symbolic computation, and type-theoretic verification.
 
-1. **Symbolic Language** - For expressing modal ontological structures (POT/HONT)
-2. **Mathematical Renderer** - Converts expression trees to LaTeX/Unicode with **100+ operations** and 91 gallery examples
-3. **LaTeX Parser + Template Inference** - Parses LaTeX back into structured ASTs (~80% coverage) and infers higher-level templates (integrals, quantifiers, statistics, tensor ops, etc.)
+### Core Components
+
+1. **Structural Equation Editor**
+   - WYSIWYG formula builder (build quadratic formula from primitives)
+   - Deterministic UUID-based marker positioning (100% accurate)
+   - Content-aware rendering (no clipping, adaptive sizing)
+   - 8 balanced palette tabs (Basics, Fences, Accents, Calculus, Linear Algebra, Greek, Logic, Physics)
+   - Template composition (equality, +, −, ×, fractions, roots, matrices)
+
+2. **Type System**
+   - Complete algebraic hierarchy (Magma → Semigroup → Monoid → Group → Ring → Field)
+   - Polymorphic dispatch (same operation, different semantics based on types)
+   - Extensible architecture (add Groups, Categories, Fiber Bundles via plugins)
+   - Exception handling (type-level errors vs runtime preconditions)
+   - Vector space axioms, field axioms, all formally expressed
+
+3. **Evaluation Engine** *(designed, not yet implemented)*
+   - Context-aware symbolic computation
+   - Type-directed evaluation with polymorphic dispatch
+   - Substitute, eval, typecheck, simplify operations
+   - Multi-valued results (±, solution sets)
+
+4. **Renderer + Parser**
+   - **100+ operations** (calculus, linear algebra, quantum mechanics, tensor ops)
+   - **91 gallery examples** (physics, number theory, vector calculus)
+   - LaTeX parser with template inference (~80% coverage)
+   - Multiple output formats (LaTeX, Unicode, HTML, SVG with semantic bounding boxes)
+
+5. **Universal Verification** *(vision)*
+   - Same type system for mathematics AND real-world domains
+   - Business rules (PurchaseOrder axioms), legal constraints (Contract axioms)
+   - Medical protocols (Prescription safety), engineering specs (stress limits)
+   - AI verification layer (catch LLM hallucinations via type checking)
+
+### Key Innovation
+
+**Axiomatic Types = Universal Verification**
+
+The same type system that verifies:
+```
+"A vector space over field F satisfies 8 axioms"
+```
+
+Can also verify:
+```
+"A purchase order must have: total = sum(line_items), customer.credit_limit ≥ total"
+```
+
+**Mathematical correctness and business logic use the same verification engine.**
 
 ### Inspiration
 
-- Functional symbolic systems like **LISP** and **REDUCE**
-- Formal language design principles
-- The need to represent non-temporal structure, projection mechanics, and modal coherence
+- Symbolic systems: **LISP**, **REDUCE**, **Mathematica**
+- Proof assistants: **Coq**, **Lean**, **Agda**
+- Type theory: **Haskell**, **ML**, dependent types
+- Structural editors: **MathType**, **Maple**
+- Domain modeling: **Alloy**, **Z notation**, formal methods
+- Ontological formalism: POT/HONT theories
 
 ---
 
@@ -292,35 +402,129 @@ Expression evaluation in Kleis is **minimal, meaning-preserving, and necessary**
 
 ---
 
-## 🎯 Future Vision
+## 🎯 Vision & Roadmap
 
-### Vision 1: LLM Integration
-Instead of natural language responses, LLMs will output formal Kleis DSL. Reasoning becomes structured, provable formal chains—no hallucination possible.
+### Phase 1: Mathematical Foundation *(Current)*
+- ✅ Structural editor with deterministic positioning
+- ✅ Content-aware rendering and adaptive layout
+- ✅ Primitive templates for formula composition
+- ✅ Type system design (algebraic hierarchy, extensibility)
+- ✅ Evaluation syntax design (substitute, eval, multi-valued)
+- 🔄 Type inference implementation (next step)
+- 🔄 Context management and eval() pipeline
 
-### Vision 2: Visual Authoring
-A visual editor for defining new mathematical structures:
-- Custom operations with visual glyphs
-- Template assignment (LaTeX, Unicode)
+### Phase 2: Universal Verification Engine
+- Implement axiomatic type definitions
+- Add plugin architecture for domain-specific types
+- Create domain libraries:
+  - `std.business` - PurchaseOrder, Invoice, Contract
+  - `std.legal` - Contract axioms, compliance rules
+  - `std.medical` - Prescription safety, drug interactions
+  - `std.engineering` - Design specs, tolerance checking
+- Build verification API for AI integration
+
+### Phase 3: AI Integration
+- API endpoint: `/api/verify` for formula/document validation
+- LLM integration: AI generates → Kleis verifies → AI corrects
+- Trust-but-verify workflow for AI-generated mathematics
+- Type error feedback with suggested fixes
+- **Goal:** Make LLM-generated formulas reliable and trustworthy
+
+### Phase 4: Visual Authoring
+- Visual editor for defining new mathematical structures
+- Custom operations with glyphs
 - Type signatures and semantic bindings
 - Package distribution (.kleis modules)
-- Live preview and validation
+- Live validation and proof obligations
 
-See `docs/adr-005-visual-authoring.md` and `docs/kleis_vision_executable_math.md` for details.
+### Phase 5: Executable Mathematics
+- Notebook interface with context management
+- Template contexts (Physics, Quantum, Linear Algebra)
+- Interactive type prompts and inference
+- Proof assistant integration
+- Collaborative mathematical reasoning
 
-### Vision 3: Executable Mathematics
-Mathematicians define new algebras with notation, glyphs, and laws. Kleis understands, applies, renders, and shares them. Notation becomes executable; algebra becomes live.
+### Ultimate Vision
+
+**Kleis becomes the universal verification layer for structured knowledge:**
+- ✅ Mathematical formulas (type checking, axiom verification)
+- ✅ Business processes (rule validation, constraint checking)
+- ✅ Legal documents (compliance verification, axiom satisfaction)
+- ✅ AI-generated content (structural correctness, type safety)
+- ✅ Executable specifications (formal methods for any domain)
+
+**In the AI era:** LLMs generate content quickly; Kleis verifies it rigorously. The combination makes AI-assisted formal reasoning actually reliable.
+
+See `docs/adr-005-visual-authoring.md`, `docs/kleis_vision_executable_math.md`, and `docs/KLEIS_TYPE_UX.md` for details.
+
+---
+
+## 🎯 Use Cases
+
+### 1. Mathematical Research
+- Build complex formulas structurally without LaTeX expertise
+- Type-check equations before using in papers
+- Verify dimensional consistency across derivations
+- Example: Build quadratic formula from primitives, verify types match
+
+### 2. AI-Assisted Mathematics
+- **LLM generates formula** → Kleis type-checks → Human reviews
+- Catches AI hallucinations (incompatible Hilbert spaces, dimension mismatches)
+- Example: LLM suggests projection kernel with wrong types → Kleis catches immediately
+- Makes AI-generated mathematics trustworthy
+
+### 3. Physics & Engineering
+- Model field theories with proper type structure
+- Verify gauge field tensors, stress calculations, circuit equations
+- Type system prevents nonsense (adding scalar to vector field)
+- Example: Gauss's law ∇·E = ρ/ε₀ type-checks field dimensions
+
+### 4. Education
+- Students build formulas visually, learn mathematical structure
+- Verify homework solutions against axioms
+- Understand why certain operations are invalid
+- Example: See why 3⁻¹ ∉ ℤ (integers are Ring, not Field)
+
+### 5. Business Rules Verification *(Future)*
+- Model purchase orders, contracts, financial transactions as types
+- Verify axioms (credit limits, inventory constraints, legal capacity)
+- Same type system as mathematics, different domain
+- Example: Check PO total matches line items, customer credit sufficient
+
+### 6. Formal Methods
+- Express system invariants as axioms
+- Verify protocol correctness
+- Model state machines with type-safe transitions
+- Integration with formal verification tools
 
 ---
 
 ## 📖 Documentation
 
-- **Architecture Decisions:** `docs/adr-*.md`
-- **Syntax Reference:** `docs/syntax.md`
-- **Server API:** `SERVER_README.md`
-- **Parser Status:** `PARSER_TODO.md`
-- **Ontology Theories:**
-  - Projected Ontology Theory: `docs/POT.md`
-  - Hilbert Ontology: `docs/HONT.md`
+### Type System & Evaluation
+- **[KLEIS_TYPE_SYSTEM.md](docs/KLEIS_TYPE_SYSTEM.md)** - Complete type system design (algebraic hierarchy, polymorphic dispatch, extensibility)
+- **[KLEIS_TYPE_UX.md](docs/KLEIS_TYPE_UX.md)** - Type system UX (context management, inference prompts, AI verification)
+- **[KLEIS_EVALUATION_SYNTAX.md](docs/KLEIS_EVALUATION_SYNTAX.md)** - Evaluation operations (substitute, eval, multi-valued semantics)
+
+### Structural Editor
+- **[STRUCTURAL_EDITOR_STATUS.md](STRUCTURAL_EDITOR_STATUS.md)** - Implementation status, UUID positioning, 92.7% determinism achieved
+- **[PALETTE_COMPLETE_GUIDE.md](PALETTE_COMPLETE_GUIDE.md)** - Complete palette guide (8 tabs, primitive templates, usage)
+- **[ARBITRARY_MATRIX_SOLUTION.md](ARBITRARY_MATRIX_SOLUTION.md)** - Matrix handling, MathType comparison, builder design
+
+### Implementation Guides
+- **[TECHNICAL_REFERENCE.md](TECHNICAL_REFERENCE.md)** - Technical implementation details (architecture, API, debugging)
+- **[SESSION_FINAL_SUMMARY.md](SESSION_FINAL_SUMMARY.md)** - Recent improvements and accomplishments
+- **[SERVER_README.md](SERVER_README.md)** - Server API documentation
+- **[TEST_GUIDE.md](TEST_GUIDE.md)** - Testing guide
+
+### Design & Architecture
+- **[docs/adr-*.md](docs/)** - Architecture Decision Records
+- **[docs/syntax.md](docs/syntax.md)** - Language syntax reference
+- **[PARSER_TODO.md](PARSER_TODO.md)** - Parser implementation status
+
+### Ontology & Theory
+- **[docs/POT.md](docs/POT.md)** - Projected Ontology Theory
+- **[docs/HONT.md](docs/HONT.md)** - Hilbert Ontology
 
 ---
 
