@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Kleis Palette Icons</title>
+    <link rel="stylesheet" href="palette_icons.css">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            padding: 40px;
+            background: #f5f5f5;
+        }
+        .container { 
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Kleis Palette Icons</h1>
+        <p class="subtitle">Click any icon to copy its template code</p>
+        <div class="palette-section">
+            <div class="palette-section-title">calculus</div>
+            <div class="palette-grid">
+                <button class="palette-icon-btn" 
+                        data-tooltip="integral"
+                        onclick="navigator.clipboard.writeText('$integral_a^b f dif x$')">
+                    <img src="integral.svg" alt="integral">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="sum"
+                        onclick="navigator.clipboard.writeText('$sum_(i=1)^n a_i$')">
+                    <img src="sum.svg" alt="sum">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="product"
+                        onclick="navigator.clipboard.writeText('$product_(i=1)^n a_i$')">
+                    <img src="product.svg" alt="product">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="limit"
+                        onclick="navigator.clipboard.writeText('$lim_(x arrow 0) f(x)$')">
+                    <img src="limit.svg" alt="limit">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="partial"
+                        onclick="navigator.clipboard.writeText('$(diff f)/(diff x)$')">
+                    <img src="partial.svg" alt="partial">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="gradient"
+                        onclick="navigator.clipboard.writeText('$nabla f$')">
+                    <img src="gradient.svg" alt="gradient">
+                </button>
+            </div>
+        </div>
+
+        <div class="palette-section">
+            <div class="palette-section-title">functions</div>
+            <div class="palette-grid">
+                <button class="palette-icon-btn" 
+                        data-tooltip="sin"
+                        onclick="navigator.clipboard.writeText('$sin(x)$')">
+                    <img src="sin.svg" alt="sin">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="cos"
+                        onclick="navigator.clipboard.writeText('$cos(x)$')">
+                    <img src="cos.svg" alt="cos">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="ln"
+                        onclick="navigator.clipboard.writeText('$ln(x)$')">
+                    <img src="ln.svg" alt="ln">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="exp"
+                        onclick="navigator.clipboard.writeText('$e^x$')">
+                    <img src="exp.svg" alt="exp">
+                </button>
+            </div>
+        </div>
+
+        <div class="palette-section">
+            <div class="palette-section-title">quantum</div>
+            <div class="palette-grid">
+                <button class="palette-icon-btn" 
+                        data-tooltip="ket"
+                        onclick="navigator.clipboard.writeText('$|psi angle.r$')">
+                    <img src="ket.svg" alt="ket">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="bra"
+                        onclick="navigator.clipboard.writeText('$angle.l phi|$')">
+                    <img src="bra.svg" alt="bra">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="inner"
+                        onclick="navigator.clipboard.writeText('$angle.l phi|psi angle.r$')">
+                    <img src="inner.svg" alt="inner">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="outer"
+                        onclick="navigator.clipboard.writeText('$|psi angle.r angle.l phi|$')">
+                    <img src="outer.svg" alt="outer">
+                </button>
+            </div>
+        </div>
+
+        <div class="palette-section">
+            <div class="palette-section-title">brackets</div>
+            <div class="palette-grid">
+                <button class="palette-icon-btn" 
+                        data-tooltip="parens"
+                        onclick="navigator.clipboard.writeText('$(x)$')">
+                    <img src="parens.svg" alt="parens">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="brackets"
+                        onclick="navigator.clipboard.writeText('$[x]$')">
+                    <img src="brackets.svg" alt="brackets">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="braces"
+                        onclick="navigator.clipboard.writeText('${x}$')">
+                    <img src="braces.svg" alt="braces">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="angle_brackets"
+                        onclick="navigator.clipboard.writeText('$angle.l x angle.r$')">
+                    <img src="angle_brackets.svg" alt="angle_brackets">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="abs"
+                        onclick="navigator.clipboard.writeText('$|x|$')">
+                    <img src="abs.svg" alt="abs">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="norm"
+                        onclick="navigator.clipboard.writeText('$norm(v)$')">
+                    <img src="norm.svg" alt="norm">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="floor"
+                        onclick="navigator.clipboard.writeText('$floor(x)$')">
+                    <img src="floor.svg" alt="floor">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="ceiling"
+                        onclick="navigator.clipboard.writeText('$ceil(x)$')">
+                    <img src="ceiling.svg" alt="ceiling">
+                </button>
+            </div>
+        </div>
+
+        <div class="palette-section">
+            <div class="palette-section-title">basic</div>
+            <div class="palette-grid">
+                <button class="palette-icon-btn" 
+                        data-tooltip="fraction"
+                        onclick="navigator.clipboard.writeText('$a/b$')">
+                    <img src="fraction.svg" alt="fraction">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="sqrt"
+                        onclick="navigator.clipboard.writeText('$sqrt(x)$')">
+                    <img src="sqrt.svg" alt="sqrt">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="nthroot"
+                        onclick="navigator.clipboard.writeText('$root(n, x)$')">
+                    <img src="nthroot.svg" alt="nthroot">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="power"
+                        onclick="navigator.clipboard.writeText('$x^n$')">
+                    <img src="power.svg" alt="power">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="subscript"
+                        onclick="navigator.clipboard.writeText('$x_i$')">
+                    <img src="subscript.svg" alt="subscript">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="tensor_mixed"
+                        onclick="navigator.clipboard.writeText('$T^i_j$')">
+                    <img src="tensor_mixed.svg" alt="tensor_mixed">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="subsup"
+                        onclick="navigator.clipboard.writeText('$T_j^i$')">
+                    <img src="subsup.svg" alt="subsup">
+                </button>
+            </div>
+        </div>
+
+        <div class="palette-section">
+            <div class="palette-section-title">tensors</div>
+            <div class="palette-grid">
+                <button class="palette-icon-btn" 
+                        data-tooltip="tensor_upper_pair"
+                        onclick="navigator.clipboard.writeText('$T^(mu nu)$')">
+                    <img src="tensor_upper_pair.svg" alt="tensor_upper_pair">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="tensor_lower_pair"
+                        onclick="navigator.clipboard.writeText('$g_(mu nu)$')">
+                    <img src="tensor_lower_pair.svg" alt="tensor_lower_pair">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="tensor_1up_3down"
+                        onclick="navigator.clipboard.writeText('$R^rho_(sigma mu nu)$')">
+                    <img src="tensor_1up_3down.svg" alt="tensor_1up_3down">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="tensor_2up_2down"
+                        onclick="navigator.clipboard.writeText('$R^(mu nu)_(rho sigma)$')">
+                    <img src="tensor_2up_2down.svg" alt="tensor_2up_2down">
+                </button>
+            </div>
+        </div>
+
+        <div class="palette-section">
+            <div class="palette-section-title">matrices</div>
+            <div class="palette-grid">
+                <button class="palette-icon-btn" 
+                        data-tooltip="matrix2x2"
+                        onclick="navigator.clipboard.writeText('$mat(a, b; c, d)$')">
+                    <img src="matrix2x2.svg" alt="matrix2x2">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="matrix3x3"
+                        onclick="navigator.clipboard.writeText('$mat(a, b, c; d, e, f; g, h, i)$')">
+                    <img src="matrix3x3.svg" alt="matrix3x3">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="pmatrix2x2"
+                        onclick="navigator.clipboard.writeText('$(mat(a, b; c, d))$')">
+                    <img src="pmatrix2x2.svg" alt="pmatrix2x2">
+                </button>
+                <button class="palette-icon-btn" 
+                        data-tooltip="vmatrix2x2"
+                        onclick="navigator.clipboard.writeText('$det(mat(a, b; c, d))$')">
+                    <img src="vmatrix2x2.svg" alt="vmatrix2x2">
+                </button>
+            </div>
+        </div>
+
+    </div>
+    <script>
+        document.querySelectorAll('.palette-icon-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.style.background = '#4CAF50';
+                btn.style.color = 'white';
+                setTimeout(() => {
+                    btn.style.background = '';
+                    btn.style.color = '';
+                }, 200);
+            });
+        });
+    </script>
+</body>
+</html>

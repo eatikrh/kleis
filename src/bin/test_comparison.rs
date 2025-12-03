@@ -60,7 +60,7 @@ fn main() {
         // Render to LaTeX (for MathJax)
         let latex_markup = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
 
-        let typst_cell = match compile_math_to_svg_with_ids(&typst_markup, &[]) {
+        let typst_cell = match compile_math_to_svg_with_ids(&typst_markup, &[], &[]) {
             Ok(output) => output.svg,
             Err(e) => format!(
                 r#"<div class="error">Typst Error: {}<br>Markup: {}</div>"#,
@@ -94,7 +94,7 @@ fn main() {
         let typst_cell = match parse_latex(&latex) {
             Ok(expr) => {
                 let typst_markup = render_expression(&expr, &ctx, &RenderTarget::Typst);
-                match compile_math_to_svg_with_ids(&typst_markup, &[]) {
+                match compile_math_to_svg_with_ids(&typst_markup, &[], &[]) {
                     Ok(output) => output.svg,
                     Err(e) => format!(
                         r#"<div class="error">Typst Compilation Error: {}<br>Markup: {}</div>"#,

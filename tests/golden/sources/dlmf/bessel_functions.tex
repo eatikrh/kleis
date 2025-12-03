@@ -1,0 +1,19 @@
+% DLMF Bessel Functions - Curated Equations
+% Source: https://dlmf.nist.gov/
+% Manually curated for testing
+
+% 10.2.2: Bessel series
+\[ J_\nu(z) = \sum_{k=0}^\infty \frac{(-1)^k}{k!\,\Gamma(k+\nu+1)} \left(\frac{z}{2}\right)^{2k+\nu} \]
+
+% 10.4.1: Negative integer
+\[ J_{-n}(z) = (-1)^n J_n(z) \]
+
+% 10.2.3: Bessel Y
+\[ Y_\nu(z) = \frac{J_\nu(z)\cos(\nu\pi) - J_{-\nu}(z)}{\sin(\nu\pi)} \]
+
+% 10.2.5: Hankel first
+\[ H_\nu^{(1)}(z) = J_\nu(z) + iY_\nu(z) \]
+
+% 10.27.6: Modified Bessel
+\[ I_\nu(z) = e^{-\nu\pi i/2} J_\nu(ze^{\pi i/2}) \]
+

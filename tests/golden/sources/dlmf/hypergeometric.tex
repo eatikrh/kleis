@@ -1,0 +1,16 @@
+% DLMF Hypergeometric - Curated Equations
+% Source: https://dlmf.nist.gov/
+% Manually curated for testing
+
+% 15.2.1: Hypergeometric series
+\[ {}_2F_1(a,b;c;z) = \sum_{n=0}^\infty \frac{(a)_n(b)_n}{(c)_n} \frac{z^n}{n!} \]
+
+% 15.6.1: Integral rep
+\[ {}_2F_1(a,b;c;z) = \frac{\Gamma(c)}{\Gamma(b)\Gamma(c-b)} \int_0^1 t^{b-1}(1-t)^{c-b-1}(1-zt)^{-a} dt \]
+
+% 13.2.2: Confluent
+\[ {}_1F_1(a;b;z) = \sum_{n=0}^\infty \frac{(a)_n}{(b)_n} \frac{z^n}{n!} \]
+
+% 13.2.39: Kummer transform
+\[ M(a,b,z) = e^z {}_1F_1(b-a;b;-z) \]
+

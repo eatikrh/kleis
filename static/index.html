@@ -399,6 +399,90 @@
             border-color: #667eea;
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
+        
+        /* Clean Math Button Style (for MathJax-rendered buttons) */
+        .math-btn {
+            min-width: 70px;
+            height: 56px;
+            padding: 10px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            background: linear-gradient(to bottom, #ffffff, #fafafa);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            user-select: none;
+        }
+
+        .math-btn:hover {
+            border-color: #4CAF50;
+            background: white;
+            box-shadow: 
+                0 2px 8px rgba(76, 175, 80, 0.2),
+                0 4px 16px rgba(76, 175, 80, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .math-btn:hover .MathJax,
+        .math-btn:hover mjx-container {
+            color: #333 !important;
+        }
+
+        .math-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            background: #f5f5f5;
+        }
+
+        /* Tooltip for math buttons */
+        .math-btn[data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: -36px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            font-size: 11px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .math-btn:hover[data-tooltip]::after {
+            opacity: 1;
+        }
+
+        /* MathJax rendered content in buttons */
+        .math-btn .MathJax {
+            font-size: 20px !important;
+            color: #333 !important;
+        }
+
+        .math-btn .MathJax_SVG {
+            vertical-align: middle !important;
+        }
+        
+        .math-btn .MathJax_SVG svg {
+            fill: #333 !important;
+        }
+        
+        /* Ensure math content is visible */
+        .math-btn mjx-container {
+            color: #333 !important;
+        }
+        
+        .math-btn mjx-container svg {
+            fill: #333 !important;
+        }
     </style>
 </head>
 <body>
@@ -477,173 +561,174 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     
                     <!-- Basics -->
                     <div id="palette-basics" class="symbol-grid">
-                        <button class="symbol-btn" onclick="insertSymbol('+')">+</button>
-                        <button class="symbol-btn" onclick="insertSymbol('-')">−</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\times')">×</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\div')">÷</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\pm')">±</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\mp')">∓</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\cdot')">·</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\ast')">∗</button>
-                        <button class="symbol-btn" onclick="insertSymbol('=')">=</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\neq')">≠</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\infty')">∞</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\square')">□</button>
+                        <button class="math-btn" onclick="insertSymbol('+')" data-tooltip="Plus">\(+\)</button>
+                        <button class="math-btn" onclick="insertSymbol('-')" data-tooltip="Minus">\(-\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\times')" data-tooltip="Times">\(\times\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\div')" data-tooltip="Divide">\(\div\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\pm')" data-tooltip="Plus-Minus">\(\pm\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\mp')" data-tooltip="Minus-Plus">\(\mp\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\cdot')" data-tooltip="Dot">\(\cdot\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\ast')" data-tooltip="Asterisk">\(\ast\)</button>
+                        <button class="math-btn" onclick="insertSymbol('=')" data-tooltip="Equal">\(=\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\neq')" data-tooltip="Not Equal">\(\neq\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\infty')" data-tooltip="Infinity">\(\infty\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\square')" data-tooltip="Box">\(\square\)</button>
                         
-                        <button class="template-btn" onclick="insertTemplate('□ = □')">□ = □ Equality</button>
-                        <button class="template-btn" onclick="insertTemplate('□ + □')">□ + □ Addition</button>
-                        <button class="template-btn" onclick="insertTemplate('□ - □')">□ - □ Subtraction</button>
-                        <button class="template-btn" onclick="insertTemplate('□ \\cdot □')">□·□ Multiplication</button>
-                        <button class="template-btn" onclick="insertTemplate('-□')">−□ Negate</button>
-                        <button class="template-btn" onclick="insertTemplate('±')">± Symbol</button>
+                        <button class="math-btn" onclick="insertTemplate('□ = □')" data-tooltip="Equality">\(a = b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ + □')" data-tooltip="Addition">\(a + b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ - □')" data-tooltip="Subtraction">\(a - b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ \\cdot □')" data-tooltip="Multiplication">\(a \cdot b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('-□')" data-tooltip="Negate">\(-x\)</button>
+                        <button class="math-btn" onclick="insertTemplate('±')" data-tooltip="Plus-Minus">\(\pm\)</button>
                         
-                        <button class="template-btn" onclick="insertTemplate('\\frac{□}{□}')">📐 Fraction</button>
-                        <button class="template-btn" onclick="insertTemplate('\\sqrt{□}')">√ Square Root</button>
-                        <button class="template-btn" onclick="insertTemplate('\\sqrt[□]{□}')">ⁿ√x Nth Root</button>
-                        <button class="template-btn" onclick="insertTemplate('x^{□}')">x^n Power</button>
-                        <button class="template-btn" onclick="insertTemplate('x_{□}')">x_n Subscript</button>
-                        <button class="template-btn" onclick="insertTemplate('x^{□}_{□}')">x^n_m Mixed</button>
-                        <button class="template-btn" onclick="insertTemplate('\\binom{□}{□}')">⎛n⎞ Binomial</button>
-                        <button class="template-btn" onclick="insertTemplate('□!')">n! Factorial</button>
+                        <button class="math-btn" onclick="insertTemplate('\\frac{□}{□}')" data-tooltip="Fraction">\(\frac{a}{b}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\sqrt{□}')" data-tooltip="Square Root">\(\sqrt{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\sqrt[□]{□}')" data-tooltip="Nth Root">\(\sqrt[n]{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□^{□}')" data-tooltip="Power">\(x^n\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□_{□}')" data-tooltip="Subscript">\(x_i\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□^{□}_{□}')" data-tooltip="Sup-Sub">\(T^i_j\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□_{□}^{□}')" data-tooltip="Sub-Sup">\(T_j^i\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□_{□ □}')" data-tooltip="Covariant Tensor">\(g_{\mu\nu}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□^{□ □}_{□ □}')" data-tooltip="Riemann Tensor">\(R^{\mu\nu}_{\rho\sigma}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\binom{□}{□}')" data-tooltip="Binomial">\(\binom{n}{k}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□!')" data-tooltip="Factorial">\(n!\)</button>
                         
-                        <button class="template-btn" onclick="insertTemplate('\\sin(□)')">sin(x)</button>
-                        <button class="template-btn" onclick="insertTemplate('\\cos(□)')">cos(x)</button>
-                        <button class="template-btn" onclick="insertTemplate('\\tan(□)')">tan(x)</button>
-                        <button class="template-btn" onclick="insertTemplate('\\arcsin(□)')">arcsin(x)</button>
-                        <button class="template-btn" onclick="insertTemplate('\\arccos(□)')">arccos(x)</button>
-                        <button class="template-btn" onclick="insertTemplate('\\arctan(□)')">arctan(x)</button>
-                        <button class="template-btn" onclick="insertTemplate('\\ln(□)')">ln(x)</button>
-                        <button class="template-btn" onclick="insertTemplate('\\log(□)')">log(x)</button>
-                        <button class="template-btn" onclick="insertTemplate('\\exp(□)')">exp(x)</button>
-                        <button class="template-btn" onclick="insertTemplate('e^{□}')">e^x</button>
+                        <button class="math-btn" onclick="insertTemplate('\\sin(□)')" data-tooltip="Sine">\(\sin(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\cos(□)')" data-tooltip="Cosine">\(\cos(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\tan(□)')" data-tooltip="Tangent">\(\tan(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\arcsin(□)')" data-tooltip="Arcsine">\(\arcsin(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\arccos(□)')" data-tooltip="Arccosine">\(\arccos(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\arctan(□)')" data-tooltip="Arctangent">\(\arctan(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\ln(□)')" data-tooltip="Natural Log">\(\ln(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\log(□)')" data-tooltip="Logarithm">\(\log(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\exp(□)')" data-tooltip="Exponential">\(\exp(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('e^{□}')" data-tooltip="e to the power">\(e^x\)</button>
                     </div>
                     
                     <!-- Fences & Grouping -->
-                    <div id="palette-fences" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
-                        <button class="template-btn" onclick="insertTemplate('\\left(□\\right)')">( ) Paren</button>
-                        <button class="template-btn" onclick="insertTemplate('\\left[□\\right]')">[ ] Bracket</button>
-                        <button class="template-btn" onclick="insertTemplate('\\left\\{□\\right\\}')">{ } Brace</button>
-                        <button class="template-btn" onclick="insertTemplate('\\left\\langle □ \\right\\rangle')">⟨ ⟩ Angle</button>
-                        <button class="template-btn" onclick="insertTemplate('\\left|□\\right|')">|x| Abs</button>
-                        <button class="template-btn" onclick="insertTemplate('\\left\\|□\\right\\|')">‖v‖ Norm</button>
-                        <button class="template-btn" onclick="insertTemplate('|x|')">|x| Quick</button>
-                        <button class="template-btn" onclick="insertTemplate('\\|v\\|')">‖v‖ Quick</button>
-                        <button class="template-btn" onclick="insertTemplate('\\left\\lfloor □ \\right\\rfloor')">⌊x⌋ Floor</button>
-                        <button class="template-btn" onclick="insertTemplate('\\left\\lceil □ \\right\\rceil')">⌈x⌉ Ceiling</button>
-                        <button class="template-btn" onclick="insertTemplate('\\begin{cases}□\\\\□\\end{cases}')">Piecewise</button>
-                        <button class="template-btn" onclick="insertTemplate('[□, □]')">[A,B] Commutator</button>
+                    <div id="palette-fences" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('\\left(□\\right)')" data-tooltip="Parentheses">\((x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left[□\\right]')" data-tooltip="Square Brackets">\([x]\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\{□\\right\\}')" data-tooltip="Curly Braces">\(\{x\}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\langle □ \\right\\rangle')" data-tooltip="Angle Brackets">\(\langle x \rangle\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left|□\\right|')" data-tooltip="Absolute Value">\(|x|\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\|□\\right\\|')" data-tooltip="Norm">\(\|v\|\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\lfloor □ \\right\\rfloor')" data-tooltip="Floor">\(\lfloor x \rfloor\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\lceil □ \\right\\rceil')" data-tooltip="Ceiling">\(\lceil x \rceil\)</button>
                     </div>
                     
                     <!-- Accents & Styling -->
-                    <div id="palette-accents" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
-                        <button class="template-btn" onclick="insertTemplate('\\dot{□}')">ẋ Dot</button>
-                        <button class="template-btn" onclick="insertTemplate('\\ddot{□}')">ẍ Double Dot</button>
-                        <button class="template-btn" onclick="insertTemplate('\\hat{□}')">x̂ Hat</button>
-                        <button class="template-btn" onclick="insertTemplate('\\bar{□}')">x̄ Bar</button>
-                        <button class="template-btn" onclick="insertTemplate('\\tilde{□}')">x̃ Tilde</button>
-                        <button class="template-btn" onclick="insertTemplate('\\overline{□}')">Overline</button>
-                        <button class="template-btn" onclick="insertTemplate('\\underline{□}')">Underline</button>
-                        <button class="template-btn" onclick="insertTemplate('\\vec{□}')">Vector Arrow</button>
-                        <button class="template-btn" onclick="insertTemplate('\\mathbf{□}')">Bold Symbol</button>
+                    <div id="palette-accents" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('\\dot{□}')" data-tooltip="Dot Accent">\(\dot{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\ddot{□}')" data-tooltip="Double Dot">\(\ddot{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\hat{□}')" data-tooltip="Hat">\(\hat{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\bar{□}')" data-tooltip="Bar">\(\bar{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\tilde{□}')" data-tooltip="Tilde">\(\tilde{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\overline{□}')" data-tooltip="Overline">\(\overline{ABC}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\underline{□}')" data-tooltip="Underline">\(\underline{ABC}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\vec{□}')" data-tooltip="Vector Arrow">\(\vec{v}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathbf{□}')" data-tooltip="Bold">\(\mathbf{x}\)</button>
                     </div>
                     
                     <!-- Calculus & Analysis -->
-                    <div id="palette-calculus" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
-                        <button class="symbol-btn" onclick="insertSymbol('\\int')">∫</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\sum')">Σ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\prod')">∏</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\nabla')">∇</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\partial')">∂</button>
-                        
-                        <button class="template-btn" onclick="insertTemplate('\\int_{□}^{□} □ \\, dx')">Definite Integral</button>
-                        <button class="template-btn" onclick="insertTemplate('\\sum_{□}^{□} □')">Summation</button>
-                        <button class="template-btn" onclick="insertTemplate('\\prod_{□}^{□} □')">Product</button>
-                        <button class="template-btn" onclick="insertTemplate('\\lim_{□ \\to □} □')">Limit</button>
-                        <button class="template-btn" onclick="insertTemplate('\\frac{d □}{d □}')">d/dx Derivative</button>
-                        <button class="template-btn" onclick="insertTemplate('\\partial_{□} □')">Partial Derivative</button>
-                        <button class="template-btn" onclick="insertTemplate('\\nabla □')">Gradient</button>
+                    <div id="palette-calculus" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('\\int_{□}^{□} □ \\, dx')" data-tooltip="Definite Integral">\(\int_a^b f\,dx\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\sum_{□}^{□} □')" data-tooltip="Summation">\(\sum_{i=1}^n a_i\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\prod_{□}^{□} □')" data-tooltip="Product">\(\prod_{i=1}^n a_i\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\lim_{□ \\to □} □')" data-tooltip="Limit">\(\lim_{x\to 0} f(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\frac{d □}{d □}')" data-tooltip="Derivative">\(\frac{df}{dx}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\frac{\\partial □}{\\partial □}')" data-tooltip="Partial Derivative">\(\frac{\partial f}{\partial x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\nabla □')" data-tooltip="Gradient">\(\nabla f\)</button>
                     </div>
                     
                     <!-- Linear Algebra & Matrices -->
-                    <div id="palette-linear" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
-                        <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}')">[ ] Matrix 2×2</button>
-                        <button class="template-btn" onclick="insertTemplate('\\begin{bmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{bmatrix}')">[ ] Matrix 3×3</button>
-                        <button class="template-btn" onclick="insertTemplate('\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}')">( ) Matrix 2×2</button>
-                        <button class="template-btn" onclick="insertTemplate('\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}')">( ) Matrix 3×3</button>
-                        <button class="template-btn" onclick="insertTemplate('\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}')">| | Det 2×2</button>
-                        <button class="template-btn" onclick="insertTemplate('\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}')">| | Det 3×3</button>
-                        <button class="template-btn" onclick="insertTemplate('\\mathbf{v}')">Bold Vector</button>
-                        <button class="template-btn" onclick="insertTemplate('\\vec{v}')">Arrow Vector</button>
-                        <button class="template-btn" onclick="insertTemplate('a \\cdot b')">Dot Product</button>
-                        <button class="template-btn" onclick="insertTemplate('a \\times b')">Cross Product</button>
+                    <div id="palette-linear" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}')" data-tooltip="Matrix 2×2 [brackets]">\(\begin{bmatrix}a&b\\c&d\end{bmatrix}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\begin{bmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{bmatrix}')" data-tooltip="Matrix 3×3 [brackets]">\(\begin{bmatrix}a&b&c\\d&e&f\\g&h&i\end{bmatrix}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}')" data-tooltip="Matrix 2×2 (parens)">\(\begin{pmatrix}a&b\\c&d\end{pmatrix}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}')" data-tooltip="Matrix 3×3 (parens)">\(\begin{pmatrix}a&b&c\\d&e&f\\g&h&i\end{pmatrix}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}')" data-tooltip="Determinant 2×2">\(\begin{vmatrix}a&b\\c&d\end{vmatrix}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}')" data-tooltip="Determinant 3×3">\(\begin{vmatrix}a&b&c\\d&e&f\\g&h&i\end{vmatrix}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathbf{v}')" data-tooltip="Bold Vector">\(\mathbf{v}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\vec{v}')" data-tooltip="Vector Arrow">\(\vec{v}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('a \\cdot b')" data-tooltip="Dot Product">\(a \cdot b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('a \\times b')" data-tooltip="Cross Product">\(a \times b\)</button>
                     </div>
                     
                     <!-- Greek Letters -->
                     <div id="palette-greek" class="symbol-grid" style="display:none;">
-                        <button class="symbol-btn" onclick="insertSymbol('\\alpha')">α</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\beta')">β</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\gamma')">γ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\delta')">δ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\epsilon')">ε</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\zeta')">ζ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\eta')">η</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\theta')">θ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\iota')">ι</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\kappa')">κ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\lambda')">λ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\mu')">μ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\nu')">ν</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\xi')">ξ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\omicron')">ο</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\pi')">π</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\rho')">ρ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\sigma')">σ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\tau')">τ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\upsilon')">υ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\phi')">φ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\chi')">χ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\psi')">ψ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\omega')">ω</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Gamma')">Γ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Delta')">Δ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Theta')">Θ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Lambda')">Λ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Xi')">Ξ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Pi')">Π</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Sigma')">Σ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Upsilon')">Υ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Phi')">Φ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Psi')">Ψ</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Omega')">Ω</button>
+                        <button class="math-btn" onclick="insertSymbol('\\alpha')" data-tooltip="alpha">\(\alpha\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\beta')" data-tooltip="beta">\(\beta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\gamma')" data-tooltip="gamma">\(\gamma\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\delta')" data-tooltip="delta">\(\delta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\epsilon')" data-tooltip="epsilon">\(\epsilon\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\zeta')" data-tooltip="zeta">\(\zeta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\eta')" data-tooltip="eta">\(\eta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\theta')" data-tooltip="theta">\(\theta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\iota')" data-tooltip="iota">\(\iota\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\kappa')" data-tooltip="kappa">\(\kappa\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\lambda')" data-tooltip="lambda">\(\lambda\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\mu')" data-tooltip="mu">\(\mu\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\nu')" data-tooltip="nu">\(\nu\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\xi')" data-tooltip="xi">\(\xi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\omicron')" data-tooltip="omicron">\(o\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\pi')" data-tooltip="pi">\(\pi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\rho')" data-tooltip="rho">\(\rho\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\sigma')" data-tooltip="sigma">\(\sigma\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\tau')" data-tooltip="tau">\(\tau\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\upsilon')" data-tooltip="upsilon">\(\upsilon\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\phi')" data-tooltip="phi">\(\phi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\chi')" data-tooltip="chi">\(\chi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\psi')" data-tooltip="psi">\(\psi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\omega')" data-tooltip="omega">\(\omega\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Gamma')" data-tooltip="Gamma">\(\Gamma\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Delta')" data-tooltip="Delta">\(\Delta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Theta')" data-tooltip="Theta">\(\Theta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Lambda')" data-tooltip="Lambda">\(\Lambda\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Xi')" data-tooltip="Xi">\(\Xi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Pi')" data-tooltip="Pi">\(\Pi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Sigma')" data-tooltip="Sigma">\(\Sigma\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Upsilon')" data-tooltip="Upsilon">\(\Upsilon\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Phi')" data-tooltip="Phi">\(\Phi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Psi')" data-tooltip="Psi">\(\Psi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Omega')" data-tooltip="Omega">\(\Omega\)</button>
                     </div>
                     
                     <!-- Logic & Set Theory -->
                     <div id="palette-logic" class="symbol-grid" style="display:none;">
-                        <button class="symbol-btn" onclick="insertSymbol('<')"><</button>
-                        <button class="symbol-btn" onclick="insertSymbol('>')">></button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\leq')">≤</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\geq')">≥</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\approx')">≈</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\equiv')">≡</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\in')">∈</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\subset')">⊂</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\cup')">∪</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\cap')">∩</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\to')">→</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\Rightarrow')">⇒</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\forall')">∀</button>
-                        <button class="symbol-btn" onclick="insertSymbol('\\exists')">∃</button>
+                        <button class="math-btn" onclick="insertSymbol('<')" data-tooltip="Less Than">\(<\)</button>
+                        <button class="math-btn" onclick="insertSymbol('>')" data-tooltip="Greater Than">\(>\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\leq')" data-tooltip="Less or Equal">\(\leq\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\geq')" data-tooltip="Greater or Equal">\(\geq\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\approx')" data-tooltip="Approximately">\(\approx\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\equiv')" data-tooltip="Equivalent">\(\equiv\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\in')" data-tooltip="Element Of">\(\in\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\notin')" data-tooltip="Not Element Of">\(\notin\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\subset')" data-tooltip="Subset">\(\subset\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\subseteq')" data-tooltip="Subset or Equal">\(\subseteq\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\cup')" data-tooltip="Union">\(\cup\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\cap')" data-tooltip="Intersection">\(\cap\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\emptyset')" data-tooltip="Empty Set">\(\emptyset\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\to')" data-tooltip="Maps To">\(\to\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Rightarrow')" data-tooltip="Implies">\(\Rightarrow\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Leftrightarrow')" data-tooltip="If and Only If">\(\Leftrightarrow\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\forall')" data-tooltip="For All">\(\forall\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\exists')" data-tooltip="There Exists">\(\exists\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\neg')" data-tooltip="Not">\(\neg\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\land')" data-tooltip="And">\(\land\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\lor')" data-tooltip="Or">\(\lor\)</button>
                     </div>
                     
                     <!-- Physics & Advanced -->
-                    <div id="palette-physics" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
-                        <button class="template-btn" onclick="insertTemplate('|□\\rangle')">|ψ⟩ Ket</button>
-                        <button class="template-btn" onclick="insertTemplate('\\langle□|')">⟨φ| Bra</button>
-                        <button class="template-btn" onclick="insertTemplate('\\langle□|□\\rangle')">⟨φ|ψ⟩ Inner</button>
-                        <button class="template-btn" onclick="insertTemplate('|□\\rangle\\langle□|')">|ψ⟩⟨φ| Outer</button>
-                        <button class="template-btn" onclick="insertTemplate('\\langle □ \\rangle')">⟨A⟩ Expectation</button>
-                        <button class="template-btn" onclick="insertTemplate('\\Gamma^{□}_{□ □}')">Γ Christoffel</button>
-                        <button class="template-btn" onclick="insertTemplate('R^{□}_{□ □ □}')">R Riemann</button>
+                    <div id="palette-physics" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('|□\\rangle')" data-tooltip="Ket">\(|\psi\rangle\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\langle□|')" data-tooltip="Bra">\(\langle\phi|\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\langle□|□\\rangle')" data-tooltip="Inner Product">\(\langle\phi|\psi\rangle\)</button>
+                        <button class="math-btn" onclick="insertTemplate('|□\\rangle\\langle□|')" data-tooltip="Outer Product">\(|\psi\rangle\langle\phi|\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\langle □ \\rangle')" data-tooltip="Expectation Value">\(\langle A \rangle\)</button>
+                        <button class="math-btn" onclick="insertTemplate('[□, □]')" data-tooltip="Commutator">\([A, B]\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\Gamma^{□}_{□ □}')" data-tooltip="Christoffel Symbol">\(\Gamma^\lambda_{\mu\nu}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('R^{□}_{□ □ □}')" data-tooltip="Riemann Tensor">\(R^\rho_{\sigma\mu\nu}\)</button>
                     </div>
                 </div>
                 
@@ -1159,9 +1244,27 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
 
         function insertSymbol(latex) {
             if (editorMode === 'structural') {
-                // In structural mode, insert as text/object into active slot
-                // Implementation todo: handle symbol insertion in structural mode
-                alert('Symbol insertion in structural mode not fully implemented. Use text input in placeholders.');
+                // In structural mode, insert symbol into active placeholder
+                if (activeEditMarker) {
+                    // Replace the placeholder at the active path with a Const node
+                    const symbolNode = { Const: latex };
+                    setNodeAtPath(currentAST, activeEditMarker.path, symbolNode);
+                    
+                    // Clear active marker
+                    activeEditMarker = null;
+                    document.querySelectorAll('.arg-overlay').forEach(el => {
+                        el.classList.remove('active-marker');
+                    });
+                    
+                    // Re-render
+                    renderStructuralEditor();
+                    showStatus('✅ Symbol inserted', 'success');
+                } else {
+                    // No marker selected - create a simple expression with the symbol
+                    currentAST = { Const: latex };
+                    renderStructuralEditor();
+                    showStatus('✅ Symbol inserted', 'success');
+                }
                 return;
             }
             
@@ -1238,6 +1341,13 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             '\\frac{□}{□}': 'fraction',
             '\\sqrt{□}': 'sqrt',
             '\\sqrt[□]{□}': 'nthroot',
+            '□^{□}': 'power',
+            '□_{□}': 'subscript',
+            '□^{□}_{□}': 'tensor_mixed',
+            '□_{□}^{□}': 'subsup',
+            '□_{□ □}': 'tensor_lower_pair',
+            '□^{□ □}_{□ □}': 'tensor_2up_2down',
+            // Legacy (kept for compatibility)
             'x^{□}': 'power',
             'x_{□}': 'subscript',
             'x^{□}_{□}': 'tensor_mixed',
@@ -1245,6 +1355,17 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             '□!': 'factorial',
             '\\lfloor □ \\rfloor': 'floor',
             '\\lceil □ \\rceil': 'ceiling',
+            '\\left\\lfloor □ \\right\\rfloor': 'floor',
+            '\\left\\lceil □ \\right\\rceil': 'ceiling',
+            
+            // Brackets & Grouping
+            '\\left(□\\right)': 'parens',
+            '\\left[□\\right]': 'brackets',
+            '\\left\\{□\\right\\}': 'braces',
+            '\\left\\langle □ \\right\\rangle': 'angle_brackets',
+            '\\left|□\\right|': 'abs',
+            '\\left\\|□\\right\\|': 'norm',
+            
             '□ = □': 'equals',
             '□ + □': 'plus',
             '□ - □': 'minus',
@@ -1363,6 +1484,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             norm: { Operation: { name: 'norm', args: [{Placeholder:{id:0,hint:'vector'}}] } },
             abs: { Operation: { name: 'abs', args: [{Placeholder:{id:0,hint:'value'}}] } },
             
+            // Brackets & Grouping
+            parens: { Operation: { name: 'parens', args: [{Placeholder:{id:0,hint:'content'}}] } },
+            brackets: { Operation: { name: 'brackets', args: [{Placeholder:{id:0,hint:'content'}}] } },
+            braces: { Operation: { name: 'braces', args: [{Placeholder:{id:0,hint:'content'}}] } },
+            angle_brackets: { Operation: { name: 'angle_brackets', args: [{Placeholder:{id:0,hint:'content'}}] } },
+            
             // Functions
             sin: { Operation: { name: 'sin', args: [{Placeholder:{id:0,hint:'argument'}}] } },
             cos: { Operation: { name: 'cos', args: [{Placeholder:{id:0,hint:'argument'}}] } },
@@ -1383,6 +1510,11 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             tilde: { Operation: { name: 'tilde', args: [{Placeholder:{id:0,hint:'variable'}}] } },
             
             // Tensors
+            subsup: { Operation: { name: 'subsup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}, {Placeholder:{id:2,hint:'superscript'}}] } },
+            tensor_upper_pair: { Operation: { name: 'index_pair', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'idx1'}}, {Placeholder:{id:2,hint:'idx2'}}] } },
+            tensor_lower_pair: { Operation: { name: 'tensor_lower_pair', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
+            tensor_1up_3down: { Operation: { name: 'tensor_1up_3down', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower1'}}, {Placeholder:{id:3,hint:'lower2'}}, {Placeholder:{id:4,hint:'lower3'}}] } },
+            tensor_2up_2down: { Operation: { name: 'tensor_2up_2down', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper1'}}, {Placeholder:{id:2,hint:'upper2'}}, {Placeholder:{id:3,hint:'lower1'}}, {Placeholder:{id:4,hint:'lower2'}}] } },
             christoffel: { Operation: { name: 'gamma', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
             riemann: { Operation: { name: 'riemann', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}, {Placeholder:{id:3,hint:'lower3'}}] } },
             
@@ -2088,6 +2220,15 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 console.log('sqrt template:', astTemplates.sqrt);
             }
         };
+        
+        // Render MathJax in palette buttons
+        if (window.MathJax) {
+            MathJax.typesetPromise(document.querySelectorAll('.math-btn'))
+                .then(() => {
+                    console.log('✓ Palette buttons rendered with MathJax');
+                })
+                .catch(err => console.error('MathJax rendering failed:', err));
+        }
     </script>
 </body>
 </html>

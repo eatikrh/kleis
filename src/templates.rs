@@ -253,6 +253,38 @@ pub fn template_abs() -> Expression {
     Expression::operation("abs", vec![Expression::placeholder(next_id(), "value")])
 }
 
+// === Brackets & Grouping ===
+
+/// Parentheses: (x)
+pub fn template_parens() -> Expression {
+    Expression::operation("parens", vec![Expression::placeholder(next_id(), "content")])
+}
+
+/// Square brackets: [x]
+pub fn template_brackets() -> Expression {
+    Expression::operation("brackets", vec![Expression::placeholder(next_id(), "content")])
+}
+
+/// Curly braces: {x}
+pub fn template_braces() -> Expression {
+    Expression::operation("braces", vec![Expression::placeholder(next_id(), "content")])
+}
+
+/// Angle brackets: ⟨x⟩
+pub fn template_angle_brackets() -> Expression {
+    Expression::operation("angle_brackets", vec![Expression::placeholder(next_id(), "content")])
+}
+
+/// Floor function: ⌊x⌋
+pub fn template_floor() -> Expression {
+    Expression::operation("floor", vec![Expression::placeholder(next_id(), "arg")])
+}
+
+/// Ceiling function: ⌈x⌉
+pub fn template_ceiling() -> Expression {
+    Expression::operation("ceiling", vec![Expression::placeholder(next_id(), "arg")])
+}
+
 // === Quantum Mechanics ===
 
 /// Ket vector: |ψ⟩
@@ -316,6 +348,58 @@ pub fn template_tensor_mixed() -> Expression {
             Expression::placeholder(next_id(), "base"),
             Expression::placeholder(next_id(), "upper"),
             Expression::placeholder(next_id(), "lower"),
+        ],
+    )
+}
+
+/// Subscript-superscript: base_{sub}^{sup}
+pub fn template_subsup() -> Expression {
+    Expression::operation(
+        "subsup",
+        vec![
+            Expression::placeholder(next_id(), "base"),
+            Expression::placeholder(next_id(), "subscript"),
+            Expression::placeholder(next_id(), "superscript"),
+        ],
+    )
+}
+
+/// Tensor with 1 upper and 3 lower indices: base^{upper}_{lower1 lower2 lower3}
+pub fn template_tensor_1up_3down() -> Expression {
+    Expression::operation(
+        "tensor_1up_3down",
+        vec![
+            Expression::placeholder(next_id(), "base"),
+            Expression::placeholder(next_id(), "upper"),
+            Expression::placeholder(next_id(), "lower1"),
+            Expression::placeholder(next_id(), "lower2"),
+            Expression::placeholder(next_id(), "lower3"),
+        ],
+    )
+}
+
+/// Tensor with double lower indices: g_{μν}
+pub fn template_tensor_lower_pair() -> Expression {
+    Expression::operation(
+        "tensor_lower_pair",
+        vec![
+            Expression::placeholder(next_id(), "base"),
+            Expression::placeholder(next_id(), "lower1"),
+            Expression::placeholder(next_id(), "lower2"),
+        ],
+    )
+}
+
+/// Tensor with 2 upper and 2 lower indices: R^{μν}_{ρσ}
+pub fn template_tensor_2up_2down() -> Expression {
+    Expression::operation(
+        "tensor_2up_2down",
+        vec![
+            Expression::placeholder(next_id(), "base"),
+            Expression::placeholder(next_id(), "upper1"),
+            Expression::placeholder(next_id(), "upper2"),
+            Expression::placeholder(next_id(), "lower1"),
+            Expression::placeholder(next_id(), "lower2"),
         ],
     )
 }
@@ -549,6 +633,13 @@ pub fn get_all_templates() -> Vec<(&'static str, fn() -> Expression)> {
         ("cross", template_cross_product),
         ("norm", template_norm),
         ("abs", template_abs),
+        // Brackets & Grouping
+        ("parens", template_parens),
+        ("brackets", template_brackets),
+        ("braces", template_braces),
+        ("angle_brackets", template_angle_brackets),
+        ("floor", template_floor),
+        ("ceiling", template_ceiling),
         // Quantum
         ("ket", template_ket),
         ("bra", template_bra),
@@ -558,7 +649,11 @@ pub fn get_all_templates() -> Vec<(&'static str, fn() -> Expression)> {
         ("expectation", template_expectation),
         // Tensors
         ("tensor_mixed", template_tensor_mixed),
+        ("subsup", template_subsup),
         ("tensor_upper_pair", template_tensor_upper_pair),
+        ("tensor_lower_pair", template_tensor_lower_pair),
+        ("tensor_1up_3down", template_tensor_1up_3down),
+        ("tensor_2up_2down", template_tensor_2up_2down),
         ("christoffel", template_christoffel),
         ("riemann", template_riemann),
         // Trig & Functions

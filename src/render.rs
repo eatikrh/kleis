@@ -593,7 +593,7 @@ fn render_expression_internal(
                 RenderTarget::HTML => {
                     format!(r#"<span class="math-const">{}</span>"#, escape_html(name))
                 }
-                RenderTarget::Typst => name.clone(), // Constants are the same in Typst
+                RenderTarget::Typst => latex_to_typst_symbol(name), // Convert LaTeX symbols to Typst
             }
         }
         Expression::Object(name) => {
@@ -792,6 +792,7 @@ fn render_expression_internal(
                 result = result.replace("{operator}", first);
                 result = result.replace("{argument}", first);
                 result = result.replace("{value}", first);
+                result = result.replace("{content}", first); // for brackets: parens, brackets, braces, angle_brackets
                 result = result.replace("{bra}", first); // for inner product (arg 0)
                 // For outer product, {ket} is arg 0, but for inner product, {ket} is arg 1
                 if name != "inner" {
@@ -804,6 +805,8 @@ fn render_expression_internal(
                 // Extended placeholder aliases for arg1
                 result = result.replace("{den}", second);
                 result = result.replace("{exponent}", second);
+                result = result.replace("{lower1}", second); // For tensor_lower_pair arg1
+                result = result.replace("{upper1}", second); // For tensor_2up_2down arg1
                 // Use arg1 as {from} for 2-3 arg operations, not for cases2 or cases3
                 if name != "cases2" && name != "cases3" {
                     result = result.replace("{from}", second);
@@ -833,6 +836,9 @@ fn render_expression_internal(
                 if name == "index_mixed" {
                     result = result.replace("{upper}", second); // mixed tensor: arg 1 is upper index
                 }
+                if name == "subsup" {
+                    result = result.replace("{subscript}", second); // subsup: arg 1 is subscript
+                }
                 result = result.replace("{ket}", second); // for inner product
                 // For outer product, {bra} is arg 1, but for inner product, {bra} is arg 0
                 if name != "inner" {
@@ -854,11 +860,15 @@ fn render_expression_internal(
                 if rendered_args.len() < 6 {
                     result = result.replace("{idx2}", third);
                 }
+                result = result.replace("{lower2}", third); // For tensor_lower_pair arg2
+                result = result.replace("{upper2}", third); // For tensor_2up_2down arg2
                 // Added for coverage
                 if name == "int_bounds" {
                     result = result.replace("{upper}", third); // integral upper bound: arg 2
                 } else if name == "index_mixed" {
                     result = result.replace("{lower}", third); // mixed tensor: arg 2 is lower index
+                } else if name == "subsup" {
+                    result = result.replace("{superscript}", third); // subsup: arg 2 is superscript
                 } else if name == "lim" || name == "limit" || name == "limsup" || name == "liminf" {
                     result = result.replace("{target}", third); // limit target: arg 2
                 }
@@ -870,12 +880,14 @@ fn render_expression_internal(
                     result = result.replace("{to}", fourth);
                 }
                 result = result.replace("{idx3}", fourth);
+                result = result.replace("{lower1}", fourth); // For tensor_2up_2down arg3 (first lower index)
                 // Added for coverage
                 result = result.replace("{variable}", fourth); // int_bounds variable
             }
             // Add more for Matrix3x3
             if let Some(fifth) = rendered_args.get(4) {
                 result = result.replace("{idx4}", fifth);
+                result = result.replace("{lower2}", fifth); // For tensor_2up_2down arg4 (second lower index)
                 // For 6-arg operations (cases3), use arg4 as {body}
                 if rendered_args.len() == 6 {
                     result = result.replace("{body}", fifth);
@@ -1296,6 +1308,11 @@ pub fn build_default_context() -> GlyphContext {
     unicode_templates.insert("power".to_string(), "{base}^{exponent}".to_string());
     unicode_templates.insert("norm".to_string(), "‖{arg}‖".to_string());
     unicode_templates.insert("abs".to_string(), "|{arg}|".to_string());
+    // Brackets & grouping
+    unicode_templates.insert("parens".to_string(), "({content})".to_string());
+    unicode_templates.insert("brackets".to_string(), "[{content}]".to_string());
+    unicode_templates.insert("braces".to_string(), "{{{content}}}".to_string());
+    unicode_templates.insert("angle_brackets".to_string(), "⟨{content}⟩".to_string());
     unicode_templates.insert("inner".to_string(), "⟨{left}, {right}⟩".to_string());
     unicode_templates.insert(
         "sum_bounds".to_string(),
@@ -1352,12 +1369,28 @@ pub fn build_default_context() -> GlyphContext {
         "index_mixed".to_string(),
         "{base}^{idx1}_{idx2}".to_string(),
     );
+    unicode_templates.insert(
+        "subsup".to_string(),
+        "{base}_{subscript}^{superscript}".to_string(),
+    );
     unicode_templates.insert("index_pair".to_string(), "{base}_{idx1}{idx2}".to_string());
     // Gamma (Christoffel) and Riemann tensors
     unicode_templates.insert("gamma".to_string(), "Γ^{idx1}_{idx2 idx3}".to_string());
     unicode_templates.insert(
         "riemann".to_string(),
         "R^{idx1}_{idx2 idx3 idx4}".to_string(),
+    );
+    unicode_templates.insert(
+        "tensor_1up_3down".to_string(),
+        "{base}^{upper}_{lower1 lower2 lower3}".to_string(),
+    );
+    unicode_templates.insert(
+        "tensor_lower_pair".to_string(),
+        "{base}_{lower1 lower2}".to_string(),
+    );
+    unicode_templates.insert(
+        "tensor_2up_2down".to_string(),
+        "{base}^{upper1 upper2}_{lower1 lower2}".to_string(),
     );
     // Zeta as a function
     unicode_templates.insert("zeta".to_string(), "ζ({args})".to_string());
@@ -1537,6 +1570,23 @@ pub fn build_default_context() -> GlyphContext {
         "abs".to_string(),
         "\\left\\lvert {arg} \\right\\rvert".to_string(),
     );
+    // Brackets & grouping
+    latex_templates.insert(
+        "parens".to_string(),
+        "\\left( {content} \\right)".to_string(),
+    );
+    latex_templates.insert(
+        "brackets".to_string(),
+        "\\left[ {content} \\right]".to_string(),
+    );
+    latex_templates.insert(
+        "braces".to_string(),
+        "\\left\\{{ {content} \\right\\}}".to_string(),
+    );
+    latex_templates.insert(
+        "angle_brackets".to_string(),
+        "\\left\\langle {content} \\right\\rangle".to_string(),
+    );
     latex_templates.insert(
         "inner".to_string(),
         "\\langle {left}, {right} \\rangle".to_string(),
@@ -1629,6 +1679,10 @@ pub fn build_default_context() -> GlyphContext {
         "{base}^{{{idx1}}}_{{{idx2}}}".to_string(),
     );
     latex_templates.insert(
+        "subsup".to_string(),
+        "{base}_{{{subscript}}}^{{{superscript}}}".to_string(),
+    );
+    latex_templates.insert(
         "index_pair".to_string(),
         "{base}^{{{idx1}{idx2}}}".to_string(),
     );
@@ -1640,6 +1694,18 @@ pub fn build_default_context() -> GlyphContext {
     latex_templates.insert(
         "riemann".to_string(),
         "R^{{{idx1}}}_{{{idx2} {idx3} {idx4}}}".to_string(),
+    );
+    latex_templates.insert(
+        "tensor_1up_3down".to_string(),
+        "{base}^{{{upper}}}_{{{lower1} {lower2} {lower3}}}".to_string(),
+    );
+    latex_templates.insert(
+        "tensor_lower_pair".to_string(),
+        "{base}_{{{lower1} {lower2}}}".to_string(),
+    );
+    latex_templates.insert(
+        "tensor_2up_2down".to_string(),
+        "{base}^{{{upper1} {upper2}}}_{{{lower1} {lower2}}}".to_string(),
     );
     // Zeta and common math functions
     latex_templates.insert("zeta".to_string(), "\\zeta({args})".to_string());
@@ -1878,6 +1944,10 @@ pub fn build_default_context() -> GlyphContext {
         r#"{base}<sup class="math-sup">{idx1}</sup><sub class="math-sub">{idx2}</sub>"#.to_string(),
     );
     html_templates.insert(
+        "subsup".to_string(),
+        r#"{base}<sub class="math-sub">{subscript}</sub><sup class="math-sup">{superscript}</sup>"#.to_string(),
+    );
+    html_templates.insert(
         "index_pair".to_string(),
         r#"{base}<sub class="math-sub">{idx1}{idx2}</sub>"#.to_string(),
     );
@@ -1931,6 +2001,11 @@ pub fn build_default_context() -> GlyphContext {
     // Brackets and norms
     html_templates.insert("norm".to_string(), r#"‖{arg}‖"#.to_string());
     html_templates.insert("abs".to_string(), r#"|{arg}|"#.to_string());
+    // Brackets & grouping
+    html_templates.insert("parens".to_string(), r#"({content})"#.to_string());
+    html_templates.insert("brackets".to_string(), r#"[{content}]"#.to_string());
+    html_templates.insert("braces".to_string(), r#"{{{content}}}"#.to_string());
+    html_templates.insert("angle_brackets".to_string(), r#"⟨{content}⟩"#.to_string());
     html_templates.insert("commutator".to_string(), r#"[{left}, {right}]"#.to_string());
     html_templates.insert(
         "anticommutator".to_string(),
@@ -2049,6 +2124,20 @@ pub fn build_default_context() -> GlyphContext {
     html_templates.insert(
         "riemann".to_string(),
         r#"R<sup class="math-sup">{idx1}</sup><sub class="math-sub">{idx2} {idx3} {idx4}</sub>"#
+            .to_string(),
+    );
+    html_templates.insert(
+        "tensor_1up_3down".to_string(),
+        r#"{base}<sup class="math-sup">{upper}</sup><sub class="math-sub">{lower1} {lower2} {lower3}</sub>"#
+            .to_string(),
+    );
+    html_templates.insert(
+        "tensor_lower_pair".to_string(),
+        r#"{base}<sub class="math-sub">{lower1} {lower2}</sub>"#.to_string(),
+    );
+    html_templates.insert(
+        "tensor_2up_2down".to_string(),
+        r#"{base}<sup class="math-sup">{upper1} {upper2}</sup><sub class="math-sub">{lower1} {lower2}</sub>"#
             .to_string(),
     );
 
@@ -2391,6 +2480,11 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("cross".to_string(), "{left} times {right}".to_string());
     typst_templates.insert("norm".to_string(), "norm({vector})".to_string());
     typst_templates.insert("abs".to_string(), "abs({value})".to_string());
+    // Brackets & grouping (use lr() for auto-scaling)
+    typst_templates.insert("parens".to_string(), "lr(({content}))".to_string());
+    typst_templates.insert("brackets".to_string(), "lr([{content}])".to_string());
+    typst_templates.insert("braces".to_string(), "lr(\\{ {content} \\})".to_string());
+    typst_templates.insert("angle_brackets".to_string(), "lr(angle.l {content} angle.r)".to_string());
     typst_templates.insert("det".to_string(), "det({arg})".to_string());
     typst_templates.insert("transpose".to_string(), "{arg}^T".to_string());
     typst_templates.insert("inverse".to_string(), "{arg}^(-1)".to_string());
@@ -2422,6 +2516,10 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert(
         "index_mixed".to_string(),
         "{base}^({upper}) _({lower})".to_string(),
+    );
+    typst_templates.insert(
+        "subsup".to_string(),
+        "{base}_({subscript}) ^({superscript})".to_string(),
     );
     typst_templates.insert(
         "index_pair".to_string(),
@@ -2531,6 +2629,18 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert(
         "riemann".to_string(),
         "R^({idx1})_({idx2} {idx3} {idx4})".to_string(),
+    );
+    typst_templates.insert(
+        "tensor_1up_3down".to_string(),
+        "{base}^({upper})_({lower1} {lower2} {lower3})".to_string(),
+    );
+    typst_templates.insert(
+        "tensor_lower_pair".to_string(),
+        "{base}_({lower1} {lower2})".to_string(),
+    );
+    typst_templates.insert(
+        "tensor_2up_2down".to_string(),
+        "{base}^({upper1} {upper2})_({lower1} {lower2})".to_string(),
     );
     typst_templates.insert("zeta".to_string(), "zeta({arg})".to_string());
     // Christoffel symbol: Γ^idx1_{idx2 idx3}

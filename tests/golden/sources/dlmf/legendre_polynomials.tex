@@ -1,0 +1,16 @@
+% DLMF Legendre Polynomials - Curated Equations
+% Source: https://dlmf.nist.gov/
+% Manually curated for testing
+
+% 18.5.5: Rodrigues
+\[ P_n(x) = \frac{1}{2^n n!} \frac{d^n}{dx^n}(x^2-1)^n \]
+
+% 18.5.6: Series
+\[ P_n(x) = \sum_{k=0}^{\lfloor n/2\rfloor} \frac{(-1)^k(2n-2k)!}{2^n k!(n-k)!(n-2k)!} x^{n-2k} \]
+
+% 18.3.1: Orthogonality
+\[ \int_{-1}^1 P_m(x) P_n(x) \, dx = \frac{2}{2n+1} \delta_{mn} \]
+
+% 18.9.2: Recurrence
+\[ (n+1)P_{n+1}(x) = (2n+1)xP_n(x) - nP_{n-1}(x) \]
+
