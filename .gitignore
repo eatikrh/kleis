@@ -1,1 +1,9 @@
 /target
+
+# Funding and business documents (private)
+/funding/
+FUNDING_*.md
+GRANT_*.md
+PITCH_*.md
+*_PROPOSAL.md
+*_proposal.md
