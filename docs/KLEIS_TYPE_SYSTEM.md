@@ -436,7 +436,9 @@ assert!(typecheck(&expr, &ctx).is_ok());
 
 ---
 
-## Type Errors
+## Type Errors and Exceptional Cases
+
+### Type Errors
 
 ```rust
 pub enum TypeError {
@@ -449,6 +451,141 @@ pub enum TypeError {
     AmbiguousType,
 }
 ```
+
+### Handling Exceptional Values
+
+Many operations have **domain restrictions** that cannot be fully captured by types alone. The type system distinguishes between:
+
+1. **Type-level restrictions** (enforced statically)
+2. **Value-level restrictions** (checked at runtime/evaluation)
+
+#### Type-Level vs Value-Level
+
+```rust
+// Type-level: Wrong structure
+det(Matrix(2, 3))  
+// ❌ Type error: det requires square matrix
+// Caught by type system
+
+// Value-level: Division by zero
+scalar_divide(x, y)  where x,y: Scalar
+// ✅ Type correct: Scalar / Scalar → Scalar
+// ⚠️  Runtime check needed: y ≠ 0
+// Cannot catch statically without dependent types
+```
+
+#### Common Value-Level Restrictions
+
+**Division operations:**
+- `a / b` requires `b ≠ 0` (for any field F)
+- `1 / z` for z ∈ ℂ requires `z ≠ 0`
+- Matrix inverse `A⁻¹` requires `det(A) ≠ 0`
+
+**Square roots:**
+- `√x` for x ∈ ℝ requires `x ≥ 0` (or extends to ℂ)
+- nth root with even n has similar restrictions
+
+**Logarithms:**
+- `ln(x)` requires `x > 0` for real-valued result
+- `log(x, base)` requires `base > 0, base ≠ 1`
+
+**Trigonometric:**
+- `tan(x)` undefined at `x = π/2 + nπ`
+- `arcsin(x)` requires `|x| ≤ 1` for real result
+
+**Matrix operations:**
+- `A⁻¹` requires `det(A) ≠ 0` (singular matrices have no inverse)
+- Eigenvalues require characteristic polynomial to have roots
+- SVD requires certain rank conditions
+
+**Set operations:**
+- `a ∈ S` depends on set membership at runtime
+- Union/intersection require compatible set types
+
+#### Design Strategy
+
+**Type signatures include preconditions:**
+
+```rust
+pub struct OperationSignature {
+    pub name: String,
+    pub signature: Vec<Type>,
+    pub result: Type,
+    pub preconditions: Vec<Constraint>,  // Runtime checks
+}
+
+pub enum Constraint {
+    NotZero(Arg),
+    Positive(Arg),
+    NonSingular(Arg),      // For matrices
+    DimensionMatch(Arg, Arg),
+    InDomain(Arg, Set),
+    Custom(Expression),     // General predicate
+}
+
+// Example: Division
+OperationSignature {
+    name: "scalar_divide",
+    signature: vec![Type::Scalar, Type::Scalar],
+    result: Type::Scalar,
+    preconditions: vec![Constraint::NotZero(Arg(1))],  // Second arg ≠ 0
+}
+
+// Example: Matrix inverse
+OperationSignature {
+    name: "inverse",
+    signature: vec![Type::Matrix(n, n)],
+    result: Type::Matrix(n, n),
+    preconditions: vec![Constraint::NonSingular(Arg(0))],  // det(A) ≠ 0
+}
+```
+
+#### Evaluation Behavior
+
+```rust
+impl Expression {
+    pub fn eval(&self, context: &Context) -> Result<Value, EvalError> {
+        // Step 1: Type inference
+        let typ = infer_type(self, context)?;
+        
+        // Step 2: Type checking
+        validate_type(&typ)?;
+        
+        // Step 3: Evaluate (may fail on preconditions)
+        match eval_with_type(self, &typ, context) {
+            Ok(value) => Ok(value),
+            Err(EvalError::DivisionByZero) => {
+                // Handle gracefully: return symbolic or error
+                Ok(Value::Undefined("division by zero"))
+            }
+            Err(EvalError::SingularMatrix) => {
+                Ok(Value::Undefined("singular matrix has no inverse"))
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+```
+
+#### User Experience
+
+```kleis
+// User writes
+x = 1 / 0
+
+// Type system: ✓ Type correct (Scalar / Scalar → Scalar)
+// Evaluation: ⚠️ Runtime error: division by zero
+// Result: x = Undefined("division by zero")
+
+// In symbolic mode
+x = 1 / y  where y: Scalar
+
+// Type system: ✓ Type correct
+// Evaluation: Keeps symbolic (can't verify y ≠ 0 without value)
+// Result: x = 1/y (with precondition: y ≠ 0)
+```
+
+**General Principle**: The type system catches **structural** impossibilities (wrong shapes, incompatible operations). Runtime checks catch **value-level** impossibilities (division by zero, domain violations). Both are necessary for correctness.
 
 ---
 
