@@ -501,30 +501,48 @@ See `docs/adr-005-visual-authoring.md`, `docs/kleis_vision_executable_math.md`, 
 
 ## 📖 Documentation
 
-### Type System & Evaluation
-- **[KLEIS_TYPE_SYSTEM.md](docs/KLEIS_TYPE_SYSTEM.md)** - Complete type system design (algebraic hierarchy, polymorphic dispatch, extensibility)
-- **[KLEIS_TYPE_UX.md](docs/KLEIS_TYPE_UX.md)** - Type system UX (context management, inference prompts, AI verification)
-- **[KLEIS_EVALUATION_SYNTAX.md](docs/KLEIS_EVALUATION_SYNTAX.md)** - Evaluation operations (substitute, eval, multi-valued semantics)
+### Getting Started
+- **[README](README.md)** - You are here
+- **[Palette Guide](PALETTE_COMPLETE_GUIDE.md)** - Using the structural editor
+- **[Server API](SERVER_README.md)** - API reference
+- **[Missing Symbols](PALETTE_MISSING_SYMBOLS.md)** - TODO: Symbols to add
 
-### Structural Editor
-- **[STRUCTURAL_EDITOR_STATUS.md](STRUCTURAL_EDITOR_STATUS.md)** - Implementation status, UUID positioning, 92.7% determinism achieved
-- **[PALETTE_COMPLETE_GUIDE.md](PALETTE_COMPLETE_GUIDE.md)** - Complete palette guide (8 tabs, primitive templates, usage)
-- **[ARBITRARY_MATRIX_SOLUTION.md](ARBITRARY_MATRIX_SOLUTION.md)** - Matrix handling, MathType comparison, builder design
+### Type System & Verification
+- **[Type System Design](docs/type-system/KLEIS_TYPE_SYSTEM.md)** - Algebraic foundations, polymorphic dispatch
+- **[Type System UX](docs/type-system/KLEIS_TYPE_UX.md)** - Context management, inference prompts
+- **[Evaluation Syntax](docs/type-system/KLEIS_EVALUATION_SYNTAX.md)** - Substitute, eval, multi-valued operations
 
-### Implementation Guides
-- **[TECHNICAL_REFERENCE.md](TECHNICAL_REFERENCE.md)** - Technical implementation details (architecture, API, debugging)
-- **[SESSION_FINAL_SUMMARY.md](SESSION_FINAL_SUMMARY.md)** - Recent improvements and accomplishments
-- **[SERVER_README.md](SERVER_README.md)** - Server API documentation
-- **[TEST_GUIDE.md](TEST_GUIDE.md)** - Testing guide
+### Vision & Future
+- **[arXiv Integration](docs/vision/ARXIV_INTEGRATION_VISION.md)** - Academic publishing transformation
+- **[Universal Verification](docs/vision/UNIVERSAL_QUALITY_GATES.md)** - Beyond mathematics
+- **[Executable Mathematics](docs/vision/kleis_vision_executable_math.md)** - Long-term vision
+- **[Visual Authoring](docs/vision/adr-005-visual-authoring.md)** - Custom operation design
 
-### Design & Architecture
-- **[docs/adr-*.md](docs/)** - Architecture Decision Records
-- **[docs/syntax.md](docs/syntax.md)** - Language syntax reference
-- **[PARSER_TODO.md](PARSER_TODO.md)** - Parser implementation status
+### For Developers
+- **[Structural Editor Status](STRUCTURAL_EDITOR_STATUS.md)** - Implementation details
+- **[Technical Reference](TECHNICAL_REFERENCE.md)** - Architecture internals
+- **[Parser Status](PARSER_TODO.md)** - Parser implementation TODO
+- **[Test Guide](TEST_GUIDE.md)** - Testing procedures
+- **[Matrix Handling](ARBITRARY_MATRIX_SOLUTION.md)** - Matrix design decisions
 
-### Ontology & Theory
-- **[docs/POT.md](docs/POT.md)** - Projected Ontology Theory
-- **[docs/HONT.md](docs/HONT.md)** - Hilbert Ontology
+### Architecture Decisions
+- **[ADR-001](docs/adr-001-scalar-multiply.md)** - Scalar multiply semantics
+- **[ADR-002](docs/adr-002-eval-vs-simplify.md)** - Evaluation vs simplification
+- **[ADR-003](docs/adr-003-self-hosting.md)** - Self-hosting strategy
+- **[ADR-004](docs/adr-004-input-visualization.md)** - Input visualization
+- **[ADR-006](docs/adr-006-template-grammar-duality.md)** - Template grammar duality
+- **[ADR-007](docs/adr-007-bootstrap-grammar.md)** - Bootstrap grammar
+- **[ADR-008](docs/adr-008-bootstrap-grammar-boundary.md)** - Grammar boundary
+- **[ADR-009](docs/adr-009-wysiwyg-structural-editor.md)** - WYSIWYG editor design
+
+### Theory & Foundations
+- **[Projected Ontology Theory](docs/theory/POT.md)** - POT formalism
+- **[Hilbert Ontology](docs/theory/HONT.md)** - HONT formalism
+- **[Language Syntax](docs/theory/syntax.md)** - Kleis syntax reference
+- **[Grammar Specification](docs/grammar/kleis_grammar_v02.md)** - Formal grammar
+
+### Historical Reference
+- **[Archive](docs/archive/)** - Old analyses and implementation notes
 
 ---
 
