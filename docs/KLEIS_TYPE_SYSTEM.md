@@ -733,37 +733,57 @@ For advanced structures, define axioms that must be satisfied:
 ```rust
 pub struct AxiomaticType {
     pub name: String,
-    pub base_types: Vec<Type>,
+    pub base_types: Vec<TypeParam>,
     pub operations: Vec<OperationSignature>,
     pub axioms: Vec<Expression>,  // Equations that must hold
 }
 
-// Example: Group axioms
+pub struct TypeParam {
+    pub name: String,
+    pub constraint: Type,  // What kind of type this parameter must be
+}
+
+pub struct OperationSignature {
+    pub name: String,
+    pub signature: Vec<Type>,
+    pub result: Type,
+}
+```
+
+#### Example 1: Group Axioms
+
+```rust
 let group_axioms = AxiomaticType {
     name: "Group".to_string(),
-    base_types: vec![Type::Core(CoreType::Set(Box::new(Type::Unknown)))],
+    base_types: vec![
+        TypeParam { 
+            name: "G".to_string(), 
+            constraint: Type::Core(CoreType::Set(Box::new(Type::Unknown))) 
+        }
+    ],
     operations: vec![
         OperationSignature {
             name: "op".to_string(),
-            signature: vec![Type::This, Type::This],
-            result: Type::This,
+            signature: vec![Type::Var("G"), Type::Var("G")],
+            result: Type::Var("G"),
         },
         OperationSignature {
             name: "inverse".to_string(),
-            signature: vec![Type::This],
-            result: Type::This,
+            signature: vec![Type::Var("G")],
+            result: Type::Var("G"),
         },
     ],
     axioms: vec![
         // Associativity: (a·b)·c = a·(b·c)
-        equals(
-            op(op(var("a"), var("b")), var("c")),
-            op(var("a"), op(var("b"), var("c")))
+        forall(["a", "b", "c"], Type::Var("G"),
+            equals(
+                op(op(var("a"), var("b")), var("c")),
+                op(var("a"), op(var("b"), var("c")))
+            )
         ),
         // Identity: ∃e. ∀a. e·a = a·e = a
-        exists(
-            var("e"),
-            forall(var("a"),
+        exists(var("e"), Type::Var("G"),
+            forall(var("a"), Type::Var("G"),
                 and(
                     equals(op(var("e"), var("a")), var("a")),
                     equals(op(var("a"), var("e")), var("a"))
@@ -771,7 +791,7 @@ let group_axioms = AxiomaticType {
             )
         ),
         // Inverse: ∀a. ∃a⁻¹. a·a⁻¹ = a⁻¹·a = e
-        forall(var("a"),
+        forall(var("a"), Type::Var("G"),
             equals(
                 op(var("a"), inverse(var("a"))),
                 identity()
@@ -780,6 +800,194 @@ let group_axioms = AxiomaticType {
     ],
 };
 ```
+
+#### Example 2: Vector Space over Field (Complete Definition)
+
+**Formal statement**: "A vector space over a field F is a non-empty set V together with a binary operation (vector addition) and a binary function (scalar multiplication) that satisfy the eight axioms listed below."
+
+```rust
+let vector_space = AxiomaticType {
+    name: "VectorSpace".to_string(),
+    
+    // Type parameters: Field F and Set V
+    base_types: vec![
+        TypeParam { 
+            name: "F".to_string(), 
+            constraint: Type::Extended(Box::new(FieldType::new()))
+        },
+        TypeParam { 
+            name: "V".to_string(), 
+            constraint: Type::Core(CoreType::Set(Box::new(Type::Unknown)))
+        },
+    ],
+    
+    // Operations
+    operations: vec![
+        // Vector addition: V × V → V
+        OperationSignature {
+            name: "vec_add".to_string(),
+            signature: vec![Type::Var("V"), Type::Var("V")],
+            result: Type::Var("V"),
+        },
+        // Scalar multiplication: F × V → V
+        OperationSignature {
+            name: "scalar_mul".to_string(),
+            signature: vec![Type::Var("F"), Type::Var("V")],
+            result: Type::Var("V"),
+        },
+    ],
+    
+    // The eight vector space axioms
+    axioms: vec![
+        // Axiom 1: Associativity of vector addition
+        // (u + v) + w = u + (v + w)
+        forall(["u", "v", "w"], Type::Var("V"),
+            equals(
+                vec_add(vec_add(var("u"), var("v")), var("w")),
+                vec_add(var("u"), vec_add(var("v"), var("w")))
+            )
+        ),
+        
+        // Axiom 2: Commutativity of vector addition
+        // u + v = v + u
+        forall(["u", "v"], Type::Var("V"),
+            equals(
+                vec_add(var("u"), var("v")),
+                vec_add(var("v"), var("u"))
+            )
+        ),
+        
+        // Axiom 3: Identity element of vector addition
+        // ∃0 ∈ V. ∀v ∈ V. v + 0 = v
+        exists(var("zero"), Type::Var("V"),
+            forall(var("v"), Type::Var("V"),
+                equals(
+                    vec_add(var("v"), var("zero")),
+                    var("v")
+                )
+            )
+        ),
+        
+        // Axiom 4: Inverse elements of vector addition
+        // ∀v ∈ V. ∃(-v) ∈ V. v + (-v) = 0
+        forall(var("v"), Type::Var("V"),
+            exists(var("neg_v"), Type::Var("V"),
+                equals(
+                    vec_add(var("v"), var("neg_v")),
+                    zero_vector()
+                )
+            )
+        ),
+        
+        // Axiom 5: Compatibility of scalar multiplication with field multiplication
+        // a(bv) = (ab)v
+        forall(["a", "b"], Type::Var("F"),
+            forall(var("v"), Type::Var("V"),
+                equals(
+                    scalar_mul(var("a"), scalar_mul(var("b"), var("v"))),
+                    scalar_mul(field_mul(var("a"), var("b")), var("v"))
+                )
+            )
+        ),
+        
+        // Axiom 6: Identity element of scalar multiplication
+        // 1v = v where 1 is the multiplicative identity in F
+        forall(var("v"), Type::Var("V"),
+            equals(
+                scalar_mul(field_identity(), var("v")),
+                var("v")
+            )
+        ),
+        
+        // Axiom 7: Distributivity of scalar multiplication with respect to vector addition
+        // a(u + v) = au + av
+        forall(var("a"), Type::Var("F"),
+            forall(["u", "v"], Type::Var("V"),
+                equals(
+                    scalar_mul(var("a"), vec_add(var("u"), var("v"))),
+                    vec_add(
+                        scalar_mul(var("a"), var("u")),
+                        scalar_mul(var("a"), var("v"))
+                    )
+                )
+            )
+        ),
+        
+        // Axiom 8: Distributivity of scalar multiplication with respect to field addition
+        // (a + b)v = av + bv
+        forall(["a", "b"], Type::Var("F"),
+            forall(var("v"), Type::Var("V"),
+                equals(
+                    scalar_mul(field_add(var("a"), var("b")), var("v")),
+                    vec_add(
+                        scalar_mul(var("a"), var("v")),
+                        scalar_mul(var("b"), var("v"))
+                    )
+                )
+            )
+        ),
+    ],
+};
+
+// Register the vector space type
+context.define_axiomatic_type(vector_space);
+
+// Instantiate concrete vector spaces
+context.bind_typed("V3", Type::VectorSpace {
+    field: Type::Core(CoreType::Scalar),  // ℝ
+    dimension: Some(3),
+});
+
+// Abstract vector space over arbitrary field
+context.bind_typed("V", Type::VectorSpace {
+    field: Type::Var("F"),
+    dimension: None,
+});
+```
+
+**Future Kleis syntax:**
+
+```kleis
+// Define vector space axiomatically
+type VectorSpace<F: Field, V: Set> {
+    // Operations
+    vec_add: V × V → V
+    scalar_mul: F × V → V
+    
+    // The eight axioms
+    axiom associative_add:
+        ∀u,v,w ∈ V. (u + v) + w = u + (v + w)
+    
+    axiom commutative_add:
+        ∀u,v ∈ V. u + v = v + u
+    
+    axiom identity_add:
+        ∃0 ∈ V. ∀v ∈ V. v + 0 = v
+    
+    axiom inverse_add:
+        ∀v ∈ V. ∃(-v) ∈ V. v + (-v) = 0
+    
+    axiom compatible_scalar:
+        ∀a,b ∈ F. ∀v ∈ V. a(bv) = (ab)v
+    
+    axiom identity_scalar:
+        ∀v ∈ V. 1v = v
+    
+    axiom distributive_vector:
+        ∀a ∈ F. ∀u,v ∈ V. a(u + v) = au + av
+    
+    axiom distributive_field:
+        ∀a,b ∈ F. ∀v ∈ V. (a + b)v = av + bv
+}
+
+// Instantiate
+V3: VectorSpace<ℝ, ℝ³>
+
+// Verify instance satisfies axioms
+verify V3: VectorSpace<ℝ, ℝ³>
+```
+
+This demonstrates Kleis's ability to capture **formal mathematical definitions** as executable type specifications, enabling both type checking and axiom verification.
 
 ### Integration with Context
 
