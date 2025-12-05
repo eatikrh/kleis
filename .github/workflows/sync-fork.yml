@@ -1,0 +1,41 @@
+name: Sync Fork with Upstream
+
+# This workflow is for FORKS of this repository
+# It syncs the fork with the upstream (original) repository
+# Forks will inherit this workflow and auto-sync
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+  workflow_dispatch:  # Manual trigger button
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    # Only run on forks, not on the original repository
+    if: github.repository != 'eatikrh/kleis'
+    
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          
+      - name: Sync with upstream
+        run: |
+          git remote add upstream https://github.com/eatikrh/kleis.git
+          git fetch upstream
+          git checkout main
+          git reset --hard upstream/main
+          git push origin main --force
+          
+      - name: Sync complete
+        run: echo "✅ Fork synced with upstream eatikrh/kleis"
+
