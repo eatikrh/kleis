@@ -538,10 +538,10 @@ pub fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderT
 
 /// Render expression with UUID labels for position tracking
 pub fn render_expression_with_ids(
-    expr: &Expression, 
-    ctx: &GlyphContext, 
+    expr: &Expression,
+    ctx: &GlyphContext,
     target: &RenderTarget,
-    node_id_to_uuid: &std::collections::HashMap<String, String>
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
 ) -> String {
     render_expression_internal(expr, ctx, target, "0", node_id_to_uuid)
 }
@@ -559,14 +559,14 @@ fn render_literal_chain(
         .map(|(i, arg)| {
             let child_id = format!("{}.{}", node_id, i);
             let rendered = render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
-            
+
             // For Typst: wrap each child with UUID label so they're individually editable
             if *target == RenderTarget::Typst {
                 if let Some(uuid) = node_id_to_uuid.get(&child_id) {
                     return format!("#[#box[${}$]<id{}>]", rendered, uuid);
                 }
             }
-            
+
             rendered
         })
         .collect();
@@ -632,18 +632,25 @@ fn render_expression_internal(
             // Wrap arguments (not function name) with UUID for deterministic positioning
             if name == "function_call" && !args.is_empty() {
                 let func_name_id = format!("{}.0", node_id);
-                let func_name = render_expression_internal(&args[0], ctx, target, &func_name_id, node_id_to_uuid);
-                
+                let func_name = render_expression_internal(
+                    &args[0],
+                    ctx,
+                    target,
+                    &func_name_id,
+                    node_id_to_uuid,
+                );
+
                 // NOTE: Cannot wrap function name with #[#box[$f$]<id>](...) - breaks Typst syntax
                 // With Option B filtering, function name is hidden anyway (child of function_call parent)
-                
+
                 let func_args: Vec<String> = args[1..]
                     .iter()
                     .enumerate()
                     .map(|(i, arg)| {
                         let arg_id = format!("{}.{}", node_id, i + 1);
-                        let rendered = render_expression_internal(arg, ctx, target, &arg_id, node_id_to_uuid);
-                        
+                        let rendered =
+                            render_expression_internal(arg, ctx, target, &arg_id, node_id_to_uuid);
+
                         // For Typst: wrap each argument with UUID label inside the parentheses
                         if *target == RenderTarget::Typst {
                             if let Some(uuid) = node_id_to_uuid.get(&arg_id) {
@@ -653,7 +660,7 @@ fn render_expression_internal(
                         rendered
                     })
                     .collect();
-                    
+
                 // Return function call with individually-labeled arguments
                 return format!("{}({})", func_name, func_args.join(", "));
             }
@@ -663,15 +670,21 @@ fn render_expression_internal(
                 if let Expression::Const(val) = &args[0] {
                     if val == "0" {
                         let operand_id = format!("{}.1", node_id);
-                        let operand = render_expression_internal(&args[1], ctx, target, &operand_id, node_id_to_uuid);
-                        
+                        let operand = render_expression_internal(
+                            &args[1],
+                            ctx,
+                            target,
+                            &operand_id,
+                            node_id_to_uuid,
+                        );
+
                         // For Typst: wrap the negated operand with UUID if available
                         if *target == RenderTarget::Typst {
                             if let Some(uuid) = node_id_to_uuid.get(&operand_id) {
                                 return format!("-#[#box[${}$]<id{}>]", operand, uuid);
                             }
                         }
-                        
+
                         return format!("-{}", operand);
                     }
                 }
@@ -732,7 +745,7 @@ fn render_expression_internal(
                 "text" => vec![0],
                 _ => vec![],
             };
-            
+
             let rendered_args: Vec<String> = args
                 .iter()
                 .enumerate()
@@ -740,14 +753,14 @@ fn render_expression_internal(
                     // Generate child node ID: parent.index
                     let child_id = format!("{}.{}", node_id, i);
                     let rendered = render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
-                    
+
                     // For Typst: wrap arguments with labeled boxes for position tracking
                     // This enables edit markers on ALL filled content (Const, Object, Operations)
                     // Skip wrapping for arguments in special positions (like after "dif")
                     // Also skip if the child already handled its own wrapping (function_call, literal_chain)
-                    let child_handles_own_wrapping = matches!(arg, Expression::Operation { name, .. } 
+                    let child_handles_own_wrapping = matches!(arg, Expression::Operation { name, .. }
                         if name == "function_call" || name == "literal_chain");
-                    
+
                     if *target == RenderTarget::Typst && !skip_wrap_indices.contains(&i) && !child_handles_own_wrapping {
                         // Check if this node has a UUID in the map
                         if let Some(uuid) = node_id_to_uuid.get(&child_id) {
@@ -842,9 +855,12 @@ fn render_expression_internal(
                     result = result.replace("{lower}", second); // for int_bounds: arg 1 is lower bound
                 } else if name == "kernel_integral" {
                     result = result.replace("{function}", second); // kernel_integral: arg 1 is function
-                } else if name == "fourier_transform" || name == "inverse_fourier" || 
-                          name == "laplace_transform" || name == "inverse_laplace" ||
-                          name == "projection" {
+                } else if name == "fourier_transform"
+                    || name == "inverse_fourier"
+                    || name == "laplace_transform"
+                    || name == "inverse_laplace"
+                    || name == "projection"
+                {
                     result = result.replace("{variable}", second); // transforms: arg 1 is variable
                 } else if name == "projection_kernel" || name == "greens_function" {
                     result = result.replace("{source_m}", second);
@@ -862,8 +878,11 @@ fn render_expression_internal(
                 result = result.replace("{subscript}", second);
                 // Don't replace {idx2} here for operations that use arg 2 for idx2
                 // riemann and gamma use {idx2} for arg[2], not arg[1]
-                if name != "double_integral" && name != "triple_integral" && name != "congruent_mod"
-                    && name != "riemann" && name != "gamma"
+                if name != "double_integral"
+                    && name != "triple_integral"
+                    && name != "congruent_mod"
+                    && name != "riemann"
+                    && name != "gamma"
                 {
                     result = result.replace("{idx2}", second); // general index
                 }
@@ -1579,7 +1598,7 @@ pub fn build_default_context() -> GlyphContext {
     unicode_templates.insert("covariance".to_string(), "Cov({left}, {right})".to_string());
 
     // === Integral Transforms - Unicode ===
-    
+
     // Fourier transforms
     unicode_templates.insert(
         "fourier_transform".to_string(),
@@ -1589,7 +1608,7 @@ pub fn build_default_context() -> GlyphContext {
         "inverse_fourier".to_string(),
         "ℱ⁻¹[{function}]({variable})".to_string(),
     );
-    
+
     // Laplace transforms
     unicode_templates.insert(
         "laplace_transform".to_string(),
@@ -1599,19 +1618,19 @@ pub fn build_default_context() -> GlyphContext {
         "inverse_laplace".to_string(),
         "ℒ⁻¹[{function}]({variable})".to_string(),
     );
-    
+
     // Convolution
     unicode_templates.insert(
         "convolution".to_string(),
         "({f} ∗ {g})({variable})".to_string(),
     );
-    
+
     // Kernel integral
     unicode_templates.insert(
         "kernel_integral".to_string(),
         "∫_{domain} {kernel} {function} d{variable}".to_string(),
     );
-    
+
     // Green's function
     unicode_templates.insert(
         "greens_function".to_string(),
@@ -1619,54 +1638,42 @@ pub fn build_default_context() -> GlyphContext {
     );
 
     // === POT-Specific Operations - Unicode ===
-    
+
     // Projection operator
     unicode_templates.insert(
         "projection".to_string(),
         "Π[{function}]({variable})".to_string(),
     );
-    
+
     // Modal integral
     unicode_templates.insert(
         "modal_integral".to_string(),
         "∫_{modal_space} {function} dμ({variable})".to_string(),
     );
-    
+
     // Projection kernel
     unicode_templates.insert(
         "projection_kernel".to_string(),
         "K({spacetime_point}, {modal_state})".to_string(),
     );
-    
+
     // Causal bound
-    unicode_templates.insert(
-        "causal_bound".to_string(),
-        "c({point})".to_string(),
-    );
-    
+    unicode_templates.insert("causal_bound".to_string(), "c({point})".to_string());
+
     // Projection residue
     unicode_templates.insert(
         "projection_residue".to_string(),
         "Residue[{projection}, {structure}]".to_string(),
     );
-    
+
     // Modal space
-    unicode_templates.insert(
-        "modal_space".to_string(),
-        "𝓜_{name}".to_string(),
-    );
-    
+    unicode_templates.insert("modal_space".to_string(), "𝓜_{name}".to_string());
+
     // Spacetime
-    unicode_templates.insert(
-        "spacetime".to_string(),
-        "ℝ⁴".to_string(),
-    );
-    
+    unicode_templates.insert("spacetime".to_string(), "ℝ⁴".to_string());
+
     // Hont (Hilbert Ontology)
-    unicode_templates.insert(
-        "hont".to_string(),
-        "𝓗_{dimension}".to_string(),
-    );
+    unicode_templates.insert("hont".to_string(), "𝓗_{dimension}".to_string());
 
     let mut latex_glyphs = HashMap::new();
     latex_glyphs.insert("grad".to_string(), "\\nabla".to_string());
@@ -2039,7 +2046,7 @@ pub fn build_default_context() -> GlyphContext {
     );
 
     // === Integral Transforms - LaTeX ===
-    
+
     // Fourier transforms
     latex_templates.insert(
         "fourier_transform".to_string(),
@@ -2049,7 +2056,7 @@ pub fn build_default_context() -> GlyphContext {
         "inverse_fourier".to_string(),
         "\\mathcal{F}^{-1}[{function}]({variable})".to_string(),
     );
-    
+
     // Laplace transforms
     latex_templates.insert(
         "laplace_transform".to_string(),
@@ -2059,19 +2066,19 @@ pub fn build_default_context() -> GlyphContext {
         "inverse_laplace".to_string(),
         "\\mathcal{L}^{-1}[{function}]({variable})".to_string(),
     );
-    
+
     // Convolution
     latex_templates.insert(
         "convolution".to_string(),
         "({f} \\ast {g})({variable})".to_string(),
     );
-    
+
     // Kernel integral
     latex_templates.insert(
         "kernel_integral".to_string(),
         "\\int_{{{domain}}} {kernel} \\, {function} \\, \\mathrm{d}{variable}".to_string(),
     );
-    
+
     // Green's function
     latex_templates.insert(
         "greens_function".to_string(),
@@ -2079,49 +2086,43 @@ pub fn build_default_context() -> GlyphContext {
     );
 
     // === POT-Specific Operations - LaTeX ===
-    
+
     // Projection operator
     latex_templates.insert(
         "projection".to_string(),
         "\\Pi[{function}]({variable})".to_string(),
     );
-    
+
     // Modal integral
     latex_templates.insert(
         "modal_integral".to_string(),
         "\\int_{{{modal_space}}} {function} \\, \\mathrm{d}\\mu({variable})".to_string(),
     );
-    
+
     // Projection kernel
     latex_templates.insert(
         "projection_kernel".to_string(),
         "K({spacetime_point}, {modal_state})".to_string(),
     );
-    
+
     // Causal bound
-    latex_templates.insert(
-        "causal_bound".to_string(),
-        "c({point})".to_string(),
-    );
-    
+    latex_templates.insert("causal_bound".to_string(), "c({point})".to_string());
+
     // Projection residue
     latex_templates.insert(
         "projection_residue".to_string(),
         "\\mathrm{Residue}[{projection}, {structure}]".to_string(),
     );
-    
+
     // Modal space
     latex_templates.insert(
         "modal_space".to_string(),
         "\\mathcal{M}_{{{name}}}".to_string(),
     );
-    
+
     // Spacetime
-    latex_templates.insert(
-        "spacetime".to_string(),
-        "\\mathbb{R}^4".to_string(),
-    );
-    
+    latex_templates.insert("spacetime".to_string(), "\\mathbb{R}^4".to_string());
+
     // Hont (Hilbert Ontology)
     latex_templates.insert(
         "hont".to_string(),
@@ -2167,7 +2168,8 @@ pub fn build_default_context() -> GlyphContext {
     );
     html_templates.insert(
         "subsup".to_string(),
-        r#"{base}<sub class="math-sub">{subscript}</sub><sup class="math-sup">{superscript}</sup>"#.to_string(),
+        r#"{base}<sub class="math-sub">{subscript}</sub><sup class="math-sup">{superscript}</sup>"#
+            .to_string(),
     );
     html_templates.insert(
         "index_pair".to_string(),
@@ -2590,7 +2592,7 @@ pub fn build_default_context() -> GlyphContext {
     );
 
     // === Integral Transforms - HTML ===
-    
+
     // Fourier transforms
     html_templates.insert(
         "fourier_transform".to_string(),
@@ -2600,7 +2602,7 @@ pub fn build_default_context() -> GlyphContext {
         "inverse_fourier".to_string(),
         r#"<span class="math-script">ℱ</span><sup class="math-sup">-1</sup>[{function}]({variable})"#.to_string(),
     );
-    
+
     // Laplace transforms
     html_templates.insert(
         "laplace_transform".to_string(),
@@ -2610,19 +2612,19 @@ pub fn build_default_context() -> GlyphContext {
         "inverse_laplace".to_string(),
         r#"<span class="math-script">ℒ</span><sup class="math-sup">-1</sup>[{function}]({variable})"#.to_string(),
     );
-    
+
     // Convolution
     html_templates.insert(
         "convolution".to_string(),
         r#"({f} <span class="math-op">∗</span> {g})({variable})"#.to_string(),
     );
-    
+
     // Kernel integral
     html_templates.insert(
         "kernel_integral".to_string(),
         r#"∫<sub class="math-sub">{domain}</sub> {kernel} {function} d{variable}"#.to_string(),
     );
-    
+
     // Green's function
     html_templates.insert(
         "greens_function".to_string(),
@@ -2630,49 +2632,49 @@ pub fn build_default_context() -> GlyphContext {
     );
 
     // === POT-Specific Operations - HTML ===
-    
+
     // Projection operator
     html_templates.insert(
         "projection".to_string(),
         r#"<span class="math-op">Π</span>[{function}]({variable})"#.to_string(),
     );
-    
+
     // Modal integral
     html_templates.insert(
         "modal_integral".to_string(),
         r#"∫<sub class="math-sub">{modal_space}</sub> {function} dμ({variable})"#.to_string(),
     );
-    
+
     // Projection kernel
     html_templates.insert(
         "projection_kernel".to_string(),
         r#"<span class="math-func">K</span>({spacetime_point}, {modal_state})"#.to_string(),
     );
-    
+
     // Causal bound
     html_templates.insert(
         "causal_bound".to_string(),
         r#"<span class="math-func">c</span>({point})"#.to_string(),
     );
-    
+
     // Projection residue
     html_templates.insert(
         "projection_residue".to_string(),
         r#"<span class="math-func">Residue</span>[{projection}, {structure}]"#.to_string(),
     );
-    
+
     // Modal space
     html_templates.insert(
         "modal_space".to_string(),
         r#"<span class="math-script">𝓜</span><sub class="math-sub">{name}</sub>"#.to_string(),
     );
-    
+
     // Spacetime
     html_templates.insert(
         "spacetime".to_string(),
         r#"<span class="math-blackboard">ℝ</span><sup class="math-sup">4</sup>"#.to_string(),
     );
-    
+
     // Hont (Hilbert Ontology)
     html_templates.insert(
         "hont".to_string(),
@@ -2796,7 +2798,10 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("parens".to_string(), "lr(({content}))".to_string());
     typst_templates.insert("brackets".to_string(), "lr([{content}])".to_string());
     typst_templates.insert("braces".to_string(), "lr(\\{ {content} \\})".to_string());
-    typst_templates.insert("angle_brackets".to_string(), "lr(angle.l {content} angle.r)".to_string());
+    typst_templates.insert(
+        "angle_brackets".to_string(),
+        "lr(angle.l {content} angle.r)".to_string(),
+    );
     typst_templates.insert("det".to_string(), "det({arg})".to_string());
     typst_templates.insert("transpose".to_string(), "{arg}^T".to_string());
     typst_templates.insert("inverse".to_string(), "{arg}^(-1)".to_string());
@@ -2913,9 +2918,9 @@ pub fn build_default_context() -> GlyphContext {
 
     // Accents
     typst_templates.insert("hat".to_string(), "hat({arg})".to_string());
-    typst_templates.insert("bar".to_string(), "macron({arg})".to_string());  // Use macron for short bar (like LaTeX \bar)
+    typst_templates.insert("bar".to_string(), "macron({arg})".to_string()); // Use macron for short bar (like LaTeX \bar)
     typst_templates.insert("tilde".to_string(), "tilde({arg})".to_string());
-    typst_templates.insert("overline".to_string(), "overline({arg})".to_string());  // Keep overline for full overline
+    typst_templates.insert("overline".to_string(), "overline({arg})".to_string()); // Keep overline for full overline
     typst_templates.insert("dot_accent".to_string(), "dot({arg})".to_string());
     typst_templates.insert("ddot_accent".to_string(), "dot.double({arg})".to_string());
 
@@ -2956,7 +2961,10 @@ pub fn build_default_context() -> GlyphContext {
     );
     typst_templates.insert("zeta".to_string(), "zeta({arg})".to_string());
     // Christoffel symbol: Γ^idx1_{idx2 idx3}
-    typst_templates.insert("gamma".to_string(), "Gamma^({idx1})_({idx2} {idx3})".to_string());
+    typst_templates.insert(
+        "gamma".to_string(),
+        "Gamma^({idx1})_({idx2} {idx3})".to_string(),
+    );
     typst_templates.insert("power".to_string(), "{base}^({exponent})".to_string());
     typst_templates.insert("index".to_string(), "{base}_({subscript})".to_string());
     typst_templates.insert(
@@ -2975,7 +2983,7 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert("iff".to_string(), "{left} <=> {right}".to_string());
 
     // === Integral Transforms - Typst ===
-    
+
     // Fourier transforms
     typst_templates.insert(
         "fourier_transform".to_string(),
@@ -2985,7 +2993,7 @@ pub fn build_default_context() -> GlyphContext {
         "inverse_fourier".to_string(),
         "cal(F)^(-1)[{function}]({variable})".to_string(),
     );
-    
+
     // Laplace transforms
     typst_templates.insert(
         "laplace_transform".to_string(),
@@ -2995,19 +3003,19 @@ pub fn build_default_context() -> GlyphContext {
         "inverse_laplace".to_string(),
         "cal(L)^(-1)[{function}]({variable})".to_string(),
     );
-    
+
     // Convolution
     typst_templates.insert(
         "convolution".to_string(),
         "({f} ast {g})({variable})".to_string(),
     );
-    
+
     // Kernel integral
     typst_templates.insert(
         "kernel_integral".to_string(),
         "integral _({domain}) {kernel} {function} dif {variable}".to_string(),
     );
-    
+
     // Green's function
     typst_templates.insert(
         "greens_function".to_string(),
@@ -3015,54 +3023,42 @@ pub fn build_default_context() -> GlyphContext {
     );
 
     // === POT-Specific Operations - Typst ===
-    
+
     // Projection operator
     typst_templates.insert(
         "projection".to_string(),
         "Pi[{function}]({variable})".to_string(),
     );
-    
+
     // Modal integral
     typst_templates.insert(
         "modal_integral".to_string(),
         "integral _({modal_space}) {function} dif mu({variable})".to_string(),
     );
-    
+
     // Projection kernel
     typst_templates.insert(
         "projection_kernel".to_string(),
         "K({spacetime_point}, {modal_state})".to_string(),
     );
-    
+
     // Causal bound
-    typst_templates.insert(
-        "causal_bound".to_string(),
-        "c({point})".to_string(),
-    );
-    
+    typst_templates.insert("causal_bound".to_string(), "c({point})".to_string());
+
     // Projection residue
     typst_templates.insert(
         "projection_residue".to_string(),
         "op(\"Residue\")[{projection}, {structure}]".to_string(),
     );
-    
+
     // Modal space
-    typst_templates.insert(
-        "modal_space".to_string(),
-        "cal(M)_({name})".to_string(),
-    );
-    
+    typst_templates.insert("modal_space".to_string(), "cal(M)_({name})".to_string());
+
     // Spacetime
-    typst_templates.insert(
-        "spacetime".to_string(),
-        "bb(R)^4".to_string(),
-    );
-    
+    typst_templates.insert("spacetime".to_string(), "bb(R)^4".to_string());
+
     // Hont (Hilbert Ontology)
-    typst_templates.insert(
-        "hont".to_string(),
-        "cal(H)_({dimension})".to_string(),
-    );
+    typst_templates.insert("hont".to_string(), "cal(H)_({dimension})".to_string());
 
     // TODO: Add more Typst templates as needed
 

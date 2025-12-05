@@ -338,18 +338,20 @@ async fn render_typst_handler(
 ) -> impl IntoResponse {
     eprintln!("=== render_typst_handler called ===");
     eprintln!("Received AST JSON: {:?}", req.ast);
-    
+
     match json_to_expression(&req.ast) {
         Ok(expr) => {
             eprintln!("Parsed Expression: {:#?}", expr);
-            
+
             // Collect ALL argument slots with their info (empty or filled)
             let arg_slots = collect_argument_slots(&expr);
             eprintln!("Argument slots: {} total", arg_slots.len());
-            
+
             for (i, slot) in arg_slots.iter().enumerate() {
-                eprintln!("  Slot {}: id={}, is_placeholder={}, hint='{}'", 
-                    i, slot.id, slot.is_placeholder, slot.hint);
+                eprintln!(
+                    "  Slot {}: id={}, is_placeholder={}, hint='{}'",
+                    i, slot.id, slot.is_placeholder, slot.hint
+                );
             }
 
             // Get unfilled placeholder IDs for Typst square rendering
@@ -365,7 +367,7 @@ async fn render_typst_handler(
                     }
                 })
                 .collect();
-            
+
             // For all_slot_ids, we only care about placeholders (which have numeric IDs)
             // Filled slots have UUIDs which don't map to Typst placeholder positions
             let all_slot_ids = unfilled_ids.clone();
@@ -374,42 +376,68 @@ async fn render_typst_handler(
             // Truncate UUIDs with collision detection and regeneration
             let mut node_id_to_uuid = std::collections::HashMap::new();
             let mut used_truncated = std::collections::HashSet::new();
-            
+
             for slot in &arg_slots {
-                let node_id = slot.path.iter().enumerate()
-                    .map(|(depth, &idx)| if depth == 0 { format!("{}", idx) } else { format!(".{}", idx) })
+                let node_id = slot
+                    .path
+                    .iter()
+                    .enumerate()
+                    .map(|(depth, &idx)| {
+                        if depth == 0 {
+                            format!("{}", idx)
+                        } else {
+                            format!(".{}", idx)
+                        }
+                    })
                     .collect::<String>();
-                let node_id = if node_id.is_empty() { "0".to_string() } else { format!("0.{}", node_id) };
-                
+                let node_id = if node_id.is_empty() {
+                    "0".to_string()
+                } else {
+                    format!("0.{}", node_id)
+                };
+
                 // Only process filled slots (not placeholders)
                 if !slot.is_placeholder {
                     // Truncate UUID to first 8 chars
                     let mut truncated = slot.id.chars().take(8).collect::<String>();
-                    
+
                     // Check for collision - regenerate if needed
                     let mut attempts = 0;
                     while used_truncated.contains(&truncated) && attempts < 100 {
-                        eprintln!("⚠️  UUID collision detected for {}, regenerating...", truncated);
+                        eprintln!(
+                            "⚠️  UUID collision detected for {}, regenerating...",
+                            truncated
+                        );
                         let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
                         truncated = new_uuid.chars().take(8).collect::<String>();
                         attempts += 1;
                     }
-                    
+
                     if attempts >= 100 {
-                        eprintln!("❌ Failed to generate unique 8-char UUID after 100 attempts, using full UUID");
+                        eprintln!(
+                            "❌ Failed to generate unique 8-char UUID after 100 attempts, using full UUID"
+                        );
                         truncated = uuid::Uuid::new_v4().to_string().replace("-", "");
                     }
-                    
+
                     used_truncated.insert(truncated.clone());
                     node_id_to_uuid.insert(node_id, truncated);
                 }
             }
-            
-            eprintln!("Built node_id->UUID map with {} entries", node_id_to_uuid.len());
+
+            eprintln!(
+                "Built node_id->UUID map with {} entries",
+                node_id_to_uuid.len()
+            );
 
             // Compile with Typst using semantic bounding box extraction
             // Pass both unfilled_ids (for placeholder squares) and all_slot_ids (for filled content)
-            match kleis::math_layout::compile_with_semantic_boxes_and_slots(&expr, &unfilled_ids, &all_slot_ids, &node_id_to_uuid) {
+            match kleis::math_layout::compile_with_semantic_boxes_and_slots(
+                &expr,
+                &unfilled_ids,
+                &all_slot_ids,
+                &node_id_to_uuid,
+            ) {
                 Ok(output) => {
                     let response = serde_json::json!({
                         "svg": output.svg,
@@ -485,7 +513,7 @@ fn collect_slots_recursive(
         Expression::Placeholder { id, hint } => {
             // Empty placeholder - convert ID to string
             slots.push(ArgumentSlot {
-                id: format!("ph{}", id),  // Prefix with "ph" to distinguish from UUIDs
+                id: format!("ph{}", id), // Prefix with "ph" to distinguish from UUIDs
                 path: path.clone(),
                 hint: hint.clone(),
                 is_placeholder: true,
@@ -513,7 +541,7 @@ fn collect_slots_recursive(
                 is_placeholder: false,
                 role: role.clone(),
             });
-            
+
             // Recursively process each argument
             for (i, arg) in args.iter().enumerate() {
                 let mut child_path = path.clone();

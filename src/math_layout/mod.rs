@@ -34,7 +34,8 @@ pub use layout_box::{
 pub use typst_adapter::{ConversionContext, PlaceholderInfo, expression_to_typst};
 pub use typst_compiler::{
     ArgumentBoundingBox, CompiledOutput, PlaceholderPosition, compile_math_to_svg,
-    compile_math_to_svg_with_ids, compile_with_semantic_boxes, compile_with_semantic_boxes_and_slots,
+    compile_math_to_svg_with_ids, compile_with_semantic_boxes,
+    compile_with_semantic_boxes_and_slots,
 };
 
 use crate::ast::Expression;

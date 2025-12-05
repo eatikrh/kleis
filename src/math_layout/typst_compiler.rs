@@ -14,7 +14,10 @@ use typst::utils::LazyHash;
 use typst::{Library, World};
 
 use crate::ast::Expression;
-use crate::render::{GlyphContext, RenderTarget, build_default_context, render_expression, render_expression_with_ids};
+use crate::render::{
+    GlyphContext, RenderTarget, build_default_context, render_expression,
+    render_expression_with_ids,
+};
 
 /// Minimal World implementation for Typst compilation
 ///
@@ -105,7 +108,12 @@ pub fn compile_with_semantic_boxes(
     placeholder_ids: &[usize],
     all_slot_ids: &[usize],
 ) -> Result<CompiledOutput, String> {
-    compile_with_semantic_boxes_and_slots(ast, placeholder_ids, all_slot_ids, &std::collections::HashMap::new())
+    compile_with_semantic_boxes_and_slots(
+        ast,
+        placeholder_ids,
+        all_slot_ids,
+        &std::collections::HashMap::new(),
+    )
 }
 
 /// Compile with UUID-based slot tracking
@@ -130,17 +138,25 @@ pub fn compile_with_semantic_boxes_and_slots(
     eprintln!("Full markup: {}", full_markup);
 
     let mut output = compile_math_to_svg_with_ids(&full_markup, placeholder_ids, all_slot_ids)?;
-    
+
     // Extract ALL labeled positions from SVG (both placeholders and filled slots)
     let labeled_positions = extract_positions_from_labels(&output.svg)?;
-    eprintln!("Extracted {} labeled positions for semantic matching", labeled_positions.len());
-    
+    eprintln!(
+        "Extracted {} labeled positions for semantic matching",
+        labeled_positions.len()
+    );
+
     // Also extract UUID-based labels (id{uuid}) for filled slots
     let uuid_positions = extract_uuid_positions(&output.svg)?;
     eprintln!("Extracted {} UUID-based positions", uuid_positions.len());
-    
+
     output.argument_bounding_boxes = extract_semantic_argument_boxes(
-        ast, &ctx, &full_markup, &labeled_positions, node_id_to_uuid, &uuid_positions
+        ast,
+        &ctx,
+        &full_markup,
+        &labeled_positions,
+        node_id_to_uuid,
+        &uuid_positions,
     )?;
 
     Ok(output)
@@ -176,15 +192,21 @@ fn extract_semantic_argument_boxes(
     let mut sorted_labeled_positions = labeled_positions.to_vec();
     sorted_labeled_positions.sort_by(|a, b| {
         let y_diff = a.y - b.y;
-        if y_diff.abs() < 3.0 {  // Same row (tolerance for slight vertical variations)
+        if y_diff.abs() < 3.0 {
+            // Same row (tolerance for slight vertical variations)
             a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal)
         } else {
-            y_diff.partial_cmp(&0.0).unwrap_or(std::cmp::Ordering::Equal)
+            y_diff
+                .partial_cmp(&0.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
         }
     });
-    
+
     if !sorted_labeled_positions.is_empty() {
-        eprintln!("Sorted {} labeled positions by reading order:", sorted_labeled_positions.len());
+        eprintln!(
+            "Sorted {} labeled positions by reading order:",
+            sorted_labeled_positions.len()
+        );
         for (i, p) in sorted_labeled_positions.iter().take(15).enumerate() {
             eprintln!("  [{}] id={} at ({:.1}, {:.1})", i, p.id, p.x, p.y);
         }
@@ -192,18 +214,30 @@ fn extract_semantic_argument_boxes(
 
     let mut result = Vec::new();
     let mut label_pool = sorted_labeled_positions.clone();
-    assign_boxes_recursive(ast, ctx, &text_boxes, "0", &mut markup_cache, &mut label_pool, node_id_to_uuid, &uuid_to_position, &mut result)?;
+    assign_boxes_recursive(
+        ast,
+        ctx,
+        &text_boxes,
+        "0",
+        &mut markup_cache,
+        &mut label_pool,
+        node_id_to_uuid,
+        &uuid_to_position,
+        &mut result,
+    )?;
 
     eprintln!("Created {} semantic argument boxes", result.len());
-    
+
     // POST-PROCESSING: Fix matrix cell order if needed
     if let Expression::Operation { name, args } = ast {
-        let is_matrix = name.starts_with("matrix") || name.starts_with("vmatrix") || name.starts_with("pmatrix");
+        let is_matrix = name.starts_with("matrix")
+            || name.starts_with("vmatrix")
+            || name.starts_with("pmatrix");
         if is_matrix {
             fix_matrix_cell_order(&mut result, name, args.len())?;
         }
     }
-    
+
     Ok(result)
 }
 
@@ -214,46 +248,55 @@ fn fix_matrix_cell_order(
     num_args: usize,
 ) -> Result<(), String> {
     // Get top-level matrix cells (node_id like "0.0", "0.1", etc.)
-    let mut matrix_cells: Vec<_> = boxes.iter()
+    let mut matrix_cells: Vec<_> = boxes
+        .iter()
         .filter(|b| b.node_id.starts_with("0.") && b.node_id.matches('.').count() == 1)
         .cloned()
         .collect();
-    
+
     if matrix_cells.len() != num_args {
-        eprintln!("  Matrix has {}/{} cells, skipping order fix", matrix_cells.len(), num_args);
+        eprintln!(
+            "  Matrix has {}/{} cells, skipping order fix",
+            matrix_cells.len(),
+            num_args
+        );
         return Ok(());
     }
-    
+
     // Sort by spatial position (reading order)
     matrix_cells.sort_by(|a, b| {
         let y_diff = a.y - b.y;
-        if y_diff.abs() < 3.0 {  // Same row
+        if y_diff.abs() < 3.0 {
+            // Same row
             a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal)
         } else {
-            y_diff.partial_cmp(&0.0).unwrap_or(std::cmp::Ordering::Equal)
+            y_diff
+                .partial_cmp(&0.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
         }
     });
-    
+
     // Check if already in correct order
     let current_order: Vec<_> = matrix_cells.iter().map(|b| b.node_id.as_str()).collect();
     let expected_order: Vec<String> = (0..num_args).map(|i| format!("0.{}", i)).collect();
     let expected_refs: Vec<&str> = expected_order.iter().map(|s| s.as_str()).collect();
-    
+
     if current_order == expected_refs {
         eprintln!("  Matrix cells already in correct reading order");
         return Ok(());
     }
-    
+
     eprintln!("  🔧 Fixing matrix cell order:");
     eprintln!("     Current: {:?}", current_order);
     eprintln!("     Fixed:   {:?}", expected_refs);
-    
+
     // Create a mapping from old node_id to new node_id
-    let mut id_mapping: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut id_mapping: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
     for (new_idx, cell) in matrix_cells.iter().enumerate() {
         id_mapping.insert(cell.node_id.clone(), format!("0.{}", new_idx));
     }
-    
+
     // Apply the mapping to all boxes
     for b in boxes.iter_mut() {
         // Check if this is a matrix cell that needs remapping
@@ -278,7 +321,7 @@ fn fix_matrix_cell_order(
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -336,17 +379,22 @@ fn assign_boxes_recursive(
     result: &mut Vec<ArgumentBoundingBox>,
 ) -> Result<(), String> {
     if let Expression::Operation { name, args } = expr {
-        eprintln!("assign_boxes_recursive: node={}, operation={}, args={}, available_boxes={}", 
-                  node_id, name, args.len(), text_boxes.len());
-        
+        eprintln!(
+            "assign_boxes_recursive: node={}, operation={}, args={}, available_boxes={}",
+            node_id,
+            name,
+            args.len(),
+            text_boxes.len()
+        );
+
         // UUID-BASED DIRECT LOOKUP: Try to get position from UUID map first
         // This is deterministic - no heuristics, just direct UUID matching
         let use_uuid_lookup = !uuid_positions.is_empty() && node_id == "0";
-        
+
         if use_uuid_lookup {
             eprintln!("  🔑 UUID positions available, attempting direct lookup");
         }
-        
+
         let arg_signatures = collect_text_boxes_for_args(args, ctx, cache);
         let mut cursor = 0usize;
 
@@ -356,14 +404,22 @@ fn assign_boxes_recursive(
             } else {
                 format!("{}.{}", node_id, idx)
             };
-            
+
             // PRIORITY 1: UUID-based direct lookup (deterministic)
             if let Some(uuid) = node_id_to_uuid.get(&child_node_id) {
                 let display_uuid = &uuid[..8.min(uuid.len())];
-                eprintln!("  Arg {}: Looking for UUID {}... (len={}) in position map", idx, display_uuid, uuid.len());
+                eprintln!(
+                    "  Arg {}: Looking for UUID {}... (len={}) in position map",
+                    idx,
+                    display_uuid,
+                    uuid.len()
+                );
                 if let Some((x, y, w, h)) = uuid_positions.get(uuid) {
-                    eprintln!("  Arg {}: 🔑 UUID match! {}... -> ({:.1}, {:.1})", idx, display_uuid, x, y);
-                    
+                    eprintln!(
+                        "  Arg {}: 🔑 UUID match! {}... -> ({:.1}, {:.1})",
+                        idx, display_uuid, x, y
+                    );
+
                     result.push(ArgumentBoundingBox {
                         arg_index: idx,
                         node_id: child_node_id.clone(),
@@ -372,13 +428,23 @@ fn assign_boxes_recursive(
                         width: *w,
                         height: *h,
                     });
-                    
+
                     // Recursively process children
-                    assign_boxes_recursive(arg, ctx, &[], &child_node_id, cache, labeled_positions, node_id_to_uuid, uuid_positions, result)?;
+                    assign_boxes_recursive(
+                        arg,
+                        ctx,
+                        &[],
+                        &child_node_id,
+                        cache,
+                        labeled_positions,
+                        node_id_to_uuid,
+                        uuid_positions,
+                        result,
+                    )?;
                     continue;
                 }
             }
-            
+
             // PRIORITY 2: Pattern matching in text boxes
             let pattern = match arg_signatures.get(idx) {
                 Some(p) if !p.is_empty() => p.as_slice(),
@@ -395,43 +461,65 @@ fn assign_boxes_recursive(
             // Check if we've run out of boxes - try to use labeled position or geometry
             if cursor >= text_boxes.len() {
                 eprintln!("  Arg {}: Cursor at end of boxes ({})", idx, cursor);
-                
+
                 // Strategy 1: Pop next labeled position from spatially-sorted pool
-                let (fallback_x, fallback_y, fallback_w, fallback_h) = if !labeled_positions.is_empty() {
-                    let pos = labeled_positions[0].clone();
-                    eprintln!("    → Using next spatial label: id={} at ({:.1}, {:.1})", pos.id, pos.x, pos.y);
-                    labeled_positions.remove(0);
-                    (pos.x, pos.y, pos.width, pos.height)
-                } else if !result.is_empty() {
-                    // Strategy 2: Estimate based on already-placed siblings (matrix geometry)
-                    // For 2x2 matrix: if we have cells 0,1,2 and need cell 3:
-                    //   cell 3.x ≈ cell 1.x (same column as cell 1)
-                    //   cell 3.y ≈ cell 2.y (same row as cell 2)
-                    eprintln!("    → Using geometric estimation based on {} existing boxes", result.len());
-                    let prev_boxes: Vec<_> = result.iter()
-                        .filter(|b| b.node_id.matches('.').count() == node_id.matches('.').count() + 1)
-                        .collect();
-                    
-                    if prev_boxes.len() >= 2 {
-                        // Use position from geometric pattern
-                        let x = prev_boxes.iter().map(|b| b.x).max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(0.0);
-                        let y = prev_boxes.iter().map(|b| b.y).max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(0.0);
-                        let w = prev_boxes.iter().map(|b| b.width).sum::<f64>() / prev_boxes.len() as f64;
-                        let h = prev_boxes.iter().map(|b| b.height).sum::<f64>() / prev_boxes.len() as f64;
-                        (x, y, w, h)
-                    } else if !text_boxes.is_empty() {
-                        let last_box = &text_boxes[text_boxes.len() - 1];
-                        (last_box.x + last_box.width + 5.0, last_box.y, 30.0, 30.0)
+                let (fallback_x, fallback_y, fallback_w, fallback_h) =
+                    if !labeled_positions.is_empty() {
+                        let pos = labeled_positions[0].clone();
+                        eprintln!(
+                            "    → Using next spatial label: id={} at ({:.1}, {:.1})",
+                            pos.id, pos.x, pos.y
+                        );
+                        labeled_positions.remove(0);
+                        (pos.x, pos.y, pos.width, pos.height)
+                    } else if !result.is_empty() {
+                        // Strategy 2: Estimate based on already-placed siblings (matrix geometry)
+                        // For 2x2 matrix: if we have cells 0,1,2 and need cell 3:
+                        //   cell 3.x ≈ cell 1.x (same column as cell 1)
+                        //   cell 3.y ≈ cell 2.y (same row as cell 2)
+                        eprintln!(
+                            "    → Using geometric estimation based on {} existing boxes",
+                            result.len()
+                        );
+                        let prev_boxes: Vec<_> = result
+                            .iter()
+                            .filter(|b| {
+                                b.node_id.matches('.').count() == node_id.matches('.').count() + 1
+                            })
+                            .collect();
+
+                        if prev_boxes.len() >= 2 {
+                            // Use position from geometric pattern
+                            let x = prev_boxes
+                                .iter()
+                                .map(|b| b.x)
+                                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                                .unwrap_or(0.0);
+                            let y = prev_boxes
+                                .iter()
+                                .map(|b| b.y)
+                                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                                .unwrap_or(0.0);
+                            let w = prev_boxes.iter().map(|b| b.width).sum::<f64>()
+                                / prev_boxes.len() as f64;
+                            let h = prev_boxes.iter().map(|b| b.height).sum::<f64>()
+                                / prev_boxes.len() as f64;
+                            (x, y, w, h)
+                        } else if !text_boxes.is_empty() {
+                            let last_box = &text_boxes[text_boxes.len() - 1];
+                            (last_box.x + last_box.width + 5.0, last_box.y, 30.0, 30.0)
+                        } else {
+                            (0.0, 0.0, 30.0, 30.0)
+                        }
                     } else {
                         (0.0, 0.0, 30.0, 30.0)
-                    }
-                } else {
-                    (0.0, 0.0, 30.0, 30.0)
-                };
-                
-                eprintln!("    → Fallback BBox: ({:.1}, {:.1}) {:.1}×{:.1}", 
-                         fallback_x, fallback_y, fallback_w, fallback_h);
-                
+                    };
+
+                eprintln!(
+                    "    → Fallback BBox: ({:.1}, {:.1}) {:.1}×{:.1}",
+                    fallback_x, fallback_y, fallback_w, fallback_h
+                );
+
                 result.push(ArgumentBoundingBox {
                     arg_index: idx,
                     node_id: child_node_id.clone(),
@@ -440,15 +528,40 @@ fn assign_boxes_recursive(
                     width: fallback_w,
                     height: fallback_h,
                 });
-                
+
                 // Process children with empty slice
-                assign_boxes_recursive(arg, ctx, &[], &child_node_id, cache, labeled_positions, node_id_to_uuid, uuid_positions, result)?;
+                assign_boxes_recursive(
+                    arg,
+                    ctx,
+                    &[],
+                    &child_node_id,
+                    cache,
+                    labeled_positions,
+                    node_id_to_uuid,
+                    uuid_positions,
+                    result,
+                )?;
                 continue;
             }
 
-            eprintln!("  Arg {}: Searching for pattern (len={}) from cursor={}", idx, pattern.len(), cursor);
-            eprintln!("    Pattern boxes: {:?}", pattern.iter().map(|b| format!("{}@({:.1},{:.1})", 
-                      b.text.as_ref().unwrap_or(&"?".to_string()), b.x, b.y)).collect::<Vec<_>>());
+            eprintln!(
+                "  Arg {}: Searching for pattern (len={}) from cursor={}",
+                idx,
+                pattern.len(),
+                cursor
+            );
+            eprintln!(
+                "    Pattern boxes: {:?}",
+                pattern
+                    .iter()
+                    .map(|b| format!(
+                        "{}@({:.1},{:.1})",
+                        b.text.as_ref().unwrap_or(&"?".to_string()),
+                        b.x,
+                        b.y
+                    ))
+                    .collect::<Vec<_>>()
+            );
 
             let (start, end) = match find_matching_slice(text_boxes, pattern, cursor) {
                 Some(range) => {
@@ -458,7 +571,7 @@ fn assign_boxes_recursive(
                 None => {
                     eprintln!("    ✗ Pattern not found sequentially!");
                     eprintln!("    Attempting spatial fallback...");
-                    
+
                     // Try spatial matching as fallback
                     match find_matching_slice_spatial(text_boxes, pattern, cursor) {
                         Some(range) => {
@@ -491,7 +604,10 @@ fn assign_boxes_recursive(
                 format!("{}.{}", node_id, idx)
             };
 
-            eprintln!("    → BBox: ({:.1}, {:.1}) {}×{}", bbox.0, bbox.1, bbox.2, bbox.3);
+            eprintln!(
+                "    → BBox: ({:.1}, {:.1}) {}×{}",
+                bbox.0, bbox.1, bbox.2, bbox.3
+            );
 
             result.push(ArgumentBoundingBox {
                 arg_index: idx,
@@ -502,8 +618,18 @@ fn assign_boxes_recursive(
                 height: bbox.3,
             });
 
-            assign_boxes_recursive(arg, ctx, slice, &child_node_id, cache, labeled_positions, node_id_to_uuid, uuid_positions, result)?;
-            
+            assign_boxes_recursive(
+                arg,
+                ctx,
+                slice,
+                &child_node_id,
+                cache,
+                labeled_positions,
+                node_id_to_uuid,
+                uuid_positions,
+                result,
+            )?;
+
             // Advance cursor but ensure progress
             cursor = end;
             eprintln!("  Advanced cursor to {}", cursor);
@@ -590,37 +716,51 @@ fn find_matching_slice_spatial(
         return None;
     }
 
-    eprintln!("      [Spatial] Reordering {} boxes from index {}", haystack.len(), start_index);
-    
+    eprintln!(
+        "      [Spatial] Reordering {} boxes from index {}",
+        haystack.len(),
+        start_index
+    );
+
     // Create indexed copies of remaining boxes with spatial sorting
     let mut indexed_boxes: Vec<(usize, &LayoutBoundingBox)> = haystack[start_index..]
         .iter()
         .enumerate()
         .map(|(i, b)| (start_index + i, b))
         .collect();
-    
+
     // Sort by reading order: top-to-bottom, then left-to-right
     indexed_boxes.sort_by(|a, b| {
         let y_diff = a.1.y - b.1.y;
-        if y_diff.abs() < 2.0 {  // Same row (within 2pt tolerance)
-            a.1.x.partial_cmp(&b.1.x).unwrap_or(std::cmp::Ordering::Equal)
+        if y_diff.abs() < 2.0 {
+            // Same row (within 2pt tolerance)
+            a.1.x
+                .partial_cmp(&b.1.x)
+                .unwrap_or(std::cmp::Ordering::Equal)
         } else {
-            y_diff.partial_cmp(&0.0).unwrap_or(std::cmp::Ordering::Equal)
+            y_diff
+                .partial_cmp(&0.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
         }
     });
-    
+
     eprintln!("      [Spatial] Reordered boxes:");
     for (orig_idx, b) in indexed_boxes.iter().take(10) {
-        eprintln!("        [{}] {}@({:.1},{:.1})", orig_idx, 
-                  b.text.as_ref().unwrap_or(&"?".to_string()), b.x, b.y);
+        eprintln!(
+            "        [{}] {}@({:.1},{:.1})",
+            orig_idx,
+            b.text.as_ref().unwrap_or(&"?".to_string()),
+            b.x,
+            b.y
+        );
     }
-    
+
     // Try to match pattern in spatially-ordered sequence
     if indexed_boxes.len() < needle.len() {
         eprintln!("      [Spatial] Not enough boxes to match pattern");
         return None;
     }
-    
+
     for window_start in 0..=(indexed_boxes.len() - needle.len()) {
         let mut all_match = true;
         for offset in 0..needle.len() {
@@ -629,24 +769,32 @@ fn find_matching_slice_spatial(
                 break;
             }
         }
-        
+
         if all_match {
             // Found a match! Now determine the actual slice range in original haystack
-            let matched_indices: Vec<usize> = indexed_boxes[window_start..window_start + needle.len()]
+            let matched_indices: Vec<usize> = indexed_boxes
+                [window_start..window_start + needle.len()]
                 .iter()
                 .map(|(orig_idx, _)| *orig_idx)
                 .collect();
-            
+
             let min_idx = *matched_indices.iter().min().unwrap();
             let max_idx = *matched_indices.iter().max().unwrap();
-            
-            eprintln!("      [Spatial] ✓ Match found! Original indices: {:?}", matched_indices);
-            eprintln!("      [Spatial] Returning range [{}, {})", min_idx, max_idx + 1);
-            
+
+            eprintln!(
+                "      [Spatial] ✓ Match found! Original indices: {:?}",
+                matched_indices
+            );
+            eprintln!(
+                "      [Spatial] Returning range [{}, {})",
+                min_idx,
+                max_idx + 1
+            );
+
             return Some((min_idx, max_idx + 1));
         }
     }
-    
+
     eprintln!("      [Spatial] No match found in reordered sequence");
     None
 }
@@ -791,21 +939,26 @@ pub fn compile_math_to_svg_with_ids(
     // This is much simpler and more reliable than layout tree traversal
     // The render.rs now outputs #[#box[$content$]<ph{id}>] which produces
     // <g data-typst-label="ph{id}"> in the SVG with proper transform attributes
-    
+
     let mut placeholder_positions = Vec::new();
-    
+
     // Only extract placeholder positions if there are actual placeholders
     if !placeholder_ids.is_empty() {
         placeholder_positions = extract_positions_from_labels(&svg)?;
-        eprintln!("Found {} positions from SVG labels", placeholder_positions.len());
-        
+        eprintln!(
+            "Found {} positions from SVG labels",
+            placeholder_positions.len()
+        );
+
         // If no labels found (old markup format), fall back to span-based extraction
         if placeholder_positions.is_empty() {
             eprintln!("No labels found, falling back to span-based extraction");
-            let source = world.source(world.main()).map_err(|e| format!("Failed to get source: {:?}", e))?;
+            let source = world
+                .source(world.main())
+                .map_err(|e| format!("Failed to get source: {:?}", e))?;
             let mut span_markers: Vec<SpanBasedPlaceholder> = Vec::new();
             extract_placeholders_by_span(frame, &source, Transform::identity(), &mut span_markers);
-            
+
             placeholder_positions = span_markers
                 .iter()
                 .map(|m| PlaceholderPosition {
@@ -816,24 +969,22 @@ pub fn compile_math_to_svg_with_ids(
                     height: m.height,
                 })
                 .collect();
-            
+
             // If still empty, try SVG glyph detection
             if placeholder_positions.is_empty() {
                 eprintln!("No span markers found, falling back to SVG glyph detection");
-                placeholder_positions = extract_placeholder_positions_by_symbol(&svg, placeholder_ids)?;
+                placeholder_positions =
+                    extract_placeholder_positions_by_symbol(&svg, placeholder_ids)?;
             }
         }
     } else {
         eprintln!("No placeholders in expression - skipping placeholder extraction");
     }
-    
+
     // Sort by ID for consistent output
     placeholder_positions.sort_by_key(|p| p.id);
-    
-    eprintln!(
-        "Final placeholder count: {}",
-        placeholder_positions.len()
-    );
+
+    eprintln!("Final placeholder count: {}", placeholder_positions.len());
 
     // CALIBRATE COORDINATES
     // Calculate offset between Layout coordinates and SVG coordinates using the first placeholder
@@ -848,61 +999,80 @@ pub fn compile_math_to_svg_with_ids(
 
     if USE_CALIBRATION {
         if let Some(first_ph) = placeholder_positions.first() {
-        // Find corresponding box in layout tree (Text element with similar size/position relative to others)
-        // The square symbol in Typst is a text glyph
-        // We look for a text box with width ~18pt (square.stroked size)
+            // Find corresponding box in layout tree (Text element with similar size/position relative to others)
+            // The square symbol in Typst is a text glyph
+            // We look for a text box with width ~18pt (square.stroked size)
 
-        // Find text boxes with width between 10 and 25 (likely squares)
-        let candidates: Vec<&LayoutBoundingBox> = all_boxes
-            .iter()
-            .filter(|b| b.content_type == "text" && b.width > 10.0 && b.width < 25.0)
-            .collect();
-
-        eprintln!("Found {} candidate boxes for calibration (width 10-25pt)", candidates.len());
-
-        // IMPROVED: Find the box closest to the first placeholder's relative position
-        // Instead of just taking first(), find the one with similar relative position
-        let match_box = if candidates.len() > 1 {
-            // If we have multiple candidates, find the best match by position
-            // The first placeholder in SVG should correspond to first square in layout
-            // They should have similar relative positions within their coordinate systems
-            candidates.iter()
-                .min_by(|a, b| {
-                    // Prefer boxes closer to origin (likely the first one)
-                    let dist_a = (a.x * a.x + a.y * a.y).sqrt();
-                    let dist_b = (b.x * b.x + b.y * b.y).sqrt();
-                    dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
-                })
-                .copied()
-        } else {
-            candidates.first().copied()
-        };
-
-        if let Some(match_box) = match_box {
-            // Calculate offset
-            // SVG = Layout + Offset
-            // Offset = SVG - Layout
-            offset_x = first_ph.x - match_box.x;
-            offset_y = first_ph.y - match_box.y;
+            // Find text boxes with width between 10 and 25 (likely squares)
+            let candidates: Vec<&LayoutBoundingBox> = all_boxes
+                .iter()
+                .filter(|b| b.content_type == "text" && b.width > 10.0 && b.width < 25.0)
+                .collect();
 
             eprintln!(
-                "Calibrated offset: ({:.2}, {:.2}) using placeholder ID {} matched to layout box at ({:.2}, {:.2})",
-                offset_x, offset_y, first_ph.id, match_box.x, match_box.y
+                "Found {} candidate boxes for calibration (width 10-25pt)",
+                candidates.len()
             );
-            
-            // Sanity check: offset shouldn't be too large
-            if offset_x.abs() > 50.0 || offset_y.abs() > 50.0 {
-                eprintln!("⚠️ WARNING: Large calibration offset detected! This may indicate matching error.");
-                eprintln!("   First placeholder SVG: ({:.2}, {:.2})", first_ph.x, first_ph.y);
-                eprintln!("   Matched layout box: ({:.2}, {:.2})", match_box.x, match_box.y);
+
+            // IMPROVED: Find the box closest to the first placeholder's relative position
+            // Instead of just taking first(), find the one with similar relative position
+            let match_box = if candidates.len() > 1 {
+                // If we have multiple candidates, find the best match by position
+                // The first placeholder in SVG should correspond to first square in layout
+                // They should have similar relative positions within their coordinate systems
+                candidates
+                    .iter()
+                    .min_by(|a, b| {
+                        // Prefer boxes closer to origin (likely the first one)
+                        let dist_a = (a.x * a.x + a.y * a.y).sqrt();
+                        let dist_b = (b.x * b.x + b.y * b.y).sqrt();
+                        dist_a
+                            .partial_cmp(&dist_b)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    })
+                    .copied()
+            } else {
+                candidates.first().copied()
+            };
+
+            if let Some(match_box) = match_box {
+                // Calculate offset
+                // SVG = Layout + Offset
+                // Offset = SVG - Layout
+                offset_x = first_ph.x - match_box.x;
+                offset_y = first_ph.y - match_box.y;
+
+                eprintln!(
+                    "Calibrated offset: ({:.2}, {:.2}) using placeholder ID {} matched to layout box at ({:.2}, {:.2})",
+                    offset_x, offset_y, first_ph.id, match_box.x, match_box.y
+                );
+
+                // Sanity check: offset shouldn't be too large
+                if offset_x.abs() > 50.0 || offset_y.abs() > 50.0 {
+                    eprintln!(
+                        "⚠️ WARNING: Large calibration offset detected! This may indicate matching error."
+                    );
+                    eprintln!(
+                        "   First placeholder SVG: ({:.2}, {:.2})",
+                        first_ph.x, first_ph.y
+                    );
+                    eprintln!(
+                        "   Matched layout box: ({:.2}, {:.2})",
+                        match_box.x, match_box.y
+                    );
+                }
             }
-        }
-        }  // End of if let Some(first_ph)
-    }  // End of if USE_CALIBRATION
+        } // End of if let Some(first_ph)
+    } // End of if USE_CALIBRATION
 
     // Apply offset to all layout boxes (if calibration enabled)
     let calibrated_boxes: Vec<LayoutBoundingBox> = if USE_CALIBRATION {
-        eprintln!("Applying calibration offset ({:.2}, {:.2}) to {} layout boxes", offset_x, offset_y, all_boxes.len());
+        eprintln!(
+            "Applying calibration offset ({:.2}, {:.2}) to {} layout boxes",
+            offset_x,
+            offset_y,
+            all_boxes.len()
+        );
         all_boxes
             .iter()
             .map(|b| LayoutBoundingBox {
@@ -931,7 +1101,7 @@ pub fn compile_math_to_svg_with_ids(
 
     // Expand viewBox to encompass all content (fixes clipping of interactive markers)
     let expanded_svg = expand_viewbox_for_markers(&svg, &calibrated_boxes)?;
-    
+
     Ok(CompiledOutput {
         svg: expanded_svg,
         placeholder_positions,
@@ -1055,7 +1225,7 @@ struct SpanBasedPlaceholder {
 ///
 /// This uses the attach-based ID encoding where each placeholder has an invisible
 /// bottom marker: attach(square.stroked, b: #text(size: 0.1pt, fill: white)[N])
-/// 
+///
 /// We find the Group frames that contain these markers and use the Group's
 /// bounding box as the placeholder position. The Group IS the attach structure.
 fn extract_placeholders_by_span(
@@ -1066,8 +1236,11 @@ fn extract_placeholders_by_span(
 ) {
     // Find groups that contain markers and use their bounding boxes
     find_marker_groups(frame, source, ts, placeholders);
-    
-    eprintln!("Found {} placeholders from marker groups", placeholders.len());
+
+    eprintln!(
+        "Found {} placeholders from marker groups",
+        placeholders.len()
+    );
 }
 
 /// Check if a frame contains a tiny marker and return its ID
@@ -1077,7 +1250,7 @@ fn find_marker_in_frame(frame: &Frame, source: &Source) -> Option<usize> {
             FrameItem::Text(text) => {
                 let font_size = text.size.to_pt();
                 let text_content = text.text.as_str();
-                
+
                 if font_size < 1.0 {
                     // Try placeholder ID (format: "N")
                     if let Ok(id) = text_content.parse::<usize>() {
@@ -1123,7 +1296,7 @@ fn find_marker_groups(
 
         if let FrameItem::Group(group) = item {
             let group_ts = item_ts.pre_concat(group.transform);
-            
+
             // Check if this group directly contains a marker (not in a nested group)
             let has_direct_marker = group.frame.items().any(|(_p, i)| {
                 if let FrameItem::Text(text) = i {
@@ -1133,13 +1306,13 @@ fn find_marker_groups(
                     false
                 }
             });
-            
+
             if has_direct_marker {
                 // This group contains a marker - use its bounding box
                 if let Some(id) = find_marker_in_frame(&group.frame, source) {
                     let tl = Point::zero().transform(group_ts);
                     let size = group.frame.size();
-                    
+
                     placeholders.push(SpanBasedPlaceholder {
                         id,
                         x: tl.x.to_pt(),
@@ -1147,10 +1320,14 @@ fn find_marker_groups(
                         width: size.x.to_pt(),
                         height: size.y.to_pt(),
                     });
-                    
+
                     eprintln!(
                         "  Found marker group for id {} at ({:.1}, {:.1}) size {:.1}x{:.1}",
-                        id, tl.x.to_pt(), tl.y.to_pt(), size.x.to_pt(), size.y.to_pt()
+                        id,
+                        tl.x.to_pt(),
+                        tl.y.to_pt(),
+                        size.x.to_pt(),
+                        size.y.to_pt()
                     );
                 }
             } else {
@@ -1170,78 +1347,96 @@ fn extract_placeholders_with_spans(
     placeholder_ids: &[usize],
 ) -> Vec<PlaceholderPosition> {
     eprintln!("Extracting placeholders using span-based ID detection");
-    
+
     // First, find all subscript digits with their positions
     let mut subscripts: Vec<SpanBasedPlaceholder> = Vec::new();
     extract_placeholders_by_span(frame, source, Transform::identity(), &mut subscripts);
-    
+
     // Also extract all layout boxes to find square positions
     let mut all_boxes: Vec<LayoutBoundingBox> = Vec::new();
     extract_bounding_boxes_from_frame(frame, Transform::identity(), &mut all_boxes);
-    
+
     // Normalize coordinates to match SVG (shift so min becomes 0)
     if !all_boxes.is_empty() {
-        let min_x = all_boxes.iter().map(|b| b.x).fold(f64::INFINITY, |a, b| a.min(b));
-        let min_y = all_boxes.iter().map(|b| b.y).fold(f64::INFINITY, |a, b| a.min(b));
-        
+        let min_x = all_boxes
+            .iter()
+            .map(|b| b.x)
+            .fold(f64::INFINITY, |a, b| a.min(b));
+        let min_y = all_boxes
+            .iter()
+            .map(|b| b.y)
+            .fold(f64::INFINITY, |a, b| a.min(b));
+
         for bbox in &mut all_boxes {
             bbox.x -= min_x;
             bbox.y -= min_y;
         }
-        
+
         // Also normalize subscript marker positions
         for sub in &mut subscripts {
             sub.x -= min_x;
             sub.y -= min_y;
         }
-        
-        eprintln!("  Normalized coordinates: shifted by ({:.1}, {:.1})", min_x, min_y);
+
+        eprintln!(
+            "  Normalized coordinates: shifted by ({:.1}, {:.1})",
+            min_x, min_y
+        );
     }
-    
+
     // Find square glyphs (text items containing "□")
     let squares: Vec<&LayoutBoundingBox> = all_boxes
         .iter()
-        .filter(|b| b.content_type == "text" && b.text.as_ref().map(|t| t.contains('□')).unwrap_or(false))
+        .filter(|b| {
+            b.content_type == "text" && b.text.as_ref().map(|t| t.contains('□')).unwrap_or(false)
+        })
         .collect();
-    
-    eprintln!("  Found {} subscript markers and {} square glyphs", subscripts.len(), squares.len());
-    
+
+    eprintln!(
+        "  Found {} subscript markers and {} square glyphs",
+        subscripts.len(),
+        squares.len()
+    );
+
     // Debug: print all marker and square positions
     for (i, marker) in subscripts.iter().enumerate() {
-        eprintln!("    Marker {}: id={} at ({:.1}, {:.1})", i, marker.id, marker.x, marker.y);
+        eprintln!(
+            "    Marker {}: id={} at ({:.1}, {:.1})",
+            i, marker.id, marker.x, marker.y
+        );
     }
     for (i, sq) in squares.iter().enumerate() {
         eprintln!("    Square {}: at ({:.1}, {:.1})", i, sq.x, sq.y);
     }
-    
+
     // Match markers to squares using a greedy approach
     // The marker from attach(..., b: ...) is placed BELOW and CENTERED on the square
     // Track which squares have been used
     let mut used_squares: Vec<bool> = vec![false; squares.len()];
     let mut positions = Vec::new();
-    
+
     // Sort markers by ID to process in order
     let mut sorted_markers = subscripts.clone();
     sorted_markers.sort_by_key(|m| m.id);
-    
+
     for marker in &sorted_markers {
         // Find the closest UNUSED square
         // The marker from attach(..., b: ...) appears to be placed to the RIGHT of the square
         // (after the square's width) and slightly below
         let mut best_square_idx: Option<usize> = None;
         let mut best_dist = f64::MAX;
-        
+
         for (sq_idx, sq) in squares.iter().enumerate() {
             if used_squares[sq_idx] {
                 continue; // Skip already-matched squares
             }
-            
+
             // The marker is placed after the square (to the right)
             // marker.x should be close to sq.x + sq.width
             let sq_right_edge = sq.x + sq.width;
             let dx = (marker.x - sq_right_edge).abs();
             let dy = (marker.y - sq.y).abs(); // Should be on same row
-            
+
             // Marker is to the right of square and on same row
             if dx < 25.0 && dy < 35.0 {
                 let dist = dx * dx + dy * dy;
@@ -1251,7 +1446,7 @@ fn extract_placeholders_with_spans(
                 }
             }
         }
-        
+
         if let Some(sq_idx) = best_square_idx {
             used_squares[sq_idx] = true;
             let sq = squares[sq_idx];
@@ -1281,10 +1476,10 @@ fn extract_placeholders_with_spans(
             });
         }
     }
-    
+
     // Sort by ID to ensure consistent order
     positions.sort_by_key(|p| p.id);
-    
+
     // Verify we found the expected placeholders
     if positions.len() != placeholder_ids.len() {
         eprintln!(
@@ -1293,7 +1488,7 @@ fn extract_placeholders_with_spans(
             placeholder_ids.len()
         );
     }
-    
+
     positions
 }
 
@@ -1491,21 +1686,23 @@ fn accumulate_ancestor_translates(node: &roxmltree::Node) -> (f64, f64) {
     let mut total_x = 0.0;
     let mut total_y = 0.0;
     let mut depth = 0;
-    
+
     let mut current = node.parent();
     while let Some(parent) = current {
         if let Some(transform) = parent.attribute("transform") {
             if let Some((x, y)) = parse_translate(transform) {
                 total_x += x;
                 total_y += y;
-                eprintln!("    depth {}: translate({}, {}) -> cumulative ({}, {})", 
-                         depth, x, y, total_x, total_y);
+                eprintln!(
+                    "    depth {}: translate({}, {}) -> cumulative ({}, {})",
+                    depth, x, y, total_x, total_y
+                );
             }
         }
         depth += 1;
         current = parent.parent();
     }
-    
+
     (total_x, total_y)
 }
 
@@ -1519,18 +1716,20 @@ struct SvgGlyphPosition {
 
 /// Extract ALL glyph positions from SVG using DOM parsing
 fn extract_all_glyph_positions(svg: &str) -> Result<Vec<SvgGlyphPosition>, String> {
-    let doc = roxmltree::Document::parse(svg)
-        .map_err(|e| format!("Failed to parse SVG: {}", e))?;
-    
+    let doc = roxmltree::Document::parse(svg).map_err(|e| format!("Failed to parse SVG: {}", e))?;
+
     let mut positions = Vec::new();
     let mut first_logged = false;
-    
+
     for node in doc.descendants() {
         if node.tag_name().name() == "use" {
             if let Some(href) = node.attribute(("http://www.w3.org/1999/xlink", "href")) {
                 if let Some(glyph_id) = href.strip_prefix("#g") {
                     if !first_logged {
-                        eprintln!("DEBUG: Processing first <use> element with glyph #{}", glyph_id);
+                        eprintln!(
+                            "DEBUG: Processing first <use> element with glyph #{}",
+                            glyph_id
+                        );
                         first_logged = true;
                     }
                     let (x, y) = accumulate_ancestor_translates(&node);
@@ -1543,12 +1742,18 @@ fn extract_all_glyph_positions(svg: &str) -> Result<Vec<SvgGlyphPosition>, Strin
             }
         }
     }
-    
-    eprintln!("DEBUG: extract_all_glyph_positions found {} positions", positions.len());
+
+    eprintln!(
+        "DEBUG: extract_all_glyph_positions found {} positions",
+        positions.len()
+    );
     if let Some(first) = positions.first() {
-        eprintln!("DEBUG: First position: glyph={}, x={:.2}, y={:.2}", first.glyph_id, first.x, first.y);
+        eprintln!(
+            "DEBUG: First position: glyph={}, x={:.2}, y={:.2}",
+            first.glyph_id, first.x, first.y
+        );
     }
-    
+
     Ok(positions)
 }
 
@@ -1572,11 +1777,11 @@ fn extract_placeholder_positions_by_symbol(
 
     // Get all glyph positions
     let all_glyphs = extract_all_glyph_positions(svg)?;
-    
+
     // Group by glyph ID
     let mut glyph_counts: std::collections::HashMap<String, Vec<(f64, f64)>> =
         std::collections::HashMap::new();
-    
+
     for glyph in &all_glyphs {
         glyph_counts
             .entry(glyph.glyph_id.clone())
@@ -1584,7 +1789,11 @@ fn extract_placeholder_positions_by_symbol(
             .push((glyph.x, glyph.y));
     }
 
-    eprintln!("Found {} unique glyphs, {} total", glyph_counts.len(), all_glyphs.len());
+    eprintln!(
+        "Found {} unique glyphs, {} total",
+        glyph_counts.len(),
+        all_glyphs.len()
+    );
     for (glyph, positions_vec) in &glyph_counts {
         if positions_vec.len() > 1 {
             eprintln!("  Glyph #{}: {} occurrences", glyph, positions_vec.len());
@@ -1597,11 +1806,11 @@ fn extract_placeholder_positions_by_symbol(
     // 3. Close match: use single glyph closest to expected_count
     // 4. Single placeholder: special handling for expected_count == 1
     // 5. Different-sized placeholders: multiple glyphs each appearing once (e.g., nth_root)
-    
+
     let mut exact_match: Option<(&String, &Vec<(f64, f64)>)> = None;
     let mut best_glyph: Option<(&String, &Vec<(f64, f64)>)> = None;
     let mut best_diff = usize::MAX;
-    
+
     // First pass: find exact match or closest glyph with multiple occurrences
     for (glyph_id, positions_vec) in &glyph_counts {
         let count = positions_vec.len();
@@ -1620,7 +1829,7 @@ fn extract_placeholder_positions_by_symbol(
             }
         }
     }
-    
+
     // Special case: single placeholder (expected_count == 1)
     // Find any glyph that appears exactly once
     if exact_match.is_none() && best_glyph.is_none() && expected_count == 1 {
@@ -1631,22 +1840,28 @@ fn extract_placeholder_positions_by_symbol(
             }
         }
     }
-    
+
     let mut all_square_positions: Vec<(f64, f64, f64)> = Vec::new(); // (x, y, estimated_height)
-    
+
     if let Some((glyph_id, positions_vec)) = exact_match {
         // Exact match - use this single glyph
         let glyph_height = 18.0;
-        eprintln!("  Using glyph #{} with {} positions (exact match)", 
-                  glyph_id, positions_vec.len());
+        eprintln!(
+            "  Using glyph #{} with {} positions (exact match)",
+            glyph_id,
+            positions_vec.len()
+        );
         for (x, y) in positions_vec {
             all_square_positions.push((*x, *y, glyph_height));
         }
     } else if expected_count > 2 && best_diff > 0 {
         // No exact match - try combining multiple glyphs
         // This handles cases like integrals where bounds use smaller squares than the main content
-        eprintln!("  No exact match for {} placeholders, collecting from multiple glyphs", expected_count);
-        
+        eprintln!(
+            "  No exact match for {} placeholders, collecting from multiple glyphs",
+            expected_count
+        );
+
         // Collect all glyphs with 2+ occurrences
         for (glyph_id, positions_vec) in &glyph_counts {
             if positions_vec.len() >= 2 {
@@ -1654,21 +1869,33 @@ fn extract_placeholder_positions_by_symbol(
                 for (x, y) in positions_vec {
                     all_square_positions.push((*x, *y, glyph_height));
                 }
-                eprintln!("  Collecting {} positions from glyph #{}", positions_vec.len(), glyph_id);
+                eprintln!(
+                    "  Collecting {} positions from glyph #{}",
+                    positions_vec.len(),
+                    glyph_id
+                );
             }
         }
-        
+
         // If we got enough or close enough, keep them; otherwise fall through to best_glyph
-        if all_square_positions.len() >= expected_count || 
-           (all_square_positions.len() > 0 && all_square_positions.len() >= expected_count - 1) {
-            eprintln!("  Combined glyphs gave {} positions", all_square_positions.len());
+        if all_square_positions.len() >= expected_count
+            || (all_square_positions.len() > 0 && all_square_positions.len() >= expected_count - 1)
+        {
+            eprintln!(
+                "  Combined glyphs gave {} positions",
+                all_square_positions.len()
+            );
         } else {
             // Not enough from combining - clear and try single best glyph
             all_square_positions.clear();
             if let Some((glyph_id, positions_vec)) = best_glyph.as_ref() {
                 let glyph_height = 18.0;
-                eprintln!("  Using glyph #{} with {} positions (closest to expected {})", 
-                          glyph_id, positions_vec.len(), expected_count);
+                eprintln!(
+                    "  Using glyph #{} with {} positions (closest to expected {})",
+                    glyph_id,
+                    positions_vec.len(),
+                    expected_count
+                );
                 for (x, y) in *positions_vec {
                     all_square_positions.push((*x, *y, glyph_height));
                 }
@@ -1677,8 +1904,12 @@ fn extract_placeholder_positions_by_symbol(
     } else if let Some((glyph_id, positions_vec)) = best_glyph {
         // Use closest match
         let glyph_height = 18.0;
-        eprintln!("  Using glyph #{} with {} positions (closest to expected {})", 
-                  glyph_id, positions_vec.len(), expected_count);
+        eprintln!(
+            "  Using glyph #{} with {} positions (closest to expected {})",
+            glyph_id,
+            positions_vec.len(),
+            expected_count
+        );
         for (x, y) in positions_vec {
             all_square_positions.push((*x, *y, glyph_height));
         }
@@ -1692,15 +1923,21 @@ fn extract_placeholder_positions_by_symbol(
                 for (x, y) in positions_vec {
                     all_square_positions.push((*x, *y, glyph_height));
                 }
-                eprintln!("  Collecting {} positions from glyph #{}", positions_vec.len(), glyph_id);
+                eprintln!(
+                    "  Collecting {} positions from glyph #{}",
+                    positions_vec.len(),
+                    glyph_id
+                );
             }
         }
-        
+
         // If still not enough, collect from single-occurrence glyphs
         // This handles cases like nth_root where different-sized squares each appear once
         if all_square_positions.len() < expected_count {
-            eprintln!("  Still need {} more, checking single-occurrence glyphs", 
-                      expected_count - all_square_positions.len());
+            eprintln!(
+                "  Still need {} more, checking single-occurrence glyphs",
+                expected_count - all_square_positions.len()
+            );
             for (glyph_id, positions_vec) in &glyph_counts {
                 if positions_vec.len() == 1 && all_square_positions.len() < expected_count {
                     let glyph_height = 18.0;
@@ -1712,28 +1949,31 @@ fn extract_placeholder_positions_by_symbol(
             }
         }
     }
-    
+
     // Deduplicate positions that are very close together (same visual position)
     all_square_positions.sort_by(|a, b| {
-        a.1.partial_cmp(&b.1).unwrap().then(a.0.partial_cmp(&b.0).unwrap())
+        a.1.partial_cmp(&b.1)
+            .unwrap()
+            .then(a.0.partial_cmp(&b.0).unwrap())
     });
-    
+
     // Remove duplicates (positions within 5pt of each other)
     let mut unique_positions: Vec<(f64, f64, f64)> = Vec::new();
     for pos in &all_square_positions {
-        let is_duplicate = unique_positions.iter().any(|p| {
-            (p.0 - pos.0).abs() < 5.0 && (p.1 - pos.1).abs() < 5.0
-        });
+        let is_duplicate = unique_positions
+            .iter()
+            .any(|p| (p.0 - pos.0).abs() < 5.0 && (p.1 - pos.1).abs() < 5.0);
         if !is_duplicate {
             unique_positions.push(*pos);
         }
     }
-    
+
     eprintln!(
         "Found {} unique square-like positions (expected {})",
-        unique_positions.len(), expected_count
+        unique_positions.len(),
+        expected_count
     );
-    
+
     // Sort by visual order (row then column)
     unique_positions.sort_by(|a, b| {
         // Group by rows (within 15pt tolerance)
@@ -1741,16 +1981,16 @@ fn extract_placeholder_positions_by_symbol(
         let row_b = (b.1 / 15.0).floor() as i32;
         row_a.cmp(&row_b).then(a.0.partial_cmp(&b.0).unwrap())
     });
-    
+
     // Match with placeholder IDs
     for (i, (x, y, glyph_height)) in unique_positions.iter().enumerate() {
         if i >= placeholder_ids.len() {
             eprintln!("  Skipping extra square at ({:.1}, {:.1})", x, y);
             continue;
         }
-        
+
         let placeholder_id = placeholder_ids[i];
-        
+
         // The y-coordinate from accumulated transforms is the visual position
         // We need to adjust for the glyph's visual rendering:
         // - Typst uses scale(1, -1) which flips text vertically
@@ -1759,7 +1999,7 @@ fn extract_placeholder_positions_by_symbol(
         // After testing: the accumulated y IS the correct visual position
         // The glyph renders from y downward (in SVG coordinates)
         let visual_y = *y - glyph_height;
-        
+
         eprintln!(
             "  Square {} (ID {}): position ({:.1}, {:.1}) -> visual y={:.1}",
             i, placeholder_id, x, y, visual_y
@@ -1767,7 +2007,7 @@ fn extract_placeholder_positions_by_symbol(
         positions.push(PlaceholderPosition {
             id: placeholder_id,
             x: *x,
-            y: *y,  // Use the raw y-coordinate, not adjusted
+            y: *y, // Use the raw y-coordinate, not adjusted
             width: *glyph_height,
             height: *glyph_height,
         });
@@ -2000,58 +2240,68 @@ fn expand_viewbox_for_markers(svg: &str, boxes: &[LayoutBoundingBox]) -> Result<
     if boxes.is_empty() {
         return Ok(svg.to_string());
     }
-    
+
     // Calculate actual content bounds from all bounding boxes
     let min_x = boxes.iter().map(|b| b.x).fold(f64::INFINITY, f64::min);
     let min_y = boxes.iter().map(|b| b.y).fold(f64::INFINITY, f64::min);
-    let max_x = boxes.iter().map(|b| b.x + b.width).fold(f64::NEG_INFINITY, f64::max);
-    let max_y = boxes.iter().map(|b| b.y + b.height).fold(f64::NEG_INFINITY, f64::max);
-    
+    let max_x = boxes
+        .iter()
+        .map(|b| b.x + b.width)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let max_y = boxes
+        .iter()
+        .map(|b| b.y + b.height)
+        .fold(f64::NEG_INFINITY, f64::max);
+
     // Calculate content dimensions
     let content_width = max_x - min_x;
     let content_height = max_y - min_y;
-    
+
     // Compute proportional padding: 10% of each dimension, with minimum 20pt
     let padding_x = (content_width * 0.1).max(20.0);
     let padding_y = (content_height * 0.1).max(20.0);
-    
+
     // Apply padding (allow negative x/y if content requires it)
     let new_x = min_x - padding_x;
     let new_y = min_y - padding_y;
     let new_width = content_width + (2.0 * padding_x);
     let new_height = content_height + (2.0 * padding_y);
-    
+
     // Parse current viewBox and always replace with content-aware bounds
     let viewbox_regex = regex::Regex::new(r#"viewBox="([^"]+)""#).unwrap();
     if let Some(captures) = viewbox_regex.captures(svg) {
         let old_vb = captures.get(1).unwrap().as_str();
-        let old_parts: Vec<f64> = old_vb.split_whitespace()
+        let old_parts: Vec<f64> = old_vb
+            .split_whitespace()
             .filter_map(|s| s.parse().ok())
             .collect();
-        
+
         if old_parts.len() == 4 {
             let new_viewbox = format!("{} {} {} {}", new_x, new_y, new_width, new_height);
             let expanded = viewbox_regex.replace(svg, format!(r#"viewBox="{}""#, new_viewbox));
-            
-            eprintln!("📐 Content-aware viewBox: [{:.1}, {:.1}] to [{:.1}, {:.1}] → viewBox({:.1}, {:.1}, {:.1}, {:.1})", 
-                     min_x, min_y, max_x, max_y, new_x, new_y, new_width, new_height);
-            
+
+            eprintln!(
+                "📐 Content-aware viewBox: [{:.1}, {:.1}] to [{:.1}, {:.1}] → viewBox({:.1}, {:.1}, {:.1}, {:.1})",
+                min_x, min_y, max_x, max_y, new_x, new_y, new_width, new_height
+            );
+
             return Ok(expanded.to_string());
         }
     }
-    
+
     Ok(svg.to_string())
 }
 
 /// Extract UUID-based positions from SVG (labels like "id12345678")
-fn extract_uuid_positions(svg: &str) -> Result<std::collections::HashMap<String, (f64, f64, f64, f64)>, String> {
+fn extract_uuid_positions(
+    svg: &str,
+) -> Result<std::collections::HashMap<String, (f64, f64, f64, f64)>, String> {
     use roxmltree::Document;
-    
-    let doc = Document::parse(svg)
-        .map_err(|e| format!("Failed to parse SVG: {}", e))?;
-    
+
+    let doc = Document::parse(svg).map_err(|e| format!("Failed to parse SVG: {}", e))?;
+
     let mut positions = std::collections::HashMap::new();
-    
+
     fn find_uuid_labels(
         node: roxmltree::Node,
         parent_transforms: &[(f64, f64)],
@@ -2063,26 +2313,33 @@ fn extract_uuid_positions(svg: &str) -> Result<std::collections::HashMap<String,
                 current_transforms.push((tx, ty));
             }
         }
-        
+
         if let Some(label) = node.attribute("data-typst-label") {
             if label.starts_with("id") {
-                let uuid_part = &label[2..];  // Remove "id" prefix (rest is the UUID)
-                let (abs_x, abs_y) = current_transforms.iter()
+                let uuid_part = &label[2..]; // Remove "id" prefix (rest is the UUID)
+                let (abs_x, abs_y) = current_transforms
+                    .iter()
                     .fold((0.0, 0.0), |(ax, ay), (tx, ty)| (ax + tx, ay + ty));
-                
+
                 let (width, height) = estimate_group_size(&node);
-                
+
                 positions.insert(uuid_part.to_string(), (abs_x, abs_y, width, height));
                 let display_uuid = &uuid_part[..8.min(uuid_part.len())];
-                eprintln!("Found UUID label: id={}... (len={}) at ({:.1}, {:.1})", display_uuid, uuid_part.len(), abs_x, abs_y);
+                eprintln!(
+                    "Found UUID label: id={}... (len={}) at ({:.1}, {:.1})",
+                    display_uuid,
+                    uuid_part.len(),
+                    abs_x,
+                    abs_y
+                );
             }
         }
-        
+
         for child in node.children() {
             find_uuid_labels(child, &current_transforms, positions);
         }
     }
-    
+
     find_uuid_labels(doc.root(), &[], &mut positions);
     Ok(positions)
 }
@@ -2098,12 +2355,11 @@ fn extract_uuid_positions(svg: &str) -> Result<std::collections::HashMap<String,
 /// - "sl{index}" for filled slots
 fn extract_positions_from_labels(svg: &str) -> Result<Vec<PlaceholderPosition>, String> {
     use roxmltree::Document;
-    
-    let doc = Document::parse(svg)
-        .map_err(|e| format!("Failed to parse SVG: {}", e))?;
-    
+
+    let doc = Document::parse(svg).map_err(|e| format!("Failed to parse SVG: {}", e))?;
+
     let mut positions = Vec::new();
-    
+
     // Find all elements with data-typst-label attribute
     fn find_labeled_elements(
         node: roxmltree::Node,
@@ -2117,13 +2373,14 @@ fn extract_positions_from_labels(svg: &str) -> Result<Vec<PlaceholderPosition>, 
                 current_transforms.push((tx, ty));
             }
         }
-        
+
         // Check for data-typst-label attribute
         if let Some(label) = node.attribute("data-typst-label") {
             // Calculate absolute position by summing all transforms
-            let (abs_x, abs_y) = current_transforms.iter()
+            let (abs_x, abs_y) = current_transforms
+                .iter()
                 .fold((0.0, 0.0), |(ax, ay), (tx, ty)| (ax + tx, ay + ty));
-            
+
             // Extract ID from label
             // Format: "ph{id}" for placeholders, "sl{index}" for filled slots
             let id = if label.starts_with("ph") {
@@ -2134,12 +2391,12 @@ fn extract_positions_from_labels(svg: &str) -> Result<Vec<PlaceholderPosition>, 
             } else {
                 None
             };
-            
+
             if let Some(id) = id {
                 // Get the bounding box of the labeled group
                 // We need to find the content size inside this group
                 let (width, height) = estimate_group_size(&node);
-                
+
                 positions.push(PlaceholderPosition {
                     id,
                     x: abs_x,
@@ -2147,20 +2404,25 @@ fn extract_positions_from_labels(svg: &str) -> Result<Vec<PlaceholderPosition>, 
                     width,
                     height,
                 });
-                eprintln!("Found labeled element: label='{}', id={}, pos=({:.1}, {:.1}), size=({:.1}x{:.1})", 
-                    label, id, abs_x, abs_y, width, height);
+                eprintln!(
+                    "Found labeled element: label='{}', id={}, pos=({:.1}, {:.1}), size=({:.1}x{:.1})",
+                    label, id, abs_x, abs_y, width, height
+                );
             }
         }
-        
+
         // Recurse into children
         for child in node.children() {
             find_labeled_elements(child, &current_transforms, positions);
         }
     }
-    
+
     find_labeled_elements(doc.root(), &[], &mut positions);
-    
-    eprintln!("Extracted {} positions from data-typst-label attributes", positions.len());
+
+    eprintln!(
+        "Extracted {} positions from data-typst-label attributes",
+        positions.len()
+    );
     Ok(positions)
 }
 
@@ -2169,7 +2431,7 @@ fn estimate_group_size(node: &roxmltree::Node) -> (f64, f64) {
     // Default size for a placeholder square
     let default_width = 18.0;
     let default_height = 18.0;
-    
+
     // Try to find a use element (glyph reference) inside the group
     fn find_glyph_size(node: &roxmltree::Node) -> Option<(f64, f64)> {
         if node.tag_name().name() == "use" {
@@ -2184,7 +2446,7 @@ fn estimate_group_size(node: &roxmltree::Node) -> (f64, f64) {
         }
         None
     }
-    
+
     find_glyph_size(node).unwrap_or((default_width, default_height))
 }
 

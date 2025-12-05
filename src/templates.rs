@@ -257,22 +257,34 @@ pub fn template_abs() -> Expression {
 
 /// Parentheses: (x)
 pub fn template_parens() -> Expression {
-    Expression::operation("parens", vec![Expression::placeholder(next_id(), "content")])
+    Expression::operation(
+        "parens",
+        vec![Expression::placeholder(next_id(), "content")],
+    )
 }
 
 /// Square brackets: [x]
 pub fn template_brackets() -> Expression {
-    Expression::operation("brackets", vec![Expression::placeholder(next_id(), "content")])
+    Expression::operation(
+        "brackets",
+        vec![Expression::placeholder(next_id(), "content")],
+    )
 }
 
 /// Curly braces: {x}
 pub fn template_braces() -> Expression {
-    Expression::operation("braces", vec![Expression::placeholder(next_id(), "content")])
+    Expression::operation(
+        "braces",
+        vec![Expression::placeholder(next_id(), "content")],
+    )
 }
 
 /// Angle brackets: ⟨x⟩
 pub fn template_angle_brackets() -> Expression {
-    Expression::operation("angle_brackets", vec![Expression::placeholder(next_id(), "content")])
+    Expression::operation(
+        "angle_brackets",
+        vec![Expression::placeholder(next_id(), "content")],
+    )
 }
 
 /// Floor function: ⌊x⌋
@@ -451,17 +463,26 @@ pub fn template_limit() -> Expression {
 
 /// Arcsine: arcsin(x)
 pub fn template_arcsin() -> Expression {
-    Expression::operation("arcsin", vec![Expression::placeholder(next_id(), "argument")])
+    Expression::operation(
+        "arcsin",
+        vec![Expression::placeholder(next_id(), "argument")],
+    )
 }
 
 /// Arccosine: arccos(x)
 pub fn template_arccos() -> Expression {
-    Expression::operation("arccos", vec![Expression::placeholder(next_id(), "argument")])
+    Expression::operation(
+        "arccos",
+        vec![Expression::placeholder(next_id(), "argument")],
+    )
 }
 
 /// Arctangent: arctan(x)
 pub fn template_arctan() -> Expression {
-    Expression::operation("arctan", vec![Expression::placeholder(next_id(), "argument")])
+    Expression::operation(
+        "arctan",
+        vec![Expression::placeholder(next_id(), "argument")],
+    )
 }
 
 /// Natural logarithm: ln(x)
@@ -483,12 +504,18 @@ pub fn template_exp() -> Expression {
 
 /// Dot accent: ẋ (velocity, time derivative)
 pub fn template_dot_accent() -> Expression {
-    Expression::operation("dot_accent", vec![Expression::placeholder(next_id(), "variable")])
+    Expression::operation(
+        "dot_accent",
+        vec![Expression::placeholder(next_id(), "variable")],
+    )
 }
 
 /// Double dot accent: ẍ (acceleration, second derivative)
 pub fn template_ddot_accent() -> Expression {
-    Expression::operation("ddot_accent", vec![Expression::placeholder(next_id(), "variable")])
+    Expression::operation(
+        "ddot_accent",
+        vec![Expression::placeholder(next_id(), "variable")],
+    )
 }
 
 /// Hat accent: x̂
@@ -503,7 +530,10 @@ pub fn template_bar() -> Expression {
 
 /// Tilde accent: x̃
 pub fn template_tilde() -> Expression {
-    Expression::operation("tilde", vec![Expression::placeholder(next_id(), "variable")])
+    Expression::operation(
+        "tilde",
+        vec![Expression::placeholder(next_id(), "variable")],
+    )
 }
 
 // === Advanced Tensors ===
@@ -1068,7 +1098,7 @@ mod tests {
     fn test_all_new_templates_registered() {
         let templates = get_all_templates();
         let names: Vec<&str> = templates.iter().map(|(name, _)| *name).collect();
-        
+
         // Check integral transforms
         assert!(names.contains(&"fourier_transform"));
         assert!(names.contains(&"inverse_fourier"));
@@ -1077,7 +1107,7 @@ mod tests {
         assert!(names.contains(&"convolution"));
         assert!(names.contains(&"kernel_integral"));
         assert!(names.contains(&"greens_function"));
-        
+
         // Check POT operations
         assert!(names.contains(&"projection"));
         assert!(names.contains(&"modal_integral"));

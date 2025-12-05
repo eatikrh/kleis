@@ -61,12 +61,16 @@ impl World for MinimalWorld {
         if id == self.main_source.id() {
             Ok(self.main_source.clone())
         } else {
-            Err(FileError::NotFound(id.vpath().as_rootless_path().to_path_buf()))
+            Err(FileError::NotFound(
+                id.vpath().as_rootless_path().to_path_buf(),
+            ))
         }
     }
 
     fn file(&self, _id: FileId) -> FileResult<Bytes> {
-        Err(FileError::NotFound(PathBuf::from("file access not supported")))
+        Err(FileError::NotFound(PathBuf::from(
+            "file access not supported",
+        )))
     }
 
     fn font(&self, index: usize) -> Option<Font> {
@@ -181,7 +185,10 @@ fn main() {
 
             println!("Extracted {} items with spans:\n", items.len());
             for (i, item) in items.iter().enumerate() {
-                println!("Item {}: {} at ({:.1}, {:.1})", i, item.item_type, item.x, item.y);
+                println!(
+                    "Item {}: {} at ({:.1}, {:.1})",
+                    i, item.item_type, item.x, item.y
+                );
                 if let Some(text) = &item.text {
                     println!("  Text content: {:?}", text);
                 }
@@ -222,15 +229,22 @@ fn main() {
             let frame = &page.frame;
 
             let mut items = Vec::new();
-            extract_spanned_items(frame, Transform::identity(), &world2.main_source, &mut items);
+            extract_spanned_items(
+                frame,
+                Transform::identity(),
+                &world2.main_source,
+                &mut items,
+            );
 
             // Filter to just text items (which include the squares)
             let text_items: Vec<_> = items.iter().filter(|i| i.item_type == "text").collect();
 
             println!("Extracted {} text items:\n", text_items.len());
             for (i, item) in text_items.iter().enumerate() {
-                println!("Text {}: at ({:.1}, {:.1}) size {:.1}x{:.1}", 
-                    i, item.x, item.y, item.width, item.height);
+                println!(
+                    "Text {}: at ({:.1}, {:.1}) size {:.1}x{:.1}",
+                    i, item.x, item.y, item.width, item.height
+                );
                 if let Some(text) = &item.text {
                     println!("  Glyph text: {:?}", text);
                 }
@@ -244,10 +258,11 @@ fn main() {
 
             // Key question: Do different square.stroked instances have different source ranges?
             println!("\n=== Key Finding ===");
-            let ranges: Vec<_> = text_items.iter()
+            let ranges: Vec<_> = text_items
+                .iter()
                 .filter_map(|i| i.source_range.clone())
                 .collect();
-            
+
             if ranges.is_empty() {
                 println!("❌ No source ranges found - spans are detached");
             } else {
@@ -256,7 +271,11 @@ fn main() {
                     println!("✅ All {} items have UNIQUE source ranges!", ranges.len());
                     println!("   We can use source position to identify placeholders!");
                 } else {
-                    println!("⚠️ {} items but only {} unique ranges", ranges.len(), unique_ranges.len());
+                    println!(
+                        "⚠️ {} items but only {} unique ranges",
+                        ranges.len(),
+                        unique_ranges.len()
+                    );
                     println!("   Some items share the same source range");
                 }
             }
@@ -287,7 +306,12 @@ fn main() {
             let frame = &page.frame;
 
             let mut items = Vec::new();
-            extract_spanned_items(frame, Transform::identity(), &world3.main_source, &mut items);
+            extract_spanned_items(
+                frame,
+                Transform::identity(),
+                &world3.main_source,
+                &mut items,
+            );
 
             let text_items: Vec<_> = items.iter().filter(|i| i.item_type == "text").collect();
 
@@ -295,8 +319,10 @@ fn main() {
             for (i, item) in text_items.iter().enumerate() {
                 if let Some(range) = &item.source_range {
                     let source_snippet = &world3.source_text()[range.clone()];
-                    println!("Text {}: {:?} at ({:.1}, {:.1}) → source {:?}", 
-                        i, item.text, item.x, item.y, source_snippet);
+                    println!(
+                        "Text {}: {:?} at ({:.1}, {:.1}) → source {:?}",
+                        i, item.text, item.x, item.y, source_snippet
+                    );
                 }
             }
         }
@@ -323,7 +349,12 @@ fn main() {
             let frame = &page.frame;
 
             let mut items = Vec::new();
-            extract_spanned_items(frame, Transform::identity(), &world4.main_source, &mut items);
+            extract_spanned_items(
+                frame,
+                Transform::identity(),
+                &world4.main_source,
+                &mut items,
+            );
 
             let text_items: Vec<_> = items.iter().filter(|i| i.item_type == "text").collect();
 
@@ -331,20 +362,36 @@ fn main() {
             for (i, item) in text_items.iter().enumerate() {
                 if let Some(range) = &item.source_range {
                     let source_snippet = &world4.source_text()[range.clone()];
-                    println!("  {}: {:?} at ({:.1}, {:.1}) → {:?}", 
-                        i, item.text, item.x, item.y, source_snippet);
+                    println!(
+                        "  {}: {:?} at ({:.1}, {:.1}) → {:?}",
+                        i, item.text, item.x, item.y, source_snippet
+                    );
                 } else {
-                    println!("  {}: {:?} at ({:.1}, {:.1}) → NO SPAN", 
-                        i, item.text, item.x, item.y);
+                    println!(
+                        "  {}: {:?} at ({:.1}, {:.1}) → NO SPAN",
+                        i, item.text, item.x, item.y
+                    );
                 }
             }
 
             // Check uniqueness
-            let ranges: Vec<_> = text_items.iter()
-                .filter(|i| i.text.as_ref().map(|t| t.contains('□') || t.contains('0') || t.contains('1') || t.contains('2') || t.contains('3')).unwrap_or(false))
+            let ranges: Vec<_> = text_items
+                .iter()
+                .filter(|i| {
+                    i.text
+                        .as_ref()
+                        .map(|t| {
+                            t.contains('□')
+                                || t.contains('0')
+                                || t.contains('1')
+                                || t.contains('2')
+                                || t.contains('3')
+                        })
+                        .unwrap_or(false)
+                })
                 .filter_map(|i| i.source_range.clone())
                 .collect();
-            
+
             let unique: std::collections::HashSet<_> = ranges.iter().collect();
             if unique.len() == ranges.len() && !ranges.is_empty() {
                 println!("\n✅ All placeholder-related items have UNIQUE source ranges!");
@@ -373,12 +420,17 @@ fn main() {
             let frame = &page.frame;
 
             let mut items = Vec::new();
-            extract_spanned_items(frame, Transform::identity(), &world5.main_source, &mut items);
+            extract_spanned_items(
+                frame,
+                Transform::identity(),
+                &world5.main_source,
+                &mut items,
+            );
 
             let text_items: Vec<_> = items.iter().filter(|i| i.item_type == "text").collect();
 
             println!("Extracted {} text items:", text_items.len());
-            
+
             // Look for items that might be our markers
             let mut marker_count = 0;
             for item in &text_items {
@@ -387,13 +439,15 @@ fn main() {
                         marker_count += 1;
                         if let Some(range) = &item.source_range {
                             let source_snippet = &world5.source_text()[range.clone()];
-                            println!("  Marker {:?} at ({:.1}, {:.1}) → {:?}", 
-                                text, item.x, item.y, source_snippet);
+                            println!(
+                                "  Marker {:?} at ({:.1}, {:.1}) → {:?}",
+                                text, item.x, item.y, source_snippet
+                            );
                         }
                     }
                 }
             }
-            
+
             if marker_count == 4 {
                 println!("\n✅ Found all 4 unique markers with positions!");
                 println!("   We can map marker position → placeholder ID");
@@ -416,4 +470,3 @@ fn main() {
     println!("  B) Use attach() with tiny invisible markers");
     println!("  C) Use completely different symbols per placeholder");
 }
-

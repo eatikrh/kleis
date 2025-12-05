@@ -19,7 +19,10 @@ pub fn infer_templates(expr: Expression) -> Expression {
     let expr = match expr {
         Expression::Operation { name, args } => {
             let new_args = args.into_iter().map(infer_templates).collect();
-            Expression::Operation { name, args: new_args }
+            Expression::Operation {
+                name,
+                args: new_args,
+            }
         }
         other => other,
     };

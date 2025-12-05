@@ -1,20 +1,19 @@
+use kleis::ast::Expression;
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 /// HTML/MathML Rendering Demo for Integral Transforms & POT Operations
-/// 
+///
 /// This program demonstrates the HTML rendering of all 16 new mathematical
 /// operations added to Kleis for POT (Projected Ontology Theory).
-/// 
+///
 /// Run with: cargo run --example html_rendering_demo > output.html
-
 use kleis::templates::*;
-use kleis::render::{render_expression, RenderTarget, build_default_context};
-use kleis::ast::Expression;
 
 fn render_html(name: &str, description: &str, template_fn: fn() -> Expression) {
     reset_placeholder_counter();
     let expr = template_fn();
     let ctx = build_default_context();
     let output = render_expression(&expr, &ctx, &RenderTarget::HTML);
-    
+
     println!(r#"      <div class="operation">"#);
     println!(r#"        <div class="name">{}</div>"#, name);
     println!(r#"        <div class="math">{}</div>"#, output);
@@ -24,7 +23,8 @@ fn render_html(name: &str, description: &str, template_fn: fn() -> Expression) {
 
 fn main() {
     // HTML Header
-    println!(r#"<!DOCTYPE html>
+    println!(
+        r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -189,96 +189,97 @@ fn main() {
     <div class="container">
         <h1>🎨 Kleis HTML Rendering Gallery</h1>
         <div class="subtitle">Integral Transforms & POT Operations</div>
-"#);
+"#
+    );
 
     // Integral Transforms
     println!(r#"        <div class="section">"#);
     println!(r#"          <h2 class="section-title">📐 Integral Transforms</h2>"#);
-    
+
     render_html(
         "Fourier Transform",
         "Transform from time/space domain to frequency/momentum domain",
-        template_fourier_transform
+        template_fourier_transform,
     );
-    
+
     render_html(
         "Inverse Fourier Transform",
         "Transform from frequency/momentum domain back to time/space domain",
-        template_inverse_fourier
+        template_inverse_fourier,
     );
-    
+
     render_html(
         "Laplace Transform",
         "Transform for solving differential equations, converting to s-domain",
-        template_laplace_transform
+        template_laplace_transform,
     );
-    
+
     render_html(
         "Inverse Laplace Transform",
         "Transform from s-domain back to time domain",
-        template_inverse_laplace
+        template_inverse_laplace,
     );
-    
+
     render_html(
         "Convolution",
         "Combines two functions to produce a third, used for signal processing and field theory",
-        template_convolution
+        template_convolution,
     );
-    
+
     render_html(
         "Kernel Integral",
         "General integral transform with arbitrary kernel K(x,m)",
-        template_kernel_integral
+        template_kernel_integral,
     );
-    
+
     render_html(
         "Green's Function",
         "Response at point x due to impulse at source point m",
-        template_greens_function
+        template_greens_function,
     );
-    
+
     println!(r#"        </div>"#);
 
     // POT Operations
     println!(r#"        <div class="section">"#);
     println!(r#"          <h2 class="section-title">🌌 POT Operations</h2>"#);
-    
+
     render_html(
         "Projection Operator",
         "Maps modal space functions to spacetime - the core POT operation",
-        template_projection
+        template_projection,
     );
-    
+
     render_html(
         "Modal Integral",
         "Integration over modal space with measure dμ",
-        template_modal_integral
+        template_modal_integral,
     );
-    
+
     render_html(
         "Projection Kernel",
         "The kernel K(x,m) that defines how modal states project to spacetime",
-        template_projection_kernel
+        template_projection_kernel,
     );
-    
+
     render_html(
         "Causal Bound",
         "Variable speed of light c(x), derived from projection kernel support",
-        template_causal_bound
+        template_causal_bound,
     );
-    
+
     render_html(
         "Projection Residue",
         "Physical constants as stable properties of the projection",
-        template_projection_residue
+        template_projection_residue,
     );
-    
+
     render_html(
         "Modal Space",
         "The modal domain 𝓜 from which spacetime is projected",
-        template_modal_space
+        template_modal_space,
     );
-    
+
     // Spacetime (no placeholders)
     reset_placeholder_counter();
     let spacetime = template_spacetime();
@@ -287,22 +288,25 @@ fn main() {
     println!(r#"      <div class="operation">"#);
     println!(r#"        <div class="name">Spacetime</div>"#);
     println!(r#"        <div class="math">{}</div>"#, output);
-    println!(r#"        <div class="description">4-dimensional spacetime manifold - the target of projection</div>"#);
+    println!(
+        r#"        <div class="description">4-dimensional spacetime manifold - the target of projection</div>"#
+    );
     println!(r#"      </div>"#);
-    
+
     render_html(
         "Hont (Hilbert Ontology)",
         "The eternal ontological domain - Hilbert space as Being",
-        template_hont
+        template_hont,
     );
-    
+
     println!(r#"        </div>"#);
 
     // Examples
     println!(r#"        <div class="section">"#);
     println!(r#"          <h2 class="section-title">💡 Complete Examples</h2>"#);
-    
-    println!(r#"          <div class="example">
+
+    println!(
+        r#"          <div class="example">
             <div class="example-title">Example 1: Projection Expansion</div>
             <div class="math">Π[ψ](x) = ∫<sub class="math-sub">M</sub> K(x,m) ψ(m) dμ(m)</div>
             <div class="description">
@@ -325,12 +329,14 @@ fn main() {
             <div class="description">
               Field φ at point x from distributed source ρ via Green's function G
             </div>
-          </div>"#);
-    
+          </div>"#
+    );
+
     println!(r#"        </div>"#);
 
     // POT Hierarchy
-    println!(r#"        <div class="hierarchy">
+    println!(
+        r#"        <div class="hierarchy">
           <div style="font-weight: bold; margin-bottom: 15px;">POT Ontological Hierarchy</div>
           <div style="font-size: 1.3em;">
             <span class="math-script">𝓗</span> (Hont) → 
@@ -341,10 +347,12 @@ fn main() {
           <div style="margin-top: 10px; color: #28a745;">
             Being → Relations → Transform → Appearance
           </div>
-        </div>"#);
+        </div>"#
+    );
 
     // Footer
-    println!(r#"        <div class="footer">
+    println!(
+        r#"        <div class="footer">
           <p><strong>✅ All 16 operations rendered successfully in HTML!</strong></p>
           <p>Generated by Kleis - Mathematical document editor with POT support</p>
           <p style="margin-top: 10px; font-size: 0.9em;">
@@ -353,6 +361,6 @@ fn main() {
         </div>
       </div>
     </body>
-</html>"#);
+</html>"#
+    );
 }
-

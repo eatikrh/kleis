@@ -1,6 +1,6 @@
 use kleis::ast::Expression;
 use kleis::math_layout::compile_with_semantic_boxes;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 #[derive(Debug)]
 struct ArgumentSlot {
@@ -18,11 +18,7 @@ fn main() {
         vec![0, 1, 2, 3],
     );
     println!("\n========================================\n");
-    run_case(
-        "Matrix with sin in (2,1)",
-        matrix_with_sin(),
-        Vec::new(),
-    );
+    run_case("Matrix with sin in (2,1)", matrix_with_sin(), Vec::new());
 }
 
 fn run_case(label: &str, ast: Expression, placeholder_ids: Vec<usize>) {
@@ -47,7 +43,11 @@ fn run_case(label: &str, ast: Expression, placeholder_ids: Vec<usize>) {
     for box_info in &output.argument_bounding_boxes {
         println!(
             "  node {node_id} arg{} -> x={:.1} y={:.1} w={:.1} h={:.1}",
-            box_info.arg_index, box_info.x, box_info.y, box_info.width, box_info.height,
+            box_info.arg_index,
+            box_info.x,
+            box_info.y,
+            box_info.width,
+            box_info.height,
             node_id = box_info.node_id
         );
     }
@@ -91,12 +91,7 @@ fn matrix_with_placeholders() -> Expression {
 }
 
 fn matrix_with_sin() -> Expression {
-    matrix2x2(
-        o("a"),
-        o("b"),
-        sin(o("x")),
-        o("d"),
-    )
+    matrix2x2(o("a"), o("b"), sin(o("x")), o("d"))
 }
 
 fn placeholder(id: usize, hint: &str) -> Expression {
@@ -177,4 +172,3 @@ fn determine_arg_role(op_name: &str, arg_index: usize) -> Option<String> {
         _ => None,
     }
 }
-

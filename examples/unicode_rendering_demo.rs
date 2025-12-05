@@ -1,13 +1,12 @@
+use kleis::ast::Expression;
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 /// Unicode Rendering Demo for Integral Transforms & POT Operations
-/// 
+///
 /// This program demonstrates the Unicode rendering of all 16 new mathematical
 /// operations added to Kleis for POT (Projected Ontology Theory).
-/// 
+///
 /// Run with: cargo run --example unicode_rendering_demo
-
 use kleis::templates::*;
-use kleis::render::{render_expression, RenderTarget, build_default_context};
-use kleis::ast::Expression;
 
 fn render_unicode(name: &str, template_fn: fn() -> Expression) {
     reset_placeholder_counter();
@@ -25,7 +24,7 @@ fn main() {
 
     // Integral Transforms
     println!("═══ INTEGRAL TRANSFORMS ═══\n");
-    
+
     render_unicode("Fourier Transform:", template_fourier_transform);
     render_unicode("Inverse Fourier:", template_inverse_fourier);
     render_unicode("Laplace Transform:", template_laplace_transform);
@@ -36,35 +35,35 @@ fn main() {
 
     // POT Operations
     println!("\n═══ POT OPERATIONS ═══\n");
-    
+
     render_unicode("Projection:", template_projection);
     render_unicode("Modal Integral:", template_modal_integral);
     render_unicode("Projection Kernel:", template_projection_kernel);
     render_unicode("Causal Bound:", template_causal_bound);
     render_unicode("Projection Residue:", template_projection_residue);
     render_unicode("Modal Space:", template_modal_space);
-    
+
     // These don't need placeholders
     reset_placeholder_counter();
     let spacetime = template_spacetime();
     let ctx = build_default_context();
     let output = render_expression(&spacetime, &ctx, &RenderTarget::Unicode);
     println!("  {:<25} {}", "Spacetime:", output);
-    
+
     render_unicode("Hont:", template_hont);
 
     // Complete examples
     println!("\n═══ COMPLETE EXAMPLES ═══\n");
-    
+
     println!("Example 1: Fourier Transform Expanded");
     println!("  ℱ[f](ω) = ∫₋∞^∞ f(t) e^(-iωt) dt\n");
-    
+
     println!("Example 2: Projection Expansion");
     println!("  Π[ψ](x) = ∫_M K(x,m) ψ(m) dμ(m)\n");
-    
+
     println!("Example 3: Variable Speed of Light");
     println!("  c(x) = derived from support[K(x,·)]\n");
-    
+
     println!("Example 4: Convolution for Field");
     println!("  φ(x) = (ρ ∗ G)(x) = ∫ ρ(y) G(x,y) dy\n");
 
@@ -77,7 +76,6 @@ fn main() {
     println!("  Greek:   Π π ω ψ ρ μ α");
     println!("  Math:    ∫ ∗ ∈ → ∞ ℝ ℂ");
     println!("  Sub/Sup: ₀₁₂ ⁰¹² ⁻¹");
-    
+
     println!("\n✅ All 16 operations rendered successfully in Unicode!\n");
 }
-

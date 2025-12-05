@@ -41,8 +41,14 @@ fn main() {
         ("text white fill", "#text(fill: white)[X]"),
         ("text tiny invisible", "#text(size: 0.1pt, fill: white)[ID]"),
         // Combining with square
-        ("square + text", "square.stroked #text(size: 0.1pt, fill: white)[0]"),
-        ("text + square", "#text(size: 0.1pt, fill: white)[0] square.stroked"),
+        (
+            "square + text",
+            "square.stroked #text(size: 0.1pt, fill: white)[0]",
+        ),
+        (
+            "text + square",
+            "#text(size: 0.1pt, fill: white)[0] square.stroked",
+        ),
     ];
 
     for (name, markup) in &text_tests {
@@ -83,7 +89,8 @@ fn main() {
             Ok(out) => {
                 println!("✅ {} bytes", out.svg.len());
                 // Check for our markers
-                let has_markers = out.svg.contains("⟨0⟩") || out.svg.contains(">0<") || out.svg.contains(">1<");
+                let has_markers =
+                    out.svg.contains("⟨0⟩") || out.svg.contains(">0<") || out.svg.contains(">1<");
                 if has_markers {
                     println!("    → ID markers found in SVG!");
                 }
