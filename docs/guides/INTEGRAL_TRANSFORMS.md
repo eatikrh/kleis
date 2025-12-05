@@ -1,18 +1,103 @@
-# Integral Transforms & POT Operations - Complete Reference
+# Integral Transforms & POT Operations Guide
 
-**Date:** 2024-12-05  
-**Status:** Production Ready  
-**Version:** 1.0
+**Version:** 1.0  
+**Status:** ✅ Production Ready  
+**Last Updated:** December 2024
+
+---
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Motivation & Context](#motivation--context)
-3. [Operations Reference](#operations-reference)
-4. [Implementation Details](#implementation-details)
+1. [Quick Start](#quick-start)
+2. [Overview](#overview)
+3. [Motivation & POT Framework](#motivation--pot-framework)
+4. [Operations Reference](#operations-reference)
 5. [Usage Guide](#usage-guide)
-6. [Troubleshooting](#troubleshooting)
+6. [Implementation Details](#implementation-details)
 7. [Examples](#examples)
+8. [Troubleshooting](#troubleshooting)
+
+---
+
+## Quick Start
+
+### Access
+
+Open: **http://localhost:3000**
+
+**Tabs:**
+- **Calculus** → Scroll down → 7 transform buttons
+- **POT** (far right) → 8 POT buttons
+
+### Quick Reference
+
+#### Transforms (Calculus Tab)
+
+```
+ℱ[f](ω)      Fourier Transform
+ℱ⁻¹[F](t)    Inverse Fourier
+ℒ[f](s)      Laplace Transform
+ℒ⁻¹[F](t)    Inverse Laplace
+(f ∗ g)(x)   Convolution
+∫_D K f dμ   Kernel Integral
+G(x,m)       Green's Function
+```
+
+#### POT Operations (POT Tab)
+
+```
+Π[ψ](x)         Projection: Modal → Spacetime
+∫_M f dμ(m)     Modal Integral
+K(x,m)          Projection Kernel
+c(x)            Causal Bound (VSL)
+Residue[Π,X]    Constants as Residues
+𝓜_name          Modal Space
+ℝ⁴              Spacetime
+𝓗_dim           Hont (Hilbert Ontology)
+```
+
+### Key POT Expression
+
+```
+Π[ψ](x) = ∫_M K(x,m) ψ(m) dμ(m)
+
+Projection of modal state ψ to spacetime field φ
+```
+
+### Important: Text in Subscripts
+
+**⚠️ When typing multi-letter text in Typst:**
+
+✅ Use quotes: `"Hont"`, `"config"`, `"dimension"`  
+❌ Don't type: `Hont`, `config`, `dimension` (causes "unknown variable" error)
+
+**Single letters OK without quotes:**
+```
+✅ n, i, x, H, ∞    (no quotes needed)
+```
+
+### Quick Examples
+
+**Projection:**
+```
+Insert: Π[□](□)
+Fill:   ψ, x
+→ Π[ψ](x)
+```
+
+**Hont:**
+```
+Insert: 𝓗_[□]
+Fill:   "Hont"  (with quotes!)
+→ 𝓗_("Hont")
+```
+
+**Fourier:**
+```
+Insert: ℱ[□](□)
+Fill:   f, ω
+→ ℱ[f](ω)
+```
 
 ---
 
@@ -23,6 +108,8 @@ Kleis now has **16 new mathematical operations** for integral transforms and Pro
 - **8 POT Operations:** Projection operators, modal integrals, causal bounds, ontological spaces
 - **1 Green's Function:** Response/propagator representation
 
+### Implementation Status
+
 All operations have:
 - ✅ Full rendering support (Unicode, LaTeX, HTML, Typst)
 - ✅ Palette integration (Calculus + new POT tab)
@@ -32,7 +119,7 @@ All operations have:
 
 ---
 
-## Motivation & Context
+## Motivation & POT Framework
 
 ### Why Integral Transforms?
 
@@ -49,10 +136,10 @@ Where:
 - **dμ** = Measure on modal space
 
 This is more general than Jacobians and naturally handles:
-- Non-locality
-- Variable causal bounds c(x)
-- Physical constants as kernel residues
-- VSL (Variable Speed of Light) cosmology
+- **Non-locality** - Modal → spacetime projection is inherently non-local
+- **Variable causal bounds** - c(x) as continuous field
+- **Physical constants as kernel residues** - c(x), G, ℏ emerge from K(x,m)
+- **VSL cosmology** - Variable Speed of Light without inflation
 
 ### POT Framework
 
@@ -63,12 +150,30 @@ This is more general than Jacobians and naturally handles:
   Eternal     Flow          Integral           Emergent
 ```
 
-**Key Insights:**
-- Spacetime is not fundamental - it's a projection
-- Physical "constants" are projection residues
-- c(x) varies continuously with kernel support
-- Big Bang is a projection boundary, not a beginning
-- Universe is eternal in modal space
+**Key POT Principles:**
+
+1. **Projection as Integral Transform**:
+   ```
+   Π[f](x) = ∫_M K(x,m) f(m) dμ(m)
+   ```
+   Not a differential map (Jacobian), but an integral transform with kernel K.
+
+2. **Constants as Residues**:
+   ```
+   c(x) = Residue[Π, causal_structure]
+   G(x) = Residue[Π, gravitational_coupling]
+   ℏ(x) = Residue[Π, quantum_scale]
+   ```
+
+3. **VSL (Variable Speed of Light)**:
+   - Early universe: K(x,m) has wide support → large c(x)
+   - Late universe: K(x,m) narrows → smaller c(x)
+   - Eliminates need for inflation
+
+4. **Spacetime as Projection**:
+   - ℝ⁴ is the **target** of projection, not the ontological domain
+   - Big Bang is a projection boundary, not a beginning
+   - Universe is eternal in modal space
 
 ---
 
@@ -152,6 +257,8 @@ Args:   kernel, function, domain, variable
 
 **Most general form** - subsumes Fourier, Laplace, and most other integral transforms.
 
+**Mathematical Form:** `∫_D K(x,m) f(m) dμ(m)`
+
 #### 7. Green's Function
 ```
 Symbol: G(x, m)
@@ -161,6 +268,8 @@ Args:   point_x, source_m
 ```
 
 **Physical meaning:** Response at point x from impulse at source m
+
+**Properties:** Describes how a disturbance at source point m influences the field at point x.
 
 ### POT Operations
 
@@ -178,6 +287,11 @@ Args:   function, variable
 ```
 Π[ψ](x) = ∫_M K(x,m) ψ(m) dμ(m)
 ```
+
+Where:
+- M = Modal space (Hont)
+- K(x,m) = Projection kernel
+- dμ = Measure on modal space
 
 #### 9. Modal Integral
 ```
@@ -222,6 +336,11 @@ c(x) = property of support[K(x,·)]
 - Early: wide K → large c(x) → no inflation needed
 - Late: narrow K → small c(x) → local physics
 
+**Physical Interpretation:** 
+- Not a universal constant in POT
+- Varies continuously with spacetime conditions
+- Bounded but not necessarily constant
+
 #### 12. Projection Residue
 ```
 Symbol: Residue[Π, X]
@@ -237,6 +356,11 @@ G(x) = Residue[Π, gravitational_coupling]
 ℏ(x) = Residue[Π, quantum_scale]
 ```
 
+**Examples of Residues:**
+- Physical constants
+- Conserved quantities
+- Symmetries that survive projection
+
 #### 13. Modal Space
 ```
 Symbol: 𝓜_name
@@ -249,6 +373,7 @@ Args:   name
 - 𝓜 - General modal space
 - 𝓜_H - Hilbert space
 - 𝓜_config - Configuration space
+- 𝓜_∞ - Infinite-dimensional modal space
 
 **⚠️ Note:** For multi-letter names in Typst, use quotes: `"config"`, `"Hilbert"`
 
@@ -279,40 +404,7 @@ Args:   dimension
 
 **⚠️ Important:** For text like "Hont", use quotes in placeholder: `"Hont"`
 
----
-
-## Implementation Details
-
-### Code Structure
-
-**Templates:** `src/templates.rs`
-- 16 template functions (lines ~600-760)
-- Template registry updated
-- 16 unit tests added (all passing)
-
-**Rendering:** `src/render.rs`
-- Unicode templates (~90 lines, starting ~1540)
-- LaTeX templates (~90 lines, starting ~1909)
-- HTML templates (~90 lines, starting ~2547)
-- Typst templates (~90 lines, starting ~2937)
-- Placeholder mappings (~40 lines, lines 787-927)
-
-**Frontend:** `static/index.html`
-- POT tab added (line 717)
-- 15 palette buttons (lines 800-820)
-- templateMap entries (lines 1630-1648)
-- astTemplates entries (lines 1677-1714)
-
-### Test Coverage
-
-```bash
-cargo test --lib templates::
-```
-
-**Results:** 16/16 tests passing ✅
-- All template functions create correct AST
-- All operations properly registered
-- No compilation errors
+**POT Meaning:** The modal/ontic space from which spacetime is projected.
 
 ---
 
@@ -353,42 +445,79 @@ x    i    n    m    ω    α    ∞    →  No quotes needed ✅
 
 ---
 
-## Troubleshooting
+## Implementation Details
 
-### Error: "Template not implemented in structural mode yet"
+### Code Structure
 
-**Cause:** Operation not in templateMap or astTemplates
+**Templates:** `src/templates.rs`
+- 16 template functions (lines ~600-760)
+- Template registry updated
+- 16 unit tests added (all passing)
 
-**Solution:** ✅ Fixed - all 16 operations mapped
+**Rendering:** `src/render.rs`
+- Unicode templates (~90 lines, starting ~1540)
+- LaTeX templates (~90 lines, starting ~1909)
+- HTML templates (~90 lines, starting ~2547)
+- Typst templates (~90 lines, starting ~2937)
+- Placeholder mappings (~40 lines, lines 787-927)
 
-**If you still see this:**
-1. Refresh browser (Ctrl+R or Cmd+R)
-2. Clear cache (Ctrl+Shift+R or Cmd+Shift+R)
-3. Check server is running: `curl http://localhost:3000/health`
+**Frontend:** `static/index.html`
+- POT tab added (line 717)
+- 15 palette buttons (lines 800-820)
+- templateMap entries (lines 1630-1648)
+- astTemplates entries (lines 1677-1714)
 
-### Error: "unknown variable: dimension" (or Hont, ont, etc.)
+### Test Coverage
 
-**Cause:** Multi-letter text in Typst math mode needs quotes
-
-**Solution:** Use quotes around multi-letter text:
+```bash
+cargo test --lib templates::
 ```
-Wrong: 𝓗_(Hont)       → Type: Hont
-Right: 𝓗_("Hont")     → Type: "Hont"  (with quotes!)
+
+**Results:** 16/16 tests passing ✅
+- All template functions create correct AST
+- All operations properly registered
+- No compilation errors
+
+### Implementation Status
+
+**Coverage:**
+
+✅ **Backend:** 16 template functions  
+✅ **Rendering:** 64 templates (16 ops × 4 targets)  
+✅ **Placeholder Mappings:** All 16 operations  
+✅ **Palette UI:** 15 buttons + 1 new tab  
+✅ **Frontend Mappings:** templateMap + astTemplates  
+✅ **Tests:** 16/16 passing  
+✅ **Documentation:** Complete  
+
+**Files Modified:**
+
+1. `src/templates.rs` (+204 lines)
+2. `src/render.rs` (+490 lines)
+3. `static/index.html` (+80 lines)
+
+**Total:** ~774 lines added
+
+**Quality Metrics:**
+
+- Compilation errors: 0 ✅
+- Linter errors: 0 ✅
+- Test pass rate: 100% (16/16) ✅
+- Rendering coverage: 100% (4/4 targets) ✅
+- Documentation coverage: 100% ✅
+
+### Type System Integration (Future)
+
+These operations will integrate with the Kleis type system:
+
 ```
-
-**Full guide:** See `docs/TYPST_TEXT_IN_MATH.md`
-
-### Error: "unknown variable: variable"
-
-**Cause:** Placeholder mapping missing in render.rs
-
-**Solution:** ✅ Fixed - all placeholders mapped (lines 787-927)
-
-### Partial Derivative Doesn't Work
-
-**Cause:** Missing templateMap entry
-
-**Solution:** ✅ Fixed - added `\frac{\partial □}{\partial □}` mapping
+Types to define:
+  ModalSpace : Type
+  Spacetime : Type
+  Kernel : (Spacetime × ModalSpace) → Real
+  Projection : ModalSpace → Spacetime
+  CausalBound : Spacetime → Real≥0
+```
 
 ---
 
@@ -454,9 +583,70 @@ Fill:   ρ, G, x
 Result: (ρ ∗ G)(x)
 ```
 
+### Example 7: Projection of Modal State
+```
+Given:
+  - Modal state: ψ(m) ∈ 𝓜
+  - Projection kernel: K(x,m) = G(x,m)  [Green's function]
+
+Compute:
+  φ(x) = Π[ψ](x) = ∫_M G(x,m) ψ(m) dμ(m)
+```
+
+### Example 8: Causal Bound from Kernel
+```
+Given:
+  - Projection kernel K(x,m) with support S(x)
+  
+Derive:
+  c(x) = 1 / width(S(x))
+  
+Early universe: wide support → large c(x)
+Late universe: narrow support → small c(x)
+```
+
 ---
 
-## Quick Reference
+## Troubleshooting
+
+### Error: "Template not implemented in structural mode yet"
+
+**Cause:** Operation not in templateMap or astTemplates
+
+**Solution:** ✅ Fixed - all 16 operations mapped
+
+**If you still see this:**
+1. Refresh browser (Ctrl+R or Cmd+R)
+2. Clear cache (Ctrl+Shift+R or Cmd+Shift+R)
+3. Check server is running: `curl http://localhost:3000/health`
+
+### Error: "unknown variable: dimension" (or Hont, ont, etc.)
+
+**Cause:** Multi-letter text in Typst math mode needs quotes
+
+**Solution:** Use quotes around multi-letter text:
+```
+Wrong: 𝓗_(Hont)       → Type: Hont
+Right: 𝓗_("Hont")     → Type: "Hont"  (with quotes!)
+```
+
+**Full guide:** See `docs/TYPST_TEXT_IN_MATH.md`
+
+### Error: "unknown variable: variable"
+
+**Cause:** Placeholder mapping missing in render.rs
+
+**Solution:** ✅ Fixed - all placeholders mapped (lines 787-927)
+
+### Partial Derivative Doesn't Work
+
+**Cause:** Missing templateMap entry
+
+**Solution:** ✅ Fixed - added `\frac{\partial □}{\partial □}` mapping
+
+---
+
+## Quick Reference Table
 
 ### Integral Transforms (Calculus Tab)
 
@@ -485,91 +675,31 @@ Result: (ρ ∗ G)(x)
 
 ---
 
-## Implementation Status
+## Future Extensions
 
-### Coverage
-
-✅ **Backend:** 16 template functions  
-✅ **Rendering:** 64 templates (16 ops × 4 targets)  
-✅ **Placeholder Mappings:** All 16 operations  
-✅ **Palette UI:** 15 buttons + 1 new tab  
-✅ **Frontend Mappings:** templateMap + astTemplates  
-✅ **Tests:** 16/16 passing  
-✅ **Documentation:** Complete  
-
-### Files Modified
-
-1. `src/templates.rs` (+204 lines)
-2. `src/render.rs` (+490 lines)
-3. `static/index.html` (+80 lines)
-
-**Total:** ~774 lines added
-
-### Quality Metrics
-
-- Compilation errors: 0 ✅
-- Linter errors: 0 ✅
-- Test pass rate: 100% (16/16) ✅
-- Rendering coverage: 100% (4/4 targets) ✅
-- Documentation coverage: 100% ✅
-
----
-
-## Typst Text Mode Caveat
-
-**Important:** When using multi-letter text in subscripts/superscripts with Typst rendering:
-
-**Use quotes for multi-letter text:**
-```
-✅ 𝓗_("Hont")       Type: "Hont" (with quotes)
-✅ 𝓜_("config")     Type: "config" (with quotes)
-❌ 𝓗_(Hont)         ERROR: unknown variable: Hont
-❌ 𝓜_(config)       ERROR: unknown variable: config
-```
-
-**Don't use quotes for single letters/symbols:**
-```
-✅ 𝓗_(∞)            Type: ∞
-✅ 𝓗_(n)            Type: n
-✅ 𝓜_(H)            Type: H
-```
-
-**See:** `docs/TYPST_TEXT_IN_MATH.md` for full details
-
----
-
-## Related Documentation
-
-- **`docs/TYPST_TEXT_IN_MATH.md`** - Typst text handling guide
-- **`kleis-pot-conversation-with-chatgpt.txt`** - POT theoretical context
-- **`docs/type-system/`** - Type system design (future integration)
-- **`docs/adr-011-notebook-environment.md`** - Notebook usage
-
----
-
-## Future Work
-
-### Planned Extensions
-1. Hankel transform (cylindrical symmetry)
-2. Radon transform (tomography)
-3. Wavelet transform (multi-scale)
-4. Mellin transform (scale invariance)
-
-### Type System Integration
-```
-Types to define:
-  ModalSpace : Type
-  Spacetime : Type
-  Kernel : (Spacetime × ModalSpace) → Real
-  Projection : ModalSpace → Spacetime
-  CausalBound : Spacetime → Real≥0
-```
+### Planned Transforms
+1. **Hankel transform** - Cylindrical symmetry problems
+2. **Radon transform** - Tomography and projection geometry
+3. **Wavelet transform** - Multi-scale analysis
+4. **Mellin transform** - Scale-invariant analysis
+5. **Z-Transform** - Discrete-time systems
 
 ### Notebook Examples
 - POT theory introduction
 - VSL cosmology without inflation
 - Kernel properties and causal structure
 - Physical constants as residues
+
+---
+
+## Related Documentation
+
+- **`docs/TYPST_TEXT_IN_MATH.md`** - Typst text handling guide
+- **`docs/theory/POT.md`** - Projected Ontology Theory details
+- **`docs/theory/HONT.md`** - Hilbert Ontology framework
+- **`docs/type-system/`** - Type system design (future integration)
+- **`docs/adr-011-notebook-environment.md`** - Notebook usage
+- **`kleis-pot-conversation-with-chatgpt.txt`** - POT theoretical context
 
 ---
 
@@ -584,17 +714,7 @@ Types to define:
 
 ---
 
-## References
-
-- ChatGPT conversation on POT framework
-- POT: Projected Ontology Theory
-- VSL: Variable Speed of Light cosmology
-- Hont: Hilbert Ontology
-- Green's functions in mathematical physics
-
----
-
 **Status:** ✅ Production Ready  
 **Version:** 1.0  
-**Last Updated:** 2024-12-05
+**Test URL:** http://localhost:3000
 
