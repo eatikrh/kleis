@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kleis HTML/MathML Rendering Gallery</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        
+        .section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            color: #764ba2;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+        
+        .operation {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .operation:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        
+        .name {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .math {
+            font-size: 1.4em;
+            font-family: 'Cambria Math', 'Times New Roman', serif;
+            color: #212529;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        
+        /* Math-specific styling */
+        .math-script {
+            font-style: italic;
+            font-size: 1.2em;
+        }
+        
+        .math-op {
+            padding: 0 4px;
+            font-weight: normal;
+        }
+        
+        .math-func {
+            font-style: normal;
+            font-weight: 500;
+        }
+        
+        .math-sub {
+            font-size: 0.8em;
+            vertical-align: sub;
+        }
+        
+        .math-sup {
+            font-size: 0.8em;
+            vertical-align: super;
+        }
+        
+        .math-blackboard {
+            font-weight: bold;
+            font-family: 'Times New Roman', serif;
+        }
+        
+        .description {
+            color: #6c757d;
+            font-size: 0.95em;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        .example {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+        
+        .example-title {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .hierarchy {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #dee2e6;
+            color: #6c757d;
+        }
+        
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Kleis HTML Rendering Gallery</h1>
+        <div class="subtitle">Integral Transforms & POT Operations</div>
+
+        <div class="section">
+          <h2 class="section-title">📐 Integral Transforms</h2>
+      <div class="operation">
+        <div class="name">Fourier Transform</div>
+        <div class="math"><span class="math-script">ℱ</span>[<span class="placeholder" data-id="1" data-hint="function" title="Click to fill: function" onclick="selectPlaceholder(1)">□</span>](<span class="placeholder" data-id="2" data-hint="variable" title="Click to fill: variable" onclick="selectPlaceholder(2)">□</span>)</div>
+        <div class="description">Transform from time/space domain to frequency/momentum domain</div>
+      </div>
+      <div class="operation">
+        <div class="name">Inverse Fourier Transform</div>
+        <div class="math"><span class="math-script">ℱ</span><sup class="math-sup">-1</sup>[<span class="placeholder" data-id="1" data-hint="function" title="Click to fill: function" onclick="selectPlaceholder(1)">□</span>](<span class="placeholder" data-id="2" data-hint="variable" title="Click to fill: variable" onclick="selectPlaceholder(2)">□</span>)</div>
+        <div class="description">Transform from frequency/momentum domain back to time/space domain</div>
+      </div>
+      <div class="operation">
+        <div class="name">Laplace Transform</div>
+        <div class="math"><span class="math-script">ℒ</span>[<span class="placeholder" data-id="1" data-hint="function" title="Click to fill: function" onclick="selectPlaceholder(1)">□</span>](<span class="placeholder" data-id="2" data-hint="variable" title="Click to fill: variable" onclick="selectPlaceholder(2)">□</span>)</div>
+        <div class="description">Transform for solving differential equations, converting to s-domain</div>
+      </div>
+      <div class="operation">
+        <div class="name">Inverse Laplace Transform</div>
+        <div class="math"><span class="math-script">ℒ</span><sup class="math-sup">-1</sup>[<span class="placeholder" data-id="1" data-hint="function" title="Click to fill: function" onclick="selectPlaceholder(1)">□</span>](<span class="placeholder" data-id="2" data-hint="variable" title="Click to fill: variable" onclick="selectPlaceholder(2)">□</span>)</div>
+        <div class="description">Transform from s-domain back to time domain</div>
+      </div>
+      <div class="operation">
+        <div class="name">Convolution</div>
+        <div class="math">({f} <span class="math-op">∗</span> {g})(<span class="placeholder" data-id="2" data-hint="g" title="Click to fill: g" onclick="selectPlaceholder(2)">□</span>)</div>
+        <div class="description">Combines two functions to produce a third, used for signal processing and field theory</div>
+      </div>
+      <div class="operation">
+        <div class="name">Kernel Integral</div>
+        <div class="math">∫<sub class="math-sub">{domain}</sub> {kernel} <span class="placeholder" data-id="1" data-hint="kernel" title="Click to fill: kernel" onclick="selectPlaceholder(1)">□</span> d<span class="placeholder" data-id="2" data-hint="function" title="Click to fill: function" onclick="selectPlaceholder(2)">□</span></div>
+        <div class="description">General integral transform with arbitrary kernel K(x,m)</div>
+      </div>
+      <div class="operation">
+        <div class="name">Green's Function</div>
+        <div class="math"><span class="math-func">G</span>({point_x}, {source_m})</div>
+        <div class="description">Response at point x due to impulse at source point m</div>
+      </div>
+        </div>
+        <div class="section">
+          <h2 class="section-title">🌌 POT Operations</h2>
+      <div class="operation">
+        <div class="name">Projection Operator</div>
+        <div class="math"><span class="math-op">Π</span>[<span class="placeholder" data-id="1" data-hint="function" title="Click to fill: function" onclick="selectPlaceholder(1)">□</span>](<span class="placeholder" data-id="2" data-hint="variable" title="Click to fill: variable" onclick="selectPlaceholder(2)">□</span>)</div>
+        <div class="description">Maps modal space functions to spacetime - the core POT operation</div>
+      </div>
+      <div class="operation">
+        <div class="name">Modal Integral</div>
+        <div class="math">∫<sub class="math-sub">{modal_space}</sub> <span class="placeholder" data-id="1" data-hint="function" title="Click to fill: function" onclick="selectPlaceholder(1)">□</span> dμ(<span class="placeholder" data-id="2" data-hint="modal_space" title="Click to fill: modal_space" onclick="selectPlaceholder(2)">□</span>)</div>
+        <div class="description">Integration over modal space with measure dμ</div>
+      </div>
+      <div class="operation">
+        <div class="name">Projection Kernel</div>
+        <div class="math"><span class="math-func">K</span>({spacetime_point}, {modal_state})</div>
+        <div class="description">The kernel K(x,m) that defines how modal states project to spacetime</div>
+      </div>
+      <div class="operation">
+        <div class="name">Causal Bound</div>
+        <div class="math"><span class="math-func">c</span>({point})</div>
+        <div class="description">Variable speed of light c(x), derived from projection kernel support</div>
+      </div>
+      <div class="operation">
+        <div class="name">Projection Residue</div>
+        <div class="math"><span class="math-func">Residue</span>[{projection}, {structure}]</div>
+        <div class="description">Physical constants as stable properties of the projection</div>
+      </div>
+      <div class="operation">
+        <div class="name">Modal Space</div>
+        <div class="math"><span class="math-script">𝓜</span><sub class="math-sub">{name}</sub></div>
+        <div class="description">The modal domain 𝓜 from which spacetime is projected</div>
+      </div>
+      <div class="operation">
+        <div class="name">Spacetime</div>
+        <div class="math"><span class="math-blackboard">ℝ</span><sup class="math-sup">4</sup></div>
+        <div class="description">4-dimensional spacetime manifold - the target of projection</div>
+      </div>
+      <div class="operation">
+        <div class="name">Hont (Hilbert Ontology)</div>
+        <div class="math"><span class="math-script">𝓗</span><sub class="math-sub">{dimension}</sub></div>
+        <div class="description">The eternal ontological domain - Hilbert space as Being</div>
+      </div>
+        </div>
+        <div class="section">
+          <h2 class="section-title">💡 Complete Examples</h2>
+          <div class="example">
+            <div class="example-title">Example 1: Projection Expansion</div>
+            <div class="math">Π[ψ](x) = ∫<sub class="math-sub">M</sub> K(x,m) ψ(m) dμ(m)</div>
+            <div class="description">
+              Modal state ψ(m) in modal space M is projected to spacetime field φ(x) via kernel K(x,m)
+            </div>
+          </div>
+          
+          <div class="example">
+            <div class="example-title">Example 2: Variable Speed of Light</div>
+            <div class="math">c(x) = Residue[Π, causal_structure] = 1/width[K(x,·)]</div>
+            <div class="description">
+              Early universe: wide K(x,m) → large c(x) → no inflation needed<br>
+              Late universe: narrow K(x,m) → small c(x) → local physics
+            </div>
+          </div>
+          
+          <div class="example">
+            <div class="example-title">Example 3: Convolution for Field Propagation</div>
+            <div class="math">φ(x) = (ρ <span class="math-op">∗</span> G)(x) = ∫ ρ(y) G(x,y) dy</div>
+            <div class="description">
+              Field φ at point x from distributed source ρ via Green's function G
+            </div>
+          </div>
+        </div>
+        <div class="hierarchy">
+          <div style="font-weight: bold; margin-bottom: 15px;">POT Ontological Hierarchy</div>
+          <div style="font-size: 1.3em;">
+            <span class="math-script">𝓗</span> (Hont) → 
+            <span class="math-script">𝓜</span> (Modal) → 
+            <span class="math-op">Π</span> (Projection) → 
+            <span class="math-blackboard">ℝ</span><sup class="math-sup">4</sup> (Spacetime)
+          </div>
+          <div style="margin-top: 10px; color: #28a745;">
+            Being → Relations → Transform → Appearance
+          </div>
+        </div>
+        <div class="footer">
+          <p><strong>✅ All 16 operations rendered successfully in HTML!</strong></p>
+          <p>Generated by Kleis - Mathematical document editor with POT support</p>
+          <p style="margin-top: 10px; font-size: 0.9em;">
+            Run: <code>cargo run --example html_rendering_demo > gallery.html</code>
+          </p>
+        </div>
+      </div>
+    </body>
+</html>

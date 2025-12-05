@@ -599,6 +599,164 @@ pub fn template_vmatrix_3x3() -> Expression {
     )
 }
 
+// === Integral Transforms ===
+
+/// Fourier transform: ℱ[f](ω)
+pub fn template_fourier_transform() -> Expression {
+    Expression::operation(
+        "fourier_transform",
+        vec![
+            Expression::placeholder(next_id(), "function"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
+}
+
+/// Inverse Fourier transform: ℱ⁻¹[f](x)
+pub fn template_inverse_fourier() -> Expression {
+    Expression::operation(
+        "inverse_fourier",
+        vec![
+            Expression::placeholder(next_id(), "function"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
+}
+
+/// Laplace transform: ℒ[f](s)
+pub fn template_laplace_transform() -> Expression {
+    Expression::operation(
+        "laplace_transform",
+        vec![
+            Expression::placeholder(next_id(), "function"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
+}
+
+/// Inverse Laplace transform: ℒ⁻¹[f](t)
+pub fn template_inverse_laplace() -> Expression {
+    Expression::operation(
+        "inverse_laplace",
+        vec![
+            Expression::placeholder(next_id(), "function"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
+}
+
+/// Convolution: (f ∗ g)(x)
+pub fn template_convolution() -> Expression {
+    Expression::operation(
+        "convolution",
+        vec![
+            Expression::placeholder(next_id(), "f"),
+            Expression::placeholder(next_id(), "g"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
+}
+
+/// Kernel integral: ∫ K(x,m) f(m) dμ
+pub fn template_kernel_integral() -> Expression {
+    Expression::operation(
+        "kernel_integral",
+        vec![
+            Expression::placeholder(next_id(), "kernel"),
+            Expression::placeholder(next_id(), "function"),
+            Expression::placeholder(next_id(), "domain"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
+}
+
+/// Green's function: G(x, m)
+pub fn template_greens_function() -> Expression {
+    Expression::operation(
+        "greens_function",
+        vec![
+            Expression::placeholder(next_id(), "point_x"),
+            Expression::placeholder(next_id(), "source_m"),
+        ],
+    )
+}
+
+// === POT-Specific Operations ===
+
+/// Projection operator: Π[f](x)
+pub fn template_projection() -> Expression {
+    Expression::operation(
+        "projection",
+        vec![
+            Expression::placeholder(next_id(), "function"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
+}
+
+/// Modal integral: ∫_M f(m) dμ(m)
+pub fn template_modal_integral() -> Expression {
+    Expression::operation(
+        "modal_integral",
+        vec![
+            Expression::placeholder(next_id(), "function"),
+            Expression::placeholder(next_id(), "modal_space"),
+            Expression::placeholder(next_id(), "variable"),
+        ],
+    )
+}
+
+/// Projection kernel: K(x, m)
+pub fn template_projection_kernel() -> Expression {
+    Expression::operation(
+        "projection_kernel",
+        vec![
+            Expression::placeholder(next_id(), "spacetime_point"),
+            Expression::placeholder(next_id(), "modal_state"),
+        ],
+    )
+}
+
+/// Causal bound: c(x)
+pub fn template_causal_bound() -> Expression {
+    Expression::operation(
+        "causal_bound",
+        vec![Expression::placeholder(next_id(), "point")],
+    )
+}
+
+/// Projection residue: Residue[Π, X]
+pub fn template_projection_residue() -> Expression {
+    Expression::operation(
+        "projection_residue",
+        vec![
+            Expression::placeholder(next_id(), "projection"),
+            Expression::placeholder(next_id(), "structure"),
+        ],
+    )
+}
+
+/// Modal space: ModalSpace
+pub fn template_modal_space() -> Expression {
+    Expression::operation(
+        "modal_space",
+        vec![Expression::placeholder(next_id(), "name")],
+    )
+}
+
+/// Spacetime: R⁴
+pub fn template_spacetime() -> Expression {
+    Expression::operation("spacetime", vec![])
+}
+
+/// Hont (Hilbert Ontology): Modal domain
+pub fn template_hont() -> Expression {
+    Expression::operation(
+        "hont",
+        vec![Expression::placeholder(next_id(), "dimension")],
+    )
+}
+
 // === Template Registry ===
 
 /// Get all available templates as (name, function) pairs
@@ -633,6 +791,23 @@ pub fn get_all_templates() -> Vec<(&'static str, fn() -> Expression)> {
         ("cross", template_cross_product),
         ("norm", template_norm),
         ("abs", template_abs),
+        // Integral Transforms
+        ("fourier_transform", template_fourier_transform),
+        ("inverse_fourier", template_inverse_fourier),
+        ("laplace_transform", template_laplace_transform),
+        ("inverse_laplace", template_inverse_laplace),
+        ("convolution", template_convolution),
+        ("kernel_integral", template_kernel_integral),
+        ("greens_function", template_greens_function),
+        // POT-Specific
+        ("projection", template_projection),
+        ("modal_integral", template_modal_integral),
+        ("projection_kernel", template_projection_kernel),
+        ("causal_bound", template_causal_bound),
+        ("projection_residue", template_projection_residue),
+        ("modal_space", template_modal_space),
+        ("spacetime", template_spacetime),
+        ("hont", template_hont),
         // Brackets & Grouping
         ("parens", template_parens),
         ("brackets", template_brackets),
@@ -741,5 +916,176 @@ mod tests {
 
         let unknown = get_template("unknown_template");
         assert!(unknown.is_none());
+    }
+
+    // === Tests for Integral Transform Templates ===
+
+    #[test]
+    fn test_fourier_transform() {
+        reset_placeholder_counter();
+        let expr = template_fourier_transform();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "fourier_transform");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_laplace_transform() {
+        reset_placeholder_counter();
+        let expr = template_laplace_transform();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "laplace_transform");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_convolution() {
+        reset_placeholder_counter();
+        let expr = template_convolution();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "convolution");
+                assert_eq!(args.len(), 3);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_kernel_integral() {
+        reset_placeholder_counter();
+        let expr = template_kernel_integral();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "kernel_integral");
+                assert_eq!(args.len(), 4);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_greens_function() {
+        reset_placeholder_counter();
+        let expr = template_greens_function();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "greens_function");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    // === Tests for POT-Specific Templates ===
+
+    #[test]
+    fn test_projection() {
+        reset_placeholder_counter();
+        let expr = template_projection();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "projection");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_modal_integral() {
+        reset_placeholder_counter();
+        let expr = template_modal_integral();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "modal_integral");
+                assert_eq!(args.len(), 3);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_projection_kernel() {
+        reset_placeholder_counter();
+        let expr = template_projection_kernel();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "projection_kernel");
+                assert_eq!(args.len(), 2);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_causal_bound() {
+        reset_placeholder_counter();
+        let expr = template_causal_bound();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "causal_bound");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_spacetime() {
+        let expr = template_spacetime();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "spacetime");
+                assert_eq!(args.len(), 0);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_hont() {
+        reset_placeholder_counter();
+        let expr = template_hont();
+        match expr {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "hont");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected operation"),
+        }
+    }
+
+    #[test]
+    fn test_all_new_templates_registered() {
+        let templates = get_all_templates();
+        let names: Vec<&str> = templates.iter().map(|(name, _)| *name).collect();
+        
+        // Check integral transforms
+        assert!(names.contains(&"fourier_transform"));
+        assert!(names.contains(&"inverse_fourier"));
+        assert!(names.contains(&"laplace_transform"));
+        assert!(names.contains(&"inverse_laplace"));
+        assert!(names.contains(&"convolution"));
+        assert!(names.contains(&"kernel_integral"));
+        assert!(names.contains(&"greens_function"));
+        
+        // Check POT operations
+        assert!(names.contains(&"projection"));
+        assert!(names.contains(&"modal_integral"));
+        assert!(names.contains(&"projection_kernel"));
+        assert!(names.contains(&"causal_bound"));
+        assert!(names.contains(&"projection_residue"));
+        assert!(names.contains(&"modal_space"));
+        assert!(names.contains(&"spacetime"));
+        assert!(names.contains(&"hont"));
     }
 }

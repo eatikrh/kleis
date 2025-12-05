@@ -714,6 +714,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="palette-tab" onclick="showPalette('greek', this)">Greek</button>
                         <button class="palette-tab" onclick="showPalette('logic', this)">Logic & Sets</button>
                         <button class="palette-tab" onclick="showPalette('physics', this)">Physics</button>
+                        <button class="palette-tab" onclick="showPalette('pot', this)">POT</button>
                     </div>
                     
                     <!-- Basics -->
@@ -796,6 +797,27 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="math-btn" onclick="insertTemplate('\\frac{d □}{d □}')" data-tooltip="Derivative">\(\frac{df}{dx}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\frac{\\partial □}{\\partial □}')" data-tooltip="Partial Derivative">\(\frac{\partial f}{\partial x}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\nabla □')" data-tooltip="Gradient">\(\nabla f\)</button>
+                        
+                        <!-- Integral Transforms -->
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{F}[□](□)')" data-tooltip="Fourier Transform">\(\mathcal{F}[f](\omega)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{F}^{-1}[□](□)')" data-tooltip="Inverse Fourier">\(\mathcal{F}^{-1}[F](t)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{L}[□](□)')" data-tooltip="Laplace Transform">\(\mathcal{L}[f](s)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{L}^{-1}[□](□)')" data-tooltip="Inverse Laplace">\(\mathcal{L}^{-1}[F](t)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('(□ \\ast □)(□)')" data-tooltip="Convolution">\((f \ast g)(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\int_{□} □ □ \\, d□')" data-tooltip="Kernel Integral">\(\int_D K f\,d\mu\)</button>
+                        <button class="math-btn" onclick="insertTemplate('G(□, □)')" data-tooltip="Green's Function">\(G(x,m)\)</button>
+                    </div>
+                    
+                    <!-- POT (Projected Ontology Theory) -->
+                    <div id="palette-pot" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('\\Pi[□](□)')" data-tooltip="Projection Operator">\(\Pi[\psi](x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\int_{□} □ \\, d\\mu(□)')" data-tooltip="Modal Integral">\(\int_M f\,d\mu(m)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('K(□, □)')" data-tooltip="Projection Kernel">\(K(x,m)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('c(□)')" data-tooltip="Causal Bound (VSL)">\(c(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathrm{Residue}[□, □]')" data-tooltip="Projection Residue">\(\mathrm{Residue}[\Pi, X]\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{M}_{□}')" data-tooltip="Modal Space">\(\mathcal{M}_H\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathbb{R}^4')" data-tooltip="Spacetime">\(\mathbb{R}^4\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{H}_{□}')" data-tooltip="Hont (Hilbert Ontology)">\(\mathcal{H}_\infty\)</button>
                     </div>
                     
                     <!-- Linear Algebra & Matrices -->
@@ -1555,6 +1577,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             '\\prod_{□}^{□} □': 'product',
             '\\lim_{□ \\to □} □': 'limit',
             '\\partial_{□} □': 'partial',
+            '\\frac{\\partial □}{\\partial □}': 'partial',
             '\\frac{d □}{d □}': 'derivative',
             '\\nabla □': 'gradient',
             
@@ -1603,7 +1626,26 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             
             // Tensors
             '\\Gamma^{□}_{□ □}': 'christoffel',
-            'R^{□}_{□ □ □}': 'riemann'
+            'R^{□}_{□ □ □}': 'riemann',
+            
+            // Integral Transforms
+            '\\mathcal{F}[□](□)': 'fourier_transform',
+            '\\mathcal{F}^{-1}[□](□)': 'inverse_fourier',
+            '\\mathcal{L}[□](□)': 'laplace_transform',
+            '\\mathcal{L}^{-1}[□](□)': 'inverse_laplace',
+            '(□ \\ast □)(□)': 'convolution',
+            '\\int_{□} □ □ \\, d□': 'kernel_integral',
+            'G(□, □)': 'greens_function',
+            
+            // POT Operations
+            '\\Pi[□](□)': 'projection',
+            '\\int_{□} □ \\, d\\mu(□)': 'modal_integral',
+            'K(□, □)': 'projection_kernel',
+            'c(□)': 'causal_bound',
+            '\\mathrm{Residue}[□, □]': 'projection_residue',
+            '\\mathcal{M}_{□}': 'modal_space',
+            '\\mathbb{R}^4': 'spacetime',
+            '\\mathcal{H}_{□}': 'hont'
         };
 
         // AST Templates definitions (simplified for client-side creation)
@@ -1651,6 +1693,25 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             outer: { Operation: { name: 'outer', args: [{Placeholder:{id:0,hint:'ket'}}, {Placeholder:{id:1,hint:'bra'}}] } },
             commutator: { Operation: { name: 'commutator', args: [{Placeholder:{id:0,hint:'A'}}, {Placeholder:{id:1,hint:'B'}}] } },
             expectation: { Operation: { name: 'expectation', args: [{Placeholder:{id:0,hint:'operator'}}] } },
+            
+            // Integral Transforms
+            fourier_transform: { Operation: { name: 'fourier_transform', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            inverse_fourier: { Operation: { name: 'inverse_fourier', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            laplace_transform: { Operation: { name: 'laplace_transform', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            inverse_laplace: { Operation: { name: 'inverse_laplace', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            convolution: { Operation: { name: 'convolution', args: [{Placeholder:{id:0,hint:'f'}}, {Placeholder:{id:1,hint:'g'}}, {Placeholder:{id:2,hint:'variable'}}] } },
+            kernel_integral: { Operation: { name: 'kernel_integral', args: [{Placeholder:{id:0,hint:'kernel'}}, {Placeholder:{id:1,hint:'function'}}, {Placeholder:{id:2,hint:'domain'}}, {Placeholder:{id:3,hint:'variable'}}] } },
+            greens_function: { Operation: { name: 'greens_function', args: [{Placeholder:{id:0,hint:'point_x'}}, {Placeholder:{id:1,hint:'source_m'}}] } },
+            
+            // POT Operations
+            projection: { Operation: { name: 'projection', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            modal_integral: { Operation: { name: 'modal_integral', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'modal_space'}}, {Placeholder:{id:2,hint:'variable'}}] } },
+            projection_kernel: { Operation: { name: 'projection_kernel', args: [{Placeholder:{id:0,hint:'spacetime_point'}}, {Placeholder:{id:1,hint:'modal_state'}}] } },
+            causal_bound: { Operation: { name: 'causal_bound', args: [{Placeholder:{id:0,hint:'point'}}] } },
+            projection_residue: { Operation: { name: 'projection_residue', args: [{Placeholder:{id:0,hint:'projection'}}, {Placeholder:{id:1,hint:'structure'}}] } },
+            modal_space: { Operation: { name: 'modal_space', args: [{Placeholder:{id:0,hint:'name'}}] } },
+            spacetime: { Operation: { name: 'spacetime', args: [] } },
+            hont: { Operation: { name: 'hont', args: [{Placeholder:{id:0,hint:'dimension'}}] } },
             
             // Vectors
             vector_bold: { Operation: { name: 'vector_bold', args: [{Placeholder:{id:0,hint:'vector'}}] } },
