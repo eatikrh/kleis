@@ -13,7 +13,7 @@ fn main() {
 
     println!("Testing two-pass rendering for: frac(a, b)\n");
 
-    match compile_with_semantic_boxes(&frac, &[]) {
+    match compile_with_semantic_boxes(&frac, &[], &[]) {
         Ok(output) => {
             println!("\n✓ Compilation successful");
             println!(

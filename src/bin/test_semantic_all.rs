@@ -41,7 +41,7 @@ fn main() {
 
     for (name, ast) in tests {
         print!("{:20} ", name);
-        match compile_with_semantic_boxes(&ast, &[]) {
+        match compile_with_semantic_boxes(&ast, &[], &[]) {
             Ok(output) => {
                 let expected = match &ast {
                     Expression::Operation { args, .. } => args.len(),

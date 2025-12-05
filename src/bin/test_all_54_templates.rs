@@ -147,7 +147,7 @@ fn main() {
         let placeholders = expr.find_placeholders();
         let placeholder_ids: Vec<usize> = placeholders.iter().map(|(id, _)| *id).collect();
 
-        match compile_with_semantic_boxes(&expr, &placeholder_ids) {
+        match compile_with_semantic_boxes(&expr, &placeholder_ids, &placeholder_ids) {
             Ok(output) => {
                 let has_placeholders = output.placeholder_positions.len() > 0;
                 let has_boxes = output.argument_bounding_boxes.len() > 0;

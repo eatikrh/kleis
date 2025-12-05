@@ -22,7 +22,7 @@ fn main() {
 
     for (name, ast) in tests {
         println!("\n=== {} ===", name);
-        match compile_with_semantic_boxes(&ast, &[]) {
+        match compile_with_semantic_boxes(&ast, &[], &[]) {
             Ok(output) => {
                 println!("✓ {} argument boxes", output.argument_bounding_boxes.len());
                 for bbox in &output.argument_bounding_boxes {

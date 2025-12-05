@@ -57,7 +57,7 @@ fn main() {
 
     // 2. Compile and extract layout
     // We don't have placeholders here, so we pass empty list
-    match compile_math_to_svg_with_ids(&typst_markup, &[]) {
+    match compile_math_to_svg_with_ids(&typst_markup, &[], &[]) {
         Ok(output) => {
             println!("\n--- Final Bounding Boxes ---");
             for (i, bbox) in output.argument_bounding_boxes.iter().enumerate() {

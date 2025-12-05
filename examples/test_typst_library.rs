@@ -15,7 +15,7 @@ fn main() {
     println!("  Markup: {}", markup1);
     println!("  Placeholder IDs: {:?}", placeholder_ids1);
 
-    match compile_math_to_svg_with_ids(markup1, &placeholder_ids1) {
+    match compile_math_to_svg_with_ids(markup1, &placeholder_ids1, &placeholder_ids1) {
         Ok(output) => {
             println!("  ✅ Compilation successful!");
             println!("  SVG length: {} bytes", output.svg.len());
@@ -35,13 +35,13 @@ fn main() {
             );
             for (i, bbox) in output.argument_bounding_boxes.iter().enumerate().take(5) {
                 println!(
-                    "    {}. pos ({:.1}, {:.1}), size {:.1}x{:.1}, type: {}",
+                    "    {}. pos ({:.1}, {:.1}), size {:.1}x{:.1}, node: {}",
                     i + 1,
                     bbox.x,
                     bbox.y,
                     bbox.width,
                     bbox.height,
-                    bbox.content_type
+                    bbox.node_id
                 );
             }
         }
@@ -56,7 +56,7 @@ fn main() {
 
     println!("  Markup: {}", markup2);
 
-    match compile_math_to_svg_with_ids(markup2, &placeholder_ids2) {
+    match compile_math_to_svg_with_ids(markup2, &placeholder_ids2, &placeholder_ids2) {
         Ok(output) => {
             println!("  ✅ Compilation successful!");
             println!("  SVG length: {} bytes", output.svg.len());
@@ -66,13 +66,13 @@ fn main() {
             );
             for (i, bbox) in output.argument_bounding_boxes.iter().enumerate() {
                 println!(
-                    "    {}. pos ({:.1}, {:.1}), size {:.1}x{:.1}, type: {}",
+                    "    {}. pos ({:.1}, {:.1}), size {:.1}x{:.1}, node: {}",
                     i + 1,
                     bbox.x,
                     bbox.y,
                     bbox.width,
                     bbox.height,
-                    bbox.content_type
+                    bbox.node_id
                 );
             }
         }

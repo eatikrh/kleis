@@ -29,7 +29,7 @@ fn main() {
         println!("Typst markup: {}", typst);
 
         // Compile to SVG with layout info
-        match compile_math_to_svg_with_ids(&typst, &[]) {
+        match compile_math_to_svg_with_ids(&typst, &[], &[]) {
             Ok(output) => {
                 println!("✓ Compiled successfully");
                 println!("  Placeholders: {}", output.placeholder_positions.len());

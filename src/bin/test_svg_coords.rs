@@ -16,7 +16,7 @@ fn main() {
     let typst = render_expression(&frac, &ctx, &RenderTarget::Typst);
     println!("Typst markup: {}", typst);
 
-    match compile_math_to_svg_with_ids(&typst, &[]) {
+    match compile_math_to_svg_with_ids(&typst, &[], &[]) {
         Ok(output) => {
             println!("\n=== Bounding Boxes from Backend ===");
             for (i, bbox) in output.argument_bounding_boxes.iter().enumerate() {

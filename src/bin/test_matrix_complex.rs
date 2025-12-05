@@ -12,7 +12,7 @@ fn main() {
     let placeholder_ids = collect_placeholder_ids(&matrix);
     println!("Placeholder IDs: {:?}\n", placeholder_ids);
 
-    match compile_with_semantic_boxes(&matrix, &placeholder_ids) {
+    match compile_with_semantic_boxes(&matrix, &placeholder_ids, &placeholder_ids) {
         Ok(output) => {
             println!(
                 "✅ compile_with_semantic_boxes succeeded ({} placeholders, {} argument boxes)\n",

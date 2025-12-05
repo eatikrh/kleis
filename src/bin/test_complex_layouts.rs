@@ -39,7 +39,7 @@ fn main() {
         let typst_markup = render_expression(&expr, &ctx, &RenderTarget::Typst);
 
         // 2. Compile and extract layout
-        match compile_math_to_svg_with_ids(&typst_markup, &[]) {
+        match compile_math_to_svg_with_ids(&typst_markup, &[], &[]) {
             Ok(output) => {
                 let mut svg = output.svg.clone();
 
