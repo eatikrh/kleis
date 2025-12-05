@@ -1,0 +1,268 @@
+// ============================================
+// Kleis Standard Library - Prelude
+// ============================================
+// This file is always loaded in the editor
+// Defines fundamental algebraic structures
+// Version: 0.1.0
+// ============================================
+
+@library("std.prelude")
+@version("0.1.0")
+
+// ============================================
+// ALGEBRAIC STRUCTURE HIERARCHY
+// ============================================
+
+// Foundation: Associativity only
+structure Semigroup(S) {
+  operation (•) : S × S → S
+  
+  axiom associativity:
+    ∀(x y z : S). (x • y) • z = x • (y • z)
+}
+
+// Add identity element
+structure Monoid(M) extends Semigroup(M) {
+  element e : M
+  
+  axiom left_identity:
+    ∀(x : M). e • x = x
+    
+  axiom right_identity:
+    ∀(x : M). x • e = x
+}
+
+// Add inverse
+structure Group(G) extends Monoid(G) {
+  operation inv : G → G
+  
+  axiom left_inverse:
+    ∀(x : G). inv(x) • x = e
+    
+  axiom right_inverse:
+    ∀(x : G). x • inv(x) = e
+}
+
+// Add commutativity
+structure AbelianGroup(A) extends Group(A) {
+  axiom commutativity:
+    ∀(x y : A). x • y = y • x
+}
+
+// Two operations with distributivity
+structure Ring(R) {
+  // Addition structure
+  structure additive : AbelianGroup(R) {
+    operation (+) : R × R → R
+    operation negate : R → R
+    element zero : R
+  }
+  
+  // Multiplication structure
+  structure multiplicative : Monoid(R) {
+    operation (×) : R × R → R
+    element one : R
+  }
+  
+  // Subtraction (derived)
+  operation (-) : R × R → R
+  define (-)(x, y) = x + negate(y)
+  
+  // Distributivity law
+  axiom left_distributivity:
+    ∀(x y z : R). x × (y + z) = (x × y) + (x × z)
+    
+  axiom right_distributivity:
+    ∀(x y z : R). (x + y) × z = (x × z) + (y × z)
+}
+
+// Add division
+structure Field(F) extends Ring(F) {
+  operation (/) : F × F → F
+  operation inverse : F → F
+  
+  axiom multiplicative_inverse:
+    ∀(x : F) where x ≠ zero. inverse(x) × x = one
+    
+  // Division defined
+  define (/)(x, y) = x × inverse(y)
+}
+
+// ============================================
+// VECTOR SPACE STRUCTURE
+// ============================================
+
+structure VectorSpace(V) over Field(F) {
+  // Vector addition
+  operation (+) : V × V → V
+  element zero_v : V
+  
+  // Scalar multiplication
+  operation (·) : F × V → V
+  
+  // Axioms
+  axiom vector_associativity:
+    ∀(u v w : V). (u + v) + w = u + (v + w)
+    
+  axiom vector_commutativity:
+    ∀(u v : V). u + v = v + u
+    
+  axiom vector_identity:
+    ∀(v : V). zero_v + v = v
+    
+  axiom scalar_identity:
+    ∀(v : V). 1 · v = v
+    
+  axiom scalar_distributivity_vector:
+    ∀(c : F, u v : V). c · (u + v) = c · u + c · v
+    
+  axiom scalar_distributivity_field:
+    ∀(c d : F, v : V). (c + d) · v = c · v + d · v
+}
+
+// ============================================
+// IMPLEMENTATIONS FOR BUILT-IN TYPES
+// ============================================
+
+// Real numbers form a field
+implements Field(ℝ) {
+  element zero = 0
+  element one = 1
+  operation (+) = builtin_add
+  operation (×) = builtin_mul
+  operation negate(x) = -x
+  operation inverse(x) = 1/x
+}
+
+// Complex numbers form a field
+implements Field(ℂ) {
+  element zero = 0 + 0i
+  element one = 1 + 0i
+  operation (+) = complex_add
+  operation (×) = complex_mul
+  operation negate(z) = -z
+  operation inverse(z) = z̄ / |z|²
+}
+
+// Integers form a ring (not a field - no division)
+implements Ring(ℤ) {
+  element zero = 0
+  element one = 1
+  operation (+) = builtin_add
+  operation (×) = builtin_mul
+  operation negate(x) = -x
+}
+
+// Vectors form a vector space over reals
+implements VectorSpace(Vector(n)) over Field(ℝ) {
+  element zero_v = [0, 0, ..., 0]  // n zeros
+  operation (+) = vector_add
+  operation (·) = scalar_vector_mul
+}
+
+// Matrices form a vector space over reals
+implements VectorSpace(Matrix(m,n)) over Field(ℝ) {
+  element zero_v = zero_matrix(m, n)
+  operation (+) = matrix_add
+  operation (·) = scalar_matrix_mul
+}
+
+// ============================================
+// VECTOR OPERATIONS
+// ============================================
+
+// Dot product (inner product)
+operation dot : ∀(n : ℕ). Vector(n) × Vector(n) → ℝ
+define dot(u, v) = Σᵢ uᵢ × vᵢ
+
+// Cross product (3D only)
+operation cross : Vector(3) × Vector(3) → Vector(3)
+define cross([u₁,u₂,u₃], [v₁,v₂,v₃]) = [
+  u₂v₃ - u₃v₂,
+  u₃v₁ - u₁v₃,
+  u₁v₂ - u₂v₁
+]
+
+// Norm (Euclidean)
+operation norm : ∀(n : ℕ). Vector(n) → ℝ
+define norm(v) = √(dot(v, v))
+
+// ============================================
+// MATRIX OPERATIONS
+// ============================================
+
+// Matrix multiplication
+operation (×) : ∀(m n p : ℕ). Matrix(m,n) × Matrix(n,p) → Matrix(m,p)
+
+// Transpose
+operation transpose : ∀(m n : ℕ). Matrix(m,n) → Matrix(n,m)
+notation transpose(A) = A^T
+
+// Determinant (square matrices only)
+operation det : ∀(n : ℕ). Matrix(n,n) → ℝ
+
+// Trace (square matrices only)
+operation trace : ∀(n : ℕ). Matrix(n,n) → ℝ
+define trace(A) = Σᵢ Aᵢᵢ
+
+// ============================================
+// CALCULUS OPERATIONS
+// ============================================
+
+// Ordinary derivative
+operation d/dx : (ℝ → ℝ) → (ℝ → ℝ)
+
+// Partial derivative
+operation ∂/∂x : ScalarField(ℝⁿ) → ScalarField(ℝⁿ)
+
+// Gradient
+operation ∇ : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
+
+// Divergence
+operation div : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
+notation div(F) = ∇ · F
+
+// Curl (3D only)
+operation curl : VectorField(ℝ³) → VectorField(ℝ³)
+notation curl(F) = ∇ × F
+
+// Definite integral
+operation ∫ : (ℝ → ℝ) → ℝ → ℝ → ℝ
+
+// ============================================
+// MATHEMATICAL CONSTANTS
+// ============================================
+
+define π : ℝ = 3.14159265358979323846
+define e : ℝ = 2.71828182845904523536
+define φ : ℝ = 1.61803398874989484820  // Golden ratio
+define √2 : ℝ = 1.41421356237309504880
+
+// Complex unit
+define i : ℂ = √(-1)
+
+// ============================================
+// COMMON FUNCTIONS
+// ============================================
+
+// Trigonometric
+operation sin : ℝ → ℝ
+operation cos : ℝ → ℝ
+operation tan : ℝ → ℝ
+
+// Exponential and logarithm
+operation exp : ℝ → ℝ
+operation ln : ℝ → ℝ
+operation log : ℝ → ℝ → ℝ  // log(base, x)
+
+// Power
+operation (^) : ℝ × ℝ → ℝ
+
+// Absolute value
+operation abs : ℝ → ℝ
+operation abs : ℂ → ℝ  // Overloaded for complex
+
+// ============================================
+// END OF PRELUDE
+// ============================================
+

@@ -4,6 +4,7 @@ pub mod parser;
 pub mod render;
 pub mod template_inference;
 pub mod templates;
+pub mod type_inference;
 
 /// Convenience function: Parse LaTeX and render to Unicode
 pub fn latex_to_unicode(latex: &str) -> Result<String, parser::ParseError> {
