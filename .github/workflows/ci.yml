@@ -118,7 +118,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       
     - name: Run template tests
-      run: cargo test --lib templates:: --verbose
+      run: cargo test --lib 'templates::' --verbose
       
     - name: Count templates
       run: |
