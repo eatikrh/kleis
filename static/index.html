@@ -587,6 +587,154 @@
             justify-content: flex-end;
         }
         
+        /* Matrix Builder Modal */
+        .matrix-builder-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .matrix-builder-modal.show {
+            display: flex;
+        }
+        
+        .matrix-builder-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            min-width: 400px;
+            animation: modalSlideIn 0.2s ease-out;
+        }
+        
+        .matrix-builder-content h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .matrix-grid-selector {
+            display: inline-grid;
+            grid-template-columns: repeat(6, 30px);
+            grid-template-rows: repeat(6, 30px);
+            gap: 2px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .matrix-grid-cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        
+        .matrix-grid-cell.hover {
+            background: #667eea;
+            border-color: #667eea;
+        }
+        
+        .matrix-size-display {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        
+        .matrix-inputs {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .matrix-input-group {
+            flex: 1;
+        }
+        
+        .matrix-input-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .matrix-input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .matrix-input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .matrix-delimiter-group {
+            margin-bottom: 20px;
+        }
+        
+        .matrix-delimiter-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .matrix-delimiter-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .matrix-delimiter-btn {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .matrix-delimiter-btn:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        
+        .matrix-delimiter-btn.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        
+        .matrix-builder-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
         .btn-primary, .btn-secondary {
             padding: 10px 20px;
             border-radius: 6px;
@@ -668,6 +816,64 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <div class="confirm-modal-buttons">
                             <button id="replace-confirm-no" class="btn-secondary">Keep Typing</button>
                             <button id="replace-confirm-yes" class="btn-primary">Insert Template</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Matrix Builder Modal -->
+                <div id="matrix-builder-modal" class="matrix-builder-modal">
+                    <div class="matrix-builder-content">
+                        <h3>🔢 Create Matrix</h3>
+                        
+                        <!-- Grid Selector -->
+                        <div>
+                            <div class="matrix-grid-selector" id="matrix-grid-selector">
+                                <!-- 6x6 grid cells will be generated by JavaScript -->
+                            </div>
+                            <div class="matrix-size-display" id="matrix-size-display">
+                                Select size (hover over grid)
+                            </div>
+                        </div>
+                        
+                        <!-- Numeric Inputs -->
+                        <div class="matrix-inputs">
+                            <div class="matrix-input-group">
+                                <label for="matrix-rows-input">Rows:</label>
+                                <input type="number" id="matrix-rows-input" min="1" max="10" value="2">
+                            </div>
+                            <div class="matrix-input-group">
+                                <label for="matrix-cols-input">Columns:</label>
+                                <input type="number" id="matrix-cols-input" min="1" max="10" value="2">
+                            </div>
+                        </div>
+                        
+                        <!-- Delimiter Selector -->
+                        <div class="matrix-delimiter-group">
+                            <label>Delimiter:</label>
+                            <div class="matrix-delimiter-options">
+                                <button class="matrix-delimiter-btn selected" data-delimiter="bmatrix">
+                                    <span>[ ]</span>
+                                    <span>Square brackets</span>
+                                </button>
+                                <button class="matrix-delimiter-btn" data-delimiter="pmatrix">
+                                    <span>( )</span>
+                                    <span>Parentheses</span>
+                                </button>
+                                <button class="matrix-delimiter-btn" data-delimiter="vmatrix">
+                                    <span>| |</span>
+                                    <span>Determinant</span>
+                                </button>
+                                <button class="matrix-delimiter-btn" data-delimiter="Bmatrix">
+                                    <span>{ }</span>
+                                    <span>Curly braces</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="matrix-builder-buttons">
+                            <button class="btn-secondary" onclick="closeMatrixBuilder()">Cancel</button>
+                            <button class="btn-primary" onclick="createMatrixFromBuilder()">Create Matrix</button>
                         </div>
                     </div>
                 </div>
@@ -828,6 +1034,32 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="math-btn" onclick="insertTemplate('\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}')" data-tooltip="Matrix 3×3 (parens)">\(\begin{pmatrix}a&b&c\\d&e&f\\g&h&i\end{pmatrix}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}')" data-tooltip="Determinant 2×2">\(\begin{vmatrix}a&b\\c&d\end{vmatrix}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}')" data-tooltip="Determinant 3×3">\(\begin{vmatrix}a&b&c\\d&e&f\\g&h&i\end{vmatrix}\)</button>
+                        <button class="math-btn" onclick="showMatrixBuilder()" data-tooltip="Custom Matrix Builder" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="24" viewBox="0 0 64 48" style="flex-shrink: 0;">
+                                <g stroke="white" stroke-width="2.5" fill="none">
+                                    <path d="M 12 6 L 8 6 L 8 42 L 12 42"/>
+                                    <path d="M 52 6 L 56 6 L 56 42 L 52 42"/>
+                                </g>
+                                <g stroke="white" stroke-width="1.8" fill="none" opacity="0.9">
+                                    <line x1="22" y1="12" x2="22" y2="36"/>
+                                    <line x1="30" y1="12" x2="30" y2="36"/>
+                                    <line x1="38" y1="12" x2="38" y2="36"/>
+                                    <line x1="46" y1="12" x2="46" y2="36"/>
+                                    <line x1="14" y1="18" x2="50" y2="18"/>
+                                    <line x1="14" y1="24" x2="50" y2="24"/>
+                                    <line x1="14" y1="30" x2="50" y2="30"/>
+                                    <line x1="14" y1="36" x2="50" y2="36"/>
+                                </g>
+                                <g transform="translate(50, 36)">
+                                    <circle cx="0" cy="0" r="7" fill="#4CAF50" stroke="white" stroke-width="1.5"/>
+                                    <g stroke="white" stroke-width="2.2" stroke-linecap="round">
+                                        <line x1="-3" y1="0" x2="3" y2="0"/>
+                                        <line x1="0" y1="-3" x2="0" y2="3"/>
+                                    </g>
+                                </g>
+                            </svg>
+                            <span style="font-size: 13px;">Matrix</span>
+                        </button>
                         <button class="math-btn" onclick="insertTemplate('\\mathbf{v}')" data-tooltip="Bold Vector">\(\mathbf{v}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\vec{v}')" data-tooltip="Vector Arrow">\(\vec{v}\)</button>
                         <button class="math-btn" onclick="insertTemplate('a \\cdot b')" data-tooltip="Dot Product">\(a \cdot b\)</button>
@@ -2829,6 +3061,218 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             // Setup keyboard shortcuts are already in setupInlineEditorHandlers
             console.log('✓ Inline editing system initialized');
         }
+        
+        // === Matrix Builder Functions ===
+        
+        let matrixBuilderState = {
+            rows: 2,
+            cols: 2,
+            delimiter: 'bmatrix'
+        };
+        
+        function initializeMatrixBuilder() {
+            const gridSelector = document.getElementById('matrix-grid-selector');
+            
+            // Create 6x6 grid
+            for (let row = 0; row < 6; row++) {
+                for (let col = 0; col < 6; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'matrix-grid-cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    cell.addEventListener('mouseenter', (e) => {
+                        highlightMatrixGrid(row + 1, col + 1);
+                    });
+                    
+                    cell.addEventListener('click', (e) => {
+                        selectMatrixSize(row + 1, col + 1);
+                    });
+                    
+                    gridSelector.appendChild(cell);
+                }
+            }
+            
+            // Setup numeric inputs
+            document.getElementById('matrix-rows-input').addEventListener('input', (e) => {
+                const value = Math.max(1, Math.min(10, parseInt(e.target.value) || 2));
+                e.target.value = value;
+                matrixBuilderState.rows = value;
+                updateSizeDisplay();
+            });
+            
+            document.getElementById('matrix-cols-input').addEventListener('input', (e) => {
+                const value = Math.max(1, Math.min(10, parseInt(e.target.value) || 2));
+                e.target.value = value;
+                matrixBuilderState.cols = value;
+                updateSizeDisplay();
+            });
+            
+            // Setup delimiter buttons
+            document.querySelectorAll('.matrix-delimiter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.matrix-delimiter-btn').forEach(b => 
+                        b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    matrixBuilderState.delimiter = btn.dataset.delimiter;
+                });
+            });
+            
+            console.log('✓ Matrix builder initialized');
+        }
+        
+        function showMatrixBuilder() {
+            const modal = document.getElementById('matrix-builder-modal');
+            modal.classList.add('show');
+            
+            // Reset to defaults
+            matrixBuilderState = { rows: 2, cols: 2, delimiter: 'bmatrix' };
+            document.getElementById('matrix-rows-input').value = 2;
+            document.getElementById('matrix-cols-input').value = 2;
+            document.querySelectorAll('.matrix-delimiter-btn').forEach(b => 
+                b.classList.remove('selected'));
+            document.querySelector('[data-delimiter="bmatrix"]').classList.add('selected');
+            
+            clearMatrixGrid();
+            highlightMatrixGrid(2, 2);
+        }
+        
+        function closeMatrixBuilder() {
+            const modal = document.getElementById('matrix-builder-modal');
+            modal.classList.remove('show');
+            clearMatrixGrid();
+        }
+        
+        function highlightMatrixGrid(rows, cols) {
+            const cells = document.querySelectorAll('.matrix-grid-cell');
+            cells.forEach(cell => {
+                const cellRow = parseInt(cell.dataset.row);
+                const cellCol = parseInt(cell.dataset.col);
+                if (cellRow < rows && cellCol < cols) {
+                    cell.classList.add('hover');
+                } else {
+                    cell.classList.remove('hover');
+                }
+            });
+            
+            matrixBuilderState.rows = rows;
+            matrixBuilderState.cols = cols;
+            document.getElementById('matrix-rows-input').value = rows;
+            document.getElementById('matrix-cols-input').value = cols;
+            updateSizeDisplay();
+        }
+        
+        function clearMatrixGrid() {
+            document.querySelectorAll('.matrix-grid-cell').forEach(cell => {
+                cell.classList.remove('hover');
+            });
+        }
+        
+        function selectMatrixSize(rows, cols) {
+            matrixBuilderState.rows = rows;
+            matrixBuilderState.cols = cols;
+            document.getElementById('matrix-rows-input').value = rows;
+            document.getElementById('matrix-cols-input').value = cols;
+            updateSizeDisplay();
+        }
+        
+        function updateSizeDisplay() {
+            const display = document.getElementById('matrix-size-display');
+            display.textContent = `${matrixBuilderState.rows} × ${matrixBuilderState.cols}`;
+        }
+        
+        function createMatrixFromBuilder() {
+            const { rows, cols, delimiter } = matrixBuilderState;
+            
+            if (editorMode === 'structural') {
+                // Create AST directly for structural mode
+                const totalElements = rows * cols;
+                const args = [];
+                
+                // Generate placeholders for each cell
+                for (let i = 0; i < totalElements; i++) {
+                    const row = Math.floor(i / cols) + 1;
+                    const col = (i % cols) + 1;
+                    args.push({
+                        Placeholder: {
+                            id: nextPlaceholderId++,
+                            hint: `a${row}${col}`
+                        }
+                    });
+                }
+                
+                // Determine operation name
+                let opName;
+                if (rows === 2 && cols === 2) {
+                    opName = delimiter === 'pmatrix' ? 'pmatrix2x2' : 
+                             delimiter === 'vmatrix' ? 'vmatrix2x2' : 'matrix2x2';
+                } else if (rows === 3 && cols === 3) {
+                    opName = delimiter === 'pmatrix' ? 'pmatrix3x3' : 
+                             delimiter === 'vmatrix' ? 'vmatrix3x3' : 'matrix3x3';
+                } else {
+                    // For arbitrary sizes, use generic 'matrix' operation
+                    opName = 'matrix';
+                }
+                
+                // Create AST
+                const ast = {
+                    Operation: {
+                        name: opName,
+                        args: args
+                    }
+                };
+                
+                // Save to undo stack
+                saveToUndoStack();
+                
+                // Set as current AST
+                currentAST = ast;
+                
+                // Render
+                renderStructuralEditor();
+                
+                showStatus(`✅ Created ${rows}×${cols} matrix`, 'success');
+            } else {
+                // Text mode: Generate LaTeX template
+                let latex = `\\begin{${delimiter}}`;
+                
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        latex += '□';
+                        if (c < cols - 1) latex += '&';
+                    }
+                    if (r < rows - 1) latex += '\\\\';
+                }
+                
+                latex += `\\end{${delimiter}}`;
+                
+                // Insert template in text mode
+                const textarea = document.getElementById('latexInput');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = textarea.value;
+                textarea.value = text.substring(0, start) + latex + text.substring(end);
+                const newPos = start + latex.length;
+                textarea.setSelectionRange(newPos, newPos);
+                textarea.focus();
+                
+                showStatus(`✅ Created ${rows}×${cols} matrix`, 'success');
+            }
+            
+            // Close modal
+            closeMatrixBuilder();
+        }
+        
+        // Close modal when clicking outside
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('matrix-builder-modal');
+            if (e.target === modal) {
+                closeMatrixBuilder();
+            }
+        });
+        
+        // Initialize matrix builder on load
+        window.addEventListener('load', initializeMatrixBuilder);
         
         // Render MathJax in palette buttons
         if (window.MathJax) {
