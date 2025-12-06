@@ -185,6 +185,9 @@ impl TypeInference {
     }
 
     /// Infer type of an operation
+    /// ADR-016 NOTE: For now, matrix operations are partially hardcoded here.
+    /// TODO: Fully delegate to TypeContextBuilder.infer_operation_type()
+    /// This requires refactoring to pass context_builder through the call chain.
     fn infer_operation(&mut self, name: &str, args: &[Expression]) -> Result<Type, String> {
         match name {
             // Addition: T + T → T (same types)
@@ -213,12 +216,32 @@ impl TypeInference {
                 let t1 = self.infer(&args[0])?;
                 let t2 = self.infer(&args[1])?;
 
-                // Result type depends on inputs
-                let result_ty = self.context.fresh_var();
-
-                // TODO: Add more sophisticated multiplication rules
-                // For now, just return fresh variable
-                Ok(result_ty)
+                // Check if both are matrices → matrix multiplication
+                match (&t1, &t2) {
+                    (Type::Matrix(m, n), Type::Matrix(p, q)) => {
+                        // Matrix multiplication: check dimension compatibility
+                        if n != p {
+                            return Err(format!(
+                                "Matrix multiplication: inner dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot multiply: {} ≠ {}",
+                                m, n, p, q, n, p
+                            ));
+                        }
+                        Ok(Type::Matrix(*m, *q))
+                    }
+                    (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
+                    (Type::Scalar, Type::Matrix(m, n)) | (Type::Matrix(m, n), Type::Scalar) => {
+                        // Scalar × Matrix or Matrix × Scalar → same matrix type
+                        Ok(Type::Matrix(*m, *n))
+                    }
+                    (Type::Vector(n1), Type::Vector(n2)) if n1 == n2 => {
+                        // Dot product: Vector · Vector → Scalar
+                        Ok(Type::Scalar)
+                    }
+                    _ => {
+                        // Unknown combination, return fresh variable
+                        Ok(self.context.fresh_var())
+                    }
+                }
             }
 
             // Division: T / Scalar → T

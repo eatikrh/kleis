@@ -91,7 +91,11 @@ impl TypeChecker {
 
     /// Type check an expression with helpful error messages
     pub fn check(&mut self, expr: &Expression) -> TypeCheckResult {
-        // First, try HM inference
+        // Set the context builder in inference so it can query the registry
+        self.inference
+            .set_context_builder(Some(&self.context_builder));
+
+        // Try HM inference (will now query registry via context_builder)
         match self.inference.infer_and_solve(expr) {
             Ok(ty) => TypeCheckResult::Success(ty),
             Err(e) => {

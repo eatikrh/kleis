@@ -18,6 +18,26 @@ use crate::kleis_ast::{
 use crate::type_inference::{Type, TypeContext};
 use std::collections::HashMap;
 
+/// Parse matrix dimensions from operation name
+/// Handles: matrix2x3, pmatrix4x5, vmatrix2x2, etc.
+fn parse_matrix_dims_from_op(name: &str) -> Option<(usize, usize)> {
+    let without_prefix = name
+        .strip_prefix("vmatrix")
+        .or_else(|| name.strip_prefix("pmatrix"))
+        .or_else(|| name.strip_prefix("Bmatrix"))
+        .or_else(|| name.strip_prefix("matrix"))?;
+
+    let parts: Vec<&str> = without_prefix.split('x').collect();
+    if parts.len() != 2 {
+        return None;
+    }
+
+    let rows = parts[0].parse::<usize>().ok()?;
+    let cols = parts[1].parse::<usize>().ok()?;
+
+    Some((rows, cols))
+}
+
 /// Tracks which structures define which operations
 #[derive(Debug, Clone)]
 pub struct OperationRegistry {
@@ -262,6 +282,125 @@ impl TypeContextBuilder {
     /// Get the operation registry
     pub fn registry(&self) -> &OperationRegistry {
         &self.registry
+    }
+
+    /// Infer the type of an operation applied to given argument types
+    /// This is the ADR-016 compliant way: query structures, don't hardcode!
+    pub fn infer_operation_type(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
+        use crate::type_inference::Type;
+
+        // Special handling for matrix construction operations
+        // These encode their type in the operation name itself
+        if let Some((rows, cols)) = parse_matrix_dims_from_op(op_name) {
+            // matrix2x3, matrix4x5, etc. → Matrix(2, 3), Matrix(4, 5)
+            // This is valid because the operation name IS the type specification
+            return Ok(Type::Matrix(rows, cols));
+        }
+
+        // Query registry for operation
+        if let Some(structure_name) = self.registry.structure_for_operation(op_name) {
+            // Found the structure that defines this operation
+            // Now infer the result type based on structure definition
+
+            match op_name {
+                "transpose" => {
+                    // transpose: Matrix(m, n, T) → Matrix(n, m, T)
+                    if arg_types.len() != 1 {
+                        return Err("transpose requires 1 argument".to_string());
+                    }
+
+                    match &arg_types[0] {
+                        Type::Matrix(m, n) => Ok(Type::Matrix(*n, *m)),
+                        _ => Err("transpose requires a matrix".to_string()),
+                    }
+                }
+
+                "add" => {
+                    // add: Matrix(m, n, T) → Matrix(m, n, T) → Matrix(m, n, T)
+                    // Dimensions must match!
+                    if arg_types.len() != 2 {
+                        return Err("add requires 2 arguments".to_string());
+                    }
+
+                    match (&arg_types[0], &arg_types[1]) {
+                        (Type::Matrix(m1, n1), Type::Matrix(m2, n2)) => {
+                            if m1 != m2 || n1 != n2 {
+                                return Err(format!(
+                                    "Matrix addition: dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot add matrices with different dimensions",
+                                    m1, n1, m2, n2
+                                ));
+                            }
+                            Ok(Type::Matrix(*m1, *n1))
+                        }
+                        (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
+                        _ => Err("add expects matrices of same dimensions or scalars".to_string()),
+                    }
+                }
+
+                "multiply" => {
+                    // multiply: Matrix(m, n, T) → Matrix(n, p, T) → Matrix(m, p, T)
+                    // Inner dimensions must match!
+                    if arg_types.len() != 2 {
+                        return Err("multiply requires 2 arguments".to_string());
+                    }
+
+                    match (&arg_types[0], &arg_types[1]) {
+                        (Type::Matrix(m, n), Type::Matrix(p, q)) => {
+                            if n != p {
+                                return Err(format!(
+                                    "Matrix multiplication: inner dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot multiply: {} ≠ {}",
+                                    m, n, p, q, n, p
+                                ));
+                            }
+                            Ok(Type::Matrix(*m, *q))
+                        }
+                        _ => Err("multiply requires two matrices".to_string()),
+                    }
+                }
+
+                "det" | "determinant" => {
+                    // det: Matrix(n, n, T) → T
+                    if arg_types.len() != 1 {
+                        return Err("det requires 1 argument".to_string());
+                    }
+
+                    match &arg_types[0] {
+                        Type::Matrix(m, n) if m == n => Ok(Type::Scalar),
+                        Type::Matrix(m, n) => Err(format!(
+                            "Determinant requires square matrix!\n  Got: {}×{} (non-square)\n  Determinants only exist for n×n matrices",
+                            m, n
+                        )),
+                        _ => Err("det requires a matrix".to_string()),
+                    }
+                }
+
+                "trace" => {
+                    // trace: Matrix(n, n, T) → T
+                    if arg_types.len() != 1 {
+                        return Err("trace requires 1 argument".to_string());
+                    }
+
+                    match &arg_types[0] {
+                        Type::Matrix(m, n) if m == n => Ok(Type::Scalar),
+                        Type::Matrix(m, n) => {
+                            Err(format!("Trace requires square matrix! Got {}×{}", m, n))
+                        }
+                        _ => Err("trace requires a matrix".to_string()),
+                    }
+                }
+
+                _ => {
+                    // Operation found in registry but we don't know how to infer its type yet
+                    Err(format!(
+                        "Operation '{}' found in structure '{}' but type inference not implemented yet",
+                        op_name, structure_name
+                    ))
+                }
+            }
+        } else {
+            // Operation not in registry
+            Err(format!("Unknown operation: {}", op_name))
+        }
     }
 
     /// Get the underlying type context
