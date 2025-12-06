@@ -3066,7 +3066,8 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         let matrixBuilderState = {
             rows: 2,
             cols: 2,
-            delimiter: 'bmatrix'
+            delimiter: 'bmatrix',
+            locked: false  // Track if selection is locked
         };
         
         function initializeMatrixBuilder() {
@@ -3081,11 +3082,18 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     cell.dataset.col = col;
                     
                     cell.addEventListener('mouseenter', (e) => {
-                        highlightMatrixGrid(row + 1, col + 1);
+                        // Only respond to hover if not locked
+                        if (!matrixBuilderState.locked) {
+                            highlightMatrixGrid(row + 1, col + 1);
+                        }
                     });
                     
                     cell.addEventListener('click', (e) => {
+                        // Lock the selection on click
+                        matrixBuilderState.locked = true;
                         selectMatrixSize(row + 1, col + 1);
+                        highlightMatrixGrid(row + 1, col + 1);
+                        updateSizeDisplay();
                     });
                     
                     gridSelector.appendChild(cell);
@@ -3108,6 +3116,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 e.target.value = value;
                 matrixBuilderState.rows = value;
                 matrixBuilderState.cols = parseInt(document.getElementById('matrix-cols-input').value) || 2;
+                matrixBuilderState.locked = false;  // Unlock when typing
                 updateSizeDisplay();
                 // Update grid visual if within 6×6, otherwise clear it
                 if (value <= 6 && matrixBuilderState.cols <= 6) {
@@ -3122,6 +3131,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 e.target.value = value;
                 matrixBuilderState.cols = value;
                 matrixBuilderState.rows = parseInt(document.getElementById('matrix-rows-input').value) || 2;
+                matrixBuilderState.locked = false;  // Unlock when typing
                 updateSizeDisplay();
                 // Update grid visual if within 6×6, otherwise clear it
                 if (matrixBuilderState.rows <= 6 && value <= 6) {
@@ -3148,8 +3158,8 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             const modal = document.getElementById('matrix-builder-modal');
             modal.classList.add('show');
             
-            // Reset to defaults
-            matrixBuilderState = { rows: 2, cols: 2, delimiter: 'bmatrix' };
+            // Reset to defaults (unlocked)
+            matrixBuilderState = { rows: 2, cols: 2, delimiter: 'bmatrix', locked: false };
             document.getElementById('matrix-rows-input').value = 2;
             document.getElementById('matrix-cols-input').value = 2;
             document.querySelectorAll('.matrix-delimiter-btn').forEach(b => 
