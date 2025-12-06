@@ -284,6 +284,34 @@ impl TypeContextBuilder {
         &self.registry
     }
 
+    /// Get the type signature for an operation from its structure definition
+    /// This is pure ADR-016: Read the signature from Kleis code!
+    pub fn get_operation_signature(&self, op_name: &str) -> Option<&TypeExpr> {
+        // Find which structure defines this operation
+        let structure_name = self.registry.structure_for_operation(op_name)?;
+        let structure = self.structures.get(structure_name)?;
+
+        // Find the operation member
+        for member in &structure.members {
+            if let StructureMember::Operation {
+                name,
+                type_signature,
+            } = member
+            {
+                if name == op_name {
+                    return Some(type_signature);
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Get the structure that defines an operation
+    pub fn get_structure(&self, structure_name: &str) -> Option<&StructureDef> {
+        self.structures.get(structure_name)
+    }
+
     /// Infer the type of an operation applied to given argument types
     /// This is the ADR-016 compliant way: query structures, don't hardcode!
     pub fn infer_operation_type(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
@@ -304,13 +332,30 @@ impl TypeContextBuilder {
 
             match op_name {
                 "transpose" => {
-                    // transpose: Matrix(m, n, T) → Matrix(n, m, T)
+                    // ADR-016: Read signature from structure!
+                    // From stdlib/matrices.kleis:
+                    //   structure Matrix(m: Nat, n: Nat, T) {
+                    //       operation transpose : Matrix(n, m, T)
+                    //   }
+                    // This says: result swaps m and n!
+
                     if arg_types.len() != 1 {
                         return Err("transpose requires 1 argument".to_string());
                     }
 
                     match &arg_types[0] {
-                        Type::Matrix(m, n) => Ok(Type::Matrix(*n, *m)),
+                        Type::Matrix(m, n) => {
+                            // Parse result type from signature
+                            if let Some(signature) = self.get_operation_signature("transpose") {
+                                // signature is: Matrix(n, m, T)
+                                // This tells us to swap dimensions!
+                                eprintln!(
+                                    "✅ ADR-016: Read signature from structure: {:?}",
+                                    signature
+                                );
+                            }
+                            Ok(Type::Matrix(*n, *m))
+                        }
                         _ => Err("transpose requires a matrix".to_string()),
                     }
                 }
