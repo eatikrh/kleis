@@ -37,6 +37,98 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 - Ask for clarification when uncertain
 - Be respectful of the user's workflow and preferences
 
+## Parser Development Rules
+
+**CRITICAL: Parser changes must align with formal grammar.**
+
+### Rule: Grammar Consistency Check
+
+**When modifying `src/kleis_parser.rs`:**
+
+1. **Check against formal grammar** in `docs/grammar/kleis_grammar_v03.ebnf` or `docs/grammar/Kleis_v03.g4`
+2. **Verify change is valid** according to formal specification
+3. **Document any deviations** with rationale
+4. **Update grammar if needed** (requires ADR if significant)
+
+**Grammar files:**
+- `docs/grammar/kleis_grammar_v03.ebnf` - EBNF specification (source of truth)
+- `docs/grammar/Kleis_v03.g4` - ANTLR4 grammar
+- `docs/grammar/kleis_grammar_v03.md` - Human-readable explanation
+
+**Process:**
+```
+Before changing parser:
+→ Read relevant grammar section
+→ Verify change matches specification
+→ If deviation needed, document why
+
+After changing parser:
+→ Test with examples from grammar
+→ Update grammar docs if specification changed
+→ Note any limitations in parser file comments
+```
+
+**Why this matters:**
+- Parser is ~30% of full grammar (by design, POC)
+- Must stay aligned with formal specification
+- Prevents drift between implementation and design
+- Makes future full parser implementation easier
+
+## Type System Rules
+
+**CRITICAL: Follow ADR-016 (Operations in Structures).**
+
+### Rule: No Hardcoding Types
+
+**Types and operations MUST be defined in Kleis structures, NOT hardcoded in Rust.**
+
+**❌ WRONG - Hardcoded in type_inference.rs:**
+```rust
+"matrix2x3" => Ok(Type::Matrix(2, 3))  // BAD!
+"matmul" => /* hardcoded matrix multiplication logic */  // BAD!
+```
+
+**✅ CORRECT - Defined in stdlib/*.kleis:**
+```kleis
+structure Matrix(m: Nat, n: Nat, T) {
+    operation transpose : Matrix(n, m, T)
+}
+
+implements Matrix(m, n, ℝ) {
+    operation transpose = builtin_transpose
+}
+```
+
+**Then type inference queries the registry:**
+```rust
+// Query: What type does "matrix2x3" produce?
+let ty = type_checker.infer_from_registry("matrix2x3", args)?;
+
+// Query: Does Matrix(2,3) support multiply with Matrix(3,2)?  
+let result_ty = type_checker.check_operation("multiply", &[t1, t2])?;
+```
+
+**Why this matters:**
+- **Extensibility:** Users can define custom types without changing Rust code
+- **Consistency:** Single source of truth (stdlib/*.kleis files)
+- **Self-hosting:** Kleis defines itself in Kleis (ADR-003)
+- **Maintainability:** Type rules live with their structures
+
+**Exceptions:**
+- **Built-in primitives only:** Scalar, basic arithmetic (+, -, *, /)
+- **Everything else:** Define in stdlib/*.kleis structures
+
+**When tempted to hardcode:**
+1. Stop and ask: "Should this be a structure?"
+2. If yes: Create/update stdlib/*.kleis file
+3. Make type inference query the registry
+4. Document the structure with axioms
+
+**Related ADRs:**
+- ADR-016: Operations in Structures (the foundation)
+- ADR-015: Text as Source of Truth (applies to types too)
+- ADR-003: Self-Hosting Strategy (Kleis defines Kleis)
+
 ## Documentation Organization Rules
 
 **When creating documentation during a session:**
