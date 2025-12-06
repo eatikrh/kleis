@@ -3243,8 +3243,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     opName = delimiter === 'pmatrix' ? 'pmatrix3x3' : 
                              delimiter === 'vmatrix' ? 'vmatrix3x3' : 'matrix3x3';
                 } else {
-                    // For arbitrary sizes, use generic 'matrix' operation
-                    opName = 'matrix';
+                    // For arbitrary sizes, encode dimensions in operation name
+                    // e.g. "matrix2x3", "matrix4x5"
+                    opName = `matrix${rows}x${cols}`;
                 }
                 
                 // Create AST

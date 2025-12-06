@@ -725,6 +725,14 @@ fn render_expression_internal(
                         .typst_templates
                         .get(name)
                         .cloned()
+                        .or_else(|| {
+                            // Fallback for dynamic matrix operations: matrix, matrix2x3, matrix4x5, etc.
+                            if name.starts_with("matrix") {
+                                ctx.typst_templates.get("matrix").cloned()
+                            } else {
+                                None
+                            }
+                        })
                         .unwrap_or_else(|| format!("{}({})", name, "{args}"));
                     let glyph = ctx.typst_glyphs.get(name).unwrap_or(name);
                     (template, glyph)
@@ -780,7 +788,9 @@ fn render_expression_internal(
             // Simple placeholder substitution
             result = result.replace("{glyph}", glyph);
             // Replace {args} with comma-separated rendered args if present
-            if result.contains("{args}") {
+            // BUT: Skip this for matrix operations - they need special formatting with semicolons
+            let is_matrix_op = name.starts_with("matrix");
+            if result.contains("{args}") && !is_matrix_op {
                 let joined = rendered_args.join(", ");
                 result = result.replace("{args}", &joined);
             }
@@ -1067,11 +1077,20 @@ fn render_expression_internal(
                     }
                 }
             }
-            // Special handling for generic matrix - infer dimensions and format
-            if name == "matrix" {
-                let total_args = rendered_args.len();
-                // Try to infer a square matrix first, then rectangular
-                let (rows, cols) = infer_matrix_dimensions(total_args);
+            // Special handling for generic matrix - extract dimensions from operation name
+            // Handles both "matrix" (legacy) and "matrix2x3", "matrix4x5", etc.
+            if name.starts_with("matrix") {
+                let (rows, cols) = if name == "matrix" {
+                    // Legacy: infer from args
+                    let total_args = rendered_args.len();
+                    infer_matrix_dimensions(total_args)
+                } else {
+                    // Parse dimensions from name: "matrix2x3" → (2, 3)
+                    parse_matrix_dimensions_from_name(name).unwrap_or_else(|| {
+                        let total_args = rendered_args.len();
+                        infer_matrix_dimensions(total_args)
+                    })
+                };
                 
                 let mut matrix_content = String::new();
                 for r in 0..rows {
@@ -1099,6 +1118,29 @@ fn render_expression_internal(
             result
         }
     }
+}
+
+/// Parse matrix dimensions from operation name
+/// E.g. "matrix2x3" → Some((2, 3)), "matrix4x5" → Some((4, 5))
+fn parse_matrix_dimensions_from_name(name: &str) -> Option<(usize, usize)> {
+    if !name.starts_with("matrix") {
+        return None;
+    }
+    
+    // Remove "matrix" prefix
+    let dims = &name[6..];
+    
+    // Split on 'x'
+    let parts: Vec<&str> = dims.split('x').collect();
+    if parts.len() != 2 {
+        return None;
+    }
+    
+    // Parse rows and cols
+    let rows = parts[0].parse::<usize>().ok()?;
+    let cols = parts[1].parse::<usize>().ok()?;
+    
+    Some((rows, cols))
 }
 
 /// Infer matrix dimensions from total number of elements
