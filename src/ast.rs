@@ -4,7 +4,7 @@
 //! Both the parser and renderer use this shared representation.
 
 /// Core expression type representing mathematical structures
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Expression {
     /// Numeric constant (e.g., "1", "2", "3.14")
     Const(String),

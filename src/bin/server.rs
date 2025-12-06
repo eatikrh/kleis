@@ -71,13 +71,59 @@ struct RenderASTResponse {
     error: Option<String>,
 }
 
+// Type check request/response
+#[derive(Debug, Deserialize)]
+struct TypeCheckRequest {
+    ast: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+struct TypeCheckResponse {
+    success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    type_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    suggestion: Option<String>,
+}
+
 // Shared application state
 #[derive(Clone)]
-struct AppState {}
+struct AppState {
+    // TypeChecker loaded from stdlib/matrices.kleis
+    type_checker: Arc<std::sync::Mutex<Option<kleis::type_checker::TypeChecker>>>,
+}
 
 #[tokio::main]
 async fn main() {
-    let state = Arc::new(AppState {});
+    // Load stdlib/matrices.kleis and initialize TypeChecker
+    let type_checker = match std::fs::read_to_string("stdlib/matrices.kleis") {
+        Ok(content) => match kleis::kleis_parser::parse_kleis_program(&content) {
+            Ok(program) => match kleis::type_checker::TypeChecker::from_program(program) {
+                Ok(checker) => {
+                    println!("✅ TypeChecker initialized from stdlib/matrices.kleis");
+                    Some(checker)
+                }
+                Err(e) => {
+                    eprintln!("⚠️  TypeChecker initialization failed: {}", e);
+                    None
+                }
+            },
+            Err(e) => {
+                eprintln!("⚠️  Failed to parse stdlib/matrices.kleis: {}", e);
+                None
+            }
+        },
+        Err(e) => {
+            eprintln!("⚠️  Failed to load stdlib/matrices.kleis: {}", e);
+            None
+        }
+    };
+
+    let state = Arc::new(AppState {
+        type_checker: Arc::new(std::sync::Mutex::new(type_checker)),
+    });
 
     // Build router
     let app = Router::new()
@@ -86,6 +132,7 @@ async fn main() {
         .route("/api/render_ast", post(render_ast_handler))
         .route("/api/render_typst", post(render_typst_handler))
         .route("/api/parse", post(parse_handler))
+        .route("/api/type_check", post(type_check_handler))
         .route("/api/operations", get(operations_handler))
         .route("/api/gallery", get(gallery_handler))
         .route("/health", get(health_handler))
@@ -576,6 +623,104 @@ fn determine_arg_role(op_name: &str, arg_index: usize) -> Option<String> {
 }
 
 // Health check endpoint
+// Handler for type checking expressions
+async fn type_check_handler(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<TypeCheckRequest>,
+) -> impl IntoResponse {
+    // Try to get type checker from state
+    let type_checker_guard = state.type_checker.lock().unwrap();
+
+    if type_checker_guard.is_none() {
+        return Json(TypeCheckResponse {
+            success: false,
+            type_name: None,
+            error: Some(
+                "Type checker not initialized (stdlib/matrices.kleis not loaded)".to_string(),
+            ),
+            suggestion: None,
+        });
+    }
+
+    // Parse AST from JSON
+    let expr: kleis::ast::Expression = match serde_json::from_value(req.ast) {
+        Ok(e) => e,
+        Err(e) => {
+            return Json(TypeCheckResponse {
+                success: false,
+                type_name: None,
+                error: Some(format!("Failed to parse AST: {}", e)),
+                suggestion: None,
+            });
+        }
+    };
+
+    // Need to clone the type checker since check() takes &mut self
+    // For now, create a new one each time (TODO: make check() use &self)
+    drop(type_checker_guard);
+
+    // Re-create type checker (since we can't mutate through Arc<Mutex>)
+    // This is a temporary workaround
+    let result = match std::fs::read_to_string("stdlib/matrices.kleis") {
+        Ok(content) => match kleis::kleis_parser::parse_kleis_program(&content) {
+            Ok(program) => match kleis::type_checker::TypeChecker::from_program(program) {
+                Ok(mut checker) => checker.check(&expr),
+                Err(e) => {
+                    return Json(TypeCheckResponse {
+                        success: false,
+                        type_name: None,
+                        error: Some(format!("TypeChecker error: {}", e)),
+                        suggestion: None,
+                    });
+                }
+            },
+            Err(e) => {
+                return Json(TypeCheckResponse {
+                    success: false,
+                    type_name: None,
+                    error: Some(format!("Parse error: {}", e)),
+                    suggestion: None,
+                });
+            }
+        },
+        Err(e) => {
+            return Json(TypeCheckResponse {
+                success: false,
+                type_name: None,
+                error: Some(format!("Failed to load stdlib: {}", e)),
+                suggestion: None,
+            });
+        }
+    };
+
+    // Convert TypeCheckResult to response
+    match result {
+        kleis::type_checker::TypeCheckResult::Success(ty) => Json(TypeCheckResponse {
+            success: true,
+            type_name: Some(format!("{:?}", ty)),
+            error: None,
+            suggestion: None,
+        }),
+        kleis::type_checker::TypeCheckResult::Error {
+            message,
+            suggestion,
+        } => Json(TypeCheckResponse {
+            success: false,
+            type_name: None,
+            error: Some(message),
+            suggestion,
+        }),
+        kleis::type_checker::TypeCheckResult::Polymorphic { type_var, .. } => {
+            Json(TypeCheckResponse {
+                success: true,
+                type_name: Some(format!("Polymorphic({:?})", type_var)),
+                error: None,
+                suggestion: Some("Type is polymorphic - needs more context".to_string()),
+            })
+        }
+    }
+}
+
 async fn health_handler() -> &'static str {
     "OK"
 }
