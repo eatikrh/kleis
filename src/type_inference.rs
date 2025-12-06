@@ -288,41 +288,72 @@ impl TypeInference {
                 Ok(Type::Scalar)
             }
 
-            // Matrix construction: parse dimensions from operation name
-            // matrix2x3, matrix4x5, pmatrix2x2, vmatrix3x3, etc.
-            name if name.contains("matrix")
-                || name.contains("pmatrix")
-                || name.contains("vmatrix") =>
-            {
-                // Extract dimensions from operation name
-                if let Some((rows, cols)) = parse_matrix_dimensions_from_op_name(name) {
-                    // Infer element types (may be placeholders or scalars)
-                    // But we KNOW the overall matrix type from the operation name!
-                    for arg in args {
-                        let ty = self.infer(arg, context_builder)?;
-                        // Don't add constraint if it's a placeholder (type variable)
-                        // Placeholders can be filled with anything
-                        match ty {
-                            Type::Var(_) => {
-                                // It's a placeholder, skip constraint
-                            }
-                            _ => {
-                                // It's a concrete value, should be scalar
-                                self.add_constraint(ty, Type::Scalar);
-                            }
+            // Multiplication: polymorphic (scalar × scalar, scalar × matrix, etc.)
+            "scalar_multiply" | "times" => {
+                if args.len() != 2 {
+                    return Err(format!("{} requires 2 arguments", name));
+                }
+                let t1 = self.infer(&args[0], context_builder)?;
+                let t2 = self.infer(&args[1], context_builder)?;
+
+                // Simple cases first
+                match (&t1, &t2) {
+                    (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
+                    (Type::Scalar, Type::Matrix(m, n)) | (Type::Matrix(m, n), Type::Scalar) => {
+                        // Scalar × Matrix or Matrix × Scalar → same matrix type
+                        Ok(Type::Matrix(*m, *n))
+                    }
+                    (Type::Matrix(_m, _n), Type::Matrix(_p, _q)) => {
+                        // Matrix × Matrix - delegate to context_builder for proper checking
+                        if let Some(builder) = context_builder {
+                            builder.infer_operation_type("multiply", &[t1, t2])
+                        } else {
+                            // Without context_builder, return fresh var
+                            Ok(self.context.fresh_var())
                         }
                     }
-
-                    // Return matrix type based on operation name
-                    // Even if elements are placeholders!
-                    Ok(Type::Matrix(rows, cols))
-                } else {
-                    // Couldn't parse dimensions, treat as unknown
-                    for arg in args {
-                        self.infer(arg, context_builder)?;
+                    _ => {
+                        // Unknown combination, return fresh variable
+                        Ok(self.context.fresh_var())
                     }
-                    Ok(self.context.fresh_var())
                 }
+            }
+
+            // Matrix constructors: Matrix(rows, cols, ...elements)
+            "Matrix" | "PMatrix" | "VMatrix" | "BMatrix" => {
+                if args.len() < 2 {
+                    return Err(format!(
+                        "{} requires at least 2 arguments (rows, cols)",
+                        name
+                    ));
+                }
+
+                // Extract dimensions from first two arguments (should be constants)
+                let rows = match &args[0] {
+                    Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
+                    _ => 2, // Default if not a constant
+                };
+                let cols = match &args[1] {
+                    Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
+                    _ => 2, // Default if not a constant
+                };
+
+                // Infer element types (skip first two dimension args)
+                for arg in &args[2..] {
+                    let ty = self.infer(arg, context_builder)?;
+                    // Elements should be scalars (or placeholders)
+                    match ty {
+                        Type::Var(_) => {
+                            // Placeholder - OK
+                        }
+                        _ => {
+                            // Should be scalar
+                            self.add_constraint(ty, Type::Scalar);
+                        }
+                    }
+                }
+
+                Ok(Type::Matrix(rows, cols))
             }
 
             // Default: Delegate to context_builder (ADR-016 compliant!)

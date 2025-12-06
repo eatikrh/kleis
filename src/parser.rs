@@ -806,49 +806,32 @@ impl Parser {
             }
         }
 
-        // Convert rows to matrix operation
-        // For 2x2 matrix
-        if rows.len() == 2 && rows[0].len() == 2 && rows[1].len() == 2 {
-            let op_name = match env_name {
-                "pmatrix" => "pmatrix2x2",
-                "vmatrix" => "vmatrix2x2",
-                _ => "matrix2x2",
-            };
-            Ok(op(
-                op_name,
-                vec![
-                    rows[0][0].clone(),
-                    rows[0][1].clone(),
-                    rows[1][0].clone(),
-                    rows[1][1].clone(),
-                ],
-            ))
-        } else if rows.len() == 3 && rows[0].len() == 3 {
-            let op_name = match env_name {
-                "pmatrix" => "pmatrix3x3",
-                "vmatrix" => "vmatrix3x3",
-                _ => "matrix3x3",
-            };
-            Ok(op(
-                op_name,
-                vec![
-                    rows[0][0].clone(),
-                    rows[0][1].clone(),
-                    rows[0][2].clone(),
-                    rows[1][0].clone(),
-                    rows[1][1].clone(),
-                    rows[1][2].clone(),
-                    rows[2][0].clone(),
-                    rows[2][1].clone(),
-                    rows[2][2].clone(),
-                ],
-            ))
-        } else {
-            // Generic matrix - store as operation with all elements
-            let all_elements: Vec<Expression> =
-                rows.into_iter().flat_map(|row| row.into_iter()).collect();
-            Ok(op("matrix", all_elements))
+        // Convert rows to matrix operation with generic Matrix constructor
+        // Matrix operations now have format: Matrix(rows, cols, ...elements)
+        // Or PMatrix(rows, cols, ...elements) for parenthesis matrices
+        // Or VMatrix(rows, cols, ...elements) for determinant bars
+
+        let num_rows = rows.len();
+        let num_cols = if !rows.is_empty() { rows[0].len() } else { 0 };
+
+        // Flatten all elements
+        let mut args = vec![
+            Expression::Const(num_rows.to_string()), // First arg: rows
+            Expression::Const(num_cols.to_string()), // Second arg: cols
+        ];
+        for row in rows {
+            args.extend(row);
         }
+
+        // Choose operation name based on environment
+        let op_name = match env_name {
+            "pmatrix" => "PMatrix",
+            "vmatrix" => "VMatrix",
+            "bmatrix" | "matrix" => "Matrix", // Both use square brackets
+            _ => "Matrix",
+        };
+
+        Ok(op(op_name, args))
     }
 
     fn parse_cases_environment(&mut self) -> Result<Expression, ParseError> {
@@ -1951,8 +1934,11 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, .. } => {
-                assert_eq!(name, "matrix2x2");
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "Matrix");
+                // Check dimensions
+                assert!(matches!(&args[0], Expression::Const(s) if s == "2"));
+                assert!(matches!(&args[1], Expression::Const(s) if s == "2"));
             }
             _ => panic!("Expected matrix operation"),
         }
@@ -1965,9 +1951,10 @@ mod tests {
         let expr = result.unwrap();
         match expr {
             Expression::Operation { name, args } => {
-                assert_eq!(name, "matrix2x2");
-                // First cell should be a scalar_divide operation, not a string
-                match &args[0] {
+                assert_eq!(name, "Matrix");
+                // First cell (after dimensions) should be a scalar_divide operation, not a string
+                match &args[2] {
+                    // Skip first two dimension args
                     Expression::Operation { name, .. } => {
                         assert_eq!(name, "scalar_divide");
                     }
@@ -1986,9 +1973,10 @@ mod tests {
         let expr = result.unwrap();
         match expr {
             Expression::Operation { name, args } => {
-                assert_eq!(name, "matrix2x2");
-                // First cell should be a sqrt operation
-                match &args[0] {
+                assert_eq!(name, "Matrix");
+                // First cell (after dimensions) should be a sqrt operation
+                match &args[2] {
+                    // Skip first two dimension args
                     Expression::Operation { name, .. } => {
                         assert_eq!(name, "sqrt");
                     }
@@ -2007,9 +1995,10 @@ mod tests {
         let expr = result.unwrap();
         match expr {
             Expression::Operation { name, args } => {
-                assert_eq!(name, "matrix2x2");
-                // First cell should be sin operation
-                match &args[0] {
+                assert_eq!(name, "Matrix");
+                // First cell (after dimensions) should be sin operation
+                match &args[2] {
+                    // Skip first two dimension args
                     Expression::Operation { name, .. } => {
                         assert_eq!(name, "sin");
                     }
@@ -2029,9 +2018,10 @@ mod tests {
         let expr = result.unwrap();
         match expr {
             Expression::Operation { name, args } => {
-                assert_eq!(name, "matrix2x2");
-                // First cell should be scalar_divide with sqrt in denominator
-                match &args[0] {
+                assert_eq!(name, "Matrix");
+                // First cell (after dimensions) should be scalar_divide with sqrt in denominator
+                match &args[2] {
+                    // Skip first two dimension args
                     Expression::Operation {
                         name,
                         args: inner_args,
@@ -2061,10 +2051,10 @@ mod tests {
         let expr = result.unwrap();
         match expr {
             Expression::Operation { name, args } => {
-                assert_eq!(name, "matrix3x3");
+                assert_eq!(name, "Matrix");
                 // Check that ellipsis symbols are preserved
-                // args[1] should be \cdots
-                match &args[1] {
+                // args[3] should be \cdots (args[0-1] are dimensions, args[2] is first element)
+                match &args[3] {
                     Expression::Object(s) => {
                         assert_eq!(s, "\\cdots");
                     }

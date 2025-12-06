@@ -174,11 +174,13 @@ pub fn template_gradient() -> Expression {
 
 // === Linear Algebra ===
 
-/// 2×2 Matrix
+/// 2×2 Matrix (generic constructor)
 pub fn template_matrix_2x2() -> Expression {
     Expression::operation(
-        "matrix2x2",
+        "Matrix",
         vec![
+            Expression::Const("2".to_string()), // rows
+            Expression::Const("2".to_string()), // cols
             Expression::placeholder(next_id(), "a11"),
             Expression::placeholder(next_id(), "a12"),
             Expression::placeholder(next_id(), "a21"),
@@ -187,11 +189,13 @@ pub fn template_matrix_2x2() -> Expression {
     )
 }
 
-/// 3×3 Matrix
+/// 3×3 Matrix (generic constructor)
 pub fn template_matrix_3x3() -> Expression {
     Expression::operation(
-        "matrix3x3",
+        "Matrix",
         vec![
+            Expression::Const("3".to_string()), // rows
+            Expression::Const("3".to_string()), // cols
             Expression::placeholder(next_id(), "a11"),
             Expression::placeholder(next_id(), "a12"),
             Expression::placeholder(next_id(), "a13"),
@@ -567,11 +571,13 @@ pub fn template_riemann() -> Expression {
 
 // === Additional Matrix Types ===
 
-/// 2×2 Matrix with parentheses
+/// 2×2 Matrix with parentheses (generic constructor)
 pub fn template_pmatrix_2x2() -> Expression {
     Expression::operation(
-        "pmatrix2x2",
+        "PMatrix",
         vec![
+            Expression::Const("2".to_string()), // rows
+            Expression::Const("2".to_string()), // cols
             Expression::placeholder(next_id(), "a11"),
             Expression::placeholder(next_id(), "a12"),
             Expression::placeholder(next_id(), "a21"),
@@ -580,11 +586,13 @@ pub fn template_pmatrix_2x2() -> Expression {
     )
 }
 
-/// 3×3 Matrix with parentheses
+/// 3×3 Matrix with parentheses (generic constructor)
 pub fn template_pmatrix_3x3() -> Expression {
     Expression::operation(
-        "pmatrix3x3",
+        "PMatrix",
         vec![
+            Expression::Const("3".to_string()), // rows
+            Expression::Const("3".to_string()), // cols
             Expression::placeholder(next_id(), "a11"),
             Expression::placeholder(next_id(), "a12"),
             Expression::placeholder(next_id(), "a13"),
@@ -598,11 +606,13 @@ pub fn template_pmatrix_3x3() -> Expression {
     )
 }
 
-/// 2×2 Determinant matrix (vertical bars)
+/// 2×2 Determinant matrix (vertical bars, generic constructor)
 pub fn template_vmatrix_2x2() -> Expression {
     Expression::operation(
-        "vmatrix2x2",
+        "VMatrix",
         vec![
+            Expression::Const("2".to_string()), // rows
+            Expression::Const("2".to_string()), // cols
             Expression::placeholder(next_id(), "a11"),
             Expression::placeholder(next_id(), "a12"),
             Expression::placeholder(next_id(), "a21"),
@@ -611,11 +621,13 @@ pub fn template_vmatrix_2x2() -> Expression {
     )
 }
 
-/// 3×3 Determinant matrix (vertical bars)
+/// 3×3 Determinant matrix (vertical bars, generic constructor)
 pub fn template_vmatrix_3x3() -> Expression {
     Expression::operation(
-        "vmatrix3x3",
+        "VMatrix",
         vec![
+            Expression::Const("3".to_string()), // rows
+            Expression::Const("3".to_string()), // cols
             Expression::placeholder(next_id(), "a11"),
             Expression::placeholder(next_id(), "a12"),
             Expression::placeholder(next_id(), "a13"),
@@ -931,8 +943,9 @@ mod tests {
         let matrix = template_matrix_2x2();
         match matrix {
             Expression::Operation { name, args } => {
-                assert_eq!(name, "matrix2x2");
-                assert_eq!(args.len(), 4);
+                assert_eq!(name, "Matrix");
+                // 2 dimension args + 4 elements = 6 total
+                assert_eq!(args.len(), 6);
             }
             _ => panic!("Expected operation"),
         }

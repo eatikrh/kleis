@@ -1913,13 +1913,13 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             derivative: { Operation: { name: 'd_dt', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
             gradient: { Operation: { name: 'grad', args: [{Placeholder:{id:0,hint:'function'}}] } },
             
-            // Matrices
-            matrix2x2: { Operation: { name: 'matrix2x2', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
-            matrix3x3: { Operation: { name: 'matrix3x3', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
-            pmatrix2x2: { Operation: { name: 'pmatrix2x2', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
-            pmatrix3x3: { Operation: { name: 'pmatrix3x3', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
-            vmatrix2x2: { Operation: { name: 'vmatrix2x2', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
-            vmatrix3x3: { Operation: { name: 'vmatrix3x3', args: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
+            // Matrices (NEW FORMAT: Matrix(rows, cols, ...elements))
+            matrix2x2: { Operation: { name: 'Matrix', args: [{Const:'2'}, {Const:'2'}, {Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
+            matrix3x3: { Operation: { name: 'Matrix', args: [{Const:'3'}, {Const:'3'}, {Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
+            pmatrix2x2: { Operation: { name: 'PMatrix', args: [{Const:'2'}, {Const:'2'}, {Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
+            pmatrix3x3: { Operation: { name: 'PMatrix', args: [{Const:'3'}, {Const:'3'}, {Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
+            vmatrix2x2: { Operation: { name: 'VMatrix', args: [{Const:'2'}, {Const:'2'}, {Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}] } },
+            vmatrix3x3: { Operation: { name: 'VMatrix', args: [{Const:'3'}, {Const:'3'}, {Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}] } },
             
             // Quantum
             ket: { Operation: { name: 'ket', args: [{Placeholder:{id:0,hint:'state'}}] } },
@@ -3309,25 +3309,29 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     });
                 }
                 
-                // Determine operation name
+                // Determine operation name (NEW FORMAT: generic Matrix constructor)
                 let opName;
-                if (rows === 2 && cols === 2) {
-                    opName = delimiter === 'pmatrix' ? 'pmatrix2x2' : 
-                             delimiter === 'vmatrix' ? 'vmatrix2x2' : 'matrix2x2';
-                } else if (rows === 3 && cols === 3) {
-                    opName = delimiter === 'pmatrix' ? 'pmatrix3x3' : 
-                             delimiter === 'vmatrix' ? 'vmatrix3x3' : 'matrix3x3';
+                if (delimiter === 'pmatrix') {
+                    opName = 'PMatrix';
+                } else if (delimiter === 'vmatrix') {
+                    opName = 'VMatrix';
                 } else {
-                    // For arbitrary sizes, encode dimensions in operation name
-                    // e.g. "matrix2x3", "matrix4x5"
-                    opName = `matrix${rows}x${cols}`;
+                    opName = 'Matrix';  // includes bmatrix and plain matrix
                 }
+                
+                // NEW FORMAT: Matrix(rows, cols, ...elements)
+                // Add dimension arguments at the beginning
+                const matrixArgs = [
+                    { Const: String(rows) },   // First arg: rows
+                    { Const: String(cols) },   // Second arg: cols
+                    ...args                     // Then all the elements
+                ];
                 
                 // Create AST
                 const ast = {
                     Operation: {
                         name: opName,
-                        args: args
+                        args: matrixArgs
                     }
                 };
                 

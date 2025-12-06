@@ -135,7 +135,17 @@ fn det_e(a: Expression) -> Expression {
 }
 #[allow(dead_code)]
 fn m2(a11: Expression, a12: Expression, a21: Expression, a22: Expression) -> Expression {
-    op("matrix2x2", vec![a11, a12, a21, a22])
+    op(
+        "Matrix",
+        vec![
+            Expression::Const("2".to_string()),
+            Expression::Const("2".to_string()),
+            a11,
+            a12,
+            a21,
+            a22,
+        ],
+    )
 }
 #[allow(dead_code)]
 fn m3(
@@ -150,8 +160,20 @@ fn m3(
     a33: Expression,
 ) -> Expression {
     op(
-        "matrix3x3",
-        vec![a11, a12, a13, a21, a22, a23, a31, a32, a33],
+        "Matrix",
+        vec![
+            Expression::Const("3".to_string()),
+            Expression::Const("3".to_string()),
+            a11,
+            a12,
+            a13,
+            a21,
+            a22,
+            a23,
+            a31,
+            a32,
+            a33,
+        ],
     )
 }
 #[allow(dead_code)]
@@ -423,7 +445,17 @@ fn cot_e(x: Expression) -> Expression {
 // Parenthesis matrices
 #[allow(dead_code)]
 fn pmatrix2(a11: Expression, a12: Expression, a21: Expression, a22: Expression) -> Expression {
-    op("pmatrix2x2", vec![a11, a12, a21, a22])
+    op(
+        "PMatrix",
+        vec![
+            Expression::Const("2".to_string()),
+            Expression::Const("2".to_string()),
+            a11,
+            a12,
+            a21,
+            a22,
+        ],
+    )
 }
 #[allow(dead_code)]
 fn pmatrix3(
@@ -438,8 +470,20 @@ fn pmatrix3(
     a33: Expression,
 ) -> Expression {
     op(
-        "pmatrix3x3",
-        vec![a11, a12, a13, a21, a22, a23, a31, a32, a33],
+        "PMatrix",
+        vec![
+            Expression::Const("3".to_string()),
+            Expression::Const("3".to_string()),
+            a11,
+            a12,
+            a13,
+            a21,
+            a22,
+            a23,
+            a31,
+            a32,
+            a33,
+        ],
     )
 }
 
@@ -495,7 +539,17 @@ fn cases3(
 // Phase C: Nice to Have
 #[allow(dead_code)]
 fn vmatrix2(a11: Expression, a12: Expression, a21: Expression, a22: Expression) -> Expression {
-    op("vmatrix2x2", vec![a11, a12, a21, a22])
+    op(
+        "VMatrix",
+        vec![
+            Expression::Const("2".to_string()),
+            Expression::Const("2".to_string()),
+            a11,
+            a12,
+            a21,
+            a22,
+        ],
+    )
 }
 #[allow(dead_code)]
 fn vmatrix3(
@@ -751,13 +805,36 @@ fn render_expression_internal(
                 "mathrm" => vec![0],
                 // text: similar issue
                 "text" => vec![0],
+                // Matrix constructors: skip first two args (dimensions)
+                "Matrix" | "PMatrix" | "VMatrix" | "BMatrix" => vec![0, 1],
                 _ => vec![],
             };
 
+            // For Matrix constructors: extract dimensions but don't render them
+            let is_matrix_constructor = matches!(name.as_str(), "Matrix" | "PMatrix" | "VMatrix" | "BMatrix");
+            let (matrix_rows, matrix_cols) = if is_matrix_constructor && args.len() >= 2 {
+                let rows = match &args[0] {
+                    Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
+                    _ => 2,
+                };
+                let cols = match &args[1] {
+                    Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
+                    _ => 2,
+                };
+                (rows, cols)
+            } else {
+                (0, 0)
+            };
+            
             let rendered_args: Vec<String> = args
                 .iter()
                 .enumerate()
-                .map(|(i, arg)| {
+                .filter_map(|(i, arg)| {
+                    // Skip first two args for Matrix constructors - they're dimension metadata
+                    if is_matrix_constructor && i < 2 {
+                        return None;
+                    }
+                    
                     // Generate child node ID: parent.index
                     let child_id = format!("{}.{}", node_id, i);
                     let rendered = render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
@@ -773,13 +850,13 @@ fn render_expression_internal(
                         // Check if this node has a UUID in the map
                         if let Some(uuid) = node_id_to_uuid.get(&child_id) {
                             // Wrap with UUID label for deterministic position tracking
-                            format!("#[#box[${}$]<id{}>]", rendered, uuid)
+                            Some(format!("#[#box[${}$]<id{}>]", rendered, uuid))
                         } else {
                             // No UUID available, return unwrapped
-                            rendered
+                            Some(rendered)
                         }
                     } else {
-                        rendered
+                        Some(rendered)
                     }
                 })
                 .collect();
@@ -789,7 +866,11 @@ fn render_expression_internal(
             result = result.replace("{glyph}", glyph);
             // Replace {args} with comma-separated rendered args if present
             // BUT: Skip this for matrix operations - they need special formatting with semicolons
-            let is_matrix_op = name.starts_with("matrix");
+            let is_matrix_op = name.starts_with("matrix")
+                || name == "Matrix"
+                || name == "PMatrix"
+                || name == "VMatrix"
+                || name == "BMatrix";
             if result.contains("{args}") && !is_matrix_op {
                 let joined = rendered_args.join(", ");
                 result = result.replace("{args}", &joined);
@@ -1077,15 +1158,51 @@ fn render_expression_internal(
                     }
                 }
             }
-            // Special handling for generic matrix - extract dimensions from operation name
-            // Handles both "matrix" (legacy) and "matrix2x3", "matrix4x5", etc.
-            if name.starts_with("matrix") {
+            // Special handling for Matrix, PMatrix, VMatrix, BMatrix constructors
+            // Format: Matrix(rows, cols, ...elements)
+            // Note: dimensions were already extracted above and filtered from rendered_args
+            if is_matrix_constructor {
+                let rows = matrix_rows;
+                let cols = matrix_cols;
+
+                let mut matrix_content = String::new();
+                for r in 0..rows {
+                    for c in 0..cols {
+                        let idx = r * cols + c; // No offset - dimensions already filtered
+                        if let Some(val) = rendered_args.get(idx) {
+                            matrix_content.push_str(val);
+                            if c < cols - 1 {
+                                // LaTeX uses & for column separator
+                                if *target == RenderTarget::LaTeX {
+                                    matrix_content.push('&');
+                                } else {
+                                    matrix_content.push_str(" , ");
+                                }
+                            }
+                        }
+                    }
+                    if r < rows - 1 {
+                        // LaTeX uses \\ for row separator
+                        if *target == RenderTarget::LaTeX {
+                            matrix_content.push_str("\\\\");
+                        } else {
+                            matrix_content.push_str(" ; ");
+                        }
+                    }
+                }
+                result = result.replace("{args}", &matrix_content);
+            }
+            // Legacy support: old matrix operations like matrix2x2, matrix3x3, etc.
+            else if name.starts_with("matrix")
+                || name.starts_with("pmatrix")
+                || name.starts_with("vmatrix")
+            {
                 let (rows, cols) = if name == "matrix" {
                     // Legacy: infer from args
                     let total_args = rendered_args.len();
                     infer_matrix_dimensions(total_args)
                 } else {
-                    // Parse dimensions from name: "matrix2x3" → (2, 3)
+                    // Parse dimensions from name: "matrix2x2" → (2, 2)
                     parse_matrix_dimensions_from_name(name).unwrap_or_else(|| {
                         let total_args = rendered_args.len();
                         infer_matrix_dimensions(total_args)
@@ -2068,6 +2185,24 @@ pub fn build_default_context() -> GlyphContext {
     latex_templates.insert("trace".to_string(), "\\mathrm{Tr}({arg})".to_string());
     latex_templates.insert("inverse".to_string(), "{arg}^{-1}".to_string());
 
+    // Generic matrix constructors (new system)
+    latex_templates.insert(
+        "Matrix".to_string(),
+        "\\begin{bmatrix}{args}\\end{bmatrix}".to_string(),
+    );
+    latex_templates.insert(
+        "PMatrix".to_string(),
+        "\\begin{pmatrix}{args}\\end{pmatrix}".to_string(),
+    );
+    latex_templates.insert(
+        "VMatrix".to_string(),
+        "\\begin{vmatrix}{args}\\end{vmatrix}".to_string(),
+    );
+    latex_templates.insert(
+        "BMatrix".to_string(),
+        "\\begin{bmatrix}{args}\\end{bmatrix}".to_string(),
+    );
+
     // === Batch 3: Completeness Operations - LaTeX ===
 
     // Phase A: Quick wins
@@ -2856,6 +2991,24 @@ pub fn build_default_context() -> GlyphContext {
     typst_templates.insert(
         "matrix2x2".to_string(),
         "mat(delim: \"[\", {a11} , {a12} ; {a21} , {a22})".to_string(),
+    );
+
+    // Generic matrix constructors (new system)
+    typst_templates.insert(
+        "Matrix".to_string(),
+        "mat(delim: \"[\", {args})".to_string(),
+    );
+    typst_templates.insert(
+        "PMatrix".to_string(),
+        "mat(delim: \"(\", {args})".to_string(),
+    );
+    typst_templates.insert(
+        "VMatrix".to_string(),
+        "mat(delim: \"|\", {args})".to_string(),
+    );
+    typst_templates.insert(
+        "BMatrix".to_string(),
+        "mat(delim: \"[\", {args})".to_string(),
     );
     typst_templates.insert(
         "matrix3x3".to_string(),
