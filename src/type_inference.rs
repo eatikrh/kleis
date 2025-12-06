@@ -399,12 +399,25 @@ impl TypeInference {
             {
                 // Extract dimensions from operation name
                 if let Some((rows, cols)) = parse_matrix_dimensions_from_op_name(name) {
-                    // All matrix elements must be scalars
+                    // Infer element types (may be placeholders or scalars)
+                    // But we KNOW the overall matrix type from the operation name!
                     for arg in args {
                         let ty = self.infer(arg)?;
-                        self.add_constraint(ty, Type::Scalar);
+                        // Don't add constraint if it's a placeholder (type variable)
+                        // Placeholders can be filled with anything
+                        match ty {
+                            Type::Var(_) => {
+                                // It's a placeholder, skip constraint
+                            }
+                            _ => {
+                                // It's a concrete value, should be scalar
+                                self.add_constraint(ty, Type::Scalar);
+                            }
+                        }
                     }
 
+                    // Return matrix type based on operation name
+                    // Even if elements are placeholders!
                     Ok(Type::Matrix(rows, cols))
                 } else {
                     // Couldn't parse dimensions, treat as unknown
