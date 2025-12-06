@@ -32,7 +32,15 @@ pub enum TopLevel {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructureDef {
     pub name: String,
+    pub type_params: Vec<TypeParam>,  // e.g., (m: Nat, n: Nat, T)
     pub members: Vec<StructureMember>,
+}
+
+/// Type parameter for structures
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeParam {
+    pub name: String,
+    pub kind: Option<String>,  // e.g., "Nat" for natural number parameters
 }
 
 /// Structure member (field, operation, or axiom)
@@ -77,11 +85,11 @@ pub struct TypeAlias {
     pub type_expr: TypeExpr,
 }
 
-/// Implements definition: implements StructureName(Type) { members }
+/// Implements definition: implements StructureName(Type, ...) { members }
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImplementsDef {
     pub structure_name: String,
-    pub type_arg: TypeExpr,
+    pub type_args: Vec<TypeExpr>,  // Changed from single type_arg to multiple
     pub members: Vec<ImplMember>,
 }
 

@@ -188,8 +188,12 @@ impl TypeContextBuilder {
             .get(&impl_def.structure_name)
             .ok_or_else(|| format!("Unknown structure: {}", impl_def.structure_name))?;
 
-        // Extract type name from type_arg
-        let type_name = self.type_expr_to_string(&impl_def.type_arg);
+        // Extract type name from type_args (use first arg for now, TODO: handle multiple)
+        let type_name = if let Some(first_arg) = impl_def.type_args.first() {
+            self.type_expr_to_string(first_arg)
+        } else {
+            return Err(format!("Implements block for {} has no type arguments", impl_def.structure_name));
+        };
 
         // Register each operation implementation
         for member in &impl_def.members {

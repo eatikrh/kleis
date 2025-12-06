@@ -457,26 +457,50 @@ impl KleisParser {
         let name = self.parse_identifier()?;
         self.skip_whitespace();
 
-        // Optional type parameters: (N) or (M, N)
-        if self.peek() == Some('(') {
+        // Optional type parameters: (N) or (m: Nat, n: Nat, T)
+        let type_params = if self.peek() == Some('(') {
             self.advance();
-            // Skip type parameters for now (TODO: parse and store them)
-            let mut depth = 1;
-            while depth > 0 {
-                match self.advance() {
-                    Some('(') => depth += 1,
-                    Some(')') => depth -= 1,
-                    Some(_) => {}
-                    None => {
-                        return Err(KleisParseError {
-                            message: "Unclosed type parameters".to_string(),
-                            position: self.pos,
-                        });
-                    }
+            self.skip_whitespace();
+            
+            let mut params = Vec::new();
+            
+            while self.peek() != Some(')') {
+                let param_name = self.parse_identifier()?;
+                self.skip_whitespace();
+                
+                // Optional kind annotation: m: Nat
+                let kind = if self.peek() == Some(':') {
+                    self.advance();
+                    self.skip_whitespace();
+                    Some(self.parse_identifier()?)
+                } else {
+                    None
+                };
+                
+                params.push(crate::kleis_ast::TypeParam {
+                    name: param_name,
+                    kind,
+                });
+                
+                self.skip_whitespace();
+                if self.peek() == Some(',') {
+                    self.advance();
+                    self.skip_whitespace();
                 }
             }
+            
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after type parameters".to_string(),
+                    position: self.pos,
+                });
+            }
+            
             self.skip_whitespace();
-        }
+            params
+        } else {
+            Vec::new()
+        };
 
         // Expect '{'
         if self.advance() != Some('{') {
@@ -535,7 +559,11 @@ impl KleisParser {
             });
         }
 
-        Ok(StructureDef { name, members })
+        Ok(StructureDef {
+            name,
+            type_params,
+            members,
+        })
     }
 
     fn peek_word(&self, word: &str) -> bool {
@@ -640,7 +668,7 @@ impl KleisParser {
         let structure_name = self.parse_identifier()?;
         self.skip_whitespace();
 
-        // Parse type argument: (ℝ) or (Vector(n))
+        // Parse type arguments: (ℝ) or (m, n, ℝ) or (Vector(n))
         if self.advance() != Some('(') {
             return Err(KleisParseError {
                 message: "Expected '(' after structure name".to_string(),
@@ -648,12 +676,22 @@ impl KleisParser {
             });
         }
 
-        let type_arg = self.parse_type()?;
+        let mut type_args = Vec::new();
         self.skip_whitespace();
+        
+        while self.peek() != Some(')') {
+            type_args.push(self.parse_type()?);
+            self.skip_whitespace();
+            
+            if self.peek() == Some(',') {
+                self.advance();
+                self.skip_whitespace();
+            }
+        }
 
         if self.advance() != Some(')') {
             return Err(KleisParseError {
-                message: "Expected ')' after type argument".to_string(),
+                message: "Expected ')' after type arguments".to_string(),
                 position: self.pos,
             });
         }
@@ -688,7 +726,7 @@ impl KleisParser {
 
         Ok(ImplementsDef {
             structure_name,
-            type_arg,
+            type_args,
             members,
         })
     }

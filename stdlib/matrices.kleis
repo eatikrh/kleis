@@ -1,0 +1,31 @@
+structure Matrix(m: Nat, n: Nat, T) {
+    operation transpose : Matrix(n, m, T)
+}
+
+structure MatrixAddable(m: Nat, n: Nat, T) {
+    operation add : Matrix(m, n, T)
+}
+
+implements MatrixAddable(m, n, ℝ) {
+    operation add = builtin_matrix_add
+}
+
+structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
+    operation multiply : Matrix(m, p, T)
+}
+
+implements MatrixMultipliable(m, n, p, ℝ) {
+    operation multiply = builtin_matrix_multiply
+}
+
+structure SquareMatrix(n: Nat, T) {
+    operation det : T
+    operation trace : T
+    operation identity : Matrix(n, n, T)
+}
+
+implements SquareMatrix(n, ℝ) {
+    operation det = builtin_determinant
+    operation trace = builtin_trace
+    operation identity = builtin_identity
+}
