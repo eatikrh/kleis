@@ -91,12 +91,48 @@ impl KleisParser {
     }
 
     fn skip_whitespace(&mut self) {
-        while let Some(ch) = self.peek() {
-            if ch.is_whitespace() {
-                self.advance();
-            } else {
-                break;
+        loop {
+            // Skip whitespace characters
+            while let Some(ch) = self.peek() {
+                if ch.is_whitespace() {
+                    self.advance();
+                } else {
+                    break;
+                }
             }
+            
+            // Skip comments
+            if self.peek() == Some('/') {
+                if self.peek_ahead(1) == Some('/') {
+                    // Line comment: skip until newline
+                    self.advance(); // /
+                    self.advance(); // /
+                    while let Some(ch) = self.peek() {
+                        if ch == '\n' {
+                            self.advance(); // consume newline
+                            break;
+                        }
+                        self.advance();
+                    }
+                    continue; // Re-check for more whitespace/comments
+                } else if self.peek_ahead(1) == Some('*') {
+                    // Block comment: skip until */
+                    self.advance(); // /
+                    self.advance(); // *
+                    while let Some(ch) = self.peek() {
+                        if ch == '*' && self.peek_ahead(1) == Some('/') {
+                            self.advance(); // *
+                            self.advance(); // /
+                            break;
+                        }
+                        self.advance();
+                    }
+                    continue; // Re-check for more whitespace/comments
+                }
+            }
+            
+            // No more whitespace or comments
+            break;
         }
     }
 

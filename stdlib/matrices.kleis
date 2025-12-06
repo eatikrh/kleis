@@ -1,7 +1,17 @@
+// Kleis Standard Library - Matrices
+// Defines matrix structures and operations following ADR-016
+//
+// Matrices are parametric over:
+//   m: number of rows (Nat)
+//   n: number of columns (Nat)
+//   T: element type (typically ℝ or ℂ)
+
+/* Matrix Structure */
 structure Matrix(m: Nat, n: Nat, T) {
     operation transpose : Matrix(n, m, T)
 }
 
+/* Matrix Addition - Only when dimensions match */
 structure MatrixAddable(m: Nat, n: Nat, T) {
     operation add : Matrix(m, n, T)
 }
@@ -10,6 +20,7 @@ implements MatrixAddable(m, n, ℝ) {
     operation add = builtin_matrix_add
 }
 
+/* Matrix Multiplication - (m×n) · (n×p) → (m×p) */
 structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
     operation multiply : Matrix(m, p, T)
 }
@@ -18,6 +29,7 @@ implements MatrixMultipliable(m, n, p, ℝ) {
     operation multiply = builtin_matrix_multiply
 }
 
+/* Square Matrices - Additional operations for n×n matrices */
 structure SquareMatrix(n: Nat, T) {
     operation det : T
     operation trace : T
