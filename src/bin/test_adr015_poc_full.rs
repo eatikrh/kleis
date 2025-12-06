@@ -6,7 +6,6 @@
 ///! 3. (Conceptual) rendering to visual form
 ///!
 ///! Uses the actual Kleis text parser to validate ADR-015 decisions.
-
 use kleis::ast::Expression;
 use kleis::kleis_parser::parse_kleis;
 
@@ -83,11 +82,11 @@ fn main() {
 
 fn test_parse(text: &str, expected_op: &str, expected_args: usize, visual: &str) -> bool {
     println!("  Text:   {}", text);
-    
+
     match parse_kleis(text) {
         Ok(ast) => {
             println!("  AST:    {:?}", ast);
-            
+
             match ast {
                 Expression::Operation { name, args } => {
                     if name == expected_op && args.len() == expected_args {
@@ -95,8 +94,13 @@ fn test_parse(text: &str, expected_op: &str, expected_args: usize, visual: &str)
                         println!("  ✓ Parsed correctly: '{}' with {} args", name, args.len());
                         true
                     } else {
-                        println!("  ❌ Expected operation '{}' with {} args, got '{}' with {} args",
-                                 expected_op, expected_args, name, args.len());
+                        println!(
+                            "  ❌ Expected operation '{}' with {} args, got '{}' with {} args",
+                            expected_op,
+                            expected_args,
+                            name,
+                            args.len()
+                        );
                         false
                     }
                 }
@@ -118,7 +122,7 @@ fn test_division_vs_fraction() -> bool {
     let division_text = "a / b";
     println!("  Division:");
     println!("    Text:   {}", division_text);
-    
+
     let div_result = match parse_kleis(division_text) {
         Ok(ast) => {
             println!("    AST:    {:?}", ast);
@@ -146,7 +150,7 @@ fn test_division_vs_fraction() -> bool {
     let fraction_text = "frac(a, b)";
     println!("  Fraction:");
     println!("    Text:   {}", fraction_text);
-    
+
     let frac_result = match parse_kleis(fraction_text) {
         Ok(ast) => {
             println!("    AST:    {:?}", ast);
@@ -180,15 +184,17 @@ fn test_division_vs_fraction() -> bool {
 fn test_nested() -> bool {
     let text = "abs(frac(a, b))";
     println!("  Text:   {}", text);
-    
+
     match parse_kleis(text) {
         Ok(ast) => {
             println!("  AST:    {:?}", ast);
-            
+
             match ast {
                 Expression::Operation { name, args } if name == "abs" && args.len() == 1 => {
                     match &args[0] {
-                        Expression::Operation { name, args } if name == "frac" && args.len() == 2 => {
+                        Expression::Operation { name, args }
+                            if name == "frac" && args.len() == 2 =>
+                        {
                             println!("  Visual: |a/b|  or  |a─b|");
                             println!("  ✓ Nesting works: abs( frac(...) )");
                             println!("  ✓ Unambiguous at every level");
@@ -216,12 +222,12 @@ fn test_nested() -> bool {
 fn test_complex() -> bool {
     let text = "abs(x + y) / norm(v)";
     println!("  Text:   {}", text);
-    
+
     match parse_kleis(text) {
         Ok(ast) => {
             println!("  AST:    {:?}", ast);
             println!("  Visual: |x + y| / ‖v‖");
-            
+
             match ast {
                 Expression::Operation { name, .. } if name == "divide" => {
                     println!("  ✓ Complex expression parsed correctly");
@@ -256,4 +262,3 @@ fn demonstrate_rejection() {
     println!("  Note: Visual display can still use |x| notation!");
     println!("        The RENDERER converts abs(x) → |x| for display");
 }
-

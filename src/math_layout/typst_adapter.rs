@@ -244,7 +244,7 @@ mod tests {
 
     // TODO(2024-12-06): Placeholder conversion tests failing - needs typst_adapter refactor
     // These tests have outdated expectations for placeholder markers
-    
+
     #[test]
     #[ignore = "TODO: Fix placeholder conversion - outdated expectations"]
     fn test_convert_placeholder() {

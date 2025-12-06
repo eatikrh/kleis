@@ -3302,7 +3302,7 @@ mod tests {
 
     // TODO(2024-12-06): Some LaTeX rendering tests have outdated expectations
     // These may need updates to match current renderer output
-    
+
     #[test]
     #[ignore = "TODO: Fix inner product LaTeX rendering - outdated expectations"]
     fn renders_inner_product_latex() {

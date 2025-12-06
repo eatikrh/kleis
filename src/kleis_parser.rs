@@ -34,12 +34,10 @@
 ///!   arguments := expression (',' expression)*
 ///!
 ///! **Purpose:** Validate ADR-015 design decisions, not production-ready!
-
 use crate::ast::Expression;
 use crate::kleis_ast::{
-    TopLevel, StructureDef, StructureMember, OperationDecl, 
-    ImplementsDef, ImplMember, Implementation,
-    TypeExpr, Program
+    ImplMember, Implementation, ImplementsDef, OperationDecl, Program, StructureDef,
+    StructureMember, TopLevel, TypeExpr,
 };
 use std::fmt;
 
@@ -104,7 +102,7 @@ impl KleisParser {
 
     fn parse_identifier(&mut self) -> Result<String, KleisParseError> {
         let start = self.pos;
-        
+
         // First character must be letter or underscore
         match self.peek() {
             Some(ch) if ch.is_alphabetic() || ch == '_' => {
@@ -221,7 +219,10 @@ impl KleisParser {
         }
 
         // Identifier or function call
-        if self.peek().map_or(false, |ch| ch.is_alphabetic() || ch == '_') {
+        if self
+            .peek()
+            .map_or(false, |ch| ch.is_alphabetic() || ch == '_')
+        {
             let id = self.parse_identifier()?;
             self.skip_whitespace();
 
@@ -326,35 +327,35 @@ impl KleisParser {
 
         Ok(expr)
     }
-    
+
     /// Parse a type expression
     /// Examples: ℝ, Vector(3), Set(ℤ), ℝ → ℝ
     pub fn parse_type(&mut self) -> Result<TypeExpr, KleisParseError> {
         self.skip_whitespace();
-        
+
         // Parse base type - could be identifier or number (for dimension literals)
         let base_name = if self.peek().map_or(false, |ch| ch.is_numeric()) {
             self.parse_number()?
         } else {
             self.parse_identifier()?
         };
-        
+
         self.skip_whitespace();
-        
+
         let mut ty = if self.peek() == Some('(') {
             // Parametric type: Vector(3), Set(ℤ)
             self.advance(); // consume '('
             let mut params = Vec::new();
-            
+
             loop {
                 self.skip_whitespace();
                 if self.peek() == Some(')') {
                     break;
                 }
-                
+
                 params.push(self.parse_type()?);
                 self.skip_whitespace();
-                
+
                 if self.peek() == Some(',') {
                     self.advance();
                 } else if self.peek() == Some(')') {
@@ -366,22 +367,23 @@ impl KleisParser {
                     });
                 }
             }
-            
+
             if self.advance() != Some(')') {
                 return Err(KleisParseError {
                     message: "Expected ')'".to_string(),
                     position: self.pos,
                 });
             }
-            
+
             TypeExpr::Parametric(base_name, params)
         } else {
             TypeExpr::Named(base_name)
         };
-        
+
         // Check for function type: T1 → T2 or T1 -> T2
         self.skip_whitespace();
-        if self.peek() == Some('→') || (self.peek() == Some('-') && self.peek_ahead(1) == Some('>')) {
+        if self.peek() == Some('→') || (self.peek() == Some('-') && self.peek_ahead(1) == Some('>'))
+        {
             // Consume arrow
             if self.peek() == Some('→') {
                 self.advance();
@@ -389,11 +391,11 @@ impl KleisParser {
                 self.advance(); // -
                 self.advance(); // >
             }
-            
+
             let return_type = self.parse_type()?;
             ty = TypeExpr::Function(Box::new(ty), Box::new(return_type));
         }
-        
+
         // Check for × (product type for multi-arg functions)
         self.skip_whitespace();
         if self.peek() == Some('×') {
@@ -405,10 +407,10 @@ impl KleisParser {
             }
             ty = TypeExpr::Product(product_types);
         }
-        
+
         Ok(ty)
     }
-    
+
     fn peek_ahead(&self, offset: usize) -> Option<char> {
         let pos = self.pos + offset;
         if pos < self.input.len() {
@@ -417,34 +419,31 @@ impl KleisParser {
             None
         }
     }
-    
+
     /// Parse structure member
     fn parse_structure_member(&mut self) -> Result<StructureMember, KleisParseError> {
         self.skip_whitespace();
         let name = self.parse_identifier()?;
         self.skip_whitespace();
-        
+
         if self.advance() != Some(':') {
             return Err(KleisParseError {
                 message: "Expected ':' after member name".to_string(),
                 position: self.pos,
             });
         }
-        
+
         let type_expr = self.parse_type()?;
-        
-        Ok(StructureMember::Field {
-            name,
-            type_expr,
-        })
+
+        Ok(StructureMember::Field { name, type_expr })
     }
-    
+
     /// Parse structure definition
     /// Example: structure Money { amount : ℝ }
     /// Or: structure Numeric(N) { operation abs : N → N }
     pub fn parse_structure(&mut self) -> Result<StructureDef, KleisParseError> {
         self.skip_whitespace();
-        
+
         // Expect 'structure' keyword
         let keyword = self.parse_identifier()?;
         if keyword != "structure" {
@@ -453,11 +452,11 @@ impl KleisParser {
                 position: self.pos,
             });
         }
-        
+
         self.skip_whitespace();
         let name = self.parse_identifier()?;
         self.skip_whitespace();
-        
+
         // Optional type parameters: (N) or (M, N)
         if self.peek() == Some('(') {
             self.advance();
@@ -467,7 +466,7 @@ impl KleisParser {
                 match self.advance() {
                     Some('(') => depth += 1,
                     Some(')') => depth -= 1,
-                    Some(_) => {},
+                    Some(_) => {}
                     None => {
                         return Err(KleisParseError {
                             message: "Unclosed type parameters".to_string(),
@@ -478,7 +477,7 @@ impl KleisParser {
             }
             self.skip_whitespace();
         }
-        
+
         // Expect '{'
         if self.advance() != Some('{') {
             return Err(KleisParseError {
@@ -486,16 +485,16 @@ impl KleisParser {
                 position: self.pos,
             });
         }
-        
+
         // Parse members
         let mut members = Vec::new();
         loop {
             self.skip_whitespace();
-            
+
             if self.peek() == Some('}') {
                 break;
             }
-            
+
             // Check for operation keyword
             let start_pos = self.pos;
             if self.peek_word("operation") {
@@ -504,19 +503,19 @@ impl KleisParser {
                     self.advance();
                 }
                 self.skip_whitespace();
-                
+
                 let op_name = self.parse_identifier()?;
                 self.skip_whitespace();
-                
+
                 if self.advance() != Some(':') {
                     return Err(KleisParseError {
                         message: "Expected ':' after operation name".to_string(),
                         position: self.pos,
                     });
                 }
-                
+
                 let type_sig = self.parse_type()?;
-                
+
                 members.push(StructureMember::Operation {
                     name: op_name,
                     type_signature: type_sig,
@@ -527,7 +526,7 @@ impl KleisParser {
                 members.push(self.parse_structure_member()?);
             }
         }
-        
+
         // Expect '}'
         if self.advance() != Some('}') {
             return Err(KleisParseError {
@@ -535,10 +534,10 @@ impl KleisParser {
                 position: self.pos,
             });
         }
-        
+
         Ok(StructureDef { name, members })
     }
-    
+
     fn peek_word(&self, word: &str) -> bool {
         let word_chars: Vec<char> = word.chars().collect();
         for (i, ch) in word_chars.iter().enumerate() {
@@ -553,12 +552,12 @@ impl KleisParser {
             true
         }
     }
-    
+
     /// Parse operation declaration (top-level)
     /// Example: operation abs : ℝ → ℝ
     pub fn parse_operation_decl(&mut self) -> Result<OperationDecl, KleisParseError> {
         self.skip_whitespace();
-        
+
         // Expect 'operation' keyword
         let keyword = self.parse_identifier()?;
         if keyword != "operation" {
@@ -567,9 +566,9 @@ impl KleisParser {
                 position: self.pos,
             });
         }
-        
+
         self.skip_whitespace();
-        
+
         // Parse operation name (could be symbol like (+) or identifier)
         let name = if self.peek() == Some('(') {
             // Operator in parens: (+)
@@ -602,9 +601,9 @@ impl KleisParser {
         } else {
             self.parse_identifier()?
         };
-        
+
         self.skip_whitespace();
-        
+
         // Expect ':'
         if self.advance() != Some(':') {
             return Err(KleisParseError {
@@ -612,20 +611,20 @@ impl KleisParser {
                 position: self.pos,
             });
         }
-        
+
         let type_signature = self.parse_type()?;
-        
+
         Ok(OperationDecl {
             name,
             type_signature,
         })
     }
-    
+
     /// Parse implements block
     /// Example: implements Numeric(ℝ) { operation abs = builtin_abs }
     pub fn parse_implements(&mut self) -> Result<ImplementsDef, KleisParseError> {
         self.skip_whitespace();
-        
+
         // Expect 'implements' keyword
         let keyword = self.parse_identifier()?;
         if keyword != "implements" {
@@ -634,13 +633,13 @@ impl KleisParser {
                 position: self.pos,
             });
         }
-        
+
         self.skip_whitespace();
-        
+
         // Parse structure name
         let structure_name = self.parse_identifier()?;
         self.skip_whitespace();
-        
+
         // Parse type argument: (ℝ) or (Vector(n))
         if self.advance() != Some('(') {
             return Err(KleisParseError {
@@ -648,19 +647,19 @@ impl KleisParser {
                 position: self.pos,
             });
         }
-        
+
         let type_arg = self.parse_type()?;
         self.skip_whitespace();
-        
+
         if self.advance() != Some(')') {
             return Err(KleisParseError {
                 message: "Expected ')' after type argument".to_string(),
                 position: self.pos,
             });
         }
-        
+
         self.skip_whitespace();
-        
+
         // Parse members in { }
         if self.advance() != Some('{') {
             return Err(KleisParseError {
@@ -668,52 +667,52 @@ impl KleisParser {
                 position: self.pos,
             });
         }
-        
+
         let mut members = Vec::new();
         loop {
             self.skip_whitespace();
-            
+
             if self.peek() == Some('}') {
                 break;
             }
-            
+
             members.push(self.parse_impl_member()?);
         }
-        
+
         if self.advance() != Some('}') {
             return Err(KleisParseError {
                 message: "Expected '}'".to_string(),
                 position: self.pos,
             });
         }
-        
+
         Ok(ImplementsDef {
             structure_name,
             type_arg,
             members,
         })
     }
-    
+
     fn parse_impl_member(&mut self) -> Result<ImplMember, KleisParseError> {
         self.skip_whitespace();
         let keyword = self.parse_identifier()?;
         self.skip_whitespace();
-        
+
         match keyword.as_str() {
             "element" => {
                 // element zero = 0
                 let name = self.parse_identifier()?;
                 self.skip_whitespace();
-                
+
                 if self.advance() != Some('=') {
                     return Err(KleisParseError {
                         message: "Expected '=' after element name".to_string(),
                         position: self.pos,
                     });
                 }
-                
+
                 let value = self.parse_expression()?;
-                
+
                 Ok(ImplMember::Element { name, value })
             }
             "operation" => {
@@ -721,20 +720,20 @@ impl KleisParser {
                 // or operation abs(x) = x^2
                 let name = self.parse_identifier()?;
                 self.skip_whitespace();
-                
+
                 if self.advance() != Some('=') {
                     return Err(KleisParseError {
                         message: "Expected '=' after operation name".to_string(),
                         position: self.pos,
                     });
                 }
-                
+
                 self.skip_whitespace();
-                
+
                 // Check if next is identifier (builtin) or expression
                 // For now, assume builtin (TODO: handle inline definitions)
                 let builtin_name = self.parse_identifier()?;
-                
+
                 Ok(ImplMember::Operation {
                     name,
                     implementation: Implementation::Builtin(builtin_name),
@@ -743,21 +742,21 @@ impl KleisParser {
             _ => Err(KleisParseError {
                 message: format!("Expected 'element' or 'operation', got '{}'", keyword),
                 position: self.pos,
-            })
+            }),
         }
     }
-    
+
     /// Parse a complete program (multiple top-level items)
     pub fn parse_program(&mut self) -> Result<Program, KleisParseError> {
         let mut program = Program::new();
-        
+
         loop {
             self.skip_whitespace();
-            
+
             if self.pos >= self.input.len() {
                 break;
             }
-            
+
             // Peek at next keyword
             if self.peek_word("structure") {
                 let structure = self.parse_structure()?;
@@ -775,7 +774,7 @@ impl KleisParser {
                 });
             }
         }
-        
+
         Ok(program)
     }
 }
@@ -879,15 +878,15 @@ mod tests {
             _ => panic!("Expected Operation"),
         }
     }
-    
+
     // Tests for new features (structures, types, programs)
-    
+
     #[test]
     fn test_parse_simple_type() {
         let result = parse_type_expr("ℝ").unwrap();
         assert_eq!(result, TypeExpr::Named("ℝ".to_string()));
     }
-    
+
     #[test]
     fn test_parse_parametric_type() {
         let result = parse_type_expr("Vector(3)").unwrap();
@@ -900,7 +899,7 @@ mod tests {
             _ => panic!("Expected Parametric"),
         }
     }
-    
+
     #[test]
     fn test_parse_function_type() {
         let result = parse_type_expr("ℝ → ℝ").unwrap();
@@ -912,26 +911,26 @@ mod tests {
             _ => panic!("Expected Function"),
         }
     }
-    
+
     #[test]
     fn test_parse_operation_decl() {
         let code = "operation abs : ℝ → ℝ";
         let mut parser = KleisParser::new(code);
         let result = parser.parse_operation_decl().unwrap();
-        
+
         assert_eq!(result.name, "abs");
         assert!(matches!(result.type_signature, TypeExpr::Function(_, _)));
     }
-    
+
     #[test]
     fn test_parse_structure_simple() {
         let code = "structure Money { amount : ℝ }";
         let mut parser = KleisParser::new(code);
         let result = parser.parse_structure().unwrap();
-        
+
         assert_eq!(result.name, "Money");
         assert_eq!(result.members.len(), 1);
-        
+
         match &result.members[0] {
             StructureMember::Field { name, type_expr } => {
                 assert_eq!(name, "amount");
@@ -940,27 +939,27 @@ mod tests {
             _ => panic!("Expected Field"),
         }
     }
-    
+
     #[test]
     fn test_parse_structure_multiple_fields() {
         let code = "structure Money { amount : ℝ currency : String }";
         let mut parser = KleisParser::new(code);
         let result = parser.parse_structure().unwrap();
-        
+
         assert_eq!(result.name, "Money");
         assert_eq!(result.members.len(), 2);
     }
-    
+
     #[test]
     fn test_parse_program_with_operations() {
         let code = r#"
             operation abs : ℝ → ℝ
             operation card : Set(ℤ) → ℕ
         "#;
-        
+
         let result = parse_kleis_program(code).unwrap();
         assert_eq!(result.items.len(), 2);
-        
+
         // Check first operation
         match &result.items[0] {
             TopLevel::OperationDecl(op) => {
@@ -969,7 +968,7 @@ mod tests {
             _ => panic!("Expected OperationDecl"),
         }
     }
-    
+
     #[test]
     fn test_parse_program_with_structure() {
         let code = r#"
@@ -980,10 +979,10 @@ mod tests {
             
             operation (+) : Money → Money
         "#;
-        
+
         let result = parse_kleis_program(code).unwrap();
         assert_eq!(result.items.len(), 2);
-        
+
         // Check structure
         match &result.items[0] {
             TopLevel::StructureDef(s) => {
@@ -992,7 +991,7 @@ mod tests {
             }
             _ => panic!("Expected StructureDef"),
         }
-        
+
         // Check operation
         match &result.items[1] {
             TopLevel::OperationDecl(op) => {
@@ -1001,26 +1000,29 @@ mod tests {
             _ => panic!("Expected OperationDecl"),
         }
     }
-    
+
     #[test]
     fn test_parse_implements_simple() {
         let code = "implements Numeric(ℝ) { operation abs = builtin_abs }";
         let mut parser = KleisParser::new(code);
         let result = parser.parse_implements().unwrap();
-        
+
         assert_eq!(result.structure_name, "Numeric");
         assert_eq!(result.type_arg, TypeExpr::Named("ℝ".to_string()));
         assert_eq!(result.members.len(), 1);
-        
+
         match &result.members[0] {
-            ImplMember::Operation { name, implementation } => {
+            ImplMember::Operation {
+                name,
+                implementation,
+            } => {
                 assert_eq!(name, "abs");
                 assert!(matches!(implementation, Implementation::Builtin(_)));
             }
             _ => panic!("Expected Operation"),
         }
     }
-    
+
     #[test]
     fn test_parse_implements_multiple_members() {
         let code = r#"
@@ -1030,12 +1032,12 @@ mod tests {
                 operation floor = builtin_floor
             }
         "#;
-        
+
         let mut parser = KleisParser::new(code);
         let result = parser.parse_implements().unwrap();
-        
+
         assert_eq!(result.members.len(), 3);
-        
+
         // Check element
         match &result.members[0] {
             ImplMember::Element { name, .. } => {
@@ -1043,7 +1045,7 @@ mod tests {
             }
             _ => panic!("Expected Element"),
         }
-        
+
         // Check operations
         match &result.members[1] {
             ImplMember::Operation { name, .. } => {
@@ -1052,7 +1054,7 @@ mod tests {
             _ => panic!("Expected Operation"),
         }
     }
-    
+
     #[test]
     fn test_parse_program_with_structure_and_implements() {
         let code = r#"
@@ -1064,10 +1066,10 @@ mod tests {
                 operation abs = builtin_abs
             }
         "#;
-        
+
         let result = parse_kleis_program(code).unwrap();
         assert_eq!(result.items.len(), 2);
-        
+
         // Check structure
         match &result.items[0] {
             TopLevel::StructureDef(s) => {
@@ -1075,7 +1077,7 @@ mod tests {
             }
             _ => panic!("Expected StructureDef"),
         }
-        
+
         // Check implements
         match &result.items[1] {
             TopLevel::ImplementsDef(impl_def) => {
@@ -1084,13 +1086,12 @@ mod tests {
             }
             _ => panic!("Expected ImplementsDef"),
         }
-        
+
         // Use helper methods
         let structures = result.structures();
         let implements = result.implements();
-        
+
         assert_eq!(structures.len(), 1);
         assert_eq!(implements.len(), 1);
     }
 }
-

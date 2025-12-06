@@ -4,7 +4,6 @@
 ///! - structure defines abstract operations
 ///! - implements binds operations to concrete types
 ///! - Ready for type context building!
-
 use kleis::kleis_parser::parse_kleis_program;
 
 fn main() {
@@ -54,40 +53,47 @@ fn test_numeric_pattern() {
             operation abs = builtin_abs_real
         }
     "#;
-    
+
     println!("Input:");
     println!("{}", code);
-    
+
     match parse_kleis_program(code) {
         Ok(program) => {
             println!("✅ Parsed successfully!");
-            
+
             let structures = program.structures();
             println!("\nStructure: {}", structures[0].name);
             println!("  Declares:");
             for member in &structures[0].members {
                 match member {
-                    kleis::kleis_ast::StructureMember::Operation { name, type_signature } => {
+                    kleis::kleis_ast::StructureMember::Operation {
+                        name,
+                        type_signature,
+                    } => {
                         println!("    operation {} : {:?}", name, type_signature);
                     }
                     _ => {}
                 }
             }
-            
+
             let implements = program.implements();
-            println!("\nImplements: {} for {:?}", 
-                     implements[0].structure_name,
-                     implements[0].type_arg);
+            println!(
+                "\nImplements: {} for {:?}",
+                implements[0].structure_name, implements[0].type_arg
+            );
             println!("  Provides:");
             for member in &implements[0].members {
                 match member {
-                    kleis::kleis_ast::ImplMember::Operation { name, implementation } => {
+                    kleis::kleis_ast::ImplMember::Operation {
+                        name,
+                        implementation,
+                    } => {
                         println!("    operation {} = {:?}", name, implementation);
                     }
                     _ => {}
                 }
             }
-            
+
             println!("\n✓ Structure defines WHAT operations exist");
             println!("✓ Implements defines HOW they work for ℝ");
             println!("✓ Conceptually pure: abs belongs to Numeric types!");
@@ -112,24 +118,27 @@ fn test_polymorphic() {
             operation abs = complex_modulus
         }
     "#;
-    
+
     println!("Input: Numeric structure with 2 implementations");
-    
+
     match parse_kleis_program(code) {
         Ok(program) => {
             println!("✅ Parsed successfully!");
-            
+
             let structures = program.structures();
             let implements = program.implements();
-            
+
             println!("\nStructure: {} (abstract)", structures[0].name);
             println!("  operation abs : N → N");
-            
+
             println!("\nImplementations: {}", implements.len());
             for impl_def in implements {
-                println!("  - {} for {:?}", impl_def.structure_name, impl_def.type_arg);
+                println!(
+                    "  - {} for {:?}",
+                    impl_def.structure_name, impl_def.type_arg
+                );
             }
-            
+
             println!("\n✓ abs is POLYMORPHIC!");
             println!("✓ Works for any type that implements Numeric");
             println!("✓ Currently: ℝ and ℂ");
@@ -173,9 +182,9 @@ fn test_complete_stdlib() {
         
         operation frac : ℝ × ℝ → ℝ
     "#;
-    
+
     println!("Input: Complete stdlib pattern (3 structures, 4 implements, 1 top-level)");
-    
+
     match parse_kleis_program(code) {
         Ok(program) => {
             println!("✅ Parsed successfully!");
@@ -183,22 +192,25 @@ fn test_complete_stdlib() {
             println!("  Structures: {}", program.structures().len());
             println!("  Implements: {}", program.implements().len());
             println!("  Top-level operations: {}", program.operations().len());
-            
+
             println!("\nStructures (abstract):");
             for s in program.structures() {
                 println!("  - {}", s.name);
             }
-            
+
             println!("\nImplements (concrete):");
             for impl_def in program.implements() {
-                println!("  - {} for {:?}", impl_def.structure_name, impl_def.type_arg);
+                println!(
+                    "  - {} for {:?}",
+                    impl_def.structure_name, impl_def.type_arg
+                );
             }
-            
+
             println!("\nTop-level operations (utilities):");
             for op in program.operations() {
                 println!("  - {} (display mode hint)", op.name);
             }
-            
+
             println!("\n✓ Complete pattern works!");
             println!("✓ Operations in structures (Numeric, Finite, NormedSpace)");
             println!("✓ Implementations for concrete types (ℝ, ℂ, Set, Vector)");
@@ -210,4 +222,3 @@ fn test_complete_stdlib() {
         }
     }
 }
-

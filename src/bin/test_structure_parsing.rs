@@ -7,7 +7,6 @@
 ///! 4. Query operation support
 ///!
 ///! This demonstrates the full integration!
-
 use kleis::kleis_parser::parse_kleis_program;
 use kleis::type_checker::TypeChecker;
 
@@ -58,31 +57,40 @@ fn test_with_type_context() {
             operation abs = complex_modulus
         }
     "#;
-    
+
     println!("Input: Numeric structure with 2 implements");
-    
+
     // Step 1: Parse
     let program = parse_kleis_program(code).unwrap();
     println!("✅ Step 1: Parsed");
     println!("   - 1 structure");
     println!("   - 2 implements");
-    
+
     // Step 2: Build type checker
     match TypeChecker::from_program(program) {
         Ok(checker) => {
             println!("✅ Step 2: Type checker built");
-            
+
             // Step 3: Query support
             let types = checker.types_supporting("abs");
             println!("✅ Step 3: Query operations");
             println!("   Which types support 'abs'? {}", types.join(", "));
-            
+
             // Step 4: Check specific combinations
             println!("✅ Step 4: Check support");
-            println!("   ℝ supports abs? {}", checker.type_supports_operation("ℝ", "abs"));
-            println!("   ℂ supports abs? {}", checker.type_supports_operation("ℂ", "abs"));
-            println!("   ℝ supports card? {}", checker.type_supports_operation("ℝ", "card"));
-            
+            println!(
+                "   ℝ supports abs? {}",
+                checker.type_supports_operation("ℝ", "abs")
+            );
+            println!(
+                "   ℂ supports abs? {}",
+                checker.type_supports_operation("ℂ", "abs")
+            );
+            println!(
+                "   ℝ supports card? {}",
+                checker.type_supports_operation("ℝ", "card")
+            );
+
             println!("\n🎯 Complete pipeline working!");
         }
         Err(e) => {
@@ -101,23 +109,23 @@ fn test_user_types() {
             operation add = money_add
         }
     "#;
-    
+
     println!("Input: User-defined Money type with Additive");
-    
+
     let program = parse_kleis_program(code).unwrap();
     println!("✅ Parsed: 1 structure, 1 implements");
-    
+
     match TypeChecker::from_program(program) {
         Ok(checker) => {
             println!("✅ Type checker built");
-            
+
             // Check if Money supports add
             if checker.type_supports_operation("Money", "add") {
                 println!("✅ Money supports add");
                 println!("   Reason: Money implements Additive");
                 println!("   ✓ User-defined types work!");
             }
-            
+
             // Check which types support add
             let types = checker.types_supporting("add");
             println!("\n   Types supporting add: {}", types.join(", "));
@@ -154,22 +162,22 @@ fn test_operation_queries() {
             operation norm = vector_norm
         }
     "#;
-    
+
     println!("Input: 3 structures, 3 implements");
-    
+
     let program = parse_kleis_program(code).unwrap();
     let checker = TypeChecker::from_program(program).unwrap();
-    
+
     println!("✅ Type checker built");
-    
+
     println!("\n🔍 Query Operations:");
     let operations = vec!["abs", "card", "norm"];
-    
+
     for op in &operations {
         let types = checker.types_supporting(op);
         println!("   {} → {}", op, types.join(", "));
     }
-    
+
     println!("\n🔍 Query Types:");
     let type_checks = vec![
         ("ℝ", "abs", true),
@@ -178,13 +186,13 @@ fn test_operation_queries() {
         ("Set(T)", "abs", false),
         ("Vector(n)", "norm", true),
     ];
-    
+
     for (ty, op, expected) in type_checks {
         let result = checker.type_supports_operation(ty, op);
         let symbol = if result == expected { "✓" } else { "✗" };
         println!("   {} {} {}: {}", symbol, ty, op, result);
     }
-    
+
     println!("\n🎯 Query system working!");
     println!("   ✓ Can ask: 'Which types support operation X?'");
     println!("   ✓ Can check: 'Does type T support operation X?'");

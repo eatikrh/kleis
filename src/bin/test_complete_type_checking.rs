@@ -1,3 +1,4 @@
+use kleis::kleis_ast::TypeExpr;
 ///! Complete Type Checking Pipeline Demo
 ///!
 ///! Shows the full integration:
@@ -8,10 +9,8 @@
 ///! 5. Generate helpful error messages
 ///!
 ///! This is the COMPLETE type checking POC!
-
-use kleis::kleis_parser::{parse_kleis_program, parse_kleis};
+use kleis::kleis_parser::{parse_kleis, parse_kleis_program};
 use kleis::type_checker::TypeChecker;
-use kleis::kleis_ast::TypeExpr;
 
 fn main() {
     println!("🎯 Complete Type Checking Pipeline");
@@ -68,19 +67,19 @@ fn demo_basic_checking() {
             operation abs = builtin_abs
         }
     "#;
-    
+
     println!("stdlib/core.kleis:");
     println!("{}", stdlib);
-    
+
     let program = parse_kleis_program(stdlib).unwrap();
     let checker = TypeChecker::from_program(program).unwrap();
-    
+
     println!("✅ Type checker initialized!");
     println!("\nRegistry:");
     println!("  Structure Numeric defines: abs");
     println!("  Type ℝ implements: Numeric");
     println!("  Result: ℝ supports abs ✓");
-    
+
     // Query
     if checker.type_supports_operation("ℝ", "abs") {
         println!("\n🔍 Query: Can we use abs on ℝ?");
@@ -103,21 +102,21 @@ fn demo_polymorphic() {
             operation abs = complex_modulus
         }
     "#;
-    
+
     println!("stdlib with 2 implementations:");
-    
+
     let program = parse_kleis_program(stdlib).unwrap();
     let checker = TypeChecker::from_program(program).unwrap();
-    
+
     println!("✅ Type checker initialized!");
-    
+
     // Query which types support abs
     let types = checker.types_supporting("abs");
     println!("\n🔍 Query: Which types support 'abs'?");
     println!("   Answer: {}", types.join(", "));
     println!("   ✓ abs is POLYMORPHIC!");
     println!("   ✓ Works for any type that implements Numeric");
-    
+
     println!("\n📝 User can write:");
     println!("   define magnitude<T: Numeric>(x: T) = abs(x)");
     println!("   ✓ Works for ℝ, ℂ, or any future Numeric type!");
@@ -141,31 +140,31 @@ fn demo_error_detection() {
             operation card = builtin_card
         }
     "#;
-    
+
     println!("stdlib with Numeric and Finite:");
-    
+
     let program = parse_kleis_program(stdlib).unwrap();
     let mut checker = TypeChecker::from_program(program).unwrap();
-    
+
     println!("✅ Type checker initialized!");
-    
+
     // Test 1: Correct usage
     println!("\n✅ Correct: abs(x) where x : ℝ");
     checker.bind("x", &TypeExpr::Named("ℝ".to_string()));
     let expr = parse_kleis("abs(x)").unwrap();
-    
+
     if checker.type_supports_operation("ℝ", "abs") {
         println!("   Type check: PASS");
         println!("   Reason: ℝ implements Numeric");
     }
-    
+
     // Test 2: Type error with suggestion
     println!("\n❌ Error: abs(S) where S : Set(ℤ)");
-    
+
     if !checker.type_supports_operation("Set(ℤ)", "abs") {
         println!("   Type check: FAIL");
         println!("   Error: Set(ℤ) does not implement Numeric");
-        
+
         // Get available operations for Set
         let types_with_card = checker.types_supporting("card");
         if types_with_card.contains(&"Set(ℤ)".to_string()) {
@@ -174,7 +173,7 @@ fn demo_error_detection() {
             println!("      Did you mean: card(S)?");
         }
     }
-    
+
     println!("\n🎯 This validates ADR-015!");
     println!("   ✓ Explicit form 'abs' enables type checking");
     println!("   ✓ Registry knows which types support which operations");
@@ -220,31 +219,31 @@ fn demo_complete_stdlib() {
             operation norm = euclidean_norm
         }
     "#;
-    
+
     println!("Complete stdlib (3 structures, 5 implements):");
-    
+
     let program = parse_kleis_program(stdlib).unwrap();
     let checker = TypeChecker::from_program(program).unwrap();
-    
+
     println!("✅ Type checker initialized!");
-    
+
     println!("\n📊 Operation Support Matrix:");
     let operations = vec!["abs", "floor", "card", "isEmpty", "norm"];
-    
+
     for op in &operations {
         let types = checker.types_supporting(op);
         if !types.is_empty() {
             println!("   {} → {}", op, types.join(", "));
         }
     }
-    
+
     println!("\n✓ Complete type checking system!");
     println!("✓ 3 structures define abstract operations");
     println!("✓ 5 implements bind to concrete types");
     println!("✓ Registry tracks all relationships");
     println!("✓ HM inference can query registry");
     println!("✓ Error messages reference structures");
-    
+
     println!("\n🎯 COMPLETE PIPELINE WORKING!");
     println!("\nWhat we can do now:");
     println!("  1. Parse .kleis files with structures");
@@ -255,4 +254,3 @@ fn demo_complete_stdlib() {
     println!("  6. Support user-defined types");
     println!("  7. Enable polymorphic operations");
 }
-

@@ -27,7 +27,8 @@ fn run_case(label: &str, ast: Expression, placeholder_ids: Vec<usize>) {
     let typst_markup = render_expression(&ast, &ctx, &RenderTarget::Typst);
     println!("Typst markup: {typst_markup}");
 
-    let output = compile_with_semantic_boxes(&ast, &placeholder_ids, &placeholder_ids).expect("compile");
+    let output =
+        compile_with_semantic_boxes(&ast, &placeholder_ids, &placeholder_ids).expect("compile");
     if let Ok(dir) = std::env::var("DEBUG_SVG_DIR") {
         let path = std::path::Path::new(&dir).join(format!("{}.svg", label.replace(' ', "_")));
         if let Err(err) = std::fs::write(&path, &output.svg) {

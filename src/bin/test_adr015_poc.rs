@@ -6,7 +6,6 @@
 ///! 3. The representation is unambiguous
 ///!
 ///! Note: This is a concept validation, not a full parser implementation.
-
 use kleis::ast::Expression;
 
 fn main() {
@@ -63,16 +62,13 @@ fn main() {
 fn test_absolute_value() {
     // Text form: abs(x)
     let text = "abs(x)";
-    
+
     // AST representation
-    let ast = Expression::operation(
-        "abs",
-        vec![Expression::object("x")]
-    );
-    
+    let ast = Expression::operation("abs", vec![Expression::object("x")]);
+
     // Visual rendering (conceptual)
     let visual = "|x|";
-    
+
     println!("  Text:   {}", text);
     println!("  AST:    {:?}", ast);
     println!("  Visual: {}", visual);
@@ -82,16 +78,13 @@ fn test_absolute_value() {
 fn test_cardinality() {
     // Text form: card(S)
     let text = "card(S)";
-    
-    // AST representation  
-    let ast = Expression::operation(
-        "card",
-        vec![Expression::object("S")]
-    );
-    
+
+    // AST representation
+    let ast = Expression::operation("card", vec![Expression::object("S")]);
+
     // Visual rendering (conceptual)
     let visual = "|S|";
-    
+
     println!("  Text:   {}", text);
     println!("  AST:    {:?}", ast);
     println!("  Visual: {}", visual);
@@ -102,16 +95,13 @@ fn test_cardinality() {
 fn test_norm() {
     // Text form: norm(v)
     let text = "norm(v)";
-    
+
     // AST representation
-    let ast = Expression::operation(
-        "norm",
-        vec![Expression::object("v")]
-    );
-    
+    let ast = Expression::operation("norm", vec![Expression::object("v")]);
+
     // Visual rendering (conceptual)
     let visual = "‖v‖";
-    
+
     println!("  Text:   {}", text);
     println!("  AST:    {:?}", ast);
     println!("  Visual: {}", visual);
@@ -122,19 +112,16 @@ fn test_norm() {
 fn test_fraction() {
     // Text form: frac(a, b)
     let text = "frac(a, b)";
-    
+
     // AST representation
     let ast = Expression::operation(
         "frac",
-        vec![
-            Expression::object("a"),
-            Expression::object("b")
-        ]
+        vec![Expression::object("a"), Expression::object("b")],
     );
-    
+
     // Visual rendering (conceptual)
     let visual = "a\n─\nb  (stacked fraction)";
-    
+
     println!("  Text:   {}", text);
     println!("  AST:    {:?}", ast);
     println!("  Visual: {}", visual);
@@ -146,24 +133,18 @@ fn test_division_vs_fraction() {
     let division_text = "a / b";
     let division_ast = Expression::operation(
         "divide",
-        vec![
-            Expression::object("a"),
-            Expression::object("b")
-        ]
+        vec![Expression::object("a"), Expression::object("b")],
     );
     let division_visual = "a / b  (inline)";
-    
+
     // Fraction function
     let fraction_text = "frac(a, b)";
     let fraction_ast = Expression::operation(
         "frac",
-        vec![
-            Expression::object("a"),
-            Expression::object("b")
-        ]
+        vec![Expression::object("a"), Expression::object("b")],
     );
     let fraction_visual = "a\n─\nb  (stacked)";
-    
+
     println!("  Division:");
     println!("    Text:   {}", division_text);
     println!("    AST:    {:?}", division_ast);
@@ -181,24 +162,19 @@ fn test_division_vs_fraction() {
 fn test_nested() {
     // Text form: abs(frac(a, b))
     let text = "abs(frac(a, b))";
-    
+
     // AST representation (nested)
     let ast = Expression::operation(
         "abs",
-        vec![
-            Expression::operation(
-                "frac",
-                vec![
-                    Expression::object("a"),
-                    Expression::object("b")
-                ]
-            )
-        ]
+        vec![Expression::operation(
+            "frac",
+            vec![Expression::object("a"), Expression::object("b")],
+        )],
     );
-    
+
     // Visual rendering (conceptual)
     let visual = "|a/b|  or  |a\n        ─\n        b|";
-    
+
     println!("  Text:   {}", text);
     println!("  AST:    {:?}", ast);
     println!("  Visual: {}", visual);
@@ -216,4 +192,3 @@ fn demonstrate_ambiguity() {
     println!("  Solution: Use explicit forms in text");
     println!("  Note: Visual display can still use |x| notation!");
 }
-
