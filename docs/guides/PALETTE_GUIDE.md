@@ -27,6 +27,7 @@ The Kleis Equation Editor palette provides 54+ mathematical templates with profe
 - **98% perfect edit marker alignment** (was 26%)
 - **Fully functional structural mode**
 - **All matrix types working** (original issue resolved)
+- **Matrix Builder** for arbitrary-size matrices (1×1 to 10×10) ✨ NEW
 - **Clean MathJax-rendered buttons**
 
 ### What's Available
@@ -34,7 +35,7 @@ The Kleis Equation Editor palette provides 54+ mathematical templates with profe
 ✅ **Tensor representations:** T^i_j, Γ^μ_{νσ}, R^ρ_{σμν}  
 ✅ **Dot notation derivatives:** ẋ, ẍ  
 ✅ **All bracket types:** [ ], ( ), | |  
-✅ **Arbitrary-size matrices:** Backend handles automatically  
+✅ **Arbitrary-size matrices:** Visual matrix builder with grid selector  
 ✅ **Integral transforms:** Fourier, Laplace, convolution  
 ✅ **POT operations:** Projection, modal integrals, causal bounds
 
@@ -49,7 +50,7 @@ The Kleis Equation Editor palette provides 54+ mathematical templates with profe
 | Basic Operations | 10 | Fraction, power, subscript |
 | Calculus | 7 | Integral, derivative, limit |
 | Transforms | 7 | Fourier, Laplace, convolution |
-| Matrices | 6 | 2×2, 3×3 (bmatrix, pmatrix, vmatrix) |
+| Matrices | 7 | 2×2, 3×3 + Matrix Builder (any size) |
 | Quantum | 6 | Bra-ket, commutator, inner product |
 | Vectors | 6 | Column, row, unit vectors |
 | Functions | 10 | Trig, inverse trig, log, exp |
@@ -129,8 +130,9 @@ The Kleis Equation Editor palette provides 54+ mathematical templates with profe
 - Green's function
 
 #### Linear Algebra Tab
-- Matrices (2×2, 3×3)
-- Determinants
+- **Matrix Builder** - Create any size matrix (1×1 to 10×10) with visual grid selector
+- Matrices (2×2, 3×3) - Quick insert buttons
+- Determinants (vmatrix)
 - Trace, transpose
 - Vectors (column, row)
 - Inner/outer products

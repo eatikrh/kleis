@@ -1,8 +1,9 @@
 # Matrix Builder - Phase 1 Complete
 
 **Date:** December 6, 2024  
-**Status:** ✅ Phase 1 Implemented and Tested  
-**Tag:** `checkpoint-before-matrix-builder`
+**Status:** ✅ Complete and Production-Ready  
+**Safe Harbor Tag:** `checkpoint-before-matrix-builder`  
+**Milestone Tag:** Ready for `v0.2.0-matrix-builder`
 
 ---
 
@@ -101,18 +102,25 @@ const ast = {
 ✅ Cancel button works  
 ✅ Create button generates AST  
 
-### Known Issue
+### All Issues Resolved ✅
 
-**Backend Rendering:**
-The generic `"matrix"` operation creates the AST successfully, but the backend needs to be updated to render arbitrary-size matrices.
+**Backend Rendering:** ✅ FIXED
+- Added dynamic operation naming: `matrix2x3`, `matrix4x5`
+- Backend parses dimensions from operation name
+- Proper row/column formatting with semicolons
+- Works for all matrix sizes
 
-**Error:** "Network error: Failed to fetch"
+**Active Edit Markers:** ✅ FIXED
+- Matrix builder now respects `activeEditMarker`
+- Inserts at placeholder location (doesn't replace whole equation)
+- Matches behavior of other template buttons
 
-**Cause:** Server doesn't know how to render generic `matrix` operation.
+**Grid Selector UX:** ✅ FIXED
+- Click-to-lock prevents inadvertent size changes
+- Mouseleave handler for clean interaction
+- Typing in inputs unlocks the grid
 
-**Impact:** Low - matrix is created, just not rendered yet.
-
-**Fix Needed:** Update `src/render.rs` or `src/math_layout/typst_compiler.rs` to handle the generic `matrix` operation with arbitrary args.
+**All systems operational!**
 
 ---
 
