@@ -41,6 +41,50 @@ Decision records documenting key design choices:
 - **[ADR-007](adr-007-bootstrap-grammar.md)** - Bootstrap Grammar
 - **[ADR-008](adr-008-bootstrap-grammar-boundary.md)** - Bootstrap Grammar Boundary
 
+### Editing & Notation System
+- **[ADR-009](adr-009-wysiwyg-structural-editor.md)** - WYSIWYG Structural Editor
+- **[ADR-010](adr-010-inline-editing.md)** - Inline Editing
+- **[ADR-011](adr-011-notebook-environment.md)** - Notebook Environment
+- **[ADR-012](adr-012-document-authoring.md)** - Document Authoring
+- **[ADR-014](adr-014-hindley-milner-type-system.md)** - Hindley-Milner Type System
+- **[ADR-015](adr-015-text-as-source-of-truth.md)** - ⭐ Text as Source of Truth (Notation System)
+- **[ADR-016](ADR-016-operations-in-structures.md)** - ⭐ Operations in Structures (Type System)
+
+### Type System
+- **[Type System Overview](type-system/KLEIS_TYPE_SYSTEM.md)** - Complete type system design
+- **[Type Inference POC](type-system/TYPE_INFERENCE_POC.md)** - Proof of concept
+
+---
+
+## 📝 Notation & Type System (Dec 6, 2024)
+
+**Major session:** Notation design + Type checking infrastructure  
+**Status:** ✅ Complete with working implementation  
+**See:** [Session Summary](session-2024-12-06/README.md)
+
+### Core ADRs
+1. **[ADR-015: Text as Source of Truth](adr-015-text-as-source-of-truth.md)** ⭐
+   - Text representation for Kleis code
+   - Explicit forms (`abs`, `frac`, etc.)
+   - Git-friendly design
+
+2. **[ADR-016: Operations in Structures](ADR-016-operations-in-structures.md)** ⭐
+   - Operations belong to structures
+   - Implements pattern for concrete types
+   - Enables polymorphism
+
+### Implementation
+- **Parser:** `src/kleis_parser.rs` (1097 lines)
+- **Type Context:** `src/type_context.rs` (313 lines)  
+- **Type Checker:** `src/type_checker.rs` (251 lines)
+- **Tests:** 25+ passing ✅
+
+### Subdirectories
+- `notation/` - Notation design documents and test cases
+- `parser-implementation/` - Parser compatibility analyses
+- `session-2024-12-06/` - Session-specific documents and milestones
+- `type-system/` - Type inference and checking documentation
+
 ---
 
 ## 📖 Language Reference
@@ -120,6 +164,22 @@ docs/
 ├── kleis_vision_executable_math.md  # Future vision
 ├── kleis_grammar_v02.md         # Grammar specification
 ├── adr-00X-*.md                 # Architecture Decision Records
+├── notation-design-summary.md   # ⭐ Notation system design overview
+├── notation-mapping-tests.md    # Text ↔ visual mapping tests
+├── notation-poc-tests.md        # Proof of concept tests
+├── content-editing-paradigm.md  # Editing paradigm discussion
+├── grammar/                     # Grammar specifications
+│   ├── kleis_grammar_v03.md
+│   ├── kleis_grammar_v03.ebnf
+│   └── Kleis_v03.g4
+├── type-system/                 # Type system documentation
+│   ├── KLEIS_TYPE_SYSTEM.md
+│   ├── TYPE_INFERENCE_POC.md
+│   └── examples/
+├── guides/                      # Implementation guides
+│   ├── PALETTE_GUIDE.md
+│   ├── INLINE_EDITING.md
+│   └── TEST_GUIDE.md
 ├── hont/                        # HONT/POT papers (LaTeX + PDF)
 │   ├── projected_ontology_theory.pdf
 │   ├── hont_modal_enrichment.pdf
@@ -167,5 +227,5 @@ What are the implications?
 
 ---
 
-**Last Updated:** November 2024
+**Last Updated:** December 6, 2024
 

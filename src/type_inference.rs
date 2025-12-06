@@ -127,6 +127,11 @@ impl TypeContext {
         self.next_var += 1;
         Type::Var(var)
     }
+    
+    /// Get all bound variables
+    pub fn vars(&self) -> &HashMap<String, Type> {
+        &self.vars
+    }
 }
 
 /// Type inference engine
@@ -146,6 +151,16 @@ impl TypeInference {
     /// Add a constraint
     fn add_constraint(&mut self, left: Type, right: Type) {
         self.constraints.push(Constraint { left, right });
+    }
+    
+    /// Bind a variable to a type
+    pub fn bind(&mut self, name: String, ty: Type) {
+        self.context.bind(name, ty);
+    }
+    
+    /// Get the context
+    pub fn context(&self) -> &TypeContext {
+        &self.context
     }
     
     /// Infer type of an expression

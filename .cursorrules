@@ -17,3 +17,46 @@
 - Ask for clarification when uncertain
 - Be respectful of the user's workflow and preferences
 
+## Documentation Organization Rules
+
+**When creating documentation during a session:**
+
+1. **Combine overlapping content** - Review documents for redundancy and consolidate
+2. **Check for obsolete documents** - Remove or archive documents that are superseded
+3. **Organize into subdirectories** - Don't leave many documents in root `docs/`
+   - Use `docs/session-YYYY-MM-DD/` for session-specific work
+   - Use `docs/notation/`, `docs/parser-implementation/`, `docs/type-system/` etc. for topic-specific docs
+   - Keep only ADRs and main reference docs in root
+4. **Create session README** - Summarize session work in `docs/session-YYYY-MM-DD/README.md`
+5. **Update main README** - Keep `docs/README.md` as the navigation index
+
+**Cleanup checklist before ending session:**
+- [ ] Consolidate overlapping documents
+- [ ] Move session-specific docs to session folder
+- [ ] Move technical docs to appropriate subdirectories  
+- [ ] Delete obsolete/temporary documents
+- [ ] Update docs/README.md with navigation
+- [ ] Create session README summarizing work
+
+## Project Root Organization Rules
+
+**Keep project root clean:**
+
+1. **Generated reports** - Keep in root if they show current state
+   - `comparison_report.html` - Test comparison (useful for viewing)
+   - `html_gallery.html` - Rendering gallery (useful for viewing)
+   - `template_coverage_report.html` - Template coverage (useful for viewing)
+   - These are snapshots showing current system state
+
+2. **No loose markdown files in root** - Except:
+   - README.md
+   - CHANGELOG.md
+   - LICENSE
+   - CONTRIBUTING.md (if exists)
+   - PARSER_TODO.md, SERVER_README.md (project docs)
+
+3. **Temporary files** - Add to .gitignore:
+   - `tmp_*.html`, `tmp_*.pdf`
+   - Build artifacts
+   - Editor temp files
+

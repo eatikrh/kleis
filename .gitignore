@@ -8,6 +8,12 @@
 tmp_*.pdf
 tmp_*.tex
 
+# Generated test reports
+# Note: These are kept in root as they show current state
+# comparison_report.html
+# html_gallery.html
+# template_coverage_report.html
+
 # Funding and business documents (private)
 /funding/
 FUNDING_*.md
@@ -15,3 +21,6 @@ GRANT_*.md
 PITCH_*.md
 *_PROPOSAL.md
 *_proposal.md
+
+# Video/presentation materials (private)
+/pot_video_90/

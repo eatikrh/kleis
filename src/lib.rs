@@ -1,9 +1,13 @@
 pub mod ast;
+pub mod kleis_ast;
+pub mod kleis_parser;
 pub mod math_layout;
 pub mod parser;
 pub mod render;
 pub mod template_inference;
 pub mod templates;
+pub mod type_checker;
+pub mod type_context;
 pub mod type_inference;
 
 /// Convenience function: Parse LaTeX and render to Unicode

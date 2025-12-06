@@ -1,7 +1,8 @@
 # ADR-012: Kleis as Document Authoring Environment
 
 ## Status
-**Proposed** - Extension of ADR-011 for complete document authoring
+**Proposed** - Extension of ADR-011 for complete document authoring  
+**Updated:** December 6, 2024 - References ADR-015 for text representation
 
 ## Context
 
@@ -10,6 +11,8 @@ Kleis notebook (ADR-011) should be more than just cells with equations - it shou
 - LaTeX (for arXiv submissions)
 - HTML (for web publishing)
 - Jupyter notebooks (.ipynb)
+
+**Related Decision:** [ADR-015: Text as Source of Truth](adr-015-text-as-source-of-truth.md) defines the canonical text representation for all equations, including inline equations in document text.
 
 ## Vision
 
@@ -167,55 +170,78 @@ Click the equation → Structural editor opens:
 
 ### Embedding Equations in Text
 
-**Syntax 1: Bracket notation**
+**Syntax: Bracket notation** `[equation]`
+
 ```
 The energy [E = ½mv²] depends on velocity.
              ↑
              Click to edit with structural editor
 ```
 
-**Syntax 2: Special delimiter**
-```
-The force ${F = ma}$ equals mass times acceleration.
-            ↑
-            Inline structural editor
+**Important:** Per [ADR-015](adr-015-text-as-source-of-truth.md), the text inside brackets follows canonical Kleis syntax:
+
+```kleis
+// In document text cell:
+The absolute value [abs(x)] is always non-negative.
+                    ^^^^^^
+                    Canonical form (not |x|)
+
+The cardinality [card(S)] gives the set size.
+                 ^^^^^^^
+                 Explicit function name
+
+The fraction [frac(a, b)] represents division.
+              ^^^^^^^^^^
+              Display mode specified
 ```
 
-**Syntax 3: Placeholder approach**
+**Benefits:**
+- Clean bracket syntax for embedding
+- Canonical Kleis text inside (git-friendly!)
+- Visual editor generates canonical forms
+- Click equation to edit with structural editor
+- Renders beautifully when displayed
+
+### Rendering and Storage
+
+**Storage (per ADR-015):**
+```kleis
+// Stored as plain text in .kleis file
+The energy [E = frac(1, 2) × m × v^2] is conserved.
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           Canonical Kleis text syntax
 ```
-The momentum is {equation:p=mv} where...
-                    ↑
-                    Equation slot
-```
 
-**Recommended:** **Bracket notation** `[equation]`
-- Clean syntax
-- Easy to type
-- Visual distinction from regular brackets
-
-### Rendering
-
+**Parsing:**
 ```javascript
 // Parse text with embedded equations
-const text = "The energy [E = ½mv²] is conserved.";
+const text = "The energy [E = frac(1, 2) × m × v^2] is conserved.";
 
-// Extract equations
+// Extract equations (parse canonical Kleis inside brackets)
 const parts = parseTextWithEquations(text);
 // → [
 //     {type: 'text', content: 'The energy '},
-//     {type: 'equation', ast: {...}, rendered: 'E = ½mv²'},
+//     {type: 'equation', 
+//      text: 'E = frac(1, 2) × m × v^2',
+//      ast: {...}, 
+//      displayStyle: 'inline'},
 //     {type: 'text', content: ' is conserved.'}
 //   ]
+```
 
-// Render as HTML
+**Rendering:**
+```html
+<!-- Visual display uses traditional notation -->
 <p>
   The energy 
   <span class="inline-equation" onclick="editEquation(...)">
-    <img src="data:image/svg+xml,..." />  ← Typst-rendered
+    E = ½mv²   <!-- Rendered beautifully, frac() shown as fraction -->
   </span>
   is conserved.
 </p>
 ```
+
+**Key Point:** Text file contains `frac(1, 2)`, visual display shows `½`. Per ADR-015, text is explicit and canonical, visual is beautiful.
 
 ---
 
@@ -921,6 +947,8 @@ let typst_doc = format!(r#"
 
 ## File Format: Extended .kleis
 
+**Per ADR-015, stored as canonical Kleis text:**
+
 ```kleis
 ---
 metadata:
@@ -939,8 +967,12 @@ This paper presents...
 
 ## 1. Introduction
 
-Classical mechanics describes motion. The fundamental equation [F = ma]
+Classical mechanics describes motion. The fundamental equation [F = m × a]
 relates force, mass, and acceleration.
+
+The absolute value [abs(x - x₀)] represents distance.
+                   ^^^^^^^^^^^
+                   Canonical form (ADR-015)
 
 ---
 
@@ -955,11 +987,11 @@ context physics {
 
 The kinetic energy is defined as:
 
-E_k = ½mv²
+E_k = frac(1, 2) × m × v^2
 
 Using our values:
 
->>> E_k = ½ × 1.5 × (1² + 2² + 0²)
+>>> E_k = frac(1, 2) × 1.5 × (1^2 + 2^2 + 0^2)
 Result: 3.75 J
 
 ---
@@ -972,9 +1004,15 @@ Result: 3.75 J
 **Syntax:**
 - `---` separates cells
 - `##` creates section headers
-- `[equation]` for inline math
+- `[equation]` for inline math (uses canonical Kleis syntax inside)
 - `>>> code` for executable equations
 - `context { }` for definitions
+
+**Text Representation (ADR-015):**
+- Inline equations use explicit forms: `abs(x)`, `card(S)`, `norm(v)`
+- Display mode specified: `frac(a, b)` for fractions
+- Unicode symbols allowed: `×`, `Σ`, `∫`, etc.
+- Git diffs show actual equation changes clearly
 
 ---
 
@@ -1148,23 +1186,31 @@ Result: classical_mechanics.pdf
 
 ### Source (.kleis file):
 
+**Stored as canonical Kleis text (ADR-015):**
+
 ```kleis
 # Classical Mechanics
 
 ## Introduction
 
-Newton's second law states [F = ma].
+Newton's second law states [F = m × a].
+
+The magnitude [abs(F)] gives the force strength.
+               ^^^^^^
+               Explicit form for git diffs
 
 context physics {
     m: Scalar = 1.5
 }
 
-E = ½mv²
+E = frac(1, 2) × m × v^2
 
 Result: 3.75 J
 ```
 
 ### Generated PDF:
+
+**Visual rendering uses traditional notation:**
 
 ```
 ┌──────────────────────────────────────┐
@@ -1174,9 +1220,18 @@ Result: 3.75 J
 │                                       │
 │ Newton's second law states F = ma.   │
 │                                       │
+│ The magnitude |F| gives the force    │
+│ strength.                             │
+│      ↑                                │
+│      abs(F) rendered as |F|           │
+│                                       │
 │ Given m = 1.5 kg:                    │
 │                                       │
-│        E = ½mv²            (1)        │
+│          1                            │
+│      E = ─ mv²            (1)         │
+│          2                            │
+│      ↑                                │
+│      frac(1,2) rendered as fraction   │
 │                                       │
 │ Result: E = 3.75 J                    │
 │                                       │
@@ -1184,7 +1239,7 @@ Result: 3.75 J
 └──────────────────────────────────────┘
 ```
 
-Professional typography, equation numbering, proper spacing!
+**Key:** Text file has `frac(1,2)` and `abs(F)` (canonical), PDF renders as ½mv² and |F| (beautiful)!
 
 ---
 
@@ -1220,7 +1275,15 @@ Professional typography, equation numbering, proper spacing!
 2. **Reuses v2.2 editor** - Inline editing for all equations
 3. **Professional output** - Typst generates beautiful PDFs
 4. **arXiv-ready** - LaTeX export included
-5. **Git-friendly** - Plain text .kleis files
+5. **Git-friendly** - Plain text .kleis files (per ADR-015)
+6. **Canonical text** - Explicit forms for clear version control
+
+**Key Design Principles (from ADR-015):**
+- Text is source of truth (files store canonical Kleis syntax)
+- Visual display uses traditional notation (beautiful rendering)
+- Inline equations in `[brackets]` use canonical forms
+- Visual editor generates explicit text: `abs(x)`, `frac(a,b)`, etc.
+- Git diffs show actual equation changes clearly
 
 **Timeline:** Q1 2025 (alongside notebook implementation)
 
@@ -1228,5 +1291,9 @@ Professional typography, equation numbering, proper spacing!
 
 **Status:** ✅ **Fully Specified - Ready for Implementation**
 
-Next: Create UI mockups and begin prototyping text cells with embedded structural editor.
+**Related ADRs:**
+- [ADR-011](adr-011-notebook-environment.md) - Notebook Environment
+- [ADR-015](adr-015-text-as-source-of-truth.md) - Text Representation (critical!)
+
+Next: Create UI mockups and begin prototyping text cells with embedded structural editor. Ensure visual editor generates canonical text per ADR-015.
 

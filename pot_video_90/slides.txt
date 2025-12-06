@@ -1,7 +1,0 @@
-Slide1|Projected Ontology Theory in 90 Seconds|Imagine everything you see in space and time is a shadow. POT says reality lives in a richer Hilbert space, and what we observe is its projection.
-Slide2|Hont and Projection|Hont is the deeper space. A projection operator maps Hont to our world, R4. Modes, phases, and symmetries project as fields, forces, particles.
-Slide3|Modal Flow and Invariants|Hont evolves by modal flow. Invariants of that flow become physical quantities: charge as phase-winding; 1/r^2 from projected Green’s functions.
-Slide4|Locality Reframed|R4-locality is the artifact of projection. Quantum correlations are shared Hont structure, not spooky action; no-signalling still holds.
-Slide5|USEF: Semantics as Projection|Meaning lives in a shared semantic space; each language is a projection. Distortion is measurable via alignment geometry.
-Slide6|Testable and Useful|Falsifiable: predicts invariant structures, constraints on correlations, rotation curves from projection, and practical translation metrics and control designs.
-Slide7|Close|Project first, observe second. Change the projection, and you change what’s possible to explain.
