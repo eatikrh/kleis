@@ -4,12 +4,32 @@
 
 **CRITICAL: NEVER push to any git repository without explicit user permission.**
 
+### Why This Is Critical - The Safe Harbor Principle
+
+Local commits are "safe harbors" - checkpoints the user can return to.
+
+**If LLM can push:**
+- Current safe harbor destroyed (work becomes public)
+- ALL safe harbors at risk (force push could rewrite history)
+- Psychological safety lost (can't experiment freely)
+- Entire repository integrity threatened
+
+**The human must control the boundary between:**
+- Private (local repo) ← LLM can work here
+- Public (remote repo) ← Only human crosses this line
+
+### Rules
+
 - You may stage files (`git add`)
 - You may commit files (`git commit`)
 - You must ALWAYS ask before running `git push`
+- You must NEVER run `git push --force` (EVER)
 - Stop after committing and ask: "The changes are committed. Would you like me to push to GitHub now?"
 - Wait for explicit "yes" or "push" command from the user before executing any `git push` operation
 - This rule applies to ALL branches and ALL remotes
+- No exceptions, no shortcuts, no "just this once"
+
+**Push is the irreversible action - human must control it.**
 
 ## General Guidelines
 
