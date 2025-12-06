@@ -3259,8 +3259,20 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 // Save to undo stack
                 saveToUndoStack();
                 
-                // Set as current AST
-                currentAST = ast;
+                // Check if inserting at active marker or replacing whole AST
+                if (activeEditMarker) {
+                    // INSERT AT ACTIVE MARKER (like other templates)
+                    setNodeAtPath(currentAST, activeEditMarker.path, ast);
+                    
+                    // Clear active marker
+                    activeEditMarker = null;
+                    document.querySelectorAll('.arg-overlay').forEach(el => {
+                        el.classList.remove('active-marker');
+                    });
+                } else {
+                    // NO MARKER - Replace whole AST
+                    currentAST = ast;
+                }
                 
                 // Render
                 renderStructuralEditor();
