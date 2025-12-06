@@ -1067,6 +1067,29 @@ fn render_expression_internal(
                     }
                 }
             }
+            // Special handling for generic matrix - infer dimensions and format
+            if name == "matrix" {
+                let total_args = rendered_args.len();
+                // Try to infer a square matrix first, then rectangular
+                let (rows, cols) = infer_matrix_dimensions(total_args);
+                
+                let mut matrix_content = String::new();
+                for r in 0..rows {
+                    for c in 0..cols {
+                        let idx = r * cols + c;
+                        if let Some(val) = rendered_args.get(idx) {
+                            matrix_content.push_str(val);
+                            if c < cols - 1 {
+                                matrix_content.push_str(" , ");
+                            }
+                        }
+                    }
+                    if r < rows - 1 {
+                        matrix_content.push_str(" ; ");
+                    }
+                }
+                result = result.replace("{args}", &matrix_content);
+            }
             // Special handling for integral var position: int_bounds(integrand, from, to, var)
             if name == "int_bounds" {
                 if let Some(var) = rendered_args.get(3) {
@@ -1076,6 +1099,35 @@ fn render_expression_internal(
             result
         }
     }
+}
+
+/// Infer matrix dimensions from total number of elements
+/// Tries to find the most reasonable (rows, cols) pair
+fn infer_matrix_dimensions(total: usize) -> (usize, usize) {
+    if total == 0 {
+        return (0, 0);
+    }
+    
+    // Try square matrices first
+    let sqrt = (total as f64).sqrt();
+    if sqrt.fract() == 0.0 {
+        let n = sqrt as usize;
+        return (n, n);
+    }
+    
+    // Try common rectangular dimensions
+    // Check if it's a nice factorization
+    for rows in 1..=10 {
+        if total % rows == 0 {
+            let cols = total / rows;
+            if cols <= 10 {
+                return (rows, cols);
+            }
+        }
+    }
+    
+    // Fallback: make it a row vector
+    (1, total)
 }
 
 fn latex_to_unicode(input: &str) -> String {
@@ -2785,6 +2837,11 @@ pub fn build_default_context() -> GlyphContext {
         "vmatrix3x3".to_string(),
         "mat(delim: \"|\", {a11} , {a12} , {a13} ; {a21} , {a22} , {a23} ; {a31} , {a32} , {a33})"
             .to_string(),
+    );
+    // Generic matrix template - will be filled dynamically
+    typst_templates.insert(
+        "matrix".to_string(),
+        "mat(delim: \"[\", {args})".to_string(),
     );
     typst_templates.insert("binomial".to_string(), "binom({left}, {right})".to_string());
 

@@ -1034,13 +1034,13 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="math-btn" onclick="insertTemplate('\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}')" data-tooltip="Matrix 3×3 (parens)">\(\begin{pmatrix}a&b&c\\d&e&f\\g&h&i\end{pmatrix}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}')" data-tooltip="Determinant 2×2">\(\begin{vmatrix}a&b\\c&d\end{vmatrix}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}')" data-tooltip="Determinant 3×3">\(\begin{vmatrix}a&b&c\\d&e&f\\g&h&i\end{vmatrix}\)</button>
-                        <button class="math-btn" onclick="showMatrixBuilder()" data-tooltip="Custom Matrix Builder" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="24" viewBox="0 0 64 48" style="flex-shrink: 0;">
-                                <g stroke="white" stroke-width="2.5" fill="none">
+                        <button class="math-btn" onclick="showMatrixBuilder()" data-tooltip="Custom Matrix Builder">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="28" viewBox="0 0 64 48">
+                                <g stroke="#333" stroke-width="2.5" fill="none">
                                     <path d="M 12 6 L 8 6 L 8 42 L 12 42"/>
                                     <path d="M 52 6 L 56 6 L 56 42 L 52 42"/>
                                 </g>
-                                <g stroke="white" stroke-width="1.8" fill="none" opacity="0.9">
+                                <g stroke="#666" stroke-width="1.8" fill="none" opacity="0.7">
                                     <line x1="22" y1="12" x2="22" y2="36"/>
                                     <line x1="30" y1="12" x2="30" y2="36"/>
                                     <line x1="38" y1="12" x2="38" y2="36"/>
@@ -1058,7 +1058,6 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                     </g>
                                 </g>
                             </svg>
-                            <span style="font-size: 13px;">Matrix</span>
                         </button>
                         <button class="math-btn" onclick="insertTemplate('\\mathbf{v}')" data-tooltip="Bold Vector">\(\mathbf{v}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\vec{v}')" data-tooltip="Vector Arrow">\(\vec{v}\)</button>
@@ -3093,19 +3092,43 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 }
             }
             
+            // Clear highlighting when mouse leaves the grid
+            gridSelector.addEventListener('mouseleave', () => {
+                // Keep the current selected size, just remove the visual highlighting
+                clearMatrixGrid();
+                // Restore the selected size from state
+                if (matrixBuilderState.rows <= 6 && matrixBuilderState.cols <= 6) {
+                    highlightMatrixGrid(matrixBuilderState.rows, matrixBuilderState.cols);
+                }
+            });
+            
             // Setup numeric inputs
             document.getElementById('matrix-rows-input').addEventListener('input', (e) => {
                 const value = Math.max(1, Math.min(10, parseInt(e.target.value) || 2));
                 e.target.value = value;
                 matrixBuilderState.rows = value;
+                matrixBuilderState.cols = parseInt(document.getElementById('matrix-cols-input').value) || 2;
                 updateSizeDisplay();
+                // Update grid visual if within 6×6, otherwise clear it
+                if (value <= 6 && matrixBuilderState.cols <= 6) {
+                    highlightMatrixGrid(value, matrixBuilderState.cols);
+                } else {
+                    clearMatrixGrid();
+                }
             });
             
             document.getElementById('matrix-cols-input').addEventListener('input', (e) => {
                 const value = Math.max(1, Math.min(10, parseInt(e.target.value) || 2));
                 e.target.value = value;
                 matrixBuilderState.cols = value;
+                matrixBuilderState.rows = parseInt(document.getElementById('matrix-rows-input').value) || 2;
                 updateSizeDisplay();
+                // Update grid visual if within 6×6, otherwise clear it
+                if (matrixBuilderState.rows <= 6 && value <= 6) {
+                    highlightMatrixGrid(matrixBuilderState.rows, value);
+                } else {
+                    clearMatrixGrid();
+                }
             });
             
             // Setup delimiter buttons
