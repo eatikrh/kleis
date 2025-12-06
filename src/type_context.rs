@@ -192,7 +192,10 @@ impl TypeContextBuilder {
         let type_name = if let Some(first_arg) = impl_def.type_args.first() {
             self.type_expr_to_string(first_arg)
         } else {
-            return Err(format!("Implements block for {} has no type arguments", impl_def.structure_name));
+            return Err(format!(
+                "Implements block for {} has no type arguments",
+                impl_def.structure_name
+            ));
         };
 
         // Register each operation implementation

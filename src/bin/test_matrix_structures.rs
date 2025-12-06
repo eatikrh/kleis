@@ -6,8 +6,8 @@ use std::fs;
 fn main() {
     println!("=== Testing Matrix Structures Parser ===\n");
 
-    let content = fs::read_to_string("stdlib/matrices.kleis")
-        .expect("Failed to read stdlib/matrices.kleis");
+    let content =
+        fs::read_to_string("stdlib/matrices.kleis").expect("Failed to read stdlib/matrices.kleis");
 
     println!("File size: {} bytes\n", content.len());
 
@@ -61,17 +61,21 @@ fn main() {
                 }
                 println!("  ]");
                 println!("  Members: {}", def.members.len());
-                
+
                 // Count operations
-                let ops = def.members.iter().filter(|m| {
-                    matches!(m, kleis::kleis_ast::StructureMember::Operation { .. })
-                }).count();
+                let ops = def
+                    .members
+                    .iter()
+                    .filter(|m| matches!(m, kleis::kleis_ast::StructureMember::Operation { .. }))
+                    .count();
                 println!("    Operations: {}", ops);
-                
-                // Count axioms  
-                let axioms = def.members.iter().filter(|m| {
-                    matches!(m, kleis::kleis_ast::StructureMember::Axiom { .. })
-                }).count();
+
+                // Count axioms
+                let axioms = def
+                    .members
+                    .iter()
+                    .filter(|m| matches!(m, kleis::kleis_ast::StructureMember::Axiom { .. }))
+                    .count();
                 println!("    Axioms: {}", axioms);
                 println!();
             }
@@ -91,7 +95,7 @@ fn main() {
         Err(e) => {
             eprintln!("❌ Parse error: {}", e.message);
             eprintln!("   Position: {}", e.position);
-            
+
             // Show context around error
             let lines: Vec<&str> = content.lines().collect();
             let mut char_count = 0;
@@ -110,9 +114,8 @@ fn main() {
                     break;
                 }
             }
-            
+
             std::process::exit(1);
         }
     }
 }
-

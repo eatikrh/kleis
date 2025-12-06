@@ -1091,7 +1091,7 @@ fn render_expression_internal(
                         infer_matrix_dimensions(total_args)
                     })
                 };
-                
+
                 let mut matrix_content = String::new();
                 for r in 0..rows {
                     for c in 0..cols {
@@ -1126,20 +1126,20 @@ fn parse_matrix_dimensions_from_name(name: &str) -> Option<(usize, usize)> {
     if !name.starts_with("matrix") {
         return None;
     }
-    
+
     // Remove "matrix" prefix
     let dims = &name[6..];
-    
+
     // Split on 'x'
     let parts: Vec<&str> = dims.split('x').collect();
     if parts.len() != 2 {
         return None;
     }
-    
+
     // Parse rows and cols
     let rows = parts[0].parse::<usize>().ok()?;
     let cols = parts[1].parse::<usize>().ok()?;
-    
+
     Some((rows, cols))
 }
 
@@ -1149,14 +1149,14 @@ fn infer_matrix_dimensions(total: usize) -> (usize, usize) {
     if total == 0 {
         return (0, 0);
     }
-    
+
     // Try square matrices first
     let sqrt = (total as f64).sqrt();
     if sqrt.fract() == 0.0 {
         let n = sqrt as usize;
         return (n, n);
     }
-    
+
     // Try common rectangular dimensions
     // Check if it's a nice factorization
     for rows in 1..=10 {
@@ -1167,7 +1167,7 @@ fn infer_matrix_dimensions(total: usize) -> (usize, usize) {
             }
         }
     }
-    
+
     // Fallback: make it a row vector
     (1, total)
 }

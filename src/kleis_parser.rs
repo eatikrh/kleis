@@ -100,7 +100,7 @@ impl KleisParser {
                     break;
                 }
             }
-            
+
             // Skip comments
             if self.peek() == Some('/') {
                 if self.peek_ahead(1) == Some('/') {
@@ -130,7 +130,7 @@ impl KleisParser {
                     continue; // Re-check for more whitespace/comments
                 }
             }
-            
+
             // No more whitespace or comments
             break;
         }
@@ -497,13 +497,13 @@ impl KleisParser {
         let type_params = if self.peek() == Some('(') {
             self.advance();
             self.skip_whitespace();
-            
+
             let mut params = Vec::new();
-            
+
             while self.peek() != Some(')') {
                 let param_name = self.parse_identifier()?;
                 self.skip_whitespace();
-                
+
                 // Optional kind annotation: m: Nat
                 let kind = if self.peek() == Some(':') {
                     self.advance();
@@ -512,26 +512,26 @@ impl KleisParser {
                 } else {
                     None
                 };
-                
+
                 params.push(crate::kleis_ast::TypeParam {
                     name: param_name,
                     kind,
                 });
-                
+
                 self.skip_whitespace();
                 if self.peek() == Some(',') {
                     self.advance();
                     self.skip_whitespace();
                 }
             }
-            
+
             if self.advance() != Some(')') {
                 return Err(KleisParseError {
                     message: "Expected ')' after type parameters".to_string(),
                     position: self.pos,
                 });
             }
-            
+
             self.skip_whitespace();
             params
         } else {
@@ -714,11 +714,11 @@ impl KleisParser {
 
         let mut type_args = Vec::new();
         self.skip_whitespace();
-        
+
         while self.peek() != Some(')') {
             type_args.push(self.parse_type()?);
             self.skip_whitespace();
-            
+
             if self.peek() == Some(',') {
                 self.advance();
                 self.skip_whitespace();
@@ -1082,7 +1082,8 @@ mod tests {
         let result = parser.parse_implements().unwrap();
 
         assert_eq!(result.structure_name, "Numeric");
-        assert_eq!(result.type_arg, TypeExpr::Named("ℝ".to_string()));
+        assert_eq!(result.type_args.len(), 1);
+        assert_eq!(result.type_args[0], TypeExpr::Named("ℝ".to_string()));
         assert_eq!(result.members.len(), 1);
 
         match &result.members[0] {
@@ -1156,7 +1157,8 @@ mod tests {
         match &result.items[1] {
             TopLevel::ImplementsDef(impl_def) => {
                 assert_eq!(impl_def.structure_name, "Numeric");
-                assert_eq!(impl_def.type_arg, TypeExpr::Named("ℝ".to_string()));
+                assert_eq!(impl_def.type_args.len(), 1);
+                assert_eq!(impl_def.type_args[0], TypeExpr::Named("ℝ".to_string()));
             }
             _ => panic!("Expected ImplementsDef"),
         }

@@ -37,6 +37,70 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 - Ask for clarification when uncertain
 - Be respectful of the user's workflow and preferences
 
+## Rust Code Quality Rules
+
+**CRITICAL: Run quality checks before committing .rs files.**
+
+### Rule: Pre-Commit Quality Gates
+
+**Before committing any Rust code changes:**
+
+1. **Format code** (required)
+   ```bash
+   cargo fmt
+   ```
+   - Ensures consistent code style
+   - GitHub CI will fail if formatting is incorrect
+   - Run automatically before every commit
+
+2. **Run clippy** (required)
+   ```bash
+   cargo clippy --all-targets --all-features
+   ```
+   - Catches common mistakes and anti-patterns
+   - Fix all clippy warnings before committing
+   - GitHub CI runs this check
+
+3. **Run tests** (required)
+   ```bash
+   cargo test --lib
+   ```
+   - Ensures no regressions
+   - Must pass (279 tests as of Dec 6, 2024)
+   - GitHub CI runs this exact command
+
+**Process:**
+```
+Before committing .rs files:
+→ Run: cargo fmt
+→ Run: cargo clippy --all-targets --all-features
+→ Run: cargo test --lib
+→ Fix any errors/warnings
+→ Then commit
+
+If tests fail:
+→ Fix the code OR
+→ Document why test should be ignored
+→ Never commit broken tests
+```
+
+**Why this matters:**
+- Prevents CI failures
+- Maintains code quality
+- Catches bugs early
+- Ensures consistent style
+- Professional development practice
+
+**GitHub CI checks these exact commands:**
+- `cargo fmt -- --check` (formatting)
+- `cargo clippy --all-targets --all-features -- -D warnings` (linting)
+- `cargo test --lib --verbose` (tests)
+
+**Exceptions:**
+- Quick documentation-only commits (no .rs files changed): skip
+- Clippy warnings in legacy code: can continue-on-error, but fix if possible
+- Known test failures: documented in test files with `#[ignore]`
+
 ## Parser Development Rules
 
 **CRITICAL: Parser changes must align with formal grammar.**
