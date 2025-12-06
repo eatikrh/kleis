@@ -4,6 +4,7 @@ pub mod kleis_parser;
 pub mod math_layout;
 pub mod parser;
 pub mod render;
+pub mod signature_interpreter;
 pub mod template_inference;
 pub mod templates;
 pub mod type_checker;

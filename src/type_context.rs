@@ -15,6 +15,7 @@
 use crate::kleis_ast::{
     ImplMember, ImplementsDef, Program, StructureDef, StructureMember, TopLevel, TypeExpr,
 };
+use crate::signature_interpreter::SignatureInterpreter;
 use crate::type_inference::{Type, TypeContext};
 use std::collections::HashMap;
 
@@ -332,32 +333,13 @@ impl TypeContextBuilder {
 
             match op_name {
                 "transpose" => {
-                    // ADR-016: Read signature from structure!
-                    // From stdlib/matrices.kleis:
-                    //   structure Matrix(m: Nat, n: Nat, T) {
-                    //       operation transpose : Matrix(n, m, T)
-                    //   }
-                    // This says: result swaps m and n!
+                    // ✅ TRUE ADR-016: Use signature interpreter!
+                    let structure = self
+                        .get_structure(&structure_name)
+                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    if arg_types.len() != 1 {
-                        return Err("transpose requires 1 argument".to_string());
-                    }
-
-                    match &arg_types[0] {
-                        Type::Matrix(m, n) => {
-                            // Parse result type from signature
-                            if let Some(signature) = self.get_operation_signature("transpose") {
-                                // signature is: Matrix(n, m, T)
-                                // This tells us to swap dimensions!
-                                eprintln!(
-                                    "✅ ADR-016: Read signature from structure: {:?}",
-                                    signature
-                                );
-                            }
-                            Ok(Type::Matrix(*n, *m))
-                        }
-                        _ => Err("transpose requires a matrix".to_string()),
-                    }
+                    let mut interpreter = SignatureInterpreter::new();
+                    interpreter.interpret_signature(structure, op_name, arg_types)
                 }
 
                 "add" => {
