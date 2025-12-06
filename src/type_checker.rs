@@ -91,10 +91,11 @@ impl TypeChecker {
 
     /// Type check an expression with helpful error messages
     pub fn check(&mut self, expr: &Expression) -> TypeCheckResult {
-        // Try HM inference
-        // NOTE: Matrix operations currently hardcoded in type_inference.rs
-        // TODO: Refactor to query self.context_builder (proper ADR-016)
-        match self.inference.infer_and_solve(expr) {
+        // Try HM inference with context_builder (ADR-016 compliant!)
+        match self
+            .inference
+            .infer_and_solve(expr, Some(&self.context_builder))
+        {
             Ok(ty) => TypeCheckResult::Success(ty),
             Err(e) => {
                 // Check if error is due to unsupported operation

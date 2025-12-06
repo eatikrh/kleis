@@ -159,7 +159,11 @@ impl TypeInference {
     }
 
     /// Infer type of an expression
-    pub fn infer(&mut self, expr: &Expression) -> Result<Type, String> {
+    pub fn infer(
+        &mut self,
+        expr: &Expression,
+        context_builder: Option<&crate::type_context::TypeContextBuilder>,
+    ) -> Result<Type, String> {
         match expr {
             // Constants are scalars
             Expression::Const(_) => Ok(Type::Scalar),
@@ -180,23 +184,29 @@ impl TypeInference {
             Expression::Placeholder { .. } => Ok(self.context.fresh_var()),
 
             // Operations: infer based on operation type
-            Expression::Operation { name, args } => self.infer_operation(name, args),
+            Expression::Operation { name, args } => {
+                self.infer_operation(name, args, context_builder)
+            }
         }
     }
 
     /// Infer type of an operation
-    /// ADR-016 NOTE: For now, matrix operations are partially hardcoded here.
-    /// TODO: Fully delegate to TypeContextBuilder.infer_operation_type()
-    /// This requires refactoring to pass context_builder through the call chain.
-    fn infer_operation(&mut self, name: &str, args: &[Expression]) -> Result<Type, String> {
+    /// ADR-016 COMPLIANT: Delegates matrix operations to TypeContextBuilder.
+    /// Only keeps truly primitive operations (plus, minus, divide, sqrt, power).
+    fn infer_operation(
+        &mut self,
+        name: &str,
+        args: &[Expression],
+        context_builder: Option<&crate::type_context::TypeContextBuilder>,
+    ) -> Result<Type, String> {
         match name {
             // Addition: T + T → T (same types)
             "plus" | "minus" => {
                 if args.len() != 2 {
                     return Err(format!("{} requires 2 arguments", name));
                 }
-                let t1 = self.infer(&args[0])?;
-                let t2 = self.infer(&args[1])?;
+                let t1 = self.infer(&args[0], context_builder)?;
+                let t2 = self.infer(&args[1], context_builder)?;
 
                 // Add constraint: t1 = t2
                 self.add_constraint(t1.clone(), t2.clone());
@@ -204,53 +214,13 @@ impl TypeInference {
                 Ok(t1)
             }
 
-            // Multiplication: polymorphic!
-            // Scalar × Scalar → Scalar
-            // Scalar × Vector → Vector
-            // Vector × Vector → Scalar (dot product)
-            // Matrix × Matrix → Matrix
-            "scalar_multiply" | "times" => {
-                if args.len() != 2 {
-                    return Err(format!("{} requires 2 arguments", name));
-                }
-                let t1 = self.infer(&args[0])?;
-                let t2 = self.infer(&args[1])?;
-
-                // Check if both are matrices → matrix multiplication
-                match (&t1, &t2) {
-                    (Type::Matrix(m, n), Type::Matrix(p, q)) => {
-                        // Matrix multiplication: check dimension compatibility
-                        if n != p {
-                            return Err(format!(
-                                "Matrix multiplication: inner dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot multiply: {} ≠ {}",
-                                m, n, p, q, n, p
-                            ));
-                        }
-                        Ok(Type::Matrix(*m, *q))
-                    }
-                    (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
-                    (Type::Scalar, Type::Matrix(m, n)) | (Type::Matrix(m, n), Type::Scalar) => {
-                        // Scalar × Matrix or Matrix × Scalar → same matrix type
-                        Ok(Type::Matrix(*m, *n))
-                    }
-                    (Type::Vector(n1), Type::Vector(n2)) if n1 == n2 => {
-                        // Dot product: Vector · Vector → Scalar
-                        Ok(Type::Scalar)
-                    }
-                    _ => {
-                        // Unknown combination, return fresh variable
-                        Ok(self.context.fresh_var())
-                    }
-                }
-            }
-
             // Division: T / Scalar → T
             "scalar_divide" | "frac" => {
                 if args.len() != 2 {
                     return Err(format!("{} requires 2 arguments", name));
                 }
-                let t1 = self.infer(&args[0])?;
-                let t2 = self.infer(&args[1])?;
+                let t1 = self.infer(&args[0], context_builder)?;
+                let t2 = self.infer(&args[1], context_builder)?;
 
                 // Divisor must be scalar
                 self.add_constraint(t2, Type::Scalar);
@@ -264,7 +234,7 @@ impl TypeInference {
                 if args.len() != 1 {
                     return Err("sqrt requires 1 argument".to_string());
                 }
-                let t1 = self.infer(&args[0])?;
+                let t1 = self.infer(&args[0], context_builder)?;
 
                 // Argument must be scalar
                 self.add_constraint(t1, Type::Scalar);
@@ -277,8 +247,8 @@ impl TypeInference {
                 if args.len() != 2 {
                     return Err(format!("{} requires 2 arguments", name));
                 }
-                let t1 = self.infer(&args[0])?;
-                let t2 = self.infer(&args[1])?;
+                let t1 = self.infer(&args[0], context_builder)?;
+                let t2 = self.infer(&args[1], context_builder)?;
 
                 // Both must be scalars
                 self.add_constraint(t1, Type::Scalar);
@@ -292,7 +262,7 @@ impl TypeInference {
                 if args.is_empty() {
                     return Err("derivative requires arguments".to_string());
                 }
-                let t1 = self.infer(&args[0])?;
+                let t1 = self.infer(&args[0], context_builder)?;
 
                 // Function type: Scalar → Scalar
                 self.add_constraint(
@@ -311,107 +281,11 @@ impl TypeInference {
                 if args.is_empty() {
                     return Err("integral requires arguments".to_string());
                 }
-                let t1 = self.infer(&args[0])?;
+                let _t1 = self.infer(&args[0], context_builder)?;
 
                 // Integrand should be function or scalar
                 // Result is scalar
                 Ok(Type::Scalar)
-            }
-
-            // Matrix operations: multiply, add, transpose, det
-            // These correspond to operations defined in stdlib/matrices.kleis
-            "multiply" => {
-                if args.len() != 2 {
-                    return Err("multiply requires 2 arguments".to_string());
-                }
-
-                let t1 = self.infer(&args[0])?;
-                let t2 = self.infer(&args[1])?;
-
-                match (t1, t2) {
-                    (Type::Matrix(m, n), Type::Matrix(p, q)) => {
-                        if n != p {
-                            return Err(format!(
-                                "Matrix multiplication: inner dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot multiply: {} ≠ {}",
-                                m, n, p, q, n, p
-                            ));
-                        }
-                        Ok(Type::Matrix(m, q))
-                    }
-                    _ => Err("multiply requires two matrices".to_string()),
-                }
-            }
-
-            "add" => {
-                if args.len() != 2 {
-                    return Err("add requires 2 arguments".to_string());
-                }
-
-                let t1 = self.infer(&args[0])?;
-                let t2 = self.infer(&args[1])?;
-
-                match (&t1, &t2) {
-                    (Type::Matrix(m1, n1), Type::Matrix(m2, n2)) => {
-                        if m1 != m2 || n1 != n2 {
-                            return Err(format!(
-                                "Matrix addition: dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot add matrices with different dimensions",
-                                m1, n1, m2, n2
-                            ));
-                        }
-                        Ok(Type::Matrix(*m1, *n1))
-                    }
-                    (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
-                    _ => {
-                        self.add_constraint(t1.clone(), t2.clone());
-                        Ok(t1)
-                    }
-                }
-            }
-
-            "transpose" => {
-                if args.len() != 1 {
-                    return Err("transpose requires 1 argument".to_string());
-                }
-
-                let t = self.infer(&args[0])?;
-
-                match t {
-                    Type::Matrix(m, n) => Ok(Type::Matrix(n, m)), // Flip dimensions!
-                    _ => Err("transpose requires a matrix".to_string()),
-                }
-            }
-
-            "det" | "determinant" => {
-                if args.len() != 1 {
-                    return Err("det requires 1 argument".to_string());
-                }
-
-                let t = self.infer(&args[0])?;
-
-                match t {
-                    Type::Matrix(m, n) if m == n => Ok(Type::Scalar),
-                    Type::Matrix(m, n) => Err(format!(
-                        "Determinant requires square matrix!\n  Got: {}×{} (non-square)\n  Determinants only exist for n×n matrices",
-                        m, n
-                    )),
-                    _ => Err("det requires a matrix".to_string()),
-                }
-            }
-
-            "trace" => {
-                if args.len() != 1 {
-                    return Err("trace requires 1 argument".to_string());
-                }
-
-                let t = self.infer(&args[0])?;
-
-                match t {
-                    Type::Matrix(m, n) if m == n => Ok(Type::Scalar),
-                    Type::Matrix(m, n) => {
-                        Err(format!("Trace requires square matrix! Got {}×{}", m, n))
-                    }
-                    _ => Err("trace requires a matrix".to_string()),
-                }
             }
 
             // Matrix construction: parse dimensions from operation name
@@ -425,7 +299,7 @@ impl TypeInference {
                     // Infer element types (may be placeholders or scalars)
                     // But we KNOW the overall matrix type from the operation name!
                     for arg in args {
-                        let ty = self.infer(arg)?;
+                        let ty = self.infer(arg, context_builder)?;
                         // Don't add constraint if it's a placeholder (type variable)
                         // Placeholders can be filled with anything
                         match ty {
@@ -445,32 +319,31 @@ impl TypeInference {
                 } else {
                     // Couldn't parse dimensions, treat as unknown
                     for arg in args {
-                        self.infer(arg)?;
+                        self.infer(arg, context_builder)?;
                     }
                     Ok(self.context.fresh_var())
                 }
             }
 
-            // Unknown operation: create fresh variable
+            // Default: Delegate to context_builder (ADR-016 compliant!)
             _ => {
-                // Infer all argument types
-                for arg in args {
-                    self.infer(arg)?;
+                // If context_builder is available, try to infer from it
+                if let Some(builder) = context_builder {
+                    // Infer argument types first
+                    let arg_types: Vec<Type> = args
+                        .iter()
+                        .map(|arg| self.infer(arg, context_builder))
+                        .collect::<Result<Vec<_>, _>>()?;
+
+                    // Delegate to builder!
+                    builder.infer_operation_type(name, &arg_types)
+                } else {
+                    // No context builder - infer arguments and return unknown
+                    for arg in args {
+                        self.infer(arg, context_builder)?;
+                    }
+                    Ok(self.context.fresh_var())
                 }
-
-                // Return fresh variable for result
-                Ok(self.context.fresh_var())
-            }
-
-            // Unknown operation: create fresh variable
-            _ => {
-                // Infer all argument types
-                for arg in args {
-                    self.infer(arg)?;
-                }
-
-                // Return fresh variable for result
-                Ok(self.context.fresh_var())
             }
         }
     }
@@ -491,8 +364,12 @@ impl TypeInference {
     }
 
     /// Infer and solve: complete type inference
-    pub fn infer_and_solve(&mut self, expr: &Expression) -> Result<Type, String> {
-        let ty = self.infer(expr)?;
+    pub fn infer_and_solve(
+        &mut self,
+        expr: &Expression,
+        context_builder: Option<&crate::type_context::TypeContextBuilder>,
+    ) -> Result<Type, String> {
+        let ty = self.infer(expr, context_builder)?;
         let subst = self.solve()?;
         Ok(subst.apply(&ty))
     }
@@ -582,7 +459,7 @@ mod tests {
     fn test_const_type() {
         let mut infer = TypeInference::new();
         let expr = Expression::Const("42".to_string());
-        let ty = infer.infer_and_solve(&expr).unwrap();
+        let ty = infer.infer_and_solve(&expr, None).unwrap();
         assert_eq!(ty, Type::Scalar);
     }
 
@@ -599,7 +476,7 @@ mod tests {
             ],
         );
 
-        let ty = infer.infer_and_solve(&expr).unwrap();
+        let ty = infer.infer_and_solve(&expr, None).unwrap();
         assert_eq!(ty, Type::Scalar);
     }
 
@@ -616,7 +493,7 @@ mod tests {
             ],
         );
 
-        let ty = infer.infer_and_solve(&expr).unwrap();
+        let ty = infer.infer_and_solve(&expr, None).unwrap();
         // Should infer x : Scalar
         assert_eq!(ty, Type::Scalar);
     }
@@ -634,7 +511,7 @@ mod tests {
             ],
         );
 
-        let ty = infer.infer_and_solve(&expr).unwrap();
+        let ty = infer.infer_and_solve(&expr, None).unwrap();
         // Should infer x : α (unknown), result: α
         println!("Inferred type: {}", ty);
     }

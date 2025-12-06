@@ -79,7 +79,7 @@ fn test_numeric_pattern() {
             let implements = program.implements();
             println!(
                 "\nImplements: {} for {:?}",
-                implements[0].structure_name, implements[0].type_arg
+                implements[0].structure_name, implements[0].type_args
             );
             println!("  Provides:");
             for member in &implements[0].members {
@@ -135,7 +135,7 @@ fn test_polymorphic() {
             for impl_def in implements {
                 println!(
                     "  - {} for {:?}",
-                    impl_def.structure_name, impl_def.type_arg
+                    impl_def.structure_name, impl_def.type_args
                 );
             }
 
@@ -202,7 +202,7 @@ fn test_complete_stdlib() {
             for impl_def in program.implements() {
                 println!(
                     "  - {} for {:?}",
-                    impl_def.structure_name, impl_def.type_arg
+                    impl_def.structure_name, impl_def.type_args
                 );
             }
 

@@ -141,7 +141,7 @@ fn demo_inference(expr: &Expression) {
     println!("  Expression: {:?}", expr);
 
     // Perform type inference
-    match infer.infer_and_solve(expr) {
+    match infer.infer_and_solve(expr, None) {
         Ok(ty) => {
             println!("  Inferred type: {}", ty);
         }
