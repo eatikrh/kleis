@@ -589,25 +589,36 @@ impl TypeContextBuilder {
                     Ok(Type::Scalar)
                 }
 
-                // Relational operations
-                // For 'equals' in mathematical definitions (I = Matrix), return the RHS type
-                // For comparisons (a < b), return Bool (currently Scalar)
-                "equals" => {
+                // Equality operations (work for any type)
+                "equals" | "not_equals" => {
                     if arg_types.len() != 2 {
-                        return Err("equals requires 2 arguments".to_string());
+                        return Err(format!("{} requires 2 arguments", op_name));
                     }
-                    // For equals, return the type of RHS (second argument)
+                    // For equals/not_equals, return the type of RHS (second argument)
                     // This handles definitions like: I = Matrix(2,2,...)
                     // Type of equation is the type of what's defined
                     Ok(arg_types[1].clone())
                 }
                 
-                "not_equals" | "less_than" | "greater_than" => {
+                // Ordering operations (only for ordered types like scalars)
+                "less_than" | "greater_than" | "less_equal" | "greater_equal" => {
                     if arg_types.len() != 2 {
                         return Err(format!("{} requires 2 arguments", op_name));
                     }
-                    // These are comparisons, return Bool (using Scalar for now)
-                    Ok(Type::Scalar)
+                    
+                    // Check that both arguments are scalars
+                    match (&arg_types[0], &arg_types[1]) {
+                        (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
+                        (Type::Matrix(_, _), _) | (_, Type::Matrix(_, _)) => {
+                            Err(format!(
+                                "Ordering operations ({}) don't make sense for matrices!\n\
+                                 Matrices don't have a natural ordering.\n\
+                                 Use 'equals' or 'not_equals' to compare matrices.",
+                                op_name
+                            ))
+                        }
+                        _ => Ok(Type::Scalar),  // For type variables, assume scalar
+                    }
                 }
 
                 _ => {
