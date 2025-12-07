@@ -575,17 +575,34 @@ impl TypeContextBuilder {
                         return Err("power requires 2 arguments".to_string());
                     }
 
-                    // For now, require both to be scalars
+                    // Handle type variables gracefully (like arithmetic operations)
                     match (&arg_types[0], &arg_types[1]) {
                         (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
+                        (Type::Var(_), Type::Scalar) | (Type::Scalar, Type::Var(_)) => {
+                            Ok(Type::Scalar)
+                        }
+                        (Type::Var(_), Type::Var(_)) => Ok(Type::Scalar),
                         _ => Err("power requires both arguments to be scalars".to_string()),
                     }
                 }
 
                 // Calculus operations
-                "derivative" | "integral" => {
+                "derivative" | "integral" | "d_dx" | "partial" => {
                     // For now, just return Scalar
                     // TODO: Proper function type handling
+                    Ok(Type::Scalar)
+                }
+
+                "int_bounds" => {
+                    // int_bounds(integrand, lower, upper, variable) → Scalar
+                    // ∫_a^b f(x) dx
+                    if arg_types.len() != 4 {
+                        return Err(
+                            "int_bounds requires 4 arguments (integrand, lower, upper, variable)"
+                                .to_string(),
+                        );
+                    }
+                    // Result is always Scalar
                     Ok(Type::Scalar)
                 }
 

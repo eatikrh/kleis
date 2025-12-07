@@ -78,10 +78,13 @@ implements Numeric(ℝ) {
 // Calculus operations
 structure Differentiable(F) {
   operation derivative : F → F
+  operation d_dx : F → F
+  operation partial : F → F
 }
 
 structure Integrable(F) {
   operation integral : F → ℝ
+  operation int_bounds : F → ℝ → ℝ → F → ℝ
 }
 
 // Simple matrix structure
