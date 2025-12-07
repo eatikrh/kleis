@@ -97,26 +97,14 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
-    // Load stdlib/matrices.kleis and initialize TypeChecker
-    let type_checker = match std::fs::read_to_string("stdlib/matrices.kleis") {
-        Ok(content) => match kleis::kleis_parser::parse_kleis_program(&content) {
-            Ok(program) => match kleis::type_checker::TypeChecker::from_program(program) {
-                Ok(checker) => {
-                    println!("✅ TypeChecker initialized from stdlib/matrices.kleis");
-                    Some(checker)
-                }
-                Err(e) => {
-                    eprintln!("⚠️  TypeChecker initialization failed: {}", e);
-                    None
-                }
-            },
-            Err(e) => {
-                eprintln!("⚠️  Failed to parse stdlib/matrices.kleis: {}", e);
-                None
-            }
-        },
+    // Initialize TypeChecker with stdlib (includes minimal_prelude + matrices)
+    let type_checker = match kleis::type_checker::TypeChecker::with_stdlib() {
+        Ok(checker) => {
+            println!("✅ TypeChecker initialized with stdlib (minimal_prelude + matrices)");
+            Some(checker)
+        }
         Err(e) => {
-            eprintln!("⚠️  Failed to load stdlib/matrices.kleis: {}", e);
+            eprintln!("⚠️  Failed to initialize TypeChecker with stdlib: {}", e);
             None
         }
     };
@@ -659,35 +647,14 @@ async fn type_check_handler(
     // For now, create a new one each time (TODO: make check() use &self)
     drop(type_checker_guard);
 
-    // Re-create type checker (since we can't mutate through Arc<Mutex>)
-    // This is a temporary workaround
-    let result = match std::fs::read_to_string("stdlib/matrices.kleis") {
-        Ok(content) => match kleis::kleis_parser::parse_kleis_program(&content) {
-            Ok(program) => match kleis::type_checker::TypeChecker::from_program(program) {
-                Ok(mut checker) => checker.check(&expr),
-                Err(e) => {
-                    return Json(TypeCheckResponse {
-                        success: false,
-                        type_name: None,
-                        error: Some(format!("TypeChecker error: {}", e)),
-                        suggestion: None,
-                    });
-                }
-            },
-            Err(e) => {
-                return Json(TypeCheckResponse {
-                    success: false,
-                    type_name: None,
-                    error: Some(format!("Parse error: {}", e)),
-                    suggestion: None,
-                });
-            }
-        },
+    // Re-create type checker with full stdlib (minimal_prelude + matrices)
+    let result = match kleis::type_checker::TypeChecker::with_stdlib() {
+        Ok(mut checker) => checker.check(&expr),
         Err(e) => {
             return Json(TypeCheckResponse {
                 success: false,
                 type_name: None,
-                error: Some(format!("Failed to load stdlib: {}", e)),
+                error: Some(format!("Failed to initialize TypeChecker: {}", e)),
                 suggestion: None,
             });
         }
