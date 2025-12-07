@@ -17,13 +17,18 @@ tmp_*.tex
 # html_gallery.html
 # template_coverage_report.html
 
-# Funding and business documents (private)
+# Private planning and strategy documents
 /funding/
+/private/
 FUNDING_*.md
 GRANT_*.md
 PITCH_*.md
 *_PROPOSAL.md
 *_proposal.md
+*_INTERNAL*.md
+*_PRIVATE*.md
+*_STRATEGY*.md
+*_PLAN_*.md
 
 # Video/presentation materials (private)
 /pot_video_90/
