@@ -5221,7 +5221,7 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
 
     // Trig & log functions
     out.push((
-        "Cosine".into(),
+        "Function - cos".into(),
         render_expression(&cos_e(o("x")), &ctx, &RenderTarget::LaTeX),
     ));
     out.push((
@@ -5229,7 +5229,7 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
         render_expression(&tan_e(o("x")), &ctx, &RenderTarget::LaTeX),
     ));
     out.push((
-        "Sine".into(),
+        "Function - sin".into(),
         render_expression(&func("sin", vec![o("x")]), &ctx, &RenderTarget::LaTeX),
     ));
     out.push((
@@ -5241,11 +5241,11 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
         render_expression(&cosh_e(o("x")), &ctx, &RenderTarget::LaTeX),
     ));
     out.push((
-        "Natural logarithm".into(),
+        "Function - log".into(),
         render_expression(&ln_e(o("x")), &ctx, &RenderTarget::LaTeX),
     ));
     out.push((
-        "Logarithm".into(),
+        "Function - exp".into(),
         render_expression(&log_e(o("x")), &ctx, &RenderTarget::LaTeX),
     ));
     out.push((
@@ -5297,11 +5297,11 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
         render_expression(&ceiling(o("x")), &ctx, &RenderTarget::LaTeX),
     ));
     out.push((
-        "Arcsine".into(),
+        "Inverse trig - arcsin".into(),
         render_expression(&arcsin_e(o("x")), &ctx, &RenderTarget::LaTeX),
     ));
     out.push((
-        "Arccosine".into(),
+        "Inverse trig - arccos".into(),
         render_expression(&arccos_e(o("x")), &ctx, &RenderTarget::LaTeX),
     ));
     out.push((
