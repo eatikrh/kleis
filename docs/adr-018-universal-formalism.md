@@ -265,6 +265,58 @@ theorem fold_fusion:
 
 ---
 
+## Current State vs Future State
+
+### Current Implementation (v0.3.0)
+
+**Templates: Hardcoded in Rust**
+- Location: `src/render.rs` (2000+ lines of template definitions)
+- Also: `src/templates.rs` (palette template functions)
+- Format: Rust HashMaps with template strings
+- Examples:
+  ```rust
+  latex_templates.insert("matrix2x2", "\\begin{bmatrix}{a11}&{a12}\\\\{a21}&{a22}\\end{bmatrix}");
+  typst_templates.insert("integral", "integral _({from})^({to}) {body}");
+  ```
+
+**Limitation:** Users **cannot** add custom notation without modifying Rust code.
+
+**What Works:**
+- ✅ Multiple render targets (LaTeX, Typst, HTML, Unicode)
+- ✅ Template substitution system
+- ✅ 100+ built-in mathematical templates
+- ✅ Operation name → template mapping
+
+**What's Missing:**
+- ❌ User-defined templates in .kleis files
+- ❌ Domain-specific rendering
+- ❌ Custom notation for user types
+- ❌ Rendering extensibility
+
+### Future Implementation (Stages 2-4)
+
+**Templates: User-Defined in .kleis Files**
+```kleis
+@render_target("accounting")
+@render(PurchaseOrder) {
+    template: """
+    ┌─────────────────────┐
+    │ Order #{orderId}    │
+    ├─────────────────────┤
+    │ Total: ${total}     │
+    └─────────────────────┘
+    """
+}
+```
+
+**This enables:**
+- ✅ Users define notation for their types
+- ✅ Multiple views of same structure
+- ✅ Domain-specific presentation
+- ✅ No Rust code changes needed
+
+---
+
 ## Architecture
 
 ### Three-Layer Design
