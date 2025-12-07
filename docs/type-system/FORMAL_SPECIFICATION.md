@@ -11,6 +11,8 @@
 
 Kleis implements a **Hindley-Milner-style constraint-based type inference system** augmented with a **user-extensible operation registry** (ADR-016) and **dimensional type checking** (ADR-019). The system differs from classical HM by storing type definitions in user-space structures rather than hardcoding them in the inference engine, enabling self-hosting and domain-specific type systems.
 
+**Important:** The current implementation (v0.4.0) has the core HM unification machinery but **not yet** full Damas-Milner let-polymorphism (type schemes, generalization, instantiation). The `ForAll` constructor exists in the type language but is not used in inference yet. Planned extensions are clearly marked throughout.
+
 ---
 
 ## 1. Type Language
@@ -343,7 +345,7 @@ not:          ℝ → ℝ    (too specific)
 
 ---
 
-## 9. Extensions (Planned)
+## 9. Extensions (Not Implemented Yet)
 
 ### **9.1 Let-Polymorphism (Phase 4)**
 
@@ -571,6 +573,28 @@ M¹·L¹·T⁻² × L¹ = M¹·L²·T⁻²
 Γ ⊢ times(F, d) : Physical(L₁+L₂, M₁+M₂, T₁+T₂)
 ```
 
+**Example with dimension constraints:**
+
+Let `n : ℕ` be a dimension variable. Consider:
+```
+A : Matrix(n, 2n)
+B : Matrix(2n, 3)
+```
+
+Multiplication constraint:
+```
+Matrix(n, 2n) × Matrix(2n, 3) requires 2n = 2n ✓
+Result: Matrix(n, 3)
+```
+
+Unification example:
+```
+unify(Matrix(n, 2n), Matrix(3, 6))
+⇒ unify_dim(n, 3) ∧ unify_dim(2n, 6)
+⇒ [n ↦ 3] ∧ [2n ↦ 6]
+⇒ [n ↦ 3]  (consistent: 2·3 = 6 ✓)
+```
+
 ---
 
 ## 12. Comparison to Standard HM
@@ -622,6 +646,8 @@ Rules:
 | **Dimensional checking** | ❌ | ✅ ADR-019 | Current |
 | **Self-hosting** | ❌ | ✅ Types in Kleis | Current |
 
+**Design choice:** Kleis prioritizes HM-style inference over richer systems (e.g., full dependent types) at the core to preserve decidable inference and compiler-friendly complexity, while using the registry to express domain-specific structure. This allows users to extend the type system without modifying the inference engine.
+
 ---
 
 ## 13. Metatheoretic Properties
@@ -652,13 +678,14 @@ Rules:
 
 ### **13.3 Decidability**
 
-**Theorem:** Type inference is decidable.
+**Theorem:** Assuming the operation registry is finite and non-ambiguous per operator signature, type inference is decidable.
 
 **Proof:**
 - Expression structure is finite
 - Fresh variable generation terminates
 - Unification is decidable (occurs check prevents infinite recursion)
-- Registry lookup is finite
+- Registry lookup is finite and deterministic by construction
+- Constraint solving terminates (finite constraints, terminating unification)
 
 **Complexity:** O(n·log n) where n is expression size (in practice).
 
