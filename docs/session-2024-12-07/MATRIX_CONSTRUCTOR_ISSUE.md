@@ -253,6 +253,33 @@ fn infer_matrix_constructor(...) {
 
 ## Related Issues
 
+### **0. UI Shows Edit Markers for Dimensions**
+
+When displaying `Matrix(2, 2, 1, 0, 0, 1)`, the UI shows edit markers for ALL arguments including the dimensions (2, 2).
+
+**Problem:** Dimensions are type-level metadata, not editable values.
+
+**Current behavior:**
+```
+[2] [2] [1] [0]  <- All have edit markers (green boxes)
+    [0] [1]
+```
+
+**Should be:**
+```
+2x2 matrix:      <- Dimensions shown but not editable
+[1] [0]          <- Only elements have edit markers
+[0] [1]
+```
+
+**Fix:** UI needs to skip dimension arguments (args 0 and 1) when generating edit markers.
+
+**Location:** Server rendering logic or frontend marker placement.
+
+**Priority:** Medium - cosmetic issue, doesn't break functionality.
+
+---
+
 ### **1. Vector Constructors Don't Exist**
 
 ```kleis
