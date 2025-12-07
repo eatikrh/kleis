@@ -484,43 +484,15 @@ impl TypeContextBuilder {
         // Query registry for operation
         if let Some(structure_name) = self.registry.structure_for_operation(op_name) {
             // Found the structure that defines this operation
-            // Now infer the result type based on structure definition
+            // Check if operation needs special handling or can use SignatureInterpreter directly
 
             match op_name {
-                "transpose" => {
-                    // ✅ TRUE ADR-016: Use signature interpreter!
-                    let structure = self
-                        .get_structure(&structure_name)
-                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
-
-                    let mut interpreter = SignatureInterpreter::new();
-                    interpreter.interpret_signature(structure, op_name, arg_types)
-                }
-
-                "add" => {
-                    // ✅ TRUE ADR-016: SignatureInterpreter checks dimension constraints!
-                    // No manual dimension checking needed - it's in the signature
-                    let structure = self
-                        .get_structure(&structure_name)
-                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
-
-                    let mut interpreter = SignatureInterpreter::new();
-                    interpreter.interpret_signature(structure, op_name, arg_types)
-                }
-
-                "multiply" => {
-                    // ✅ TRUE ADR-016: SignatureInterpreter checks inner dimension constraint!
-                    // MatrixMultipliable(m, n, p) enforces n matches between matrices
-                    let structure = self
-                        .get_structure(&structure_name)
-                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
-
-                    let mut interpreter = SignatureInterpreter::new();
-                    interpreter.interpret_signature(structure, op_name, arg_types)
-                }
-
-                "det" | "determinant" | "trace" => {
-                    // ✅ TRUE ADR-016: SquareMatrix structure enforces squareness!
+                // Matrix operations that use SignatureInterpreter (dimension constraints in signatures!)
+                "transpose" | "add" | "multiply" | "det" | "determinant" | "trace" => {
+                    // ✅ TRUE ADR-016: All dimension constraints enforced by signatures!
+                    // - MatrixAddable(m,n,T): enforces same dimensions
+                    // - MatrixMultipliable(m,n,p,T): enforces inner dimension n matches
+                    // - SquareMatrix(n,T): enforces rows = cols
                     let structure = self
                         .get_structure(&structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
@@ -540,25 +512,9 @@ impl TypeContextBuilder {
                 // For now, these operations are restricted to scalars
                 "power" | "sup" | "sub" => self.infer_binary_same_type_op(op_name, arg_types),
 
-                // Calculus operations
-                "derivative" | "integral" | "d_dx" | "partial" => {
-                    // For now, just return Scalar
-                    // TODO: Proper function type handling
-                    Ok(Type::Scalar)
-                }
-
-                "int_bounds" => {
-                    // int_bounds(integrand, lower, upper, variable) → Scalar
-                    // ∫_a^b f(x) dx
-                    if arg_types.len() != 4 {
-                        return Err(
-                            "int_bounds requires 4 arguments (integrand, lower, upper, variable)"
-                                .to_string(),
-                        );
-                    }
-                    // Result is always Scalar
-                    Ok(Type::Scalar)
-                }
+                // Calculus operations (all return Scalar for now)
+                // TODO: Proper function type handling when we add function types
+                "derivative" | "integral" | "d_dx" | "partial" | "int_bounds" => Ok(Type::Scalar),
 
                 // Equality operations (work for any type)
                 "equals" | "not_equals" => {
