@@ -64,6 +64,7 @@ structure Numeric(N) {
   operation sqrt : N → N
   operation power : N → N → N
   operation sup : N → N → N
+  operation sub : N → N → N
 }
 
 // Implementation for reals
@@ -72,7 +73,8 @@ implements Numeric(ℝ) {
   operation floor = builtin_floor
   operation sqrt = builtin_sqrt
   operation power = builtin_pow
-  operation sup = builtin_pow
+  operation sup = builtin_superscript
+  operation sub = builtin_subscript
 }
 
 // Calculus operations

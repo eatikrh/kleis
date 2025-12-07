@@ -570,9 +570,9 @@ impl TypeContextBuilder {
                 }
 
                 // Power: T → T → T (includes sup for superscripts)
-                "power" | "sup" => {
+                "power" | "sup" | "sub" => {
                     if arg_types.len() != 2 {
-                        return Err("power requires 2 arguments".to_string());
+                        return Err(format!("{} requires 2 arguments", op_name));
                     }
 
                     // Handle type variables gracefully (like arithmetic operations)
@@ -582,7 +582,7 @@ impl TypeContextBuilder {
                             Ok(Type::Scalar)
                         }
                         (Type::Var(_), Type::Var(_)) => Ok(Type::Scalar),
-                        _ => Err("power requires both arguments to be scalars".to_string()),
+                        _ => Err(format!("{} requires compatible types", op_name)),
                     }
                 }
 
