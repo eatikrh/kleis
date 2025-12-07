@@ -416,34 +416,6 @@ impl TypeContextBuilder {
         Ok(arg_types[0].clone())
     }
 
-    /// Helper: Check if matrix dimensions match (for addition, equality, etc.)
-    fn check_matrix_dimensions_match(
-        op_name: &str,
-        m1: usize,
-        n1: usize,
-        m2: usize,
-        n2: usize,
-    ) -> Result<(), String> {
-        if m1 != m2 || n1 != n2 {
-            return Err(format!(
-                "{}: dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot operate on matrices with different dimensions",
-                op_name, m1, n1, m2, n2
-            ));
-        }
-        Ok(())
-    }
-
-    /// Helper: Check if matrix is square (for det, trace, etc.)
-    fn check_square_matrix(op_name: &str, ty: &Type) -> Result<(), String> {
-        match ty {
-            Type::Matrix(m, n) if m == n => Ok(()),
-            Type::Matrix(m, n) => Err(format!(
-                "{} requires square matrix!\n  Got: {}×{} (non-square)\n  Operation only defined for n×n matrices",
-                op_name, m, n
-            )),
-            _ => Err(format!("{} requires a matrix", op_name)),
-        }
-    }
 
     /// Infer the type of an operation applied to given argument types
     /// This is the ADR-016 compliant way: query structures, don't hardcode!
