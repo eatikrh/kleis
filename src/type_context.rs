@@ -524,6 +524,70 @@ impl TypeContextBuilder {
                     }
                 }
 
+                // Arithmetic operations: T → T → T (same types)
+                "plus" | "minus" | "times" | "divide" => {
+                    if arg_types.len() != 2 {
+                        return Err(format!("{} requires 2 arguments", op_name));
+                    }
+
+                    // Both arguments should have the same type
+                    // Handle type variables (unknown types) gracefully
+                    match (&arg_types[0], &arg_types[1]) {
+                        (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
+                        (Type::Matrix(m1, n1), Type::Matrix(m2, n2)) if m1 == m2 && n1 == n2 => {
+                            // Same matrix dimensions
+                            Ok(Type::Matrix(*m1, *n1))
+                        }
+                        (Type::Var(_), Type::Scalar) | (Type::Scalar, Type::Var(_)) => {
+                            // One is unknown, other is Scalar → result is Scalar
+                            // The inference engine will add the constraint that Var = Scalar
+                            Ok(Type::Scalar)
+                        }
+                        (Type::Var(_), Type::Matrix(m, n)) | (Type::Matrix(m, n), Type::Var(_)) => {
+                            // One is unknown, other is Matrix → result is Matrix
+                            Ok(Type::Matrix(*m, *n))
+                        }
+                        (Type::Var(_), Type::Var(_)) => {
+                            // Both unknown → return first (unification will handle it)
+                            Ok(arg_types[0].clone())
+                        }
+                        _ => Err(format!(
+                            "{} requires both arguments to be compatible types (got {:?} and {:?})",
+                            op_name, arg_types[0], arg_types[1]
+                        )),
+                    }
+                }
+
+                // Numeric operations: T → T
+                "abs" | "floor" | "sqrt" => {
+                    if arg_types.len() != 1 {
+                        return Err(format!("{} requires 1 argument", op_name));
+                    }
+
+                    // Result type is same as input type
+                    Ok(arg_types[0].clone())
+                }
+
+                // Power: T → T → T
+                "power" => {
+                    if arg_types.len() != 2 {
+                        return Err("power requires 2 arguments".to_string());
+                    }
+
+                    // For now, require both to be scalars
+                    match (&arg_types[0], &arg_types[1]) {
+                        (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
+                        _ => Err("power requires both arguments to be scalars".to_string()),
+                    }
+                }
+
+                // Calculus operations
+                "derivative" | "integral" => {
+                    // For now, just return Scalar
+                    // TODO: Proper function type handling
+                    Ok(Type::Scalar)
+                }
+
                 _ => {
                     // Operation found in registry but we don't know how to infer its type yet
                     Err(format!(

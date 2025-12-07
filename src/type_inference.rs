@@ -191,8 +191,8 @@ impl TypeInference {
     }
 
     /// Infer type of an operation
-    /// ADR-016 COMPLIANT: Delegates matrix operations to TypeContextBuilder.
-    /// Only keeps truly primitive operations (plus, minus, divide, sqrt, power).
+    /// ADR-016 COMPLIANT: Delegates ALL operations to TypeContextBuilder.
+    /// Only keeps Matrix constructors (they're literals, not operations).
     fn infer_operation(
         &mut self,
         name: &str,
@@ -200,183 +200,74 @@ impl TypeInference {
         context_builder: Option<&crate::type_context::TypeContextBuilder>,
     ) -> Result<Type, String> {
         match name {
-            // Addition: T + T → T (same types)
-            "plus" | "minus" => {
-                if args.len() != 2 {
-                    return Err(format!("{} requires 2 arguments", name));
-                }
-                let t1 = self.infer(&args[0], context_builder)?;
-                let t2 = self.infer(&args[1], context_builder)?;
-
-                // Add constraint: t1 = t2
-                self.add_constraint(t1.clone(), t2.clone());
-
-                Ok(t1)
-            }
-
-            // Division: T / Scalar → T
-            "scalar_divide" | "frac" => {
-                if args.len() != 2 {
-                    return Err(format!("{} requires 2 arguments", name));
-                }
-                let t1 = self.infer(&args[0], context_builder)?;
-                let t2 = self.infer(&args[1], context_builder)?;
-
-                // Divisor must be scalar
-                self.add_constraint(t2, Type::Scalar);
-
-                // Result has same type as dividend
-                Ok(t1)
-            }
-
-            // Square root: Scalar → Scalar
-            "sqrt" => {
-                if args.len() != 1 {
-                    return Err("sqrt requires 1 argument".to_string());
-                }
-                let t1 = self.infer(&args[0], context_builder)?;
-
-                // Argument must be scalar
-                self.add_constraint(t1, Type::Scalar);
-
-                Ok(Type::Scalar)
-            }
-
-            // Power: Scalar ^ Scalar → Scalar
-            "sup" | "power" => {
-                if args.len() != 2 {
-                    return Err(format!("{} requires 2 arguments", name));
-                }
-                let t1 = self.infer(&args[0], context_builder)?;
-                let t2 = self.infer(&args[1], context_builder)?;
-
-                // Both must be scalars
-                self.add_constraint(t1, Type::Scalar);
-                self.add_constraint(t2, Type::Scalar);
-
-                Ok(Type::Scalar)
-            }
-
-            // Differentiation: (Scalar → Scalar) → (Scalar → Scalar)
-            "derivative" | "d_dx" | "partial" => {
-                if args.is_empty() {
-                    return Err("derivative requires arguments".to_string());
-                }
-                let t1 = self.infer(&args[0], context_builder)?;
-
-                // Function type: Scalar → Scalar
-                self.add_constraint(
-                    t1,
-                    Type::Function(Box::new(Type::Scalar), Box::new(Type::Scalar)),
-                );
-
-                Ok(Type::Function(
-                    Box::new(Type::Scalar),
-                    Box::new(Type::Scalar),
-                ))
-            }
-
-            // Integration: (Scalar → Scalar) → Scalar
-            "integral" | "int" => {
-                if args.is_empty() {
-                    return Err("integral requires arguments".to_string());
-                }
-                let _t1 = self.infer(&args[0], context_builder)?;
-
-                // Integrand should be function or scalar
-                // Result is scalar
-                Ok(Type::Scalar)
-            }
-
-            // Multiplication: polymorphic (scalar × scalar, scalar × matrix, etc.)
-            "scalar_multiply" | "times" => {
-                if args.len() != 2 {
-                    return Err(format!("{} requires 2 arguments", name));
-                }
-                let t1 = self.infer(&args[0], context_builder)?;
-                let t2 = self.infer(&args[1], context_builder)?;
-
-                // Simple cases first
-                match (&t1, &t2) {
-                    (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
-                    (Type::Scalar, Type::Matrix(m, n)) | (Type::Matrix(m, n), Type::Scalar) => {
-                        // Scalar × Matrix or Matrix × Scalar → same matrix type
-                        Ok(Type::Matrix(*m, *n))
-                    }
-                    (Type::Matrix(_m, _n), Type::Matrix(_p, _q)) => {
-                        // Matrix × Matrix - delegate to context_builder for proper checking
-                        if let Some(builder) = context_builder {
-                            builder.infer_operation_type("multiply", &[t1, t2])
-                        } else {
-                            // Without context_builder, return fresh var
-                            Ok(self.context.fresh_var())
-                        }
-                    }
-                    _ => {
-                        // Unknown combination, return fresh variable
-                        Ok(self.context.fresh_var())
-                    }
-                }
-            }
-
-            // Matrix constructors: Matrix(rows, cols, ...elements)
+            // Matrix constructors are LITERALS (not operations)
+            // Format: Matrix(rows, cols, ...elements)
+            // These must stay hardcoded because they construct literal values
             "Matrix" | "PMatrix" | "VMatrix" | "BMatrix" => {
-                if args.len() < 2 {
-                    return Err(format!(
-                        "{} requires at least 2 arguments (rows, cols)",
-                        name
-                    ));
-                }
-
-                // Extract dimensions from first two arguments (should be constants)
-                let rows = match &args[0] {
-                    Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
-                    _ => 2, // Default if not a constant
-                };
-                let cols = match &args[1] {
-                    Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
-                    _ => 2, // Default if not a constant
-                };
-
-                // Infer element types (skip first two dimension args)
-                for arg in &args[2..] {
-                    let ty = self.infer(arg, context_builder)?;
-                    // Elements should be scalars (or placeholders)
-                    match ty {
-                        Type::Var(_) => {
-                            // Placeholder - OK
-                        }
-                        _ => {
-                            // Should be scalar
-                            self.add_constraint(ty, Type::Scalar);
-                        }
-                    }
-                }
-
-                Ok(Type::Matrix(rows, cols))
+                self.infer_matrix_constructor(name, args, context_builder)
             }
 
-            // Default: Delegate to context_builder (ADR-016 compliant!)
+            // EVERYTHING ELSE: Delegate to context_builder (ADR-016!)
             _ => {
-                // If context_builder is available, try to infer from it
-                if let Some(builder) = context_builder {
-                    // Infer argument types first
-                    let arg_types: Vec<Type> = args
-                        .iter()
-                        .map(|arg| self.infer(arg, context_builder))
-                        .collect::<Result<Vec<_>, _>>()?;
+                // Infer argument types first
+                let arg_types: Vec<Type> = args
+                    .iter()
+                    .map(|arg| self.infer(arg, context_builder))
+                    .collect::<Result<Vec<_>, _>>()?;
 
-                    // Delegate to builder!
+                // If context_builder is available, query the registry
+                if let Some(builder) = context_builder {
                     builder.infer_operation_type(name, &arg_types)
                 } else {
-                    // No context builder - infer arguments and return unknown
-                    for arg in args {
-                        self.infer(arg, context_builder)?;
-                    }
+                    // No context builder - return fresh variable (for backwards compatibility)
+                    // This allows tests without context_builder to still run
                     Ok(self.context.fresh_var())
                 }
             }
         }
+    }
+
+    /// Infer type of matrix constructor (Matrix, PMatrix, VMatrix, BMatrix)
+    /// These are special because they're LITERALS that construct values,
+    /// not operations that transform values.
+    fn infer_matrix_constructor(
+        &mut self,
+        _name: &str,
+        args: &[Expression],
+        context_builder: Option<&crate::type_context::TypeContextBuilder>,
+    ) -> Result<Type, String> {
+        if args.len() < 2 {
+            return Err(
+                "Matrix constructor requires at least 2 arguments (rows, cols)".to_string(),
+            );
+        }
+
+        // Extract dimensions from first two arguments (should be constants)
+        let rows = match &args[0] {
+            Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
+            _ => 2, // Default if not a constant
+        };
+        let cols = match &args[1] {
+            Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
+            _ => 2, // Default if not a constant
+        };
+
+        // Infer element types (skip first two dimension args)
+        for arg in &args[2..] {
+            let ty = self.infer(arg, context_builder)?;
+            // Elements should be scalars (or placeholders)
+            match ty {
+                Type::Var(_) => {
+                    // Placeholder - OK
+                }
+                _ => {
+                    // Should be scalar
+                    self.add_constraint(ty, Type::Scalar);
+                }
+            }
+        }
+
+        Ok(Type::Matrix(rows, cols))
     }
 
     /// Solve all constraints using unification
@@ -485,6 +376,19 @@ impl std::fmt::Display for Type {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::type_context::TypeContextBuilder;
+
+    /// Helper to create a context builder with minimal stdlib
+    fn create_test_context() -> TypeContextBuilder {
+        use crate::kleis_parser::parse_kleis_program;
+
+        let minimal_prelude = include_str!("../stdlib/minimal_prelude.kleis");
+        let program =
+            parse_kleis_program(minimal_prelude).expect("Failed to parse minimal_prelude.kleis");
+
+        TypeContextBuilder::from_program(program)
+            .expect("Failed to build context from minimal_prelude")
+    }
 
     #[test]
     fn test_const_type() {
@@ -497,6 +401,7 @@ mod tests {
     #[test]
     fn test_addition_type() {
         let mut infer = TypeInference::new();
+        let context = create_test_context();
 
         // 1 + 2
         let expr = Expression::operation(
@@ -507,13 +412,14 @@ mod tests {
             ],
         );
 
-        let ty = infer.infer_and_solve(&expr, None).unwrap();
+        let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
         assert_eq!(ty, Type::Scalar);
     }
 
     #[test]
     fn test_variable_inference() {
         let mut infer = TypeInference::new();
+        let context = create_test_context();
 
         // x + 1 (where x is unknown)
         let expr = Expression::operation(
@@ -524,7 +430,7 @@ mod tests {
             ],
         );
 
-        let ty = infer.infer_and_solve(&expr, None).unwrap();
+        let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
         // Should infer x : Scalar
         assert_eq!(ty, Type::Scalar);
     }
@@ -532,18 +438,32 @@ mod tests {
     #[test]
     fn test_division_type() {
         let mut infer = TypeInference::new();
+        let context = create_test_context();
 
         // x / 2
         let expr = Expression::operation(
-            "scalar_divide",
+            "divide",
             vec![
                 Expression::Object("x".to_string()),
                 Expression::Const("2".to_string()),
             ],
         );
 
-        let ty = infer.infer_and_solve(&expr, None).unwrap();
-        // Should infer x : α (unknown), result: α
+        let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
+        // Should infer x : Scalar, result: Scalar
         println!("Inferred type: {}", ty);
+        assert_eq!(ty, Type::Scalar);
+    }
+
+    #[test]
+    fn test_without_context_returns_type_var() {
+        let mut infer = TypeInference::new();
+
+        // Without context_builder, operations return fresh variables
+        let expr = Expression::operation("unknown_op", vec![Expression::Const("1".to_string())]);
+
+        let ty = infer.infer_and_solve(&expr, None).unwrap();
+        // Should return a type variable (not an error)
+        assert!(matches!(ty, Type::Var(_)));
     }
 }

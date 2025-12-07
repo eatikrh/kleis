@@ -1,16 +1,45 @@
 // Minimal Kleis Standard Library - For Testing
 // Only includes syntax that the current parser supports
 
-// Simple structure with named operations (not operators)
+// Basic arithmetic operations
+structure Arithmetic(T) {
+  operation plus : T → T → T
+  operation minus : T → T → T
+  operation times : T → T → T
+  operation divide : T → T → T
+}
+
+// Arithmetic for scalars
+implements Arithmetic(ℝ) {
+  operation plus = builtin_add
+  operation minus = builtin_sub
+  operation times = builtin_mul
+  operation divide = builtin_div
+}
+
+// Numeric operations (beyond arithmetic)
 structure Numeric(N) {
   operation abs : N → N
   operation floor : N → N
+  operation sqrt : N → N
+  operation power : N → N → N
 }
 
 // Implementation for reals
 implements Numeric(ℝ) {
   operation abs = builtin_abs
   operation floor = builtin_floor
+  operation sqrt = builtin_sqrt
+  operation power = builtin_pow
+}
+
+// Calculus operations
+structure Differentiable(F) {
+  operation derivative : F → F
+}
+
+structure Integrable(F) {
+  operation integral : F → ℝ
 }
 
 // Simple matrix structure
