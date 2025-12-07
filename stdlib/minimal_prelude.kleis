@@ -9,6 +9,7 @@ structure Arithmetic(T) {
   operation divide : T → T → T
   operation scalar_divide : T → T → T
   operation scalar_multiply : T → T → T
+  operation frac : T → T → T
 }
 
 // Arithmetic for scalars
@@ -19,6 +20,7 @@ implements Arithmetic(ℝ) {
   operation divide = builtin_div
   operation scalar_divide = builtin_div
   operation scalar_multiply = builtin_mul
+  operation frac = builtin_div
 }
 
 // Numeric operations (beyond arithmetic)
@@ -27,6 +29,7 @@ structure Numeric(N) {
   operation floor : N → N
   operation sqrt : N → N
   operation power : N → N → N
+  operation sup : N → N → N
 }
 
 // Implementation for reals
@@ -35,6 +38,7 @@ implements Numeric(ℝ) {
   operation floor = builtin_floor
   operation sqrt = builtin_sqrt
   operation power = builtin_pow
+  operation sup = builtin_pow
 }
 
 // Calculus operations

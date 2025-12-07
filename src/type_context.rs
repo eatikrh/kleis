@@ -525,7 +525,7 @@ impl TypeContextBuilder {
                 }
 
                 // Arithmetic operations: T → T → T (same types)
-                "plus" | "minus" | "times" | "divide" | "scalar_divide" | "scalar_multiply" => {
+                "plus" | "minus" | "times" | "divide" | "scalar_divide" | "scalar_multiply" | "frac" => {
                     if arg_types.len() != 2 {
                         return Err(format!("{} requires 2 arguments", op_name));
                     }
@@ -568,8 +568,8 @@ impl TypeContextBuilder {
                     Ok(arg_types[0].clone())
                 }
 
-                // Power: T → T → T
-                "power" => {
+                // Power: T → T → T (includes sup for superscripts)
+                "power" | "sup" => {
                     if arg_types.len() != 2 {
                         return Err("power requires 2 arguments".to_string());
                     }
