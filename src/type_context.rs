@@ -589,13 +589,24 @@ impl TypeContextBuilder {
                     Ok(Type::Scalar)
                 }
 
-                // Relational operations: T → T → Bool
-                "equals" | "not_equals" | "less_than" | "greater_than" => {
+                // Relational operations
+                // For 'equals' in mathematical definitions (I = Matrix), return the RHS type
+                // For comparisons (a < b), return Bool (currently Scalar)
+                "equals" => {
+                    if arg_types.len() != 2 {
+                        return Err("equals requires 2 arguments".to_string());
+                    }
+                    // For equals, return the type of RHS (second argument)
+                    // This handles definitions like: I = Matrix(2,2,...)
+                    // Type of equation is the type of what's defined
+                    Ok(arg_types[1].clone())
+                }
+                
+                "not_equals" | "less_than" | "greater_than" => {
                     if arg_types.len() != 2 {
                         return Err(format!("{} requires 2 arguments", op_name));
                     }
-                    // For now, just verify both args have compatible types
-                    // Return Scalar (we don't have Bool type yet)
+                    // These are comparisons, return Bool (using Scalar for now)
                     Ok(Type::Scalar)
                 }
 
