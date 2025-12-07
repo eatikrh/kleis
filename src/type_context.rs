@@ -459,20 +459,6 @@ impl TypeContextBuilder {
             // Check if operation needs special handling or can use SignatureInterpreter directly
 
             match op_name {
-                // Matrix operations that use SignatureInterpreter (dimension constraints in signatures!)
-                "transpose" | "add" | "multiply" | "det" | "determinant" | "trace" => {
-                    // ✅ TRUE ADR-016: All dimension constraints enforced by signatures!
-                    // - MatrixAddable(m,n,T): enforces same dimensions
-                    // - MatrixMultipliable(m,n,p,T): enforces inner dimension n matches
-                    // - SquareMatrix(n,T): enforces rows = cols
-                    let structure = self
-                        .get_structure(&structure_name)
-                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
-
-                    let mut interpreter = SignatureInterpreter::new();
-                    interpreter.interpret_signature(structure, op_name, arg_types)
-                }
-
                 // Arithmetic operations: T → T → T (same types)
                 "plus" | "minus" | "times" | "divide" | "scalar_divide" | "scalar_multiply"
                 | "frac" => self.infer_binary_same_type_op(op_name, arg_types),
