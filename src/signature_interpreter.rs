@@ -228,6 +228,15 @@ impl SignatureInterpreter {
                             self.bind_or_check("n", *rows, "second matrix rows".to_string())?;
                             self.bind_or_check("p", *cols, "second matrix cols".to_string())?;
                         }
+                    } else if structure.name == "SquareMatrix" {
+                        // SquareMatrix(n, T): must be n×n (rows = cols)
+                        if rows != cols {
+                            return Err(format!(
+                                "{} requires square matrix!\n  Got: {}×{} (non-square)\n  {} only defined for n×n matrices",
+                                structure.name, rows, cols, structure.name
+                            ));
+                        }
+                        self.bind_or_check("n", *rows, "square matrix dimension".to_string())?;
                     } else {
                         // Generic Matrix structure: bind m, n from first matrix
                         if arg_idx == 0 {

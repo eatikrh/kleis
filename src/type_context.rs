@@ -519,44 +519,14 @@ impl TypeContextBuilder {
                     interpreter.interpret_signature(structure, op_name, arg_types)
                 }
 
-                "det" | "determinant" => {
-                    // ✅ ADR-016: Check squareness then use signature interpreter
-                    if arg_types.len() != 1 {
-                        return Err("det requires 1 argument".to_string());
-                    }
+                "det" | "determinant" | "trace" => {
+                    // ✅ TRUE ADR-016: SquareMatrix structure enforces squareness!
+                    let structure = self
+                        .get_structure(&structure_name)
+                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    match &arg_types[0] {
-                        Type::Matrix(m, n) if m == n => {
-                            // Square matrix - use signature interpreter
-                            let structure =
-                                self.get_structure(&structure_name).ok_or_else(|| {
-                                    format!("Structure '{}' not found", structure_name)
-                                })?;
-
-                            let mut interpreter = SignatureInterpreter::new();
-                            interpreter.interpret_signature(structure, op_name, arg_types)
-                        }
-                        Type::Matrix(m, n) => Err(format!(
-                            "Determinant requires square matrix!\n  Got: {}×{} (non-square)\n  Determinants only exist for n×n matrices",
-                            m, n
-                        )),
-                        _ => Err("det requires a matrix".to_string()),
-                    }
-                }
-
-                "trace" => {
-                    // trace: Matrix(n, n, T) → T
-                    if arg_types.len() != 1 {
-                        return Err("trace requires 1 argument".to_string());
-                    }
-
-                    match &arg_types[0] {
-                        Type::Matrix(m, n) if m == n => Ok(Type::Scalar),
-                        Type::Matrix(m, n) => {
-                            Err(format!("Trace requires square matrix! Got {}×{}", m, n))
-                        }
-                        _ => Err("trace requires a matrix".to_string()),
-                    }
+                    let mut interpreter = SignatureInterpreter::new();
+                    interpreter.interpret_signature(structure, op_name, arg_types)
                 }
 
                 // Arithmetic operations: T → T → T (same types)
