@@ -589,6 +589,16 @@ impl TypeContextBuilder {
                     Ok(Type::Scalar)
                 }
 
+                // Relational operations: T → T → Bool
+                "equals" | "not_equals" | "less_than" | "greater_than" => {
+                    if arg_types.len() != 2 {
+                        return Err(format!("{} requires 2 arguments", op_name));
+                    }
+                    // For now, just verify both args have compatible types
+                    // Return Scalar (we don't have Bool type yet)
+                    Ok(Type::Scalar)
+                }
+
                 _ => {
                     // Operation found in registry but we don't know how to infer its type yet
                     Err(format!(
