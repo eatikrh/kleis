@@ -140,9 +140,67 @@ After changing parser:
 
 ## Type System Rules
 
-**CRITICAL: Follow ADR-016 (Operations in Structures).**
+**CRITICAL: Follow ADR-014 (Hindley-Milner Type System) and ADR-016 (Operations in Structures).**
 
-### Rule: No Hardcoding Types
+### Rule: Maintain Type System Integrity (ADR-014)
+
+**The type system must follow Hindley-Milner principles.**
+
+**Core Principles:**
+
+1. **Constraint-based inference** - Generate constraints, then unify
+2. **Principal types** - Always infer the most general type
+3. **No shortcuts** - Don't bypass unification or constraint solving
+4. **Context threading** - Pass `context_builder` through call chain
+
+**❌ WRONG - Bypassing type inference:**
+```rust
+// Hardcoding result type without inference
+fn check_multiply(t1: Type, t2: Type) -> Type {
+    Type::Matrix(2, 2)  // BAD! Ignores actual dimensions
+}
+
+// Skipping constraint generation
+let t1 = self.infer(&args[0], context_builder)?;
+// Just return without adding constraints  // BAD!
+return Ok(Type::Scalar);
+```
+
+**✅ CORRECT - Proper HM inference:**
+```rust
+// Generate constraints
+let t1 = self.infer(&args[0], context_builder)?;
+let t2 = self.infer(&args[1], context_builder)?;
+self.add_constraint(t1.clone(), t2.clone());
+
+// Delegate to context_builder for operation types
+if let Some(builder) = context_builder {
+    builder.infer_operation_type(name, &[t1, t2])
+} else {
+    Ok(self.context.fresh_var())
+}
+```
+
+**When modifying type inference:**
+1. **Always generate constraints** - Don't hardcode results
+2. **Always delegate operations** - Use `context_builder.infer_operation_type()`
+3. **Always thread context** - Pass `context_builder` through recursive calls
+4. **Always unify** - Let the solver determine types
+
+**Key Files:**
+- `src/type_inference.rs` - Core HM algorithm
+- `src/type_context.rs` - Type registry and queries
+- `src/type_checker.rs` - Combines inference + registry
+- `stdlib/*.kleis` - Type definitions (source of truth)
+
+**Related ADRs:**
+- ADR-014: Hindley-Milner Type System (the algorithm)
+- ADR-016: Operations in Structures (the architecture)
+- ADR-015: Text as Source of Truth (where types are defined)
+
+---
+
+### Rule: No Hardcoding Types (ADR-016)
 
 **Types and operations MUST be defined in Kleis structures, NOT hardcoded in Rust.**
 

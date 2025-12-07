@@ -1,257 +1,164 @@
-# NEXT SESSION: Remove Hardcoded Matrix Logic from type_inference.rs
+# NEXT SESSION: Fix Matrix Rendering Issues
 
-**CRITICAL TASK:** Fix ADR-016 violation in `src/type_inference.rs` lines 207-396
+**Current State:** v0.3.0-adr016-full (pushed to GitHub)
 
-**Status:** SignatureInterpreter exists and works! Just need to wire it up properly.
-
----
-
-## The Problem (MUST FIX)
-
-**File:** `src/type_inference.rs`  
-**Lines:** 207-396 (approximately)  
-**Issue:** Hardcoded matrix-specific type rules violate ADR-016
-
-**Specific hardcoded sections:**
-1. Lines 207-245: `"scalar_multiply" | "times"` - Matrix multiplication logic
-2. Lines 297-333: `"multiply"` - Matrix multiplication (duplicate!)
-3. Lines 335-361: `"add"` - Matrix addition
-4. Lines 363-376: `"transpose"` - Transpose logic
-5. Lines 378-391: `"det" | "determinant"` - Determinant logic
-6. Lines 393-406: `"trace"` - Trace logic
-
-**All these need to be DELETED and replaced with delegation to TypeContextBuilder!**
+**Status:** Matrix(m,n) refactoring complete BUT layout issues discovered
 
 ---
 
-## What Already Works ✅
+## Achievements This Session ✅
 
-**SignatureInterpreter (src/signature_interpreter.rs):**
-- ✅ Created and tested
-- ✅ Reads operation signatures from structures
-- ✅ Interprets `Matrix(n, m, T)` correctly
-- ✅ Test passing: `test_interpret_transpose_signature`
+1. **Full ADR-016 Compliance**
+   - Removed ~180 lines of hardcoded matrix logic
+   - All operations delegated to TypeContextBuilder
+   - Zero hardcoded type rules in type_inference.rs
 
-**TypeContextBuilder (src/type_context.rs):**
-- ✅ Has `infer_operation_type()` method
-- ✅ Uses SignatureInterpreter for transpose, add, det
-- ✅ Can read from stdlib/matrices.kleis
+2. **Unified Matrix(m,n) Constructor**
+   - Replaced 18+ operations (matrix2x2, etc.) with 3 generic ones
+   - Format: `Matrix(rows, cols, ...elements)`
+   - Parser, renderer, type inference, templates all updated
+   - Frontend (index.html) synchronized
 
-**The infrastructure is READY!**
+3. **Testing**
+   - All 280 tests passing
+   - Matrix type inference: 7/7 passing
+   - Type system working correctly
+
+**Commits:**
+- `2d70e17` - Delegated matrix operations (partial)
+- `d1a57af` - Unified Matrix(m,n) constructor (full)
+
+**Tags:**
+- `v0.3.0-adr016-partial` - Safe checkpoint
+- `v0.3.0-adr016-full` - Current stable state ← PUSHED
 
 ---
 
-## The Solution (Step by Step)
+## Problems Discovered 🐛
 
-### Step 1: Make infer_operation() delegate to context_builder
+### 1. Dimension Constants Create Edit Markers
 
-**Current code (src/type_inference.rs line ~191):**
+**Issue:** The dimension args `Const("2")`, `Const("3")` in `Matrix(2, 3, ...)` create visible edit markers in the UI.
+
+**Why:** The renderer creates argument slots for ALL arguments, including dimension metadata.
+
+**Observation:**
+```
+Slot 955773da05204e4ea2d18476a0318eae: hint="value: 2", path=[0,0]
+Slot aee796b342d743b7894f93cf550e697b: hint="value: 3", path=[0,1]
+```
+
+These dimension constants shouldn't be editable!
+
+**Solution:** Skip creating slots for first two args of Matrix operations in server.rs slot generation.
+
+---
+
+### 2. Negative Placeholder Coordinates
+
+**Issue:** Some placeholder positions have negative Y coordinates:
+```
+ID 10: (x=109.84, y=-14.65)  ← NEGATIVE Y!
+ID 19: (x=213.04, y=-14.65)  ← NEGATIVE Y!
+```
+
+This causes content to be cut off at the top of the viewport.
+
+**Why:** 
+- Typst positions elements in its own coordinate system
+- First-row matrix elements end up above the baseline
+- Layout box normalization happens (lines 914-931) but placeholder positions are extracted AFTER from SVG labels
+- Placeholder positions don't get the same normalization
+
+**Attempted Fix:** Added normalization to `extract_semantic_argument_boxes()` - fixed argument boxes but NOT placeholder positions.
+
+**Root Cause:** Placeholder positions come from SVG label extraction, which happens separately and doesn't go through normalization.
+
+---
+
+## Solution for Next Session
+
+### Option A: Normalize Placeholder Positions
+
+**Where:** After `extract_positions_from_labels()` in `compile_with_semantic_boxes_and_slots()`
+
+**Code location:** `src/math_layout/typst_compiler.rs` line ~143
+
 ```rust
-fn infer_operation(&mut self, name: &str, args: &[Expression]) -> Result<Type, String> {
-    match name {
-        "plus" | "minus" => { /* OK - basic arithmetic */ }
-        
-        "scalar_multiply" | "times" => {
-            // ❌ DELETE lines 207-245 (hardcoded matrix logic)
-        }
-        
-        "multiply" => {
-            // ❌ DELETE lines 297-333
-        }
-        
-        "add" => {
-            // ❌ DELETE lines 335-361
-        }
-        
-        "transpose" => {
-            // ❌ DELETE lines 363-376
-        }
-        
-        // etc...
-        
-        _ => { /* unknown */ }
+let mut labeled_positions = extract_positions_from_labels(&output.svg)?;
+
+// Normalize placeholder positions
+if !labeled_positions.is_empty() {
+    let min_x = labeled_positions.iter().map(|p| p.x).fold(f64::INFINITY, |a, b| a.min(b));
+    let min_y = labeled_positions.iter().map(|p| p.y).fold(f64::INFINITY, |a, b| a.min(b));
+    
+    let shift_x = if min_x < 0.0 { -min_x } else { 0.0 };
+    let shift_y = if min_y < 0.0 { -min_y } else { 0.0 };
+    
+    for pos in &mut labeled_positions {
+        pos.x += shift_x;
+        pos.y += shift_y;
     }
 }
 ```
 
-**Replace with:**
-```rust
-fn infer_operation(
-    &mut self,
-    name: &str,
-    args: &[Expression],
-    context_builder: Option<&crate::type_context::TypeContextBuilder>,  // ADD THIS
-) -> Result<Type, String> {
-    match name {
-        // Keep basic arithmetic (truly primitive)
-        "plus" | "minus" | "scalar_divide" | "frac" | "sqrt" | "sup" | "power" => {
-            /* existing logic - these are primitive */
-        }
-        
-        // Everything else: delegate to context_builder!
-        _ => {
-            if let Some(builder) = context_builder {
-                // Infer argument types first
-                let arg_types: Vec<Type> = args.iter()
-                    .map(|arg| self.infer(arg, context_builder))  // Recursive call
-                    .collect::<Result<Vec<_>, _>>()?;
-                
-                // Delegate to builder!
-                builder.infer_operation_type(name, &arg_types)
-            } else {
-                // No context builder - return unknown
-                for arg in args {
-                    self.infer(arg, context_builder)?;
-                }
-                Ok(self.context.fresh_var())
-            }
-        }
-    }
-}
-```
+### Option B: Fix Dimension Constants in Slot Generation
 
-### Step 2: Thread context_builder through call chain
+**Where:** Server slot generation code (likely `src/bin/server.rs`)
 
-**Update `infer()` signature:**
-```rust
-// OLD:
-pub fn infer(&mut self, expr: &Expression) -> Result<Type, String>
-
-// NEW:
-pub fn infer(
-    &mut self,
-    expr: &Expression,
-    context_builder: Option<&crate::type_context::TypeContextBuilder>,
-) -> Result<Type, String>
-```
-
-**Update the match in `infer()`:**
-```rust
-Expression::Operation { name, args } => {
-    self.infer_operation(name, args, context_builder)  // Pass it through!
-}
-```
-
-### Step 3: Update infer_and_solve()
-
-```rust
-// OLD:
-pub fn infer_and_solve(&mut self, expr: &Expression) -> Result<Type, String>
-
-// NEW:
-pub fn infer_and_solve(
-    &mut self,
-    expr: &Expression,
-    context_builder: Option<&crate::type_context::TypeContextBuilder>,
-) -> Result<Type, String> {
-    let ty = self.infer(expr, context_builder)?;  // Pass it through
-    let subst = self.solve()?;
-    Ok(subst.apply(&ty))
-}
-```
-
-### Step 4: Update TypeChecker.check()
-
-```rust
-pub fn check(&mut self, expr: &Expression) -> TypeCheckResult {
-    match self.inference.infer_and_solve(expr, Some(&self.context_builder)) {
-        // ✅ NOW context_builder is passed!
-        ...
-    }
-}
-```
-
-### Step 5: Delete hardcoded matrix logic
-
-**Delete these entire match arms:**
-- `"scalar_multiply" | "times"` (lines ~212-245) → **DELETE**
-- `"multiply"` (lines ~297-333) → **DELETE**
-- `"add"` (lines ~335-361) → **DELETE**
-- `"transpose"` (lines ~363-376) → **DELETE**
-- `"det" | "determinant"` (lines ~378-391) → **DELETE**
-- `"trace"` (lines ~393-406) → **DELETE**
-- Matrix construction (lines ~408-430) → **KEEP but move to context_builder**
-
-**Total: Delete ~180 lines of hardcoded logic!**
+**Goal:** Skip creating slots for `path=[*,0]` and `path=[*,1]` when parent is Matrix/PMatrix/VMatrix operation.
 
 ---
 
-## Testing Checklist
+## Alternative: Revert to Legacy Format
 
-After changes, verify:
+If fixing these issues is too complex, we could:
+1. Keep backend with Matrix(m,n) for type inference
+2. Revert frontend (index.html) to use legacy format (matrix2x3, etc.)
+3. Parser still supports both formats
+4. Renderer handles both formats
+
+**Tradeoff:** Lose unified system benefits but keep working UI.
+
+---
+
+## Testing Checklist for Next Session
+
+When attempting fixes:
 
 ```bash
-# 1. Library tests
+# 1. Run layout test
+cargo run --bin test_matrix_layout
+# Should show: "All coordinates positive"
+
+# 2. Run full tests
 cargo test --lib
 # Should pass: 280 tests
 
-# 2. Matrix type inference
-cargo run --bin test_matrix_type_inference
-# Should pass all 7 tests
-
-# 3. Format
-cargo fmt
-
-# 4. Server builds
+# 3. Rebuild server
 cargo build --bin server --release
 
-# 5. Live demo
-# Start server, create matrix, see type feedback
+# 4. Start server and test in browser
+# Check: No negative coordinates in debug
+# Check: No dimension constant edit markers
+# Check: All matrices fully visible
+
+# 5. If broken, revert:
+git checkout HEAD -- src/math_layout/typst_compiler.rs
 ```
 
 ---
 
-## Files to Modify
+## Current Stable State
 
-1. **src/type_inference.rs** (~200 lines changed)
-   - Add `context_builder` parameter to methods
-   - Delete hardcoded matrix logic
-   - Keep only primitive operations
-
-2. **src/type_checker.rs** (~5 lines changed)
-   - Pass `Some(&self.context_builder)` to inference
-
-3. **src/type_context.rs** (maybe ~20 lines)
-   - Finish signature interpreter for multiply, trace
-   - Handle matrix construction
+**Git:** Clean working tree, all commits pushed
+**Tag:** `v0.3.0-adr016-full`
+**Server:** Running stable version
+**Tests:** All passing
+**Known issues:** Layout needs work but core functionality is solid
 
 ---
 
-## Expected Result
+**For next session:** Focus on placeholder coordinate normalization + dimension slot filtering.
 
-**After this refactor:**
-- ✅ ZERO hardcoded matrix logic in type_inference.rs
-- ✅ ALL rules read from stdlib/matrices.kleis
-- ✅ Pure ADR-016 compliance
-- ✅ All tests passing
-- ✅ Live demo still works
-
-**Time estimate:** 30-60 minutes focused work
-
----
-
-## Current Git State
-
-**Branch:** main  
-**Commits ahead:** 12  
-**Last commit:** f00917a "feat: Signature interpreter for add and det operations"  
-**Tests:** 280 passing  
-**Tag ready:** v0.3.0-type-inference (but wait for pure compliance!)
-
----
-
-## Success Criteria
-
-When done, `src/type_inference.rs` should have:
-- ✅ Basic arithmetic only (plus, minus, divide, sqrt, power)
-- ✅ Generic delegation: `builder.infer_operation_type(name, &arg_types)`
-- ✅ NO matrix-specific code
-- ✅ NO hardcoded type rules
-
-**This is achievable in 30-60 minutes with fresh context!**
-
----
-
-**Ready for new session. This is the final push to pure ADR-016!** 🚀
-
-
+The Matrix(m,n) architecture is sound - just needs polish! 🚀
