@@ -7,6 +7,8 @@ structure Arithmetic(T) {
   operation minus : T → T → T
   operation times : T → T → T
   operation divide : T → T → T
+  operation scalar_divide : T → T → T
+  operation scalar_multiply : T → T → T
 }
 
 // Arithmetic for scalars
@@ -15,6 +17,8 @@ implements Arithmetic(ℝ) {
   operation minus = builtin_sub
   operation times = builtin_mul
   operation divide = builtin_div
+  operation scalar_divide = builtin_div
+  operation scalar_multiply = builtin_mul
 }
 
 // Numeric operations (beyond arithmetic)
