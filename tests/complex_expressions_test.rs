@@ -215,7 +215,10 @@ fn test_dimension_mismatch_error() {
 
     match checker.check(&expr) {
         TypeCheckResult::Error { message, .. } => {
-            assert!(message.contains("inner dimensions"));
+            // SignatureInterpreter now gives different error message
+            assert!(
+                message.contains("Dimension constraint") || message.contains("inner dimensions")
+            );
             assert!(message.contains("3") && message.contains("4"));
             println!("✓ Dimension error is clear: {}", message);
         }

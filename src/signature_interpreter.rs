@@ -44,9 +44,9 @@ impl SignatureInterpreter {
     ///   Args: [Matrix(2, 3), Matrix(3, 5)]
     ///
     /// Process:
-    ///   1. Bind structure params from args: m=2, n=3, p=5
-    ///   2. Check constraints (n of first = p of second)
-    ///   3. Substitute into result: Matrix(m, p, T) = Matrix(2, 5, ℝ)
+    ///   1. Parse signature to get expected argument types
+    ///   2. Unify actual args with expected (bind params, check constraints)
+    ///   3. Substitute into result type
     pub fn interpret_signature(
         &mut self,
         structure: &StructureDef,
@@ -76,11 +76,117 @@ impl SignatureInterpreter {
                 )
             })?;
 
-        // Bind structure parameters from argument types
-        self.bind_from_args(structure, arg_types)?;
+        // Parse the function signature to get expected argument types
+        let (expected_arg_types, result_type) = self.parse_function_signature(operation)?;
 
-        // Interpret the result type signature
-        self.interpret_type_expr(operation)
+        // If no expected args (signature is just result type), use old binding method
+        if expected_arg_types.is_empty() {
+            // Fallback to old behavior for signatures without arrows
+            self.bind_from_args(structure, arg_types)?;
+        } else {
+            // Unify actual arguments with expected types
+            // This validates constraints like "both Matrix(m, n, T)"
+            self.unify_arguments(arg_types, &expected_arg_types)?;
+        }
+
+        // Now interpret the result type with bound parameters
+        self.interpret_type_expr(&result_type)
+    }
+
+    /// Parse a function signature into (argument types, result type)
+    /// Example: Matrix(m, n, T) → Matrix(m, n, T) → Matrix(m, n, T)
+    /// Returns: ([Matrix(m,n,T), Matrix(m,n,T)], Matrix(m,n,T))
+    ///
+    /// For single-arg operations: Matrix(m, n, T) (no arrow)
+    /// Returns: ([], Matrix(m,n,T)) - result is the type itself
+    fn parse_function_signature(
+        &self,
+        sig: &TypeExpr,
+    ) -> Result<(Vec<TypeExpr>, TypeExpr), String> {
+        match sig {
+            TypeExpr::Function(from, to) => {
+                // Recursively parse nested functions
+                let (mut args, result) = self.parse_function_signature(to)?;
+                args.insert(0, (**from).clone());
+                Ok((args, result))
+            }
+            _ => {
+                // Base case: no arrows, this is the result type
+                // For operations like: transpose : Matrix(n, m, T)
+                // This means the operation is already bound and returns this type
+                Ok((vec![], sig.clone()))
+            }
+        }
+    }
+
+    /// Unify actual argument types with expected types from signature
+    /// This is where dimension constraints get checked!
+    fn unify_arguments(
+        &mut self,
+        actual_types: &[Type],
+        expected_types: &[TypeExpr],
+    ) -> Result<(), String> {
+        if actual_types.len() != expected_types.len() {
+            return Err(format!(
+                "Argument count mismatch: got {}, expected {}",
+                actual_types.len(),
+                expected_types.len()
+            ));
+        }
+
+        for (i, (actual, expected)) in actual_types.iter().zip(expected_types.iter()).enumerate() {
+            self.unify_with_expected(actual, expected)
+                .map_err(|e| format!("Argument {}: {}", i + 1, e))?;
+        }
+
+        Ok(())
+    }
+
+    /// Unify an actual type with an expected TypeExpr
+    /// Binds parameters and checks constraints
+    fn unify_with_expected(&mut self, actual: &Type, expected: &TypeExpr) -> Result<(), String> {
+        match (actual, expected) {
+            // Matrix(m, n) unifies with Matrix(m, n, T) by binding m, n
+            (Type::Matrix(m, n), TypeExpr::Parametric(name, params)) if name == "Matrix" => {
+                if params.len() >= 2 {
+                    self.bind_or_check_param(&params[0], *m)?;
+                    self.bind_or_check_param(&params[1], *n)?;
+                }
+                Ok(())
+            }
+
+            // Scalar unifies with any type parameter T or ℝ
+            (Type::Scalar, TypeExpr::Named(name)) if name == "T" || name == "ℝ" => Ok(()),
+
+            // Type variables unify with anything (unknown type)
+            (Type::Var(_), _) => Ok(()),
+
+            _ => Ok(()), // For now, accept other combinations
+        }
+    }
+
+    /// Bind a parameter or check it matches existing binding
+    /// This is where "both Matrix(m, n, T)" constraint gets enforced!
+    fn bind_or_check_param(&mut self, param_expr: &TypeExpr, value: usize) -> Result<(), String> {
+        match param_expr {
+            TypeExpr::Named(name) => {
+                if let Some(&existing) = self.bindings.get(name) {
+                    // Parameter already bound - check it matches!
+                    if existing != value {
+                        return Err(format!(
+                            "Dimension constraint violated: {} was bound to {}, but got {}",
+                            name, existing, value
+                        ));
+                    }
+                } else {
+                    // First time seeing this parameter - bind it
+                    self.bindings.insert(name.clone(), value);
+                }
+                Ok(())
+            }
+            TypeExpr::Var(_) => Ok(()), // Type variable, no constraint
+            _ => Ok(()),                // Complex expression, handle later
+        }
     }
 
     /// Bind structure type parameters from argument types
@@ -90,35 +196,73 @@ impl SignatureInterpreter {
     ///   Arg types: [Matrix(2, 3), Matrix(3, 5)]
     ///
     /// From Matrix(2, 3): m=2, n=3
-    /// From Matrix(3, 5): p=5 (and verify n=3 matches)
+    /// From Matrix(3, 5): CHECKS m=2?, n=3?, then binds p=5
+    ///
+    /// This is where dimension constraints get enforced!
     fn bind_from_args(
         &mut self,
         structure: &StructureDef,
         arg_types: &[Type],
     ) -> Result<(), String> {
-        // For Matrix operations, try to extract dimensions
+        // For Matrix operations, extract and validate dimensions from ALL args
         if structure.name.contains("Matrix") {
-            // Try to bind from first matrix argument
-            for arg_type in arg_types {
-                if let Type::Matrix(rows, cols) = arg_type {
-                    // Bind m and n from first matrix
-                    if !self.bindings.contains_key("m") {
-                        self.bindings.insert("m".to_string(), *rows);
-                    }
-                    if !self.bindings.contains_key("n") {
-                        self.bindings.insert("n".to_string(), *cols);
-                    }
+            let param_names = &structure.type_params;
 
-                    // For MatrixMultipliable, second matrix gives p
-                    if structure.name == "MatrixMultipliable" {
-                        if let Some(Type::Matrix(_second_rows, second_cols)) = arg_types.get(1) {
-                            self.bindings.insert("p".to_string(), *second_cols);
+            // Process each matrix argument
+            for (arg_idx, arg_type) in arg_types.iter().enumerate() {
+                if let Type::Matrix(rows, cols) = arg_type {
+                    // For MatrixAddable(m, n, T): both matrices must have same m, n
+                    // For MatrixMultipliable(m, n, p, T): first is (m,n), second is (n,p)
+
+                    if structure.name == "MatrixAddable" {
+                        // Both matrices must have same (m, n)
+                        self.bind_or_check("m", *rows, format!("argument {}", arg_idx + 1))?;
+                        self.bind_or_check("n", *cols, format!("argument {}", arg_idx + 1))?;
+                    } else if structure.name == "MatrixMultipliable" {
+                        if arg_idx == 0 {
+                            // First matrix: bind m and n
+                            self.bind_or_check("m", *rows, "first matrix rows".to_string())?;
+                            self.bind_or_check("n", *cols, "first matrix cols".to_string())?;
+                        } else if arg_idx == 1 {
+                            // Second matrix: check rows=n, bind p=cols
+                            self.bind_or_check("n", *rows, "second matrix rows".to_string())?;
+                            self.bind_or_check("p", *cols, "second matrix cols".to_string())?;
+                        }
+                    } else {
+                        // Generic Matrix structure: bind m, n from first matrix
+                        if arg_idx == 0 {
+                            self.bind_or_check("m", *rows, "matrix rows".to_string())?;
+                            self.bind_or_check("n", *cols, "matrix cols".to_string())?;
                         }
                     }
                 }
             }
         }
 
+        Ok(())
+    }
+
+    /// Bind a parameter value or check it matches existing binding
+    /// This enforces that all uses of 'm' have the same value!
+    fn bind_or_check(
+        &mut self,
+        param_name: &str,
+        value: usize,
+        context: String,
+    ) -> Result<(), String> {
+        if let Some(&existing) = self.bindings.get(param_name) {
+            if existing != value {
+                return Err(format!(
+                    "Dimension constraint violated for parameter '{}':\n  \
+                     Previously bound to {} \n  \
+                     But {} has {} \n  \
+                     All uses of '{}' must have the same value!",
+                    param_name, existing, context, value, param_name
+                ));
+            }
+        } else {
+            self.bindings.insert(param_name.to_string(), value);
+        }
         Ok(())
     }
 

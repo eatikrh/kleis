@@ -498,59 +498,25 @@ impl TypeContextBuilder {
                 }
 
                 "add" => {
-                    // ✅ ADR-016: Use signature interpreter!
-                    // Note: add requires dimensions to match, which is implicitly in the signature
-                    // operation add : Matrix(m, n, T) (takes same dimensions)
+                    // ✅ TRUE ADR-016: SignatureInterpreter checks dimension constraints!
+                    // No manual dimension checking needed - it's in the signature
+                    let structure = self
+                        .get_structure(&structure_name)
+                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    if arg_types.len() != 2 {
-                        return Err("add requires 2 arguments".to_string());
-                    }
-
-                    // Check dimensions match first
-                    match (&arg_types[0], &arg_types[1]) {
-                        (Type::Matrix(m1, n1), Type::Matrix(m2, n2)) => {
-                            if m1 != m2 || n1 != n2 {
-                                return Err(format!(
-                                    "Matrix addition: dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot add matrices with different dimensions",
-                                    m1, n1, m2, n2
-                                ));
-                            }
-
-                            // Use signature interpreter
-                            let structure =
-                                self.get_structure(&structure_name).ok_or_else(|| {
-                                    format!("Structure '{}' not found", structure_name)
-                                })?;
-
-                            let mut interpreter = SignatureInterpreter::new();
-                            interpreter.interpret_signature(structure, op_name, arg_types)
-                        }
-                        (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
-                        _ => Err("add expects matrices of same dimensions or scalars".to_string()),
-                    }
+                    let mut interpreter = SignatureInterpreter::new();
+                    interpreter.interpret_signature(structure, op_name, arg_types)
                 }
 
                 "multiply" => {
-                    // ✅ ADR-016: Use signature interpreter!
-                    // multiply: Matrix(m, n) × Matrix(n, p) → Matrix(m, p)
-                    if arg_types.len() != 2 {
-                        return Err("multiply requires 2 arguments".to_string());
-                    }
+                    // ✅ TRUE ADR-016: SignatureInterpreter checks inner dimension constraint!
+                    // MatrixMultipliable(m, n, p) enforces n matches between matrices
+                    let structure = self
+                        .get_structure(&structure_name)
+                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    // Check dimensions match before using interpreter
-                    match (&arg_types[0], &arg_types[1]) {
-                        (Type::Matrix(m, n), Type::Matrix(p, q)) => {
-                            if n != p {
-                                return Err(format!(
-                                    "Matrix multiplication: inner dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot multiply: {} ≠ {}",
-                                    m, n, p, q, n, p
-                                ));
-                            }
-                            // Dimension check passed, now compute result type
-                            Ok(Type::Matrix(*m, *q))
-                        }
-                        _ => Err("multiply requires two matrices".to_string()),
-                    }
+                    let mut interpreter = SignatureInterpreter::new();
+                    interpreter.interpret_signature(structure, op_name, arg_types)
                 }
 
                 "det" | "determinant" => {
