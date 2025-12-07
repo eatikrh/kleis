@@ -2,7 +2,6 @@
 ///!
 ///! Tests that complex nested expressions work correctly with
 ///! the improved SignatureInterpreter fallback logic.
-
 use kleis::ast::Expression;
 use kleis::type_checker::{TypeCheckResult, TypeChecker};
 use kleis::type_inference::Type;
@@ -22,19 +21,29 @@ fn op(name: &str, args: Vec<Expression>) -> Expression {
 #[test]
 fn test_nested_matrix_operations() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     // transpose(transpose(A)) where A is Matrix(2,3)
     // Should be Matrix(2,3) (double transpose)
-    let expr = op("transpose", vec![
-        op("transpose", vec![
-            op("Matrix", vec![
-                c("2"), c("3"),
-                c("1"), c("2"), c("3"),
-                c("4"), c("5"), c("6")
-            ])
-        ])
-    ]);
-    
+    let expr = op(
+        "transpose",
+        vec![op(
+            "transpose",
+            vec![op(
+                "Matrix",
+                vec![
+                    c("2"),
+                    c("3"),
+                    c("1"),
+                    c("2"),
+                    c("3"),
+                    c("4"),
+                    c("5"),
+                    c("6"),
+                ],
+            )],
+        )],
+    );
+
     match checker.check(&expr) {
         TypeCheckResult::Success(ty) => {
             assert_eq!(ty, Type::Matrix(2, 3));
@@ -50,18 +59,19 @@ fn test_nested_matrix_operations() {
 #[test]
 fn test_complex_arithmetic_with_integrals() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     // (a + b) * ∫₀¹ x² dx
-    let expr = op("scalar_multiply", vec![
-        op("plus", vec![var("a"), var("b")]),
-        op("int_bounds", vec![
-            op("sup", vec![var("x"), c("2")]),
-            c("0"),
-            c("1"),
-            var("x")
-        ])
-    ]);
-    
+    let expr = op(
+        "scalar_multiply",
+        vec![
+            op("plus", vec![var("a"), var("b")]),
+            op(
+                "int_bounds",
+                vec![op("sup", vec![var("x"), c("2")]), c("0"), c("1"), var("x")],
+            ),
+        ],
+    );
+
     match checker.check(&expr) {
         TypeCheckResult::Success(ty) => {
             assert_eq!(ty, Type::Scalar);
@@ -77,25 +87,52 @@ fn test_complex_arithmetic_with_integrals() {
 #[test]
 fn test_matrix_equation() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     // A = B × C where B is 2×3, C is 3×4
-    let expr = op("equals", vec![
-        var("A"),
-        op("multiply", vec![
-            op("Matrix", vec![
-                c("2"), c("3"),
-                c("1"), c("2"), c("3"),
-                c("4"), c("5"), c("6")
-            ]),
-            op("Matrix", vec![
-                c("3"), c("4"),
-                c("1"), c("2"), c("3"), c("4"),
-                c("5"), c("6"), c("7"), c("8"),
-                c("9"), c("10"), c("11"), c("12")
-            ])
-        ])
-    ]);
-    
+    let expr = op(
+        "equals",
+        vec![
+            var("A"),
+            op(
+                "multiply",
+                vec![
+                    op(
+                        "Matrix",
+                        vec![
+                            c("2"),
+                            c("3"),
+                            c("1"),
+                            c("2"),
+                            c("3"),
+                            c("4"),
+                            c("5"),
+                            c("6"),
+                        ],
+                    ),
+                    op(
+                        "Matrix",
+                        vec![
+                            c("3"),
+                            c("4"),
+                            c("1"),
+                            c("2"),
+                            c("3"),
+                            c("4"),
+                            c("5"),
+                            c("6"),
+                            c("7"),
+                            c("8"),
+                            c("9"),
+                            c("10"),
+                            c("11"),
+                            c("12"),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    );
+
     match checker.check(&expr) {
         TypeCheckResult::Success(ty) => {
             assert_eq!(ty, Type::Matrix(2, 4));
@@ -111,10 +148,10 @@ fn test_matrix_equation() {
 #[test]
 fn test_error_message_quality() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     // Try to use a completely unknown operation
     let expr = op("nonexistent_operation", vec![c("1")]);
-    
+
     match checker.check(&expr) {
         TypeCheckResult::Error { message, .. } => {
             assert!(message.contains("Unknown operation"));
@@ -128,23 +165,54 @@ fn test_error_message_quality() {
 #[test]
 fn test_dimension_mismatch_error() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     // Try to multiply incompatible matrices: 2×3 × 4×5
-    let expr = op("multiply", vec![
-        op("Matrix", vec![
-            c("2"), c("3"),
-            c("1"), c("2"), c("3"),
-            c("4"), c("5"), c("6")
-        ]),
-        op("Matrix", vec![
-            c("4"), c("5"),
-            c("1"), c("2"), c("3"), c("4"), c("5"),
-            c("6"), c("7"), c("8"), c("9"), c("10"),
-            c("11"), c("12"), c("13"), c("14"), c("15"),
-            c("16"), c("17"), c("18"), c("19"), c("20")
-        ])
-    ]);
-    
+    let expr = op(
+        "multiply",
+        vec![
+            op(
+                "Matrix",
+                vec![
+                    c("2"),
+                    c("3"),
+                    c("1"),
+                    c("2"),
+                    c("3"),
+                    c("4"),
+                    c("5"),
+                    c("6"),
+                ],
+            ),
+            op(
+                "Matrix",
+                vec![
+                    c("4"),
+                    c("5"),
+                    c("1"),
+                    c("2"),
+                    c("3"),
+                    c("4"),
+                    c("5"),
+                    c("6"),
+                    c("7"),
+                    c("8"),
+                    c("9"),
+                    c("10"),
+                    c("11"),
+                    c("12"),
+                    c("13"),
+                    c("14"),
+                    c("15"),
+                    c("16"),
+                    c("17"),
+                    c("18"),
+                    c("19"),
+                    c("20"),
+                ],
+            ),
+        ],
+    );
+
     match checker.check(&expr) {
         TypeCheckResult::Error { message, .. } => {
             assert!(message.contains("inner dimensions"));
@@ -158,13 +226,22 @@ fn test_dimension_mismatch_error() {
 #[test]
 fn test_ordering_on_matrices_rejected() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     // Try A < B where both are matrices (nonsensical)
-    let expr = op("less_than", vec![
-        op("Matrix", vec![c("2"), c("2"), c("1"), c("2"), c("3"), c("4")]),
-        op("Matrix", vec![c("2"), c("2"), c("5"), c("6"), c("7"), c("8")])
-    ]);
-    
+    let expr = op(
+        "less_than",
+        vec![
+            op(
+                "Matrix",
+                vec![c("2"), c("2"), c("1"), c("2"), c("3"), c("4")],
+            ),
+            op(
+                "Matrix",
+                vec![c("2"), c("2"), c("5"), c("6"), c("7"), c("8")],
+            ),
+        ],
+    );
+
     match checker.check(&expr) {
         TypeCheckResult::Error { message, .. } => {
             assert!(message.contains("Ordering") || message.contains("don't make sense"));
@@ -174,4 +251,3 @@ fn test_ordering_on_matrices_rejected() {
         _ => panic!("Should reject ordering on matrices"),
     }
 }
-

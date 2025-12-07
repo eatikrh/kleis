@@ -378,6 +378,73 @@ impl TypeContextBuilder {
         self.structures.get(structure_name)
     }
 
+    /// Helper: Infer type for binary operations where both args must be same type (T → T → T)
+    /// Handles type variables gracefully
+    fn infer_binary_same_type_op(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
+        if arg_types.len() != 2 {
+            return Err(format!("{} requires 2 arguments", op_name));
+        }
+
+        // Handle all combinations of concrete types and type variables
+        match (&arg_types[0], &arg_types[1]) {
+            // Both concrete and same
+            (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
+            (Type::Matrix(m1, n1), Type::Matrix(m2, n2)) if m1 == m2 && n1 == n2 => {
+                Ok(Type::Matrix(*m1, *n1))
+            }
+            (Type::Vector(n1), Type::Vector(n2)) if n1 == n2 => Ok(Type::Vector(*n1)),
+
+            // Type variables - infer from known type
+            (Type::Var(_), t) | (t, Type::Var(_)) => Ok(t.clone()),
+            (Type::Var(_), Type::Var(_)) => Ok(arg_types[0].clone()),
+
+            // Incompatible types
+            _ => Err(format!(
+                "{} requires both arguments to be compatible types\n  Got: {:?} and {:?}",
+                op_name, arg_types[0], arg_types[1]
+            )),
+        }
+    }
+
+    /// Helper: Infer type for unary operations (T → T)
+    fn infer_unary_same_type_op(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
+        if arg_types.len() != 1 {
+            return Err(format!("{} requires 1 argument", op_name));
+        }
+
+        // Result type is same as input type
+        Ok(arg_types[0].clone())
+    }
+
+    /// Helper: Check if matrix dimensions match (for addition, equality, etc.)
+    fn check_matrix_dimensions_match(
+        op_name: &str,
+        m1: usize,
+        n1: usize,
+        m2: usize,
+        n2: usize,
+    ) -> Result<(), String> {
+        if m1 != m2 || n1 != n2 {
+            return Err(format!(
+                "{}: dimensions must match!\n  Left: {}×{}\n  Right: {}×{}\n  Cannot operate on matrices with different dimensions",
+                op_name, m1, n1, m2, n2
+            ));
+        }
+        Ok(())
+    }
+
+    /// Helper: Check if matrix is square (for det, trace, etc.)
+    fn check_square_matrix(op_name: &str, ty: &Type) -> Result<(), String> {
+        match ty {
+            Type::Matrix(m, n) if m == n => Ok(()),
+            Type::Matrix(m, n) => Err(format!(
+                "{} requires square matrix!\n  Got: {}×{} (non-square)\n  Operation only defined for n×n matrices",
+                op_name, m, n
+            )),
+            _ => Err(format!("{} requires a matrix", op_name)),
+        }
+    }
+
     /// Infer the type of an operation applied to given argument types
     /// This is the ADR-016 compliant way: query structures, don't hardcode!
     pub fn infer_operation_type(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
@@ -528,65 +595,14 @@ impl TypeContextBuilder {
 
                 // Arithmetic operations: T → T → T (same types)
                 "plus" | "minus" | "times" | "divide" | "scalar_divide" | "scalar_multiply"
-                | "frac" => {
-                    if arg_types.len() != 2 {
-                        return Err(format!("{} requires 2 arguments", op_name));
-                    }
-
-                    // Both arguments should have the same type
-                    // Handle type variables (unknown types) gracefully
-                    match (&arg_types[0], &arg_types[1]) {
-                        (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
-                        (Type::Matrix(m1, n1), Type::Matrix(m2, n2)) if m1 == m2 && n1 == n2 => {
-                            // Same matrix dimensions
-                            Ok(Type::Matrix(*m1, *n1))
-                        }
-                        (Type::Var(_), Type::Scalar) | (Type::Scalar, Type::Var(_)) => {
-                            // One is unknown, other is Scalar → result is Scalar
-                            // The inference engine will add the constraint that Var = Scalar
-                            Ok(Type::Scalar)
-                        }
-                        (Type::Var(_), Type::Matrix(m, n)) | (Type::Matrix(m, n), Type::Var(_)) => {
-                            // One is unknown, other is Matrix → result is Matrix
-                            Ok(Type::Matrix(*m, *n))
-                        }
-                        (Type::Var(_), Type::Var(_)) => {
-                            // Both unknown → return first (unification will handle it)
-                            Ok(arg_types[0].clone())
-                        }
-                        _ => Err(format!(
-                            "{} requires both arguments to be compatible types (got {:?} and {:?})",
-                            op_name, arg_types[0], arg_types[1]
-                        )),
-                    }
-                }
+                | "frac" => self.infer_binary_same_type_op(op_name, arg_types),
 
                 // Numeric operations: T → T
-                "abs" | "floor" | "sqrt" => {
-                    if arg_types.len() != 1 {
-                        return Err(format!("{} requires 1 argument", op_name));
-                    }
+                "abs" | "floor" | "sqrt" => self.infer_unary_same_type_op(op_name, arg_types),
 
-                    // Result type is same as input type
-                    Ok(arg_types[0].clone())
-                }
-
-                // Power: T → T → T (includes sup for superscripts)
-                "power" | "sup" | "sub" => {
-                    if arg_types.len() != 2 {
-                        return Err(format!("{} requires 2 arguments", op_name));
-                    }
-
-                    // Handle type variables gracefully (like arithmetic operations)
-                    match (&arg_types[0], &arg_types[1]) {
-                        (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
-                        (Type::Var(_), Type::Scalar) | (Type::Scalar, Type::Var(_)) => {
-                            Ok(Type::Scalar)
-                        }
-                        (Type::Var(_), Type::Var(_)) => Ok(Type::Scalar),
-                        _ => Err(format!("{} requires compatible types", op_name)),
-                    }
-                }
+                // Power, superscript, subscript: T → T → T
+                // For now, these operations are restricted to scalars
+                "power" | "sup" | "sub" => self.infer_binary_same_type_op(op_name, arg_types),
 
                 // Calculus operations
                 "derivative" | "integral" | "d_dx" | "partial" => {
