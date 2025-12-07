@@ -811,7 +811,8 @@ fn render_expression_internal(
             };
 
             // For Matrix constructors: extract dimensions but don't render them
-            let is_matrix_constructor = matches!(name.as_str(), "Matrix" | "PMatrix" | "VMatrix" | "BMatrix");
+            let is_matrix_constructor =
+                matches!(name.as_str(), "Matrix" | "PMatrix" | "VMatrix" | "BMatrix");
             let (matrix_rows, matrix_cols) = if is_matrix_constructor && args.len() >= 2 {
                 let rows = match &args[0] {
                     Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
@@ -825,7 +826,7 @@ fn render_expression_internal(
             } else {
                 (0, 0)
             };
-            
+
             let rendered_args: Vec<String> = args
                 .iter()
                 .enumerate()
@@ -834,7 +835,8 @@ fn render_expression_internal(
                     if is_matrix_constructor && i < 2 {
                         return None;
                     }
-                    
+
+
                     // Generate child node ID: parent.index
                     let child_id = format!("{}.{}", node_id, i);
                     let rendered = render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
