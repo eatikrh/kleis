@@ -51,14 +51,30 @@ Decision records documenting key design choices:
 - **[ADR-016](ADR-016-operations-in-structures.md)** - ⭐ Operations in Structures (Type System)
 
 ### Type System
+- **[ADR-014: Hindley-Milner Type System](adr-014-hindley-milner-type-system.md)** - HM algorithm
+- **[ADR-016: Operations in Structures](ADR-016-operations-in-structures.md)** - ⭐ Self-hosting architecture
 - **[Type System Overview](type-system/KLEIS_TYPE_SYSTEM.md)** - Complete type system design
 - **[Type Inference POC](type-system/TYPE_INFERENCE_POC.md)** - Proof of concept
+- **[Session 2024-12-07](session-2024-12-07/README.md)** - Implementation & integration
 
 ---
 
-## 📝 Notation & Type System (Dec 6, 2024)
+## 📝 Recent Sessions
 
-**Major session:** Notation design + Type checking infrastructure  
+### Session 2024-12-07: Type System & Stdlib Integration ⭐
+**Focus:** Connecting standard library to type inference  
+**Status:** ✅ Complete - ADR-016 compliance achieved  
+**See:** [Session Summary](session-2024-12-07/README.md)
+
+**Achievements:**
+- ✅ Stdlib loading infrastructure
+- ✅ Reduced hardcoded operations by 88%
+- ✅ ADR-016 compliant (operations in structures)
+- ✅ Type system now self-hosting
+- ✅ Working in browser with comprehensive tests
+
+### Session 2024-12-06: Notation Design + Type Checking
+**Focus:** Notation design + Type checking infrastructure  
 **Status:** ✅ Complete with working implementation  
 **See:** [Session Summary](session-2024-12-06/README.md)
 
@@ -80,10 +96,16 @@ Decision records documenting key design choices:
 - **Tests:** 25+ passing ✅
 
 ### Subdirectories
+- `grammar/` - Formal grammar specifications (EBNF, ANTLR4)
+- `guides/` - Implementation guides and best practices
 - `notation/` - Notation design documents and test cases
 - `parser-implementation/` - Parser compatibility analyses
-- `session-2024-12-06/` - Session-specific documents and milestones
 - `type-system/` - Type inference and checking documentation
+- `theory/` - Mathematical theory documents
+- `vision/` - Future roadmap and vision documents
+- `session-2024-12-06/` - Notation system session
+- `session-2024-12-07/` - Type system integration session ⭐
+- `archive/` - Historical documents and deprecated content
 
 ---
 
@@ -227,5 +249,5 @@ What are the implications?
 
 ---
 
-**Last Updated:** December 6, 2024
+**Last Updated:** December 7, 2024
 
