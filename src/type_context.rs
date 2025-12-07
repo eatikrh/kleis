@@ -134,6 +134,46 @@ impl OperationRegistry {
     pub fn structure_for_operation(&self, operation_name: &str) -> Option<&String> {
         self.operation_to_structure.get(operation_name)
     }
+
+    /// Merge another OperationRegistry into this one
+    pub fn merge(&mut self, other: OperationRegistry) -> Result<(), String> {
+        // Merge operation_to_structure
+        for (op, structure) in other.operation_to_structure {
+            if let Some(existing) = self.operation_to_structure.get(&op) {
+                if existing != &structure {
+                    return Err(format!(
+                        "Operation '{}' defined in both '{}' and '{}'",
+                        op, existing, structure
+                    ));
+                }
+            } else {
+                self.operation_to_structure.insert(op, structure);
+            }
+        }
+
+        // Merge structure_to_operations
+        for (structure, ops) in other.structure_to_operations {
+            self.structure_to_operations
+                .entry(structure)
+                .or_insert_with(Vec::new)
+                .extend(ops);
+        }
+
+        // Merge concrete_implementations
+        for ((ty, op), impl_name) in other.concrete_implementations {
+            self.concrete_implementations.insert((ty, op), impl_name);
+        }
+
+        // Merge type_to_structures
+        for (ty, structures) in other.type_to_structures {
+            self.type_to_structures
+                .entry(ty)
+                .or_insert_with(Vec::new)
+                .extend(structures);
+        }
+
+        Ok(())
+    }
 }
 
 /// Builds TypeContext from parsed Kleis programs
@@ -159,6 +199,31 @@ impl TypeContextBuilder {
             registry: OperationRegistry::new(),
             context: TypeContext::new(),
         }
+    }
+
+    /// Merge another TypeContextBuilder into this one
+    /// This allows incremental loading of Kleis libraries
+    pub fn merge(&mut self, other: TypeContextBuilder) -> Result<(), String> {
+        // Merge structures (check for conflicts)
+        for (name, structure) in other.structures {
+            if self.structures.contains_key(&name) {
+                // Structure already exists - this is OK if they're identical
+                // For now, we'll just warn and skip
+                eprintln!("Warning: Structure '{}' already defined, skipping", name);
+            } else {
+                self.structures.insert(name, structure);
+            }
+        }
+
+        // Merge implements (just append, duplicates are OK)
+        self.implements.extend(other.implements);
+
+        // Merge operation registry
+        self.registry.merge(other.registry)?;
+
+        // Context merging is not needed (it's ephemeral)
+
+        Ok(())
     }
 
     /// Build type context from a parsed program

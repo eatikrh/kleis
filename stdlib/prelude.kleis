@@ -6,8 +6,9 @@
 // Version: 0.1.0
 // ============================================
 
-@library("std.prelude")
-@version("0.1.0")
+// TODO: Parser doesn't support annotations yet
+// @library("std.prelude")
+// @version("0.1.0")
 
 // ============================================
 // ALGEBRAIC STRUCTURE HIERARCHY
@@ -173,19 +174,15 @@ implements VectorSpace(Matrix(m,n)) over Field(ℝ) {
 
 // Dot product (inner product)
 operation dot : ∀(n : ℕ). Vector(n) × Vector(n) → ℝ
-define dot(u, v) = Σᵢ uᵢ × vᵢ
+// TODO: define dot(u, v) = Σᵢ uᵢ × vᵢ (summation/subscript syntax not implemented yet)
 
 // Cross product (3D only)
 operation cross : Vector(3) × Vector(3) → Vector(3)
-define cross([u₁,u₂,u₃], [v₁,v₂,v₃]) = [
-  u₂v₃ - u₃v₂,
-  u₃v₁ - u₁v₃,
-  u₁v₂ - u₂v₁
-]
+// TODO: define cross([u₁,u₂,u₃], [v₁,v₂,v₃]) = [...] (subscript syntax not implemented yet)
 
 // Norm (Euclidean)
 operation norm : ∀(n : ℕ). Vector(n) → ℝ
-define norm(v) = √(dot(v, v))
+// TODO: define norm(v) = √(dot(v, v)) (sqrt syntax not implemented yet)
 
 // ============================================
 // MATRIX OPERATIONS
@@ -196,14 +193,14 @@ operation (×) : ∀(m n p : ℕ). Matrix(m,n) × Matrix(n,p) → Matrix(m,p)
 
 // Transpose
 operation transpose : ∀(m n : ℕ). Matrix(m,n) → Matrix(n,m)
-notation transpose(A) = A^T
+// TODO: notation transpose(A) = A^T (parser not implemented yet)
 
 // Determinant (square matrices only)
 operation det : ∀(n : ℕ). Matrix(n,n) → ℝ
 
 // Trace (square matrices only)
 operation trace : ∀(n : ℕ). Matrix(n,n) → ℝ
-define trace(A) = Σᵢ Aᵢᵢ
+// TODO: define trace(A) = Σᵢ Aᵢᵢ (summation syntax not implemented yet)
 
 // ============================================
 // CALCULUS OPERATIONS
@@ -220,11 +217,11 @@ operation ∇ : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
 
 // Divergence
 operation div : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
-notation div(F) = ∇ · F
+// TODO: notation div(F) = ∇ · F (parser not implemented yet)
 
 // Curl (3D only)
 operation curl : VectorField(ℝ³) → VectorField(ℝ³)
-notation curl(F) = ∇ × F
+// TODO: notation curl(F) = ∇ × F (parser not implemented yet)
 
 // Definite integral
 operation ∫ : (ℝ → ℝ) → ℝ → ℝ → ℝ

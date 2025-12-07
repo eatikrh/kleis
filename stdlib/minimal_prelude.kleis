@@ -1,0 +1,25 @@
+// Minimal Kleis Standard Library - For Testing
+// Only includes syntax that the current parser supports
+
+// Simple structure with named operations (not operators)
+structure Numeric(N) {
+  operation abs : N → N
+  operation floor : N → N
+}
+
+// Implementation for reals
+implements Numeric(ℝ) {
+  operation abs = builtin_abs
+  operation floor = builtin_floor
+}
+
+// Simple matrix structure
+structure Matrix(m: Nat, n: Nat, T) {
+  operation transpose : Matrix(n, m, T)
+}
+
+// Matrix implementation
+implements Matrix(m, n, ℝ) {
+  operation transpose = builtin_transpose
+}
+

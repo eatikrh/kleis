@@ -42,12 +42,57 @@ pub struct TypeChecker {
 }
 
 impl TypeChecker {
-    /// Create new type checker
+    /// Create new type checker (empty context)
     pub fn new() -> Self {
         TypeChecker {
             context_builder: TypeContextBuilder::new(),
             inference: TypeInference::new(),
         }
+    }
+
+    /// Create type checker with standard library loaded
+    /// This is the recommended way to create a type checker for most use cases.
+    ///
+    /// **Note:** Currently loads `minimal_prelude.kleis` because the full `prelude.kleis`
+    /// uses advanced syntax (operator symbols, axioms with ∀) that the parser doesn't
+    /// support yet. Once the parser is extended (Phase 2), this will load the full stdlib.
+    pub fn with_stdlib() -> Result<Self, String> {
+        let mut checker = Self::new();
+
+        // Load minimal prelude (subset that parser can handle)
+        // TODO: Switch to full prelude.kleis once parser supports:
+        //   - Operator symbols in parens: (•), (⊗)
+        //   - Axioms with universal quantifiers: ∀(x y z : S)
+        //   - Nested structures
+        let minimal_prelude = include_str!("../stdlib/minimal_prelude.kleis");
+        checker
+            .load_kleis(minimal_prelude)
+            .map_err(|e| format!("Failed to load stdlib/minimal_prelude.kleis: {}", e))?;
+
+        // Load matrices
+        let matrices = include_str!("../stdlib/matrices.kleis");
+        checker
+            .load_kleis(matrices)
+            .map_err(|e| format!("Failed to load stdlib/matrices.kleis: {}", e))?;
+
+        Ok(checker)
+    }
+
+    /// Load Kleis code into the type checker context
+    /// This can be used to load additional libraries or user-defined types.
+    pub fn load_kleis(&mut self, code: &str) -> Result<(), String> {
+        use crate::kleis_parser::parse_kleis_program;
+
+        // Parse the Kleis code
+        let program = parse_kleis_program(code).map_err(|e| format!("Parse error: {}", e))?;
+
+        // Build context from program
+        let new_context = TypeContextBuilder::from_program(program)?;
+
+        // Merge into existing context
+        self.context_builder.merge(new_context)?;
+
+        Ok(())
     }
 
     /// Create from parsed program
