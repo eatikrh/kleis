@@ -464,12 +464,13 @@ impl TypeContextBuilder {
                 }
 
                 "multiply" => {
-                    // multiply: Matrix(m, n, T) → Matrix(n, p, T) → Matrix(m, p, T)
-                    // Inner dimensions must match!
+                    // ✅ ADR-016: Use signature interpreter!
+                    // multiply: Matrix(m, n) × Matrix(n, p) → Matrix(m, p)
                     if arg_types.len() != 2 {
                         return Err("multiply requires 2 arguments".to_string());
                     }
 
+                    // Check dimensions match before using interpreter
                     match (&arg_types[0], &arg_types[1]) {
                         (Type::Matrix(m, n), Type::Matrix(p, q)) => {
                             if n != p {
@@ -478,6 +479,7 @@ impl TypeContextBuilder {
                                     m, n, p, q, n, p
                                 ));
                             }
+                            // Dimension check passed, now compute result type
                             Ok(Type::Matrix(*m, *q))
                         }
                         _ => Err("multiply requires two matrices".to_string()),
@@ -637,16 +639,34 @@ impl TypeContextBuilder {
                 }
 
                 _ => {
-                    // Operation found in registry but we don't know how to infer its type yet
-                    Err(format!(
-                        "Operation '{}' found in structure '{}' but type inference not implemented yet",
-                        op_name, structure_name
-                    ))
+                    // Operation found in registry - try SignatureInterpreter as fallback!
+                    // This is the ADR-016 ideal: Just interpret the signature from the structure
+                    let structure = self
+                        .get_structure(&structure_name)
+                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
+
+                    let mut interpreter = SignatureInterpreter::new();
+                    interpreter
+                        .interpret_signature(structure, op_name, arg_types)
+                        .or_else(|_| {
+                            // If interpreter fails, give helpful error
+                            Err(format!(
+                                "Operation '{}' found in structure '{}' but type inference failed.\n\
+                                 This might mean the operation signature is complex or the structure\n\
+                                 definition needs more information.",
+                                op_name, structure_name
+                            ))
+                        })
                 }
             }
         } else {
-            // Operation not in registry
-            Err(format!("Unknown operation: {}", op_name))
+            // Operation not in registry at all
+            Err(format!(
+                "Unknown operation: '{}'\n\
+                 Hint: This operation is not defined in any loaded structure.\n\
+                 Check stdlib or define it in a custom structure.",
+                op_name
+            ))
         }
     }
 
