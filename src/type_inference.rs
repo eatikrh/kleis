@@ -2,11 +2,63 @@
 //!
 //! Implements Hindley-Milner type inference for symbolic mathematical expressions.
 //! This is a minimal PoC to demonstrate type inference on the existing AST.
+//!
+//! ## Future Vision (ADR-021: Algebraic Data Types)
+//!
+//! Currently, the Type enum is hardcoded in Rust. In Phase 3, this will move to Kleis:
+//!
+//! ```kleis
+//! // stdlib/types.kleis
+//! data Type =
+//!   | Scalar
+//!   | Vector(n: Nat)
+//!   | Matrix(m: Nat, n: Nat)
+//!   | Complex
+//!   | Var(id: Nat)
+//!   | Function(domain: Type, codomain: Type)
+//!   | ForAll(var: Nat, body: Type)
+//!   | UserDefined(name: String, params: List(Type))
+//!
+//! // Unification in Kleis (not Rust!)
+//! operation unify : Type → Type → Option(Substitution)
+//! define unify(t1, t2) = match (t1, t2) { ... }
+//! ```
+//!
+//! This enables:
+//! - Users can extend types without recompiling
+//! - Type checking logic in Kleis (meta-circular!)
+//! - True self-hosting (Kleis types defined in Kleis)
+//!
+//! See ADR-021 for complete proposal.
 
 use crate::ast::Expression;
 use std::collections::HashMap;
 
 /// Type representation for Kleis expressions
+///
+/// TODO(ADR-021): This enum should be defined in Kleis, not hardcoded in Rust!
+///
+/// Future (Phase 2.5): Replace with dynamic type system
+/// ```kleis
+/// // In stdlib/types.kleis:
+/// data Type =
+///   | Scalar
+///   | Vector(n: Nat)
+///   | Matrix(m: Nat, n: Nat)
+///   | Complex
+///   | Var(Nat)
+///   | Function(Type, Type)
+///   | ForAll(Nat, Type)
+///   | UserDefined(String, List(Type))  // ← Users can extend!
+/// ```
+///
+/// Benefits:
+/// - Users can add new types without recompiling
+/// - Type system becomes self-hosting
+/// - Enables true meta-circularity (Kleis types defined in Kleis)
+/// - Pattern matching on types moves to Kleis code
+///
+/// See ADR-021 for full proposal.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     /// Scalar (ℝ)
@@ -193,6 +245,14 @@ impl TypeInference {
     /// Infer type of an operation
     /// ADR-016 COMPLIANT: Delegates ALL operations to TypeContextBuilder.
     /// Only keeps Matrix constructors (they're literals, not operations).
+    ///
+    /// TODO(ADR-021): Matrix constructors are DATA CONSTRUCTORS
+    /// With `data` keyword, these would be handled generically:
+    /// ```kleis
+    /// data Type = ... | Matrix(Nat, Nat)
+    /// // Matrix(...) becomes a generic data constructor!
+    /// // No special case needed!
+    /// ```
     fn infer_operation(
         &mut self,
         name: &str,
@@ -200,9 +260,12 @@ impl TypeInference {
         context_builder: Option<&crate::type_context::TypeContextBuilder>,
     ) -> Result<Type, String> {
         match name {
-            // Matrix constructors are LITERALS (not operations)
+            // Matrix constructors are LITERALS (data constructors, not operations)
             // Format: Matrix(rows, cols, ...elements)
-            // These must stay hardcoded because they construct literal values
+            //
+            // TODO(ADR-021): Replace with generic data constructor handling
+            // Once we have `data Type = ... | Matrix(Nat, Nat)`, this special case
+            // can be replaced with generic logic that works for ALL data constructors.
             "Matrix" | "PMatrix" | "VMatrix" | "BMatrix" => {
                 self.infer_matrix_constructor(name, args, context_builder)
             }
@@ -230,19 +293,55 @@ impl TypeInference {
     /// Infer type of matrix constructor (Matrix, PMatrix, VMatrix, BMatrix)
     /// These are special because they're LITERALS that construct values,
     /// not operations that transform values.
+    ///
+    /// TODO(ADR-021): This should be generic data constructor inference!
+    ///
+    /// With `data` keyword:
+    /// ```kleis
+    /// data Type = ... | Matrix(m: Nat, n: Nat)
+    ///
+    /// // Generic inference for ALL data constructors:
+    /// fn infer_data_constructor(name: &str, args: &[Expr]) -> Type {
+    ///     let variant = lookup_variant(name)?;
+    ///     validate_args(variant, args)?;
+    ///     construct_type(variant, args)
+    /// }
+    /// ```
+    ///
+    /// This function would disappear - replaced by generic data constructor handling!
+    ///
+    /// REFACTORING NOTES:
+    /// - Separated dimension extraction (lines 254-263) - could be generic
+    /// - Element type inference (lines 265-278) - already generic
+    /// - Type construction (line 280) - would use generic constructor registry
     fn infer_matrix_constructor(
         &mut self,
         _name: &str,
         args: &[Expression],
         context_builder: Option<&crate::type_context::TypeContextBuilder>,
     ) -> Result<Type, String> {
+        // Step 1: Extract constructor parameters (dimensions)
+        // TODO(ADR-021): Generic data constructors would get params from variant definition
+        let (rows, cols) = self.extract_matrix_dimensions(args)?;
+
+        // Step 2: Infer field types (matrix elements)
+        // NOTE: This is already generic! Could work for any data constructor.
+        self.infer_data_constructor_fields(&args[2..], context_builder, Type::Scalar)?;
+
+        // Step 3: Construct result type
+        // TODO(ADR-021): Would lookup variant definition and construct generically
+        Ok(Type::Matrix(rows, cols))
+    }
+
+    /// Extract matrix dimensions from first two arguments
+    /// TODO(ADR-021): Generic version would extract params based on variant definition
+    fn extract_matrix_dimensions(&self, args: &[Expression]) -> Result<(usize, usize), String> {
         if args.len() < 2 {
             return Err(
                 "Matrix constructor requires at least 2 arguments (rows, cols)".to_string(),
             );
         }
 
-        // Extract dimensions from first two arguments (should be constants)
         let rows = match &args[0] {
             Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
             _ => 2, // Default if not a constant
@@ -252,22 +351,34 @@ impl TypeInference {
             _ => 2, // Default if not a constant
         };
 
-        // Infer element types (skip first two dimension args)
-        for arg in &args[2..] {
-            let ty = self.infer(arg, context_builder)?;
-            // Elements should be scalars (or placeholders)
-            match ty {
+        Ok((rows, cols))
+    }
+
+    /// Infer types of data constructor fields
+    /// This is GENERIC! Works for any data constructor with typed fields.
+    ///
+    /// TODO(ADR-021): This logic is already generic and would work for all data constructors!
+    /// Example: Cons(head: T, tail: List(T)) would validate head and tail fields.
+    fn infer_data_constructor_fields(
+        &mut self,
+        field_exprs: &[Expression],
+        context_builder: Option<&crate::type_context::TypeContextBuilder>,
+        expected_type: Type,
+    ) -> Result<(), String> {
+        for field_expr in field_exprs {
+            let field_type = self.infer(field_expr, context_builder)?;
+
+            match field_type {
                 Type::Var(_) => {
-                    // Placeholder - OK
+                    // Type variable (placeholder) - OK, will be unified later
                 }
                 _ => {
-                    // Should be scalar
-                    self.add_constraint(ty, Type::Scalar);
+                    // Concrete type - add constraint that it matches expected type
+                    self.add_constraint(field_type, expected_type.clone());
                 }
             }
         }
-
-        Ok(Type::Matrix(rows, cols))
+        Ok(())
     }
 
     /// Solve all constraints using unification
@@ -297,29 +408,32 @@ impl TypeInference {
     }
 }
 
-/// Parse matrix dimensions from operation name
-/// Handles: matrix2x3, pmatrix4x5, vmatrix2x2, etc.
-fn parse_matrix_dimensions_from_op_name(name: &str) -> Option<(usize, usize)> {
-    // Remove prefix (matrix, pmatrix, vmatrix, Bmatrix)
-    let without_prefix = name
-        .strip_prefix("vmatrix")
-        .or_else(|| name.strip_prefix("pmatrix"))
-        .or_else(|| name.strip_prefix("Bmatrix"))
-        .or_else(|| name.strip_prefix("matrix"))?;
-
-    // Should be in format: 2x3, 4x5, etc.
-    let parts: Vec<&str> = without_prefix.split('x').collect();
-    if parts.len() != 2 {
-        return None;
-    }
-
-    let rows = parts[0].parse::<usize>().ok()?;
-    let cols = parts[1].parse::<usize>().ok()?;
-
-    Some((rows, cols))
-}
-
 /// Unification: make two types equal
+///
+/// TODO(ADR-021): This pattern matching should be in Kleis, not Rust!
+///
+/// Future (Phase 3): Once Type is defined with `data`, unification becomes:
+/// ```kleis
+/// operation unify : Type → Type → Option(Substitution)
+///
+/// define unify(t1, t2) = match (t1, t2) {
+///   (Scalar, Scalar) => Some(empty)
+///   (Vector(n), Vector(m)) if n == m => Some(empty)
+///   (Matrix(r1,c1), Matrix(r2,c2)) if r1==r2 && c1==c2 => Some(empty)
+///   (Var(id), t) => Some(bind(id, t))
+///   (t, Var(id)) => Some(bind(id, t))
+///   (Function(a1,b1), Function(a2,b2)) =>
+///     unify(a1,a2).and_then(s1 =>
+///       unify(s1(b1), s1(b2)).map(s2 => compose(s1,s2)))
+///   _ => None
+/// }
+/// ```
+///
+/// Benefits:
+/// - Unification logic in Kleis, not Rust
+/// - Users can see/modify unification rules
+/// - Extensible to user-defined types
+/// - Meta-circular type system!
 fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
     match (t1, t2) {
         // Same concrete types unify trivially
