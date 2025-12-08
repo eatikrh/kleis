@@ -52,18 +52,18 @@ fn assert_type_error(latex: &str, error_substring: &str) {
 #[test]
 fn test_basic_arithmetic() {
     println!("\n=== Basic Arithmetic ===");
-    assert_type_checks("1 + 2", Type::Scalar);
-    assert_type_checks("5 - 3", Type::Scalar);
-    assert_type_checks("2 * 3", Type::Scalar);
-    assert_type_checks("10 / 2", Type::Scalar);
+    assert_type_checks("1 + 2", Type::scalar());
+    assert_type_checks("5 - 3", Type::scalar());
+    assert_type_checks("2 * 3", Type::scalar());
+    assert_type_checks("10 / 2", Type::scalar());
 }
 
 #[test]
 fn test_fractions_and_powers() {
     println!("\n=== Fractions and Powers ===");
-    assert_type_checks("1/2", Type::Scalar);
-    assert_type_checks("x^2", Type::Scalar);
-    assert_type_checks("sqrt(x)", Type::Scalar);
+    assert_type_checks("1/2", Type::scalar());
+    assert_type_checks("x^2", Type::scalar());
+    assert_type_checks("sqrt(x)", Type::scalar());
 }
 
 #[test]
@@ -123,9 +123,9 @@ fn test_equations() {
 #[test]
 fn test_nested_operations() {
     println!("\n=== Nested Operations ===");
-    assert_type_checks("(a + b) * (c - d)", Type::Scalar);
-    assert_type_checks("sqrt(x^2 + y^2)", Type::Scalar);
-    assert_type_checks("(a + b) / (c + d)", Type::Scalar);
+    assert_type_checks("(a + b) * (c - d)", Type::scalar());
+    assert_type_checks("sqrt(x^2 + y^2)", Type::scalar());
+    assert_type_checks("(a + b) / (c + d)", Type::scalar());
 }
 
 #[test]
@@ -138,9 +138,9 @@ fn test_error_unknown_operation() {
 fn test_variable_inference() {
     println!("\n=== Variable Inference ===");
     // x + 1 should infer x : Scalar
-    assert_type_checks("x + 1", Type::Scalar);
-    assert_type_checks("y * 2", Type::Scalar);
-    assert_type_checks("sqrt(z)", Type::Scalar);
+    assert_type_checks("x + 1", Type::scalar());
+    assert_type_checks("y * 2", Type::scalar());
+    assert_type_checks("sqrt(z)", Type::scalar());
 }
 
 #[test]
@@ -175,10 +175,10 @@ fn test_type_safety() {
     println!("\n=== Type Safety ===");
 
     // These should type check
-    assert_type_checks("1 + 1", Type::Scalar);
-    assert_type_checks("x + x", Type::Scalar);
+    assert_type_checks("1 + 1", Type::scalar());
+    assert_type_checks("x + x", Type::scalar());
 
     // Variable with constant should infer
-    assert_type_checks("a + 1", Type::Scalar);
-    assert_type_checks("2 * b", Type::Scalar);
+    assert_type_checks("a + 1", Type::scalar());
+    assert_type_checks("2 * b", Type::scalar());
 }

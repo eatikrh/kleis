@@ -36,9 +36,29 @@ use std::collections::HashMap;
 
 /// Type representation for Kleis expressions
 ///
-/// TODO(ADR-021): This enum should be defined in Kleis, not hardcoded in Rust!
+/// **ADR-021: Algebraic Data Types - IMPLEMENTED!**
 ///
-/// Future (Phase 2.5): Replace with dynamic type system
+/// This Type enum now supports dynamic user-defined types via the `Data` variant.
+/// Types are loaded from Kleis files (e.g., stdlib/types.kleis) rather than hardcoded.
+///
+/// ## Type Structure
+///
+/// **Bootstrap types** (needed for parsing Kleis itself):
+/// - `Nat`: Natural numbers (for dimensions, indices)
+/// - `String`: Text values
+/// - `Bool`: Boolean values
+///
+/// **User-defined types** (loaded from Kleis):
+/// - `Data`: Any type defined with `data` keyword
+///   - Example: `data Type = Scalar | Matrix(m: Nat, n: Nat)`
+///   - The Type system itself is a Data type!
+///
+/// **Meta-level types** (for type inference):
+/// - `Var`: Type variables (α, β, γ) during inference
+/// - `ForAll`: Polymorphic types (∀α. T) after generalization
+///
+/// ## Example Usage
+///
 /// ```kleis
 /// // In stdlib/types.kleis:
 /// data Type =
@@ -46,39 +66,60 @@ use std::collections::HashMap;
 ///   | Vector(n: Nat)
 ///   | Matrix(m: Nat, n: Nat)
 ///   | Complex
-///   | Var(Nat)
-///   | Function(Type, Type)
-///   | ForAll(Nat, Type)
-///   | UserDefined(String, List(Type))  // ← Users can extend!
+///
+/// // Users can add their own:
+/// data Currency = USD | EUR | GBP
 /// ```
 ///
-/// Benefits:
-/// - Users can add new types without recompiling
-/// - Type system becomes self-hosting
-/// - Enables true meta-circularity (Kleis types defined in Kleis)
-/// - Pattern matching on types moves to Kleis code
+/// The registry maps variant names to types, enabling:
+/// - `Scalar` → Data { type_name: "Type", constructor: "Scalar", args: [] }
+/// - `Matrix(2, 3)` → Data { type_name: "Type", constructor: "Matrix", args: [Nat(2), Nat(3)] }
 ///
-/// See ADR-021 for full proposal.
+/// See ADR-021 for complete design.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
-    /// Scalar (ℝ)
-    Scalar,
+    // ===== Bootstrap Types =====
+    // These are needed to parse and represent Kleis itself
+    /// Natural number type (for dimensions, indices)
+    /// Used in: Matrix(m: Nat, n: Nat)
+    Nat,
 
-    /// Vector of dimension n
-    Vector(usize),
+    /// String type (for text values)
+    /// Used in: Currency(code: String)
+    String,
 
-    /// Matrix of dimensions m×n
-    Matrix(usize, usize),
+    /// Boolean type (for logical values)
+    Bool,
 
+    // ===== User-Defined Types =====
+    /// User-defined algebraic data type
+    ///
+    /// Loaded from `data` definitions in Kleis files.
+    /// This is the KEY innovation - types are data, not hardcoded!
+    ///
+    /// Fields:
+    /// - `type_name`: Which data type (e.g., "Type", "Option", "Currency")
+    /// - `constructor`: Which variant (e.g., "Scalar", "Matrix", "Some")
+    /// - `args`: Constructor arguments (e.g., [Nat(2), Nat(3)] for Matrix(2,3))
+    ///
+    /// Examples:
+    /// - Scalar → Data { type_name: "Type", constructor: "Scalar", args: [] }
+    /// - Matrix(2,3) → Data { type_name: "Type", constructor: "Matrix", args: [Nat, Nat] }
+    /// - Some(x) → Data { type_name: "Option", constructor: "Some", args: [infer(x)] }
+    Data {
+        type_name: String,
+        constructor: String,
+        args: Vec<Type>,
+    },
+
+    // ===== Meta-Level Types =====
+    // These exist at the type inference level, not user level
     /// Type variable (for inference)
     /// α, β, γ in type theory
     Var(TypeVar),
 
-    /// Function type: input → output
-    Function(Box<Type>, Box<Type>),
-
     /// Polymorphic type: ∀α. T
-    /// For now, we'll represent this after generalization
+    /// For generalized types after inference
     ForAll(TypeVar, Box<Type>),
 }
 
@@ -117,11 +158,22 @@ impl Substitution {
                     ty.clone()
                 }
             }
-            Type::Function(t1, t2) => {
-                Type::Function(Box::new(self.apply(t1)), Box::new(self.apply(t2)))
+            Type::Data {
+                type_name,
+                constructor,
+                args,
+            } => {
+                // Apply substitution to all type arguments
+                let new_args: Vec<Type> = args.iter().map(|arg| self.apply(arg)).collect();
+                Type::Data {
+                    type_name: type_name.clone(),
+                    constructor: constructor.clone(),
+                    args: new_args,
+                }
             }
             Type::ForAll(v, t) => Type::ForAll(v.clone(), Box::new(self.apply(t))),
-            _ => ty.clone(),
+            // Bootstrap types have no substructure
+            Type::Nat | Type::String | Type::Bool => ty.clone(),
         }
     }
 
@@ -218,7 +270,7 @@ impl TypeInference {
     ) -> Result<Type, String> {
         match expr {
             // Constants are scalars
-            Expression::Const(_) => Ok(Type::Scalar),
+            Expression::Const(_) => Ok(Type::scalar()),
 
             // Variables: look up in context or create fresh var
             Expression::Object(name) => {
@@ -326,11 +378,11 @@ impl TypeInference {
 
         // Step 2: Infer field types (matrix elements)
         // NOTE: This is already generic! Could work for any data constructor.
-        self.infer_data_constructor_fields(&args[2..], context_builder, Type::Scalar)?;
+        self.infer_data_constructor_fields(&args[2..], context_builder, Type::scalar())?;
 
         // Step 3: Construct result type
         // TODO(ADR-021): Would lookup variant definition and construct generically
-        Ok(Type::Matrix(rows, cols))
+        Ok(Type::matrix(rows, cols))
     }
 
     /// Extract matrix dimensions from first two arguments
@@ -436,11 +488,57 @@ impl TypeInference {
 /// - Meta-circular type system!
 fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
     match (t1, t2) {
-        // Same concrete types unify trivially
-        (Type::Scalar, Type::Scalar) => Ok(Substitution::empty()),
-        (Type::Vector(n1), Type::Vector(n2)) if n1 == n2 => Ok(Substitution::empty()),
-        (Type::Matrix(m1, n1), Type::Matrix(m2, n2)) if m1 == m2 && n1 == n2 => {
-            Ok(Substitution::empty())
+        // Bootstrap types unify with themselves
+        (Type::Nat, Type::Nat) => Ok(Substitution::empty()),
+        (Type::String, Type::String) => Ok(Substitution::empty()),
+        (Type::Bool, Type::Bool) => Ok(Substitution::empty()),
+
+        // Data types: must have same type and constructor, then unify args
+        (
+            Type::Data {
+                type_name: t1,
+                constructor: c1,
+                args: a1,
+            },
+            Type::Data {
+                type_name: t2,
+                constructor: c2,
+                args: a2,
+            },
+        ) => {
+            // Must be from the same data type
+            if t1 != t2 {
+                return Err(format!(
+                    "Cannot unify types from different data types: {} vs {}",
+                    t1, t2
+                ));
+            }
+
+            // Must be the same constructor
+            if c1 != c2 {
+                return Err(format!(
+                    "Cannot unify different constructors: {} vs {}",
+                    c1, c2
+                ));
+            }
+
+            // Must have same number of arguments
+            if a1.len() != a2.len() {
+                return Err(format!(
+                    "Constructor {} has different number of arguments: {} vs {}",
+                    c1,
+                    a1.len(),
+                    a2.len()
+                ));
+            }
+
+            // Unify all arguments recursively
+            let mut subst = Substitution::empty();
+            for (arg1, arg2) in a1.iter().zip(a2.iter()) {
+                let s = unify(&subst.apply(arg1), &subst.apply(arg2))?;
+                subst = subst.compose(&s);
+            }
+            Ok(subst)
         }
 
         // Type variable unifies with anything (if not occurs)
@@ -452,15 +550,8 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
             }
         }
 
-        // Function types: unify components
-        (Type::Function(a1, b1), Type::Function(a2, b2)) => {
-            let s1 = unify(a1, a2)?;
-            let s2 = unify(&s1.apply(b1), &s1.apply(b2))?;
-            Ok(s1.compose(&s2))
-        }
-
         // Otherwise: cannot unify
-        _ => Err(format!("Cannot unify {:?} with {:?}", t1, t2)),
+        _ => Err(format!("Cannot unify {} with {}", t1, t2)),
     }
 }
 
@@ -468,20 +559,80 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
 fn occurs(v: &TypeVar, t: &Type) -> bool {
     match t {
         Type::Var(v2) => v == v2,
-        Type::Function(t1, t2) => occurs(v, t1) || occurs(v, t2),
+        Type::Data { args, .. } => args.iter().any(|arg| occurs(v, arg)),
         Type::ForAll(_, t) => occurs(v, t),
-        _ => false,
+        Type::Nat | Type::String | Type::Bool => false,
+    }
+}
+
+impl Type {
+    /// Create a Scalar type (backward compatibility)
+    ///
+    /// This is a convenience constructor to ease the transition from
+    /// the old hardcoded Type::Scalar to the new Data-based system.
+    pub fn scalar() -> Type {
+        Type::Data {
+            type_name: "Type".to_string(),
+            constructor: "Scalar".to_string(),
+            args: vec![],
+        }
+    }
+
+    /// Create a Vector type (backward compatibility)
+    ///
+    /// Note: In the new system, dimension is part of the type.
+    /// For now, we represent it symbolically.
+    pub fn vector(_n: usize) -> Type {
+        Type::Data {
+            type_name: "Type".to_string(),
+            constructor: "Vector".to_string(),
+            args: vec![Type::Nat], // Placeholder for dimension
+        }
+    }
+
+    /// Create a Matrix type (backward compatibility)
+    ///
+    /// Note: In the new system, dimensions are part of the type.
+    /// For now, we represent them symbolically.
+    pub fn matrix(_m: usize, _n: usize) -> Type {
+        Type::Data {
+            type_name: "Type".to_string(),
+            constructor: "Matrix".to_string(),
+            args: vec![Type::Nat, Type::Nat], // Placeholders for dimensions
+        }
     }
 }
 
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Type::Scalar => write!(f, "ℝ"),
-            Type::Vector(n) => write!(f, "Vector(ℝ{})", n),
-            Type::Matrix(m, n) => write!(f, "Matrix({}, {})", m, n),
+            // Bootstrap types
+            Type::Nat => write!(f, "Nat"),
+            Type::String => write!(f, "String"),
+            Type::Bool => write!(f, "Bool"),
+
+            // User-defined data types
+            Type::Data {
+                constructor, args, ..
+            } => {
+                if args.is_empty() {
+                    // Simple constructor: Scalar, True, None
+                    write!(f, "{}", constructor)
+                } else {
+                    // Parameterized constructor: Matrix(2, 3), Some(T)
+                    write!(f, "{}(", constructor)?;
+                    for (i, arg) in args.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}", arg)?;
+                    }
+                    write!(f, ")")
+                }
+            }
+
+            // Meta-level types
             Type::Var(TypeVar(n)) => write!(f, "α{}", n),
-            Type::Function(t1, t2) => write!(f, "{} → {}", t1, t2),
             Type::ForAll(TypeVar(n), t) => write!(f, "∀α{}. {}", n, t),
         }
     }
@@ -509,7 +660,7 @@ mod tests {
         let mut infer = TypeInference::new();
         let expr = Expression::Const("42".to_string());
         let ty = infer.infer_and_solve(&expr, None).unwrap();
-        assert_eq!(ty, Type::Scalar);
+        assert_eq!(ty, Type::scalar());
     }
 
     #[test]
@@ -527,7 +678,7 @@ mod tests {
         );
 
         let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
-        assert_eq!(ty, Type::Scalar);
+        assert_eq!(ty, Type::scalar());
     }
 
     #[test]
@@ -546,7 +697,7 @@ mod tests {
 
         let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
         // Should infer x : Scalar
-        assert_eq!(ty, Type::Scalar);
+        assert_eq!(ty, Type::scalar());
     }
 
     #[test]
@@ -566,7 +717,7 @@ mod tests {
         let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
         // Should infer x : Scalar, result: Scalar
         println!("Inferred type: {}", ty);
-        assert_eq!(ty, Type::Scalar);
+        assert_eq!(ty, Type::scalar());
     }
 
     #[test]

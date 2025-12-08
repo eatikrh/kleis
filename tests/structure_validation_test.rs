@@ -43,7 +43,7 @@ fn test_ordering_works_for_scalars() {
             TypeCheckResult::Success(ty) => {
                 // Should infer Bool (represented as Scalar in current system)
                 assert!(
-                    matches!(ty, Type::Scalar),
+                    matches!(ty, Type::scalar()),
                     "Expected Scalar/Bool, got {:?}",
                     ty
                 );

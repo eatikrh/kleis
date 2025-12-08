@@ -117,20 +117,20 @@ impl TypeChecker {
             TypeExpr::Named(name) => {
                 // Map named types to Type enum
                 match name.as_str() {
-                    "ℝ" | "Real" => Type::Scalar,
+                    "ℝ" | "Real" => Type::scalar(),
                     // TODO: Add more mappings
-                    _ => Type::Scalar, // Default for now
+                    _ => Type::scalar(), // Default for now
                 }
             }
             TypeExpr::Parametric(name, _params) => {
                 // TODO: Handle parametric types
                 match name.as_str() {
-                    "Vector" => Type::Vector(3), // Default dimension
-                    "Matrix" => Type::Matrix(3, 3),
-                    _ => Type::Scalar,
+                    "Vector" => Type::vector(3), // Default dimension
+                    "Matrix" => Type::matrix(3, 3),
+                    _ => Type::scalar(),
                 }
             }
-            _ => Type::Scalar, // Default
+            _ => Type::scalar(), // Default
         }
     }
 

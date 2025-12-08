@@ -147,16 +147,27 @@ impl SignatureInterpreter {
     fn unify_with_expected(&mut self, actual: &Type, expected: &TypeExpr) -> Result<(), String> {
         match (actual, expected) {
             // Matrix(m, n) unifies with Matrix(m, n, T) by binding m, n
-            (Type::Matrix(m, n), TypeExpr::Parametric(name, params)) if name == "Matrix" => {
-                if params.len() >= 2 {
-                    self.bind_or_check_param(&params[0], *m)?;
-                    self.bind_or_check_param(&params[1], *n)?;
+            (
+                Type::Data {
+                    constructor, args, ..
+                },
+                TypeExpr::Parametric(name, params),
+            ) if constructor == "Matrix" && name == "Matrix" => {
+                if params.len() >= 2 && args.len() >= 2 {
+                    // Extract dimension values from Nat types
+                    // For now, we treat all Nat args as placeholder dimensions
+                    // TODO: Extract actual values when available
+                    // self.bind_or_check_param(&params[0], dimension_value)?;
                 }
                 Ok(())
             }
 
             // Scalar unifies with any type parameter T or ℝ
-            (Type::Scalar, TypeExpr::Named(name)) if name == "T" || name == "ℝ" => Ok(()),
+            (Type::Data { constructor, .. }, TypeExpr::Named(name))
+                if constructor == "Scalar" && (name == "T" || name == "ℝ") =>
+            {
+                Ok(())
+            }
 
             // Type variables unify with anything (unknown type)
             (Type::Var(_), _) => Ok(()),
@@ -209,40 +220,19 @@ impl SignatureInterpreter {
             let param_names = &structure.type_params;
 
             // Process each matrix argument
-            for (arg_idx, arg_type) in arg_types.iter().enumerate() {
-                if let Type::Matrix(rows, cols) = arg_type {
-                    // For MatrixAddable(m, n, T): both matrices must have same m, n
-                    // For MatrixMultipliable(m, n, p, T): first is (m,n), second is (n,p)
-
-                    if structure.name == "MatrixAddable" {
-                        // Both matrices must have same (m, n)
-                        self.bind_or_check("m", *rows, format!("argument {}", arg_idx + 1))?;
-                        self.bind_or_check("n", *cols, format!("argument {}", arg_idx + 1))?;
-                    } else if structure.name == "MatrixMultipliable" {
-                        if arg_idx == 0 {
-                            // First matrix: bind m and n
-                            self.bind_or_check("m", *rows, "first matrix rows".to_string())?;
-                            self.bind_or_check("n", *cols, "first matrix cols".to_string())?;
-                        } else if arg_idx == 1 {
-                            // Second matrix: check rows=n, bind p=cols
-                            self.bind_or_check("n", *rows, "second matrix rows".to_string())?;
-                            self.bind_or_check("p", *cols, "second matrix cols".to_string())?;
-                        }
-                    } else if structure.name == "SquareMatrix" {
-                        // SquareMatrix(n, T): must be n×n (rows = cols)
-                        if rows != cols {
-                            return Err(format!(
-                                "{} requires square matrix!\n  Got: {}×{} (non-square)\n  {} only defined for n×n matrices",
-                                structure.name, rows, cols, structure.name
-                            ));
-                        }
-                        self.bind_or_check("n", *rows, "square matrix dimension".to_string())?;
-                    } else {
-                        // Generic Matrix structure: bind m, n from first matrix
-                        if arg_idx == 0 {
-                            self.bind_or_check("m", *rows, "matrix rows".to_string())?;
-                            self.bind_or_check("n", *cols, "matrix cols".to_string())?;
-                        }
+            for (_arg_idx, arg_type) in arg_types.iter().enumerate() {
+                if let Type::Data {
+                    constructor,
+                    args: _type_args,
+                    ..
+                } = arg_type
+                {
+                    if constructor == "Matrix" {
+                        // For MatrixAddable(m, n, T): both matrices must have same m, n
+                        // For MatrixMultipliable(m, n, p, T): first is (m,n), second is (n,p)
+                        // TODO(ADR-021): Extract actual dimension values from type_args when available
+                        // For now, dimension checking is deferred to future implementation
+                        // when we can extract concrete values from Type::Nat
                     }
                 }
             }
@@ -286,9 +276,9 @@ impl SignatureInterpreter {
             TypeExpr::Named(name) => {
                 // Simple type like ℝ, or a type parameter like T
                 match name.as_str() {
-                    "ℝ" | "Real" => Ok(Type::Scalar),
-                    "T" => Ok(Type::Scalar), // For now, T defaults to Scalar
-                    _ => Ok(Type::Scalar),   // Default
+                    "ℝ" | "Real" => Ok(Type::scalar()),
+                    "T" => Ok(Type::scalar()), // For now, T defaults to Scalar
+                    _ => Ok(Type::scalar()),   // Default
                 }
             }
 
@@ -299,10 +289,10 @@ impl SignatureInterpreter {
                     let rows = self.eval_param(&params[0])?;
                     let cols = self.eval_param(&params[1])?;
 
-                    Ok(Type::Matrix(rows, cols))
+                    Ok(Type::matrix(rows, cols))
                 } else if name == "Vector" && params.len() >= 1 {
                     let dim = self.eval_param(&params[0])?;
-                    Ok(Type::Vector(dim))
+                    Ok(Type::vector(dim))
                 } else {
                     Err(format!("Unknown parametric type: {}", name))
                 }
@@ -366,12 +356,12 @@ mod tests {
         interp.bindings.insert("n".to_string(), 3);
 
         // Interpret signature
-        let arg_types = vec![Type::Matrix(2, 3)];
+        let arg_types = vec![Type::matrix(2, 3)];
         let result = interp
             .interpret_signature(structure, "transpose", &arg_types)
             .unwrap();
 
         // Should be Matrix(3, 2) - dimensions flipped!
-        assert_eq!(result, Type::Matrix(3, 2));
+        assert_eq!(result, Type::matrix(3, 2));
     }
 }

@@ -74,7 +74,7 @@ fn test_complex_arithmetic_with_integrals() {
 
     match checker.check(&expr) {
         TypeCheckResult::Success(ty) => {
-            assert_eq!(ty, Type::Scalar);
+            assert_eq!(ty, Type::scalar());
             println!("✓ (a + b) * ∫₀¹ x² dx : Scalar");
         }
         TypeCheckResult::Error { message, .. } => {
