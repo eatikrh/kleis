@@ -1,7 +1,7 @@
 # Kleis Standard Library
 
 **Location:** `stdlib/`  
-**Language:** Kleis v0.3  
+**Language:** Kleis v0.5 (with pattern matching)  
 **Purpose:** Bootstrap the type system with fundamental mathematical structures
 
 ---
@@ -206,7 +206,7 @@ ctx.load_kleis_definitions(&user_workspace)?;
 
 ## Grammar Conformance
 
-All code in `stdlib/prelude.kleis` conforms to **Kleis Grammar v0.3**:
+All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.5**:
 
 ✅ Structure definitions  
 ✅ Operation declarations  
@@ -215,16 +215,27 @@ All code in `stdlib/prelude.kleis` conforms to **Kleis Grammar v0.3**:
 ✅ Polymorphic types with `∀`  
 ✅ Type annotations with `:`  
 ✅ Library annotations with `@`  
+✅ Algebraic data types with `data` (v0.4)  
+✅ Pattern matching with `match` (v0.5)  
 
 ---
 
 ## Status
 
-**Defined:** ✅ `prelude.kleis` written  
-**Grammar:** ✅ v0.3 formalized  
-**Parser:** ⬜ Needs implementation  
+**Defined:** ✅ `types.kleis`, `prelude.kleis`, `matrices.kleis` written  
+**Grammar:** ✅ v0.5 formalized (with pattern matching!)  
+**Parser:** ✅ Pattern matching implemented  
+**Type Inference:** ✅ Pattern matching type-checks  
+**Evaluation:** ✅ Pattern matching evaluates  
+**Exhaustiveness:** ✅ Missing case warnings  
 **Loader:** ⬜ Needs implementation  
-**Type System:** ✅ POC working  
+
+**Pattern Matching Functions:** ✅ Added to `types.kleis`
+- Boolean operations: `not`, `and`, `or`
+- Option operations: `isSome`, `isNone`, `getOrDefault`, `mapOption`
+- Result operations: `isOk`, `isErr`, `unwrapOr`
+- List operations: `isEmpty`, `head`, `tail`
+- Meta-level: `isScalarType`, `isVectorType`, `vectorDimension`  
 
 ---
 

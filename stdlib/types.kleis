@@ -85,6 +85,134 @@ data Unit = Unit
 // data Currency = USD | EUR | GBP | JPY | CHF | CAD
 
 // ============================================
+// Pattern Matching Functions (NEW v0.5)
+// ============================================
+//
+// NOTE: These function definitions use pattern matching syntax.
+// The kleis_parser doesn't support 'define' statements yet (ADR-015 POC),
+// but these examples show what's possible with pattern matching!
+//
+// Once the full parser is implemented, these will be uncommented and loaded.
+
+// Boolean operations using pattern matching
+// define not : Bool → Bool
+// define not(b) = match b {
+//   True => False
+//   False => True
+// }
+//
+// define and : Bool × Bool → Bool
+// define and(b1, b2) = match b1 {
+//   False => False
+//   True => b2
+// }
+//
+// define or : Bool × Bool → Bool
+// define or(b1, b2) = match b1 {
+//   True => True
+//   False => b2
+// }
+
+// Option operations
+// define isSome : Option(T) → Bool
+// define isSome(opt) = match opt {
+//   None => False
+//   Some(_) => True
+// }
+//
+// define isNone : Option(T) → Bool
+// define isNone(opt) = match opt {
+//   None => True
+//   Some(_) => False
+// }
+//
+// define getOrDefault : Option(T) × T → T
+// define getOrDefault(opt, default) = match opt {
+//   None => default
+//   Some(x) => x
+// }
+
+// Map function for Option
+// define mapOption : (T → U) × Option(T) → Option(U)
+// define mapOption(f, opt) = match opt {
+//   None => None
+//   Some(x) => Some(f(x))
+// }
+
+// Result operations
+// define isOk : Result(T, E) → Bool
+// define isOk(result) = match result {
+//   Ok(_) => True
+//   Err(_) => False
+// }
+//
+// define isErr : Result(T, E) → Bool
+// define isErr(result) = match result {
+//   Ok(_) => False
+//   Err(_) => True
+// }
+//
+// define unwrapOr : Result(T, E) × T → T
+// define unwrapOr(result, default) = match result {
+//   Ok(x) => x
+//   Err(_) => default
+// }
+
+// List operations
+// define isEmpty : List(T) → Bool
+// define isEmpty(list) = match list {
+//   Nil => True
+//   Cons(_, _) => False
+// }
+//
+// define head : List(T) → Option(T)
+// define head(list) = match list {
+//   Nil => None
+//   Cons(h, _) => Some(h)
+// }
+//
+// define tail : List(T) → Option(List(T))
+// define tail(list) = match list {
+//   Nil => None
+//   Cons(_, t) => Some(t)
+// }
+
+// Ordering operations
+// define compare : Ordering → Ordering → Bool
+// define compare(ord1, ord2) = match ord1 {
+//   LT => match ord2 { LT => True | _ => False }
+//   EQ => match ord2 { EQ => True | _ => False }
+//   GT => match ord2 { GT => True | _ => False }
+// }
+
+// ============================================
+// Self-Hosting: Type System in Kleis!
+// ============================================
+//
+// This is meta-circular: using Kleis to define Kleis's type system!
+// These functions would be used by the type checker itself.
+
+// Check if a type is a scalar type
+// define isScalarType : Type → Bool
+// define isScalarType(t) = match t {
+//   Scalar => True
+//   Complex => True
+//   _ => False
+// }
+//
+// define isVectorType : Type → Bool
+// define isVectorType(t) = match t {
+//   Vector(_) => True
+//   _ => False
+// }
+//
+// define vectorDimension : Type → Option(Nat)
+// define vectorDimension(t) = match t {
+//   Vector(n) => Some(n)
+//   _ => None
+// }
+
+// ============================================
 // Implementation Notes
 // ============================================
 
