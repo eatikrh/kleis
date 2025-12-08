@@ -234,6 +234,10 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
             let args_json: Vec<serde_json::Value> = args.iter().map(expression_to_json).collect();
             json!({"Operation": {"name": name, "args": args_json}})
         }
+        Expression::Match { .. } => {
+            // TODO: Implement match expression JSON serialization
+            json!({"Match": "not yet implemented"})
+        }
     }
 }
 
@@ -584,6 +588,10 @@ fn collect_slots_recursive(
                 let child_role = determine_arg_role(name, i);
                 collect_slots_recursive(arg, slots, child_path, child_role);
             }
+        }
+        Expression::Match { .. } => {
+            // TODO: Implement match expression slot collection
+            // For now, don't collect slots from match expressions
         }
     }
 }

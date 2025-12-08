@@ -149,6 +149,9 @@ fn collect_slots_recursive(
                 collect_slots_recursive(arg, slots, next_auto_id, child_path, child_role);
             }
         }
+        Expression::Match { .. } => {
+            // TODO: Implement match expression slot collection
+        }
     }
 }
 

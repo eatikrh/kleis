@@ -50,10 +50,7 @@ pub enum Pattern {
     Variable(String),
 
     /// Constructor pattern: Some(x), None, True
-    Constructor {
-        name: String,
-        args: Vec<Pattern>,
-    },
+    Constructor { name: String, args: Vec<Pattern> },
 
     /// Constant pattern: 0, 1, "hello"
     Constant(String),

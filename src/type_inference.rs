@@ -353,14 +353,14 @@ impl TypeInference {
     ) -> Result<Type, String> {
         // TODO: Implement full pattern matching type inference
         // For now, return fresh type variable
-        
+
         // Step 1: Infer scrutinee type
         let _scrutinee_ty = self.infer(scrutinee, context_builder)?;
-        
+
         // Step 2: Infer all branch types (would check patterns and bind variables)
         // Step 3: Unify all branch types
         // Step 4: Check exhaustiveness
-        
+
         // For now, return a type variable
         Ok(self.context.fresh_var())
     }
