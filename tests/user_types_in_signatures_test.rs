@@ -13,6 +13,7 @@ use kleis::data_registry::DataTypeRegistry;
 use kleis::kleis_ast::{DataDef, DataVariant, TypeParam};
 use kleis::kleis_parser::parse_kleis_program;
 use kleis::signature_interpreter::SignatureInterpreter;
+use kleis::structure_registry::StructureRegistry;
 use kleis::type_inference::Type;
 
 /// Helper: Create a simple data type (0-arity)
@@ -88,7 +89,7 @@ fn test_simple_user_type_in_signature() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Manually bind C to Currency (would normally happen during unification)
     // For now we'll just test that Currency is recognized
@@ -130,7 +131,7 @@ fn test_parametric_1_arity_nat() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Bind n to 3
     interp.bindings.insert("n".to_string(), 3);
@@ -171,7 +172,7 @@ fn test_parametric_2_arity_nat() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Bind n to 4
     interp.bindings.insert("n".to_string(), 4);
@@ -213,7 +214,7 @@ fn test_parametric_3_arity_nat() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Bind i=10, j=20, k=30
     interp.bindings.insert("i".to_string(), 10);
@@ -256,7 +257,7 @@ fn test_parametric_4_arity_nat() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Bind i=2, j=3, k=4, l=5
     interp.bindings.insert("i".to_string(), 2);
@@ -296,7 +297,7 @@ fn test_arity_validation() {
         .register(make_nat_parametric_type("Tensor3D", vec!["i", "j", "k"]))
         .unwrap();
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Bind i=10, j=20
     interp.bindings.insert("i".to_string(), 10);
@@ -345,7 +346,7 @@ fn test_parametric_with_type_params() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Create Option(ℝ) type
     let option_type = Type::Data {
@@ -378,7 +379,7 @@ fn test_backward_compatibility_matrix() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Bind m=2, n=3
     interp.bindings.insert("m".to_string(), 2);
@@ -412,7 +413,7 @@ fn test_zero_arity_from_registry() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // No arguments needed for 0-arity
     let result = interp.interpret_signature(structure, "unit", &[]);
@@ -493,7 +494,7 @@ fn test_string_parameter_binding() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Create Metric("m/s", ℝ) type
     let metric_type = Type::Data {
@@ -537,7 +538,7 @@ fn test_string_parameter_mismatch_caught() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Try to add metrics with different units - should fail!
     let metric1 = Type::Data {
@@ -591,7 +592,7 @@ fn test_string_parameter_consistency() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Both arguments have same unit
     let metric1 = Type::Data {
@@ -673,7 +674,7 @@ fn test_mixed_string_and_nat_parameters() {
     let program = parse_kleis_program(code).unwrap();
     let structure = &program.structures()[0];
 
-    let mut interp = SignatureInterpreter::new(registry);
+    let mut interp = SignatureInterpreter::new(registry, StructureRegistry::new());
 
     // Create LabeledMatrix("velocity", 2, 3, ℝ)
     let labeled_matrix = Type::Data {
@@ -741,7 +742,7 @@ fn test_unit_safe_physics_calculations() {
     let structure = &program.structures()[0];
 
     // Case 1: Adding same units - SHOULD WORK
-    let mut interp1 = SignatureInterpreter::new(registry.clone());
+    let mut interp1 = SignatureInterpreter::new(registry.clone(), StructureRegistry::new());
 
     let velocity1 = Type::Data {
         type_name: "Quantity".to_string(),
@@ -760,7 +761,7 @@ fn test_unit_safe_physics_calculations() {
     println!("✓ velocity (m/s) + velocity (m/s) → velocity (m/s) ✅");
 
     // Case 2: Adding different units - SHOULD FAIL
-    let mut interp2 = SignatureInterpreter::new(registry.clone());
+    let mut interp2 = SignatureInterpreter::new(registry.clone(), StructureRegistry::new());
 
     let velocity = Type::Data {
         type_name: "Quantity".to_string(),
@@ -782,7 +783,7 @@ fn test_unit_safe_physics_calculations() {
     println!("✓ velocity (m/s) + force (N) → ERROR ❌ (unit mismatch caught!)");
 
     // Case 3: Multiple physics units
-    let mut interp3 = SignatureInterpreter::new(registry.clone());
+    let mut interp3 = SignatureInterpreter::new(registry.clone(), StructureRegistry::new());
 
     let mass1 = Type::Data {
         type_name: "Quantity".to_string(),

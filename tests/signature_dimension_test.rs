@@ -3,6 +3,7 @@
 use kleis::data_registry::DataTypeRegistry;
 use kleis::kleis_parser::parse_kleis_program;
 use kleis::signature_interpreter::SignatureInterpreter;
+use kleis::structure_registry::StructureRegistry;
 use kleis::type_inference::Type;
 
 #[test]
@@ -21,7 +22,8 @@ fn test_add_dimension_constraint_via_signature() {
 
     // Test 1: Same dimensions - should work
     let registry = DataTypeRegistry::new();
-    let mut interp1 = SignatureInterpreter::new(registry);
+    let structure_registry = StructureRegistry::new();
+    let mut interp1 = SignatureInterpreter::new(registry, structure_registry);
     let args1 = vec![Type::matrix(2, 3), Type::matrix(2, 3)];
 
     // This should work because both are Matrix(2, 3)
@@ -39,7 +41,8 @@ fn test_add_dimension_constraint_via_signature() {
 
     // Test 2: Different dimensions - should fail
     let registry2 = DataTypeRegistry::new();
-    let mut interp2 = SignatureInterpreter::new(registry2);
+    let structure_registry2 = StructureRegistry::new();
+    let mut interp2 = SignatureInterpreter::new(registry2, structure_registry2);
     let args2 = vec![Type::matrix(2, 3), Type::matrix(4, 5)];
 
     // This should FAIL because dimensions don't match
@@ -73,7 +76,8 @@ fn test_multiply_dimension_constraint_via_signature() {
 
     // Test: Compatible dimensions (2×3 × 3×4)
     let registry = DataTypeRegistry::new();
-    let mut interp = SignatureInterpreter::new(registry);
+    let structure_registry = StructureRegistry::new();
+    let mut interp = SignatureInterpreter::new(registry, structure_registry);
     let args = vec![Type::matrix(2, 3), Type::matrix(3, 4)];
 
     // Should work: m=2, n=3 from first, p=4 from second

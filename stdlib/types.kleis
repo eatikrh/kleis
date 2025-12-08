@@ -19,13 +19,13 @@
 // Note: This is a data type that defines what types exist.
 // It's used by the type checker itself.
 //
-// Matrix is now included! The type/value distinction (ADR-020) is handled
-// by arity: Matrix(2, 3) is a type, Matrix(2, 3, a, b, c, d, e, f) is a value.
-// This eliminates the need for special-case handling in type_inference.rs.
+// **Note on Matrix and Vector:** These are NOT included here because they are
+// STRUCTURE types (defined with `structure` keyword), not DATA types.
+// Structure types represent type classes/interfaces with operations,
+// while data types represent concrete algebraic data types with variants.
+// Matrix and Vector are handled by StructureRegistry, not DataTypeRegistry.
 data Type =
   Scalar
-  | Vector(n: Nat)
-  | Matrix(m: Nat, n: Nat)
   | Complex
   | Set(T: Type)
   | List(T: Type)

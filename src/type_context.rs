@@ -526,7 +526,8 @@ impl TypeContextBuilder {
                         .get_structure(&structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    SignatureInterpreter::new(data_registry.clone())
+                    let structure_registry = self.build_structure_registry();
+                    SignatureInterpreter::new(data_registry.clone(), structure_registry)
                         .interpret_signature(structure, op_name, arg_types)
                 }
 
@@ -538,7 +539,9 @@ impl TypeContextBuilder {
                         .get_structure(&structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    let mut interpreter = SignatureInterpreter::new(data_registry.clone());
+                    let structure_registry = self.build_structure_registry();
+                    let mut interpreter =
+                        SignatureInterpreter::new(data_registry.clone(), structure_registry);
                     interpreter
                         .interpret_signature(structure, op_name, arg_types)
                         .map_err(|e| {
@@ -621,6 +624,28 @@ impl TypeContextBuilder {
             available_ops.join(", "),
             available_ops[0]
         ))
+    }
+
+    /// Build a StructureRegistry from loaded structures
+    /// This enables generic handling of parametric structure types in signatures
+    fn build_structure_registry(&self) -> crate::structure_registry::StructureRegistry {
+        use crate::structure_registry::StructureRegistry;
+        let mut registry = StructureRegistry::new();
+
+        for structure in self.structures.values() {
+            // Only register parametric structures (those with type parameters)
+            // Non-parametric structures don't need registry lookup
+            if !structure.type_params.is_empty() {
+                if let Err(e) = registry.register(structure.clone()) {
+                    eprintln!(
+                        "Warning: Failed to register structure '{}': {}",
+                        structure.name, e
+                    );
+                }
+            }
+        }
+
+        registry
     }
 }
 

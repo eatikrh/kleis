@@ -20,7 +20,8 @@
 ///! This is SELF-HOSTING: Kleis defines Kleis!
 use crate::data_registry::DataTypeRegistry;
 use crate::kleis_ast::{StructureDef, StructureMember, TypeExpr};
-use crate::type_inference::Type;
+use crate::structure_registry::StructureRegistry;
+use crate::type_inference::{Type, TypeVar};
 use std::collections::HashMap;
 
 /// Interprets operation type signatures from structure definitions
@@ -44,21 +45,27 @@ pub struct SignatureInterpreter {
     /// Type variable substitutions for proper HM unification
     /// Maps type variables to their resolved types
     /// Example: {TypeVar(0): Scalar, TypeVar(1): Matrix(2,3)}
-    substitutions: HashMap<crate::type_inference::TypeVar, Type>,
+    substitutions: HashMap<TypeVar, Type>,
 
     /// Registry of user-defined data types
     /// Enables looking up types like Currency, Tensor3D, Option, etc.
     data_registry: DataTypeRegistry,
+
+    /// Registry of structure definitions
+    /// Enables looking up structures like Matrix(m, n, T), Tensor(i, j, k, T), etc.
+    /// This allows generic handling of parametric structure types without hardcoding.
+    structure_registry: StructureRegistry,
 }
 
 impl SignatureInterpreter {
-    pub fn new(data_registry: DataTypeRegistry) -> Self {
+    pub fn new(data_registry: DataTypeRegistry, structure_registry: StructureRegistry) -> Self {
         SignatureInterpreter {
             bindings: HashMap::new(),
             type_bindings: HashMap::new(),
             string_bindings: HashMap::new(),
             substitutions: HashMap::new(),
             data_registry,
+            structure_registry,
         }
     }
 
@@ -572,27 +579,73 @@ impl SignatureInterpreter {
                     });
                 }
 
-                // Fallback for structure types (Matrix, Vector)
-                // These are STRUCTURE types defined in stdlib/*.kleis with `structure` keyword,
-                // not DATA types defined with `data` keyword.
-                // Structure types are not in DataTypeRegistry because structures define
+                // 2. Check if this is a structure type (Matrix, Vector, custom structures)
+                // Structure types are defined with `structure` keyword and represent
                 // type classes/interfaces, not concrete data types.
-                //
-                // TODO(future): Implement StructureRegistry to handle all structure types generically.
-                // For now, Matrix and Vector are special-cased because they're the only parametric
-                // structure types in the stdlib.
-                if name == "Matrix" && param_exprs.len() >= 2 {
-                    // Matrix structure type: Matrix(m: Nat, n: Nat, T: Type)
-                    let rows = self.eval_param(&param_exprs[0])?;
-                    let cols = self.eval_param(&param_exprs[1])?;
-                    Ok(Type::matrix(rows, cols))
-                } else if name == "Vector" && param_exprs.len() >= 1 {
-                    // Vector structure type: Vector(n: Nat, T: Type)
-                    let dim = self.eval_param(&param_exprs[0])?;
-                    Ok(Type::vector(dim))
-                } else {
-                    Err(format!("Unknown parametric type: {}", name))
+                if let Some(structure_def) = self.structure_registry.get(name) {
+                    // GENERIC handling for ANY parametric structure!
+                    let expected_arity = structure_def.type_params.len();
+
+                    if param_exprs.len() != expected_arity {
+                        return Err(format!(
+                            "Structure type {} expects {} parameters, got {}",
+                            name,
+                            expected_arity,
+                            param_exprs.len()
+                        ));
+                    }
+
+                    // Special handling for Matrix and Vector to maintain backwards compatibility
+                    // Type::matrix(m, n) and Type::vector(n) use a specific format
+                    if name == "Matrix" && param_exprs.len() == 3 {
+                        // Matrix(m, n, T) - extract just m and n, ignore T for now
+                        let m = self.eval_param(&param_exprs[0])?;
+                        let n = self.eval_param(&param_exprs[1])?;
+                        return Ok(Type::matrix(m, n));
+                    } else if name == "Vector" && param_exprs.len() == 2 {
+                        // Vector(n, T) - extract just n, ignore T for now
+                        let n = self.eval_param(&param_exprs[0])?;
+                        return Ok(Type::vector(n));
+                    }
+
+                    // Generic handling for other structure types
+                    let mut args = Vec::new();
+                    for (param_def, param_expr) in structure_def.type_params.iter().zip(param_exprs)
+                    {
+                        let arg = match param_def.kind.as_deref() {
+                            Some("Nat") => {
+                                // Natural number parameter (dimension, index, etc.)
+                                let n = self.eval_param(param_expr)?;
+                                Type::NatValue(n)
+                            }
+                            Some("String") => {
+                                // String parameter (label, name, etc.)
+                                let s = self.eval_string_param(param_expr)?;
+                                Type::StringValue(s)
+                            }
+                            Some("Type") | None => {
+                                // Type parameter - recursively interpret
+                                self.interpret_type_expr(param_expr)?
+                            }
+                            Some(k) => {
+                                return Err(format!("Unknown parameter kind: {}", k));
+                            }
+                        };
+                        args.push(arg);
+                    }
+
+                    // Construct Type::Data representation for structure types
+                    // Structure types use the same representation as data types
+                    // but are conceptually different (interfaces vs concrete types)
+                    return Ok(Type::Data {
+                        type_name: name.clone(),
+                        constructor: name.clone(),
+                        args,
+                    });
                 }
+
+                // Neither data type nor structure type - unknown
+                Err(format!("Unknown parametric type: {}", name))
             }
 
             TypeExpr::Function(_, result) => {
@@ -665,18 +718,20 @@ mod tests {
 
     #[test]
     fn test_interpret_transpose_signature() {
+        use crate::structure_registry::StructureRegistry;
+
         // Load stdlib/types.kleis to get Matrix data type
         let types_code = include_str!("../stdlib/types.kleis");
         let types_program = parse_kleis_program(types_code).unwrap();
-        
-        let mut registry = DataTypeRegistry::new();
+
+        let mut data_registry = DataTypeRegistry::new();
         for item in types_program.items {
             if let crate::kleis_ast::TopLevel::DataDef(data_def) = item {
-                registry.register(data_def).unwrap();
+                data_registry.register(data_def).unwrap();
             }
         }
 
-        // Parse structure with transpose
+        // Parse structure with transpose and register it
         let code = r#"
             structure Matrix(m: Nat, n: Nat, T) {
                 operation transpose : Matrix(n, m, T)
@@ -684,9 +739,13 @@ mod tests {
         "#;
 
         let program = parse_kleis_program(code).unwrap();
-        let structure = program.structures()[0];
+        let structure = program.structures()[0].clone();
 
-        let mut interp = SignatureInterpreter::new(registry);
+        // Register Matrix structure in structure_registry
+        let mut structure_registry = StructureRegistry::new();
+        structure_registry.register(structure.clone()).unwrap();
+
+        let mut interp = SignatureInterpreter::new(data_registry, structure_registry);
 
         // Bind: m=2, n=3
         interp.bindings.insert("m".to_string(), 2);
@@ -695,7 +754,7 @@ mod tests {
         // Interpret signature
         let arg_types = vec![Type::matrix(2, 3)];
         let result = interp
-            .interpret_signature(structure, "transpose", &arg_types)
+            .interpret_signature(&structure, "transpose", &arg_types)
             .unwrap();
 
         // Should be Matrix(3, 2) - dimensions flipped!
@@ -704,6 +763,8 @@ mod tests {
 
     #[test]
     fn test_type_variable_substitution() {
+        use crate::structure_registry::StructureRegistry;
+
         // Test that Var(α) + Scalar correctly substitutes α := Scalar
         // This is the key HM unification feature!
 
@@ -716,8 +777,9 @@ mod tests {
         let program = parse_kleis_program(code).unwrap();
         let structure = program.structures()[0];
 
-        let registry = DataTypeRegistry::new();
-        let mut interp = SignatureInterpreter::new(registry);
+        let data_registry = DataTypeRegistry::new();
+        let structure_registry = StructureRegistry::new();
+        let mut interp = SignatureInterpreter::new(data_registry, structure_registry);
 
         // Simulate: x + 1 where x is Var(0), 1 is Scalar
         use crate::type_inference::TypeVar;

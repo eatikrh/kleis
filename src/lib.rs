@@ -7,6 +7,7 @@ pub mod parser;
 pub mod pattern_matcher;
 pub mod render;
 pub mod signature_interpreter;
+pub mod structure_registry;
 pub mod template_inference;
 pub mod templates;
 pub mod type_checker;
