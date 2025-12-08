@@ -378,42 +378,12 @@ impl TypeContextBuilder {
         self.structures.get(structure_name)
     }
 
-    /// Helper: Infer type for binary operations where both args must be same type (T → T → T)
-    /// Handles type variables gracefully
-    fn infer_binary_same_type_op(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
+    /// Helper: Check binary operation argument count
+    fn check_binary_args(&self, op_name: &str, arg_types: &[Type]) -> Result<(), String> {
         if arg_types.len() != 2 {
             return Err(format!("{} requires 2 arguments", op_name));
         }
-
-        // Handle all combinations of concrete types and type variables
-        match (&arg_types[0], &arg_types[1]) {
-            // Both concrete and same
-            (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
-            (Type::Matrix(m1, n1), Type::Matrix(m2, n2)) if m1 == m2 && n1 == n2 => {
-                Ok(Type::Matrix(*m1, *n1))
-            }
-            (Type::Vector(n1), Type::Vector(n2)) if n1 == n2 => Ok(Type::Vector(*n1)),
-
-            // Type variables - infer from known type
-            (Type::Var(_), t) | (t, Type::Var(_)) => Ok(t.clone()),
-            (Type::Var(_), Type::Var(_)) => Ok(arg_types[0].clone()),
-
-            // Incompatible types
-            _ => Err(format!(
-                "{} requires both arguments to be compatible types\n  Got: {:?} and {:?}",
-                op_name, arg_types[0], arg_types[1]
-            )),
-        }
-    }
-
-    /// Helper: Infer type for unary operations (T → T)
-    fn infer_unary_same_type_op(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
-        if arg_types.len() != 1 {
-            return Err(format!("{} requires 1 argument", op_name));
-        }
-
-        // Result type is same as input type
-        Ok(arg_types[0].clone())
+        Ok(())
     }
 
     /// Infer the type of an operation applied to given argument types
@@ -461,9 +431,7 @@ impl TypeContextBuilder {
                 // Special semantics: equals returns RHS type (for definitions like I = Matrix(...))
                 // This can't be expressed in a signature, so needs special handling
                 "equals" | "not_equals" => {
-                    if arg_types.len() != 2 {
-                        return Err(format!("{} requires 2 arguments", op_name));
-                    }
+                    self.check_binary_args(op_name, arg_types)?;
                     // For equals/not_equals, return the type of RHS (second argument)
                     // This handles definitions like: I = Matrix(2,2,...)
                     // Type of equation is the type of what's defined
@@ -472,9 +440,7 @@ impl TypeContextBuilder {
 
                 // Ordering operations (only for ordered types like scalars)
                 "less_than" | "greater_than" | "less_equal" | "greater_equal" => {
-                    if arg_types.len() != 2 {
-                        return Err(format!("{} requires 2 arguments", op_name));
-                    }
+                    self.check_binary_args(op_name, arg_types)?;
 
                     // Check that both arguments are scalars
                     match (&arg_types[0], &arg_types[1]) {
