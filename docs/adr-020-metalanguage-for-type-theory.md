@@ -294,12 +294,14 @@ axiom lambda_rule:
 
 ## Examples of Formalization
 
+**Note:** These examples use proposed `data` keyword for algebraic data types, which is not yet in Kleis grammar v0.3. This syntax is being considered for a future version (see ADR-021 proposal). Current grammar would require more verbose structure definitions. Examples show the INTENT and capability, not current syntax.
+
 ### **Example 1: Simply Typed Lambda Calculus**
 
 ```kleis
 structure STLC {
   // Object language types
-  data TypeSTLC = Base | Arrow(TypeSTLC, TypeSTLC)
+  data TypeSTLC = Base | Arrow(TypeSTLC, TypeSTLC)  // ← PROPOSED syntax
   
   // Object language terms
   data TermSTLC = Var(String) | Abs(String, TermSTLC) | App(TermSTLC, TermSTLC)
