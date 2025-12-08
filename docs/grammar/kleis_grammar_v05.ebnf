@@ -1,0 +1,511 @@
+(* ============================================ *)
+(* Kleis Grammar v0.5 - EBNF Specification   *)
+(* Date: 2024-12-08                           *)
+(* NEW: Pattern Matching (ADR-021 Part 2)     *)
+(* Includes: Data Types, Pattern Matching,    *)
+(*           Type System, Structures, Axioms  *)
+(* ============================================ *)
+
+(* Top-Level Program *)
+program ::= { declaration } ;
+
+declaration
+    ::= libraryAnnotation
+      | versionAnnotation
+      | structureDef
+      | implementsDef
+      | dataDef              (* v0.4: Algebraic data types *)
+      | functionDef
+      | operationDecl
+      | objectDecl
+      | typeAlias
+      ;
+
+(* ============================================ *)
+(* ANNOTATIONS                                  *)
+(* ============================================ *)
+
+libraryAnnotation ::= "@library" "(" string ")" ;
+versionAnnotation ::= "@version" "(" string ")" ;
+
+(* ============================================ *)
+(* DATA TYPE DEFINITIONS (ADR-021) - v0.4      *)
+(* ============================================ *)
+
+(*
+  Algebraic data types enable user-defined types.
+  
+  Examples:
+    data Bool = True | False
+    data Option(T) = None | Some(T)
+    data Type = Scalar | Vector(n: Nat) | Matrix(m: Nat, n: Nat)
+    
+  This is the foundation for self-hosting: Kleis types defined in Kleis!
+*)
+
+dataDef
+    ::= "data" identifier [ "(" typeParams ")" ] "="
+        dataVariant { "|" dataVariant }
+    ;
+
+dataVariant
+    ::= identifier [ "(" dataFields ")" ]
+    ;
+
+dataFields ::= dataField { "," dataField } ;
+
+dataField
+    ::= identifier ":" type      (* Named field: m: Nat, value: T *)
+      | type                      (* Positional field: T, Nat *)
+    ;
+
+(* ============================================ *)
+(* PATTERN MATCHING (NEW v0.5) - ADR-021 Part 2 *)
+(* ============================================ *)
+
+(*
+  Pattern matching enables using algebraic data types.
+  Completes ADR-021: now you can define AND use data types!
+  
+  Examples:
+    match x { True => 1 | False => 0 }
+    match opt { None => 0 | Some(x) => x }
+    match result { Ok(Some(x)) => x | Ok(None) => 0 | Err(_) => -1 }
+    
+  Features:
+    - Wildcard patterns: _
+    - Variable binding: x, value
+    - Constructor patterns: Some(x), None
+    - Constant patterns: 0, 1, "hello"
+    - Nested patterns: Ok(Some(x))
+    - Exhaustiveness checking (compile-time warnings)
+*)
+
+matchExpr
+    ::= "match" expression "{" matchCases "}"
+    ;
+
+matchCases
+    ::= matchCase { caseSeparator matchCase }
+    ;
+
+caseSeparator
+    ::= "|"               (* Pipe separator *)
+      | newline           (* Newline separator *)
+      ;
+
+matchCase
+    ::= pattern "=>" expression
+    ;
+
+pattern
+    ::= wildcardPattern
+      | variablePattern
+      | constructorPattern
+      | constantPattern
+      ;
+
+wildcardPattern
+    ::= "_"
+    ;
+
+variablePattern
+    ::= identifier       (* Must start with lowercase *)
+    ;
+
+constructorPattern
+    ::= identifier [ "(" patternArgs ")" ]
+    ;                    (* Constructor must start with uppercase *)
+
+patternArgs
+    ::= pattern { "," pattern }
+    ;
+
+constantPattern
+    ::= number
+      | string
+      | boolean
+      ;
+
+boolean ::= "True" | "False" ;
+
+(* ============================================ *)
+(* STRUCTURE DEFINITIONS                        *)
+(* ============================================ *)
+
+structureDef
+    ::= "structure" identifier "(" typeParams ")"
+        [ extendsClause ]
+        [ overClause ]
+        "{" { structureMember } "}"
+    ;
+
+typeParams ::= typeParam { "," typeParam } ;
+typeParam ::= identifier [ ":" kind ] ;
+
+kind
+    ::= "Type"
+      | "ℕ" | "Nat"
+      | "Field"
+      | "*"
+      | kind "→" kind
+      ;
+
+extendsClause ::= "extends" identifier [ "(" typeArgs ")" ] ;
+overClause ::= "over" "Field" "(" type ")" ;
+
+structureMember
+    ::= operationDecl
+      | elementDecl
+      | axiomDecl
+      | nestedStructure
+      | supportsBlock
+      | notationDecl
+      ;
+
+operationDecl ::= "operation" operatorSymbol ":" typeSignature ;
+elementDecl ::= "element" identifier ":" type ;
+axiomDecl ::= "axiom" identifier ":" proposition ;
+
+nestedStructure
+    ::= "structure" identifier ":" identifier "(" type ")"
+        "{" { structureMember } "}"
+    ;
+
+supportsBlock ::= "supports" "{" { operationDecl } "}" ;
+notationDecl ::= "notation" identifier "(" params ")" "=" expression ;
+
+(* ============================================ *)
+(* IMPLEMENTATIONS                              *)
+(* ============================================ *)
+
+implementsDef
+    ::= "implements" identifier "(" typeArgs ")"
+        [ overClause ]
+        [ "{" { implMember } "}" ]
+    ;
+
+implMember
+    ::= elementImpl
+      | operationImpl
+      | verifyStmt
+      ;
+
+elementImpl ::= "element" identifier "=" expression ;
+
+operationImpl
+    ::= "operation" operatorSymbol "=" implementation
+      | "operation" operatorSymbol "(" params ")" "=" expression
+      ;
+
+implementation
+    ::= identifier        (* Function name like builtin_add *)
+      | expression        (* Inline expression *)
+      ;
+
+verifyStmt ::= "verify" identifier ;
+
+(* ============================================ *)
+(* FUNCTION DEFINITIONS                         *)
+(* ============================================ *)
+
+functionDef
+    ::= "define" identifier [ typeAnnotation ] "=" expression
+      | "define" identifier "(" params ")" [ ":" type ] "=" expression
+      ;
+
+params ::= param { "," param } ;
+
+param
+    ::= identifier [ ":" type ]
+      | "(" identifier { identifier } ":" type ")"
+      ;
+
+(* ============================================ *)
+(* TYPE SYSTEM                                  *)
+(* ============================================ *)
+
+typeSignature
+    ::= polymorphicType
+      | type
+      ;
+
+polymorphicType
+    ::= forAllQuantifier typeVarList "." [ constraints ] type
+    ;
+
+forAllQuantifier ::= "∀" | "forall" ;
+
+typeVarList
+    ::= typeVarDecl { typeVarDecl }
+      | "(" typeVarDecl { "," typeVarDecl } ")"
+      ;
+
+typeVarDecl ::= identifier [ ":" kind ] ;
+
+constraints ::= constraint { "," constraint } implication ;
+implication ::= "⇒" | "=>" ;
+
+constraint
+    ::= identifier "(" type ")"         (* Monoid(T) *)
+      | type "=" type                   (* m = n *)
+      | expression                      (* x ≠ 0 *)
+      ;
+
+type
+    ::= primitiveType
+      | parametricType
+      | functionType
+      | typeVariable
+      | "(" type ")"
+      ;
+
+primitiveType
+    ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
+      | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
+      | "Bool" | "String"
+      ;
+
+parametricType ::= identifier "(" typeArgs ")" ;
+typeArgs ::= type { "," type } ;
+
+functionType
+    ::= type "→" type
+      | type "->" type
+      ;
+
+typeVariable
+    ::= greekLower      (* α, β, γ *)
+      | identifier       (* a, b, T, M *)
+      ;
+
+typeAnnotation ::= ":" type ;
+
+typeAlias ::= "type" identifier "=" type ;
+
+(* ============================================ *)
+(* PROPOSITIONS (for axioms)                   *)
+(* ============================================ *)
+
+proposition
+    ::= forAllProp
+      | existsProp
+      | expression
+      ;
+
+forAllProp
+    ::= forAllQuantifier variables [ whereClause ] "." proposition
+    ;
+
+existsProp
+    ::= existsQuantifier variables [ whereClause ] "." proposition
+    ;
+
+existsQuantifier ::= "∃" | "exists" ;
+
+variables
+    ::= varDecl { varDecl }
+      | "(" varDecl { varDecl } ")"
+      ;
+
+varDecl
+    ::= identifier [ ":" type ]
+      | "(" identifier { identifier } ":" type ")"
+      | identifier "∈" type
+      | identifier "∈" expression
+      ;
+
+whereClause ::= "where" expression ;
+
+(* ============================================ *)
+(* EXPRESSIONS                                  *)
+(* ============================================ *)
+
+expression
+    ::= primary
+      | matchExpr                           (* NEW v0.5: Pattern matching *)
+      | prefixOp expression
+      | expression postfixOp
+      | expression infixOp expression
+      | expression "(" [ arguments ] ")"    (* Function application *)
+      | "[" [ expressions ] "]"             (* Vector/list literal *)
+      | "{" [ expressions ] "}"             (* Set literal *)
+      | lambda
+      | letBinding
+      | conditional
+      | summation
+      | product
+      | integral
+      | derivative
+      ;
+
+primary
+    ::= identifier
+      | number
+      | string
+      | symbolicConstant
+      | "(" expression ")"
+      | placeholder
+      ;
+
+symbolicConstant
+    ::= "π" | "e" | "i" | "ℏ" | "c" | "φ" | "∞" | "∅"
+      ;
+
+placeholder ::= "□" ;
+
+(* Operators *)
+
+prefixOp
+    ::= "-" | "¬" | "∇" | "√" | "∂"
+      ;
+
+postfixOp
+    ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
+      ;
+
+infixOp
+    ::= arithmeticOp
+      | relationOp
+      | logicOp
+      ;
+
+arithmeticOp
+    ::= "+" | "-" | "×" | "/" | "·" | "*" | "^"
+      | "⊗" | "∘" | "∗"
+      ;
+
+relationOp
+    ::= "=" | "==" | "≠" | "<" | ">" | "≤" | "≥"
+      | "≈" | "≡" | "~" | "∈" | "∉" | "⊂" | "⊆"
+      ;
+
+logicOp
+    ::= "∧" | "∨" | "⟹" | "⟺" | "→" | "⇒"
+      ;
+
+operatorSymbol
+    ::= "(" infixOp ")"          (* Infix as function: (+) *)
+      | infixOp
+      | prefixOp
+      | postfixOp
+      | identifier                 (* Named operations *)
+      ;
+
+arguments ::= expression { "," expression } ;
+expressions ::= expression { "," expression } ;
+
+(* Lambda *)
+
+lambda
+    ::= "λ" params "." expression
+      | "lambda" params "." expression
+      ;
+
+(* Let binding *)
+
+letBinding
+    ::= "let" identifier [ typeAnnotation ] "=" expression "in" expression
+      ;
+
+(* Conditional *)
+
+conditional
+    ::= "if" expression "then" expression "else" expression
+      ;
+
+(* Mathematical notation *)
+
+summation
+    ::= "Σ" [ subscript ] [ superscript ] expression
+      ;
+
+product
+    ::= "Π" [ subscript ] [ superscript ] expression
+      ;
+
+integral
+    ::= "∫" [ subscript ] [ superscript ] expression [ "d" identifier ]
+      ;
+
+derivative
+    ::= "d" expression "/" "d" identifier
+      | "∂" expression "/" "∂" identifier
+      ;
+
+subscript ::= "_" ( identifier | "{" expression "}" ) ;
+superscript ::= "^" ( identifier | "{" expression "}" ) ;
+
+(* ============================================ *)
+(* EQUALITY TYPES (from v0.2)                  *)
+(* ============================================ *)
+
+defineStmt ::= "define" identifier "=" expression ;
+assertStmt ::= "assert" expression "==" expression ;
+equivStmt ::= "equiv" expression "~" expression ;
+approxStmt ::= "approx" expression "≈" expression ;
+
+(* ============================================ *)
+(* LEXICAL ELEMENTS                            *)
+(* ============================================ *)
+
+identifier ::= letter { letter | digit | "_" } ;
+
+greekLower
+    ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
+      | "ι" | "κ" | "λ" | "μ" | "ν" | "ξ" | "ο" | "π"
+      | "ρ" | "σ" | "τ" | "υ" | "φ" | "χ" | "ψ" | "ω"
+      ;
+
+number
+    ::= integer
+      | decimal
+      | scientific
+      ;
+
+integer ::= digit { digit } ;
+decimal ::= digit { digit } "." { digit } ;
+scientific ::= decimal [eE] [+-]? digit { digit } ;
+
+string ::= '"' { character } '"' ;
+character ::= (* any character except " and \ *) ;
+
+letter ::= "a".."z" | "A".."Z" ;
+digit ::= "0".."9" ;
+
+(* Whitespace and comments *)
+whitespace ::= " " | "\t" | "\r" | "\n" ;
+lineComment ::= "//" { (* any character except newline *) } "\n" ;
+blockComment ::= "/*" { (* any character *) } "*/" ;
+
+(* ============================================ *)
+(* CHANGE LOG                                   *)
+(* ============================================ *)
+
+(*
+  Version 0.5 (2024-12-08):
+    - Added pattern matching (matchExpr, pattern, matchCase)
+    - Completes ADR-021: Can now USE algebraic data types
+    - Wildcard, variable, constructor, and constant patterns
+    - Nested pattern matching support
+    - Exhaustiveness checking (warnings for missing cases)
+    - Unreachable pattern detection
+    - Self-hosting capability: can implement type checker in Kleis!
+    
+  Version 0.4 (2024-12-08):
+    - Added algebraic data types (dataDef, dataVariant, dataField)
+    - Implements ADR-021 Part 1: DEFINE data types
+    - Enables user-defined types without recompiling
+    - Foundation for stdlib/types.kleis
+    
+  Version 0.3 (2024-12-05):
+    - Type system with polymorphism
+    - Structure definitions with axioms
+    - Implements blocks
+    
+  Version 0.2:
+    - Basic mathematical expressions
+    - Function definitions
+*)
+
+
