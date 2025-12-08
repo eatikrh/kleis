@@ -18,10 +18,15 @@
 //
 // Note: This is a data type that defines what types exist.
 // It's used by the type checker itself.
+//
+// **Note on Matrix:** Matrix is NOT included here because the current
+// Matrix(...) syntax is a VALUE constructor (creates matrix values),
+// not a TYPE constructor. This is the type/value distinction from ADR-020.
+// Once we separate type constructors from value constructors, we can add:
+//   data Type = ... | Matrix(m: Nat, n: Nat) | ...
 data Type =
   Scalar
   | Vector(n: Nat)
-  | Matrix(m: Nat, n: Nat)
   | Complex
   | Set(T: Type)
   | List(T: Type)

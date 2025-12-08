@@ -432,6 +432,13 @@ mod tests {
         assert!(result.is_ok());
 
         let checker = result.unwrap();
+        
+        // Debug: Check what's in the registry
+        eprintln!("Registry type count: {}", checker.inference.data_registry().type_count());
+        eprintln!("Registry variant count: {}", checker.inference.data_registry().variant_count());
+        eprintln!("Has Matrix variant: {}", checker.inference.data_registry().has_variant("Matrix"));
+        eprintln!("Has Scalar variant: {}", checker.inference.data_registry().has_variant("Scalar"));
+        
         // Should have loaded minimal_prelude and matrices
         assert!(checker.type_supports_operation("ℝ", "plus"));
     }
