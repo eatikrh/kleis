@@ -386,8 +386,36 @@ impl TypeContextBuilder {
                     Ok(arg_types[1].clone())
                 }
 
-                // ALL other operations (including ordering) use SignatureInterpreter
-                // No type-specific hardcoding!
+                // Ordering operations: Need runtime check that types implement Ordered
+                // TODO(Phase 2): Replace with proper structure implementation validation
+                // For now: Reject Matrix types explicitly (they don't implement Ordered)
+                "less_than" | "greater_than" | "less_equal" | "greater_equal" => {
+                    self.check_binary_args(op_name, arg_types)?;
+
+                    // Check if any argument is a Matrix (matrices don't implement Ordered)
+                    for arg_type in arg_types {
+                        if matches!(arg_type, Type::Matrix(_, _)) {
+                            return Err(format!(
+                                "Ordering operations ({}) are not defined for matrices.\n\
+                                 Matrices don't have a natural ordering.\n\
+                                 Use 'equals' or 'not_equals' to compare matrices.\n\
+                                 \n\
+                                 NOTE: This check will be replaced with proper structure \n\
+                                 implementation validation in Phase 2.",
+                                op_name
+                            ));
+                        }
+                    }
+
+                    // Otherwise delegate to SignatureInterpreter
+                    let structure = self
+                        .get_structure(&structure_name)
+                        .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
+
+                    SignatureInterpreter::new().interpret_signature(structure, op_name, arg_types)
+                }
+
+                // ALL other operations use SignatureInterpreter
                 _ => {
                     // Operation found in registry - try SignatureInterpreter as fallback!
                     // This is the ADR-016 ideal: Just interpret the signature from the structure

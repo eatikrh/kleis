@@ -70,8 +70,10 @@ implements SquareMatrix(n, ℝ) {
  * 
  * Prefer: matrix(a, b, c, d) : Matrix(2, 2, ℝ)
  * Over:   matrix2x2(a, b, c, d)
+ * 
+ * NOTE: T parameter is unused, but required by grammar (all structures need params)
  */
-structure LegacyMatrixConstructors {
+structure LegacyMatrixConstructors(T) {
     operation matrix2x2 : Matrix(2, 2, ℝ)
     operation matrix2x3 : Matrix(2, 3, ℝ)
     operation matrix3x2 : Matrix(3, 2, ℝ)
@@ -83,7 +85,7 @@ structure LegacyMatrixConstructors {
     operation vmatrix3x3 : Matrix(3, 3, ℝ)
 }
 
-implements LegacyMatrixConstructors {
+implements LegacyMatrixConstructors(ℝ) {
     operation matrix2x2 = builtin_matrix2x2
     operation matrix2x3 = builtin_matrix2x3
     operation matrix3x2 = builtin_matrix3x2
