@@ -428,3 +428,377 @@ fn test_zero_arity_from_registry() {
         _ => panic!("Expected Type::Data for Unit"),
     }
 }
+
+// =============================================================================
+// String Parameter Tests
+// =============================================================================
+
+/// Helper: Create a type with String and Type parameters
+fn make_string_type_parametric(
+    name: &str,
+    string_params: Vec<&str>,
+    type_params: Vec<&str>,
+) -> DataDef {
+    let mut params = vec![];
+
+    // Add string parameters
+    for p in string_params {
+        params.push(TypeParam {
+            name: p.to_string(),
+            kind: Some("String".to_string()),
+        });
+    }
+
+    // Add type parameters
+    for p in type_params {
+        params.push(TypeParam {
+            name: p.to_string(),
+            kind: Some("Type".to_string()),
+        });
+    }
+
+    DataDef {
+        name: name.to_string(),
+        type_params: params,
+        variants: vec![DataVariant {
+            name: name.to_string(),
+            fields: vec![],
+        }],
+    }
+}
+
+#[test]
+fn test_string_parameter_binding() {
+    // Test: String parameter binding works
+    // data Metric(unit: String, T) = Metric(...)
+    // structure MetricOps(unit: String, T) {
+    //     operation convert : Metric(unit, T) → ℝ
+    // }
+
+    let mut registry = DataTypeRegistry::new();
+    registry
+        .register(make_string_type_parametric(
+            "Metric",
+            vec!["unit"],
+            vec!["T"],
+        ))
+        .unwrap();
+
+    let code = r#"
+        structure MetricOps(unit: String, T) {
+            operation magnitude : Metric(unit, T) → ℝ
+        }
+    "#;
+
+    let program = parse_kleis_program(code).unwrap();
+    let structure = &program.structures()[0];
+
+    let mut interp = SignatureInterpreter::new(registry);
+
+    // Create Metric("m/s", ℝ) type
+    let metric_type = Type::Data {
+        type_name: "Metric".to_string(),
+        constructor: "Metric".to_string(),
+        args: vec![Type::StringValue("m/s".to_string()), Type::scalar()],
+    };
+
+    let result = interp.interpret_signature(structure, "magnitude", &[metric_type]);
+
+    assert!(result.is_ok());
+    let result_type = result.unwrap();
+    assert_eq!(result_type, Type::scalar());
+
+    // Verify string binding was recorded
+    assert_eq!(interp.string_bindings.get("unit"), Some(&"m/s".to_string()));
+
+    println!("✓ String parameter binding works: Metric(\"m/s\", ℝ)");
+}
+
+#[test]
+fn test_string_parameter_mismatch_caught() {
+    // Test: String parameter mismatches are caught
+    // Metric("m/s", ℝ) + Metric("N", ℝ) should fail (unit mismatch!)
+
+    let mut registry = DataTypeRegistry::new();
+    registry
+        .register(make_string_type_parametric(
+            "Metric",
+            vec!["unit"],
+            vec!["T"],
+        ))
+        .unwrap();
+
+    let code = r#"
+        structure MetricAddable(unit: String, T) {
+            operation add : Metric(unit, T) → Metric(unit, T) → Metric(unit, T)
+        }
+    "#;
+
+    let program = parse_kleis_program(code).unwrap();
+    let structure = &program.structures()[0];
+
+    let mut interp = SignatureInterpreter::new(registry);
+
+    // Try to add metrics with different units - should fail!
+    let metric1 = Type::Data {
+        type_name: "Metric".to_string(),
+        constructor: "Metric".to_string(),
+        args: vec![Type::StringValue("m/s".to_string()), Type::scalar()],
+    };
+
+    let metric2 = Type::Data {
+        type_name: "Metric".to_string(),
+        constructor: "Metric".to_string(),
+        args: vec![Type::StringValue("N".to_string()), Type::scalar()],
+    };
+
+    let result = interp.interpret_signature(structure, "add", &[metric1, metric2]);
+
+    // Should error about unit mismatch
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(
+        err.contains("String parameter") && err.contains("mismatch"),
+        "Expected string mismatch error, got: {}",
+        err
+    );
+    assert!(err.contains("m/s") && err.contains("N"));
+
+    println!("✓ String parameter mismatch correctly caught");
+}
+
+#[test]
+fn test_string_parameter_consistency() {
+    // Test: Same string parameter used multiple times must be consistent
+    // operation process : Metric(unit, T) → Metric(unit, T) → Metric(unit, T)
+    // All three Metric types must have the same unit!
+
+    let mut registry = DataTypeRegistry::new();
+    registry
+        .register(make_string_type_parametric(
+            "Metric",
+            vec!["unit"],
+            vec!["T"],
+        ))
+        .unwrap();
+
+    let code = r#"
+        structure MetricOps(unit: String, T) {
+            operation average : Metric(unit, T) → Metric(unit, T) → Metric(unit, T)
+        }
+    "#;
+
+    let program = parse_kleis_program(code).unwrap();
+    let structure = &program.structures()[0];
+
+    let mut interp = SignatureInterpreter::new(registry);
+
+    // Both arguments have same unit
+    let metric1 = Type::Data {
+        type_name: "Metric".to_string(),
+        constructor: "Metric".to_string(),
+        args: vec![Type::StringValue("kg".to_string()), Type::scalar()],
+    };
+
+    let metric2 = Type::Data {
+        type_name: "Metric".to_string(),
+        constructor: "Metric".to_string(),
+        args: vec![Type::StringValue("kg".to_string()), Type::scalar()],
+    };
+
+    let result = interp.interpret_signature(structure, "average", &[metric1, metric2]);
+
+    assert!(result.is_ok());
+    let result_type = result.unwrap();
+
+    // Result should also be Metric with unit="kg"
+    match result_type {
+        Type::Data {
+            type_name, args, ..
+        } => {
+            assert_eq!(type_name, "Metric");
+            assert_eq!(args.len(), 2);
+            assert_eq!(args[0], Type::StringValue("kg".to_string()));
+        }
+        _ => panic!("Expected Metric type, got {:?}", result_type),
+    }
+
+    println!("✓ String parameter consistency enforced");
+}
+
+#[test]
+fn test_mixed_string_and_nat_parameters() {
+    // Test: Types can have both String and Nat parameters
+    // data LabeledMatrix(label: String, m: Nat, n: Nat, T) = LabeledMatrix(...)
+
+    let mut registry = DataTypeRegistry::new();
+
+    // Create type with String param first, then Nat params, then Type param
+    let params = vec![
+        TypeParam {
+            name: "label".to_string(),
+            kind: Some("String".to_string()),
+        },
+        TypeParam {
+            name: "m".to_string(),
+            kind: Some("Nat".to_string()),
+        },
+        TypeParam {
+            name: "n".to_string(),
+            kind: Some("Nat".to_string()),
+        },
+        TypeParam {
+            name: "T".to_string(),
+            kind: Some("Type".to_string()),
+        },
+    ];
+
+    let data_def = DataDef {
+        name: "LabeledMatrix".to_string(),
+        type_params: params,
+        variants: vec![DataVariant {
+            name: "LabeledMatrix".to_string(),
+            fields: vec![],
+        }],
+    };
+
+    registry.register(data_def).unwrap();
+
+    let code = r#"
+        structure LabeledMatrixOps(label: String, m: Nat, n: Nat, T) {
+            operation transpose : LabeledMatrix(label, m, n, T) → LabeledMatrix(label, n, m, T)
+        }
+    "#;
+
+    let program = parse_kleis_program(code).unwrap();
+    let structure = &program.structures()[0];
+
+    let mut interp = SignatureInterpreter::new(registry);
+
+    // Create LabeledMatrix("velocity", 2, 3, ℝ)
+    let labeled_matrix = Type::Data {
+        type_name: "LabeledMatrix".to_string(),
+        constructor: "LabeledMatrix".to_string(),
+        args: vec![
+            Type::StringValue("velocity".to_string()),
+            Type::NatValue(2),
+            Type::NatValue(3),
+            Type::scalar(),
+        ],
+    };
+
+    let result = interp.interpret_signature(structure, "transpose", &[labeled_matrix]);
+
+    assert!(result.is_ok());
+    let result_type = result.unwrap();
+
+    // Result should be LabeledMatrix("velocity", 3, 2, ℝ) - dimensions flipped!
+    match result_type {
+        Type::Data {
+            type_name, args, ..
+        } => {
+            assert_eq!(type_name, "LabeledMatrix");
+            assert_eq!(args[0], Type::StringValue("velocity".to_string()));
+            assert_eq!(args[1], Type::NatValue(3)); // Flipped!
+            assert_eq!(args[2], Type::NatValue(2)); // Flipped!
+            assert_eq!(args[3], Type::scalar());
+        }
+        _ => panic!("Expected LabeledMatrix type, got {:?}", result_type),
+    }
+
+    // Verify all bindings were recorded
+    assert_eq!(
+        interp.string_bindings.get("label"),
+        Some(&"velocity".to_string())
+    );
+    assert_eq!(interp.bindings.get("m"), Some(&2));
+    assert_eq!(interp.bindings.get("n"), Some(&3));
+
+    println!("✓ Mixed String, Nat, and Type parameters work together");
+}
+
+#[test]
+fn test_unit_safe_physics_calculations() {
+    // Test: Unit-safe physics - THE KILLER FEATURE!
+    // This prevents: adding velocity (m/s) to force (N) - physically nonsensical!
+
+    let mut registry = DataTypeRegistry::new();
+    registry
+        .register(make_string_type_parametric(
+            "Quantity",
+            vec!["unit"],
+            vec!["T"],
+        ))
+        .unwrap();
+
+    let code = r#"
+        structure QuantityAddable(unit: String, T) {
+            operation add : Quantity(unit, T) → Quantity(unit, T) → Quantity(unit, T)
+        }
+    "#;
+
+    let program = parse_kleis_program(code).unwrap();
+    let structure = &program.structures()[0];
+
+    // Case 1: Adding same units - SHOULD WORK
+    let mut interp1 = SignatureInterpreter::new(registry.clone());
+
+    let velocity1 = Type::Data {
+        type_name: "Quantity".to_string(),
+        constructor: "Quantity".to_string(),
+        args: vec![Type::StringValue("m/s".to_string()), Type::scalar()],
+    };
+
+    let velocity2 = Type::Data {
+        type_name: "Quantity".to_string(),
+        constructor: "Quantity".to_string(),
+        args: vec![Type::StringValue("m/s".to_string()), Type::scalar()],
+    };
+
+    let result1 = interp1.interpret_signature(structure, "add", &[velocity1, velocity2]);
+    assert!(result1.is_ok(), "Adding velocities should work!");
+    println!("✓ velocity (m/s) + velocity (m/s) → velocity (m/s) ✅");
+
+    // Case 2: Adding different units - SHOULD FAIL
+    let mut interp2 = SignatureInterpreter::new(registry.clone());
+
+    let velocity = Type::Data {
+        type_name: "Quantity".to_string(),
+        constructor: "Quantity".to_string(),
+        args: vec![Type::StringValue("m/s".to_string()), Type::scalar()],
+    };
+
+    let force = Type::Data {
+        type_name: "Quantity".to_string(),
+        constructor: "Quantity".to_string(),
+        args: vec![Type::StringValue("N".to_string()), Type::scalar()],
+    };
+
+    let result2 = interp2.interpret_signature(structure, "add", &[velocity, force]);
+    assert!(result2.is_err(), "Adding velocity to force should FAIL!");
+
+    let err = result2.unwrap_err();
+    assert!(err.contains("m/s") && err.contains("N"));
+    println!("✓ velocity (m/s) + force (N) → ERROR ❌ (unit mismatch caught!)");
+
+    // Case 3: Multiple physics units
+    let mut interp3 = SignatureInterpreter::new(registry.clone());
+
+    let mass1 = Type::Data {
+        type_name: "Quantity".to_string(),
+        constructor: "Quantity".to_string(),
+        args: vec![Type::StringValue("kg".to_string()), Type::scalar()],
+    };
+
+    let mass2 = Type::Data {
+        type_name: "Quantity".to_string(),
+        constructor: "Quantity".to_string(),
+        args: vec![Type::StringValue("kg".to_string()), Type::scalar()],
+    };
+
+    let result3 = interp3.interpret_signature(structure, "add", &[mass1, mass2]);
+    assert!(result3.is_ok(), "Adding masses should work!");
+    println!("✓ mass (kg) + mass (kg) → mass (kg) ✅");
+
+    println!("\n🎉 UNIT-SAFE PHYSICS: Type system prevents dimensional errors!");
+}

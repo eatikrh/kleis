@@ -35,6 +35,12 @@ pub struct SignatureInterpreter {
     /// This enables true polymorphism!
     type_bindings: HashMap<String, Type>,
 
+    /// String parameter bindings for labeled types
+    /// Example: {unit: "m/s", label: "velocity"}
+    /// Enables unit-safe types like: Metric("m/s", ℝ)
+    /// Public for testing
+    pub string_bindings: HashMap<String, String>,
+
     /// Type variable substitutions for proper HM unification
     /// Maps type variables to their resolved types
     /// Example: {TypeVar(0): Scalar, TypeVar(1): Matrix(2,3)}
@@ -50,6 +56,7 @@ impl SignatureInterpreter {
         SignatureInterpreter {
             bindings: HashMap::new(),
             type_bindings: HashMap::new(),
+            string_bindings: HashMap::new(),
             substitutions: HashMap::new(),
             data_registry,
         }
@@ -187,11 +194,20 @@ impl SignatureInterpreter {
                                 // Nat parameter - bind dimension
                                 self.bind_or_check_param(expected_param, *n)?;
                             }
-                            Type::StringValue(_s) => {
-                                // TODO: Add string binding support for types like:
-                                // data Tagged(label: String, T) = Tagged(...)
-                                // Would need: string_bindings: HashMap<String, String>
-                                // Currently ignored - string-valued type parameters not validated
+                            Type::StringValue(s) => {
+                                // String parameter - bind string value
+                                // Enables: data Metric(unit: String, T) = Metric(...)
+                                if let TypeExpr::Named(param_name) = expected_param {
+                                    self.bind_or_check_string(param_name, s)?;
+                                } else if let TypeExpr::Var(literal) = expected_param {
+                                    // String literal in signature - check it matches
+                                    if literal != s {
+                                        return Err(format!(
+                                            "String literal mismatch: expected \"{}\", got \"{}\"",
+                                            literal, s
+                                        ));
+                                    }
+                                }
                             }
                             other_type => {
                                 // Type parameter - bind the type itself
@@ -359,6 +375,28 @@ impl SignatureInterpreter {
             }
         } else {
             self.bindings.insert(param_name.to_string(), value);
+        }
+        Ok(())
+    }
+
+    /// Bind a string parameter or check it matches existing binding
+    /// This enables unit-safe types: Metric("m/s", ℝ) vs Metric("N", ℝ)
+    fn bind_or_check_string(&mut self, param_name: &str, value: &str) -> Result<(), String> {
+        if let Some(existing) = self.string_bindings.get(param_name) {
+            // Parameter already bound - check it matches!
+            if existing != value {
+                return Err(format!(
+                    "String parameter '{}' mismatch:\n  \
+                     Previously bound to \"{}\"\n  \
+                     But got \"{}\"\n  \
+                     All uses of '{}' must have the same value!",
+                    param_name, existing, value, param_name
+                ));
+            }
+        } else {
+            // First time seeing this parameter - bind it
+            self.string_bindings
+                .insert(param_name.to_string(), value.to_string());
         }
         Ok(())
     }
@@ -592,16 +630,28 @@ impl SignatureInterpreter {
     /// Evaluate a string parameter
     ///
     /// Example:
-    ///   Param: Named("label")
-    ///   Result: "label"
+    ///   Param: Named("unit")
+    ///   Bindings: {unit: "m/s"}
+    ///   Result: "m/s"
     ///
     /// Used for string-valued type parameters like:
-    ///   data Tagged(label: String, T) = Tagged(...)
+    ///   data Metric(unit: String, T) = Metric(...)
     fn eval_string_param(&self, param: &TypeExpr) -> Result<String, String> {
         match param {
-            TypeExpr::Named(s) => Ok(s.clone()),
-            TypeExpr::Var(s) => Ok(s.clone()),
-            _ => Err("Expected string parameter (simple name)".to_string()),
+            TypeExpr::Named(name) => {
+                // Check if bound to a string value
+                if let Some(value) = self.string_bindings.get(name) {
+                    Ok(value.clone())
+                } else {
+                    // Not bound - use the name as literal
+                    Ok(name.clone())
+                }
+            }
+            TypeExpr::Var(s) => {
+                // String literal in signature
+                Ok(s.clone())
+            }
+            _ => Err("Expected string parameter (simple name or literal)".to_string()),
         }
     }
 }
