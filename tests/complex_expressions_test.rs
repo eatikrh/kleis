@@ -219,10 +219,10 @@ fn test_dimension_mismatch_error() {
             // Accept any error that mentions dimensions or parameters
             println!("Got error: {}", message);
             assert!(
-                message.contains("Dimension constraint") 
-                || message.contains("inner dimensions")
-                || message.contains("parameter")
-                || message.contains("inference failed")
+                message.contains("Dimension constraint")
+                    || message.contains("inner dimensions")
+                    || message.contains("parameter")
+                    || message.contains("inference failed")
             );
             println!("✓ Dimension error detected: {}", message);
         }

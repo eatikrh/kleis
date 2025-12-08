@@ -211,8 +211,14 @@ fn test_error_cases() {
     let expr = op("plus", vec![c("1")]);
     match checker.check(&expr) {
         TypeCheckResult::Error { message, .. } => {
-            assert!(message.contains("requires 2 arguments") || message.contains("requires both"));
-            println!("✓ plus with 1 arg correctly errors");
+            // SignatureInterpreter may give different error
+            assert!(
+                message.contains("requires 2 arguments")
+                    || message.contains("requires both")
+                    || message.contains("Argument count")
+                    || message.contains("inference failed")
+            );
+            println!("✓ plus with 1 arg correctly errors: {}", message);
         }
         _ => panic!("Expected error for plus with wrong number of args"),
     }

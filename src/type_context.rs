@@ -416,7 +416,6 @@ impl TypeContextBuilder {
         Ok(arg_types[0].clone())
     }
 
-
     /// Infer the type of an operation applied to given argument types
     /// This is the ADR-016 compliant way: query structures, don't hardcode!
     pub fn infer_operation_type(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
@@ -459,22 +458,8 @@ impl TypeContextBuilder {
             // Check if operation needs special handling or can use SignatureInterpreter directly
 
             match op_name {
-                // Arithmetic operations: T → T → T (same types)
-                "plus" | "minus" | "times" | "divide" | "scalar_divide" | "scalar_multiply"
-                | "frac" => self.infer_binary_same_type_op(op_name, arg_types),
-
-                // Numeric operations: T → T
-                "abs" | "floor" | "sqrt" => self.infer_unary_same_type_op(op_name, arg_types),
-
-                // Power, superscript, subscript: T → T → T
-                // For now, these operations are restricted to scalars
-                "power" | "sup" | "sub" => self.infer_binary_same_type_op(op_name, arg_types),
-
-                // Calculus operations (all return Scalar for now)
-                // TODO: Proper function type handling when we add function types
-                "derivative" | "integral" | "d_dx" | "partial" | "int_bounds" => Ok(Type::Scalar),
-
-                // Equality operations (work for any type)
+                // Special semantics: equals returns RHS type (for definitions like I = Matrix(...))
+                // This can't be expressed in a signature, so needs special handling
                 "equals" | "not_equals" => {
                     if arg_types.len() != 2 {
                         return Err(format!("{} requires 2 arguments", op_name));
