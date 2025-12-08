@@ -1,205 +1,254 @@
-# NEXT SESSION: Fix Matrix Rendering Issues
+# NEXT SESSION: Implement ADR-021 (Algebraic Data Types)
 
-**Current State:** v0.3.0-adr016-full (pushed to GitHub)
+**Current State:** v0.6.0-adr016-complete (about to be tagged)
 
-**Status:** Matrix(m,n) refactoring complete BUT layout issues discovered
-
----
-
-## Achievements This Session ✅
-
-1. **Full ADR-016 Compliance**
-   - Removed ~180 lines of hardcoded matrix logic
-   - All operations delegated to TypeContextBuilder
-   - Zero hardcoded type rules in type_inference.rs
-
-2. **Unified Matrix(m,n) Constructor**
-   - Replaced 18+ operations (matrix2x2, etc.) with 3 generic ones
-   - Format: `Matrix(rows, cols, ...elements)`
-   - Parser, renderer, type inference, templates all updated
-   - Frontend (index.html) synchronized
-
-3. **Testing**
-   - All 280 tests passing
-   - Matrix type inference: 7/7 passing
-   - Type system working correctly
-
-**Commits:**
-- `2d70e17` - Delegated matrix operations (partial)
-- `d1a57af` - Unified Matrix(m,n) constructor (full)
-
-**Tags:**
-- `v0.3.0-adr016-partial` - Safe checkpoint
-- `v0.3.0-adr016-full` - Current stable state ← PUSHED
+**Status:** Ready to implement the dynamic type system! 🚀
 
 ---
 
-## Problems Discovered 🐛
+## What We Accomplished Today (Dec 8, 2024)
 
-**UPDATE (Dec 8, 2024):** See ADR-020 "Practical Application" section for root cause analysis and proper solution. The issue is type/value conflation, not just rendering.
+### **Phase 1: COMPLETE** ✅
+1. Task 1.5 finished (clippy fixes, documentation)
+2. **TRUE ADR-016 compliance** achieved:
+   - Removed ALL type-specific hardcoding
+   - Generic structure validation
+   - Zero Type::Matrix or Type::Scalar references in type_context.rs
+3. Test coverage expanded: 281 → 288 tests
 
-### 1. Dimension Constants Create Edit Markers
+### **ADR-020 Extended** ✅
+- Connected Matrix constructor issue to type/value distinction
+- "Practical Application" section added
+- Root cause: Type/value conflation
 
-**Issue:** The dimension args `Const("2")`, `Const("3")` in `Matrix(2, 3, ...)` create visible edit markers in the UI.
+### **ADR-021 Prepared** ✅
+- type_inference.rs refactored and documented
+- Dead code removed
+- Helper functions extracted (generic field inference)
+- Vision documented in code comments
 
-**Why:** The renderer creates argument slots for ALL arguments, including dimension metadata.
-
-**Root Cause (from ADR-020):** We're conflating TYPE-level parameters (dimensions) with VALUE-level parameters (matrix elements) in a single constructor.
-
-**Observation:**
-```
-Slot 955773da05204e4ea2d18476a0318eae: hint="value: 2", path=[0,0]
-Slot aee796b342d743b7894f93cf550e697b: hint="value: 3", path=[0,1]
-```
-
-These dimension constants shouldn't be editable!
-
-**Solution:** Skip creating slots for first two args of Matrix operations in server.rs slot generation.
-
----
-
-### 2. Negative Placeholder Coordinates
-
-**Issue:** Some placeholder positions have negative Y coordinates:
-```
-ID 10: (x=109.84, y=-14.65)  ← NEGATIVE Y!
-ID 19: (x=213.04, y=-14.65)  ← NEGATIVE Y!
-```
-
-This causes content to be cut off at the top of the viewport.
-
-**Why:** 
-- Typst positions elements in its own coordinate system
-- First-row matrix elements end up above the baseline
-- Layout box normalization happens (lines 914-931) but placeholder positions are extracted AFTER from SVG labels
-- Placeholder positions don't get the same normalization
-
-**Attempted Fix:** Added normalization to `extract_semantic_argument_boxes()` - fixed argument boxes but NOT placeholder positions.
-
-**Root Cause:** Placeholder positions come from SVG label extraction, which happens separately and doesn't go through normalization.
+### **Implementation Plan Created** ✅
+- Complete 11-step plan in ADR021_IMPLEMENTATION_PLAN.md
+- Risk assessment
+- Timeline (1-2 weeks)
+- Rollback strategy
 
 ---
 
-## Solutions for Next Session
+## The Vision: What We're Building
 
-**See ADR-020 for detailed analysis of root cause and proper solutions.**
+### **Current (Hardcoded):**
+```rust
+pub enum Type {
+    Scalar,
+    Matrix(usize, usize),  // ← Fixed at compile time
+    // Users can't add types!
+}
+```
 
-### Option 0: Quick Band-Aid (30 min)
-
-**Skip creating slots for dimension args in server:**
-- Detect Matrix/PMatrix/VMatrix operations
-- Skip paths `[*,0]` and `[*,1]` (dimension args)
-- **Pros:** Fast fix
-- **Cons:** Doesn't address root cause (type/value conflation)
-
-### Option 1: Proper Fix - Separate Value Constructor (Medium-term)
-
-**Introduce lowercase `matrix` value constructor:**
+### **Target (Dynamic):**
 ```kleis
-structure Matrix(m: Nat, n: Nat, T) {
-    operation matrix : Vec(T, m*n) → Matrix(m, n, T)
+// stdlib/types.kleis - Loaded at runtime!
+data Type =
+  | Scalar
+  | Vector(n: Nat)
+  | Matrix(m: Nat, n: Nat)
+  | Complex
+  | Currency(code: String)  // ← Users add this!
+```
+
+**Benefits:**
+- ✅ Type system defined in Kleis (self-hosting Level 2)
+- ✅ Users extend types without recompiling
+- ✅ Matrix becomes just another data constructor (no special cases!)
+- ✅ Path to meta-circularity (Kleis types in Kleis)
+
+---
+
+## Next Session Task: Start ADR-021 Implementation
+
+### **Preparation (5 min):**
+1. Review ADR021_IMPLEMENTATION_PLAN.md
+2. Create feature branch: `feature/adr-021-data-types`
+3. Verify starting point: v0.6.0-adr016-complete
+
+### **Step 1: Add Data Type AST** (2 hours)
+
+**File:** `src/kleis_ast.rs`
+
+**Changes:**
+```rust
+pub enum TopLevel {
+    DataDef(DataDef),  // ← ADD THIS
+    // ... existing
 }
 
-// Usage:
-matrix(a, b, c, d, e, f)  // Type inferred: Matrix(2, 3, ℝ)
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataDef {
+    pub name: String,
+    pub type_params: Vec<TypeParam>,
+    pub variants: Vec<DataVariant>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataVariant {
+    pub name: String,
+    pub fields: Vec<DataField>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataField {
+    pub name: Option<String>,
+    pub type_expr: TypeExpr,
+}
+```
+
+**Tests:**
+- Create DataDef programmatically
+- Verify fields are correct
+- Test with/without type params
+
+**Commit:** "feat: Add DataDef AST for ADR-021"
+
+---
+
+### **Step 2: Parser Support** (4 hours)
+
+**File:** `src/kleis_parser.rs`
+
+**Grammar:**
+```ebnf
+dataDecl ::= "data" identifier [ "(" typeParams ")" ] "=" 
+             dataVariant { "|" dataVariant }
 ```
 
 **Implementation:**
-1. Add `matrix` operation to stdlib/matrices.kleis
-2. Update frontend palette to use `matrix(...)` instead of `Matrix(...)`
-3. Type checker infers dimensions from arg count + context
-4. **Time:** Half day (requires Parser Phase 2 first)
+- Add `parse_data_def()` function
+- Handle `data` keyword
+- Parse variants with "|" separator
+- Parse fields (named and positional)
 
-**Pros:** 
-- ✅ Clean type/value distinction
-- ✅ No editable dimension markers
-- ✅ Mathematically natural
+**Tests:**
+- `data Bool = True | False`
+- `data Option(T) = None | Some(T)`
+- `data Type = Scalar | Matrix(Nat, Nat)`
 
-### Option 2: Layout Fixes (Also needed)
-
-#### A. Normalize Placeholder Positions
-
-**Where:** After `extract_positions_from_labels()` in `compile_with_semantic_boxes_and_slots()`
-
-**Code location:** `src/math_layout/typst_compiler.rs` line ~143
-
-```rust
-let mut labeled_positions = extract_positions_from_labels(&output.svg)?;
-
-// Normalize placeholder positions
-if !labeled_positions.is_empty() {
-    let min_x = labeled_positions.iter().map(|p| p.x).fold(f64::INFINITY, |a, b| a.min(b));
-    let min_y = labeled_positions.iter().map(|p| p.y).fold(f64::INFINITY, |a, b| a.min(b));
-    
-    let shift_x = if min_x < 0.0 { -min_x } else { 0.0 };
-    let shift_y = if min_y < 0.0 { -min_y } else { 0.0 };
-    
-    for pos in &mut labeled_positions {
-        pos.x += shift_x;
-        pos.y += shift_y;
-    }
-}
-```
-
-#### B. Fix Dimension Constants in Slot Generation
-
-**Where:** Server slot generation code (likely `src/bin/server.rs`)
-
-**Goal:** Skip creating slots for `path=[*,0]` and `path=[*,1]` when parent is Matrix/PMatrix/VMatrix operation.
-
-**Note:** This is Option 0 (quick band-aid) above.
+**Commit:** "feat: Add parser support for data keyword"
 
 ---
 
-## Alternative: Revert to Legacy Format (Not Recommended)
+### **Step 3: Data Registry** (3 hours)
 
-If fixing these issues is too complex, we could:
-1. Keep backend with Matrix(m,n) for type inference
-2. Revert frontend (index.html) to use legacy format (matrix2x3, etc.)
-3. Parser still supports both formats
-4. Renderer handles both formats
+**File:** `src/data_registry.rs` (NEW)
 
-**Tradeoff:** Lose unified system benefits but keep working UI.
+**Create registry for data type definitions:**
+- Maps type names to definitions
+- Maps variant names to (type, variant)
+- Lookup functions
+- Validation
 
----
+**Tests:**
+- Register data type
+- Lookup variants
+- Detect conflicts
 
-## Testing Checklist for Next Session
-
-When attempting fixes:
-
-```bash
-# 1. Run layout test
-cargo run --bin test_matrix_layout
-# Should show: "All coordinates positive"
-
-# 2. Run full tests
-cargo test --lib
-# Should pass: 280 tests
-
-# 3. Rebuild server
-cargo build --bin server --release
-
-# 4. Start server and test in browser
-# Check: No negative coordinates in debug
-# Check: No dimension constant edit markers
-# Check: All matrices fully visible
-
-# 5. If broken, revert:
-git checkout HEAD -- src/math_layout/typst_compiler.rs
-```
+**Commit:** "feat: Add DataTypeRegistry for ADR-021"
 
 ---
 
-## Current Stable State
+### **Remaining Steps:** See ADR021_IMPLEMENTATION_PLAN.md
 
-**Git:** Clean working tree, all commits pushed
-**Tag:** `v0.3.0-adr016-full`
-**Server:** Running stable version
-**Tests:** All passing
-**Known issues:** Layout needs work but core functionality is solid
+Steps 4-11 cover:
+- Type enum refactoring (biggest change)
+- Unification updates
+- Generic constructor inference
+- Integration with TypeChecker
+- stdlib/types.kleis creation
+- Backward compatibility
+- Migration of tests
 
 ---
 
-**For next session:** Focus on placeholder coordinate normalization + dimension slot filtering.
+## Critical Success Factors
 
-The Matrix(m,n) architecture is sound - just needs polish! 🚀
+### **Must Maintain:**
+- ✅ All 288 tests passing (regression prevention)
+- ✅ Backward compatibility during transition
+- ✅ Error messages quality
+- ✅ Performance acceptable
+
+### **Must Achieve:**
+- ✅ Load stdlib/types.kleis successfully
+- ✅ Matrix as data constructor (no special case)
+- ✅ Users can define custom types
+- ✅ Unification works with data types
+
+---
+
+## Rollback Strategy
+
+**Safety checkpoints:**
+1. **Tag before starting:** `v0.6.0-adr016-complete` ← Safe harbor
+2. **Feature branch:** Can abandon if needed
+3. **Incremental commits:** Can bisect if issues
+4. **Tests guard:** Don't merge until all pass
+
+**If stuck:**
+- Check ADR021_IMPLEMENTATION_PLAN.md for detailed guidance
+- Revert to v0.6.0-adr016-complete and reassess
+- Consider smaller incremental approach
+
+---
+
+## Expected Timeline
+
+**Week 1:** AST, Parser, Registry (Steps 1-3)  
+**Week 2:** Type refactoring, Integration, Testing (Steps 4-11)
+
+**Total:** 1-2 weeks depending on complexity
+
+---
+
+## Why This Matters
+
+**From ADR-020/021:**
+> "The Matrix bug isn't a bug - it's a symptom of missing algebraic data types!"
+
+**Once we have `data`:**
+- Matrix constructor weirdness: SOLVED
+- User type extensibility: ENABLED
+- Meta-circularity (Level 2): ACHIEVED
+- Self-hosting vision: REALIZED
+
+**This is the breakthrough that makes Kleis truly self-hosting!** 🎯
+
+---
+
+## Session Summary (Dec 8, 2024)
+
+**Commits today:** 7 commits
+1. Task 1.5 complete (clippy fixes)
+2. ADR-020 extended (Matrix analysis)
+3. Session README updated
+4. ADR-016 completion (remove Matrix hardcoding)
+5. Generic validation (structure checks)
+6. Validation tests (7 new tests)
+7. type_inference.rs prepared for ADR-021
+
+**Tests:** 281 → 288 (7 new validation tests)  
+**Code quality:** Clean, all checks pass  
+**Documentation:** ~3,000 lines added  
+**Ready:** ADR-021 implementation plan complete
+
+---
+
+**Next session: Start implementing ADR-021!** 🚀
+
+**First action:** Create feature branch and start with AST changes.
+
+---
+
+**Status:** ✅ Ready to tag and push  
+**Tag:** v0.6.0-adr016-complete  
+**Next:** ADR-021 implementation (data types)
+
