@@ -13,7 +13,7 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 
 ### Core Concepts
 - **Syntax Reference:** `syntax.md` - Kleis language syntax
-- **Grammar:** `kleis_grammar_v02.md` - Formal grammar specification
+- **Grammar:** `grammar/kleis_grammar_v03.md` - Formal grammar specification (v0.3)
 - **Vision:** `kleis_vision_executable_math.md` - Future roadmap
 
 ### Ontology Theories
@@ -126,8 +126,9 @@ Decision records documenting key design choices:
 
 ### Syntax & Grammar
 - **`syntax.md`** - Complete syntax reference
-- **`kleis_grammar_v02.md`** - EBNF grammar specification
-- **`kleis_grammar_v02.ebnf`** - Machine-readable EBNF
+- **`grammar/kleis_grammar_v03.md`** - EBNF grammar specification (v0.3)
+- **`grammar/kleis_grammar_v03.ebnf`** - Machine-readable EBNF (v0.3)
+- **`grammar/Kleis_v03.g4`** - ANTLR4 grammar (v0.3)
 - **`Kleis.g4`** - ANTLR4 grammar
 - **`kleis.pest`** - Pest parser grammar
 
@@ -197,15 +198,16 @@ docs/
 ├── POT.md                       # Projected Ontology Theory overview
 ├── HONT.md                      # Hilbert Ontology overview
 ├── kleis_vision_executable_math.md  # Future vision
-├── kleis_grammar_v02.md         # Grammar specification
+├── grammar/                     # Formal grammar (v0.3)
+│   ├── kleis_grammar_v03.ebnf  # EBNF specification
+│   ├── kleis_grammar_v03.md    # Human-readable docs
+│   └── Kleis_v03.g4            # ANTLR4 grammar
 ├── adr-00X-*.md                 # Architecture Decision Records
 ├── notation-design-summary.md   # ⭐ Notation system design overview
 ├── notation-mapping-tests.md    # Text ↔ visual mapping tests
 ├── notation-poc-tests.md        # Proof of concept tests
 ├── content-editing-paradigm.md  # Editing paradigm discussion
 ├── grammar/                     # Grammar specifications
-│   ├── kleis_grammar_v03.md
-│   ├── kleis_grammar_v03.ebnf
 │   └── Kleis_v03.g4
 ├── type-system/                 # Type system documentation
 │   ├── KLEIS_TYPE_SYSTEM.md

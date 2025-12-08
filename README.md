@@ -539,7 +539,7 @@ See `docs/adr-005-visual-authoring.md`, `docs/kleis_vision_executable_math.md`, 
 - **[Projected Ontology Theory](docs/theory/POT.md)** - POT formalism
 - **[Hilbert Ontology](docs/theory/HONT.md)** - HONT formalism
 - **[Language Syntax](docs/theory/syntax.md)** - Kleis syntax reference
-- **[Grammar Specification](docs/grammar/kleis_grammar_v02.md)** - Formal grammar
+- **[Grammar Specification](docs/grammar/kleis_grammar_v03.md)** - Formal grammar (v0.3)
 
 ### Historical Reference
 - **[Archive](docs/archive/)** - Old analyses and implementation notes
