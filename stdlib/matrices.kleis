@@ -6,9 +6,30 @@
 //   n: number of columns (Nat)
 //   T: element type (typically ℝ or ℂ)
 
-/* Matrix Structure */
+/* Matrix Structure - TYPE constructor
+ * 
+ * Matrix(m, n, T) is a TYPE that represents m×n matrices with elements of type T.
+ * 
+ * NOTE (ADR-020): This is the TYPE constructor, not a value constructor.
+ * To create matrix values, use the 'matrix' operation below.
+ */
 structure Matrix(m: Nat, n: Nat, T) {
     operation transpose : Matrix(n, m, T)
+}
+
+/* Matrix Value Constructor
+ * 
+ * Creates matrix values from elements.
+ * Dimensions (m, n) must be provided by type annotation or inferred from context.
+ * 
+ * Example: matrix(1, 2, 3, 4) : Matrix(2, 2, ℝ)
+ */
+structure MatrixConstructor(m: Nat, n: Nat, T) {
+    operation matrix : Matrix(m, n, T)
+}
+
+implements MatrixConstructor(m, n, ℝ) {
+    operation matrix = builtin_matrix_constructor
 }
 
 /* Matrix Addition - Only when dimensions match */
@@ -40,4 +61,36 @@ implements SquareMatrix(n, ℝ) {
     operation det = builtin_determinant
     operation trace = builtin_trace
     operation identity = builtin_identity
+}
+
+/* Legacy Matrix Constructors (DEPRECATED - Use 'matrix' instead)
+ * 
+ * These are the old matrix2x2, matrix2x3, etc. operations.
+ * Kept for backward compatibility but will be removed in future versions.
+ * 
+ * Prefer: matrix(a, b, c, d) : Matrix(2, 2, ℝ)
+ * Over:   matrix2x2(a, b, c, d)
+ */
+structure LegacyMatrixConstructors {
+    operation matrix2x2 : Matrix(2, 2, ℝ)
+    operation matrix2x3 : Matrix(2, 3, ℝ)
+    operation matrix3x2 : Matrix(3, 2, ℝ)
+    operation matrix3x3 : Matrix(3, 3, ℝ)
+    operation pmatrix2x2 : Matrix(2, 2, ℝ)
+    operation pmatrix2x3 : Matrix(2, 3, ℝ)
+    operation pmatrix3x3 : Matrix(3, 3, ℝ)
+    operation vmatrix2x2 : Matrix(2, 2, ℝ)
+    operation vmatrix3x3 : Matrix(3, 3, ℝ)
+}
+
+implements LegacyMatrixConstructors {
+    operation matrix2x2 = builtin_matrix2x2
+    operation matrix2x3 = builtin_matrix2x3
+    operation matrix3x2 = builtin_matrix3x2
+    operation matrix3x3 = builtin_matrix3x3
+    operation pmatrix2x2 = builtin_pmatrix2x2
+    operation pmatrix2x3 = builtin_pmatrix2x3
+    operation pmatrix3x3 = builtin_pmatrix3x3
+    operation vmatrix2x2 = builtin_vmatrix2x2
+    operation vmatrix3x3 = builtin_vmatrix3x3
 }

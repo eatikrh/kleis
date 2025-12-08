@@ -19,26 +19,6 @@ use crate::signature_interpreter::SignatureInterpreter;
 use crate::type_inference::{Type, TypeContext};
 use std::collections::HashMap;
 
-/// Parse matrix dimensions from operation name
-/// Handles: matrix2x3, pmatrix4x5, vmatrix2x2, etc.
-fn parse_matrix_dims_from_op(name: &str) -> Option<(usize, usize)> {
-    let without_prefix = name
-        .strip_prefix("vmatrix")
-        .or_else(|| name.strip_prefix("pmatrix"))
-        .or_else(|| name.strip_prefix("Bmatrix"))
-        .or_else(|| name.strip_prefix("matrix"))?;
-
-    let parts: Vec<&str> = without_prefix.split('x').collect();
-    if parts.len() != 2 {
-        return None;
-    }
-
-    let rows = parts[0].parse::<usize>().ok()?;
-    let cols = parts[1].parse::<usize>().ok()?;
-
-    Some((rows, cols))
-}
-
 /// Tracks which structures define which operations
 #[derive(Debug, Clone)]
 pub struct OperationRegistry {
@@ -268,8 +248,8 @@ impl TypeContextBuilder {
     }
 
     fn register_implements(&mut self, impl_def: &ImplementsDef) -> Result<(), String> {
-        // Find the structure this implements
-        let structure = self
+        // Find the structure this implements (validation check)
+        let _structure = self
             .structures
             .get(&impl_def.structure_name)
             .ok_or_else(|| format!("Unknown structure: {}", impl_def.structure_name))?;
@@ -389,38 +369,6 @@ impl TypeContextBuilder {
     /// Infer the type of an operation applied to given argument types
     /// This is the ADR-016 compliant way: query structures, don't hardcode!
     pub fn infer_operation_type(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
-        use crate::type_inference::Type;
-
-        // Special handling for Matrix constructors (data constructors, not operations)
-        // Pattern: Any operation ending with "Matrix" is treated as a matrix constructor
-        // Examples: Matrix, PMatrix, VMatrix, BMatrix, CustomMatrix, etc.
-        // Format: *Matrix(rows, cols, ...elements)
-        if op_name.ends_with("Matrix") {
-            if arg_types.len() >= 2 {
-                // First two args should be scalars representing dimensions
-                // Extract the actual dimension values from the type (they're constants)
-                // For now, we can't easily extract the constant values from Type::Scalar
-                // So we return a generic Matrix type - the parser will need to pass dimension info differently
-                // OR we need to look at the original expression, not just types
-
-                // For now, return a generic matrix type
-                // This is a limitation - we lose dimension information in the type system
-                // TODO: Consider dependent types or passing expression context
-                return Ok(Type::Matrix(2, 2)); // Default for now
-            }
-            return Err(format!(
-                "{} constructor requires at least 2 arguments (rows, cols)",
-                op_name
-            ));
-        }
-
-        // Legacy support: old matrix operations like matrix2x3, matrix4x5
-        if let Some((rows, cols)) = parse_matrix_dims_from_op(op_name) {
-            // matrix2x3, matrix4x5, etc. → Matrix(2, 3), Matrix(4, 5)
-            // This is valid because the operation name IS the type specification
-            return Ok(Type::Matrix(rows, cols));
-        }
-
         // Query registry for operation
         if let Some(structure_name) = self.registry.structure_for_operation(op_name) {
             // Found the structure that defines this operation
