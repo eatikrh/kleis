@@ -250,7 +250,7 @@ fn test_matrix_operations_still_work() {
     );
 
     match checker.check(&expr) {
-        TypeCheckResult::Success(ty) if ty == Type::matrix(3, 2) => {
+        TypeCheckResult::Success(ty) if ty == Type::matrix(3, 2, Type::scalar()) => {
             println!("✓ Matrix transpose works and infers correct dimensions");
         }
         TypeCheckResult::Success(ty) => {

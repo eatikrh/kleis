@@ -909,24 +909,33 @@ impl Type {
     /// The dimension is stored as a concrete value, enabling:
     /// - Vector(3) ≠ Vector(4) (different types!)
     /// - Dimension checking in operations
-    pub fn vector(n: usize) -> Type {
+    /// Create a Vector type
+    ///
+    /// Vector(n, T) where:
+    /// - n is dimension (Nat value)
+    /// - T is element type (Type)
+    pub fn vector(n: usize, elem_type: Type) -> Type {
         Type::Data {
-            type_name: "Type".to_string(),
+            type_name: "Vector".to_string(),
             constructor: "Vector".to_string(),
-            args: vec![Type::NatValue(n)],
+            args: vec![Type::NatValue(n), elem_type],
         }
     }
 
-    /// Create a Matrix type (backward compatibility)
+    /// Create a Matrix type
+    ///
+    /// Matrix(m, n, T) where:
+    /// - m, n are dimensions (Nat values)
+    /// - T is element type (Type)
     ///
     /// Dimensions are stored as concrete values, enabling:
-    /// - Matrix(2,3) ≠ Matrix(2,2) (different types!)
-    /// - Matrix(2,3) × Matrix(3,4) → Matrix(2,4) dimension checking
-    pub fn matrix(m: usize, n: usize) -> Type {
+    /// - Matrix(2,3,ℝ) ≠ Matrix(2,2,ℝ) (different types!)
+    /// - Matrix(2,3,ℝ) × Matrix(3,4,ℝ) → Matrix(2,4,ℝ) dimension checking
+    pub fn matrix(m: usize, n: usize, elem_type: Type) -> Type {
         Type::Data {
-            type_name: "Type".to_string(),
+            type_name: "Matrix".to_string(),
             constructor: "Matrix".to_string(),
-            args: vec![Type::NatValue(m), Type::NatValue(n)],
+            args: vec![Type::NatValue(m), Type::NatValue(n), elem_type],
         }
     }
 }

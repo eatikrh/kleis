@@ -171,8 +171,8 @@ impl TypeChecker {
             TypeExpr::Parametric(name, _params) => {
                 // TODO: Handle parametric types
                 match name.as_str() {
-                    "Vector" => Type::vector(3), // Default dimension
-                    "Matrix" => Type::matrix(3, 3),
+                    "Vector" => Type::vector(3, Type::scalar()), // Default dimension
+                    "Matrix" => Type::matrix(3, 3, Type::scalar()),
                     _ => Type::scalar(),
                 }
             }

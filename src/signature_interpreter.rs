@@ -595,20 +595,7 @@ impl SignatureInterpreter {
                         ));
                     }
 
-                    // Special handling for Matrix and Vector to maintain backwards compatibility
-                    // Type::matrix(m, n) and Type::vector(n) use a specific format
-                    if name == "Matrix" && param_exprs.len() == 3 {
-                        // Matrix(m, n, T) - extract just m and n, ignore T for now
-                        let m = self.eval_param(&param_exprs[0])?;
-                        let n = self.eval_param(&param_exprs[1])?;
-                        return Ok(Type::matrix(m, n));
-                    } else if name == "Vector" && param_exprs.len() == 2 {
-                        // Vector(n, T) - extract just n, ignore T for now
-                        let n = self.eval_param(&param_exprs[0])?;
-                        return Ok(Type::vector(n));
-                    }
-
-                    // Generic handling for other structure types
+                    // Generic handling for ALL structure types
                     let mut args = Vec::new();
                     for (param_def, param_expr) in structure_def.type_params.iter().zip(param_exprs)
                     {
@@ -752,13 +739,13 @@ mod tests {
         interp.bindings.insert("n".to_string(), 3);
 
         // Interpret signature
-        let arg_types = vec![Type::matrix(2, 3)];
+        let arg_types = vec![Type::matrix(2, 3, Type::scalar())];
         let result = interp
             .interpret_signature(&structure, "transpose", &arg_types)
             .unwrap();
 
         // Should be Matrix(3, 2) - dimensions flipped!
-        assert_eq!(result, Type::matrix(3, 2));
+        assert_eq!(result, Type::matrix(3, 2, Type::scalar()));
     }
 
     #[test]

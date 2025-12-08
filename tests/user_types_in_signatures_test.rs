@@ -385,13 +385,13 @@ fn test_backward_compatibility_matrix() {
     interp.bindings.insert("m".to_string(), 2);
     interp.bindings.insert("n".to_string(), 3);
 
-    let matrix_type = Type::matrix(2, 3);
+    let matrix_type = Type::matrix(2, 3, Type::scalar());
 
     let result = interp.interpret_signature(structure, "transpose", &[matrix_type]);
 
     assert!(result.is_ok());
     let result_type = result.unwrap();
-    assert_eq!(result_type, Type::matrix(3, 2)); // Transposed!
+    assert_eq!(result_type, Type::matrix(3, 2, Type::scalar())); // Transposed!
 }
 
 #[test]
