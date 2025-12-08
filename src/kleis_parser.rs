@@ -34,7 +34,7 @@
 ///!   arguments := expression (',' expression)*
 ///!
 ///! **Purpose:** Validate ADR-015 design decisions, not production-ready!
-use crate::ast::Expression;
+use crate::ast::{Expression, MatchCase, Pattern};
 use crate::kleis_ast::{
     DataDef, DataField, DataVariant, ImplMember, Implementation, ImplementsDef, OperationDecl,
     Program, StructureDef, StructureMember, TopLevel, TypeExpr,
@@ -233,6 +233,11 @@ impl KleisParser {
 
     fn parse_primary(&mut self) -> Result<Expression, KleisParseError> {
         self.skip_whitespace();
+
+        // Match expression
+        if self.peek_word("match") {
+            return self.parse_match_expr();
+        }
 
         // Parenthesized expression
         if self.peek() == Some('(') {
@@ -454,6 +459,228 @@ impl KleisParser {
         } else {
             None
         }
+    }
+
+    /// Consume a specific string if present, return true if successful
+    fn consume_str(&mut self, s: &str) -> bool {
+        let chars: Vec<char> = s.chars().collect();
+        for (i, ch) in chars.iter().enumerate() {
+            if self.peek_ahead(i) != Some(*ch) {
+                return false;
+            }
+        }
+        // Consume the string
+        for _ in 0..chars.len() {
+            self.advance();
+        }
+        true
+    }
+
+    /// Expect a specific character, return error if not found
+    fn expect_char(&mut self, expected: char) -> Result<(), KleisParseError> {
+        match self.advance() {
+            Some(ch) if ch == expected => Ok(()),
+            Some(ch) => Err(KleisParseError {
+                message: format!("Expected '{}', found '{}'", expected, ch),
+                position: self.pos - 1,
+            }),
+            None => Err(KleisParseError {
+                message: format!("Expected '{}', found end of input", expected),
+                position: self.pos,
+            }),
+        }
+    }
+
+    /// Expect a specific word/keyword, return error if not found
+    fn expect_word(&mut self, word: &str) -> Result<(), KleisParseError> {
+        if self.peek_word(word) {
+            // Consume the word
+            for _ in 0..word.len() {
+                self.advance();
+            }
+            Ok(())
+        } else {
+            Err(KleisParseError {
+                message: format!("Expected keyword '{}'", word),
+                position: self.pos,
+            })
+        }
+    }
+
+    /// Parse a match expression
+    /// Grammar: match expr { case1 | case2 ... }
+    fn parse_match_expr(&mut self) -> Result<Expression, KleisParseError> {
+        // Consume 'match' keyword
+        self.expect_word("match")?;
+        self.skip_whitespace();
+
+        // Parse scrutinee expression
+        let scrutinee = self.parse_expression()?;
+        self.skip_whitespace();
+
+        // Expect opening brace
+        self.expect_char('{')?;
+        self.skip_whitespace();
+
+        // Parse cases
+        let cases = self.parse_match_cases()?;
+        self.skip_whitespace();
+
+        // Expect closing brace
+        self.expect_char('}')?;
+
+        Ok(Expression::match_expr(scrutinee, cases))
+    }
+
+    /// Parse match cases separated by '|' or newlines
+    fn parse_match_cases(&mut self) -> Result<Vec<MatchCase>, KleisParseError> {
+        let mut cases = Vec::new();
+
+        loop {
+            self.skip_whitespace();
+
+            // Check for closing brace
+            if self.peek() == Some('}') {
+                break;
+            }
+
+            // Parse one case
+            let case = self.parse_match_case()?;
+            cases.push(case);
+
+            self.skip_whitespace();
+
+            // Optional separator
+            if self.peek() == Some('|') {
+                self.advance();
+            }
+        }
+
+        if cases.is_empty() {
+            return Err(KleisParseError {
+                message: "Match expression must have at least one case".to_string(),
+                position: self.pos,
+            });
+        }
+
+        Ok(cases)
+    }
+
+    /// Parse a single match case
+    /// Grammar: pattern => expression
+    fn parse_match_case(&mut self) -> Result<MatchCase, KleisParseError> {
+        self.skip_whitespace();
+
+        // Parse pattern
+        let pattern = self.parse_pattern()?;
+        self.skip_whitespace();
+
+        // Expect =>
+        if !self.consume_str("=>") {
+            return Err(KleisParseError {
+                message: "Expected '=>' after pattern".to_string(),
+                position: self.pos,
+            });
+        }
+        self.skip_whitespace();
+
+        // Parse body expression
+        let body = self.parse_expression()?;
+
+        Ok(MatchCase::new(pattern, body))
+    }
+
+    /// Parse a pattern
+    fn parse_pattern(&mut self) -> Result<Pattern, KleisParseError> {
+        self.skip_whitespace();
+
+        // Wildcard: _
+        if self.peek() == Some('_') {
+            let start_pos = self.pos;
+            self.advance();
+            // Make sure it's just underscore (not part of identifier)
+            if self
+                .peek()
+                .map_or(true, |ch| !ch.is_alphanumeric() && ch != '_')
+            {
+                return Ok(Pattern::wildcard());
+            }
+            // Otherwise, it's an identifier starting with underscore
+            self.pos = start_pos;
+        }
+
+        // Number constant
+        if self.peek().map_or(false, |ch| ch.is_numeric()) {
+            let num = self.parse_number()?;
+            return Ok(Pattern::constant(num));
+        }
+
+        // Constructor or variable
+        if self
+            .peek()
+            .map_or(false, |ch| ch.is_alphabetic() || ch == '_')
+        {
+            let id = self.parse_identifier()?;
+            self.skip_whitespace();
+
+            // Constructor with arguments: Some(x)
+            if self.peek() == Some('(') {
+                self.advance();
+                let args = self.parse_pattern_args()?;
+                self.skip_whitespace();
+                self.expect_char(')')?;
+                return Ok(Pattern::constructor(id, args));
+            }
+
+            // Determine if it's a constructor or variable
+            // Heuristic: Capitalized = constructor, lowercase = variable
+            if id.chars().next().unwrap().is_uppercase() {
+                // Constructor without arguments: None, True, False
+                return Ok(Pattern::constructor(id, vec![]));
+            } else {
+                // Variable binding: x, value, result
+                return Ok(Pattern::variable(id));
+            }
+        }
+
+        Err(KleisParseError {
+            message: "Expected pattern (wildcard, variable, constructor, or constant)".to_string(),
+            position: self.pos,
+        })
+    }
+
+    /// Parse pattern arguments separated by commas
+    fn parse_pattern_args(&mut self) -> Result<Vec<Pattern>, KleisParseError> {
+        let mut args = Vec::new();
+
+        loop {
+            self.skip_whitespace();
+
+            // Check for closing paren
+            if self.peek() == Some(')') {
+                break;
+            }
+
+            // Parse one pattern
+            let pattern = self.parse_pattern()?;
+            args.push(pattern);
+
+            self.skip_whitespace();
+
+            // Check for comma
+            if self.peek() == Some(',') {
+                self.advance();
+            } else if self.peek() == Some(')') {
+                break;
+            } else {
+                return Err(KleisParseError {
+                    message: "Expected ',' or ')' in pattern arguments".to_string(),
+                    position: self.pos,
+                });
+            }
+        }
+
+        Ok(args)
     }
 
     /// Parse structure member
@@ -1546,6 +1773,331 @@ mod tests {
         let code = "data Bool =";
         let mut parser = KleisParser::new(code);
         let result = parser.parse_data_def();
+
+        assert!(result.is_err());
+    }
+
+    // ===== Pattern Matching Parser Tests =====
+
+    #[test]
+    fn test_parse_pattern_wildcard() {
+        let code = "_";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_pattern().unwrap();
+
+        assert_eq!(result, Pattern::Wildcard);
+    }
+
+    #[test]
+    fn test_parse_pattern_variable() {
+        let code = "x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_pattern().unwrap();
+
+        assert_eq!(result, Pattern::Variable("x".to_string()));
+    }
+
+    #[test]
+    fn test_parse_pattern_constant_number() {
+        let code = "42";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_pattern().unwrap();
+
+        assert_eq!(result, Pattern::Constant("42".to_string()));
+    }
+
+    #[test]
+    fn test_parse_pattern_constructor_no_args() {
+        let code = "None";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_pattern().unwrap();
+
+        assert_eq!(
+            result,
+            Pattern::Constructor {
+                name: "None".to_string(),
+                args: vec![]
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_pattern_constructor_one_arg() {
+        let code = "Some(x)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_pattern().unwrap();
+
+        assert_eq!(
+            result,
+            Pattern::Constructor {
+                name: "Some".to_string(),
+                args: vec![Pattern::Variable("x".to_string())]
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_pattern_constructor_multiple_args() {
+        let code = "Pair(a, b)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_pattern().unwrap();
+
+        assert_eq!(
+            result,
+            Pattern::Constructor {
+                name: "Pair".to_string(),
+                args: vec![
+                    Pattern::Variable("a".to_string()),
+                    Pattern::Variable("b".to_string())
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_pattern_nested() {
+        let code = "Some(Pair(x, y))";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_pattern().unwrap();
+
+        assert_eq!(
+            result,
+            Pattern::Constructor {
+                name: "Some".to_string(),
+                args: vec![Pattern::Constructor {
+                    name: "Pair".to_string(),
+                    args: vec![
+                        Pattern::Variable("x".to_string()),
+                        Pattern::Variable("y".to_string())
+                    ]
+                }]
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_match_simple() {
+        let code = "match x { True => 1 | False => 0 }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Match { scrutinee, cases } => {
+                assert_eq!(*scrutinee, Expression::Object("x".to_string()));
+                assert_eq!(cases.len(), 2);
+
+                // First case: True => 1
+                assert_eq!(
+                    cases[0].pattern,
+                    Pattern::Constructor {
+                        name: "True".to_string(),
+                        args: vec![]
+                    }
+                );
+                assert_eq!(cases[0].body, Expression::Const("1".to_string()));
+
+                // Second case: False => 0
+                assert_eq!(
+                    cases[1].pattern,
+                    Pattern::Constructor {
+                        name: "False".to_string(),
+                        args: vec![]
+                    }
+                );
+                assert_eq!(cases[1].body, Expression::Const("0".to_string()));
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_with_variable_binding() {
+        let code = "match opt { None => 0 | Some(x) => x }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Match { scrutinee, cases } => {
+                assert_eq!(*scrutinee, Expression::Object("opt".to_string()));
+                assert_eq!(cases.len(), 2);
+
+                // First case: None => 0
+                assert_eq!(
+                    cases[0].pattern,
+                    Pattern::Constructor {
+                        name: "None".to_string(),
+                        args: vec![]
+                    }
+                );
+
+                // Second case: Some(x) => x
+                assert_eq!(
+                    cases[1].pattern,
+                    Pattern::Constructor {
+                        name: "Some".to_string(),
+                        args: vec![Pattern::Variable("x".to_string())]
+                    }
+                );
+                assert_eq!(cases[1].body, Expression::Object("x".to_string()));
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_with_wildcard() {
+        let code = "match status { Running => 1 | _ => 0 }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Match { cases, .. } => {
+                assert_eq!(cases.len(), 2);
+                assert_eq!(
+                    cases[0].pattern,
+                    Pattern::Constructor {
+                        name: "Running".to_string(),
+                        args: vec![]
+                    }
+                );
+                assert_eq!(cases[1].pattern, Pattern::Wildcard);
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_with_nested_pattern() {
+        let code = "match result { Ok(Some(x)) => x | Ok(None) => 0 | Err(_) => minus(1) }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Match { cases, .. } => {
+                assert_eq!(cases.len(), 3);
+
+                // First case: Ok(Some(x)) => x
+                assert_eq!(
+                    cases[0].pattern,
+                    Pattern::Constructor {
+                        name: "Ok".to_string(),
+                        args: vec![Pattern::Constructor {
+                            name: "Some".to_string(),
+                            args: vec![Pattern::Variable("x".to_string())]
+                        }]
+                    }
+                );
+
+                // Second case: Ok(None) => 0
+                assert_eq!(
+                    cases[1].pattern,
+                    Pattern::Constructor {
+                        name: "Ok".to_string(),
+                        args: vec![Pattern::Constructor {
+                            name: "None".to_string(),
+                            args: vec![]
+                        }]
+                    }
+                );
+
+                // Third case: Err(_) => -1
+                assert_eq!(
+                    cases[2].pattern,
+                    Pattern::Constructor {
+                        name: "Err".to_string(),
+                        args: vec![Pattern::Wildcard]
+                    }
+                );
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_with_expressions_in_body() {
+        let code = "match pair { Pair(a, b) => plus(a, b) }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Match { cases, .. } => {
+                assert_eq!(cases.len(), 1);
+                match &cases[0].body {
+                    Expression::Operation { name, args } => {
+                        assert_eq!(name, "plus");
+                        assert_eq!(args.len(), 2);
+                    }
+                    _ => panic!("Expected Operation in body"),
+                }
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_multiline() {
+        let code = r#"match x {
+            None => 0
+            Some(value) => value
+        }"#;
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Match { cases, .. } => {
+                assert_eq!(cases.len(), 2);
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_with_numbers() {
+        let code = "match n { 0 => zero | 1 => one | _ => other }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Match { cases, .. } => {
+                assert_eq!(cases.len(), 3);
+                assert_eq!(cases[0].pattern, Pattern::Constant("0".to_string()));
+                assert_eq!(cases[1].pattern, Pattern::Constant("1".to_string()));
+                assert_eq!(cases[2].pattern, Pattern::Wildcard);
+            }
+            _ => panic!("Expected Match expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_match_error_no_cases() {
+        let code = "match x { }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse();
+
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .message
+                .contains("must have at least one case")
+        );
+    }
+
+    #[test]
+    fn test_parse_match_error_missing_arrow() {
+        let code = "match x { Some(x) 5 }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse();
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().message.contains("Expected '=>'"));
+    }
+
+    #[test]
+    fn test_parse_match_error_missing_closing_brace() {
+        let code = "match x { None => 0";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse();
 
         assert!(result.is_err());
     }
