@@ -391,13 +391,11 @@ impl TypeContextBuilder {
     pub fn infer_operation_type(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
         use crate::type_inference::Type;
 
-        // Special handling for generic Matrix constructors
-        // Format: Matrix(rows, cols, ...elements) where first two args are Scalar dimension values
-        if op_name == "Matrix"
-            || op_name == "PMatrix"
-            || op_name == "VMatrix"
-            || op_name == "BMatrix"
-        {
+        // Special handling for Matrix constructors (data constructors, not operations)
+        // Pattern: Any operation ending with "Matrix" is treated as a matrix constructor
+        // Examples: Matrix, PMatrix, VMatrix, BMatrix, CustomMatrix, etc.
+        // Format: *Matrix(rows, cols, ...elements)
+        if op_name.ends_with("Matrix") {
             if arg_types.len() >= 2 {
                 // First two args should be scalars representing dimensions
                 // Extract the actual dimension values from the type (they're constants)
@@ -410,9 +408,10 @@ impl TypeContextBuilder {
                 // TODO: Consider dependent types or passing expression context
                 return Ok(Type::Matrix(2, 2)); // Default for now
             }
-            return Err(
-                "Matrix constructor requires at least 2 arguments (rows, cols)".to_string(),
-            );
+            return Err(format!(
+                "{} constructor requires at least 2 arguments (rows, cols)",
+                op_name
+            ));
         }
 
         // Legacy support: old matrix operations like matrix2x3, matrix4x5
