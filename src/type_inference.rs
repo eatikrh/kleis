@@ -351,18 +351,201 @@ impl TypeInference {
         cases: &[crate::ast::MatchCase],
         context_builder: Option<&crate::type_context::TypeContextBuilder>,
     ) -> Result<Type, String> {
-        // TODO: Implement full pattern matching type inference
-        // For now, return fresh type variable
+        if cases.is_empty() {
+            return Err("Match expression must have at least one case".to_string());
+        }
 
         // Step 1: Infer scrutinee type
-        let _scrutinee_ty = self.infer(scrutinee, context_builder)?;
+        let scrutinee_ty = self.infer(scrutinee, context_builder)?;
 
-        // Step 2: Infer all branch types (would check patterns and bind variables)
-        // Step 3: Unify all branch types
-        // Step 4: Check exhaustiveness
+        // Step 2: Infer each branch and collect result types
+        let mut branch_types = Vec::new();
 
-        // For now, return a type variable
-        Ok(self.context.fresh_var())
+        for (i, case) in cases.iter().enumerate() {
+            // Save context before this branch
+            let saved_context = self.context.clone();
+
+            // Check pattern matches scrutinee type and bind variables
+            self.check_pattern(&case.pattern, &scrutinee_ty)
+                .map_err(|e| format!("In branch {}: {}", i + 1, e))?;
+
+            // Infer body type with pattern bindings in scope
+            let body_ty = self.infer(&case.body, context_builder)?;
+            branch_types.push(body_ty);
+
+            // Restore context (pattern bindings don't escape branch)
+            self.context = saved_context;
+        }
+
+        // Step 3: Unify all branch types (must all return same type)
+        let result_ty = branch_types[0].clone();
+        for branch_ty in branch_types.iter().skip(1) {
+            self.add_constraint(result_ty.clone(), branch_ty.clone());
+        }
+
+        Ok(result_ty)
+    }
+
+    /// Check that a pattern matches the expected type and bind pattern variables
+    ///
+    /// This validates:
+    /// - Constructors belong to the expected data type
+    /// - Constructor arity matches pattern arguments
+    /// - Nested patterns match their expected types recursively
+    ///
+    /// Side effect: Binds pattern variables in the type context
+    fn check_pattern(
+        &mut self,
+        pattern: &crate::ast::Pattern,
+        expected_ty: &Type,
+    ) -> Result<(), String> {
+        use crate::ast::Pattern;
+
+        match pattern {
+            Pattern::Wildcard => {
+                // Wildcard matches anything
+                Ok(())
+            }
+
+            Pattern::Variable(name) => {
+                // Variable matches anything and gets bound to the type
+                self.context.bind(name.clone(), expected_ty.clone());
+                Ok(())
+            }
+
+            Pattern::Constructor { name, args } => {
+                // Look up constructor in data registry
+                let variant_info = self
+                    .data_registry
+                    .lookup_variant(name)
+                    .ok_or_else(|| format!("Unknown constructor: {}", name))?
+                    .clone(); // Clone to release borrow
+
+                let (type_name, variant) = variant_info;
+
+                // Check scrutinee type matches constructor's type
+                match expected_ty {
+                    Type::Data {
+                        type_name: scrutinee_type,
+                        ..
+                    } => {
+                        if type_name != *scrutinee_type {
+                            return Err(format!(
+                                "Pattern mismatch: constructor {} belongs to type {}, \
+                                 but scrutinee has type {}",
+                                name, type_name, scrutinee_type
+                            ));
+                        }
+                    }
+                    Type::Var(_) => {
+                        // Type variable - we'll constrain it through unification
+                        // Create the data type and unify
+                        let constructor_ty = Type::Data {
+                            type_name: type_name.clone(),
+                            constructor: name.clone(),
+                            args: vec![],
+                        };
+                        self.add_constraint(expected_ty.clone(), constructor_ty);
+                    }
+                    _ => {
+                        return Err(format!(
+                            "Pattern mismatch: constructor {} expects data type, \
+                             but scrutinee has type {:?}",
+                            name, expected_ty
+                        ));
+                    }
+                }
+
+                // Check arity
+                if variant.fields.len() != args.len() {
+                    return Err(format!(
+                        "Constructor {} expects {} arguments, got {}",
+                        name,
+                        variant.fields.len(),
+                        args.len()
+                    ));
+                }
+
+                // Recursively check nested patterns
+                for (pattern_arg, field) in args.iter().zip(&variant.fields) {
+                    // Convert TypeExpr to Type for the field
+                    let field_ty = self.type_expr_to_type(&field.type_expr)?;
+                    self.check_pattern(pattern_arg, &field_ty)?;
+                }
+
+                Ok(())
+            }
+
+            Pattern::Constant(value) => {
+                // Constant patterns must match primitive types
+                // For now, assume numeric constants are Scalars
+                // TODO: Add proper constant type checking
+                if value.chars().all(|c| c.is_numeric() || c == '.') {
+                    // Numeric constant - should be Scalar
+                    let scalar_ty = Type::scalar();
+                    self.add_constraint(expected_ty.clone(), scalar_ty);
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// Convert a TypeExpr (from AST) to a Type (for inference)
+    ///
+    /// This is needed to translate field types from data definitions into
+    /// types we can use for pattern checking.
+    fn type_expr_to_type(&self, type_expr: &crate::kleis_ast::TypeExpr) -> Result<Type, String> {
+        use crate::kleis_ast::TypeExpr;
+
+        match type_expr {
+            TypeExpr::Named(name) if name == "ℝ" || name == "Scalar" => Ok(Type::scalar()),
+            TypeExpr::Named(name) if name == "Nat" => Ok(Type::Nat),
+            TypeExpr::Named(name) if name == "String" => Ok(Type::String),
+            TypeExpr::Named(name) if name == "Bool" => Ok(Type::Bool),
+            TypeExpr::Named(name) => {
+                // Check if it's a user-defined data type
+                if self.data_registry.has_type(name) {
+                    Ok(Type::Data {
+                        type_name: name.clone(),
+                        constructor: name.clone(), // Use type name as constructor for now
+                        args: vec![],
+                    })
+                } else {
+                    // Unknown type - could be a type variable in the definition
+                    // For now, return an error
+                    Err(format!("Unknown type: {}", name))
+                }
+            }
+            TypeExpr::Parametric(name, params) => {
+                // Handle parametric types like Vector(n), Matrix(m, n)
+                let param_types: Result<Vec<Type>, String> =
+                    params.iter().map(|p| self.type_expr_to_type(p)).collect();
+                let param_types = param_types?;
+
+                Ok(Type::Data {
+                    type_name: "Type".to_string(), // Meta-type
+                    constructor: name.clone(),
+                    args: param_types,
+                })
+            }
+            TypeExpr::Var(name) => {
+                // Type variable in the definition (e.g., T in Option(T))
+                // For now, treat as a fresh type variable
+                // TODO: Proper handling of polymorphic type parameters
+                Err(format!(
+                    "Type variables in patterns not yet supported: {}",
+                    name
+                ))
+            }
+            TypeExpr::Function(_, _) => {
+                // Function types in patterns not supported yet
+                Err("Function types in patterns not yet supported".to_string())
+            }
+            TypeExpr::Product(_) => {
+                // Product types in patterns not supported yet
+                Err("Product types in patterns not yet supported".to_string())
+            }
+        }
     }
 
     /// Infer type of an operation
@@ -1132,6 +1315,594 @@ mod tests {
 
         // Should fall back to context_builder (returns type var)
         let ty = infer.infer(&expr, None).unwrap();
+        assert!(matches!(ty, Type::Var(_)));
+    }
+
+    // ===== Pattern Matching Type Inference Tests =====
+
+    #[test]
+    fn test_match_simple_bool() {
+        use crate::ast::{Expression, MatchCase, Pattern};
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+
+        // Create registry with Bool type
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Bool".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "True".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "False".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        // Bind a boolean variable
+        infer.bind(
+            "x".to_string(),
+            Type::Data {
+                type_name: "Bool".to_string(),
+                constructor: "Bool".to_string(),
+                args: vec![],
+            },
+        );
+
+        // match x { True => 1 | False => 0 }
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("x".to_string())),
+            cases: vec![
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "True".to_string(),
+                        args: vec![],
+                    },
+                    Expression::Const("1".to_string()),
+                ),
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "False".to_string(),
+                        args: vec![],
+                    },
+                    Expression::Const("0".to_string()),
+                ),
+            ],
+        };
+
+        let ty = infer.infer(&match_expr, None).unwrap();
+        // Both branches return Scalar, so result should be Scalar
+        assert!(matches!(
+            ty,
+            Type::Data { constructor, .. } if constructor == "Scalar"
+        ));
+    }
+
+    #[test]
+    fn test_match_with_variable_binding() {
+        use crate::ast::{Expression, MatchCase, Pattern};
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataField, DataVariant, TypeExpr};
+
+        // Create registry with Option type
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Option".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "None".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "Some".to_string(),
+                        fields: vec![DataField {
+                            name: Some("value".to_string()),
+                            type_expr: TypeExpr::Named("ℝ".to_string()),
+                        }],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        // Bind an Option variable
+        infer.bind(
+            "opt".to_string(),
+            Type::Data {
+                type_name: "Option".to_string(),
+                constructor: "Option".to_string(),
+                args: vec![],
+            },
+        );
+
+        // match opt { None => 0 | Some(x) => x }
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("opt".to_string())),
+            cases: vec![
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "None".to_string(),
+                        args: vec![],
+                    },
+                    Expression::Const("0".to_string()),
+                ),
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "Some".to_string(),
+                        args: vec![Pattern::Variable("x".to_string())],
+                    },
+                    Expression::Object("x".to_string()),
+                ),
+            ],
+        };
+
+        let ty = infer.infer(&match_expr, None).unwrap();
+        // Both branches return Scalar
+        assert!(matches!(
+            ty,
+            Type::Data { constructor, .. } if constructor == "Scalar"
+        ));
+    }
+
+    #[test]
+    fn test_match_with_wildcard() {
+        use crate::ast::{Expression, MatchCase, Pattern};
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+
+        // Create registry with Status type
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Status".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "Running".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "Idle".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        infer.bind(
+            "status".to_string(),
+            Type::Data {
+                type_name: "Status".to_string(),
+                constructor: "Status".to_string(),
+                args: vec![],
+            },
+        );
+
+        // match status { Running => 1 | _ => 0 }
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("status".to_string())),
+            cases: vec![
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "Running".to_string(),
+                        args: vec![],
+                    },
+                    Expression::Const("1".to_string()),
+                ),
+                MatchCase::new(Pattern::Wildcard, Expression::Const("0".to_string())),
+            ],
+        };
+
+        let ty = infer.infer(&match_expr, None).unwrap();
+        assert!(matches!(
+            ty,
+            Type::Data { constructor, .. } if constructor == "Scalar"
+        ));
+    }
+
+    #[test]
+    fn test_match_nested_patterns() {
+        use crate::ast::{Expression, MatchCase, Pattern};
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataField, DataVariant, TypeExpr};
+
+        // Create registry with Result and Option types
+        let mut registry = DataTypeRegistry::new();
+
+        registry
+            .register(DataDef {
+                name: "Option".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "None".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "Some".to_string(),
+                        fields: vec![DataField {
+                            name: Some("value".to_string()),
+                            type_expr: TypeExpr::Named("ℝ".to_string()),
+                        }],
+                    },
+                ],
+            })
+            .unwrap();
+
+        registry
+            .register(DataDef {
+                name: "Result".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "Ok".to_string(),
+                        fields: vec![DataField {
+                            name: Some("value".to_string()),
+                            type_expr: TypeExpr::Named("Option".to_string()),
+                        }],
+                    },
+                    DataVariant {
+                        name: "Err".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        infer.bind(
+            "result".to_string(),
+            Type::Data {
+                type_name: "Result".to_string(),
+                constructor: "Result".to_string(),
+                args: vec![],
+            },
+        );
+
+        // match result { Ok(Some(x)) => x | Ok(None) => 0 | Err(_) => 0 }
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("result".to_string())),
+            cases: vec![
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "Ok".to_string(),
+                        args: vec![Pattern::Constructor {
+                            name: "Some".to_string(),
+                            args: vec![Pattern::Variable("x".to_string())],
+                        }],
+                    },
+                    Expression::Object("x".to_string()),
+                ),
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "Ok".to_string(),
+                        args: vec![Pattern::Constructor {
+                            name: "None".to_string(),
+                            args: vec![],
+                        }],
+                    },
+                    Expression::Const("0".to_string()),
+                ),
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "Err".to_string(),
+                        args: vec![],
+                    },
+                    Expression::Const("0".to_string()),
+                ),
+            ],
+        };
+
+        let ty = infer.infer(&match_expr, None).unwrap();
+        assert!(matches!(
+            ty,
+            Type::Data { constructor, .. } if constructor == "Scalar"
+        ));
+    }
+
+    #[test]
+    fn test_match_error_wrong_constructor() {
+        use crate::ast::{Expression, MatchCase, Pattern};
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Bool".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "True".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "False".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        registry
+            .register(DataDef {
+                name: "Option".to_string(),
+                type_params: vec![],
+                variants: vec![DataVariant {
+                    name: "None".to_string(),
+                    fields: vec![],
+                }],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        infer.bind(
+            "x".to_string(),
+            Type::Data {
+                type_name: "Bool".to_string(),
+                constructor: "Bool".to_string(),
+                args: vec![],
+            },
+        );
+
+        // match x { None => 0 }  // ERROR: None is not a Bool constructor!
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("x".to_string())),
+            cases: vec![MatchCase::new(
+                Pattern::Constructor {
+                    name: "None".to_string(),
+                    args: vec![],
+                },
+                Expression::Const("0".to_string()),
+            )],
+        };
+
+        let result = infer.infer(&match_expr, None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Pattern mismatch"));
+    }
+
+    #[test]
+    fn test_match_error_wrong_arity() {
+        use crate::ast::{Expression, MatchCase, Pattern};
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataField, DataVariant, TypeExpr};
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Option".to_string(),
+                type_params: vec![],
+                variants: vec![DataVariant {
+                    name: "Some".to_string(),
+                    fields: vec![DataField {
+                        name: Some("value".to_string()),
+                        type_expr: TypeExpr::Named("ℝ".to_string()),
+                    }],
+                }],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        infer.bind(
+            "opt".to_string(),
+            Type::Data {
+                type_name: "Option".to_string(),
+                constructor: "Option".to_string(),
+                args: vec![],
+            },
+        );
+
+        // match opt { Some(x, y) => 0 }  // ERROR: Some takes 1 arg, not 2!
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("opt".to_string())),
+            cases: vec![MatchCase::new(
+                Pattern::Constructor {
+                    name: "Some".to_string(),
+                    args: vec![
+                        Pattern::Variable("x".to_string()),
+                        Pattern::Variable("y".to_string()),
+                    ],
+                },
+                Expression::Const("0".to_string()),
+            )],
+        };
+
+        let result = infer.infer(&match_expr, None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 1 arguments, got 2"));
+    }
+
+    #[test]
+    fn test_match_error_no_cases() {
+        use crate::ast::Expression;
+
+        let mut infer = TypeInference::new();
+
+        // match x { }  // ERROR: No cases!
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("x".to_string())),
+            cases: vec![],
+        };
+
+        let result = infer.infer(&match_expr, None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("must have at least one case"));
+    }
+
+    #[test]
+    fn test_match_with_constant_pattern() {
+        use crate::ast::{Expression, MatchCase, Pattern};
+
+        let mut infer = TypeInference::new();
+
+        infer.bind("n".to_string(), Type::scalar());
+
+        // match n { 0 => "zero" | 1 => "one" | _ => "other" }
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("n".to_string())),
+            cases: vec![
+                MatchCase::new(
+                    Pattern::Constant("0".to_string()),
+                    Expression::Object("zero".to_string()),
+                ),
+                MatchCase::new(
+                    Pattern::Constant("1".to_string()),
+                    Expression::Object("one".to_string()),
+                ),
+                MatchCase::new(Pattern::Wildcard, Expression::Object("other".to_string())),
+            ],
+        };
+
+        // Should infer successfully (all branches return type variables that unify)
+        let ty = infer.infer(&match_expr, None).unwrap();
+        assert!(matches!(ty, Type::Var(_)));
+    }
+
+    #[test]
+    fn test_match_variable_binding_scope() {
+        use crate::ast::{Expression, MatchCase, Pattern};
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataField, DataVariant, TypeExpr};
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Option".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "None".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "Some".to_string(),
+                        fields: vec![DataField {
+                            name: Some("value".to_string()),
+                            type_expr: TypeExpr::Named("ℝ".to_string()),
+                        }],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        infer.bind(
+            "opt".to_string(),
+            Type::Data {
+                type_name: "Option".to_string(),
+                constructor: "Option".to_string(),
+                args: vec![],
+            },
+        );
+
+        // match opt { Some(x) => x | None => 0 }
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("opt".to_string())),
+            cases: vec![
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "Some".to_string(),
+                        args: vec![Pattern::Variable("x".to_string())],
+                    },
+                    Expression::Object("x".to_string()),
+                ),
+                MatchCase::new(
+                    Pattern::Constructor {
+                        name: "None".to_string(),
+                        args: vec![],
+                    },
+                    Expression::Const("0".to_string()),
+                ),
+            ],
+        };
+
+        // Infer the match
+        let _ty = infer.infer(&match_expr, None).unwrap();
+
+        // After match, 'x' should NOT be in scope (bindings are local to branches)
+        assert!(infer.context().get("x").is_none());
+    }
+
+    #[test]
+    fn test_match_multiple_variables() {
+        use crate::ast::{Expression, MatchCase, Pattern};
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataField, DataVariant, TypeExpr};
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Pair".to_string(),
+                type_params: vec![],
+                variants: vec![DataVariant {
+                    name: "Pair".to_string(),
+                    fields: vec![
+                        DataField {
+                            name: Some("first".to_string()),
+                            type_expr: TypeExpr::Named("ℝ".to_string()),
+                        },
+                        DataField {
+                            name: Some("second".to_string()),
+                            type_expr: TypeExpr::Named("ℝ".to_string()),
+                        },
+                    ],
+                }],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        infer.bind(
+            "pair".to_string(),
+            Type::Data {
+                type_name: "Pair".to_string(),
+                constructor: "Pair".to_string(),
+                args: vec![],
+            },
+        );
+
+        // match pair { Pair(a, b) => plus(a, b) }
+        let match_expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("pair".to_string())),
+            cases: vec![MatchCase::new(
+                Pattern::Constructor {
+                    name: "Pair".to_string(),
+                    args: vec![
+                        Pattern::Variable("a".to_string()),
+                        Pattern::Variable("b".to_string()),
+                    ],
+                },
+                Expression::Operation {
+                    name: "plus".to_string(),
+                    args: vec![
+                        Expression::Object("a".to_string()),
+                        Expression::Object("b".to_string()),
+                    ],
+                },
+            )],
+        };
+
+        // Should infer successfully
+        let ty = infer.infer(&match_expr, None).unwrap();
+        // Result is a type variable (no context_builder to resolve plus)
         assert!(matches!(ty, Type::Var(_)));
     }
 }
