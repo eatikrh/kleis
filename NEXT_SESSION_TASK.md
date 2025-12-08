@@ -36,11 +36,15 @@
 
 ## Problems Discovered 🐛
 
+**UPDATE (Dec 8, 2024):** See ADR-020 "Practical Application" section for root cause analysis and proper solution. The issue is type/value conflation, not just rendering.
+
 ### 1. Dimension Constants Create Edit Markers
 
 **Issue:** The dimension args `Const("2")`, `Const("3")` in `Matrix(2, 3, ...)` create visible edit markers in the UI.
 
 **Why:** The renderer creates argument slots for ALL arguments, including dimension metadata.
+
+**Root Cause (from ADR-020):** We're conflating TYPE-level parameters (dimensions) with VALUE-level parameters (matrix elements) in a single constructor.
 
 **Observation:**
 ```
@@ -76,9 +80,44 @@ This causes content to be cut off at the top of the viewport.
 
 ---
 
-## Solution for Next Session
+## Solutions for Next Session
 
-### Option A: Normalize Placeholder Positions
+**See ADR-020 for detailed analysis of root cause and proper solutions.**
+
+### Option 0: Quick Band-Aid (30 min)
+
+**Skip creating slots for dimension args in server:**
+- Detect Matrix/PMatrix/VMatrix operations
+- Skip paths `[*,0]` and `[*,1]` (dimension args)
+- **Pros:** Fast fix
+- **Cons:** Doesn't address root cause (type/value conflation)
+
+### Option 1: Proper Fix - Separate Value Constructor (Medium-term)
+
+**Introduce lowercase `matrix` value constructor:**
+```kleis
+structure Matrix(m: Nat, n: Nat, T) {
+    operation matrix : Vec(T, m*n) → Matrix(m, n, T)
+}
+
+// Usage:
+matrix(a, b, c, d, e, f)  // Type inferred: Matrix(2, 3, ℝ)
+```
+
+**Implementation:**
+1. Add `matrix` operation to stdlib/matrices.kleis
+2. Update frontend palette to use `matrix(...)` instead of `Matrix(...)`
+3. Type checker infers dimensions from arg count + context
+4. **Time:** Half day (requires Parser Phase 2 first)
+
+**Pros:** 
+- ✅ Clean type/value distinction
+- ✅ No editable dimension markers
+- ✅ Mathematically natural
+
+### Option 2: Layout Fixes (Also needed)
+
+#### A. Normalize Placeholder Positions
 
 **Where:** After `extract_positions_from_labels()` in `compile_with_semantic_boxes_and_slots()`
 
@@ -102,15 +141,17 @@ if !labeled_positions.is_empty() {
 }
 ```
 
-### Option B: Fix Dimension Constants in Slot Generation
+#### B. Fix Dimension Constants in Slot Generation
 
 **Where:** Server slot generation code (likely `src/bin/server.rs`)
 
 **Goal:** Skip creating slots for `path=[*,0]` and `path=[*,1]` when parent is Matrix/PMatrix/VMatrix operation.
 
+**Note:** This is Option 0 (quick band-aid) above.
+
 ---
 
-## Alternative: Revert to Legacy Format
+## Alternative: Revert to Legacy Format (Not Recommended)
 
 If fixing these issues is too complex, we could:
 1. Keep backend with Matrix(m,n) for type inference

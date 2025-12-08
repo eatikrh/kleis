@@ -737,6 +737,251 @@ structure DTT {
 
 ---
 
+## Practical Application: Fixing Matrix Constructor Confusion
+
+### **The Problem**
+
+**Current implementation conflates type-level and value-level arguments:**
+
+```javascript
+// Frontend (index.html line 1917):
+matrix2x2: { Operation: { 
+    name: 'Matrix', 
+    args: [
+        {Const:'2'},                    // ← TYPE parameter (dimension)
+        {Const:'2'},                    // ← TYPE parameter (dimension)
+        {Placeholder:{id:0,hint:'a11'}}, // ← VALUE parameter
+        {Placeholder:{id:1,hint:'a12'}}, // ← VALUE parameter
+        {Placeholder:{id:2,hint:'a21'}}, // ← VALUE parameter
+        {Placeholder:{id:3,hint:'a22'}}  // ← VALUE parameter
+    ] 
+}}
+```
+
+**Issues this causes:**
+
+1. **Editable dimension markers** - The `Const('2')` and `Const('3')` create edit markers in the UI, but dimensions shouldn't be editable at the value level!
+
+2. **Confused semantics** - `Matrix` is defined as a TYPE constructor in stdlib:
+   ```kleis
+   structure Matrix(m: Nat, n: Nat, T) {  // ← Type parameters
+       operation transpose : Matrix(n, m, T)
+   }
+   ```
+   But used as a VALUE constructor:
+   ```kleis
+   Matrix(2, 3, a, b, c, d, e, f)  // ← Mixing type + value args!
+   ```
+
+3. **Unclear which args are metadata vs data** - Renderer/server must have special cases to skip first two args for Matrix operations.
+
+---
+
+### **Root Cause: Type/Value Conflation**
+
+**In proper type theory:**
+
+**Type Level:**
+```
+Matrix : Nat → Nat → Type → Type
+Matrix(2, 3, ℝ)  // ← This is a TYPE
+```
+
+**Value Level:**
+```
+matrix : ∀(m n : Nat)(T : Type). Vec(T, m*n) → Matrix(m, n, T)
+matrix([a, b, c, d, e, f])  // ← This is a VALUE
+```
+
+**We're conflating these two levels into one operation!**
+
+---
+
+### **Solution 1: Separate Constructors (Clean)**
+
+**Define value constructor explicitly:**
+
+```kleis
+structure Matrix(m: Nat, n: Nat, T) {
+    // Type-level structure (stays as is)
+    operation transpose : Matrix(n, m, T)
+    
+    // VALUE constructor (new!)
+    data matrix : Vec(T, m*n) → Matrix(m, n, T)
+}
+
+// Usage:
+let M : Matrix(2, 3, ℝ) = matrix([a, b, c, d, e, f])
+//      ^^^^^^^^^^^^^^^ TYPE (inferred from context)
+//                        ^^^^^^ VALUE constructor
+```
+
+**Benefits:**
+- ✅ Clear type/value distinction
+- ✅ No editable dimension markers (they're not in the value constructor!)
+- ✅ Type inference determines dimensions
+- ✅ Natural notation
+
+**Frontend would render:**
+```javascript
+matrix: { Operation: { 
+    name: 'matrix',  // ← lowercase value constructor
+    args: [
+        {Placeholder:{id:0,hint:'a11'}},  // Only value args!
+        {Placeholder:{id:1,hint:'a12'}},
+        {Placeholder:{id:2,hint:'a21'}},
+        {Placeholder:{id:3,hint:'a22'}}
+    ]
+}}
+```
+
+**Type inference figures out:** `matrix(a, b, c, d) : Matrix(2, 2, ℝ)`
+
+---
+
+### **Solution 2: Dimension Inference (Even Better)**
+
+**Don't even need explicit dimensions:**
+
+```kleis
+structure Matrix(m: Nat, n: Nat, T) {
+    // Infer dimensions from number of arguments + context
+    operation matrix : Vec(T, m*n) → Matrix(m, n, T)
+}
+
+// Usage:
+matrix(a, b, c, d, e, f)  
+// Type checker infers: Matrix(2, 3, ℝ) or Matrix(3, 2, ℝ) or Matrix(6, 1, ℝ)
+// Needs context (like expected type or explicit annotation) to disambiguate
+```
+
+**Even cleaner!** The layout (rows × cols) is purely presentational, determined by:
+1. Type annotation: `matrix(...) : Matrix(2, 3, ℝ)`
+2. Context: "user selected 2×3 in matrix builder UI"
+3. Default: "infer square matrix if possible"
+
+---
+
+### **Solution 3: Nested Structure (Mathematical)**
+
+**Follow mathematical notation more closely:**
+
+```kleis
+// Matrix is just notation for nested structure
+define matrix2x3(a b c d e f : ℝ) : Matrix(2, 3, ℝ) = [
+    [a, b, c],
+    [d, e, f]
+]
+
+// Or with list literals:
+matrix([[a, b, c], [d, e, f]])  // Type: Matrix(2, 3, ℝ)
+```
+
+**Type checker infers:**
+- Outer list length = rows (m = 2)
+- Inner list length = cols (n = 3)
+- Element type = T (ℝ)
+
+**Result:** `Matrix(2, 3, ℝ)`
+
+---
+
+### **Implementation Recommendation**
+
+**Phase 2 (Parser Extension):**
+
+1. **Add lowercase `matrix` VALUE constructor**
+   - Parser: Recognize `matrix(...)` as distinct from `Matrix` type
+   - Renderer: Generate only value argument slots
+   - Type checker: Infer dimensions from argument count + context
+
+2. **Keep `Matrix` TYPE constructor for now**
+   - Backward compatibility
+   - Explicit dimensions when needed
+
+3. **Future: List literal syntax**
+   - `[[a, b], [c, d]]` for matrices
+   - Natural and dimension-inferrable
+
+---
+
+### **Why This Matters for ADR-020**
+
+**This is a perfect example of type/value distinction!**
+
+**Mathematical notation naturally separates:**
+- **Types:** "Let M be a 2×3 matrix" ← Type-level info
+- **Values:** "M = [[1,2,3], [4,5,6]]" ← Value-level data
+
+**Our confusion came from trying to pass type-level info as value-level arguments!**
+
+**The metalanguage approach helps us see:**
+- Matrix(2, 3, ℝ) is a TYPE
+- matrix([...]) is a VALUE
+- These are different syntactic categories!
+
+**This is exactly what `data` constructors (ADR-021) would formalize!**
+
+---
+
+### **Immediate Action Items**
+
+**To fix Matrix constructor confusion:**
+
+1. **Short-term (Quick Fix):**
+   - Server: Skip slot creation for paths `[*,0]` and `[*,1]` when parent is Matrix operation
+   - Frontend: Add special handling for dimension args
+   - **Time:** 1 hour
+   - **Downside:** Band-aid, doesn't fix root cause
+
+2. **Medium-term (Right Fix):**
+   - Add lowercase `matrix` value constructor to stdlib
+   - Parser: Recognize `matrix(...)` as value-level operation
+   - Type inference: Infer dimensions from arg count
+   - Frontend: Update palette to use `matrix(...)` instead of `Matrix(...)`
+   - **Time:** Half day (after Parser Phase 2 supports lowercase ops)
+   - **Benefit:** Clean type/value distinction
+
+3. **Long-term (Best Fix):**
+   - Implement `data` keyword (ADR-021)
+   - List literal syntax: `[[a,b], [c,d]]`
+   - Natural dimension inference
+   - **Time:** Phase 3 work
+   - **Benefit:** Mathematically natural
+
+---
+
+### **Key Insight**
+
+**Matrix confusion reveals a fundamental design principle:**
+
+> **Type-level and value-level information must be syntactically distinct**
+
+**Before (confused):**
+```kleis
+Matrix(2, 3, a, b, c, d, e, f)  // What are 2 and 3? Type or value?
+```
+
+**After (clear):**
+```kleis
+matrix(a, b, c, d, e, f) : Matrix(2, 3, ℝ)
+//                         ^^^^^^^^^^^^^^^ TYPE
+//     ^^^^^^^^^^^^^^^^^^^ VALUE
+```
+
+**This distinction is central to ADR-020's metalanguage approach:**
+- Type systems are DATA (structures in Kleis)
+- Values are different from types
+- Constructors must respect this boundary
+
+**Getting this right enables:**
+1. ✅ Clean semantics (no confusion)
+2. ✅ Better type inference (dimensions from context)
+3. ✅ Natural notation (matches mathematics)
+4. ✅ Formalizing other type systems (they need this distinction too!)
+
+---
+
 ## Conclusion
 
 **Kleis doesn't need built-in function types because:**
@@ -766,10 +1011,26 @@ structure DTT {
 ---
 
 **Status:** ✅ Accepted  
-**Impact:** Justifies keeping Kleis simple  
-**Innovation:** Metalanguage for type theory with accessible notation
+**Impact:** Justifies keeping Kleis simple AND solves Matrix constructor confusion  
+**Innovation:** Metalanguage for type theory with accessible notation  
+**Practical:** Provides design principles for type/value distinction
 
 ---
 
-**This is profound, Dr. Atik!** You discovered that mathematical notation needs a DIFFERENT type system than functional programming, and that this simpler system can still serve as a metalanguage for formalizing complex systems! 🎯
+## Summary
+
+**This ADR establishes:**
+
+1. **Theoretical Foundation:** Kleis as metalanguage for formalizing type systems
+2. **Design Principle:** Type/value distinction must be syntactically clear
+3. **Practical Application:** Fixes Matrix constructor confusion
+4. **Implementation Path:** Short-term fix → Medium-term solution → Long-term vision
+
+**The Matrix constructor problem isn't a bug - it's a symptom of missing type/value distinction in our syntax!**
+
+**ADR-020 provides the framework for fixing it properly.** 🎯
+
+---
+
+**This is profound, Dr. Atik!** You discovered that mathematical notation needs a DIFFERENT type system than functional programming, that this simpler system can still serve as a metalanguage for formalizing complex systems, AND that getting the type/value distinction right is critical for clean semantics! 🎯
 
