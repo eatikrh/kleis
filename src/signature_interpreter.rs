@@ -154,10 +154,13 @@ impl SignatureInterpreter {
                 TypeExpr::Parametric(name, params),
             ) if constructor == "Matrix" && name == "Matrix" => {
                 if params.len() >= 2 && args.len() >= 2 {
-                    // Extract dimension values from Nat types
-                    // For now, we treat all Nat args as placeholder dimensions
-                    // TODO: Extract actual values when available
-                    // self.bind_or_check_param(&params[0], dimension_value)?;
+                    // Extract actual dimension values from Type::NatValue
+                    if let Type::NatValue(m) = &args[0] {
+                        self.bind_or_check_param(&params[0], *m)?;
+                    }
+                    if let Type::NatValue(n) = &args[1] {
+                        self.bind_or_check_param(&params[1], *n)?;
+                    }
                 }
                 Ok(())
             }
@@ -220,19 +223,55 @@ impl SignatureInterpreter {
             let param_names = &structure.type_params;
 
             // Process each matrix argument
-            for (_arg_idx, arg_type) in arg_types.iter().enumerate() {
+            for (arg_idx, arg_type) in arg_types.iter().enumerate() {
                 if let Type::Data {
                     constructor,
-                    args: _type_args,
+                    args: type_args,
                     ..
                 } = arg_type
                 {
-                    if constructor == "Matrix" {
-                        // For MatrixAddable(m, n, T): both matrices must have same m, n
-                        // For MatrixMultipliable(m, n, p, T): first is (m,n), second is (n,p)
-                        // TODO(ADR-021): Extract actual dimension values from type_args when available
-                        // For now, dimension checking is deferred to future implementation
-                        // when we can extract concrete values from Type::Nat
+                    if constructor == "Matrix" && type_args.len() >= 2 {
+                        // Extract dimensions from Type::NatValue
+                        let rows = match &type_args[0] {
+                            Type::NatValue(n) => *n,
+                            _ => continue, // Skip if not concrete value
+                        };
+                        let cols = match &type_args[1] {
+                            Type::NatValue(n) => *n,
+                            _ => continue, // Skip if not concrete value
+                        };
+
+                        // Bind dimensions based on structure type
+                        if structure.name == "MatrixAddable" {
+                            // Both matrices must have same (m, n)
+                            self.bind_or_check("m", rows, format!("argument {}", arg_idx + 1))?;
+                            self.bind_or_check("n", cols, format!("argument {}", arg_idx + 1))?;
+                        } else if structure.name == "MatrixMultipliable" {
+                            if arg_idx == 0 {
+                                // First matrix: bind m and n
+                                self.bind_or_check("m", rows, "first matrix rows".to_string())?;
+                                self.bind_or_check("n", cols, "first matrix cols".to_string())?;
+                            } else if arg_idx == 1 {
+                                // Second matrix: check rows=n, bind p=cols
+                                self.bind_or_check("n", rows, "second matrix rows".to_string())?;
+                                self.bind_or_check("p", cols, "second matrix cols".to_string())?;
+                            }
+                        } else if structure.name == "SquareMatrix" {
+                            // SquareMatrix(n, T): must be n×n (rows = cols)
+                            if rows != cols {
+                                return Err(format!(
+                                    "{} requires square matrix!\n  Got: {}×{} (non-square)\n  {} only defined for n×n matrices",
+                                    structure.name, rows, cols, structure.name
+                                ));
+                            }
+                            self.bind_or_check("n", rows, "square matrix dimension".to_string())?;
+                        } else {
+                            // Generic Matrix structure: bind m, n from first matrix
+                            if arg_idx == 0 {
+                                self.bind_or_check("m", rows, "matrix rows".to_string())?;
+                                self.bind_or_check("n", cols, "matrix cols".to_string())?;
+                            }
+                        }
                     }
                 }
             }

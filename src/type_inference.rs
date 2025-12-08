@@ -84,9 +84,18 @@ pub enum Type {
     /// Used in: Matrix(m: Nat, n: Nat)
     Nat,
 
+    /// Concrete natural number value (for dimension checking!)
+    /// This is CRITICAL for distinguishing Matrix(2,3) from Matrix(2,2)
+    /// Example: Matrix(2, 3) → Data { args: [NatValue(2), NatValue(3)] }
+    NatValue(usize),
+
     /// String type (for text values)
     /// Used in: Currency(code: String)
     String,
+
+    /// Concrete string value
+    /// Example: Currency("USD") → Data { args: [StringValue("USD")] }
+    StringValue(std::string::String),
 
     /// Boolean type (for logical values)
     Bool,
@@ -172,8 +181,10 @@ impl Substitution {
                 }
             }
             Type::ForAll(v, t) => Type::ForAll(v.clone(), Box::new(self.apply(t))),
-            // Bootstrap types have no substructure
-            Type::Nat | Type::String | Type::Bool => ty.clone(),
+            // Bootstrap types have no substructure (leaf types)
+            Type::Nat | Type::NatValue(_) | Type::String | Type::StringValue(_) | Type::Bool => {
+                ty.clone()
+            }
         }
     }
 
@@ -479,10 +490,12 @@ impl TypeInference {
                 crate::kleis_ast::TypeExpr::Named(name) if name == "Nat" => {
                     // This is a dimension/index parameter - must be constant
                     match arg_expr {
-                        Expression::Const(_s) => {
-                            // For now, store as Type::Nat
-                            // TODO: Store actual value when we have Nat(value) variant
-                            constructor_args.push(Type::Nat);
+                        Expression::Const(s) => {
+                            // Extract actual numeric value
+                            let value = s.parse::<usize>().map_err(|_| {
+                                format!("Constructor parameter {} must be a valid number: {}", i, s)
+                            })?;
+                            constructor_args.push(Type::NatValue(value));
                         }
                         _ => {
                             return Err(format!(
@@ -495,10 +508,9 @@ impl TypeInference {
                 crate::kleis_ast::TypeExpr::Named(name) if name == "String" => {
                     // String parameter - must be constant
                     match arg_expr {
-                        Expression::Const(_s) => {
-                            // For now, store as Type::String
-                            // TODO: Store actual value when we have String(value) variant
-                            constructor_args.push(Type::String);
+                        Expression::Const(s) => {
+                            // Store actual string value
+                            constructor_args.push(Type::StringValue(s.clone()));
                         }
                         _ => {
                             return Err(format!(
@@ -609,7 +621,17 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
     match (t1, t2) {
         // Bootstrap types unify with themselves
         (Type::Nat, Type::Nat) => Ok(Substitution::empty()),
+        (Type::NatValue(n1), Type::NatValue(n2)) if n1 == n2 => Ok(Substitution::empty()),
+        (Type::NatValue(n1), Type::NatValue(n2)) => Err(format!(
+            "Cannot unify different dimensions: {} vs {}",
+            n1, n2
+        )),
         (Type::String, Type::String) => Ok(Substitution::empty()),
+        (Type::StringValue(s1), Type::StringValue(s2)) if s1 == s2 => Ok(Substitution::empty()),
+        (Type::StringValue(s1), Type::StringValue(s2)) => Err(format!(
+            "Cannot unify different strings: {:?} vs {:?}",
+            s1, s2
+        )),
         (Type::Bool, Type::Bool) => Ok(Substitution::empty()),
 
         // Data types: must have same type and constructor, then unify args
@@ -680,7 +702,8 @@ fn occurs(v: &TypeVar, t: &Type) -> bool {
         Type::Var(v2) => v == v2,
         Type::Data { args, .. } => args.iter().any(|arg| occurs(v, arg)),
         Type::ForAll(_, t) => occurs(v, t),
-        Type::Nat | Type::String | Type::Bool => false,
+        // Leaf types (no variables can occur in them)
+        Type::Nat | Type::NatValue(_) | Type::String | Type::StringValue(_) | Type::Bool => false,
     }
 }
 
@@ -699,25 +722,27 @@ impl Type {
 
     /// Create a Vector type (backward compatibility)
     ///
-    /// Note: In the new system, dimension is part of the type.
-    /// For now, we represent it symbolically.
-    pub fn vector(_n: usize) -> Type {
+    /// The dimension is stored as a concrete value, enabling:
+    /// - Vector(3) ≠ Vector(4) (different types!)
+    /// - Dimension checking in operations
+    pub fn vector(n: usize) -> Type {
         Type::Data {
             type_name: "Type".to_string(),
             constructor: "Vector".to_string(),
-            args: vec![Type::Nat], // Placeholder for dimension
+            args: vec![Type::NatValue(n)],
         }
     }
 
     /// Create a Matrix type (backward compatibility)
     ///
-    /// Note: In the new system, dimensions are part of the type.
-    /// For now, we represent them symbolically.
-    pub fn matrix(_m: usize, _n: usize) -> Type {
+    /// Dimensions are stored as concrete values, enabling:
+    /// - Matrix(2,3) ≠ Matrix(2,2) (different types!)
+    /// - Matrix(2,3) × Matrix(3,4) → Matrix(2,4) dimension checking
+    pub fn matrix(m: usize, n: usize) -> Type {
         Type::Data {
             type_name: "Type".to_string(),
             constructor: "Matrix".to_string(),
-            args: vec![Type::Nat, Type::Nat], // Placeholders for dimensions
+            args: vec![Type::NatValue(m), Type::NatValue(n)],
         }
     }
 }
@@ -727,7 +752,9 @@ impl std::fmt::Display for Type {
         match self {
             // Bootstrap types
             Type::Nat => write!(f, "Nat"),
+            Type::NatValue(n) => write!(f, "{}", n),
             Type::String => write!(f, "String"),
+            Type::StringValue(s) => write!(f, "\"{}\"", s),
             Type::Bool => write!(f, "Bool"),
 
             // User-defined data types
@@ -949,7 +976,7 @@ mod tests {
                 assert_eq!(type_name, "Type");
                 assert_eq!(constructor, "Vector");
                 assert_eq!(args.len(), 1);
-                assert_eq!(args[0], Type::Nat);
+                assert_eq!(args[0], Type::NatValue(3));
             }
             _ => panic!("Expected Data type, got {:?}", ty),
         }

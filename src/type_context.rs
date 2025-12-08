@@ -371,7 +371,9 @@ impl TypeContextBuilder {
         match ty {
             // Bootstrap types
             Type::Nat => Some("Nat".to_string()),
+            Type::NatValue(n) => Some(n.to_string()),
             Type::String => Some("String".to_string()),
+            Type::StringValue(s) => Some(format!("\"{}\"", s)),
             Type::Bool => Some("Bool".to_string()),
 
             // User-defined data types
