@@ -1,0 +1,108 @@
+// Kleis Type System - Self-Hosting Type Definitions
+// 
+// **ADR-021: Algebraic Data Types**
+// This file defines the Kleis type system IN KLEIS ITSELF!
+//
+// This is loaded FIRST, before any other stdlib files, because
+// structures and operations reference these types.
+//
+// This is META-CIRCULARITY: The type system that types Kleis
+// is defined in Kleis!
+
+// ============================================
+// Core Type System
+// ============================================
+
+// The main Type data type
+// This replaces the hardcoded Type enum in Rust!
+//
+// Note: This is a data type that defines what types exist.
+// It's used by the type checker itself.
+data Type =
+  Scalar
+  | Vector(n: Nat)
+  | Matrix(m: Nat, n: Nat)
+  | Complex
+  | Set(T: Type)
+  | List(T: Type)
+  | Tensor(dims: List(Nat))
+
+// ============================================
+// Bootstrap Types
+// ============================================
+
+// Boolean type
+data Bool = True | False
+
+// Optional type (Maybe in Haskell)
+data Option(T) =
+  None
+  | Some(value: T)
+
+// Result type (Either in Haskell)
+data Result(T, E) =
+  Ok(value: T)
+  | Err(error: E)
+
+// List type (recursive!)
+data List(T) =
+  Nil
+  | Cons(head: T, tail: List(T))
+
+// ============================================
+// Domain-Specific Types
+// ============================================
+
+// Ordering relation results
+data Ordering = LT | EQ | GT
+
+// Unit type (for functions with no meaningful return value)
+data Unit = Unit
+
+// ============================================
+// Future Extensions (Commented Out)
+// ============================================
+
+// Tuple types (not yet supported)
+// data Pair(A, B) = Pair(first: A, second: B)
+// data Triple(A, B, C) = Triple(A, B, C)
+
+// Tree structures (requires recursive types)
+// data Tree(T) =
+//   | Leaf(value: T)
+//   | Node(left: Tree(T), right: Tree(T))
+
+// Physics types (domain-specific)
+// data Particle = Electron | Proton | Neutron | Photon
+// data Spin = SpinUp | SpinDown
+
+// Currency types (business domain)
+// data Currency = USD | EUR | GBP | JPY | CHF | CAD
+
+// ============================================
+// Implementation Notes
+// ============================================
+
+// **Why This File Exists:**
+// Before ADR-021, types were hardcoded in src/type_inference.rs.
+// Now they're defined here in Kleis, making the system self-hosting!
+//
+// **Loading Order:**
+// 1. This file (types.kleis) - Defines what types exist
+// 2. minimal_prelude.kleis - Defines structures (Arithmetic, Numeric, etc.)
+// 3. matrices.kleis - Defines matrix-specific operations
+//
+// **Self-Hosting Levels:**
+// - Level 1: Parser written in Rust, reads Kleis
+// - Level 2: Types defined in Kleis (THIS FILE!) ← We are here!
+// - Level 3: Type checker written in Kleis
+//
+// **User Extensibility:**
+// Users can now add their own data types without recompiling:
+//
+// ```kleis
+// data MyType = Constructor1 | Constructor2(field: ℝ)
+// ```
+//
+// This is the foundation of a truly extensible type system!
+

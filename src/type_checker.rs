@@ -68,11 +68,10 @@ impl TypeChecker {
 
         // PHASE 1: Load data type definitions (ADR-021)
         // This must happen FIRST so structures can reference these types
-        // TODO: Uncomment when stdlib/types.kleis exists (Step 8)
-        // let types_def = include_str!("../stdlib/types.kleis");
-        // checker
-        //     .load_data_types(types_def)
-        //     .map_err(|e| format!("Failed to load stdlib/types.kleis: {}", e))?;
+        let types_def = include_str!("../stdlib/types.kleis");
+        checker
+            .load_data_types(types_def)
+            .map_err(|e| format!("Failed to load stdlib/types.kleis: {}", e))?;
 
         // PHASE 2: Load structures and operations
         // Load minimal prelude (subset that parser can handle)
@@ -427,6 +426,9 @@ mod tests {
     fn test_with_stdlib_still_works() {
         // Ensure with_stdlib() still works after our changes
         let result = TypeChecker::with_stdlib();
+        if let Err(e) = &result {
+            eprintln!("Error loading stdlib: {}", e);
+        }
         assert!(result.is_ok());
 
         let checker = result.unwrap();
