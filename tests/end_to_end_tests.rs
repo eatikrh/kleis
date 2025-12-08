@@ -2,7 +2,6 @@
 ///!
 ///! These tests verify the complete type checking pipeline works correctly
 ///! from parsing through type inference to result.
-
 use kleis::kleis_parser::parse_kleis;
 use kleis::type_checker::{TypeCheckResult, TypeChecker};
 use kleis::type_inference::Type;
@@ -11,7 +10,7 @@ use kleis::type_inference::Type;
 fn assert_type_checks(latex: &str, expected_type: Type) {
     let expr = parse_kleis(latex).expect(&format!("Failed to parse: {}", latex));
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     match checker.check(&expr) {
         TypeCheckResult::Success(ty) => {
             assert_eq!(ty, expected_type, "Type mismatch for: {}", latex);
@@ -30,13 +29,14 @@ fn assert_type_checks(latex: &str, expected_type: Type) {
 fn assert_type_error(latex: &str, error_substring: &str) {
     let expr = parse_kleis(latex).expect(&format!("Failed to parse: {}", latex));
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     match checker.check(&expr) {
         TypeCheckResult::Error { message, .. } => {
             assert!(
                 message.contains(error_substring),
                 "Expected error to contain '{}', got: {}",
-                error_substring, message
+                error_substring,
+                message
             );
             println!("✓ {} correctly rejected: {}", latex, message);
         }
@@ -71,12 +71,12 @@ fn test_matrix_operations() {
     println!("\n=== Matrix Operations ===");
     // Note: Matrix constructor defaults to 2×2 (known limitation)
     // We're testing the operations work, not the dimension inference
-    
+
     // These would need actual Matrix types to test properly
     // For now, test that operations are recognized
     let expr = parse_kleis("A + B").expect("Parse failed");
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     // With unknown A and B, should infer some type
     match checker.check(&expr) {
         TypeCheckResult::Success(_) | TypeCheckResult::Polymorphic { .. } => {
@@ -94,13 +94,16 @@ fn test_integrals() {
     // Verify integral operations are defined in structures
     // Note: They may not have implementations yet (just structure definitions)
     let checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     // Check if int_bounds is available (it's the one we actually use)
     let int_bounds = checker.types_supporting("int_bounds");
-    
+
     // If no implementations, that's OK - structure exists
     // Just verify we can query for it without error
-    println!("✓ Integral operations queryable (int_bounds implementations: {:?})", int_bounds);
+    println!(
+        "✓ Integral operations queryable (int_bounds implementations: {:?})",
+        int_bounds
+    );
 }
 
 #[test]
@@ -110,7 +113,10 @@ fn test_equations() {
     let checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
     let eq_types = checker.types_supporting("equals");
     assert!(!eq_types.is_empty(), "equals should be available");
-    assert!(eq_types.contains(&"ℝ".to_string()), "equals should work for scalars");
+    assert!(
+        eq_types.contains(&"ℝ".to_string()),
+        "equals should work for scalars"
+    );
     println!("✓ Equation operations available for: {:?}", eq_types);
 }
 
@@ -141,7 +147,7 @@ fn test_variable_inference() {
 fn test_operation_coverage() {
     println!("\n=== Operation Coverage ===");
     let checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
-    
+
     // Verify all major operation categories are available
     let categories = vec![
         ("plus", "Arithmetic"),
@@ -151,10 +157,15 @@ fn test_operation_coverage() {
         ("less_than", "Ordered"),
         ("transpose", "Matrix"),
     ];
-    
+
     for (op, category) in categories {
         let types = checker.types_supporting(op);
-        assert!(!types.is_empty(), "{} operation ({}) not found", op, category);
+        assert!(
+            !types.is_empty(),
+            "{} operation ({}) not found",
+            op,
+            category
+        );
         println!("✓ {} ({}) available for: {:?}", op, category, types);
     }
 }
@@ -162,13 +173,12 @@ fn test_operation_coverage() {
 #[test]
 fn test_type_safety() {
     println!("\n=== Type Safety ===");
-    
+
     // These should type check
     assert_type_checks("1 + 1", Type::Scalar);
     assert_type_checks("x + x", Type::Scalar);
-    
+
     // Variable with constant should infer
     assert_type_checks("a + 1", Type::Scalar);
     assert_type_checks("2 * b", Type::Scalar);
 }
-
