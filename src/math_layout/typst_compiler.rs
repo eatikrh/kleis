@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Datetime};
 use typst::layout::{Frame, FrameItem, Point, Transform};
-use typst::syntax::{FileId, Source, Span, VirtualPath};
+use typst::syntax::{FileId, Source, VirtualPath};
 use typst::text::{Font, FontBook};
 use typst::utils::LazyHash;
 use typst::{Library, World};
@@ -244,7 +244,7 @@ fn extract_semantic_argument_boxes(
 /// Fix matrix cell positions by re-sorting them spatially if they're out of reading order
 fn fix_matrix_cell_order(
     boxes: &mut Vec<ArgumentBoundingBox>,
-    op_name: &str,
+    _op_name: &str,
     num_args: usize,
 ) -> Result<(), String> {
     // Get top-level matrix cells (node_id like "0.0", "0.1", etc.)
