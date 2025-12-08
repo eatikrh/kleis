@@ -41,8 +41,16 @@ fn test_ordering_works_for_scalars() {
 
         match checker.check(&expr) {
             TypeCheckResult::Success(ty) => {
-                // Should infer Bool (represented as Scalar in current system)
-                assert!(ty == Type::scalar(), "Expected Scalar/Bool, got {:?}", ty);
+                // Should infer Bool (now properly represented as Type::Data)
+                let is_bool = match &ty {
+                    Type::Data { type_name, .. } => type_name == "Bool",
+                    _ => false,
+                };
+                assert!(
+                    ty == Type::scalar() || is_bool,
+                    "Expected Scalar or Bool, got {:?}",
+                    ty
+                );
                 println!("✓ {} on scalars works: {:?}", op_name, ty);
             }
             TypeCheckResult::Error { message, .. } => {

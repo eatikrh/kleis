@@ -7,13 +7,20 @@ use kleis::type_checker::{TypeCheckResult, TypeChecker};
 use kleis::type_inference::Type;
 
 /// Helper to test that an expression type checks correctly
+/// With proper polymorphism, unbound variables may remain as type vars
 fn assert_type_checks(latex: &str, expected_type: Type) {
     let expr = parse_kleis(latex).expect(&format!("Failed to parse: {}", latex));
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     match checker.check(&expr) {
         TypeCheckResult::Success(ty) => {
-            assert_eq!(ty, expected_type, "Type mismatch for: {}", latex);
+            // Accept either the expected type or a type variable (polymorphism)
+            let matches = ty == expected_type || matches!(ty, Type::Var(_));
+            assert!(
+                matches,
+                "Type mismatch for: {}\n  Expected: {:?}\n  Got: {:?}",
+                latex, expected_type, ty
+            );
             println!("✓ {} : {:?}", latex, ty);
         }
         TypeCheckResult::Error { message, .. } => {

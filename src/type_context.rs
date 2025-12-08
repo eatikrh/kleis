@@ -489,7 +489,12 @@ impl TypeContextBuilder {
 
     /// Infer the type of an operation applied to given argument types
     /// This is the ADR-016 compliant way: query structures, don't hardcode!
-    pub fn infer_operation_type(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
+    pub fn infer_operation_type(
+        &self,
+        op_name: &str,
+        arg_types: &[Type],
+        data_registry: &crate::data_registry::DataTypeRegistry,
+    ) -> Result<Type, String> {
         // Query registry for operation
         if let Some(structure_name) = self.registry.structure_for_operation(op_name) {
             // Found the structure that defines this operation
@@ -521,7 +526,8 @@ impl TypeContextBuilder {
                         .get_structure(&structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    SignatureInterpreter::new().interpret_signature(structure, op_name, arg_types)
+                    SignatureInterpreter::new(data_registry.clone())
+                        .interpret_signature(structure, op_name, arg_types)
                 }
 
                 // ALL other operations use SignatureInterpreter
@@ -532,17 +538,17 @@ impl TypeContextBuilder {
                         .get_structure(&structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    let mut interpreter = SignatureInterpreter::new();
+                    let mut interpreter = SignatureInterpreter::new(data_registry.clone());
                     interpreter
                         .interpret_signature(structure, op_name, arg_types)
-                        .or_else(|_| {
-                            // If interpreter fails, give helpful error
-                            Err(format!(
-                                "Operation '{}' found in structure '{}' but type inference failed.\n\
+                        .map_err(|e| {
+                            // Show actual error for debugging
+                            format!(
+                                "Operation '{}' found in structure '{}' but type inference failed: {}\n\
                                  This might mean the operation signature is complex or the structure\n\
                                  definition needs more information.",
-                                op_name, structure_name
-                            ))
+                                op_name, structure_name, e
+                            )
                         })
                 }
             }
