@@ -18,6 +18,9 @@ pub enum TopLevel {
     /// Implements block: implements StructureName(Type) { ... }
     ImplementsDef(ImplementsDef),
 
+    /// Data type definition: data Name = Variant1 | Variant2 | ...
+    DataDef(DataDef),
+
     /// Operation declaration: operation name : Type (top-level utility)
     OperationDecl(OperationDecl),
 
@@ -82,6 +85,57 @@ pub struct FunctionDef {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeAlias {
     pub name: String,
+    pub type_expr: TypeExpr,
+}
+
+/// Data type definition: data Name(T, U) = Variant1 | Variant2(T) | ...
+///
+/// Algebraic data types (ADR-021) for user-defined types.
+/// Examples:
+///   data Bool = True | False
+///   data Option(T) = None | Some(T)
+///   data Type = Scalar | Matrix(m: Nat, n: Nat)
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataDef {
+    /// Name of the data type (e.g., "Bool", "Option", "Type")
+    pub name: String,
+
+    /// Type parameters (e.g., T in Option(T), m and n in Matrix(m,n))
+    pub type_params: Vec<TypeParam>,
+
+    /// Data constructors/variants (e.g., True | False, None | Some(T))
+    pub variants: Vec<DataVariant>,
+}
+
+/// Data constructor variant
+///
+/// A single variant of an algebraic data type.
+/// Examples:
+///   True (no fields)
+///   Some(T) (one field)
+///   Matrix(m: Nat, n: Nat) (two named fields)
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataVariant {
+    /// Constructor name (e.g., "True", "Some", "Matrix")
+    pub name: String,
+
+    /// Constructor fields/arguments
+    pub fields: Vec<DataField>,
+}
+
+/// Field in a data constructor
+///
+/// Can be named or positional.
+/// Examples:
+///   T (positional field of type T)
+///   value: T (named field)
+///   m: Nat (named field with concrete type)
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataField {
+    /// Optional field name (None for positional fields)
+    pub name: Option<String>,
+
+    /// Type of the field
     pub type_expr: TypeExpr,
 }
 
@@ -224,6 +278,20 @@ impl Program {
             .filter_map(|item| {
                 if let TopLevel::ImplementsDef(impl_def) = item {
                     Some(impl_def)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Get all data type definitions
+    pub fn data_types(&self) -> Vec<&DataDef> {
+        self.items
+            .iter()
+            .filter_map(|item| {
+                if let TopLevel::DataDef(data_def) = item {
+                    Some(data_def)
                 } else {
                     None
                 }
