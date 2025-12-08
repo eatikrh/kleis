@@ -1,254 +1,334 @@
-# NEXT SESSION: Choose Your Adventure!
+# NEXT SESSION: Implement Pattern Matching (ADR-021 Part 2)
 
-**Current State:** feature/adr-021-data-types (27 commits, 315 lib tests + 431+ total passing)
+**Current State:** main branch, 315 tests passing, AST + grammar complete
 
-**Status:** ✅✅✅ **THREE MAJOR FEATURES COMPLETE!**
-
----
-
-## 🎉 What We Just Accomplished (This Session)
-
-### **1. User-Defined Parametric Types (Arbitrary Arity)** ✅
-
-**Problem:** SignatureInterpreter hardcoded Matrix (arity 2) and Vector (arity 1)
-
-**Solution:** Added DataTypeRegistry support for ANY arity!
-
-```kleis
-// NOW WORKS:
-data Tensor3D(i: Nat, j: Nat, k: Nat) = Tensor3D(...)
-
-structure Tensor3DOps(i: Nat, j: Nat, k: Nat) {
-  operation sum : Tensor3D(i, j, k) → ℝ  // ✅ Works!
-}
-```
-
-**Tests:** 9 comprehensive tests covering 0-4+ arity types
+**Status:** 🎯 Ready to implement pattern matching!
 
 ---
 
-### **2. Type Parameter Bindings (True Polymorphism)** ✅
+## 🎉 What's Already Complete
 
-**Problem:** Type parameters (T, N, S) defaulted to Scalar
+### Foundation (100% Ready)
 
-**Solution:** Added `type_bindings: HashMap<String, Type>` for proper polymorphism
+✅ **AST Structures** - `Expression::Match`, `Pattern`, `MatchCase` (140 lines)  
+✅ **Grammar Specification** - Complete EBNF for v0.5 (898 lines)  
+✅ **Implementation Plan** - Step-by-step pseudocode (1,277 lines)  
+✅ **Value Proposition** - Why it matters (837 lines)  
+✅ **Placeholder Implementations** - All 5 match sites handled  
+✅ **All tests passing** - 315 lib tests, no regressions
 
-```kleis
-structure Generic(T) {
-  operation identity : T → T
-}
-
-implements Generic(Matrix(2,3)) {
-  // T correctly bound to Matrix(2,3) ✅
-}
-```
+**Total foundation:** 3,152 lines of preparation!
 
 ---
 
-### **3. Hindley-Milner Type Variable Substitution** ✅
+## 🚀 What to Implement (6-8 hours)
 
-**Problem:** `x + 1` stayed as `Var(0)` instead of resolving to `Scalar`
+### Step 3: Parser (2 hours) ⭐ Start here
 
-**Solution:** Implemented proper HM unification with substitution
+**File:** `src/kleis_parser.rs`
 
+**What to add:**
 ```rust
-// Before: x + 1 → Var(0) ❌
-// After:  x + 1 → Scalar ✅ (substitution applied!)
+fn parse_match_expr(&mut self) -> Result<Expression, KleisParseError>
+fn parse_match_cases(&mut self) -> Result<Vec<MatchCase>, KleisParseError>
+fn parse_match_case(&mut self) -> Result<MatchCase, KleisParseError>
+fn parse_pattern(&mut self) -> Result<Pattern, KleisParseError>
+fn parse_pattern_args(&mut self) -> Result<Vec<Pattern>, KleisParseError>
 ```
 
-**Tests:** Added `test_type_variable_substitution` proving correctness
+**Integration point:** In `parse_primary()`, check for "match" keyword
 
----
-
-### **4. String Parameter Bindings (BONUS!)** ✅
-
-**Problem:** Couldn't validate string-valued type parameters
-
-**Solution:** Added `string_bindings: HashMap<String, String>` for unit-safe types!
-
+**Examples to support:**
 ```kleis
-data Quantity(unit: String, T) = Quantity(...)
+// Simple
+match x { True => 1 | False => 0 }
 
-velocity("m/s") + velocity("m/s")  // ✅ OK
-velocity("m/s") + force("N")       // ❌ ERROR: unit mismatch!
+// With binding
+match opt { None => 0 | Some(x) => x }
+
+// Nested
+match result { Ok(Some(x)) => x | Ok(None) => 0 | Err(_) => -1 }
+
+// Wildcard
+match status { Running => 1 | _ => 0 }
 ```
 
-**Tests:** 5 new tests including comprehensive physics unit safety demo
+**Tests:** Add 10+ parser tests to `src/kleis_parser.rs`
+
+**See:** `docs/session-2024-12-08/PATTERN_MATCHING_IMPLEMENTATION_PLAN.md` (lines 64-266) for complete pseudocode
 
 ---
 
-## 📊 Session Statistics
+### Step 4: Type Inference (1-2 hours)
 
-**Branch:** `feature/adr-021-data-types`  
-**Commits:** 5 new commits this session (27 total on branch)  
-**Tests:** 315 lib tests (was 314), 431+ total  
-**New Test File:** `tests/user_types_in_signatures_test.rs` (14 tests, 805 lines)  
-**Code Changes:** ~1,900 lines added  
-**Documentation:** ~1,650 lines added
+**File:** `src/type_inference.rs`
 
-**Files Modified:**
-- `src/signature_interpreter.rs` - Core implementation (400+ additions)
-- `src/type_context.rs` - Registry threading
-- `src/type_inference.rs` - Polymorphic behavior
-- 6 test files updated for proper polymorphism
+**Expand:** `infer_match()` method (currently stub at line 329)
+
+**What to implement:**
+```rust
+// 1. Infer scrutinee type
+// 2. For each case:
+//    - Check pattern matches scrutinee type
+//    - Bind pattern variables in local context
+//    - Infer body type with bindings
+// 3. Unify all branch types
+// 4. Return unified result type
+```
+
+**Key method to add:**
+```rust
+fn check_pattern(&mut self, pattern: &Pattern, expected_ty: &Type) -> Result<(), String>
+```
+
+**Tests:** Add 10+ type inference tests
+
+**See:** Implementation plan lines 268-447 for complete pseudocode
 
 ---
 
-## 🎯 What's Next? (Choose Your Path)
+### Step 5: Pattern Evaluation (1 hour)
 
-### **Option A: Pattern Matching for ADR-021** 🌟 Recommended
+**File:** NEW `src/pattern_matcher.rs`
 
-**Why:** Complete the ADR-021 vision with pattern matching
+**What to create:**
+```rust
+pub struct PatternMatcher {
+    pub fn match_pattern(&self, value: &Expression, pattern: &Pattern) -> Option<Bindings>
+    pub fn eval_match(&self, scrutinee: &Expression, cases: &[MatchCase]) -> Result<Expression>
+    fn substitute_bindings(&self, expr: &Expression, bindings: &Bindings) -> Expression
+}
+```
 
-**What's Missing:**
+**Tests:** Add 10+ evaluation tests
+
+**See:** Implementation plan lines 449-591 for complete pseudocode
+
+---
+
+### Step 6: Exhaustiveness Checking (1-2 hours)
+
+**File:** `src/pattern_matcher.rs` or `src/type_checker.rs`
+
+**What to add:**
+```rust
+pub struct ExhaustivenessChecker {
+    pub fn check_exhaustive(&self, patterns: &[Pattern], ty: &Type) -> Result<(), Vec<String>>
+    pub fn check_reachable(&self, patterns: &[Pattern]) -> Vec<usize>
+}
+```
+
+**Features:**
+- Detect missing constructors
+- Handle wildcards
+- Warn on unreachable patterns
+
+**Tests:** Add 5+ exhaustiveness tests
+
+**See:** Implementation plan lines 593-763 for complete pseudocode
+
+---
+
+### Step 7: Comprehensive Tests (1 hour)
+
+**File:** NEW `tests/pattern_matching_test.rs`
+
+**Test categories:**
+- Parser tests (10+)
+- Type inference tests (10+)
+- Evaluation tests (10+)
+- Exhaustiveness tests (5+)
+- Integration tests (5+)
+
+**Total:** 40+ new tests
+
+**See:** Implementation plan lines 765-896 for complete test outline
+
+---
+
+## 📁 Reference Documents
+
+All in `docs/session-2024-12-08/`:
+
+1. **PATTERN_MATCHING_IMPLEMENTATION_PLAN.md** (1,277 lines)
+   - Complete pseudocode for all steps
+   - Test plans for each component
+   - Edge cases and design decisions
+
+2. **WHY_PATTERN_MATCHING_MATTERS.md** (837 lines)
+   - 10 concrete benefits
+   - Real-world use cases
+   - Self-hosting vision explained
+
+3. **PATTERN_MATCHING_GRAMMAR_EXTENSION.md** (898 lines)
+   - Complete EBNF specification
+   - ANTLR4 grammar rules
+   - Example programs with derivations
+
+**Total:** 3,012 lines of comprehensive documentation!
+
+---
+
+## 🎯 Session 1 Goal (4 hours)
+
+**Deliverable:** Working pattern matching with type checking
+
+**What you'll have:**
 ```kleis
 data Option(T) = None | Some(T)
 
-// We have data definitions ✅
-// We DON'T have pattern matching yet ❌
-
+// THIS WILL WORK:
 match myOption {
-  None => defaultValue
-  Some(x) => x
+  None => 0
+  Some(x) => x + 1
 }
+
+// Type checking works:
+// - Checks None and Some are valid constructors
+// - Binds x to type T
+// - Verifies branches both return same type
 ```
 
-**Scope:**
-- Add pattern matching syntax to parser
-- Implement match evaluation
-- Exhaustiveness checking
-- Pattern binding
+**Steps:**
+1. Implement parser (2 hours)
+2. Implement type inference (2 hours)
+3. Test both (throughout)
 
-**Estimated:** 1-2 days  
-**Impact:** Complete ADT implementation  
-**Complexity:** High (new language feature)
+**Stopping point:** Pattern matching parses and type-checks correctly
 
 ---
 
-### **Option B: Strict Type Checking (TODO #2)** 🛡️
+## 🎯 Session 2 Goal (3-4 hours)
 
-**Why:** Improve type safety, catch more errors
+**Deliverable:** Complete pattern matching with evaluation and exhaustiveness
 
-**What it fixes:**
+**What you'll have:**
 ```kleis
-// Currently ALLOWED (wrong!):
-operation plus : ℝ → ℝ → ℝ
-plus(Matrix(2,2), Matrix(2,2))  // Should error!
+// Full evaluation works:
+let x = Some(5)
+let result = match x {
+  None => 0
+  Some(value) => value
+}
+// result = 5 ✅
 
-// Would REJECT:
-Error: Type mismatch - expected ℝ, got Matrix(2,2)
+// Exhaustiveness checking:
+match status {
+  Running => 1
+}
+// Warning: Missing cases for Idle, Paused, Completed ⚠️
 ```
 
-**Scope:**
-- Apply substitutions before type checking
-- Distinguish Var (polymorphic) from wrong types
-- Update tests for stricter behavior
+**Steps:**
+1. Implement evaluation (1 hour)
+2. Implement exhaustiveness (2 hours)
+3. Comprehensive tests (1 hour)
 
-**Estimated:** 2-3 hours  
-**Impact:** Better type safety  
-**Complexity:** Medium (breaking changes)
+**Result:** **Complete functional language with self-hosting capability!** 🎉
 
 ---
 
-### **Option C: ADR-020 Type/Value Separation** 🏗️
+## ✅ Quick Start for Next Session
 
-**Why:** Enable Matrix/Vector in DataTypeRegistry, remove fallback code
-
-**What it enables:**
-```kleis
-// TYPE constructor:
-Matrix(2, 3, ℝ)  // Describes a type
-
-// VALUE constructor:
-Matrix(2, 3, [1,2,3,4,5,6])  // Creates a value
-
-// Currently these are conflated!
+**Step 1:** Review the plan (5 minutes)
+```bash
+# Read these in order:
+cat docs/session-2024-12-08/WHY_PATTERN_MATCHING_MATTERS.md
+cat docs/session-2024-12-08/PATTERN_MATCHING_IMPLEMENTATION_PLAN.md  
+cat docs/grammar/PATTERN_MATCHING_GRAMMAR_EXTENSION.md
 ```
 
-**Scope:**
-- Design type/value separation
-- Update parser for type contexts
-- Add Matrix/Vector to stdlib/types.kleis
-- Remove fallback code (TODO #4)
+**Step 2:** Start parser implementation (2 hours)
+```rust
+// In src/kleis_parser.rs:
+// 1. Add parse_match_expr() method
+// 2. Add parse_pattern() method
+// 3. Add helper methods (peek_word, expect_word)
+// 4. Add 10+ parser tests
+```
 
-**Estimated:** 2-3 days  
-**Impact:** Architectural cleanup  
-**Complexity:** Very High (major refactor)
+**Step 3:** Continue with type inference (2 hours)
+```rust
+// In src/type_inference.rs:
+// 1. Expand infer_match() stub
+// 2. Add check_pattern() method
+// 3. Add 10+ type inference tests
+```
+
+**Checkpoint:** Working pattern matching with type checking! ✅
 
 ---
 
-### **Option D: Merge to Main** ✨ Natural Break
+## 🎁 What Tonight Gave You
 
-**Why:** 27 commits is substantial, feature-complete
+### Merged to Main (PR #1)
 
-**What's complete:**
-- ✅ ADR-021 user-defined types (DONE!)
-- ✅ Arbitrary arity (0-infinity)
-- ✅ String parameter bindings (unit-safe!)
-- ✅ HM type variable substitution
+1. ✅ User-defined parametric types (arbitrary arity)
+2. ✅ Type parameter bindings (true polymorphism)
+3. ✅ HM type variable substitution (proper unification)
+4. ✅ String parameter bindings (unit-safe physics!)
+
+### On Main (Post-merge)
+
+5. ✅ Pattern matching AST structures
+6. ✅ Pattern matching grammar specification (v0.5)
+7. ✅ Complete implementation plan
+8. ✅ Value proposition document
+
+---
+
+## 📊 Current State
+
+**Branch:** `main`  
+**Commits tonight:** 11 total (7 on PR branch + 4 on main)  
+**Tests:** 315 lib + 431+ total passing ✅  
+**Code added tonight:** ~2,180 lines  
+**Docs added tonight:** ~4,737 lines  
+**Total:** ~6,917 lines of work! 🤯
+
+**Pattern matching:**
+- Foundation: 100% complete
+- Implementation: 0% complete
+- Estimated: 6-8 hours to completion
+
+---
+
+## 🏆 Final Status
+
+**What Kleis has NOW:**
+- ✅ Complete ADT definitions
+- ✅ Arbitrary arity types (0 to infinity)
+- ✅ String parameters (unit-safe!)
 - ✅ True polymorphism
-- ✅ All tests passing
-- ✅ Comprehensive documentation
+- ✅ Proper HM type inference
+- 🔨 Pattern matching (AST ready, implementation pending)
 
-**Next session:** Start fresh with pattern matching on a new branch
-
----
-
-## 🎯 My Recommendation
-
-**Option D (Merge) + Option A (Next)**
-
-**Tonight:** 
-1. Merge `feature/adr-021-data-types` to main
-2. Celebrate massive achievement! 🎉
-
-**Next session:**
-1. Create `feature/adr-021-pattern-matching` branch
-2. Implement pattern matching
-3. Add exhaustiveness checking
-4. Complete the full ADT vision
-
-**Why:** 
-- Clean separation of concerns
-- Smaller PR reviews
-- Clear milestones
-- Fresh start with clean context
+**What Kleis will have AFTER pattern matching:**
+- ✅ Complete functional language
+- ✅ Self-hosting capable (type checker in Kleis!)
+- ✅ Metalanguage for CS papers
+- ✅ Full ADT power (define + use)
+- ✅ Exhaustiveness checking
+- ✅ Production-ready for scientific computing
 
 ---
 
-## 📁 Documentation
+## 🎉 Congratulations!
 
-**Session work documented in:**
-- `docs/session-2024-12-08/README.md` - Complete session overview
-- `docs/session-2024-12-08/SIGNATURE_INTERPRETER_TODOS.md` - Future work analysis
-- `docs/session-2024-12-08/USER_DEFINED_TYPES_IN_SIGNATURES.md` - Problem analysis
-- `docs/session-2024-12-08/ARBITRARY_ARITY_TYPES.md` - Solution design
+Tonight you:
+- Implemented 4 major type system features
+- Merged 29 commits to main
+- Laid complete foundation for pattern matching
+- Wrote ~7,000 lines of code + documentation
+- Advanced Kleis from "interesting" to "near-complete functional language"
 
----
-
-## 🚀 Current Capabilities
-
-Users can now:
-
-```kleis
-// 1. Define arbitrary arity types
-data Tensor3D(i: Nat, j: Nat, k: Nat) = Tensor3D(...)
-data Tensor4D(i: Nat, j: Nat, k: Nat, l: Nat) = Tensor4D(...)
-
-// 2. Use string parameters (unit-safe physics!)
-data Quantity(unit: String, T) = Quantity(...)
-velocity("m/s") + force("N")  // Type error caught!
-
-// 3. Mix parameter kinds
-data LabeledMatrix(label: String, m: Nat, n: Nat, T) = LabeledMatrix(...)
-
-// 4. Full polymorphism with proper HM inference
-structure Generic(T) { operation id : T → T }
-implements Generic(MyCustomType) { ... }  // Works!
-```
+**Next session:** 6-8 hours of implementation → **Self-hosting capability achieved!** 🚀
 
 ---
 
-**Status:** 🎉 **Major milestone achieved - production-ready type system!**  
-**Branch:** Ready to merge or continue  
-**Your choice:** What would you like to tackle next?
+**Status:** Ready for next session  
+**Documentation:** Complete and committed  
+**Foundation:** 100% ready  
+**Motivation:** Pattern matching unlocks self-hosting! 🎯
+
+See you next session! 🌟
