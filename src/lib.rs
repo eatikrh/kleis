@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod data_registry;
 pub mod kleis_ast;
 pub mod kleis_parser;
 pub mod math_layout;
