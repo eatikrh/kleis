@@ -1236,6 +1236,16 @@ fn render_expression_internal(
             }
             result
         }
+
+        Expression::Match { .. } => {
+            // TODO: Implement pattern matching rendering
+            match target {
+                RenderTarget::Unicode => "⟨match⟩".to_string(),
+                RenderTarget::LaTeX => r"\text{match}".to_string(),
+                RenderTarget::HTML => r#"<span class="match-expr">match</span>"#.to_string(),
+                RenderTarget::Typst => "\\text{match}".to_string(),
+            }
+        }
     }
 }
 

@@ -69,6 +69,12 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
         }
 
         Expression::Operation { name, args } => operation_to_typst(name, args, ctx),
+
+        Expression::Match { .. } => {
+            // TODO: Implement pattern matching rendering
+            // For now, return placeholder text
+            "\\text{match expression}".to_string()
+        }
     }
 }
 

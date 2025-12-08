@@ -323,7 +323,46 @@ impl TypeInference {
             Expression::Operation { name, args } => {
                 self.infer_operation(name, args, context_builder)
             }
+
+            // Pattern matching: infer scrutinee and all branches
+            Expression::Match { scrutinee, cases } => {
+                self.infer_match(scrutinee, cases, context_builder)
+            }
         }
+    }
+
+    /// Infer type of a pattern matching expression
+    ///
+    /// Pattern matching type inference (ADR-021):
+    /// 1. Infer type of scrutinee
+    /// 2. For each case, check pattern matches scrutinee type
+    /// 3. Infer body type in context extended with pattern bindings
+    /// 4. Unify all branch types (all must have same result type)
+    ///
+    /// Example:
+    ///   match myOption {
+    ///     None => 0        // Branch type: Scalar
+    ///     Some(x) => x     // Branch type: Scalar (x bound to Scalar)
+    ///   }
+    ///   Result type: Scalar
+    fn infer_match(
+        &mut self,
+        scrutinee: &Expression,
+        cases: &[crate::ast::MatchCase],
+        context_builder: Option<&crate::type_context::TypeContextBuilder>,
+    ) -> Result<Type, String> {
+        // TODO: Implement full pattern matching type inference
+        // For now, return fresh type variable
+        
+        // Step 1: Infer scrutinee type
+        let _scrutinee_ty = self.infer(scrutinee, context_builder)?;
+        
+        // Step 2: Infer all branch types (would check patterns and bind variables)
+        // Step 3: Unify all branch types
+        // Step 4: Check exhaustiveness
+        
+        // For now, return a type variable
+        Ok(self.context.fresh_var())
     }
 
     /// Infer type of an operation

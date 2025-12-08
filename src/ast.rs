@@ -24,6 +24,39 @@ pub enum Expression {
     /// id: unique identifier for this placeholder
     /// hint: user-friendly description of what should go here (e.g., "numerator", "exponent")
     Placeholder { id: usize, hint: String },
+
+    /// Pattern matching expression (ADR-021)
+    /// Example: match myOption { None => 0 | Some(x) => x }
+    Match {
+        scrutinee: Box<Expression>,
+        cases: Vec<MatchCase>,
+    },
+}
+
+/// A single case in a match expression
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct MatchCase {
+    pub pattern: Pattern,
+    pub body: Expression,
+}
+
+/// Pattern for matching against data constructors
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum Pattern {
+    /// Wildcard pattern: _
+    Wildcard,
+
+    /// Variable binding: x
+    Variable(String),
+
+    /// Constructor pattern: Some(x), None, True
+    Constructor {
+        name: String,
+        args: Vec<Pattern>,
+    },
+
+    /// Constant pattern: 0, 1, "hello"
+    Constant(String),
 }
 
 impl Expression {
@@ -53,6 +86,14 @@ impl Expression {
         }
     }
 
+    /// Create a match expression
+    pub fn match_expr(scrutinee: Expression, cases: Vec<MatchCase>) -> Self {
+        Expression::Match {
+            scrutinee: Box::new(scrutinee),
+            cases,
+        }
+    }
+
     /// Traverse the expression tree to find all placeholders
     pub fn find_placeholders(&self) -> Vec<(usize, String)> {
         let mut placeholders = Vec::new();
@@ -68,6 +109,12 @@ impl Expression {
             Expression::Operation { args, .. } => {
                 for arg in args {
                     arg.collect_placeholders(acc);
+                }
+            }
+            Expression::Match { scrutinee, cases } => {
+                scrutinee.collect_placeholders(acc);
+                for case in cases {
+                    case.body.collect_placeholders(acc);
                 }
             }
             _ => {}
@@ -92,5 +139,37 @@ impl Expression {
             .map(|(id, _)| *id)
             .filter(|id| *id < current_id)
             .max()
+    }
+}
+
+impl MatchCase {
+    /// Create a match case
+    pub fn new(pattern: Pattern, body: Expression) -> Self {
+        MatchCase { pattern, body }
+    }
+}
+
+impl Pattern {
+    /// Create a wildcard pattern
+    pub fn wildcard() -> Self {
+        Pattern::Wildcard
+    }
+
+    /// Create a variable pattern
+    pub fn variable(name: impl Into<String>) -> Self {
+        Pattern::Variable(name.into())
+    }
+
+    /// Create a constructor pattern
+    pub fn constructor(name: impl Into<String>, args: Vec<Pattern>) -> Self {
+        Pattern::Constructor {
+            name: name.into(),
+            args,
+        }
+    }
+
+    /// Create a constant pattern
+    pub fn constant(value: impl Into<String>) -> Self {
+        Pattern::Constant(value.into())
     }
 }
