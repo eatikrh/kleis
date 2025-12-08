@@ -46,7 +46,9 @@
 //! ```
 
 use crate::ast::{Expression, MatchCase, Pattern};
-use std::collections::HashMap;
+use crate::data_registry::DataTypeRegistry;
+use crate::type_inference::Type;
+use std::collections::{HashMap, HashSet};
 
 /// Pattern matcher for evaluating pattern matching expressions
 ///
@@ -253,6 +255,196 @@ impl PatternMatcher {
 impl Default for PatternMatcher {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Exhaustiveness checker for pattern matching
+///
+/// Checks if patterns cover all possible cases for a data type and
+/// detects unreachable patterns (patterns that can never match because
+/// earlier patterns are more general).
+///
+/// ## Examples
+///
+/// ```ignore
+/// // Exhaustive match - all Bool constructors covered
+/// match x { True => 1 | False => 0 }
+/// // ✅ OK
+///
+/// // Non-exhaustive - False missing
+/// match x { True => 1 }
+/// // ⚠️ Warning: Missing case: False
+///
+/// // Unreachable pattern - wildcard makes False unreachable
+/// match x { True => 1 | _ => 0 | False => 2 }
+/// //                              ^^^^^^^^ unreachable!
+/// ```
+pub struct ExhaustivenessChecker {
+    data_registry: DataTypeRegistry,
+}
+
+impl ExhaustivenessChecker {
+    /// Create a new exhaustiveness checker with the given data registry
+    pub fn new(data_registry: DataTypeRegistry) -> Self {
+        ExhaustivenessChecker { data_registry }
+    }
+
+    /// Check if patterns are exhaustive for a given type
+    ///
+    /// Returns Ok(()) if exhaustive, Err(missing_constructors) if not.
+    ///
+    /// A match is exhaustive if:
+    /// - All constructors of the data type are covered, OR
+    /// - There's a wildcard or variable pattern (catches all)
+    ///
+    /// ## Example
+    ///
+    /// ```ignore
+    /// // Bool has constructors: True, False
+    /// let patterns = vec![
+    ///     Pattern::Constructor { name: "True".to_string(), args: vec![] },
+    ///     Pattern::Constructor { name: "False".to_string(), args: vec![] },
+    /// ];
+    ///
+    /// let result = checker.check_exhaustive(&patterns, &bool_type);
+    /// assert!(result.is_ok()); // All cases covered
+    /// ```
+    pub fn check_exhaustive(
+        &self,
+        patterns: &[Pattern],
+        scrutinee_ty: &Type,
+    ) -> Result<(), Vec<String>> {
+        match scrutinee_ty {
+            Type::Data { type_name, .. } => {
+                // Get all constructors for this type
+                if let Some(data_def) = self.data_registry.get_type(type_name) {
+                    let all_constructors: HashSet<_> =
+                        data_def.variants.iter().map(|v| &v.name).collect();
+
+                    // Get covered constructors from patterns
+                    let mut covered = HashSet::new();
+                    let mut has_wildcard = false;
+
+                    for pattern in patterns {
+                        match pattern {
+                            Pattern::Wildcard | Pattern::Variable(_) => {
+                                // Wildcard/variable catches everything
+                                has_wildcard = true;
+                            }
+                            Pattern::Constructor { name, .. } => {
+                                covered.insert(name);
+                            }
+                            Pattern::Constant(_) => {
+                                // Constants don't contribute to constructor coverage
+                            }
+                        }
+                    }
+
+                    // If wildcard exists, automatically exhaustive
+                    if has_wildcard {
+                        return Ok(());
+                    }
+
+                    // Check if all constructors are covered
+                    let missing: Vec<_> = all_constructors
+                        .difference(&covered)
+                        .map(|s| s.to_string())
+                        .collect();
+
+                    if missing.is_empty() {
+                        Ok(())
+                    } else {
+                        Err(missing)
+                    }
+                } else {
+                    // Unknown type - can't check exhaustiveness
+                    Ok(())
+                }
+            }
+
+            // Other types (Scalar, Var, etc.) - can't enumerate cases
+            _ => Ok(()),
+        }
+    }
+
+    /// Check for unreachable patterns
+    ///
+    /// Returns indices of patterns that can never match because they're
+    /// subsumed by earlier patterns.
+    ///
+    /// A pattern is unreachable if an earlier pattern always matches when
+    /// this pattern would match.
+    ///
+    /// ## Example
+    ///
+    /// ```ignore
+    /// let patterns = vec![
+    ///     Pattern::Constructor { name: "True".to_string(), args: vec![] },
+    ///     Pattern::Wildcard,  // Catches everything else
+    ///     Pattern::Constructor { name: "False".to_string(), args: vec![] },  // UNREACHABLE!
+    /// ];
+    ///
+    /// let unreachable = checker.check_reachable(&patterns);
+    /// assert_eq!(unreachable, vec![2]); // Pattern at index 2 is unreachable
+    /// ```
+    pub fn check_reachable(&self, patterns: &[Pattern]) -> Vec<usize> {
+        let mut unreachable = Vec::new();
+
+        for (i, pattern) in patterns.iter().enumerate() {
+            // Check if this pattern is shadowed by earlier patterns
+            if i > 0 && self.is_subsumed(pattern, &patterns[..i]) {
+                unreachable.push(i);
+            }
+        }
+
+        unreachable
+    }
+
+    /// Check if a pattern is subsumed by any earlier pattern
+    fn is_subsumed(&self, pattern: &Pattern, earlier: &[Pattern]) -> bool {
+        for earlier_pattern in earlier {
+            if self.pattern_subsumes(earlier_pattern, pattern) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if pattern1 subsumes pattern2
+    ///
+    /// Pattern p1 subsumes p2 if whenever p2 matches, p1 also matches.
+    /// This makes p2 unreachable if p1 comes before it.
+    ///
+    /// Examples:
+    /// - Wildcard subsumes everything
+    /// - Variable subsumes everything
+    /// - Some(x) subsumes Some(5)
+    /// - Some(_) subsumes Some(x)
+    fn pattern_subsumes(&self, p1: &Pattern, p2: &Pattern) -> bool {
+        match (p1, p2) {
+            // Wildcard/variable subsumes everything
+            (Pattern::Wildcard, _) => true,
+            (Pattern::Variable(_), _) => true,
+
+            // Same constructor - check if sub-patterns are subsumed
+            (
+                Pattern::Constructor { name: n1, args: a1 },
+                Pattern::Constructor { name: n2, args: a2 },
+            ) if n1 == n2 => {
+                // All sub-patterns must be subsumed
+                if a1.len() != a2.len() {
+                    return false;
+                }
+                a1.iter()
+                    .zip(a2)
+                    .all(|(p1, p2)| self.pattern_subsumes(p1, p2))
+            }
+
+            // Same constant
+            (Pattern::Constant(c1), Pattern::Constant(c2)) => c1 == c2,
+
+            _ => false,
+        }
     }
 }
 
@@ -539,5 +731,361 @@ mod tests {
             }
             _ => panic!("Expected Operation"),
         }
+    }
+
+    // ===== Exhaustiveness Checking Tests =====
+
+    #[test]
+    fn test_exhaustiveness_all_covered() {
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+        use crate::type_inference::Type;
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Bool".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "True".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "False".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let checker = ExhaustivenessChecker::new(registry);
+        let patterns = vec![
+            Pattern::Constructor {
+                name: "True".to_string(),
+                args: vec![],
+            },
+            Pattern::Constructor {
+                name: "False".to_string(),
+                args: vec![],
+            },
+        ];
+        let ty = Type::Data {
+            type_name: "Bool".to_string(),
+            constructor: "Bool".to_string(),
+            args: vec![],
+        };
+
+        let result = checker.check_exhaustive(&patterns, &ty);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_exhaustiveness_wildcard() {
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+        use crate::type_inference::Type;
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Bool".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "True".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "False".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let checker = ExhaustivenessChecker::new(registry);
+        let patterns = vec![
+            Pattern::Constructor {
+                name: "True".to_string(),
+                args: vec![],
+            },
+            Pattern::Wildcard,
+        ];
+        let ty = Type::Data {
+            type_name: "Bool".to_string(),
+            constructor: "Bool".to_string(),
+            args: vec![],
+        };
+
+        let result = checker.check_exhaustive(&patterns, &ty);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_exhaustiveness_variable() {
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+        use crate::type_inference::Type;
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Bool".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "True".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "False".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let checker = ExhaustivenessChecker::new(registry);
+        let patterns = vec![Pattern::Variable("x".to_string())];
+        let ty = Type::Data {
+            type_name: "Bool".to_string(),
+            constructor: "Bool".to_string(),
+            args: vec![],
+        };
+
+        // Variable pattern catches everything
+        let result = checker.check_exhaustive(&patterns, &ty);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_exhaustiveness_missing_case() {
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+        use crate::type_inference::Type;
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Bool".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "True".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "False".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let checker = ExhaustivenessChecker::new(registry);
+        let patterns = vec![Pattern::Constructor {
+            name: "True".to_string(),
+            args: vec![],
+        }];
+        let ty = Type::Data {
+            type_name: "Bool".to_string(),
+            constructor: "Bool".to_string(),
+            args: vec![],
+        };
+
+        let result = checker.check_exhaustive(&patterns, &ty);
+        assert!(result.is_err());
+        let missing = result.unwrap_err();
+        assert_eq!(missing.len(), 1);
+        assert!(missing.contains(&"False".to_string()));
+    }
+
+    #[test]
+    fn test_exhaustiveness_multiple_missing() {
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+        use crate::type_inference::Type;
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Status".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "Running".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "Idle".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "Paused".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "Completed".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let checker = ExhaustivenessChecker::new(registry);
+        let patterns = vec![Pattern::Constructor {
+            name: "Running".to_string(),
+            args: vec![],
+        }];
+        let ty = Type::Data {
+            type_name: "Status".to_string(),
+            constructor: "Status".to_string(),
+            args: vec![],
+        };
+
+        let result = checker.check_exhaustive(&patterns, &ty);
+        assert!(result.is_err());
+        let missing = result.unwrap_err();
+        assert_eq!(missing.len(), 3);
+    }
+
+    #[test]
+    fn test_unreachable_after_wildcard() {
+        let checker = ExhaustivenessChecker::new(DataTypeRegistry::new());
+        let patterns = vec![
+            Pattern::Constructor {
+                name: "True".to_string(),
+                args: vec![],
+            },
+            Pattern::Wildcard,
+            Pattern::Constructor {
+                name: "False".to_string(),
+                args: vec![],
+            },
+        ];
+
+        let unreachable = checker.check_reachable(&patterns);
+        assert_eq!(unreachable, vec![2]);
+    }
+
+    #[test]
+    fn test_unreachable_after_variable() {
+        let checker = ExhaustivenessChecker::new(DataTypeRegistry::new());
+        let patterns = vec![
+            Pattern::Constructor {
+                name: "True".to_string(),
+                args: vec![],
+            },
+            Pattern::Variable("x".to_string()),
+            Pattern::Constructor {
+                name: "False".to_string(),
+                args: vec![],
+            },
+        ];
+
+        let unreachable = checker.check_reachable(&patterns);
+        assert_eq!(unreachable, vec![2]);
+    }
+
+    #[test]
+    fn test_unreachable_duplicate_constructor() {
+        let checker = ExhaustivenessChecker::new(DataTypeRegistry::new());
+        let patterns = vec![
+            Pattern::Constructor {
+                name: "True".to_string(),
+                args: vec![],
+            },
+            Pattern::Constructor {
+                name: "True".to_string(),
+                args: vec![],
+            },
+        ];
+
+        let unreachable = checker.check_reachable(&patterns);
+        assert_eq!(unreachable, vec![1]);
+    }
+
+    #[test]
+    fn test_reachable_different_constructors() {
+        let checker = ExhaustivenessChecker::new(DataTypeRegistry::new());
+        let patterns = vec![
+            Pattern::Constructor {
+                name: "True".to_string(),
+                args: vec![],
+            },
+            Pattern::Constructor {
+                name: "False".to_string(),
+                args: vec![],
+            },
+        ];
+
+        let unreachable = checker.check_reachable(&patterns);
+        assert!(unreachable.is_empty());
+    }
+
+    #[test]
+    fn test_pattern_subsumes_wildcard() {
+        let checker = ExhaustivenessChecker::new(DataTypeRegistry::new());
+        let p1 = Pattern::Wildcard;
+        let p2 = Pattern::Constructor {
+            name: "Some".to_string(),
+            args: vec![],
+        };
+
+        assert!(checker.pattern_subsumes(&p1, &p2));
+    }
+
+    #[test]
+    fn test_pattern_subsumes_variable() {
+        let checker = ExhaustivenessChecker::new(DataTypeRegistry::new());
+        let p1 = Pattern::Variable("x".to_string());
+        let p2 = Pattern::Constructor {
+            name: "Some".to_string(),
+            args: vec![],
+        };
+
+        assert!(checker.pattern_subsumes(&p1, &p2));
+    }
+
+    #[test]
+    fn test_pattern_subsumes_nested() {
+        let checker = ExhaustivenessChecker::new(DataTypeRegistry::new());
+        let p1 = Pattern::Constructor {
+            name: "Some".to_string(),
+            args: vec![Pattern::Wildcard],
+        };
+        let p2 = Pattern::Constructor {
+            name: "Some".to_string(),
+            args: vec![Pattern::Variable("x".to_string())],
+        };
+
+        assert!(checker.pattern_subsumes(&p1, &p2));
+    }
+
+    #[test]
+    fn test_pattern_not_subsumes_different_constructor() {
+        let checker = ExhaustivenessChecker::new(DataTypeRegistry::new());
+        let p1 = Pattern::Constructor {
+            name: "Some".to_string(),
+            args: vec![],
+        };
+        let p2 = Pattern::Constructor {
+            name: "None".to_string(),
+            args: vec![],
+        };
+
+        assert!(!checker.pattern_subsumes(&p1, &p2));
+    }
+
+    #[test]
+    fn test_exhaustiveness_non_data_type() {
+        let checker = ExhaustivenessChecker::new(DataTypeRegistry::new());
+        let patterns = vec![Pattern::Constant("0".to_string())];
+        let ty = Type::scalar();
+
+        // Can't check exhaustiveness for non-data types
+        let result = checker.check_exhaustive(&patterns, &ty);
+        assert!(result.is_ok());
     }
 }

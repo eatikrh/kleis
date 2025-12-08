@@ -338,6 +338,7 @@ impl TypeInference {
     /// 2. For each case, check pattern matches scrutinee type
     /// 3. Infer body type in context extended with pattern bindings
     /// 4. Unify all branch types (all must have same result type)
+    /// 5. Check exhaustiveness (warn if missing cases)
     ///
     /// Example:
     ///   match myOption {
@@ -383,7 +384,43 @@ impl TypeInference {
             self.add_constraint(result_ty.clone(), branch_ty.clone());
         }
 
+        // Step 4: Check exhaustiveness (warn if missing cases)
+        self.check_match_exhaustiveness(cases, &scrutinee_ty);
+
         Ok(result_ty)
+    }
+
+    /// Check match exhaustiveness and warn about issues
+    ///
+    /// This checks:
+    /// 1. Are all constructors covered? (exhaustiveness)
+    /// 2. Are any patterns unreachable? (dead code)
+    ///
+    /// Warnings are printed to stderr but don't fail type checking.
+    fn check_match_exhaustiveness(&self, cases: &[crate::ast::MatchCase], scrutinee_ty: &Type) {
+        use crate::pattern_matcher::ExhaustivenessChecker;
+
+        let checker = ExhaustivenessChecker::new(self.data_registry.clone());
+        let patterns: Vec<_> = cases.iter().map(|c| c.pattern.clone()).collect();
+
+        // Check exhaustiveness
+        match checker.check_exhaustive(&patterns, scrutinee_ty) {
+            Ok(()) => {} // Exhaustive - good!
+            Err(missing) => {
+                eprintln!(
+                    "Warning: Non-exhaustive match. Missing cases: {}",
+                    missing.join(", ")
+                );
+            }
+        }
+
+        // Check for unreachable patterns
+        let unreachable = checker.check_reachable(&patterns);
+        if !unreachable.is_empty() {
+            for idx in unreachable {
+                eprintln!("Warning: Unreachable pattern at case {}", idx + 1);
+            }
+        }
     }
 
     /// Check that a pattern matches the expected type and bind pattern variables
