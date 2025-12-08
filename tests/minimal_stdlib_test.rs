@@ -33,10 +33,9 @@ fn test_minimal_stdlib_has_operations() {
     println!("Types supporting 'abs': {:?}", abs_types);
     assert!(!abs_types.is_empty(), "Expected 'abs' operation");
 
-    let transpose_types = checker.types_supporting("transpose");
-    println!("Types supporting 'transpose': {:?}", transpose_types);
-    assert!(
-        !transpose_types.is_empty(),
-        "Expected 'transpose' operation"
-    );
+    // Note: transpose is now in matrices.kleis, not minimal_prelude.kleis
+    // This is the correct organization (all Matrix operations together)
+    let plus_types = checker.types_supporting("plus");
+    println!("Types supporting 'plus': {:?}", plus_types);
+    assert!(!plus_types.is_empty(), "Expected 'plus' operation");
 }

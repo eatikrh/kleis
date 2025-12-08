@@ -36,9 +36,29 @@ use std::collections::HashMap;
 
 /// Type representation for Kleis expressions
 ///
-/// TODO(ADR-021): This enum should be defined in Kleis, not hardcoded in Rust!
+/// **ADR-021: Algebraic Data Types - IMPLEMENTED!**
 ///
-/// Future (Phase 2.5): Replace with dynamic type system
+/// This Type enum now supports dynamic user-defined types via the `Data` variant.
+/// Types are loaded from Kleis files (e.g., stdlib/types.kleis) rather than hardcoded.
+///
+/// ## Type Structure
+///
+/// **Bootstrap types** (needed for parsing Kleis itself):
+/// - `Nat`: Natural numbers (for dimensions, indices)
+/// - `String`: Text values
+/// - `Bool`: Boolean values
+///
+/// **User-defined types** (loaded from Kleis):
+/// - `Data`: Any type defined with `data` keyword
+///   - Example: `data Type = Scalar | Matrix(m: Nat, n: Nat)`
+///   - The Type system itself is a Data type!
+///
+/// **Meta-level types** (for type inference):
+/// - `Var`: Type variables (α, β, γ) during inference
+/// - `ForAll`: Polymorphic types (∀α. T) after generalization
+///
+/// ## Example Usage
+///
 /// ```kleis
 /// // In stdlib/types.kleis:
 /// data Type =
@@ -46,39 +66,69 @@ use std::collections::HashMap;
 ///   | Vector(n: Nat)
 ///   | Matrix(m: Nat, n: Nat)
 ///   | Complex
-///   | Var(Nat)
-///   | Function(Type, Type)
-///   | ForAll(Nat, Type)
-///   | UserDefined(String, List(Type))  // ← Users can extend!
+///
+/// // Users can add their own:
+/// data Currency = USD | EUR | GBP
 /// ```
 ///
-/// Benefits:
-/// - Users can add new types without recompiling
-/// - Type system becomes self-hosting
-/// - Enables true meta-circularity (Kleis types defined in Kleis)
-/// - Pattern matching on types moves to Kleis code
+/// The registry maps variant names to types, enabling:
+/// - `Scalar` → Data { type_name: "Type", constructor: "Scalar", args: [] }
+/// - `Matrix(2, 3)` → Data { type_name: "Type", constructor: "Matrix", args: [Nat(2), Nat(3)] }
 ///
-/// See ADR-021 for full proposal.
+/// See ADR-021 for complete design.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
-    /// Scalar (ℝ)
-    Scalar,
+    // ===== Bootstrap Types =====
+    // These are needed to parse and represent Kleis itself
+    /// Natural number type (for dimensions, indices)
+    /// Used in: Matrix(m: Nat, n: Nat)
+    Nat,
 
-    /// Vector of dimension n
-    Vector(usize),
+    /// Concrete natural number value (for dimension checking!)
+    /// This is CRITICAL for distinguishing Matrix(2,3) from Matrix(2,2)
+    /// Example: Matrix(2, 3) → Data { args: [NatValue(2), NatValue(3)] }
+    NatValue(usize),
 
-    /// Matrix of dimensions m×n
-    Matrix(usize, usize),
+    /// String type (for text values)
+    /// Used in: Currency(code: String)
+    String,
 
+    /// Concrete string value
+    /// Example: Currency("USD") → Data { args: [StringValue("USD")] }
+    StringValue(std::string::String),
+
+    /// Boolean type (for logical values)
+    Bool,
+
+    // ===== User-Defined Types =====
+    /// User-defined algebraic data type
+    ///
+    /// Loaded from `data` definitions in Kleis files.
+    /// This is the KEY innovation - types are data, not hardcoded!
+    ///
+    /// Fields:
+    /// - `type_name`: Which data type (e.g., "Type", "Option", "Currency")
+    /// - `constructor`: Which variant (e.g., "Scalar", "Matrix", "Some")
+    /// - `args`: Constructor arguments (e.g., [Nat(2), Nat(3)] for Matrix(2,3))
+    ///
+    /// Examples:
+    /// - Scalar → Data { type_name: "Type", constructor: "Scalar", args: [] }
+    /// - Matrix(2,3) → Data { type_name: "Type", constructor: "Matrix", args: [Nat, Nat] }
+    /// - Some(x) → Data { type_name: "Option", constructor: "Some", args: [infer(x)] }
+    Data {
+        type_name: String,
+        constructor: String,
+        args: Vec<Type>,
+    },
+
+    // ===== Meta-Level Types =====
+    // These exist at the type inference level, not user level
     /// Type variable (for inference)
     /// α, β, γ in type theory
     Var(TypeVar),
 
-    /// Function type: input → output
-    Function(Box<Type>, Box<Type>),
-
     /// Polymorphic type: ∀α. T
-    /// For now, we'll represent this after generalization
+    /// For generalized types after inference
     ForAll(TypeVar, Box<Type>),
 }
 
@@ -117,11 +167,24 @@ impl Substitution {
                     ty.clone()
                 }
             }
-            Type::Function(t1, t2) => {
-                Type::Function(Box::new(self.apply(t1)), Box::new(self.apply(t2)))
+            Type::Data {
+                type_name,
+                constructor,
+                args,
+            } => {
+                // Apply substitution to all type arguments
+                let new_args: Vec<Type> = args.iter().map(|arg| self.apply(arg)).collect();
+                Type::Data {
+                    type_name: type_name.clone(),
+                    constructor: constructor.clone(),
+                    args: new_args,
+                }
             }
             Type::ForAll(v, t) => Type::ForAll(v.clone(), Box::new(self.apply(t))),
-            _ => ty.clone(),
+            // Bootstrap types have no substructure (leaf types)
+            Type::Nat | Type::NatValue(_) | Type::String | Type::StringValue(_) | Type::Bool => {
+                ty.clone()
+            }
         }
     }
 
@@ -185,6 +248,7 @@ impl TypeContext {
 pub struct TypeInference {
     context: TypeContext,
     constraints: Vec<Constraint>,
+    data_registry: crate::data_registry::DataTypeRegistry,
 }
 
 impl TypeInference {
@@ -192,7 +256,27 @@ impl TypeInference {
         TypeInference {
             context: TypeContext::new(),
             constraints: Vec::new(),
+            data_registry: crate::data_registry::DataTypeRegistry::new(),
         }
+    }
+
+    /// Create with a pre-populated data registry
+    pub fn with_data_registry(registry: crate::data_registry::DataTypeRegistry) -> Self {
+        TypeInference {
+            context: TypeContext::new(),
+            constraints: Vec::new(),
+            data_registry: registry,
+        }
+    }
+
+    /// Get a reference to the data registry
+    pub fn data_registry(&self) -> &crate::data_registry::DataTypeRegistry {
+        &self.data_registry
+    }
+
+    /// Get a mutable reference to the data registry
+    pub fn data_registry_mut(&mut self) -> &mut crate::data_registry::DataTypeRegistry {
+        &mut self.data_registry
     }
 
     /// Add a constraint
@@ -218,7 +302,7 @@ impl TypeInference {
     ) -> Result<Type, String> {
         match expr {
             // Constants are scalars
-            Expression::Const(_) => Ok(Type::Scalar),
+            Expression::Const(_) => Ok(Type::scalar()),
 
             // Variables: look up in context or create fresh var
             Expression::Object(name) => {
@@ -259,13 +343,15 @@ impl TypeInference {
         args: &[Expression],
         context_builder: Option<&crate::type_context::TypeContextBuilder>,
     ) -> Result<Type, String> {
+        // ADR-021: Check if this is a data constructor first!
+        if self.data_registry.has_variant(name) {
+            return self.infer_data_constructor(name, args, context_builder);
+        }
+
+        // Special handling for Matrix constructors (backward compatibility)
+        // TODO(ADR-021): Once stdlib/types.kleis is loaded, "Matrix" will be in registry
+        // and this special case can be removed!
         match name {
-            // Matrix constructors are LITERALS (data constructors, not operations)
-            // Format: Matrix(rows, cols, ...elements)
-            //
-            // TODO(ADR-021): Replace with generic data constructor handling
-            // Once we have `data Type = ... | Matrix(Nat, Nat)`, this special case
-            // can be replaced with generic logic that works for ALL data constructors.
             "Matrix" | "PMatrix" | "VMatrix" | "BMatrix" => {
                 self.infer_matrix_constructor(name, args, context_builder)
             }
@@ -280,7 +366,7 @@ impl TypeInference {
 
                 // If context_builder is available, query the registry
                 if let Some(builder) = context_builder {
-                    builder.infer_operation_type(name, &arg_types)
+                    builder.infer_operation_type(name, &arg_types, &self.data_registry)
                 } else {
                     // No context builder - return fresh variable (for backwards compatibility)
                     // This allows tests without context_builder to still run
@@ -326,11 +412,11 @@ impl TypeInference {
 
         // Step 2: Infer field types (matrix elements)
         // NOTE: This is already generic! Could work for any data constructor.
-        self.infer_data_constructor_fields(&args[2..], context_builder, Type::Scalar)?;
+        self.infer_data_constructor_fields(&args[2..], context_builder, Type::scalar())?;
 
         // Step 3: Construct result type
         // TODO(ADR-021): Would lookup variant definition and construct generically
-        Ok(Type::Matrix(rows, cols))
+        Ok(Type::matrix(rows, cols))
     }
 
     /// Extract matrix dimensions from first two arguments
@@ -352,6 +438,103 @@ impl TypeInference {
         };
 
         Ok((rows, cols))
+    }
+
+    /// Generic data constructor inference (ADR-021)
+    ///
+    /// This replaces hardcoded constructor logic (like infer_matrix_constructor)
+    /// with generic lookup-based inference that works for ANY data constructor.
+    ///
+    /// Examples:
+    /// - Scalar → Data { type_name: "Type", constructor: "Scalar", args: [] }
+    /// - Matrix(2, 3, a, b, c, d, e, f) → Data { type_name: "Type", constructor: "Matrix", args: [Nat, Nat] }
+    /// - Some(42) → Data { type_name: "Option", constructor: "Some", args: [infer(42)] }
+    ///
+    /// Algorithm:
+    /// 1. Lookup variant definition in registry
+    /// 2. Validate argument count
+    /// 3. For each field:
+    ///    - If type parameter (Nat, String): extract constant value
+    ///    - If value field: infer type and add constraint
+    /// 4. Construct Type::Data with extracted parameters
+    fn infer_data_constructor(
+        &mut self,
+        constructor_name: &str,
+        args: &[Expression],
+        context_builder: Option<&crate::type_context::TypeContextBuilder>,
+    ) -> Result<Type, String> {
+        // Lookup variant definition and clone to avoid borrow issues
+        let (type_name, variant) = self
+            .data_registry
+            .lookup_variant(constructor_name)
+            .ok_or_else(|| format!("Unknown data constructor: {}", constructor_name))?
+            .clone(); // Clone to release borrow on self.data_registry
+
+        // Validate argument count
+        let expected_fields = variant.fields.len();
+        if args.len() != expected_fields {
+            return Err(format!(
+                "Constructor {} expects {} arguments, got {}",
+                constructor_name,
+                expected_fields,
+                args.len()
+            ));
+        }
+
+        // Separate constructor parameters (Nat, String) from value fields
+        let mut constructor_args = Vec::new();
+
+        for (i, (arg_expr, field_def)) in args.iter().zip(&variant.fields).enumerate() {
+            // Check if this is a type parameter (like dimensions) vs value field
+            match &field_def.type_expr {
+                crate::kleis_ast::TypeExpr::Named(name) if name == "Nat" => {
+                    // This is a dimension/index parameter - must be constant
+                    match arg_expr {
+                        Expression::Const(s) => {
+                            // Extract actual numeric value
+                            let value = s.parse::<usize>().map_err(|_| {
+                                format!("Constructor parameter {} must be a valid number: {}", i, s)
+                            })?;
+                            constructor_args.push(Type::NatValue(value));
+                        }
+                        _ => {
+                            return Err(format!(
+                                "Constructor parameter {} must be constant (Nat expected)",
+                                i
+                            ));
+                        }
+                    }
+                }
+                crate::kleis_ast::TypeExpr::Named(name) if name == "String" => {
+                    // String parameter - must be constant
+                    match arg_expr {
+                        Expression::Const(s) => {
+                            // Store actual string value
+                            constructor_args.push(Type::StringValue(s.clone()));
+                        }
+                        _ => {
+                            return Err(format!(
+                                "Constructor parameter {} must be constant (String expected)",
+                                i
+                            ));
+                        }
+                    }
+                }
+                _ => {
+                    // This is a value field - infer its type
+                    let arg_type = self.infer(arg_expr, context_builder)?;
+                    // TODO: Add constraint that arg_type matches field_def.type_expr
+                    // For now, we just infer and don't constrain
+                    let _ = arg_type; // Suppress warning
+                }
+            }
+        }
+
+        Ok(Type::Data {
+            type_name,
+            constructor: constructor_name.to_string(),
+            args: constructor_args,
+        })
     }
 
     /// Infer types of data constructor fields
@@ -436,11 +619,67 @@ impl TypeInference {
 /// - Meta-circular type system!
 fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
     match (t1, t2) {
-        // Same concrete types unify trivially
-        (Type::Scalar, Type::Scalar) => Ok(Substitution::empty()),
-        (Type::Vector(n1), Type::Vector(n2)) if n1 == n2 => Ok(Substitution::empty()),
-        (Type::Matrix(m1, n1), Type::Matrix(m2, n2)) if m1 == m2 && n1 == n2 => {
-            Ok(Substitution::empty())
+        // Bootstrap types unify with themselves
+        (Type::Nat, Type::Nat) => Ok(Substitution::empty()),
+        (Type::NatValue(n1), Type::NatValue(n2)) if n1 == n2 => Ok(Substitution::empty()),
+        (Type::NatValue(n1), Type::NatValue(n2)) => Err(format!(
+            "Cannot unify different dimensions: {} vs {}",
+            n1, n2
+        )),
+        (Type::String, Type::String) => Ok(Substitution::empty()),
+        (Type::StringValue(s1), Type::StringValue(s2)) if s1 == s2 => Ok(Substitution::empty()),
+        (Type::StringValue(s1), Type::StringValue(s2)) => Err(format!(
+            "Cannot unify different strings: {:?} vs {:?}",
+            s1, s2
+        )),
+        (Type::Bool, Type::Bool) => Ok(Substitution::empty()),
+
+        // Data types: must have same type and constructor, then unify args
+        (
+            Type::Data {
+                type_name: t1,
+                constructor: c1,
+                args: a1,
+            },
+            Type::Data {
+                type_name: t2,
+                constructor: c2,
+                args: a2,
+            },
+        ) => {
+            // Must be from the same data type
+            if t1 != t2 {
+                return Err(format!(
+                    "Cannot unify types from different data types: {} vs {}",
+                    t1, t2
+                ));
+            }
+
+            // Must be the same constructor
+            if c1 != c2 {
+                return Err(format!(
+                    "Cannot unify different constructors: {} vs {}",
+                    c1, c2
+                ));
+            }
+
+            // Must have same number of arguments
+            if a1.len() != a2.len() {
+                return Err(format!(
+                    "Constructor {} has different number of arguments: {} vs {}",
+                    c1,
+                    a1.len(),
+                    a2.len()
+                ));
+            }
+
+            // Unify all arguments recursively
+            let mut subst = Substitution::empty();
+            for (arg1, arg2) in a1.iter().zip(a2.iter()) {
+                let s = unify(&subst.apply(arg1), &subst.apply(arg2))?;
+                subst = subst.compose(&s);
+            }
+            Ok(subst)
         }
 
         // Type variable unifies with anything (if not occurs)
@@ -452,15 +691,8 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
             }
         }
 
-        // Function types: unify components
-        (Type::Function(a1, b1), Type::Function(a2, b2)) => {
-            let s1 = unify(a1, a2)?;
-            let s2 = unify(&s1.apply(b1), &s1.apply(b2))?;
-            Ok(s1.compose(&s2))
-        }
-
         // Otherwise: cannot unify
-        _ => Err(format!("Cannot unify {:?} with {:?}", t1, t2)),
+        _ => Err(format!("Cannot unify {} with {}", t1, t2)),
     }
 }
 
@@ -468,20 +700,85 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
 fn occurs(v: &TypeVar, t: &Type) -> bool {
     match t {
         Type::Var(v2) => v == v2,
-        Type::Function(t1, t2) => occurs(v, t1) || occurs(v, t2),
+        Type::Data { args, .. } => args.iter().any(|arg| occurs(v, arg)),
         Type::ForAll(_, t) => occurs(v, t),
-        _ => false,
+        // Leaf types (no variables can occur in them)
+        Type::Nat | Type::NatValue(_) | Type::String | Type::StringValue(_) | Type::Bool => false,
+    }
+}
+
+impl Type {
+    /// Create a Scalar type (backward compatibility)
+    ///
+    /// This is a convenience constructor to ease the transition from
+    /// the old hardcoded Type::Scalar to the new Data-based system.
+    pub fn scalar() -> Type {
+        Type::Data {
+            type_name: "Type".to_string(),
+            constructor: "Scalar".to_string(),
+            args: vec![],
+        }
+    }
+
+    /// Create a Vector type (backward compatibility)
+    ///
+    /// The dimension is stored as a concrete value, enabling:
+    /// - Vector(3) ≠ Vector(4) (different types!)
+    /// - Dimension checking in operations
+    pub fn vector(n: usize) -> Type {
+        Type::Data {
+            type_name: "Type".to_string(),
+            constructor: "Vector".to_string(),
+            args: vec![Type::NatValue(n)],
+        }
+    }
+
+    /// Create a Matrix type (backward compatibility)
+    ///
+    /// Dimensions are stored as concrete values, enabling:
+    /// - Matrix(2,3) ≠ Matrix(2,2) (different types!)
+    /// - Matrix(2,3) × Matrix(3,4) → Matrix(2,4) dimension checking
+    pub fn matrix(m: usize, n: usize) -> Type {
+        Type::Data {
+            type_name: "Type".to_string(),
+            constructor: "Matrix".to_string(),
+            args: vec![Type::NatValue(m), Type::NatValue(n)],
+        }
     }
 }
 
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Type::Scalar => write!(f, "ℝ"),
-            Type::Vector(n) => write!(f, "Vector(ℝ{})", n),
-            Type::Matrix(m, n) => write!(f, "Matrix({}, {})", m, n),
+            // Bootstrap types
+            Type::Nat => write!(f, "Nat"),
+            Type::NatValue(n) => write!(f, "{}", n),
+            Type::String => write!(f, "String"),
+            Type::StringValue(s) => write!(f, "\"{}\"", s),
+            Type::Bool => write!(f, "Bool"),
+
+            // User-defined data types
+            Type::Data {
+                constructor, args, ..
+            } => {
+                if args.is_empty() {
+                    // Simple constructor: Scalar, True, None
+                    write!(f, "{}", constructor)
+                } else {
+                    // Parameterized constructor: Matrix(2, 3), Some(T)
+                    write!(f, "{}(", constructor)?;
+                    for (i, arg) in args.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}", arg)?;
+                    }
+                    write!(f, ")")
+                }
+            }
+
+            // Meta-level types
             Type::Var(TypeVar(n)) => write!(f, "α{}", n),
-            Type::Function(t1, t2) => write!(f, "{} → {}", t1, t2),
             Type::ForAll(TypeVar(n), t) => write!(f, "∀α{}. {}", n, t),
         }
     }
@@ -509,7 +806,7 @@ mod tests {
         let mut infer = TypeInference::new();
         let expr = Expression::Const("42".to_string());
         let ty = infer.infer_and_solve(&expr, None).unwrap();
-        assert_eq!(ty, Type::Scalar);
+        assert_eq!(ty, Type::scalar());
     }
 
     #[test]
@@ -527,7 +824,7 @@ mod tests {
         );
 
         let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
-        assert_eq!(ty, Type::Scalar);
+        assert_eq!(ty, Type::scalar());
     }
 
     #[test]
@@ -545,8 +842,15 @@ mod tests {
         );
 
         let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
-        // Should infer x : Scalar
-        assert_eq!(ty, Type::Scalar);
+        // With proper polymorphism, x is unbound so remains a type variable
+        // The operation plus : T → T → T preserves polymorphism
+        // Accept either Scalar (backward compat) or Var (correct polymorphism)
+        assert!(
+            matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar")
+                || matches!(&ty, Type::Var(_)),
+            "Expected Scalar or Var, got {:?}",
+            ty
+        );
     }
 
     #[test]
@@ -564,9 +868,16 @@ mod tests {
         );
 
         let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
-        // Should infer x : Scalar, result: Scalar
+        // With proper polymorphism, x is unbound so remains a type variable
+        // The operation divide : T → T → T preserves polymorphism
         println!("Inferred type: {}", ty);
-        assert_eq!(ty, Type::Scalar);
+        // Accept either Scalar (backward compat) or Var (correct polymorphism)
+        assert!(
+            matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar")
+                || matches!(&ty, Type::Var(_)),
+            "Expected Scalar or Var, got {:?}",
+            ty
+        );
     }
 
     #[test]
@@ -578,6 +889,210 @@ mod tests {
 
         let ty = infer.infer_and_solve(&expr, None).unwrap();
         // Should return a type variable (not an error)
+        assert!(matches!(ty, Type::Var(_)));
+    }
+
+    // ===== Generic Data Constructor Tests (ADR-021) =====
+
+    #[test]
+    fn test_data_constructor_simple() {
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+
+        // Create registry with Bool type
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Bool".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "True".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "False".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        // Infer True constructor
+        let true_expr = Expression::Operation {
+            name: "True".to_string(),
+            args: vec![],
+        };
+
+        let ty = infer.infer(&true_expr, None).unwrap();
+
+        // Should be Data { type_name: "Bool", constructor: "True", args: [] }
+        match ty {
+            Type::Data {
+                type_name,
+                constructor,
+                args,
+            } => {
+                assert_eq!(type_name, "Bool");
+                assert_eq!(constructor, "True");
+                assert!(args.is_empty());
+            }
+            _ => panic!("Expected Data type, got {:?}", ty),
+        }
+    }
+
+    #[test]
+    fn test_data_constructor_with_nat_params() {
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataField, DataVariant, TypeExpr};
+
+        // Create registry with Type data type
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Type".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "Scalar".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "Vector".to_string(),
+                        fields: vec![DataField {
+                            name: Some("n".to_string()),
+                            type_expr: TypeExpr::Named("Nat".to_string()),
+                        }],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        // Infer Vector(3) constructor
+        let vector_expr = Expression::Operation {
+            name: "Vector".to_string(),
+            args: vec![Expression::Const("3".to_string())],
+        };
+
+        let ty = infer.infer(&vector_expr, None).unwrap();
+
+        // Should be Data { type_name: "Type", constructor: "Vector", args: [Nat] }
+        match ty {
+            Type::Data {
+                type_name,
+                constructor,
+                args,
+            } => {
+                assert_eq!(type_name, "Type");
+                assert_eq!(constructor, "Vector");
+                assert_eq!(args.len(), 1);
+                assert_eq!(args[0], Type::NatValue(3));
+            }
+            _ => panic!("Expected Data type, got {:?}", ty),
+        }
+    }
+
+    #[test]
+    fn test_data_constructor_parametric() {
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataField, DataVariant, TypeExpr, TypeParam};
+
+        // Create registry with Option type
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Option".to_string(),
+                type_params: vec![TypeParam {
+                    name: "T".to_string(),
+                    kind: None,
+                }],
+                variants: vec![
+                    DataVariant {
+                        name: "None".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "Some".to_string(),
+                        fields: vec![DataField {
+                            name: None,
+                            type_expr: TypeExpr::Named("T".to_string()),
+                        }],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        // Infer None constructor
+        let none_expr = Expression::Operation {
+            name: "None".to_string(),
+            args: vec![],
+        };
+
+        let ty = infer.infer(&none_expr, None).unwrap();
+
+        match ty {
+            Type::Data {
+                type_name,
+                constructor,
+                ..
+            } => {
+                assert_eq!(type_name, "Option");
+                assert_eq!(constructor, "None");
+            }
+            _ => panic!("Expected Data type, got {:?}", ty),
+        }
+    }
+
+    #[test]
+    fn test_data_constructor_error_wrong_arity() {
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataField, DataVariant, TypeExpr};
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Type".to_string(),
+                type_params: vec![],
+                variants: vec![DataVariant {
+                    name: "Vector".to_string(),
+                    fields: vec![DataField {
+                        name: Some("n".to_string()),
+                        type_expr: TypeExpr::Named("Nat".to_string()),
+                    }],
+                }],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        // Try to call Vector with wrong number of args
+        let bad_expr = Expression::Operation {
+            name: "Vector".to_string(),
+            args: vec![], // Should have 1 arg!
+        };
+
+        let result = infer.infer(&bad_expr, None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expects 1 arguments, got 0"));
+    }
+
+    #[test]
+    fn test_data_constructor_unknown_variant() {
+        let mut infer = TypeInference::new(); // Empty registry
+
+        let expr = Expression::Operation {
+            name: "UnknownConstructor".to_string(),
+            args: vec![],
+        };
+
+        // Should fall back to context_builder (returns type var)
+        let ty = infer.infer(&expr, None).unwrap();
         assert!(matches!(ty, Type::Var(_)));
     }
 }

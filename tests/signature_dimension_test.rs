@@ -1,5 +1,6 @@
 ///! Test that dimension constraints are enforced via signatures
 ///! This is the TRUE ADR-016 vision: constraints in signatures, not code!
+use kleis::data_registry::DataTypeRegistry;
 use kleis::kleis_parser::parse_kleis_program;
 use kleis::signature_interpreter::SignatureInterpreter;
 use kleis::type_inference::Type;
@@ -19,8 +20,9 @@ fn test_add_dimension_constraint_via_signature() {
     let structure = program.structures()[0];
 
     // Test 1: Same dimensions - should work
-    let mut interp1 = SignatureInterpreter::new();
-    let args1 = vec![Type::Matrix(2, 3), Type::Matrix(2, 3)];
+    let registry = DataTypeRegistry::new();
+    let mut interp1 = SignatureInterpreter::new(registry);
+    let args1 = vec![Type::matrix(2, 3), Type::matrix(2, 3)];
 
     // This should work because both are Matrix(2, 3)
     // Binds m=2, n=3 from first arg
@@ -29,15 +31,16 @@ fn test_add_dimension_constraint_via_signature() {
 
     match result1 {
         Ok(ty) => {
-            assert_eq!(ty, Type::Matrix(2, 3));
+            assert_eq!(ty, Type::matrix(2, 3));
             println!("✓ add(Matrix(2,3), Matrix(2,3)) → Matrix(2,3)");
         }
         Err(e) => panic!("Should have succeeded: {}", e),
     }
 
     // Test 2: Different dimensions - should fail
-    let mut interp2 = SignatureInterpreter::new();
-    let args2 = vec![Type::Matrix(2, 3), Type::Matrix(4, 5)];
+    let registry2 = DataTypeRegistry::new();
+    let mut interp2 = SignatureInterpreter::new(registry2);
+    let args2 = vec![Type::matrix(2, 3), Type::matrix(4, 5)];
 
     // This should FAIL because dimensions don't match
     // Binds m=2, n=3 from first arg
@@ -69,8 +72,9 @@ fn test_multiply_dimension_constraint_via_signature() {
     let structure = program.structures()[0];
 
     // Test: Compatible dimensions (2×3 × 3×4)
-    let mut interp = SignatureInterpreter::new();
-    let args = vec![Type::Matrix(2, 3), Type::Matrix(3, 4)];
+    let registry = DataTypeRegistry::new();
+    let mut interp = SignatureInterpreter::new(registry);
+    let args = vec![Type::matrix(2, 3), Type::matrix(3, 4)];
 
     // Should work: m=2, n=3 from first, p=4 from second
     // Inner dimension n=3 matches!
@@ -78,7 +82,7 @@ fn test_multiply_dimension_constraint_via_signature() {
 
     match result {
         Ok(ty) => {
-            assert_eq!(ty, Type::Matrix(2, 4));
+            assert_eq!(ty, Type::matrix(2, 4));
             println!("✓ multiply(Matrix(2,3), Matrix(3,4)) → Matrix(2,4)");
         }
         Err(e) => panic!("Should have succeeded: {}", e),

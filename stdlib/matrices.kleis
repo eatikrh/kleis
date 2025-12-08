@@ -17,6 +17,11 @@ structure Matrix(m: Nat, n: Nat, T) {
     operation transpose : Matrix(n, m, T)
 }
 
+// Implementation for Matrix operations
+implements Matrix(m, n, ℝ) {
+    operation transpose = builtin_transpose
+}
+
 /* Matrix Value Constructor
  * 
  * Creates matrix values from elements.

@@ -369,11 +369,53 @@ impl TypeContextBuilder {
     /// Helper: Convert Type to type name for registry lookup
     fn type_to_name(&self, ty: &Type) -> Option<String> {
         match ty {
-            Type::Scalar => Some("ℝ".to_string()),
-            Type::Matrix(m, n) => Some(format!("Matrix({}, {}, ℝ)", m, n)),
-            Type::Vector(n) => Some(format!("Vector({})", n)),
+            // Bootstrap types
+            Type::Nat => Some("Nat".to_string()),
+            Type::NatValue(n) => Some(n.to_string()),
+            Type::String => Some("String".to_string()),
+            Type::StringValue(s) => Some(format!("\"{}\"", s)),
+            Type::Bool => Some("Bool".to_string()),
+
+            // User-defined data types
+            Type::Data {
+                constructor, args, ..
+            } => {
+                if args.is_empty() {
+                    // Map Scalar to ℝ for backward compatibility
+                    if constructor == "Scalar" {
+                        Some("ℝ".to_string())
+                    } else {
+                        Some(constructor.clone())
+                    }
+                } else {
+                    // Construct type name with arguments
+                    let arg_names: Vec<String> = args
+                        .iter()
+                        .filter_map(|arg| self.type_to_name(arg))
+                        .collect();
+
+                    if constructor == "Matrix" && args.len() >= 2 {
+                        // Special format for Matrix: Matrix(2, 3, ℝ)
+                        Some(format!(
+                            "Matrix({}, {}, ℝ)",
+                            arg_names.get(0).unwrap_or(&"?".to_string()),
+                            arg_names.get(1).unwrap_or(&"?".to_string())
+                        ))
+                    } else if constructor == "Vector" && !args.is_empty() {
+                        // Special format for Vector: Vector(3)
+                        Some(format!(
+                            "Vector({})",
+                            arg_names.get(0).unwrap_or(&"?".to_string())
+                        ))
+                    } else {
+                        // General format: Constructor(arg1, arg2, ...)
+                        Some(format!("{}({})", constructor, arg_names.join(", ")))
+                    }
+                }
+            }
+
+            // Meta-level types
             Type::Var(_) => None, // Type variables can't be validated (polymorphic)
-            Type::Function(_, _) => None, // Functions not in registry yet
             Type::ForAll(_, _) => None, // Polymorphic types handled elsewhere
         }
     }
@@ -447,7 +489,12 @@ impl TypeContextBuilder {
 
     /// Infer the type of an operation applied to given argument types
     /// This is the ADR-016 compliant way: query structures, don't hardcode!
-    pub fn infer_operation_type(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
+    pub fn infer_operation_type(
+        &self,
+        op_name: &str,
+        arg_types: &[Type],
+        data_registry: &crate::data_registry::DataTypeRegistry,
+    ) -> Result<Type, String> {
         // Query registry for operation
         if let Some(structure_name) = self.registry.structure_for_operation(op_name) {
             // Found the structure that defines this operation
@@ -479,7 +526,8 @@ impl TypeContextBuilder {
                         .get_structure(&structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    SignatureInterpreter::new().interpret_signature(structure, op_name, arg_types)
+                    SignatureInterpreter::new(data_registry.clone())
+                        .interpret_signature(structure, op_name, arg_types)
                 }
 
                 // ALL other operations use SignatureInterpreter
@@ -490,17 +538,17 @@ impl TypeContextBuilder {
                         .get_structure(&structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
-                    let mut interpreter = SignatureInterpreter::new();
+                    let mut interpreter = SignatureInterpreter::new(data_registry.clone());
                     interpreter
                         .interpret_signature(structure, op_name, arg_types)
-                        .or_else(|_| {
-                            // If interpreter fails, give helpful error
-                            Err(format!(
-                                "Operation '{}' found in structure '{}' but type inference failed.\n\
+                        .map_err(|e| {
+                            // Show actual error for debugging
+                            format!(
+                                "Operation '{}' found in structure '{}' but type inference failed: {}\n\
                                  This might mean the operation signature is complex or the structure\n\
                                  definition needs more information.",
-                                op_name, structure_name
-                            ))
+                                op_name, structure_name, e
+                            )
                         })
                 }
             }
