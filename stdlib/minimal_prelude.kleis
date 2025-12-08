@@ -88,14 +88,3 @@ structure Integrable(F) {
   operation integral : F → ℝ
   operation int_bounds : F → ℝ → ℝ → F → ℝ
 }
-
-// Simple matrix structure
-structure Matrix(m: Nat, n: Nat, T) {
-  operation transpose : Matrix(n, m, T)
-}
-
-// Matrix implementation
-implements Matrix(m, n, ℝ) {
-  operation transpose = builtin_transpose
-}
-
