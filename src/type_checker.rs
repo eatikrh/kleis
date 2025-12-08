@@ -53,12 +53,28 @@ impl TypeChecker {
     /// Create type checker with standard library loaded
     /// This is the recommended way to create a type checker for most use cases.
     ///
+    /// **ADR-021 Update:** Now loads data types FIRST, then structures.
+    ///
+    /// **Loading Order:**
+    /// 1. stdlib/types.kleis (data type definitions) - NEW in ADR-021
+    /// 2. stdlib/minimal_prelude.kleis (structures and operations)
+    /// 3. stdlib/matrices.kleis (matrix operations)
+    ///
     /// **Note:** Currently loads `minimal_prelude.kleis` because the full `prelude.kleis`
     /// uses advanced syntax (operator symbols, axioms with ∀) that the parser doesn't
     /// support yet. Once the parser is extended (Phase 2), this will load the full stdlib.
     pub fn with_stdlib() -> Result<Self, String> {
         let mut checker = Self::new();
 
+        // PHASE 1: Load data type definitions (ADR-021)
+        // This must happen FIRST so structures can reference these types
+        // TODO: Uncomment when stdlib/types.kleis exists (Step 8)
+        // let types_def = include_str!("../stdlib/types.kleis");
+        // checker
+        //     .load_data_types(types_def)
+        //     .map_err(|e| format!("Failed to load stdlib/types.kleis: {}", e))?;
+
+        // PHASE 2: Load structures and operations
         // Load minimal prelude (subset that parser can handle)
         // TODO: Switch to full prelude.kleis once parser supports:
         //   - Operator symbols in parens: (•), (⊗)
@@ -76,6 +92,37 @@ impl TypeChecker {
             .map_err(|e| format!("Failed to load stdlib/matrices.kleis: {}", e))?;
 
         Ok(checker)
+    }
+
+    /// Load data type definitions from Kleis code (ADR-021)
+    ///
+    /// Parses data type definitions and registers them in the inference engine's
+    /// data registry. This must be called BEFORE loading structures that reference
+    /// these types.
+    ///
+    /// Example:
+    /// ```ignore
+    /// let types = "data Bool = True | False";
+    /// checker.load_data_types(types)?;
+    /// // Now Bool constructors are available
+    /// ```
+    pub fn load_data_types(&mut self, code: &str) -> Result<(), String> {
+        use crate::kleis_parser::parse_kleis_program;
+
+        // Parse the Kleis code
+        let program = parse_kleis_program(code).map_err(|e| format!("Parse error: {}", e))?;
+
+        // Extract and register all data definitions
+        for item in program.items {
+            if let crate::kleis_ast::TopLevel::DataDef(data_def) = item {
+                self.inference
+                    .data_registry_mut()
+                    .register(data_def)
+                    .map_err(|e| format!("Failed to register data type: {}", e))?;
+            }
+        }
+
+        Ok(())
     }
 
     /// Load Kleis code into the type checker context
@@ -298,5 +345,92 @@ mod tests {
         assert_eq!(types.len(), 2);
         assert!(types.contains(&"ℝ".to_string()));
         assert!(types.contains(&"ℂ".to_string()));
+    }
+
+    // ===== Data Type Loading Tests (ADR-021) =====
+
+    #[test]
+    fn test_load_data_types_simple() {
+        let mut checker = TypeChecker::new();
+
+        let code = "data Bool = True | False";
+        checker.load_data_types(code).unwrap();
+
+        // Verify data types were loaded
+        let registry = checker.inference.data_registry();
+        assert!(registry.has_type("Bool"));
+        assert!(registry.has_variant("True"));
+        assert!(registry.has_variant("False"));
+    }
+
+    #[test]
+    fn test_load_data_types_parametric() {
+        let mut checker = TypeChecker::new();
+
+        let code = "data Option(T) = None | Some(T)";
+        checker.load_data_types(code).unwrap();
+
+        let registry = checker.inference.data_registry();
+        assert!(registry.has_type("Option"));
+        assert!(registry.has_variant("None"));
+        assert!(registry.has_variant("Some"));
+    }
+
+    #[test]
+    fn test_load_multiple_data_types() {
+        let mut checker = TypeChecker::new();
+
+        let code = r#"
+            data Bool = True | False
+            data Option(T) = None | Some(T)
+            data Type = Scalar | Vector(n: Nat)
+        "#;
+        checker.load_data_types(code).unwrap();
+
+        let registry = checker.inference.data_registry();
+        assert_eq!(registry.type_count(), 3);
+        assert_eq!(registry.variant_count(), 6); // True, False, None, Some, Scalar, Vector
+    }
+
+    #[test]
+    fn test_load_data_types_with_named_fields() {
+        let mut checker = TypeChecker::new();
+
+        let code = "data Type = Scalar | Matrix(m: Nat, n: Nat)";
+        checker.load_data_types(code).unwrap();
+
+        let registry = checker.inference.data_registry();
+        assert!(registry.has_variant("Scalar"));
+        assert!(registry.has_variant("Matrix"));
+
+        // Check Matrix variant has correct structure
+        let (type_name, variant) = registry.lookup_variant("Matrix").unwrap();
+        assert_eq!(type_name, "Type");
+        assert_eq!(variant.fields.len(), 2);
+    }
+
+    #[test]
+    fn test_load_data_types_error_duplicate() {
+        let mut checker = TypeChecker::new();
+
+        let code = r#"
+            data Bool = True | False
+            data Bool = Yes | No
+        "#;
+
+        let result = checker.load_data_types(code);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("already registered"));
+    }
+
+    #[test]
+    fn test_with_stdlib_still_works() {
+        // Ensure with_stdlib() still works after our changes
+        let result = TypeChecker::with_stdlib();
+        assert!(result.is_ok());
+
+        let checker = result.unwrap();
+        // Should have loaded minimal_prelude and matrices
+        assert!(checker.type_supports_operation("ℝ", "plus"));
     }
 }
