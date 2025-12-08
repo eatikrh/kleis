@@ -376,7 +376,8 @@ impl TypeContextBuilder {
 
             match op_name {
                 // Special semantics: equals returns RHS type (for definitions like I = Matrix(...))
-                // This can't be expressed in a signature, so needs special handling
+                // This is SEMANTIC, not type-specific: The type of "x = y" is the type of y
+                // This can't be expressed in a simple signature, so needs special handling
                 "equals" | "not_equals" => {
                     self.check_binary_args(op_name, arg_types)?;
                     // For equals/not_equals, return the type of RHS (second argument)
@@ -385,23 +386,8 @@ impl TypeContextBuilder {
                     Ok(arg_types[1].clone())
                 }
 
-                // Ordering operations (only for ordered types like scalars)
-                "less_than" | "greater_than" | "less_equal" | "greater_equal" => {
-                    self.check_binary_args(op_name, arg_types)?;
-
-                    // Check that both arguments are scalars
-                    match (&arg_types[0], &arg_types[1]) {
-                        (Type::Scalar, Type::Scalar) => Ok(Type::Scalar),
-                        (Type::Matrix(_, _), _) | (_, Type::Matrix(_, _)) => Err(format!(
-                            "Ordering operations ({}) don't make sense for matrices!\n\
-                                 Matrices don't have a natural ordering.\n\
-                                 Use 'equals' or 'not_equals' to compare matrices.",
-                            op_name
-                        )),
-                        _ => Ok(Type::Scalar), // For type variables, assume scalar
-                    }
-                }
-
+                // ALL other operations (including ordering) use SignatureInterpreter
+                // No type-specific hardcoding!
                 _ => {
                     // Operation found in registry - try SignatureInterpreter as fallback!
                     // This is the ADR-016 ideal: Just interpret the signature from the structure
