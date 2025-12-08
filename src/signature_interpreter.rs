@@ -535,6 +535,14 @@ impl SignatureInterpreter {
                 }
 
                 // 2. Fallback to hardcoded Matrix/Vector (backward compatibility)
+                // TODO(ADR-020): Remove after type/value separation
+                // Matrix and Vector are NOT in DataTypeRegistry yet because they're
+                // currently VALUE constructors (Matrix(...) creates values, not types).
+                // Once ADR-020 separates type constructors from value constructors,
+                // add to stdlib/types.kleis:
+                //   data Type = ... | Matrix(m: Nat, n: Nat, T: Type) | Vector(n: Nat, T: Type)
+                // Then remove this fallback.
+                // See: stdlib/types.kleis lines 22-26 for detailed explanation
                 if name == "Matrix" && param_exprs.len() >= 2 {
                     // Extract rows and cols from params
                     let rows = self.eval_param(&param_exprs[0])?;

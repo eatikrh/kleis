@@ -7,7 +7,7 @@
 
 ## Overview
 
-After implementing proper type parameter bindings and HM substitution, there are **3 remaining TODOs** in `src/signature_interpreter.rs`. This document analyzes why each is more difficult than what we just implemented and provides recommendations.
+After implementing proper type parameter bindings and HM substitution, there are **4 remaining TODOs** in `src/signature_interpreter.rs`. This document analyzes why each is more difficult than what we just implemented and provides recommendations.
 
 ---
 
@@ -367,6 +367,145 @@ Need to defer error checking until AFTER unification completes.
 
 ---
 
+## TODO #4: Remove Matrix/Vector Fallback After ADR-020
+
+**Location:** `src/signature_interpreter.rs:530-548`
+
+```rust
+// 2. Fallback to hardcoded Matrix/Vector (backward compatibility)
+// TODO(ADR-020): Remove after type/value separation
+// Matrix and Vector are NOT in DataTypeRegistry yet because they're
+// currently VALUE constructors (Matrix(...) creates values, not types).
+if name == "Matrix" && param_exprs.len() >= 2 {
+    Ok(Type::matrix(rows, cols))
+} else if name == "Vector" && param_exprs.len() >= 1 {
+    Ok(Type::vector(dim))
+}
+```
+
+### Why It Exists
+
+Matrix and Vector are **not in the DataTypeRegistry** because of the type/value distinction:
+
+```kleis
+// Current (ADR-020 not implemented):
+Matrix(2, 3, [1, 2, 3, 4, 5, 6])  // VALUE constructor - creates a matrix value
+
+// After ADR-020:
+Matrix(2, 3, ℝ)  // TYPE constructor - describes a matrix type
+Matrix(2, 3, [1, 2, 3, 4, 5, 6])  // VALUE constructor - creates a value
+```
+
+From `stdlib/types.kleis` lines 22-26:
+
+> Matrix is NOT included here because the current Matrix(...) syntax is a VALUE constructor (creates matrix values), not a TYPE constructor. This is the type/value distinction from ADR-020.
+
+### Why We Can't Remove It Yet
+
+Without the fallback:
+```rust
+// User code:
+structure MatrixOps(m: Nat, n: Nat) {
+    operation transpose : Matrix(m, n) → Matrix(n, m)
+}
+
+// Would fail:
+self.data_registry.get_type("Matrix")  // Returns None!
+// Falls through to: Err("Unknown parametric type: Matrix")
+```
+
+**Result:** All matrix operations would break!
+
+### What ADR-020 Needs to Do
+
+**1. Separate Type Constructors from Value Constructors**
+
+```kleis
+// TYPE LEVEL (describes types):
+type MatrixType(m: Nat, n: Nat, T: Type)
+
+// VALUE LEVEL (creates values):
+data MatrixValue(m: Nat, n: Nat, T: Type) = 
+  Matrix(rows: m, cols: n, elements: List(T))
+```
+
+**2. Update stdlib/types.kleis**
+
+```kleis
+data Type = 
+  Scalar
+  | Matrix(m: Nat, n: Nat, T: Type)  // ← Add type constructor
+  | Vector(n: Nat, T: Type)          // ← Add type constructor
+  | Complex
+  | ...
+```
+
+**3. Register in DataTypeRegistry**
+
+The type checker loads `stdlib/types.kleis` and registers all data types, including Matrix and Vector.
+
+**4. Remove the Fallback**
+
+Once Matrix and Vector are in the registry, the generic lookup will find them:
+
+```rust
+if let Some(data_def) = self.data_registry.get_type("Matrix") {
+    // Now returns Some(...)! ✓
+    // Generic code handles it - no special case needed
+}
+```
+
+### Implementation Steps
+
+**Phase 1: ADR-020 Design**
+1. Write ADR-020 documenting type/value separation
+2. Design syntax for type constructors vs value constructors
+3. Decide on backward compatibility strategy
+
+**Phase 2: Parser Changes**
+1. Update parser to distinguish type contexts from value contexts
+2. Add `TypeConstructor` and `ValueConstructor` to AST
+3. Update type expression parsing
+
+**Phase 3: Registry Updates**
+1. Add Matrix and Vector to `stdlib/types.kleis`
+2. Update type checker to load type constructors
+3. Test that registry lookup works
+
+**Phase 4: Remove Fallback**
+1. Delete the hardcoded Matrix/Vector special case
+2. Verify all tests still pass
+3. Celebrate clean, generic code! 🎉
+
+### Complexity
+
+**Very High** - Requires ADR-020 implementation (major type system change)
+
+### Priority
+
+**Low (blocked on ADR-020)** - This is a cleanup task that unblocks after ADR-020
+
+### Dependencies
+
+- **Blocks:** Nothing - fallback works fine
+- **Blocked by:** ADR-020 (type/value separation)
+- **Related:** TODO #1 (string bindings) could inform ADR-020 design
+
+### Impact if Not Fixed
+
+**Low** - The fallback is:
+- ✓ Well-documented
+- ✓ Harmless (no bugs)
+- ✓ Localized (only 2 types)
+- ✓ Easy to maintain
+
+**But removing it would:**
+- ✓ Make code more consistent (no special cases)
+- ✓ Demonstrate true generic type system
+- ✓ Enable Matrix/Vector to have full ADT features (variants, pattern matching)
+
+---
+
 ## Summary: Difficulty Comparison
 
 ### What We Just Implemented (Easier)
@@ -393,6 +532,7 @@ Need to defer error checking until AFTER unification completes.
 | **#1 String Bindings** | Medium-High | Parser changes + new unification logic + new type dimension |
 | **#2 Strict ℝ Check** | High | Breaking changes + substitution ordering + policy decisions |
 | **#3 Error on Unbound** | Very High | Multiple code paths + backward compat + distinguishing legitimate cases |
+| **#4 Remove Matrix/Vector Fallback** | Very High | Blocked on ADR-020 (type/value separation) - major architectural change |
 
 ---
 
@@ -414,6 +554,11 @@ Need to defer error checking until AFTER unification completes.
    - Lowest priority: current behavior works
    - Very high migration cost
    - Could be done in next major version
+
+4. **TODO #4 (Remove Matrix/Vector fallback)** - After ADR-020
+   - Blocked on ADR-020 implementation
+   - Will happen naturally when type/value separation is complete
+   - Not a priority - fallback is harmless
 
 ### Before Starting Any TODO
 
@@ -437,6 +582,7 @@ Need to defer error checking until AFTER unification completes.
 - String parameters (new capability)
 - Stricter type checking (safety improvement)
 - Better error messages (developer experience)
+- Remove Matrix/Vector fallback (blocked on ADR-020)
 
 **Key Insight:**
 We chose to implement features that were **additive** rather than **breaking**. This allowed rapid progress without extensive migration work. The remaining TODOs involve breaking changes or new type system features, making them inherently more complex.
