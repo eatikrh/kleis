@@ -36,8 +36,8 @@
 ///! **Purpose:** Validate ADR-015 design decisions, not production-ready!
 use crate::ast::Expression;
 use crate::kleis_ast::{
-    ImplMember, Implementation, ImplementsDef, OperationDecl, Program, StructureDef,
-    StructureMember, TopLevel, TypeExpr,
+    DataDef, DataField, DataVariant, ImplMember, Implementation, ImplementsDef, OperationDecl,
+    Program, StructureDef, StructureMember, TopLevel, TypeExpr,
 };
 use std::fmt;
 
@@ -820,6 +820,188 @@ impl KleisParser {
         }
     }
 
+    /// Parse a data type definition: data Bool = True | False
+    /// Grammar:
+    ///   dataDecl ::= "data" identifier [ "(" typeParams ")" ] "="
+    ///                dataVariant { "|" dataVariant }
+    ///   dataVariant ::= identifier [ "(" dataFields ")" ]
+    ///   dataFields ::= dataField { "," dataField }
+    ///   dataField ::= [ identifier ":" ] typeExpr
+    pub fn parse_data_def(&mut self) -> Result<DataDef, KleisParseError> {
+        self.skip_whitespace();
+
+        // Expect 'data' keyword
+        let keyword = self.parse_identifier()?;
+        if keyword != "data" {
+            return Err(KleisParseError {
+                message: format!("Expected 'data', got '{}'", keyword),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+        let name = self.parse_identifier()?;
+        self.skip_whitespace();
+
+        // Optional type parameters: (T) or (T, E) or (m: Nat, n: Nat)
+        let type_params = if self.peek() == Some('(') {
+            self.advance();
+            self.skip_whitespace();
+
+            let mut params = Vec::new();
+
+            while self.peek() != Some(')') {
+                let param_name = self.parse_identifier()?;
+                self.skip_whitespace();
+
+                // Optional kind annotation: m: Nat
+                let kind = if self.peek() == Some(':') {
+                    self.advance();
+                    self.skip_whitespace();
+                    Some(self.parse_identifier()?)
+                } else {
+                    None
+                };
+
+                params.push(crate::kleis_ast::TypeParam {
+                    name: param_name,
+                    kind,
+                });
+
+                self.skip_whitespace();
+                if self.peek() == Some(',') {
+                    self.advance();
+                    self.skip_whitespace();
+                }
+            }
+
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after type parameters".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            self.skip_whitespace();
+            params
+        } else {
+            Vec::new()
+        };
+
+        // Expect '='
+        if self.advance() != Some('=') {
+            return Err(KleisParseError {
+                message: "Expected '=' after data type name".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Parse first variant (required)
+        let mut variants = vec![self.parse_data_variant()?];
+
+        // Parse additional variants with "|" separator
+        loop {
+            self.skip_whitespace();
+
+            if self.peek() != Some('|') {
+                break;
+            }
+
+            self.advance(); // consume '|'
+            self.skip_whitespace();
+
+            variants.push(self.parse_data_variant()?);
+        }
+
+        Ok(DataDef {
+            name,
+            type_params,
+            variants,
+        })
+    }
+
+    /// Parse a data variant: Variant or Variant(fields)
+    fn parse_data_variant(&mut self) -> Result<DataVariant, KleisParseError> {
+        self.skip_whitespace();
+
+        let name = self.parse_identifier()?;
+        self.skip_whitespace();
+
+        // Optional fields in parentheses
+        let fields = if self.peek() == Some('(') {
+            self.advance();
+            self.skip_whitespace();
+
+            let mut fields = Vec::new();
+
+            while self.peek() != Some(')') {
+                fields.push(self.parse_data_field()?);
+                self.skip_whitespace();
+
+                if self.peek() == Some(',') {
+                    self.advance();
+                    self.skip_whitespace();
+                }
+            }
+
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after data variant fields".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            fields
+        } else {
+            Vec::new()
+        };
+
+        Ok(DataVariant { name, fields })
+    }
+
+    /// Parse a data field: type or name: type
+    fn parse_data_field(&mut self) -> Result<DataField, KleisParseError> {
+        self.skip_whitespace();
+
+        // Try to parse as "name: type" or just "type"
+        // We need to look ahead to see if there's a colon
+        let start_pos = self.pos;
+
+        // Try to parse identifier
+        if let Ok(potential_name) = self.parse_identifier() {
+            self.skip_whitespace();
+
+            // Check if followed by colon
+            if self.peek() == Some(':') {
+                self.advance(); // consume ':'
+                self.skip_whitespace();
+
+                let type_expr = self.parse_type()?;
+
+                return Ok(DataField {
+                    name: Some(potential_name),
+                    type_expr,
+                });
+            } else {
+                // Not a named field, backtrack and parse as type
+                self.pos = start_pos;
+            }
+        } else {
+            // Not an identifier, reset position
+            self.pos = start_pos;
+        }
+
+        // Parse as positional field (just a type)
+        let type_expr = self.parse_type()?;
+
+        Ok(DataField {
+            name: None,
+            type_expr,
+        })
+    }
+
     /// Parse a complete program (multiple top-level items)
     pub fn parse_program(&mut self) -> Result<Program, KleisParseError> {
         let mut program = Program::new();
@@ -838,12 +1020,16 @@ impl KleisParser {
             } else if self.peek_word("implements") {
                 let implements = self.parse_implements()?;
                 program.add_item(TopLevel::ImplementsDef(implements));
+            } else if self.peek_word("data") {
+                let data_def = self.parse_data_def()?;
+                program.add_item(TopLevel::DataDef(data_def));
             } else if self.peek_word("operation") {
                 let operation = self.parse_operation_decl()?;
                 program.add_item(TopLevel::OperationDecl(operation));
             } else {
                 return Err(KleisParseError {
-                    message: "Expected 'structure', 'implements', or 'operation'".to_string(),
+                    message: "Expected 'structure', 'implements', 'data', or 'operation'"
+                        .to_string(),
                     position: self.pos,
                 });
             }
@@ -1169,5 +1355,198 @@ mod tests {
 
         assert_eq!(structures.len(), 1);
         assert_eq!(implements.len(), 1);
+    }
+
+    // ===== Data Type Parser Tests =====
+
+    #[test]
+    fn test_parse_data_simple() {
+        // data Bool = True | False
+        let code = "data Bool = True | False";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_data_def().unwrap();
+
+        assert_eq!(result.name, "Bool");
+        assert_eq!(result.type_params.len(), 0);
+        assert_eq!(result.variants.len(), 2);
+
+        assert_eq!(result.variants[0].name, "True");
+        assert!(result.variants[0].fields.is_empty());
+
+        assert_eq!(result.variants[1].name, "False");
+        assert!(result.variants[1].fields.is_empty());
+    }
+
+    #[test]
+    fn test_parse_data_parametric() {
+        // data Option(T) = None | Some(T)
+        let code = "data Option(T) = None | Some(T)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_data_def().unwrap();
+
+        assert_eq!(result.name, "Option");
+        assert_eq!(result.type_params.len(), 1);
+        assert_eq!(result.type_params[0].name, "T");
+        assert_eq!(result.variants.len(), 2);
+
+        // None variant
+        assert_eq!(result.variants[0].name, "None");
+        assert!(result.variants[0].fields.is_empty());
+
+        // Some variant with one positional field
+        assert_eq!(result.variants[1].name, "Some");
+        assert_eq!(result.variants[1].fields.len(), 1);
+        assert!(result.variants[1].fields[0].name.is_none()); // Positional
+        // Note: Type variables are parsed as Named types at this stage
+        assert!(matches!(
+            result.variants[1].fields[0].type_expr,
+            TypeExpr::Named(ref s) if s == "T"
+        ));
+    }
+
+    #[test]
+    fn test_parse_data_with_named_fields() {
+        // data Type = Scalar | Matrix(m: Nat, n: Nat)
+        let code = "data Type = Scalar | Matrix(m: Nat, n: Nat)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_data_def().unwrap();
+
+        assert_eq!(result.name, "Type");
+        assert!(result.type_params.is_empty());
+        assert_eq!(result.variants.len(), 2);
+
+        // Scalar variant
+        assert_eq!(result.variants[0].name, "Scalar");
+        assert!(result.variants[0].fields.is_empty());
+
+        // Matrix variant with named fields
+        let matrix_variant = &result.variants[1];
+        assert_eq!(matrix_variant.name, "Matrix");
+        assert_eq!(matrix_variant.fields.len(), 2);
+
+        // First field: m: Nat
+        assert_eq!(matrix_variant.fields[0].name, Some("m".to_string()));
+        assert!(matches!(
+            matrix_variant.fields[0].type_expr,
+            TypeExpr::Named(ref s) if s == "Nat"
+        ));
+
+        // Second field: n: Nat
+        assert_eq!(matrix_variant.fields[1].name, Some("n".to_string()));
+        assert!(matches!(
+            matrix_variant.fields[1].type_expr,
+            TypeExpr::Named(ref s) if s == "Nat"
+        ));
+    }
+
+    #[test]
+    fn test_parse_data_multi_param() {
+        // data Result(T, E) = Ok(value: T) | Err(error: E)
+        let code = "data Result(T, E) = Ok(value: T) | Err(error: E)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_data_def().unwrap();
+
+        assert_eq!(result.name, "Result");
+        assert_eq!(result.type_params.len(), 2);
+        assert_eq!(result.type_params[0].name, "T");
+        assert_eq!(result.type_params[1].name, "E");
+        assert_eq!(result.variants.len(), 2);
+
+        // Ok variant
+        assert_eq!(result.variants[0].name, "Ok");
+        assert_eq!(result.variants[0].fields.len(), 1);
+        assert_eq!(result.variants[0].fields[0].name, Some("value".to_string()));
+
+        // Err variant
+        assert_eq!(result.variants[1].name, "Err");
+        assert_eq!(result.variants[1].fields.len(), 1);
+        assert_eq!(result.variants[1].fields[0].name, Some("error".to_string()));
+    }
+
+    #[test]
+    fn test_parse_data_multiple_variants() {
+        // data Color = Red | Green | Blue | Yellow
+        let code = "data Color = Red | Green | Blue | Yellow";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_data_def().unwrap();
+
+        assert_eq!(result.name, "Color");
+        assert_eq!(result.variants.len(), 4);
+        assert_eq!(result.variants[0].name, "Red");
+        assert_eq!(result.variants[1].name, "Green");
+        assert_eq!(result.variants[2].name, "Blue");
+        assert_eq!(result.variants[3].name, "Yellow");
+    }
+
+    #[test]
+    fn test_parse_data_with_type_params_in_fields() {
+        // data Vector(n: Nat) = Vector(elements: List(ℝ))
+        let code = "data Vector(n: Nat) = Vector(elements: List(ℝ))";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_data_def().unwrap();
+
+        assert_eq!(result.name, "Vector");
+        assert_eq!(result.type_params.len(), 1);
+        assert_eq!(result.type_params[0].name, "n");
+        assert_eq!(result.type_params[0].kind, Some("Nat".to_string()));
+
+        assert_eq!(result.variants.len(), 1);
+        let variant = &result.variants[0];
+        assert_eq!(variant.name, "Vector");
+        assert_eq!(variant.fields.len(), 1);
+        assert_eq!(variant.fields[0].name, Some("elements".to_string()));
+    }
+
+    #[test]
+    fn test_parse_program_with_data() {
+        let code = r#"
+            data Bool = True | False
+            
+            structure Money {
+                amount : ℝ
+            }
+            
+            data Option(T) = None | Some(T)
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+
+        let data_types = result.data_types();
+        let structures = result.structures();
+
+        assert_eq!(data_types.len(), 2);
+        assert_eq!(structures.len(), 1);
+        assert_eq!(data_types[0].name, "Bool");
+        assert_eq!(data_types[1].name, "Option");
+    }
+
+    #[test]
+    fn test_parse_data_whitespace_tolerance() {
+        // Test with various whitespace
+        let code = "data   Bool   =   True   |   False";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_data_def().unwrap();
+
+        assert_eq!(result.name, "Bool");
+        assert_eq!(result.variants.len(), 2);
+    }
+
+    #[test]
+    fn test_parse_data_error_missing_equals() {
+        let code = "data Bool True | False";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_data_def();
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().message.contains("Expected '='"));
+    }
+
+    #[test]
+    fn test_parse_data_error_no_variants() {
+        let code = "data Bool =";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_data_def();
+
+        assert!(result.is_err());
     }
 }
