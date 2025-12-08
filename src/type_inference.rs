@@ -607,96 +607,21 @@ impl TypeInference {
             return self.infer_data_constructor(name, args, context_builder);
         }
 
-        // Special handling for Matrix constructors (backward compatibility)
-        // TODO(ADR-021): Once stdlib/types.kleis is loaded, "Matrix" will be in registry
-        // and this special case can be removed!
-        match name {
-            "Matrix" | "PMatrix" | "VMatrix" | "BMatrix" => {
-                self.infer_matrix_constructor(name, args, context_builder)
-            }
+        // Delegate to context_builder (ADR-016!)
+        // Matrix is now in stdlib/types.kleis and handled generically via data registry
+        let arg_types: Vec<Type> = args
+            .iter()
+            .map(|arg| self.infer(arg, context_builder))
+            .collect::<Result<Vec<_>, _>>()?;
 
-            // EVERYTHING ELSE: Delegate to context_builder (ADR-016!)
-            _ => {
-                // Infer argument types first
-                let arg_types: Vec<Type> = args
-                    .iter()
-                    .map(|arg| self.infer(arg, context_builder))
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                // If context_builder is available, query the registry
-                if let Some(builder) = context_builder {
-                    builder.infer_operation_type(name, &arg_types, &self.data_registry)
-                } else {
-                    // No context builder - return fresh variable (for backwards compatibility)
-                    // This allows tests without context_builder to still run
-                    Ok(self.context.fresh_var())
-                }
-            }
+        // If context_builder is available, query the registry
+        if let Some(builder) = context_builder {
+            builder.infer_operation_type(name, &arg_types, &self.data_registry)
+        } else {
+            // No context builder - return fresh variable (for backwards compatibility)
+            // This allows tests without context_builder to still run
+            Ok(self.context.fresh_var())
         }
-    }
-
-    /// Infer type of matrix constructor (Matrix, PMatrix, VMatrix, BMatrix)
-    /// These are special because they're LITERALS that construct values,
-    /// not operations that transform values.
-    ///
-    /// TODO(ADR-021): This should be generic data constructor inference!
-    ///
-    /// With `data` keyword:
-    /// ```kleis
-    /// data Type = ... | Matrix(m: Nat, n: Nat)
-    ///
-    /// // Generic inference for ALL data constructors:
-    /// fn infer_data_constructor(name: &str, args: &[Expr]) -> Type {
-    ///     let variant = lookup_variant(name)?;
-    ///     validate_args(variant, args)?;
-    ///     construct_type(variant, args)
-    /// }
-    /// ```
-    ///
-    /// This function would disappear - replaced by generic data constructor handling!
-    ///
-    /// REFACTORING NOTES:
-    /// - Separated dimension extraction (lines 254-263) - could be generic
-    /// - Element type inference (lines 265-278) - already generic
-    /// - Type construction (line 280) - would use generic constructor registry
-    fn infer_matrix_constructor(
-        &mut self,
-        _name: &str,
-        args: &[Expression],
-        context_builder: Option<&crate::type_context::TypeContextBuilder>,
-    ) -> Result<Type, String> {
-        // Step 1: Extract constructor parameters (dimensions)
-        // TODO(ADR-021): Generic data constructors would get params from variant definition
-        let (rows, cols) = self.extract_matrix_dimensions(args)?;
-
-        // Step 2: Infer field types (matrix elements)
-        // NOTE: This is already generic! Could work for any data constructor.
-        self.infer_data_constructor_fields(&args[2..], context_builder, Type::scalar())?;
-
-        // Step 3: Construct result type
-        // TODO(ADR-021): Would lookup variant definition and construct generically
-        Ok(Type::matrix(rows, cols))
-    }
-
-    /// Extract matrix dimensions from first two arguments
-    /// TODO(ADR-021): Generic version would extract params based on variant definition
-    fn extract_matrix_dimensions(&self, args: &[Expression]) -> Result<(usize, usize), String> {
-        if args.len() < 2 {
-            return Err(
-                "Matrix constructor requires at least 2 arguments (rows, cols)".to_string(),
-            );
-        }
-
-        let rows = match &args[0] {
-            Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
-            _ => 2, // Default if not a constant
-        };
-        let cols = match &args[1] {
-            Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
-            _ => 2, // Default if not a constant
-        };
-
-        Ok((rows, cols))
     }
 
     /// Generic data constructor inference (ADR-021)

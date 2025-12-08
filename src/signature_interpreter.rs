@@ -572,21 +572,22 @@ impl SignatureInterpreter {
                     });
                 }
 
-                // 2. Fallback to hardcoded Matrix/Vector (backward compatibility)
-                // TODO(ADR-020): Remove after type/value separation
-                // Matrix and Vector are NOT in DataTypeRegistry yet because they're
-                // currently VALUE constructors (Matrix(...) creates values, not types).
-                // Once ADR-020 separates type constructors from value constructors,
-                // add to stdlib/types.kleis:
-                //   data Type = ... | Matrix(m: Nat, n: Nat, T: Type) | Vector(n: Nat, T: Type)
-                // Then remove this fallback.
-                // See: stdlib/types.kleis lines 22-26 for detailed explanation
+                // Fallback for structure types (Matrix, Vector)
+                // These are STRUCTURE types defined in stdlib/*.kleis with `structure` keyword,
+                // not DATA types defined with `data` keyword.
+                // Structure types are not in DataTypeRegistry because structures define
+                // type classes/interfaces, not concrete data types.
+                //
+                // TODO(future): Implement StructureRegistry to handle all structure types generically.
+                // For now, Matrix and Vector are special-cased because they're the only parametric
+                // structure types in the stdlib.
                 if name == "Matrix" && param_exprs.len() >= 2 {
-                    // Extract rows and cols from params
+                    // Matrix structure type: Matrix(m: Nat, n: Nat, T: Type)
                     let rows = self.eval_param(&param_exprs[0])?;
                     let cols = self.eval_param(&param_exprs[1])?;
                     Ok(Type::matrix(rows, cols))
                 } else if name == "Vector" && param_exprs.len() >= 1 {
+                    // Vector structure type: Vector(n: Nat, T: Type)
                     let dim = self.eval_param(&param_exprs[0])?;
                     Ok(Type::vector(dim))
                 } else {
@@ -664,6 +665,17 @@ mod tests {
 
     #[test]
     fn test_interpret_transpose_signature() {
+        // Load stdlib/types.kleis to get Matrix data type
+        let types_code = include_str!("../stdlib/types.kleis");
+        let types_program = parse_kleis_program(types_code).unwrap();
+        
+        let mut registry = DataTypeRegistry::new();
+        for item in types_program.items {
+            if let crate::kleis_ast::TopLevel::DataDef(data_def) = item {
+                registry.register(data_def).unwrap();
+            }
+        }
+
         // Parse structure with transpose
         let code = r#"
             structure Matrix(m: Nat, n: Nat, T) {
@@ -674,7 +686,6 @@ mod tests {
         let program = parse_kleis_program(code).unwrap();
         let structure = program.structures()[0];
 
-        let registry = DataTypeRegistry::new();
         let mut interp = SignatureInterpreter::new(registry);
 
         // Bind: m=2, n=3
