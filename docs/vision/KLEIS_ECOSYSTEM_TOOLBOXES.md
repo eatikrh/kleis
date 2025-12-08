@@ -1037,38 +1037,44 @@ Not just a language - a **PLATFORM**:
 
 ---
 
-## The Timeline
+## The Timeline (Realistic!)
 
 ### Now (Dec 2024)
 - ✅ ADR-021 complete
-- 🎯 Fix parametric types (next session)
+- 🎯 Fix parametric types (next session - 3-4 hours)
 
-### Q1 2025
-- ADR-027: Template externalization
-- ADR-028: Glyph externalization
+### Q1 2025 (Jan-Mar)
+- Fix user-defined types in signatures
+- Start template externalization design (ADR-027 draft)
+- Experiment with toolbox concept
+
+### Q2 2025 (Apr-Jun)
+- ADR-027: Template externalization (2-3 weeks focused work)
+- ADR-028: Glyph externalization (1-2 weeks)
 - First toolbox prototype
 
-### Q2 2025
-- ADR-029: Toolbox system
-- Package manager
+### Q3 2025 (Jul-Sep)
+- ADR-029: Toolbox system design
+- Package manager prototype
 - Your control toolbox v0.1.0
 
-### Q3 2025
+### Q4 2025 (Oct-Dec)
+- Toolbox system implementation
+- Local toolbox loading working
+- 3-5 example toolboxes
+
+### 2026
 - Toolbox registry (toolboxes.kleis.org)
-- 5-10 open-source toolboxes
-- First commercial toolbox
+- **Write first paper IN Kleis!** (Mid-year goal)
+- 10+ open-source toolboxes
+- First commercial toolbox exploration
 
-### Q4 2025
-- **Write first paper IN Kleis!**
-- 50+ toolboxes available
-- Active creator community
-
-### 2026+
-- JIT compiler (ADR-025)
+### 2027+
+- JIT compiler (ADR-025) - major project
 - GPU backends
-- Enterprise toolboxes
+- Enterprise adoption
 - Educational adoption
-- Research publications
+- Self-sustaining ecosystem
 
 ---
 
