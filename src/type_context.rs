@@ -366,6 +366,85 @@ impl TypeContextBuilder {
         Ok(())
     }
 
+    /// Helper: Convert Type to type name for registry lookup
+    fn type_to_name(&self, ty: &Type) -> Option<String> {
+        match ty {
+            Type::Scalar => Some("ℝ".to_string()),
+            Type::Matrix(m, n) => Some(format!("Matrix({}, {}, ℝ)", m, n)),
+            Type::Vector(n) => Some(format!("Vector({})", n)),
+            Type::Var(_) => None, // Type variables can't be validated (polymorphic)
+            Type::Function(_, _) => None, // Functions not in registry yet
+            Type::ForAll(_, _) => None, // Polymorphic types handled elsewhere
+        }
+    }
+
+    /// Validate that argument types implement the required structure
+    /// This is the PROPER ADR-016 way: Check registry, not hardcoded types!
+    fn validate_structure_implementation(
+        &self,
+        structure_name: &str,
+        op_name: &str,
+        arg_types: &[Type],
+    ) -> Result<(), String> {
+        for arg_type in arg_types {
+            // Skip type variables (they're polymorphic, checked at instantiation)
+            if matches!(arg_type, Type::Var(_)) {
+                continue;
+            }
+
+            // Convert type to name for registry lookup
+            let type_name = self.type_to_name(arg_type).ok_or_else(|| {
+                format!(
+                    "Cannot validate structure implementation for type: {:?}",
+                    arg_type
+                )
+            })?;
+
+            // Check if this type implements the required structure
+            if !self.registry.supports_operation(&type_name, op_name) {
+                // Get structures this type actually implements
+                let type_structures = self.structures_for_type(&type_name);
+                let available_ops: Vec<String> = type_structures
+                    .iter()
+                    .flat_map(|s| {
+                        self.registry
+                            .structure_to_operations
+                            .get(s)
+                            .cloned()
+                            .unwrap_or_default()
+                    })
+                    .collect();
+
+                return Err(format!(
+                    "Type '{}' does not support operation '{}'.\n\
+                     \n\
+                     The operation '{}' is defined in structure '{}', \n\
+                     but type '{}' does not implement this structure.\n\
+                     \n\
+                     Type '{}' implements: {}\n\
+                     Available operations: {}",
+                    type_name,
+                    op_name,
+                    op_name,
+                    structure_name,
+                    type_name,
+                    type_name,
+                    if type_structures.is_empty() {
+                        "no structures".to_string()
+                    } else {
+                        type_structures.join(", ")
+                    },
+                    if available_ops.is_empty() {
+                        "none".to_string()
+                    } else {
+                        available_ops.join(", ")
+                    }
+                ));
+            }
+        }
+        Ok(())
+    }
+
     /// Infer the type of an operation applied to given argument types
     /// This is the ADR-016 compliant way: query structures, don't hardcode!
     pub fn infer_operation_type(&self, op_name: &str, arg_types: &[Type]) -> Result<Type, String> {
@@ -386,28 +465,16 @@ impl TypeContextBuilder {
                     Ok(arg_types[1].clone())
                 }
 
-                // Ordering operations: Need runtime check that types implement Ordered
-                // TODO(Phase 2): Replace with proper structure implementation validation
-                // For now: Reject Matrix types explicitly (they don't implement Ordered)
+                // Ordering operations: Validate that types implement Ordered
+                // This is the GENERIC solution: Works for ANY user-defined type!
                 "less_than" | "greater_than" | "less_equal" | "greater_equal" => {
                     self.check_binary_args(op_name, arg_types)?;
 
-                    // Check if any argument is a Matrix (matrices don't implement Ordered)
-                    for arg_type in arg_types {
-                        if matches!(arg_type, Type::Matrix(_, _)) {
-                            return Err(format!(
-                                "Ordering operations ({}) are not defined for matrices.\n\
-                                 Matrices don't have a natural ordering.\n\
-                                 Use 'equals' or 'not_equals' to compare matrices.\n\
-                                 \n\
-                                 NOTE: This check will be replaced with proper structure \n\
-                                 implementation validation in Phase 2.",
-                                op_name
-                            ));
-                        }
-                    }
+                    // GENERIC validation: Check registry for structure implementation
+                    // Works for built-in types (ℝ, Matrix) AND user-defined types!
+                    self.validate_structure_implementation(&structure_name, op_name, arg_types)?;
 
-                    // Otherwise delegate to SignatureInterpreter
+                    // Then delegate to SignatureInterpreter for type inference
                     let structure = self
                         .get_structure(&structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
