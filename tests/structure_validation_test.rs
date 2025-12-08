@@ -43,7 +43,7 @@ fn test_ordering_works_for_scalars() {
             TypeCheckResult::Success(ty) => {
                 // Should infer Bool (represented as Scalar in current system)
                 assert!(
-                    matches!(ty, Type::scalar()),
+                    ty == Type::scalar(),
                     "Expected Scalar/Bool, got {:?}",
                     ty
                 );
@@ -246,7 +246,7 @@ fn test_matrix_operations_still_work() {
     );
 
     match checker.check(&expr) {
-        TypeCheckResult::Success(Type::Matrix(3, 2)) => {
+        TypeCheckResult::Success(ty) if ty == Type::matrix(3, 2) => {
             println!("✓ Matrix transpose works and infers correct dimensions");
         }
         TypeCheckResult::Success(ty) => {
