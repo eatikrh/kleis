@@ -231,12 +231,57 @@ impl KleisParser {
         Ok(args)
     }
 
+    fn parse_list_literal(&mut self) -> Result<Expression, KleisParseError> {
+        // Consume '['
+        assert_eq!(self.advance(), Some('['));
+        
+        let mut elements = Vec::new();
+
+        // Empty list
+        self.skip_whitespace();
+        if self.peek() == Some(']') {
+            self.advance();
+            return Ok(Expression::List(elements));
+        }
+
+        // Parse comma-separated expressions
+        loop {
+            self.skip_whitespace();
+            elements.push(self.parse_expression()?);
+            self.skip_whitespace();
+
+            match self.peek() {
+                Some(',') => {
+                    self.advance();
+                    continue;
+                }
+                Some(']') => {
+                    self.advance();
+                    break;
+                }
+                _ => {
+                    return Err(KleisParseError {
+                        message: "Expected ',' or ']' in list literal".to_string(),
+                        position: self.pos,
+                    });
+                }
+            }
+        }
+
+        Ok(Expression::List(elements))
+    }
+
     fn parse_primary(&mut self) -> Result<Expression, KleisParseError> {
         self.skip_whitespace();
 
         // Match expression
         if self.peek_word("match") {
             return self.parse_match_expr();
+        }
+
+        // List literal: [a, b, c]
+        if self.peek() == Some('[') {
+            return self.parse_list_literal();
         }
 
         // Parenthesized expression

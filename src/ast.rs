@@ -31,6 +31,11 @@ pub enum Expression {
         scrutinee: Box<Expression>,
         cases: Vec<MatchCase>,
     },
+
+    /// List literal
+    /// Example: [1, 2, 3] or [x, y, z]
+    /// This enables Matrix(2, 2, [a, b, c, d]) instead of variable-arity Matrix(2, 2, a, b, c, d)
+    List(Vec<Expression>),
 }
 
 /// A single case in a match expression

@@ -19,13 +19,24 @@
 // Note: This is a data type that defines what types exist.
 // It's used by the type checker itself.
 //
-// **Note on Matrix and Vector:** These are NOT included here because they are
-// STRUCTURE types (defined with `structure` keyword), not DATA types.
-// Structure types represent type classes/interfaces with operations,
-// while data types represent concrete algebraic data types with variants.
-// Matrix and Vector are handled by StructureRegistry, not DataTypeRegistry.
+// Matrix and Vector as FIXED-arity data constructors using List!
+// 
+// NEW FORMAT (with List literal):
+//   - Matrix(2, 2, [a, b, c, d]): 3 args (fixed!)
+//   - Vector(3, [x, y, z]): 2 args (fixed!)
+//
+// This makes them REGULAR data constructors with fixed arity.
+// The variable-arity aspect is moved into the List type.
+//
+// OLD FORMAT (variable arity - being phased out):
+//   - Matrix(2, 2, a, b, c, d): 6 args (variable)
+//   - Vector(3, x, y, z): 4 args (variable)
+//
+// Both formats are supported during transition.
 data Type =
   Scalar
+  | Vector(n: Nat, elements: List(T))
+  | Matrix(m: Nat, n: Nat, elements: List(T))
   | Complex
   | Set(T: Type)
   | List(T: Type)

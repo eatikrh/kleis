@@ -244,6 +244,15 @@ impl PatternMatcher {
                 }
             }
 
+            Expression::List(elements) => {
+                // Substitute in all list elements
+                let substituted_elements = elements
+                    .iter()
+                    .map(|elem| self.substitute_bindings(elem, bindings))
+                    .collect();
+                Expression::List(substituted_elements)
+            }
+
             Expression::Placeholder { .. } | Expression::Const(_) => {
                 // Leaves don't contain variables
                 expr.clone()

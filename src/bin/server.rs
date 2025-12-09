@@ -238,6 +238,10 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
             // TODO: Implement match expression JSON serialization
             json!({"Match": "not yet implemented"})
         }
+        Expression::List(elements) => {
+            let elements_json: Vec<serde_json::Value> = elements.iter().map(expression_to_json).collect();
+            json!({"List": elements_json})
+        }
     }
 }
 
@@ -281,6 +285,12 @@ fn json_to_expression(json: &serde_json::Value) -> Result<kleis::ast::Expression
                 let args: Result<Vec<Expression>, String> =
                     args_json.iter().map(json_to_expression).collect();
                 return Ok(Expression::Operation { name, args: args? });
+            }
+        } else if let Some(list_val) = obj.get("List") {
+            if let Some(list_array) = list_val.as_array() {
+                let elements: Result<Vec<Expression>, String> =
+                    list_array.iter().map(json_to_expression).collect();
+                return Ok(Expression::List(elements?));
             }
         }
     }
@@ -592,6 +602,14 @@ fn collect_slots_recursive(
         Expression::Match { .. } => {
             // TODO: Implement match expression slot collection
             // For now, don't collect slots from match expressions
+        }
+        Expression::List(elements) => {
+            // Collect slots from list elements
+            for (i, elem) in elements.iter().enumerate() {
+                let mut child_path = path.clone();
+                child_path.push(i);
+                collect_slots_recursive(elem, slots, child_path, None);
+            }
         }
     }
 }

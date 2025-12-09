@@ -102,6 +102,12 @@ pub fn layout_expression(expr: &Expression, context: &LayoutContext) -> LayoutBo
         Expression::Placeholder { id, hint } => layout_placeholder(*id, hint, context),
         Expression::Operation { name, args } => layout_operation(name, args, context),
 
+        Expression::List(_elements) => {
+            // TODO: Implement proper list literal layout
+            // For now, return a placeholder
+            LayoutBox::text("[list]", context.base_font_size, FontFamily::Main, false)
+        }
+
         Expression::Match { .. } => {
             // TODO: Implement pattern matching layout
             unimplemented!("Pattern matching layout not yet implemented")

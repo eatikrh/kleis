@@ -54,6 +54,15 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             latex_to_typst_symbol(s)
         }
 
+        Expression::List(elements) => {
+            // Render list as Typst array
+            let rendered: Vec<String> = elements
+                .iter()
+                .map(|e| expression_to_typst(e, ctx))
+                .collect();
+            format!("({})", rendered.join(", "))
+        }
+
         Expression::Placeholder { id, hint } => {
             // Render as Typst square symbol
             // Typst will render square.stroked as a hollow square glyph

@@ -1246,6 +1246,27 @@ fn render_expression_internal(
                 RenderTarget::Typst => "\\text{match}".to_string(),
             }
         }
+
+        Expression::List(elements) => {
+            // Render list literal as [a, b, c]
+            let rendered_elements: Vec<String> = elements
+                .iter()
+                .enumerate()
+                .map(|(i, elem)| {
+                    let child_id = format!("{}.{}", node_id, i);
+                    render_expression_internal(elem, ctx, target, &child_id, node_id_to_uuid)
+                })
+                .collect();
+
+            match target {
+                RenderTarget::Unicode => format!("[{}]", rendered_elements.join(", ")),
+                RenderTarget::LaTeX => format!(r"\left[{}\right]", rendered_elements.join(", ")),
+                RenderTarget::HTML => {
+                    format!(r#"<span class="list">[{}]</span>"#, rendered_elements.join(", "))
+                }
+                RenderTarget::Typst => format!("({})", rendered_elements.join(", ")), // Typst uses () for lists
+            }
+        }
     }
 }
 

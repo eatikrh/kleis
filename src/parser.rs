@@ -1689,6 +1689,7 @@ impl Expression {
             Expression::Operation { .. } => "".to_string(),
             Expression::Placeholder { hint, .. } => hint.clone(),
             Expression::Match { .. } => "match".to_string(),
+            Expression::List(_) => "list".to_string(),
         }
     }
 }

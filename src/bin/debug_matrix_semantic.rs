@@ -152,6 +152,14 @@ fn collect_slots_recursive(
         Expression::Match { .. } => {
             // TODO: Implement match expression slot collection
         }
+        Expression::List(elements) => {
+            // Collect slots from list elements
+            for (i, elem) in elements.iter().enumerate() {
+                let mut child_path = path.clone();
+                child_path.push(i);
+                collect_slots_recursive(elem, slots, next_auto_id, child_path, None);
+            }
+        }
     }
 }
 
