@@ -810,7 +810,7 @@ fn render_expression_internal(
                 _ => vec![],
             };
 
-            // For Matrix constructors: extract dimensions but don't render them
+            // For Matrix constructors: extract dimensions and handle List format
             let is_matrix_constructor =
                 matches!(name.as_str(), "Matrix" | "PMatrix" | "VMatrix" | "BMatrix");
             let (matrix_rows, matrix_cols) = if is_matrix_constructor && args.len() >= 2 {
@@ -827,18 +827,42 @@ fn render_expression_internal(
                 (0, 0)
             };
 
-            let rendered_args: Vec<String> = args
+            // For Matrix: flatten List elements into individual rendered args
+            let args_to_render: Vec<&Expression> = if is_matrix_constructor && args.len() == 3 {
+                // Check if 3rd arg is a List (NEW FORMAT)
+                if let Expression::List(list_elements) = &args[2] {
+                    // NEW FORMAT: Matrix(2, 2, [a, b, c, d])
+                    // Flatten: render a, b, c, d individually
+                    list_elements.iter().collect()
+                } else {
+                    // Not a List, render normally (skip first 2)
+                    args[2..].iter().collect()
+                }
+            } else if is_matrix_constructor {
+                // OLD FORMAT: Matrix(2, 2, a, b, c, d) - skip first 2
+                args[2..].iter().collect()
+            } else {
+                // Not a matrix, render all args
+                args.iter().collect()
+            };
+
+            let rendered_args: Vec<String> = args_to_render
                 .iter()
                 .enumerate()
                 .filter_map(|(i, arg)| {
-                    // Skip first two args for Matrix constructors - they're dimension metadata
-                    if is_matrix_constructor && i < 2 {
-                        return None;
-                    }
-
-
-                    // Generate child node ID: parent.index
-                    let child_id = format!("{}.{}", node_id, i);
+                    // For Matrix, we already extracted elements, so no skipping needed
+                    
+                    // Generate child node ID
+                    let child_id = if is_matrix_constructor && args.len() == 3 {
+                        // NEW FORMAT: child IDs go under the List at args[2]
+                        format!("{}.2.{}", node_id, i)
+                    } else if is_matrix_constructor {
+                        // OLD FORMAT: child IDs start at args[2+i]
+                        format!("{}.{}", node_id, i + 2)
+                    } else {
+                        format!("{}.{}", node_id, i)
+                    };
+                    
                     let rendered = render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
 
                     // For Typst: wrap arguments with labeled boxes for position tracking

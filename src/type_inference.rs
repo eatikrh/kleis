@@ -816,11 +816,10 @@ impl TypeInference {
                     }
                 }
                 _ => {
-                    // This is a value field - infer its type
+                    // This is a value field - infer its type and include it in result
                     let arg_type = self.infer(arg_expr, context_builder)?;
                     // TODO: Add constraint that arg_type matches field_def.type_expr
-                    // For now, we just infer and don't constrain
-                    let _ = arg_type; // Suppress warning
+                    constructor_args.push(arg_type);
                 }
             }
         }
