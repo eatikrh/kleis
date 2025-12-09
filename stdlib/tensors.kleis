@@ -1,0 +1,422 @@
+// Kleis Standard Library - Tensors
+// Differential geometry and General Relativity operations
+//
+// Tensors are fundamental to Einstein's field equations and curved spacetime.
+// This file defines tensor structures following ADR-016.
+//
+// Tensors are parametric over:
+//   - Rank: (contravariant, covariant) index counts
+//   - Dimension: spacetime dimension (typically 4 for GR)
+//   - T: element type (typically ℝ)
+
+/* Tensor Type
+ * 
+ * A tensor is a multilinear map with contravariant (upper) and covariant (lower) indices.
+ * 
+ * Notation conventions:
+ *   - Contravariant (upper): Tᵘ, Tᵘᵛ, ...
+ *   - Covariant (lower): Tᵤ, Tᵤᵥ, ...
+ *   - Mixed: Tᵘᵥ, Tᵘᵛᵥᵨ, ...
+ * 
+ * Type parameters:
+ *   - upper: number of contravariant indices (Nat)
+ *   - lower: number of covariant indices (Nat)
+ *   - dim: spacetime dimension (Nat)
+ *   - T: element type
+ * 
+ * Examples:
+ *   - Scalar: Tensor(0, 0, 4, ℝ)
+ *   - Vector: Tensor(1, 0, 4, ℝ) or Tensor(0, 1, 4, ℝ)
+ *   - Metric: Tensor(0, 2, 4, ℝ) → gᵤᵥ
+ *   - Riemann: Tensor(1, 3, 4, ℝ) → Rᵘᵥᵨσ
+ */
+structure Tensor(upper: Nat, lower: Nat, dim: Nat, T) {
+    operation contract : Tensor(upper, lower, dim, T) → T
+}
+
+implements Tensor(upper, lower, dim, ℝ) {
+    operation contract = builtin_tensor_contract
+}
+
+/* Metric Tensor - The Foundation of GR
+ * 
+ * The metric tensor gᵤᵥ defines distances and angles in curved spacetime.
+ * In GR, the metric determines the geometry of spacetime.
+ * 
+ * Properties:
+ *   - Symmetric: gᵤᵥ = gᵥᵤ
+ *   - Signature: Typically (-,+,+,+) for Minkowski or (timelike, spacelike³)
+ *   - Inverse: gᵘᵛ gᵥᵨ = δᵘᵨ (Kronecker delta)
+ * 
+ * Type: Tensor(0, 2, dim, ℝ) - covariant rank-2 tensor
+ */
+structure MetricTensor(dim: Nat) {
+    operation inverse : Tensor(0, 2, dim, ℝ) → Tensor(2, 0, dim, ℝ)
+    operation determinant : Tensor(0, 2, dim, ℝ) → ℝ
+    operation signature : Tensor(0, 2, dim, ℝ) → ℝ
+}
+
+implements MetricTensor(dim) {
+    operation inverse = builtin_metric_inverse
+    operation determinant = builtin_metric_determinant
+    operation signature = builtin_metric_signature
+}
+
+/* Christoffel Symbols - Connection Coefficients
+ * 
+ * The Christoffel symbols Γᵘᵥᵨ describe how vectors change as they're parallel-transported.
+ * They encode the curvature of spacetime in terms of metric derivatives.
+ * 
+ * Definition: Γᵘᵥᵨ = ½ gᵘσ (∂ᵥgσᵨ + ∂ᵨgσᵥ - ∂σgᵥᵨ)
+ * 
+ * Type: Tensor(1, 2, dim, ℝ) - one contravariant, two covariant indices
+ * 
+ * Properties:
+ *   - Symmetric in lower indices: Γᵘᵥᵨ = Γᵘᵨᵥ
+ *   - Not a tensor! (transforms non-linearly)
+ *   - Zero in flat spacetime with Cartesian coordinates
+ */
+structure Connection(dim: Nat) {
+    operation christoffel : Tensor(0, 2, dim, ℝ) → Tensor(1, 2, dim, ℝ)
+}
+
+implements Connection(dim) {
+    operation christoffel = builtin_christoffel_from_metric
+}
+
+/* Riemann Curvature Tensor - The Heart of GR
+ * 
+ * The Riemann tensor Rᵘᵥᵨσ measures the curvature of spacetime.
+ * It describes tidal forces and is the fundamental object in GR.
+ * 
+ * Definition: Rᵘᵥᵨσ = ∂ᵨΓᵘᵥσ - ∂σΓᵘᵥᵨ + ΓᵘλᵨΓλᵥσ - ΓᵘλσΓλᵥᵨ
+ * 
+ * Type: Tensor(1, 3, dim, ℝ) - one contravariant, three covariant indices
+ * 
+ * Properties:
+ *   - Antisymmetric in first pair: Rᵘᵥᵨσ = -Rᵥᵘᵨσ
+ *   - Antisymmetric in second pair: Rᵘᵥᵨσ = -Rᵘᵥσᵨ
+ *   - First Bianchi identity: Rᵘ[ᵥᵨσ] = 0 (cyclic sum)
+ *   - Second Bianchi identity: ∇[λRᵘᵥ]ᵨσ = 0
+ *   - Zero ⟺ flat spacetime
+ * 
+ * In 4D: 20 independent components (256 → 20 by symmetries)
+ */
+structure Curvature(dim: Nat) {
+    operation riemann : Tensor(1, 2, dim, ℝ) → Tensor(1, 3, dim, ℝ)
+    operation riemann_from_metric : Tensor(0, 2, dim, ℝ) → Tensor(1, 3, dim, ℝ)
+}
+
+implements Curvature(dim) {
+    operation riemann = builtin_riemann_from_christoffel
+    operation riemann_from_metric = builtin_riemann_from_metric
+}
+
+/* Ricci Tensor - Trace of Riemann Tensor
+ * 
+ * The Ricci tensor Rᵤᵥ is obtained by contracting the Riemann tensor.
+ * It appears in Einstein's field equations.
+ * 
+ * Definition: Rᵤᵥ = Rᵘᵤᵨᵥ (contraction on first and third indices)
+ * 
+ * Type: Tensor(0, 2, dim, ℝ) - covariant rank-2 tensor
+ * 
+ * Properties:
+ *   - Symmetric: Rᵤᵥ = Rᵥᵤ
+ *   - In 4D: 10 independent components
+ *   - Describes local matter/energy content
+ */
+structure RicciTensor(dim: Nat) {
+    operation ricci : Tensor(1, 3, dim, ℝ) → Tensor(0, 2, dim, ℝ)
+}
+
+implements RicciTensor(dim) {
+    operation ricci = builtin_ricci_from_riemann
+}
+
+/* Ricci Scalar - Complete Contraction
+ * 
+ * The Ricci scalar R is the trace of the Ricci tensor.
+ * It's a scalar measure of spacetime curvature.
+ * 
+ * Definition: R = gᵘᵛ Rᵤᵥ
+ * 
+ * Type: ℝ (scalar)
+ * 
+ * Physical meaning:
+ *   - R > 0: positive curvature (sphere-like)
+ *   - R < 0: negative curvature (hyperbolic)
+ *   - R = 0: flat or Ricci-flat (vacuum)
+ */
+structure RicciScalar(dim: Nat) {
+    operation ricci_scalar : Tensor(0, 2, dim, ℝ) → Tensor(2, 0, dim, ℝ) → ℝ
+}
+
+implements RicciScalar(dim) {
+    operation ricci_scalar = builtin_ricci_scalar
+}
+
+/* Einstein Tensor - Left Side of Field Equations
+ * 
+ * The Einstein tensor Gᵤᵥ appears in Einstein's field equations:
+ *   Gᵤᵥ = 8πG/c⁴ Tᵤᵥ
+ * 
+ * Definition: Gᵤᵥ = Rᵤᵥ - ½ R gᵤᵥ
+ * 
+ * Type: Tensor(0, 2, dim, ℝ) - covariant rank-2 tensor
+ * 
+ * Properties:
+ *   - Symmetric: Gᵤᵥ = Gᵥᵤ
+ *   - Divergence-free: ∇ᵘ Gᵤᵥ = 0 (conservation of energy-momentum)
+ *   - Automatically satisfies Bianchi identity
+ */
+structure EinsteinTensor(dim: Nat) {
+    operation einstein : Tensor(0, 2, dim, ℝ) → ℝ → Tensor(0, 2, dim, ℝ) → Tensor(0, 2, dim, ℝ)
+}
+
+implements EinsteinTensor(dim) {
+    operation einstein = builtin_einstein_tensor
+}
+
+/* Tensor Index Operations
+ * 
+ * Mixed index notation: Tᵘᵥ (one up, one down)
+ * 
+ * Operations:
+ *   - Raise index: gᵘᵛ Tᵥ = Tᵘ
+ *   - Lower index: gᵤᵥ Tᵛ = Tᵤ
+ *   - Contract: Tᵘᵤ (sum over repeated index)
+ */
+structure TensorIndexOps(dim: Nat, T) {
+    operation raise_index : Tensor(2, 0, dim, T) → Tensor(0, 1, dim, T) → Tensor(1, 0, dim, T)
+    operation lower_index : Tensor(0, 2, dim, T) → Tensor(1, 0, dim, T) → Tensor(0, 1, dim, T)
+    operation index_mixed : T → T → T → T
+}
+
+implements TensorIndexOps(dim, ℝ) {
+    operation raise_index = builtin_raise_index
+    operation lower_index = builtin_lower_index
+    operation index_mixed = builtin_index_mixed
+}
+
+/* Covariant Derivative - Parallel Transport
+ * 
+ * The covariant derivative ∇ᵤ generalizes ordinary derivatives to curved spaces.
+ * It accounts for the curvature via Christoffel symbols.
+ * 
+ * For a vector: ∇ᵤ Vᵛ = ∂ᵤ Vᵛ + Γᵛᵤλ Vλ
+ * For a covector: ∇ᵤ ωᵥ = ∂ᵤ ωᵥ - Γλᵤᵥ ωλ
+ * 
+ * Parallel transport: ∇ᵤ Vᵛ = 0 along a curve
+ */
+structure CovariantDerivative(dim: Nat) {
+    operation covariant_derivative : Tensor(1, 2, dim, ℝ) → Tensor(1, 0, dim, ℝ) → Tensor(1, 1, dim, ℝ)
+}
+
+implements CovariantDerivative(dim) {
+    operation covariant_derivative = builtin_covariant_derivative
+}
+
+/* Tensor Product (Outer Product)
+ * 
+ * The tensor product combines two tensors into a higher-rank tensor.
+ * 
+ * Example: Tᵘ ⊗ Sᵛ = Wᵘᵛ
+ * 
+ * Ranks add: Tensor(p, q) ⊗ Tensor(r, s) = Tensor(p+r, q+s)
+ */
+structure TensorProduct(p: Nat, q: Nat, r: Nat, s: Nat, dim: Nat, T) {
+    operation tensor_product : 
+        Tensor(p, q, dim, T) → 
+        Tensor(r, s, dim, T) → 
+        Tensor(p + r, q + s, dim, T)
+}
+
+implements TensorProduct(p, q, r, s, dim, ℝ) {
+    operation tensor_product = builtin_tensor_product
+}
+
+/* Wedge Product (Antisymmetric Tensor Product)
+ * 
+ * The wedge product ∧ creates antisymmetric tensors (differential forms).
+ * Fundamental to differential geometry and electromagnetism.
+ * 
+ * Properties:
+ *   - Antisymmetric: α ∧ β = -β ∧ α
+ *   - Associative: (α ∧ β) ∧ γ = α ∧ (β ∧ γ)
+ *   - α ∧ α = 0 for any 1-form α
+ */
+structure ExteriorAlgebra(p: Nat, q: Nat, dim: Nat) {
+    operation wedge : Tensor(0, p, dim, ℝ) → Tensor(0, q, dim, ℝ) → Tensor(0, p + q, dim, ℝ)
+}
+
+implements ExteriorAlgebra(p, q, dim) {
+    operation wedge = builtin_wedge_product
+}
+
+/* Lie Derivative - Infinitesimal Diffeomorphisms
+ * 
+ * The Lie derivative ℒ_X measures how a tensor changes along a vector field X.
+ * It describes infinitesimal coordinate transformations.
+ * 
+ * For a function: ℒ_X f = X(f) (directional derivative)
+ * For a vector: ℒ_X Y = [X, Y] (Lie bracket)
+ * For the metric: ℒ_X g = 0 ⟺ X is a Killing vector (symmetry)
+ */
+structure LieDerivative(upper: Nat, lower: Nat, dim: Nat) {
+    operation lie_derivative : 
+        Tensor(1, 0, dim, ℝ) → 
+        Tensor(upper, lower, dim, ℝ) → 
+        Tensor(upper, lower, dim, ℝ)
+}
+
+implements LieDerivative(upper, lower, dim) {
+    operation lie_derivative = builtin_lie_derivative
+}
+
+/* Killing Vector - Spacetime Symmetry
+ * 
+ * A Killing vector K satisfies ℒ_K g = 0, representing a spacetime symmetry.
+ * Each Killing vector corresponds to a conserved quantity.
+ * 
+ * Examples:
+ *   - Time translation: ∂/∂t → energy conservation
+ *   - Spatial rotation: ∂/∂φ → angular momentum conservation
+ *   - Spatial translation: ∂/∂x → linear momentum conservation
+ */
+structure KillingVector(dim: Nat) {
+    operation is_killing : Tensor(1, 0, dim, ℝ) → Tensor(0, 2, dim, ℝ) → Bool
+}
+
+implements KillingVector(dim) {
+    operation is_killing = builtin_is_killing_vector
+}
+
+/* Stress-Energy Tensor - Matter/Energy Content
+ * 
+ * The stress-energy tensor Tᵤᵥ describes the density and flux of energy and momentum.
+ * Right-hand side of Einstein's field equations.
+ * 
+ * Components:
+ *   - T₀₀: energy density
+ *   - T₀ᵢ: momentum density / energy flux
+ *   - Tᵢⱼ: stress tensor (pressure, shear)
+ * 
+ * Type: Tensor(0, 2, dim, ℝ)
+ * 
+ * Properties:
+ *   - Symmetric: Tᵤᵥ = Tᵥᵤ
+ *   - Conserved: ∇ᵘ Tᵤᵥ = 0 (energy-momentum conservation)
+ */
+structure StressEnergyTensor(dim: Nat) {
+    operation perfect_fluid : ℝ → ℝ → Tensor(1, 0, dim, ℝ) → Tensor(0, 2, dim, ℝ)
+    operation dust : ℝ → Tensor(1, 0, dim, ℝ) → Tensor(0, 2, dim, ℝ)
+    operation electromagnetic : Tensor(0, 2, dim, ℝ) → Tensor(0, 2, dim, ℝ)
+}
+
+implements StressEnergyTensor(dim) {
+    operation perfect_fluid = builtin_stress_energy_perfect_fluid
+    operation dust = builtin_stress_energy_dust
+    operation electromagnetic = builtin_stress_energy_em
+}
+
+/* Weyl Tensor - Conformal Curvature
+ * 
+ * The Weyl tensor Cᵘᵥᵨσ is the traceless part of the Riemann tensor.
+ * It represents curvature NOT due to local matter/energy (gravitational waves).
+ * 
+ * Definition: Cᵘᵥᵨσ = Rᵘᵥᵨσ - (various terms involving Ricci and metric)
+ * 
+ * Type: Tensor(1, 3, dim, ℝ)
+ * 
+ * Properties:
+ *   - Traceless: Cᵘᵥᵤσ = 0
+ *   - Same symmetries as Riemann
+ *   - Zero in 3D (all curvature is Ricci)
+ *   - Describes gravitational waves in vacuum
+ */
+structure WeylTensor(dim: Nat) {
+    operation weyl : 
+        Tensor(1, 3, dim, ℝ) → 
+        Tensor(0, 2, dim, ℝ) → 
+        ℝ → 
+        Tensor(0, 2, dim, ℝ) → 
+        Tensor(1, 3, dim, ℝ)
+}
+
+implements WeylTensor(dim) {
+    operation weyl = builtin_weyl_tensor
+}
+
+/* Geodesic Equation - Free Fall Paths
+ * 
+ * The geodesic equation describes the path of freely falling particles.
+ * In GR, planets orbit the sun by following geodesics in curved spacetime.
+ * 
+ * Equation: d²xᵘ/dτ² + Γᵘᵥᵨ (dxᵛ/dτ) (dxᵨ/dτ) = 0
+ * 
+ * where τ is proper time
+ */
+structure Geodesic(dim: Nat) {
+    operation geodesic_acceleration : 
+        Tensor(1, 2, dim, ℝ) → 
+        Tensor(1, 0, dim, ℝ) → 
+        Tensor(1, 0, dim, ℝ) → 
+        Tensor(1, 0, dim, ℝ)
+}
+
+implements Geodesic(dim) {
+    operation geodesic_acceleration = builtin_geodesic_acceleration
+}
+
+/* Einstein Field Equations
+ * 
+ * The Einstein field equations relate spacetime geometry to matter/energy:
+ * 
+ *   Gᵤᵥ + Λgᵤᵥ = (8πG/c⁴) Tᵤᵥ
+ * 
+ * where:
+ *   - Gᵤᵥ: Einstein tensor (geometry)
+ *   - Λ: cosmological constant (dark energy)
+ *   - Tᵤᵥ: stress-energy tensor (matter/energy)
+ *   - G: Newton's gravitational constant
+ *   - c: speed of light
+ * 
+ * This single equation governs:
+ *   - Black holes
+ *   - Gravitational waves
+ *   - Expanding universe
+ *   - Time dilation
+ *   - All gravitational phenomena!
+ */
+structure EinsteinEquations(dim: Nat) {
+    operation field_equation : 
+        Tensor(0, 2, dim, ℝ) →  // Metric gᵤᵥ
+        ℝ →                      // Cosmological constant Λ
+        Tensor(0, 2, dim, ℝ) →  // Stress-energy Tᵤᵥ
+        Bool                     // True if equation satisfied
+}
+
+implements EinsteinEquations(dim) {
+    operation field_equation = builtin_einstein_field_equations
+}
+
+/* Common Spacetime Metrics
+ * 
+ * Predefined metrics for standard spacetimes.
+ * These enable quick setup for common GR problems.
+ */
+structure StandardMetrics(dim: Nat) {
+    operation minkowski : Tensor(0, 2, dim, ℝ)
+    operation schwarzschild : ℝ → Tensor(0, 2, 4, ℝ)
+    operation kerr : ℝ → ℝ → Tensor(0, 2, 4, ℝ)
+    operation flrw : ℝ → ℝ → Tensor(0, 2, 4, ℝ)
+}
+
+implements StandardMetrics(dim) {
+    operation minkowski = builtin_minkowski_metric
+    operation schwarzschild = builtin_schwarzschild_metric
+    operation kerr = builtin_kerr_metric
+    operation flrw = builtin_flrw_metric
+}
+

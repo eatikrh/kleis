@@ -78,12 +78,18 @@ implements SquareMatrix(n, ℝ) {
  * 
  * Type: Matrix(2, 2, Matrix(3, 3, ℝ))
  * 
- * The existing polymorphic operations work for block matrices:
- *   - multiply: works when T = Matrix(k, l, ℝ)
- *   - add: works when T = Matrix(k, l, ℝ)
- *   - transpose: works when T = Matrix(k, l, ℝ)
+ * The existing polymorphic operations work for block matrices at ANY depth:
+ *   - multiply: works when T = ℝ (regular) OR T = Matrix(k, l, T) (recursive!)
+ *   - add: works when T = ℝ OR T = Matrix(k, l, T)
+ *   - transpose: works when T = ℝ OR T = Matrix(k, l, T)
  * 
- * No special block operations needed - parametric polymorphism handles it!
+ * Examples:
+ *   - Regular: Matrix(2, 2, ℝ)
+ *   - 1-level: Matrix(2, 2, Matrix(3, 3, ℝ))
+ *   - 2-level: Matrix(2, 2, Matrix(3, 3, Matrix(4, 4, ℝ)))
+ *   - N-level: Matrix(... Matrix(... Matrix(...) ...) ...)
+ * 
+ * No special block operations needed - parametric polymorphism handles infinite nesting!
  */
 
 /* Legacy Matrix Constructors (DEPRECATED - Use 'matrix' instead)
