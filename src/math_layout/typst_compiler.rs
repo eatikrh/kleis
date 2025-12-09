@@ -638,6 +638,92 @@ fn assign_boxes_recursive(
             cursor = end;
             eprintln!("  Advanced cursor to {}", cursor);
         }
+    } else if let Expression::List(elements) = expr {
+        // Handle List nodes: recursively process each element
+        eprintln!(
+            "assign_boxes_recursive: node={}, List with {} elements",
+            node_id,
+            elements.len()
+        );
+
+        for (idx, elem) in elements.iter().enumerate() {
+            let child_node_id = if node_id.is_empty() {
+                format!("0.{}", idx)
+            } else {
+                format!("{}.{}", node_id, idx)
+            };
+
+            eprintln!("  List element {}: processing at node_id={}", idx, child_node_id);
+
+            // Check if this element has a UUID position (for filled values)
+            if let Some(uuid) = node_id_to_uuid.get(&child_node_id) {
+                if let Some((x, y, w, h)) = uuid_positions.get(uuid) {
+                    let display_uuid = &uuid[..8.min(uuid.len())];
+                    eprintln!(
+                        "  List element {}: 🔑 UUID match! {}... -> ({:.1}, {:.1})",
+                        idx, display_uuid, x, y
+                    );
+
+                    result.push(ArgumentBoundingBox {
+                        arg_index: idx,
+                        node_id: child_node_id.clone(),
+                        x: *x,
+                        y: *y,
+                        width: *w,
+                        height: *h,
+                    });
+
+                    // Recursively process children if any
+                    assign_boxes_recursive(
+                        elem,
+                        ctx,
+                        &[],
+                        &child_node_id,
+                        cache,
+                        labeled_positions,
+                        node_id_to_uuid,
+                        uuid_positions,
+                        result,
+                    )?;
+                    continue;
+                }
+            }
+
+            // No UUID found, try recursive processing
+            // This handles nested structures or placeholder positions
+            assign_boxes_recursive(
+                elem,
+                ctx,
+                text_boxes,
+                &child_node_id,
+                cache,
+                labeled_positions,
+                node_id_to_uuid,
+                uuid_positions,
+                result,
+            )?;
+        }
+    } else {
+        // Leaf nodes (Const, Object, Placeholder, Match)
+        // If we reach here with a leaf node, try UUID lookup
+        if let Some(uuid) = node_id_to_uuid.get(node_id) {
+            if let Some((x, y, w, h)) = uuid_positions.get(uuid) {
+                let display_uuid = &uuid[..8.min(uuid.len())];
+                eprintln!(
+                    "  Leaf node at {}: 🔑 UUID match! {}... -> ({:.1}, {:.1})",
+                    node_id, display_uuid, x, y
+                );
+
+                result.push(ArgumentBoundingBox {
+                    arg_index: 0,
+                    node_id: node_id.to_string(),
+                    x: *x,
+                    y: *y,
+                    width: *w,
+                    height: *h,
+                });
+            }
+        }
     }
 
     Ok(())
