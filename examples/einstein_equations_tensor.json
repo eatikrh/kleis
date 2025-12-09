@@ -1,0 +1,72 @@
+{
+  "Operation": {
+    "name": "equals",
+    "args": [
+      {
+        "Operation": {
+          "name": "plus",
+          "args": [
+            {
+              "Operation": {
+                "name": "einstein",
+                "args": [
+                  {
+                    "Placeholder": {
+                      "id": 0,
+                      "hint": "Ricci_tensor_R_μν"
+                    }
+                  },
+                  {
+                    "Placeholder": {
+                      "id": 1,
+                      "hint": "Ricci_scalar_R"
+                    }
+                  },
+                  {
+                    "Placeholder": {
+                      "id": 2,
+                      "hint": "metric_g_μν"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "Operation": {
+                "name": "scalar_multiply",
+                "args": [
+                  {
+                    "Object": "Lambda"
+                  },
+                  {
+                    "Placeholder": {
+                      "id": 3,
+                      "hint": "metric_g_μν"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Operation": {
+          "name": "scalar_multiply",
+          "args": [
+            {
+              "Object": "kappa"
+            },
+            {
+              "Placeholder": {
+                "id": 4,
+                "hint": "stress_energy_T_μν"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+

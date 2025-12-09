@@ -1,21 +1,24 @@
-// Test Einstein's Field Equations with Proper Semantic Types
+// Test Einstein's Field Equations - CONTRACTED FORM
 //
-// This demonstrates the difference between:
-// 1. LaTeX-parsed (notation only) - type: Var(α)
-// 2. Semantically constructed (with tensor operations) - type: proper tensor types
+// This tests the TRACE (contracted) form of Einstein's equations:
+// G^μ_μ + Λg^μ_μ = κT^μ_μ
 //
-// Einstein's Field Equations: G_μν + Λg_μν = 8πG/c⁴ T_μν
-// Contracted form: G^μ_μ + Λg^μ_μ = κT^μ_μ (traces)
+// This is a SCALAR equation (taking the trace of both sides).
+// See test_einstein_tensor.rs for the full TENSOR form.
+//
+// Result type: Scalar (ℝ)
 
 use kleis::ast::Expression;
 use kleis::type_checker::TypeChecker;
 use std::fs;
 
 fn main() {
-    println!("=== Testing Einstein's Field Equations ===\n");
+    println!("=== Testing Einstein's Field Equations (CONTRACTED FORM) ===\n");
+    println!("Equation: G^μ_μ + Λg^μ_μ = κT^μ_μ");
+    println!("This is the TRACE (scalar) form.\n");
 
     // Load the semantic AST
-    let ast_json = fs::read_to_string("examples/einstein_equations_semantic.json")
+    let ast_json = fs::read_to_string("examples/einstein_equations_contracted.json")
         .expect("Failed to read semantic AST file");
     
     let ast: Expression = serde_json::from_str(&ast_json)
@@ -28,7 +31,7 @@ fn main() {
     let mut checker = TypeChecker::with_stdlib()
         .expect("Failed to load stdlib");
 
-    println!("Type checking Einstein's equations...\n");
+    println!("Type checking contracted Einstein's equations...\n");
 
     // Type check the expression
     let result = checker.check(&ast);
