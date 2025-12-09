@@ -21,18 +21,42 @@ The Kleis standard library is written **in Kleis itself** (self-hosting). It pro
 
 ### Core Library (Always Loaded)
 
-**`prelude.kleis`** (~500 lines)
-- Algebraic hierarchy: Semigroup, Monoid, Group, AbelianGroup, Ring, Field
-- Vector space structure
-- Implementations: Field(ℝ), Field(ℂ), Ring(ℤ), VectorSpace(Vector)
-- Vector operations: dot, cross, norm
-- Matrix operations: det, trace, transpose, (×)
-- Calculus operations: d/dx, ∂/∂x, ∇, ∫
-- Constants: π, e, i, φ, √2
+**`types.kleis`** (~260 lines)
+- Algebraic data types: Bool, Option, Result, List
+- Type system types: Scalar, Vector, Matrix, Complex, Set
+- Pattern matching function examples
+- Foundation for self-hosting type system
 
-**Status:** ✅ Defined, ⬜ Parser support needed
+**Status:** ✅ Complete, ✅ Loaded
 
-### Optional Libraries (Import on Demand)
+**`minimal_prelude.kleis`** (~300 lines)
+- Basic algebraic structures: Numeric, Arithmetic, Additive
+- Implementations for ℝ, ℂ, ℤ
+- Basic operations: +, -, *, /, abs, floor, ceiling
+
+**Status:** ✅ Complete, ✅ Loaded
+
+**`matrices.kleis`** (~122 lines)
+- Matrix structures: Matrix, MatrixAddable, MatrixMultipliable, SquareMatrix
+- Operations: transpose, add, multiply, det, trace, identity
+- Block matrix support via polymorphism
+- Legacy constructors for backward compatibility
+
+**Status:** ✅ Complete, ✅ Loaded
+
+### Domain-Specific Libraries
+
+**`tensors.kleis`** (~260 lines) ✨ NEW!
+- General Relativity tensor operations
+- Curvature: Riemann, Ricci, Einstein, Weyl tensors
+- Connection: Christoffel symbols, covariant derivative
+- Physics: Stress-energy tensor, geodesics, Killing vectors
+- Standard metrics: Minkowski, Schwarzschild, Kerr, FLRW
+- Tensor products: outer product, wedge product, Lie derivative
+
+**Status:** ✅ Defined, ⬜ Not yet loaded by default
+
+### Optional Libraries (Planned)
 
 **`quantum.kleis`** (planned)
 - HilbertSpace structure
@@ -220,22 +244,33 @@ All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.5**:
 
 ---
 
-## Status
+## Status (December 9, 2024)
 
-**Defined:** ✅ `types.kleis`, `prelude.kleis`, `matrices.kleis` written  
+**Files Written:** ✅ `types.kleis`, `minimal_prelude.kleis`, `matrices.kleis`, `tensors.kleis`  
 **Grammar:** ✅ v0.5 formalized (with pattern matching!)  
 **Parser:** ✅ Pattern matching implemented  
 **Type Inference:** ✅ Pattern matching type-checks  
 **Evaluation:** ✅ Pattern matching evaluates  
 **Exhaustiveness:** ✅ Missing case warnings  
-**Loader:** ⬜ Needs implementation  
+**Matrix Operations:** ✅ Working with UI button  
+**Recursive Unification:** ✅ Nested types unify correctly  
+**Block Matrices:** ✅ Work via polymorphism  
 
-**Pattern Matching Functions:** ✅ Added to `types.kleis`
+**Files Loaded:** types.kleis, minimal_prelude.kleis, matrices.kleis  
+**Files Defined (not loaded):** tensors.kleis
+
+**Pattern Matching Functions:** ✅ Defined in `types.kleis`
 - Boolean operations: `not`, `and`, `or`
 - Option operations: `isSome`, `isNone`, `getOrDefault`, `mapOption`
 - Result operations: `isOk`, `isErr`, `unwrapOr`
 - List operations: `isEmpty`, `head`, `tail`
-- Meta-level: `isScalarType`, `isVectorType`, `vectorDimension`  
+- Meta-level: `isScalarType`, `isVectorType`, `vectorDimension`
+
+**Tensor Operations:** ✅ Defined in `tensors.kleis`
+- Curvature tensors: Riemann, Ricci, Einstein, Weyl
+- Connection: Christoffel symbols, covariant derivative
+- Physics: Stress-energy, geodesics, Killing vectors
+- Standard metrics: Minkowski, Schwarzschild, Kerr, FLRW  
 
 ---
 
