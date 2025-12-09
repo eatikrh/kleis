@@ -28,15 +28,23 @@
 // This makes them REGULAR data constructors with fixed arity.
 // The variable-arity aspect is moved into the List type.
 //
+// Matrix variants for different delimiters:
+//   - Matrix: square brackets [a b; c d] (bmatrix)
+//   - PMatrix: parentheses (a b; c d) (pmatrix)
+//   - VMatrix: vertical bars |a b; c d| (vmatrix, for determinants)
+//   - BMatrix: braces {a b; c d} (Bmatrix)
+//
 // OLD FORMAT (variable arity - being phased out):
 //   - Matrix(2, 2, a, b, c, d): 6 args (variable)
-//   - Vector(3, x, y, z): 4 args (variable)
 //
 // Both formats are supported during transition.
 data Type =
   Scalar
   | Vector(n: Nat, elements: List(T))
   | Matrix(m: Nat, n: Nat, elements: List(T))
+  | PMatrix(m: Nat, n: Nat, elements: List(T))
+  | VMatrix(m: Nat, n: Nat, elements: List(T))
+  | BMatrix(m: Nat, n: Nat, elements: List(T))
   | Complex
   | Set(T: Type)
   | List(T: Type)

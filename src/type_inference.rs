@@ -670,8 +670,13 @@ impl TypeInference {
                     self.infer(arg, context_builder)?;
                 }
                 
-                // Return Matrix type
-                return Ok(Type::matrix(m, n, Type::scalar()));
+                // Return appropriate matrix type based on constructor name
+                return Ok(match name {
+                    "PMatrix" => Type::pmatrix(m, n, Type::scalar()),
+                    "VMatrix" => Type::vmatrix(m, n, Type::scalar()),
+                    "BMatrix" => Type::bmatrix(m, n, Type::scalar()),
+                    _ => Type::matrix(m, n, Type::scalar()),
+                });
             }
             "Vector" if args.len() > 2 => {
                 // OLD FORMAT: Vector(3, x, y, z)
@@ -1045,6 +1050,33 @@ impl Type {
         Type::Data {
             type_name: "Matrix".to_string(),
             constructor: "Matrix".to_string(),
+            args: vec![Type::NatValue(m), Type::NatValue(n), elem_type],
+        }
+    }
+
+    /// Create a PMatrix type (matrix with parentheses)
+    pub fn pmatrix(m: usize, n: usize, elem_type: Type) -> Type {
+        Type::Data {
+            type_name: "PMatrix".to_string(),
+            constructor: "PMatrix".to_string(),
+            args: vec![Type::NatValue(m), Type::NatValue(n), elem_type],
+        }
+    }
+
+    /// Create a VMatrix type (matrix with vertical bars, for determinants)
+    pub fn vmatrix(m: usize, n: usize, elem_type: Type) -> Type {
+        Type::Data {
+            type_name: "VMatrix".to_string(),
+            constructor: "VMatrix".to_string(),
+            args: vec![Type::NatValue(m), Type::NatValue(n), elem_type],
+        }
+    }
+
+    /// Create a BMatrix type (matrix with braces)
+    pub fn bmatrix(m: usize, n: usize, elem_type: Type) -> Type {
+        Type::Data {
+            type_name: "BMatrix".to_string(),
+            constructor: "BMatrix".to_string(),
             args: vec![Type::NatValue(m), Type::NatValue(n), elem_type],
         }
     }
