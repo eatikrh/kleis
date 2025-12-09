@@ -2,7 +2,9 @@
 
 **Date:** December 9, 2024  
 **Phase:** 5+ (Post Self-Hosting)  
-**Status:** Future enhancement after self-hosting stabilizes
+**Priority:** Low (long-term vision, not immediate roadmap)  
+**Status:** Future enhancement - community-driven if user demand emerges  
+**Audience:** Future Kleis users extending to new domains
 
 ---
 
