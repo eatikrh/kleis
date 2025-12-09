@@ -11,24 +11,25 @@
  * Used by the Physics palette buttons.
  * 
  * The type signatures encode the index structure:
- *   - gamma: Γ^λ_μν has 1 upper, 2 lower → Tensor(1, 2, dim, ℝ)
- *   - riemann: R^ρ_σμν has 1 upper, 3 lower → Tensor(1, 3, dim, ℝ)
+ *   - gamma: Γ^λ_μν has 1 upper, 2 lower → Tensor(1, 2, 4, ℝ)
+ *   - riemann: R^ρ_σμν has 1 upper, 3 lower → Tensor(1, 3, 4, ℝ)
  * 
- * This enables type checking of tensor expressions with proper index structure!
+ * Dimension is fixed at 4 (spacetime) for GR applications.
+ * This enables type checking with proper index structure!
  */
-structure ChristoffelNotation(dim: Nat) {
-    operation gamma : T → T → T → T → Tensor(1, 2, dim, ℝ)
+structure ChristoffelNotation(T) {
+    operation gamma : T → T → T → T → Tensor(1, 2, 4, ℝ)
 }
 
-implements ChristoffelNotation(dim) {
+implements ChristoffelNotation(ℝ) {
     operation gamma = builtin_gamma_notation
 }
 
-structure RiemannNotation(dim: Nat) {
-    operation riemann : T → T → T → T → T → Tensor(1, 3, dim, ℝ)
+structure RiemannNotation(T) {
+    operation riemann : T → T → T → T → T → Tensor(1, 3, 4, ℝ)
 }
 
-implements RiemannNotation(dim) {
+implements RiemannNotation(ℝ) {
     operation riemann = builtin_riemann_notation
 }
 
