@@ -1,14 +1,14 @@
-# NEXT SESSION: Matrix Constructor Cleanup + Integration Tests
+# NEXT SESSION: Integration Tests & Stdlib Expansion
 
-**Current State:** main branch, 371 tests passing, pattern matching COMPLETE! 🎉
+**Current State:** main branch, 376 tests passing, Matrix cleanup COMPLETE! 🎉
 
-**Status:** 🎯 Ready for cleanup and polish!
+**Status:** 🎯 Ready for stdlib expansion and testing!
 
 ---
 
-## 🎊 What's Complete (TODAY!)
+## 🎊 What's Complete
 
-### Pattern Matching - 100% DONE! ✅
+### Pattern Matching - 100% DONE! ✅ (Dec 8)
 
 ✅ **Parser** - Parses all pattern types (553 lines, 17 tests)  
 ✅ **Type Inference** - Type-checks patterns (779 lines, 10 tests)  
@@ -17,46 +17,43 @@
 ✅ **Grammar v0.5** - Formal specification (1,534 lines, 3 formats)  
 ✅ **Stdlib examples** - Pattern matching functions documented  
 
-**Total today:** 4,630 lines, 56 tests, 9 commits
+### Matrix Constructor Cleanup - 100% DONE! ✅ (Dec 9)
 
-**Result:** Kleis is now a **complete functional programming language**! 🚀
+✅ **StructureRegistry** - Generic parametric structure handling (+198 lines)  
+✅ **List Literals** - Fixed-arity constructors with Lists (+330 lines)  
+✅ **Removed Hardcoding** - Zero Matrix special cases (-133 lines)  
+✅ **Matrix Rendering** - Edit markers working in UI  
+✅ **Matrix Multiplication** - A•B button in palette (+95 lines)  
+✅ **Recursive Unification** - Generic nested type unification (+40 lines)  
+✅ **Block Matrices** - Nested matrices work via polymorphism!
+
+**Result:** Kleis has a **truly extensible type system with deep polymorphism**! 🚀
 
 ---
 
 ## 🎯 Next Session Options (Choose Your Adventure)
 
-### Option 1: Matrix Constructor Cleanup (1-2 hours) ⭐ Recommended
+### Option 1: Stdlib Operations (2-4 hours) ⭐ Recommended
 
-**Goal:** Eliminate Matrix special cases - make it a regular data constructor
+**Goal:** Add missing operations from palette to stdlib
 
-**Status:** 95% ready - infrastructure exists, just needs cleanup
+**Current gap:** Many palette templates reference operations not yet in stdlib
 
-**What to do:**
+**What to add:**
 
-1. **Add Matrix to data registry** (5 minutes)
-   - Uncomment or add to `stdlib/types.kleis`:
-   ```kleis
-   data Type = Scalar | Vector(n: Nat, T) | Matrix(m: Nat, n: Nat, T) | Complex
-   ```
+1. **Quantum operations** (stdlib/quantum.kleis):
+   - `ket`, `bra`, `inner`, `outer`, `commutator`, `expectation`
+   
+2. **Trigonometric inverses** (stdlib/math_functions.kleis):
+   - `arcsin`, `arccos`, `arctan` (might already exist)
+   - `factorial`, `binomial`
 
-2. **Delete special cases** (30 minutes)
-   - Remove lines 613-616 from `src/type_inference.rs` (Matrix match arm)
-   - Delete `infer_matrix_constructor()` method (~70 lines)
-   - Delete `extract_matrix_dimensions()` method (~20 lines)
-   - Remove lines 584-591 from `src/signature_interpreter.rs` (Matrix fallback)
+3. **Tensor operations** (stdlib/tensors.kleis):
+   - `index_mixed`, `christoffel`, `riemann`
 
-3. **Update tests** (30 minutes)
-   - Ensure Matrix tests load stdlib/types.kleis
-   - Verify all tests pass with generic path
+**Result:** All palette operations type-checkable!
 
-4. **Commit and celebrate** (5 minutes)
-   ```bash
-   git commit -m "Remove Matrix special cases - now a regular data type"
-   ```
-
-**Result:** -100 lines of special-case code, cleaner architecture!
-
-**See:** `docs/session-2024-12-08/MATRIX_CONSTRUCTOR_CLEANUP_PATH.md` for complete analysis
+**See:** `docs/session-2024-12-09/PALETTE_STDLIB_TODO.md`
 
 ---
 
@@ -168,8 +165,8 @@
 ## 📊 Current State
 
 **Branch:** `main`  
-**Tests:** 371 passing (56 new pattern matching tests)  
-**Commits ahead:** 9 commits (ready to push)  
+**Tests:** 376 passing  
+**Commits:** Pushed to GitHub! ✅  
 **Quality:** All gates pass ✅
 
 **Pattern Matching Status:**
@@ -180,59 +177,72 @@
 - Grammar: ✅ 100%
 - Documentation: ✅ 100%
 
+**Matrix System Status:**
+- Constructor cleanup: ✅ 100%
+- List literals: ✅ 100%
+- StructureRegistry: ✅ 100%
+- Matrix multiplication: ✅ 100%
+- Recursive unification: ✅ 100%
+- Block matrices: ✅ Automatic via polymorphism!
+
 **Technical Debt:**
-- Matrix special cases: ~100 lines (easy to remove)
 - POC parser limitations: `define` not supported yet
+- Some stdlib operations not yet defined (quantum, transforms, etc.)
 
 ---
 
 ## 💡 Recommendation for Next Session
 
-### **Option 1: Matrix Cleanup** (1-2 hours) ⭐
+### **Option 1: Stdlib Operations** (2-4 hours) ⭐
 
-**Why this first:**
-1. **Quick win** - 1 hour, big impact
-2. **Cleans architecture** - Removes special cases
-3. **Validates pattern matching** - Proves infrastructure works
-4. **Low risk** - Well documented, clear path
-5. **Completion feel** - Ties up loose ends
+**Why this next:**
+1. **High value** - Makes palette fully functional
+2. **Educational** - Learn by implementing real operations
+3. **Demonstrates extensibility** - User-defined operations!
+4. **Low risk** - Just adding definitions, no breaking changes
+5. **Immediate utility** - Quantum and tensor operations useful
 
-**Then:** Choose Option 2, 3, or 4 for remaining time
+**Start with:** Quantum operations (most interesting, ~1 hour)
 
 ---
 
 ## 🎯 Quick Start for Next Session
 
-### Matrix Cleanup Path
+### Stdlib Operations Path
 
-**Step 1:** Read the analysis (5 minutes)
-```bash
-cat docs/session-2024-12-08/MATRIX_CONSTRUCTOR_CLEANUP_PATH.md
-```
-
-**Step 2:** Add Matrix to registry (5 minutes)
+**Step 1:** Create quantum operations file (30 minutes)
 ```kleis
-// In stdlib/types.kleis, uncomment or add:
-data Type = Scalar | Vector(n: Nat, T) | Matrix(m: Nat, n: Nat, T) | Complex
+// In stdlib/quantum.kleis
+
+structure QuantumState(dim: Nat) {
+    operation ket : T → Ket(T)
+    operation bra : T → Bra(T)
+    operation inner : Bra(T) → Ket(T) → ℂ
+    operation outer : Ket(T) → Bra(T) → Operator(T)
+}
+
+structure Operator(T) {
+    operation commutator : Operator(T) → Operator(T) → Operator(T)
+    operation expectation : Operator(T) → ℝ
+}
+
+implements QuantumState(dim) {
+    operation ket = builtin_ket
+    // ... etc
+}
 ```
 
-**Step 3:** Delete special cases (30 minutes)
-```rust
-// In src/type_inference.rs:
-// - Delete lines 613-616 (match arm)
-// - Delete lines 662-700 (infer_matrix_constructor)
+**Step 2:** Test with palette (15 minutes)
+- Click quantum buttons
+- Verify type checking works
+- Fix any issues
 
-// In src/signature_interpreter.rs:
-// - Delete lines 584-591 (Matrix fallback)
-```
+**Step 3:** Add more domains (1-2 hours)
+- Math functions (arcsin, etc.)
+- Tensor operations
+- Transform operations
 
-**Step 4:** Test and commit (15 minutes)
-```bash
-cargo test --lib
-git commit -m "Remove Matrix special cases - now a regular data type"
-```
-
-**Result:** Clean, generic type system! ✅
+**Result:** Fully type-checked palette operations! ✅
 
 ---
 
