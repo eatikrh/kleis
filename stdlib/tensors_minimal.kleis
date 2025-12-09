@@ -10,17 +10,25 @@
  * These operations create indexed tensor notation for display.
  * Used by the Physics palette buttons.
  * 
- * Examples:
- *   - gamma(Γ, λ, μ, ν) → displays as Γ^λ_μν (Christoffel symbol)
- *   - riemann(R, ρ, σ, μ, ν) → displays as R^ρ_σμν (Riemann tensor)
+ * The type signatures encode the index structure:
+ *   - gamma: Γ^λ_μν has 1 upper, 2 lower → Tensor(1, 2, dim, ℝ)
+ *   - riemann: R^ρ_σμν has 1 upper, 3 lower → Tensor(1, 3, dim, ℝ)
+ * 
+ * This enables type checking of tensor expressions with proper index structure!
  */
-structure TensorNotation(T) {
-    operation gamma : T → T → T → T → T
-    operation riemann : T → T → T → T → T → T
+structure ChristoffelNotation(dim: Nat) {
+    operation gamma : T → T → T → T → Tensor(1, 2, dim, ℝ)
 }
 
-implements TensorNotation(ℝ) {
+implements ChristoffelNotation(dim) {
     operation gamma = builtin_gamma_notation
+}
+
+structure RiemannNotation(dim: Nat) {
+    operation riemann : T → T → T → T → T → Tensor(1, 3, dim, ℝ)
+}
+
+implements RiemannNotation(dim) {
     operation riemann = builtin_riemann_notation
 }
 
