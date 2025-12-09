@@ -113,36 +113,31 @@ data Unit = Unit
 // Once the full parser is implemented, these will be uncommented and loaded.
 
 // Boolean operations using pattern matching
-// define not : Bool → Bool
-// define not(b) = match b {
-//   True => False
-//   False => True
-// }
-//
-// define and : Bool × Bool → Bool
-// define and(b1, b2) = match b1 {
-//   False => False
-//   True => b2
-// }
-//
-// define or : Bool × Bool → Bool
-// define or(b1, b2) = match b1 {
-//   True => True
-//   False => b2
-// }
+define not(b) = match b {
+  True => False
+  | False => True
+}
+
+define and(b1, b2) = match b1 {
+  False => False
+  | True => b2
+}
+
+define or(b1, b2) = match b1 {
+  True => True
+  | False => b2
+}
 
 // Option operations
-// define isSome : Option(T) → Bool
-// define isSome(opt) = match opt {
-//   None => False
-//   Some(_) => True
-// }
-//
-// define isNone : Option(T) → Bool
-// define isNone(opt) = match opt {
-//   None => True
-//   Some(_) => False
-// }
+define isSome(opt) = match opt {
+  None => False
+  | Some(_) => True
+}
+
+define isNone(opt) = match opt {
+  None => True
+  | Some(_) => False
+}
 //
 // define getOrDefault : Option(T) × T → T
 // define getOrDefault(opt, default) = match opt {
@@ -177,11 +172,10 @@ data Unit = Unit
 // }
 
 // List operations
-// define isEmpty : List(T) → Bool
-// define isEmpty(list) = match list {
-//   Nil => True
-//   Cons(_, _) => False
-// }
+define isEmpty(list) = match list {
+  Nil => True
+  | Cons(_, _) => False
+}
 //
 // define head : List(T) → Option(T)
 // define head(list) = match list {

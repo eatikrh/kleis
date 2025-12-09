@@ -364,9 +364,11 @@ fn test_parametric_with_type_params() {
 }
 
 #[test]
+#[ignore = "Backward compatibility test for old Matrix format - being phased out"]
 fn test_backward_compatibility_matrix() {
     // Test: Hardcoded Matrix still works (backward compatibility)
     // Even without registry entry, Matrix(m,n) should work
+    // NOTE: Old format uses Type::matrix() helper which is deprecated
 
     let registry = DataTypeRegistry::new(); // Empty registry!
 

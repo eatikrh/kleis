@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod data_registry;
+pub mod evaluator; // Wire 3: Self-hosting
 pub mod kleis_ast;
 pub mod kleis_parser;
 pub mod math_layout;

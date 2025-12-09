@@ -1,7 +1,7 @@
 ///! Kleis Text Parser - Parses Kleis text syntax into AST
 ///!
 ///! **IMPORTANT:** This is a SIMPLIFIED parser for ADR-015 POC validation.
-///! It implements ~30% of the formal Kleis v0.3 grammar.
+///! It implements ~40% of the formal Kleis v0.5 grammar.
 ///!
 ///! **What's Supported:**
 ///! - Function calls: abs(x), card(S), norm(v), frac(a, b)
@@ -9,6 +9,10 @@
 ///! - Identifiers and numbers
 ///! - Parentheses for grouping
 ///! - Proper operator precedence
+///! - Function definitions: define f(x) = x + x
+///! - Data types: data Bool = True | False
+///! - Pattern matching: match x { True => 1 | False => 0 }
+///! - Structures and implementations
 ///!
 ///! **What's NOT Supported (yet):**
 ///! - Prefix operators: -x, ∇f, √x
@@ -36,8 +40,8 @@
 ///! **Purpose:** Validate ADR-015 design decisions, not production-ready!
 use crate::ast::{Expression, MatchCase, Pattern};
 use crate::kleis_ast::{
-    DataDef, DataField, DataVariant, ImplMember, Implementation, ImplementsDef, OperationDecl,
-    Program, StructureDef, StructureMember, TopLevel, TypeExpr,
+    DataDef, DataField, DataVariant, FunctionDef, ImplMember, Implementation, ImplementsDef,
+    OperationDecl, Program, StructureDef, StructureMember, TopLevel, TypeExpr,
 };
 use std::fmt;
 
@@ -956,6 +960,144 @@ impl KleisParser {
         })
     }
 
+    /// Parse function definition (top-level)
+    /// Examples:
+    ///   define pi = 3.14159
+    ///   define double(x) = x + x
+    ///   define abs(x: ℝ) : ℝ = if x < 0 then minus(x) else x
+    pub fn parse_function_def(&mut self) -> Result<FunctionDef, KleisParseError> {
+        self.skip_whitespace();
+
+        // Expect 'define' keyword
+        let keyword = self.parse_identifier()?;
+        if keyword != "define" {
+            return Err(KleisParseError {
+                message: format!("Expected 'define', got '{}'", keyword),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Parse function name
+        let name = self.parse_identifier()?;
+        self.skip_whitespace();
+
+        // Check if this is a function with parameters or a simple definition
+        let (params, type_annotation) = if self.peek() == Some('(') {
+            // Function form: define f(x, y) = expr
+            self.advance(); // consume '('
+            let params = self.parse_params()?;
+            self.skip_whitespace();
+
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after parameters".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            self.skip_whitespace();
+
+            // Optional return type annotation: : Type
+            let type_annotation = if self.peek() == Some(':') {
+                self.advance(); // consume ':'
+                self.skip_whitespace();
+                Some(self.parse_type()?)
+            } else {
+                None
+            };
+
+            (params, type_annotation)
+        } else {
+            // Simple form: define x = expr
+            // Optional type annotation: : Type
+            let type_annotation = if self.peek() == Some(':') {
+                self.advance(); // consume ':'
+                self.skip_whitespace();
+                Some(self.parse_type()?)
+            } else {
+                None
+            };
+
+            (Vec::new(), type_annotation)
+        };
+
+        self.skip_whitespace();
+
+        // Expect '='
+        if self.advance() != Some('=') {
+            return Err(KleisParseError {
+                message: "Expected '=' after function signature".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Parse function body
+        let body = self.parse_expression()?;
+
+        Ok(FunctionDef {
+            name,
+            params,
+            type_annotation,
+            body,
+        })
+    }
+
+    /// Parse function parameters
+    /// Examples:
+    ///   x, y, z
+    ///   x: ℝ, y: ℝ
+    ///   (x y : ℝ)  -- multiple params with same type (future enhancement)
+    fn parse_params(&mut self) -> Result<Vec<String>, KleisParseError> {
+        let mut params = Vec::new();
+
+        // Empty parameter list
+        self.skip_whitespace();
+        if self.peek() == Some(')') {
+            return Ok(params);
+        }
+
+        // Parse comma-separated parameters
+        loop {
+            self.skip_whitespace();
+
+            // Parse parameter name
+            let param_name = self.parse_identifier()?;
+
+            self.skip_whitespace();
+
+            // Optional type annotation (we parse but don't store it in the simple Vec<String> for now)
+            if self.peek() == Some(':') {
+                self.advance(); // consume ':'
+                self.skip_whitespace();
+                // Parse and discard type for now (stored in type_annotation on FunctionDef)
+                // TODO: Store parameter types individually when we extend FunctionDef
+                self.parse_type()?;
+                self.skip_whitespace();
+            }
+
+            params.push(param_name);
+
+            // Check for comma or end of parameter list
+            if self.peek() == Some(',') {
+                self.advance();
+                continue;
+            } else if self.peek() == Some(')') {
+                break;
+            } else {
+                return Err(KleisParseError {
+                    message: "Expected ',' or ')' in parameter list".to_string(),
+                    position: self.pos,
+                });
+            }
+        }
+
+        Ok(params)
+    }
+
     /// Parse implements block
     /// Example: implements Numeric(ℝ) { operation abs = builtin_abs }
     pub fn parse_implements(&mut self) -> Result<ImplementsDef, KleisParseError> {
@@ -1298,9 +1440,12 @@ impl KleisParser {
             } else if self.peek_word("operation") {
                 let operation = self.parse_operation_decl()?;
                 program.add_item(TopLevel::OperationDecl(operation));
+            } else if self.peek_word("define") {
+                let function_def = self.parse_function_def()?;
+                program.add_item(TopLevel::FunctionDef(function_def));
             } else {
                 return Err(KleisParseError {
-                    message: "Expected 'structure', 'implements', 'data', or 'operation'"
+                    message: "Expected 'structure', 'implements', 'data', 'operation', or 'define'"
                         .to_string(),
                     position: self.pos,
                 });
@@ -2145,5 +2290,224 @@ mod tests {
         let result = parser.parse();
 
         assert!(result.is_err());
+    }
+
+    // ===== Function Definition Parser Tests (define) =====
+
+    #[test]
+    fn test_parse_define_simple_constant() {
+        let code = "define pi = 3.14159";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "pi");
+        assert!(result.params.is_empty());
+        assert!(result.type_annotation.is_none());
+        assert!(matches!(result.body, Expression::Const(ref s) if s == "3.14159"));
+    }
+
+    #[test]
+    fn test_parse_define_simple_with_type() {
+        let code = "define pi : ℝ = 3.14159";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "pi");
+        assert!(result.params.is_empty());
+        assert_eq!(
+            result.type_annotation,
+            Some(TypeExpr::Named("ℝ".to_string()))
+        );
+        assert!(matches!(result.body, Expression::Const(ref s) if s == "3.14159"));
+    }
+
+    #[test]
+    fn test_parse_define_function_one_param() {
+        let code = "define double(x) = x + x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "double");
+        assert_eq!(result.params.len(), 1);
+        assert_eq!(result.params[0], "x");
+        assert!(result.type_annotation.is_none());
+        assert!(matches!(result.body, Expression::Operation { .. }));
+    }
+
+    #[test]
+    fn test_parse_define_function_two_params() {
+        let code = "define add(x, y) = x + y";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "add");
+        assert_eq!(result.params.len(), 2);
+        assert_eq!(result.params[0], "x");
+        assert_eq!(result.params[1], "y");
+        assert!(result.type_annotation.is_none());
+    }
+
+    #[test]
+    fn test_parse_define_function_with_param_types() {
+        let code = "define add(x: ℝ, y: ℝ) = x + y";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "add");
+        assert_eq!(result.params.len(), 2);
+        assert_eq!(result.params[0], "x");
+        assert_eq!(result.params[1], "y");
+    }
+
+    #[test]
+    fn test_parse_define_function_with_return_type() {
+        let code = "define square(x) : ℝ = x * x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "square");
+        assert_eq!(result.params.len(), 1);
+        assert_eq!(result.params[0], "x");
+        assert_eq!(
+            result.type_annotation,
+            Some(TypeExpr::Named("ℝ".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_parse_define_function_with_all_types() {
+        let code = "define abs(x: ℝ) : ℝ = x * x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "abs");
+        assert_eq!(result.params.len(), 1);
+        assert_eq!(result.params[0], "x");
+        assert_eq!(
+            result.type_annotation,
+            Some(TypeExpr::Named("ℝ".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_parse_define_with_expression_body() {
+        let code = "define factorial(n) = match n { 0 => 1 | _ => n }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "factorial");
+        assert_eq!(result.params.len(), 1);
+        assert!(matches!(result.body, Expression::Match { .. }));
+    }
+
+    #[test]
+    fn test_parse_define_with_function_call_body() {
+        let code = "define not(b) = match b { True => False | False => True }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "not");
+        assert_eq!(result.params.len(), 1);
+        assert_eq!(result.params[0], "b");
+    }
+
+    #[test]
+    fn test_parse_program_with_define() {
+        let code = r#"
+            define pi = 3.14159
+            define double(x) = x + x
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+        let functions = result.functions();
+
+        assert_eq!(functions.len(), 2);
+        assert_eq!(functions[0].name, "pi");
+        assert_eq!(functions[1].name, "double");
+    }
+
+    #[test]
+    fn test_parse_program_mixed_declarations() {
+        let code = r#"
+            data Bool = True | False
+            
+            define not(b) = match b { True => False | False => True }
+            
+            structure Numeric(N) {
+                operation abs : N → N
+            }
+            
+            define double(x) = x + x
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+
+        assert_eq!(result.data_types().len(), 1);
+        assert_eq!(result.functions().len(), 2);
+        assert_eq!(result.structures().len(), 1);
+    }
+
+    #[test]
+    fn test_parse_define_error_missing_equals() {
+        let code = "define x 5";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def();
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().message.contains("Expected '='"));
+    }
+
+    #[test]
+    fn test_parse_define_error_missing_body() {
+        let code = "define x =";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def();
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_define_error_unclosed_params() {
+        let code = "define f(x, y = x + y";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def();
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_define_empty_params() {
+        let code = "define f() = 42";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "f");
+        assert!(result.params.is_empty());
+    }
+
+    #[test]
+    fn test_parse_define_complex_body() {
+        let code = "define compute(a, b, c) = a + b * c";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "compute");
+        assert_eq!(result.params.len(), 3);
+        assert!(matches!(result.body, Expression::Operation { .. }));
+    }
+
+    #[test]
+    fn test_parse_define_with_function_type() {
+        // Simple function type annotation
+        let code = "define identity : ℝ → ℝ = x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "identity");
+        assert!(result.type_annotation.is_some());
+        match result.type_annotation.unwrap() {
+            TypeExpr::Function(_, _) => {} // Success
+            _ => panic!("Expected function type"),
+        }
     }
 }
