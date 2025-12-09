@@ -305,14 +305,17 @@ impl SignatureInterpreter {
         //
         // This extracts Nat parameters from argument types and binds them
         // to the structure's type parameters based on positional matching
-        
+
         if structure.type_params.is_empty() {
             return Ok(()); // No params to bind
         }
 
         // For each argument, try to extract Nat values and bind to structure params
         for (arg_idx, arg_type) in arg_types.iter().enumerate() {
-            if let Type::Data { args: type_args, .. } = arg_type {
+            if let Type::Data {
+                args: type_args, ..
+            } = arg_type
+            {
                 // Extract Nat values from the argument type
                 let nat_values: Vec<usize> = type_args
                     .iter()

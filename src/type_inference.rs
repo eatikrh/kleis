@@ -330,9 +330,7 @@ impl TypeInference {
             }
 
             // List literal: infer element types and unify
-            Expression::List(elements) => {
-                self.infer_list(elements, context_builder)
-            }
+            Expression::List(elements) => self.infer_list(elements, context_builder),
         }
     }
 
@@ -651,7 +649,7 @@ impl TypeInference {
         context_builder: Option<&crate::type_context::TypeContextBuilder>,
     ) -> Result<Type, String> {
         // Matrix and Vector are now FIXED-ARITY data constructors using List literals!
-        // 
+        //
         // Matrix(2, 2, [a, b, c, d]) - 3 args (fixed!)
         // Vector(3, [x, y, z]) - 2 args (fixed!)
         //

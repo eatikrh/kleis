@@ -849,9 +849,7 @@ fn render_expression_internal(
             let rendered_args: Vec<String> = args_to_render
                 .iter()
                 .enumerate()
-                .filter_map(|(i, arg)| {
-                    // For Matrix, we already extracted elements, so no skipping needed
-                    
+                .map(|(i, arg)| {
                     // Generate child node ID
                     let child_id = if is_matrix_constructor && args.len() == 3 {
                         // NEW FORMAT: child IDs go under the List at args[2]
@@ -862,27 +860,35 @@ fn render_expression_internal(
                     } else {
                         format!("{}.{}", node_id, i)
                     };
-                    
+
                     let rendered = render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
 
-                    // For Typst: wrap arguments with labeled boxes for position tracking
-                    // This enables edit markers on ALL filled content (Const, Object, Operations)
-                    // Skip wrapping for arguments in special positions (like after "dif")
-                    // Also skip if the child already handled its own wrapping (function_call, literal_chain)
-                    let child_handles_own_wrapping = matches!(arg, Expression::Operation { name, .. }
-                        if name == "function_call" || name == "literal_chain");
-
-                    if *target == RenderTarget::Typst && !skip_wrap_indices.contains(&i) && !child_handles_own_wrapping {
+                    // For Typst: ALWAYS wrap Matrix elements with UUID labels for edit markers
+                    // Matrix elements need edit markers whether they're placeholders or filled values
+                    if *target == RenderTarget::Typst && is_matrix_constructor {
                         // Check if this node has a UUID in the map
                         if let Some(uuid) = node_id_to_uuid.get(&child_id) {
                             // Wrap with UUID label for deterministic position tracking
-                            Some(format!("#[#box[${}$]<id{}>]", rendered, uuid))
+                            format!("#[#box[${}$]<id{}>]", rendered, uuid)
                         } else {
-                            // No UUID available, return unwrapped
-                            Some(rendered)
+                            // No UUID - this shouldn't happen for matrix elements
+                            eprintln!("Warning: No UUID for matrix element at {}", child_id);
+                            rendered
                         }
                     } else {
-                        Some(rendered)
+                        // Regular argument handling
+                        let child_handles_own_wrapping = matches!(arg, Expression::Operation { name, .. }
+                            if name == "function_call" || name == "literal_chain");
+
+                        if *target == RenderTarget::Typst && !skip_wrap_indices.contains(&i) && !child_handles_own_wrapping {
+                            if let Some(uuid) = node_id_to_uuid.get(&child_id) {
+                                format!("#[#box[${}$]<id{}>]", rendered, uuid)
+                            } else {
+                                rendered
+                            }
+                        } else {
+                            rendered
+                        }
                     }
                 })
                 .collect();
@@ -1286,7 +1292,10 @@ fn render_expression_internal(
                 RenderTarget::Unicode => format!("[{}]", rendered_elements.join(", ")),
                 RenderTarget::LaTeX => format!(r"\left[{}\right]", rendered_elements.join(", ")),
                 RenderTarget::HTML => {
-                    format!(r#"<span class="list">[{}]</span>"#, rendered_elements.join(", "))
+                    format!(
+                        r#"<span class="list">[{}]</span>"#,
+                        rendered_elements.join(", ")
+                    )
                 }
                 RenderTarget::Typst => format!("({})", rendered_elements.join(", ")), // Typst uses () for lists
             }

@@ -389,10 +389,14 @@ fn assign_boxes_recursive(
 
         // UUID-BASED DIRECT LOOKUP: Try to get position from UUID map first
         // This is deterministic - no heuristics, just direct UUID matching
-        let use_uuid_lookup = !uuid_positions.is_empty() && node_id == "0";
+        // Enable for ALL nodes (not just root) to support nested structures like List
+        let use_uuid_lookup = !uuid_positions.is_empty();
 
         if use_uuid_lookup {
-            eprintln!("  🔑 UUID positions available, attempting direct lookup");
+            eprintln!(
+                "  🔑 UUID positions available (at depth {}), attempting direct lookup",
+                node_id
+            );
         }
 
         let arg_signatures = collect_text_boxes_for_args(args, ctx, cache);

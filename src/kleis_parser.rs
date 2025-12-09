@@ -234,7 +234,7 @@ impl KleisParser {
     fn parse_list_literal(&mut self) -> Result<Expression, KleisParseError> {
         // Consume '['
         assert_eq!(self.advance(), Some('['));
-        
+
         let mut elements = Vec::new();
 
         // Empty list

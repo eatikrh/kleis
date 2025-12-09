@@ -24,7 +24,10 @@ fn test_add_dimension_constraint_via_signature() {
     let registry = DataTypeRegistry::new();
     let structure_registry = StructureRegistry::new();
     let mut interp1 = SignatureInterpreter::new(registry, structure_registry);
-    let args1 = vec![Type::matrix(2, 3, Type::scalar()), Type::matrix(2, 3, Type::scalar())];
+    let args1 = vec![
+        Type::matrix(2, 3, Type::scalar()),
+        Type::matrix(2, 3, Type::scalar()),
+    ];
 
     // This should work because both are Matrix(2, 3)
     // Binds m=2, n=3 from first arg
@@ -43,7 +46,10 @@ fn test_add_dimension_constraint_via_signature() {
     let registry2 = DataTypeRegistry::new();
     let structure_registry2 = StructureRegistry::new();
     let mut interp2 = SignatureInterpreter::new(registry2, structure_registry2);
-    let args2 = vec![Type::matrix(2, 3, Type::scalar()), Type::matrix(4, 5, Type::scalar())];
+    let args2 = vec![
+        Type::matrix(2, 3, Type::scalar()),
+        Type::matrix(4, 5, Type::scalar()),
+    ];
 
     // This should FAIL because dimensions don't match
     // Binds m=2, n=3 from first arg
@@ -78,7 +84,10 @@ fn test_multiply_dimension_constraint_via_signature() {
     let registry = DataTypeRegistry::new();
     let structure_registry = StructureRegistry::new();
     let mut interp = SignatureInterpreter::new(registry, structure_registry);
-    let args = vec![Type::matrix(2, 3, Type::scalar()), Type::matrix(3, 4, Type::scalar())];
+    let args = vec![
+        Type::matrix(2, 3, Type::scalar()),
+        Type::matrix(3, 4, Type::scalar()),
+    ];
 
     // Should work: m=2, n=3 from first, p=4 from second
     // Inner dimension n=3 matches!

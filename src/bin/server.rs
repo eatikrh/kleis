@@ -239,7 +239,8 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
             json!({"Match": "not yet implemented"})
         }
         Expression::List(elements) => {
-            let elements_json: Vec<serde_json::Value> = elements.iter().map(expression_to_json).collect();
+            let elements_json: Vec<serde_json::Value> =
+                elements.iter().map(expression_to_json).collect();
             json!({"List": elements_json})
         }
     }
@@ -478,6 +479,9 @@ async fn render_typst_handler(
                 "Built node_id->UUID map with {} entries",
                 node_id_to_uuid.len()
             );
+            for (node_id, uuid) in &node_id_to_uuid {
+                eprintln!("  {} -> {}", node_id, uuid);
+            }
 
             // Compile with Typst using semantic bounding box extraction
             // Pass both unfilled_ids (for placeholder squares) and all_slot_ids (for filled content)
@@ -593,16 +597,16 @@ fn collect_slots_recursive(
 
             // For Matrix constructors with List format: skip first two args (dimensions)
             let is_matrix = matches!(name.as_str(), "Matrix" | "PMatrix" | "VMatrix" | "BMatrix");
-            let has_list_format = is_matrix && args.len() == 3 
-                && matches!(args.get(2), Some(Expression::List(_)));
-            
+            let has_list_format =
+                is_matrix && args.len() == 3 && matches!(args.get(2), Some(Expression::List(_)));
+
             // Recursively process each argument
             for (i, arg) in args.iter().enumerate() {
                 // Skip dimension arguments for Matrix with List format
                 if has_list_format && i < 2 {
                     continue;
                 }
-                
+
                 let mut child_path = path.clone();
                 child_path.push(i);
                 let child_role = determine_arg_role(name, i);
