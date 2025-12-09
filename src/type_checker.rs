@@ -59,7 +59,8 @@ impl TypeChecker {
     /// 1. stdlib/types.kleis (data type definitions) - NEW in ADR-021
     /// 2. stdlib/minimal_prelude.kleis (structures and operations)
     /// 3. stdlib/matrices.kleis (matrix operations)
-    /// 4. stdlib/tensors.kleis (tensor operations for GR)
+    /// 4. stdlib/tensors_minimal.kleis (tensor operations for GR)
+    /// 5. stdlib/quantum_minimal.kleis (quantum mechanics operations)
     ///
     /// **Note:** Currently loads `minimal_prelude.kleis` because the full `prelude.kleis`
     /// uses advanced syntax (operator symbols, axioms with ∀) that the parser doesn't
@@ -96,6 +97,12 @@ impl TypeChecker {
         checker
             .load_kleis(tensors)
             .map_err(|e| format!("Failed to load stdlib/tensors_minimal.kleis: {}", e))?;
+
+        // Load quantum mechanics (QM operations) - minimal version
+        let quantum = include_str!("../stdlib/quantum_minimal.kleis");
+        checker
+            .load_kleis(quantum)
+            .map_err(|e| format!("Failed to load stdlib/quantum_minimal.kleis: {}", e))?;
 
         Ok(checker)
     }

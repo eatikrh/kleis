@@ -1,0 +1,365 @@
+// Kleis Standard Library - Quantum Mechanics
+// Hilbert space operations and quantum formalism
+//
+// This file defines quantum mechanical structures following ADR-016.
+//
+// Domain: Quantum mechanics operates in Hilbert space - a complex vector
+// space with inner product structure. States are vectors, observables are
+// Hermitian operators, measurements follow Born rule.
+
+/* Quantum State Types
+ * 
+ * Ket |ψ⟩: State vector in Hilbert space (column vector)
+ * Bra ⟨φ|: Dual vector (row vector, conjugate transpose of ket)
+ * 
+ * In Dirac notation:
+ *   |ψ⟩ ∈ ℋ (Hilbert space)
+ *   ⟨φ| ∈ ℋ* (dual space)
+ * 
+ * Type parameters:
+ *   - dim: Hilbert space dimension (2 for qubit, ∞ for continuous)
+ *   - T: element type (typically ℂ)
+ */
+
+/* Ket Vector - Quantum State
+ * 
+ * |ψ⟩ represents a quantum state vector.
+ * 
+ * Properties:
+ *   - Normalized: ⟨ψ|ψ⟩ = 1
+ *   - Superposition: α|ψ⟩ + β|φ⟩ is valid
+ *   - Probability: |⟨φ|ψ⟩|² is probability of measuring |φ⟩ in state |ψ⟩
+ * 
+ * Type: Ket(dim, ℂ) - complex vector in dim-dimensional Hilbert space
+ */
+structure Ket(dim: Nat, T) {
+    operation normalize : Ket(dim, T) → Ket(dim, T)
+    operation scale : T → Ket(dim, T) → Ket(dim, T)
+}
+
+implements Ket(dim, ℂ) {
+    operation normalize = builtin_ket_normalize
+    operation scale = builtin_ket_scale
+}
+
+/* Bra Vector - Dual State
+ * 
+ * ⟨φ| is the conjugate transpose of |φ⟩.
+ * 
+ * Relationship: ⟨φ| = (|φ⟩)†
+ * 
+ * Type: Bra(dim, ℂ) - dual vector (row vector)
+ */
+structure Bra(dim: Nat, T) {
+    operation conjugate : Ket(dim, T) → Bra(dim, T)
+}
+
+implements Bra(dim, ℂ) {
+    operation conjugate = builtin_bra_from_ket
+}
+
+/* Inner Product - Probability Amplitude
+ * 
+ * ⟨φ|ψ⟩ is the inner product (overlap) between states.
+ * 
+ * Properties:
+ *   - Returns complex number: ⟨φ|ψ⟩ ∈ ℂ
+ *   - Conjugate symmetric: ⟨φ|ψ⟩ = ⟨ψ|φ⟩*
+ *   - Probability: |⟨φ|ψ⟩|² is probability
+ *   - Normalization: ⟨ψ|ψ⟩ = 1 for normalized states
+ * 
+ * Physical meaning: Probability amplitude for transition from |ψ⟩ to |φ⟩
+ */
+structure InnerProduct(dim: Nat) {
+    operation inner : Bra(dim, ℂ) → Ket(dim, ℂ) → ℂ
+}
+
+implements InnerProduct(dim) {
+    operation inner = builtin_inner_product
+}
+
+/* Outer Product - Projection Operator
+ * 
+ * |ψ⟩⟨φ| is a projection operator (dyad).
+ * 
+ * Properties:
+ *   - Returns operator: |ψ⟩⟨φ| : ℋ → ℋ
+ *   - Action: (|ψ⟩⟨φ|)|χ⟩ = |ψ⟩⟨φ|χ⟩ = ⟨φ|χ⟩|ψ⟩
+ *   - Projection: |ψ⟩⟨ψ| projects onto state |ψ⟩
+ *   - Resolution of identity: Σᵢ |ψᵢ⟩⟨ψᵢ| = 𝟙
+ * 
+ * Physical meaning: Operator that projects any state onto |ψ⟩ direction
+ */
+structure OuterProduct(dim: Nat) {
+    operation outer : Ket(dim, ℂ) → Bra(dim, ℂ) → Operator(dim, ℂ)
+}
+
+implements OuterProduct(dim) {
+    operation outer = builtin_outer_product
+}
+
+/* Quantum Operator
+ * 
+ * Operators act on quantum states: Â|ψ⟩ → |φ⟩
+ * 
+ * Types of operators:
+ *   - Hermitian: Â† = Â (observables - real eigenvalues)
+ *   - Unitary: Û†Û = 𝟙 (time evolution - preserves norm)
+ *   - Projection: P̂² = P̂ (measurement operators)
+ * 
+ * Type: Operator(dim, ℂ) - linear map ℋ → ℋ
+ */
+structure Operator(dim: Nat, T) {
+    operation apply : Operator(dim, T) → Ket(dim, T) → Ket(dim, T)
+    operation adjoint : Operator(dim, T) → Operator(dim, T)
+    operation compose : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+}
+
+implements Operator(dim, ℂ) {
+    operation apply = builtin_operator_apply
+    operation adjoint = builtin_operator_adjoint
+    operation compose = builtin_operator_compose
+}
+
+/* Commutator - Operator Algebra
+ * 
+ * [Â, B̂] = ÂB̂ - B̂Â
+ * 
+ * Properties:
+ *   - Antisymmetric: [Â, B̂] = -[B̂, Â]
+ *   - Jacobi identity: [Â,[B̂,Ĉ]] + [B̂,[Ĉ,Â]] + [Ĉ,[Â,B̂]] = 0
+ *   - Heisenberg: [x̂, p̂] = iℏ (uncertainty principle!)
+ * 
+ * Physical meaning: Measures incompatibility of observables
+ * [Â, B̂] = 0 ⟹ Â and B̂ can be simultaneously measured
+ */
+structure Commutator(dim: Nat, T) {
+    operation commutator : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+}
+
+implements Commutator(dim, ℂ) {
+    operation commutator = builtin_commutator
+}
+
+/* Expectation Value - Observable Measurement
+ * 
+ * ⟨Â⟩ = ⟨ψ|Â|ψ⟩ for state |ψ⟩
+ * 
+ * Properties:
+ *   - For Hermitian Â: ⟨Â⟩ ∈ ℝ (real measurement)
+ *   - Average of many measurements
+ *   - Uncertainty: ΔA = √(⟨Â²⟩ - ⟨Â⟩²)
+ * 
+ * Physical meaning: Expected value of observable Â in state |ψ⟩
+ * 
+ * Note: Simplified signature - full version would include state:
+ *   expectation : Operator(dim, ℂ) → Ket(dim, ℂ) → ℂ
+ */
+structure Expectation(dim: Nat) {
+    operation expectation : Operator(dim, ℂ) → ℂ
+}
+
+implements Expectation(dim) {
+    operation expectation = builtin_expectation_value
+}
+
+/* Quantum Superposition
+ * 
+ * States can be superposed: α|ψ⟩ + β|φ⟩
+ * 
+ * Properties:
+ *   - Coefficients are complex: α, β ∈ ℂ
+ *   - Normalization: |α|² + |β|² = 1
+ *   - Interference: Superposition ≠ mixture
+ */
+structure Superposition(dim: Nat) {
+    operation plus : Ket(dim, ℂ) → Ket(dim, ℂ) → Ket(dim, ℂ)
+    operation scale : ℂ → Ket(dim, ℂ) → Ket(dim, ℂ)
+}
+
+implements Superposition(dim) {
+    operation plus = builtin_ket_add
+    operation scale = builtin_ket_scale
+}
+
+/* Tensor Product - Composite Systems
+ * 
+ * |ψ⟩ ⊗ |φ⟩ represents composite quantum system.
+ * 
+ * Properties:
+ *   - Dimensions multiply: dim₁ ⊗ dim₂ = dim₁ × dim₂
+ *   - Entanglement: Not all states are product states!
+ *   - Separable: |ψ⟩⊗|φ⟩ (product state)
+ *   - Entangled: α|00⟩ + β|11⟩ (not separable)
+ * 
+ * Example: Two qubits: ℋ₂ ⊗ ℋ₂ = ℋ₄
+ */
+structure QuantumTensorProduct(dim1: Nat, dim2: Nat) {
+    operation tensor : Ket(dim1, ℂ) → Ket(dim2, ℂ) → Ket(dim1, ℂ)
+}
+
+implements QuantumTensorProduct(dim1, dim2) {
+    operation tensor = builtin_quantum_tensor_product
+}
+
+/* Measurement - State Collapse
+ * 
+ * Measuring observable Â on state |ψ⟩:
+ *   - Result: One of eigenvalues λᵢ
+ *   - Probability: |⟨λᵢ|ψ⟩|²
+ *   - Post-measurement: State collapses to |λᵢ⟩
+ * 
+ * Born rule: P(λᵢ) = |⟨λᵢ|ψ⟩|²
+ */
+structure Measurement(dim: Nat) {
+    operation measure : Operator(dim, ℂ) → Ket(dim, ℂ) → ℝ
+    operation collapse : Operator(dim, ℂ) → Ket(dim, ℂ) → Ket(dim, ℂ)
+}
+
+implements Measurement(dim) {
+    operation measure = builtin_measure_expectation
+    operation collapse = builtin_state_collapse
+}
+
+/* Common Quantum States
+ * 
+ * Standard basis states and important quantum states.
+ */
+structure StandardStates(dim: Nat) {
+    operation ground : Ket(dim, ℂ)
+    operation excited : Nat → Ket(dim, ℂ)
+    operation coherent : ℂ → Ket(dim, ℂ)
+}
+
+implements StandardStates(dim) {
+    operation ground = builtin_ground_state
+    operation excited = builtin_excited_state
+    operation coherent = builtin_coherent_state
+}
+
+/* Common Quantum Operators
+ * 
+ * Standard operators for quantum mechanics.
+ */
+structure QuantumOperators(dim: Nat) {
+    operation hamiltonian : Operator(dim, ℂ)
+    operation momentum : Operator(dim, ℂ)
+    operation position : Operator(dim, ℂ)
+    operation angular_momentum : Operator(dim, ℂ)
+    operation spin : Nat → Operator(2, ℂ)
+}
+
+implements QuantumOperators(dim) {
+    operation hamiltonian = builtin_hamiltonian
+    operation momentum = builtin_momentum_op
+    operation position = builtin_position_op
+    operation angular_momentum = builtin_angular_momentum_op
+    operation spin = builtin_spin_operator
+}
+
+/* Pauli Matrices - Spin-1/2 Systems
+ * 
+ * The Pauli matrices σx, σy, σz for qubits.
+ * 
+ * Properties:
+ *   - σx² = σy² = σz² = 𝟙
+ *   - {σx, σy} = 0 (anticommute)
+ *   - [σx, σy] = 2iσz (commutation relations)
+ * 
+ * Physical meaning: Spin-1/2 observables (electron, quark spin)
+ */
+structure PauliMatrices(T) {
+    operation sigma_x : Operator(2, ℂ)
+    operation sigma_y : Operator(2, ℂ)
+    operation sigma_z : Operator(2, ℂ)
+}
+
+implements PauliMatrices(ℂ) {
+    operation sigma_x = builtin_pauli_x
+    operation sigma_y = builtin_pauli_y
+    operation sigma_z = builtin_pauli_z
+}
+
+/* Time Evolution - Schrödinger Equation
+ * 
+ * |ψ(t)⟩ = e^(-iĤt/ℏ) |ψ(0)⟩
+ * 
+ * Properties:
+ *   - Unitary evolution: norm preserved
+ *   - Hermitian Hamiltonian: energy conservation
+ *   - Stationary states: Ĥ|E⟩ = E|E⟩
+ */
+structure TimeEvolution(dim: Nat) {
+    operation evolve : Operator(dim, ℂ) → ℝ → Ket(dim, ℂ) → Ket(dim, ℂ)
+    operation propagator : Operator(dim, ℂ) → ℝ → Operator(dim, ℂ)
+}
+
+implements TimeEvolution(dim) {
+    operation evolve = builtin_time_evolution
+    operation propagator = builtin_propagator
+}
+
+/* Density Matrix - Mixed States
+ * 
+ * ρ̂ describes statistical mixtures of quantum states.
+ * 
+ * Properties:
+ *   - Hermitian: ρ̂† = ρ̂
+ *   - Positive: ⟨ψ|ρ̂|ψ⟩ ≥ 0
+ *   - Trace 1: Tr(ρ̂) = 1
+ *   - Pure state: ρ̂² = ρ̂ (idempotent)
+ *   - Mixed state: ρ̂² ≠ ρ̂
+ * 
+ * Physical meaning: Statistical ensemble of quantum states
+ */
+structure DensityMatrix(dim: Nat) {
+    operation from_ket : Ket(dim, ℂ) → Operator(dim, ℂ)
+    operation trace : Operator(dim, ℂ) → ℂ
+    operation purity : Operator(dim, ℂ) → ℝ
+}
+
+implements DensityMatrix(dim) {
+    operation from_ket = builtin_density_from_ket
+    operation trace = builtin_operator_trace
+    operation purity = builtin_density_purity
+}
+
+/* Entanglement - Non-Local Correlations
+ * 
+ * Quantum entanglement: States that cannot be written as products.
+ * 
+ * Example Bell state: (|00⟩ + |11⟩)/√2 ≠ |ψ⟩⊗|φ⟩
+ * 
+ * Measures:
+ *   - Entanglement entropy: S = -Tr(ρ̂ log ρ̂)
+ *   - Concurrence: Measure of two-qubit entanglement
+ *   - Negativity: For continuous variables
+ */
+structure Entanglement(dim1: Nat, dim2: Nat) {
+    operation entropy : Operator(dim1, ℂ) → ℝ
+    operation is_separable : Ket(dim1, ℂ) → Bool
+}
+
+implements Entanglement(dim1, dim2) {
+    operation entropy = builtin_entanglement_entropy
+    operation is_separable = builtin_check_separable
+}
+
+/* Uncertainty Principle
+ * 
+ * ΔA · ΔB ≥ ½|⟨[Â,B̂]⟩|
+ * 
+ * For position and momentum: Δx · Δp ≥ ℏ/2
+ * 
+ * Physical meaning: Fundamental quantum limit on simultaneous measurements
+ */
+structure Uncertainty(dim: Nat) {
+    operation uncertainty : Operator(dim, ℂ) → Ket(dim, ℂ) → ℝ
+    operation heisenberg : Operator(dim, ℂ) → Operator(dim, ℂ) → Ket(dim, ℂ) → ℝ
+}
+
+implements Uncertainty(dim) {
+    operation uncertainty = builtin_uncertainty
+    operation heisenberg = builtin_heisenberg_uncertainty
+}
+
