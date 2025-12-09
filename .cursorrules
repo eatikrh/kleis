@@ -109,15 +109,15 @@ If tests fail:
 
 **When modifying `src/kleis_parser.rs`:**
 
-1. **Check against formal grammar** in `docs/grammar/kleis_grammar_v03.ebnf` or `docs/grammar/Kleis_v03.g4`
+1. **Check against formal grammar** in `docs/grammar/kleis_grammar_v05.ebnf` or `docs/grammar/Kleis_v05.g4`
 2. **Verify change is valid** according to formal specification
 3. **Document any deviations** with rationale
 4. **Update grammar if needed** (requires ADR if significant)
 
 **Grammar files:**
-- `docs/grammar/kleis_grammar_v03.ebnf` - EBNF specification (source of truth)
-- `docs/grammar/Kleis_v03.g4` - ANTLR4 grammar
-- `docs/grammar/kleis_grammar_v03.md` - Human-readable explanation
+- `docs/grammar/kleis_grammar_v05.ebnf` - EBNF specification (source of truth)
+- `docs/grammar/Kleis_v05.g4` - ANTLR4 grammar
+- `docs/grammar/kleis_grammar_v05.md` - Human-readable explanation
 
 **Process:**
 ```
