@@ -51,19 +51,72 @@ implements Tensor(upper, lower, dim, ℝ) {
     operation contract = builtin_tensor_contract
 }
 
+/* Einstein Tensor Operations
+ * 
+ * Core operations for General Relativity field equations.
+ * Fixed at dimension 4 (spacetime) for GR applications.
+ */
+structure EinsteinTensor(T) {
+    operation einstein : Tensor(0, 2, 4, ℝ) → ℝ → Tensor(0, 2, 4, ℝ) → Tensor(0, 2, 4, ℝ)
+}
+
+implements EinsteinTensor(ℝ) {
+    operation einstein = builtin_einstein_tensor
+}
+
+/* Ricci Operations
+ * 
+ * Ricci tensor and scalar for curvature calculations.
+ */
+structure RicciTensor(T) {
+    operation ricci : Tensor(1, 3, 4, ℝ) → Tensor(0, 2, 4, ℝ)
+}
+
+implements RicciTensor(ℝ) {
+    operation ricci = builtin_ricci_from_riemann
+}
+
+structure RicciScalar(T) {
+    operation ricci_scalar : Tensor(0, 2, 4, ℝ) → Tensor(2, 0, 4, ℝ) → ℝ
+}
+
+implements RicciScalar(ℝ) {
+    operation ricci_scalar = builtin_ricci_scalar
+}
+
+/* Christoffel Connection (Computation)
+ * 
+ * Computes connection coefficients from metric tensor.
+ */
+structure Connection(T) {
+    operation christoffel : Tensor(0, 2, 4, ℝ) → Tensor(1, 2, 4, ℝ)
+}
+
+implements Connection(ℝ) {
+    operation christoffel = builtin_christoffel_from_metric
+}
+
+/* Curvature Computation
+ * 
+ * Computes Riemann curvature from Christoffel symbols.
+ */
+structure Curvature(T) {
+    operation riemann : Tensor(1, 2, 4, ℝ) → Tensor(1, 3, 4, ℝ)
+}
+
+implements Curvature(ℝ) {
+    operation riemann = builtin_riemann_from_christoffel
+}
+
 /* More tensor operations to be added when parser supports:
  * - Arithmetic in type parameters (p + q)
- * - Complex type expressions
- * - Higher-order function types
+ * - Tensor products (commented out due to parser limitation)
  * 
- * See full version in docs/ for planned operations:
- * - Metric tensor operations
- * - Christoffel symbols (computation)
- * - Riemann curvature
- * - Ricci tensor and scalar
- * - Einstein tensor
- * - Stress-energy tensor
- * - Geodesic equations
- * - Standard metrics (Schwarzschild, Kerr, etc.)
+ * See full version (stdlib/tensors.kleis) for:
+ * - Tensor products with rank arithmetic
+ * - Wedge products for differential forms
+ * - Lie derivatives
+ * - Killing vectors
+ * - Standard metrics (Schwarzschild, Kerr, FLRW)
  */
 
