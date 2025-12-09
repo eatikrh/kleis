@@ -741,7 +741,8 @@ structure Numeric(N) { operation abs : N → N }
    - Mathematical meaning: Infinite sequences, streams, coinduction
    - Algorithm: Uniform semi-unification
    - Complexity: O(n α(n)) for decidability
-   - **Decision:** ⏳ Wait for concrete use case
+   - **Decision:** ❌ **NO** - Kleis remains finite (Dec 9, 2024)
+   - **Rationale:** No mathematical use cases, finite types are simpler and sufficient
 
 2. **Subtyping with Constraints**
    - Use case: T <: Numeric(N) ∧ T <: Ordered(N)
