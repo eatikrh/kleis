@@ -653,7 +653,10 @@ fn assign_boxes_recursive(
                 format!("{}.{}", node_id, idx)
             };
 
-            eprintln!("  List element {}: processing at node_id={}", idx, child_node_id);
+            eprintln!(
+                "  List element {}: processing at node_id={}",
+                idx, child_node_id
+            );
 
             // Check if this element has a UUID position (for filled values)
             if let Some(uuid) = node_id_to_uuid.get(&child_node_id) {
