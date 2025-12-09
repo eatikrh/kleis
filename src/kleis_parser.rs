@@ -2506,7 +2506,7 @@ mod tests {
         assert_eq!(result.name, "identity");
         assert!(result.type_annotation.is_some());
         match result.type_annotation.unwrap() {
-            TypeExpr::Function(_, _) => {}, // Success
+            TypeExpr::Function(_, _) => {} // Success
             _ => panic!("Expected function type"),
         }
     }
