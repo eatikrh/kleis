@@ -178,6 +178,27 @@ implements EinsteinTensor(dim) {
     operation einstein = builtin_einstein_tensor
 }
 
+/* Tensor Index Notation - Display Operations
+ * 
+ * These operations create indexed tensor notation for display.
+ * They differ from computation operations - they build notation, not compute values.
+ * 
+ * Examples:
+ *   - gamma(Γ, λ, μ, ν) → displays as Γ^λ_μν
+ *   - riemann(R, ρ, σ, μ, ν) → displays as R^ρ_σμν
+ * 
+ * These are used by the UI palette to create properly indexed tensor expressions.
+ */
+structure TensorNotation(T) {
+    operation gamma : T → T → T → T → T
+    operation riemann : T → T → T → T → T → T
+}
+
+implements TensorNotation(ℝ) {
+    operation gamma = builtin_gamma_notation
+    operation riemann = builtin_riemann_notation
+}
+
 /* Tensor Index Operations
  * 
  * Mixed index notation: Tᵘᵥ (one up, one down)

@@ -3293,6 +3293,11 @@ pub fn build_default_context() -> GlyphContext {
         "gamma".to_string(),
         "Gamma^({idx1})_({idx2} {idx3})".to_string(),
     );
+    // Riemann tensor: R^idx1_{idx2 idx3 idx4}
+    typst_templates.insert(
+        "riemann".to_string(),
+        "R^({idx1})_({idx2} {idx3} {idx4})".to_string(),
+    );
     typst_templates.insert("power".to_string(), "{base}^({exponent})".to_string());
     typst_templates.insert("index".to_string(), "{base}_({subscript})".to_string());
     typst_templates.insert(
