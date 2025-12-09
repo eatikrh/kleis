@@ -411,6 +411,70 @@ expression: x * (y + z)
 
 ---
 
+## Relationship to Semi-Unification
+
+### What is Semi-Unification?
+
+**Definition:** Find θ (semi-unifier) and ζ₁,...,ζₙ (matchers) such that:
+```
+sᵢθζᵢ = tᵢθ  for each pair (sᵢ, tᵢ)
+```
+
+**Complexity:**
+- **Uniform case** (n=1): Decidable, O(n α(n)) - very efficient
+- **Non-uniform case** (n>1): **Undecidable!**
+
+### Do We Need It in Kleis?
+
+**Current answer: NO** ✅
+
+Our type checking uses **standard unification**, which is:
+- Simpler
+- Decidable
+- Sufficient for ADT type inference
+- What Haskell/ML use
+
+**When we WOULD need it:**
+
+1. **Infinite/Recursive Types**
+   ```kleis
+   α = List(α)  // Rational tree
+   ```
+   - Requires semi-unification (occurs check would fail)
+   - Use case: Infinite sequences, streams, coinduction
+   - **Question:** Do we have mathematical use cases for infinite types?
+
+2. **Subtyping with Multiple Constraints**
+   ```kleis
+   T <: Numeric(N) ∧ T <: Ordered(N)
+   ```
+   - Non-uniform case → undecidable risk
+   - Must restrict to uniform case (one at a time)
+
+**Our decision:** Keep occurs check (finite types only) until we have concrete use cases for infinite types.
+
+### Structure Instance Checking = Matching (Not Semi-Unification!)
+
+**The check:**
+```kleis
+// Does ℝ satisfy Numeric(N)?
+structure Numeric(N) { operation abs : N → N }
+```
+
+This is **matching** (one-way), not semi-unification:
+- Pattern: `Numeric(N)` (don't modify)
+- Target: `ℝ` (concrete type)
+- Find: θ = {N ↦ ℝ}
+- Check: Does ℝ have `abs : ℝ → ℝ`?
+
+**Implementation approach:**
+- Can reduce to unification with constants
+- Use existing unification infrastructure
+- Uniform case only (decidable, efficient)
+- **Phase 4 enhancement** (after self-hosting stable)
+
+---
+
 ## Open Questions
 
 ### 1. Should We Support E-Unification?
@@ -622,4 +686,107 @@ Different brick colors (True vs False) don't matter if they fit the same bluepri
 
 **Result:**
 🎉 **Self-hosting complete with correct ADT type checking!** 🎉
+
+---
+
+## Decision Record: Unification Approach for Kleis
+
+**Date:** December 9, 2024  
+**Context:** Self-hosting implementation complete, planning future enhancements
+
+### Current Implementation (Phase 3) ✅
+
+**Approach:** Standard unification with type-level ADT semantics
+
+**Characteristics:**
+- Occurs check enforced (finite types only)
+- Type-level unification (constructor names ignored)
+- Constraint-based HM inference
+- Decidable, efficient, well-understood
+
+**Rationale:**
+- Sufficient for all current type checking needs
+- Matches Haskell/ML semantics
+- Simple, maintainable
+- No infinite type use cases identified
+
+**Status:** ✅ **KEEP THIS** - Working perfectly
+
+### Phase 4: Add Matching (One-Way Unification)
+
+**Use case:** Structure instance resolution
+
+**Example:**
+```kleis
+// Check: does ℝ implement Numeric(N)?
+structure Numeric(N) { operation abs : N → N }
+```
+
+**Implementation:**
+- Reduce to unification with constants
+- Uniform case only (decidable)
+- Leverage existing unification
+- Complexity: O(n α(n))
+
+**Priority:** Medium (needed for structure constraints)
+
+**Status:** 🔜 **TODO** - After self-hosting stable
+
+### Phase 5+: Consider Semi-Unification (Conditional)
+
+**Only if we add:**
+
+1. **Infinite Types** (rational trees)
+   - Use case: α = List(α)
+   - Mathematical meaning: Infinite sequences, streams, coinduction
+   - Algorithm: Uniform semi-unification
+   - Complexity: O(n α(n)) for decidability
+   - **Decision:** ⏳ Wait for concrete use case
+
+2. **Subtyping with Constraints**
+   - Use case: T <: Numeric(N) ∧ T <: Ordered(N)
+   - Warning: Non-uniform case is undecidable
+   - Mitigation: Solve one constraint at a time (uniform)
+   - **Decision:** ⏳ Wait for subtyping design
+
+**Priority:** Low (no immediate need)
+
+**Status:** ❌ **DON'T IMPLEMENT YET** - No use cases
+
+### What We Will NOT Do
+
+❌ **Non-uniform semi-unification** - Undecidable, too risky
+
+❌ **General E-unification** - Too complex for Phase 3
+
+❌ **Higher-order unification** - Not needed for first-order math
+
+### Summary Table
+
+| Feature | Current | Phase 4 | Phase 5+ | Decidable? | Priority |
+|---------|---------|---------|----------|------------|----------|
+| **Standard Unification** | ✅ Yes | ✅ Keep | ✅ Keep | Yes | - |
+| **Type-Level ADT** | ✅ Yes | ✅ Keep | ✅ Keep | Yes | - |
+| **Occurs Check** | ✅ Yes | ✅ Keep | 🤔 Maybe relax | Yes/No | - |
+| **Matching (one-way)** | ❌ No | 🔜 Add | ✅ Keep | Yes | Medium |
+| **Uniform Semi-Unif** | ❌ No | ❌ No | 🤔 Maybe | Yes | Low |
+| **Non-Uniform Semi** | ❌ No | ❌ Never | ❌ Never | **NO** | Never |
+| **E-Unification (AC)** | ❌ No | ❌ No | 🔜 Add | Varies | Medium-Low |
+
+---
+
+## Conclusion
+
+**Current implementation is correct and complete for Phase 3 (self-hosting).**
+
+**Next steps:**
+1. ✅ Merge feature branch to main
+2. 🔜 Phase 4: Implement matching for structure constraints
+3. ⏳ Future: E-unification for symbolic simplification (if needed)
+4. ⏳ Future: Semi-unification only if we add infinite types or complex subtyping
+
+**Theoretical foundation:** UnifChapter.pdf validates our approach for finite first-order types with ADT semantics.
+
+**Result:**
+🎉 **Self-hosting complete with theoretically sound unification!** 🎉
 
