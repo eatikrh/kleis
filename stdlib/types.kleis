@@ -138,12 +138,11 @@ define isNone(opt) = match opt {
   None => True
   | Some(_) => False
 }
-//
-// define getOrDefault : Option(T) × T → T
-// define getOrDefault(opt, default) = match opt {
-//   None => default
-//   Some(x) => x
-// }
+
+define getOrDefault(opt, default) = match opt {
+  None => default
+  | Some(x) => x
+}
 
 // Map function for Option
 // define mapOption : (T → U) × Option(T) → Option(U)
@@ -176,18 +175,16 @@ define isEmpty(list) = match list {
   Nil => True
   | Cons(_, _) => False
 }
-//
-// define head : List(T) → Option(T)
-// define head(list) = match list {
-//   Nil => None
-//   Cons(h, _) => Some(h)
-// }
-//
-// define tail : List(T) → Option(List(T))
-// define tail(list) = match list {
-//   Nil => None
-//   Cons(_, t) => Some(t)
-// }
+
+define head(list) = match list {
+  Nil => None
+  | Cons(h, _) => Some(h)
+}
+
+define tail(list) = match list {
+  Nil => None
+  | Cons(_, t) => Some(t)
+}
 
 // Ordering operations
 // define compare : Ordering → Ordering → Bool

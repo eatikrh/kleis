@@ -70,6 +70,11 @@ impl TypeChecker {
 
         // PHASE 1: Load data type definitions (ADR-021)
         // This must happen FIRST so structures can reference these types
+        //
+        // Note: types.kleis also contains `define` function definitions (head, tail, etc.)
+        // which demonstrate self-hosting, but we use load_data_types() which only loads
+        // the `data` definitions. The function definitions will be loadable once the
+        // type system fully supports parametric polymorphism in self-hosted functions.
         let types_def = include_str!("../stdlib/types.kleis");
         checker
             .load_data_types(types_def)
@@ -146,13 +151,26 @@ impl TypeChecker {
         // Parse the Kleis code
         let program = parse_kleis_program(code).map_err(|e| format!("Parse error: {}", e))?;
 
-        // Build context from program
+        // PHASE 1: Register data type definitions FIRST (ADR-021)
+        // This must happen before building structures or type-checking functions
+        // because they may reference these data constructors
+        for item in &program.items {
+            if let crate::kleis_ast::TopLevel::DataDef(data_def) = item {
+                self.inference
+                    .data_registry_mut()
+                    .register(data_def.clone())
+                    .map_err(|e| format!("Failed to register data type: {}", e))?;
+            }
+        }
+
+        // PHASE 2: Build context from program (structures and operations)
         let new_context = TypeContextBuilder::from_program(program.clone())?;
 
         // Merge into existing context
         self.context_builder.merge(new_context)?;
 
-        // Load function definitions (Wire 2: Self-hosting)
+        // PHASE 3: Load function definitions (Wire 2: Self-hosting)
+        // This happens AFTER data types are registered so functions can use them
         self.load_function_definitions(&program)?;
 
         Ok(())

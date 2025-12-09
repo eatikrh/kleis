@@ -1,21 +1,25 @@
 # NEXT SESSION: Integration Tests & Stdlib Expansion
 
-**Current State:** main branch, 376 tests passing, Matrix cleanup COMPLETE! 🎉
+**Current State:** main branch, 425 tests passing, Matrix cleanup COMPLETE! 🎉
 
 **Status:** 🎯 Ready for stdlib expansion and testing!
+
+**⚠️ See:** `docs/session-2024-12-09/SESSION_CORRECTION.md` for honest assessment of self-hosting state
 
 ---
 
 ## 🎊 What's Complete
 
-### Pattern Matching - 100% DONE! ✅ (Dec 8)
+### Pattern Matching Infrastructure ✅ (Dec 8)
 
 ✅ **Parser** - Parses all pattern types (553 lines, 17 tests)  
-✅ **Type Inference** - Type-checks patterns (779 lines, 10 tests)  
-✅ **Evaluation** - Executes pattern matching (544 lines, 15 tests)  
+✅ **Type Inference** - Type-checks pattern expressions (779 lines, 10 tests)  
+✅ **Pattern Matcher** - Symbolic evaluation (544 lines, 15 tests)  
 ✅ **Exhaustiveness** - Warns about missing cases (586 lines, 14 tests)  
 ✅ **Grammar v0.5** - Formal specification (1,534 lines, 3 formats)  
-✅ **Stdlib examples** - Pattern matching functions documented  
+
+⚠️ **Evaluation** - Returns `Match` expressions (symbolic, doesn't execute)  
+⚠️ **Self-hosting** - Simple functions work, polymorphic functions NOT supported yet
 
 ### Matrix Constructor Cleanup - 100% DONE! ✅ (Dec 9)
 
@@ -28,6 +32,16 @@
 ✅ **Block Matrices** - Nested matrices work via polymorphism!
 
 **Result:** Kleis has a **truly extensible type system with deep polymorphism**! 🚀
+
+### Tests for Stdlib Functions ✅ (Dec 9 Evening)
+
+✅ **Created 12 comprehensive tests** - Verify user code using stdlib functions parses correctly  
+✅ **Uncommented 3 more functions** - `getOrDefault`, `head`, `tail` in types.kleis  
+✅ **Improved type inference** - Now checks function context for defined functions  
+✅ **Fixed load_kleis()** - Proper sequencing: data → structures → functions  
+✅ **Documented limitations** - Honest about what works vs aspirational
+
+⚠️ **Reality:** Functions are defined in types.kleis but NOT loaded due to polymorphism limitations
 
 ---
 

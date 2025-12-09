@@ -675,6 +675,15 @@ impl TypeInference {
             return self.infer_data_constructor(name, args, context_builder);
         }
 
+        // Check if this is a defined function (from `define` statements)
+        // Functions are stored in the type inference context
+        if let Some(func_ty) = self.context.get(name) {
+            // Found a function! For now, we return its type
+            // TODO: Proper function application with currying (Wire 3)
+            // For now, functions just return their body type regardless of args
+            return Ok(func_ty.clone());
+        }
+
         // Delegate to context_builder (ADR-016!)
         let arg_types: Vec<Type> = args
             .iter()

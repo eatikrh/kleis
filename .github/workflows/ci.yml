@@ -102,10 +102,14 @@ jobs:
     - name: Verify key docs exist
       run: |
         echo "Checking documentation files..."
-        test -f docs/INTEGRAL_TRANSFORMS_REFERENCE.md && echo "✅ Main reference exists" || echo "❌ Main reference missing"
-        test -f docs/INTEGRAL_TRANSFORMS_QUICKSTART.md && echo "✅ Quickstart exists" || echo "❌ Quickstart missing"
-        test -f docs/TYPST_TEXT_IN_MATH.md && echo "✅ Typst guide exists" || echo "❌ Typst guide missing"
         test -f README.md && echo "✅ README exists" || echo "❌ README missing"
+        test -f docs/README.md && echo "✅ Docs index exists" || echo "❌ Docs index missing"
+        test -d docs/adr && echo "✅ ADR directory exists" || echo "❌ ADR directory missing"
+        test -f docs/adr/README.md && echo "✅ ADR index exists" || echo "❌ ADR index missing"
+        test -d docs/reference && echo "✅ Reference directory exists" || echo "❌ Reference directory missing"
+        test -f docs/reference/README.md && echo "✅ Reference index exists" || echo "❌ Reference index missing"
+        test -f docs/reference/KLEIS_OVERVIEW.md && echo "✅ Kleis overview exists" || echo "❌ Kleis overview missing"
+        test -f docs/parser-implementation/TYPST_TEXT_IN_MATH.md && echo "✅ Typst guide exists" || echo "❌ Typst guide missing"
 
   coverage:
     name: Template Coverage Report

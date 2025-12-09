@@ -264,6 +264,36 @@ let result_ty = type_checker.check_operation("multiply", &[t1, t2])?;
 4. **Create session README** - Summarize session work in `docs/session-YYYY-MM-DD/README.md`
 5. **Update main README** - Keep `docs/README.md` as the navigation index
 
+**Session archival policy:**
+
+Sessions should be moved to `docs/archive/sessions/` after ~2 weeks:
+
+```bash
+# At start of session, check session folder dates
+cd docs && ls -lt session-* | head -5
+
+# If sessions older than 2 weeks exist, archive them:
+cd docs && mv session-YYYY-MM-DD archive/sessions/
+
+# Update docs/archive/sessions/README.md with archived session info
+```
+
+**Keep in docs/ root:**
+- Last 2-3 active sessions only
+- Current work-in-progress
+
+**Move to archive when:**
+- ✅ Content consolidated into permanent docs (ADRs, reference docs)
+- ✅ Key findings captured elsewhere
+- ✅ No longer actively referenced
+- ✅ Older than ~2 weeks
+
+**Benefits:**
+- Clean docs/ directory
+- Recent sessions easily discoverable
+- Historical sessions preserved but not cluttering
+- Clear signal of what's current vs historical
+
 **Cleanup checklist before ending session:**
 - [ ] Consolidate overlapping documents
 - [ ] Move session-specific docs to session folder
@@ -271,6 +301,7 @@ let result_ty = type_checker.check_operation("multiply", &[t1, t2])?;
 - [ ] Delete obsolete/temporary documents
 - [ ] Update docs/README.md with navigation
 - [ ] Create session README summarizing work
+- [ ] **Check for sessions older than 2 weeks and archive them**
 
 ## Project Root Organization Rules
 
