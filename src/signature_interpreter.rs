@@ -300,60 +300,43 @@ impl SignatureInterpreter {
         structure: &StructureDef,
         arg_types: &[Type],
     ) -> Result<(), String> {
-        // For Matrix operations, extract and validate dimensions from ALL args
-        if structure.name.contains("Matrix") {
-            let param_names = &structure.type_params;
+        // Legacy fallback for old-style signatures without arrows
+        // Modern signatures should use arrows and unify_arguments instead
+        //
+        // This extracts Nat parameters from argument types and binds them
+        // to the structure's type parameters based on positional matching
+        
+        if structure.type_params.is_empty() {
+            return Ok(()); // No params to bind
+        }
 
-            // Process each matrix argument
-            for (arg_idx, arg_type) in arg_types.iter().enumerate() {
-                if let Type::Data {
-                    constructor,
-                    args: type_args,
-                    ..
-                } = arg_type
-                {
-                    if constructor == "Matrix" && type_args.len() >= 2 {
-                        // Extract dimensions from Type::NatValue
-                        let rows = match &type_args[0] {
-                            Type::NatValue(n) => *n,
-                            _ => continue, // Skip if not concrete value
-                        };
-                        let cols = match &type_args[1] {
-                            Type::NatValue(n) => *n,
-                            _ => continue, // Skip if not concrete value
-                        };
-
-                        // Bind dimensions based on structure type
-                        if structure.name == "MatrixAddable" {
-                            // Both matrices must have same (m, n)
-                            self.bind_or_check("m", rows, format!("argument {}", arg_idx + 1))?;
-                            self.bind_or_check("n", cols, format!("argument {}", arg_idx + 1))?;
-                        } else if structure.name == "MatrixMultipliable" {
-                            if arg_idx == 0 {
-                                // First matrix: bind m and n
-                                self.bind_or_check("m", rows, "first matrix rows".to_string())?;
-                                self.bind_or_check("n", cols, "first matrix cols".to_string())?;
-                            } else if arg_idx == 1 {
-                                // Second matrix: check rows=n, bind p=cols
-                                self.bind_or_check("n", rows, "second matrix rows".to_string())?;
-                                self.bind_or_check("p", cols, "second matrix cols".to_string())?;
-                            }
-                        } else if structure.name == "SquareMatrix" {
-                            // SquareMatrix(n, T): must be n×n (rows = cols)
-                            if rows != cols {
-                                return Err(format!(
-                                    "{} requires square matrix!\n  Got: {}×{} (non-square)\n  {} only defined for n×n matrices",
-                                    structure.name, rows, cols, structure.name
-                                ));
-                            }
-                            self.bind_or_check("n", rows, "square matrix dimension".to_string())?;
+        // For each argument, try to extract Nat values and bind to structure params
+        for (arg_idx, arg_type) in arg_types.iter().enumerate() {
+            if let Type::Data { args: type_args, .. } = arg_type {
+                // Extract Nat values from the argument type
+                let nat_values: Vec<usize> = type_args
+                    .iter()
+                    .filter_map(|arg| {
+                        if let Type::NatValue(n) = arg {
+                            Some(*n)
                         } else {
-                            // Generic Matrix structure: bind m, n from first matrix
-                            if arg_idx == 0 {
-                                self.bind_or_check("m", rows, "matrix rows".to_string())?;
-                                self.bind_or_check("n", cols, "matrix cols".to_string())?;
-                            }
+                            None
                         }
+                    })
+                    .collect();
+
+                // Bind to structure's Nat parameters positionally
+                // This is a simple heuristic for backwards compatibility
+                let mut nat_param_idx = 0;
+                for (param_idx, param) in structure.type_params.iter().enumerate() {
+                    if param.kind.as_deref() == Some("Nat") && nat_param_idx < nat_values.len() {
+                        let value = nat_values[nat_param_idx];
+                        self.bind_or_check(
+                            &param.name,
+                            value,
+                            format!("argument {} parameter {}", arg_idx + 1, param_idx + 1),
+                        )?;
+                        nat_param_idx += 1;
                     }
                 }
             }

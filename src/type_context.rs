@@ -389,28 +389,15 @@ impl TypeContextBuilder {
                     }
                 } else {
                     // Construct type name with arguments
+                    // Generic format works for Matrix, Vector, and any parametric type
                     let arg_names: Vec<String> = args
                         .iter()
                         .filter_map(|arg| self.type_to_name(arg))
                         .collect();
 
-                    if constructor == "Matrix" && args.len() >= 2 {
-                        // Special format for Matrix: Matrix(2, 3, ℝ)
-                        Some(format!(
-                            "Matrix({}, {}, ℝ)",
-                            arg_names.get(0).unwrap_or(&"?".to_string()),
-                            arg_names.get(1).unwrap_or(&"?".to_string())
-                        ))
-                    } else if constructor == "Vector" && !args.is_empty() {
-                        // Special format for Vector: Vector(3)
-                        Some(format!(
-                            "Vector({})",
-                            arg_names.get(0).unwrap_or(&"?".to_string())
-                        ))
-                    } else {
-                        // General format: Constructor(arg1, arg2, ...)
-                        Some(format!("{}({})", constructor, arg_names.join(", ")))
-                    }
+                    // General format: Constructor(arg1, arg2, ...)
+                    // Examples: Matrix(2, 3, ℝ), Vector(3, ℝ), Tensor(2, 3, 4, ℝ)
+                    Some(format!("{}({})", constructor, arg_names.join(", ")))
                 }
             }
 

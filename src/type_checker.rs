@@ -168,13 +168,10 @@ impl TypeChecker {
                     _ => Type::scalar(), // Default for now
                 }
             }
-            TypeExpr::Parametric(name, _params) => {
-                // TODO: Handle parametric types
-                match name.as_str() {
-                    "Vector" => Type::vector(3, Type::scalar()), // Default dimension
-                    "Matrix" => Type::matrix(3, 3, Type::scalar()),
-                    _ => Type::scalar(),
-                }
+            TypeExpr::Parametric(_name, _params) => {
+                // TODO: Handle parametric types properly by interpreting params
+                // For now, return scalar as a safe default
+                Type::scalar()
             }
             _ => Type::scalar(), // Default
         }
