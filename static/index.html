@@ -1990,7 +1990,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             tensor_lower_pair: { Operation: { name: 'tensor_lower_pair', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
             tensor_1up_3down: { Operation: { name: 'tensor_1up_3down', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower1'}}, {Placeholder:{id:3,hint:'lower2'}}, {Placeholder:{id:4,hint:'lower3'}}] } },
             tensor_2up_2down: { Operation: { name: 'tensor_2up_2down', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper1'}}, {Placeholder:{id:2,hint:'upper2'}}, {Placeholder:{id:3,hint:'lower1'}}, {Placeholder:{id:4,hint:'lower2'}}] } },
-            christoffel: { Operation: { name: 'christoffel', args: [{Placeholder:{id:0,hint:'metric'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower1'}}, {Placeholder:{id:3,hint:'lower2'}}] } },
+            christoffel: { Operation: { name: 'gamma', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
             riemann: { Operation: { name: 'riemann', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}, {Placeholder:{id:3,hint:'lower3'}}] } },
             
             // Fallback for others - creates empty placeholder

@@ -97,10 +97,10 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
-    // Initialize TypeChecker with stdlib (includes minimal_prelude + matrices)
+    // Initialize TypeChecker with stdlib (includes minimal_prelude + matrices + tensors)
     let type_checker = match kleis::type_checker::TypeChecker::with_stdlib() {
         Ok(checker) => {
-            println!("✅ TypeChecker initialized with stdlib (minimal_prelude + matrices)");
+            println!("✅ TypeChecker initialized with stdlib (minimal_prelude + matrices + tensors)");
             Some(checker)
         }
         Err(e) => {

@@ -1,0 +1,60 @@
+// Kleis Standard Library - Tensors (Minimal Version)
+// Basic tensor notation operations for the Physics palette
+//
+// This is a minimal version that works with the current parser.
+// Advanced operations (with arithmetic in type params) will be added
+// when the parser is extended.
+
+/* Tensor Index Notation - Display Operations
+ * 
+ * These operations create indexed tensor notation for display.
+ * Used by the Physics palette buttons.
+ * 
+ * Examples:
+ *   - gamma(Γ, λ, μ, ν) → displays as Γ^λ_μν (Christoffel symbol)
+ *   - riemann(R, ρ, σ, μ, ν) → displays as R^ρ_σμν (Riemann tensor)
+ */
+structure TensorNotation(T) {
+    operation gamma : T → T → T → T → T
+    operation riemann : T → T → T → T → T → T
+}
+
+implements TensorNotation(ℝ) {
+    operation gamma = builtin_gamma_notation
+    operation riemann = builtin_riemann_notation
+}
+
+/* Generic Tensor Type
+ * 
+ * A tensor with specified contravariant and covariant ranks.
+ * 
+ * Parameters:
+ *   - upper: number of contravariant (upper) indices
+ *   - lower: number of covariant (lower) indices  
+ *   - dim: spacetime dimension (typically 4)
+ *   - T: element type
+ */
+structure Tensor(upper: Nat, lower: Nat, dim: Nat, T) {
+    operation contract : Tensor(upper, lower, dim, T) → T
+}
+
+implements Tensor(upper, lower, dim, ℝ) {
+    operation contract = builtin_tensor_contract
+}
+
+/* More tensor operations to be added when parser supports:
+ * - Arithmetic in type parameters (p + q)
+ * - Complex type expressions
+ * - Higher-order function types
+ * 
+ * See full version in docs/ for planned operations:
+ * - Metric tensor operations
+ * - Christoffel symbols (computation)
+ * - Riemann curvature
+ * - Ricci tensor and scalar
+ * - Einstein tensor
+ * - Stress-energy tensor
+ * - Geodesic equations
+ * - Standard metrics (Schwarzschild, Kerr, etc.)
+ */
+

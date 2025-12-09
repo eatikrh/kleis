@@ -245,17 +245,21 @@ implements CovariantDerivative(dim) {
  * Example: Tᵘ ⊗ Sᵛ = Wᵘᵛ
  * 
  * Ranks add: Tensor(p, q) ⊗ Tensor(r, s) = Tensor(p+r, q+s)
+ * 
+ * NOTE: Parser doesn't support arithmetic in type parameters yet (p + r).
+ * This will be enabled in a future parser version.
  */
-structure TensorProduct(p: Nat, q: Nat, r: Nat, s: Nat, dim: Nat, T) {
-    operation tensor_product : 
-        Tensor(p, q, dim, T) → 
-        Tensor(r, s, dim, T) → 
-        Tensor(p + r, q + s, dim, T)
-}
-
-implements TensorProduct(p, q, r, s, dim, ℝ) {
-    operation tensor_product = builtin_tensor_product
-}
+// COMMENTED OUT - Parser limitation (arithmetic in type params)
+// structure TensorProduct(p: Nat, q: Nat, r: Nat, s: Nat, dim: Nat, T) {
+//     operation tensor_product : 
+//         Tensor(p, q, dim, T) → 
+//         Tensor(r, s, dim, T) → 
+//         Tensor(p + r, q + s, dim, T)
+// }
+// 
+// implements TensorProduct(p, q, r, s, dim, ℝ) {
+//     operation tensor_product = builtin_tensor_product
+// }
 
 /* Wedge Product (Antisymmetric Tensor Product)
  * 
@@ -266,14 +270,17 @@ implements TensorProduct(p, q, r, s, dim, ℝ) {
  *   - Antisymmetric: α ∧ β = -β ∧ α
  *   - Associative: (α ∧ β) ∧ γ = α ∧ (β ∧ γ)
  *   - α ∧ α = 0 for any 1-form α
+ * 
+ * NOTE: Parser doesn't support arithmetic in type parameters yet (p + q).
  */
-structure ExteriorAlgebra(p: Nat, q: Nat, dim: Nat) {
-    operation wedge : Tensor(0, p, dim, ℝ) → Tensor(0, q, dim, ℝ) → Tensor(0, p + q, dim, ℝ)
-}
-
-implements ExteriorAlgebra(p, q, dim) {
-    operation wedge = builtin_wedge_product
-}
+// COMMENTED OUT - Parser limitation (arithmetic in type params)
+// structure ExteriorAlgebra(p: Nat, q: Nat, dim: Nat) {
+//     operation wedge : Tensor(0, p, dim, ℝ) → Tensor(0, q, dim, ℝ) → Tensor(0, p + q, dim, ℝ)
+// }
+// 
+// implements ExteriorAlgebra(p, q, dim) {
+//     operation wedge = builtin_wedge_product
+// }
 
 /* Lie Derivative - Infinitesimal Diffeomorphisms
  * 
