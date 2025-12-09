@@ -1,0 +1,93 @@
+{
+  "Operation": {
+    "name": "equals",
+    "args": [
+      {
+        "Operation": {
+          "name": "plus",
+          "args": [
+            {
+              "Operation": {
+                "name": "contract",
+                "args": [
+                  {
+                    "Operation": {
+                      "name": "einstein",
+                      "args": [
+                        {
+                          "Placeholder": {
+                            "id": 0,
+                            "hint": "Ricci_tensor"
+                          }
+                        },
+                        {
+                          "Placeholder": {
+                            "id": 1,
+                            "hint": "Ricci_scalar"
+                          }
+                        },
+                        {
+                          "Placeholder": {
+                            "id": 2,
+                            "hint": "metric"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "Operation": {
+                "name": "scalar_multiply",
+                "args": [
+                  {
+                    "Object": "Lambda"
+                  },
+                  {
+                    "Operation": {
+                      "name": "contract",
+                      "args": [
+                        {
+                          "Placeholder": {
+                            "id": 3,
+                            "hint": "metric"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Operation": {
+          "name": "scalar_multiply",
+          "args": [
+            {
+              "Object": "kappa"
+            },
+            {
+              "Operation": {
+                "name": "contract",
+                "args": [
+                  {
+                    "Placeholder": {
+                      "id": 4,
+                      "hint": "stress_energy"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+
