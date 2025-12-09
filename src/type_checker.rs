@@ -203,11 +203,9 @@ impl TypeChecker {
         // Save current context (we'll restore it after checking the function body)
         let saved_context = self.inference.context().clone();
 
-        // Add parameters to context
-        // For now, we create fresh type variables for unannotated parameters
-        // TODO: Use parameter type annotations when available
+        // Add parameters to context with fresh type variables
+        // Wire 3 TODO: Use parameter type annotations from func_def.type_annotation
         for param in &func_def.params {
-            // Create a fresh type variable for this parameter
             let param_ty = Type::Var(TypeVar(self.inference.next_var_id()));
             self.inference.bind(param.clone(), param_ty);
         }
@@ -219,18 +217,9 @@ impl TypeChecker {
             .map_err(|e| format!("Type error in function '{}': {}", func_def.name, e))?;
 
         // Build function type
-        // For simplicity, we'll store the return type for now
-        // TODO: Build proper multi-argument function type (curried)
-        let func_ty = if func_def.params.is_empty() {
-            // Simple definition: define x = expr
-            // Just use the body type
-            body_ty.clone()
-        } else {
-            // Function definition: define f(x, y) = expr
-            // For now, store as body type
-            // TODO: Build proper function type structure
-            body_ty.clone()
-        };
+        // Wire 3 TODO: Build proper curried function type: param1 → param2 → ... → result
+        // For now, we store just the body/result type since we don't have function application yet
+        let func_ty = body_ty.clone();
 
         // Restore context (parameters were local to function body)
         *self.inference.context_mut() = saved_context;
@@ -264,16 +253,17 @@ impl TypeChecker {
                 // Map named types to Type enum
                 match name.as_str() {
                     "ℝ" | "Real" => Type::scalar(),
-                    // TODO: Add more mappings
-                    _ => Type::scalar(), // Default for now
+                    // Future: Query data registry for user-defined types
+                    // For now, default to scalar for unknown types
+                    _ => Type::scalar(),
                 }
             }
             TypeExpr::Parametric(_name, _params) => {
-                // TODO: Handle parametric types properly by interpreting params
-                // For now, return scalar as a safe default
+                // Future: Interpret params and build Data type
+                // Example: Vector(3) → Data { type_name: "Type", constructor: "Vector", args: [NatValue(3)] }
                 Type::scalar()
             }
-            _ => Type::scalar(), // Default
+            _ => Type::scalar(),
         }
     }
 
@@ -594,15 +584,14 @@ mod tests {
     fn test_check_function_def_with_pattern_match() {
         let mut checker = TypeChecker::with_stdlib().unwrap();
 
-        // Define function using pattern matching (Bool is in stdlib)
-        // Note: This currently fails due to limitations in pattern match type inference
-        // The type checker tries to unify True and False (different constructors)
-        // TODO: Improve pattern match type inference to handle this case
+        // Pattern matching on Bool currently fails - known limitation
+        // The type inference tries to unify True and False (different constructors)
+        // This is a separate issue from Wire 2 (function definitions)
+        // See: type_inference.rs pattern matching implementation
         let code = "define not(b) = match b { True => False | False => True }";
         let result = checker.load_kleis(code);
         
-        // For now, we expect this to fail
-        // Once pattern match type inference is improved, change this to unwrap()
+        // Expected to fail until pattern match type inference is improved
         assert!(result.is_err());
     }
 
