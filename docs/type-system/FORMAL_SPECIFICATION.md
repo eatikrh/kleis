@@ -1,9 +1,16 @@
 # Kleis Type System - Formal Specification
 
 **Author:** Dr. Engin Atik  
-**Date:** December 7, 2024  
-**Version:** 0.4.0  
-**Status:** Core Implementation Complete, Extensions Planned
+**Date:** December 7, 2024 (Updated: December 9, 2024)  
+**Version:** 0.5.0  
+**Status:** Core Implementation Complete, Registry Extensions Complete, Let-Polymorphism Planned
+
+**Dec 9 Update:**
+- ✅ StructureRegistry implemented (generic parametric structures)
+- ✅ List literal support for compositional types
+- ✅ Matrix as regular data constructor (zero hardcoding)
+- ✅ Block matrices: Matrix(2, 2, List(Matrix(2, 2, List(α))))
+- ✅ True user extensibility achieved
 
 ---
 
@@ -706,7 +713,10 @@ Rules:
 - Relational: 6 operations (Equatable + Ordered)
 - Matrix: 3 operations
 
-**Test coverage:** 346 tests, all passing
+**Test coverage:** 381 tests, all passing (updated Dec 9, 2024)
+- 376 core type system tests
+- 5 List literal tests  
+- Block matrix compositionality verified
 
 ---
 
@@ -1005,16 +1015,24 @@ then dimensions(q) = [L, M, T]
 
 Kleis implements:
 1. ✅ **HM-style constraint-based type inference** (core algorithm)
-2. ✅ **Registry-driven operation typing** (ADR-016 innovation)
+2. ✅ **Registry-driven operation typing** (ADR-016 innovation) - **COMPLETE Dec 9!**
 3. ✅ **Dimensional type checking** (ADR-019 innovation)
-4. ⏳ **Planned: Full Damas-Milner with schemes** (Phase 4)
+4. ✅ **List literals for compositional types** - **NEW Dec 9!**
+5. ✅ **StructureRegistry for user extensibility** - **NEW Dec 9!**
+6. ⏳ **Planned: Full Damas-Milner with schemes** (Phase 4 - Let-polymorphism)
 
-### **Current Status**
+### **Current Status (Dec 9, 2024)**
 
 **Theoretical foundation:** Solid  
-**Core implementation:** Complete (469 lines)  
-**Extensions:** Well-designed, clear path forward  
-**Innovation:** Self-hosting + dimensional analysis
+**Core implementation:** Complete (1,959 lines in type_inference.rs)  
+**Extensions:** ✅ StructureRegistry, DataTypeRegistry with List support  
+**Innovation:** Self-hosting + dimensional analysis + true user extensibility  
+**Tests:** 381 passing (376 core + 5 List literals)
+
+**Major achievement:** Matrix is now a regular 3-arg data constructor with zero hardcoding!
+- Block matrices work: `Matrix(2, 2, List(Matrix(...)))`
+- Users can define `Tensor(i, j, k, List(T))` without code changes
+- Removed 133 lines of hardcoded special cases
 
 ### **Academic Contribution**
 
