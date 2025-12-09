@@ -51,6 +51,32 @@ implements Tensor(upper, lower, dim, ℝ) {
     operation contract = builtin_tensor_contract
 }
 
+/* Tensor Arithmetic - FUTURE (Parser Limitation)
+ * 
+ * DESIGN NOTE: Tensors SHOULD support polymorphic arithmetic!
+ * Just like multiply works for Matrix(m, n, T) with any T,
+ * plus/minus should work for ANY type T including Tensors.
+ * 
+ * The architecture is correct:
+ *   structure Arithmetic(T) {
+ *     operation plus : T → T → T
+ *   }
+ * 
+ * We just need: implements Arithmetic(Tensor(upper, lower, dim, ℝ))
+ * 
+ * PARSER LIMITATION: Current parser can't handle:
+ *   - implements blocks referencing structures from other files
+ *   - Complex parametric types in implements: Arithmetic(Tensor(...))
+ * 
+ * When parser is extended, uncomment:
+ */
+// implements Arithmetic(Tensor(upper, lower, dim, ℝ)) {
+//     operation plus = builtin_tensor_add
+//     operation minus = builtin_tensor_subtract
+// }
+//
+// Then Einstein equations will type-check as Tensor(0, 2, 4, ℝ) = Tensor(0, 2, 4, ℝ)!
+
 /* Einstein Tensor Operations
  * 
  * Core operations for General Relativity field equations.

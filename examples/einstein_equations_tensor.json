@@ -4,7 +4,7 @@
     "args": [
       {
         "Operation": {
-          "name": "plus",
+          "name": "tensor_plus",
           "args": [
             {
               "Operation": {
@@ -33,7 +33,7 @@
             },
             {
               "Operation": {
-                "name": "scalar_multiply",
+                "name": "tensor_scale",
                 "args": [
                   {
                     "Object": "Lambda"
@@ -52,7 +52,7 @@
       },
       {
         "Operation": {
-          "name": "scalar_multiply",
+          "name": "tensor_scale",
           "args": [
             {
               "Object": "kappa"
