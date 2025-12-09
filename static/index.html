@@ -2300,7 +2300,10 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             for (let i = 0; i < path.length; i++) {
                 if (current.Operation) {
                     current = current.Operation.args[path[i]];
+                } else if (current.List && Array.isArray(current.List)) {
+                    current = current.List[path[i]];
                 } else {
+                    console.warn('getNodeValueAtPath: cannot traverse at path', path, 'step', i);
                     return '';
                 }
             }
@@ -2809,10 +2812,22 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             for (let i = 0; i < path.length - 1; i++) {
                 if (current.Operation) {
                     current = current.Operation.args[path[i]];
+                } else if (current.List && Array.isArray(current.List)) {
+                    current = current.List[path[i]];
+                } else {
+                    console.error('setNodeAtPath: cannot traverse node at path', path, 'step', i);
+                    return;
                 }
             }
-            if (current.Operation) {
-                current.Operation.args[path[path.length-1]] = newValue;
+            
+            // Set the final value
+            const lastIndex = path[path.length - 1];
+            if (current.Operation && current.Operation.args) {
+                current.Operation.args[lastIndex] = newValue;
+            } else if (current.List && Array.isArray(current.List)) {
+                current.List[lastIndex] = newValue;
+            } else {
+                console.error('setNodeAtPath: cannot set value on node at path', path);
             }
         }
         
