@@ -2702,8 +2702,11 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             for (let i = 1; i < pathParts.length; i++) {  // Skip first "0" (root)
                 if (node.Operation && node.Operation.args) {
                     node = node.Operation.args[pathParts[i]];
+                } else if (node.List && Array.isArray(node.List)) {
+                    // Handle List nodes - traverse into list elements
+                    node = node.List[pathParts[i]];
                 } else {
-                    console.warn('Could not navigate to node:', nodeId);
+                    console.warn('Could not navigate to node:', nodeId, 'at step', i, 'node:', node);
                     return ast;  // Fallback to root
                 }
             }
