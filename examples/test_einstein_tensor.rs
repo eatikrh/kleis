@@ -40,35 +40,44 @@ fn main() {
     // Load the semantic AST
     let ast_json = fs::read_to_string("examples/einstein_equations_tensor.json")
         .expect("Failed to read tensor AST file");
-    
-    let ast: Expression = serde_json::from_str(&ast_json)
-        .expect("Failed to parse AST JSON");
+
+    let ast: Expression = serde_json::from_str(&ast_json).expect("Failed to parse AST JSON");
 
     println!("AST Structure:");
     println!("{:#?}\n", ast);
 
     // Create type checker with full stdlib (includes tensors!)
-    let mut checker = TypeChecker::with_stdlib()
-        .expect("Failed to load stdlib");
+    let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     println!("Type checking full tensor Einstein's equations...\n");
 
     // Type check the expression
     let result = checker.check(&ast);
-    
+
     match result {
         kleis::type_checker::TypeCheckResult::Success(ty) => {
             println!("✅ Type checking SUCCESS!\n");
             println!("Inferred Type: {:?}\n", ty);
-            
+
             // Validate we got the expected polymorphic type
             match &ty {
-                kleis::type_inference::Type::Data { constructor, args, .. } 
-                    if constructor == "Tensor" => {
+                kleis::type_inference::Type::Data {
+                    constructor, args, ..
+                } if constructor == "Tensor" => {
                     println!("🎉 Returned concrete Tensor (constants were declared!)");
-                    println!("    Rank: ({}, {}) (contravariant, covariant)", 
-                             if let kleis::type_inference::Type::NatValue(n) = args[0] { n } else { 0 },
-                             if let kleis::type_inference::Type::NatValue(n) = args[1] { n } else { 0 });
+                    println!(
+                        "    Rank: ({}, {}) (contravariant, covariant)",
+                        if let kleis::type_inference::Type::NatValue(n) = args[0] {
+                            n
+                        } else {
+                            0
+                        },
+                        if let kleis::type_inference::Type::NatValue(n) = args[1] {
+                            n
+                        } else {
+                            0
+                        }
+                    );
                     println!();
                     println!("This means physical constants Λ and κ were properly typed.");
                 }
@@ -120,20 +129,26 @@ fn main() {
             println!("  Λ: Cosmological constant (dark energy)");
             println!("  κ = 8πG/c⁴: Einstein's constant");
         }
-        kleis::type_checker::TypeCheckResult::Error { message, suggestion } => {
+        kleis::type_checker::TypeCheckResult::Error {
+            message,
+            suggestion,
+        } => {
             println!("❌ Type checking FAILED:");
             println!("{}\n", message);
-            
+
             if let Some(s) = suggestion {
                 println!("💡 Suggestion: {}\n", s);
             }
-            
+
             println!("This means:");
             println!("- Parser limitation: Can't add Arithmetic(Tensor(...)) implementation");
             println!("- Architecture is CORRECT - plus SHOULD be polymorphic");
             println!("- Waiting for parser to support complex implements blocks");
         }
-        kleis::type_checker::TypeCheckResult::Polymorphic { type_var, available_types } => {
+        kleis::type_checker::TypeCheckResult::Polymorphic {
+            type_var,
+            available_types,
+        } => {
             println!("⚠️  Type is polymorphic (needs more context):");
             println!("Type variable: {:?}", type_var);
             println!("Available types: {:?}\n", available_types);
@@ -153,4 +168,3 @@ fn main() {
     println!();
     println!("Both forms are valid, but the tensor form is fundamental!");
 }
-

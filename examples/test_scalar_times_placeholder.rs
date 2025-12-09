@@ -10,7 +10,10 @@ fn main() {
         name: "scalar_multiply".to_string(),
         args: vec![
             Expression::Object("Lambda".to_string()),
-            Expression::Placeholder { id: 0, hint: "unknown".to_string() },
+            Expression::Placeholder {
+                id: 0,
+                hint: "unknown".to_string(),
+            },
         ],
     };
 
@@ -18,15 +21,14 @@ fn main() {
     println!("  Λ: Object (unknown type)");
     println!("  ?: Placeholder (unknown type)\n");
 
-    let mut checker = TypeChecker::with_stdlib()
-        .expect("Failed to load stdlib");
+    let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     let result = checker.check(&ast);
-    
+
     match result {
         kleis::type_checker::TypeCheckResult::Success(ty) => {
             println!("Result type: {:?}\n", ty);
-            
+
             println!("FINDING:");
             println!("When both args are unknown (Object + Placeholder),");
             println!("scalar_multiply returns a fresh type variable.");
@@ -37,4 +39,3 @@ fn main() {
         _ => {}
     }
 }
-

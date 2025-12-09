@@ -17,17 +17,35 @@ fn main() {
             Expression::Operation {
                 name: "einstein".to_string(),
                 args: vec![
-                    Expression::Placeholder { id: 0, hint: "R1".to_string() },
-                    Expression::Placeholder { id: 1, hint: "R_scalar1".to_string() },
-                    Expression::Placeholder { id: 2, hint: "g1".to_string() },
+                    Expression::Placeholder {
+                        id: 0,
+                        hint: "R1".to_string(),
+                    },
+                    Expression::Placeholder {
+                        id: 1,
+                        hint: "R_scalar1".to_string(),
+                    },
+                    Expression::Placeholder {
+                        id: 2,
+                        hint: "g1".to_string(),
+                    },
                 ],
             },
             Expression::Operation {
                 name: "einstein".to_string(),
                 args: vec![
-                    Expression::Placeholder { id: 3, hint: "R2".to_string() },
-                    Expression::Placeholder { id: 4, hint: "R_scalar2".to_string() },
-                    Expression::Placeholder { id: 5, hint: "g2".to_string() },
+                    Expression::Placeholder {
+                        id: 3,
+                        hint: "R2".to_string(),
+                    },
+                    Expression::Placeholder {
+                        id: 4,
+                        hint: "R_scalar2".to_string(),
+                    },
+                    Expression::Placeholder {
+                        id: 5,
+                        hint: "g2".to_string(),
+                    },
                 ],
             },
         ],
@@ -37,19 +55,19 @@ fn main() {
     println!("Each einstein returns: Tensor(0, 2, 4, ℝ)");
     println!("Expected result: Tensor(0, 2, 4, ℝ)\n");
 
-    let mut checker = TypeChecker::with_stdlib()
-        .expect("Failed to load stdlib");
+    let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     let result = checker.check(&ast);
-    
+
     match result {
         kleis::type_checker::TypeCheckResult::Success(ty) => {
             println!("✅ Type checking SUCCESS!");
             println!("Got type: {:?}\n", ty);
-            
+
             match &ty {
-                kleis::type_inference::Type::Data { constructor, args, .. } 
-                    if constructor == "Tensor" => {
+                kleis::type_inference::Type::Data {
+                    constructor, args, ..
+                } if constructor == "Tensor" => {
                     println!("🎉 CORRECT! plus preserves Tensor type!");
                 }
                 kleis::type_inference::Type::Var(_) => {
@@ -79,4 +97,3 @@ fn main() {
         }
     }
 }
-

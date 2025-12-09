@@ -13,16 +13,28 @@ fn main() {
             Expression::Operation {
                 name: "einstein".to_string(),
                 args: vec![
-                    Expression::Placeholder { id: 0, hint: "R_mu_nu".to_string() },
-                    Expression::Placeholder { id: 1, hint: "R_scalar".to_string() },
-                    Expression::Placeholder { id: 2, hint: "metric".to_string() },
+                    Expression::Placeholder {
+                        id: 0,
+                        hint: "R_mu_nu".to_string(),
+                    },
+                    Expression::Placeholder {
+                        id: 1,
+                        hint: "R_scalar".to_string(),
+                    },
+                    Expression::Placeholder {
+                        id: 2,
+                        hint: "metric".to_string(),
+                    },
                 ],
             },
             Expression::Operation {
                 name: "scalar_multiply".to_string(),
                 args: vec![
                     Expression::Object("Lambda".to_string()),
-                    Expression::Placeholder { id: 3, hint: "metric_g_mu_nu".to_string() },
+                    Expression::Placeholder {
+                        id: 3,
+                        hint: "metric_g_mu_nu".to_string(),
+                    },
                 ],
             },
         ],
@@ -31,18 +43,18 @@ fn main() {
     println!("Testing: plus(einstein(...), scalar_multiply(Λ, ?))");
     println!("Expected: Tensor(0, 2, 4, ℝ)\n");
 
-    let mut checker = TypeChecker::with_stdlib()
-        .expect("Failed to load stdlib");
+    let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     let result = checker.check(&ast);
-    
+
     match result {
         kleis::type_checker::TypeCheckResult::Success(ty) => {
             println!("Result type: {:?}\n", ty);
-            
+
             match &ty {
-                kleis::type_inference::Type::Data { constructor, .. } 
-                    if constructor == "Tensor" => {
+                kleis::type_inference::Type::Data { constructor, .. }
+                    if constructor == "Tensor" =>
+                {
                     println!("✅ Left side returns Tensor!");
                 }
                 kleis::type_inference::Type::Var(_) => {
@@ -54,4 +66,3 @@ fn main() {
         _ => {}
     }
 }
-

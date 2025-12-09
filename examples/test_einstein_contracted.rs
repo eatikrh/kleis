@@ -33,31 +33,30 @@ fn main() {
     // Load the semantic AST
     let ast_json = fs::read_to_string("examples/einstein_equations_contracted.json")
         .expect("Failed to read semantic AST file");
-    
-    let ast: Expression = serde_json::from_str(&ast_json)
-        .expect("Failed to parse AST JSON");
+
+    let ast: Expression = serde_json::from_str(&ast_json).expect("Failed to parse AST JSON");
 
     println!("AST Structure:");
     println!("{:#?}\n", ast);
 
     // Create type checker with full stdlib (includes tensors!)
-    let mut checker = TypeChecker::with_stdlib()
-        .expect("Failed to load stdlib");
+    let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     println!("Type checking contracted Einstein's equations...\n");
 
     // Type check the expression
     let result = checker.check(&ast);
-    
+
     match result {
         kleis::type_checker::TypeCheckResult::Success(ty) => {
             println!("✅ Type checking SUCCESS!\n");
             println!("Inferred Type: {:?}\n", ty);
-            
+
             // Validate we got Scalar
             match &ty {
-                kleis::type_inference::Type::Data { constructor, .. } 
-                    if constructor == "Scalar" => {
+                kleis::type_inference::Type::Data { constructor, .. }
+                    if constructor == "Scalar" =>
+                {
                     println!("✅ CORRECT! Inferred as Scalar");
                     println!("    Contracted form reduces tensors to scalars via trace.");
                 }
@@ -86,20 +85,26 @@ fn main() {
             println!("      scalar arithmetic (ℝ operations) is well-defined.");
             println!("      But we SHOULD declare constants with units for physics!");
         }
-        kleis::type_checker::TypeCheckResult::Error { message, suggestion } => {
+        kleis::type_checker::TypeCheckResult::Error {
+            message,
+            suggestion,
+        } => {
             println!("❌ Type checking FAILED:");
             println!("{}\n", message);
-            
+
             if let Some(s) = suggestion {
                 println!("💡 Suggestion: {}\n", s);
             }
-            
+
             println!("This might mean:");
             println!("- Missing operation definitions in stdlib");
             println!("- contract operation needs proper signature");
             println!("- einstein operation needs proper signature");
         }
-        kleis::type_checker::TypeCheckResult::Polymorphic { type_var, available_types } => {
+        kleis::type_checker::TypeCheckResult::Polymorphic {
+            type_var,
+            available_types,
+        } => {
             println!("⚠️  Type is polymorphic (needs more context):");
             println!("Type variable: {:?}", type_var);
             println!("Available types: {:?}\n", available_types);
@@ -132,4 +137,3 @@ fn main() {
     println!();
     println!("See UNIVERSAL_CONSTANTS_FINDING.md for full analysis.");
 }
-
