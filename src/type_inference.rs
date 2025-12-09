@@ -294,6 +294,20 @@ impl TypeInference {
         &self.context
     }
 
+    /// Get mutable access to the context
+    /// Used for restoring saved contexts (e.g., after checking function bodies)
+    pub fn context_mut(&mut self) -> &mut TypeContext {
+        &mut self.context
+    }
+
+    /// Get next type variable ID (for creating fresh vars)
+    /// Used when adding function parameters to context
+    pub fn next_var_id(&mut self) -> usize {
+        let id = self.context.next_var;
+        self.context.next_var += 1;
+        id
+    }
+
     /// Infer type of an expression
     pub fn infer(
         &mut self,
