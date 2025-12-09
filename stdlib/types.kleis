@@ -40,11 +40,11 @@
 // Both formats are supported during transition.
 data Type =
   Scalar
-  | Vector(n: Nat, elements: List(T))
-  | Matrix(m: Nat, n: Nat, elements: List(T))
-  | PMatrix(m: Nat, n: Nat, elements: List(T))
-  | VMatrix(m: Nat, n: Nat, elements: List(T))
-  | BMatrix(m: Nat, n: Nat, elements: List(T))
+  | Vector(n: Nat, T)
+  | Matrix(m: Nat, n: Nat, T)
+  | PMatrix(m: Nat, n: Nat, T)
+  | VMatrix(m: Nat, n: Nat, T)
+  | BMatrix(m: Nat, n: Nat, T)
   | Complex
   | Set(T: Type)
   | List(T: Type)

@@ -423,6 +423,46 @@ impl SignatureInterpreter {
                 }
                 // Both are Vars → OK (remain polymorphic)
                 (Type::Var(_), Type::Var(_)) => Ok(()),
+                // Both are Data types with same constructor → unify arguments recursively
+                (
+                    Type::Data {
+                        constructor: c1,
+                        args: args1,
+                        ..
+                    },
+                    Type::Data {
+                        constructor: c2,
+                        args: args2,
+                        ..
+                    },
+                ) if c1 == c2 && args1.len() == args2.len() => {
+                    // Recursively unify each type argument
+                    for (arg1, arg2) in args1.iter().zip(args2.iter()) {
+                        // Create a temporary type expression for recursive unification
+                        // For now, if both are Vars, add substitution
+                        match (arg1, arg2) {
+                            (Type::Var(v1), Type::Var(v2)) if v1 != v2 => {
+                                // Unify the two variables
+                                self.substitutions.insert(v2.clone(), arg1.clone());
+                            }
+                            (Type::Var(v), concrete) | (concrete, Type::Var(v))
+                                if !matches!(concrete, Type::Var(_)) =>
+                            {
+                                self.substitutions.insert(v.clone(), concrete.clone());
+                            }
+                            _ if arg1 == arg2 => {
+                                // Equal - OK
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "Type parameter '{}' has mismatched nested types in {:?} vs {:?}",
+                                    param_name, arg1, arg2
+                                ));
+                            }
+                        }
+                    }
+                    Ok(())
+                }
                 // Otherwise, types must match exactly
                 (a, b) if a == b => Ok(()),
                 (a, b) => Err(format!(

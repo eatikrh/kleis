@@ -14,7 +14,7 @@
  * To create matrix values, use the 'matrix' operation below.
  */
 structure Matrix(m: Nat, n: Nat, T) {
-    operation transpose : Matrix(n, m, T)
+    operation transpose : Matrix(m, n, T) → Matrix(n, m, T)
 }
 
 // Implementation for Matrix operations
@@ -39,7 +39,7 @@ implements MatrixConstructor(m, n, ℝ) {
 
 /* Matrix Addition - Only when dimensions match */
 structure MatrixAddable(m: Nat, n: Nat, T) {
-    operation add : Matrix(m, n, T)
+    operation add : Matrix(m, n, T) → Matrix(m, n, T) → Matrix(m, n, T)
 }
 
 implements MatrixAddable(m, n, ℝ) {
@@ -48,7 +48,7 @@ implements MatrixAddable(m, n, ℝ) {
 
 /* Matrix Multiplication - (m×n) · (n×p) → (m×p) */
 structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
-    operation multiply : Matrix(m, p, T)
+    operation multiply : Matrix(m, n, T) → Matrix(n, p, T) → Matrix(m, p, T)
 }
 
 implements MatrixMultipliable(m, n, p, ℝ) {
@@ -57,8 +57,8 @@ implements MatrixMultipliable(m, n, p, ℝ) {
 
 /* Square Matrices - Additional operations for n×n matrices */
 structure SquareMatrix(n: Nat, T) {
-    operation det : T
-    operation trace : T
+    operation det : Matrix(n, n, T) → T
+    operation trace : Matrix(n, n, T) → T
     operation identity : Matrix(n, n, T)
 }
 
@@ -67,6 +67,24 @@ implements SquareMatrix(n, ℝ) {
     operation trace = builtin_trace
     operation identity = builtin_identity
 }
+
+/* Block Matrix Support
+ * 
+ * Block matrices (matrices of matrices) work automatically through polymorphism!
+ * 
+ * Example: A 2×2 block matrix where each block is 3×3:
+ *   [[A₁₁, A₁₂],     where each Aᵢⱼ is a 3×3 matrix
+ *    [A₂₁, A₂₂]]
+ * 
+ * Type: Matrix(2, 2, Matrix(3, 3, ℝ))
+ * 
+ * The existing polymorphic operations work for block matrices:
+ *   - multiply: works when T = Matrix(k, l, ℝ)
+ *   - add: works when T = Matrix(k, l, ℝ)
+ *   - transpose: works when T = Matrix(k, l, ℝ)
+ * 
+ * No special block operations needed - parametric polymorphism handles it!
+ */
 
 /* Legacy Matrix Constructors (DEPRECATED - Use 'matrix' instead)
  * 

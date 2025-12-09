@@ -1631,6 +1631,7 @@ pub fn build_default_context() -> GlyphContext {
         "{glyph}_{surface} {field} dS".to_string(),
     );
     unicode_templates.insert("scalar_multiply".to_string(), "{left} {right}".to_string());
+    unicode_templates.insert("multiply".to_string(), "{left} {right}".to_string()); // Matrix multiplication (polymorphic - works for block matrices!)
     unicode_templates.insert(
         "scalar_divide".to_string(),
         "({left}) / ({right})".to_string(),
@@ -1965,6 +1966,10 @@ pub fn build_default_context() -> GlyphContext {
     latex_templates.insert(
         "scalar_multiply".to_string(),
         "{left} \\, {right}".to_string(),
+    );
+    latex_templates.insert(
+        "multiply".to_string(),
+        "{left} \\, {right}".to_string(), // Matrix multiplication (polymorphic - works for block matrices!)
     );
     latex_templates.insert(
         "scalar_divide".to_string(),
@@ -2442,6 +2447,10 @@ pub fn build_default_context() -> GlyphContext {
     html_templates.insert(
         "scalar_multiply".to_string(),
         r#"{left} <span class="math-op">·</span> {right}"#.to_string(),
+    );
+    html_templates.insert(
+        "multiply".to_string(),
+        r#"{left} <span class="math-op">·</span> {right}"#.to_string(), // Matrix multiplication (polymorphic - works for block matrices!)
     );
     html_templates.insert(
         "equals".to_string(),
@@ -2988,6 +2997,7 @@ pub fn build_default_context() -> GlyphContext {
         "({left})/({right})".to_string(),
     );
     typst_templates.insert("scalar_multiply".to_string(), "{left} {right}".to_string());
+    typst_templates.insert("multiply".to_string(), "{left} {right}".to_string()); // Matrix multiplication (polymorphic over T - works for block matrices too!)
     typst_templates.insert("plus".to_string(), "{left} + {right}".to_string());
     typst_templates.insert("minus".to_string(), "{left} - {right}".to_string());
 

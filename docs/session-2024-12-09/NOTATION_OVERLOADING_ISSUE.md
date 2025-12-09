@@ -290,29 +290,24 @@ If we don't implement resolution, we should:
 
 ---
 
-## Immediate Fix Needed
+## ✅ FIXED - Matrix Multiplication Button Added
 
-**Frontend template mapping is broken!**
+**Solution:** Added explicit button for matrix multiplication
 
-The `×` button (or cross template) should generate:
-```javascript
-// For matrix context:
-{ Operation: { name: 'multiply', args: [...] } }  // NOT 'cross'!
-
-// For 3D vectors:
-{ Operation: { name: 'cross', args: [...] } }
-
-// For scalars:
-{ Operation: { name: 'scalar_multiply', args: [...] } }
+**New button in Linear Algebra palette:**
+```html
+<button ... onclick="insertTemplate('A \\bullet B')" ...>\(A \bullet B\)</button>
 ```
 
-**Location:** `static/index.html` - astTemplates or button handlers
+Generates:
+```javascript
+{ Operation: { name: 'multiply', args: [left, right] } }
+```
 
----
+**Now users have clear choices:**
+- **A•B** = Matrix multiplication (`multiply`)
+- **a·b** = Dot product (`dot`)
+- **a×b** = Cross product (`cross`)
 
-## Current Workaround
-
-**For testing:** Manually construct with correct operation name
-- Matrix multiplication: use `"multiply"` operation name
-- Avoid using `×` button for matrices until fixed
+**Status:** Fixed Dec 9, 2024 - No backend resolution needed!
 

@@ -1065,6 +1065,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         </button>
                         <button class="math-btn" onclick="insertTemplate('\\mathbf{v}')" data-tooltip="Bold Vector">\(\mathbf{v}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\vec{v}')" data-tooltip="Vector Arrow">\(\vec{v}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('A \\bullet B')" data-tooltip="Matrix Multiplication">\(A \bullet B\)</button>
                         <button class="math-btn" onclick="insertTemplate('a \\cdot b')" data-tooltip="Dot Product">\(a \cdot b\)</button>
                         <button class="math-btn" onclick="insertTemplate('a \\times b')" data-tooltip="Cross Product">\(a \times b\)</button>
                     </div>
@@ -1837,6 +1838,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             '\\vec{v}': 'vector_arrow',
             'a \\cdot b': 'dot',
             'a \\times b': 'cross',
+            'A \\bullet B': 'matrix_multiply',
             '\\|v\\|': 'norm',
             '|x|': 'abs',
             
@@ -1901,6 +1903,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             plus: { Operation: { name: 'plus', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             minus: { Operation: { name: 'minus', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             times: { Operation: { name: 'scalar_multiply', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            matrix_multiply: { Operation: { name: 'multiply', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             negate: { Operation: { name: 'minus', args: [{Const:'0'}, {Placeholder:{id:0,hint:'value'}}] } },
             plus_minus_literal: { Object: '\\pm' },
             
