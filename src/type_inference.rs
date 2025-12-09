@@ -650,48 +650,13 @@ impl TypeInference {
         args: &[Expression],
         context_builder: Option<&crate::type_context::TypeContextBuilder>,
     ) -> Result<Type, String> {
-        // Special handling for OLD FORMAT Matrix/Vector VALUE constructors (variable arity)
+        // Matrix and Vector are now FIXED-ARITY data constructors using List literals!
         // 
-        // NEW FORMAT (preferred): Matrix(2, 2, [a, b, c, d]) - fixed 3-arity
-        //   → Handled by data constructor path (falls through below)
+        // Matrix(2, 2, [a, b, c, d]) - 3 args (fixed!)
+        // Vector(3, [x, y, z]) - 2 args (fixed!)
         //
-        // OLD FORMAT (legacy): Matrix(2, 2, a, b, c, d) - variable arity
-        //   → Handled here for backwards compatibility
-        //
-        // Once frontend migrates to List literals, we can remove this special case entirely
-        match name {
-            "Matrix" | "PMatrix" | "VMatrix" | "BMatrix" if args.len() > 3 => {
-                // OLD FORMAT: Matrix(2, 2, a, b, c, d, ...)
-                // Variable arity based on dimensions - must be special-cased
-                let (m, n) = self.extract_dimensions(args)?;
-                
-                // Infer types of all elements (args[2..])
-                for arg in &args[2..] {
-                    self.infer(arg, context_builder)?;
-                }
-                
-                // Return appropriate matrix type based on constructor name
-                return Ok(match name {
-                    "PMatrix" => Type::pmatrix(m, n, Type::scalar()),
-                    "VMatrix" => Type::vmatrix(m, n, Type::scalar()),
-                    "BMatrix" => Type::bmatrix(m, n, Type::scalar()),
-                    _ => Type::matrix(m, n, Type::scalar()),
-                });
-            }
-            "Vector" if args.len() > 2 => {
-                // OLD FORMAT: Vector(3, x, y, z)
-                // Variable arity - must be special-cased
-                let n = self.extract_single_dimension(&args[0])?;
-                
-                // Infer types of all elements (args[1..])
-                for arg in &args[1..] {
-                    self.infer(arg, context_builder)?;
-                }
-                
-                return Ok(Type::vector(n, Type::scalar()));
-            }
-            _ => {}
-        }
+        // They are handled by the generic data constructor path below.
+        // No special case needed!
 
         // ADR-021: Check if this is a (fixed-arity) data constructor
         if self.data_registry.has_variant(name) {
@@ -711,32 +676,6 @@ impl TypeInference {
             // No context builder - return fresh variable (for backwards compatibility)
             // This allows tests without context_builder to still run
             Ok(self.context.fresh_var())
-        }
-    }
-
-    /// Extract dimensions from matrix constructor arguments
-    fn extract_dimensions(&self, args: &[Expression]) -> Result<(usize, usize), String> {
-        if args.len() < 2 {
-            return Err("Matrix constructor requires at least 2 arguments (rows, cols)".to_string());
-        }
-
-        let rows = match &args[0] {
-            Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
-            _ => 2, // Default if not a constant
-        };
-        let cols = match &args[1] {
-            Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
-            _ => 2, // Default if not a constant
-        };
-
-        Ok((rows, cols))
-    }
-
-    /// Extract single dimension from vector constructor
-    fn extract_single_dimension(&self, arg: &Expression) -> Result<usize, String> {
-        match arg {
-            Expression::Const(s) => Ok(s.parse::<usize>().unwrap_or(3)),
-            _ => Ok(3), // Default if not a constant
         }
     }
 
