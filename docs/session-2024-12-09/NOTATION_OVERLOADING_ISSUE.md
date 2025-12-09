@@ -13,14 +13,25 @@
 Matrix(2,3) × Matrix(3,3) × Matrix(3,2) = Matrix(2,2)  ✓ Correct math!
 ```
 
-**Current Behavior:**
+**Current Behavior (varies!):**
+
+**Sometimes:**
 ```
 ✗ Type Error: 'T' mismatch
   scalar_multiply requires both args to be same type
   Got: Matrix(3,3) and Matrix(3,2)
 ```
 
-**Root Cause:** The `×` symbol maps to `scalar_multiply`, but for matrices it should map to `multiply` (matrix multiplication).
+**Other times:**
+```
+✗ Unknown operation: 'cross'
+  Hint: cross is not defined in any loaded structure
+```
+
+**Root Cause:** The `×` symbol maps inconsistently:
+- Sometimes → `"scalar_multiply"` (wrong for matrices of different dimensions)
+- Sometimes → `"cross"` (wrong - that's for 3D vector cross products!)
+- Should → `"multiply"` (matrix multiplication)
 
 ---
 
@@ -42,7 +53,9 @@ Matrix(2,3) × Matrix(3,3) × Matrix(3,2) = Matrix(2,2)  ✓ Correct math!
 ## Current Architecture
 
 **Parser/Frontend:** Maps LaTeX/visual notation to operation names
-- `\times` or `*` → `"scalar_multiply"`
+- `\times` or `*` → `"scalar_multiply"` (sometimes!)
+- `\times` or `×` → `"cross"` (sometimes!)
+- **Inconsistent mapping depending on context!**
 
 **Type System:** Checks if operation is valid for argument types
 - `scalar_multiply` requires `Arithmetic(T)` with `T → T → T`
@@ -277,9 +290,29 @@ If we don't implement resolution, we should:
 
 ---
 
+## Immediate Fix Needed
+
+**Frontend template mapping is broken!**
+
+The `×` button (or cross template) should generate:
+```javascript
+// For matrix context:
+{ Operation: { name: 'multiply', args: [...] } }  // NOT 'cross'!
+
+// For 3D vectors:
+{ Operation: { name: 'cross', args: [...] } }
+
+// For scalars:
+{ Operation: { name: 'scalar_multiply', args: [...] } }
+```
+
+**Location:** `static/index.html` - astTemplates or button handlers
+
+---
+
 ## Current Workaround
 
-**For testing:** Use the correct operation name explicitly
-- Matrix multiplication: use `multiply` operation (if exposed in UI)
-- Or: Define matrix-aware templates in frontend
+**For testing:** Manually construct with correct operation name
+- Matrix multiplication: use `"multiply"` operation name
+- Avoid using `×` button for matrices until fixed
 
