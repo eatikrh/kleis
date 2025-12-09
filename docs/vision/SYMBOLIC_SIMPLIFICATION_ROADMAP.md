@@ -91,7 +91,9 @@ a * (b + c) → a*b + a*c
 
 ## Implementation Approaches
 
-### Approach 1: Pattern-Based Simplification (Easiest)
+### Approach 1: User-Definable Simplification (Recommended)
+
+**Key principle:** Users define their own simplification strategy
 
 **Define simplify function in Kleis:**
 ```kleis
@@ -119,16 +121,40 @@ define simplify(e: Expr) : Expr = match e {
 }
 ```
 
+**Domain-specific canonical forms:**
+```kleis
+// Physicist's canonical form
+define physics_canonical(e: Expr) : Expr = 
+  sort_by_dimensional_units(collect_like_terms(e))
+  
+// Result: G * m1 * m2 / r^2  (dimensional grouping)
+
+// Algebraist's canonical form
+define algebra_canonical(e: Expr) : Expr = 
+  expand_and_sort_alphabetically(e)
+  
+// Result: 2ab + a^2 + b^2  (alphabetical, expanded)
+
+// Geometer's canonical form
+define geometry_canonical(e: Expr) : Expr =
+  factor_and_preserve_structure(e)
+  
+// Result: (a + b)^2  (factored, structural)
+```
+
+**Users choose which canonical form to use for their domain!**
+
 **Pros:**
-- ✅ Simple to implement
+- ✅ Domain-agnostic (not hardcoded)
 - ✅ Written in Kleis (self-hosting!)
-- ✅ Easy to extend
+- ✅ Users control behavior
+- ✅ Multiple forms coexist
 - ✅ Type-safe by construction
 
 **Cons:**
-- ⚠️ Order matters (must try all rules)
-- ⚠️ May miss opportunities (limited look-ahead)
-- ⚠️ No guarantee of termination
+- ⚠️ Users must define their own rules
+- ⚠️ No universal "right answer"
+- ⚠️ Learning curve (but more powerful!)
 
 ---
 
@@ -205,11 +231,93 @@ rewrite annihilation {
 
 ---
 
+## CRITICAL INSIGHT: No Universal Canonical Form
+
+### The Poetry → Prose Problem
+
+**Poetry:**
+```
+Shall I compare thee to a summer's day?
+Thou art more lovely and more temperate
+```
+
+**"Canonical form" (prose):**
+```
+Should I compare you to summer? You're nicer and more moderate.
+```
+
+**What was lost:** Rhythm, meter, beauty, aesthetic meaning
+
+### Mathematical Parallel
+
+**Structured form:**
+```kleis
+(a + b)^2  // Shows: square of sum, geometric insight
+```
+
+**"Canonical form" (expanded):**
+```kleis
+a^2 + 2ab + b^2  // Shows: three terms, but insight lost
+```
+
+**What was lost:** Factorization, geometric interpretation, mathematical structure
+
+### The Principle
+
+> **"Canonical form" is DOMAIN-DEPENDENT, not universal**
+
+Just as:
+- Poetry → prose loses aesthetic meaning
+- Factored → expanded loses structural meaning
+
+**Therefore:**
+
+❌ **NEVER hardcode ONE canonical form in Rust**
+
+✅ **LET USERS define their canonical form in Kleis**
+
+Different domains need different forms:
+- **Geometry:** Factored forms reveal structure
+- **Algebra:** Expanded forms enable calculation
+- **Physics:** Dimensional grouping clarifies meaning
+- **Numerics:** Horner form optimizes computation
+
+**Kleis must support ALL, not force ONE.**
+
+---
+
+## Design Philosophy
+
+### Core Principle: Domain-Agnostic
+
+**Kleis should NOT impose a canonical form.**
+
+Why:
+- Poetry → prose loses aesthetic meaning
+- Factored → expanded loses structural insight
+- Physics → algebra loses dimensional meaning
+- **One size does NOT fit all**
+
+**Instead:**
+- Provide default simplification rules
+- Let users override for their domain
+- Support multiple canonical forms
+- Preserve user intent
+
+### Analogy
+
+Just as Kleis doesn't hardcode "Matrix is 2D array" (users define via structures),
+Kleis shouldn't hardcode "canonical form is expanded" (users define via simplification functions).
+
+**Self-hosting applies to simplification too!**
+
+---
+
 ## Recommended Approach for Kleis
 
 ### Start Simple, Grow Sophisticated
 
-**Phase 5a: Pattern-Based Simplification** (Approach 1)
+**Phase 5a: User-Definable Simplification** (Approach 1)
 - Implement `simplify(e)` function in Kleis
 - Cover basic algebraic laws
 - Self-hosting demonstration
