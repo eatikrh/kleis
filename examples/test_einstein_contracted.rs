@@ -6,7 +6,20 @@
 // This is a SCALAR equation (taking the trace of both sides).
 // See test_einstein_tensor.rs for the full TENSOR form.
 //
-// Result type: Scalar (ℝ)
+// EXPECTED RESULT: Scalar (ℝ)
+//
+// WHY THIS WORKS BETTER:
+// The contract() operation explicitly takes traces, returning Scalar.
+// Even though Λ and κ are undefined, the scalar operations (plus, scalar_multiply)
+// have concrete implementations for ℝ, so the equation type-checks.
+//
+// This demonstrates:
+// - Contracted (trace) form reduces to scalar algebra
+// - Scalar arithmetic is well-defined in stdlib
+// - Works even without declaring constants (but shouldn't!)
+//
+// Note: Even though this type-checks, we SHOULD still declare constants
+// with proper units for dimensional consistency!
 
 use kleis::ast::Expression;
 use kleis::type_checker::TypeChecker;
@@ -40,20 +53,38 @@ fn main() {
         kleis::type_checker::TypeCheckResult::Success(ty) => {
             println!("✅ Type checking SUCCESS!\n");
             println!("Inferred Type: {:?}\n", ty);
+            
+            // Validate we got Scalar
+            match &ty {
+                kleis::type_inference::Type::Data { constructor, .. } 
+                    if constructor == "Scalar" => {
+                    println!("✅ CORRECT! Inferred as Scalar");
+                    println!("    Contracted form reduces tensors to scalars via trace.");
+                }
+                _ => {
+                    println!("⚠️  Got unexpected type (expected Scalar): {:?}", ty);
+                }
+            }
+            println!();
 
-            // Expected type analysis:
-            println!("=== Expected Types ===");
+            // Type analysis:
+            println!("=== Type Flow ===");
             println!("Left side: contract(einstein(...)) + scalar_multiply(Λ, contract(metric))");
-            println!("  - einstein returns Tensor(0, 2, 4, ℝ)");
-            println!("  - contract returns ℝ (scalar)");
-            println!("  - Should be: ℝ + ℝ = ℝ");
+            println!("  1. einstein(...) → Tensor(0, 2, 4, ℝ)");
+            println!("  2. contract(Tensor) → ℝ (takes trace: G^μ_μ)");
+            println!("  3. contract(metric) → ℝ (takes trace: g^μ_μ)");
+            println!("  4. scalar_multiply(Λ, ℝ) → ℝ");
+            println!("  5. plus(ℝ, ℝ) → ℝ");
             println!();
             println!("Right side: scalar_multiply(κ, contract(stress_energy))");
-            println!("  - stress_energy is Tensor(0, 2, 4, ℝ)");
-            println!("  - contract returns ℝ");
-            println!("  - Should be: ℝ * ℝ = ℝ");
+            println!("  1. contract(T_μν) → ℝ (takes trace: T^μ_μ)");
+            println!("  2. scalar_multiply(κ, ℝ) → ℝ");
             println!();
-            println!("Equation: ℝ = ℝ ✓");
+            println!("Final: Scalar = Scalar ✓");
+            println!();
+            println!("NOTE: This works even without declaring Λ and κ because");
+            println!("      scalar arithmetic (ℝ operations) is well-defined.");
+            println!("      But we SHOULD declare constants with units for physics!");
         }
         kleis::type_checker::TypeCheckResult::Error { message, suggestion } => {
             println!("❌ Type checking FAILED:");
@@ -75,17 +106,30 @@ fn main() {
         }
     }
 
-    println!("\n=== Comparison ===");
-    println!("LaTeX-parsed equation (from gallery):");
-    println!("  Type: Var(α) - generic notation");
-    println!("  No semantic knowledge");
+    println!("\n=== Key Insights ===");
     println!();
-    println!("Semantically constructed (with tensor ops):");
-    println!("  Type: Should be ℝ = ℝ (scalar equation)");
-    println!("  Full tensor type knowledge");
-    println!("  Validates dimensional consistency");
+    println!("1. CONTRACTED FORM (this test):");
+    println!("   - Takes trace: G^μ_μ, g^μ_μ, T^μ_μ");
+    println!("   - Result: Scalar equation");
+    println!("   - Type-checks: Scalar = Scalar ✓");
+    println!("   - Physical meaning: Energy conservation");
     println!();
-    println!("The PALETTE provides the semantics!");
-    println!("LaTeX is just for display/import.");
+    println!("2. TENSOR FORM (see test_einstein_tensor.rs):");
+    println!("   - Full equation: G_μν + Λg_μν = κT_μν");
+    println!("   - Result: Tensor equation (10 independent equations)");
+    println!("   - Type-checks: Var(α) - requires constant declarations");
+    println!("   - Physical meaning: Fundamental field equations");
+    println!();
+    println!("3. PALETTE vs LATEX:");
+    println!("   - Palette: Semantic operations (einstein, contract, etc.)");
+    println!("   - LaTeX: Visual notation only (from gallery)");
+    println!("   - Type checking needs SEMANTICS from palette!");
+    println!();
+    println!("4. CONSTANTS NEED UNITS:");
+    println!("   - Λ is not just 1.089e-52");
+    println!("   - Λ is 1.089e-52 m⁻² (with units!)");
+    println!("   - Type system should enforce dimensional consistency");
+    println!();
+    println!("See UNIVERSAL_CONSTANTS_FINDING.md for full analysis.");
 }
 
