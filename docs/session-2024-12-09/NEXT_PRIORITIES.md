@@ -6,6 +6,102 @@
 
 ---
 
+## 🔥 Priority 0: `define` Parsing - THE SELF-HOSTING KEY (3-4 hours) ⭐⭐⭐
+
+**Why this is THE priority:**
+- 🔑 **Unlocks self-hosting** - Kleis can define Kleis!
+- 🎯 **Last missing piece** - AST + patterns + types exist, just need `define`
+- ✅ **Stdlib completion** - uncomment pattern matching functions
+- 🚀 **User empowerment** - custom functions without Rust
+- 🎓 **Milestone achievement** - meta-circular Kleis!
+
+**Current state:**
+```kleis
+// In stdlib/types.kleis - COMMENTED OUT:
+// define not(b) = match b { True => False | False => True }
+```
+
+**After `define` works:**
+```kleis
+define not(b) = match b { True => False | False => True }  // ✅
+define map(f, list) = match list { Nil => Nil | Cons(h,t) => Cons(f(h), map(f,t)) }
+```
+
+### The Three Wires (Implementation Path)
+
+**Following standard compiler design:**
+
+**Wire 1: Parser → AST (1-2 hours)**
+```rust
+// Parse both forms into single AST variant:
+// define x = expr                    → Define(x, [], None, expr)
+// define f(x: T) : U = expr          → Define(f, [Param(x, T)], Some(U), expr)
+
+fn parse_define(&mut self) -> Result<Decl::Define, ParseError>
+fn parse_params(&mut self) -> Result<Vec<Param>, ParseError>
+```
+
+**Wire 2: Type Checker → Environment (1 hour)**
+```rust
+// Add function type to environment:
+// For annotated: f : T → U (use annotation)
+// For unannotated: f : τ (run HM inference)
+
+fn check_define(&mut self, def: &Define) -> Result<Type, String>
+```
+
+**Wire 3: Evaluator → Closure (1 hour)**
+```rust
+// Store function as closure in runtime environment:
+// f = Closure { params, body, env }
+
+fn eval_define(&mut self, def: &Define) -> Result<Value, String>
+```
+
+### What This Unlocks
+
+**Immediate:**
+- ✅ Uncomment stdlib pattern matching functions
+- ✅ Users can define custom operations
+- ✅ Functions type-check before use
+
+**Strategic:**
+- ✅ Kleis grammar can be written IN Kleis!
+- ✅ Transformations written in Kleis
+- ✅ Self-hosting achieved (ADR-003 Phase 3)
+
+**Example - Grammar as Kleis Value:**
+```kleis
+data Program = Program(decls: List(Decl))
+data Decl = Define(...) | DataDef(...) | StructureDef(...)
+data Expr = Var(String) | Apply(...) | Match(...)
+
+// Pretty printer IN KLEIS:
+define prettyPrint(e: Expr) : String = match e {
+  Var(name) => name
+  Apply(f, args) => prettyPrint(f) ++ "(" ++ ... ++ ")"
+  Match(scrut, cases) => "match " ++ prettyPrint(scrut) ++ " {...}"
+}
+```
+
+**The moment the Kleis grammar exists as a Kleis value: Self-hosting achieved!** 🎊
+
+### Testing
+
+**After implementation, test:**
+```kleis
+define double(x) = x + x
+define map(f, list) = match list { Nil => Nil | Cons(h,t) => Cons(f(h), map(f,t)) }
+
+// Use them:
+double(5)  // → 10
+map(double, [1, 2, 3])  // → [2, 4, 6]
+```
+
+**Result:** Self-hosted function definitions working! ✨
+
+---
+
 ## 🔥 Priority 1: Physical Constants Palette (2-3 hours) ⭐ HIGHEST IMPACT
 
 **Why this is #1:**
