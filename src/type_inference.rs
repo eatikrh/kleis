@@ -284,6 +284,13 @@ impl TypeInference {
         self.constraints.push(Constraint { left, right });
     }
 
+    /// Clear all constraints
+    /// This should be called after solving constraints for a function to prevent
+    /// constraint leakage between function definitions
+    pub fn clear_constraints(&mut self) {
+        self.constraints.clear();
+    }
+
     /// Bind a variable to a type
     pub fn bind(&mut self, name: String, ty: Type) {
         self.context.bind(name, ty);
@@ -318,8 +325,15 @@ impl TypeInference {
             // Constants are scalars
             Expression::Const(_) => Ok(Type::scalar()),
 
-            // Variables: look up in context or create fresh var
+            // Variables: look up in context or check if data constructor
             Expression::Object(name) => {
+                // First check if it's a nullary data constructor (like None, True, False, Nil)
+                if self.data_registry.has_variant(name) {
+                    // It's a data constructor! Treat as constructor with zero args
+                    return self.infer_data_constructor(name, &[], context_builder);
+                }
+
+                // Not a constructor - look up as variable
                 if let Some(ty) = self.context.get(name) {
                     Ok(ty.clone())
                 } else {
@@ -520,10 +534,11 @@ impl TypeInference {
 
                 let (type_name, variant) = variant_info;
 
-                // Check scrutinee type matches constructor's type
-                match expected_ty {
+                // Extract type arguments from scrutinee for instantiating type parameters
+                let type_args = match expected_ty {
                     Type::Data {
                         type_name: scrutinee_type,
+                        args: scrutinee_args,
                         ..
                     } => {
                         if type_name != *scrutinee_type {
@@ -533,16 +548,29 @@ impl TypeInference {
                                 name, type_name, scrutinee_type
                             ));
                         }
+                        // Use the type arguments from the scrutinee
+                        scrutinee_args.clone()
                     }
                     Type::Var(_) => {
                         // Type variable - we'll constrain it through unification
-                        // Create the data type and unify
+                        // Create fresh type variables for each type parameter
+                        let data_def = self
+                            .data_registry
+                            .get_type(&type_name)
+                            .ok_or_else(|| format!("Type {} not found", type_name))?;
+                        let fresh_args: Vec<Type> = data_def
+                            .type_params
+                            .iter()
+                            .map(|_| self.context.fresh_var())
+                            .collect();
+
                         let constructor_ty = Type::Data {
                             type_name: type_name.clone(),
                             constructor: name.clone(),
-                            args: vec![],
+                            args: fresh_args.clone(),
                         };
                         self.add_constraint(expected_ty.clone(), constructor_ty);
+                        fresh_args
                     }
                     _ => {
                         return Err(format!(
@@ -551,7 +579,7 @@ impl TypeInference {
                             name, expected_ty
                         ));
                     }
-                }
+                };
 
                 // Check arity
                 if variant.fields.len() != args.len() {
@@ -563,10 +591,23 @@ impl TypeInference {
                     ));
                 }
 
-                // Recursively check nested patterns
+                // Get the data type definition to know type parameters
+                // Clone to release borrow before recursive call
+                let type_params = self
+                    .data_registry
+                    .get_type(&type_name)
+                    .ok_or_else(|| format!("Type {} not found in registry", type_name))?
+                    .type_params
+                    .clone();
+
+                // Recursively check nested patterns with type parameter substitution
                 for (pattern_arg, field) in args.iter().zip(&variant.fields) {
-                    // Convert TypeExpr to Type for the field
-                    let field_ty = self.type_expr_to_type(&field.type_expr)?;
+                    // Convert TypeExpr to Type for the field, substituting type parameters
+                    let field_ty = self.type_expr_to_type_with_params(
+                        &field.type_expr,
+                        &type_params,
+                        &type_args,
+                    )?;
                     self.check_pattern(pattern_arg, &field_ty)?;
                 }
 
@@ -587,11 +628,74 @@ impl TypeInference {
         }
     }
 
+    /// Convert a TypeExpr (from AST) to a Type (for inference) with type parameter substitution
+    ///
+    /// This version handles parametric types by substituting type parameters with concrete types.
+    ///
+    /// Example: For `Some(value: T)` where T is bound to Scalar:
+    ///   - type_params = ["T"]
+    ///   - type_args = [Scalar]
+    ///   - Result: value has type Scalar
+    fn type_expr_to_type_with_params(
+        &mut self,
+        type_expr: &crate::kleis_ast::TypeExpr,
+        type_params: &[crate::kleis_ast::TypeParam],
+        type_args: &[Type],
+    ) -> Result<Type, String> {
+        use crate::kleis_ast::TypeExpr;
+
+        match type_expr {
+            TypeExpr::Var(param_name) => {
+                // Look up in type parameters
+                for (i, param) in type_params.iter().enumerate() {
+                    if param.name == *param_name {
+                        // Found! Return the corresponding type argument
+                        return Ok(type_args
+                            .get(i)
+                            .ok_or_else(|| {
+                                format!("Type parameter {} index out of bounds", param_name)
+                            })?
+                            .clone());
+                    }
+                }
+                // Not a known type parameter - create fresh var
+                Ok(self.context.fresh_var())
+            }
+            TypeExpr::Named(name) => {
+                // Delegate to regular conversion
+                self.type_expr_to_type(type_expr)
+            }
+            TypeExpr::Parametric(name, params) => {
+                // Parametric type like List(T) - recursively substitute
+                let param_types: Result<Vec<Type>, String> = params
+                    .iter()
+                    .map(|p| self.type_expr_to_type_with_params(p, type_params, type_args))
+                    .collect();
+                let param_types = param_types?;
+
+                Ok(Type::Data {
+                    type_name: "Type".to_string(), // Meta-type
+                    constructor: name.clone(),
+                    args: param_types,
+                })
+            }
+            _ => {
+                // For other cases, delegate to regular conversion
+                self.type_expr_to_type(type_expr)
+            }
+        }
+    }
+
     /// Convert a TypeExpr (from AST) to a Type (for inference)
     ///
     /// This is needed to translate field types from data definitions into
     /// types we can use for pattern checking.
-    fn type_expr_to_type(&self, type_expr: &crate::kleis_ast::TypeExpr) -> Result<Type, String> {
+    ///
+    /// Note: Now takes &mut self to handle type variables (creates fresh vars)
+    fn type_expr_to_type(
+        &mut self,
+        type_expr: &crate::kleis_ast::TypeExpr,
+    ) -> Result<Type, String> {
         use crate::kleis_ast::TypeExpr;
 
         match type_expr {
@@ -609,8 +713,14 @@ impl TypeInference {
                     })
                 } else {
                     // Unknown type - could be a type variable in the definition
-                    // For now, return an error
-                    Err(format!("Unknown type: {}", name))
+                    // Treat single capital letters as type variables (Haskell convention)
+                    if name.len() == 1 && name.chars().next().unwrap().is_uppercase() {
+                        // Type variable like T, U, V - create fresh type variable
+                        Ok(self.context.fresh_var())
+                    } else {
+                        // Truly unknown type - error
+                        Err(format!("Unknown type: {}", name))
+                    }
                 }
             }
             TypeExpr::Parametric(name, params) => {
@@ -627,12 +737,14 @@ impl TypeInference {
             }
             TypeExpr::Var(name) => {
                 // Type variable in the definition (e.g., T in Option(T))
-                // For now, treat as a fresh type variable
-                // TODO: Proper handling of polymorphic type parameters
-                Err(format!(
-                    "Type variables in patterns not yet supported: {}",
-                    name
-                ))
+                // Create a fresh type variable for this type parameter
+                // The HM algorithm will unify these correctly across the function
+                //
+                // Note: This creates a NEW type variable each time.
+                // For proper polymorphism, we'd want to share the same type variable
+                // for all occurrences of "T" in the same context, but for pattern
+                // matching this works because unification will connect them.
+                Ok(self.context.fresh_var())
             }
             TypeExpr::Function(_, _) => {
                 // Function types in patterns not supported yet

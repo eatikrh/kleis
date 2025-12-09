@@ -68,16 +68,18 @@ impl TypeChecker {
     pub fn with_stdlib() -> Result<Self, String> {
         let mut checker = Self::new();
 
-        // PHASE 1: Load data type definitions (ADR-021)
+        // PHASE 1: Load data type definitions AND function definitions (ADR-021 + Self-hosting!)
         // This must happen FIRST so structures can reference these types
         //
-        // Note: types.kleis also contains `define` function definitions (head, tail, etc.)
-        // which demonstrate self-hosting, but we use load_data_types() which only loads
-        // the `data` definitions. The function definitions will be loadable once the
-        // type system fully supports parametric polymorphism in self-hosted functions.
+        // types.kleis contains both:
+        // - `data` definitions (Bool, Option, List, etc.)
+        // - `define` function definitions (not, head, tail, etc.) - SELF-HOSTED!
+        //
+        // We use load_kleis() which loads BOTH data types and functions.
+        // This is real self-hosting - Kleis standard library functions defined in Kleis!
         let types_def = include_str!("../stdlib/types.kleis");
         checker
-            .load_data_types(types_def)
+            .load_kleis(types_def)
             .map_err(|e| format!("Failed to load stdlib/types.kleis: {}", e))?;
 
         // PHASE 2: Load structures and operations
@@ -241,6 +243,9 @@ impl TypeChecker {
 
         // Restore context (parameters were local to function body)
         *self.inference.context_mut() = saved_context;
+
+        // Clear constraints (they were solved for this function, don't leak to next function)
+        self.inference.clear_constraints();
 
         // Add function to context with its type
         self.inference.bind(func_def.name.clone(), func_ty.clone());
