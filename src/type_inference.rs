@@ -732,50 +732,70 @@ impl TypeInference {
             ));
         }
 
-        // Separate constructor parameters (Nat, String) from value fields
+        // Get the parent data type definition to know type parameters
+        let data_def = self
+            .data_registry
+            .get_type(&type_name)
+            .ok_or_else(|| format!("Data type {} not found", type_name))?
+            .clone();
+
+        // Build type arguments from constructor fields
+        // If constructor has no fields but parent has type params, use fresh vars
         let mut constructor_args = Vec::new();
 
-        for (i, (arg_expr, field_def)) in args.iter().zip(&variant.fields).enumerate() {
-            // Check if this is a type parameter (like dimensions) vs value field
-            match &field_def.type_expr {
-                crate::kleis_ast::TypeExpr::Named(name) if name == "Nat" => {
-                    // This is a dimension/index parameter - must be constant
-                    match arg_expr {
-                        Expression::Const(s) => {
-                            // Extract actual numeric value
-                            let value = s.parse::<usize>().map_err(|_| {
-                                format!("Constructor parameter {} must be a valid number: {}", i, s)
-                            })?;
-                            constructor_args.push(Type::NatValue(value));
-                        }
-                        _ => {
-                            return Err(format!(
-                                "Constructor parameter {} must be constant (Nat expected)",
-                                i
-                            ));
-                        }
-                    }
-                }
-                crate::kleis_ast::TypeExpr::Named(name) if name == "String" => {
-                    // String parameter - must be constant
-                    match arg_expr {
-                        Expression::Const(s) => {
-                            // Store actual string value
-                            constructor_args.push(Type::StringValue(s.clone()));
-                        }
-                        _ => {
-                            return Err(format!(
-                                "Constructor parameter {} must be constant (String expected)",
-                                i
-                            ));
+        if variant.fields.is_empty() && !data_def.type_params.is_empty() {
+            // Constructor has no fields (like None), but parent has type params (like Option(T))
+            // Create fresh type variables for each type parameter
+            for _type_param in &data_def.type_params {
+                constructor_args.push(self.context.fresh_var());
+            }
+        } else {
+            // Constructor has fields - infer from actual arguments
+            for (i, (arg_expr, field_def)) in args.iter().zip(&variant.fields).enumerate() {
+                // Check if this is a type parameter (like dimensions) vs value field
+                match &field_def.type_expr {
+                    crate::kleis_ast::TypeExpr::Named(name) if name == "Nat" => {
+                        // This is a dimension/index parameter - must be constant
+                        match arg_expr {
+                            Expression::Const(s) => {
+                                // Extract actual numeric value
+                                let value = s.parse::<usize>().map_err(|_| {
+                                    format!(
+                                        "Constructor parameter {} must be a valid number: {}",
+                                        i, s
+                                    )
+                                })?;
+                                constructor_args.push(Type::NatValue(value));
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "Constructor parameter {} must be constant (Nat expected)",
+                                    i
+                                ));
+                            }
                         }
                     }
-                }
-                _ => {
-                    // This is a value field - infer its type and include it in result
-                    let arg_type = self.infer(arg_expr, context_builder)?;
-                    // TODO: Add constraint that arg_type matches field_def.type_expr
-                    constructor_args.push(arg_type);
+                    crate::kleis_ast::TypeExpr::Named(name) if name == "String" => {
+                        // String parameter - must be constant
+                        match arg_expr {
+                            Expression::Const(s) => {
+                                // Store actual string value
+                                constructor_args.push(Type::StringValue(s.clone()));
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "Constructor parameter {} must be constant (String expected)",
+                                    i
+                                ));
+                            }
+                        }
+                    }
+                    _ => {
+                        // This is a value field - infer its type and include it in result
+                        let arg_type = self.infer(arg_expr, context_builder)?;
+                        // TODO: Add constraint that arg_type matches field_def.type_expr
+                        constructor_args.push(arg_type);
+                    }
                 }
             }
         }
@@ -897,7 +917,9 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
                 args: a2,
             },
         ) => {
-            // Must be from the same data type
+            // Must be from the same parent ADT type
+            // All constructors of the same ADT produce values of that type
+            // (True and False both produce Bool values, not different types)
             if t1 != t2 {
                 return Err(format!(
                     "Cannot unify types from different data types: {} vs {}",
@@ -905,20 +927,20 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
                 ));
             }
 
-            // Must be the same constructor
-            if c1 != c2 {
-                return Err(format!(
-                    "Cannot unify different constructors: {} vs {}",
-                    c1, c2
-                ));
-            }
+            // Constructor names are VALUE-level distinctions (True vs False),
+            // not TYPE-level distinctions. We unify based on the parent ADT.
+            // This is how Haskell/ML handle algebraic data types.
+            //
+            // REMOVED: Constructor name check (was incorrectly preventing
+            // True and False from unifying, even though both are type Bool)
 
-            // Must have same number of arguments
+            // Must have same number of type arguments
             if a1.len() != a2.len() {
                 return Err(format!(
-                    "Constructor {} has different number of arguments: {} vs {}",
+                    "Cannot unify {}({} type args) with {}({} type args)",
                     c1,
                     a1.len(),
+                    c2,
                     a2.len()
                 ));
             }
@@ -933,6 +955,10 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
         }
 
         // Type variable unifies with anything (if not occurs)
+        (Type::Var(v1), Type::Var(v2)) if v1 == v2 => {
+            // Same type variable - trivially unifies with itself
+            Ok(Substitution::empty())
+        }
         (Type::Var(v), t) | (t, Type::Var(v)) => {
             if occurs(v, t) {
                 Err(format!("Occurs check failed: {:?} occurs in {:?}", v, t))
@@ -1837,6 +1863,134 @@ mod tests {
         // Should infer successfully (all branches return type variables that unify)
         let ty = infer.infer(&match_expr, None).unwrap();
         assert!(matches!(ty, Type::Var(_)));
+    }
+
+    // ===== Constructor Unification Tests (Fix for Bool pattern matching) =====
+
+    #[test]
+    fn test_unify_same_enum_constructors() {
+        // True and False should unify (both are Bool)
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataVariant};
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Bool".to_string(),
+                type_params: vec![],
+                variants: vec![
+                    DataVariant {
+                        name: "True".to_string(),
+                        fields: vec![],
+                    },
+                    DataVariant {
+                        name: "False".to_string(),
+                        fields: vec![],
+                    },
+                ],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        // Infer True and False
+        let true_ty = infer
+            .infer(
+                &Expression::Operation {
+                    name: "True".to_string(),
+                    args: vec![],
+                },
+                None,
+            )
+            .unwrap();
+
+        let false_ty = infer
+            .infer(
+                &Expression::Operation {
+                    name: "False".to_string(),
+                    args: vec![],
+                },
+                None,
+            )
+            .unwrap();
+
+        // They should both be Data{Bool, ..., []}
+        assert!(matches!(true_ty, Type::Data { .. }));
+        assert!(matches!(false_ty, Type::Data { .. }));
+
+        // Now unify them - should succeed!
+        infer.add_constraint(true_ty, false_ty);
+        let result = infer.solve();
+        assert!(
+            result.is_ok(),
+            "True and False should unify (both are Bool)"
+        );
+    }
+
+    #[test]
+    fn test_unify_different_matrix_dimensions() {
+        // Matrix(2,3) and Matrix(3,2) should NOT unify
+        use crate::data_registry::DataTypeRegistry;
+        use crate::kleis_ast::{DataDef, DataField, DataVariant, TypeExpr};
+
+        let mut registry = DataTypeRegistry::new();
+        registry
+            .register(DataDef {
+                name: "Type".to_string(),
+                type_params: vec![],
+                variants: vec![DataVariant {
+                    name: "Matrix".to_string(),
+                    fields: vec![
+                        DataField {
+                            name: Some("m".to_string()),
+                            type_expr: TypeExpr::Named("Nat".to_string()),
+                        },
+                        DataField {
+                            name: Some("n".to_string()),
+                            type_expr: TypeExpr::Named("Nat".to_string()),
+                        },
+                    ],
+                }],
+            })
+            .unwrap();
+
+        let mut infer = TypeInference::with_data_registry(registry);
+
+        // Matrix(2, 3)
+        let mat23_ty = infer
+            .infer(
+                &Expression::Operation {
+                    name: "Matrix".to_string(),
+                    args: vec![
+                        Expression::Const("2".to_string()),
+                        Expression::Const("3".to_string()),
+                    ],
+                },
+                None,
+            )
+            .unwrap();
+
+        // Matrix(3, 2)
+        let mat32_ty = infer
+            .infer(
+                &Expression::Operation {
+                    name: "Matrix".to_string(),
+                    args: vec![
+                        Expression::Const("3".to_string()),
+                        Expression::Const("2".to_string()),
+                    ],
+                },
+                None,
+            )
+            .unwrap();
+
+        // Try to unify - should FAIL (different dimensions)
+        infer.add_constraint(mat23_ty, mat32_ty);
+        let result = infer.solve();
+        assert!(
+            result.is_err(),
+            "Matrix(2,3) and Matrix(3,2) should NOT unify"
+        );
     }
 
     #[test]

@@ -584,15 +584,26 @@ mod tests {
     fn test_check_function_def_with_pattern_match() {
         let mut checker = TypeChecker::with_stdlib().unwrap();
 
-        // Pattern matching on Bool currently fails - known limitation
-        // The type inference tries to unify True and False (different constructors)
-        // This is a separate issue from Wire 2 (function definitions)
-        // See: type_inference.rs pattern matching implementation
+        // First test: simpler case without pattern matching
+        let simple_code = "define identity(x) = x";
+        checker.load_kleis(simple_code).unwrap();
+
+        // Pattern matching on Bool - should work after fixing constructor unification!
+        // True and False both have type Bool, so branches unify correctly
         let code = "define not(b) = match b { True => False | False => True }";
         let result = checker.load_kleis(code);
-        
-        // Expected to fail until pattern match type inference is improved
-        assert!(result.is_err());
+
+        if let Err(e) = &result {
+            eprintln!("ERROR: {}", e);
+            eprintln!("Context before match: {:?}", checker.inference.context());
+        }
+
+        // Should succeed now!
+        assert!(result.is_ok());
+
+        // Verify not is in context
+        let not_ty = checker.inference.context().get("not");
+        assert!(not_ty.is_some());
     }
 
     #[test]
@@ -636,7 +647,7 @@ mod tests {
         // This should succeed - undefined variables get fresh type vars
         let code = "define f(x) = x + y";
         let result = checker.load_kleis(code);
-        
+
         // The function loads successfully (y gets a fresh type variable)
         assert!(result.is_ok());
     }
