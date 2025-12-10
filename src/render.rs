@@ -1284,8 +1284,20 @@ fn render_expression_internal(
 
                         match target {
                             RenderTarget::Typst => {
-                                // Typst cases: each row is "expr & cond"
-                                case_rows.push(format!("{} & {}", rendered_expr, rendered_cond));
+                                // Wrap elements with UUID labels like Matrix does
+                                let expr_wrapped = if let Some(uuid) = node_id_to_uuid.get(&expr_id)
+                                {
+                                    format!("#[#box[${}$]<id{}>]", rendered_expr, uuid)
+                                } else {
+                                    rendered_expr
+                                };
+                                let cond_wrapped = if let Some(uuid) = node_id_to_uuid.get(&cond_id)
+                                {
+                                    format!("#[#box[${}$]<id{}>]", rendered_cond, uuid)
+                                } else {
+                                    rendered_cond
+                                };
+                                case_rows.push(format!("{} & {}", expr_wrapped, cond_wrapped));
                             }
                             RenderTarget::LaTeX | RenderTarget::HTML => {
                                 // LaTeX: same format
