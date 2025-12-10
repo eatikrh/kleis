@@ -278,6 +278,16 @@ impl KleisParser {
     fn parse_primary(&mut self) -> Result<Expression, KleisParseError> {
         self.skip_whitespace();
 
+        // Negation: ¬A or not A (prefix operator)
+        if self.peek() == Some('¬') {
+            self.advance(); // consume ¬
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "logical_not".to_string(),
+                args: vec![arg],
+            });
+        }
+
         // Match expression
         if self.peek_word("match") {
             return self.parse_match_expr();
@@ -381,6 +391,130 @@ impl KleisParser {
     }
 
     fn parse_expression(&mut self) -> Result<Expression, KleisParseError> {
+        // Parse logical expression (lowest precedence)
+        self.parse_implication()
+    }
+
+    /// Parse implication: A ⟹ B
+    fn parse_implication(&mut self) -> Result<Expression, KleisParseError> {
+        let mut left = self.parse_disjunction()?;
+
+        loop {
+            self.skip_whitespace();
+            let is_implies = self.peek() == Some('⟹');
+            
+            if !is_implies {
+                break;
+            }
+
+            self.advance(); // consume ⟹
+            let right = self.parse_disjunction()?;
+            left = Expression::Operation {
+                name: "implies".to_string(),
+                args: vec![left, right],
+            };
+        }
+
+        Ok(left)
+    }
+
+    /// Parse disjunction: A ∨ B (logical or)
+    fn parse_disjunction(&mut self) -> Result<Expression, KleisParseError> {
+        let mut left = self.parse_conjunction()?;
+
+        loop {
+            self.skip_whitespace();
+            let is_or = self.peek() == Some('∨');
+            
+            if !is_or {
+                break;
+            }
+
+            self.advance(); // consume ∨
+            let right = self.parse_conjunction()?;
+            left = Expression::Operation {
+                name: "logical_or".to_string(),
+                args: vec![left, right],
+            };
+        }
+
+        Ok(left)
+    }
+
+    /// Parse conjunction: A ∧ B (logical and)
+    fn parse_conjunction(&mut self) -> Result<Expression, KleisParseError> {
+        let mut left = self.parse_comparison()?;
+
+        loop {
+            self.skip_whitespace();
+            let is_and = self.peek() == Some('∧');
+            
+            if !is_and {
+                break;
+            }
+
+            self.advance(); // consume ∧
+            let right = self.parse_comparison()?;
+            left = Expression::Operation {
+                name: "logical_and".to_string(),
+                args: vec![left, right],
+            };
+        }
+
+        Ok(left)
+    }
+
+    /// Parse comparison: A = B, A < B, etc.
+    fn parse_comparison(&mut self) -> Result<Expression, KleisParseError> {
+        let mut left = self.parse_arithmetic()?;
+
+        self.skip_whitespace();
+        let op = match self.peek() {
+            Some('=') => {
+                // Check if it's not ⟹ (which is handled at higher level)
+                if self.peek_ahead(1) != Some('⟹') {
+                    self.advance();
+                    Some("equals")
+                } else {
+                    None
+                }
+            }
+            Some('<') => {
+                self.advance();
+                Some("less_than")
+            }
+            Some('>') => {
+                self.advance();
+                Some("greater_than")
+            }
+            Some('≤') => {
+                self.advance();
+                Some("leq")
+            }
+            Some('≥') => {
+                self.advance();
+                Some("geq")
+            }
+            Some('≠') => {
+                self.advance();
+                Some("neq")
+            }
+            _ => None,
+        };
+
+        if let Some(op) = op {
+            let right = self.parse_arithmetic()?;
+            Ok(Expression::Operation {
+                name: op.to_string(),
+                args: vec![left, right],
+            })
+        } else {
+            Ok(left)
+        }
+    }
+
+    /// Parse arithmetic expressions: +, -
+    fn parse_arithmetic(&mut self) -> Result<Expression, KleisParseError> {
         let mut left = self.parse_term()?;
 
         loop {
@@ -430,6 +564,7 @@ impl KleisParser {
 
             // Parse operator symbol
             let op_symbol = match self.peek() {
+                // Arithmetic
                 Some('+') => "+",
                 Some('-') => "-",
                 Some('*') => "*",
@@ -438,9 +573,19 @@ impl KleisParser {
                 Some('×') => "×",
                 Some('·') => "·",
                 Some('•') => "•",
+                // Comparisons
                 Some('=') => "=",
                 Some('<') => "<",
                 Some('>') => ">",
+                Some('≤') => "≤",
+                Some('≥') => "≥",
+                Some('≠') => "≠",
+                // Logical
+                Some('∧') => "∧",
+                Some('∨') => "∨",
+                Some('¬') => "¬",
+                Some('⟹') => "⟹",
+                // Algebra
                 Some('∘') => "∘", // composition
                 Some('⊗') => "⊗", // tensor product
                 Some('⊕') => "⊕", // direct sum

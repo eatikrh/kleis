@@ -199,6 +199,43 @@ impl AxiomVerifier {
                 Ok(left._eq(&right))
             }
             
+            // Comparisons
+            "less_than" | "lt" => {
+                if args.len() != 2 {
+                    return Err("less_than requires 2 arguments".to_string());
+                }
+                let left = self.kleis_expr_to_z3_int(&args[0], vars)?;
+                let right = self.kleis_expr_to_z3_int(&args[1], vars)?;
+                Ok(left.lt(&right))
+            }
+            
+            "greater_than" | "gt" => {
+                if args.len() != 2 {
+                    return Err("greater_than requires 2 arguments".to_string());
+                }
+                let left = self.kleis_expr_to_z3_int(&args[0], vars)?;
+                let right = self.kleis_expr_to_z3_int(&args[1], vars)?;
+                Ok(left.gt(&right))
+            }
+            
+            "leq" => {
+                if args.len() != 2 {
+                    return Err("leq requires 2 arguments".to_string());
+                }
+                let left = self.kleis_expr_to_z3_int(&args[0], vars)?;
+                let right = self.kleis_expr_to_z3_int(&args[1], vars)?;
+                Ok(left.le(&right))
+            }
+            
+            "geq" => {
+                if args.len() != 2 {
+                    return Err("geq requires 2 arguments".to_string());
+                }
+                let left = self.kleis_expr_to_z3_int(&args[0], vars)?;
+                let right = self.kleis_expr_to_z3_int(&args[1], vars)?;
+                Ok(left.ge(&right))
+            }
+            
             // Boolean operations
             "and" | "logical_and" => {
                 if args.len() != 2 {
@@ -224,6 +261,16 @@ impl AxiomVerifier {
                 }
                 let arg = self.kleis_to_z3(&args[0], vars)?;
                 Ok(arg.not())
+            }
+            
+            // Implication: P ⟹ Q is equivalent to ¬P ∨ Q
+            "implies" => {
+                if args.len() != 2 {
+                    return Err("implies requires 2 arguments".to_string());
+                }
+                let left = self.kleis_to_z3(&args[0], vars)?;
+                let right = self.kleis_to_z3(&args[1], vars)?;
+                Ok(left.implies(&right))
             }
             
             _ => Err(format!("Unsupported operation for Z3: {}", name)),
