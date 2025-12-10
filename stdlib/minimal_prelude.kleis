@@ -59,20 +59,8 @@ implements Arithmetic(ℝ) {
   operation angle_brackets = builtin_identity
 }
 
-implements Piecewise(2, ℝ) {
-  operation cases = builtin_cases2
-}
-
-implements Piecewise(3, ℝ) {
-  operation cases = builtin_cases3
-}
-
-implements Piecewise(4, ℝ) {
-  operation cases = builtin_cases4
-}
-
-implements Piecewise(5, ℝ) {
-  operation cases = builtin_cases5
+implements Piecewise(n, ℝ) {
+  operation cases = builtin_piecewise
 }
 
 // Equality for scalars

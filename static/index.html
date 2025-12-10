@@ -3514,17 +3514,18 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             
             if (editorMode === 'structural') {
                 // Create AST directly for structural mode
-                const args = [];
+                const exprs = [];
+                const conds = [];
                 
-                // Generate placeholders for each case: expr1, cond1, expr2, cond2, ...
+                // Generate separate lists for expressions and conditions
                 for (let i = 0; i < cases; i++) {
-                    args.push({
+                    exprs.push({
                         Placeholder: {
                             id: nextPlaceholderId++,
                             hint: `expr${i+1}`
                         }
                     });
-                    args.push({
+                    conds.push({
                         Placeholder: {
                             id: nextPlaceholderId++,
                             hint: `cond${i+1}`
@@ -3532,12 +3533,16 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     });
                 }
                 
-                // Create AST: cases2, cases3, cases4, or cases5
-                const opName = `cases${cases}`;
+                // Create AST: Piecewise(n, [exprs], [conds])
+                // Like Matrix(m, n, [elements])
                 const ast = {
                     Operation: {
-                        name: opName,
-                        args: args
+                        name: 'Piecewise',
+                        args: [
+                            { Const: String(cases) },
+                            { List: exprs },
+                            { List: conds }
+                        ]
                     }
                 };
                 

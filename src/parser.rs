@@ -967,44 +967,28 @@ impl Parser {
         }
 
         // Convert to appropriate cases operation based on number of rows
-        match rows.len() {
-            2 => {
-                // cases2: expr1, cond1, expr2, cond2
-                Ok(op(
-                    "cases2",
-                    vec![
-                        rows[0][0].clone(),
-                        rows[0][1].clone(),
-                        rows[1][0].clone(),
-                        rows[1][1].clone(),
-                    ],
-                ))
-            }
-            3 => {
-                // cases3: expr1, cond1, expr2, cond2, expr3, cond3
-                Ok(op(
-                    "cases3",
-                    vec![
-                        rows[0][0].clone(),
-                        rows[0][1].clone(),
-                        rows[1][0].clone(),
-                        rows[1][1].clone(),
-                        rows[2][0].clone(),
-                        rows[2][1].clone(),
-                    ],
-                ))
-            }
-            n if n > 3 => {
-                // Generic cases with more rows - flatten all
-                let all_elements: Vec<Expression> =
-                    rows.into_iter().flat_map(|row| row.into_iter()).collect();
-                Ok(op("cases", all_elements))
-            }
-            _ => Err(ParseError {
+        let n = rows.len();
+        if n < 2 {
+            return Err(ParseError {
                 message: "Cases environment must have at least 2 rows".to_string(),
                 position: self.pos,
-            }),
+            });
         }
+
+        // Extract expressions and conditions into separate lists
+        let exprs: Vec<Expression> = rows.iter().map(|row| row[0].clone()).collect();
+        let conds: Vec<Expression> = rows.iter().map(|row| row[1].clone()).collect();
+
+        // Generate: Piecewise(n, [expr1, expr2, ...], [cond1, cond2, ...])
+        // Like Matrix(m, n, [elements])
+        Ok(op(
+            "Piecewise",
+            vec![
+                Expression::Const(n.to_string()),
+                Expression::List(exprs),
+                Expression::List(conds),
+            ],
+        ))
     }
 
     fn parse_latex_command(&mut self) -> Result<Expression, ParseError> {
@@ -2074,10 +2058,13 @@ mod tests {
         let expr = result.unwrap();
         match expr {
             Expression::Operation { name, args } => {
-                assert_eq!(name, "cases2");
-                assert_eq!(args.len(), 4); // expr1, cond1, expr2, cond2
+                assert_eq!(name, "Piecewise");
+                assert_eq!(args.len(), 3); // n, [exprs], [conds]
+                // args[0] = Const("2")
+                // args[1] = List([expr1, expr2])
+                // args[2] = List([cond1, cond2])
             }
-            _ => panic!("Expected cases2 operation"),
+            _ => panic!("Expected Piecewise operation"),
         }
     }
 
@@ -2088,10 +2075,13 @@ mod tests {
         let expr = result.unwrap();
         match expr {
             Expression::Operation { name, args } => {
-                assert_eq!(name, "cases3");
-                assert_eq!(args.len(), 6); // expr1, cond1, expr2, cond2, expr3, cond3
+                assert_eq!(name, "Piecewise");
+                assert_eq!(args.len(), 3); // n, [exprs], [conds]
+                // args[0] = Const("3")
+                // args[1] = List([expr1, expr2, expr3])
+                // args[2] = List([cond1, cond2, cond3])
             }
-            _ => panic!("Expected cases3 operation"),
+            _ => panic!("Expected Piecewise operation"),
         }
     }
 
