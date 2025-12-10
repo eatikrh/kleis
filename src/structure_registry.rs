@@ -96,6 +96,78 @@ impl StructureRegistry {
     pub fn structure_count(&self) -> usize {
         self.structures.len()
     }
+
+    /// Get all axioms from a structure
+    ///
+    /// Returns a vector of (axiom_name, axiom_expression) pairs.
+    ///
+    /// Example:
+    /// ```ignore
+    /// let axioms = registry.get_axioms("Ring");
+    /// for (name, expr) in axioms {
+    ///     println!("Axiom {}: {:?}", name, expr);
+    /// }
+    /// ```
+    pub fn get_axioms(&self, structure_name: &str) -> Vec<(String, &crate::ast::Expression)> {
+        if let Some(structure) = self.get(structure_name) {
+            structure
+                .members
+                .iter()
+                .filter_map(|member| match member {
+                    crate::kleis_ast::StructureMember::Axiom { name, proposition } => {
+                        Some((name.clone(), proposition))
+                    }
+                    _ => None,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Get all operations from a structure
+    ///
+    /// Returns a vector of (operation_name, type_signature) pairs.
+    pub fn get_operations(
+        &self,
+        structure_name: &str,
+    ) -> Vec<(String, &crate::kleis_ast::TypeExpr)> {
+        if let Some(structure) = self.get(structure_name) {
+            structure
+                .members
+                .iter()
+                .filter_map(|member| match member {
+                    crate::kleis_ast::StructureMember::Operation {
+                        name,
+                        type_signature,
+                    } => Some((name.clone(), type_signature)),
+                    _ => None,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Check if a structure has a specific axiom
+    pub fn has_axiom(&self, structure_name: &str, axiom_name: &str) -> bool {
+        self.get_axioms(structure_name)
+            .iter()
+            .any(|(name, _)| name == axiom_name)
+    }
+
+    /// Get all structures that have axioms
+    pub fn structures_with_axioms(&self) -> Vec<&String> {
+        self.structures
+            .iter()
+            .filter(|(_, def)| {
+                def.members
+                    .iter()
+                    .any(|m| matches!(m, crate::kleis_ast::StructureMember::Axiom { .. }))
+            })
+            .map(|(name, _)| name)
+            .collect()
+    }
 }
 
 impl Default for StructureRegistry {
@@ -137,6 +209,36 @@ mod tests {
                     ],
                 ),
             }],
+        }
+    }
+
+    fn make_ring_structure_with_axioms() -> StructureDef {
+        use crate::ast::Expression;
+
+        StructureDef {
+            name: "Ring".to_string(),
+            type_params: vec![TypeParam {
+                name: "R".to_string(),
+                kind: None,
+            }],
+            members: vec![
+                StructureMember::Operation {
+                    name: "+".to_string(),
+                    type_signature: TypeExpr::Named("R".to_string()),
+                },
+                StructureMember::Operation {
+                    name: "×".to_string(),
+                    type_signature: TypeExpr::Named("R".to_string()),
+                },
+                StructureMember::Axiom {
+                    name: "distributivity".to_string(),
+                    proposition: Expression::Object("axiom_expr".to_string()),
+                },
+                StructureMember::Axiom {
+                    name: "commutativity".to_string(),
+                    proposition: Expression::Object("axiom_expr2".to_string()),
+                },
+            ],
         }
     }
 
@@ -193,5 +295,70 @@ mod tests {
         let names = registry.structure_names();
         assert_eq!(names.len(), 1);
         assert!(names.contains(&&"Matrix".to_string()));
+    }
+
+    #[test]
+    fn test_get_axioms() {
+        let mut registry = StructureRegistry::new();
+        let ring = make_ring_structure_with_axioms();
+
+        registry.register(ring).unwrap();
+
+        let axioms = registry.get_axioms("Ring");
+        assert_eq!(axioms.len(), 2);
+
+        let axiom_names: Vec<String> = axioms.iter().map(|(name, _)| name.clone()).collect();
+        assert!(axiom_names.contains(&"distributivity".to_string()));
+        assert!(axiom_names.contains(&"commutativity".to_string()));
+    }
+
+    #[test]
+    fn test_get_operations() {
+        let mut registry = StructureRegistry::new();
+        let ring = make_ring_structure_with_axioms();
+
+        registry.register(ring).unwrap();
+
+        let operations = registry.get_operations("Ring");
+        assert_eq!(operations.len(), 2);
+
+        let op_names: Vec<String> = operations.iter().map(|(name, _)| name.clone()).collect();
+        assert!(op_names.contains(&"+".to_string()));
+        assert!(op_names.contains(&"×".to_string()));
+    }
+
+    #[test]
+    fn test_has_axiom() {
+        let mut registry = StructureRegistry::new();
+        let ring = make_ring_structure_with_axioms();
+
+        registry.register(ring).unwrap();
+
+        assert!(registry.has_axiom("Ring", "distributivity"));
+        assert!(registry.has_axiom("Ring", "commutativity"));
+        assert!(!registry.has_axiom("Ring", "nonexistent"));
+        assert!(!registry.has_axiom("Nonexistent", "distributivity"));
+    }
+
+    #[test]
+    fn test_structures_with_axioms() {
+        let mut registry = StructureRegistry::new();
+        let matrix = make_matrix_structure();
+        let ring = make_ring_structure_with_axioms();
+
+        registry.register(matrix).unwrap();
+        registry.register(ring).unwrap();
+
+        let with_axioms = registry.structures_with_axioms();
+        assert_eq!(with_axioms.len(), 1);
+        assert!(with_axioms.contains(&&"Ring".to_string()));
+        assert!(!with_axioms.contains(&&"Matrix".to_string()));
+    }
+
+    #[test]
+    fn test_get_axioms_nonexistent_structure() {
+        let registry = StructureRegistry::new();
+        let axioms = registry.get_axioms("Nonexistent");
+        assert_eq!(axioms.len(), 0);
     }
 }
