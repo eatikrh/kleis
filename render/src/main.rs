@@ -12,7 +12,6 @@ enum RenderTarget {
     LaTeX,
 }
 
-
 // === Glyph + Template Context ===
 #[derive(Debug)]
 struct GlyphContext {
@@ -22,38 +21,38 @@ struct GlyphContext {
     latex_templates: HashMap<String, String>,
 }
 
-
 // === Renderer ===
 fn render_expression(expr: &Expression, ctx: &GlyphContext, target: &RenderTarget) -> String {
     match expr {
-        Expression::Const(name) => {
-            match target {
-                RenderTarget::Unicode => name.clone(),
-                RenderTarget::LaTeX => escape_latex_constant(name),
-            }
-        }
+        Expression::Const(name) => match target {
+            RenderTarget::Unicode => name.clone(),
+            RenderTarget::LaTeX => escape_latex_constant(name),
+        },
         Expression::Object(name) => name.clone(),
         Expression::Operation { name, args } => {
             let (template, glyph) = match target {
                 RenderTarget::Unicode => {
-                    let template = ctx.unicode_templates.get(name)
+                    let template = ctx
+                        .unicode_templates
+                        .get(name)
                         .cloned()
                         .unwrap_or_else(|| format!("{}({})", name, "{args}"));
-                    let glyph = ctx.unicode_glyphs.get(name)
-                        .unwrap_or(name);
+                    let glyph = ctx.unicode_glyphs.get(name).unwrap_or(name);
                     (template, glyph)
-                },
+                }
                 RenderTarget::LaTeX => {
-                    let template = ctx.latex_templates.get(name)
+                    let template = ctx
+                        .latex_templates
+                        .get(name)
                         .cloned()
                         .unwrap_or_else(|| format!("{}({})", name, "{args}"));
-                    let glyph = ctx.latex_glyphs.get(name)
-                        .unwrap_or(name);
+                    let glyph = ctx.latex_glyphs.get(name).unwrap_or(name);
                     (template, glyph)
-                },
+                }
             };
 
-            let rendered_args: Vec<String> = args.iter()
+            let rendered_args: Vec<String> = args
+                .iter()
                 .map(|arg| render_expression(arg, ctx, target)) // RECURSION
                 .collect();
 
@@ -88,11 +87,18 @@ fn main() {
 
     let mut unicode_templates = HashMap::new();
     unicode_templates.insert("grad".to_string(), "{glyph}{arg}".to_string());
-    unicode_templates.insert("surface_integral_over".to_string(), "{glyph}_{surface} {field} dS".to_string());
-    unicode_templates.insert("scalar_multiply".to_string(),  "{left} \\, {right}".to_string()); // thin space
-    unicode_templates.insert("scalar_divide".to_string(), "({left}) / ({right})".to_string());
-
-
+    unicode_templates.insert(
+        "surface_integral_over".to_string(),
+        "{glyph}_{surface} {field} dS".to_string(),
+    );
+    unicode_templates.insert(
+        "scalar_multiply".to_string(),
+        "{left} \\, {right}".to_string(),
+    ); // thin space
+    unicode_templates.insert(
+        "scalar_divide".to_string(),
+        "({left}) / ({right})".to_string(),
+    );
 
     let mut latex_glyphs = HashMap::new();
     latex_glyphs.insert("grad".to_string(), "\\nabla".to_string());
@@ -102,11 +108,18 @@ fn main() {
 
     let mut latex_templates = HashMap::new();
     latex_templates.insert("grad".to_string(), "{glyph} {arg}".to_string());
-    latex_templates.insert("surface_integral_over".to_string(), "{glyph}_{ {surface} } {field} \\, dS".to_string());
-    latex_templates.insert("scalar_multiply".to_string(), "{left} \\, {right}".to_string());
-    latex_templates.insert("scalar_divide".to_string(), "\\frac{{left}}{{right}}".to_string());
-
-
+    latex_templates.insert(
+        "surface_integral_over".to_string(),
+        "{glyph}_{ {surface} } {field} \\, dS".to_string(),
+    );
+    latex_templates.insert(
+        "scalar_multiply".to_string(),
+        "{left} \\, {right}".to_string(),
+    );
+    latex_templates.insert(
+        "scalar_divide".to_string(),
+        "\\frac{{left}}{{right}}".to_string(),
+    );
 
     let ctx = GlyphContext {
         unicode_glyphs,
@@ -119,7 +132,7 @@ fn main() {
     let phi = Expression::Object("Φ".to_string());
     let grad_phi = Expression::Operation {
         name: "grad".to_string(),
-        args: vec![phi]
+        args: vec![phi],
     };
 
     let surface = Expression::Object("S".to_string());
@@ -156,7 +169,6 @@ fn main() {
         args: vec![residue, g_c],
     };
 
-
     // === Render Unicode===
     let output = render_expression(&mass, &ctx, &RenderTarget::Unicode);
     println!("Rendered Expression: {}", output);
@@ -164,5 +176,4 @@ fn main() {
     // === Render Latex ===
     let output = render_expression(&mass, &ctx, &RenderTarget::LaTeX);
     println!("Rendered Expression: {}", output);
-
 }
