@@ -402,7 +402,7 @@ impl KleisParser {
         loop {
             self.skip_whitespace();
             let is_implies = self.peek() == Some('⟹');
-            
+
             if !is_implies {
                 break;
             }
@@ -425,7 +425,7 @@ impl KleisParser {
         loop {
             self.skip_whitespace();
             let is_or = self.peek() == Some('∨');
-            
+
             if !is_or {
                 break;
             }
@@ -448,7 +448,7 @@ impl KleisParser {
         loop {
             self.skip_whitespace();
             let is_and = self.peek() == Some('∧');
-            
+
             if !is_and {
                 break;
             }
@@ -751,7 +751,10 @@ impl KleisParser {
 
         // Create QuantifiedVar for each name with the same type
         for name in names {
-            vars.push(crate::ast::QuantifiedVar::new(name, Some(type_name.clone())));
+            vars.push(crate::ast::QuantifiedVar::new(
+                name,
+                Some(type_name.clone()),
+            ));
         }
 
         Ok(vars)
@@ -760,7 +763,7 @@ impl KleisParser {
     /// Check if the next word matches (without consuming)
     fn peek_word(&self, word: &str) -> bool {
         let mut temp_pos = self.pos;
-        
+
         // Skip whitespace
         while temp_pos < self.input.len() && self.input[temp_pos].is_whitespace() {
             temp_pos += 1;
@@ -1306,7 +1309,7 @@ impl KleisParser {
 
         // Parse operation name (identifier or operator symbol in parens)
         let name = self.parse_operation_name()?;
-        
+
         self.skip_whitespace();
 
         // Expect ':'

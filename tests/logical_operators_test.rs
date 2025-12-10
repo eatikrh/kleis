@@ -1,7 +1,6 @@
 ///! Test parsing and verification of logical operators
 ///!
 ///! Tests Phase 2 Task 1: Logical Operators (⟹, ∧, ∨, ¬)
-
 use kleis::ast::Expression;
 use kleis::axiom_verifier::{AxiomVerifier, VerificationResult};
 use kleis::kleis_parser::KleisParser;
@@ -12,9 +11,9 @@ fn test_parse_conjunction() {
     let input = "x ∧ y";
     let mut parser = KleisParser::new(input);
     let result = parser.parse();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     match result.unwrap() {
         Expression::Operation { name, args } => {
             assert_eq!(name, "logical_and");
@@ -30,9 +29,9 @@ fn test_parse_disjunction() {
     let input = "x ∨ y";
     let mut parser = KleisParser::new(input);
     let result = parser.parse();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     match result.unwrap() {
         Expression::Operation { name, args } => {
             assert_eq!(name, "logical_or");
@@ -48,9 +47,9 @@ fn test_parse_negation() {
     let input = "¬x";
     let mut parser = KleisParser::new(input);
     let result = parser.parse();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     match result.unwrap() {
         Expression::Operation { name, args } => {
             assert_eq!(name, "logical_not");
@@ -66,9 +65,9 @@ fn test_parse_implication() {
     let input = "x ⟹ y";
     let mut parser = KleisParser::new(input);
     let result = parser.parse();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     match result.unwrap() {
         Expression::Operation { name, args } => {
             assert_eq!(name, "implies");
@@ -84,9 +83,9 @@ fn test_parse_comparison() {
     let input = "x = y";
     let mut parser = KleisParser::new(input);
     let result = parser.parse();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     match result.unwrap() {
         Expression::Operation { name, args } => {
             assert_eq!(name, "equals");
@@ -103,9 +102,9 @@ fn test_logical_precedence() {
     let input = "a ∧ b ∨ c";
     let mut parser = KleisParser::new(input);
     let result = parser.parse();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     match result.unwrap() {
         Expression::Operation { name, args } => {
             assert_eq!(name, "logical_or");
@@ -127,9 +126,9 @@ fn test_implication_with_conjunction() {
     let input = "(a ∧ b) ⟹ c";
     let mut parser = KleisParser::new(input);
     let result = parser.parse();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     match result.unwrap() {
         Expression::Operation { name, args } => {
             assert_eq!(name, "implies");
@@ -159,13 +158,13 @@ fn test_de_morgan_law_parsing() {
     // - Show counterexample if violated
     //
     // For now, just test that equality parsing works
-    
+
     let input = "a = b";
     let mut parser = KleisParser::new(input);
     let result = parser.parse();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     match result.unwrap() {
         Expression::Operation { name, .. } => {
             assert_eq!(name, "equals");
@@ -179,14 +178,14 @@ fn test_de_morgan_law_parsing() {
 fn test_modus_ponens() {
     // Test: (P ∧ (P ⟹ Q)) ⟹ Q
     // This is the modus ponens inference rule
-    
+
     let axiom_text = "∀(p q : Bool). implies(logical_and(p, implies(p, q)), q)";
     let mut parser = KleisParser::new(axiom_text);
     let axiom = parser.parse_proposition().expect("Failed to parse");
-    
+
     let verifier = AxiomVerifier::new();
     let result = verifier.verify_axiom(&axiom);
-    
+
     println!("Modus Ponens verification: {:?}", result);
     assert!(result.is_ok());
 }
@@ -195,13 +194,13 @@ fn test_modus_ponens() {
 fn test_complex_logical_expression() {
     // Test: (A ⟹ B) ∧ (B ⟹ C) ⟹ (A ⟹ C)
     // Transitivity of implication
-    
+
     let input = "(a ⟹ b) ∧ (b ⟹ c) ⟹ (a ⟹ c)";
     let mut parser = KleisParser::new(input);
     let result = parser.parse();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     // Check that it parsed correctly
     match result.unwrap() {
         Expression::Operation { name, .. } => {
@@ -223,29 +222,32 @@ fn test_logical_operators_in_structure() {
             axiom excluded_middle: ∀(p : Bool). logical_or(p, logical_not(p))
         }
     "#;
-    
+
     let mut parser = KleisParser::new(structure_text);
     let result = parser.parse_structure();
-    
-    assert!(result.is_ok(), "Failed to parse structure: {:?}", result.err());
-    
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse structure: {:?}",
+        result.err()
+    );
+
     let structure = result.unwrap();
     assert_eq!(structure.name, "Logic");
     assert_eq!(structure.members.len(), 5); // 4 operations + 1 axiom
-    
+
     // Check operation names
-    let op_names: Vec<String> = structure.members.iter()
-        .filter_map(|member| {
-            match member {
-                kleis::kleis_ast::StructureMember::Operation { name, .. } => Some(name.clone()),
-                _ => None,
-            }
+    let op_names: Vec<String> = structure
+        .members
+        .iter()
+        .filter_map(|member| match member {
+            kleis::kleis_ast::StructureMember::Operation { name, .. } => Some(name.clone()),
+            _ => None,
         })
         .collect();
-    
+
     assert!(op_names.contains(&"∧".to_string()));
     assert!(op_names.contains(&"∨".to_string()));
     assert!(op_names.contains(&"¬".to_string()));
     assert!(op_names.contains(&"⟹".to_string()));
 }
-

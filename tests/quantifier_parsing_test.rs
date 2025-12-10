@@ -1,7 +1,6 @@
 ///! Test parsing of universal quantifiers for axioms
 ///!
 ///! Tests Phase 1 Task 1: Universal Quantifiers
-
 use kleis::ast::{Expression, QuantifiedVar, QuantifierKind};
 use kleis::kleis_parser::KleisParser;
 
@@ -10,17 +9,21 @@ fn test_parse_simple_forall() {
     let input = "∀(x : M). x";
     let mut parser = KleisParser::new(input);
     let result = parser.parse_proposition();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     let expr = result.unwrap();
     match expr {
-        Expression::Quantifier { quantifier, variables, body } => {
+        Expression::Quantifier {
+            quantifier,
+            variables,
+            body,
+        } => {
             assert!(matches!(quantifier, QuantifierKind::ForAll));
             assert_eq!(variables.len(), 1);
             assert_eq!(variables[0].name, "x");
             assert_eq!(variables[0].type_annotation, Some("M".to_string()));
-            
+
             // Body should be Object("x")
             match *body {
                 Expression::Object(ref name) => assert_eq!(name, "x"),
@@ -36,12 +39,16 @@ fn test_parse_forall_multiple_vars() {
     let input = "∀(x y z : R). x";
     let mut parser = KleisParser::new(input);
     let result = parser.parse_proposition();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     let expr = result.unwrap();
     match expr {
-        Expression::Quantifier { quantifier, variables, .. } => {
+        Expression::Quantifier {
+            quantifier,
+            variables,
+            ..
+        } => {
             assert!(matches!(quantifier, QuantifierKind::ForAll));
             assert_eq!(variables.len(), 3);
             assert_eq!(variables[0].name, "x");
@@ -61,9 +68,9 @@ fn test_parse_forall_with_operation() {
     let input = "∀(x : M). plus(x, e)";
     let mut parser = KleisParser::new(input);
     let result = parser.parse_proposition();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     let expr = result.unwrap();
     match expr {
         Expression::Quantifier { body, .. } => {
@@ -85,9 +92,9 @@ fn test_parse_exists() {
     let input = "∃(x : M). x";
     let mut parser = KleisParser::new(input);
     let result = parser.parse_proposition();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     let expr = result.unwrap();
     match expr {
         Expression::Quantifier { quantifier, .. } => {
@@ -102,9 +109,9 @@ fn test_parse_forall_keyword() {
     let input = "forall(x : M). x";
     let mut parser = KleisParser::new(input);
     let result = parser.parse_proposition();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     let expr = result.unwrap();
     match expr {
         Expression::Quantifier { quantifier, .. } => {
@@ -120,15 +127,17 @@ fn test_parse_nested_quantifiers() {
     let input = "∀(x : M). ∀(y : M). plus(x, y)";
     let mut parser = KleisParser::new(input);
     let result = parser.parse_proposition();
-    
+
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
-    
+
     let expr = result.unwrap();
     match expr {
         Expression::Quantifier { body, .. } => {
             // Body should be another Quantifier
             match *body {
-                Expression::Quantifier { body: inner_body, .. } => {
+                Expression::Quantifier {
+                    body: inner_body, ..
+                } => {
                     // Inner body should be Operation
                     match *inner_body {
                         Expression::Operation { ref name, .. } => {
@@ -154,21 +163,25 @@ fn test_axiom_in_structure() {
             axiom identity: ∀(x : M). plus(x, e)
         }
     "#;
-    
+
     let mut parser = KleisParser::new(input);
     let result = parser.parse_structure();
-    
-    assert!(result.is_ok(), "Failed to parse structure: {:?}", result.err());
-    
+
+    assert!(
+        result.is_ok(),
+        "Failed to parse structure: {:?}",
+        result.err()
+    );
+
     let structure = result.unwrap();
     assert_eq!(structure.name, "Monoid");
     assert_eq!(structure.members.len(), 3);
-    
+
     // Check the axiom member
     match &structure.members[2] {
         kleis::kleis_ast::StructureMember::Axiom { name, proposition } => {
             assert_eq!(name, "identity");
-            
+
             // Proposition should be a Quantifier
             match proposition {
                 Expression::Quantifier { .. } => {
@@ -180,4 +193,3 @@ fn test_axiom_in_structure() {
         _ => panic!("Expected Axiom as third member"),
     }
 }
-

@@ -240,7 +240,11 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
             // TODO: Implement match expression JSON serialization
             json!({"Match": "not yet implemented"})
         }
-        Expression::Quantifier { quantifier, variables, body } => {
+        Expression::Quantifier {
+            quantifier,
+            variables,
+            body,
+        } => {
             json!({
                 "Quantifier": {
                     "kind": match quantifier {
