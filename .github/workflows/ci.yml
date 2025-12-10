@@ -22,6 +22,12 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    
+    - name: Clone z3.rs (for local z3 dependency)
+      run: |
+        cd ..
+        git clone https://github.com/prove-rs/z3.rs.git Z3
+        echo "✅ z3.rs cloned to ../Z3/"
       
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
