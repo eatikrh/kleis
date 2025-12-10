@@ -83,11 +83,16 @@ impl TypeChecker {
             .map_err(|e| format!("Failed to load stdlib/types.kleis: {}", e))?;
 
         // PHASE 2: Load structures and operations
-        // Load minimal prelude (subset that parser can handle)
-        // TODO: Switch to full prelude.kleis once parser supports:
-        //   - Operator symbols in parens: (•), (⊗)
-        //   - Axioms with universal quantifiers: ∀(x y z : S)
-        //   - Nested structures
+        // Load minimal prelude (most features work, except product types in signatures)
+        // Parser now supports:
+        //   ✅ Operator symbols in parens: (•), (⊗)
+        //   ✅ Axioms with universal quantifiers: ∀(x y z : S)
+        //   ✅ Nested structures
+        //   ✅ Extends keyword (inheritance)
+        //   ✅ Where clauses (generic constraints)
+        //   ✅ Define with operators
+        // Still needs:
+        //   ⚠️ Product types in signatures: S × S → R (vs curried S → S → R)
         let minimal_prelude = include_str!("../stdlib/minimal_prelude.kleis");
         checker
             .load_kleis(minimal_prelude)
