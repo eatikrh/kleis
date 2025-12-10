@@ -45,6 +45,7 @@ data Type =
   | PMatrix(m: Nat, n: Nat, T)
   | VMatrix(m: Nat, n: Nat, T)
   | BMatrix(m: Nat, n: Nat, T)
+  | Piecewise(n: Nat, T)
   | Complex
   | Set(T: Type)
   | List(T: Type)
