@@ -339,6 +339,42 @@ axiom identity: ∀(x : M). x + 0 = x
 
 ---
 
+## 💡 Key Discovery: Identity Elements Work Without `element` Keyword!
+
+**We discovered:** The `element` keyword is NOT required for identity elements!
+
+**Instead of:**
+```kleis
+structure Ring(R) {
+    element zero : R    // Needs 'element' keyword?
+    element one : R
+}
+```
+
+**We can use:**
+```kleis
+structure Ring(R) {
+    operation zero : R    // Nullary operation = identity element!
+    operation one : R     // No arrows = constant!
+    operation plus : R → R → R
+}
+```
+
+**AxiomVerifier automatically detects:**
+```rust
+let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
+if is_nullary {
+    // This is an identity element!
+    identity_elements.insert(name, z3_const);
+}
+```
+
+**This works in all our tests!** Group/Ring/Field identity elements all work without `element` keyword.
+
+**Impact:** One less parser feature needed for full prelude! 🎉
+
+---
+
 ## Recent Additions (December 8-10, 2024)
 
 ### Pattern Matching (Complete!)
@@ -533,15 +569,7 @@ structure Monoid(M) extends Semigroup(M) {
 
 **Needed for:** Structure inheritance hierarchy in `prelude.kleis`
 
-**2. `element` Keyword** (~1-2 hours)
-```kleis
-element zero : R  // Constant, not operation
-operation plus : R → R → R  // Operation
-```
-
-**Needed for:** Distinguishing constants from operations
-
-**3. Nested Structures** (~3-4 hours)
+**2. Nested Structures** (~3-4 hours)
 ```kleis
 structure Ring(R) {
   structure additive : AbelianGroup(R) { ... }
@@ -550,6 +578,20 @@ structure Ring(R) {
 ```
 
 **Needed for:** Composing algebraic structures
+
+**3. `define` with Operators** (~2-3 hours)
+```kleis
+define (-)(x, y) = x + negate(y)
+```
+
+**Needed for:** Defining operations with operator syntax
+
+**Note on `element` keyword:**
+The parser supports `element` in implements blocks. For structures, we can use nullary operations:
+```kleis
+operation zero : R  // Nullary operation = identity element
+```
+This works perfectly - AxiomVerifier detects them automatically as identity elements!
 
 ### Medium Priority (Better UX)
 
@@ -706,11 +748,12 @@ structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
 
 **Remaining for full prelude:**
 1. `extends` keyword (3-4 hours) - Structure inheritance
-2. `element` keyword (1-2 hours) - Constants vs operations
-3. Nested structures (3-4 hours) - Composing structures
-4. `define` with operators (2-3 hours) - Operator definitions
+2. Nested structures (3-4 hours) - Composing structures
+3. `define` with operators (2-3 hours) - Operator definitions
 
-**Total:** ~10-13 hours additional work
+**Total:** ~8-11 hours additional work
+
+**Note:** `element` keyword is NOT a blocker - nullary operations work the same way!
 
 ### Future Enhancements (Lower Priority)
 
@@ -764,13 +807,15 @@ This is **sufficient for:**
 
 **Still needed:**
 1. `extends` keyword - Structure inheritance (e.g., `Monoid extends Semigroup`)
-2. `element` keyword - Distinguish constants from operations
-3. Nested structures - Substructures within structures
-4. `define` with operators - Define operations like `define (-)(x,y) = ...`
+2. Nested structures - Substructures within structures
+3. `define` with operators - Define operations like `define (-)(x,y) = ...`
 
-**Impact:** Can't load full `prelude.kleis` without these parser features
+**Not needed (works already!):**
+- ~~`element` keyword~~ - Nullary operations work: `operation zero : R` (no arrows = identity element)
 
-**Timeline:** ~10-13 hours to implement all features
+**Impact:** Can't load full `prelude.kleis` without the 3 remaining features
+
+**Timeline:** ~8-11 hours to implement (reduced from 10-13!)
 
 ---
 
