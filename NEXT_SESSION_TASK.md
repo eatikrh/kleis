@@ -138,35 +138,229 @@ let prelude = include_str!("../stdlib/prelude.kleis");
 
 ## Part 5: Axiom Storage & Z3 Integration (Optional)
 
-**Basic (required):**
-- Parse axioms ✅ (already works)
-- Store in structure registry
-- Make available for inspection
+### Basic Axiom Support (Required)
 
-**Advanced (optional - Z3):**
-```rust
-// Add to Cargo.toml:
+**What works now:**
+- ✅ Axioms parse into AST (`StructureMember::Axiom`)
+- ✅ Stored in structure definitions
+- ❌ Not verified (just documentation)
+
+**Add:**
+- Store axioms in structure registry
+- Make available via API
+- Display in type error messages
+
+**Estimated:** 1 hour
+
+### Z3 Integration Design (Optional)
+
+**Based on official Z3 Rust API (z3 crate v0.12):**
+
+#### Step 1: Add Dependency
+
+```toml
 [dependencies]
 z3 = { version = "0.12", optional = true }
 
 [features]
 axiom-verification = ["z3"]
+```
 
-// src/axiom_verifier.rs:
-fn kleis_to_z3(expr: &Expression, ctx: &Context) -> Result<z3::ast::Bool> {
-    // Generic translator: ANY Kleis axiom → Z3
-    match expr {
-        Expression::Operation { name: "equals", args } => {
-            let lhs = kleis_expr_to_z3(&args[0], ctx)?;
-            let rhs = kleis_expr_to_z3(&args[1], ctx)?;
-            Ok(lhs._eq(&rhs))
-        }
-        // ... handle all operations generically
+#### Step 2: Generic Kleis → Z3 Translator
+
+```rust
+// src/axiom_verifier.rs (new file)
+
+use z3::{Config, Context, Solver, SatResult, ast::{Ast, Int, Bool}};
+use crate::ast::Expression;
+use std::collections::HashMap;
+
+pub struct AxiomVerifier {
+    cfg: Config,
+}
+
+impl AxiomVerifier {
+    pub fn new() -> Self {
+        Self { cfg: Config::new() }
     }
+    
+    /// Verify ANY Kleis axiom using Z3
+    pub fn verify_axiom(&self, axiom: &Axiom) -> Result<VerificationResult, String> {
+        let ctx = Context::new(&self.cfg);
+        let solver = Solver::new(&ctx);
+        
+        // Parse quantified variables from axiom expression
+        // e.g., ∀(x y z : R). ... → ["x", "y", "z"]
+        let var_names = self.extract_quantified_vars(&axiom.proposition)?;
+        
+        // Create Z3 variables using fresh_const (from API docs)
+        let mut z3_vars = HashMap::new();
+        for var_name in var_names {
+            let z3_var = Int::fresh_const(&ctx, &var_name);
+            z3_vars.insert(var_name, z3_var);
+        }
+        
+        // Translate Kleis expression to Z3 (GENERIC!)
+        let z3_formula = self.kleis_to_z3(&axiom.proposition, &ctx, &z3_vars)?;
+        
+        // Assert and check
+        solver.assert(&z3_formula);
+        
+        match solver.check() {
+            SatResult::Sat => Ok(VerificationResult::Valid),
+            SatResult::Unsat => Ok(VerificationResult::Invalid { 
+                counterexample: self.get_counterexample(&solver, &z3_vars)
+            }),
+            SatResult::Unknown => Ok(VerificationResult::Unknown),
+        }
+    }
+    
+    /// Generic translator: ANY Kleis Expression → Z3 AST
+    /// NO HARDCODING - reads operation names from Expression
+    fn kleis_to_z3<'ctx>(
+        &self,
+        expr: &Expression,
+        ctx: &'ctx Context,
+        vars: &HashMap<String, Int<'ctx>>,
+    ) -> Result<Int<'ctx>, String> {
+        match expr {
+            // Variables: look up in map
+            Expression::Object(name) => {
+                vars.get(name)
+                    .cloned()
+                    .ok_or_else(|| format!("Unknown variable: {}", name))
+            }
+            
+            // Constants: convert to Z3
+            Expression::Const(s) => {
+                let n: i64 = s.parse()
+                    .map_err(|_| format!("Not a number: {}", s))?;
+                Ok(Int::from_i64(ctx, n))
+            }
+            
+            // Operations: map generically by name
+            Expression::Operation { name, args } => {
+                match name.as_str() {
+                    // Arithmetic (Z3 has operator overloading!)
+                    "plus" | "add" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(&left + &right)  // Z3 operator overloading
+                    }
+                    "times" | "multiply" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(&left * &right)  // Z3 operator overloading
+                    }
+                    "minus" | "subtract" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(&left - &right)
+                    }
+                    
+                    // Comparisons (return Bool)
+                    "equals" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(left._eq(&right))  // Special _eq() method from API
+                    }
+                    "less_than" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(left.lt(&right))  // Z3 .lt() method
+                    }
+                    "greater_than" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(left.gt(&right))  // Z3 .gt() method
+                    }
+                    
+                    // Logical operations
+                    "logical_and" => {
+                        let left = self.kleis_to_z3_bool(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3_bool(&args[1], ctx, vars)?;
+                        Ok(Bool::and(ctx, &[&left, &right]))
+                    }
+                    "logical_or" => {
+                        let left = self.kleis_to_z3_bool(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3_bool(&args[1], ctx, vars)?;
+                        Ok(Bool::or(ctx, &[&left, &right]))
+                    }
+                    
+                    // Unknown operation
+                    _ => Err(format!("Unsupported operation for Z3: {}", name))
+                }
+            }
+            
+            _ => Err("Unsupported expression type for Z3".to_string())
+        }
+    }
+    
+    /// Extract variable names from quantifier
+    fn extract_quantified_vars(&self, expr: &Expression) -> Result<Vec<String>, String> {
+        // Parse: ∀(x y z : R). body
+        // Return: ["x", "y", "z"]
+        // 
+        // This would parse the quantifier syntax when parser supports it
+        // For now, could infer from free variables in expression
+        todo!("Parse quantifier syntax or infer free variables")
+    }
+}
+
+pub enum VerificationResult {
+    Valid,
+    Invalid { counterexample: String },
+    Unknown,
 }
 ```
 
-**Estimated:** 3-4 hours
+#### Key Design Principles
+
+**1. NO HARDCODING:**
+- One `kleis_to_z3()` function handles ALL expressions
+- Operation mapping is generic (reads `name` field)
+- Variable binding is dynamic (reads from Expression)
+
+**2. Type-Driven:**
+- `Int` for numeric operations
+- `Bool` for logical operations  
+- `Real` for real arithmetic (if needed)
+
+**3. Extensible:**
+- Add new operations by extending the match
+- No per-axiom functions
+- Works for ANY axiom in ANY structure
+
+#### Usage Example
+
+```rust
+// Load stdlib with axioms
+let checker = TypeChecker::with_stdlib()?;
+
+// Get a structure
+let ring = checker.get_structure("Ring")?;
+
+// Find distributivity axiom
+let dist_axiom = ring.axioms.iter()
+    .find(|a| a.name == "distributivity")?;
+
+// Verify it with Z3
+let verifier = AxiomVerifier::new();
+let result = verifier.verify_axiom(dist_axiom)?;
+
+match result {
+    VerificationResult::Valid => println!("✅ Axiom verified!"),
+    VerificationResult::Invalid { counterexample } => {
+        println!("❌ Axiom violated! Counterexample: {}", counterexample)
+    }
+    VerificationResult::Unknown => println!("⚠️ Z3 could not determine"),
+}
+```
+
+**Estimated:** 4-5 hours
+- Basic translator structure (1 hour)
+- Operation mapping (2 hours)
+- Testing and debugging (2 hours)
 
 ---
 
