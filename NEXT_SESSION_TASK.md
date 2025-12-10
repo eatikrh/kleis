@@ -1,11 +1,28 @@
-# NEXT SESSION: Matrix Type Consistency
+# NEXT SESSION: Prelude Cleanup - Full Stdlib Migration
 
-**Current State:** main branch, 31 commits pushed, 413 tests passing  
-**Status:** 🎯 Ready for type signature standardization
+**Current State:** main branch, 35 commits pushed, 413 tests passing  
+**Status:** 🎯 Ready for complete stdlib cleanup
+
+**Branch:** `feature/full-prelude-migration`
 
 ---
 
-## 🎯 Priority: Standardize Matrix Type Signatures
+## 🎯 The Big Picture
+
+This is a **complete cleanup** of the type system foundations:
+
+1. **Matrix type consistency** - Always use Matrix(m,n,T) with T
+2. **Remove legacy constructors** - Delete matrix2x2, cases2, etc.
+3. **Load full prelude.kleis** - Replace minimal_prelude.kleis
+4. **Extend parser** - Support operator symbols `(×)` and quantifiers `∀`
+5. **Implement axiom storage** - Parse and store axioms
+6. **(Optional) Z3 integration** - Axiom verification
+
+**All related, do together on one branch!**
+
+---
+
+## Part 1: Standardize Matrix Type Signatures
 
 ### The Inconsistency
 
@@ -77,36 +94,113 @@ Matrix(2, 2, Matrix(3, 3, ℝ))  // 2×2 of 3×3 blocks
 
 ---
 
+## Part 2: Remove All Legacy Constructors
+
+Delete hardcoded constructors completely:
+- `LegacyMatrixConstructors` structure
+- All `matrix2x2`, `pmatrix3x3`, etc.
+- Legacy rendering code in `src/render.rs`
+
+## Part 3: Extend Parser for Full Prelude
+
+**Add support for:**
+
+1. **Operator symbols in definitions:**
+   ```kleis
+   operation (×) : R → R → R
+   operation (+) : R → R → R
+   ```
+
+2. **Universal quantifiers in axioms:**
+   ```kleis
+   axiom associativity: ∀(x y z : S). (x • y) • z = x • (y • z)
+   ```
+
+**Estimated:** 2-3 hours
+
+## Part 4: Load Full Prelude
+
+Replace:
+```rust
+let minimal_prelude = include_str!("../stdlib/minimal_prelude.kleis");
+```
+
+With:
+```rust
+let prelude = include_str!("../stdlib/prelude.kleis");
+```
+
+**Benefits:**
+- Complete algebraic hierarchy
+- Formal axioms expressed
+- No workarounds needed
+- Beautiful mathematical syntax
+
+## Part 5: Axiom Storage & Z3 Integration (Optional)
+
+**Basic (required):**
+- Parse axioms ✅ (already works)
+- Store in structure registry
+- Make available for inspection
+
+**Advanced (optional - Z3):**
+```rust
+// Add to Cargo.toml:
+[dependencies]
+z3 = { version = "0.12", optional = true }
+
+[features]
+axiom-verification = ["z3"]
+
+// src/axiom_verifier.rs:
+fn kleis_to_z3(expr: &Expression, ctx: &Context) -> Result<z3::ast::Bool> {
+    // Generic translator: ANY Kleis axiom → Z3
+    match expr {
+        Expression::Operation { name: "equals", args } => {
+            let lhs = kleis_expr_to_z3(&args[0], ctx)?;
+            let rhs = kleis_expr_to_z3(&args[1], ctx)?;
+            Ok(lhs._eq(&rhs))
+        }
+        // ... handle all operations generically
+    }
+}
+```
+
+**Estimated:** 3-4 hours
+
+---
+
 ## ⚠️ IMPORTANT: Work on Separate Branch
 
-**Branch name:** `feature/matrix-type-consistency`
+**Branch name:** `feature/full-prelude-migration`
 
 **Why separate branch:**
 
 1. **Will cause many errors** while working
-2. **Takes significant time** to update all references
+2. **Takes significant time** - multiple related changes
 3. **Don't want to block main** with broken intermediate states
 4. **Can test thoroughly** before merging
+5. **Multiple components** need to work together
 
 ### Expected Breakage
 
-While updating, expect:
-- Type errors where Matrix(m,n) is used without T
-- Signature mismatches in operations
-- Tests failing until all references updated
-- Parser might need adjustments
-- Rendering might break for legacy matrix operations
-- Any code using matrix2x2, matrix3x3, etc. will fail
+While working, expect:
+- Type errors where Matrix(m,n) used without T
+- Parser errors on operator symbols initially
+- Tests failing until parser extended
+- Stdlib loading failures during transition
+- Rendering issues during legacy cleanup
 
 ### Timeline
 
-**Estimated:** 3-4 hours (increased due to legacy cleanup)
-- Find all Matrix(m,n) usages (~30 min)
-- Update signatures systematically (~1 hour)
-- Remove LegacyMatrixConstructors (~30 min)
-- Clean up renderer legacy code (~30 min)
-- Fix resulting type errors (~1 hour)
-- Test and verify (~30 min)
+**Total Estimated:** 6-8 hours
+- Matrix type consistency (~1 hour)
+- Remove legacy constructors (~1 hour)
+- Extend parser for operators (~2 hours)
+- Extend parser for quantifiers (~1 hour)
+- Load full prelude & fix issues (~1-2 hours)
+- (Optional) Basic Z3 integration (~3-4 hours)
+- Testing and cleanup (~1 hour)
 
 ---
 
