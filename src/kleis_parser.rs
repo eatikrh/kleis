@@ -1117,6 +1117,124 @@ impl KleisParser {
         Ok(args)
     }
 
+    /// Parse nested structure definition
+    /// Example: structure additive : AbelianGroup(R) { ... }
+    fn parse_nested_structure(&mut self) -> Result<StructureMember, KleisParseError> {
+        // Skip "structure" keyword
+        for _ in 0..9 {
+            self.advance();
+        }
+        self.skip_whitespace();
+
+        // Parse nested structure name
+        let name = self.parse_identifier()?;
+        self.skip_whitespace();
+
+        // Expect ':'
+        if self.advance() != Some(':') {
+            return Err(KleisParseError {
+                message: format!("Expected ':' after nested structure name '{}'", name),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Parse structure type (e.g., AbelianGroup(R))
+        let structure_type = self.parse_type()?;
+        self.skip_whitespace();
+
+        // Parse optional body { ... }
+        let members = if self.peek() == Some('{') {
+            self.advance(); // consume '{'
+            let mut nested_members = Vec::new();
+
+            loop {
+                self.skip_whitespace();
+
+                if self.peek() == Some('}') {
+                    break;
+                }
+
+                // Recursively parse structure members
+                // (nested structures can contain nested structures!)
+                let start_pos = self.pos;
+                if self.peek_word("structure") {
+                    nested_members.push(self.parse_nested_structure()?);
+                } else if self.peek_word("operation") {
+                    // Parse operation
+                    for _ in 0..9 {
+                        self.advance();
+                    }
+                    self.skip_whitespace();
+
+                    let op_name = self.parse_operation_name()?;
+                    self.skip_whitespace();
+
+                    if self.advance() != Some(':') {
+                        return Err(KleisParseError {
+                            message: "Expected ':' after operation name".to_string(),
+                            position: self.pos,
+                        });
+                    }
+
+                    let type_sig = self.parse_type()?;
+
+                    nested_members.push(StructureMember::Operation {
+                        name: op_name,
+                        type_signature: type_sig,
+                    });
+                } else if self.peek_word("axiom") {
+                    // Parse axiom
+                    for _ in 0..5 {
+                        self.advance();
+                    }
+                    self.skip_whitespace();
+
+                    let axiom_name = self.parse_identifier()?;
+                    self.skip_whitespace();
+
+                    if self.advance() != Some(':') {
+                        return Err(KleisParseError {
+                            message: "Expected ':' after axiom name".to_string(),
+                            position: self.pos,
+                        });
+                    }
+
+                    self.skip_whitespace();
+                    let proposition = self.parse_proposition()?;
+
+                    nested_members.push(StructureMember::Axiom {
+                        name: axiom_name,
+                        proposition,
+                    });
+                } else {
+                    // Regular field
+                    self.pos = start_pos;
+                    nested_members.push(self.parse_structure_member()?);
+                }
+            }
+
+            if self.advance() != Some('}') {
+                return Err(KleisParseError {
+                    message: "Expected '}' after nested structure body".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            nested_members
+        } else {
+            // No body - just a reference to existing structure
+            Vec::new()
+        };
+
+        Ok(StructureMember::NestedStructure {
+            name,
+            structure_type,
+            members,
+        })
+    }
+
     /// Parse structure member
     fn parse_structure_member(&mut self) -> Result<StructureMember, KleisParseError> {
         self.skip_whitespace();
@@ -1216,9 +1334,12 @@ impl KleisParser {
                 break;
             }
 
-            // Check for operation or axiom keyword
+            // Check for nested structure, operation, or axiom keyword
             let start_pos = self.pos;
-            if self.peek_word("operation") {
+            if self.peek_word("structure") {
+                // Nested structure definition
+                members.push(self.parse_nested_structure()?);
+            } else if self.peek_word("operation") {
                 // Skip "operation"
                 for _ in 0..9 {
                     self.advance();

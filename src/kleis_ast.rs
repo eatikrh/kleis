@@ -63,6 +63,14 @@ pub enum StructureMember {
         name: String,
         proposition: Expression,
     },
+
+    /// Nested structure: structure name : StructureType { members }
+    /// Example: structure additive : AbelianGroup(R) { ... }
+    NestedStructure {
+        name: String,
+        structure_type: TypeExpr,      // e.g., AbelianGroup(R)
+        members: Vec<StructureMember>, // Recursive!
+    },
 }
 
 /// Operation declaration

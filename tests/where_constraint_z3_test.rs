@@ -146,7 +146,7 @@ fn test_where_constraint_loads_dependent_structure() {
         let test_axiom = "∀(x y z : R). x × (y + z) = (x × y) + (x × z)";
         let mut parser = KleisParser::new(test_axiom);
         let axiom = parser.parse_proposition().expect("Failed to parse");
-        
+
         println!("   Using mathematical notation: {}", test_axiom);
 
         println!("\n🧪 Verifying Ring distributivity (via where constraint)...");
