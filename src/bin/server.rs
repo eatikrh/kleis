@@ -602,10 +602,22 @@ fn collect_slots_recursive(
             let has_list_format =
                 is_matrix && args.len() == 3 && matches!(args.get(2), Some(Expression::List(_)));
 
+            // For Piecewise with List format: skip first arg (n = number of cases)
+            let is_piecewise = name == "Piecewise";
+            let piecewise_list_format = is_piecewise
+                && args.len() == 3
+                && matches!(args.get(1), Some(Expression::List(_)))
+                && matches!(args.get(2), Some(Expression::List(_)));
+
             // Recursively process each argument
             for (i, arg) in args.iter().enumerate() {
                 // Skip dimension arguments for Matrix with List format
                 if has_list_format && i < 2 {
+                    continue;
+                }
+
+                // Skip size argument for Piecewise with List format
+                if piecewise_list_format && i == 0 {
                     continue;
                 }
 
