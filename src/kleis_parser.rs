@@ -1487,8 +1487,9 @@ impl KleisParser {
 
         self.skip_whitespace();
 
-        // Parse function name
-        let name = self.parse_identifier()?;
+        // Parse function name (can be identifier or operator symbol)
+        // Examples: define add(x, y) = ... OR define (-)(x, y) = ...
+        let name = self.parse_operation_name()?;
         self.skip_whitespace();
 
         // Check if this is a function with parameters or a simple definition
