@@ -418,6 +418,57 @@ impl KleisParser {
         Ok(expr)
     }
 
+    /// Parse operation name (identifier or operator symbol)
+    /// Examples: abs, transpose, (+), (×), (•)
+    fn parse_operation_name(&mut self) -> Result<String, KleisParseError> {
+        self.skip_whitespace();
+
+        // Check if it's an operator in parentheses
+        if self.peek() == Some('(') {
+            self.advance(); // consume '('
+            self.skip_whitespace();
+
+            // Parse operator symbol
+            let op_symbol = match self.peek() {
+                Some('+') => "+",
+                Some('-') => "-",
+                Some('*') => "*",
+                Some('/') => "/",
+                Some('^') => "^",
+                Some('×') => "×",
+                Some('·') => "·",
+                Some('•') => "•",
+                Some('=') => "=",
+                Some('<') => "<",
+                Some('>') => ">",
+                Some('∘') => "∘", // composition
+                Some('⊗') => "⊗", // tensor product
+                Some('⊕') => "⊕", // direct sum
+                _ => {
+                    return Err(KleisParseError {
+                        message: format!("Expected operator symbol, got {:?}", self.peek()),
+                        position: self.pos,
+                    });
+                }
+            };
+
+            self.advance(); // consume operator
+            self.skip_whitespace();
+
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after operator symbol".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            Ok(op_symbol.to_string())
+        } else {
+            // Regular identifier
+            self.parse_identifier()
+        }
+    }
+
     /// Parse a proposition (for axioms)
     /// Supports quantifiers: ∀(x : T). body
     pub fn parse_proposition(&mut self) -> Result<Expression, KleisParseError> {
@@ -1026,7 +1077,8 @@ impl KleisParser {
                 }
                 self.skip_whitespace();
 
-                let op_name = self.parse_identifier()?;
+                // Parse operation name (could be identifier or operator symbol)
+                let op_name = self.parse_operation_name()?;
                 self.skip_whitespace();
 
                 if self.advance() != Some(':') {
@@ -1107,39 +1159,9 @@ impl KleisParser {
 
         self.skip_whitespace();
 
-        // Parse operation name (could be symbol like (+) or identifier)
-        let name = if self.peek() == Some('(') {
-            // Operator in parens: (+)
-            self.advance(); // (
-            self.skip_whitespace();
-            let op = match self.peek() {
-                Some('+') => "+",
-                Some('-') => "-",
-                Some('*') => "*",
-                Some('/') => "/",
-                Some('^') => "^",
-                Some('×') => "×",
-                Some('·') => "·",
-                _ => {
-                    return Err(KleisParseError {
-                        message: "Expected operator symbol".to_string(),
-                        position: self.pos,
-                    });
-                }
-            };
-            self.advance();
-            self.skip_whitespace();
-            if self.advance() != Some(')') {
-                return Err(KleisParseError {
-                    message: "Expected ')' after operator".to_string(),
-                    position: self.pos,
-                });
-            }
-            op.to_string()
-        } else {
-            self.parse_identifier()?
-        };
-
+        // Parse operation name (identifier or operator symbol in parens)
+        let name = self.parse_operation_name()?;
+        
         self.skip_whitespace();
 
         // Expect ':'
