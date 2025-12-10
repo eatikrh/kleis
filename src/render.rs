@@ -1257,9 +1257,9 @@ fn render_expression_internal(
                 }
                 result = result.replace("{args}", &matrix_content);
             }
-            // Piecewise functions: render as \begin{cases}...\end{cases}
+            // Piecewise functions: render as cases(...)
             else if is_piecewise {
-                let mut cases_content = String::new();
+                let mut case_rows = Vec::new();
                 for i in 0..piecewise_cases {
                     if let (Some(expr), Some(cond)) =
                         (piecewise_exprs.get(i), piecewise_conds.get(i))
@@ -1282,25 +1282,34 @@ fn render_expression_internal(
                             node_id_to_uuid,
                         );
 
-                        cases_content.push_str(&rendered_expr);
-                        cases_content.push_str(" & ");
-                        cases_content.push_str(&rendered_cond);
-
-                        if i < piecewise_cases - 1 {
-                            cases_content.push_str(r" \\ ");
+                        match target {
+                            RenderTarget::Typst => {
+                                // Typst cases: each row is "expr & cond"
+                                case_rows.push(format!("{} & {}", rendered_expr, rendered_cond));
+                            }
+                            RenderTarget::LaTeX | RenderTarget::HTML => {
+                                // LaTeX: same format
+                                case_rows.push(format!("{} & {}", rendered_expr, rendered_cond));
+                            }
+                            RenderTarget::Unicode => {
+                                case_rows.push(format!("{}  if {}", rendered_expr, rendered_cond));
+                            }
                         }
                     }
                 }
 
                 match target {
                     RenderTarget::Typst => {
-                        result = format!("cases({})", cases_content);
+                        // Typst cases uses commas between rows
+                        result = format!("cases({})", case_rows.join(", "));
                     }
                     RenderTarget::LaTeX | RenderTarget::HTML => {
-                        result = format!(r"\begin{{cases}}{}\end{{cases}}", cases_content);
+                        // LaTeX uses \\ between rows
+                        result =
+                            format!(r"\begin{{cases}}{}\end{{cases}}", case_rows.join(r" \\ "));
                     }
                     RenderTarget::Unicode => {
-                        result = format!("{{ {} }}", cases_content);
+                        result = format!("{{ {} }}", case_rows.join(" ; "));
                     }
                 }
             }
