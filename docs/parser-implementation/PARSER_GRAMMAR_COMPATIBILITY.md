@@ -82,7 +82,6 @@
 | **Conditionals** | `if x > 0 then x else -x` | ❌ Missing | Low |
 | **Type annotations** | `x : ℝ` in expressions | ❌ Missing | Medium |
 | **Symbolic constants** | `π`, `e`, `i`, `ℏ` | ❌ Missing | Low |
-| **`where` clauses** | Generic constraints | ❌ Missing | High |
 | **Placeholders** | `□` syntax | N/A | N/A - Editor only |
 
 **Why missing features matter:**
@@ -90,7 +89,10 @@
 **High priority (blocks full prelude):**
 - ~~Operator symbols~~ ✅ **DONE!**
 - ~~Universal quantifiers~~ ✅ **DONE!**
-- **`where` clauses:** Needed for generic constraints on implementations
+- ~~`where` clauses~~ ✅ **DONE!**
+- **`extends` keyword:** Needed for structure inheritance
+- **`element` keyword:** Needed to distinguish constants from operations
+- **Nested structures:** Needed for Ring/Field hierarchy
 
 **Medium priority (convenience):**
 - Prefix/postfix operators: User-friendly syntax (¬ works, need -, ∇, √)
@@ -197,7 +199,7 @@
 
 ### ⚠️ Partially Supported:
 
-- **`stdlib/prelude.kleis`** ⚠️ (operator symbols ✅, quantifiers ✅, but needs `where` clauses)
+- **`stdlib/prelude.kleis`** ⚠️ (operator symbols ✅, quantifiers ✅, where clauses ✅, but needs `extends`, `element`, nested structures)
 - **`stdlib/tensors.kleis`** ⚠️ (most syntax works, may need minor adjustments)
 - **`stdlib/quantum.kleis`** ⚠️ (most syntax works, may need minor adjustments)
 
@@ -231,17 +233,28 @@ axiom associativity:
 
 **Z3 Integration:** Axioms are now **verifiable** with theorem prover!
 
-### Issue 3: `where` Clauses ⚠️ **REMAINING BLOCKER**
+### ~~Issue 3: `where` Clauses~~ ✅ **SOLVED!**
 
-**Needed for generic constraints:**
+**Now works in parser:**
 ```kleis
 implements MatrixMultipliable(m, n, p, T) 
-  where Semiring(T) {    // ❌ Parser doesn't support 'where' yet
+  where Semiring(T) {    // ✅ Parser now supports 'where'!
     operation multiply = builtin_matrix_multiply
   }
 ```
 
-**Status:** This is the main blocker for loading full `prelude.kleis`
+**Z3 Integration:** Constrained structure axioms are **automatically loaded** for verification!
+
+### Issue 4: Structure Inheritance ⚠️ **REMAINING BLOCKER**
+
+**Needed for structure hierarchy:**
+```kleis
+structure Monoid(M) extends Semigroup(M) {  // ❌ Parser doesn't support 'extends' yet
+    element e : M
+}
+```
+
+**Status:** This (plus `element` and nested structures) blocks loading full `prelude.kleis`
 
 
 ---
@@ -468,11 +481,11 @@ implements Foo(T) where Bar(T) { ... }  // ❌ Not yet supported
 - ⚠️ Still needs: `where` clauses for full prelude
 
 **Files:**
-- `minimal_prelude.kleis` ✅ (works on both branches)
-- `matrices.kleis` ✅ (works with operator symbols on feature branch)
-- `prelude.kleis` ⏳ (needs `where` clauses)
-- `tensors.kleis` ⏳ (needs `where` clauses)
-- `quantum.kleis` ⏳ (needs `where` clauses)
+- `minimal_prelude.kleis` ✅ (works on all branches)
+- `matrices.kleis` ✅ (works with operator symbols)
+- `prelude.kleis` ⏳ (needs `extends`, `element`, nested structures)
+- `tensors.kleis` ⏳ (needs `extends`, `element`)
+- `quantum.kleis` ⏳ (needs `extends`, `element`)
 
 ---
 
@@ -500,16 +513,43 @@ axiom associativity: ∀(x y z : S). (x • y) • z = x • (y • z)
 
 **Status:** Implemented in Phase 2.1 of Z3 integration
 
-### High Priority (Current Blocker)
-
-**1. `where` Clauses** (5 hours)
+**4. Where Clauses** ✅ **DONE!**
 ```kleis
 implements MatrixMultipliable(m, n, p, T) where Semiring(T) {
   operation multiply = builtin_matrix_multiply
 }
 ```
 
-**Needed for:** Generic constraints in `prelude.kleis`
+**Status:** Implemented in Phase 3.1 with full Z3 integration!
+
+### High Priority (Current Blockers for Full Prelude)
+
+**1. `extends` Keyword** (~3-4 hours)
+```kleis
+structure Monoid(M) extends Semigroup(M) {
+  element e : M
+}
+```
+
+**Needed for:** Structure inheritance hierarchy in `prelude.kleis`
+
+**2. `element` Keyword** (~1-2 hours)
+```kleis
+element zero : R  // Constant, not operation
+operation plus : R → R → R  // Operation
+```
+
+**Needed for:** Distinguishing constants from operations
+
+**3. Nested Structures** (~3-4 hours)
+```kleis
+structure Ring(R) {
+  structure additive : AbelianGroup(R) { ... }
+  structure multiplicative : Monoid(R) { ... }
+}
+```
+
+**Needed for:** Composing algebraic structures
 
 ### Medium Priority (Better UX)
 
@@ -653,16 +693,24 @@ structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
 
 **Branch:** `feature/full-prelude-migration` (628 tests passing)
 
-### Phase 3: Complete Full Prelude (8-9 hours)
+### ~~Phase 3: Where Clauses~~ ✅ **COMPLETE!**
 
-**Remaining Work:**
-1. `where` clauses (5 hours) - Generic constraints
-2. Load full `prelude.kleis` (2-3 hours)
-3. Write ADR-022 (1 hour) - Document Z3 architecture
+**Completed Work:**
+1. ✅ `where` clauses (3 hours) - Generic constraints working!
+2. ✅ Z3 integration (2 hours) - Constrained axioms available to verifier
+3. ✅ ADR-022 (already on main) - Z3 architecture documented
 
-**Decision Point:**
-- **Option A:** Merge Phase 1 & 2 now (already valuable!)
-- **Option B:** Continue with Phase 3 first
+**Total:** 5 hours (exactly as estimated!)
+
+### Phase 4: Full Prelude (Future Work)
+
+**Remaining for full prelude:**
+1. `extends` keyword (3-4 hours) - Structure inheritance
+2. `element` keyword (1-2 hours) - Constants vs operations
+3. Nested structures (3-4 hours) - Composing structures
+4. `define` with operators (2-3 hours) - Operator definitions
+
+**Total:** ~10-13 hours additional work
 
 ### Future Enhancements (Lower Priority)
 
@@ -712,14 +760,17 @@ This is **sufficient for:**
 3. ✅ Logical operators: `∧`, `∨`, `¬`, `⟹` - **DONE!**
 4. ✅ Z3 theorem prover integration - **DONE!**
 
-### ⚠️ Remaining Blocker For Full Stdlib
+### ⚠️ Remaining Blockers For Full Stdlib
 
 **Still needed:**
-1. `where` clauses - Generic constraints on implementations
+1. `extends` keyword - Structure inheritance (e.g., `Monoid extends Semigroup`)
+2. `element` keyword - Distinguish constants from operations
+3. Nested structures - Substructures within structures
+4. `define` with operators - Define operations like `define (-)(x,y) = ...`
 
-**Impact:** Can't load full `prelude.kleis` without `where` clause support
+**Impact:** Can't load full `prelude.kleis` without these parser features
 
-**Timeline:** ~5 hours to implement (Phase 3.1)
+**Timeline:** ~10-13 hours to implement all features
 
 ---
 
