@@ -76,6 +76,18 @@ implements SpecialFunctions(ℝ) {
     operation erfc = builtin_erfc
 }
 
+structure Exponential(T) {
+    operation exp : T → T
+    operation ln : T → T
+    operation log : T → T
+}
+
+implements Exponential(ℝ) {
+    operation exp = builtin_exp
+    operation ln = builtin_ln
+    operation log = builtin_log
+}
+
 structure LogarithmExtended(T) {
     operation log10 : T → T
     operation log2 : T → T
