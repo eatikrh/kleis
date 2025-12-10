@@ -38,10 +38,29 @@ structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
 Matrix(m, n, T)  // ALWAYS - never just Matrix(m, n)
 ```
 
+**Remove ALL legacy hardcoded matrix constructors:**
+```kleis
+// DELETE THESE:
+structure LegacyMatrixConstructors(T) {
+    operation matrix2x2 : Matrix(2, 2, ℝ)
+    operation matrix2x3 : Matrix(2, 3, ℝ)
+    operation matrix3x2 : Matrix(3, 2, ℝ)
+    // ... etc
+}
+```
+
+**Use only the parametric constructor:**
+```kleis
+// The ONE TRUE WAY:
+Matrix(2, 2, [a, b, c, d])  // Creates any size matrix
+```
+
 Update:
-1. `prelude.kleis` - Fix all operation signatures
-2. Any docs or examples using shorthand
-3. Verify consistency across codebase
+1. `prelude.kleis` - Fix all operation signatures to include T
+2. `matrices.kleis` - DELETE LegacyMatrixConstructors structure
+3. `src/render.rs` - Remove legacy matrix rendering code
+4. Any docs or examples using shorthand
+5. Verify consistency across codebase
 
 ### Why This Matters
 
@@ -76,12 +95,16 @@ While updating, expect:
 - Signature mismatches in operations
 - Tests failing until all references updated
 - Parser might need adjustments
+- Rendering might break for legacy matrix operations
+- Any code using matrix2x2, matrix3x3, etc. will fail
 
 ### Timeline
 
-**Estimated:** 2-3 hours
+**Estimated:** 3-4 hours (increased due to legacy cleanup)
 - Find all Matrix(m,n) usages (~30 min)
 - Update signatures systematically (~1 hour)
+- Remove LegacyMatrixConstructors (~30 min)
+- Clean up renderer legacy code (~30 min)
 - Fix resulting type errors (~1 hour)
 - Test and verify (~30 min)
 
@@ -215,10 +238,13 @@ Natural numbers ℕ are a semiring (can add/multiply but not subtract).
 After branch is complete:
 
 ✅ **No Matrix(m,n) without T** anywhere in codebase  
+✅ **No legacy constructors** (matrix2x2, matrix2x3, etc.)  
+✅ **Only parametric Matrix constructor** used throughout  
 ✅ **All tests pass** (413+)  
 ✅ **prelude.kleis signatures** are correct and complete  
 ✅ **Type system** properly checks element types  
 ✅ **Documentation** is consistent  
+✅ **Renderer code** cleaned up (no legacy special cases)  
 
 ---
 
