@@ -21,11 +21,13 @@ Originally designed for **Projected Ontology Theory (POT)** and **Hilbert Ontolo
 - **MathType-level UX** - 8 balanced palette tabs, intuitive navigation, keyboard shortcuts
 
 ### 🔬 Type System
+- **Hindley-Milner type inference** - Standard syntactic unification with parametric polymorphism
 - **Complete algebraic foundations** - Magma → Semigroup → Monoid → Group → Abelian Group → Ring → Field
 - **Vector space axioms** - All 8 axioms formally expressed and verifiable
 - **Polymorphic operations** - Same AST node, different semantics (scalar×scalar vs scalar×vector vs matrix×matrix)
 - **Extensible architecture** - Add Groups, Categories, Fiber Bundles, Monads via plugin system
 - **Exception handling** - Type-level errors (structure) vs value-level errors (division by zero)
+- **Future work:** E-unification for algebraic equivalences (symbolic simplification)
 
 ### 🧮 Evaluation Engine *(Designed)*
 - **Context management** - Hierarchical scoping, bindings with types
