@@ -16,11 +16,8 @@ structure Arithmetic(T) {
   operation angle_brackets : T → T
 }
 
-structure PiecewiseFunctions(T) {
-  operation cases2 : T → Bool → T → Bool → T
-  operation cases3 : T → Bool → T → Bool → T → Bool → T
-  operation cases4 : T → Bool → T → Bool → T → Bool → T → Bool → T
-  operation cases5 : T → Bool → T → Bool → T → Bool → T → Bool → T → Bool → T
+structure Piecewise(n: Nat, T) {
+  operation cases : List(T) → List(Bool) → T
 }
 
 // Equality operations (work for any type)
@@ -62,11 +59,20 @@ implements Arithmetic(ℝ) {
   operation angle_brackets = builtin_identity
 }
 
-implements PiecewiseFunctions(ℝ) {
-  operation cases2 = builtin_cases2
-  operation cases3 = builtin_cases3
-  operation cases4 = builtin_cases4
-  operation cases5 = builtin_cases5
+implements Piecewise(2, ℝ) {
+  operation cases = builtin_cases2
+}
+
+implements Piecewise(3, ℝ) {
+  operation cases = builtin_cases3
+}
+
+implements Piecewise(4, ℝ) {
+  operation cases = builtin_cases4
+}
+
+implements Piecewise(5, ℝ) {
+  operation cases = builtin_cases5
 }
 
 // Equality for scalars
