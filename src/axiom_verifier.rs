@@ -369,8 +369,8 @@ mod tests {
 
     #[test]
     fn test_verifier_creation() {
-        let verifier = AxiomVerifier::new();
-        assert!(std::mem::size_of_val(&verifier) >= 0); // Just check it creates
+        let _verifier = AxiomVerifier::new();
+        // Just check that creation succeeds without panic
     }
 
     #[test]
