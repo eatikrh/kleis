@@ -183,6 +183,20 @@ impl<'r> AxiomVerifier<'r> {
             .get(structure_name)
             .ok_or_else(|| format!("Structure not found: {}", structure_name))?;
 
+        // SECOND: Load parent structure if extends clause present (inheritance!)
+        // This ensures parent structure axioms are available
+        if let Some(extends_type) = &structure.extends_clause {
+            // Extract parent structure name
+            let parent_name = match extends_type {
+                crate::kleis_ast::TypeExpr::Named(name) => name.clone(),
+                crate::kleis_ast::TypeExpr::Parametric(name, _) => name.clone(),
+                _ => return Err("Invalid extends clause type".to_string()),
+            };
+
+            println!("   🔗 Loading parent structure: {}", parent_name);
+            self.ensure_structure_loaded(&parent_name)?;
+        }
+
         // Phase 1: Load identity elements (nullary operations: zero, one, e, etc.)
         // This includes identity elements in nested structures!
         self.load_identity_elements_recursive(&structure.members);

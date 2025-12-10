@@ -1317,6 +1317,24 @@ impl KleisParser {
             Vec::new()
         };
 
+        self.skip_whitespace();
+
+        // Optional extends clause: extends ParentStructure(Args)
+        let extends_clause = if self.peek_word("extends") {
+            // Skip "extends"
+            for _ in 0..7 {
+                self.advance();
+            }
+            self.skip_whitespace();
+
+            // Parse parent structure type (e.g., Semigroup(M))
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+
+        self.skip_whitespace();
+
         // Expect '{'
         if self.advance() != Some('{') {
             return Err(KleisParseError {
@@ -1409,6 +1427,7 @@ impl KleisParser {
             name,
             type_params,
             members,
+            extends_clause,
         })
     }
 

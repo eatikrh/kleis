@@ -32,11 +32,15 @@ pub enum TopLevel {
 }
 
 /// Structure definition
+/// Example: structure Monoid(M) extends Semigroup(M) { ... }
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructureDef {
     pub name: String,
     pub type_params: Vec<TypeParam>, // e.g., (m: Nat, n: Nat, T)
     pub members: Vec<StructureMember>,
+    /// Optional parent structure (inheritance)
+    /// Example: extends Semigroup(M)
+    pub extends_clause: Option<TypeExpr>,
 }
 
 /// Type parameter for structures
