@@ -3511,12 +3511,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 };
                 
                 // Insert into active marker or replace AST
-                if (activeEditMarker !== null) {
-                    // Replace placeholder at active marker
-                    const path = findNodePath(currentAST, activeEditMarker);
-                    if (path) {
-                        updateValueAtPath(currentAST, path, ast);
-                    }
+                if (activeEditMarker) {
+                    // INSERT AT ACTIVE MARKER (like matrix builder)
+                    setNodeAtPath(currentAST, activeEditMarker.path, ast);
                     
                     // Clear active marker
                     activeEditMarker = null;
@@ -3524,7 +3521,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         el.classList.remove('active-marker');
                     });
                 } else {
-                    // Save to undo stack
+                    // NO MARKER - Replace whole AST
                     saveToUndoStack();
                     currentAST = ast;
                 }
