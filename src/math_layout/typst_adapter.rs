@@ -54,6 +54,12 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             latex_to_typst_symbol(s)
         }
 
+        // Quantifiers - render as text (used in axioms)
+        Expression::Quantifier { .. } => {
+            // Quantifiers are for axioms, not regular math expressions
+            "\\text{quantifier}".to_string()
+        }
+
         Expression::List(elements) => {
             // Render list as Typst array
             let rendered: Vec<String> = elements

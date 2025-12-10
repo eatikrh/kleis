@@ -25,6 +25,18 @@ time = { version = "0.3", features = ["macros"] }
 roxmltree = "0.20"  # XML parsing for SVG transform extraction
 uuid = { version = "1.0", features = ["v4"] }
 
+# Theorem prover (optional - for axiom verification)
+# Vendored z3.rs bindings (simpler API than published crate)
+z3 = { path = "vendor/z3", optional = true }
+
+[features]
+# Default features (enabled by default)
+default = ["axiom-verification"]
+
+# Axiom verification using Z3 theorem prover
+# Can be disabled with: cargo build --no-default-features
+axiom-verification = ["z3"]
+
 [[bin]]
 name = "gallery"
 path = "src/bin/gallery.rs"
