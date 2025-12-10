@@ -1,3 +1,21 @@
+structure Trigonometric(T) {
+    operation sin : T → T
+    operation cos : T → T
+    operation tan : T → T
+    operation sec : T → T
+    operation csc : T → T
+    operation cot : T → T
+}
+
+implements Trigonometric(ℝ) {
+    operation sin = builtin_sin
+    operation cos = builtin_cos
+    operation tan = builtin_tan
+    operation sec = builtin_sec
+    operation csc = builtin_csc
+    operation cot = builtin_cot
+}
+
 structure InverseTrig(T) {
     operation arcsin : T → T
     operation arccos : T → T
