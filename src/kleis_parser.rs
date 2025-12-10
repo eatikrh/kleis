@@ -278,6 +278,16 @@ impl KleisParser {
     fn parse_primary(&mut self) -> Result<Expression, KleisParseError> {
         self.skip_whitespace();
 
+        // Negation: ¬A or not A (prefix operator)
+        if self.peek() == Some('¬') {
+            self.advance(); // consume ¬
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "logical_not".to_string(),
+                args: vec![arg],
+            });
+        }
+
         // Match expression
         if self.peek_word("match") {
             return self.parse_match_expr();
@@ -381,6 +391,130 @@ impl KleisParser {
     }
 
     fn parse_expression(&mut self) -> Result<Expression, KleisParseError> {
+        // Parse logical expression (lowest precedence)
+        self.parse_implication()
+    }
+
+    /// Parse implication: A ⟹ B
+    fn parse_implication(&mut self) -> Result<Expression, KleisParseError> {
+        let mut left = self.parse_disjunction()?;
+
+        loop {
+            self.skip_whitespace();
+            let is_implies = self.peek() == Some('⟹');
+
+            if !is_implies {
+                break;
+            }
+
+            self.advance(); // consume ⟹
+            let right = self.parse_disjunction()?;
+            left = Expression::Operation {
+                name: "implies".to_string(),
+                args: vec![left, right],
+            };
+        }
+
+        Ok(left)
+    }
+
+    /// Parse disjunction: A ∨ B (logical or)
+    fn parse_disjunction(&mut self) -> Result<Expression, KleisParseError> {
+        let mut left = self.parse_conjunction()?;
+
+        loop {
+            self.skip_whitespace();
+            let is_or = self.peek() == Some('∨');
+
+            if !is_or {
+                break;
+            }
+
+            self.advance(); // consume ∨
+            let right = self.parse_conjunction()?;
+            left = Expression::Operation {
+                name: "logical_or".to_string(),
+                args: vec![left, right],
+            };
+        }
+
+        Ok(left)
+    }
+
+    /// Parse conjunction: A ∧ B (logical and)
+    fn parse_conjunction(&mut self) -> Result<Expression, KleisParseError> {
+        let mut left = self.parse_comparison()?;
+
+        loop {
+            self.skip_whitespace();
+            let is_and = self.peek() == Some('∧');
+
+            if !is_and {
+                break;
+            }
+
+            self.advance(); // consume ∧
+            let right = self.parse_comparison()?;
+            left = Expression::Operation {
+                name: "logical_and".to_string(),
+                args: vec![left, right],
+            };
+        }
+
+        Ok(left)
+    }
+
+    /// Parse comparison: A = B, A < B, etc.
+    fn parse_comparison(&mut self) -> Result<Expression, KleisParseError> {
+        let mut left = self.parse_arithmetic()?;
+
+        self.skip_whitespace();
+        let op = match self.peek() {
+            Some('=') => {
+                // Check if it's not ⟹ (which is handled at higher level)
+                if self.peek_ahead(1) != Some('⟹') {
+                    self.advance();
+                    Some("equals")
+                } else {
+                    None
+                }
+            }
+            Some('<') => {
+                self.advance();
+                Some("less_than")
+            }
+            Some('>') => {
+                self.advance();
+                Some("greater_than")
+            }
+            Some('≤') => {
+                self.advance();
+                Some("leq")
+            }
+            Some('≥') => {
+                self.advance();
+                Some("geq")
+            }
+            Some('≠') => {
+                self.advance();
+                Some("neq")
+            }
+            _ => None,
+        };
+
+        if let Some(op) = op {
+            let right = self.parse_arithmetic()?;
+            Ok(Expression::Operation {
+                name: op.to_string(),
+                args: vec![left, right],
+            })
+        } else {
+            Ok(left)
+        }
+    }
+
+    /// Parse arithmetic expressions: +, -
+    fn parse_arithmetic(&mut self) -> Result<Expression, KleisParseError> {
         let mut left = self.parse_term()?;
 
         loop {
@@ -416,6 +550,257 @@ impl KleisParser {
         }
 
         Ok(expr)
+    }
+
+    /// Parse operation name (identifier or operator symbol)
+    /// Examples: abs, transpose, (+), (×), (•)
+    fn parse_operation_name(&mut self) -> Result<String, KleisParseError> {
+        self.skip_whitespace();
+
+        // Check if it's an operator in parentheses
+        if self.peek() == Some('(') {
+            self.advance(); // consume '('
+            self.skip_whitespace();
+
+            // Parse operator symbol
+            let op_symbol = match self.peek() {
+                // Arithmetic
+                Some('+') => "+",
+                Some('-') => "-",
+                Some('*') => "*",
+                Some('/') => "/",
+                Some('^') => "^",
+                Some('×') => "×",
+                Some('·') => "·",
+                Some('•') => "•",
+                // Comparisons
+                Some('=') => "=",
+                Some('<') => "<",
+                Some('>') => ">",
+                Some('≤') => "≤",
+                Some('≥') => "≥",
+                Some('≠') => "≠",
+                // Logical
+                Some('∧') => "∧",
+                Some('∨') => "∨",
+                Some('¬') => "¬",
+                Some('⟹') => "⟹",
+                // Algebra
+                Some('∘') => "∘", // composition
+                Some('⊗') => "⊗", // tensor product
+                Some('⊕') => "⊕", // direct sum
+                _ => {
+                    return Err(KleisParseError {
+                        message: format!("Expected operator symbol, got {:?}", self.peek()),
+                        position: self.pos,
+                    });
+                }
+            };
+
+            self.advance(); // consume operator
+            self.skip_whitespace();
+
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after operator symbol".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            Ok(op_symbol.to_string())
+        } else {
+            // Regular identifier
+            self.parse_identifier()
+        }
+    }
+
+    /// Parse a proposition (for axioms)
+    /// Supports quantifiers: ∀(x : T). body
+    pub fn parse_proposition(&mut self) -> Result<Expression, KleisParseError> {
+        self.skip_whitespace();
+
+        // Check for quantifier
+        if let Some('∀') | Some('∃') = self.peek() {
+            self.parse_quantifier()
+        } else if self.peek_word("forall") {
+            self.parse_quantifier()
+        } else if self.peek_word("exists") {
+            self.parse_quantifier()
+        } else {
+            // Just an expression
+            self.parse_expression()
+        }
+    }
+
+    /// Parse a quantifier expression
+    /// ∀(x : M). x • e = x
+    /// ∀(x y z : R). (x + y) + z = x + (y + z)
+    fn parse_quantifier(&mut self) -> Result<Expression, KleisParseError> {
+        self.skip_whitespace();
+
+        // Parse quantifier symbol
+        let quantifier = if self.peek() == Some('∀') {
+            self.advance();
+            crate::ast::QuantifierKind::ForAll
+        } else if self.peek() == Some('∃') {
+            self.advance();
+            crate::ast::QuantifierKind::Exists
+        } else if self.consume_word("forall") {
+            crate::ast::QuantifierKind::ForAll
+        } else if self.consume_word("exists") {
+            crate::ast::QuantifierKind::Exists
+        } else {
+            return Err(KleisParseError {
+                message: "Expected quantifier (∀, ∃, forall, or exists)".to_string(),
+                position: self.pos,
+            });
+        };
+
+        self.skip_whitespace();
+
+        // Expect '('
+        if self.advance() != Some('(') {
+            return Err(KleisParseError {
+                message: "Expected '(' after quantifier".to_string(),
+                position: self.pos,
+            });
+        }
+
+        // Parse variable list: x : T or x y z : T
+        let variables = self.parse_quantified_vars()?;
+
+        self.skip_whitespace();
+
+        // Expect ')'
+        if self.advance() != Some(')') {
+            return Err(KleisParseError {
+                message: "Expected ')' after quantified variables".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Expect '.'
+        if self.advance() != Some('.') {
+            return Err(KleisParseError {
+                message: "Expected '.' after quantified variables".to_string(),
+                position: self.pos,
+            });
+        }
+
+        // Parse body (recursively, to allow nested quantifiers)
+        let body = self.parse_proposition()?;
+
+        Ok(Expression::Quantifier {
+            quantifier,
+            variables,
+            body: Box::new(body),
+        })
+    }
+
+    /// Parse quantified variables: x : T or x y z : T
+    fn parse_quantified_vars(&mut self) -> Result<Vec<crate::ast::QuantifiedVar>, KleisParseError> {
+        let mut vars = Vec::new();
+
+        self.skip_whitespace();
+
+        // Collect variable names until we hit ':'
+        let mut names = Vec::new();
+        loop {
+            self.skip_whitespace();
+
+            // Check if we hit the colon
+            if self.peek() == Some(':') {
+                break;
+            }
+
+            // Parse identifier
+            let name = self.parse_identifier()?;
+            names.push(name);
+
+            self.skip_whitespace();
+
+            // Could be another variable or the colon
+            if self.peek() == Some(':') {
+                break;
+            }
+        }
+
+        if names.is_empty() {
+            return Err(KleisParseError {
+                message: "Expected at least one variable name".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Expect ':'
+        if self.advance() != Some(':') {
+            return Err(KleisParseError {
+                message: "Expected ':' after variable names".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Parse type annotation
+        let type_name = self.parse_identifier()?;
+
+        // Create QuantifiedVar for each name with the same type
+        for name in names {
+            vars.push(crate::ast::QuantifiedVar::new(
+                name,
+                Some(type_name.clone()),
+            ));
+        }
+
+        Ok(vars)
+    }
+
+    /// Check if the next word matches (without consuming)
+    fn peek_word(&self, word: &str) -> bool {
+        let mut temp_pos = self.pos;
+
+        // Skip whitespace
+        while temp_pos < self.input.len() && self.input[temp_pos].is_whitespace() {
+            temp_pos += 1;
+        }
+
+        // Check if word matches
+        for ch in word.chars() {
+            if temp_pos >= self.input.len() || self.input[temp_pos] != ch {
+                return false;
+            }
+            temp_pos += 1;
+        }
+
+        // Check that it's followed by non-identifier character
+        if temp_pos < self.input.len() {
+            let next = self.input[temp_pos];
+            if next.is_alphanumeric() || next == '_' {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Consume a word if it matches
+    fn consume_word(&mut self, word: &str) -> bool {
+        if self.peek_word(word) {
+            // Skip whitespace
+            self.skip_whitespace();
+            // Consume the word
+            for _ in word.chars() {
+                self.advance();
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// Parse a type expression
@@ -831,7 +1216,7 @@ impl KleisParser {
                 break;
             }
 
-            // Check for operation keyword
+            // Check for operation or axiom keyword
             let start_pos = self.pos;
             if self.peek_word("operation") {
                 // Skip "operation"
@@ -840,7 +1225,8 @@ impl KleisParser {
                 }
                 self.skip_whitespace();
 
-                let op_name = self.parse_identifier()?;
+                // Parse operation name (could be identifier or operator symbol)
+                let op_name = self.parse_operation_name()?;
                 self.skip_whitespace();
 
                 if self.advance() != Some(':') {
@@ -855,6 +1241,33 @@ impl KleisParser {
                 members.push(StructureMember::Operation {
                     name: op_name,
                     type_signature: type_sig,
+                });
+            } else if self.peek_word("axiom") {
+                // Skip "axiom"
+                for _ in 0..5 {
+                    self.advance();
+                }
+                self.skip_whitespace();
+
+                // Parse axiom name
+                let axiom_name = self.parse_identifier()?;
+                self.skip_whitespace();
+
+                if self.advance() != Some(':') {
+                    return Err(KleisParseError {
+                        message: "Expected ':' after axiom name".to_string(),
+                        position: self.pos,
+                    });
+                }
+
+                self.skip_whitespace();
+
+                // Parse proposition (which may contain quantifiers)
+                let proposition = self.parse_proposition()?;
+
+                members.push(StructureMember::Axiom {
+                    name: axiom_name,
+                    proposition,
                 });
             } else {
                 // Regular field
@@ -878,21 +1291,6 @@ impl KleisParser {
         })
     }
 
-    fn peek_word(&self, word: &str) -> bool {
-        let word_chars: Vec<char> = word.chars().collect();
-        for (i, ch) in word_chars.iter().enumerate() {
-            if self.peek_ahead(i) != Some(*ch) {
-                return false;
-            }
-        }
-        // Check that it's followed by whitespace or special char (not part of identifier)
-        if let Some(next) = self.peek_ahead(word_chars.len()) {
-            !next.is_alphanumeric() && next != '_'
-        } else {
-            true
-        }
-    }
-
     /// Parse operation declaration (top-level)
     /// Example: operation abs : ℝ → ℝ
     pub fn parse_operation_decl(&mut self) -> Result<OperationDecl, KleisParseError> {
@@ -909,38 +1307,8 @@ impl KleisParser {
 
         self.skip_whitespace();
 
-        // Parse operation name (could be symbol like (+) or identifier)
-        let name = if self.peek() == Some('(') {
-            // Operator in parens: (+)
-            self.advance(); // (
-            self.skip_whitespace();
-            let op = match self.peek() {
-                Some('+') => "+",
-                Some('-') => "-",
-                Some('*') => "*",
-                Some('/') => "/",
-                Some('^') => "^",
-                Some('×') => "×",
-                Some('·') => "·",
-                _ => {
-                    return Err(KleisParseError {
-                        message: "Expected operator symbol".to_string(),
-                        position: self.pos,
-                    });
-                }
-            };
-            self.advance();
-            self.skip_whitespace();
-            if self.advance() != Some(')') {
-                return Err(KleisParseError {
-                    message: "Expected ')' after operator".to_string(),
-                    position: self.pos,
-                });
-            }
-            op.to_string()
-        } else {
-            self.parse_identifier()?
-        };
+        // Parse operation name (identifier or operator symbol in parens)
+        let name = self.parse_operation_name()?;
 
         self.skip_whitespace();
 

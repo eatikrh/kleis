@@ -102,6 +102,11 @@ pub fn layout_expression(expr: &Expression, context: &LayoutContext) -> LayoutBo
         Expression::Placeholder { id, hint } => layout_placeholder(*id, hint, context),
         Expression::Operation { name, args } => layout_operation(name, args, context),
 
+        Expression::Quantifier { .. } => {
+            // Quantifiers are for axioms, not regular layout
+            LayoutBox::text("∀(...)", context.base_font_size, FontFamily::Main, false)
+        }
+
         Expression::List(_elements) => {
             // TODO: Implement proper list literal layout
             // For now, return a placeholder

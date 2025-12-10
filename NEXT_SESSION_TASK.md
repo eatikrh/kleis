@@ -1,11 +1,52 @@
-# NEXT SESSION: Matrix Type Consistency
+# NEXT SESSION: Prelude Cleanup - Full Stdlib Migration
 
-**Current State:** main branch, 31 commits pushed, 413 tests passing  
-**Status:** 🎯 Ready for type signature standardization
+**Current State:** main branch, 35 commits pushed, 413 tests passing  
+**Status:** 🎯 Ready for complete stdlib cleanup
+
+**Branch:** `feature/full-prelude-migration`
 
 ---
 
-## 🎯 Priority: Standardize Matrix Type Signatures
+## 🎯 The Big Picture
+
+This is a **complete cleanup** of the type system foundations with a strategic architectural addition:
+
+1. **Matrix type consistency** - Always use Matrix(m,n,T) with T
+2. **Remove legacy constructors** - Delete matrix2x2, cases2, etc.
+3. **Extend parser** - Support operator symbols `(×)` and quantifiers `∀`
+4. **Load full prelude.kleis** - Replace minimal_prelude.kleis
+5. **Implement axiom storage** - Parse and store axioms
+6. **Z3 integration** - Axiom verification (requires ADR)
+
+**All related, do together on one branch!**
+
+### The Virtuous Cycle: Why Z3 Makes Parser Work Valuable
+
+**Without Z3:**
+- Axioms are just documentation
+- `∀(x : T)` is decorative syntax
+- Parser priority: Low (nice to have)
+- Grammar coverage: 40-45%
+
+**With Z3:**
+- Axioms become **verifiable**
+- `∀(x : T)` enables **proof checking**
+- Parser priority: HIGH (enables real features!)
+- Grammar coverage: 60-65%
+
+**Z3 creates MOTIVATION to complete parser features!**
+
+The work becomes interconnected:
+- Need `∀` to verify axioms
+- Need `⟹` for logical implications
+- Need `(×)` for clean axiom syntax
+- All unlocked by Z3 integration
+
+**This isn't just adding features - it's creating architectural momentum!** 🚀
+
+---
+
+## Part 1: Standardize Matrix Type Signatures
 
 ### The Inconsistency
 
@@ -77,36 +118,331 @@ Matrix(2, 2, Matrix(3, 3, ℝ))  // 2×2 of 3×3 blocks
 
 ---
 
+## Part 2: Remove All Legacy Constructors
+
+Delete hardcoded constructors completely:
+- `LegacyMatrixConstructors` structure
+- All `matrix2x2`, `pmatrix3x3`, etc.
+- Legacy rendering code in `src/render.rs`
+
+## Part 3: Extend Parser for Full Prelude
+
+**Add support for:**
+
+1. **Operator symbols in definitions:**
+   ```kleis
+   operation (×) : R → R → R
+   operation (+) : R → R → R
+   ```
+
+2. **Universal quantifiers in axioms:**
+   ```kleis
+   axiom associativity: ∀(x y z : S). (x • y) • z = x • (y • z)
+   ```
+
+**Estimated:** 2-3 hours
+
+## Part 4: Load Full Prelude
+
+Replace:
+```rust
+let minimal_prelude = include_str!("../stdlib/minimal_prelude.kleis");
+```
+
+With:
+```rust
+let prelude = include_str!("../stdlib/prelude.kleis");
+```
+
+**Benefits:**
+- Complete algebraic hierarchy
+- Formal axioms expressed
+- No workarounds needed
+- Beautiful mathematical syntax
+
+## Part 5: Axiom Storage & Z3 Integration (Optional)
+
+### Basic Axiom Support (Required)
+
+**What works now:**
+- ✅ Axioms parse into AST (`StructureMember::Axiom`)
+- ✅ Stored in structure definitions
+- ❌ Not verified (just documentation)
+
+**Add:**
+- Store axioms in structure registry
+- Make available via API
+- Display in type error messages
+
+**Estimated:** 1 hour
+
+### Z3 Integration Design (Optional)
+
+**Based on official Z3 Rust API (z3 crate v0.12):**
+
+#### Step 1: Add Dependency
+
+```toml
+[dependencies]
+z3 = { version = "0.12", optional = true }
+
+[features]
+axiom-verification = ["z3"]
+```
+
+#### Step 2: Generic Kleis → Z3 Translator
+
+```rust
+// src/axiom_verifier.rs (new file)
+
+use z3::{Config, Context, Solver, SatResult, ast::{Ast, Int, Bool}};
+use crate::ast::Expression;
+use std::collections::HashMap;
+
+pub struct AxiomVerifier {
+    cfg: Config,
+}
+
+impl AxiomVerifier {
+    pub fn new() -> Self {
+        Self { cfg: Config::new() }
+    }
+    
+    /// Verify ANY Kleis axiom using Z3
+    pub fn verify_axiom(&self, axiom: &Axiom) -> Result<VerificationResult, String> {
+        let ctx = Context::new(&self.cfg);
+        let solver = Solver::new(&ctx);
+        
+        // Parse quantified variables from axiom expression
+        // e.g., ∀(x y z : R). ... → ["x", "y", "z"]
+        let var_names = self.extract_quantified_vars(&axiom.proposition)?;
+        
+        // Create Z3 variables using fresh_const (from API docs)
+        let mut z3_vars = HashMap::new();
+        for var_name in var_names {
+            let z3_var = Int::fresh_const(&ctx, &var_name);
+            z3_vars.insert(var_name, z3_var);
+        }
+        
+        // Translate Kleis expression to Z3 (GENERIC!)
+        let z3_formula = self.kleis_to_z3(&axiom.proposition, &ctx, &z3_vars)?;
+        
+        // Assert and check
+        solver.assert(&z3_formula);
+        
+        match solver.check() {
+            SatResult::Sat => Ok(VerificationResult::Valid),
+            SatResult::Unsat => Ok(VerificationResult::Invalid { 
+                counterexample: self.get_counterexample(&solver, &z3_vars)
+            }),
+            SatResult::Unknown => Ok(VerificationResult::Unknown),
+        }
+    }
+    
+    /// Generic translator: ANY Kleis Expression → Z3 AST
+    /// NO HARDCODING - reads operation names from Expression
+    fn kleis_to_z3<'ctx>(
+        &self,
+        expr: &Expression,
+        ctx: &'ctx Context,
+        vars: &HashMap<String, Int<'ctx>>,
+    ) -> Result<Int<'ctx>, String> {
+        match expr {
+            // Variables: look up in map
+            Expression::Object(name) => {
+                vars.get(name)
+                    .cloned()
+                    .ok_or_else(|| format!("Unknown variable: {}", name))
+            }
+            
+            // Constants: convert to Z3
+            Expression::Const(s) => {
+                let n: i64 = s.parse()
+                    .map_err(|_| format!("Not a number: {}", s))?;
+                Ok(Int::from_i64(ctx, n))
+            }
+            
+            // Operations: map generically by name
+            Expression::Operation { name, args } => {
+                match name.as_str() {
+                    // Arithmetic (Z3 has operator overloading!)
+                    "plus" | "add" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(&left + &right)  // Z3 operator overloading
+                    }
+                    "times" | "multiply" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(&left * &right)  // Z3 operator overloading
+                    }
+                    "minus" | "subtract" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(&left - &right)
+                    }
+                    
+                    // Comparisons (return Bool)
+                    "equals" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(left._eq(&right))  // Special _eq() method from API
+                    }
+                    "less_than" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(left.lt(&right))  // Z3 .lt() method
+                    }
+                    "greater_than" => {
+                        let left = self.kleis_to_z3(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3(&args[1], ctx, vars)?;
+                        Ok(left.gt(&right))  // Z3 .gt() method
+                    }
+                    
+                    // Logical operations
+                    "logical_and" => {
+                        let left = self.kleis_to_z3_bool(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3_bool(&args[1], ctx, vars)?;
+                        Ok(Bool::and(ctx, &[&left, &right]))
+                    }
+                    "logical_or" => {
+                        let left = self.kleis_to_z3_bool(&args[0], ctx, vars)?;
+                        let right = self.kleis_to_z3_bool(&args[1], ctx, vars)?;
+                        Ok(Bool::or(ctx, &[&left, &right]))
+                    }
+                    
+                    // Unknown operation
+                    _ => Err(format!("Unsupported operation for Z3: {}", name))
+                }
+            }
+            
+            _ => Err("Unsupported expression type for Z3".to_string())
+        }
+    }
+    
+    /// Extract variable names from quantifier
+    fn extract_quantified_vars(&self, expr: &Expression) -> Result<Vec<String>, String> {
+        // Parse: ∀(x y z : R). body
+        // Return: ["x", "y", "z"]
+        // 
+        // This would parse the quantifier syntax when parser supports it
+        // For now, could infer from free variables in expression
+        todo!("Parse quantifier syntax or infer free variables")
+    }
+}
+
+pub enum VerificationResult {
+    Valid,
+    Invalid { counterexample: String },
+    Unknown,
+}
+```
+
+#### Key Design Principles
+
+**1. NO HARDCODING:**
+- One `kleis_to_z3()` function handles ALL expressions
+- Operation mapping is generic (reads `name` field)
+- Variable binding is dynamic (reads from Expression)
+
+**2. Type-Driven:**
+- `Int` for numeric operations
+- `Bool` for logical operations  
+- `Real` for real arithmetic (if needed)
+
+**3. Extensible:**
+- Add new operations by extending the match
+- No per-axiom functions
+- Works for ANY axiom in ANY structure
+
+#### Usage Example
+
+```rust
+// Load stdlib with axioms
+let checker = TypeChecker::with_stdlib()?;
+
+// Get a structure
+let ring = checker.get_structure("Ring")?;
+
+// Find distributivity axiom
+let dist_axiom = ring.axioms.iter()
+    .find(|a| a.name == "distributivity")?;
+
+// Verify it with Z3
+let verifier = AxiomVerifier::new();
+let result = verifier.verify_axiom(dist_axiom)?;
+
+match result {
+    VerificationResult::Valid => println!("✅ Axiom verified!"),
+    VerificationResult::Invalid { counterexample } => {
+        println!("❌ Axiom violated! Counterexample: {}", counterexample)
+    }
+    VerificationResult::Unknown => println!("⚠️ Z3 could not determine"),
+}
+```
+
+**Estimated:** 4-5 hours
+- Basic translator structure (1 hour)
+- Operation mapping (2 hours)
+- Testing and debugging (2 hours)
+
+#### Step 3: Create ADR-022 (After Implementation)
+
+**IMPORTANT:** Write ADR AFTER experimenting on branch, not before!
+
+**ADR-022: Z3 Integration for Axiom Verification**
+
+Document:
+- Why Z3? (theorem prover capabilities)
+- Alternatives considered (manual checking, pattern matching only, Coq, Lean)
+- Architecture (optional feature, generic translator)
+- Impact on grammar motivation (increases parser priority)
+- Trade-offs (external dependency vs verification power)
+- Decision: Include Z3 as optional feature
+
+**Process:**
+1. Work on branch, experiment with Z3
+2. Learn what works and what doesn't
+3. Document findings in ADR
+4. Commit ADR with working implementation
+
+**Learn by doing, then document the decision!**
+
+**Estimated:** 1 hour to write ADR after implementation
+
+---
+
 ## ⚠️ IMPORTANT: Work on Separate Branch
 
-**Branch name:** `feature/matrix-type-consistency`
+**Branch name:** `feature/full-prelude-migration`
 
 **Why separate branch:**
 
 1. **Will cause many errors** while working
-2. **Takes significant time** to update all references
+2. **Takes significant time** - multiple related changes
 3. **Don't want to block main** with broken intermediate states
 4. **Can test thoroughly** before merging
+5. **Multiple components** need to work together
 
 ### Expected Breakage
 
-While updating, expect:
-- Type errors where Matrix(m,n) is used without T
-- Signature mismatches in operations
-- Tests failing until all references updated
-- Parser might need adjustments
-- Rendering might break for legacy matrix operations
-- Any code using matrix2x2, matrix3x3, etc. will fail
+While working, expect:
+- Type errors where Matrix(m,n) used without T
+- Parser errors on operator symbols initially
+- Tests failing until parser extended
+- Stdlib loading failures during transition
+- Rendering issues during legacy cleanup
 
 ### Timeline
 
-**Estimated:** 3-4 hours (increased due to legacy cleanup)
-- Find all Matrix(m,n) usages (~30 min)
-- Update signatures systematically (~1 hour)
-- Remove LegacyMatrixConstructors (~30 min)
-- Clean up renderer legacy code (~30 min)
-- Fix resulting type errors (~1 hour)
-- Test and verify (~30 min)
+**Total Estimated:** 6-8 hours
+- Matrix type consistency (~1 hour)
+- Remove legacy constructors (~1 hour)
+- Extend parser for operators (~2 hours)
+- Extend parser for quantifiers (~1 hour)
+- Load full prelude & fix issues (~1-2 hours)
+- (Optional) Basic Z3 integration (~3-4 hours)
+- Testing and cleanup (~1 hour)
 
 ---
 

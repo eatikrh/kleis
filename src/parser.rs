@@ -1674,6 +1674,7 @@ impl Expression {
             Expression::Placeholder { hint, .. } => hint.clone(),
             Expression::Match { .. } => "match".to_string(),
             Expression::List(_) => "list".to_string(),
+            Expression::Quantifier { .. } => "quantifier".to_string(),
         }
     }
 }

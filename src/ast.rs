@@ -36,6 +36,41 @@ pub enum Expression {
     /// Example: [1, 2, 3] or [x, y, z]
     /// This enables Matrix(2, 2, [a, b, c, d]) instead of variable-arity Matrix(2, 2, a, b, c, d)
     List(Vec<Expression>),
+
+    /// Universal quantifier (for axioms)
+    /// Example: ∀(x : M). x • e = x
+    /// Used in axiom propositions for theorem proving with Z3
+    Quantifier {
+        quantifier: QuantifierKind,
+        variables: Vec<QuantifiedVar>,
+        body: Box<Expression>,
+    },
+}
+
+/// Kind of quantifier
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum QuantifierKind {
+    /// Universal quantifier: ∀ (for all)
+    ForAll,
+    /// Existential quantifier: ∃ (there exists)
+    Exists,
+}
+
+/// A quantified variable with optional type annotation
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct QuantifiedVar {
+    pub name: String,
+    pub type_annotation: Option<String>, // e.g., "M", "R", "Nat"
+}
+
+impl QuantifiedVar {
+    /// Create a quantified variable with type annotation
+    pub fn new(name: impl Into<String>, type_annotation: Option<impl Into<String>>) -> Self {
+        QuantifiedVar {
+            name: name.into(),
+            type_annotation: type_annotation.map(|t| t.into()),
+        }
+    }
 }
 
 /// A single case in a match expression
@@ -96,6 +131,24 @@ impl Expression {
         }
     }
 
+    /// Create a universal quantifier expression
+    pub fn forall(variables: Vec<QuantifiedVar>, body: Expression) -> Self {
+        Expression::Quantifier {
+            quantifier: QuantifierKind::ForAll,
+            variables,
+            body: Box::new(body),
+        }
+    }
+
+    /// Create an existential quantifier expression
+    pub fn exists(variables: Vec<QuantifiedVar>, body: Expression) -> Self {
+        Expression::Quantifier {
+            quantifier: QuantifierKind::Exists,
+            variables,
+            body: Box::new(body),
+        }
+    }
+
     /// Traverse the expression tree to find all placeholders
     pub fn find_placeholders(&self) -> Vec<(usize, String)> {
         let mut placeholders = Vec::new();
@@ -117,6 +170,14 @@ impl Expression {
                 scrutinee.collect_placeholders(acc);
                 for case in cases {
                     case.body.collect_placeholders(acc);
+                }
+            }
+            Expression::Quantifier { body, .. } => {
+                body.collect_placeholders(acc);
+            }
+            Expression::List(items) => {
+                for item in items {
+                    item.collect_placeholders(acc);
                 }
             }
             _ => {}

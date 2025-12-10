@@ -1378,6 +1378,55 @@ fn render_expression_internal(
             }
         }
 
+        // Quantifier: render as ∀(x : T). body
+        Expression::Quantifier {
+            quantifier,
+            variables,
+            body,
+        } => {
+            let quant_symbol = match quantifier {
+                crate::ast::QuantifierKind::ForAll => match target {
+                    RenderTarget::Unicode => "∀",
+                    RenderTarget::LaTeX => r"\forall",
+                    RenderTarget::HTML => "∀",
+                    RenderTarget::Typst => "forall",
+                },
+                crate::ast::QuantifierKind::Exists => match target {
+                    RenderTarget::Unicode => "∃",
+                    RenderTarget::LaTeX => r"\exists",
+                    RenderTarget::HTML => "∃",
+                    RenderTarget::Typst => "exists",
+                },
+            };
+
+            let vars_str = variables
+                .iter()
+                .map(|v| {
+                    if let Some(ref ty) = v.type_annotation {
+                        format!("{} : {}", v.name, ty)
+                    } else {
+                        v.name.clone()
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            let body_id = format!("{}.body", node_id);
+            let body_str = render_expression_internal(body, ctx, target, &body_id, node_id_to_uuid);
+
+            match target {
+                RenderTarget::Unicode | RenderTarget::HTML => {
+                    format!("{}({}). {}", quant_symbol, vars_str, body_str)
+                }
+                RenderTarget::LaTeX => {
+                    format!("{}({}). {}", quant_symbol, vars_str, body_str)
+                }
+                RenderTarget::Typst => {
+                    format!("{}({}). {}", quant_symbol, vars_str, body_str)
+                }
+            }
+        }
+
         Expression::List(elements) => {
             // Render list literal as [a, b, c]
             let rendered_elements: Vec<String> = elements

@@ -253,6 +253,19 @@ impl PatternMatcher {
                 Expression::List(substituted_elements)
             }
 
+            Expression::Quantifier {
+                quantifier,
+                variables,
+                body,
+            } => {
+                // Substitute in quantifier body
+                Expression::Quantifier {
+                    quantifier: quantifier.clone(),
+                    variables: variables.clone(),
+                    body: Box::new(self.substitute_bindings(body, bindings)),
+                }
+            }
+
             Expression::Placeholder { .. } | Expression::Const(_) => {
                 // Leaves don't contain variables
                 expr.clone()

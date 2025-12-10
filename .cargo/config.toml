@@ -1,0 +1,19 @@
+# Cargo configuration for Kleis project
+
+# NOTE: This file contains macOS-specific paths for local development.
+# GitHub CI overrides these with environment variables per platform.
+
+[target.aarch64-apple-darwin]
+# macOS ARM: Link Z3 library from Homebrew
+rustflags = ["-L", "/opt/homebrew/opt/z3/lib"]
+
+[target.x86_64-apple-darwin]
+# macOS Intel: Link Z3 library from Homebrew
+rustflags = ["-L", "/usr/local/opt/z3/lib"]
+
+# For Z3 header location, set environment variable:
+#   export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h  # macOS ARM
+#   export Z3_SYS_Z3_HEADER=/usr/local/opt/z3/include/z3.h    # macOS Intel
+#   export Z3_SYS_Z3_HEADER=/usr/include/z3.h                 # Linux
+#
+# GitHub CI: Automatically set in workflow per platform
