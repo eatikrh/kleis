@@ -26,7 +26,8 @@ roxmltree = "0.20"  # XML parsing for SVG transform extraction
 uuid = { version = "1.0", features = ["v4"] }
 
 # Theorem prover (optional - for axiom verification)
-z3 = { version = "0.12", features = ["static-link-z3"], optional = true }
+# Using local clone to avoid build issues with z3-sys
+z3 = { path = "../Z3/z3.rs/z3", optional = true }
 
 [features]
 axiom-verification = ["z3"]
