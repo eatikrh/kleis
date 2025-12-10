@@ -131,10 +131,8 @@ impl Evaluator {
             subst.insert(param.clone(), arg.clone());
         }
 
-        // Substitute parameters in body and evaluate
-        // This enables pattern matching execution in function bodies!
-        let substituted = self.substitute(&closure.body, &subst);
-        self.eval(&substituted)
+        // Substitute parameters in body
+        Ok(self.substitute(&closure.body, &subst))
     }
 
     /// Substitute variables in an expression
@@ -206,18 +204,15 @@ impl Evaluator {
 
                     self.apply_function(name, eval_args)
                 } else {
-                    // Built-in operation - evaluate arguments then simplify
+                    // Built-in operation - just evaluate arguments
                     let eval_args: Result<Vec<_>, _> =
                         args.iter().map(|arg| self.eval(arg)).collect();
                     let eval_args = eval_args?;
 
-                    let expr = Expression::Operation {
+                    Ok(Expression::Operation {
                         name: name.clone(),
                         args: eval_args,
-                    };
-                    
-                    // Apply simplification rules (ADR-002)
-                    Ok(self.simplify(&expr))
+                    })
                 }
             }
 
@@ -238,204 +233,6 @@ impl Evaluator {
             // Atoms - return as-is
             Expression::Const(_) | Expression::Object(_) | Expression::Placeholder { .. } => {
                 Ok(expr.clone())
-            }
-        }
-    }
-
-    /// Simplify an expression using algebraic rules (ADR-002: Symbolic Simplification)
-    ///
-    /// This implements symbolic rewriting for matrix operations and other algebraic structures.
-    pub fn simplify(&self, expr: &Expression) -> Expression {
-        match expr {
-            Expression::Operation { name, args } => {
-                // First, recursively simplify arguments
-                let simplified_args: Vec<Expression> =
-                    args.iter().map(|arg| self.simplify(arg)).collect();
-
-                // Then apply simplification rules
-                match name.as_str() {
-                    "plus" if simplified_args.len() == 2 => {
-                        self.simplify_plus(&simplified_args[0], &simplified_args[1])
-                    }
-                    "times" if simplified_args.len() == 2 => {
-                        self.simplify_times(&simplified_args[0], &simplified_args[1])
-                    }
-                    _ => Expression::Operation {
-                        name: name.clone(),
-                        args: simplified_args,
-                    },
-                }
-            }
-            Expression::List(elements) => {
-                Expression::List(elements.iter().map(|e| self.simplify(e)).collect())
-            }
-            Expression::Match { scrutinee, cases } => {
-                Expression::Match {
-                    scrutinee: Box::new(self.simplify(scrutinee)),
-                    cases: cases
-                        .iter()
-                        .map(|case| crate::ast::MatchCase {
-                            pattern: case.pattern.clone(),
-                            body: self.simplify(&case.body),
-                        })
-                        .collect(),
-                }
-            }
-            _ => expr.clone(),
-        }
-    }
-
-    /// Simplify matrix/vector addition: plus(Matrix(...), Matrix(...)) → Matrix with element-wise plus
-    fn simplify_plus(&self, left: &Expression, right: &Expression) -> Expression {
-        match (left, right) {
-            (
-                Expression::Operation {
-                    name: left_name,
-                    args: left_args,
-                },
-                Expression::Operation {
-                    name: right_name,
-                    args: right_args,
-                },
-            ) if (left_name == "Matrix" || left_name == "Vector")
-                && left_name == right_name
-                && self.check_matrix_dimensions_match(left_args, right_args, left_name) =>
-            {
-                self.elementwise_binary_op("plus", left_name, left_args, right_args)
-            }
-            _ => Expression::Operation {
-                name: "plus".to_string(),
-                args: vec![left.clone(), right.clone()],
-            },
-        }
-    }
-
-    /// Simplify multiplication: scalar * Matrix or Matrix * Matrix
-    fn simplify_times(&self, left: &Expression, right: &Expression) -> Expression {
-        // TODO: Implement scalar-matrix and matrix-matrix multiplication
-        Expression::Operation {
-            name: "times".to_string(),
-            args: vec![left.clone(), right.clone()],
-        }
-    }
-
-    /// Check if two matrices/vectors have matching dimensions
-    fn check_matrix_dimensions_match(
-        &self,
-        left_args: &[Expression],
-        right_args: &[Expression],
-        type_name: &str,
-    ) -> bool {
-        match type_name {
-            "Matrix" if left_args.len() == 3 && right_args.len() == 3 => {
-                matches!(
-                    (&left_args[0], &right_args[0], &left_args[1], &right_args[1]),
-                    (Expression::Const(m1), Expression::Const(m2),
-                     Expression::Const(n1), Expression::Const(n2))
-                    if m1 == m2 && n1 == n2
-                )
-            }
-            "Vector" if left_args.len() == 2 && right_args.len() == 2 => {
-                matches!(
-                    (&left_args[0], &right_args[0]),
-                    (Expression::Const(n1), Expression::Const(n2)) if n1 == n2
-                )
-            }
-            _ => false,
-        }
-    }
-
-    /// Perform element-wise binary operation on matrices/vectors
-    fn elementwise_binary_op(
-        &self,
-        op_name: &str,
-        type_name: &str,
-        left_args: &[Expression],
-        right_args: &[Expression],
-    ) -> Expression {
-        let (left_elems, right_elems) = match type_name {
-            "Matrix" => {
-                if let (Expression::List(l), Expression::List(r)) = (&left_args[2], &right_args[2])
-                {
-                    (l, r)
-                } else {
-                    // No list format - can't simplify
-                    return Expression::Operation {
-                        name: op_name.to_string(),
-                        args: vec![
-                            Expression::Operation {
-                                name: type_name.to_string(),
-                                args: left_args.to_vec(),
-                            },
-                            Expression::Operation {
-                                name: type_name.to_string(),
-                                args: right_args.to_vec(),
-                            },
-                        ],
-                    };
-                }
-            }
-            "Vector" => {
-                if let (Expression::List(l), Expression::List(r)) = (&left_args[1], &right_args[1])
-                {
-                    (l, r)
-                } else {
-                    return Expression::Operation {
-                        name: op_name.to_string(),
-                        args: vec![
-                            Expression::Operation {
-                                name: type_name.to_string(),
-                                args: left_args.to_vec(),
-                            },
-                            Expression::Operation {
-                                name: type_name.to_string(),
-                                args: right_args.to_vec(),
-                            },
-                        ],
-                    };
-                }
-            }
-            _ => {
-                return Expression::Operation {
-                    name: op_name.to_string(),
-                    args: vec![
-                        Expression::Operation {
-                            name: type_name.to_string(),
-                            args: left_args.to_vec(),
-                        },
-                        Expression::Operation {
-                            name: type_name.to_string(),
-                            args: right_args.to_vec(),
-                        },
-                    ],
-                }
-            }
-        };
-
-        // Create element-wise operations
-        let new_elements: Vec<Expression> = left_elems
-            .iter()
-            .zip(right_elems.iter())
-            .map(|(l, r)| Expression::Operation {
-                name: op_name.to_string(),
-                args: vec![l.clone(), r.clone()],
-            })
-            .collect();
-
-        // Build result Matrix/Vector
-        if type_name == "Matrix" {
-            Expression::Operation {
-                name: "Matrix".to_string(),
-                args: vec![
-                    left_args[0].clone(),
-                    left_args[1].clone(),
-                    Expression::List(new_elements),
-                ],
-            }
-        } else {
-            Expression::Operation {
-                name: "Vector".to_string(),
-                args: vec![left_args[0].clone(), Expression::List(new_elements)],
             }
         }
     }
