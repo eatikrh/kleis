@@ -122,22 +122,60 @@ claim: ∀x. x + 1 = x
 
 ### Investigation Needed (30 min)
 
-Try different approaches to get z3-sys working:
+**Step 1: Verify Environment Variables**
 
-1. **Try newer version:**
-   ```bash
-   # In Cargo.toml
-   z3 = { version = "0.19", optional = true }
-   cargo test --test z3_axiom_experiments --features axiom-verification
-   ```
+The z3-sys crate checks these environment variables:
+```bash
+# Check if these point to system Z3:
+export Z3_SYS_LIB_DIR=/opt/homebrew/opt/z3/lib
+export Z3_SYS_INCLUDE_DIR=/opt/homebrew/opt/z3/include
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
 
-2. **Try local path:**
-   ```bash
-   z3 = { path = "../../Z3/z3.rs/z3", optional = true }
-   ```
+# Then try:
+cargo test --test z3_axiom_experiments --features axiom-verification
+```
 
-3. **Check z3-sys documentation:**
-   Look at build.rs in z3-sys to see what env vars it checks
+These should tell z3-sys to use system Z3 instead of building from source.
+
+**Step 2: Check Cargo Configuration**
+
+Look at build configuration:
+```bash
+# Check if .cargo/config.toml exists
+cat .cargo/config.toml
+
+# Check z3-sys build.rs
+cat ~/.cargo/registry/src/*/z3-sys-*/build.rs | grep -A10 "Z3_SYS"
+```
+
+The build script might have specific requirements for linking to system Z3.
+
+**Step 3: Consult z3-sys Documentation**
+
+```bash
+# Look at z3-sys GitHub issues:
+# https://github.com/prove-rs/z3.rs/issues
+
+# Common issues:
+# - "Can't find z3.h" even with env vars set
+# - CMake version conflicts
+# - Static vs dynamic linking confusion
+```
+
+Search for: "use system z3", "z3-sys build", "homebrew z3"
+
+**Step 4: Try Different Versions/Features**
+
+```bash
+# Option A: Newer z3 crate (might have fixed build)
+z3 = { version = "0.19", optional = true }
+
+# Option B: Use local clone
+z3 = { path = "../../Z3/z3.rs/z3", optional = true }
+
+# Option C: Try vcpkg
+z3 = { version = "0.12", features = ["vcpkg"], optional = true }
+```
 
 ### Once Working
 
