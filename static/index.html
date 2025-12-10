@@ -1143,17 +1143,17 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="math-btn" onclick="insertSymbol('\\text{True}')" data-tooltip="Boolean True">\(\text{True}\)</button>
                         <button class="math-btn" onclick="insertSymbol('\\text{False}')" data-tooltip="Boolean False">\(\text{False}\)</button>
                         
-                        <button class="math-btn" onclick="insertTemplate('□ = □')" data-tooltip="Equals">\(a = b\)</button>
-                        <button class="math-btn" onclick="insertTemplate('□ \\neq □')" data-tooltip="Not Equal">\(a \neq b\)</button>
-                        <button class="math-btn" onclick="insertTemplate('□ < □')" data-tooltip="Less Than">\(a < b\)</button>
-                        <button class="math-btn" onclick="insertTemplate('□ > □')" data-tooltip="Greater Than">\(a > b\)</button>
-                        <button class="math-btn" onclick="insertTemplate('□ \\leq □')" data-tooltip="Less or Equal">\(a \leq b\)</button>
-                        <button class="math-btn" onclick="insertTemplate('□ \\geq □')" data-tooltip="Greater or Equal">\(a \geq b\)</button>
-                        <button class="math-btn" onclick="insertTemplate('□ \\approx □')" data-tooltip="Approximately Equal">\(a \approx b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('equals')" data-tooltip="Equals">\(a = b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('neq')" data-tooltip="Not Equal">\(a \neq b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('less_than')" data-tooltip="Less Than">\(a < b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('greater_than')" data-tooltip="Greater Than">\(a > b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('leq')" data-tooltip="Less or Equal">\(a \leq b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('geq')" data-tooltip="Greater or Equal">\(a \geq b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('approx')" data-tooltip="Approximately Equal">\(a \approx b\)</button>
                         
-                        <button class="math-btn" onclick="insertTemplate('□ \\land □')" data-tooltip="Logical AND">\(a \land b\)</button>
-                        <button class="math-btn" onclick="insertTemplate('□ \\lor □')" data-tooltip="Logical OR">\(a \lor b\)</button>
-                        <button class="math-btn" onclick="insertTemplate('\\lnot □')" data-tooltip="Logical NOT">\(\lnot p\)</button>
+                        <button class="math-btn" onclick="insertTemplate('logical_and')" data-tooltip="Logical AND">\(a \land b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('logical_or')" data-tooltip="Logical OR">\(a \lor b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('logical_not')" data-tooltip="Logical NOT">\(\lnot p\)</button>
                         
                         <button class="math-btn" onclick="insertSymbol('\\equiv')" data-tooltip="Equivalent">\(\equiv\)</button>
                         <button class="math-btn" onclick="insertSymbol('\\in')" data-tooltip="Element Of">\(\in\)</button>
@@ -1945,6 +1945,16 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             matrix_multiply: { Operation: { name: 'multiply', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             negate: { Operation: { name: 'minus', args: [{Const:'0'}, {Placeholder:{id:0,hint:'value'}}] } },
             plus_minus_literal: { Object: '\\pm' },
+            
+            less_than: { Operation: { name: 'less_than', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            greater_than: { Operation: { name: 'greater_than', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            leq: { Operation: { name: 'leq', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            geq: { Operation: { name: 'geq', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            neq: { Operation: { name: 'neq', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            approx: { Operation: { name: 'approx', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            logical_and: { Operation: { name: 'logical_and', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            logical_or: { Operation: { name: 'logical_or', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            logical_not: { Operation: { name: 'logical_not', args: [{Placeholder:{id:0,hint:'arg'}}] } },
             
             // Calculus
             integral: { Operation: { name: 'int_bounds', args: [{Placeholder:{id:0,hint:'integrand'}}, {Placeholder:{id:1,hint:'lower'}}, {Placeholder:{id:2,hint:'upper'}}, {Placeholder:{id:3,hint:'variable'}}] } },
