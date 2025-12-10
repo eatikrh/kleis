@@ -1,0 +1,86 @@
+structure InverseTrig(T) {
+    operation arcsin : T → T
+    operation arccos : T → T
+    operation arctan : T → T
+    operation arctan2 : T → T → T
+}
+
+implements InverseTrig(ℝ) {
+    operation arcsin = builtin_arcsin
+    operation arccos = builtin_arccos
+    operation arctan = builtin_arctan
+    operation arctan2 = builtin_arctan2
+}
+
+structure Hyperbolic(T) {
+    operation sinh : T → T
+    operation cosh : T → T
+    operation tanh : T → T
+    operation asinh : T → T
+    operation acosh : T → T
+    operation atanh : T → T
+}
+
+implements Hyperbolic(ℝ) {
+    operation sinh = builtin_sinh
+    operation cosh = builtin_cosh
+    operation tanh = builtin_tanh
+    operation asinh = builtin_asinh
+    operation acosh = builtin_acosh
+    operation atanh = builtin_atanh
+}
+
+structure Combinatorics(T) {
+    operation factorial : T → T
+    operation binomial : T → T → T
+    operation permutation : T → T → T
+}
+
+implements Combinatorics(ℕ) {
+    operation factorial = builtin_factorial
+    operation binomial = builtin_binomial
+    operation permutation = builtin_permutation
+}
+
+structure SpecialFunctions(T) {
+    operation gamma_func : T → T
+    operation digamma : T → T
+    operation beta : T → T → T
+    operation erf : T → T
+    operation erfc : T → T
+}
+
+implements SpecialFunctions(ℝ) {
+    operation gamma_func = builtin_gamma
+    operation digamma = builtin_digamma
+    operation beta = builtin_beta
+    operation erf = builtin_erf
+    operation erfc = builtin_erfc
+}
+
+structure LogarithmExtended(T) {
+    operation log10 : T → T
+    operation log2 : T → T
+    operation exp2 : T → T
+    operation expm1 : T → T
+    operation log1p : T → T
+}
+
+implements LogarithmExtended(ℝ) {
+    operation log10 = builtin_log10
+    operation log2 = builtin_log2
+    operation exp2 = builtin_exp2
+    operation expm1 = builtin_expm1
+    operation log1p = builtin_log1p
+}
+
+structure RoundingExtended(T) {
+    operation round : T → T
+    operation trunc : T → T
+}
+
+implements RoundingExtended(ℝ) {
+    operation round = builtin_round
+    operation trunc = builtin_trunc
+}
+

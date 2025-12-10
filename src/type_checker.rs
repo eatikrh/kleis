@@ -111,6 +111,12 @@ impl TypeChecker {
             .load_kleis(quantum)
             .map_err(|e| format!("Failed to load stdlib/quantum_minimal.kleis: {}", e))?;
 
+        // Load math functions (inverse trig, hyperbolic, special functions, etc.)
+        let math_functions = include_str!("../stdlib/math_functions.kleis");
+        checker
+            .load_kleis(math_functions)
+            .map_err(|e| format!("Failed to load stdlib/math_functions.kleis: {}", e))?;
+
         Ok(checker)
     }
 
