@@ -36,7 +36,7 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 
 **Key ADRs:**
 - ⭐ **[ADR-015: Text as Source of Truth](adr/adr-015-text-as-source-of-truth.md)** - Notation system foundation
-- ⭐ **[ADR-016: Operations in Structures](adr/ADR-016-operations-in-structures.md)** - Type system architecture
+- ⭐ **[ADR-016: Operations in Structures](adr/adr-016-operations-in-structures.md)** - Type system architecture
 - ⭐ **[ADR-021: Algebraic Data Types](adr/adr-021-algebraic-data-types.md)** - Pattern matching system
 
 **See:** [adr/README.md](adr/README.md) for complete index with descriptions

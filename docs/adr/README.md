@@ -35,10 +35,10 @@ This directory contains all Architecture Decision Records for the Kleis project.
 **File:** `adr-015-text-as-source-of-truth.md`  
 **Status:** Accepted  
 **Summary:** Kleis source files are canonical, not internal representations  
-**Validation:** See `ADR-015-VALIDATION-REPORT.md`
+**Validation:** See `adr-015-validation-report.md`
 
 ### ADR-016: Operations in Structures
-**File:** `ADR-016-operations-in-structures.md`  
+**File:** `adr-016-operations-in-structures.md`  
 **Status:** Accepted & Implemented  
 **Summary:** Type operations defined in structures, not hardcoded in type checker
 
@@ -134,7 +134,7 @@ This directory contains all Architecture Decision Records for the Kleis project.
 ## Implementation Notes
 
 ### ADR-015 Validation Report
-**File:** `ADR-015-VALIDATION-REPORT.md`  
+**File:** `adr-015-validation-report.md`  
 **Type:** Validation Document  
 **Summary:** Evidence that text-as-source-of-truth works in practice
 
