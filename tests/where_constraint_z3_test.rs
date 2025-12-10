@@ -10,6 +10,11 @@
 ///!     axiom: ... can use Semiring properties ...
 ///! }
 ///! ```
+///!
+///! NOTE: These tests use BOTH notations to demonstrate flexibility:
+///! - Mathematical: ∀(x y : R). x + y = y + x  (beautiful!)
+///! - Function: ∀(x y : R). equals(plus(x, y), plus(y, x))  (explicit)
+///! Both work identically - parser converts infix to operations internally.
 use kleis::kleis_parser::KleisParser;
 use kleis::structure_registry::StructureRegistry;
 
@@ -24,7 +29,7 @@ fn test_where_constraint_axioms_available_to_z3() {
         structure Semiring(S) {
             operation plus : S → S → S
             operation times : S → S → S
-            axiom additive_commutativity: ∀(x y : S). equals(plus(x, y), plus(y, x))
+            axiom additive_commutativity: ∀(x y : S). x + y = y + x
         }
         
         structure MatrixMultipliable(m, n, p, T) {
@@ -66,18 +71,19 @@ fn test_where_constraint_axioms_available_to_z3() {
         // Now test with axiom verifier
         let mut verifier = AxiomVerifier::new(&registry).expect("Failed to create verifier");
 
-        // Verify a simple axiom that uses 'plus' operation
+        // Verify commutativity using beautiful mathematical notation!
         // Since MatrixMultipliable has where Semiring(T),
         // and Semiring has commutativity axiom,
         // Z3 should have that axiom available as background theory
 
-        let test_axiom_text = "∀(x y : S). equals(plus(x, y), plus(y, x))";
+        let test_axiom_text = "∀(x y : S). x + y = y + x";
         let mut axiom_parser = KleisParser::new(test_axiom_text);
         let axiom = axiom_parser
             .parse_proposition()
             .expect("Failed to parse axiom");
 
-        println!("\n🧪 Verifying Semiring commutativity...");
+        println!("\n🧪 Verifying Semiring commutativity with infix notation...");
+        println!("   Axiom: {}", test_axiom_text);
         let result = verifier.verify_axiom(&axiom);
 
         println!("   Result: {:?}", result);
@@ -102,7 +108,7 @@ fn test_where_constraint_loads_dependent_structure() {
         structure Ring(R) {
             operation plus : R → R → R
             operation times : R → R → R
-            axiom distributivity: ∀(x y z : R). equals(times(x, plus(y, z)), plus(times(x, y), times(x, z)))
+            axiom distributivity: ∀(x y z : R). x × (y + z) = (x × y) + (x × z)
         }
         
         structure MatrixRing(m, n, T) {
@@ -136,10 +142,12 @@ fn test_where_constraint_loads_dependent_structure() {
         let mut verifier = AxiomVerifier::new(&registry).expect("Failed to create verifier");
 
         // When we verify an axiom for MatrixRing, it should load Ring too
-        let test_axiom =
-            "∀(x y z : R). equals(times(x, plus(y, z)), plus(times(x, y), times(x, z)))";
+        // Using beautiful mathematical notation!
+        let test_axiom = "∀(x y z : R). x × (y + z) = (x × y) + (x × z)";
         let mut parser = KleisParser::new(test_axiom);
         let axiom = parser.parse_proposition().expect("Failed to parse");
+        
+        println!("   Using mathematical notation: {}", test_axiom);
 
         println!("\n🧪 Verifying Ring distributivity (via where constraint)...");
         let result = verifier.verify_axiom(&axiom);

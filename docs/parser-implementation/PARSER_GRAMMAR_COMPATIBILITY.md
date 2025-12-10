@@ -375,6 +375,83 @@ if is_nullary {
 
 ---
 
+## 💡 Axiom Notation Flexibility: Mathematical vs Function Style
+
+**You can write axioms TWO ways - both work identically!**
+
+### Mathematical Notation (Beautiful!) ⭐ Recommended
+
+```kleis
+structure Ring(R) {
+    operation plus : R → R → R
+    operation times : R → R → R
+    
+    axiom commutativity: ∀(x y : R). x + y = y + x
+    axiom associativity: ∀(x y z : R). (x + y) + z = x + (y + z)
+    axiom distributivity: ∀(x y z : R). x × (y + z) = (x × y) + (x × z)
+}
+```
+
+### Function Notation (Explicit)
+
+```kleis
+structure Ring(R) {
+    operation plus : R → R → R
+    operation times : R → R → R
+    
+    axiom commutativity: ∀(x y : R). equals(plus(x, y), plus(y, x))
+    axiom associativity: ∀(x y z : R). equals(plus(plus(x, y), z), plus(x, plus(y, z)))
+    axiom distributivity: ∀(x y z : R). equals(times(x, plus(y, z)), plus(times(x, y), times(x, z)))
+}
+```
+
+### How It Works
+
+**Parser converts both to the same AST:**
+
+```
+Input:  x + y = y + x
+Parses: Operation { name: "equals", args: [
+          Operation { name: "plus", args: [x, y] },
+          Operation { name: "plus", args: [y, x] }
+        ]}
+
+Input:  equals(plus(x, y), plus(y, x))
+Parses: (exact same AST!)
+```
+
+**Z3 receives identical representation either way!**
+
+### Which to Use?
+
+**Mathematical notation:**
+- ✅ More readable
+- ✅ Matches textbooks
+- ✅ Easier to write
+- ✅ **Recommended for users!**
+
+**Function notation:**
+- ✅ More explicit
+- ✅ Useful for debugging
+- ✅ Shows exact operation names
+- ✅ Useful in tests
+
+**Both verify identically with Z3!**
+
+### Supported Operators in Axioms
+
+- `+` → `plus`
+- `-` → `minus`
+- `×` → `times`
+- `/` → `divide`
+- `=` → `equals`
+- `<`, `>`, `≤`, `≥` → comparisons
+- `∧`, `∨`, `¬`, `⟹` → logical operators
+
+**All work in both infix and function notation!**
+
+---
+
 ## Recent Additions (December 8-10, 2024)
 
 ### Pattern Matching (Complete!)
