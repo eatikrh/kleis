@@ -17,7 +17,7 @@ structure Arithmetic(T) {
 }
 
 structure Piecewise(n: Nat, T) {
-  operation cases : List(T) → List(Bool) → T
+  operation Piecewise : Nat → List(T) → List(Bool) → T
 }
 
 // Equality operations (work for any type)
@@ -60,7 +60,7 @@ implements Arithmetic(ℝ) {
 }
 
 implements Piecewise(n, ℝ) {
-  operation cases = builtin_piecewise
+  operation Piecewise = builtin_piecewise
 }
 
 // Equality for scalars
