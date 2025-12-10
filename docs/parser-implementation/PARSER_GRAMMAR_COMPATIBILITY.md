@@ -1,20 +1,20 @@
 # Kleis Parser vs Formal Grammar Compatibility
 
-**Date:** December 10, 2024 (Evening Update)  
-**Formal Grammar:** Kleis v0.5 (with pattern matching + quantifiers + logic)  
+**Date:** December 10, 2024 (Late Evening Update)  
+**Formal Grammar:** Kleis v0.5 (with pattern matching + quantifiers + logic + where clauses)  
 **Parser Implementation:** `src/kleis_parser.rs`  
-**Branch:** `feature/full-prelude-migration`
+**Branch:** `feature/phase-3-where-clauses`
 
 ---
 
 ## TL;DR
 
-✅ **Parser implements ~52% of formal grammar v0.5, with Z3 theorem proving support**
+✅ **Parser implements ~55% of formal grammar v0.5, with Z3 theorem proving and generic constraints**
 
-**Coverage:** ~52% of formal grammar (+12% from morning session)  
-**Purpose:** Validate core language features, ADR-015 design, and axiom verification  
-**Status:** Phase 1 & 2 Z3 integration complete! Ready for production or Phase 3 work  
-**Tests:** 628 passing on feature branch, 565 on main
+**Coverage:** ~55% of formal grammar (+3% from where clauses)  
+**Purpose:** Validate core language features, ADR-015 design, axiom verification, and generic constraints  
+**Status:** Phase 1, 2, & 3.1 complete! Where clauses fully integrated with Z3  
+**Tests:** 434+ passing (421 library + 10 where + 3 Z3 where)
 
 ---
 
@@ -41,6 +41,7 @@
 | **Operator symbols** | `operation (+) : R → R → R` | ✅ Complete | ✅ **NEW!** |
 | **Logical operators** | `∧`, `∨`, `¬`, `⟹` | ✅ With precedence | ✅ **NEW!** |
 | **Comparisons** | `=`, `<`, `>`, `≤`, `≥`, `≠` | ✅ Complete | ✅ **NEW!** |
+| **Where clauses** | `implements Foo(T) where Bar(T)` | ✅ Complete | ✅ **NEW!** |
 | **Axiom verification** | Z3 theorem proving | ✅ Working | ✅ **NEW!** |
 
 **Pattern Matching Features:**
@@ -64,7 +65,7 @@
 - Implication: `p ⟹ q` (IMPLIES)
 - Proper precedence chain
 
-**Total Major Features:** ~18 supported ✅ (+6 from evening session)
+**Total Major Features:** ~19 supported ✅ (+7 from Dec 10 sessions, including where clauses)
 
 ---
 
@@ -132,6 +133,13 @@
 - Created axiom verifier (`src/axiom_verifier.rs`)
 - **~52% grammar coverage** (+12 percentage points!)
 
+**v0.5.2 (December 10, 2024 - Late Evening):** ✨ **Where Clauses**
+- Added where clause support to implements blocks
+- Syntax: `implements Foo(T) where Bar(T) { ... }`
+- Integrated with Z3 (constrained axioms available)
+- Recursive constraint loading
+- **~55% grammar coverage** (+3 percentage points!)
+
 ---
 
 ## Coverage Breakdown
@@ -140,7 +148,7 @@
 
 **Total features in formal grammar:** ~25 major constructs
 
-**Implemented (17):** ⭐ **+6 from evening session**
+**Implemented (19):** ⭐ **+7 from Dec 10 sessions**
 1. ✅ Basic expressions (identifiers, numbers)
 2. ✅ Infix operators with precedence
 3. ✅ Function calls
@@ -157,7 +165,9 @@
 14. ✅ **Operator symbols in definitions `(×)`** ⭐ NEW!
 15. ✅ **Logical operators (`∧`, `∨`, `¬`, `⟹`)** ⭐ NEW!
 16. ✅ **Comparison operators** ⭐ NEW!
-17. ✅ **Axiom verification (Z3)** ⭐ NEW!
+17. ✅ **Where clauses (`where Constraint(T)`)** ⭐ NEW!
+18. ✅ **Axiom verification (Z3)** ⭐ NEW!
+19. ✅ **Generic constraint verification** ⭐ NEW!
 
 **Not Implemented (8):**
 1. ❌ Prefix operators (general - only `¬` works)
@@ -169,8 +179,8 @@
 7. ❌ Symbolic constants
 8. ❌ Type aliases
 
-**Major Feature Coverage:** 17/25 = **68%** of major constructs  
-**Overall Grammar Coverage:** **~52%** (accounting for all production rules, operators, etc.)
+**Major Feature Coverage:** 19/27 = **70%** of major constructs  
+**Overall Grammar Coverage:** **~55%** (accounting for all production rules, operators, etc.)
 
 ---
 
@@ -303,13 +313,16 @@ axiom identity: ∀(x : M). x + 0 = x
 
 ### Test Results:
 
-- **628 tests total** on feature branch ✅
+- **434+ tests total** on current branch ✅
 - **Axiom integration tests:** 10 tests ✅
-- **Logical operator tests:** 11 tests ✅
+- **Logical operator tests:** 12 tests ✅
 - **Quantifier parsing tests:** 7 tests ✅
 - **Operator symbol tests:** 7 tests ✅
-- **Registry query tests:** 5 tests ✅
-- **Plus 200+ additional integration and example tests** ✅
+- **Structure loading tests:** 3 tests ✅
+- **Multi-level structure tests:** 5 tests ✅
+- **Where clause parsing tests:** 10 tests ✅ **NEW!**
+- **Where constraint Z3 tests:** 3 tests ✅ **NEW!**
+- **Library tests:** 421 tests ✅
 
 ---
 
@@ -719,10 +732,15 @@ This is **sufficient for:**
 
 ---
 
-**Status:** ✅ **~52% Coverage - Production-Ready with Z3 Integration**  
-**Recommendation:** Merge feature branch to main, or continue with Phase 3 (`where` clauses)
+**Status:** ✅ **~55% Coverage - Production-Ready with Z3 Integration + Where Clauses**  
+**Recommendation:** Merge feature branch to main (Phase 3.1 complete!)
 
-**Feature Branch:** `feature/full-prelude-migration` (628 tests passing)  
-**Main Branch:** `main` (565 tests passing)
+**Current Branch:** `feature/phase-3-where-clauses` (434+ tests passing)  
+**Main Branch:** `main` (Phase 1 & 2 merged, includes Z3 integration)
 
-**Last Updated:** December 10, 2024
+**Phase Status:**
+- ✅ Phase 1 & 2: Z3 integration - MERGED to main
+- ✅ Phase 3.1: Where clauses - COMPLETE on feature branch
+- ⚠️ Phase 3.2: Full prelude - BLOCKED (needs extends, element, nested structures)
+
+**Last Updated:** December 10, 2024 (Late Evening)
