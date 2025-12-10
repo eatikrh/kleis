@@ -17,10 +17,10 @@ structure Arithmetic(T) {
 }
 
 structure PiecewiseFunctions(T) {
-  operation cases2 : T → T → T → T → T
-  operation cases3 : T → T → T → T → T → T → T
-  operation cases4 : T → T → T → T → T → T → T → T → T
-  operation cases5 : T → T → T → T → T → T → T → T → T → T → T
+  operation cases2 : T → Bool → T → Bool → T
+  operation cases3 : T → Bool → T → Bool → T → Bool → T
+  operation cases4 : T → Bool → T → Bool → T → Bool → T → Bool → T
+  operation cases5 : T → Bool → T → Bool → T → Bool → T → Bool → T → Bool → T
 }
 
 // Equality operations (work for any type)
