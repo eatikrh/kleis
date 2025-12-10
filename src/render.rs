@@ -3323,6 +3323,11 @@ pub fn build_default_context() -> GlyphContext {
         "{left} prop {right}".to_string(),
     );
 
+    // Logical operators
+    typst_templates.insert("logical_and".to_string(), "{left} and {right}".to_string());
+    typst_templates.insert("logical_or".to_string(), "{left} or {right}".to_string());
+    typst_templates.insert("logical_not".to_string(), "not {arg}".to_string());
+
     // Piecewise functions
     typst_templates.insert(
         "cases2".to_string(),
