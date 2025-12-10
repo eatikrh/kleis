@@ -88,6 +88,16 @@ implements Exponential(ℝ) {
     operation log = builtin_log
 }
 
+structure RootFunctions(T) {
+    operation cbrt : T → T
+    operation nth_root : T → T → T
+}
+
+implements RootFunctions(ℝ) {
+    operation cbrt = builtin_cbrt
+    operation nth_root = builtin_nth_root
+}
+
 structure LogarithmExtended(T) {
     operation log10 : T → T
     operation log2 : T → T
