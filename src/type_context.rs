@@ -235,16 +235,31 @@ impl TypeContextBuilder {
     }
 
     fn register_structure(&mut self, structure: &StructureDef) -> Result<(), String> {
-        // Register operations from this structure
-        for member in &structure.members {
-            if let StructureMember::Operation { name, .. } = member {
-                self.registry.register_operation(&structure.name, name);
-            }
-        }
+        // Register operations from this structure (including nested)
+        self.register_operations_recursive(&structure.name, &structure.members);
 
         self.structures
             .insert(structure.name.clone(), structure.clone());
         Ok(())
+    }
+
+    /// Recursively register operations from structure members
+    /// Handles nested structures by flattening their operations
+    fn register_operations_recursive(&mut self, structure_name: &str, members: &[StructureMember]) {
+        for member in members {
+            match member {
+                StructureMember::Operation { name, .. } => {
+                    self.registry.register_operation(structure_name, name);
+                }
+                StructureMember::NestedStructure { members, .. } => {
+                    // Recursively register operations from nested structure
+                    self.register_operations_recursive(structure_name, members);
+                }
+                _ => {
+                    // Field or Axiom - no operation to register
+                }
+            }
+        }
     }
 
     fn register_implements(&mut self, impl_def: &ImplementsDef) -> Result<(), String> {

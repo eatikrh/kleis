@@ -184,44 +184,75 @@ impl<'r> AxiomVerifier<'r> {
             .ok_or_else(|| format!("Structure not found: {}", structure_name))?;
 
         // Phase 1: Load identity elements (nullary operations: zero, one, e, etc.)
-        for member in &structure.members {
-            if let crate::kleis_ast::StructureMember::Operation {
-                name,
-                type_signature,
-            } = member
-            {
-                // Check if this is a nullary operation (identity element)
-                // Nullary operations have type signatures that are NOT Function types
-                // Examples:
-                //   - "operation zero : R" → TypeExpr::Named("R") - IS nullary
-                //   - "operation plus : R → R → R" → TypeExpr::Function(...) - NOT nullary
-                use crate::kleis_ast::TypeExpr;
+        // This includes identity elements in nested structures!
+        self.load_identity_elements_recursive(&structure.members);
 
-                let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
-
-                if is_nullary {
-                    // This is an identity element/constant!
-                    let z3_const = Int::fresh_const(name);
-                    self.identity_elements.insert(name.clone(), z3_const);
-
-                    println!("   📌 Loaded identity element: {}", name);
-                }
-            }
-        }
-
-        // Phase 2: Get and load axioms
-        let axioms = self.registry.get_axioms(structure_name);
-
-        // Load each axiom as background assumption
-        for (_axiom_name, axiom_expr) in axioms {
-            // Translate and assert the axiom
-            // Now identity elements will be available!
-            let z3_axiom = self.kleis_to_z3(&axiom_expr, &HashMap::new())?;
-            self.solver.assert(&z3_axiom);
-        }
+        // Phase 2: Get and load axioms (including from nested structures)
+        self.load_axioms_recursive(&structure.members)?;
 
         // Mark as loaded
         self.loaded_structures.insert(structure_name.to_string());
+
+        Ok(())
+    }
+
+    /// Recursively load identity elements from structure members
+    /// Handles nested structures automatically
+    #[cfg(feature = "axiom-verification")]
+    fn load_identity_elements_recursive(&mut self, members: &[crate::kleis_ast::StructureMember]) {
+        use crate::kleis_ast::{StructureMember, TypeExpr};
+
+        for member in members {
+            match member {
+                StructureMember::Operation {
+                    name,
+                    type_signature,
+                } => {
+                    // Check if nullary (identity element)
+                    let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
+
+                    if is_nullary {
+                        let z3_const = Int::fresh_const(name);
+                        self.identity_elements.insert(name.clone(), z3_const);
+                        println!("   📌 Loaded identity element: {}", name);
+                    }
+                }
+                StructureMember::NestedStructure { members, .. } => {
+                    // Recursively process nested structure members
+                    self.load_identity_elements_recursive(members);
+                }
+                _ => {
+                    // Field or Axiom - not an identity element
+                }
+            }
+        }
+    }
+
+    /// Recursively load axioms from structure members
+    /// Handles axioms in nested structures
+    #[cfg(feature = "axiom-verification")]
+    fn load_axioms_recursive(
+        &mut self,
+        members: &[crate::kleis_ast::StructureMember],
+    ) -> Result<(), String> {
+        use crate::kleis_ast::StructureMember;
+
+        for member in members {
+            match member {
+                StructureMember::Axiom { proposition, .. } => {
+                    // Translate and assert axiom
+                    let z3_axiom = self.kleis_to_z3(proposition, &HashMap::new())?;
+                    self.solver.assert(&z3_axiom);
+                }
+                StructureMember::NestedStructure { members, .. } => {
+                    // Recursively load axioms from nested structure
+                    self.load_axioms_recursive(members)?;
+                }
+                _ => {
+                    // Operation or Field - not an axiom
+                }
+            }
+        }
 
         Ok(())
     }
