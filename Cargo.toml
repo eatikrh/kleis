@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "render"]
+
 [package]
 name = "kleis"
 version = "0.1.0"

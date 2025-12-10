@@ -47,11 +47,12 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 
 1. **Format code** (required)
    ```bash
-   cargo fmt
+   cargo fmt --all
    ```
-   - Ensures consistent code style
+   - Ensures consistent code style across ALL crates (including render/)
    - GitHub CI will fail if formatting is incorrect
    - Run automatically before every commit
+   - **CRITICAL:** Use `--all` flag to format workspace members
 
 2. **Run clippy** (required)
    ```bash
@@ -72,7 +73,7 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 **Process:**
 ```
 Before committing .rs files:
-→ Run: cargo fmt
+→ Run: cargo fmt --all
 → Run: cargo clippy --all-targets --all-features
 → Run: cargo test --lib
 → Fix any errors/warnings
