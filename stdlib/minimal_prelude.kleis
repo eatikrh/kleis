@@ -13,6 +13,7 @@ structure Arithmetic(T) {
   operation parens : T → T
   operation brackets : T → T
   operation braces : T → T
+  operation angle_brackets : T → T
 }
 
 // Equality operations (work for any type)
@@ -41,6 +42,7 @@ implements Arithmetic(ℝ) {
   operation parens = builtin_identity
   operation brackets = builtin_identity
   operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
 }
 
 // Equality for scalars
