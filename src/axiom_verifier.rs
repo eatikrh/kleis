@@ -156,11 +156,25 @@ impl<'r> AxiomVerifier<'r> {
     /// 1. Identity elements (zero, one, e) as Z3 constants
     /// 2. Operations (for future uninterpreted functions)
     /// 3. Axioms as background assumptions
+    /// 4. Where constraint structures (e.g., if implements X where Y, also load Y)
     #[cfg(feature = "axiom-verification")]
     fn ensure_structure_loaded(&mut self, structure_name: &str) -> Result<(), String> {
         // Already loaded?
         if self.loaded_structures.contains(structure_name) {
             return Ok(());
+        }
+
+        // FIRST: Load structures from where constraints
+        // This ensures constrained structure axioms are available as assumptions
+        let where_constraints = self.registry.get_where_constraints(structure_name);
+        for constraint in where_constraints {
+            // Recursively load constrained structures
+            // Example: where Semiring(T) → load Semiring axioms
+            println!(
+                "   🔗 Loading where constraint: {}",
+                constraint.structure_name
+            );
+            self.ensure_structure_loaded(&constraint.structure_name)?;
         }
 
         // Get structure definition from registry

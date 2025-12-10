@@ -1558,14 +1558,16 @@ impl KleisParser {
     /// Parse optional where clause: where Constraint1, Constraint2, ...
     ///
     /// Example: where Semiring(T), Ord(T)
-    fn parse_where_clause(&mut self) -> Result<Option<Vec<crate::kleis_ast::WhereConstraint>>, KleisParseError> {
+    fn parse_where_clause(
+        &mut self,
+    ) -> Result<Option<Vec<crate::kleis_ast::WhereConstraint>>, KleisParseError> {
         self.skip_whitespace();
-        
+
         // Check if there's a 'where' keyword
         if !self.peek_word("where") {
             return Ok(None);
         }
-        
+
         // Consume 'where' keyword
         let keyword = self.parse_identifier()?;
         if keyword != "where" {
@@ -1575,49 +1577,52 @@ impl KleisParser {
             });
         }
         self.skip_whitespace();
-        
+
         let mut constraints = Vec::new();
-        
+
         loop {
             // Parse structure name
             let structure_name = self.parse_identifier()?;
             self.skip_whitespace();
-            
+
             // Parse type arguments
             if self.advance() != Some('(') {
                 return Err(KleisParseError {
-                    message: format!("Expected '(' after structure name in where clause: {}", structure_name),
+                    message: format!(
+                        "Expected '(' after structure name in where clause: {}",
+                        structure_name
+                    ),
                     position: self.pos,
                 });
             }
-            
+
             let mut type_args = Vec::new();
             self.skip_whitespace();
-            
+
             while self.peek() != Some(')') {
                 type_args.push(self.parse_type()?);
                 self.skip_whitespace();
-                
+
                 if self.peek() == Some(',') {
                     self.advance();
                     self.skip_whitespace();
                 }
             }
-            
+
             if self.advance() != Some(')') {
                 return Err(KleisParseError {
                     message: "Expected ')' after type arguments in where clause".to_string(),
                     position: self.pos,
                 });
             }
-            
+
             constraints.push(crate::kleis_ast::WhereConstraint {
                 structure_name,
                 type_args,
             });
-            
+
             self.skip_whitespace();
-            
+
             // Check if there's another constraint (comma-separated)
             if self.peek() == Some(',') {
                 self.advance();
@@ -1627,7 +1632,7 @@ impl KleisParser {
                 break;
             }
         }
-        
+
         Ok(Some(constraints))
     }
 

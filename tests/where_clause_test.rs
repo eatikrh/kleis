@@ -8,7 +8,6 @@
 ///!     ...
 ///! }
 ///! ```
-
 use kleis::kleis_ast::{ImplMember, ImplementsDef, TypeExpr};
 use kleis::kleis_parser::KleisParser;
 
@@ -177,7 +176,11 @@ fn test_real_world_matrix_multiply_with_where() {
     let mut parser = KleisParser::new(code);
     let result = parser.parse_implements();
 
-    assert!(result.is_ok(), "Failed to parse real-world example: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Failed to parse real-world example: {:?}",
+        result.err()
+    );
 
     let impl_def = result.unwrap();
     assert_eq!(impl_def.structure_name, "MatrixMultipliable");
@@ -324,4 +327,3 @@ fn test_multiple_where_constraints_all_valid() {
 
     println!("✅ Multiple where constraints validated successfully");
 }
-

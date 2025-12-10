@@ -667,6 +667,11 @@ impl TypeContextBuilder {
             }
         }
 
+        // Also register implements blocks (for where constraint tracking)
+        for impl_def in &self.implements {
+            registry.register_implements(impl_def.clone());
+        }
+
         registry
     }
 }

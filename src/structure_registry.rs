@@ -42,6 +42,11 @@ pub struct StructureRegistry {
     /// Maps structure name to its definition
     /// Example: "Matrix" → StructureDef { name: "Matrix", type_params: [m: Nat, n: Nat, T], ... }
     structures: HashMap<String, StructureDef>,
+
+    /// Implements blocks for structures
+    /// Maps structure name to all its implementations
+    /// Example: "MatrixMultipliable" → [ImplementsDef with where Semiring(T)]
+    implements: HashMap<String, Vec<crate::kleis_ast::ImplementsDef>>,
 }
 
 impl StructureRegistry {
@@ -49,6 +54,7 @@ impl StructureRegistry {
     pub fn new() -> Self {
         StructureRegistry {
             structures: HashMap::new(),
+            implements: HashMap::new(),
         }
     }
 
@@ -199,6 +205,45 @@ impl StructureRegistry {
         } else {
             Some(owners)
         }
+    }
+
+    /// Register an implements block
+    ///
+    /// Stores the implements block so we can query where constraints later.
+    /// Used by axiom verifier to load constrained structures.
+    pub fn register_implements(&mut self, impl_def: crate::kleis_ast::ImplementsDef) {
+        self.implements
+            .entry(impl_def.structure_name.clone())
+            .or_insert_with(Vec::new)
+            .push(impl_def);
+    }
+
+    /// Get where constraints for a structure
+    ///
+    /// Returns all where constraints from all implements blocks for this structure.
+    /// Used by axiom verifier to load constrained structure axioms.
+    ///
+    /// # Example
+    /// ```ignore
+    /// // Given: implements MatrixMultipliable(...) where Semiring(T)
+    /// let constraints = registry.get_where_constraints("MatrixMultipliable");
+    /// // Returns constraints from all implements of MatrixMultipliable
+    /// ```
+    pub fn get_where_constraints(
+        &self,
+        structure_name: &str,
+    ) -> Vec<&crate::kleis_ast::WhereConstraint> {
+        let mut all_constraints = Vec::new();
+
+        if let Some(impls) = self.implements.get(structure_name) {
+            for impl_def in impls {
+                if let Some(constraints) = &impl_def.where_clause {
+                    all_constraints.extend(constraints.iter());
+                }
+            }
+        }
+
+        all_constraints
     }
 }
 
