@@ -87,9 +87,10 @@ jobs:
       run: cargo test --test '*' --no-default-features --verbose
       continue-on-error: true
       
-    - name: Build examples
-      run: cargo build --examples
-      continue-on-error: true  # Examples might have dependencies
+    # Examples disabled to save disk space (vendored z3 is large)
+    # - name: Build examples
+    #   run: cargo build --examples
+    #   continue-on-error: true
 
   build-bins:
     name: Build Binaries
