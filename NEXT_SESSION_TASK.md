@@ -1,386 +1,240 @@
-# NEXT SESSION: Symbolic Simplification in Kleis
+# NEXT SESSION: Matrix Type Consistency
 
-**Current State:** main branch, 565 tests passing, Self-hosting ACTUALLY WORKS! 🎉
-
-**Status:** 🎯 Ready for proper simplification implementation
-
-**⚠️ See:** `docs/session-2024-12-10/SESSION_SUMMARY.md` for complete session narrative
+**Current State:** main branch, 31 commits pushed, 413 tests passing  
+**Status:** 🎯 Ready for type signature standardization
 
 ---
 
-## 🎊 What's Complete
+## 🎯 Priority: Standardize Matrix Type Signatures
 
-### Pattern Matching Infrastructure ✅ (Dec 8)
+### The Inconsistency
 
-✅ **Parser** - Parses all pattern types (553 lines, 17 tests)  
-✅ **Type Inference** - Type-checks pattern expressions (779 lines, 10 tests)  
-✅ **Pattern Matcher** - Symbolic evaluation (544 lines, 15 tests)  
-✅ **Exhaustiveness** - Warns about missing cases (586 lines, 14 tests)  
-✅ **Grammar v0.5** - Formal specification (1,534 lines, 3 formats)  
-
-⚠️ **Evaluation** - Returns `Match` expressions (symbolic, doesn't execute)  
-⚠️ **Self-hosting** - Simple functions work, polymorphic functions NOT supported yet
-
-### Matrix Constructor Cleanup - 100% DONE! ✅ (Dec 9)
-
-✅ **StructureRegistry** - Generic parametric structure handling (+198 lines)  
-✅ **List Literals** - Fixed-arity constructors with Lists (+330 lines)  
-✅ **Removed Hardcoding** - Zero Matrix special cases (-133 lines)  
-✅ **Matrix Rendering** - Edit markers working in UI  
-✅ **Matrix Multiplication** - A•B button in palette (+95 lines)  
-✅ **Recursive Unification** - Generic nested type unification (+40 lines)  
-✅ **Block Matrices** - Nested matrices work via polymorphism!
-
-**Result:** Kleis has a **truly extensible type system with deep polymorphism**! 🚀
-
-### Self-Hosting Actually Fixed ✅ (Dec 10)
-
-✅ **Fixed 4 critical bugs** - Self-hosting now genuinely works!
-- Nullary constructors now recognized (None, True, False, Nil)
-- Type variables handled (T, U, V create fresh vars)
-- Constraint leakage fixed (clear between functions)
-- Type parameter substitution implemented
-
-✅ **35 comprehensive tests** - Verify functions load, execute, and compose  
-✅ **9 stdlib functions LOAD** - All callable from TypeChecker::with_stdlib()  
-✅ **Parametric polymorphism works** - Option(T), List(T) in functions  
-✅ **Pattern matching executes** - Returns symbolic results correctly  
-✅ **Matrix operations in Kleis** - Self-hosted functions with structured types  
-
-✅ **Reality:** Level 2 self-hosting GENUINELY achieved (565 tests passing)
-
----
-
-## 🎯 Priority for Next Session
-
-### PRIORITY: Symbolic Simplification in Kleis (4-8 hours) ⭐⭐⭐
-
-**Why this is THE priority:**
-- 🔑 **Completes the self-hosting story** properly
-- ✅ **Uses what we just proved works** (pattern matching, polymorphism)
-- 🎯 **Fixes the shortcut** we reverted
-- 📚 **ADR-002 compliance** (symbolic simplification)
-- 🚀 **User extensibility** (users can add their own rules)
-
-**Current problem:**
+**In types.kleis (actual definition):**
 ```kleis
-maybeAddMatrices(Some(M1), Some(M2))
-→ Some(plus(Matrix(...), Matrix(...)))  // Not simplified ❌
+data Type = ... | Matrix(m: Nat, n: Nat, T)
+```
+3 parameters: dimensions + element type ✅
+
+**In prelude.kleis (examples):**
+```kleis
+operation (×) : ∀(m n p : ℕ). Matrix(m,n) × Matrix(n,p) → Matrix(m,p)
+operation transpose : ∀(m n : ℕ). Matrix(m,n) → Matrix(n,m)
+operation det : ∀(n : ℕ). Matrix(n,n) → ℝ
+```
+2 parameters: dimensions only, **T is missing!** ❌
+
+**In matrices.kleis (what we use):**
+```kleis
+structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
+  operation multiply : Matrix(m, n, T) → Matrix(n, p, T) → Matrix(m, p, T)
+}
+```
+3 parameters: includes T ✅
+
+### The Goal
+
+**Standardize ALL Matrix references to always include T:**
+```kleis
+Matrix(m, n, T)  // ALWAYS - never just Matrix(m, n)
 ```
 
-**Goal:**
+Update:
+1. `prelude.kleis` - Fix all operation signatures
+2. Any docs or examples using shorthand
+3. Verify consistency across codebase
+
+### Why This Matters
+
+**With T explicit:**
+- Can multiply matrices of ANY type (ℝ, ℂ, ℕ, even nested Matrix!)
+- Polymorphism is clear
+- Type system can properly check element type compatibility
+
+**Example:**
 ```kleis
-maybeAddMatrices(Some(M1), Some(M2))
-→ Some(Matrix(2,2,[plus(1,5), plus(2,6), plus(3,7), plus(4,8)]))  // ✅
+// Block matrices work automatically!
+Matrix(2, 2, Matrix(3, 3, ℝ))  // 2×2 of 3×3 blocks
 ```
 
-**Implementation plan:**
-1. Define Expression as data type in Kleis (1-2 hours)
-2. Write simplification rules in Kleis (2-3 hours)
-3. Integrate with evaluator (1-2 hours)
-4. Test comprehensively (1 hour)
+---
 
-**On feature branch:** `feature/kleis-simplification`
+## ⚠️ IMPORTANT: Work on Separate Branch
 
-**See:** Previous session for motivation (we did this in Rust, then reverted)
+**Branch name:** `feature/matrix-type-consistency`
+
+**Why separate branch:**
+
+1. **Will cause many errors** while working
+2. **Takes significant time** to update all references
+3. **Don't want to block main** with broken intermediate states
+4. **Can test thoroughly** before merging
+
+### Expected Breakage
+
+While updating, expect:
+- Type errors where Matrix(m,n) is used without T
+- Signature mismatches in operations
+- Tests failing until all references updated
+- Parser might need adjustments
+
+### Timeline
+
+**Estimated:** 2-3 hours
+- Find all Matrix(m,n) usages (~30 min)
+- Update signatures systematically (~1 hour)
+- Fix resulting type errors (~1 hour)
+- Test and verify (~30 min)
 
 ---
 
-## Alternative Options
+## Implementation Plan
 
-### Option 1: Stdlib Operations (2-4 hours)
+### Step 1: Create Branch (5 min)
 
-**Goal:** Add missing operations from palette to stdlib
+```bash
+git checkout -b feature/matrix-type-consistency
+```
 
-**Current gap:** Many palette templates reference operations not yet in stdlib
+### Step 2: Update prelude.kleis (30 min)
 
-**What to add:**
-
-1. **Quantum operations** (stdlib/quantum.kleis):
-   - `ket`, `bra`, `inner`, `outer`, `commutator`, `expectation`
-   
-2. **Trigonometric inverses** (stdlib/math_functions.kleis):
-   - `arcsin`, `arccos`, `arctan` (might already exist)
-   - `factorial`, `binomial`
-
-3. **Tensor operations** (stdlib/tensors.kleis):
-   - `index_mixed`, `christoffel`, `riemann`
-
-**Result:** All palette operations type-checkable!
-
-**See:** `docs/session-2024-12-09/PALETTE_STDLIB_TODO.md`
-
----
-
-### Option 2: Integration Tests (2-3 hours)
-
-**Goal:** End-to-end tests demonstrating complete features
-
-**What to add:**
-
-1. **Create `tests/pattern_matching_integration_test.rs`**
-   - Real-world pattern matching examples
-   - Type system + pattern matching together
-   - Error message quality tests
-
-2. **Test scenarios:**
-   - Option handling (null safety pattern)
-   - Result handling (error handling pattern)
-   - List processing (recursive data structures)
-   - Boolean logic (simple ADTs)
-   - Nested patterns (complex destructuring)
-
-3. **Performance tests:**
-   - Pattern matching on large expressions
-   - Exhaustiveness checking performance
-   - Memory usage
-
-**Result:** Production-ready confidence with comprehensive test coverage
-
----
-
-### Option 3: Full Parser for `define` (4-6 hours)
-
-**Goal:** Support function definitions in kleis_parser.rs
-
-**Current limitation:** kleis_parser.rs is POC - doesn't parse `define` statements
-
-**What to implement:**
-
-1. **Add to parser:**
-   ```rust
-   fn parse_function_def(&mut self) -> Result<FunctionDef, KleisParseError>
-   fn parse_params(&mut self) -> Result<Vec<Param>, KleisParseError>
-   ```
-
-2. **Support syntax:**
-   ```kleis
-   define not(b) = match b { True => False | False => True }
-   define map(f, list) = match list { Nil => Nil | Cons(h, t) => Cons(f(h), map(f, t)) }
-   ```
-
-3. **Uncomment stdlib functions:**
-   - All the pattern matching examples in `stdlib/types.kleis`
-   - Load them into type system
-   - Test they work!
-
-**Result:** Self-hosting functions in stdlib!
-
----
-
-### Option 4: Enhanced Pattern Matching (2-4 hours)
-
-**Goal:** Add advanced pattern matching features
-
-**What to add:**
-
-1. **Pattern guards:**
-   ```kleis
-   match x {
-     Some(n) if n > 0 => positive(n)
-     Some(n) if n < 0 => negative(n)
-     _ => zero
-   }
-   ```
-
-2. **As-patterns:**
-   ```kleis
-   match expr {
-     Some(x @ Complex(_)) => useComplex(x)
-     Some(x) => useGeneric(x)
-   }
-   ```
-
-3. **Or-patterns:**
-   ```kleis
-   match status {
-     Running | Paused => active
-     Idle | Completed => inactive
-   }
-   ```
-
-**Result:** More expressive pattern matching!
-
----
-
-### Option 5: Type System Enhancements (3-5 hours)
-
-**Goal:** Additional type system features
-
-**Options:**
-1. **Tuple types:** `(T, U)` for pairs
-2. **Record types:** `{ x: ℝ, y: ℝ }` for named fields
-3. **Type classes:** `class Eq(T) { ... }`
-4. **Higher-kinded types:** `Functor(F: * → *)`
-
-**Result:** More powerful type system!
-
----
-
-## 📊 Current State
-
-**Branch:** `main`  
-**Tests:** 376 passing  
-**Commits:** Pushed to GitHub! ✅  
-**Quality:** All gates pass ✅
-
-**Pattern Matching Status:**
-- Parser: ✅ 100%
-- Type Inference: ✅ 100%
-- Evaluation: ✅ 100%
-- Exhaustiveness: ✅ 100%
-- Grammar: ✅ 100%
-- Documentation: ✅ 100%
-
-**Matrix System Status:**
-- Constructor cleanup: ✅ 100%
-- List literals: ✅ 100%
-- StructureRegistry: ✅ 100%
-- Matrix multiplication: ✅ 100%
-- Recursive unification: ✅ 100%
-- Block matrices: ✅ Automatic via polymorphism!
-
-**Technical Debt:**
-- POC parser limitations: `define` not supported yet
-- Some stdlib operations not yet defined (quantum, transforms, etc.)
-
----
-
-## 💡 Recommendation for Next Session
-
-### **Option 1: Stdlib Operations** (2-4 hours) ⭐
-
-**Why this next:**
-1. **High value** - Makes palette fully functional
-2. **Educational** - Learn by implementing real operations
-3. **Demonstrates extensibility** - User-defined operations!
-4. **Low risk** - Just adding definitions, no breaking changes
-5. **Immediate utility** - Quantum and tensor operations useful
-
-**Start with:** Quantum operations (most interesting, ~1 hour)
-
----
-
-## 🎯 Quick Start for Next Session
-
-### Stdlib Operations Path
-
-**Step 1:** Create quantum operations file (30 minutes)
+Change ALL Matrix signatures:
 ```kleis
-// In stdlib/quantum.kleis
+operation (×) : ∀(m n p : ℕ, T). Matrix(m,n,T) × Matrix(n,p,T) → Matrix(m,p,T)
+operation transpose : ∀(m n : ℕ, T). Matrix(m,n,T) → Matrix(n,m,T)
+operation det : ∀(n : ℕ, T). Matrix(n,n,T) → T
+operation trace : ∀(n : ℕ, T). Matrix(n,n,T) → T
+```
 
-structure QuantumState(dim: Nat) {
-    operation ket : T → Ket(T)
-    operation bra : T → Bra(T)
-    operation inner : Bra(T) → Ket(T) → ℂ
-    operation outer : Ket(T) → Bra(T) → Operator(T)
-}
+**Note:** Det and trace return **T**, not just ℝ!
+- det : Matrix(n,n,ℝ) → ℝ
+- det : Matrix(n,n,ℂ) → ℂ
+- Generic!
 
-structure Operator(T) {
-    operation commutator : Operator(T) → Operator(T) → Operator(T)
-    operation expectation : Operator(T) → ℝ
-}
+### Step 3: Search All Files (15 min)
 
-implements QuantumState(dim) {
-    operation ket = builtin_ket
-    // ... etc
+```bash
+# Find all Matrix references without T
+grep -r "Matrix([^,]*,[^,]*)" stdlib/ src/ --include="*.kleis" --include="*.rs"
+
+# Check docs
+grep -r "Matrix(m,n)" docs/ --include="*.md"
+```
+
+### Step 4: Update Systematically (1 hour)
+
+Go through each file:
+- Update type signatures
+- Update examples
+- Update documentation
+- Update comments
+
+### Step 5: Fix Type Errors (1 hour)
+
+Run tests frequently:
+```bash
+cargo test --lib
+```
+
+Fix errors as they appear:
+- Missing T parameters
+- Type mismatches
+- Signature incompatibilities
+
+### Step 6: Verify (30 min)
+
+```bash
+# All tests pass
+cargo test --lib
+
+# Quality gates
+cargo fmt --all
+cargo clippy --all-targets --all-features
+
+# No more Matrix(m,n) without T
+grep -r "Matrix([^,]*,[^,]*[^T])" stdlib/ src/
+```
+
+### Step 7: Merge
+
+```bash
+git checkout main
+git merge feature/matrix-type-consistency
+```
+
+---
+
+## Files Likely to Change
+
+**Stdlib:**
+- `stdlib/prelude.kleis` ⭐ (main target)
+- `stdlib/tensors.kleis` (might have Matrix references)
+- `stdlib/quantum.kleis` (might have Matrix references)
+
+**Docs:**
+- `docs/type-system/*.md` (examples might use shorthand)
+- `docs/reference/*.md` (any Matrix examples)
+- `README.md` (if has Matrix examples)
+
+**Maybe:**
+- `src/type_inference.rs` (comments about Matrix)
+- Tests with Matrix examples
+
+---
+
+## Benefits After Completion
+
+1. **Consistency** - Matrix(m,n,T) everywhere, no shortcuts
+2. **Clarity** - Element type always explicit
+3. **Correctness** - Type system can check element type operations
+4. **Polymorphism** - Clear that Matrix works for ANY T
+5. **Documentation** - Examples are accurate
+
+---
+
+## Related Issues
+
+### Semiring Gap
+
+While working on this, consider adding **Semiring** structure:
+```kleis
+structure Semiring(S) {
+  structure additive : CommutativeMonoid(S)
+  structure multiplicative : Monoid(S)
+  axiom distributivity: ...
 }
 ```
 
-**Step 2:** Test with palette (15 minutes)
-- Click quantum buttons
-- Verify type checking works
-- Fix any issues
+Natural numbers ℕ are a semiring (can add/multiply but not subtract).
 
-**Step 3:** Add more domains (1-2 hours)
-- Math functions (arcsin, etc.)
-- Tensor operations
-- Transform operations
-
-**Result:** Fully type-checked palette operations! ✅
+**Decision:** Separate task, don't mix with Matrix consistency work.
 
 ---
 
-## 📁 Reference Documents
+## Success Criteria
 
-### Pattern Matching (Today's Work)
-- `docs/session-2024-12-08/PATTERN_MATCHING_COMPLETE.md` - What we achieved
-- `docs/session-2024-12-08/PATTERN_MATCHING_IMPLEMENTATION_PLAN.md` - Original plan (now complete!)
-- `docs/session-2024-12-08/WHY_PATTERN_MATCHING_MATTERS.md` - Why it matters
+After branch is complete:
 
-### Matrix Cleanup (Next Priority)
-- `docs/session-2024-12-08/MATRIX_CONSTRUCTOR_CLEANUP_PATH.md` - Complete roadmap
-- `docs/adr-020-metalanguage-for-type-theory.md` - Type/value separation
-
-### Other Options
-- `docs/session-2024-12-08/SIGNATURE_INTERPRETER_TODOS.md` - Future improvements
-- `docs/grammar/kleis_grammar_v05.ebnf` - Current grammar
+✅ **No Matrix(m,n) without T** anywhere in codebase  
+✅ **All tests pass** (413+)  
+✅ **prelude.kleis signatures** are correct and complete  
+✅ **Type system** properly checks element types  
+✅ **Documentation** is consistent  
 
 ---
 
-## 🏆 What Kleis Has NOW
+## Notes
 
-### Complete Features
-- ✅ Algebraic data types (`data` keyword)
-- ✅ Pattern matching (`match` keyword)
-- ✅ Type inference (Hindley-Milner)
-- ✅ Parametric polymorphism (arbitrary arity)
-- ✅ Type parameter bindings (T, C, N)
-- ✅ String parameters (unit-safe!)
-- ✅ HM substitution (proper unification)
-- ✅ Exhaustiveness checking
-- ✅ Unreachable pattern detection
+**User insight:** "how do we know that Matrix(m,n) and Matrix(m,n,T) same type of things"
 
-### Production Ready
-- ✅ 371 tests passing
-- ✅ Comprehensive test coverage
-- ✅ Quality gates pass
-- ✅ Well documented
-- ✅ Grammar formalized (v0.5)
+**Answer:** They're NOT the same - that's the problem! We need to always use Matrix(m,n,T).
 
-### Self-Hosting Capable
-```kleis
-// Type checker IN KLEIS:
-define unify(t1, t2) = match (t1, t2) {
-  (Scalar, Scalar) => Some(empty)
-  (Var(id), t) => Some(bind(id, t))
-  _ => None
-}
-```
+The shorthand Matrix(m,n) is:
+- Ambiguous (what's the element type?)
+- Incomplete (missing type parameter)
+- Inconsistent with our actual definition
 
-**Kleis can now define itself in Kleis!** 🎉
+Must be fixed for type system correctness!
 
 ---
 
-## 🎊 Today's Accomplishments
-
-### Code
-- **4,630 lines** written
-- **56 tests** added (all passing)
-- **9 commits** made
-- **0 test failures**
-
-### Features Completed
-- ✅ Complete pattern matching (Steps 3-6)
-- ✅ Grammar v0.5 (3 formats)
-- ✅ Stdlib examples
-- ✅ Matrix cleanup analysis
-
-### Milestone Achieved
-**Kleis is now a complete functional programming language!**
-
----
-
-## 🚀 Ready for Next Session
-
-**Status:** Everything committed and ready to push  
-**Documentation:** Complete and organized  
-**Next steps:** Clear and documented  
-**Priority:** Matrix cleanup (1 hour quick win)
-
-**You know exactly what to do next!** 🎯
-
----
-
-**See you next session!** 🌟
-
+**Ready for next session on feature branch!** 🎯
