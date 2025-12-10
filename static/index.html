@@ -878,6 +878,48 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     </div>
                 </div>
                 
+                <!-- Piecewise Function Builder Modal -->
+                <div id="piecewise-builder-modal" class="matrix-builder-modal">
+                    <div class="matrix-builder-content">
+                        <h3>📐 Create Piecewise Function</h3>
+                        
+                        <!-- Case Count Selector -->
+                        <div class="matrix-delimiter-group">
+                            <label>Number of cases:</label>
+                            <div class="matrix-delimiter-options">
+                                <button class="matrix-delimiter-btn selected" data-cases="2">
+                                    <span>2</span>
+                                    <span>If-Else</span>
+                                </button>
+                                <button class="matrix-delimiter-btn" data-cases="3">
+                                    <span>3</span>
+                                    <span>Three cases</span>
+                                </button>
+                                <button class="matrix-delimiter-btn" data-cases="4">
+                                    <span>4</span>
+                                    <span>Four cases</span>
+                                </button>
+                                <button class="matrix-delimiter-btn" data-cases="5">
+                                    <span>5</span>
+                                    <span>Five cases</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Preview -->
+                        <div class="matrix-size-display" id="piecewise-preview">
+                            f(x) = { expr₁  if condition₁
+                                   { expr₂  otherwise
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="matrix-builder-buttons">
+                            <button class="btn-secondary" onclick="closePiecewiseBuilder()">Cancel</button>
+                            <button class="btn-primary" onclick="createPiecewiseFromBuilder()">Create Piecewise</button>
+                        </div>
+                    </div>
+                </div>
+                
                 <div id="structuralControls" style="display:none; margin-top: 10px;">
                     <label style="display: inline-flex; align-items: center; cursor: pointer;">
                         <input type="checkbox" id="showBoundingBoxes" checked onchange="toggleBoundingBoxes()" style="margin-right: 8px;">
@@ -972,7 +1014,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="math-btn" onclick="insertTemplate('\\exp(□)')" data-tooltip="Exponential">\(\exp(x)\)</button>
                         <button class="math-btn" onclick="insertTemplate('e^{□}')" data-tooltip="e to the power">\(e^x\)</button>
                         
-                        <button class="math-btn" onclick="insertTemplate('\\begin{cases}□ & \\text{if } □\\\\□ & \\text{otherwise}\\end{cases}')" data-tooltip="Piecewise (2 cases)" style="min-width: 90px;">\(\begin{cases}f_1 & \text{if } c_1\\f_2 & \text{else}\end{cases}\)</button>
+                        <button class="math-btn" onclick="showPiecewiseBuilder()" data-tooltip="Piecewise Function Builder" style="min-width: 90px;">\(\begin{cases}f_1 & c_1\\f_2 & c_2\end{cases}\)</button>
                     </div>
                     
                     <!-- Fences & Grouping -->
@@ -3421,6 +3463,152 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         
         // Initialize matrix builder on load
         window.addEventListener('load', initializeMatrixBuilder);
+        
+        // === Piecewise Function Builder Functions ===
+        
+        let piecewiseBuilderState = {
+            cases: 2
+        };
+        
+        function initializePiecewiseBuilder() {
+            // Setup case count buttons
+            document.querySelectorAll('#piecewise-builder-modal .matrix-delimiter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#piecewise-builder-modal .matrix-delimiter-btn').forEach(b => 
+                        b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    piecewiseBuilderState.cases = parseInt(btn.dataset.cases);
+                    updatePiecewisePreview();
+                });
+            });
+            
+            console.log('✓ Piecewise builder initialized');
+        }
+        
+        function showPiecewiseBuilder() {
+            const modal = document.getElementById('piecewise-builder-modal');
+            modal.classList.add('show');
+            
+            // Reset to defaults
+            piecewiseBuilderState = { cases: 2 };
+            document.querySelectorAll('#piecewise-builder-modal .matrix-delimiter-btn').forEach(b => 
+                b.classList.remove('selected'));
+            document.querySelector('[data-cases="2"]').classList.add('selected');
+            
+            updatePiecewisePreview();
+        }
+        
+        function closePiecewiseBuilder() {
+            const modal = document.getElementById('piecewise-builder-modal');
+            modal.classList.remove('show');
+        }
+        
+        function updatePiecewisePreview() {
+            const { cases } = piecewiseBuilderState;
+            const preview = document.getElementById('piecewise-preview');
+            
+            let text = 'f(x) = {';
+            for (let i = 1; i <= cases; i++) {
+                text += ` expr${i}  if cond${i}`;
+                if (i < cases) text += '\n       {';
+            }
+            
+            preview.textContent = text;
+        }
+        
+        function createPiecewiseFromBuilder() {
+            const { cases } = piecewiseBuilderState;
+            
+            if (editorMode === 'structural') {
+                // Create AST directly for structural mode
+                const args = [];
+                
+                // Generate placeholders for each case: expr1, cond1, expr2, cond2, ...
+                for (let i = 0; i < cases; i++) {
+                    args.push({
+                        Placeholder: {
+                            id: nextPlaceholderId++,
+                            hint: `expr${i+1}`
+                        }
+                    });
+                    args.push({
+                        Placeholder: {
+                            id: nextPlaceholderId++,
+                            hint: `cond${i+1}`
+                        }
+                    });
+                }
+                
+                // Create AST: cases2, cases3, cases4, or cases5
+                const opName = `cases${cases}`;
+                const ast = {
+                    Operation: {
+                        name: opName,
+                        args: args
+                    }
+                };
+                
+                // Insert into active marker or replace AST
+                if (activeEditMarker !== null) {
+                    // Replace placeholder at active marker
+                    const path = findNodePath(currentAST, activeEditMarker);
+                    if (path) {
+                        updateValueAtPath(currentAST, path, ast);
+                    }
+                    
+                    // Clear active marker
+                    activeEditMarker = null;
+                    document.querySelectorAll('.arg-overlay').forEach(el => {
+                        el.classList.remove('active-marker');
+                    });
+                } else {
+                    // Save to undo stack
+                    saveToUndoStack();
+                    currentAST = ast;
+                }
+                
+                // Render
+                renderStructuralEditor();
+                
+                showStatus(`✅ Created ${cases}-case piecewise function`, 'success');
+            } else {
+                // Text mode: Generate LaTeX template
+                let latex = '\\begin{cases}';
+                
+                for (let i = 0; i < cases; i++) {
+                    latex += '□ & \\text{if } □';
+                    if (i < cases - 1) latex += '\\\\';
+                }
+                
+                latex += '\\end{cases}';
+                
+                // Insert template in text mode
+                const textarea = document.getElementById('latexInput');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = textarea.value;
+                textarea.value = text.substring(0, start) + latex + text.substring(end);
+                const newPos = start + latex.length;
+                textarea.setSelectionRange(newPos, newPos);
+                textarea.focus();
+                
+                showStatus(`✅ Created ${cases}-case piecewise function`, 'success');
+            }
+            
+            // Close modal
+            closePiecewiseBuilder();
+        }
+        
+        // Close piecewise modal when clicking outside
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('piecewise-builder-modal');
+            if (e.target === modal) {
+                closePiecewiseBuilder();
+            }
+        });
+        
+        // Initialize piecewise builder on load
+        window.addEventListener('load', initializePiecewiseBuilder);
         
         // Render MathJax in palette buttons
         if (window.MathJax) {
