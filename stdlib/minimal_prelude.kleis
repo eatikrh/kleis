@@ -10,6 +10,7 @@ structure Arithmetic(T) {
   operation scalar_divide : T → T → T
   operation scalar_multiply : T → T → T
   operation frac : T → T → T
+  operation parens : T → T
 }
 
 // Equality operations (work for any type)
@@ -35,6 +36,7 @@ implements Arithmetic(ℝ) {
   operation scalar_divide = builtin_div
   operation scalar_multiply = builtin_mul
   operation frac = builtin_div
+  operation parens = builtin_identity
 }
 
 // Equality for scalars
