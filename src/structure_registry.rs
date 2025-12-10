@@ -168,6 +168,38 @@ impl StructureRegistry {
             .map(|(name, _)| name)
             .collect()
     }
+
+    /// Find which structures define a given operation
+    ///
+    /// Returns a vector of structure names that have this operation.
+    /// Used by axiom verifier for dependency analysis.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let owners = registry.get_operation_owners("transpose");
+    /// // Returns: ["Matrix", "Tensor"] if both define transpose
+    /// ```
+    pub fn get_operation_owners(&self, operation_name: &str) -> Option<Vec<String>> {
+        let mut owners = Vec::new();
+
+        for (struct_name, def) in &self.structures {
+            // Check if this structure has the operation
+            let has_op = def.members.iter().any(|member| match member {
+                crate::kleis_ast::StructureMember::Operation { name, .. } => name == operation_name,
+                _ => false,
+            });
+
+            if has_op {
+                owners.push(struct_name.clone());
+            }
+        }
+
+        if owners.is_empty() {
+            None
+        } else {
+            Some(owners)
+        }
+    }
 }
 
 impl Default for StructureRegistry {

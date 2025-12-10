@@ -10,6 +10,7 @@ use kleis::ast::Expression;
 ///! 4. Verify with Z3
 use kleis::axiom_verifier::{AxiomVerifier, VerificationResult};
 use kleis::kleis_parser::KleisParser;
+use kleis::structure_registry::StructureRegistry;
 
 /// Helper to parse an axiom expression
 fn parse_axiom(input: &str) -> Expression {
@@ -17,17 +18,64 @@ fn parse_axiom(input: &str) -> Expression {
     parser.parse_proposition().expect("Failed to parse axiom")
 }
 
+/// Helper to verify an axiom with test setup
+/// This handles all the boilerplate of creating verifier, etc.
+#[cfg(feature = "axiom-verification")]
+fn verify_with_test_context(axiom: &Expression) -> Result<VerificationResult, String> {
+    let registry = StructureRegistry::new();
+    let mut verifier = AxiomVerifier::new(&registry)?;
+    verifier.verify_axiom(axiom)
+}
+
+/// Placeholder for non-axiom-verification builds
+#[cfg(not(feature = "axiom-verification"))]
+fn verify_with_test_context(_axiom: &Expression) -> Result<VerificationResult, String> {
+    Ok(VerificationResult::Disabled)
+}
+
+/// Helper to check equivalence with test setup
+#[cfg(feature = "axiom-verification")]
+fn check_equivalence_with_test_context(
+    expr1: &Expression,
+    expr2: &Expression,
+) -> Result<bool, String> {
+    let registry = StructureRegistry::new();
+    let mut verifier = AxiomVerifier::new(&registry)?;
+    verifier.are_equivalent(expr1, expr2)
+}
+
+/// Placeholder for non-axiom-verification builds
+#[cfg(not(feature = "axiom-verification"))]
+fn check_equivalence_with_test_context(
+    _expr1: &Expression,
+    _expr2: &Expression,
+) -> Result<bool, String> {
+    Err("Axiom verification feature not enabled".to_string())
+}
+
 #[test]
 fn test_verifier_creation() {
     // Test that we can create a verifier
-    let verifier = AxiomVerifier::new();
+    #[cfg(feature = "axiom-verification")]
+    {
+        let registry = StructureRegistry::new();
+        let verifier = AxiomVerifier::new(&registry);
+        assert!(verifier.is_ok(), "Verifier creation should succeed");
 
-    // Try to verify a simple expression (even if Z3 not enabled)
-    let expr = parse_axiom("∀(x : M). x");
-    let result = verifier.verify_axiom(&expr);
+        // Try to verify a simple expression
+        let expr = parse_axiom("∀(x : M). x");
+        let mut verifier = verifier.unwrap();
+        let result = verifier.verify_axiom(&expr);
 
-    // Should return something (either Valid/Invalid/Unknown or Disabled)
-    assert!(result.is_ok());
+        // Should return something (either Valid/Invalid/Unknown or Disabled)
+        assert!(result.is_ok());
+    }
+
+    #[cfg(not(feature = "axiom-verification"))]
+    {
+        // Just verify the test compiles without axiom-verification
+        println!("Axiom verification disabled");
+    }
 }
 
 #[test]
@@ -39,8 +87,7 @@ fn test_identity_axiom_simple() {
     let axiom_text = "∀(x : M). equals(plus(x, 0), x)";
     let axiom = parse_axiom(axiom_text);
 
-    let verifier = AxiomVerifier::new();
-    let result = verifier.verify_axiom(&axiom);
+    let result = verify_with_test_context(&axiom);
 
     // For now, this will fail because our translator is basic
     // But it should parse correctly
@@ -69,6 +116,7 @@ fn test_identity_axiom_simple() {
 
     #[cfg(not(feature = "axiom-verification"))]
     {
+        // Just compile check for non-axiom-verification builds
         assert_eq!(result.unwrap(), VerificationResult::Disabled);
     }
 }
@@ -81,8 +129,7 @@ fn test_commutativity_axiom() {
     let axiom_text = "∀(x y : R). equals(plus(x, y), plus(y, x))";
     let axiom = parse_axiom(axiom_text);
 
-    let verifier = AxiomVerifier::new();
-    let result = verifier.verify_axiom(&axiom);
+    let result = verify_with_test_context(&axiom);
 
     assert!(result.is_ok());
 
@@ -114,8 +161,7 @@ fn test_associativity_axiom() {
     let axiom_text = "∀(x y z : R). equals(plus(plus(x, y), z), plus(x, plus(y, z)))";
     let axiom = parse_axiom(axiom_text);
 
-    let verifier = AxiomVerifier::new();
-    let result = verifier.verify_axiom(&axiom);
+    let result = verify_with_test_context(&axiom);
 
     assert!(result.is_ok());
 
@@ -177,8 +223,7 @@ fn test_parse_structure_with_axiom() {
     assert_eq!(axiom_name, "identity");
 
     // Try to verify it (simplified axiom: x = x is always true)
-    let verifier = AxiomVerifier::new();
-    let result = verifier.verify_axiom(&axiom_expr);
+    let result = verify_with_test_context(&axiom_expr);
     println!("Verification result: {:?}", result);
     // Should parse and attempt verification
     assert!(result.is_ok() || result.is_err());
@@ -192,8 +237,7 @@ fn test_invalid_axiom_detection() {
     let false_axiom = "∀(x : M). equals(plus(x, 1), x)";
     let axiom = parse_axiom(false_axiom);
 
-    let verifier = AxiomVerifier::new();
-    let result = verifier.verify_axiom(&axiom);
+    let result = verify_with_test_context(&axiom);
 
     println!("Invalid axiom test result: {:?}", result);
     // Should return a result (even if error)
@@ -232,8 +276,7 @@ fn test_equivalence_checking() {
     let mut parser2 = KleisParser::new(expr2_text);
     let expr2 = parser2.parse().expect("Failed to parse expr2");
 
-    let verifier = AxiomVerifier::new();
-    let result = verifier.are_equivalent(&expr1, &expr2);
+    let result = check_equivalence_with_test_context(&expr1, &expr2);
 
     #[cfg(feature = "axiom-verification")]
     {
@@ -266,8 +309,7 @@ fn test_distributivity_axiom() {
     let axiom_text = "∀(x y z : R). equals(times(x, plus(y, z)), plus(times(x, y), times(x, z)))";
     let axiom = parse_axiom(axiom_text);
 
-    let verifier = AxiomVerifier::new();
-    let result = verifier.verify_axiom(&axiom);
+    let result = verify_with_test_context(&axiom);
 
     assert!(result.is_ok());
 
@@ -323,19 +365,28 @@ fn test_multiple_axioms_from_structure() {
     assert_eq!(axiom_count, 3, "Should have 3 axioms");
 
     // Verify each axiom
-    let verifier = AxiomVerifier::new();
-    let mut verified_count = 0;
+    #[cfg(feature = "axiom-verification")]
+    {
+        let registry = StructureRegistry::new();
+        let mut verifier = AxiomVerifier::new(&registry).expect("Failed to create verifier");
+        let mut verified_count = 0;
 
-    for member in &structure.members {
-        if let kleis::kleis_ast::StructureMember::Axiom { name, proposition } = member {
-            println!("Verifying axiom: {}", name);
-            let result = verifier.verify_axiom(proposition);
-            assert!(result.is_ok(), "Verification failed for {}", name);
-            verified_count += 1;
+        for member in &structure.members {
+            if let kleis::kleis_ast::StructureMember::Axiom { name, proposition } = member {
+                println!("Verifying axiom: {}", name);
+                let result = verifier.verify_axiom(proposition);
+                assert!(result.is_ok(), "Verification failed for {}", name);
+                verified_count += 1;
+            }
         }
+
+        assert_eq!(verified_count, 3, "Should have verified 3 axioms");
     }
 
-    assert_eq!(verified_count, 3, "Should have verified 3 axioms");
+    #[cfg(not(feature = "axiom-verification"))]
+    {
+        println!("Axiom verification disabled");
+    }
 }
 
 #[test]
@@ -346,8 +397,7 @@ fn test_nested_quantifiers() {
     let axiom_text = "∀(x : M). ∀(y : M). equals(plus(x, y), plus(y, x))";
     let axiom = parse_axiom(axiom_text);
 
-    let verifier = AxiomVerifier::new();
-    let result = verifier.verify_axiom(&axiom);
+    let result = verify_with_test_context(&axiom);
 
     assert!(result.is_ok());
 
