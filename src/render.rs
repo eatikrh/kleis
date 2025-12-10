@@ -807,7 +807,20 @@ fn render_expression_internal(
                 "text" => vec![0],
                 // Matrix constructors: skip first two args (dimensions)
                 "Matrix" | "PMatrix" | "VMatrix" | "BMatrix" => vec![0, 1],
+                // Piecewise: skip first arg (n = number of cases)
+                "Piecewise" => vec![0],
                 _ => vec![],
+            };
+
+            // For Piecewise: extract number of cases and handle List format
+            let is_piecewise = name == "Piecewise";
+            let piecewise_cases = if is_piecewise && args.len() >= 1 {
+                match &args[0] {
+                    Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
+                    _ => 2,
+                }
+            } else {
+                0
             };
 
             // For Matrix constructors: extract dimensions and handle List format
@@ -827,6 +840,23 @@ fn render_expression_internal(
                 (0, 0)
             };
 
+            // For Piecewise: extract expressions and conditions from Lists
+            let (piecewise_exprs, piecewise_conds) = if is_piecewise && args.len() == 3 {
+                let exprs = if let Expression::List(list_elements) = &args[1] {
+                    list_elements.clone()
+                } else {
+                    vec![]
+                };
+                let conds = if let Expression::List(list_elements) = &args[2] {
+                    list_elements.clone()
+                } else {
+                    vec![]
+                };
+                (exprs, conds)
+            } else {
+                (vec![], vec![])
+            };
+
             // For Matrix: flatten List elements into individual rendered args
             let args_to_render: Vec<&Expression> = if is_matrix_constructor && args.len() == 3 {
                 // Check if 3rd arg is a List (NEW FORMAT)
@@ -841,8 +871,11 @@ fn render_expression_internal(
             } else if is_matrix_constructor {
                 // OLD FORMAT: Matrix(2, 2, a, b, c, d) - skip first 2
                 args[2..].iter().collect()
+            } else if is_piecewise {
+                // Piecewise: don't render args normally, we'll handle it specially below
+                vec![]
             } else {
-                // Not a matrix, render all args
+                // Not a matrix or piecewise, render all args
                 args.iter().collect()
             };
 
@@ -1223,6 +1256,53 @@ fn render_expression_internal(
                     }
                 }
                 result = result.replace("{args}", &matrix_content);
+            }
+            // Piecewise functions: render as \begin{cases}...\end{cases}
+            else if is_piecewise {
+                let mut cases_content = String::new();
+                for i in 0..piecewise_cases {
+                    if let (Some(expr), Some(cond)) =
+                        (piecewise_exprs.get(i), piecewise_conds.get(i))
+                    {
+                        let expr_id = format!("{}.1.{}", node_id, i);
+                        let cond_id = format!("{}.2.{}", node_id, i);
+
+                        let rendered_expr = render_expression_internal(
+                            expr,
+                            ctx,
+                            target,
+                            &expr_id,
+                            node_id_to_uuid,
+                        );
+                        let rendered_cond = render_expression_internal(
+                            cond,
+                            ctx,
+                            target,
+                            &cond_id,
+                            node_id_to_uuid,
+                        );
+
+                        cases_content.push_str(&rendered_expr);
+                        cases_content.push_str(" & ");
+                        cases_content.push_str(&rendered_cond);
+
+                        if i < piecewise_cases - 1 {
+                            cases_content.push_str(r" \\ ");
+                        }
+                    }
+                }
+
+                match target {
+                    RenderTarget::Typst => {
+                        result = format!("cases({})", cases_content);
+                    }
+                    RenderTarget::LaTeX | RenderTarget::HTML => {
+                        result = format!(r"\begin{{cases}}{}\end{{cases}}", cases_content);
+                    }
+                    RenderTarget::Unicode => {
+                        result = format!("{{ {} }}", cases_content);
+                    }
+                }
             }
             // Legacy support: old matrix operations like matrix2x2, matrix3x3, etc.
             else if name.starts_with("matrix")
