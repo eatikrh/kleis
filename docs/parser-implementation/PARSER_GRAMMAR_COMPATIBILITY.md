@@ -62,7 +62,7 @@
 | **Operator symbols** | `(×)`, `(⊗)` in definitions | ❌ Missing | High |
 | **Symbolic constants** | `π`, `e`, `i`, `ℏ` | ❌ Missing | Low |
 | **Universal quantifiers** | `∀(x : T)` in axioms | ❌ Missing | High |
-| **Placeholders** | `□` syntax | ❌ Missing | Low |
+| **Placeholders** | `□` syntax | N/A | N/A - Editor only |
 
 **Why missing features matter:**
 
