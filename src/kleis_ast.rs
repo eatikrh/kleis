@@ -139,12 +139,22 @@ pub struct DataField {
     pub type_expr: TypeExpr,
 }
 
-/// Implements definition: implements StructureName(Type, ...) { members }
+/// Implements definition: implements StructureName(Type, ...) where Constraint { members }
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImplementsDef {
     pub structure_name: String,
     pub type_args: Vec<TypeExpr>, // Changed from single type_arg to multiple
     pub members: Vec<ImplMember>,
+    /// Optional where clause with structure constraints
+    /// Example: where Semiring(T), Ord(T)
+    pub where_clause: Option<Vec<WhereConstraint>>,
+}
+
+/// A constraint in a where clause
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhereConstraint {
+    pub structure_name: String,
+    pub type_args: Vec<TypeExpr>,
 }
 
 /// Implementation member (element or operation)

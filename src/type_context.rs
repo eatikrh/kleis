@@ -254,6 +254,11 @@ impl TypeContextBuilder {
             .get(&impl_def.structure_name)
             .ok_or_else(|| format!("Unknown structure: {}", impl_def.structure_name))?;
 
+        // Validate where constraints if present
+        if let Some(constraints) = &impl_def.where_clause {
+            self.validate_where_constraints(constraints)?;
+        }
+
         // Extract type name from type_args (use first arg for now, TODO: handle multiple)
         let type_name = if let Some(first_arg) = impl_def.type_args.first() {
             self.type_expr_to_string(first_arg)
@@ -298,6 +303,36 @@ impl TypeContextBuilder {
         // Top-level operations (like frac for display mode)
         // These are utility operations, not tied to structures
         // TODO: Register these separately if needed
+        Ok(())
+    }
+
+    /// Validate where constraints in an implements block
+    ///
+    /// This checks that the constrained structures exist.
+    /// Future: Could also check that the type arguments satisfy the constraints
+    /// (e.g., verify with Z3 that T actually implements Semiring)
+    fn validate_where_constraints(
+        &self,
+        constraints: &[crate::kleis_ast::WhereConstraint],
+    ) -> Result<(), String> {
+        for constraint in constraints {
+            // Check that the constrained structure exists
+            if !self.structures.contains_key(&constraint.structure_name) {
+                return Err(format!(
+                    "Unknown structure in where clause: {}",
+                    constraint.structure_name
+                ));
+            }
+
+            // TODO (future): Validate that type arguments actually satisfy the constraint
+            // This would involve checking:
+            // 1. Do the type arguments implement the required structure?
+            // 2. If using Z3, verify axioms hold
+            //
+            // For now, we just check the structure exists (compile-time check)
+            // Runtime/proof-time checking would be next phase
+        }
+
         Ok(())
     }
 
