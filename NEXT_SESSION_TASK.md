@@ -9,16 +9,40 @@
 
 ## 🎯 The Big Picture
 
-This is a **complete cleanup** of the type system foundations:
+This is a **complete cleanup** of the type system foundations with a strategic architectural addition:
 
 1. **Matrix type consistency** - Always use Matrix(m,n,T) with T
 2. **Remove legacy constructors** - Delete matrix2x2, cases2, etc.
-3. **Load full prelude.kleis** - Replace minimal_prelude.kleis
-4. **Extend parser** - Support operator symbols `(×)` and quantifiers `∀`
+3. **Extend parser** - Support operator symbols `(×)` and quantifiers `∀`
+4. **Load full prelude.kleis** - Replace minimal_prelude.kleis
 5. **Implement axiom storage** - Parse and store axioms
-6. **(Optional) Z3 integration** - Axiom verification
+6. **Z3 integration** - Axiom verification (requires ADR)
 
 **All related, do together on one branch!**
+
+### The Virtuous Cycle: Why Z3 Makes Parser Work Valuable
+
+**Without Z3:**
+- Axioms are just documentation
+- `∀(x : T)` is decorative syntax
+- Parser priority: Low (nice to have)
+- Grammar coverage: 40-45%
+
+**With Z3:**
+- Axioms become **verifiable**
+- `∀(x : T)` enables **proof checking**
+- Parser priority: HIGH (enables real features!)
+- Grammar coverage: 60-65%
+
+**Z3 creates MOTIVATION to complete parser features!**
+
+The work becomes interconnected:
+- Need `∀` to verify axioms
+- Need `⟹` for logical implications
+- Need `(×)` for clean axiom syntax
+- All unlocked by Z3 integration
+
+**This isn't just adding features - it's creating architectural momentum!** 🚀
 
 ---
 
@@ -361,6 +385,30 @@ match result {
 - Basic translator structure (1 hour)
 - Operation mapping (2 hours)
 - Testing and debugging (2 hours)
+
+#### Step 3: Create ADR-022 (After Implementation)
+
+**IMPORTANT:** Write ADR AFTER experimenting on branch, not before!
+
+**ADR-022: Z3 Integration for Axiom Verification**
+
+Document:
+- Why Z3? (theorem prover capabilities)
+- Alternatives considered (manual checking, pattern matching only, Coq, Lean)
+- Architecture (optional feature, generic translator)
+- Impact on grammar motivation (increases parser priority)
+- Trade-offs (external dependency vs verification power)
+- Decision: Include Z3 as optional feature
+
+**Process:**
+1. Work on branch, experiment with Z3
+2. Learn what works and what doesn't
+3. Document findings in ADR
+4. Commit ADR with working implementation
+
+**Learn by doing, then document the decision!**
+
+**Estimated:** 1 hour to write ADR after implementation
 
 ---
 
