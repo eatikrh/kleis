@@ -30,6 +30,11 @@ uuid = { version = "1.0", features = ["v4"] }
 z3 = { path = "../Z3/z3.rs/z3", optional = true }
 
 [features]
+# Default features (enabled by default)
+default = ["axiom-verification"]
+
+# Axiom verification using Z3 theorem prover
+# Can be disabled with: cargo build --no-default-features
 axiom-verification = ["z3"]
 
 [[bin]]

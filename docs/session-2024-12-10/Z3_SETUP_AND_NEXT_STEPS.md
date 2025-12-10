@@ -26,9 +26,15 @@ rustc --version --verbose | grep host
 rustup default stable-aarch64-apple-darwin
 ```
 
-**Environment variables (NOT needed with local path):**
+**Configuration (AUTOMATIC via .cargo/config.toml):**
 ```bash
-# These were tried but not necessary when using local Z3 clone:
+# NO environment variables needed!
+# .cargo/config.toml handles everything automatically
+```
+
+**Old way (NOT needed anymore):**
+```bash
+# These were tried but not necessary with .cargo/config.toml:
 export Z3_SYS_INCLUDE_DIR="/opt/homebrew/opt/z3/include"
 export Z3_SYS_LIB_DIR="/opt/homebrew/opt/z3/lib"
 export Z3_SYS_Z3_HEADER="/opt/homebrew/opt/z3/include/z3.h"
@@ -42,8 +48,11 @@ export Z3_SYS_Z3_HEADER="/opt/homebrew/opt/z3/include/z3.h"
 z3 = { path = "../Z3/z3.rs/z3", optional = true }
 
 [features]
+default = ["axiom-verification"]  # Z3 enabled by default!
 axiom-verification = ["z3"]
 ```
+
+**To disable Z3:** `cargo build --no-default-features`
 
 **Why local path:**
 - z3-sys from crates.io tries to build from source
@@ -258,6 +267,14 @@ let prelude = include_str!("../stdlib/prelude.kleis");
 
 ### Before Starting Work
 
+**Quick health check (RECOMMENDED):**
+```bash
+# Run the automated health check script
+./scripts/check_z3_setup.sh
+# Should show: "✅ All checks passed! Z3 integration ready 🚀"
+```
+
+**Manual verification:**
 ```bash
 # 1. Verify Rust architecture
 rustc --version --verbose | grep host
@@ -267,8 +284,7 @@ rustc --version --verbose | grep host
 git checkout feature/full-prelude-migration
 
 # 3. Verify Z3 tests pass
-cargo test --features axiom-verification \
-    --test z3_axiom_experiments -- --nocapture
+cargo test --test z3_axiom_experiments
 # Should see: "test result: ok. 7 passed"
 ```
 
@@ -373,20 +389,19 @@ Solution: Match architectures!
 ## 📝 Quick Start for Next Session
 
 ```bash
-# 1. Verify setup
-rustc --version | grep aarch64  # Should match
-uname -m                        # Should be arm64
-
-# 2. Switch to branch
+# 1. Switch to branch
 cd /Users/eatik_1/Documents/git/cee/kleis
 git checkout feature/full-prelude-migration
 
-# 3. Verify tests work
-cargo test --features axiom-verification --test z3_axiom_experiments
+# 2. Run health check
+./scripts/check_z3_setup.sh
+# Should show: "✅ All checks passed!"
 
-# 4. Start coding!
+# 3. If health check passes, start coding!
 # Create src/axiom_verifier.rs
 # Implement generic kleis_to_z3() translator
+
+# 4. If health check fails, see troubleshooting in docs/session-2024-12-10/Z3_BUILD_SETUP.md
 ```
 
 ---

@@ -1,0 +1,20 @@
+# Cargo configuration for Kleis project
+#
+# This file configures build settings, particularly for Z3 integration
+
+[build]
+# Link Z3 library (installed via Homebrew on macOS)
+rustflags = ["-L", "/opt/homebrew/opt/z3/lib"]
+
+[env]
+# Z3 header location for z3-sys binding generation
+Z3_SYS_Z3_HEADER = "/opt/homebrew/opt/z3/include/z3.h"
+
+# Note: If Z3 is installed in a different location on your system,
+# update these paths accordingly:
+#
+# Linux (typical): /usr/lib and /usr/include
+# macOS Homebrew Intel: /usr/local/opt/z3/lib and /usr/local/opt/z3/include
+# macOS Homebrew ARM: /opt/homebrew/opt/z3/lib and /opt/homebrew/opt/z3/include (default above)
+# Windows: Varies by installation method
+
