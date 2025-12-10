@@ -1,10 +1,10 @@
-# NEXT SESSION: Integration Tests & Stdlib Expansion
+# NEXT SESSION: Symbolic Simplification in Kleis
 
-**Current State:** main branch, 425 tests passing, Matrix cleanup COMPLETE! 🎉
+**Current State:** main branch, 565 tests passing, Self-hosting ACTUALLY WORKS! 🎉
 
-**Status:** 🎯 Ready for stdlib expansion and testing!
+**Status:** 🎯 Ready for proper simplification implementation
 
-**⚠️ See:** `docs/session-2024-12-09/SESSION_CORRECTION.md` for honest assessment of self-hosting state
+**⚠️ See:** `docs/session-2024-12-10/SESSION_SUMMARY.md` for complete session narrative
 
 ---
 
@@ -33,21 +33,62 @@
 
 **Result:** Kleis has a **truly extensible type system with deep polymorphism**! 🚀
 
-### Tests for Stdlib Functions ✅ (Dec 9 Evening)
+### Self-Hosting Actually Fixed ✅ (Dec 10)
 
-✅ **Created 12 comprehensive tests** - Verify user code using stdlib functions parses correctly  
-✅ **Uncommented 3 more functions** - `getOrDefault`, `head`, `tail` in types.kleis  
-✅ **Improved type inference** - Now checks function context for defined functions  
-✅ **Fixed load_kleis()** - Proper sequencing: data → structures → functions  
-✅ **Documented limitations** - Honest about what works vs aspirational
+✅ **Fixed 4 critical bugs** - Self-hosting now genuinely works!
+- Nullary constructors now recognized (None, True, False, Nil)
+- Type variables handled (T, U, V create fresh vars)
+- Constraint leakage fixed (clear between functions)
+- Type parameter substitution implemented
 
-⚠️ **Reality:** Functions are defined in types.kleis but NOT loaded due to polymorphism limitations
+✅ **35 comprehensive tests** - Verify functions load, execute, and compose  
+✅ **9 stdlib functions LOAD** - All callable from TypeChecker::with_stdlib()  
+✅ **Parametric polymorphism works** - Option(T), List(T) in functions  
+✅ **Pattern matching executes** - Returns symbolic results correctly  
+✅ **Matrix operations in Kleis** - Self-hosted functions with structured types  
+
+✅ **Reality:** Level 2 self-hosting GENUINELY achieved (565 tests passing)
 
 ---
 
-## 🎯 Next Session Options (Choose Your Adventure)
+## 🎯 Priority for Next Session
 
-### Option 1: Stdlib Operations (2-4 hours) ⭐ Recommended
+### PRIORITY: Symbolic Simplification in Kleis (4-8 hours) ⭐⭐⭐
+
+**Why this is THE priority:**
+- 🔑 **Completes the self-hosting story** properly
+- ✅ **Uses what we just proved works** (pattern matching, polymorphism)
+- 🎯 **Fixes the shortcut** we reverted
+- 📚 **ADR-002 compliance** (symbolic simplification)
+- 🚀 **User extensibility** (users can add their own rules)
+
+**Current problem:**
+```kleis
+maybeAddMatrices(Some(M1), Some(M2))
+→ Some(plus(Matrix(...), Matrix(...)))  // Not simplified ❌
+```
+
+**Goal:**
+```kleis
+maybeAddMatrices(Some(M1), Some(M2))
+→ Some(Matrix(2,2,[plus(1,5), plus(2,6), plus(3,7), plus(4,8)]))  // ✅
+```
+
+**Implementation plan:**
+1. Define Expression as data type in Kleis (1-2 hours)
+2. Write simplification rules in Kleis (2-3 hours)
+3. Integrate with evaluator (1-2 hours)
+4. Test comprehensively (1 hour)
+
+**On feature branch:** `feature/kleis-simplification`
+
+**See:** Previous session for motivation (we did this in Rust, then reverted)
+
+---
+
+## Alternative Options
+
+### Option 1: Stdlib Operations (2-4 hours)
 
 **Goal:** Add missing operations from palette to stdlib
 

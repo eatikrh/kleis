@@ -109,7 +109,8 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 - [`LLMs/`](LLMs/) - LLM integration research
 
 **Session Reports:** (Last 2-3 sessions)
-- [`session-2024-12-09/`](session-2024-12-09/README.md) - Matrix improvements & reality check ⭐
+- [`session-2024-12-10/`](session-2024-12-10/README.md) - Self-hosting actually fixed ⭐⭐
+- [`session-2024-12-09/`](session-2024-12-09/README.md) - Matrix improvements & reality check
 - [`session-2024-12-08/`](session-2024-12-08/README.md) - Signature-driven type system
 
 **Archive:**
