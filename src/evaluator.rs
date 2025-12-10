@@ -173,6 +173,17 @@ impl Evaluator {
                 }
             }
 
+            // Quantifiers - substitute in body
+            Expression::Quantifier {
+                quantifier,
+                variables,
+                body,
+            } => Expression::Quantifier {
+                quantifier: quantifier.clone(),
+                variables: variables.clone(),
+                body: Box::new(self.substitute(body, subst)),
+            },
+
             Expression::List(elements) => {
                 // Substitute in list elements
                 Expression::List(
@@ -228,6 +239,12 @@ impl Evaluator {
                 let eval_elements: Result<Vec<_>, _> =
                     elements.iter().map(|elem| self.eval(elem)).collect();
                 Ok(Expression::List(eval_elements?))
+            }
+
+            // Quantifiers - not evaluated (used in axioms)
+            Expression::Quantifier { .. } => {
+                // Quantifiers are for axioms, not runtime evaluation
+                Ok(expr.clone())
             }
 
             // Atoms - return as-is

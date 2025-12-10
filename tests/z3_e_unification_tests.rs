@@ -12,20 +12,20 @@ mod z3_e_unification_tests {
     fn test_commutativity_built_in() {
         // Z3 knows addition is commutative!
         // Can it determine that (a + b) and (b + a) are equivalent?
-        
+
         let a = Int::fresh_const("a");
         let b = Int::fresh_const("b");
         let c = Int::fresh_const("c");
-        
-        let expr1 = &a + &b;  // a + b
-        let expr2 = &b + &a;  // b + a
-        
+
+        let expr1 = &a + &b; // a + b
+        let expr2 = &b + &a; // b + a
+
         let solver = Solver::new();
-        
+
         // Assert they're equal, and that c equals one of them
         solver.assert(&c._eq(&expr1));
         solver.assert(&c._eq(&expr2));
-        
+
         match solver.check() {
             SatResult::Sat => {
                 println!("✅ Z3 knows a+b = b+a (commutativity built-in)");
@@ -44,21 +44,21 @@ mod z3_e_unification_tests {
     fn test_associativity_built_in() {
         // Z3 knows addition is associative!
         // Can it determine (a+b)+c = a+(b+c)?
-        
+
         let a = Int::fresh_const("a");
         let b = Int::fresh_const("b");
         let c = Int::fresh_const("c");
         let result = Int::fresh_const("result");
-        
-        let expr1 = (&a + &b) + &c;    // (a + b) + c
-        let expr2 = &a + (&b + &c);    // a + (b + c)
-        
+
+        let expr1 = (&a + &b) + &c; // (a + b) + c
+        let expr2 = &a + (&b + &c); // a + (b + c)
+
         let solver = Solver::new();
-        
+
         // Both should equal result
         solver.assert(&result._eq(&expr1));
         solver.assert(&result._eq(&expr2));
-        
+
         match solver.check() {
             SatResult::Sat => {
                 println!("✅ Z3 knows (a+b)+c = a+(b+c) (associativity built-in)");
@@ -77,17 +77,17 @@ mod z3_e_unification_tests {
     fn test_algebraic_simplification_detection() {
         // Can Z3 tell us when expressions are algebraically equivalent?
         // This is the KEY for simplification!
-        
+
         let x = Int::fresh_const("x");
-        
-        let expr1 = &x + &Int::from_i64(0);  // x + 0
-        let expr2 = x.clone();                // x
-        
+
+        let expr1 = &x + &Int::from_i64(0); // x + 0
+        let expr2 = x.clone(); // x
+
         let solver = Solver::new();
-        
+
         // Are they always equal?
         solver.assert(&expr1._eq(&expr2).not());
-        
+
         match solver.check() {
             SatResult::Unsat => {
                 println!("✅ Z3 knows x + 0 = x (algebraic simplification!)");
@@ -105,19 +105,19 @@ mod z3_e_unification_tests {
     #[test]
     fn test_distributivity_as_rewrite() {
         // Can Z3 verify that rewriting x(y+z) → xy + xz is valid?
-        
+
         let x = Int::fresh_const("x");
         let y = Int::fresh_const("y");
         let z = Int::fresh_const("z");
-        
-        let before = &x * (&y + &z);           // x(y + z)
-        let after = (&x * &y) + (&x * &z);     // xy + xz
-        
+
+        let before = &x * (&y + &z); // x(y + z)
+        let after = (&x * &y) + (&x * &z); // xy + xz
+
         let solver = Solver::new();
-        
+
         // Check if transformation is always valid
         solver.assert(&before._eq(&after).not());
-        
+
         match solver.check() {
             SatResult::Unsat => {
                 println!("✅ Z3 confirms: x(y+z) → xy+xz is ALWAYS valid");
@@ -135,17 +135,17 @@ mod z3_e_unification_tests {
     #[test]
     fn test_multiplication_by_zero() {
         // Can Z3 verify: ∀x. x × 0 = 0
-        
+
         let x = Int::fresh_const("x");
         let zero = Int::from_i64(0);
-        
-        let expr = &x * &zero;  // x × 0
-        
+
+        let expr = &x * &zero; // x × 0
+
         let solver = Solver::new();
-        
+
         // Check if it always equals zero
         solver.assert(&expr._eq(&zero).not());
-        
+
         match solver.check() {
             SatResult::Unsat => {
                 println!("✅ Z3 knows: x × 0 = 0 always");
@@ -153,7 +153,10 @@ mod z3_e_unification_tests {
             }
             SatResult::Sat => {
                 let model = solver.get_model().unwrap();
-                println!("❌ Found x where x×0 ≠ 0: x={}", model.eval(&x, true).unwrap());
+                println!(
+                    "❌ Found x where x×0 ≠ 0: x={}",
+                    model.eval(&x, true).unwrap()
+                );
             }
             SatResult::Unknown => {
                 println!("⚠️ Z3 could not determine");
@@ -164,17 +167,17 @@ mod z3_e_unification_tests {
     #[test]
     fn test_multiplication_by_one() {
         // Can Z3 verify: ∀x. x × 1 = x
-        
+
         let x = Int::fresh_const("x");
         let one = Int::from_i64(1);
-        
-        let expr = &x * &one;  // x × 1
-        
+
+        let expr = &x * &one; // x × 1
+
         let solver = Solver::new();
-        
+
         // Check if it always equals x
         solver.assert(&expr._eq(&x).not());
-        
+
         match solver.check() {
             SatResult::Unsat => {
                 println!("✅ Z3 knows: x × 1 = x always");
@@ -192,16 +195,16 @@ mod z3_e_unification_tests {
     #[test]
     fn test_double_negation() {
         // Can Z3 verify: ∀x. -(-x) = x
-        
+
         let x = Int::fresh_const("x");
-        
-        let expr = -(-x.clone());  // -(-x)
-        
+
+        let expr = -(-x.clone()); // -(-x)
+
         let solver = Solver::new();
-        
+
         // Check if -(-x) = x always
         solver.assert(&expr._eq(&x).not());
-        
+
         match solver.check() {
             SatResult::Unsat => {
                 println!("✅ Z3 knows: -(-x) = x (double negation)");
@@ -224,4 +227,3 @@ mod placeholder {
         println!("⚠️ Z3 E-unification tests skipped - compile with --features axiom-verification");
     }
 }
-

@@ -359,6 +359,13 @@ impl TypeInference {
 
             // List literal: infer element types and unify
             Expression::List(elements) => self.infer_list(elements, context_builder),
+
+            // Quantifier: used in axioms, not in regular expressions
+            // For now, just return a fresh type variable (axioms are checked separately)
+            Expression::Quantifier { body, .. } => {
+                // Infer the body type (the proposition)
+                self.infer(body, context_builder)
+            }
         }
     }
 

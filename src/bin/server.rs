@@ -240,6 +240,20 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
             // TODO: Implement match expression JSON serialization
             json!({"Match": "not yet implemented"})
         }
+        Expression::Quantifier { quantifier, variables, body } => {
+            json!({
+                "Quantifier": {
+                    "kind": match quantifier {
+                        kleis::ast::QuantifierKind::ForAll => "forall",
+                        kleis::ast::QuantifierKind::Exists => "exists",
+                    },
+                    "variables": variables.iter().map(|v| {
+                        json!({"name": v.name, "type": v.type_annotation})
+                    }).collect::<Vec<_>>(),
+                    "body": expression_to_json(body)
+                }
+            })
+        }
         Expression::List(elements) => {
             let elements_json: Vec<serde_json::Value> =
                 elements.iter().map(expression_to_json).collect();
@@ -630,6 +644,12 @@ fn collect_slots_recursive(
         Expression::Match { .. } => {
             // TODO: Implement match expression slot collection
             // For now, don't collect slots from match expressions
+        }
+        Expression::Quantifier { body, .. } => {
+            // Collect slots from quantifier body
+            let mut child_path = path.clone();
+            child_path.push(0);
+            collect_slots_recursive(body, slots, child_path, None);
         }
         Expression::List(elements) => {
             // Collect slots from list elements
