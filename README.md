@@ -55,7 +55,14 @@ Originally designed for **Projected Ontology Theory (POT)** and **Hilbert Ontolo
 
 ### Run the Web Equation Editor
 
+**Easy way (recommended):**
 ```bash
+./run_server.sh
+```
+
+**Or manually:**
+```bash
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h  # macOS ARM
 cargo run --bin server
 ```
 
