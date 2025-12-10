@@ -147,8 +147,18 @@ fn test_implication_with_conjunction() {
 
 #[test]
 fn test_de_morgan_law_parsing() {
-    // Test: Parse De Morgan's law
-    // Simplified: just parse the structure
+    // TODO: This test should verify De Morgan's Law: ¬(A ∨ B) = (¬A) ∧ (¬B)
+    // Currently simplified because:
+    // 1. Need better Z3 translator for nested boolean operations
+    // 2. Need Bool type support (not just Int)
+    // 3. Need proper type context for boolean variables
+    //
+    // Future implementation should:
+    // - Parse: "∀(a b : Bool). ¬(a ∨ b) = (¬a) ∧ (¬b)"
+    // - Verify with Z3 that it holds for all boolean values
+    // - Show counterexample if violated
+    //
+    // For now, just test that equality parsing works
     
     let input = "a = b";
     let mut parser = KleisParser::new(input);
@@ -159,7 +169,7 @@ fn test_de_morgan_law_parsing() {
     match result.unwrap() {
         Expression::Operation { name, .. } => {
             assert_eq!(name, "equals");
-            println!("✅ Equality parses correctly");
+            println!("✅ Equality parses correctly (De Morgan's full test TODO)");
         }
         _ => panic!("Expected equals operation"),
     }
