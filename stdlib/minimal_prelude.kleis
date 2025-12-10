@@ -35,6 +35,16 @@ structure Ordered(T) {
   operation greater_than : T → T → Bool
   operation less_equal : T → T → Bool
   operation greater_equal : T → T → Bool
+  operation leq : T → T → Bool
+  operation geq : T → T → Bool
+  operation neq : T → T → Bool
+  operation approx : T → T → Bool
+}
+
+structure LogicalOps(T) {
+  operation logical_and : T → T → T
+  operation logical_or : T → T → T
+  operation logical_not : T → T
 }
 
 // Arithmetic for scalars
@@ -77,6 +87,16 @@ implements Ordered(ℝ) {
   operation greater_than = builtin_gt
   operation less_equal = builtin_le
   operation greater_equal = builtin_ge
+  operation leq = builtin_le
+  operation geq = builtin_ge
+  operation neq = builtin_neq
+  operation approx = builtin_approx
+}
+
+implements LogicalOps(Bool) {
+  operation logical_and = builtin_and
+  operation logical_or = builtin_or
+  operation logical_not = builtin_not
 }
 
 // Numeric operations (beyond arithmetic)
