@@ -9,12 +9,12 @@
 
 ## TL;DR
 
-✅ **Parser implements ~55% of formal grammar v0.5, with Z3 theorem proving and generic constraints**
+✅ **Parser implements ~58% of formal grammar v0.5, with Z3 theorem proving, generic constraints, and compositional algebra**
 
-**Coverage:** ~55% of formal grammar (+3% from where clauses)  
-**Purpose:** Validate core language features, ADR-015 design, axiom verification, and generic constraints  
-**Status:** Phase 1, 2, & 3.1 complete! Where clauses fully integrated with Z3  
-**Tests:** 434+ passing (421 library + 10 where + 3 Z3 where)
+**Coverage:** ~58% of formal grammar (+6% from where clauses + nested structures)  
+**Purpose:** Validate core language features, ADR-015 design, axiom verification, generic constraints, and compositional algebra  
+**Status:** Phase 1, 2, 3.1 & nested structures complete! Full compositional algebra support  
+**Tests:** 445+ passing (421 library + 10 where + 3 Z3 where + 7 nested + 3 nested Z3 + others)
 
 ---
 
@@ -42,6 +42,7 @@
 | **Logical operators** | `∧`, `∨`, `¬`, `⟹` | ✅ With precedence | ✅ **NEW!** |
 | **Comparisons** | `=`, `<`, `>`, `≤`, `≥`, `≠` | ✅ Complete | ✅ **NEW!** |
 | **Where clauses** | `implements Foo(T) where Bar(T)` | ✅ Complete | ✅ **NEW!** |
+| **Nested structures** | `structure additive : Group(R) { ... }` | ✅ Complete | ✅ **NEW!** |
 | **Axiom verification** | Z3 theorem proving | ✅ Working | ✅ **NEW!** |
 
 **Pattern Matching Features:**
@@ -65,7 +66,7 @@
 - Implication: `p ⟹ q` (IMPLIES)
 - Proper precedence chain
 
-**Total Major Features:** ~19 supported ✅ (+7 from Dec 10 sessions, including where clauses)
+**Total Major Features:** ~20 supported ✅ (+8 from Dec 10 sessions: quantifiers, logic, where clauses, nested structures)
 
 ---
 
@@ -142,6 +143,13 @@
 - Recursive constraint loading
 - **~55% grammar coverage** (+3 percentage points!)
 
+**v0.5.3 (December 10, 2024 - Very Late Evening):** ✨ **Nested Structures**
+- Added nested structure support (compositional algebra!)
+- Syntax: `structure Ring(R) { structure additive : Group(R) { ... } }`
+- Integrated with Z3 (nested axioms/identities available)
+- Arbitrary nesting depth supported
+- **~58% grammar coverage** (+3 percentage points!)
+
 ---
 
 ## Coverage Breakdown
@@ -168,10 +176,11 @@
 15. ✅ **Logical operators (`∧`, `∨`, `¬`, `⟹`)** ⭐ NEW!
 16. ✅ **Comparison operators** ⭐ NEW!
 17. ✅ **Where clauses (`where Constraint(T)`)** ⭐ NEW!
-18. ✅ **Axiom verification (Z3)** ⭐ NEW!
-19. ✅ **Generic constraint verification** ⭐ NEW!
+18. ✅ **Nested structures (compositional algebra)** ⭐ NEW!
+19. ✅ **Axiom verification (Z3)** ⭐ NEW!
+20. ✅ **Generic constraint verification** ⭐ NEW!
 
-**Not Implemented (8):**
+**Not Implemented (7):**
 1. ❌ Prefix operators (general - only `¬` works)
 2. ❌ Postfix operators
 3. ❌ Lambda expressions
@@ -181,8 +190,8 @@
 7. ❌ Symbolic constants
 8. ❌ Type aliases
 
-**Major Feature Coverage:** 19/27 = **70%** of major constructs  
-**Overall Grammar Coverage:** **~55%** (accounting for all production rules, operators, etc.)
+**Major Feature Coverage:** 20/27 = **74%** of major constructs  
+**Overall Grammar Coverage:** **~58%** (accounting for all production rules, operators, etc.)
 
 ---
 
@@ -646,29 +655,29 @@ structure Monoid(M) extends Semigroup(M) {
 
 **Needed for:** Structure inheritance hierarchy in `prelude.kleis`
 
-**2. Nested Structures** (~3-4 hours)
-```kleis
-structure Ring(R) {
-  structure additive : AbelianGroup(R) { ... }
-  structure multiplicative : Monoid(R) { ... }
-}
-```
-
-**Needed for:** Composing algebraic structures
-
-**3. `define` with Operators** (~2-3 hours)
+**2. `define` with Operators** (~2-3 hours)
 ```kleis
 define (-)(x, y) = x + negate(y)
 ```
 
 **Needed for:** Defining operations with operator syntax
 
-**Note on `element` keyword:**
-The parser supports `element` in implements blocks. For structures, we can use nullary operations:
+**Notes on features that work already:**
+
+✅ **`element` keyword:** Not required! Nullary operations work:
 ```kleis
 operation zero : R  // Nullary operation = identity element
 ```
-This works perfectly - AxiomVerifier detects them automatically as identity elements!
+AxiomVerifier detects them automatically!
+
+✅ **Nested structures:** ✅ IMPLEMENTED!
+```kleis
+structure Ring(R) {
+  structure additive : AbelianGroup(R) { ... }
+  structure multiplicative : Monoid(R) { ... }
+}
+```
+Fully integrated with Z3! Axioms from nested structures available!
 
 ### Medium Priority (Better UX)
 
@@ -825,12 +834,15 @@ structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
 
 **Remaining for full prelude:**
 1. `extends` keyword (3-4 hours) - Structure inheritance
-2. Nested structures (3-4 hours) - Composing structures
-3. `define` with operators (2-3 hours) - Operator definitions
+2. `define` with operators (2-3 hours) - Operator definitions
 
-**Total:** ~8-11 hours additional work
+**Total:** ~5-7 hours additional work (reduced from 8-11!)
 
-**Note:** `element` keyword is NOT a blocker - nullary operations work the same way!
+**Completed (not blockers anymore):**
+- ✅ `element` keyword - Nullary operations work the same way!
+- ✅ Nested structures - IMPLEMENTED! Compositional algebra works!
+
+**We're getting close to full prelude!** Only 2 features remain!
 
 ### Future Enhancements (Lower Priority)
 
@@ -884,15 +896,15 @@ This is **sufficient for:**
 
 **Still needed:**
 1. `extends` keyword - Structure inheritance (e.g., `Monoid extends Semigroup`)
-2. Nested structures - Substructures within structures
-3. `define` with operators - Define operations like `define (-)(x,y) = ...`
+2. `define` with operators - Define operations like `define (-)(x,y) = ...`
 
 **Not needed (works already!):**
 - ~~`element` keyword~~ - Nullary operations work: `operation zero : R` (no arrows = identity element)
+- ~~Nested structures~~ ✅ **DONE!** - `structure additive : Group(R) { ... }`
 
-**Impact:** Can't load full `prelude.kleis` without the 3 remaining features
+**Impact:** Can't load full `prelude.kleis` without the 2 remaining features
 
-**Timeline:** ~8-11 hours to implement (reduced from 10-13!)
+**Timeline:** ~5-7 hours to implement (reduced from 8-11!)
 
 ---
 
