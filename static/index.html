@@ -1140,12 +1140,13 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     
                     <!-- Logic & Set Theory -->
                     <div id="palette-logic" class="symbol-grid" style="display:none;">
-                        <button class="math-btn" onclick="insertSymbol('<')" data-tooltip="Less Than">\(<\)</button>
-                        <button class="math-btn" onclick="insertSymbol('>')" data-tooltip="Greater Than">\(>\)</button>
-                        <button class="math-btn" onclick="insertSymbol('\\leq')" data-tooltip="Less or Equal">\(\leq\)</button>
-                        <button class="math-btn" onclick="insertSymbol('\\geq')" data-tooltip="Greater or Equal">\(\geq\)</button>
-                        <button class="math-btn" onclick="insertSymbol('\\neq')" data-tooltip="Not Equal">\(\neq\)</button>
-                        <button class="math-btn" onclick="insertSymbol('\\approx')" data-tooltip="Approximately">\(\approx\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ = □')" data-tooltip="Equals">\(a = b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ \\neq □')" data-tooltip="Not Equal">\(a \neq b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ < □')" data-tooltip="Less Than">\(a < b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ > □')" data-tooltip="Greater Than">\(a > b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ \\leq □')" data-tooltip="Less or Equal">\(a \leq b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ \\geq □')" data-tooltip="Greater or Equal">\(a \geq b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ \\approx □')" data-tooltip="Approximately Equal">\(a \approx b\)</button>
                         
                         <button class="math-btn" onclick="insertTemplate('□ \\land □')" data-tooltip="Logical AND">\(a \land b\)</button>
                         <button class="math-btn" onclick="insertTemplate('□ \\lor □')" data-tooltip="Logical OR">\(a \lor b\)</button>
