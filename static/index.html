@@ -883,33 +883,18 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     <div class="matrix-builder-content">
                         <h3>📐 Create Piecewise Function</h3>
                         
-                        <!-- Case Count Selector -->
-                        <div class="matrix-delimiter-group">
-                            <label>Number of cases:</label>
-                            <div class="matrix-delimiter-options">
-                                <button class="matrix-delimiter-btn selected" data-cases="2">
-                                    <span>2</span>
-                                    <span>If-Else</span>
-                                </button>
-                                <button class="matrix-delimiter-btn" data-cases="3">
-                                    <span>3</span>
-                                    <span>Three cases</span>
-                                </button>
-                                <button class="matrix-delimiter-btn" data-cases="4">
-                                    <span>4</span>
-                                    <span>Four cases</span>
-                                </button>
-                                <button class="matrix-delimiter-btn" data-cases="5">
-                                    <span>5</span>
-                                    <span>Five cases</span>
-                                </button>
+                        <!-- Case Count Input -->
+                        <div class="matrix-inputs">
+                            <div class="matrix-input-group">
+                                <label for="piecewise-cases-input">Number of cases:</label>
+                                <input type="number" id="piecewise-cases-input" min="2" max="10" value="2" oninput="updatePiecewisePreview()">
                             </div>
                         </div>
                         
                         <!-- Preview -->
                         <div class="matrix-size-display" id="piecewise-preview">
-                            f(x) = { expr₁  if condition₁
-                                   { expr₂  otherwise
+                            f(x) = { expr₁  if cond₁
+                                   { expr₂  if cond₂
                         </div>
                         
                         <!-- Action Buttons -->
@@ -3466,35 +3451,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         
         // === Piecewise Function Builder Functions ===
         
-        let piecewiseBuilderState = {
-            cases: 2
-        };
-        
-        function initializePiecewiseBuilder() {
-            // Setup case count buttons
-            document.querySelectorAll('#piecewise-builder-modal .matrix-delimiter-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('#piecewise-builder-modal .matrix-delimiter-btn').forEach(b => 
-                        b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                    piecewiseBuilderState.cases = parseInt(btn.dataset.cases);
-                    updatePiecewisePreview();
-                });
-            });
-            
-            console.log('✓ Piecewise builder initialized');
-        }
-        
         function showPiecewiseBuilder() {
             const modal = document.getElementById('piecewise-builder-modal');
             modal.classList.add('show');
             
             // Reset to defaults
-            piecewiseBuilderState = { cases: 2 };
-            document.querySelectorAll('#piecewise-builder-modal .matrix-delimiter-btn').forEach(b => 
-                b.classList.remove('selected'));
-            document.querySelector('[data-cases="2"]').classList.add('selected');
-            
+            document.getElementById('piecewise-cases-input').value = 2;
             updatePiecewisePreview();
         }
         
@@ -3504,7 +3466,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         }
         
         function updatePiecewisePreview() {
-            const { cases } = piecewiseBuilderState;
+            const cases = parseInt(document.getElementById('piecewise-cases-input').value) || 2;
             const preview = document.getElementById('piecewise-preview');
             
             let text = 'f(x) = {';
@@ -3517,7 +3479,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         }
         
         function createPiecewiseFromBuilder() {
-            const { cases } = piecewiseBuilderState;
+            const cases = parseInt(document.getElementById('piecewise-cases-input').value) || 2;
             
             if (editorMode === 'structural') {
                 // Create AST directly for structural mode
@@ -3606,9 +3568,6 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 closePiecewiseBuilder();
             }
         });
-        
-        // Initialize piecewise builder on load
-        window.addEventListener('load', initializePiecewiseBuilder);
         
         // Render MathJax in palette buttons
         if (window.MathJax) {
