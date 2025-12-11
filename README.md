@@ -566,14 +566,14 @@ See `docs/adr-005-visual-authoring.md`, `docs/kleis_vision_executable_math.md`, 
 - **[Grammar Specification](docs/grammar/)** - Formal grammar and specifications
 
 ### Architecture Decisions
-- **[ADR-001](docs/adr-001-scalar-multiply.md)** - Scalar multiply semantics
-- **[ADR-002](docs/adr-002-eval-vs-simplify.md)** - Evaluation vs simplification
-- **[ADR-003](docs/adr-003-self-hosting.md)** - Self-hosting strategy
-- **[ADR-004](docs/adr-004-input-visualization.md)** - Input visualization
-- **[ADR-006](docs/adr-006-template-grammar-duality.md)** - Template grammar duality
-- **[ADR-007](docs/adr-007-bootstrap-grammar.md)** - Bootstrap grammar
-- **[ADR-008](docs/adr-008-bootstrap-grammar-boundary.md)** - Grammar boundary
-- **[ADR-009](docs/adr-009-wysiwyg-structural-editor.md)** - WYSIWYG editor design
+- **[ADR-001](docs/adr/adr-001-scalar-multiply.md)** - Scalar multiply semantics
+- **[ADR-002](docs/adr/adr-002-eval-vs-simplify.md)** - Evaluation vs simplification
+- **[ADR-003](docs/adr/adr-003-self-hosting.md)** - Self-hosting strategy
+- **[ADR-004](docs/adr/adr-004-input-visualization.md)** - Input visualization
+- **[ADR-006](docs/adr/adr-006-template-grammar-duality.md)** - Template grammar duality
+- **[ADR-007](docs/adr/adr-007-bootstrap-grammar.md)** - Bootstrap grammar
+- **[ADR-008](docs/adr/adr-008-bootstrap-grammar-boundary.md)** - Grammar boundary
+- **[ADR-009](docs/adr/adr-009-wysiwyg-structural-editor.md)** - WYSIWYG editor design
 
 ### Theory & Foundations
 - **[Projected Ontology Theory](docs/theory/POT.md)** - POT formalism
