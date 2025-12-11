@@ -1061,12 +1061,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     
                     <!-- Linear Algebra & Matrices -->
                     <div id="palette-linear" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
-                        <button class="math-btn" onclick="insertTemplate('\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}')" data-tooltip="Matrix 2×2 [brackets]">\(\begin{bmatrix}a&b\\c&d\end{bmatrix}\)</button>
-                        <button class="math-btn" onclick="insertTemplate('\\begin{bmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{bmatrix}')" data-tooltip="Matrix 3×3 [brackets]">\(\begin{bmatrix}a&b&c\\d&e&f\\g&h&i\end{bmatrix}\)</button>
-                        <button class="math-btn" onclick="insertTemplate('\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}')" data-tooltip="Matrix 2×2 (parens)">\(\begin{pmatrix}a&b\\c&d\end{pmatrix}\)</button>
-                        <button class="math-btn" onclick="insertTemplate('\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}')" data-tooltip="Matrix 3×3 (parens)">\(\begin{pmatrix}a&b&c\\d&e&f\\g&h&i\end{pmatrix}\)</button>
-                        <button class="math-btn" onclick="insertTemplate('\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}')" data-tooltip="Determinant 2×2">\(\begin{vmatrix}a&b\\c&d\end{vmatrix}\)</button>
-                        <button class="math-btn" onclick="insertTemplate('\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}')" data-tooltip="Determinant 3×3">\(\begin{vmatrix}a&b&c\\d&e&f\\g&h&i\end{vmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(2, 2, 'bmatrix')" data-tooltip="Matrix 2×2 [brackets]">\(\begin{bmatrix}a&b\\c&d\end{bmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(3, 3, 'bmatrix')" data-tooltip="Matrix 3×3 [brackets]">\(\begin{bmatrix}a&b&c\\d&e&f\\g&h&i\end{bmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(2, 2, 'pmatrix')" data-tooltip="Matrix 2×2 (parens)">\(\begin{pmatrix}a&b\\c&d\end{pmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(3, 3, 'pmatrix')" data-tooltip="Matrix 3×3 (parens)">\(\begin{pmatrix}a&b&c\\d&e&f\\g&h&i\end{pmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(2, 2, 'vmatrix')" data-tooltip="Determinant 2×2">\(\begin{vmatrix}a&b\\c&d\end{vmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(3, 3, 'vmatrix')" data-tooltip="Determinant 3×3">\(\begin{vmatrix}a&b&c\\d&e&f\\g&h&i\end{vmatrix}\)</button>
                         <button class="math-btn" onclick="showMatrixBuilder()" data-tooltip="Custom Matrix Builder">
                             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="28" viewBox="0 0 64 48">
                                 <g stroke="#333" stroke-width="2.5" fill="none">
@@ -3370,51 +3370,52 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             display.textContent = `${matrixBuilderState.rows} × ${matrixBuilderState.cols}`;
         }
         
+        // Generic matrix creation (used by both Matrix Builder and palette buttons)
+        function createMatrixAST(rows, cols, delimiter) {
+            const totalElements = rows * cols;
+            const args = [];
+            
+            // Generate placeholders for each cell using nextPlaceholderId
+            for (let i = 0; i < totalElements; i++) {
+                const row = Math.floor(i / cols) + 1;
+                const col = (i % cols) + 1;
+                args.push({
+                    Placeholder: {
+                        id: nextPlaceholderId++,  // Coordinates with existing IDs!
+                        hint: `a${row}${col}`
+                    }
+                });
+            }
+            
+            // Determine operation name based on delimiter
+            let opName;
+            if (delimiter === 'pmatrix') {
+                opName = 'PMatrix';
+            } else if (delimiter === 'vmatrix') {
+                opName = 'VMatrix';
+            } else {
+                opName = 'Matrix';  // includes bmatrix and plain matrix
+            }
+            
+            // NEW FORMAT: Matrix(rows, cols, [elements]) with List literal
+            return {
+                Operation: {
+                    name: opName,
+                    args: [
+                        { Const: String(rows) },
+                        { Const: String(cols) },
+                        { List: args }
+                    ]
+                }
+            };
+        }
+        
         function createMatrixFromBuilder() {
             const { rows, cols, delimiter } = matrixBuilderState;
             
             if (editorMode === 'structural') {
-                // Create AST directly for structural mode
-                const totalElements = rows * cols;
-                const args = [];
-                
-                // Generate placeholders for each cell
-                for (let i = 0; i < totalElements; i++) {
-                    const row = Math.floor(i / cols) + 1;
-                    const col = (i % cols) + 1;
-                    args.push({
-                        Placeholder: {
-                            id: nextPlaceholderId++,
-                            hint: `a${row}${col}`
-                        }
-                    });
-                }
-                
-                // Determine operation name (NEW FORMAT: generic Matrix constructor)
-                let opName;
-                if (delimiter === 'pmatrix') {
-                    opName = 'PMatrix';
-                } else if (delimiter === 'vmatrix') {
-                    opName = 'VMatrix';
-                } else {
-                    opName = 'Matrix';  // includes bmatrix and plain matrix
-                }
-                
-                // NEW FORMAT: Matrix(rows, cols, [elements]) - FIXED ARITY with List literal!
-                // This makes Matrix a regular 3-arg data constructor instead of variable arity
-                const matrixArgs = [
-                    { Const: String(rows) },   // First arg: rows (Nat)
-                    { Const: String(cols) },   // Second arg: cols (Nat)
-                    { List: args }              // Third arg: [elements] (List)
-                ];
-                
-                // Create AST
-                const ast = {
-                    Operation: {
-                        name: opName,
-                        args: matrixArgs
-                    }
-                };
+                // Use shared matrix creation function
+                const ast = createMatrixAST(rows, cols, delimiter);
                 
                 // Save to undo stack
                 saveToUndoStack();
@@ -3480,6 +3481,35 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         // Initialize matrix builder on load
         window.addEventListener('load', initializeMatrixBuilder);
         
+        // Insert matrix from palette button (mimics Matrix Builder logic)
+        function insertMatrixFromPalette(rows, cols, delimiter) {
+            if (editorMode === 'structural') {
+                const ast = createMatrixAST(rows, cols, delimiter);
+                saveToUndoStack();
+                if (activeEditMarker) {
+                    setNodeAtPath(currentAST, activeEditMarker.path, ast);
+                    activeEditMarker = null;
+                    document.querySelectorAll('.arg-overlay').forEach(el => el.classList.remove('active-marker'));
+                } else {
+                    currentAST = ast;
+                }
+                renderStructuralEditor();
+                showStatus(`✅ Inserted ${rows}×${cols} matrix`, 'success');
+            } else {
+                let latex = `\\begin{${delimiter}}`;
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        latex += '□';
+                        if (c < cols - 1) latex += '&';
+                    }
+                    if (r < rows - 1) latex += '\\\\\\\\';
+                }
+                latex += `\\end{${delimiter}}`;
+                insertTemplate(latex);
+            }
+        }
+        
+
         // === Piecewise Function Builder Functions ===
         
         function showPiecewiseBuilder() {
