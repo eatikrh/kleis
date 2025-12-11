@@ -1,11 +1,13 @@
 # Kleis
 
-**Kleis** is a **formal mathematical reasoning engine** with:
-- **Structural equation editor** - Build formulas visually with WYSIWYG editing and deterministic positioning
-- **Type system** - Algebraic foundations (Groups, Rings, Fields) through advanced structures (Fiber Bundles, Categories, Monads)
-- **Evaluation engine** - Type-safe symbolic computation with polymorphic dispatch
-- **Universal verification** - Check mathematical correctness AND business rules, legal constraints, medical protocols
-- **AI verification layer** - Catch LLM hallucinations by type-checking generated formulas
+**Kleis** is a **formal mathematical reasoning engine** with rigorous type checking and theorem proving:
+
+- **Type system with structures** - Algebraic hierarchy (Magma → Semigroup → Monoid → Group → Ring → Field) with generic constraints, inheritance, and compositional algebra
+- **Z3 theorem prover integration** - Verify mathematical axioms with SMT solving (5/5 dependency types rigorously proven)
+- **Kleis language** - Self-hosted type definitions, operations in structures (ADR-016), parser with 60% grammar coverage
+- **Structural equation editor** - WYSIWYG formula building with deterministic positioning and professional presentation
+- **Documentation generator** - Auto-generate beautiful docs from .kleis files (Markdown + HTML with MathJax)
+- **Universal verification vision** - Same type system for mathematics AND real-world domains (business rules, legal constraints, protocols)
 
 Originally designed for **Projected Ontology Theory (POT)** and **Hilbert Ontology (HONT)**, Kleis has evolved into a general-purpose formal reasoning system that unifies mathematics, ontological structure, and real-world domain modeling under a single type-theoretic framework.
 
@@ -113,7 +115,7 @@ Then open **http://localhost:3000** in your browser for the web editor:
 cargo test
 ```
 
-**Current status:** 300+ tests passing across renderer, parser, semantic layout, and golden suites.
+**Current status:** 421 tests passing (library tests) + 5 rigorous Z3 proof tests.
 
 ### Generate PDF Gallery
 
