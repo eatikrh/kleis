@@ -1,0 +1,16 @@
+# VS Code Extension Build Artifacts
+*.vsix
+
+# Node modules (already excluded by parent .gitignore, but explicit here)
+node_modules/
+
+# Build outputs
+out/
+dist/
+
+# Test outputs
+.vscode-test/
+
+# macOS
+.DS_Store
+
