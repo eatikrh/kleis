@@ -185,7 +185,7 @@ define frac(a, b) = a / b
 - `∃ x . Q(x)` - existential quantification
 - Function application: `f(x)` - covers abs, card, norm, frac
 
-**See:** [ADR-015 Grammar Impact Analysis](adr-015-grammar-impact.md) for detailed analysis.
+**Note:** Grammar impact analysis completed and integrated into this document.
 
 ### What Needs Implementation
 
@@ -299,11 +299,11 @@ class VisualEditor {
 
 ### Test Cases
 
-See [notation-mapping-tests.md](notation-mapping-tests.md) for 11 detailed test cases.
+See [notation-mapping-tests.md](../notation/notation-mapping-tests.md) for 11 detailed test cases.
 
 ### Proof-of-Concept Tests
 
-See [notation-poc-tests.md](notation-poc-tests.md) for 10 POC tests including:
+See [notation-poc-tests.md](../notation/notation-poc-tests.md) for 10 POC tests including:
 - Basic parsing and rendering
 - Visual editor text generation
 - Git diff readability
@@ -491,10 +491,9 @@ This is why text representation matters for document collaboration.
 ## References
 
 ### Design Documents
-- [content-editing-paradigm.md](content-editing-paradigm.md) - Design discussion
-- [notation-design-summary.md](notation-design-summary.md) - Complete overview
-- [notation-mapping-tests.md](notation-mapping-tests.md) - Test cases
-- [notation-poc-tests.md](notation-poc-tests.md) - Validation tests
+- [content-editing-paradigm.md](../notation/content-editing-paradigm.md) - Design discussion
+- [notation-mapping-tests.md](../notation/notation-mapping-tests.md) - Test cases
+- [notation-poc-tests.md](../notation/notation-poc-tests.md) - Validation tests
 
 ### Related ADRs
 - [ADR-009](adr-009-wysiwyg-structural-editor.md) - WYSIWYG Structural Editor
@@ -504,8 +503,7 @@ This is why text representation matters for document collaboration.
 - [ADR-014](adr-014-hindley-milner-type-system.md) - Type System
 
 ### Implementation
-- [IMPLEMENTATION_NEXT_STEPS.md](IMPLEMENTATION_NEXT_STEPS.md) - 5-phase roadmap
-- [notation-poc-tests.md](notation-poc-tests.md) - 10 proof-of-concept test specifications
+- [notation-poc-tests.md](../notation/notation-poc-tests.md) - 10 proof-of-concept test specifications
 - **Executable POC:** `cargo run --bin test_adr015_poc` - ✅ **PASSING** - Validates core design
 
 ---

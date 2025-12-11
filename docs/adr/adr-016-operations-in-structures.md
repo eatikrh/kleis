@@ -467,9 +467,8 @@ structure PurchaseOrder {
 
 ## References
 
-- [stdlib/prelude.kleis](../stdlib/prelude.kleis) - Existing pattern
+- [stdlib/prelude.kleis](../../stdlib/prelude.kleis) - Existing pattern
 - [ADR-015](adr-015-text-as-source-of-truth.md) - Text representation
-- [OPERATIONS_DUAL_REPRESENTATION.md](OPERATIONS_DUAL_REPRESENTATION.md) - Discussion
 - [TYPE_CHECKING_NEXT_STEPS.md](type-system/TYPE_CHECKING_NEXT_STEPS.md) - Updated roadmap
 
 ---
