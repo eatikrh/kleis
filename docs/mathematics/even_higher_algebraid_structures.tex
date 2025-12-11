@@ -1,0 +1,181 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{example}{Example}
+\newtheorem{remark}{Remark}
+
+\title{\textbf{Even Higher Algebraic Structures}\\[4pt]
+\large Modules, Algebras, Group Actions, and Representations}
+\author{Kleis Language Project}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Higher Algebraic Structures: Modules, Algebras, Group Actions, and Representations}
+
+This section develops the next layer of abstract algebra above groups,
+rings, fields, and vector spaces.  The structures introduced here
+provide the algebraic foundation for linear algebra, representation
+theory, and many constructions appearing in the semantic foundations
+of Kleis.
+
+\subsection{Modules Over Rings}
+
+\begin{definition}[$R$-module]
+Let $R$ be a ring.  An \emph{$R$-module} is an abelian group $(M,+)$
+together with a scalar multiplication
+\[
+  \cdot : R \times M \to M
+\]
+such that, for all $r,s\in R$ and $x,y\in M$,
+\begin{align*}
+  r\cdot(x+y) &= r\cdot x + r\cdot y, \\
+  (r+s)\cdot x &= r\cdot x + s\cdot x, \\
+  (rs)\cdot x &= r\cdot(s\cdot x), \\
+  1\cdot x &= x,
+\end{align*}
+where $1$ denotes the multiplicative identity of $R$.
+\end{definition}
+
+\begin{remark}
+Modules generalize vector spaces by allowing the scalars to come from
+an arbitrary ring rather than a field.  When $R$ is a field, an
+$R$-module is precisely a vector space over $R$.
+\end{remark}
+
+\subsection{Algebras Over a Ring or Field}
+
+\begin{definition}[Algebra over a ring]
+Let $R$ be a ring.  An \emph{$R$-algebra} is an $R$-module $(A,+,\cdot)$
+together with a bilinear multiplication
+\[
+  * : A \times A \to A
+\]
+such that $(A,*,1)$ is a ring and scalar multiplication in $A$ is
+compatible with multiplication:
+\[
+  r\cdot(a * b) = (r\cdot a) * b = a * (r\cdot b).
+\]
+\end{definition}
+
+\begin{example}
+\leavevmode
+\begin{enumerate}
+  \item The polynomial ring $R[x]$ is an $R$-algebra.
+  \item The matrix ring $M_n(R)$ is an $R$-algebra.
+  \item Over a field $F$, any associative algebra (Lie, Clifford,
+        tensor, exterior, symmetric) is an $F$-algebra.
+\end{enumerate}
+\end{example}
+
+\subsection{Group Actions}
+
+\begin{definition}[Group action]
+Let $G$ be a group and $X$ a set.  A \emph{(left) action} of $G$ on $X$
+is a function
+\[
+  \alpha : G \times X \to X
+\qquad\text{denoted } g\cdot x,
+\]
+such that, for all $g,h\in G$ and $x\in X$,
+\begin{align*}
+  e\cdot x &= x, \\
+  (gh)\cdot x &= g\cdot(h\cdot x),
+\end{align*}
+where $e$ is the identity of $G$.
+\end{definition}
+
+\begin{remark}
+A group action is a homomorphism $G \to \mathrm{Bij}(X)$, the group of
+all bijections of $X$.
+\end{remark}
+
+\subsection{Representation Theory}
+
+\begin{definition}[Linear representation]
+Let $G$ be a group and $F$ a field.  A \emph{representation} of $G$
+on a vector space $V$ over $F$ is a group homomorphism
+\[
+  \rho : G \to \mathrm{GL}(V),
+\]
+where $\mathrm{GL}(V)$ denotes the group of invertible linear
+transformations of $V$.
+\end{definition}
+
+\begin{example}
+\leavevmode
+\begin{enumerate}
+  \item The trivial representation: $\rho(g)=\mathrm{id}$.
+  \item The permutation representation of $S_n$ on $\mathbb{R}^n$.
+  \item The adjoint representation of a Lie group on its Lie algebra.
+\end{enumerate}
+\end{example}
+
+\begin{remark}
+Representations allow groups to be studied through the linear algebra
+of vector spaces.  Much of modern algebra, geometry, and quantum
+physics is based on the interaction between groups and their
+representations.
+\end{remark}
+
+\subsection{Structural Overview}
+
+The higher algebraic hierarchy extends the basic tower:
+\[
+  \text{Magma} \subset
+  \text{Semigroup} \subset
+  \text{Monoid} \subset
+  \text{Group} \subset
+  \text{Ring} \subset
+  \text{Field}.
+\]
+
+Above these, one obtains:
+\[
+  \text{Field} \implies \text{Vector Space},
+\qquad
+  \text{Ring} \implies \text{Module},
+\qquad
+  \text{Module} \implies \text{$R$-Algebra}.
+\]
+
+Group actions and group representations provide the fundamental means
+by which algebraic symmetry is expressed within linear structures.
+
+\subsection{Interpretation in Kleis}
+
+The structures introduced above admit direct specification in Kleis.
+For instance:
+\begin{verbatim}
+structure Module(M) over Ring(R) {
+  operation (+) : M × M → M
+  operation (·) : R × M → M
+}
+\end{verbatim}
+
+\begin{verbatim}
+structure Algebra(A) over Ring(R) {
+  structure module : Module(A) over Ring(R)
+  operation (*) : A × A → A
+  axiom bilinear:
+    ∀(r : R, x y : A).
+      r · (x * y) = (r · x) * y = x * (r · y)
+}
+\end{verbatim}
+
+\begin{verbatim}
+structure Representation(G, V) over Field(F) {
+  operation act : G × V → V
+  axiom compatibility:
+    ∀(g h : G, v : V).
+      act(g · h, v) = act(g, act(h, v))
+}
+\end{verbatim}
+
+\end{document}

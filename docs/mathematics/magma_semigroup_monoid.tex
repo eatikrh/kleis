@@ -1,0 +1,139 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{example}{Example}
+\newtheorem{remark}{Remark}
+
+\title{\textbf{Algebraic Foundations}\\[4pt]
+\large Magma, Semigroup, and Monoid}
+\author{Kleis Language Project}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Algebraic Foundations: Magma, Semigroup, and Monoid}
+
+This appendix recalls the universal–algebraic hierarchy underlying many
+of the core abstractions in Kleis.  The presentation follows the
+style of Bourbaki and classical algebraic specification.
+
+\subsection{Magma}
+
+\begin{definition}[Magma]
+A \emph{magma} is a pair $(M,\star)$ consisting of a set $M$ together
+with a binary operation
+\[
+  \star : M \times M \to M.
+\]
+No algebraic axioms are required: in particular, associativity and
+identity need not hold.
+\end{definition}
+
+\begin{example}
+Let $M=\{1,2,3\}$ and define $x \star y = x$ for all $x,y\in M$.
+Then $(M,\star)$ is a magma which is neither associative nor admits
+an identity element.
+\end{example}
+
+\subsection{Semigroup}
+
+\begin{definition}[Semigroup]
+A \emph{semigroup} is a magma $(S,\star)$ whose operation is
+associative:
+\[
+  (x \star y)\star z = x \star (y \star z)
+  \qquad\text{for all } x,y,z\in S.
+\]
+\end{definition}
+
+\begin{remark}
+A semigroup may fail to have a neutral element.  Thus the usual notion
+of a \emph{fold} over an empty list is not available for arbitrary
+semigroups.
+\end{remark}
+
+\subsection{Monoid}
+
+\begin{definition}[Monoid]
+A \emph{monoid} is a semigroup $(M,\cdot)$ together with a distinguished
+element $e\in M$, called the \emph{identity}, such that
+\[
+  e \cdot x = x
+  \qquad\text{and}\qquad
+  x \cdot e = x
+  \qquad\text{for all } x \in M.
+\]
+Thus a monoid is a triple $(M,\cdot,e)$ satisfying associativity and
+both left and right identity laws.
+\end{definition}
+
+\begin{example}[Classical monoids]
+\leavevmode
+\begin{enumerate}
+  \item $(\mathbb{N},+,0)$ is a monoid.
+  \item $(\text{Strings},\text{concatenation},\varepsilon)$ is a monoid,
+        where $\varepsilon$ is the empty string.
+  \item For any set $X$, the endofunctions $X^X$ with composition form a
+        monoid; the identity element is $\mathrm{id}_X$.
+\end{enumerate}
+\end{example}
+
+\subsection{Relationship Between the Structures}
+
+Every monoid is a semigroup, and every semigroup is a magma.  The
+converse implications do not hold.  In summary:
+\[
+  \text{Monoid}
+  \;\subset\;
+  \text{Semigroup}
+  \;\subset\;
+  \text{Magma}.
+\]
+
+\subsection{Categorical Interpretation}
+
+\begin{proposition}
+A monoid is precisely a category with a single object.
+\end{proposition}
+
+\begin{proof}
+Let $\mathcal{C}$ be a category with one object $*$.
+Its morphisms $\mathrm{Hom}( *, * )$ carry a natural associative
+composition, and the identity morphism $\mathrm{id}_*$ is a unit.
+Conversely, given a monoid $(M,\cdot,e)$, construct a category with
+one object whose endomorphisms are the elements of $M$ and whose
+composition is $\cdot$.
+\end{proof}
+
+\subsection{Interpretation in Kleis}
+
+The algebraic hierarchy of Kleis mirrors the universal–algebraic
+definitions above.  In Kleis, the corresponding specifications are:
+
+\begin{verbatim}
+structure Magma(M) {
+  operation (•) : M × M → M
+}
+
+structure Semigroup(S) extends Magma(S) {
+  axiom associativity:
+    ∀(x y z : S). (x • y) • z = x • (y • z)
+}
+
+structure Monoid(M) extends Semigroup(M) {
+  element e : M
+  axiom left_identity:  ∀(x : M). e • x = x
+  axiom right_identity: ∀(x : M). x • e = x
+}
+\end{verbatim}
+
+Thus the standard fold and accumulation operators become available
+precisely at the level of monoids, in agreement with both algebraic and
+category-theoretic semantics.
+\end{document}

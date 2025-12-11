@@ -1,0 +1,199 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{example}{Example}
+\newtheorem{remark}{Remark}
+
+\title{\textbf{Higher Algebraic Structures}\\[4pt]
+\large Groups, Rings, Fields, and Vector Spaces}
+\author{Kleis Language Project}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Higher Algebraic Structures: Groups, Rings, Fields, and Vector Spaces}
+
+This section extends the algebraic hierarchy beyond monoids.  The
+presentation follows the classical structural method of Bourbaki:
+each structure is defined by a carrier set together with operations
+and equational axioms.
+
+\subsection{Groups}
+
+\begin{definition}[Group]
+A \emph{group} is a triple $(G,\cdot,e)$ where:
+\begin{enumerate}
+  \item $(G,\cdot,e)$ is a monoid;
+  \item every element $x\in G$ admits a (two-sided) inverse, i.e.,
+        there exists $x^{-1}\in G$ such that
+        \[
+           x^{-1}\cdot x = e
+           \qquad\text{and}\qquad
+           x\cdot x^{-1} = e .
+        \]
+\end{enumerate}
+\end{definition}
+
+\begin{example}
+The integers $(\mathbb{Z},+,0)$ form a group, where $x^{-1}=-x$.
+\end{example}
+
+\begin{definition}[Abelian group]
+A group is \emph{abelian} if its multiplication is commutative:
+\[
+  x \cdot y = y \cdot x
+  \qquad\text{for all } x,y\in G .
+\]
+\end{definition}
+
+\begin{example}
+$(\mathbb{Z},+)$ is abelian; $(S_n,\circ)$, the symmetric group,
+is not.
+\end{example}
+
+\subsection{Rings}
+
+\begin{definition}[Ring]
+A \emph{ring} is a triple $(R,+,\times)$ such that:
+\begin{enumerate}
+  \item $(R,+)$ is an abelian group, with identity $0$ and inverse
+        $-x$;
+  \item $(R,\times)$ is a monoid, with identity $1$;
+  \item multiplication distributes over addition:
+        \[
+           x\times (y+z) = (x\times y) + (x\times z),
+           \qquad
+           (x+y)\times z = (x\times z) + (y\times z).
+        \]
+\end{enumerate}
+\end{definition}
+
+\begin{remark}
+A ring need not be commutative under multiplication; commutative rings
+form a distinguished subclass.
+\end{remark}
+
+\begin{example}
+The integers $(\mathbb{Z},+,\times)$ form a commutative ring.
+The $n\times n$ matrices with real entries form a (noncommutative)
+ring under matrix addition and multiplication.
+\end{example}
+
+\subsection{Fields}
+
+\begin{definition}[Field]
+A \emph{field} is a commutative ring $(F,+,\times)$ in which every
+nonzero element admits a multiplicative inverse.  Thus:
+\[
+  x \neq 0 \implies \exists\,x^{-1}\in F \text{ such that }
+  x\times x^{-1} = 1 .
+\]
+\end{definition}
+
+\begin{example}
+$\mathbb{Q}$, $\mathbb{R}$, and $\mathbb{C}$ are fields.  The integers
+are not a field, since only $\pm 1$ are invertible.
+\end{example}
+
+\begin{remark}
+Fields form the algebraic basis of linear algebra and support division
+and scalar multiplication in vector spaces.
+\end{remark}
+
+\subsection{Vector Spaces}
+
+\begin{definition}[Vector space]
+Let $F$ be a field.  A \emph{vector space} over $F$ is a pair $(V,+)$
+together with a scalar-multiplication operation
+\[
+  \cdot : F \times V \to V
+\]
+such that:
+\begin{enumerate}
+  \item $(V,+)$ is an abelian group with identity $0_v$;
+  \item scalar multiplication satisfies:
+        \begin{align*}
+           a\cdot (v+w) &= (a\cdot v) + (a\cdot w), \\
+           (a+b)\cdot v &= (a\cdot v) + (b\cdot v), \\
+           (ab)\cdot v &= a\cdot(b\cdot v), \\
+           1\cdot v &= v,
+        \end{align*}
+        for all $a,b\in F$ and $v,w\in V$.
+\end{enumerate}
+\end{definition}
+
+\begin{example}
+$\mathbb{R}^n$ is a vector space over the field $\mathbb{R}$.
+Matrices of size $m\times n$ form a vector space over $\mathbb{R}$
+under entrywise addition and scalar multiplication.
+\end{example}
+
+\subsection{Structural Relationships}
+
+The hierarchy of algebraic structures can be summarized as:
+\[
+\text{Group} \supset \text{Monoid} \supset \text{Semigroup} \supset \text{Magma},
+\]
+and
+\[
+\text{Field} \supset \text{Commutative Ring} \supset \text{Ring}.
+\]
+
+Vector spaces are defined over fields:
+\[
+\text{Vector Space}(V) \text{ is defined over a Field } F.
+\]
+
+In categorical terms:
+\begin{itemize}
+  \item a monoid is a category with one object;
+  \item a group is a groupoid with one object;
+  \item a ring is a rig with additive inverses;
+  \item a field is a commutative ring in which all nonzero arrows are invertible.
+\end{itemize}
+
+\subsection{Interpretation in Kleis}
+
+The Kleis algebraic hierarchy mirrors these classical structures.  In
+Kleis, each structure is specified by its operations and axioms:
+
+\begin{verbatim}
+structure Group(G) extends Monoid(G) {
+  operation inv : G → G
+  axiom left_inverse:
+    ∀(x : G). inv(x) • x = e
+}
+\end{verbatim}
+
+\begin{verbatim}
+structure Ring(R) {
+  structure additive : AbelianGroup(R)
+  structure multiplicative : Monoid(R)
+  axiom distributivity:
+    ∀(x y z : R). x × (y + z) = (x × y) + (x × z)
+}
+\end{verbatim}
+
+\begin{verbatim}
+structure Field(F) extends Ring(F) {
+  operation inverse : F → F
+  axiom multiplicative_inverse:
+    ∀(x : F) where x ≠ zero.
+      inverse(x) × x = one
+}
+\end{verbatim}
+
+\begin{verbatim}
+structure VectorSpace(V) over Field(F) {
+  operation (+) : V × V → V
+  operation (·) : F × V → V
+}
+\end{verbatim}
+
+\end{document}
