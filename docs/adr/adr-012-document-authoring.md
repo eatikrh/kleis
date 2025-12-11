@@ -446,9 +446,9 @@ Text cell:
 │                                        │
 │ `Code snippets`                        │
 │                                        │
-│ [Hyperlinks](url)                      │
+│ Hyperlinks: `[text](url)`              │
 │                                        │
-│ Images: ![alt](url)                    │
+│ Images: `![alt](url)`                  │
 │                                        │
 │ Tables: | Col1 | Col2 |                │
 └────────────────────────────────────────┘
