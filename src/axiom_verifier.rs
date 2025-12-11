@@ -235,6 +235,7 @@ impl<'r> AxiomVerifier<'r> {
 
         // Mark as loaded
         self.loaded_structures.insert(structure_name.to_string());
+        println!("   ✅ Marked {} as loaded", structure_name);
 
         Ok(())
     }

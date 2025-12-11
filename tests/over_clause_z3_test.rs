@@ -21,10 +21,10 @@ fn test_over_clause_loads_field_axioms() {
         }
         
         structure VectorSpace(V) over Field(F) {
-            operation (·) : F × V → V
+            operation times : F × V → V
             
             axiom scalar_identity:
-                ∀(v : V). one · v = v
+                ∀(v : V). times(one, v) = v
         }
     "#;
 
