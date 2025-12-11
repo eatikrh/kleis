@@ -1,6 +1,6 @@
 # Kleis Parser vs Formal Grammar Compatibility
 
-**Date:** December 10, 2024 (Late Evening Update)  
+**Date:** December 11, 2024 (Updated after Z3 fixes)  
 **Formal Grammar:** Kleis v0.5 (with pattern matching + quantifiers + logic + where clauses)  
 **Parser Implementation:** `src/kleis_parser.rs`  
 **Branch:** `feature/phase-3-where-clauses`
@@ -13,8 +13,8 @@
 
 **Coverage:** ~60% of formal grammar (+20% from Dec 10 sessions!)  
 **Purpose:** Complete algebraic type system with theorem proving, generic constraints, inheritance, and compositional structures  
-**Status:** Phase 1, 2, 3 COMPLETE! Where clauses, nested structures, extends, and define operators all working  
-**Tests:** 464+ passing (421 library + 10 where + 3 Z3 where + 7 nested + 3 nested Z3 + 7 extends + 3 extends Z3 + 6 define ops + 4 notation)
+**Status:** Phase 1, 2, 3 COMPLETE! Where clauses, nested structures, extends, define operators, and Z3 integration all working  
+**Tests:** 426+ passing (421 library + 5 Z3 proof tests - ALL RIGOROUS ✅)
 
 ---
 
@@ -45,6 +45,8 @@
 | **Nested structures** | `structure additive : Group(R) { ... }` | ✅ Complete | ✅ **NEW!** |
 | **Extends keyword** | `structure Monoid(M) extends Semigroup(M)` | ✅ Complete | ✅ **NEW!** |
 | **Define with operators** | `define (-)(x, y) = x + negate(y)` | ✅ Complete | ✅ **NEW!** |
+| **Custom operators** | `operation (•) : S → S → S` | ✅ Complete | ✅ **NEW!** |
+| **Comments** | `// line`, `/* block */` | ✅ Complete | ✅ Works |
 | **Axiom verification** | Z3 theorem proving | ✅ Working | ✅ **NEW!** |
 
 **Pattern Matching Features:**
@@ -68,7 +70,7 @@
 - Implication: `p ⟹ q` (IMPLIES)
 - Proper precedence chain
 
-**Total Major Features:** ~22 supported ✅ (+10 from Dec 10 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators)
+**Total Major Features:** ~24 supported ✅ (+12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
 
 ---
 
@@ -166,6 +168,15 @@
 - One-line change (parse_identifier → parse_operation_name)
 - **~60% grammar coverage** (refinement)
 
+**v0.5.6 (December 11, 2024):** 🔧 **Quality & Documentation**
+- Fixed Z3 dependency analysis bug (nullary operations like `e`, `zero`, `one` now found)
+- All 5/5 Z3 proof tests pass - mathematical rigor achieved! ✅
+- Created `kleis_doc` tool: generates HTML/Markdown docs from .kleis files
+- Synchronized G4 grammar with EBNF (added custom operators, named operations)
+- Documented comment support: `//` line and `/* */` block comments fully work
+- Updated compatibility doc with custom operators and comments
+- 426+ tests passing (421 library + 5 Z3 proof tests)
+
 ---
 
 ## Coverage Breakdown
@@ -195,8 +206,10 @@
 18. ✅ **Nested structures (compositional algebra)** ⭐ NEW!
 19. ✅ **Extends keyword (structure inheritance)** ⭐ NEW!
 20. ✅ **Define with operators (`define (-)(x,y)`)** ⭐ NEW!
-21. ✅ **Axiom verification (Z3)** ⭐ NEW!
-22. ✅ **Generic constraint verification** ⭐ NEW!
+21. ✅ **Custom operators (`•`, `⊗`, `⊕`, etc.)** ⭐ NEW!
+22. ✅ **Comments (`//` and `/* */`)** ✅ Works!
+23. ✅ **Axiom verification (Z3)** ⭐ NEW!
+24. ✅ **Generic constraint verification** ⭐ NEW!
 
 **Not Implemented (7):**
 1. ❌ Prefix operators (general - only `¬` works)
@@ -208,7 +221,7 @@
 7. ❌ Symbolic constants
 8. ❌ Type aliases
 
-**Major Feature Coverage:** 22/29 = **76%** of major constructs  
+**Major Feature Coverage:** 24/31 = **77%** of major constructs  
 **Overall Grammar Coverage:** **~60%** (accounting for all production rules, operators, etc.)
 
 ---
@@ -276,7 +289,7 @@ implements MatrixMultipliable(m, n, p, T)
 
 **Needed for structure hierarchy:**
 ```kleis
-structure Monoid(M) extends Semigroup(M) {  // ❌ Parser doesn't support 'extends' yet
+structure Monoid(M) extends Semigroup(M) {  // ✅ Parser now supports 'extends'!
     element e : M
 }
 ```
@@ -910,19 +923,24 @@ This is **sufficient for:**
 3. ✅ Logical operators: `∧`, `∨`, `¬`, `⟹` - **DONE!**
 4. ✅ Z3 theorem prover integration - **DONE!**
 
-### ⚠️ Remaining Blockers For Full Stdlib
+### ✅ All Core Features Implemented!
 
-**Still needed:**
-1. `extends` keyword - Structure inheritance (e.g., `Monoid extends Semigroup`)
-2. `define` with operators - Define operations like `define (-)(x,y) = ...`
+**Completed (Dec 10, 2024):**
+1. ✅ `extends` keyword - Structure inheritance **DONE!**
+2. ✅ `define` with operators - Operator definitions **DONE!**
+3. ✅ Nested structures - Compositional algebra **DONE!**
+4. ✅ Where clauses - Generic constraints **DONE!**
+5. ✅ Custom operators - Unicode math symbols **DONE!**
 
-**Not needed (works already!):**
-- ~~`element` keyword~~ - Nullary operations work: `operation zero : R` (no arrows = identity element)
-- ~~Nested structures~~ ✅ **DONE!** - `structure additive : Group(R) { ... }`
+**Already worked:**
+- ✅ Nullary operations work: `operation zero : R` (no arrows = identity element)
+- ✅ Comments: `//` and `/* */` fully supported
 
-**Impact:** Can't load full `prelude.kleis` without the 2 remaining features
+**Remaining for full prelude.kleis:**
+- ⚠️ Top-level operation declarations: `operation dot : ∀(n : ℕ). Vector(n) → ℝ`
+- ⚠️ Top-level define statements (not critical for Z3)
 
-**Timeline:** ~5-7 hours to implement (reduced from 8-11!)
+**Timeline:** Full prelude support ~2-3 hours (top-level syntax only)
 
 ---
 
