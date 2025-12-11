@@ -142,8 +142,17 @@ impl<'r> AxiomVerifier<'r> {
                 }
             }
 
-            Expression::Object(_) | Expression::Const(_) => {
-                // Variables and constants don't introduce dependencies
+            Expression::Object(name) => {
+                // Check if this object is actually a nullary operation (like e, zero, one)
+                // Nullary operations appear as Object when used in expressions
+                if let Some(owners) = self.registry.get_operation_owners(name) {
+                    structures.extend(owners);
+                }
+                // Otherwise it's a true variable and introduces no dependencies
+            }
+
+            Expression::Const(_) => {
+                // Constants don't introduce dependencies
             }
 
             _ => {
