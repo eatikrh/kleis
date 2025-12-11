@@ -545,27 +545,25 @@ See `docs/adr-005-visual-authoring.md`, `docs/kleis_vision_executable_math.md`, 
 
 ### Getting Started
 - **[README](README.md)** - You are here
-- **[Palette Guide](PALETTE_COMPLETE_GUIDE.md)** - Using the structural editor
+- **[Palette Guide](docs/guides/PALETTE_GUIDE.md)** - Using the structural editor
 - **[Server API](SERVER_README.md)** - API reference
-- **[Missing Symbols](PALETTE_MISSING_SYMBOLS.md)** - TODO: Symbols to add
+- **[Parser Status](PARSER_TODO.md)** - Parser implementation TODO
 
 ### Type System & Verification
 - **[Type System Design](docs/type-system/KLEIS_TYPE_SYSTEM.md)** - Algebraic foundations, polymorphic dispatch
 - **[Type System UX](docs/type-system/KLEIS_TYPE_UX.md)** - Context management, inference prompts
-- **[Evaluation Syntax](docs/type-system/KLEIS_EVALUATION_SYNTAX.md)** - Substitute, eval, multi-valued operations
+- **[Evaluation Syntax](docs/archive/type-system-roadmaps/KLEIS_EVALUATION_SYNTAX.md)** - Substitute, eval, multi-valued operations
 
 ### Vision & Future
 - **[arXiv Integration](docs/vision/ARXIV_INTEGRATION_VISION.md)** - Academic publishing transformation
 - **[Universal Verification](docs/vision/UNIVERSAL_QUALITY_GATES.md)** - Beyond mathematics
 - **[Executable Mathematics](docs/vision/kleis_vision_executable_math.md)** - Long-term vision
-- **[Visual Authoring](docs/vision/adr-005-visual-authoring.md)** - Custom operation design
+- **[Visual Authoring](docs/adr/adr-005-visual-authoring.md)** - Custom operation design
 
 ### For Developers
-- **[Structural Editor Status](STRUCTURAL_EDITOR_STATUS.md)** - Implementation details
-- **[Technical Reference](TECHNICAL_REFERENCE.md)** - Architecture internals
 - **[Parser Status](PARSER_TODO.md)** - Parser implementation TODO
-- **[Test Guide](TEST_GUIDE.md)** - Testing procedures
-- **[Matrix Handling](ARBITRARY_MATRIX_SOLUTION.md)** - Matrix design decisions
+- **[Test Guide](docs/guides/TEST_GUIDE.md)** - Testing procedures
+- **[Grammar Specification](docs/grammar/)** - Formal grammar and specifications
 
 ### Architecture Decisions
 - **[ADR-001](docs/adr-001-scalar-multiply.md)** - Scalar multiply semantics
@@ -619,14 +617,10 @@ See `LICENSE` file for details.
 ## 📚 Documentation
 
 ### Main Guides
-- **[PALETTE_COMPLETE_GUIDE.md](PALETTE_COMPLETE_GUIDE.md)** - Complete palette guide (54 templates, usage, troubleshooting)
-- **[TECHNICAL_REFERENCE.md](TECHNICAL_REFERENCE.md)** - Technical implementation details (architecture, API, debugging)
-- **[SESSION_FINAL_SUMMARY.md](SESSION_FINAL_SUMMARY.md)** - Recent improvements and accomplishments
-
-### Specific Topics
-- **[ARBITRARY_MATRIX_SOLUTION.md](ARBITRARY_MATRIX_SOLUTION.md)** - Matrix handling and arbitrary sizes
-- **[SERVER_README.md](SERVER_README.md)** - Server API documentation
-- **[TEST_GUIDE.md](TEST_GUIDE.md)** - Testing guide
+- **[Palette Guide](docs/guides/PALETTE_GUIDE.md)** - Using the structural editor
+- **[Test Guide](docs/guides/TEST_GUIDE.md)** - Testing procedures
+- **[Server API](SERVER_README.md)** - Server API documentation
+- **[Parser Status](PARSER_TODO.md)** - Parser implementation TODO
 
 ### Architecture Decision Records
 - See `docs/adr-*.md` for design decisions
