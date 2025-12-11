@@ -181,10 +181,12 @@ pub fn template_matrix_2x2() -> Expression {
         vec![
             Expression::Const("2".to_string()), // rows
             Expression::Const("2".to_string()), // cols
-            Expression::placeholder(next_id(), "a11"),
-            Expression::placeholder(next_id(), "a12"),
-            Expression::placeholder(next_id(), "a21"),
-            Expression::placeholder(next_id(), "a22"),
+            Expression::List(vec![
+                Expression::placeholder(next_id(), "a11"),
+                Expression::placeholder(next_id(), "a12"),
+                Expression::placeholder(next_id(), "a21"),
+                Expression::placeholder(next_id(), "a22"),
+            ]),
         ],
     )
 }
@@ -196,15 +198,17 @@ pub fn template_matrix_3x3() -> Expression {
         vec![
             Expression::Const("3".to_string()), // rows
             Expression::Const("3".to_string()), // cols
-            Expression::placeholder(next_id(), "a11"),
-            Expression::placeholder(next_id(), "a12"),
-            Expression::placeholder(next_id(), "a13"),
-            Expression::placeholder(next_id(), "a21"),
-            Expression::placeholder(next_id(), "a22"),
-            Expression::placeholder(next_id(), "a23"),
-            Expression::placeholder(next_id(), "a31"),
-            Expression::placeholder(next_id(), "a32"),
-            Expression::placeholder(next_id(), "a33"),
+            Expression::List(vec![
+                Expression::placeholder(next_id(), "a11"),
+                Expression::placeholder(next_id(), "a12"),
+                Expression::placeholder(next_id(), "a13"),
+                Expression::placeholder(next_id(), "a21"),
+                Expression::placeholder(next_id(), "a22"),
+                Expression::placeholder(next_id(), "a23"),
+                Expression::placeholder(next_id(), "a31"),
+                Expression::placeholder(next_id(), "a32"),
+                Expression::placeholder(next_id(), "a33"),
+            ]),
         ],
     )
 }
@@ -578,10 +582,12 @@ pub fn template_pmatrix_2x2() -> Expression {
         vec![
             Expression::Const("2".to_string()), // rows
             Expression::Const("2".to_string()), // cols
-            Expression::placeholder(next_id(), "a11"),
-            Expression::placeholder(next_id(), "a12"),
-            Expression::placeholder(next_id(), "a21"),
-            Expression::placeholder(next_id(), "a22"),
+            Expression::List(vec![
+                Expression::placeholder(next_id(), "a11"),
+                Expression::placeholder(next_id(), "a12"),
+                Expression::placeholder(next_id(), "a21"),
+                Expression::placeholder(next_id(), "a22"),
+            ]),
         ],
     )
 }
@@ -593,15 +599,17 @@ pub fn template_pmatrix_3x3() -> Expression {
         vec![
             Expression::Const("3".to_string()), // rows
             Expression::Const("3".to_string()), // cols
-            Expression::placeholder(next_id(), "a11"),
-            Expression::placeholder(next_id(), "a12"),
-            Expression::placeholder(next_id(), "a13"),
-            Expression::placeholder(next_id(), "a21"),
-            Expression::placeholder(next_id(), "a22"),
-            Expression::placeholder(next_id(), "a23"),
-            Expression::placeholder(next_id(), "a31"),
-            Expression::placeholder(next_id(), "a32"),
-            Expression::placeholder(next_id(), "a33"),
+            Expression::List(vec![
+                Expression::placeholder(next_id(), "a11"),
+                Expression::placeholder(next_id(), "a12"),
+                Expression::placeholder(next_id(), "a13"),
+                Expression::placeholder(next_id(), "a21"),
+                Expression::placeholder(next_id(), "a22"),
+                Expression::placeholder(next_id(), "a23"),
+                Expression::placeholder(next_id(), "a31"),
+                Expression::placeholder(next_id(), "a32"),
+                Expression::placeholder(next_id(), "a33"),
+            ]),
         ],
     )
 }
@@ -613,10 +621,12 @@ pub fn template_vmatrix_2x2() -> Expression {
         vec![
             Expression::Const("2".to_string()), // rows
             Expression::Const("2".to_string()), // cols
-            Expression::placeholder(next_id(), "a11"),
-            Expression::placeholder(next_id(), "a12"),
-            Expression::placeholder(next_id(), "a21"),
-            Expression::placeholder(next_id(), "a22"),
+            Expression::List(vec![
+                Expression::placeholder(next_id(), "a11"),
+                Expression::placeholder(next_id(), "a12"),
+                Expression::placeholder(next_id(), "a21"),
+                Expression::placeholder(next_id(), "a22"),
+            ]),
         ],
     )
 }
@@ -628,15 +638,17 @@ pub fn template_vmatrix_3x3() -> Expression {
         vec![
             Expression::Const("3".to_string()), // rows
             Expression::Const("3".to_string()), // cols
-            Expression::placeholder(next_id(), "a11"),
-            Expression::placeholder(next_id(), "a12"),
-            Expression::placeholder(next_id(), "a13"),
-            Expression::placeholder(next_id(), "a21"),
-            Expression::placeholder(next_id(), "a22"),
-            Expression::placeholder(next_id(), "a23"),
-            Expression::placeholder(next_id(), "a31"),
-            Expression::placeholder(next_id(), "a32"),
-            Expression::placeholder(next_id(), "a33"),
+            Expression::List(vec![
+                Expression::placeholder(next_id(), "a11"),
+                Expression::placeholder(next_id(), "a12"),
+                Expression::placeholder(next_id(), "a13"),
+                Expression::placeholder(next_id(), "a21"),
+                Expression::placeholder(next_id(), "a22"),
+                Expression::placeholder(next_id(), "a23"),
+                Expression::placeholder(next_id(), "a31"),
+                Expression::placeholder(next_id(), "a32"),
+                Expression::placeholder(next_id(), "a33"),
+            ]),
         ],
     )
 }
@@ -944,8 +956,15 @@ mod tests {
         match matrix {
             Expression::Operation { name, args } => {
                 assert_eq!(name, "Matrix");
-                // 2 dimension args + 4 elements = 6 total
-                assert_eq!(args.len(), 6);
+                // NEW FORMAT: 2 dimension args + 1 List = 3 total
+                assert_eq!(args.len(), 3);
+                // Third arg should be a List with 4 elements
+                match &args[2] {
+                    Expression::List(elements) => {
+                        assert_eq!(elements.len(), 4, "2x2 matrix should have 4 elements");
+                    }
+                    _ => panic!("Expected List as third argument"),
+                }
             }
             _ => panic!("Expected operation"),
         }
