@@ -1436,7 +1436,18 @@ fn render_expression_internal(
                 .enumerate()
                 .map(|(i, elem)| {
                     let child_id = format!("{}.{}", node_id, i);
-                    render_expression_internal(elem, ctx, target, &child_id, node_id_to_uuid)
+                    let rendered =
+                        render_expression_internal(elem, ctx, target, &child_id, node_id_to_uuid);
+
+                    // For Typst: wrap list elements with UUID labels for position tracking
+                    // This is critical for Matrix List format where each element needs tracking
+                    if *target == RenderTarget::Typst {
+                        if let Some(uuid) = node_id_to_uuid.get(&child_id) {
+                            return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+                        }
+                    }
+
+                    rendered
                 })
                 .collect();
 
