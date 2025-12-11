@@ -37,6 +37,43 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 - Ask for clarification when uncertain
 - Be respectful of the user's workflow and preferences
 
+## Website Stats Update Rule
+
+**CRITICAL: Update kleis.io landing page stats at the start of each session.**
+
+### Rule: Update GitHub Traffic Stats
+
+**At the beginning of each session (or when requested):**
+
+1. **Check GitHub Traffic** 
+   - Visit: https://github.com/eatikrh/kleis/graphs/traffic
+   - Note current "Unique cloners" count
+   - Note current "Commits" count from main page
+
+2. **Count Research Papers**
+   - Count PDF files in `docs/mathematics/`
+   - Current count should match dynamic counter
+
+3. **Update Landing Page Static Stats** (if needed)
+   - File: `index.html`
+   - Update any hardcoded numbers or date references
+   - Example: "286+ Cloners (Dec 2024)" → new count
+
+4. **Document the update**
+   - Log format: "Updated kleis.io stats: X cloners, Y commits, Z papers"
+
+**Current stats (as of Dec 11, 2024):**
+- Unique Cloners: 286+
+- GitHub Stars: 0
+- Commits: 481
+- Research Papers: 14 PDFs
+
+**Why this matters:**
+- Shows active development and community interest
+- Cloner count is private (requires auth) - must be manually updated
+- Other stats (stars, commits, papers) are dynamic via GitHub API
+- Helps track project growth over time
+
 ## Rust Code Quality Rules
 
 **CRITICAL: Run quality checks before committing .rs files.**
