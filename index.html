@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kleis - Universal Verification Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 60px;
+            max-width: 900px;
+            width: 100%;
+        }
+        h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .tagline {
+            font-size: 1.5em;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        .feature {
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .buttons {
+            display: flex;
+            gap: 20px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            border: 2px solid #667eea;
+            color: #667eea;
+            background: white;
+        }
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Kleis</h1>
+        <p class="tagline">Universal Verification Platform for Mathematics, Business Rules, and Beyond</p>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">286+</div>
+                <div class="stat-label">Unique Cloners</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">478</div>
+                <div class="stat-label">Commits</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">14</div>
+                <div class="stat-label">Research Papers</div>
+            </div>
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <h3>🔬 Type System</h3>
+                <p>Hindley-Milner type inference with complete algebraic foundations</p>
+            </div>
+            <div class="feature">
+                <h3>🎯 Verification</h3>
+                <p>Z3 theorem prover integration for axiom verification</p>
+            </div>
+            <div class="feature">
+                <h3>🌐 Universal</h3>
+                <p>Mathematics, business rules, network protocols, and more</p>
+            </div>
+            <div class="feature">
+                <h3>⚡ WASM</h3>
+                <p>Runs everywhere - browser, server, desktop, mobile</p>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <a href="https://github.com/eatikrh/kleis" class="btn btn-primary">View on GitHub</a>
+            <a href="https://github.com/eatikrh/kleis#readme" class="btn btn-secondary">Documentation</a>
+        </div>
+    </div>
+</body>
+</html>
+
