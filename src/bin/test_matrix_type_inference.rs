@@ -12,33 +12,12 @@ use std::fs;
 fn main() {
     println!("=== Matrix Type Inference Test ===\n");
 
-    // Step 1: Load stdlib/matrices.kleis
-    println!("Step 1: Loading stdlib/matrices.kleis...");
-    let stdlib_content =
-        fs::read_to_string("stdlib/matrices.kleis").expect("Failed to read stdlib/matrices.kleis");
-
-    println!("  File size: {} bytes", stdlib_content.len());
-
-    // Step 2: Parse into Program
-    println!("\nStep 2: Parsing structure definitions...");
-    let program = match parse_kleis_program(&stdlib_content) {
-        Ok(prog) => {
-            println!("  ✅ Parsed successfully!");
-            println!("  Structures: {}", prog.structures().len());
-            println!("  Implements: {}", prog.implements().len());
-            prog
-        }
-        Err(e) => {
-            eprintln!("  ❌ Parse error: {}", e);
-            std::process::exit(1);
-        }
-    };
-
-    // Step 3: Build TypeChecker from program
-    println!("\nStep 3: Building TypeChecker from structures...");
-    let mut type_checker = match TypeChecker::from_program(program) {
+    // Step 1: Load full stdlib (includes Matrix constructor)
+    println!("Step 1: Loading full stdlib...");
+    let mut type_checker = match TypeChecker::with_stdlib() {
         Ok(checker) => {
-            println!("  ✅ TypeChecker initialized!");
+            println!("  ✅ TypeChecker initialized with stdlib!");
+            println!("  (Includes minimal_prelude, matrices, tensors, quantum)");
             checker
         }
         Err(e) => {
@@ -50,17 +29,21 @@ fn main() {
     // Step 4: Test matrix type inference
     println!("\nStep 4: Testing matrix type inference...");
 
-    // Test 1: Simple matrix creation
-    println!("\n  Test 1: matrix2x3 type inference");
+    // Test 1: Simple matrix creation (NEW FORMAT)
+    println!("\n  Test 1: Matrix(2, 3, [elements]) type inference");
     let matrix_2x3 = Expression::operation(
-        "matrix2x3",
+        "Matrix",
         vec![
-            Expression::Const("1".to_string()),
             Expression::Const("2".to_string()),
             Expression::Const("3".to_string()),
-            Expression::Const("4".to_string()),
-            Expression::Const("5".to_string()),
-            Expression::Const("6".to_string()),
+            Expression::List(vec![
+                Expression::Const("1".to_string()),
+                Expression::Const("2".to_string()),
+                Expression::Const("3".to_string()),
+                Expression::Const("4".to_string()),
+                Expression::Const("5".to_string()),
+                Expression::Const("6".to_string()),
+            ]),
         ],
     );
 
@@ -90,14 +73,18 @@ fn main() {
     // Test 2: Matrix multiplication (if implemented)
     println!("\n  Test 2: Matrix multiplication type checking");
     let matrix_3x2 = Expression::operation(
-        "matrix3x2",
+        "Matrix",
         vec![
-            Expression::Const("a".to_string()),
-            Expression::Const("b".to_string()),
-            Expression::Const("c".to_string()),
-            Expression::Const("d".to_string()),
-            Expression::Const("e".to_string()),
-            Expression::Const("f".to_string()),
+            Expression::Const("3".to_string()),
+            Expression::Const("2".to_string()),
+            Expression::List(vec![
+                Expression::Const("a".to_string()),
+                Expression::Const("b".to_string()),
+                Expression::Const("c".to_string()),
+                Expression::Const("d".to_string()),
+                Expression::Const("e".to_string()),
+                Expression::Const("f".to_string()),
+            ]),
         ],
     );
 
@@ -129,14 +116,18 @@ fn main() {
     // Test 3: Matrix addition (same dimensions - should work)
     println!("\n  Test 3: Matrix addition (same dimensions)");
     let matrix_2x3_second = Expression::operation(
-        "matrix2x3",
+        "Matrix",
         vec![
-            Expression::Const("a".to_string()),
-            Expression::Const("b".to_string()),
-            Expression::Const("c".to_string()),
-            Expression::Const("d".to_string()),
-            Expression::Const("e".to_string()),
-            Expression::Const("f".to_string()),
+            Expression::Const("2".to_string()),
+            Expression::Const("3".to_string()),
+            Expression::List(vec![
+                Expression::Const("a".to_string()),
+                Expression::Const("b".to_string()),
+                Expression::Const("c".to_string()),
+                Expression::Const("d".to_string()),
+                Expression::Const("e".to_string()),
+                Expression::Const("f".to_string()),
+            ]),
         ],
     );
 
@@ -170,12 +161,16 @@ fn main() {
     // Test 5: Determinant on square matrix (should work)
     println!("\n  Test 5: Determinant on square matrix");
     let matrix_2x2 = Expression::operation(
-        "matrix2x2",
+        "Matrix",
         vec![
-            Expression::Const("1".to_string()),
             Expression::Const("2".to_string()),
-            Expression::Const("3".to_string()),
-            Expression::Const("4".to_string()),
+            Expression::Const("2".to_string()),
+            Expression::List(vec![
+                Expression::Const("1".to_string()),
+                Expression::Const("2".to_string()),
+                Expression::Const("3".to_string()),
+                Expression::Const("4".to_string()),
+            ]),
         ],
     );
 
