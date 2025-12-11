@@ -39,10 +39,12 @@ pub enum Expression {
 
     /// Universal quantifier (for axioms)
     /// Example: ∀(x : M). x • e = x
+    /// With where clause: ∀(x : F) where x ≠ zero. inverse(x) × x = one
     /// Used in axiom propositions for theorem proving with Z3
     Quantifier {
         quantifier: QuantifierKind,
         variables: Vec<QuantifiedVar>,
+        where_clause: Option<Box<Expression>>,
         body: Box<Expression>,
     },
 }
@@ -136,6 +138,7 @@ impl Expression {
         Expression::Quantifier {
             quantifier: QuantifierKind::ForAll,
             variables,
+            where_clause: None,
             body: Box::new(body),
         }
     }
@@ -145,6 +148,7 @@ impl Expression {
         Expression::Quantifier {
             quantifier: QuantifierKind::Exists,
             variables,
+            where_clause: None,
             body: Box::new(body),
         }
     }

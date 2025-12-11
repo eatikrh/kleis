@@ -373,6 +373,18 @@ infixOp
 arithmeticOp
     ::= "+" | "-" | "×" | "/" | "·" | "*" | "^"
       | "⊗" | "∘" | "∗"
+      | customOperator
+      ;
+
+(* Custom user-defined operators - NEW in implementation *)
+(* Any Unicode math symbol (Symbol, Math category) *)
+(* Examples: •, ⊗, ⊕, ⊙, ⊛, ∪, ∩, ⋆, etc. *)
+customOperator
+    ::= (* Unicode Symbol, Math (Sm) category *)
+      | (* Excluding: +, -, *, /, ^, ×, · (built-in arithmetic) *)
+      | (* Excluding: =, <, >, ≤, ≥, ≠ (comparisons) *)
+      | (* Excluding: ∧, ∨, ¬, ⟹ (logical) *)
+      | (* Excluding: (), [], {}, ,, ., :, ; (delimiters) *)
       ;
 
 relationOp

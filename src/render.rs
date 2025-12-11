@@ -1378,12 +1378,14 @@ fn render_expression_internal(
             }
         }
 
-        // Quantifier: render as ∀(x : T). body
+        // Quantifier: render as ∀(x : T). body or ∀(x : T) where cond. body
         Expression::Quantifier {
             quantifier,
             variables,
+            where_clause,
             body,
         } => {
+            let _ = where_clause; // TODO: Render where clause in output
             let quant_symbol = match quantifier {
                 crate::ast::QuantifierKind::ForAll => match target {
                     RenderTarget::Unicode => "∀",

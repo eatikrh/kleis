@@ -256,12 +256,16 @@ impl PatternMatcher {
             Expression::Quantifier {
                 quantifier,
                 variables,
+                where_clause,
                 body,
             } => {
-                // Substitute in quantifier body
+                // Substitute in quantifier body and where clause
                 Expression::Quantifier {
                     quantifier: quantifier.clone(),
                     variables: variables.clone(),
+                    where_clause: where_clause
+                        .as_ref()
+                        .map(|w| Box::new(self.substitute_bindings(w, bindings))),
                     body: Box::new(self.substitute_bindings(body, bindings)),
                 }
             }

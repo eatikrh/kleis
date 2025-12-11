@@ -133,8 +133,13 @@ impl<'r> AxiomVerifier<'r> {
                 }
             }
 
-            Expression::Quantifier { body, .. } => {
+            Expression::Quantifier {
+                body, where_clause, ..
+            } => {
                 structures.extend(self.analyze_dependencies(body));
+                if let Some(condition) = where_clause {
+                    structures.extend(self.analyze_dependencies(condition));
+                }
             }
 
             Expression::Object(_) | Expression::Const(_) => {
@@ -195,6 +200,21 @@ impl<'r> AxiomVerifier<'r> {
 
             println!("   🔗 Loading parent structure: {}", parent_name);
             self.ensure_structure_loaded(&parent_name)?;
+        }
+
+        // THIRD: Load field structure if over clause present
+        // This ensures field axioms are available for vector space reasoning
+        if let Some(over_type) = &structure.over_clause {
+            // Extract field structure name
+            // Example: over Field(ℝ) → load Field
+            let field_name = match over_type {
+                crate::kleis_ast::TypeExpr::Named(name) => name.clone(),
+                crate::kleis_ast::TypeExpr::Parametric(name, _) => name.clone(),
+                _ => return Err("Invalid over clause type".to_string()),
+            };
+
+            println!("   🔗 Loading over clause: {}", field_name);
+            self.ensure_structure_loaded(&field_name)?;
         }
 
         // Phase 1: Load identity elements (nullary operations: zero, one, e, etc.)
@@ -459,8 +479,9 @@ impl<'r> AxiomVerifier<'r> {
             Expression::Quantifier {
                 quantifier,
                 variables,
+                where_clause,
                 body,
-            } => self.quantifier_to_z3(quantifier, variables, body, vars),
+            } => self.quantifier_to_z3(quantifier, variables, where_clause.as_ref(), body, vars),
 
             _ => Err(format!("Unsupported expression type for Z3: {:?}", expr)),
         }
@@ -652,11 +673,15 @@ impl<'r> AxiomVerifier<'r> {
     ///
     /// Creates fresh Z3 variables and translates the body.
     /// Z3 treats free variables as universally quantified.
+    ///
+    /// If a where clause is present (e.g., ∀(x : F) where x ≠ zero. body),
+    /// it's translated as: where_clause ⟹ body
     #[cfg(feature = "axiom-verification")]
     fn quantifier_to_z3(
         &self,
         _quantifier: &QuantifierKind,
         variables: &[QuantifiedVar],
+        where_clause: Option<&Box<Expression>>,
         body: &Expression,
         vars: &HashMap<String, Int>,
     ) -> Result<Bool, String> {
@@ -668,8 +693,17 @@ impl<'r> AxiomVerifier<'r> {
             new_vars.insert(var.name.clone(), z3_var);
         }
 
-        // Translate body with new variables
-        let body_z3 = self.kleis_to_z3(body, &new_vars)?;
+        // If there's a where clause, translate as: where_clause ⟹ body
+        let body_z3 = if let Some(condition) = where_clause {
+            let condition_z3 = self.kleis_to_z3(condition, &new_vars)?;
+            let body_z3 = self.kleis_to_z3(body, &new_vars)?;
+
+            // where_clause ⟹ body
+            condition_z3.implies(&body_z3)
+        } else {
+            // No where clause, just translate body
+            self.kleis_to_z3(body, &new_vars)?
+        };
 
         // For both universal and existential quantifiers,
         // Z3 treats free variables as universally quantified

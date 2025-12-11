@@ -262,6 +262,7 @@ mod tests {
         StructureDef {
             name: "Matrix".to_string(),
             extends_clause: None,
+            over_clause: None,
             type_params: vec![
                 TypeParam {
                     name: "m".to_string(),
@@ -296,6 +297,7 @@ mod tests {
         StructureDef {
             name: "Ring".to_string(),
             extends_clause: None,
+            over_clause: None,
             type_params: vec![TypeParam {
                 name: "R".to_string(),
                 kind: None,

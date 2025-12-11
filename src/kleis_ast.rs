@@ -33,6 +33,7 @@ pub enum TopLevel {
 
 /// Structure definition
 /// Example: structure Monoid(M) extends Semigroup(M) { ... }
+/// Example: structure VectorSpace(V) over Field(F) { ... }
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructureDef {
     pub name: String,
@@ -41,6 +42,9 @@ pub struct StructureDef {
     /// Optional parent structure (inheritance)
     /// Example: extends Semigroup(M)
     pub extends_clause: Option<TypeExpr>,
+    /// Optional over clause (for structures parameterized over fields)
+    /// Example: over Field(F) for vector spaces
+    pub over_clause: Option<TypeExpr>,
 }
 
 /// Type parameter for structures
@@ -151,12 +155,15 @@ pub struct DataField {
     pub type_expr: TypeExpr,
 }
 
-/// Implements definition: implements StructureName(Type, ...) where Constraint { members }
+/// Implements definition: implements StructureName(Type, ...) over Field(F) where Constraint { members }
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImplementsDef {
     pub structure_name: String,
     pub type_args: Vec<TypeExpr>, // Changed from single type_arg to multiple
     pub members: Vec<ImplMember>,
+    /// Optional over clause (for vector spaces over fields)
+    /// Example: over Field(ℝ)
+    pub over_clause: Option<TypeExpr>,
     /// Optional where clause with structure constraints
     /// Example: where Semiring(T), Ord(T)
     pub where_clause: Option<Vec<WhereConstraint>>,
