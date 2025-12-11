@@ -7,7 +7,7 @@
 ///!   cargo run --bin kleis_doc stdlib/matrices.kleis --format html > matrices.html
 use kleis::kleis_ast::{ImplementsDef, StructureDef, StructureMember, TopLevel};
 use kleis::kleis_parser::KleisParser;
-use kleis::render::{RenderTarget, build_default_context, render_expression};
+use kleis::render::{build_default_context, render_expression, RenderTarget};
 use std::env;
 use std::fs;
 
@@ -219,7 +219,7 @@ fn render_structure_markdown(structure: &StructureDef, ctx: &kleis::render::Glyp
     println!("---\n");
 }
 
-fn render_implements_markdown(implements: &ImplementsDef, ctx: &kleis::render::GlyphContext) {
+fn render_implements_markdown(implements: &ImplementsDef, _ctx: &kleis::render::GlyphContext) {
     print!("## Implementation: `{}`", implements.structure_name);
 
     if !implements.type_args.is_empty() {

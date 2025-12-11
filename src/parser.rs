@@ -2061,9 +2061,9 @@ mod tests {
             Expression::Operation { name, args } => {
                 assert_eq!(name, "Piecewise");
                 assert_eq!(args.len(), 3); // n, [exprs], [conds]
-                // args[0] = Const("2")
-                // args[1] = List([expr1, expr2])
-                // args[2] = List([cond1, cond2])
+                                           // args[0] = Const("2")
+                                           // args[1] = List([expr1, expr2])
+                                           // args[2] = List([cond1, cond2])
             }
             _ => panic!("Expected Piecewise operation"),
         }
@@ -2078,9 +2078,9 @@ mod tests {
             Expression::Operation { name, args } => {
                 assert_eq!(name, "Piecewise");
                 assert_eq!(args.len(), 3); // n, [exprs], [conds]
-                // args[0] = Const("3")
-                // args[1] = List([expr1, expr2, expr3])
-                // args[2] = List([cond1, cond2, cond3])
+                                           // args[0] = Const("3")
+                                           // args[1] = List([expr1, expr2, expr3])
+                                           // args[2] = List([cond1, cond2, cond3])
             }
             _ => panic!("Expected Piecewise operation"),
         }

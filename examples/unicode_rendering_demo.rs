@@ -1,5 +1,5 @@
 use kleis::ast::Expression;
-use kleis::render::{RenderTarget, build_default_context, render_expression};
+use kleis::render::{build_default_context, render_expression, RenderTarget};
 /// Unicode Rendering Demo for Integral Transforms & POT Operations
 ///
 /// This program demonstrates the Unicode rendering of all 16 new mathematical

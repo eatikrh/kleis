@@ -1,5 +1,5 @@
 use kleis::math_layout::compile_math_to_svg_with_ids;
-use kleis::render::{RenderTarget, build_default_context, render_expression};
+use kleis::render::{build_default_context, render_expression, RenderTarget};
 use kleis::templates::get_all_templates;
 use std::fs::File;
 use std::io::Write;

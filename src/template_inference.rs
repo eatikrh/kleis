@@ -493,7 +493,7 @@ fn is_vector_like(expr: &Expression) -> bool {
 mod tests {
     use super::*;
     use crate::parser::parse_latex;
-    use crate::render::{RenderTarget, build_default_context, render_expression};
+    use crate::render::{build_default_context, render_expression, RenderTarget};
 
     #[test]
     fn test_infer_double_integral() {

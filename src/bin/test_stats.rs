@@ -1,5 +1,5 @@
 use kleis::parser::parse_latex;
-use kleis::render::{RenderTarget, build_default_context, render_expression};
+use kleis::render::{build_default_context, render_expression, RenderTarget};
 
 fn main() {
     let tests = vec![r"\mathrm{Var}(X)", r"\mathrm{Cov}(X, Y)", r"\mathrm{Tr}(A)"];

@@ -1,7 +1,7 @@
 use kleis::math_layout::compile_math_to_svg_with_ids;
 use kleis::parser::parse_latex;
 use kleis::render::{
-    RenderTarget, build_default_context, collect_samples_for_gallery, render_expression,
+    build_default_context, collect_samples_for_gallery, render_expression, RenderTarget,
 };
 use kleis::templates::get_all_templates;
 use std::fs::File;

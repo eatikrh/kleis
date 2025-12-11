@@ -4,7 +4,7 @@
 // Expression → Typst markup (with placeholder markers)
 
 use kleis::ast::Expression;
-use kleis::math_layout::typst_adapter::{ConversionContext, expression_to_typst};
+use kleis::math_layout::typst_adapter::{expression_to_typst, ConversionContext};
 
 fn main() {
     println!("=== Kleis → Typst Adapter Demo ===\n");
