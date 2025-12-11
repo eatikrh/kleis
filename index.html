@@ -118,15 +118,15 @@
         
         <div class="stats">
             <div class="stat">
-                <div class="stat-number" id="stars-count">⭐</div>
-                <div class="stat-label">GitHub Stars</div>
+                <div class="stat-number">286+</div>
+                <div class="stat-label">Unique Cloners</div>
             </div>
             <div class="stat">
-                <div class="stat-number" id="commits-count">...</div>
+                <div class="stat-number">481</div>
                 <div class="stat-label">Commits</div>
             </div>
             <div class="stat">
-                <div class="stat-number" id="papers-count">...</div>
+                <div class="stat-number">14</div>
                 <div class="stat-label">Research Papers</div>
             </div>
         </div>
@@ -155,47 +155,6 @@
             <a href="https://github.com/eatikrh/kleis#readme" class="btn btn-secondary">Documentation</a>
         </div>
     </div>
-    
-    <script>
-        // Fetch real stats from GitHub API
-        async function loadStats() {
-            try {
-                // Fetch repository info
-                const repoResponse = await fetch('https://api.github.com/repos/eatikrh/kleis');
-                const repoData = await repoResponse.json();
-                
-                // Update stars
-                document.getElementById('stars-count').textContent = repoData.stargazers_count;
-                
-                // Fetch commits count
-                const commitsResponse = await fetch('https://api.github.com/repos/eatikrh/kleis/commits?per_page=1');
-                const linkHeader = commitsResponse.headers.get('Link');
-                let commitsCount = 1;
-                if (linkHeader) {
-                    const match = linkHeader.match(/page=(\d+)>; rel="last"/);
-                    if (match) commitsCount = parseInt(match[1]);
-                }
-                document.getElementById('commits-count').textContent = commitsCount;
-                
-                // Fetch research papers count (PDFs in docs/mathematics/)
-                const mathResponse = await fetch('https://api.github.com/repos/eatikrh/kleis/contents/docs/mathematics');
-                const mathFiles = await mathResponse.json();
-                const pdfCount = mathFiles.filter(file => file.name.endsWith('.pdf')).length;
-                document.getElementById('papers-count').textContent = pdfCount;
-                
-            } catch (error) {
-                console.error('Error loading stats:', error);
-                // Fallback to static numbers if API fails
-                document.getElementById('stars-count').textContent = '0';
-                document.getElementById('commits-count').textContent = '478+';
-                document.getElementById('papers-count').textContent = '14';
-            }
-        }
-        
-        // Load stats when page loads
-        loadStats();
-    </script>
 </body>
 </html>
-
-<!-- Rebuild trigger -->
+<!-- Updated: Dec 11, 2024 -->
