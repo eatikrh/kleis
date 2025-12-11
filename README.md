@@ -70,16 +70,26 @@ Originally designed for **Projected Ontology Theory (POT)** and **Hilbert Ontolo
 
 ### Run the Web Equation Editor
 
-**Easy way (recommended):**
+**Recommended (handles Z3 setup automatically):**
 ```bash
 ./run_server.sh
 ```
 
-**Or manually:**
+**Or manually (requires Z3 environment variable):**
 ```bash
-export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h  # macOS ARM
+# macOS ARM (Apple Silicon)
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
+
+# macOS Intel
+export Z3_SYS_Z3_HEADER=/usr/local/opt/z3/include/z3.h
+
+# Linux
+export Z3_SYS_Z3_HEADER=/usr/include/z3.h
+
 cargo run --bin server
 ```
+
+**Note:** Z3 integration is required for the type checker and axiom verification features.
 
 Then open **http://localhost:3000** in your browser for the web editor:
 
@@ -112,7 +122,14 @@ Then open **http://localhost:3000** in your browser for the web editor:
 ### Run Tests
 
 ```bash
-cargo test
+# Set Z3 header path first
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h  # macOS ARM
+
+# Run all library tests
+cargo test --lib
+
+# Run Z3 proof tests (requires axiom-verification feature)
+cargo test --test z3_dependency_proof_tests --features axiom-verification
 ```
 
 **Current status:** 421 tests passing (library tests) + 5 rigorous Z3 proof tests.
