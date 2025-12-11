@@ -56,10 +56,50 @@ axiom matrix_addition_commutative:
 ### From Source
 ```bash
 cd vscode-kleis
-npm install -g vsce
-vsce package
+# NOTE: packaging requires Node.js v20+ (use nvm to switch if necessary)
+npm run lint-grammar
+
+# install the modern packager locally and package via npx (recommended)
+npm install --no-save @vscode/vsce
+npx @vscode/vsce package
+
+# install the produced VSIX
 code --install-extension kleis-0.1.0.vsix
 ```
+
+### Packaging & local install (developer notes)
+
+Requirements
+- Node.js v20+ (use `nvm install 20 && nvm use 20`)
+
+Build VSIX (recommended)
+```bash
+cd vscode-kleis
+# validate grammar first
+npm run lint-grammar
+
+# install packager locally and package
+npm install --no-save @vscode/vsce
+npx @vscode/vsce package
+# produces `kleis-<version>.vsix`
+```
+
+Make `code` CLI available (macOS)
+- In VS Code: Command Palette → "Shell Command: Install 'code' command in PATH"
+
+Install the VSIX
+```bash
+code --install-extension kleis-0.1.0.vsix
+# verify
+code --list-extensions | grep kleis
+```
+
+Quick dev test (no packaging)
+- Open the extension folder in VS Code and press `F5` to launch an Extension Development Host.
+- To inspect the scopes applied to a token: Command Palette → "Developer: Inspect Editor Tokens and Scopes" and click a token.
+
+CI note
+- The repository includes a GitHub Actions workflow that runs `npm run lint-grammar` on pushes and pull requests to `main` (see `.github/workflows/lint-grammar.yml`).
 
 ## Requirements
 

@@ -44,7 +44,9 @@
 ,
   "scripts": {
     "lint-grammar": "node ./tools/lintGrammar.js",
-    "inspect-scopes": "npm run lint-grammar && node ./tools/inspectScopes.js"
+    "inspect-scopes": "npm run lint-grammar && node ./tools/inspectScopes.js",
+    "prepublishOnly": "npm run lint-grammar",
+    "test-syntax": "node ./tools/tests/tokenScopeTest.js"
   },
   "devDependencies": {
     "vscode-textmate": "^5.3.0",
