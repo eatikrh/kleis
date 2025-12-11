@@ -451,8 +451,9 @@ Expression evaluation in Kleis is **minimal, meaning-preserving, and necessary**
 - ✅ Primitive templates for formula composition
 - ✅ Type system design (algebraic hierarchy, extensibility)
 - ✅ Evaluation syntax design (substitute, eval, multi-valued)
-- 🔄 Type inference implementation (next step)
-- 🔄 Context management and eval() pipeline
+- ✅ Type inference implementation (Hindley-Milner)
+- ✅ Z3 theorem prover integration (axiom verification)
+- 🔄 Context management and eval() pipeline (in progress)
 
 ### Phase 2: Universal Verification Engine
 - Implement axiomatic type definitions
