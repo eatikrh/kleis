@@ -1,0 +1,374 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath, amssymb, amsthm, stmaryrd, mathrsfs}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{stmaryrd}
+\geometry{margin=1in}
+
+\title{\textbf{Kleis Language Specification}\\
+Version 0.5 (Draft)}
+\author{Kleis Project}
+\date{}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Preface}
+
+Kleis is a structurally rich, algebra-oriented language designed to express
+mathematical objects, algebraic theories, axioms, and executable definitions
+within a unified formal system.
+
+The guiding principles of Kleis are:
+
+\begin{itemize}
+    \item \textbf{Mathematical correctness}: structures correspond directly to algebraic theories.
+    \item \textbf{Self-hosting}: the language can describe its own type system.
+    \item \textbf{Parametric generality}: all operators and structures are parametric in types and indices.
+    \item \textbf{Strong static typing}: every construct is typed, including axioms and propositions.
+    \item \textbf{No implicit behavior}: all operations must be explicitly defined or implemented.
+\end{itemize}
+
+This document presents the syntax, typing rules, semantic intuition, and structural
+foundations of Kleis.
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Lexical Structure}
+
+Identifiers:
+\[
+\texttt{identifier} ::= \texttt{letter} (\texttt{letter} \mid \texttt{digit} \mid \_ )^*
+\]
+
+Greek lowercase letters denote type variables:
+\[
+\alpha,\;\beta,\;\gamma,\;\ldots
+\]
+
+Numbers:
+\[
+\texttt{number} ::= \texttt{integer} \mid \texttt{decimal} \mid \texttt{scientific}
+\]
+
+Strings use double quotes:
+\[
+\texttt{"hello"}.
+\]
+
+Comments:
+\begin{itemize}
+    \item \texttt{// line comment}
+    \item \texttt{/* block comment */}
+\end{itemize}
+
+Whitespace is ignored except where required for separation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Programs and Declarations}
+
+A Kleis program consists of a sequence of declarations:
+
+\begin{verbatim}
+program ::= { declaration } ;
+\end{verbatim}
+
+Declarations include data types, structures, function definitions,
+implementations, and type aliases.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Algebraic Data Types}
+
+Algebraic data types follow the form:
+
+\begin{verbatim}
+data Option(T) = None | Some(T)
+data Bool = True | False
+data Pair(A,B) = Pair(A,B)
+\end{verbatim}
+
+Formally:
+\[
+\texttt{data } D(\vec{T}) = C_1(\vec{A_1}) \;|\; C_2(\vec{A_2}) \;|\;\cdots
+\]
+
+Constructors introduce sum types.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Pattern Matching}
+
+Pattern matching provides decomposition of algebraic values.
+
+\begin{verbatim}
+match x {
+    None      => 0
+  | Some(y)   => y
+}
+\end{verbatim}
+
+Patterns include:
+
+\begin{itemize}
+    \item wildcard: \texttt{\_}
+    \item variable: \texttt{x}
+    \item constructor pattern: \texttt{Some(x)}
+    \item constant: \texttt{0}, \texttt{"hello"}, \texttt{True}
+\end{itemize}
+
+Exhaustiveness checking is performed statically.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Types}
+
+Primitive types:
+\[
+\mathbb{R},\;\mathbb{C},\;\mathbb{Z},\;\mathbb{N},\;\texttt{Bool},\;\texttt{String}.
+\]
+
+Function types:
+\[
+A \to B.
+\]
+
+Parametric types:
+\[
+T(X_1,\dots,X_n).
+\]
+
+Polymorphic types use universal quantifiers:
+
+\begin{verbatim}
+∀(T : Type). T → T
+\end{verbatim}
+
+Constraints may appear:
+
+\begin{verbatim}
+∀(T). Semigroup(T) ⇒ T × T → T
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Structures}
+
+A structure defines an algebraic theory:
+
+\begin{verbatim}
+structure Monoid(M) {
+    operation (•) : M × M → M
+    element e : M
+    axiom left_identity:
+        ∀(x : M). e • x = x
+}
+\end{verbatim}
+
+A structure consists of:
+\begin{itemize}
+    \item operations,
+    \item elements,
+    \item axioms,
+    \item optionally nested structures,
+    \item optionally a parameter clause.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\texttt{extends}: Inheritance of Structure}
+
+Kleis models mathematical extension of theories:
+
+\begin{verbatim}
+structure Group(G) extends Monoid(G) {
+    operation inv : G → G
+}
+\end{verbatim}
+
+Meaning:
+\[
+\text{Group axioms } \supset \text{Monoid axioms}.
+\]
+
+All members of the parent structure are imported.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\texttt{over}: Parameterized Structures}
+
+Many structures depend on a base structure, e.g.\ vector spaces over fields:
+
+\begin{verbatim}
+structure VectorSpace(V) over Field(F) {
+    operation (+) : V × V → V
+    operation (·) : F × V → V
+}
+\end{verbatim}
+
+Mathematically:
+\[
+(V,+,\cdot) \text{ is a vector space over } F.
+\]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\texttt{implements}: Concrete Models}
+
+To assert that a concrete type satisfies a structure:
+
+\begin{verbatim}
+implements Field(ℝ) {
+    element zero = 0
+    element one = 1
+    operation (+) = builtin_add
+}
+\end{verbatim}
+
+This is analogous to writing:
+\[
+\mathbb{R} \text{ is a field.}
+\]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\texttt{where}: Logical Conditions}
+
+Implementations or operations may require side-conditions:
+
+\begin{verbatim}
+operation det : Matrix(n,n) → ℝ
+\end{verbatim}
+
+implicitly requires \(n = n\) (square matrices).
+
+Future versions allow:
+
+\begin{verbatim}
+implements Ring(T) where Commutative(T)
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Nested Structures}
+
+A structure may contain substructures:
+
+\begin{verbatim}
+structure Ring(R) {
+    structure additive : AbelianGroup(R)
+    structure multiplicative : Monoid(R)
+}
+\end{verbatim}
+
+This mirrors standard algebra:
+\[
+(R,+,0) \text{ is an Abelian group},\quad
+(R,\cdot,1) \text{ is a monoid}.
+\]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Functions and Definitions}
+
+Functions may be defined with or without parameters:
+
+\begin{verbatim}
+define id(x : T) = x
+define square(x) : ℝ = x * x
+\end{verbatim}
+
+Definitions inside structures extend the algebraic signature.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Expressions}
+
+Expressions include:
+
+\begin{itemize}
+    \item identifiers: $x$
+    \item literals: numbers, strings, booleans
+    \item function application: $f(x)$
+    \item infix operators: $x + y$, $A × B$
+    \item prefix/postfix operators: $-x$, $A^T$
+    \item lambda expressions: $\lambda x.\, e$
+    \item let-bindings
+    \item conditionals
+    \item match-expressions
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Typing Rules (Informal)}
+
+\subsection*{Variables}
+\[
+\Gamma(x) = T \implies \Gamma \vdash x : T
+\]
+
+\subsection*{Application}
+\[
+\Gamma \vdash f : A \to B,\quad \Gamma \vdash x : A
+\quad\Rightarrow\quad \Gamma \vdash f(x) : B
+\]
+
+\subsection*{Pattern Matching}
+
+Constructor patterns refine the typing context:
+\[
+\texttt{Some}(x) : \texttt{Option}(T) \quad\Rightarrow\quad x : T.
+\]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Operational Semantics (Sketch)}
+
+Kleis is not defined by a reduction calculus, but by:
+
+\begin{itemize}
+    \item evaluation of expressions,
+    \item dispatch to implementations for operations,
+    \item symbolic handling of axioms and propositions,
+    \item static enforcement of typing rules.
+\end{itemize}
+
+Evaluation is strict and call-by-value.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Examples}
+
+\subsection*{Matrix Multiplication}
+
+\begin{verbatim}
+structure MatrixMultipliable(m,n,p,T) {
+    operation multiply :
+        Matrix(m,n,T) → Matrix(n,p,T) → Matrix(m,p,T)
+}
+
+implements MatrixMultipliable(m,n,p,ℝ) {
+    operation multiply = builtin_matrix_multiply
+}
+\end{verbatim}
+
+\subsection*{Vector Space}
+
+\begin{verbatim}
+structure VectorSpace(V) over Field(F) {
+    operation (+) : V × V → V
+    operation (·) : F × V → V
+}
+\end{verbatim}
+
+\begin{verbatim}
+implements VectorSpace(Vector(n)) over Field(ℝ) {
+    operation (+) = vector_add
+    operation (·) = scalar_vector_mul
+}
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+
+Kleis unifies algebraic specification, type theory, and executable semantics
+into a single mathematical-programming language.
+Its structural foundations map closely to mathematical practice:
+extensions of theories, parameterized structures, concrete models,
+and logical constraints.
+
+This specification is intended as a basis for both implementation
+and formal reasoning.
+
+\end{document}

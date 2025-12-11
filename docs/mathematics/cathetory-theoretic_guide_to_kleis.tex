@@ -1,0 +1,405 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsthm, mathrsfs, stmaryrd}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+% Unicode character declarations
+\DeclareUnicodeCharacter{2200}{\ensuremath{\forall}}
+\DeclareUnicodeCharacter{2192}{\ensuremath{\to}}
+\DeclareUnicodeCharacter{2115}{\ensuremath{\mathbb{N}}}
+\DeclareUnicodeCharacter{211D}{\ensuremath{\mathbb{R}}}
+
+\title{\textbf{A Category-Theoretic Guide to Kleis}}
+\author{Kleis Language Project}
+\date{}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Preface}
+
+Kleis is a language whose structural constructs correspond directly to
+category-theoretic notions.
+It does not merely imitate the syntax of mathematics; rather, it encodes
+mathematical structure in a form suitable for computation, formal reasoning,
+and algebraic abstraction.
+
+This document introduces Kleis from the point of view of category theory:
+\begin{itemize}
+    \item structures as algebraic theories,
+    \item implementations as models,
+    \item \texttt{extends} as morphisms of theories,
+    \item \texttt{over} as fibrations or indexed categories,
+    \item pattern matching as initiality of inductive types,
+    \item type constructors as functors,
+    \item polymorphism as naturality,
+    \item axioms as commutative diagrams.
+\end{itemize}
+
+We assume familiarity with basic category theory, universal algebra,
+and type theory.
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Structures as Algebraic Theories}
+
+In Kleis, a \textbf{structure} represents a finitary algebraic theory in the
+sense of Lawvere.
+
+Example:
+\begin{verbatim}
+structure Monoid(M) {
+    operation (•) : M × M → M
+    element e : M
+    axiom left_identity:
+        ∀(x : M). e • x = x
+}
+\end{verbatim}
+
+This corresponds to a Lawvere theory $\mathsf{Th(Monoid)}$ with:
+
+\begin{itemize}
+    \item one basic sort $M$,
+    \item one binary operation symbol $\mu : M \times M \to M$,
+    \item one constant $e : 1 \to M$,
+    \item equations expressing associativity and identity.
+\end{itemize}
+
+Formally:
+\[
+\mathsf{Th(Monoid)} : \mathbf{FinSet} \to \mathbf{Set},
+\]
+a finitary product-preserving functor.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\texttt{implements} as Models of Theories}
+
+Kleis uses:
+
+\begin{verbatim}
+implements Monoid(ℕ) { ... }
+\end{verbatim}
+
+to express that the set $\mathbb{N}$ with the given operations forms a model
+of $\mathsf{Th(Monoid)}$.
+
+That is, an implementation is a functor:
+
+\[
+\mathsf{Mod(Monoid)} = \mathbf{Set}^{\mathsf{Th(Monoid)}}.
+\]
+
+Every implementation is a product-preserving functor sending the abstract
+operations to actual functions.
+
+Thus:
+
+\begin{itemize}
+    \item \texttt{structure} = algebraic theory $\mathsf{T}$,
+    \item \texttt{implements} = interpretation $F : \mathsf{T} \to \mathbf{Set}$.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\texttt{extends} as Morphisms of Theories}
+
+A declaration such as:
+
+\begin{verbatim}
+structure Group(G) extends Monoid(G) { ... }
+\end{verbatim}
+
+is a \emph{morphism of Lawvere theories.}
+
+There is an inclusion:
+\[
+\mathsf{Th(Monoid)} \hookrightarrow \mathsf{Th(Group)}.
+\]
+
+Thus every group model restricts to a monoid model:
+
+\[
+\mathsf{Mod(Group)} \to \mathsf{Mod(Monoid)}.
+\]
+
+This is a forgetful functor:
+\[
+U : \mathbf{Grp} \to \mathbf{Monoid}.
+\]
+
+In Kleis:
+\begin{itemize}
+    \item \texttt{extends} imports operations and axioms,
+    \item the induced inclusion corresponds to a Cartesian morphism.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\texttt{over} as Indexed Structures and Fibrations}
+
+Kleis allows:
+
+\begin{verbatim}
+structure VectorSpace(V) over Field(F) { ... }
+\end{verbatim}
+
+This expresses the classical fact that vector spaces form a
+\emph{category fibred over the category of fields}:
+
+\[
+\pi : \mathbf{Vect} \to \mathbf{Field}.
+\]
+
+Given a field $F$, the fiber $\pi^{-1}(F)$ is the category of vector spaces
+over $F$.
+
+Thus \texttt{over} introduces a fibration of theories:
+
+\[
+\mathsf{Th(VectorSpace)} \to \mathsf{Th(Field)}.
+\]
+
+This is an indexed family of theories parametrized by the base theory.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\texttt{where} as Logical Predicates and Subfibrations}
+
+A future Kleis feature:
+
+\begin{verbatim}
+implements Ring(R) where Commutative(R)
+\end{verbatim}
+
+corresponds to restricting to models satisfying a predicate.
+
+Categorically, this forms a \emph{subfibration} of the original fibration:
+
+\[
+\mathbf{CRing} \hookrightarrow \mathbf{Ring}.
+\]
+
+Such constraints are represented as:
+
+\[
+\mathsf{Mod(Ring)} \supseteq \mathsf{Mod(Ring)}_{\varphi}
+\]
+
+where $\varphi$ is the predicate (e.g.\ commutativity).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Nested Structures as Internal Subtheories}
+
+Consider:
+
+\begin{verbatim}
+structure Ring(R) {
+    structure additive : AbelianGroup(R)
+    structure multiplicative : Monoid(R)
+}
+\end{verbatim}
+
+This corresponds to an amalgamated sum of theories:
+
+\[
+\mathsf{Th(Additive)} \sqcup \mathsf{Th(Multiplicative)}
+\longrightarrow \mathsf{Th(Ring)}.
+\]
+
+Categorically, a ring is an object with two compatible algebra structures.
+This corresponds to an internal diagram of theories.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Algebraic Data Types as Initial Algebras}
+
+Consider:
+
+\begin{verbatim}
+data List(T) = Nil | Cons(T, List(T))
+\end{verbatim}
+
+This defines the initial algebra of a functor:
+
+\[
+F(X) = 1 + T \times X.
+\]
+
+Pattern matching corresponds to the universal property:
+
+\[
+\text{Every $F$-algebra receives a unique morphism from }\mu F.
+\]
+
+That is, \texttt{match} is a catamorphism.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Type Constructors as Functors}
+
+A declaration such as:
+
+\begin{verbatim}
+Matrix(m,n,T)
+\end{verbatim}
+
+behaves as a functor:
+
+\[
+\mathsf{Matrix}_{m,n} : \mathbf{Type} \to \mathbf{Type}.
+\]
+
+Polymorphic functions:
+
+\begin{verbatim}
+∀(T). f : T → T
+\end{verbatim}
+
+are \emph{natural transformations}:
+
+\[
+f : \mathrm{Id} \Rightarrow \mathrm{Id}.
+\]
+
+More generally:
+
+\[
+f : F \Rightarrow G
+\]
+
+for functors $F,G$ corresponding to type expressions.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Pattern Matching as Case Analysis from an Initial Object}
+
+Given a data type:
+
+\[
+D = \sum_i C_i(\vec{A_i}),
+\]
+
+a match-expression corresponds to a morphism:
+
+\[
+D \to X
+\]
+
+obtained by specifying morphisms for each constructor branch.
+
+This is the same universal property as in inductive type theory and
+initial algebras in $\mathbf{Set}$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Axioms as Commutative Diagrams}
+
+A Kleis axiom:
+
+\begin{verbatim}
+axiom associativity:
+    ∀(x y z : M). (x • y) • z = x • (y • z)
+\end{verbatim}
+
+corresponds to requiring the following diagram commute:
+
+\[
+\begin{array}{ccc}
+(M \times M) \times M & \xrightarrow{\mu \times \mathrm{id}} & M \times M \\
+\downarrow_{\alpha} &  & \downarrow_{\mu} \\
+M \times (M \times M) & \xrightarrow{\mathrm{id} \times \mu} & M
+\end{array}
+\]
+
+Patterns and axioms in Kleis are thus expressed purely diagrammatically.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Category of Kleis Structures}
+
+Kleis defines a category:
+
+\[
+\mathbf{KleisTh}
+\]
+
+whose objects are theories (structures), and whose morphisms are
+\texttt{extends}-maps (theory inclusions).
+
+\subsection*{Models}
+
+For each theory $T$, there is a category of models:
+
+\[
+\mathsf{Mod}(T) = \mathbf{Set}^{T}.
+\]
+
+The entire semantics of Kleis can be viewed as a fibration:
+
+\[
+\mathsf{Mod} : \mathbf{KleisTh}^{op} \to \mathbf{Cat}.
+\]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Functorial Semantics of Kleis Programs}
+
+A program defines:
+
+\begin{itemize}
+    \item a theory $T$ (from \texttt{structure} declarations), and
+    \item a model $M$ (from \texttt{implements} declarations).
+\end{itemize}
+
+Evaluating a program corresponds to:
+
+\[
+\text{Computing } M \in \mathsf{Mod}(T).
+\]
+
+Thus running a Kleis program is applying a functor that interprets the
+syntactic theory as a semantic object in $\mathbf{Set}$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Kleis as an Internal Language of a Fibration}
+
+The constructs \texttt{extends}, \texttt{over}, \texttt{implements}, and
+\texttt{where} correspond precisely to:
+
+\begin{itemize}
+    \item morphisms of theories,
+    \item fibrational indexing,
+    \item sections/choices of models,
+    \item subfibrations determined by predicates.
+\end{itemize}
+
+This positions Kleis alongside dependently typed languages and algebraic
+specification systems such as:
+
+\[
+\text{Lawvere theories},\;\;
+\text{Sketches},\;\;
+\text{Institution theory}.
+\]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+
+Kleis is not merely a typed functional language.
+It is a categorical metalanguage for describing algebraic theories,
+their morphisms, and their models.
+
+In summary:
+
+\begin{itemize}
+    \item \textbf{structure} = algebraic theory,
+    \item \textbf{extends} = morphism of theories,
+    \item \textbf{over} = fibration or indexed theory,
+    \item \textbf{nested structures} = internal diagrams,
+    \item \textbf{data types} = initial algebras,
+    \item \textbf{polymorphism} = naturality,
+    \item \textbf{implements} = model in $\mathbf{Set}$,
+    \item \textbf{evaluation} = interpretation functor.
+\end{itemize}
+
+Kleis thus forms a bridge between category theory, type theory,
+and executable algebraic computation.
+
+\end{document}

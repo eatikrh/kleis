@@ -1,0 +1,145 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{mathpartir}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\begin{document}
+
+\section*{Pattern Non--Redundancy}
+
+We now introduce a judgment expressing that \emph{no branch of a pattern
+list is redundant}, i.e.\ each pattern contributes new, previously uncovered
+values.
+
+We write a sequence of patterns as
+\[
+  \vec{p} = (p_1,\dots,p_n).
+\]
+
+Recall the (partial) matching function
+\[
+  \textsf{match}(p,v) = \theta
+\]
+which is defined precisely when $p$ matches value $v$ and returns a
+binding environment $\theta$.
+
+\subsection*{Non--Redundancy Judgment}
+
+We define a judgment
+\[
+  \Delta \vdash \mathsf{NR}(T, \vec{p})
+\]
+read: \emph{under type context $\Delta$, the pattern sequence $\vec{p}$
+is non--redundant for type $T$}.
+
+Intuitively, each pattern $p_k$ must match at least one value of type $T$
+that is not matched by any earlier pattern $p_1,\dots,p_{k-1}$.
+
+We define $\mathsf{NR}$ inductively.
+
+\paragraph{Empty Sequence}
+
+The empty sequence is trivially non--redundant:
+
+\[
+\inference[\textsc{NR-Empty}]{}{
+  \Delta \vdash \mathsf{NR}(T, ())
+}
+\]
+
+\paragraph{Extending a Non--Redundant Sequence}
+
+Suppose we already have a non--redundant sequence $(p_1,\dots,p_{k-1})$.
+We may extend it with $p_k$ provided that there exists a value of type $T$
+which matches $p_k$ but does \emph{not} match any of the earlier patterns.
+
+Formally:
+
+\[
+\inference[\textsc{NR-Cons}]{
+  \Delta \vdash \mathsf{NR}(T,(p_1,\dots,p_{k-1})) \\[0.4em]
+  \exists v : T.\ \exists \theta.\ \textsf{match}(p_k,v) = \theta \ \wedge\
+    \forall i < k.\ \textsf{match}(p_i,v)\ \text{is undefined}
+}{
+  \Delta \vdash \mathsf{NR}(T,(p_1,\dots,p_k))
+}
+\]
+
+Thus, each new pattern is required to introduce at least one \emph{fresh}
+value of type $T$ that was not already covered.
+
+\subsection*{Typing Rule with Exhaustiveness and Non--Redundancy}
+
+Combining the earlier exhaustiveness judgment $\mathsf{Exh}$ with
+non--redundancy, we may state a strengthened typing rule for pattern
+matching.
+
+\[
+\inference[\textsc{T-Match-Total}]{
+  \Gamma \vdash e : T
+  \\
+  \forall k.\ \Gamma, \Gamma_{p_k} \vdash e_k : U
+  \\
+  \Delta \vdash \mathsf{Exh}(T,\{p_1,\dots,p_m\})
+  \\
+  \Delta \vdash \mathsf{NR}(T,(p_1,\dots,p_m))
+}{
+  \Gamma \vdash
+    \texttt{match } e
+      \{\,p_1 \Rightarrow e_1 \mid \dots \mid p_m \Rightarrow e_m\,\}
+  : U
+}
+\]
+
+Here:
+\begin{itemize}
+  \item $\mathsf{Exh}$ guarantees that \emph{every} value of type $T$
+        is matched by \emph{some} pattern.
+  \item $\mathsf{NR}$ guarantees that \emph{each} branch matches
+        \emph{at least one} value that no earlier branch matches.
+\end{itemize}
+
+\subsection*{Non--Redundancy Lemma}
+
+We may now formulate a meta--theoretic property of the non--redundancy
+judgment.
+
+\paragraph{Lemma (Branch Non--Redundancy).}
+
+Let $T$ be a type and $\vec{p} = (p_1,\dots,p_m)$ a sequence of patterns
+such that
+\[
+  \Delta \vdash \mathsf{NR}(T,\vec{p}).
+\]
+Then for each $k$ with $1 \leq k \leq m$ there exists a value $v_k : T$
+and a binding environment $\theta_k$ such that:
+\[
+  \textsf{match}(p_k, v_k) = \theta_k
+  \quad\text{and}\quad
+  \forall i < k.\ \textsf{match}(p_i, v_k)\ \text{is undefined}.
+\]
+
+In other words, every branch $p_k \Rightarrow e_k$ is \emph{semantically
+reachable}: there is at least one value of type $T$ for which operational
+evaluation of the corresponding \texttt{match} expression selects that
+branch.
+
+\paragraph{Sketch of Proof.}
+
+The proof proceeds by induction on the derivation of
+\(
+  \Delta \vdash \mathsf{NR}(T,\vec{p}).
+\)
+
+\begin{itemize}
+  \item In case \textsc{NR-Empty}, the statement is vacuously true.
+  \item In case \textsc{NR-Cons}, the induction hypothesis yields the
+        required witnesses $v_i$ for all $i < k$, and the side condition
+        of the rule provides the witness $v_k$ for the new pattern.
+\end{itemize}
+
+Thus, $\mathsf{NR}(T,\vec{p})$ precisely captures the intended notion of
+branch non--redundancy in pattern matching.
+
+\end{document}

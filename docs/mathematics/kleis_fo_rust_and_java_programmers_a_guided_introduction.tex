@@ -1,0 +1,406 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{hyperref}
+
+% Unicode character declarations
+\DeclareUnicodeCharacter{2200}{\ensuremath{\forall}}
+\DeclareUnicodeCharacter{2192}{\ensuremath{\to}}
+\DeclareUnicodeCharacter{21D2}{\ensuremath{\Rightarrow}}
+\DeclareUnicodeCharacter{211D}{\ensuremath{\mathbb{R}}}
+\DeclareUnicodeCharacter{2022}{\ensuremath{\bullet}}
+
+\title{\textbf{Kleis for Rust and Java Programmers}\\[4pt]
+\large A Practical Guide for Engineers}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Overview}
+
+Kleis is a statically typed, mathematical programming language that
+combines the precision of type theory with the algebraic expressiveness
+of modern functional languages.
+This guide explains Kleis concepts by drawing parallels with constructs
+familiar to experienced \textbf{Rust} and \textbf{Java} developers.
+
+The goal is not to repeat the formal specification, but to give you
+\emph{intuition}:
+\begin{itemize}
+  \item If you know Rust traits or Java interfaces, you already understand Kleis \texttt{structure}.
+  \item If you know Rust enums or Java sealed classes, you already understand Kleis algebraic data types.
+  \item If you know Rust's \texttt{match} or Java's \texttt{switch} expressions, you already understand Kleis pattern matching.
+  \item If you understand generics and type bounds, you already understand Kleis parametric kinds.
+\end{itemize}
+
+\vspace{1em}
+
+\section{Structures = Traits / Interfaces}
+
+Rust:
+\begin{verbatim}
+trait Add {
+    fn add(self, other: Self) -> Self;
+}
+\end{verbatim}
+
+Java:
+\begin{verbatim}
+interface Add<T> {
+    T add(T other);
+}
+\end{verbatim}
+
+Kleis:
+\begin{verbatim}
+structure Add(T) {
+    operation add : T → T → T
+}
+\end{verbatim}
+
+\subsection*{Key correspondences}
+
+\begin{center}
+\begin{tabular}{l|l}
+Rust trait & Kleis structure \\
+Java interface & Kleis structure \\
+Trait method & Kleis operation \\
+Trait bound & Kleis parameter kind / constraint \\
+\end{tabular}
+\end{center}
+
+A Kleis \texttt{structure} is conceptually the same as a Rust \texttt{trait}
+or Java \texttt{interface}, but with mathematical intent: the operations are
+meant to satisfy axioms.
+
+For example, a Monoid in Kleis:
+
+\begin{verbatim}
+structure Monoid(M) {
+    operation (•) : M → M → M
+    element e : M
+
+    axiom associativity:
+      ∀(x y z : M). (x • y) • z = x • (y • z)
+}
+\end{verbatim}
+
+Rust and Java cannot express axioms, but the structural analogy remains.
+
+
+\section{implements = impl blocks / interface implementation}
+
+Rust:
+\begin{verbatim}
+impl Add for i32 {
+    fn add(self, other: i32) -> i32 { self + other }
+}
+\end{verbatim}
+
+Java:
+\begin{verbatim}
+class MyInt implements Add<Integer> {
+    Integer add(Integer x, Integer y) { return x + y; }
+}
+\end{verbatim}
+
+Kleis:
+\begin{verbatim}
+implements Add(ℝ) {
+    operation add = builtin_add
+}
+\end{verbatim}
+
+\subsection*{Key idea}
+
+An \texttt{implements} block in Kleis is exactly an \texttt{impl} block in Rust:
+it says “for this type, here is how the structure's operations are executed.”
+
+Kleis blends the clarity of Rust’s “one impl per trait/type” with the
+mathematical rigor of specifying laws (axioms).
+
+
+\section{Algebraic Data Types = Rust enums / Java sealed classes}
+
+Rust:
+\begin{verbatim}
+enum Option<T> { None, Some(T) }
+\end{verbatim}
+
+Java:
+\begin{verbatim}
+sealed interface Option<T>
+    permits None<T>, Some<T> {}
+
+record None<T>() implements Option<T> {}
+record Some<T>(T value) implements Option<T> {}
+\end{verbatim}
+
+Kleis:
+\begin{verbatim}
+data Option(T) = None | Some(T)
+\end{verbatim}
+
+\subsection*{Key correspondences}
+
+\begin{center}
+\begin{tabular}{l|l}
+Rust enum & Kleis algebraic data type (ADT) \\
+Java sealed class & Kleis ADT \\
+Enum variant & ADT constructor \\
+Record fields & constructor fields \\
+\end{tabular}
+\end{center}
+
+Kleis ADTs are \emph{fully parametric} and integrate with its type inference
+system.
+
+
+\section{Pattern matching = Rust match / Java switch expressions}
+
+Rust:
+\begin{verbatim}
+match x {
+    Some(v) => v,
+    None => 0,
+}
+\end{verbatim}
+
+Java 21+:
+\begin{verbatim}
+switch(x) {
+    case Some(var v) -> v;
+    case None        -> 0;
+}
+\end{verbatim}
+
+Kleis:
+\begin{verbatim}
+match x {
+    Some(v) => v
+  | None    => 0
+}
+\end{verbatim}
+
+\subsection*{What Kleis adds}
+
+\begin{itemize}
+  \item Exhaustiveness checking (like Rust)
+  \item Non-redundancy checking
+  \item Nested pattern matching
+  \item Constructor-level inference
+\end{itemize}
+
+Pattern matching is a central mechanism in Kleis for deconstructing ADTs
+and defining semantics purely through symbolic structure.
+
+
+\section{Generics and Kinds = Rust traits bounds / Java generics constraints}
+
+Rust:
+\begin{verbatim}
+fn norm<V: VectorSpace>(v: V) -> f64
+\end{verbatim}
+
+Java:
+\begin{verbatim}
+<T extends VectorSpace<T>>
+double norm(T v)
+\end{verbatim}
+
+Kleis:
+\begin{verbatim}
+operation norm :
+  ∀(V : Type) (F : Field).
+    VectorSpace(V) over Field(F) ⇒ V → F
+\end{verbatim}
+
+\subsection*{Key ideas}
+
+\begin{itemize}
+  \item Kleis quantifiers (\(\forall\)) generalize Rust/Java generics.
+  \item Kleis kinds classify type parameters (e.g.\ \(Type, \mathbb{N}, Type→Type\)).
+  \item Constraints correspond to Rust trait bounds.
+\end{itemize}
+
+Kleis type inference is Hindley–Milner–based, so type arguments are
+often omitted and recovered automatically.
+
+
+\section{Structures with “extends” = trait inheritance / interface inheritance}
+
+Rust has trait inheritance:
+\begin{verbatim}
+trait Group: Monoid {
+    fn inv(&self) -> Self;
+}
+\end{verbatim}
+
+Java has interface inheritance:
+\begin{verbatim}
+interface Group extends Monoid {
+    T invert(T x);
+}
+\end{verbatim}
+
+Kleis:
+\begin{verbatim}
+structure Group(G) extends Monoid(G) {
+    operation inv : G → G
+}
+\end{verbatim}
+
+\subsection*{Key idea}
+
+\texttt{extends} forms \emph{algebraic hierarchies}, not class hierarchies.
+
+Examples:
+\[
+\text{Semigroup} \subseteq \text{Monoid} \subseteq \text{Group} \subseteq \text{AbelianGroup}
+\]
+
+Mathematically this is elegant, and for programmers the mental model is
+Rust’s trait inheritance.
+
+
+\section{``over Field(F)'' = associated traits / context parameters}
+
+Rust equivalent idea:
+\begin{verbatim}
+trait VectorSpace<F: Field> {
+    type Vector;
+}
+\end{verbatim}
+
+Java:
+\begin{verbatim}
+interface VectorSpace<V,F extends Field<F>> { ... }
+\end{verbatim}
+
+Kleis:
+\begin{verbatim}
+structure VectorSpace(V) over Field(F) {
+    operation (+) : V → V → V
+    operation (·) : F → V → V
+}
+\end{verbatim}
+
+\subsection*{Mental model for programmers}
+
+“\texttt{over Field(F)}” means:
+
+> This structure depends on another structure instance (a field instance),
+> just like a Rust trait might require another trait for its associated type.
+
+
+\section{Nested structures = inner traits / inner interfaces (but better)}
+
+Java:
+\begin{verbatim}
+interface Ring {
+    interface Additive { ... }
+    interface Multiplicative { ... }
+}
+\end{verbatim}
+
+Rust:
+\begin{verbatim}
+trait Ring {
+    type Additive: AbelianGroup;
+    type Multiplicative: Monoid;
+}
+\end{verbatim}
+
+Kleis:
+\begin{verbatim}
+structure Ring(R) {
+    structure additive : AbelianGroup(R) { ... }
+    structure multiplicative : Monoid(R) { ... }
+}
+\end{verbatim}
+
+\subsection*{Why Kleis is cleaner}
+
+Rust and Java approximate mathematical hierarchies; Kleis expresses them
+\emph{exactly}.
+Nested structures model multi-operation objects (rings, fields, vector
+spaces) in their natural form.
+
+
+\section{Matrices as a motivating case}
+
+Rust:
+\begin{verbatim}
+struct Matrix<M,N,T> { data: [[T; N]; M] }
+\end{verbatim}
+
+Java:
+\begin{verbatim}
+class Matrix<T> { T[][] data; }
+\end{verbatim}
+
+Kleis:
+\begin{verbatim}
+data Matrix(m: Nat, n: Nat, T)
+\end{verbatim}
+
+Kleis can express:
+
+\begin{itemize}
+  \item dimension-safe multiplication,
+  \item polymorphic matrix types,
+  \item block matrices,
+  \item vector spaces over fields.
+\end{itemize}
+
+\subsection*{Dimension correctness = no run-time errors}
+
+\[
+  \texttt{operation multiply} :
+    Matrix(m,n,T) → Matrix(n,p,T) → Matrix(m,p,T)
+\]
+
+Kleis enforces this at compile time, unlike Rust or Java without custom
+type machinery.
+
+
+\section{Summary Table}
+
+\begin{center}
+\begin{tabular}{l|l|l}
+Concept & Rust / Java analogue & Kleis feature \\ \hline
+Trait / Interface & \texttt{trait}, \texttt{interface} & \texttt{structure} \\
+Impl block & \texttt{impl}, \texttt{implements} & \texttt{implements} \\
+Enum / Sealed class & \texttt{enum}, sealed types & \texttt{data} ADT \\
+Pattern match & \texttt{match}, \texttt{switch} & Kleis \texttt{match} \\
+Trait bounds & trait bounds, extends & constraints, kinds \\
+Nested traits & inner interfaces & nested structures \\
+Laws & none native & axioms \\
+Generic types & generics & polymorphic types, kinds \\
+\end{tabular}
+\end{center}
+
+\section*{Closing Remarks}
+
+Rust and Java programmers will find Kleis familiar at the surface level:
+structures behave like traits, implementations behave like \texttt{impl} blocks,
+and data types mirror enums or sealed classes.
+
+But Kleis takes the next step:
+\begin{itemize}
+  \item mathematics becomes first-class,
+  \item algebraic laws are part of the type system,
+  \item polymorphism is principled and expressive,
+  \item pattern matching is exhaustive and safe,
+  \item parametric kinds allow type-level mathematics.
+\end{itemize}
+
+Kleis is thus both \emph{more general} than a conventional programming
+language and \emph{more precise} than a typical proof assistant: it lets
+expert programmers write mathematics like software and software like an
+algebraic structure.
+
+\end{document}

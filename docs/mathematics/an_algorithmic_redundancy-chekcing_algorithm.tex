@@ -1,0 +1,313 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{mathpartir}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\begin{document}
+
+\section*{Algorithmic Redundancy Checking for Pattern Matching}
+
+We present a \emph{syntax-directed}, algorithmic procedure for
+detecting redundant (unreachable) branches in a single-scrutinee
+\texttt{match} expression.
+
+The key idea is to maintain a symbolic description of the set of
+\emph{uncovered} values, and to test each new pattern against this
+uncovered space.
+
+\subsection*{Symbolic Value Shapes}
+
+We introduce a notion of \emph{symbolic value shape}, or simply
+\emph{shape}, which is a pattern-like term with no variables except
+wildcards. These serve as canonical representatives of sets of values.
+
+\[
+\begin{array}{rcl}
+q &::=& \_ \mid c \mid C(q_1,\dots,q_k)
+\end{array}
+\]
+
+We will use finite sets of shapes
+\(
+  S = \{q_1,\dots,q_r\}
+\)
+to represent an over-approximation of the set of values of a given type
+that are not yet covered by a set of patterns.
+
+\subsection*{Uncovered-Space Judgment}
+
+We define a judgment
+\[
+  \Delta \vdash \mathsf{Uncov}(T,\vec{p}) \Rightarrow S
+\]
+read:
+\emph{under type context $\Delta$, the sequence of patterns
+$\vec{p} = (p_1,\dots,p_n)$ for type $T$ leaves uncovered the symbolic
+space $S$}.
+
+Intuitively:
+\begin{itemize}
+  \item $S = \emptyset$ means the patterns are exhaustive.
+  \item $S \neq \emptyset$ gives symbolic examples of values not matched.
+\end{itemize}
+
+We define $\mathsf{Uncov}$ inductively using an auxiliary judgment
+\[
+  \Delta \vdash \mathsf{Diff}(T, S, p) \Rightarrow S'
+\]
+which removes from $S$ all shapes covered by the pattern $p$.
+
+\paragraph{Base Case}
+
+With no patterns, the entire type $T$ is initially uncovered, represented
+by a single wildcard shape:
+
+\[
+\inference[\textsc{U-Empty}]{}{
+  \Delta \vdash \mathsf{Uncov}(T, ()) \Rightarrow \{\_\}
+}
+\]
+
+\paragraph{Inductive Step}
+
+To extend the uncovered space with a new pattern $p$:
+
+\[
+\inference[\textsc{U-Cons}]{
+  \Delta \vdash \mathsf{Uncov}(T,(p_1,\dots,p_{k-1})) \Rightarrow S \\
+  \Delta \vdash \mathsf{Diff}(T, S, p_k) \Rightarrow S'
+}{
+  \Delta \vdash \mathsf{Uncov}(T,(p_1,\dots,p_k)) \Rightarrow S'
+}
+\]
+
+\subsection*{Difference Judgment \texorpdfstring{$\mathsf{Diff}$}{Diff}}
+
+The judgment
+\[
+  \Delta \vdash \mathsf{Diff}(T, S, p) \Rightarrow S'
+\]
+means:
+\emph{from the symbolic uncovered space $S$ of type $T$, remove all
+shapes that are covered by pattern $p$, yielding $S'$}.
+
+We define $\mathsf{Diff}$ syntax-directly on the structure of $p$ and
+shapes $q \in S$.
+
+\paragraph{Wildcard and Variable Patterns}
+
+A wildcard or variable pattern matches \emph{all} values, so it removes
+everything from the uncovered space:
+
+\[
+\inference[\textsc{D-Wild}]{}{
+  \Delta \vdash \mathsf{Diff}(T, S, \_) \Rightarrow \emptyset
+}
+\]
+
+\[
+\inference[\textsc{D-Var}]{}{
+  \Delta \vdash \mathsf{Diff}(T, S, x) \Rightarrow \emptyset
+}
+\]
+
+\paragraph{Constant Patterns}
+
+A constant pattern $c$ removes only shapes compatible with $c$.
+For simplicity we say: any wildcard shape \(\_\) is split into
+\emph{one} shape equal to $c$ and \emph{one} residual wildcard representing
+``all values except $c$''. This is schematic; in an implementation one
+would refine the residual space more precisely.
+
+We write
+\(
+  S = \{q_1,\dots,q_r\}
+\)
+and define:
+\[
+\inference[\textsc{D-Const}]{}{
+  \Delta \vdash \mathsf{Diff}(T, \{c\}, c) \Rightarrow \emptyset
+}
+\]
+
+\[
+\inference[\textsc{D-Const-Wild}]{}{
+  \Delta \vdash \mathsf{Diff}(T, \{\_\}, c) \Rightarrow \{\_\}'
+}
+\]
+
+Here $\{\_\}'$ is understood informally as a wildcard shape over the
+residual values of $T$ distinct from $c$. For non-matching shapes,
+we propagate them unchanged:
+
+\[
+\inference[\textsc{D-Const-Other}]{}{
+  \Delta \vdash \mathsf{Diff}(T, \{q\}, c) \Rightarrow \{q\}
+  \quad\text{if $q$ is incompatible with $c$}
+}
+\]
+
+For a general finite set $S$, we apply $\mathsf{Diff}$ pointwise and
+union the results:
+
+\[
+\inference[\textsc{D-Set}]{
+  \forall i.\ \Delta \vdash \mathsf{Diff}(T, \{q_i\}, p) \Rightarrow S_i
+}{
+  \Delta \vdash \mathsf{Diff}(T, \{q_1,\dots,q_r\}, p)
+    \Rightarrow \bigcup_{i=1}^r S_i
+}
+\]
+
+\paragraph{Constructor Patterns}
+
+Assume $T$ is an algebraic data type
+\[
+  \texttt{data } T = C_1(\vec{\tau}_1) \mid \cdots \mid C_n(\vec{\tau}_n).
+\]
+
+A constructor pattern $C(\vec{p})$ only affects shapes whose outer
+constructor is $C$ or wildcard \(\_\). Wildcards are refined into
+constructor-specific shapes.
+
+For a single shape:
+\[
+\inference[\textsc{D-Constr-Match}]{
+  q = C(q_1,\dots,q_k) \\
+  \Delta \vdash \mathsf{DiffArgs}((\tau_1,\dots,\tau_k),
+     (q_1,\dots,q_k), (\vec{p}))
+    \Rightarrow
+     \{(q'_1,\dots,q'_k)_1,\dots,(q'_1,\dots,q'_k)_m\}
+}{
+  \Delta \vdash \mathsf{Diff}(T, \{q\}, C(\vec{p}))
+    \Rightarrow
+      \{\,C((q'_1,\dots,q'_k)_1),\dots,C((q'_1,\dots,q'_k)_m)\,\}
+}
+\]
+
+Here $\mathsf{DiffArgs}$ is an auxiliary, syntax-directed procedure
+that subtracts the argument-pattern space $(\vec{p})$ from the
+argument-shape tuple $(q_1,\dots,q_k)$ componentwise; details depend
+on the desired precision of the checker.
+
+A wildcard shape \(\_\) is expanded into constructor-specific shapes
+before applying \textsc{D-Constr-Match}:
+
+\[
+\inference[\textsc{D-Constr-Wild}]{
+  \text{Constructors of $T$ are exactly } C_1,\dots,C_n \\
+  \forall i.\ q_i = C_i(\underbrace{\_,\dots,\_}_{k_i})
+  \\
+  \Delta \vdash \mathsf{Diff}(T, \{q_i\}, C(\vec{p})) \Rightarrow S_i
+}{
+  \Delta \vdash \mathsf{Diff}(T, \{\_\}, C(\vec{p}))
+    \Rightarrow \bigcup_i S_i
+}
+\]
+
+Shapes whose outer constructor is different from $C$ are unaffected:
+
+\[
+\inference[\textsc{D-Constr-Other}]{}{
+  q = C'(q_1,\dots,q_\ell),\ C' \neq C
+}{
+  \Delta \vdash \mathsf{Diff}(T, \{q\}, C(\vec{p}))
+    \Rightarrow \{q\}
+}
+\]
+
+\subsection*{Algorithmic Usefulness and Redundancy}
+
+Given the uncovered-space analysis, we define a purely syntactic
+\emph{usefulness} judgment for patterns:
+
+\[
+  \Delta \vdash \mathsf{Useful}(T,\vec{p},p)
+\]
+
+read: \emph{for type $T$, pattern $p$ is useful (non-redundant) relative
+to the preceding patterns $\vec{p}$}.
+
+Algorithmically:
+
+\[
+\inference[\textsc{U-Alg}]{
+  \Delta \vdash \mathsf{Uncov}(T,\vec{p}) \Rightarrow S \\
+  \exists q \in S,\ \exists \theta.\ \textsf{match}(p,q) = \theta
+}{
+  \Delta \vdash \mathsf{Useful}(T,\vec{p},p)
+}
+\]
+
+That is, $p$ is useful if there is some symbolic shape $q$ in the current
+uncovered space $S$ that it still matches.
+
+Dually, we define an algorithmic redundancy judgment:
+
+\[
+  \Delta \vdash \mathsf{Redundant}(T,\vec{p},p)
+\]
+
+when \emph{no uncovered shape} is matched by $p$:
+
+\[
+\inference[\textsc{R-Alg}]{
+  \Delta \vdash \mathsf{Uncov}(T,\vec{p}) \Rightarrow S \\
+  \forall q \in S.\ \textsf{match}(p,q) \text{ is undefined}
+}{
+  \Delta \vdash \mathsf{Redundant}(T,\vec{p},p)
+}
+\]
+
+\subsection*{Algorithmic Non--Redundancy for a Full Branch List}
+
+Given a full branch list $\vec{p} = (p_1,\dots,p_m)$, we say it is
+algorithmically non--redundant for $T$ if:
+
+\[
+  \Delta \vdash \mathsf{NR}^{\mathsf{alg}}(T,(p_1,\dots,p_m))
+\]
+
+holds, where:
+
+\[
+\inference[\textsc{NR-Alg-Empty}]{}{
+  \Delta \vdash \mathsf{NR}^{\mathsf{alg}}(T,())
+}
+\]
+
+\[
+\inference[\textsc{NR-Alg-Cons}]{
+  \Delta \vdash \mathsf{NR}^{\mathsf{alg}}(T,(p_1,\dots,p_{k-1})) \\
+  \Delta \vdash \mathsf{Useful}(T,(p_1,\dots,p_{k-1}),p_k)
+}{
+  \Delta \vdash \mathsf{NR}^{\mathsf{alg}}(T,(p_1,\dots,p_k))
+}
+\]
+
+Thus each new pattern $p_k$ must be \emph{useful} with respect to the
+uncovered space after the previous patterns.
+
+\subsection*{Meta--Properties (Informal)}
+
+\begin{itemize}
+  \item \textbf{Soundness}: If
+        $\Delta \vdash \mathsf{Redundant}(T,\vec{p},p)$ then
+        $p$ is semantically redundant in the sense of the semantic
+        non--redundancy judgment $\mathsf{NR}$ (no value of type $T$ is
+        matched first by $p$).
+
+  \item \textbf{(Possible) Completeness}: With a sufficiently precise
+        definition of $\mathsf{Diff}$ and $\mathsf{DiffArgs}$, the
+        algorithmic notion $\mathsf{Useful}$ can be made complete with
+        respect to the semantic notion of non--redundancy for
+        first-order algebraic data types, as in classical coverage
+        algorithms for ML/Haskell pattern matching.
+\end{itemize}
+
+In practice, Kleis can implement $\mathsf{Uncov}$ and $\mathsf{Useful}$
+as a coverage-checking pass on pattern matrices, following techniques
+à la Maranget, using the rules above as a specification.
+
+\end{document}

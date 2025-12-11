@@ -1,0 +1,224 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath, amssymb, amsthm, stmaryrd, mathrsfs}
+\usepackage{bm}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{\textbf{A Mathematician’s Guide to Kleis}}
+\author{Kleis Language Project}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+
+Kleis is a formally structured, algebra-oriented language designed to express
+mathematical objects and their axioms with precision.
+Unlike programming languages that treat structures as implementation artifacts,
+Kleis models mathematical practice directly:
+
+\begin{itemize}
+    \item Abstract structures (groups, rings, fields)
+    \item Parameterized structures (vector spaces over a field)
+    \item Substructures (additive and multiplicative components of a ring)
+    \item Explicit implementations of axioms for concrete models (e.g.\ $\mathbb{R}$ is a field)
+\end{itemize}
+
+This document introduces the central structural features of Kleis:
+\texttt{extends}, \texttt{over}, \texttt{implements}, \texttt{where},
+and nested structures.
+
+Each feature corresponds to a familiar concept in algebra or category theory.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The \texttt{extends} Construct: Inheritance of Structure}
+
+When mathematicians define a group, they implicitly note that every group
+is also a monoid.
+Formally:
+
+\[
+(G, \cdot, e, ()^{-1}) \text{ is a group } \implies
+(G, \cdot, e) \text{ is a monoid}.
+\]
+
+Kleis expresses this relationship directly:
+
+\begin{verbatim}
+structure Group(G) extends Monoid(G) {
+    operation inv : G → G
+    axiom left_inverse:
+        ∀(x : G). inv(x) • x = e
+}
+\end{verbatim}
+
+Thus:
+
+\begin{itemize}
+    \item all operations of a monoid are \emph{inherited},
+    \item all axioms of a monoid apply automatically to groups,
+    \item new axioms extend the theory.
+\end{itemize}
+
+This mirrors the extension of algebraic theories in universal algebra.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The \texttt{over} Construct: Parameterized Structures}
+
+Many mathematical structures require a second structure as part of their
+definition.
+For example, a vector space is defined:
+
+\[
+(V, +, \cdot) \quad \text{over a field } F.
+\]
+
+In Kleis:
+
+\begin{verbatim}
+structure VectorSpace(V) over Field(F) {
+    operation (+) : V × V → V
+    operation (·) : F × V → V
+}
+\end{verbatim}
+
+This expresses that:
+
+\begin{itemize}
+    \item the structure \texttt{VectorSpace(V)} is not meaningful alone,
+    \item it depends on the existence of a field \(F\),
+    \item its axioms relate \(V\) and \(F\).
+\end{itemize}
+
+This corresponds exactly to parameterized algebraic structures (modules,
+vector spaces, algebras) in standard mathematical literature.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The \texttt{implements} Construct: Concrete Mathematical Models}
+
+In mathematics, once an axiomatic structure is defined, one may declare:
+
+\[
+\mathbb{R} \text{ is a field}, \qquad
+\mathbb{Z} \text{ is a ring}, \qquad
+\mathbb{R}^n \text{ is a vector space over } \mathbb{R}.
+\]
+
+In Kleis:
+
+\begin{verbatim}
+implements Field(ℝ) {
+    element zero = 0
+    element one  = 1
+    operation (+) = builtin_add
+    operation (×) = builtin_mul
+}
+\end{verbatim}
+
+This provides a \emph{model} for the field axioms using the actual real numbers.
+
+Thus \texttt{implements} corresponds to constructing an algebra over a given
+signature, or verifying that a concrete structure satisfies the axioms of an
+abstract one.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The \texttt{where} Construct: Logical Constraints}
+
+Mathematicians frequently impose side-conditions:
+
+\[
+\text{Let $G$ be a group where $|G|$ is prime},
+\]
+\[
+\text{Define $\det(A)$ where $A$ is a square matrix}.
+\]
+
+Kleis expresses such constraints through \texttt{where} clauses:
+
+\begin{verbatim}
+operation det : Matrix(n, n) → ℝ
+\end{verbatim}
+
+implicitly includes the logical condition “where matrix is square.”
+
+More generally, Kleis may express:
+
+\begin{verbatim}
+implements SomeStructure(T)
+    where Commutative(T)
+{
+    ...
+}
+\end{verbatim}
+
+This states:
+
+\[
+\text{This interpretation of the structure is valid only when } T
+\text{ satisfies the given property.}
+\]
+
+Thus \texttt{where} acts as a predicate restricting admissible models,
+analogous to side-conditions in theorems.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Nested Structures: Substructures Within Structures}
+
+A ring contains two internal algebraic structures:
+
+\[
+(R, +, 0) \text{ is an Abelian group}, \qquad
+(R, \cdot, 1) \text{ is a monoid}.
+\]
+
+Kleis expresses this literally:
+
+\begin{verbatim}
+structure Ring(R) {
+    structure additive : AbelianGroup(R) { ... }
+    structure multiplicative : Monoid(R)  { ... }
+}
+\end{verbatim}
+
+Thus nested structures formalize the mathematical idea that an object may
+possess multiple compatible algebraic structures.
+
+This reflects the treatment of algebraic objects in Bourbaki and universal
+algebra, where a single underlying set supports multiple signatures.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Summary Table}
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Kleis Construct} & \textbf{Mathematical Meaning} & \textbf{Example} \\
+\hline
+\texttt{extends} & Inheritance of axioms & Group extends Monoid \\
+\hline
+\texttt{over} & Parameterized structure & Vector space over a field \\
+\hline
+\texttt{implements} & Concrete model of axioms & $\mathbb{R}$ is a field \\
+\hline
+\texttt{where} & Logical side-condition & $\det(A)$ where $A$ is square \\
+\hline
+Nested structures & Internal algebraic components & Ring's additive/multiplicative parts \\
+\hline
+\end{tabular}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Conclusion}
+
+Kleis mirrors mathematical practice in a direct, structural way.
+Its constructs are not ad hoc language features but correspond
+precisely to the methods by which mathematicians build and relate
+algebraic objects.
+
+Understanding Kleis as a language of abstract structures and their
+concrete models provides a natural bridge between symbolic algebra,
+formal logic, and executable mathematics.
+
+\end{document}

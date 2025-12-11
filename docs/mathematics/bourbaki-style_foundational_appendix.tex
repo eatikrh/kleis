@@ -1,0 +1,268 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath, amssymb, amsthm, mathrsfs, stmaryrd}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\begin{document}
+
+\section*{Appendix A. Bourbaki–Style Foundations of Kleis}
+
+\subsection*{A.0. Introduction}
+
+The present appendix establishes, in a form adhering to the structural method,
+the foundational principles upon which the Kleis language is constructed.
+Kleis is intended to serve as a formal system for the description of
+mathematical structures, their relations, and the operations defined upon them.
+Rather than adopting a computational viewpoint, we adopt here the classical
+framework of \emph{structures} as introduced in the \emph{Éléments de
+mathématique}.
+
+Throughout, we assume the existence of a background universe $\mathscr{U}$
+sufficiently large to contain all sets considered. No distinction is made
+between sets and classes except where explicitly noted. All constructions are
+understood to take place within $\mathscr{U}$.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.1. Species of Structures}
+
+A \emph{species of structure} in the sense of Bourbaki is determined by:
+\begin{itemize}
+    \item[(i)] a finite family of underlying sets,
+    \item[(ii)] a finite family of operations of finite arity,
+    \item[(iii)] a finite family of relations of finite arity,
+    \item[(iv)] a finite family of axioms expressed as identities or implications.
+\end{itemize}
+
+In Kleis, such a species corresponds precisely to a declaration of the form:
+
+\begin{verbatim}
+structure S(X1, ..., Xn) { ... }
+\end{verbatim}
+
+The sets $X_1, \dots, X_n$ constitute the underlying sets of the structure;
+the operations and relations correspond to the \texttt{operation}
+and \texttt{element} declarations; the axioms correspond to the \texttt{axiom}
+declarations.
+
+Thus, a Kleis structure is a \emph{formal species of structure} in
+Bourbaki’s sense.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.2. Morphisms of Species and the \texttt{extends} Relation}
+
+Given two species of structures $\mathcal{S}$ and $\mathcal{T}$,
+a \emph{morphism of species} is any mapping which respects:
+\begin{itemize}
+    \item the number and positions of underlying sets,
+    \item the signature of operations and relations,
+    \item the axioms imposed.
+\end{itemize}
+
+The Kleis construct:
+
+\begin{verbatim}
+structure T(...) extends S(...)
+\end{verbatim}
+
+represents precisely such a morphism of species in which:
+\begin{itemize}
+    \item each operation of $\mathcal{S}$ is preserved in $\mathcal{T}$,
+    \item each axiom of $\mathcal{S}$ holds in $\mathcal{T}$,
+    \item additional operations and axioms may be added.
+\end{itemize}
+
+Thus, \texttt{extends} corresponds to the inclusion of one species of structure
+into another.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.3. Structures Dependent on Other Structures and the \texttt{over} Clause}
+
+In Bourbaki’s formalism, certain structures are defined relative to a
+previously chosen structure.
+For example, a vector space is defined only after a field has
+been designated.
+
+Kleis formalizes this by the construct:
+
+\begin{verbatim}
+structure V(X) over Field(F) { ... }
+\end{verbatim}
+
+This expresses that $V$ is a species whose definition presupposes the choice
+of a structure of type \texttt{Field}.
+Formally, this corresponds to the notion of a \emph{parametrized species of
+structure}, or, in categorical language, to a \emph{fibred} family of
+structures indexed by the models of the parameter species.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.4. Realizations of Structures and the \texttt{implements} Clause}
+
+A \emph{structure of species} $\mathcal{S}$ in the sense of Bourbaki is given
+by:
+\begin{itemize}
+    \item a family of sets,
+    \item interpretations of each operation symbol as a genuine function,
+    \item interpretations of relations as subsets,
+    \item verification that all axioms hold.
+\end{itemize}
+
+In Kleis:
+
+\begin{verbatim}
+implements Field(ℝ) { ... }
+\end{verbatim}
+
+declares that the species \texttt{Field} is realized on the set $\mathbb{R}$.
+The operations and elements given in the implementation constitute the
+interpretation of the signature, and the axioms are asserted to hold in this
+interpretation.
+
+Thus \texttt{implements} corresponds exactly to the
+Bourbaki notion of a \emph{structure of a given species}.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.5. Conditions on Realizations and the \texttt{where} Clause}
+
+Many mathematical constructions impose side conditions on underlying sets or
+operations (e.g., commutativity, order-completeness).
+In Bourbaki’s methodology, these appear as \emph{subspecies of structures}.
+
+The Kleis construct:
+
+\begin{verbatim}
+implements R(T) where C(T)
+\end{verbatim}
+
+specifies that the realization of $R$ on $T$ is valid only in cases where
+$T$ satisfies an auxiliary species $C$.
+
+Thus, \texttt{where} produces a \emph{subspecies} of the original species,
+in the Bourbaki sense.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.6. Nested Structures and Composite Species}
+
+A Bourbaki structure may itself contain other structures whose underlying
+set is identical.
+For example, a ring consists of an additive commutative group and a
+multiplicative monoid defined on the same set.
+
+In Kleis:
+
+\begin{verbatim}
+structure Ring(R) {
+    structure additive : AbelianGroup(R)
+    structure multiplicative : Monoid(R)
+}
+\end{verbatim}
+
+This corresponds to a composite species of structure in Bourbaki’s
+terminology: the ring structure is obtained by amalgamating two subspecies
+defined on the same underlying set and adding compatibility axioms.
+
+Thus, nested Kleis structures represent the Bourbaki notion of a structure
+\emph{with internal substructures of species}.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.7. Algebraic Data Types and Inductive Species}
+
+An inductive Kleis data type:
+
+\begin{verbatim}
+data Option(T) = None | Some(T)
+\end{verbatim}
+
+corresponds to the initial model of a finitary algebraic species.
+In Bourbaki's terminology, this is a \emph{free structure} on the given
+signature.
+
+Given a functor:
+\[
+F(X) = 1 + T \times X,
+\]
+the type defined above is the initial object of the category of
+$F$-algebras.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.8. Axioms as Structural Relations}
+
+A Kleis axiom:
+
+\begin{verbatim}
+axiom associativity:
+    ∀(x y z : M). (x • y) • z = x • (y • z)
+\end{verbatim}
+
+corresponds to an identity constraint on the operations of the species.
+In Bourbaki’s setting, these axioms complete the specification of the
+structure by imposing structural relations on the operations.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.9. Functoriality and Polymorphism}
+
+Many Kleis expressions, particularly polymorphic type constructors, correspond
+to functors between categories of structures.
+
+For a type operator such as:
+
+\begin{verbatim}
+Matrix(m,n,T)
+\end{verbatim}
+
+we obtain a mapping:
+\[
+\mathsf{Matrix}_{m,n} : \mathscr{U} \to \mathscr{U},
+\]
+which, when restricted to appropriate categories of structures, becomes a
+covariant functor.
+
+Polymorphic Kleis functions correspond to families of functions natural
+with respect to such functorial actions.
+
+\bigskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{A.10. Summary}
+
+In this appendix, we have identified the principal constructs of the Kleis
+language with the corresponding notions in Bourbaki’s theory of structures:
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Kleis Construct} & \textbf{Bourbaki Concept} \\
+\hline
+\texttt{structure} & species of structure \\
+\texttt{extends} & morphism of species / species inclusion \\
+\texttt{over} & parametrized species \\
+\texttt{implements} & structure of a given species \\
+\texttt{where} & subspecies via conditions \\
+nested structures & composite species / associated structures \\
+algebraic data types & free or inductive structures \\
+polymorphism & functorial dependence \\
+\hline
+\end{tabular}
+\end{center}
+
+Thus, Kleis may be regarded as a formal, executable language for defining
+and manipulating Bourbaki-style mathematical structures.
+
+\end{document}
