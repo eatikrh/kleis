@@ -65,11 +65,6 @@ fn test_proof_extends_makes_parent_axioms_available() {
         }
     }
 
-    // Now manually register operations so dependency analysis works
-    registry.register_operation("Semigroup", "plus");
-    registry.register_operation("Monoid", "plus");
-    registry.register_operation("Monoid", "e");
-
     let mut verifier = AxiomVerifier::new(&registry).expect("Failed to create verifier");
 
     println!("\n🧪 STRONG PROOF TEST: extends makes parent axioms available");

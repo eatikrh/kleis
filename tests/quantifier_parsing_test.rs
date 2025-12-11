@@ -18,6 +18,7 @@ fn test_parse_simple_forall() {
             quantifier,
             variables,
             body,
+            where_clause: _,
         } => {
             assert!(matches!(quantifier, QuantifierKind::ForAll));
             assert_eq!(variables.len(), 1);

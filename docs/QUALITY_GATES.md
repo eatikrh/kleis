@@ -24,24 +24,34 @@ cargo fmt --all
 ### 2. Run Clippy (Required)
 
 ```bash
-cargo clippy --all-targets --all-features
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo clippy --all-targets --all-features
 ```
 
 **Purpose:** Catches common mistakes and anti-patterns  
 **CI Check:** `cargo clippy --all-targets --all-features -- -D warnings`  
 **Action:** Fix all clippy warnings before committing
 
+**Platform-specific Z3 header paths:**
+- **macOS ARM:** `/opt/homebrew/opt/z3/include/z3.h`
+- **macOS Intel:** `/usr/local/opt/z3/include/z3.h`
+- **Linux:** `/usr/include/z3.h`
+
 ---
 
 ### 3. Run Library Tests (Required)
 
 ```bash
-cargo test --lib
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test --lib
 ```
 
 **Purpose:** Ensures no regressions in core functionality  
 **CI Check:** `cargo test --lib --verbose`  
-**Requirement:** Must pass (currently 421 tests)
+**Requirement:** Must pass (currently 421+ tests)
+
+**Platform-specific Z3 header paths:**
+- **macOS ARM:** `/opt/homebrew/opt/z3/include/z3.h`
+- **macOS Intel:** `/usr/local/opt/z3/include/z3.h`
+- **Linux:** `/usr/include/z3.h`
 
 ---
 
@@ -81,15 +91,14 @@ cargo test --features axiom-verification
 # 1. Format
 cargo fmt --all
 
-# 2. Lint
-cargo clippy --all-targets --all-features
+# 2. Lint (with Z3 support)
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo clippy --all-targets --all-features
 
-# 3. Test core
-cargo test --lib
+# 3. Test core (with Z3 support)
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test --lib
 
-# 4. Test Z3 (if applicable)
-export Z3_SYS_Z3_HEADER=/opt/homebrew/include/z3.h
-cargo test --features axiom-verification
+# 4. Test Z3 verification (if applicable)
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test --features axiom-verification
 
 # 5. Fix any errors/warnings from steps 2-4
 
@@ -109,10 +118,10 @@ git commit -m "..."
 brew install z3
 
 # Set environment variable
-export Z3_SYS_Z3_HEADER=/opt/homebrew/include/z3.h
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
 
 # Add to .zshrc or .bashrc:
-echo 'export Z3_SYS_Z3_HEADER=/opt/homebrew/include/z3.h' >> ~/.zshrc
+echo 'export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h' >> ~/.zshrc
 ```
 
 ### macOS Intel
@@ -122,10 +131,10 @@ echo 'export Z3_SYS_Z3_HEADER=/opt/homebrew/include/z3.h' >> ~/.zshrc
 brew install z3
 
 # Set environment variable
-export Z3_SYS_Z3_HEADER=/usr/local/include/z3.h
+export Z3_SYS_Z3_HEADER=/usr/local/opt/z3/include/z3.h
 
 # Add to .bash_profile:
-echo 'export Z3_SYS_Z3_HEADER=/usr/local/include/z3.h' >> ~/.bash_profile
+echo 'export Z3_SYS_Z3_HEADER=/usr/local/opt/z3/include/z3.h' >> ~/.bash_profile
 ```
 
 ### Linux (Ubuntu/Debian)
