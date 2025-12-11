@@ -7,6 +7,10 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/render/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/vendor/z3-sys/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/vendor/z3-sys/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/vendor/z3/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/vendor/z3/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

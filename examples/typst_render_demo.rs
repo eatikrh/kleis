@@ -4,7 +4,7 @@
 // by simply adding Typst as a new RenderTarget.
 
 use kleis::ast::Expression;
-use kleis::render::{RenderTarget, build_default_context, render_expression};
+use kleis::render::{build_default_context, render_expression, RenderTarget};
 
 fn main() {
     println!("=== Kleis Renderer → Typst Markup Demo ===\n");

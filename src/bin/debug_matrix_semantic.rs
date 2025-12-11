@@ -1,6 +1,6 @@
 use kleis::ast::Expression;
 use kleis::math_layout::compile_with_semantic_boxes;
-use kleis::render::{RenderTarget, build_default_context, render_expression};
+use kleis::render::{build_default_context, render_expression, RenderTarget};
 
 #[derive(Debug)]
 struct ArgumentSlot {

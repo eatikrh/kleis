@@ -8,7 +8,7 @@
 
 use kleis::ast::Expression;
 use kleis::math_layout::compile_math_to_svg;
-use kleis::render::{RenderTarget, build_default_context, render_expression};
+use kleis::render::{build_default_context, render_expression, RenderTarget};
 
 fn main() {
     println!("=== Full Pipeline Demo: Expression → Typst → SVG ===\n");

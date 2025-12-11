@@ -967,7 +967,7 @@ fn render_expression_internal(
                 result = result.replace("{value}", first);
                 result = result.replace("{content}", first); // for brackets: parens, brackets, braces, angle_brackets
                 result = result.replace("{bra}", first); // for inner product (arg 0)
-                // For outer product, {ket} is arg 0, but for inner product, {ket} is arg 1
+                                                         // For outer product, {ket} is arg 0, but for inner product, {ket} is arg 1
                 if name != "inner" {
                     result = result.replace("{ket}", first); // for outer product
                 }
@@ -995,7 +995,7 @@ fn render_expression_internal(
                 result = result.replace("{exponent}", second);
                 result = result.replace("{lower1}", second); // For tensor_lower_pair arg1
                 result = result.replace("{upper1}", second); // For tensor_2up_2down arg1
-                // Use arg1 as {from} for 2-3 arg operations, not for cases2 or cases3
+                                                             // Use arg1 as {from} for 2-3 arg operations, not for cases2 or cases3
                 if name != "cases2" && name != "cases3" {
                     result = result.replace("{from}", second);
                 }
@@ -1049,7 +1049,7 @@ fn render_expression_internal(
                     result = result.replace("{subscript}", second); // subsup: arg 1 is subscript
                 }
                 result = result.replace("{ket}", second); // for inner product
-                // For outer product, {bra} is arg 1, but for inner product, {bra} is arg 0
+                                                          // For outer product, {bra} is arg 1, but for inner product, {bra} is arg 0
                 if name != "inner" {
                     result = result.replace("{bra}", second); // for outer product
                 }
@@ -1071,7 +1071,7 @@ fn render_expression_internal(
                 }
                 result = result.replace("{lower2}", third); // For tensor_lower_pair arg2
                 result = result.replace("{upper2}", third); // For tensor_2up_2down arg2
-                // Added for coverage
+                                                            // Added for coverage
                 if name == "int_bounds" {
                     result = result.replace("{upper}", third); // integral upper bound: arg 2
                 } else if name == "index_mixed" {
@@ -1096,7 +1096,7 @@ fn render_expression_internal(
                 }
                 result = result.replace("{idx3}", fourth);
                 result = result.replace("{lower1}", fourth); // For tensor_2up_2down arg3 (first lower index)
-                // Added for coverage
+                                                             // Added for coverage
                 if name == "int_bounds" || name == "kernel_integral" {
                     result = result.replace("{variable}", fourth); // int_bounds and kernel_integral variable
                 }
@@ -1105,7 +1105,7 @@ fn render_expression_internal(
             if let Some(fifth) = rendered_args.get(4) {
                 result = result.replace("{idx4}", fifth);
                 result = result.replace("{lower2}", fifth); // For tensor_2up_2down arg4 (second lower index)
-                // For 6-arg operations (cases3), use arg4 as {body}
+                                                            // For 6-arg operations (cases3), use arg4 as {body}
                 if rendered_args.len() == 6 {
                     result = result.replace("{body}", fifth);
                 }
@@ -1378,12 +1378,14 @@ fn render_expression_internal(
             }
         }
 
-        // Quantifier: render as ∀(x : T). body
+        // Quantifier: render as ∀(x : T). body or ∀(x : T) where cond. body
         Expression::Quantifier {
             quantifier,
             variables,
+            where_clause,
             body,
         } => {
+            let _ = where_clause; // TODO: Render where clause in output
             let quant_symbol = match quantifier {
                 crate::ast::QuantifierKind::ForAll => match target {
                     RenderTarget::Unicode => "∀",

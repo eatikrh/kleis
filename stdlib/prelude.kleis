@@ -137,12 +137,12 @@ implements Field(ℝ) {
 
 // Complex numbers form a field
 implements Field(ℂ) {
-  element zero = 0 + 0i
-  element one = 1 + 0i
+  element zero = 0
+  element one = 1
   operation (+) = complex_add
   operation (×) = complex_mul
   operation negate(z) = -z
-  operation inverse(z) = z̄ / |z|²
+  operation inverse(z) = complex_inverse
 }
 
 // Integers form a ring (not a field - no division)
@@ -156,7 +156,7 @@ implements Ring(ℤ) {
 
 // Vectors form a vector space over reals
 implements VectorSpace(Vector(n)) over Field(ℝ) {
-  element zero_v = [0, 0, ..., 0]  // n zeros
+  element zero_v = zero_vector(n)
   operation (+) = vector_add
   operation (·) = scalar_vector_mul
 }

@@ -15,8 +15,8 @@ use typst::{Library, World};
 
 use crate::ast::Expression;
 use crate::render::{
-    GlyphContext, RenderTarget, build_default_context, render_expression,
-    render_expression_with_ids,
+    build_default_context, render_expression, render_expression_with_ids, GlyphContext,
+    RenderTarget,
 };
 
 /// Minimal World implementation for Typst compilation

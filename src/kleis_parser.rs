@@ -188,8 +188,9 @@ impl KleisParser {
         }
 
         // Optional decimal part
-        if self.peek() == Some('.') {
-            self.advance();
+        // Only consume '.' if there's a digit after it
+        if self.peek() == Some('.') && self.peek_ahead(1).map_or(false, |ch| ch.is_numeric()) {
+            self.advance(); // consume '.'
             while let Some(ch) = self.peek() {
                 if ch.is_numeric() {
                     self.advance();
@@ -277,6 +278,16 @@ impl KleisParser {
 
     fn parse_primary(&mut self) -> Result<Expression, KleisParseError> {
         self.skip_whitespace();
+
+        // Unary minus: -x (prefix operator)
+        if self.peek() == Some('-') {
+            self.advance(); // consume -
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "negate".to_string(),
+                args: vec![arg],
+            });
+        }
 
         // Negation: ¬A or not A (prefix operator)
         if self.peek() == Some('¬') {
@@ -513,24 +524,74 @@ impl KleisParser {
         }
     }
 
-    /// Parse arithmetic expressions: +, -
+    /// Check if a character is a custom mathematical operator
+    /// Includes Unicode math symbols like •, ⊗, ⊕, ∘, etc.
+    fn is_custom_operator_char(&self, ch: char) -> bool {
+        match ch {
+            // Common mathematical operators (Unicode Symbol, Math category)
+            '•' | '∘' | '∗' | '⋆' | '⊗' | '⊕' | '⊙' | '⊛' | '⊘' | '⊚' | '⊝' | '⊞' | '⊟' | '⊠'
+            | '⊡' | '⨀' | '⨁' | '⨂' | '⨃' | '⨄' | '⊓' | '⊔' | '⊎' | '⊍' | '∪' | '∩' | '⋃' | '⋂'
+            | '△' | '▽' => true,
+
+            // Exclude operators already handled explicitly
+            '+' | '-' | '*' | '/' | '^' | '×' | '·' => false,
+
+            // Exclude comparison operators (handled separately)
+            '=' | '<' | '>' | '≤' | '≥' | '≠' => false,
+
+            // Exclude logical operators (handled separately)
+            '∧' | '∨' | '¬' | '⟹' => false,
+
+            // Exclude delimiters
+            '(' | ')' | '[' | ']' | '{' | '}' | ',' | '.' | ':' | ';' => false,
+
+            _ => false,
+        }
+    }
+
+    /// Try to parse a custom operator (single Unicode math symbol)
+    fn try_parse_custom_operator(&mut self) -> Option<String> {
+        match self.peek() {
+            Some(ch) if self.is_custom_operator_char(ch) => {
+                self.advance();
+                Some(ch.to_string())
+            }
+            _ => None,
+        }
+    }
+
+    /// Parse arithmetic expressions: +, -, and custom operators
     fn parse_arithmetic(&mut self) -> Result<Expression, KleisParseError> {
         let mut left = self.parse_term()?;
 
         loop {
             self.skip_whitespace();
+
+            // Try built-in operators first
             let op = match self.peek() {
-                Some('+') => "plus",
-                Some('-') => "minus",
-                _ => break,
+                Some('+') => {
+                    self.advance();
+                    Some("plus".to_string())
+                }
+                Some('-') => {
+                    self.advance();
+                    Some("minus".to_string())
+                }
+                _ => {
+                    // Try custom operators (like •, ⊗, ⊕, etc.)
+                    self.try_parse_custom_operator()
+                }
             };
 
-            self.advance();
-            let right = self.parse_term()?;
-            left = Expression::Operation {
-                name: op.to_string(),
-                args: vec![left, right],
-            };
+            if let Some(op) = op {
+                let right = self.parse_term()?;
+                left = Expression::Operation {
+                    name: op,
+                    args: vec![left, right],
+                };
+            } else {
+                break;
+            }
         }
 
         Ok(left)
@@ -681,6 +742,24 @@ impl KleisParser {
 
         self.skip_whitespace();
 
+        // Optional where clause: where x ≠ zero
+        let where_clause = if self.peek_word("where") {
+            // Skip "where"
+            for _ in 0..5 {
+                self.advance();
+            }
+            self.skip_whitespace();
+
+            // Parse condition expression (until we hit '.')
+            // We need to parse a comparison but stop at '.'
+            let condition = self.parse_where_condition()?;
+            Some(Box::new(condition))
+        } else {
+            None
+        };
+
+        self.skip_whitespace();
+
         // Expect '.'
         if self.advance() != Some('.') {
             return Err(KleisParseError {
@@ -695,69 +774,181 @@ impl KleisParser {
         Ok(Expression::Quantifier {
             quantifier,
             variables,
+            where_clause,
             body: Box::new(body),
         })
     }
 
-    /// Parse quantified variables: x : T or x y z : T
-    fn parse_quantified_vars(&mut self) -> Result<Vec<crate::ast::QuantifiedVar>, KleisParseError> {
-        let mut vars = Vec::new();
+    /// Parse where condition in quantifier (stops at '.')
+    /// Example: x ≠ zero, x > 0, x • y = e
+    fn parse_where_condition(&mut self) -> Result<Expression, KleisParseError> {
+        // Parse left side
+        let left = self.parse_where_term()?;
 
         self.skip_whitespace();
 
-        // Collect variable names until we hit ':'
-        let mut names = Vec::new();
+        // Check for comparison operator
+        let op = match self.peek() {
+            Some('=') => {
+                self.advance();
+                Some("equals")
+            }
+            Some('<') => {
+                self.advance();
+                Some("less_than")
+            }
+            Some('>') => {
+                self.advance();
+                Some("greater_than")
+            }
+            Some('≤') => {
+                self.advance();
+                Some("leq")
+            }
+            Some('≥') => {
+                self.advance();
+                Some("geq")
+            }
+            Some('≠') => {
+                self.advance();
+                Some("neq")
+            }
+            _ => None,
+        };
+
+        if let Some(op) = op {
+            self.skip_whitespace();
+            let right = self.parse_where_term()?;
+            Ok(Expression::Operation {
+                name: op.to_string(),
+                args: vec![left, right],
+            })
+        } else {
+            Ok(left)
+        }
+    }
+
+    /// Parse a term in where condition (stops at '.', '=', '<', '>', etc.)
+    fn parse_where_term(&mut self) -> Result<Expression, KleisParseError> {
+        self.skip_whitespace();
+
+        // Parse primary expressions and custom operators
+        // But stop at comparison operators and '.'
+        let mut left = self.parse_primary()?;
+
         loop {
             self.skip_whitespace();
 
-            // Check if we hit the colon
-            if self.peek() == Some(':') {
+            // Stop at comparison operators or '.'
+            match self.peek() {
+                Some('.') | Some('=') | Some('<') | Some('>') | Some('≤') | Some('≥')
+                | Some('≠') => {
+                    break;
+                }
+                _ => {}
+            }
+
+            // Check for custom operator
+            if let Some(op) = self.try_parse_custom_operator() {
+                let right = self.parse_primary()?;
+                left = Expression::Operation {
+                    name: op,
+                    args: vec![left, right],
+                };
+            } else {
+                break;
+            }
+        }
+
+        Ok(left)
+    }
+
+    /// Parse quantified variables: x : T or x y z : T or (c : F, u v : V)
+    /// Supports comma-separated type groups: ∀(c : F, u v : V). body
+    fn parse_quantified_vars(&mut self) -> Result<Vec<crate::ast::QuantifiedVar>, KleisParseError> {
+        let mut all_vars = Vec::new();
+
+        // Parse comma-separated groups of variables
+        loop {
+            self.skip_whitespace();
+
+            // Check if we're done (hit closing paren or 'where')
+            if self.peek() == Some(')') || self.peek_word("where") {
                 break;
             }
 
-            // Parse identifier
-            let name = self.parse_identifier()?;
-            names.push(name);
+            // Collect variable names until we hit ':'
+            let mut names = Vec::new();
+            loop {
+                self.skip_whitespace();
+
+                // Check if we hit the colon
+                if self.peek() == Some(':') {
+                    break;
+                }
+
+                // Parse identifier
+                let name = self.parse_identifier()?;
+                names.push(name);
+
+                self.skip_whitespace();
+
+                // Could be another variable or the colon
+                if self.peek() == Some(':') {
+                    break;
+                }
+            }
+
+            if names.is_empty() {
+                return Err(KleisParseError {
+                    message: "Expected at least one variable name".to_string(),
+                    position: self.pos,
+                });
+            }
 
             self.skip_whitespace();
 
-            // Could be another variable or the colon
-            if self.peek() == Some(':') {
+            // Expect ':'
+            if self.advance() != Some(':') {
+                return Err(KleisParseError {
+                    message: "Expected ':' after variable names".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            self.skip_whitespace();
+
+            // Parse type annotation
+            let type_name = self.parse_identifier()?;
+
+            // Create QuantifiedVar for each name with the same type
+            for name in names {
+                all_vars.push(crate::ast::QuantifiedVar::new(
+                    name,
+                    Some(type_name.clone()),
+                ));
+            }
+
+            self.skip_whitespace();
+
+            // Check for comma (more variable groups) or end
+            if self.peek() == Some(',') {
+                self.advance(); // consume comma
+                                // Continue to parse next group
+            } else {
+                // No more groups
                 break;
             }
         }
 
-        if names.is_empty() {
+        if all_vars.is_empty() {
             return Err(KleisParseError {
-                message: "Expected at least one variable name".to_string(),
+                message: "Expected at least one quantified variable".to_string(),
                 position: self.pos,
             });
         }
 
-        self.skip_whitespace();
-
-        // Expect ':'
-        if self.advance() != Some(':') {
-            return Err(KleisParseError {
-                message: "Expected ':' after variable names".to_string(),
-                position: self.pos,
-            });
-        }
-
-        self.skip_whitespace();
-
-        // Parse type annotation
-        let type_name = self.parse_identifier()?;
-
-        // Create QuantifiedVar for each name with the same type
-        for name in names {
-            vars.push(crate::ast::QuantifiedVar::new(
-                name,
-                Some(type_name.clone()),
-            ));
-        }
-
-        Ok(vars)
+        Ok(all_vars)
     }
 
     /// Check if the next word matches (without consuming)
@@ -1117,6 +1308,147 @@ impl KleisParser {
         Ok(args)
     }
 
+    /// Parse nested structure definition
+    /// Example: structure additive : AbelianGroup(R) { ... }
+    fn parse_nested_structure(&mut self) -> Result<StructureMember, KleisParseError> {
+        // Skip "structure" keyword
+        for _ in 0..9 {
+            self.advance();
+        }
+        self.skip_whitespace();
+
+        // Parse nested structure name
+        let name = self.parse_identifier()?;
+        self.skip_whitespace();
+
+        // Expect ':'
+        if self.advance() != Some(':') {
+            return Err(KleisParseError {
+                message: format!("Expected ':' after nested structure name '{}'", name),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Parse structure type (e.g., AbelianGroup(R))
+        let structure_type = self.parse_type()?;
+        self.skip_whitespace();
+
+        // Parse optional body { ... }
+        let members = if self.peek() == Some('{') {
+            self.advance(); // consume '{'
+            let mut nested_members = Vec::new();
+
+            loop {
+                self.skip_whitespace();
+
+                if self.peek() == Some('}') {
+                    break;
+                }
+
+                // Recursively parse structure members
+                // (nested structures can contain nested structures!)
+                let start_pos = self.pos;
+                if self.peek_word("structure") {
+                    nested_members.push(self.parse_nested_structure()?);
+                } else if self.peek_word("operation") {
+                    // Parse operation
+                    for _ in 0..9 {
+                        self.advance();
+                    }
+                    self.skip_whitespace();
+
+                    let op_name = self.parse_operation_name()?;
+                    self.skip_whitespace();
+
+                    if self.advance() != Some(':') {
+                        return Err(KleisParseError {
+                            message: "Expected ':' after operation name".to_string(),
+                            position: self.pos,
+                        });
+                    }
+
+                    let type_sig = self.parse_type()?;
+
+                    nested_members.push(StructureMember::Operation {
+                        name: op_name,
+                        type_signature: type_sig,
+                    });
+                } else if self.peek_word("element") {
+                    // element e : M (same as nullary operation)
+                    for _ in 0..7 {
+                        self.advance();
+                    }
+                    self.skip_whitespace();
+
+                    let elem_name = self.parse_identifier()?;
+                    self.skip_whitespace();
+
+                    if self.advance() != Some(':') {
+                        return Err(KleisParseError {
+                            message: "Expected ':' after element name".to_string(),
+                            position: self.pos,
+                        });
+                    }
+
+                    let type_sig = self.parse_type()?;
+
+                    nested_members.push(StructureMember::Operation {
+                        name: elem_name,
+                        type_signature: type_sig,
+                    });
+                } else if self.peek_word("axiom") {
+                    // Parse axiom
+                    for _ in 0..5 {
+                        self.advance();
+                    }
+                    self.skip_whitespace();
+
+                    let axiom_name = self.parse_identifier()?;
+                    self.skip_whitespace();
+
+                    if self.advance() != Some(':') {
+                        return Err(KleisParseError {
+                            message: "Expected ':' after axiom name".to_string(),
+                            position: self.pos,
+                        });
+                    }
+
+                    self.skip_whitespace();
+                    let proposition = self.parse_proposition()?;
+
+                    nested_members.push(StructureMember::Axiom {
+                        name: axiom_name,
+                        proposition,
+                    });
+                } else {
+                    // Regular field
+                    self.pos = start_pos;
+                    nested_members.push(self.parse_structure_member()?);
+                }
+            }
+
+            if self.advance() != Some('}') {
+                return Err(KleisParseError {
+                    message: "Expected '}' after nested structure body".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            nested_members
+        } else {
+            // No body - just a reference to existing structure
+            Vec::new()
+        };
+
+        Ok(StructureMember::NestedStructure {
+            name,
+            structure_type,
+            members,
+        })
+    }
+
     /// Parse structure member
     fn parse_structure_member(&mut self) -> Result<StructureMember, KleisParseError> {
         self.skip_whitespace();
@@ -1199,6 +1531,40 @@ impl KleisParser {
             Vec::new()
         };
 
+        self.skip_whitespace();
+
+        // Optional extends clause: extends ParentStructure(Args)
+        let extends_clause = if self.peek_word("extends") {
+            // Skip "extends"
+            for _ in 0..7 {
+                self.advance();
+            }
+            self.skip_whitespace();
+
+            // Parse parent structure type (e.g., Semigroup(M))
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+
+        self.skip_whitespace();
+
+        // Optional over clause: over Field(F)
+        let over_clause = if self.peek_word("over") {
+            // Skip "over"
+            for _ in 0..4 {
+                self.advance();
+            }
+            self.skip_whitespace();
+
+            // Parse field type (e.g., Field(F))
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+
+        self.skip_whitespace();
+
         // Expect '{'
         if self.advance() != Some('{') {
             return Err(KleisParseError {
@@ -1216,9 +1582,12 @@ impl KleisParser {
                 break;
             }
 
-            // Check for operation or axiom keyword
+            // Check for nested structure, operation, or axiom keyword
             let start_pos = self.pos;
-            if self.peek_word("operation") {
+            if self.peek_word("structure") {
+                // Nested structure definition
+                members.push(self.parse_nested_structure()?);
+            } else if self.peek_word("operation") {
                 // Skip "operation"
                 for _ in 0..9 {
                     self.advance();
@@ -1242,6 +1611,50 @@ impl KleisParser {
                     name: op_name,
                     type_signature: type_sig,
                 });
+            } else if self.peek_word("element") {
+                // element e : M
+                // This is semantically equivalent to a nullary operation: operation e : M
+                // Skip "element"
+                for _ in 0..7 {
+                    self.advance();
+                }
+                self.skip_whitespace();
+
+                // Parse element name
+                let elem_name = self.parse_identifier()?;
+                self.skip_whitespace();
+
+                if self.advance() != Some(':') {
+                    return Err(KleisParseError {
+                        message: "Expected ':' after element name".to_string(),
+                        position: self.pos,
+                    });
+                }
+
+                let type_sig = self.parse_type()?;
+
+                // Store as Operation (nullary operation = identity element)
+                members.push(StructureMember::Operation {
+                    name: elem_name,
+                    type_signature: type_sig,
+                });
+            } else if self.peek_word("define") {
+                // define f(x) = expr (inline function definition)
+                // Skip for now - not yet supported in structure members
+                // TODO: Add FunctionDef variant to StructureMember enum
+                for _ in 0..6 {
+                    self.advance();
+                }
+                self.skip_whitespace();
+
+                // Skip until we hit a newline or the next member
+                while let Some(ch) = self.peek() {
+                    if ch == '\n' {
+                        self.advance();
+                        break;
+                    }
+                    self.advance();
+                }
             } else if self.peek_word("axiom") {
                 // Skip "axiom"
                 for _ in 0..5 {
@@ -1288,6 +1701,8 @@ impl KleisParser {
             name,
             type_params,
             members,
+            extends_clause,
+            over_clause,
         })
     }
 
@@ -1347,8 +1762,9 @@ impl KleisParser {
 
         self.skip_whitespace();
 
-        // Parse function name
-        let name = self.parse_identifier()?;
+        // Parse function name (can be identifier or operator symbol)
+        // Examples: define add(x, y) = ... OR define (-)(x, y) = ...
+        let name = self.parse_operation_name()?;
         self.skip_whitespace();
 
         // Check if this is a function with parameters or a simple definition
@@ -1516,6 +1932,27 @@ impl KleisParser {
 
         self.skip_whitespace();
 
+        // Parse optional over clause: over Field(F)
+        let over_clause = if self.peek_word("over") {
+            // Skip "over"
+            for _ in 0..4 {
+                self.advance();
+            }
+            self.skip_whitespace();
+
+            // Parse field type (e.g., Field(ℝ))
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+
+        self.skip_whitespace();
+
+        // Parse optional where clause
+        let where_clause = self.parse_where_clause()?;
+
+        self.skip_whitespace();
+
         // Parse members in { }
         if self.advance() != Some('{') {
             return Err(KleisParseError {
@@ -1546,7 +1983,90 @@ impl KleisParser {
             structure_name,
             type_args,
             members,
+            over_clause,
+            where_clause,
         })
+    }
+
+    /// Parse optional where clause: where Constraint1, Constraint2, ...
+    ///
+    /// Example: where Semiring(T), Ord(T)
+    fn parse_where_clause(
+        &mut self,
+    ) -> Result<Option<Vec<crate::kleis_ast::WhereConstraint>>, KleisParseError> {
+        self.skip_whitespace();
+
+        // Check if there's a 'where' keyword
+        if !self.peek_word("where") {
+            return Ok(None);
+        }
+
+        // Consume 'where' keyword
+        let keyword = self.parse_identifier()?;
+        if keyword != "where" {
+            return Err(KleisParseError {
+                message: format!("Expected 'where', got '{}'", keyword),
+                position: self.pos,
+            });
+        }
+        self.skip_whitespace();
+
+        let mut constraints = Vec::new();
+
+        loop {
+            // Parse structure name
+            let structure_name = self.parse_identifier()?;
+            self.skip_whitespace();
+
+            // Parse type arguments
+            if self.advance() != Some('(') {
+                return Err(KleisParseError {
+                    message: format!(
+                        "Expected '(' after structure name in where clause: {}",
+                        structure_name
+                    ),
+                    position: self.pos,
+                });
+            }
+
+            let mut type_args = Vec::new();
+            self.skip_whitespace();
+
+            while self.peek() != Some(')') {
+                type_args.push(self.parse_type()?);
+                self.skip_whitespace();
+
+                if self.peek() == Some(',') {
+                    self.advance();
+                    self.skip_whitespace();
+                }
+            }
+
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after type arguments in where clause".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            constraints.push(crate::kleis_ast::WhereConstraint {
+                structure_name,
+                type_args,
+            });
+
+            self.skip_whitespace();
+
+            // Check if there's another constraint (comma-separated)
+            if self.peek() == Some(',') {
+                self.advance();
+                self.skip_whitespace();
+            } else {
+                // No more constraints
+                break;
+            }
+        }
+
+        Ok(Some(constraints))
     }
 
     fn parse_impl_member(&mut self) -> Result<ImplMember, KleisParseError> {
@@ -1573,9 +2093,28 @@ impl KleisParser {
             }
             "operation" => {
                 // operation abs = builtin_abs
-                // or operation abs(x) = x^2
-                let name = self.parse_identifier()?;
+                // or operation negate(x) = -x
+                // or operation (+) = builtin_add
+                let name = self.parse_operation_name()?;
                 self.skip_whitespace();
+
+                // Check for parameters: operation name(params) = expr
+                let params = if self.peek() == Some('(') {
+                    self.advance(); // consume '('
+                    let params = self.parse_params()?;
+                    self.skip_whitespace();
+
+                    if self.advance() != Some(')') {
+                        return Err(KleisParseError {
+                            message: "Expected ')' after parameters".to_string(),
+                            position: self.pos,
+                        });
+                    }
+                    self.skip_whitespace();
+                    params
+                } else {
+                    Vec::new()
+                };
 
                 if self.advance() != Some('=') {
                     return Err(KleisParseError {
@@ -1586,13 +2125,28 @@ impl KleisParser {
 
                 self.skip_whitespace();
 
-                // Check if next is identifier (builtin) or expression
-                // For now, assume builtin (TODO: handle inline definitions)
-                let builtin_name = self.parse_identifier()?;
+                // Parse implementation (could be builtin or inline expression)
+                // Try to parse as identifier first (for builtin_xxx)
+                let start_pos = self.pos;
+                if let Ok(builtin_name) = self.parse_identifier() {
+                    // Check if this looks like a builtin (starts with builtin_ or simple name without params)
+                    if builtin_name.starts_with("builtin_")
+                        || (params.is_empty() && !builtin_name.is_empty())
+                    {
+                        return Ok(ImplMember::Operation {
+                            name,
+                            implementation: Implementation::Builtin(builtin_name),
+                        });
+                    }
+                }
+
+                // Otherwise, parse as inline expression
+                self.pos = start_pos;
+                let expr = self.parse_expression()?;
 
                 Ok(ImplMember::Operation {
                     name,
-                    implementation: Implementation::Builtin(builtin_name),
+                    implementation: Implementation::Inline { params, body: expr },
                 })
             }
             _ => Err(KleisParseError {
@@ -2182,7 +2736,7 @@ mod tests {
         assert_eq!(result.variants[1].name, "Some");
         assert_eq!(result.variants[1].fields.len(), 1);
         assert!(result.variants[1].fields[0].name.is_none()); // Positional
-        // Note: Type variables are parsed as Named types at this stage
+                                                              // Note: Type variables are parsed as Named types at this stage
         assert!(matches!(
             result.variants[1].fields[0].type_expr,
             TypeExpr::Named(ref s) if s == "T"
@@ -2633,12 +3187,10 @@ mod tests {
         let result = parser.parse();
 
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .message
-                .contains("must have at least one case")
-        );
+        assert!(result
+            .unwrap_err()
+            .message
+            .contains("must have at least one case"));
     }
 
     #[test]

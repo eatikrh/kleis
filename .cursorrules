@@ -56,26 +56,32 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 
 2. **Run clippy** (required)
    ```bash
-   cargo clippy --all-targets --all-features
+   export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo clippy --all-targets --all-features
    ```
+   - **Note:** Z3 environment variable required for build
    - Catches common mistakes and anti-patterns
    - Fix all clippy warnings before committing
    - GitHub CI runs this check
+   - **macOS Intel:** Use `/usr/local/opt/z3/include/z3.h`
+   - **Linux:** Use `/usr/include/z3.h`
 
 3. **Run tests** (required)
    ```bash
-   cargo test --lib
+   export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test --lib
    ```
+   - **Note:** Z3 environment variable required for build
    - Ensures no regressions
-   - Must pass (279 tests as of Dec 6, 2024)
+   - Must pass (421+ tests as of Dec 11, 2024)
    - GitHub CI runs this exact command
+   - **macOS Intel:** Use `/usr/local/opt/z3/include/z3.h`
+   - **Linux:** Use `/usr/include/z3.h`
 
 **Process:**
 ```
 Before committing .rs files:
 → Run: cargo fmt --all
-→ Run: cargo clippy --all-targets --all-features
-→ Run: cargo test --lib
+→ Run: export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo clippy --all-targets --all-features
+→ Run: export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test --lib
 → Fix any errors/warnings
 → Then commit
 

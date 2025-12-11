@@ -29,6 +29,19 @@ Originally designed for **Projected Ontology Theory (POT)** and **Hilbert Ontolo
 - **Exception handling** - Type-level errors (structure) vs value-level errors (division by zero)
 - **Future work:** E-unification for algebraic equivalences (symbolic simplification)
 
+### 🎓 Theorem Proving (Z3 Integration)
+- **Axiom verification** - Z3 SMT solver integration for proving mathematical properties
+- **Generic constraints** - Where clauses enable type-safe generic implementations
+- **Structure inheritance** - Automatic axiom inheritance through extends keyword
+- **Compositional algebra** - Nested structures (Ring = AbelianGroup + Monoid)
+- **Mathematical notation** - Write axioms as mathematicians do: `∀(x y : R). x + y = y + x`
+
+**Important distinction:**
+- **Type inference** (automatic, fast ~1ms) - Checks syntactic structure (types match)
+- **Axiom verification** (explicit, slower ~10ms) - Checks semantic properties (axioms hold)
+- Type inference runs on every expression; axiom verification is an optional separate step
+- Example: `Matrix(2,2,[a,b,c,d])` type checks instantly, but proving distributivity requires Z3
+
 ### 🧮 Evaluation Engine *(Designed)*
 - **Context management** - Hierarchical scoping, bindings with types
 - **Type-directed dispatch** - Routes operations based on inferred types
@@ -55,7 +68,14 @@ Originally designed for **Projected Ontology Theory (POT)** and **Hilbert Ontolo
 
 ### Run the Web Equation Editor
 
+**Easy way (recommended):**
 ```bash
+./run_server.sh
+```
+
+**Or manually:**
+```bash
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h  # macOS ARM
 cargo run --bin server
 ```
 

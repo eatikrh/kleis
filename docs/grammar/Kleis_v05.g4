@@ -1,7 +1,8 @@
 // Kleis.g4 v0.5 - ANTLR4 Grammar for Kleis with Pattern Matching
-// Date: 2024-12-08
+// Date: 2024-12-11 (Updated to sync with EBNF)
 // NEW: Pattern Matching (ADR-021 Part 2) - completes algebraic data types
 // Includes: data types, pattern matching, structures, implementations, axioms
+// UPDATED: Custom operators, named operations (synced with Dec 10 EBNF changes)
 
 grammar Kleis;
 
@@ -395,8 +396,9 @@ infixOp
     ;
 
 arithmeticOp
-    : '+' | '-' | '×' | '/' | '·' | '*'
-    | '^' | '⊗' | '∘'
+    : '+' | '-' | '×' | '/' | '·' | '*' | '^'
+    | '⊗' | '∘' | '∗'
+    | CUSTOM_OPERATOR     // User-defined operators: •, ⊕, ⊙, ⊛, etc.
     ;
 
 relationOp
@@ -413,10 +415,11 @@ calcOp
     ;
 
 operatorSymbol
-    : infixOp
+    : '(' infixOp ')'     // Infix as function: (+), (×)
+    | infixOp
     | prefixOp
     | postfixOp
-    | '(' infixOp ')'     // For declaring infix as function
+    | IDENTIFIER          // Named operations: transpose, inverse, dot
     ;
 
 arguments
@@ -506,6 +509,15 @@ GREEK_LOWER
     | 'ρ' | 'σ' | 'τ' | 'υ' | 'φ' | 'χ' | 'ψ' | 'ω'
     ;
 
+// Custom operators (Unicode math symbols)
+// Examples: •, ⊕, ⊙, ⊛, ⋆, ∪, ∩, etc.
+CUSTOM_OPERATOR
+    : [\u2200-\u22FF]      // Mathematical Operators block
+    | [\u2A00-\u2AFF]      // Supplemental Mathematical Operators
+    | [\u27C0-\u27EF]      // Miscellaneous Mathematical Symbols-A
+    | [\u2980-\u29FF]      // Miscellaneous Mathematical Symbols-B
+    ;
+
 // Numbers
 NUMBER
     : [0-9]+ ('.' [0-9]+)? ([eE] [+-]? [0-9]+)?
@@ -534,6 +546,13 @@ WS
 // CHANGE LOG
 // ============================================
 
+// Version 0.5.1 (2024-12-11):
+//   - SYNC: Added CUSTOM_OPERATOR lexer rule (Unicode math symbols)
+//   - SYNC: Added IDENTIFIER to operatorSymbol (named operations)
+//   - Now matches EBNF grammar updated on Dec 10
+//   - Supports custom operators: •, ⊕, ⊙, ⊛, etc.
+//   - Supports named operations: transpose, inverse, dot
+//
 // Version 0.5 (2024-12-08):
 //   - Added pattern matching (matchExpr, pattern, matchCase)
 //   - Completes ADR-021: Can now USE algebraic data types

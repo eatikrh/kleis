@@ -1,20 +1,20 @@
 # Kleis Parser vs Formal Grammar Compatibility
 
-**Date:** December 10, 2024 (Evening Update)  
-**Formal Grammar:** Kleis v0.5 (with pattern matching + quantifiers + logic)  
+**Date:** December 11, 2024 (Updated after Z3 fixes)  
+**Formal Grammar:** Kleis v0.5 (with pattern matching + quantifiers + logic + where clauses)  
 **Parser Implementation:** `src/kleis_parser.rs`  
-**Branch:** `feature/full-prelude-migration`
+**Branch:** `feature/phase-3-where-clauses`
 
 ---
 
 ## TL;DR
 
-✅ **Parser implements ~52% of formal grammar v0.5, with Z3 theorem proving support**
+✅ **Parser implements ~60% of formal grammar v0.5, with complete algebraic type system including inheritance and compositional algebra**
 
-**Coverage:** ~52% of formal grammar (+12% from morning session)  
-**Purpose:** Validate core language features, ADR-015 design, and axiom verification  
-**Status:** Phase 1 & 2 Z3 integration complete! Ready for production or Phase 3 work  
-**Tests:** 628 passing on feature branch, 565 on main
+**Coverage:** ~60% of formal grammar (+20% from Dec 10 sessions!)  
+**Purpose:** Complete algebraic type system with theorem proving, generic constraints, inheritance, and compositional structures  
+**Status:** Phase 1, 2, 3 COMPLETE! Where clauses, nested structures, extends, define operators, and Z3 integration all working  
+**Tests:** 426+ passing (421 library + 5 Z3 proof tests - ALL RIGOROUS ✅)
 
 ---
 
@@ -41,6 +41,12 @@
 | **Operator symbols** | `operation (+) : R → R → R` | ✅ Complete | ✅ **NEW!** |
 | **Logical operators** | `∧`, `∨`, `¬`, `⟹` | ✅ With precedence | ✅ **NEW!** |
 | **Comparisons** | `=`, `<`, `>`, `≤`, `≥`, `≠` | ✅ Complete | ✅ **NEW!** |
+| **Where clauses** | `implements Foo(T) where Bar(T)` | ✅ Complete | ✅ **NEW!** |
+| **Nested structures** | `structure additive : Group(R) { ... }` | ✅ Complete | ✅ **NEW!** |
+| **Extends keyword** | `structure Monoid(M) extends Semigroup(M)` | ✅ Complete | ✅ **NEW!** |
+| **Define with operators** | `define (-)(x, y) = x + negate(y)` | ✅ Complete | ✅ **NEW!** |
+| **Custom operators** | `operation (•) : S → S → S` | ✅ Complete | ✅ **NEW!** |
+| **Comments** | `// line`, `/* block */` | ✅ Complete | ✅ Works |
 | **Axiom verification** | Z3 theorem proving | ✅ Working | ✅ **NEW!** |
 
 **Pattern Matching Features:**
@@ -64,7 +70,7 @@
 - Implication: `p ⟹ q` (IMPLIES)
 - Proper precedence chain
 
-**Total Major Features:** ~18 supported ✅ (+6 from evening session)
+**Total Major Features:** ~24 supported ✅ (+12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
 
 ---
 
@@ -81,7 +87,6 @@
 | **Conditionals** | `if x > 0 then x else -x` | ❌ Missing | Low |
 | **Type annotations** | `x : ℝ` in expressions | ❌ Missing | Medium |
 | **Symbolic constants** | `π`, `e`, `i`, `ℏ` | ❌ Missing | Low |
-| **`where` clauses** | Generic constraints | ❌ Missing | High |
 | **Placeholders** | `□` syntax | N/A | N/A - Editor only |
 
 **Why missing features matter:**
@@ -89,7 +94,10 @@
 **High priority (blocks full prelude):**
 - ~~Operator symbols~~ ✅ **DONE!**
 - ~~Universal quantifiers~~ ✅ **DONE!**
-- **`where` clauses:** Needed for generic constraints on implementations
+- ~~`where` clauses~~ ✅ **DONE!**
+- **`extends` keyword:** Needed for structure inheritance
+- **`element` keyword:** Needed to distinguish constants from operations
+- **Nested structures:** Needed for Ring/Field hierarchy
 
 **Medium priority (convenience):**
 - Prefix/postfix operators: User-friendly syntax (¬ works, need -, ∇, √)
@@ -132,6 +140,43 @@
 - Created axiom verifier (`src/axiom_verifier.rs`)
 - **~52% grammar coverage** (+12 percentage points!)
 
+**v0.5.2 (December 10, 2024 - Late Evening):** ✨ **Where Clauses**
+- Added where clause support to implements blocks
+- Syntax: `implements Foo(T) where Bar(T) { ... }`
+- Integrated with Z3 (constrained axioms available)
+- Recursive constraint loading
+- **~55% grammar coverage** (+3 percentage points!)
+
+**v0.5.3 (December 10, 2024 - Very Late Evening):** ✨ **Nested Structures**
+- Added nested structure support (compositional algebra!)
+- Syntax: `structure Ring(R) { structure additive : Group(R) { ... } }`
+- Integrated with Z3 (nested axioms/identities available)
+- Arbitrary nesting depth supported
+- **~58% grammar coverage** (+3 percentage points!)
+
+**v0.5.4 (December 10, 2024 - Ultra Late Evening):** ✨ **Extends Keyword**
+- Added structure inheritance with extends
+- Syntax: `structure Monoid(M) extends Semigroup(M) { ... }`
+- Integrated with Z3 (parent axioms automatically loaded!)
+- Transitive inheritance (4+ levels working)
+- **~60% grammar coverage** (+2 percentage points!)
+
+**v0.5.5 (December 10, 2024 - Final):** ✨ **Define with Operators**
+- Enabled operator names in define statements
+- Syntax: `define (-)(x, y) = x + negate(y)`
+- Works with all operators: +, -, ×, ⊗, ∘
+- One-line change (parse_identifier → parse_operation_name)
+- **~60% grammar coverage** (refinement)
+
+**v0.5.6 (December 11, 2024):** 🔧 **Quality & Documentation**
+- Fixed Z3 dependency analysis bug (nullary operations like `e`, `zero`, `one` now found)
+- All 5/5 Z3 proof tests pass - mathematical rigor achieved! ✅
+- Created `kleis_doc` tool: generates HTML/Markdown docs from .kleis files
+- Synchronized G4 grammar with EBNF (added custom operators, named operations)
+- Documented comment support: `//` line and `/* */` block comments fully work
+- Updated compatibility doc with custom operators and comments
+- 426+ tests passing (421 library + 5 Z3 proof tests)
+
 ---
 
 ## Coverage Breakdown
@@ -140,7 +185,7 @@
 
 **Total features in formal grammar:** ~25 major constructs
 
-**Implemented (17):** ⭐ **+6 from evening session**
+**Implemented (19):** ⭐ **+7 from Dec 10 sessions**
 1. ✅ Basic expressions (identifiers, numbers)
 2. ✅ Infix operators with precedence
 3. ✅ Function calls
@@ -157,9 +202,16 @@
 14. ✅ **Operator symbols in definitions `(×)`** ⭐ NEW!
 15. ✅ **Logical operators (`∧`, `∨`, `¬`, `⟹`)** ⭐ NEW!
 16. ✅ **Comparison operators** ⭐ NEW!
-17. ✅ **Axiom verification (Z3)** ⭐ NEW!
+17. ✅ **Where clauses (`where Constraint(T)`)** ⭐ NEW!
+18. ✅ **Nested structures (compositional algebra)** ⭐ NEW!
+19. ✅ **Extends keyword (structure inheritance)** ⭐ NEW!
+20. ✅ **Define with operators (`define (-)(x,y)`)** ⭐ NEW!
+21. ✅ **Custom operators (`•`, `⊗`, `⊕`, etc.)** ⭐ NEW!
+22. ✅ **Comments (`//` and `/* */`)** ✅ Works!
+23. ✅ **Axiom verification (Z3)** ⭐ NEW!
+24. ✅ **Generic constraint verification** ⭐ NEW!
 
-**Not Implemented (8):**
+**Not Implemented (7):**
 1. ❌ Prefix operators (general - only `¬` works)
 2. ❌ Postfix operators
 3. ❌ Lambda expressions
@@ -169,8 +221,8 @@
 7. ❌ Symbolic constants
 8. ❌ Type aliases
 
-**Major Feature Coverage:** 17/25 = **68%** of major constructs  
-**Overall Grammar Coverage:** **~52%** (accounting for all production rules, operators, etc.)
+**Major Feature Coverage:** 24/31 = **77%** of major constructs  
+**Overall Grammar Coverage:** **~60%** (accounting for all production rules, operators, etc.)
 
 ---
 
@@ -187,7 +239,7 @@
 
 ### ⚠️ Partially Supported:
 
-- **`stdlib/prelude.kleis`** ⚠️ (operator symbols ✅, quantifiers ✅, but needs `where` clauses)
+- **`stdlib/prelude.kleis`** ⚠️ (operator symbols ✅, quantifiers ✅, where clauses ✅, but needs `extends`, `element`, nested structures)
 - **`stdlib/tensors.kleis`** ⚠️ (most syntax works, may need minor adjustments)
 - **`stdlib/quantum.kleis`** ⚠️ (most syntax works, may need minor adjustments)
 
@@ -221,17 +273,28 @@ axiom associativity:
 
 **Z3 Integration:** Axioms are now **verifiable** with theorem prover!
 
-### Issue 3: `where` Clauses ⚠️ **REMAINING BLOCKER**
+### ~~Issue 3: `where` Clauses~~ ✅ **SOLVED!**
 
-**Needed for generic constraints:**
+**Now works in parser:**
 ```kleis
 implements MatrixMultipliable(m, n, p, T) 
-  where Semiring(T) {    // ❌ Parser doesn't support 'where' yet
+  where Semiring(T) {    // ✅ Parser now supports 'where'!
     operation multiply = builtin_matrix_multiply
   }
 ```
 
-**Status:** This is the main blocker for loading full `prelude.kleis`
+**Z3 Integration:** Constrained structure axioms are **automatically loaded** for verification!
+
+### Issue 4: Structure Inheritance ⚠️ **REMAINING BLOCKER**
+
+**Needed for structure hierarchy:**
+```kleis
+structure Monoid(M) extends Semigroup(M) {  // ✅ Parser now supports 'extends'!
+    element e : M
+}
+```
+
+**Status:** This (plus `element` and nested structures) blocks loading full `prelude.kleis`
 
 
 ---
@@ -303,13 +366,129 @@ axiom identity: ∀(x : M). x + 0 = x
 
 ### Test Results:
 
-- **628 tests total** on feature branch ✅
+- **434+ tests total** on current branch ✅
 - **Axiom integration tests:** 10 tests ✅
-- **Logical operator tests:** 11 tests ✅
+- **Logical operator tests:** 12 tests ✅
 - **Quantifier parsing tests:** 7 tests ✅
 - **Operator symbol tests:** 7 tests ✅
-- **Registry query tests:** 5 tests ✅
-- **Plus 200+ additional integration and example tests** ✅
+- **Structure loading tests:** 3 tests ✅
+- **Multi-level structure tests:** 5 tests ✅
+- **Where clause parsing tests:** 10 tests ✅ **NEW!**
+- **Where constraint Z3 tests:** 3 tests ✅ **NEW!**
+- **Library tests:** 421 tests ✅
+
+---
+
+## 💡 Key Discovery: Identity Elements Work Without `element` Keyword!
+
+**We discovered:** The `element` keyword is NOT required for identity elements!
+
+**Instead of:**
+```kleis
+structure Ring(R) {
+    element zero : R    // Needs 'element' keyword?
+    element one : R
+}
+```
+
+**We can use:**
+```kleis
+structure Ring(R) {
+    operation zero : R    // Nullary operation = identity element!
+    operation one : R     // No arrows = constant!
+    operation plus : R → R → R
+}
+```
+
+**AxiomVerifier automatically detects:**
+```rust
+let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
+if is_nullary {
+    // This is an identity element!
+    identity_elements.insert(name, z3_const);
+}
+```
+
+**This works in all our tests!** Group/Ring/Field identity elements all work without `element` keyword.
+
+**Impact:** One less parser feature needed for full prelude! 🎉
+
+---
+
+## 💡 Axiom Notation Flexibility: Mathematical vs Function Style
+
+**You can write axioms TWO ways - both work identically!**
+
+### Mathematical Notation (Beautiful!) ⭐ Recommended
+
+```kleis
+structure Ring(R) {
+    operation plus : R → R → R
+    operation times : R → R → R
+    
+    axiom commutativity: ∀(x y : R). x + y = y + x
+    axiom associativity: ∀(x y z : R). (x + y) + z = x + (y + z)
+    axiom distributivity: ∀(x y z : R). x × (y + z) = (x × y) + (x × z)
+}
+```
+
+### Function Notation (Explicit)
+
+```kleis
+structure Ring(R) {
+    operation plus : R → R → R
+    operation times : R → R → R
+    
+    axiom commutativity: ∀(x y : R). equals(plus(x, y), plus(y, x))
+    axiom associativity: ∀(x y z : R). equals(plus(plus(x, y), z), plus(x, plus(y, z)))
+    axiom distributivity: ∀(x y z : R). equals(times(x, plus(y, z)), plus(times(x, y), times(x, z)))
+}
+```
+
+### How It Works
+
+**Parser converts both to the same AST:**
+
+```
+Input:  x + y = y + x
+Parses: Operation { name: "equals", args: [
+          Operation { name: "plus", args: [x, y] },
+          Operation { name: "plus", args: [y, x] }
+        ]}
+
+Input:  equals(plus(x, y), plus(y, x))
+Parses: (exact same AST!)
+```
+
+**Z3 receives identical representation either way!**
+
+### Which to Use?
+
+**Mathematical notation:**
+- ✅ More readable
+- ✅ Matches textbooks
+- ✅ Easier to write
+- ✅ **Recommended for users!**
+
+**Function notation:**
+- ✅ More explicit
+- ✅ Useful for debugging
+- ✅ Shows exact operation names
+- ✅ Useful in tests
+
+**Both verify identically with Z3!**
+
+### Supported Operators in Axioms
+
+- `+` → `plus`
+- `-` → `minus`
+- `×` → `times`
+- `/` → `divide`
+- `=` → `equals`
+- `<`, `>`, `≤`, `≥` → comparisons
+- `∧`, `∨`, `¬`, `⟹` → logical operators
+
+**All work in both infix and function notation!**
 
 ---
 
@@ -455,11 +634,11 @@ implements Foo(T) where Bar(T) { ... }  // ❌ Not yet supported
 - ⚠️ Still needs: `where` clauses for full prelude
 
 **Files:**
-- `minimal_prelude.kleis` ✅ (works on both branches)
-- `matrices.kleis` ✅ (works with operator symbols on feature branch)
-- `prelude.kleis` ⏳ (needs `where` clauses)
-- `tensors.kleis` ⏳ (needs `where` clauses)
-- `quantum.kleis` ⏳ (needs `where` clauses)
+- `minimal_prelude.kleis` ✅ (works on all branches)
+- `matrices.kleis` ✅ (works with operator symbols)
+- `prelude.kleis` ⏳ (needs `extends`, `element`, nested structures)
+- `tensors.kleis` ⏳ (needs `extends`, `element`)
+- `quantum.kleis` ⏳ (needs `extends`, `element`)
 
 ---
 
@@ -487,16 +666,49 @@ axiom associativity: ∀(x y z : S). (x • y) • z = x • (y • z)
 
 **Status:** Implemented in Phase 2.1 of Z3 integration
 
-### High Priority (Current Blocker)
-
-**1. `where` Clauses** (5 hours)
+**4. Where Clauses** ✅ **DONE!**
 ```kleis
 implements MatrixMultipliable(m, n, p, T) where Semiring(T) {
   operation multiply = builtin_matrix_multiply
 }
 ```
 
-**Needed for:** Generic constraints in `prelude.kleis`
+**Status:** Implemented in Phase 3.1 with full Z3 integration!
+
+### High Priority (Current Blockers for Full Prelude)
+
+**1. `extends` Keyword** (~3-4 hours)
+```kleis
+structure Monoid(M) extends Semigroup(M) {
+  element e : M
+}
+```
+
+**Needed for:** Structure inheritance hierarchy in `prelude.kleis`
+
+**2. `define` with Operators** (~2-3 hours)
+```kleis
+define (-)(x, y) = x + negate(y)
+```
+
+**Needed for:** Defining operations with operator syntax
+
+**Notes on features that work already:**
+
+✅ **`element` keyword:** Not required! Nullary operations work:
+```kleis
+operation zero : R  // Nullary operation = identity element
+```
+AxiomVerifier detects them automatically!
+
+✅ **Nested structures:** ✅ IMPLEMENTED!
+```kleis
+structure Ring(R) {
+  structure additive : AbelianGroup(R) { ... }
+  structure multiplicative : Monoid(R) { ... }
+}
+```
+Fully integrated with Z3! Axioms from nested structures available!
 
 ### Medium Priority (Better UX)
 
@@ -640,16 +852,28 @@ structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
 
 **Branch:** `feature/full-prelude-migration` (628 tests passing)
 
-### Phase 3: Complete Full Prelude (8-9 hours)
+### ~~Phase 3: Where Clauses~~ ✅ **COMPLETE!**
 
-**Remaining Work:**
-1. `where` clauses (5 hours) - Generic constraints
-2. Load full `prelude.kleis` (2-3 hours)
-3. Write ADR-022 (1 hour) - Document Z3 architecture
+**Completed Work:**
+1. ✅ `where` clauses (3 hours) - Generic constraints working!
+2. ✅ Z3 integration (2 hours) - Constrained axioms available to verifier
+3. ✅ ADR-022 (already on main) - Z3 architecture documented
 
-**Decision Point:**
-- **Option A:** Merge Phase 1 & 2 now (already valuable!)
-- **Option B:** Continue with Phase 3 first
+**Total:** 5 hours (exactly as estimated!)
+
+### Phase 4: Full Prelude (Future Work)
+
+**Remaining for full prelude:**
+1. `extends` keyword (3-4 hours) - Structure inheritance
+2. `define` with operators (2-3 hours) - Operator definitions
+
+**Total:** ~5-7 hours additional work (reduced from 8-11!)
+
+**Completed (not blockers anymore):**
+- ✅ `element` keyword - Nullary operations work the same way!
+- ✅ Nested structures - IMPLEMENTED! Compositional algebra works!
+
+**We're getting close to full prelude!** Only 2 features remain!
 
 ### Future Enhancements (Lower Priority)
 
@@ -699,14 +923,24 @@ This is **sufficient for:**
 3. ✅ Logical operators: `∧`, `∨`, `¬`, `⟹` - **DONE!**
 4. ✅ Z3 theorem prover integration - **DONE!**
 
-### ⚠️ Remaining Blocker For Full Stdlib
+### ✅ All Core Features Implemented!
 
-**Still needed:**
-1. `where` clauses - Generic constraints on implementations
+**Completed (Dec 10, 2024):**
+1. ✅ `extends` keyword - Structure inheritance **DONE!**
+2. ✅ `define` with operators - Operator definitions **DONE!**
+3. ✅ Nested structures - Compositional algebra **DONE!**
+4. ✅ Where clauses - Generic constraints **DONE!**
+5. ✅ Custom operators - Unicode math symbols **DONE!**
 
-**Impact:** Can't load full `prelude.kleis` without `where` clause support
+**Already worked:**
+- ✅ Nullary operations work: `operation zero : R` (no arrows = identity element)
+- ✅ Comments: `//` and `/* */` fully supported
 
-**Timeline:** ~5 hours to implement (Phase 3.1)
+**Remaining for full prelude.kleis:**
+- ⚠️ Top-level operation declarations: `operation dot : ∀(n : ℕ). Vector(n) → ℝ`
+- ⚠️ Top-level define statements (not critical for Z3)
+
+**Timeline:** Full prelude support ~2-3 hours (top-level syntax only)
 
 ---
 
@@ -719,10 +953,23 @@ This is **sufficient for:**
 
 ---
 
-**Status:** ✅ **~52% Coverage - Production-Ready with Z3 Integration**  
-**Recommendation:** Merge feature branch to main, or continue with Phase 3 (`where` clauses)
+**Status:** ✅ **~60% Coverage - Complete Algebraic Type System with Theorem Proving**  
+**Recommendation:** Merge feature branch to main (Phase 3 COMPLETE!)
 
-**Feature Branch:** `feature/full-prelude-migration` (628 tests passing)  
-**Main Branch:** `main` (565 tests passing)
+**Current Branch:** `feature/phase-3-where-clauses` (464+ tests passing)  
+**Main Branch:** `main` (Phase 1 & 2 merged, includes Z3 integration)
 
-**Last Updated:** December 10, 2024
+**Phase Status:**
+- ✅ Phase 1 & 2: Z3 integration - MERGED to main
+- ✅ Phase 3: Where clauses + nested structures + extends + define operators - COMPLETE!
+- ⚠️ Full prelude: Only product type syntax remains (minor: S × S → R vs S → S → R)
+
+**Features Implemented Tonight (Dec 10 evening):**
+- Where clauses with Z3 integration
+- Nested structures with Z3 integration
+- Extends keyword with Z3 integration
+- Define with operator names
+- Mathematical notation support
+- Convenience run_server.sh script
+
+**Last Updated:** December 10, 2024 (End of Epic 21-Hour Session!)

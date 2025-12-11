@@ -32,11 +32,19 @@ pub enum TopLevel {
 }
 
 /// Structure definition
+/// Example: structure Monoid(M) extends Semigroup(M) { ... }
+/// Example: structure VectorSpace(V) over Field(F) { ... }
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructureDef {
     pub name: String,
     pub type_params: Vec<TypeParam>, // e.g., (m: Nat, n: Nat, T)
     pub members: Vec<StructureMember>,
+    /// Optional parent structure (inheritance)
+    /// Example: extends Semigroup(M)
+    pub extends_clause: Option<TypeExpr>,
+    /// Optional over clause (for structures parameterized over fields)
+    /// Example: over Field(F) for vector spaces
+    pub over_clause: Option<TypeExpr>,
 }
 
 /// Type parameter for structures
@@ -62,6 +70,14 @@ pub enum StructureMember {
     Axiom {
         name: String,
         proposition: Expression,
+    },
+
+    /// Nested structure: structure name : StructureType { members }
+    /// Example: structure additive : AbelianGroup(R) { ... }
+    NestedStructure {
+        name: String,
+        structure_type: TypeExpr,      // e.g., AbelianGroup(R)
+        members: Vec<StructureMember>, // Recursive!
     },
 }
 
@@ -139,12 +155,25 @@ pub struct DataField {
     pub type_expr: TypeExpr,
 }
 
-/// Implements definition: implements StructureName(Type, ...) { members }
+/// Implements definition: implements StructureName(Type, ...) over Field(F) where Constraint { members }
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImplementsDef {
     pub structure_name: String,
     pub type_args: Vec<TypeExpr>, // Changed from single type_arg to multiple
     pub members: Vec<ImplMember>,
+    /// Optional over clause (for vector spaces over fields)
+    /// Example: over Field(ℝ)
+    pub over_clause: Option<TypeExpr>,
+    /// Optional where clause with structure constraints
+    /// Example: where Semiring(T), Ord(T)
+    pub where_clause: Option<Vec<WhereConstraint>>,
+}
+
+/// A constraint in a where clause
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhereConstraint {
+    pub structure_name: String,
+    pub type_args: Vec<TypeExpr>,
 }
 
 /// Implementation member (element or operation)

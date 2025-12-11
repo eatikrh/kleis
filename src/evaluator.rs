@@ -177,10 +177,14 @@ impl Evaluator {
             Expression::Quantifier {
                 quantifier,
                 variables,
+                where_clause,
                 body,
             } => Expression::Quantifier {
                 quantifier: quantifier.clone(),
                 variables: variables.clone(),
+                where_clause: where_clause
+                    .as_ref()
+                    .map(|w| Box::new(self.substitute(w, subst))),
                 body: Box::new(self.substitute(body, subst)),
             },
 

@@ -1,9 +1,9 @@
 use axum::{
-    Router,
     extract::State,
     http::StatusCode,
     response::{Html, IntoResponse, Json},
     routing::{get, post},
+    Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -243,8 +243,10 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
         Expression::Quantifier {
             quantifier,
             variables,
+            where_clause,
             body,
         } => {
+            let _ = where_clause; // TODO: Include where clause in JSON
             json!({
                 "Quantifier": {
                     "kind": match quantifier {

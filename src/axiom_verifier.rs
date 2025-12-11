@@ -133,12 +133,26 @@ impl<'r> AxiomVerifier<'r> {
                 }
             }
 
-            Expression::Quantifier { body, .. } => {
+            Expression::Quantifier {
+                body, where_clause, ..
+            } => {
                 structures.extend(self.analyze_dependencies(body));
+                if let Some(condition) = where_clause {
+                    structures.extend(self.analyze_dependencies(condition));
+                }
             }
 
-            Expression::Object(_) | Expression::Const(_) => {
-                // Variables and constants don't introduce dependencies
+            Expression::Object(name) => {
+                // Check if this object is actually a nullary operation (like e, zero, one)
+                // Nullary operations appear as Object when used in expressions
+                if let Some(owners) = self.registry.get_operation_owners(name) {
+                    structures.extend(owners);
+                }
+                // Otherwise it's a true variable and introduces no dependencies
+            }
+
+            Expression::Const(_) => {
+                // Constants don't introduce dependencies
             }
 
             _ => {
@@ -156,11 +170,25 @@ impl<'r> AxiomVerifier<'r> {
     /// 1. Identity elements (zero, one, e) as Z3 constants
     /// 2. Operations (for future uninterpreted functions)
     /// 3. Axioms as background assumptions
+    /// 4. Where constraint structures (e.g., if implements X where Y, also load Y)
     #[cfg(feature = "axiom-verification")]
     fn ensure_structure_loaded(&mut self, structure_name: &str) -> Result<(), String> {
         // Already loaded?
         if self.loaded_structures.contains(structure_name) {
             return Ok(());
+        }
+
+        // FIRST: Load structures from where constraints
+        // This ensures constrained structure axioms are available as assumptions
+        let where_constraints = self.registry.get_where_constraints(structure_name);
+        for constraint in where_constraints {
+            // Recursively load constrained structures
+            // Example: where Semiring(T) → load Semiring axioms
+            println!(
+                "   🔗 Loading where constraint: {}",
+                constraint.structure_name
+            );
+            self.ensure_structure_loaded(&constraint.structure_name)?;
         }
 
         // Get structure definition from registry
@@ -169,45 +197,106 @@ impl<'r> AxiomVerifier<'r> {
             .get(structure_name)
             .ok_or_else(|| format!("Structure not found: {}", structure_name))?;
 
+        // SECOND: Load parent structure if extends clause present (inheritance!)
+        // This ensures parent structure axioms are available
+        if let Some(extends_type) = &structure.extends_clause {
+            // Extract parent structure name
+            let parent_name = match extends_type {
+                crate::kleis_ast::TypeExpr::Named(name) => name.clone(),
+                crate::kleis_ast::TypeExpr::Parametric(name, _) => name.clone(),
+                _ => return Err("Invalid extends clause type".to_string()),
+            };
+
+            println!("   🔗 Loading parent structure: {}", parent_name);
+            self.ensure_structure_loaded(&parent_name)?;
+        }
+
+        // THIRD: Load field structure if over clause present
+        // This ensures field axioms are available for vector space reasoning
+        if let Some(over_type) = &structure.over_clause {
+            // Extract field structure name
+            // Example: over Field(ℝ) → load Field
+            let field_name = match over_type {
+                crate::kleis_ast::TypeExpr::Named(name) => name.clone(),
+                crate::kleis_ast::TypeExpr::Parametric(name, _) => name.clone(),
+                _ => return Err("Invalid over clause type".to_string()),
+            };
+
+            println!("   🔗 Loading over clause: {}", field_name);
+            self.ensure_structure_loaded(&field_name)?;
+        }
+
         // Phase 1: Load identity elements (nullary operations: zero, one, e, etc.)
-        for member in &structure.members {
-            if let crate::kleis_ast::StructureMember::Operation {
-                name,
-                type_signature,
-            } = member
-            {
-                // Check if this is a nullary operation (identity element)
-                // Nullary operations have type signatures that are NOT Function types
-                // Examples:
-                //   - "operation zero : R" → TypeExpr::Named("R") - IS nullary
-                //   - "operation plus : R → R → R" → TypeExpr::Function(...) - NOT nullary
-                use crate::kleis_ast::TypeExpr;
+        // This includes identity elements in nested structures!
+        self.load_identity_elements_recursive(&structure.members);
 
-                let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
-
-                if is_nullary {
-                    // This is an identity element/constant!
-                    let z3_const = Int::fresh_const(name);
-                    self.identity_elements.insert(name.clone(), z3_const);
-
-                    println!("   📌 Loaded identity element: {}", name);
-                }
-            }
-        }
-
-        // Phase 2: Get and load axioms
-        let axioms = self.registry.get_axioms(structure_name);
-
-        // Load each axiom as background assumption
-        for (_axiom_name, axiom_expr) in axioms {
-            // Translate and assert the axiom
-            // Now identity elements will be available!
-            let z3_axiom = self.kleis_to_z3(&axiom_expr, &HashMap::new())?;
-            self.solver.assert(&z3_axiom);
-        }
+        // Phase 2: Get and load axioms (including from nested structures)
+        self.load_axioms_recursive(&structure.members)?;
 
         // Mark as loaded
         self.loaded_structures.insert(structure_name.to_string());
+        println!("   ✅ Marked {} as loaded", structure_name);
+
+        Ok(())
+    }
+
+    /// Recursively load identity elements from structure members
+    /// Handles nested structures automatically
+    #[cfg(feature = "axiom-verification")]
+    fn load_identity_elements_recursive(&mut self, members: &[crate::kleis_ast::StructureMember]) {
+        use crate::kleis_ast::{StructureMember, TypeExpr};
+
+        for member in members {
+            match member {
+                StructureMember::Operation {
+                    name,
+                    type_signature,
+                } => {
+                    // Check if nullary (identity element)
+                    let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
+
+                    if is_nullary {
+                        let z3_const = Int::fresh_const(name);
+                        self.identity_elements.insert(name.clone(), z3_const);
+                        println!("   📌 Loaded identity element: {}", name);
+                    }
+                }
+                StructureMember::NestedStructure { members, .. } => {
+                    // Recursively process nested structure members
+                    self.load_identity_elements_recursive(members);
+                }
+                _ => {
+                    // Field or Axiom - not an identity element
+                }
+            }
+        }
+    }
+
+    /// Recursively load axioms from structure members
+    /// Handles axioms in nested structures
+    #[cfg(feature = "axiom-verification")]
+    fn load_axioms_recursive(
+        &mut self,
+        members: &[crate::kleis_ast::StructureMember],
+    ) -> Result<(), String> {
+        use crate::kleis_ast::StructureMember;
+
+        for member in members {
+            match member {
+                StructureMember::Axiom { proposition, .. } => {
+                    // Translate and assert axiom
+                    let z3_axiom = self.kleis_to_z3(proposition, &HashMap::new())?;
+                    self.solver.assert(&z3_axiom);
+                }
+                StructureMember::NestedStructure { members, .. } => {
+                    // Recursively load axioms from nested structure
+                    self.load_axioms_recursive(members)?;
+                }
+                _ => {
+                    // Operation or Field - not an axiom
+                }
+            }
+        }
 
         Ok(())
     }
@@ -400,8 +489,9 @@ impl<'r> AxiomVerifier<'r> {
             Expression::Quantifier {
                 quantifier,
                 variables,
+                where_clause,
                 body,
-            } => self.quantifier_to_z3(quantifier, variables, body, vars),
+            } => self.quantifier_to_z3(quantifier, variables, where_clause.as_ref(), body, vars),
 
             _ => Err(format!("Unsupported expression type for Z3: {:?}", expr)),
         }
@@ -593,11 +683,15 @@ impl<'r> AxiomVerifier<'r> {
     ///
     /// Creates fresh Z3 variables and translates the body.
     /// Z3 treats free variables as universally quantified.
+    ///
+    /// If a where clause is present (e.g., ∀(x : F) where x ≠ zero. body),
+    /// it's translated as: where_clause ⟹ body
     #[cfg(feature = "axiom-verification")]
     fn quantifier_to_z3(
         &self,
         _quantifier: &QuantifierKind,
         variables: &[QuantifiedVar],
+        where_clause: Option<&Box<Expression>>,
         body: &Expression,
         vars: &HashMap<String, Int>,
     ) -> Result<Bool, String> {
@@ -609,8 +703,17 @@ impl<'r> AxiomVerifier<'r> {
             new_vars.insert(var.name.clone(), z3_var);
         }
 
-        // Translate body with new variables
-        let body_z3 = self.kleis_to_z3(body, &new_vars)?;
+        // If there's a where clause, translate as: where_clause ⟹ body
+        let body_z3 = if let Some(condition) = where_clause {
+            let condition_z3 = self.kleis_to_z3(condition, &new_vars)?;
+            let body_z3 = self.kleis_to_z3(body, &new_vars)?;
+
+            // where_clause ⟹ body
+            condition_z3.implies(&body_z3)
+        } else {
+            // No where clause, just translate body
+            self.kleis_to_z3(body, &new_vars)?
+        };
 
         // For both universal and existential quantifiers,
         // Z3 treats free variables as universally quantified
