@@ -162,7 +162,7 @@ implements VectorSpace(Vector(n)) over Field(ℝ) {
 }
 
 // Matrices form a vector space over reals
-implements VectorSpace(Matrix(m,n)) over Field(ℝ) {
+implements VectorSpace(Matrix(m, n, ℝ)) over Field(ℝ) {
   element zero_v = zero_matrix(m, n)
   operation (+) = matrix_add
   operation (·) = scalar_matrix_mul
@@ -189,17 +189,17 @@ operation norm : ∀(n : ℕ). Vector(n) → ℝ
 // ============================================
 
 // Matrix multiplication
-operation (×) : ∀(m n p : ℕ). Matrix(m,n) × Matrix(n,p) → Matrix(m,p)
+operation (×) : ∀(m n p : ℕ, T). Matrix(m, n, T) × Matrix(n, p, T) → Matrix(m, p, T)
 
 // Transpose
-operation transpose : ∀(m n : ℕ). Matrix(m,n) → Matrix(n,m)
+operation transpose : ∀(m n : ℕ, T). Matrix(m, n, T) → Matrix(n, m, T)
 // TODO: notation transpose(A) = A^T (parser not implemented yet)
 
-// Determinant (square matrices only)
-operation det : ∀(n : ℕ). Matrix(n,n) → ℝ
+// Determinant (square matrices only) - returns element type T
+operation det : ∀(n : ℕ, T). Matrix(n, n, T) → T
 
-// Trace (square matrices only)
-operation trace : ∀(n : ℕ). Matrix(n,n) → ℝ
+// Trace (square matrices only) - returns element type T
+operation trace : ∀(n : ℕ, T). Matrix(n, n, T) → T
 // TODO: define trace(A) = Σᵢ Aᵢᵢ (summation syntax not implemented yet)
 
 // ============================================
