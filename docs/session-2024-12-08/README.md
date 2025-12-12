@@ -22,13 +22,13 @@
 
 **Phase 1 Work:**
 - **[PHASE1_COMPLETE.md](PHASE1_COMPLETE.md)** - Comprehensive Phase 1 summary
-- **Task 1.3:** [ANALYSIS](TASK_1_3_ANALYSIS.md) | [COMPLETE](TASK_1_3_COMPLETE.md) | [REALITY](TASK_1_3_REALITY.md) | [APPROACH](MAKING_INTERPRETER_SMARTER.md)
-- **Task 1.4:** [PLAN](TASK_1_4_PLAN.md) | [COMPLETE](TASK_1_4_COMPLETE.md)
-- **Task 1.5:** [PLAN](TASK_1_5_PLAN.md) | [COMPLETE](TASK_1_5_COMPLETE.md)
+- **Task 1.3:** [ANALYSIS](phase1-tasks/TASK_1_3_ANALYSIS.md) | [COMPLETE](phase1-tasks/TASK_1_3_COMPLETE.md) | [REALITY](phase1-tasks/TASK_1_3_REALITY.md) | [APPROACH](phase1-tasks/MAKING_INTERPRETER_SMARTER.md)
+- **Task 1.4:** [PLAN](phase1-tasks/TASK_1_4_PLAN.md) | [COMPLETE](phase1-tasks/TASK_1_4_COMPLETE.md)
+- **Task 1.5:** [PLAN](phase1-tasks/TASK_1_5_PLAN.md) | [COMPLETE](phase1-tasks/TASK_1_5_COMPLETE.md)
 
 **Planning:**
-- **[NEXT_STEPS.md](NEXT_STEPS.md)** - Options after Phase 1 (historical)
-- **[FORMAL_SPEC_PROGRESS.md](FORMAL_SPEC_PROGRESS.md)** - Specification status
+- **[NEXT_STEPS.md](archive/NEXT_STEPS.md)** - Options after Phase 1 (historical)
+- **[FORMAL_SPEC_PROGRESS.md](archive/FORMAL_SPEC_PROGRESS.md)** - Specification status
 
 ---
 

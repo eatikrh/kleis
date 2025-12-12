@@ -16,7 +16,7 @@ This document tracks the **Kleis language parser** (kleis_parser.rs), which pars
 - Axioms: `axiom commutativity: ...`
 
 **Note:** This is DIFFERENT from the LaTeX parser (parser.rs) which parses math notation.
-See [PARSER_TODO.md](../PARSER_TODO.md) for LaTeX parser status.
+See [PARSER_TODO.md](../../PARSER_TODO.md) for LaTeX parser status.
 
 ---
 
@@ -155,8 +155,6 @@ data Type =
   | Complex
 ```
 
-**Implementation:** See [session-2024-12-08/ADR021_IMPLEMENTATION_PLAN.md](session-2024-12-08/ADR021_IMPLEMENTATION_PLAN.md)
-
 **Timeline:** 1-2 weeks  
 **Impact:** Meta-circular type system
 
@@ -258,7 +256,6 @@ matrix(a, b, c)    // Value constructor
 - **Formal Grammar:** docs/grammar/kleis_grammar_v03.ebnf
 - **Parser Implementation:** src/kleis_parser.rs
 - **Phase 2 Plan:** docs/parser-implementation/
-- **ADR-021 Plan:** docs/session-2024-12-08/ADR021_IMPLEMENTATION_PLAN.md
 
 ---
 

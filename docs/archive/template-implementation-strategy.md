@@ -2015,10 +2015,10 @@ Keep concerns separated, start simple, optimize if needed (but you won't need to
 ## 21. References and Further Reading
 
 ### Architecture Decision Records
-- **[ADR-009: WYSIWYG Structural Editor](adr-009-wysiwyg-structural-editor.md)** - High-level architecture and vision (read this first!)
-- **[ADR-006: Template-Grammar Duality](adr-006-template-grammar-duality.md)** - Core principle: template placeholders define grammar structure
-- **[ADR-005: Visual Authoring](adr-005-visual-authoring.md)** - Long-term vision for visual math authoring
-- **[ADR-004: Input Visualization](adr-004-input-visualization.md)** - Input strategy for complex expressions
+- **[ADR-009: WYSIWYG Structural Editor](../adr/adr-009-wysiwyg-structural-editor.md)** - High-level architecture and vision (read this first!)
+- **[ADR-006: Template-Grammar Duality](../adr/adr-006-template-grammar-duality.md)** - Core principle: template placeholders define grammar structure
+- **[ADR-005: Visual Authoring](../adr/adr-005-visual-authoring.md)** - Long-term vision for visual math authoring
+- **[ADR-004: Input Visualization](../adr/adr-004-input-visualization.md)** - Input strategy for complex expressions
 
 ### Implementation Targets
 - **src/ast.rs** - Add `Placeholder` variant here

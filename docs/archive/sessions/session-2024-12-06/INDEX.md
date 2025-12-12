@@ -21,8 +21,7 @@
 - [OPERATIONS_DUAL_REPRESENTATION.md](OPERATIONS_DUAL_REPRESENTATION.md) - Design discussion leading to ADR-016
 
 ### Implementation Details  
-- [ADR-015-VALIDATION-REPORT.md](ADR-015-VALIDATION-REPORT.md) - Test results for ADR-015
-- [IMPLEMENTATION_NEXT_STEPS.md](IMPLEMENTATION_NEXT_STEPS.md) - Implementation phases
+- [ADR-015-VALIDATION-REPORT.md](../../../adr/adr-015-validation-report.md) - Test results for ADR-015
 
 ---
 

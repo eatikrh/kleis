@@ -24,7 +24,7 @@ Historical session reports moved from docs root to keep recent documentation cle
 - Implemented SignatureInterpreter
 - Established structure-based type checking
 
-**See:** [Session 2024-12-07](2024-12-07/README.md)
+**Session archived**
 
 ---
 
@@ -47,7 +47,7 @@ Historical session reports moved from docs root to keep recent documentation cle
 - Created type checking architecture
 - Git-friendly text representation
 
-**See:** [Session 2024-12-06](2024-12-06/README.md)
+**Session archived**
 
 ---
 
