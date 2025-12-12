@@ -6,7 +6,7 @@
 // Version: 0.1.0
 // ============================================
 
-// TODO: Parser doesn't support annotations yet
+// Annotations (grammar supports them, not yet implemented in parser)
 // @library("std.prelude")
 // @version("0.1.0")
 
@@ -172,68 +172,70 @@ implements VectorSpace(Matrix(m, n, ℝ)) over Field(ℝ) {
 // VECTOR OPERATIONS
 // ============================================
 
-// Dot product (inner product)
+// Dot product (inner product): u · v = Σᵢ uᵢvᵢ
 operation dot : ∀(n : ℕ). Vector(n) × Vector(n) → ℝ
-// TODO: define dot(u, v) = Σᵢ uᵢ × vᵢ (summation/subscript syntax not implemented yet)
 
-// Cross product (3D only)
+// Cross product (3D only): u × v
 operation cross : Vector(3) × Vector(3) → Vector(3)
-// TODO: define cross([u₁,u₂,u₃], [v₁,v₂,v₃]) = [...] (subscript syntax not implemented yet)
 
-// Norm (Euclidean)
+// Norm (Euclidean): ||v|| = √(v · v)
 operation norm : ∀(n : ℕ). Vector(n) → ℝ
-// TODO: define norm(v) = √(dot(v, v)) (sqrt syntax not implemented yet)
+
+// Square root function
+operation sqrt : ℝ → ℝ
 
 // ============================================
 // MATRIX OPERATIONS
 // ============================================
 
-// Matrix multiplication
+// Matrix multiplication: A × B
 operation (×) : ∀(m n p : ℕ, T). Matrix(m, n, T) × Matrix(n, p, T) → Matrix(m, p, T)
 
-// Transpose
+// Transpose: Aᵀ (notation: A^T or A')
 operation transpose : ∀(m n : ℕ, T). Matrix(m, n, T) → Matrix(n, m, T)
-// TODO: notation transpose(A) = A^T (parser not implemented yet)
 
-// Determinant (square matrices only) - returns element type T
+// Determinant: det(A) for square matrices
 operation det : ∀(n : ℕ, T). Matrix(n, n, T) → T
 
-// Trace (square matrices only) - returns element type T
+// Trace: tr(A) = Σᵢ Aᵢᵢ for square matrices
 operation trace : ∀(n : ℕ, T). Matrix(n, n, T) → T
-// TODO: define trace(A) = Σᵢ Aᵢᵢ (summation syntax not implemented yet)
 
 // ============================================
 // CALCULUS OPERATIONS
 // ============================================
 
-// TODO: Parser doesn't support these operator names yet:
-// - Slash in names: d/dx, ∂/∂x  
-// - Single Unicode symbols: ∇, ∫
-// operation d/dx : (ℝ → ℝ) → (ℝ → ℝ)
-// operation ∂/∂x : ScalarField(ℝⁿ) → ScalarField(ℝⁿ)
-// operation ∇ : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
+// Functional notation for derivatives (following Mathematica's approach)
+// Mathematical notation ∂f/∂x is for display only, not for code!
 
-// Divergence (identifier works)
-operation div : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
-// TODO: notation div(F) = ∇ · F (parser not implemented yet)
+// NOTE: Higher-order function types (functions returning functions) require
+// parentheses in type signatures, which parser doesn't support yet.
+// TODO: Add when parser supports parenthesized types: (ℝ → ℝ) → (ℝ → ℝ)
 
-// Curl (3D only)
+// For now, calculus operations declared as builtins (implementation in Rust)
+// These would be used like: derivative(f, x), gradient(F), etc.
+
+// Gradient: ∇f in mathematical notation
+// Returns vector of all partial derivatives
+operation gradient : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
+
+// Divergence: ∇ · F in mathematical notation  
+operation divergence : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
+
+// Curl: ∇ × F in mathematical notation (3D only)
 operation curl : VectorField(ℝ³) → VectorField(ℝ³)
-// TODO: notation curl(F) = ∇ × F (parser not implemented yet)
-
-// TODO: Parser doesn't support ∫ as operation name yet  
-// operation ∫ : (ℝ → ℝ) → ℝ → ℝ → ℝ
 
 // ============================================
 // MATHEMATICAL CONSTANTS  
 // ============================================
 
-// TODO: Parser doesn't support Unicode symbols in identifiers yet
-// define π : ℝ = 3.14159265358979323846
-// define e : ℝ = 2.71828182845904523536
-// define φ : ℝ = 1.61803398874989484820  // Golden ratio
-// define √2 : ℝ = 1.41421356237309504880
-// define i : ℂ = √(-1)
+// Use ASCII names for constants (Unicode symbols in identifiers not yet supported)
+define pi : ℝ = 3.14159265358979323846
+define e : ℝ = 2.71828182845904523536
+define phi : ℝ = 1.61803398874989484820  // Golden ratio (φ)
+define sqrt2 : ℝ = 1.41421356237309504880  // √2
+
+// Complex unit (i = √(-1))
+// define i : ℂ = ... (TODO: needs complex literal syntax)
 
 // ============================================
 // BASIC ARITHMETIC OPERATIONS (for compatibility)
