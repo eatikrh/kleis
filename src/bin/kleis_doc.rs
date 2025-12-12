@@ -174,7 +174,7 @@ fn render_structure_markdown(structure: &StructureDef, ctx: &kleis::render::Glyp
                 axioms.push((name.clone(), latex, unicode));
             }
             StructureMember::NestedStructure { name, .. } => nested.push(name.clone()),
-            _ => {}
+            StructureMember::InlineFunction { .. } => {} // Skip inline functions for now
         }
     }
 

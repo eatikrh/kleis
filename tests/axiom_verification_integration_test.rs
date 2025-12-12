@@ -63,11 +63,14 @@ fn test_verifier_creation() {
         assert!(verifier.is_ok(), "Verifier creation should succeed");
 
         // Try to verify a simple expression
-        let expr = parse_axiom("∀(x : M). x");
+        let expr = parse_axiom("∀(x : M). equals(x, x)"); // Must be boolean!
         let mut verifier = verifier.unwrap();
         let result = verifier.verify_axiom(&expr);
 
         // Should return something (either Valid/Invalid/Unknown or Disabled)
+        if let Err(e) = &result {
+            println!("Error: {}", e);
+        }
         assert!(result.is_ok());
     }
 
