@@ -370,6 +370,12 @@ impl TypeChecker {
     pub fn types_supporting(&self, operation_name: &str) -> Vec<String> {
         self.context_builder.types_supporting(operation_name)
     }
+
+    /// Get the structure registry containing all loaded structures and axioms
+    /// This is useful for axiom verification and querying structure definitions
+    pub fn get_structure_registry(&self) -> crate::structure_registry::StructureRegistry {
+        self.context_builder.build_structure_registry()
+    }
 }
 
 impl Default for TypeChecker {

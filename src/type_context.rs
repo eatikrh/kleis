@@ -677,7 +677,7 @@ impl TypeContextBuilder {
 
     /// Build a StructureRegistry from loaded structures
     /// This enables generic handling of parametric structure types in signatures
-    fn build_structure_registry(&self) -> crate::structure_registry::StructureRegistry {
+    pub fn build_structure_registry(&self) -> crate::structure_registry::StructureRegistry {
         use crate::structure_registry::StructureRegistry;
         let mut registry = StructureRegistry::new();
 

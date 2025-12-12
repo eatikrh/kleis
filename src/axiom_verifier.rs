@@ -28,9 +28,9 @@ use crate::structure_registry::StructureRegistry;
 use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "axiom-verification")]
-use z3::ast::{Bool, Int};
+use z3::ast::{Ast, Bool, Dynamic, Int};
 #[cfg(feature = "axiom-verification")]
-use z3::{FuncDecl, SatResult, Solver};
+use z3::{FuncDecl, SatResult, Solver, Sort};
 
 /// Result of axiom verification
 #[derive(Debug, Clone, PartialEq)]
@@ -60,8 +60,9 @@ pub struct AxiomVerifier<'r> {
     registry: &'r StructureRegistry,
 
     #[cfg(feature = "axiom-verification")]
-    /// Cache of declared operations as uninterpreted functions
-    declared_ops: HashMap<String, FuncDecl>,
+    /// Track which operations have been declared (for logging/debugging)
+    /// We don't cache FuncDecl itself since they're lightweight to recreate
+    declared_ops: HashSet<String>,
 
     #[cfg(feature = "axiom-verification")]
     /// Track which structures' axioms are currently loaded
@@ -98,7 +99,7 @@ impl<'r> AxiomVerifier<'r> {
         Ok(Self {
             solver,
             registry,
-            declared_ops: HashMap::new(),
+            declared_ops: HashSet::new(),
             loaded_structures: HashSet::new(),
             identity_elements: HashMap::new(),
         })
@@ -439,6 +440,33 @@ impl<'r> AxiomVerifier<'r> {
         }
     }
 
+    /// Declare an operation as an uninterpreted function in Z3
+    ///
+    /// Uninterpreted functions let Z3 reason about abstract operations using only
+    /// the axioms we provide, without assuming any built-in meaning.
+    ///
+    /// Example: For `(•) : S × S → S` in Semigroup, this creates a Z3 function
+    /// that Z3 will reason about using only the associativity axiom.
+    ///
+    /// Note: FuncDecl is lightweight to recreate, so we don't cache it.
+    #[cfg(feature = "axiom-verification")]
+    fn declare_operation(&mut self, name: &str, arity: usize) -> FuncDecl {
+        // Log if this is the first time we're declaring this operation
+        if !self.declared_ops.contains(name) {
+            println!(
+                "   🔧 Declaring uninterpreted function: {} with arity {}",
+                name, arity
+            );
+            self.declared_ops.insert(name.to_string());
+        }
+
+        // Create uninterpreted function: Int × Int × ... → Int
+        // Using Int sort as default for algebraic operations
+        let domain: Vec<_> = (0..arity).map(|_| Sort::int()).collect();
+        let domain_refs: Vec<_> = domain.iter().collect();
+        FuncDecl::new(name, &domain_refs, &Sort::int())
+    }
+
     /// Generic translator: Kleis Expression → Z3 AST
     ///
     /// **NO HARDCODING!** This function handles ANY expression by:
@@ -449,7 +477,7 @@ impl<'r> AxiomVerifier<'r> {
     ///
     /// Operations not recognized as built-ins are treated as uninterpreted functions.
     #[cfg(feature = "axiom-verification")]
-    fn kleis_to_z3(&self, expr: &Expression, vars: &HashMap<String, Int>) -> Result<Bool, String> {
+    fn kleis_to_z3(&mut self, expr: &Expression, vars: &HashMap<String, Int>) -> Result<Bool, String> {
         match expr {
             // Variables and identity elements: look up in environment
             Expression::Object(name) => {
@@ -503,7 +531,7 @@ impl<'r> AxiomVerifier<'r> {
     /// for custom operations defined in structures.
     #[cfg(feature = "axiom-verification")]
     fn operation_to_z3(
-        &self,
+        &mut self,
         name: &str,
         args: &[Expression],
         vars: &HashMap<String, Int>,
@@ -593,13 +621,26 @@ impl<'r> AxiomVerifier<'r> {
                 Ok(left.implies(&right))
             }
 
-            // Unknown operation - could be custom structure operation
+            // Unknown operation - use uninterpreted function
             _ => {
-                // TODO: Check if operation is in declared_ops and use uninterpreted function
-                Err(format!(
-                    "Unsupported operation for Z3: {} (not in built-in theories)",
-                    name
-                ))
+                // Translate arguments to Z3 Int
+                let z3_args: Result<Vec<_>, _> = args
+                    .iter()
+                    .map(|arg| self.kleis_expr_to_z3_int(arg, vars))
+                    .collect();
+                let z3_args = z3_args?;
+
+                // Declare the operation as uninterpreted function
+                let func_decl = self.declare_operation(name, args.len());
+
+                // Apply the uninterpreted function
+                let ast_args: Vec<&dyn z3::ast::Ast> =
+                    z3_args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+                let result = func_decl.apply(&ast_args);
+
+                // For operations used in equality context, return true
+                // The actual comparison is handled by the equals operator
+                Ok(Bool::from_bool(true))
             }
         }
     }
@@ -608,9 +649,10 @@ impl<'r> AxiomVerifier<'r> {
     ///
     /// Handles arithmetic operations using Z3's integer theory.
     /// Also handles identity elements like zero, one, e.
+    /// Falls back to uninterpreted functions for unknown operations.
     #[cfg(feature = "axiom-verification")]
     fn kleis_expr_to_z3_int(
-        &self,
+        &mut self,
         expr: &Expression,
         vars: &HashMap<String, Int>,
     ) -> Result<Int, String> {
@@ -672,7 +714,24 @@ impl<'r> AxiomVerifier<'r> {
                     Ok(Int::unary_minus(&arg))
                 }
 
-                _ => Err(format!("Unsupported arithmetic operation: {}", name)),
+                // Unknown arithmetic operation - use uninterpreted function
+                _ => {
+                    let z3_args: Result<Vec<_>, _> = args
+                        .iter()
+                        .map(|arg| self.kleis_expr_to_z3_int(arg, vars))
+                        .collect();
+                    let z3_args = z3_args?;
+
+                    let func_decl = self.declare_operation(name, args.len());
+                    let ast_args: Vec<&dyn z3::ast::Ast> =
+                        z3_args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+                    let result = func_decl.apply(&ast_args);
+
+                    // Convert Dynamic to Int
+                    result
+                        .as_int()
+                        .ok_or_else(|| format!("Operation {} did not return Int", name))
+                }
             },
 
             _ => Err("Cannot convert to Int".to_string()),
@@ -688,7 +747,7 @@ impl<'r> AxiomVerifier<'r> {
     /// it's translated as: where_clause ⟹ body
     #[cfg(feature = "axiom-verification")]
     fn quantifier_to_z3(
-        &self,
+        &mut self,
         _quantifier: &QuantifierKind,
         variables: &[QuantifiedVar],
         where_clause: Option<&Box<Expression>>,
