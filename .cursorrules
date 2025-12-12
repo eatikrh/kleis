@@ -104,12 +104,14 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 
 3. **Run tests** (required)
    ```bash
-   export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test --lib
+   export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test
    ```
    - **Note:** Z3 environment variable required for build
-   - Ensures no regressions
-   - Must pass (421+ tests as of Dec 11, 2024)
-   - GitHub CI runs this exact command
+   - Runs ALL tests: unit tests + integration tests
+   - Ensures no regressions in any component
+   - Must pass (421+ unit tests, all integration tests as of Dec 11, 2024)
+   - **CRITICAL:** Do NOT use `--lib` flag - it skips integration tests!
+   - GitHub CI runs both unit and integration tests
    - **macOS Intel:** Use `/usr/local/opt/z3/include/z3.h`
    - **Linux:** Use `/usr/include/z3.h`
 
@@ -118,7 +120,7 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 Before committing .rs files:
 → Run: cargo fmt --all
 → Run: export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo clippy --all-targets --all-features
-→ Run: export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test --lib
+→ Run: export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test
 → Fix any errors/warnings
 → Then commit
 

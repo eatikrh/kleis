@@ -65,13 +65,9 @@ jobs:
     - name: Build
       run: cargo build --verbose
       
-    - name: Run library tests
-      run: cargo test --lib --verbose
-      continue-on-error: true  # Some legacy tests have outdated expectations (7 known failures)
-    
-    - name: Run integration tests (with Z3)
-      run: cargo test --test '*' --verbose
-      continue-on-error: false  # Z3 tests should pass with Z3 installed
+    - name: Run all tests (library + integration)
+      run: cargo test --verbose
+      continue-on-error: false  # All tests should pass (unit + integration)
     
     - name: Run integration tests without Z3 (fallback)
       if: failure()  # Only if Z3 tests failed
