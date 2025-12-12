@@ -295,6 +295,38 @@ let result_ty = type_checker.check_operation("multiply", &[t1, t2])?;
 - ADR-015: Text as Source of Truth (applies to types too)
 - ADR-003: Self-Hosting Strategy (Kleis defines Kleis)
 
+## Documentation Link Quality Gate
+
+**CRITICAL: All markdown links must be valid before committing documentation.**
+
+### Rule: Check Markdown Links
+
+**Before committing any .md files:**
+
+```bash
+python3 scripts/check_markdown_links.py
+```
+
+- Must show **0 broken links**
+- Script checks all .md files (excluding node_modules, target)
+- Ignores code blocks and mathematical notation
+- Only checks actual documentation links
+
+**Why this matters:**
+- Documentation moves and reorganizes frequently
+- Broken links create poor user experience
+- Quality standard prevents documentation rot
+- Maintains professional appearance
+
+**Process:**
+```
+Before committing .md files:
+→ Run: python3 scripts/check_markdown_links.py
+→ Fix any broken links found
+→ Re-run until 0 broken links
+→ Then commit
+```
+
 ## Documentation Organization Rules
 
 **When creating documentation during a session:**
