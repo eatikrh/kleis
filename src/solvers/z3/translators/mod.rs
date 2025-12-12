@@ -4,11 +4,11 @@
 //! Each category (arithmetic, comparison, boolean) is in its own file.
 //!
 //! **Translator Pattern:**
-//! ```
+//! ```text
 //! Kleis: Operation { name: "plus", args: [e1, e2] }
-//!          ↓
+//!          |
 //! Translator: translate_plus(z3_e1, z3_e2)
-//!          ↓
+//!          |
 //! Z3: Int::add([z3_e1, z3_e2])
 //! ```
 //!

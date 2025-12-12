@@ -12,13 +12,13 @@
 //! - Z3::Dynamic → (detect runtime type, convert accordingly)
 //!
 //! **Design Pattern:**
-//! ```
+//! ```text
 //! Z3Backend::evaluate()
-//!    ↓
-//! Z3 computation → Dynamic result
-//!    ↓
-//! Z3ResultConverter::to_expression() ← THIS MODULE
-//!    ↓
+//!    |
+//! Z3 computation -> Dynamic result
+//!    |
+//! Z3ResultConverter::to_expression() <- THIS MODULE
+//!    |
 //! Expression (safe to return to user)
 //! ```
 

@@ -3,21 +3,21 @@
 //! Pluggable solver backend system inspired by Model Context Protocol (MCP).
 //!
 //! **Architecture Overview:**
-//! ```
+//! ```text
 //! User Code (Kleis Expression)
-//!          ↓
+//!          |
 //!    SolverBackend Trait
-//!          ↓
-//!    ┌─────┴──────┬──────────┐
-//!    │            │          │
+//!          |
+//!    +-----+------+----------+
+//!    |            |          |
 //! Z3Backend  CVC5Backend  CustomBackend
-//!    │            │          │
-//!    └─────┬──────┴──────────┘
-//!          ↓
+//!    |            |          |
+//!    +-----+------+----------+
+//!          |
 //!   OperationTranslators
-//!          ↓
+//!          |
 //!    ResultConverter
-//!          ↓
+//!          |
 //! User Code (Kleis Expression)
 //! ```
 //!

@@ -12,15 +12,15 @@
 //! - All public APIs work with `Expression` only
 //!
 //! **Design Pattern:**
-//! ```
+//! ```text
 //! User Code
-//!    ↓ Expression
+//!    | Expression
 //! SolverBackend::evaluate()
-//!    ↓ (internal translation)
+//!    | (internal translation)
 //! Solver-specific types (Z3::Dynamic, etc.)
-//!    ↓ (result conversion) ← THIS MODULE
+//!    | (result conversion) <- THIS MODULE
 //! Expression
-//!    ↑
+//!    ^
 //! User Code
 //! ```
 //!
