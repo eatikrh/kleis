@@ -54,9 +54,16 @@ def extract_links(md_file):
         
         # Skip likely mathematical notation:
         # - Single char/symbol link text: [f], [ψ], [T]
-        # - Non-.md/.html link paths (likely variable names)
-        if (len(link_text) <= 3 and 
-            not link.endswith(('.md', '.html', '.pdf', '.png', '.jpg', '.svg'))):
+        # - Mathematical functions: [exp(-t²)], [sin(x)]
+        # - Greek letters or math symbols
+        # - Non-.md/.html/.pdf link paths (likely variable names)
+        if not link.endswith(('.md', '.html', '.pdf', '.png', '.jpg', '.svg', '.txt', '.rs', '.kleis')):
+            # Not a file extension - likely math notation
+            continue
+        
+        if (len(link_text) <= 3 or  # Single char like [f], [ψ]
+            '(' in link_text or     # Function notation like [exp(-t²)]
+            link_text in ['T', 'E', 'F', 'S']):  # Common math symbols
             continue
         
         # Remove anchor from end if present
