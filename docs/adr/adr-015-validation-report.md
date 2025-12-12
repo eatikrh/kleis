@@ -102,7 +102,7 @@ Key Validation:
 - ✅ Proper precedence
 - ❌ Advanced features (lambda, let, vectors, etc.) not yet implemented
 
-See [Parser Grammar Compatibility](PARSER_GRAMMAR_COMPATIBILITY.md) for full comparison.
+See [Parser Grammar Compatibility](../parser-implementation/PARSER_GRAMMAR_COMPATIBILITY.md) for full comparison.
 
 ```bash
 cargo run --bin test_adr015_poc_full
@@ -188,7 +188,7 @@ The `kleis_parser.rs` is a **simplified parser for ADR-015 validation**, not a f
 
 **Rationale:** ADR-015 focuses on explicit forms (`abs`, `frac`, etc.), not full language.
 
-**For production:** Use ANTLR4 or pest to implement full grammar. See [Parser Grammar Compatibility](PARSER_GRAMMAR_COMPATIBILITY.md).
+**For production:** Use ANTLR4 or pest to implement full grammar. See [Parser Grammar Compatibility](../parser-implementation/PARSER_GRAMMAR_COMPATIBILITY.md).
 
 ---
 
