@@ -63,9 +63,9 @@ Local commits are "safe harbors" - checkpoints the user can return to.
    - Log format: "Updated kleis.io stats: X cloners, Y commits, Z papers"
 
 **Current stats (as of Dec 11, 2024):**
-- Unique Cloners: 306+ (was 286+ this morning, 297+ earlier - rapid growth!)
+- Unique Cloners: 310+ (was 286+ this morning, 297+, 306+ - rapid growth!)
 - GitHub Stars: 0
-- Commits: 481+
+- Commits: 504
 - Architecture Decisions: 22 ADRs
 
 **Why this matters:**
