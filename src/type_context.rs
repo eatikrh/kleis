@@ -372,6 +372,14 @@ impl TypeContextBuilder {
                 format!("({})", types_str.join(" × "))
             }
             TypeExpr::Var(v) => v.clone(),
+            TypeExpr::ForAll { vars, body } => {
+                // Format: ∀(n : ℕ, T). Vector(n) → ℝ
+                let vars_str: Vec<String> = vars
+                    .iter()
+                    .map(|(name, ty)| format!("{} : {}", name, self.type_expr_to_string(ty)))
+                    .collect();
+                format!("∀({}). {}", vars_str.join(", "), self.type_expr_to_string(body))
+            }
         }
     }
 

@@ -219,6 +219,16 @@ pub enum TypeExpr {
 
     /// Polymorphic type variable: T, α, n
     Var(String),
+
+    /// Quantified type: ∀(n : ℕ). Vector(n) → ℝ
+    /// or ∀(m n p : ℕ, T). Matrix(m,n,T) × Matrix(n,p,T) → Matrix(m,p,T)
+    ForAll {
+        /// Quantified variables with their kinds/types
+        /// e.g., [("n", Named("ℕ")), ("T", Named("Type"))]
+        vars: Vec<(String, TypeExpr)>,
+        /// The body type
+        body: Box<TypeExpr>,
+    },
 }
 
 impl TypeExpr {

@@ -761,6 +761,12 @@ impl TypeInference {
                 // Product types in patterns not supported yet
                 Err("Product types in patterns not yet supported".to_string())
             }
+            TypeExpr::ForAll { vars: _, body } => {
+                // Quantified type - strip the quantifier and convert the body
+                // The HM type system handles polymorphism implicitly through
+                // type variables and generalization, so we don't need the explicit quantifiers
+                self.type_expr_to_type(body)
+            }
         }
     }
 

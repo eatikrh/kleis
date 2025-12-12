@@ -206,16 +206,14 @@ operation trace : ∀(n : ℕ, T). Matrix(n, n, T) → T
 // CALCULUS OPERATIONS
 // ============================================
 
-// Ordinary derivative
-operation d/dx : (ℝ → ℝ) → (ℝ → ℝ)
+// TODO: Parser doesn't support these operator names yet:
+// - Slash in names: d/dx, ∂/∂x  
+// - Single Unicode symbols: ∇, ∫
+// operation d/dx : (ℝ → ℝ) → (ℝ → ℝ)
+// operation ∂/∂x : ScalarField(ℝⁿ) → ScalarField(ℝⁿ)
+// operation ∇ : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
 
-// Partial derivative
-operation ∂/∂x : ScalarField(ℝⁿ) → ScalarField(ℝⁿ)
-
-// Gradient
-operation ∇ : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
-
-// Divergence
+// Divergence (identifier works)
 operation div : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
 // TODO: notation div(F) = ∇ · F (parser not implemented yet)
 
@@ -223,20 +221,19 @@ operation div : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
 operation curl : VectorField(ℝ³) → VectorField(ℝ³)
 // TODO: notation curl(F) = ∇ × F (parser not implemented yet)
 
-// Definite integral
-operation ∫ : (ℝ → ℝ) → ℝ → ℝ → ℝ
+// TODO: Parser doesn't support ∫ as operation name yet  
+// operation ∫ : (ℝ → ℝ) → ℝ → ℝ → ℝ
 
 // ============================================
-// MATHEMATICAL CONSTANTS
+// MATHEMATICAL CONSTANTS  
 // ============================================
 
-define π : ℝ = 3.14159265358979323846
-define e : ℝ = 2.71828182845904523536
-define φ : ℝ = 1.61803398874989484820  // Golden ratio
-define √2 : ℝ = 1.41421356237309504880
-
-// Complex unit
-define i : ℂ = √(-1)
+// TODO: Parser doesn't support Unicode symbols in identifiers yet
+// define π : ℝ = 3.14159265358979323846
+// define e : ℝ = 2.71828182845904523536
+// define φ : ℝ = 1.61803398874989484820  // Golden ratio
+// define √2 : ℝ = 1.41421356237309504880
+// define i : ℂ = √(-1)
 
 // ============================================
 // COMMON FUNCTIONS
