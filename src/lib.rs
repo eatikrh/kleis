@@ -3,6 +3,7 @@
 pub mod ast;
 pub mod axiom_verifier; // Z3 integration for axiom verification
 pub mod data_registry;
+pub mod solvers; // Pluggable solver backends (Z3, CVC5, etc.)
 pub mod evaluator; // Wire 3: Self-hosting
 pub mod kleis_ast;
 pub mod kleis_parser;
