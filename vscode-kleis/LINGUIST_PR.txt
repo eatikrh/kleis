@@ -1,0 +1,9 @@
+Kleis Language GitHub Linguist PR
+
+PR #7703: https://github.com/github-linguist/linguist/pull/7703
+
+Submitted: December 11, 2025
+Status: Open - Awaiting Review
+
+This PR adds official GitHub syntax highlighting support for Kleis language (.kleis files).
+

@@ -378,7 +378,11 @@ impl TypeContextBuilder {
                     .iter()
                     .map(|(name, ty)| format!("{} : {}", name, self.type_expr_to_string(ty)))
                     .collect();
-                format!("∀({}). {}", vars_str.join(", "), self.type_expr_to_string(body))
+                format!(
+                    "∀({}). {}",
+                    vars_str.join(", "),
+                    self.type_expr_to_string(body)
+                )
             }
         }
     }

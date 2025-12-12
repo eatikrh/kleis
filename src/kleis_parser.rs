@@ -1083,7 +1083,7 @@ impl KleisParser {
     }
 
     /// Parse a quantified (forall) type
-    /// Examples: 
+    /// Examples:
     ///   ∀(n : ℕ). Vector(n) → ℝ
     ///   ∀(m n p : ℕ, T). Matrix(m,n,T) × Matrix(n,p,T) → Matrix(m,p,T)
     fn parse_forall_type(&mut self) -> Result<TypeExpr, KleisParseError> {
@@ -1125,7 +1125,7 @@ impl KleisParser {
             // Parse variable names (can be multiple with same type)
             let mut var_names = Vec::new();
             var_names.push(self.parse_identifier()?);
-            
+
             self.skip_whitespace();
 
             // Check for more variable names before the colon or delimiter

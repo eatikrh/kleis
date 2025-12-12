@@ -572,11 +572,8 @@ mod tests {
             checker.inference.data_registry().has_variant("Scalar")
         );
 
-        // Should have loaded prelude (algebraic structures) and matrices
-        // Note: Full prelude defines operations in structures, not standalone
-        // If we got here, it loaded successfully (would have panicked on unwrap otherwise)
-        // Just verify checker exists
-        drop(checker);
+        // Should have loaded prelude and matrices
+        assert!(checker.type_supports_operation("ℝ", "plus"));
     }
 
     // ===== Function Definition Type Checking Tests (Wire 2: Self-hosting) =====

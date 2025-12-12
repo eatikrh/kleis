@@ -236,6 +236,26 @@ operation curl : VectorField(ℝ³) → VectorField(ℝ³)
 // define i : ℂ = √(-1)
 
 // ============================================
+// BASIC ARITHMETIC OPERATIONS (for compatibility)
+// ============================================
+
+// Basic arithmetic structure for backward compatibility with tests
+structure Arithmetic(T) {
+  operation plus : T → T → T
+  operation minus : T → T → T
+  operation times : T → T → T
+  operation divide : T → T → T
+}
+
+// Arithmetic for scalars
+implements Arithmetic(ℝ) {
+  operation plus = builtin_add
+  operation minus = builtin_sub
+  operation times = builtin_mul
+  operation divide = builtin_div
+}
+
+// ============================================
 // COMMON FUNCTIONS
 // ============================================
 
