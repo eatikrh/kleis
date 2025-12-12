@@ -90,6 +90,51 @@ impl Evaluator {
         Ok(())
     }
 
+    /// Load function definitions from structure members (Grammar v0.6)
+    ///
+    /// Processes `define` statements inside structures and makes them available
+    /// for symbolic expansion.
+    ///
+    /// Example:
+    /// ```ignore
+    /// structure Ring(R) {
+    ///   operation (-) : R × R → R
+    ///   define (-)(x, y) = x + negate(y)
+    /// }
+    /// // Now (-) is available for expansion: a - b → a + negate(b)
+    /// ```
+    pub fn load_structure_functions(
+        &mut self,
+        structure: &crate::kleis_ast::StructureDef,
+    ) -> Result<(), String> {
+        self.load_structure_functions_recursive(&structure.members)
+    }
+
+    /// Recursively load functions from structure members
+    fn load_structure_functions_recursive(
+        &mut self,
+        members: &[crate::kleis_ast::StructureMember],
+    ) -> Result<(), String> {
+        use crate::kleis_ast::StructureMember;
+
+        for member in members {
+            match member {
+                StructureMember::FunctionDef(func_def) => {
+                    // Load function for symbolic expansion
+                    self.load_function_def(func_def)?;
+                }
+                StructureMember::NestedStructure { members, .. } => {
+                    // Recursively load from nested structures
+                    self.load_structure_functions_recursive(members)?;
+                }
+                _ => {
+                    // Operation, Field, Axiom - not functions
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Load a single function definition
     pub fn load_function_def(&mut self, func_def: &FunctionDef) -> Result<(), String> {
         let closure = Closure {

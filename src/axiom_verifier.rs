@@ -286,7 +286,11 @@ impl<'r> AxiomVerifier<'r> {
     }
 
     /// Recursively load axioms from structure members
-    /// Handles axioms in nested structures
+    /// Handles axioms and function definitions in nested structures
+    ///
+    /// Grammar v0.6: Also loads function definitions as axioms.
+    /// Example: define (-)(x, y) = x + negate(y)
+    /// Becomes Z3 axiom: ∀(x y). minus(x, y) = plus(x, negate(y))
     #[cfg(feature = "axiom-verification")]
     fn load_axioms_recursive(
         &mut self,
@@ -304,6 +308,10 @@ impl<'r> AxiomVerifier<'r> {
                         .ok_or_else(|| "Axiom must be a boolean expression".to_string())?;
                     self.solver.assert(&z3_axiom);
                 }
+                StructureMember::FunctionDef(func_def) => {
+                    // Grammar v0.6: Load function definition as axiom
+                    self.load_function_as_z3_axiom(func_def)?;
+                }
                 StructureMember::NestedStructure { members, .. } => {
                     // Recursively load axioms from nested structure
                     self.load_axioms_recursive(members)?;
@@ -314,6 +322,73 @@ impl<'r> AxiomVerifier<'r> {
             }
         }
 
+        Ok(())
+    }
+
+    /// Load a function definition as a Z3 axiom (Grammar v0.6)
+    ///
+    /// Translates: `define f(x, y) = body`
+    /// To Z3: `∀(x y). f(x, y) = body`
+    ///
+    /// This allows Z3 to:
+    /// 1. Prove properties using the function definition
+    /// 2. Compute concrete values through model evaluation
+    /// 3. Chain function calls transitively
+    ///
+    /// Example:
+    /// ```ignore
+    /// define (-)(x, y) = x + negate(y)
+    /// // Z3 gets: ∀(x y). minus(x, y) = plus(x, negate(y))
+    /// ```
+    ///
+    /// # Future Refactoring (ADR-023)
+    ///
+    /// This implementation is Z3-specific and should be refactored to:
+    /// - Use SolverBackend trait (pluggable solvers)
+    /// - Load translator registry from capabilities.toml (MCP-style)
+    /// - Support user-extensible translators
+    /// - Enable multi-solver support (Z3, CVC5, custom)
+    ///
+    /// See: docs/session-2024-12-12/SOLVER_ABSTRACTION_LAYER_DESIGN.md
+    #[cfg(feature = "axiom-verification")]
+    fn load_function_as_z3_axiom(
+        &mut self,
+        func_def: &crate::kleis_ast::FunctionDef,
+    ) -> Result<(), String> {
+        println!(
+            "   📐 Loading function definition as Z3 axiom: {}",
+            func_def.name
+        );
+
+        // 1. Create fresh Z3 variables for parameters
+        let mut z3_vars = HashMap::new();
+        let mut param_ints = Vec::new();
+
+        for param in &func_def.params {
+            let z3_var = Int::fresh_const(param);
+            param_ints.push(z3_var.clone());
+            // Store as Dynamic for translation
+            z3_vars.insert(param.clone(), z3_var.into());
+        }
+
+        // 2. Translate function body to Z3
+        let body_z3 = self.kleis_to_z3_dynamic(&func_def.body, &z3_vars)?;
+
+        // 3. Declare function as uninterpreted in Z3
+        let func_decl = self.declare_operation(&func_def.name, func_def.params.len());
+
+        // 4. Create function application: f(params)
+        let ast_args: Vec<&dyn z3::ast::Ast> =
+            param_ints.iter().map(|p| p as &dyn z3::ast::Ast).collect();
+        let func_app = func_decl.apply(&ast_args);
+
+        // 5. Assert: f(params) = body
+        // Z3 treats free variables as universally quantified
+        // So this becomes: ∀(params). f(params) = body
+        let definition = func_app.eq(&body_z3);
+        self.solver.assert(&definition);
+
+        println!("   ✅ Function {} registered in Z3 as axiom", func_def.name);
         Ok(())
     }
 

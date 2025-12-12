@@ -252,11 +252,17 @@ impl TypeContextBuilder {
 
     /// Recursively register operations from structure members
     /// Handles nested structures by flattening their operations
+    /// Grammar v0.6: Also registers function definitions as operations
     fn register_operations_recursive(&mut self, structure_name: &str, members: &[StructureMember]) {
         for member in members {
             match member {
                 StructureMember::Operation { name, .. } => {
                     self.registry.register_operation(structure_name, name);
+                }
+                StructureMember::FunctionDef(func_def) => {
+                    // Grammar v0.6: Register function as available operation
+                    self.registry
+                        .register_operation(structure_name, &func_def.name);
                 }
                 StructureMember::NestedStructure { members, .. } => {
                     // Recursively register operations from nested structure
