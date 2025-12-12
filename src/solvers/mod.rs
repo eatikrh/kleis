@@ -75,20 +75,18 @@ pub use z3::Z3Backend;
 ///
 /// Future: Will list available solvers, compare capabilities, etc.
 pub mod discovery {
-    use super::*;
-
     /// List all available solver backends
     ///
     /// Future: Will scan for installed solvers (Z3, CVC5, etc.)
     pub fn list_solvers() -> Vec<String> {
-        let mut solvers = Vec::new();
-
         #[cfg(feature = "axiom-verification")]
-        solvers.push("Z3".to_string());
-
-        // Future: Add detection for CVC5, etc.
-
-        solvers
+        {
+            vec!["Z3".to_string()]
+        }
+        #[cfg(not(feature = "axiom-verification"))]
+        {
+            vec![]
+        }
     }
 
     /// Check if a specific solver is available
@@ -99,10 +97,9 @@ pub mod discovery {
 
 #[cfg(test)]
 mod tests {
-    use super::discovery;
-
     #[test]
     fn test_solver_discovery() {
+        use super::discovery;
         let solvers = discovery::list_solvers();
         #[cfg(feature = "axiom-verification")]
         assert!(solvers.contains(&"Z3".to_string()));
@@ -110,6 +107,8 @@ mod tests {
 
     #[test]
     fn test_is_available() {
+        use super::discovery;
+        
         #[cfg(feature = "axiom-verification")]
         assert!(discovery::is_available("Z3"));
 

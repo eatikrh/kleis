@@ -229,8 +229,8 @@ mod tests {
         let bool_expr = Expression::Const("true".to_string());
         assert!(extract_bool(&bool_expr).unwrap());
 
-        let float_expr = Expression::Const("3.14".to_string());
-        assert!((extract_f64(&float_expr).unwrap() - 3.14).abs() < 0.001);
+        let float_expr = Expression::Const("1.234".to_string());
+        assert!((extract_f64(&float_expr).unwrap() - 1.234).abs() < 0.001);
 
         let var_expr = Expression::Object("x".to_string());
         assert_eq!(extract_var_name(&var_expr).unwrap(), "x");

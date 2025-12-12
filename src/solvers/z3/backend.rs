@@ -33,6 +33,9 @@ pub struct Z3Backend<'r> {
     solver: Solver,
 
     /// Structure registry (source of axioms and operations)
+    /// Currently passed through from AxiomVerifier, will be used for
+    /// advanced features (coverage analysis, operation lookup, etc.)
+    #[allow(dead_code)]
     registry: &'r StructureRegistry,
 
     /// Capability manifest (loaded from capabilities.toml)
@@ -458,7 +461,7 @@ impl<'r> SolverBackend for Z3Backend<'r> {
 
         // Try to cast z3_expr to Int and assert equality
         if let Some(int_expr) = z3_expr.as_int() {
-            temp_solver.assert(&result_var.eq(&int_expr));
+            temp_solver.assert(result_var.eq(&int_expr));
 
             match temp_solver.check() {
                 SatResult::Sat => {
