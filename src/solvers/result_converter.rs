@@ -68,9 +68,7 @@ pub trait ResultConverter<SolverValue> {
     fn to_i64(&self, value: &SolverValue) -> Result<i64, String> {
         let expr = self.to_expression(value)?;
         match expr {
-            Expression::Const(s) => s
-                .parse()
-                .map_err(|_| format!("Not an integer: {}", s)),
+            Expression::Const(s) => s.parse().map_err(|_| format!("Not an integer: {}", s)),
             _ => Err(format!("Not a constant: {:?}", expr)),
         }
     }
@@ -102,9 +100,7 @@ pub trait ResultConverter<SolverValue> {
     fn to_f64(&self, value: &SolverValue) -> Result<f64, String> {
         let expr = self.to_expression(value)?;
         match expr {
-            Expression::Const(s) => s
-                .parse()
-                .map_err(|_| format!("Not a float: {}", s)),
+            Expression::Const(s) => s.parse().map_err(|_| format!("Not a float: {}", s)),
             _ => Err(format!("Not a constant: {:?}", expr)),
         }
     }
@@ -132,9 +128,7 @@ pub mod expression_extractors {
     /// Extract integer from Expression::Const
     pub fn extract_i64(expr: &Expression) -> Result<i64, String> {
         match expr {
-            Expression::Const(s) => s
-                .parse()
-                .map_err(|_| format!("Not an integer: {}", s)),
+            Expression::Const(s) => s.parse().map_err(|_| format!("Not an integer: {}", s)),
             _ => Err(format!("Not a constant: {:?}", expr)),
         }
     }
@@ -154,9 +148,7 @@ pub mod expression_extractors {
     /// Extract float from Expression::Const
     pub fn extract_f64(expr: &Expression) -> Result<f64, String> {
         match expr {
-            Expression::Const(s) => s
-                .parse()
-                .map_err(|_| format!("Not a float: {}", s)),
+            Expression::Const(s) => s.parse().map_err(|_| format!("Not a float: {}", s)),
             _ => Err(format!("Not a constant: {:?}", expr)),
         }
     }
@@ -244,4 +236,3 @@ mod tests {
         assert_eq!(extract_var_name(&var_expr).unwrap(), "x");
     }
 }
-

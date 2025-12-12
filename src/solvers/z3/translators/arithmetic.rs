@@ -197,7 +197,9 @@ mod tests {
         let right: Dynamic = Real::from_real(3, 1).into(); // 3.0
 
         let result = translate_plus(&left, &right).unwrap();
-        assert!(result.as_real().is_some(), "Mixed Int/Real should produce Real");
+        assert!(
+            result.as_real().is_some(),
+            "Mixed Int/Real should produce Real"
+        );
     }
 }
-

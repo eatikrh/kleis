@@ -28,10 +28,7 @@ use z3::ast::{Bool, Dynamic};
 ///
 /// Z3 equality works with any type. If types match, use direct equality.
 /// If types differ (Int vs Real), convert both to Real.
-pub fn translate_equals(
-    left: &Dynamic,
-    right: &Dynamic,
-) -> Result<Bool, String> {
+pub fn translate_equals(left: &Dynamic, right: &Dynamic) -> Result<Bool, String> {
     // If types match, use direct equality
     if left.sort_kind() == right.sort_kind() {
         return Ok(left.eq(right));
@@ -56,10 +53,7 @@ pub fn translate_equals(
 /// Translate less_than/lt operation
 ///
 /// Requires Int or Real types. Converts to Real if mixed.
-pub fn translate_less_than(
-    left: &Dynamic,
-    right: &Dynamic,
-) -> Result<Bool, String> {
+pub fn translate_less_than(left: &Dynamic, right: &Dynamic) -> Result<Bool, String> {
     // Try Int < Int
     if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
         return Ok(l.lt(&r));
@@ -88,10 +82,7 @@ pub fn translate_less_than(
 /// Translate greater_than/gt operation
 ///
 /// Requires Int or Real types. Converts to Real if mixed.
-pub fn translate_greater_than(
-    left: &Dynamic,
-    right: &Dynamic,
-) -> Result<Bool, String> {
+pub fn translate_greater_than(left: &Dynamic, right: &Dynamic) -> Result<Bool, String> {
     // Try Int > Int
     if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
         return Ok(l.gt(&r));
@@ -120,10 +111,7 @@ pub fn translate_greater_than(
 /// Translate leq (≤) operation
 ///
 /// Requires Int or Real types. Converts to Real if mixed.
-pub fn translate_leq(
-    left: &Dynamic,
-    right: &Dynamic,
-) -> Result<Bool, String> {
+pub fn translate_leq(left: &Dynamic, right: &Dynamic) -> Result<Bool, String> {
     // Try Int ≤ Int
     if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
         return Ok(l.le(&r));
@@ -152,10 +140,7 @@ pub fn translate_leq(
 /// Translate geq (≥) operation
 ///
 /// Requires Int or Real types. Converts to Real if mixed.
-pub fn translate_geq(
-    left: &Dynamic,
-    right: &Dynamic,
-) -> Result<Bool, String> {
+pub fn translate_geq(left: &Dynamic, right: &Dynamic) -> Result<Bool, String> {
     // Try Int ≥ Int
     if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
         return Ok(l.ge(&r));
@@ -231,4 +216,3 @@ mod tests {
         assert!(result.is_ok(), "translate_geq should succeed");
     }
 }
-

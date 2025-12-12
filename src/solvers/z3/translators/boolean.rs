@@ -30,10 +30,7 @@ use z3::ast::{Bool, Dynamic};
 ///
 /// Requires both arguments to be Bool type.
 /// Returns Bool representing logical conjunction.
-pub fn translate_and(
-    left: &Dynamic,
-    right: &Dynamic,
-) -> Result<Bool, String> {
+pub fn translate_and(left: &Dynamic, right: &Dynamic) -> Result<Bool, String> {
     let left_bool = left
         .as_bool()
         .ok_or_else(|| "and requires Bool arguments".to_string())?;
@@ -48,10 +45,7 @@ pub fn translate_and(
 ///
 /// Requires both arguments to be Bool type.
 /// Returns Bool representing logical disjunction.
-pub fn translate_or(
-    left: &Dynamic,
-    right: &Dynamic,
-) -> Result<Bool, String> {
+pub fn translate_or(left: &Dynamic, right: &Dynamic) -> Result<Bool, String> {
     let left_bool = left
         .as_bool()
         .ok_or_else(|| "or requires Bool arguments".to_string())?;
@@ -78,10 +72,7 @@ pub fn translate_not(arg: &Dynamic) -> Result<Bool, String> {
 ///
 /// Requires both arguments to be Bool type.
 /// Returns Bool representing logical implication (p → q ≡ ¬p ∨ q).
-pub fn translate_implies(
-    left: &Dynamic,
-    right: &Dynamic,
-) -> Result<Bool, String> {
+pub fn translate_implies(left: &Dynamic, right: &Dynamic) -> Result<Bool, String> {
     let left_bool = left
         .as_bool()
         .ok_or_else(|| "implies requires Bool arguments".to_string())?;
@@ -145,4 +136,3 @@ mod tests {
         assert!(result.is_err());
     }
 }
-

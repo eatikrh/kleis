@@ -64,8 +64,7 @@ pub mod z3;
 // Re-exports for convenience
 pub use backend::{SolverBackend, SolverStats, VerificationResult};
 pub use capabilities::{
-    Capabilities, FeatureFlags, OperationSpec, PerformanceHints, SolverCapabilities,
-    SolverMetadata,
+    Capabilities, FeatureFlags, OperationSpec, PerformanceHints, SolverCapabilities, SolverMetadata,
 };
 pub use result_converter::ResultConverter;
 
@@ -117,4 +116,3 @@ mod tests {
         assert!(!discovery::is_available("NonexistentSolver"));
     }
 }
-

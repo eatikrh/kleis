@@ -77,7 +77,11 @@ impl<'r> Z3Backend<'r> {
     /// Kleis expressions to Z3's internal representation.
     ///
     /// **Internal only** - results stay within Z3Backend.
-    fn kleis_to_z3(&mut self, expr: &Expression, vars: &HashMap<String, Dynamic>) -> Result<Dynamic, String> {
+    fn kleis_to_z3(
+        &mut self,
+        expr: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Dynamic, String> {
         match expr {
             Expression::Object(name) => {
                 // 1. Check quantified variables
@@ -105,10 +109,8 @@ impl<'r> Z3Backend<'r> {
 
             Expression::Operation { name, args } => {
                 // Translate arguments first
-                let z3_args: Result<Vec<_>, _> = args
-                    .iter()
-                    .map(|arg| self.kleis_to_z3(arg, vars))
-                    .collect();
+                let z3_args: Result<Vec<_>, _> =
+                    args.iter().map(|arg| self.kleis_to_z3(arg, vars)).collect();
                 let z3_args = z3_args?;
 
                 // Use modular translators
@@ -416,27 +418,27 @@ impl<'r> SolverBackend for Z3Backend<'r> {
     fn evaluate(&mut self, expr: &Expression) -> Result<Expression, String> {
         // Translate Kleis expression to Z3
         let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
-        
+
         // For evaluation, we need a concrete value
         // Use a temporary solver to check satisfiability and get a model
         let temp_solver = Solver::new();
-        
+
         // For constant expressions, we can try to extract the value directly
         // For symbolic expressions, we need a model
-        
+
         // Try to get concrete value directly
         if let Some(int_val) = z3_expr.as_int() {
             if let Some(value) = int_val.as_i64() {
                 return Ok(Expression::Const(value.to_string()));
             }
         }
-        
+
         if let Some(bool_val) = z3_expr.as_bool() {
             if let Some(value) = bool_val.as_bool() {
                 return Ok(Expression::Const(value.to_string()));
             }
         }
-        
+
         if let Some(real_val) = z3_expr.as_real() {
             if let Some((num, den)) = real_val.as_rational() {
                 if den == 1 {
@@ -447,17 +449,17 @@ impl<'r> SolverBackend for Z3Backend<'r> {
                 }
             }
         }
-        
+
         // For symbolic expressions, try to get a satisfying model
         temp_solver.push();
-        
+
         // Create a fresh variable and assert it equals our expression
         let result_var = Int::fresh_const("eval_result");
-        
+
         // Try to cast z3_expr to Int and assert equality
         if let Some(int_expr) = z3_expr.as_int() {
             temp_solver.assert(&result_var.eq(&int_expr));
-            
+
             match temp_solver.check() {
                 SatResult::Sat => {
                     if let Some(model) = temp_solver.get_model() {
@@ -468,12 +470,14 @@ impl<'r> SolverBackend for Z3Backend<'r> {
                         }
                     }
                 }
-                _ => return Err("Cannot evaluate expression - no satisfying assignment".to_string()),
+                _ => {
+                    return Err("Cannot evaluate expression - no satisfying assignment".to_string())
+                }
             }
         }
-        
+
         temp_solver.pop(1);
-        
+
         // Fallback: return string representation
         Ok(Expression::Const(z3_expr.to_string()))
     }
@@ -481,13 +485,13 @@ impl<'r> SolverBackend for Z3Backend<'r> {
     fn simplify(&mut self, expr: &Expression) -> Result<Expression, String> {
         // Translate Kleis expression to Z3
         let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
-        
+
         // Use Z3's simplify method
         let simplified = z3_expr.simplify();
-        
+
         // Convert simplified Z3 expression back to Kleis Expression
         // CRITICAL: This maintains the abstraction boundary!
-        
+
         // Check if it's a concrete value we can extract
         if let Some(int_val) = simplified.as_int() {
             if let Some(value) = int_val.as_i64() {
@@ -496,7 +500,7 @@ impl<'r> SolverBackend for Z3Backend<'r> {
             // Large integer or symbolic
             return Ok(Expression::Const(int_val.to_string()));
         }
-        
+
         if let Some(bool_val) = simplified.as_bool() {
             if let Some(value) = bool_val.as_bool() {
                 return Ok(Expression::Const(value.to_string()));
@@ -504,7 +508,7 @@ impl<'r> SolverBackend for Z3Backend<'r> {
             // Symbolic boolean
             return Ok(Expression::Const(bool_val.to_string()));
         }
-        
+
         if let Some(real_val) = simplified.as_real() {
             if let Some((num, den)) = real_val.as_rational() {
                 if den == 1 {
@@ -516,7 +520,7 @@ impl<'r> SolverBackend for Z3Backend<'r> {
             }
             return Ok(Expression::Const(real_val.to_string()));
         }
-        
+
         // For complex expressions that can't be simplified to constants,
         // we need to reconstruct the Kleis AST from Z3's simplified form
         // For now, return string representation (TODO: proper AST reconstruction)
@@ -555,7 +559,11 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         Ok(result)
     }
 
-    fn load_structure_axioms(&mut self, _structure_name: &str, _axioms: &[Expression]) -> Result<(), String> {
+    fn load_structure_axioms(
+        &mut self,
+        _structure_name: &str,
+        _axioms: &[Expression],
+    ) -> Result<(), String> {
         // TODO: Implement axiom loading
         // This would translate axioms to Z3 and assert them
         Ok(())
@@ -600,7 +608,7 @@ mod tests {
     fn test_capabilities_loaded() {
         let registry = StructureRegistry::new();
         let backend = Z3Backend::new(&registry).unwrap();
-        
+
         assert!(backend.capabilities().has_operation("plus"));
         assert!(backend.capabilities().has_operation("equals"));
         assert!(backend.capabilities().has_theory("arithmetic"));
@@ -610,7 +618,7 @@ mod tests {
     fn test_push_pop() {
         let registry = StructureRegistry::new();
         let mut backend = Z3Backend::new(&registry).unwrap();
-        
+
         // Should not panic
         backend.push();
         backend.pop(1);
@@ -620,7 +628,7 @@ mod tests {
     fn test_evaluate_returns_kleis_ast() {
         let registry = StructureRegistry::new();
         let mut backend = Z3Backend::new(&registry).unwrap();
-        
+
         // Simple arithmetic: 2 + 3
         let expr = Expression::Operation {
             name: "plus".to_string(),
@@ -629,9 +637,9 @@ mod tests {
                 Expression::Const("3".to_string()),
             ],
         };
-        
+
         let result = backend.evaluate(&expr).unwrap();
-        
+
         // Result MUST be Kleis Expression, not Z3 type!
         match result {
             Expression::Const(s) => {
@@ -645,7 +653,7 @@ mod tests {
     fn test_simplify_returns_kleis_ast() {
         let registry = StructureRegistry::new();
         let mut backend = Z3Backend::new(&registry).unwrap();
-        
+
         // Expression: x + 0 (should simplify to x in ideal case, but at minimum returns Expression)
         let expr = Expression::Operation {
             name: "plus".to_string(),
@@ -654,9 +662,9 @@ mod tests {
                 Expression::Const("0".to_string()),
             ],
         };
-        
+
         let result = backend.simplify(&expr).unwrap();
-        
+
         // Result MUST be Kleis Expression, not Z3 type!
         match result {
             Expression::Const(s) => {
@@ -670,12 +678,11 @@ mod tests {
     fn test_evaluate_concrete_constant() {
         let registry = StructureRegistry::new();
         let mut backend = Z3Backend::new(&registry).unwrap();
-        
+
         // Already a constant
         let expr = Expression::Const("123".to_string());
         let result = backend.evaluate(&expr).unwrap();
-        
+
         assert_eq!(result, Expression::Const("123".to_string()));
     }
 }
-

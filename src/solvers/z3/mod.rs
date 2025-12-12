@@ -84,7 +84,10 @@ mod tests {
         assert!(native_ops.contains(&"implies"));
 
         println!("Z3 native operations: {:?}", native_ops);
-        assert!(native_ops.len() >= 15, "Expected at least 15 native operations");
+        assert!(
+            native_ops.len() >= 15,
+            "Expected at least 15 native operations"
+        );
     }
 
     #[test]
@@ -96,4 +99,3 @@ mod tests {
         assert!(caps.capabilities.features.evaluation);
     }
 }
-

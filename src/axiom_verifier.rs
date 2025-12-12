@@ -362,13 +362,15 @@ impl<'r> AxiomVerifier<'r> {
 
         // Step 3: Delegate to backend for verification (uses solver abstraction layer!)
         use crate::solvers::backend::VerificationResult as BackendResult;
-        
+
         let backend_result = self.backend.verify_axiom(expr)?;
-        
+
         // Convert backend result to AxiomVerifier result
         Ok(match backend_result {
             BackendResult::Valid => VerificationResult::Valid,
-            BackendResult::Invalid { counterexample } => VerificationResult::Invalid { counterexample },
+            BackendResult::Invalid { counterexample } => {
+                VerificationResult::Invalid { counterexample }
+            }
             BackendResult::Unknown => VerificationResult::Unknown,
         })
     }

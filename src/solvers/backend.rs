@@ -124,8 +124,7 @@ pub trait SolverBackend {
     ///
     /// # Returns
     /// true if expressions are equivalent, false otherwise
-    fn are_equivalent(&mut self, expr1: &Expression, expr2: &Expression)
-        -> Result<bool, String>;
+    fn are_equivalent(&mut self, expr1: &Expression, expr2: &Expression) -> Result<bool, String>;
 
     /// Load a structure's axioms into the solver
     ///
@@ -169,4 +168,3 @@ pub struct SolverStats {
     /// Number of assertions currently in solver
     pub assertion_count: usize,
 }
-
