@@ -252,13 +252,26 @@ define sqrt2 : ℝ = 1.41421356237309504880  // √2
 // ============================================
 // BASIC OPERATIONS (for compatibility)
 // ============================================
+// These structures provide operations needed by equation editor and tests
 
-// Basic arithmetic structure for backward compatibility with tests
+// Basic arithmetic operations
 structure Arithmetic(T) {
   operation plus : T → T → T
   operation minus : T → T → T
   operation times : T → T → T
   operation divide : T → T → T
+  operation scalar_divide : T → T → T
+  operation scalar_multiply : T → T → T
+  operation frac : T → T → T
+  operation parens : T → T
+  operation brackets : T → T
+  operation braces : T → T
+  operation angle_brackets : T → T
+}
+
+// Piecewise functions: f(x) = { expr1 if cond1, expr2 if cond2, ... }
+structure Piecewise(n: Nat, T) {
+  operation Piecewise : Nat → List(T) → List(Bool) → T
 }
 
 // Equality operations (work for any type)
@@ -273,6 +286,39 @@ structure Ordered(T) {
   operation greater_than : T → T → Bool
   operation less_equal : T → T → Bool
   operation greater_equal : T → T → Bool
+  operation leq : T → T → Bool
+  operation geq : T → T → Bool
+  operation neq : T → T → Bool
+  operation approx : T → T → Bool
+}
+
+// Logical operations
+structure LogicalOps(T) {
+  operation logical_and : T → T → T
+  operation logical_or : T → T → T
+  operation logical_not : T → T
+}
+
+// Numeric operations (beyond basic arithmetic)
+structure Numeric(N) {
+  operation abs : N → N
+  operation floor : N → N
+  operation sqrt : N → N
+  operation power : N → N → N
+  operation sup : N → N → N  // Superscript rendering
+  operation sub : N → N → N  // Subscript rendering
+}
+
+// Calculus operations (for equation editor)
+structure Differentiable(F) {
+  operation derivative : F → F
+  operation d_dx : F → F
+  operation partial : F → F
+}
+
+structure Integrable(F) {
+  operation integral : F → ℝ
+  operation int_bounds : F → ℝ → ℝ → F → ℝ
 }
 
 // Arithmetic for scalars
@@ -281,6 +327,18 @@ implements Arithmetic(ℝ) {
   operation minus = builtin_sub
   operation times = builtin_mul
   operation divide = builtin_div
+  operation scalar_divide = builtin_div
+  operation scalar_multiply = builtin_mul
+  operation frac = builtin_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Piecewise for reals
+implements Piecewise(n, ℝ) {
+  operation Piecewise = builtin_piecewise
 }
 
 // Equality for scalars
@@ -295,12 +353,33 @@ implements Equatable(Matrix(m, n, ℝ)) {
   operation not_equals = builtin_matrix_neq
 }
 
-// Ordering only for scalars (not matrices!)
+// Ordering for scalars (not matrices!)
 implements Ordered(ℝ) {
   operation less_than = builtin_lt
   operation greater_than = builtin_gt
   operation less_equal = builtin_le
   operation greater_equal = builtin_ge
+  operation leq = builtin_le
+  operation geq = builtin_ge
+  operation neq = builtin_neq
+  operation approx = builtin_approx
+}
+
+// Logical operations for booleans
+implements LogicalOps(Bool) {
+  operation logical_and = builtin_and
+  operation logical_or = builtin_or
+  operation logical_not = builtin_not
+}
+
+// Numeric operations for reals
+implements Numeric(ℝ) {
+  operation abs = builtin_abs
+  operation floor = builtin_floor
+  operation sqrt = builtin_sqrt
+  operation power = builtin_pow
+  operation sup = builtin_superscript
+  operation sub = builtin_subscript
 }
 
 // ============================================
