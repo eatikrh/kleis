@@ -121,7 +121,7 @@ use std.physics.{tensor, metric}  // Selective import
 #### Cell Scope
 ```kleis
 // Scratch calculation, not part of paper
-let temp = Π_ψ(x₀)
+let temp = Π[ψ](x₀)
 eval(temp)  // → 0.73 + 0.21i
 // `temp` disappears when cell is cleared
 ```

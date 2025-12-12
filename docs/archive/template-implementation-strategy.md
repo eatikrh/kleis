@@ -2,7 +2,7 @@
 
 **Date:** 2024-11-22  
 **Status:** Design Document  
-**Related ADRs:** [ADR-006](adr-006-template-grammar-duality.md) (Template-Grammar Duality), [ADR-009](adr-009-wysiwyg-structural-editor.md) (WYSIWYG Structural Editor)
+**Related ADRs:** [ADR-006](../adr/adr-006-template-grammar-duality.md), [ADR-009](../adr/adr-009-wysiwyg-structural-editor.md)
 
 **Note:** This document provides detailed implementation guidance for the structural editor architecture described in ADR-009. Read ADR-009 first for the high-level vision and motivation.
 

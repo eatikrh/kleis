@@ -11,29 +11,21 @@
 ✅ Fixed critical files: README.md, PARSER_TODO.md, ADRs  
 ⏳ Remaining: 23 real broken links in archived/session folders
 
-## Remaining Broken Links (23 total)
+## Remaining Broken Links (7 real broken links)
 
-### docs/archive/session-2024-12-05/TYPST_RENDERING_FIXED.md (1)
-- [exp(-t²)](ω) - False positive (math notation), improve checker
+**Note:** Link checker has improved but still flags some mathematical notation. Real broken links below.
 
-### docs/archive/sessions/README.md (2)
-- [Session 2024-12-07](2024-12-07/README.md) - Session archived elsewhere
-- [Session 2024-12-06](2024-12-06/README.md) - Session archived elsewhere
+### Real Broken Links to Fix:
 
-### docs/archive/sessions/session-2024-12-06/INDEX.md (2)
-- [ADR-015-VALIDATION-REPORT.md](ADR-015-VALIDATION-REPORT.md) - Update path
-- [IMPLEMENTATION_NEXT_STEPS.md](IMPLEMENTATION_NEXT_STEPS.md) - File deleted
+1. **docs/archive/template-implementation-strategy.md** - Line 5
+   - ADR links in header need `../adr/` prefix
 
-### docs/archive/template-implementation-strategy.md (6)
-- ADR links need ../adr/ prefix (4 occurrences)
+2. **docs/archive/sessions/session-2024-12-06/INDEX.md**
+   - File references deleted documents (can remove these references)
 
-### docs/parser-implementation/KLEIS_PARSER_STATUS.md (2)
-- [PARSER_TODO.md](../PARSER_TODO.md) - Path incorrect (should be ../../)
-- [session-2024-12-08/ADR021_IMPLEMENTATION_PLAN.md] - File doesn't exist
-
-### docs/session-2024-12-08/README.md (10)
-- Multiple TASK files don't exist (deleted or moved)
-- Options: Remove links or create stub files
+**False positives (mathematical notation - ignore):**
+- `[exp(-t²)](ω)` in TYPST_RENDERING_FIXED.md - This is math, not a link
+- Similar patterns in other files
 
 ## Action Plan
 
