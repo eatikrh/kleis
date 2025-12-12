@@ -677,86 +677,13 @@ impl<'r> AxiomVerifier<'r> {
         }
     }
 
-    /// Map Kleis operations to Z3 operations (legacy Bool interface)
-    ///
-    /// This is kept for backward compatibility with code expecting Bool results.
-    /// New code should use operation_to_z3_dynamic.
-    #[cfg(feature = "axiom-verification")]
-    fn operation_to_z3(
-        &mut self,
-        name: &str,
-        args: &[Expression],
-        vars: &HashMap<String, Int>,
-    ) -> Result<Bool, String> {
-        let dynamic = self.operation_to_z3_dynamic(name, args, vars)?;
-        dynamic
-            .as_bool()
-            .ok_or_else(|| format!("Expected Bool from operation {}", name))
-    }
-
-    /// Helper: Map arithmetic operations to Z3 Int
-    /// Used for operations that should return numeric values (plus, times, etc.)
-    #[cfg(feature = "axiom-verification")]
-    fn operation_to_z3_int(
-        &mut self,
-        name: &str,
-        args: &[Expression],
-        vars: &HashMap<String, Int>,
-    ) -> Result<Int, String> {
-        // Translate arguments
-        let z3_args: Result<Vec<_>, _> = args
-            .iter()
-            .map(|arg| {
-                let dyn_arg = self.kleis_to_z3_dynamic(arg, vars)?;
-                dyn_arg
-                    .as_int()
-                    .ok_or_else(|| format!("Expected Int argument for {}", name))
-            })
-            .collect();
-        let z3_args = z3_args?;
-
-        // Apply arithmetic operations
-        match name {
-            "plus" | "add" => {
-                if z3_args.len() != 2 {
-                    return Err("plus requires 2 arguments".to_string());
-                }
-                Ok(Int::add(&[&z3_args[0], &z3_args[1]]))
-            }
-
-            "times" | "multiply" => {
-                if z3_args.len() != 2 {
-                    return Err("times requires 2 arguments".to_string());
-                }
-                Ok(Int::mul(&[&z3_args[0], &z3_args[1]]))
-            }
-
-            "minus" | "subtract" => {
-                if z3_args.len() != 2 {
-                    return Err("minus requires 2 arguments".to_string());
-                }
-                Ok(Int::sub(&[&z3_args[0], &z3_args[1]]))
-            }
-
-            _ => {
-                // Unknown arithmetic - use uninterpreted function
-                let func_decl = self.declare_operation(name, args.len());
-                let ast_args: Vec<&dyn z3::ast::Ast> =
-                    z3_args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
-                let result = func_decl.apply(&ast_args);
-                result
-                    .as_int()
-                    .ok_or_else(|| format!("Operation {} should return Int", name))
-            }
-        }
-    }
-
-    /// Helper: Convert Kleis expression to Z3 Int
+    /// Helper: Convert Kleis expression to Z3 Int (used by comparison operators)
     ///
     /// Handles arithmetic operations using Z3's integer theory.
     /// Also handles identity elements like zero, one, e.
     /// Falls back to uninterpreted functions for unknown operations.
     #[cfg(feature = "axiom-verification")]
+    #[allow(dead_code)] // Used internally but clippy doesn't see it
     fn kleis_expr_to_z3_int(
         &mut self,
         expr: &Expression,
