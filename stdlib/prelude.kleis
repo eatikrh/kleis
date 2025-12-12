@@ -205,7 +205,16 @@ operation trace : ∀(n : ℕ, T). Matrix(n, n, T) → T
 // ============================================
 
 // Functional notation for derivatives (following Mathematica's approach)
-// Mathematical notation ∂f/∂x is for display only, not for code!
+// 
+// **Design:** Separation of concerns
+//   - CODE uses valid identifiers: gradient, divergence, curl
+//   - RENDERING uses mathematical notation: ∇f, ∂f/∂x, ∇·F, ∇×F
+//
+// Just like Mathematica:
+//   - You write:  D[f, x]     or   gradient(f)
+//   - You see:    ∂f/∂x       or   ∇f
+//
+// This keeps the grammar simple while allowing beautiful mathematical output!
 
 // NOTE: Higher-order function types (functions returning functions) require
 // parentheses in type signatures, which parser doesn't support yet.
@@ -216,12 +225,15 @@ operation trace : ∀(n : ℕ, T). Matrix(n, n, T) → T
 
 // Gradient: ∇f in mathematical notation
 // Returns vector of all partial derivatives
+// RENDER AS: ∇f
 operation gradient : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
 
-// Divergence: ∇ · F in mathematical notation  
+// Divergence: ∇ · F in mathematical notation
+// RENDER AS: ∇·F  
 operation divergence : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
 
 // Curl: ∇ × F in mathematical notation (3D only)
+// RENDER AS: ∇×F
 operation curl : VectorField(ℝ³) → VectorField(ℝ³)
 
 // ============================================
