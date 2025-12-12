@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 use kleis::ast::Expression;
 use kleis::math_layout::compile_math_to_svg_with_ids;
 use kleis::math_layout::typst_compiler::ArgumentBoundingBox;

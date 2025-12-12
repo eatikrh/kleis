@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 use kleis::math_layout::compile_math_to_svg_with_ids;
 use kleis::parser::parse_latex;
 use kleis::render::{

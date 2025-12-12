@@ -1,4 +1,6 @@
 #!/usr/bin/env rust
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
 //! Generate SVG icons for palette buttons
 //!
 //! Creates small, clean SVG images for each template that can be used

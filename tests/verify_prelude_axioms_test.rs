@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Integration Test: Verify Actual Prelude Axioms with Z3
 ///!
 ///! This test verifies that:

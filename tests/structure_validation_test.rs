@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 // Tests for structure implementation validation (ADR-016)
 //
 // These tests verify that the generic validation system works correctly:

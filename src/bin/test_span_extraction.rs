@@ -1,3 +1,9 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
 //! Test Option 2: Extract source spans from Typst layout tree
 //!
 //! Goal: Determine if we can map FrameItems back to source positions,

@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Tests for where clause parsing in implements blocks
 ///!
 ///! Tests Phase 3.1: Parse generic constraints on implementations

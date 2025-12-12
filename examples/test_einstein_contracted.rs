@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 // Test Einstein's Field Equations - CONTRACTED FORM
 //
 // This tests the TRACE (contracted) form of Einstein's equations:

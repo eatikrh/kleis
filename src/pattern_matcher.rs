@@ -98,6 +98,7 @@ impl PatternMatcher {
     }
 
     /// Internal recursive pattern matching
+    #[allow(clippy::only_used_in_recursion)]
     fn match_pattern_internal(
         &self,
         value: &Expression,
@@ -204,6 +205,7 @@ impl PatternMatcher {
     ///
     /// Recursively traverse the expression and replace Object(name) with
     /// the bound value if it exists in bindings.
+    #[allow(clippy::only_used_in_recursion)]
     fn substitute_bindings(
         &self,
         expr: &Expression,
@@ -446,6 +448,7 @@ impl ExhaustivenessChecker {
     /// - Variable subsumes everything
     /// - Some(x) subsumes Some(5)
     /// - Some(_) subsumes Some(x)
+    #[allow(clippy::only_used_in_recursion)]
     fn pattern_subsumes(&self, p1: &Pattern, p2: &Pattern) -> bool {
         match (p1, p2) {
             // Wildcard/variable subsumes everything

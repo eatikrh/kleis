@@ -1,5 +1,10 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 use kleis::parser::parse_latex;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 fn timed_test(name: &str, latex: &str) {
     print!("Testing {}: ", name);

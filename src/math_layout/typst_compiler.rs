@@ -243,7 +243,7 @@ fn extract_semantic_argument_boxes(
 
 /// Fix matrix cell positions by re-sorting them spatially if they're out of reading order
 fn fix_matrix_cell_order(
-    boxes: &mut Vec<ArgumentBoundingBox>,
+    boxes: &mut [ArgumentBoundingBox],
     _op_name: &str,
     num_args: usize,
 ) -> Result<(), String> {
@@ -304,7 +304,7 @@ fn fix_matrix_cell_order(
             let old_id = b.node_id.clone();
             b.node_id = new_id.clone();
             // Extract the arg_index from new node_id
-            if let Some(idx_str) = new_id.split('.').last() {
+            if let Some(idx_str) = new_id.split('.').next_back() {
                 if let Ok(idx) = idx_str.parse::<usize>() {
                     b.arg_index = idx;
                 }
@@ -367,6 +367,7 @@ fn compile_markup_to_text_boxes(markup: &str) -> Result<Vec<LayoutBoundingBox>, 
 }
 
 /// Recursively assign bounding boxes to every AST argument
+#[allow(clippy::too_many_arguments)]
 fn assign_boxes_recursive(
     expr: &Expression,
     ctx: &GlyphContext,
@@ -1358,8 +1359,8 @@ fn find_marker_in_frame(frame: &Frame, source: &Source) -> Option<usize> {
                         }
                     }
                     // Try slot marker (format: "SN")
-                    else if text_content.starts_with('S') {
-                        if let Ok(id) = text_content[1..].parse::<usize>() {
+                    else if let Some(stripped) = text_content.strip_prefix('S') {
+                        if let Ok(id) = stripped.parse::<usize>() {
                             return Some(id);
                         }
                     }
@@ -1434,6 +1435,8 @@ fn find_marker_groups(
 /// Extract placeholder positions by correlating subscripts with squares
 ///
 /// Finds square glyphs and their associated subscript IDs using layout tree spans.
+/// Alternative implementation kept for reference
+#[allow(dead_code)]
 fn extract_placeholders_with_spans(
     frame: &Frame,
     source: &Source,
@@ -1597,6 +1600,8 @@ pub fn compile_math_to_svg(markup: &str) -> Result<CompiledOutput, String> {
 ///
 /// This creates a realistic-looking fraction layout with placeholder markers
 /// positioned where Typst would actually place them.
+/// Kept for testing purposes
+#[allow(dead_code)]
 fn generate_mock_svg(markup: &str) -> Result<String, String> {
     eprintln!("Generating mock SVG for: {}", markup);
 
@@ -1625,6 +1630,8 @@ fn generate_mock_svg(markup: &str) -> Result<String, String> {
 }
 
 /// Generate mock SVG specifically for fractions with realistic positioning
+/// Kept for testing purposes
+#[allow(dead_code)]
 fn generate_fraction_mock_svg(markup: &str) -> Result<String, String> {
     // Parse the fraction: (numerator)/(denominator)
     let parts: Vec<&str> = markup.split(")/").collect();
@@ -1678,6 +1685,9 @@ fn generate_fraction_mock_svg(markup: &str) -> Result<String, String> {
     ))
 }
 
+/// Escape XML special characters
+/// Kept for potential future use
+#[allow(dead_code)]
 fn escape_xml(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -1878,7 +1888,7 @@ fn extract_placeholder_positions_by_symbol(
     for glyph in &all_glyphs {
         glyph_counts
             .entry(glyph.glyph_id.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push((glyph.x, glyph.y));
     }
 
@@ -1972,7 +1982,8 @@ fn extract_placeholder_positions_by_symbol(
 
         // If we got enough or close enough, keep them; otherwise fall through to best_glyph
         if all_square_positions.len() >= expected_count
-            || (all_square_positions.len() > 0 && all_square_positions.len() >= expected_count - 1)
+            || (!all_square_positions.is_empty()
+                && all_square_positions.len() >= expected_count - 1)
         {
             eprintln!(
                 "  Combined glyphs gave {} positions",
@@ -2143,7 +2154,7 @@ fn group_content_into_arguments(
     for bbox in sorted_boxes {
         // Find if this box belongs to an existing line
         let mut placed = false;
-        for (line_idx, line) in lines.iter_mut().enumerate() {
+        for line in lines.iter_mut() {
             if let Some(first) = line.first() {
                 // If Y centers are close, it's the same line
                 // Tolerance increased to 20.0 to handle nested fractions (e.g. 3/x in denominator)
@@ -2215,6 +2226,7 @@ fn group_content_into_arguments(
 ///
 /// Looks for white-filled text groups (our invisible markers) and pairs them up
 /// to create bounding boxes for each argument.
+#[allow(dead_code)]
 fn extract_argument_bounding_boxes_markers(svg: &str) -> Result<Vec<ArgumentBoundingBox>, String> {
     eprintln!("Extracting argument bounding boxes from invisible markers...");
 
@@ -2286,6 +2298,7 @@ fn extract_argument_bounding_boxes_markers(svg: &str) -> Result<Vec<ArgumentBoun
 ///
 /// Each argument is wrapped in #box(fill: rgb(...)) which Typst renders
 /// as SVG rectangles. We find these and extract their positions.
+#[allow(dead_code)]
 fn extract_colored_boxes(svg: &str) -> Result<Vec<BoundingBox>, String> {
     let mut boxes = Vec::new();
 
@@ -2320,6 +2333,9 @@ fn extract_colored_boxes(svg: &str) -> Result<Vec<BoundingBox>, String> {
     Ok(boxes)
 }
 
+/// Bounding box for layout elements
+/// Kept for potential future use
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct BoundingBox {
     x: f64,
@@ -2386,6 +2402,7 @@ fn expand_viewbox_for_markers(svg: &str, boxes: &[LayoutBoundingBox]) -> Result<
 }
 
 /// Extract UUID-based positions from SVG (labels like "id12345678")
+#[allow(clippy::type_complexity)]
 fn extract_uuid_positions(
     svg: &str,
 ) -> Result<std::collections::HashMap<String, (f64, f64, f64, f64)>, String> {
@@ -2408,8 +2425,8 @@ fn extract_uuid_positions(
         }
 
         if let Some(label) = node.attribute("data-typst-label") {
-            if label.starts_with("id") {
-                let uuid_part = &label[2..]; // Remove "id" prefix (rest is the UUID)
+            if let Some(uuid_part) = label.strip_prefix("id") {
+                // Remove "id" prefix (rest is the UUID)
                 let (abs_x, abs_y) = current_transforms
                     .iter()
                     .fold((0.0, 0.0), |(ax, ay), (tx, ty)| (ax + tx, ay + ty));
@@ -2476,11 +2493,11 @@ fn extract_positions_from_labels(svg: &str) -> Result<Vec<PlaceholderPosition>, 
 
             // Extract ID from label
             // Format: "ph{id}" for placeholders, "sl{index}" for filled slots
-            let id = if label.starts_with("ph") {
-                label[2..].parse::<usize>().ok()
-            } else if label.starts_with("sl") {
+            let id = if let Some(stripped) = label.strip_prefix("ph") {
+                stripped.parse::<usize>().ok()
+            } else if let Some(stripped) = label.strip_prefix("sl") {
                 // For filled slots, use index + 1000 to distinguish from placeholders
-                label[2..].parse::<usize>().ok().map(|i| i + 1000)
+                stripped.parse::<usize>().ok().map(|i| i + 1000)
             } else {
                 None
             };

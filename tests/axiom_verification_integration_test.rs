@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 use kleis::ast::Expression;
 ///! Integration Tests for Axiom Verification with Z3
 ///!
@@ -63,11 +68,14 @@ fn test_verifier_creation() {
         assert!(verifier.is_ok(), "Verifier creation should succeed");
 
         // Try to verify a simple expression
-        let expr = parse_axiom("∀(x : M). x");
+        let expr = parse_axiom("∀(x : M). equals(x, x)"); // Must be boolean!
         let mut verifier = verifier.unwrap();
         let result = verifier.verify_axiom(&expr);
 
         // Should return something (either Valid/Invalid/Unknown or Disabled)
+        if let Err(e) = &result {
+            println!("Error: {}", e);
+        }
         assert!(result.is_ok());
     }
 
@@ -131,7 +139,10 @@ fn test_commutativity_axiom() {
 
     let result = verify_with_test_context(&axiom);
 
-    assert!(result.is_ok());
+    if let Err(e) = &result {
+        eprintln!("ERROR: {}", e);
+    }
+    assert!(result.is_ok(), "Failed: {:?}", result);
 
     #[cfg(feature = "axiom-verification")]
     {

@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Test that proves structures ARE being loaded and their axioms ARE being used
 ///!
 ///! This test uses simple axioms that:

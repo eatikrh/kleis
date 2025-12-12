@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Integration tests for standard library loading
 ///!
 ///! Tests that stdlib/minimal_prelude.kleis and stdlib/matrices.kleis

@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Tests for the `element` keyword in structure definitions
 ///!
 ///! The `element` keyword is semantically equivalent to a nullary operation:

@@ -213,6 +213,12 @@ pub struct TypeContext {
     next_var: usize,
 }
 
+impl Default for TypeContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypeContext {
     pub fn new() -> Self {
         TypeContext {
@@ -249,6 +255,12 @@ pub struct TypeInference {
     context: TypeContext,
     constraints: Vec<Constraint>,
     data_registry: crate::data_registry::DataTypeRegistry,
+}
+
+impl Default for TypeInference {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TypeInference {
@@ -668,7 +680,7 @@ impl TypeInference {
                 // Not a known type parameter - create fresh var
                 Ok(self.context.fresh_var())
             }
-            TypeExpr::Named(name) => {
+            TypeExpr::Named(_name) => {
                 // Delegate to regular conversion
                 self.type_expr_to_type(type_expr)
             }
@@ -742,7 +754,7 @@ impl TypeInference {
                     args: param_types,
                 })
             }
-            TypeExpr::Var(name) => {
+            TypeExpr::Var(_name) => {
                 // Type variable in the definition (e.g., T in Option(T))
                 // Create a fresh type variable for this type parameter
                 // The HM algorithm will unify these correctly across the function
@@ -946,6 +958,7 @@ impl TypeInference {
     ///
     /// TODO(ADR-021): This logic is already generic and would work for all data constructors!
     /// Example: Cons(head: T, tail: List(T)) would validate head and tail fields.
+    #[allow(dead_code)]
     fn infer_data_constructor_fields(
         &mut self,
         field_exprs: &[Expression],
@@ -1122,6 +1135,7 @@ impl Type {
     ///
     /// This is a convenience constructor to ease the transition from
     /// the old hardcoded Type::Scalar to the new Data-based system.
+    #[allow(clippy::doc_lazy_continuation)]
     pub fn scalar() -> Type {
         Type::Data {
             type_name: "Type".to_string(),
@@ -1135,11 +1149,13 @@ impl Type {
     /// The dimension is stored as a concrete value, enabling:
     /// - Vector(3) ≠ Vector(4) (different types!)
     /// - Dimension checking in operations
+    ///
     /// Create a Vector type
     ///
     /// Vector(n, T) where:
     /// - n is dimension (Nat value)
     /// - T is element type (Type)
+    #[allow(clippy::doc_lazy_continuation)]
     pub fn vector(n: usize, elem_type: Type) -> Type {
         Type::Data {
             type_name: "Vector".to_string(),

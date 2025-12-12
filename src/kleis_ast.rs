@@ -1,12 +1,12 @@
-///! Extended AST for Kleis - Structure Definitions and Type Expressions
-///!
-///! This extends the basic Expression AST with support for:
-///! - Structure definitions
-///! - Operation declarations
-///! - Type expressions
-///! - Top-level program items
-///!
-///! Used for parsing complete Kleis programs with user-defined types.
+//! Extended AST for Kleis - Structure Definitions and Type Expressions
+//!
+//! This extends the basic Expression AST with support for:
+//! - Structure definitions
+//! - Operation declarations
+//! - Type expressions
+//! - Top-level program items
+//!
+//! Used for parsing complete Kleis programs with user-defined types.
 use crate::ast::Expression;
 
 /// Top-level program items

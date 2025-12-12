@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Tests for where clauses in quantifiers
 ///!
 ///! Example: ∀(x : F) where x ≠ zero. inverse(x) × x = one

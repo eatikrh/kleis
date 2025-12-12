@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! PROOF TESTS: Z3 Actually Uses Axioms from Dependencies
 ///!
 ///! These tests PROVE (not just assert) that Z3 has access to axioms from:

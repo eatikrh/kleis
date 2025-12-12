@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 // Simple test: Just the einstein operation by itself
 //
 // einstein(?, ?, ?) should return Tensor(0, 2, 4, ℝ)

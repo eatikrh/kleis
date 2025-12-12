@@ -1,34 +1,34 @@
-///! Axiom Verification using Z3 Theorem Prover
-///!
-///! This module provides verification of Kleis axioms by translating them to Z3
-///! and checking if they're satisfiable/valid.
-///!
-///! **Architecture: Incremental Z3 Solving with Smart Caching**
-///! - Long-lived Solver instance with push/pop for efficiency
-///! - Axiom filtering: Only loads relevant axioms for each query
-///! - Structure dependency analysis: Understands type relationships
-///! - Uninterpreted functions: Custom operations declared in Z3
-///! - Scales to thousands of axioms efficiently
-///!
-///! **Key Design Decisions:**
-///! - Z3 Rust bindings use global context internally (no lifetime management)
-///! - Solver persists across queries
-///! - Each verify_axiom() uses push/pop (lightweight, ~1ms)
-///! - Axioms loaded on-demand based on expression analysis
-///! - Background theory cached per structure combination
-///!
-///! **Usage:**
-///! ```rust
-///! let registry = StructureRegistry::new();
-///! let verifier = AxiomVerifier::new(&registry)?;
-///! let result = verifier.verify_axiom(&axiom)?;
-///! ```
+//! Axiom Verification using Z3 Theorem Prover
+//!
+//! This module provides verification of Kleis axioms by translating them to Z3
+//! and checking if they're satisfiable/valid.
+//!
+//! **Architecture: Incremental Z3 Solving with Smart Caching**
+//! - Long-lived Solver instance with push/pop for efficiency
+//! - Axiom filtering: Only loads relevant axioms for each query
+//! - Structure dependency analysis: Understands type relationships
+//! - Uninterpreted functions: Custom operations declared in Z3
+//! - Scales to thousands of axioms efficiently
+//!
+//! **Key Design Decisions:**
+//! - Z3 Rust bindings use global context internally (no lifetime management)
+//! - Solver persists across queries
+//! - Each verify_axiom() uses push/pop (lightweight, ~1ms)
+//! - Axioms loaded on-demand based on expression analysis
+//! - Background theory cached per structure combination
+//!
+//! **Usage:**
+//! ```ignore
+//! let registry = StructureRegistry::new();
+//! let verifier = AxiomVerifier::new(&registry)?;
+//! let result = verifier.verify_axiom(&axiom)?;
+//! ```
 use crate::ast::{Expression, QuantifiedVar, QuantifierKind};
 use crate::structure_registry::StructureRegistry;
 use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "axiom-verification")]
-use z3::ast::{Ast, Bool, Dynamic, Int};
+use z3::ast::{Bool, Dynamic, Int, Real};
 #[cfg(feature = "axiom-verification")]
 use z3::{FuncDecl, SatResult, Solver, Sort};
 
@@ -71,8 +71,8 @@ pub struct AxiomVerifier<'r> {
     #[cfg(feature = "axiom-verification")]
     /// Identity elements (zero, one, e, etc.) mapped to Z3 constants
     /// Key: element name (e.g., "zero", "one", "e")
-    /// Value: Z3 Int constant representing that identity element
-    identity_elements: HashMap<String, Int>,
+    /// Value: Z3 Dynamic constant (can be Int, Bool, etc.)
+    identity_elements: HashMap<String, Dynamic>,
 
     #[cfg(not(feature = "axiom-verification"))]
     _phantom: std::marker::PhantomData<&'r ()>,
@@ -232,7 +232,12 @@ impl<'r> AxiomVerifier<'r> {
         self.load_identity_elements_recursive(&structure.members);
 
         // Phase 2: Get and load axioms (including from nested structures)
-        self.load_axioms_recursive(&structure.members)?;
+        println!("   Loading axioms for {}...", structure_name);
+        if let Err(e) = self.load_axioms_recursive(&structure.members) {
+            eprintln!("   ❌ ERROR loading axioms: {}", e);
+            return Err(e);
+        }
+        println!("   ✅ Axioms loaded successfully");
 
         // Mark as loaded
         self.loaded_structures.insert(structure_name.to_string());
@@ -257,9 +262,16 @@ impl<'r> AxiomVerifier<'r> {
                     let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
 
                     if is_nullary {
-                        let z3_const = Int::fresh_const(name);
-                        self.identity_elements.insert(name.clone(), z3_const);
-                        println!("   📌 Loaded identity element: {}", name);
+                        // Identity elements default to Int (usually numeric: zero, one, e)
+                        // Note: If same name appears twice, they should refer to same element
+                        // so we only load once
+                        if !self.identity_elements.contains_key(name) {
+                            let z3_const: Dynamic = Int::fresh_const(name).into();
+                            self.identity_elements.insert(name.clone(), z3_const);
+                            println!("   📌 Loaded identity element: {}", name);
+                        } else {
+                            println!("   ℹ️  Identity element {} already loaded (will reuse same constant)", name);
+                        }
                     }
                 }
                 StructureMember::NestedStructure { members, .. } => {
@@ -285,8 +297,11 @@ impl<'r> AxiomVerifier<'r> {
         for member in members {
             match member {
                 StructureMember::Axiom { proposition, .. } => {
-                    // Translate and assert axiom
-                    let z3_axiom = self.kleis_to_z3(proposition, &HashMap::new())?;
+                    // Translate axiom to Z3 and convert to Bool for assertion
+                    let z3_dynamic = self.kleis_to_z3_dynamic(proposition, &HashMap::new())?;
+                    let z3_axiom = z3_dynamic
+                        .as_bool()
+                        .ok_or_else(|| "Axiom must be a boolean expression".to_string())?;
                     self.solver.assert(&z3_axiom);
                 }
                 StructureMember::NestedStructure { members, .. } => {
@@ -347,9 +362,11 @@ impl<'r> AxiomVerifier<'r> {
     fn verify_axiom_impl(&mut self, expr: &Expression) -> Result<VerificationResult, String> {
         // Step 1: Analyze dependencies
         let dependencies = self.analyze_dependencies(expr);
+        eprintln!("DEBUG: Found dependencies: {:?}", dependencies);
 
         // Step 2: Ensure all required axioms are loaded
         for structure in &dependencies {
+            eprintln!("DEBUG: Loading structure: {}", structure);
             self.ensure_structure_loaded(structure)?;
         }
 
@@ -357,12 +374,15 @@ impl<'r> AxiomVerifier<'r> {
         self.solver.push();
 
         // Step 4: Translate Kleis expression to Z3
-        let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
+        let z3_dynamic = self.kleis_to_z3_dynamic(expr, &HashMap::new())?;
+        let z3_expr = z3_dynamic
+            .as_bool()
+            .ok_or_else(|| "Axiom must be a boolean expression".to_string())?;
 
         // Step 5: For axioms, we want to check if they're always true
         // So we assert the NEGATION and check if it's unsatisfiable
         // If unsat, the original axiom is valid
-        self.solver.assert(&z3_expr.not());
+        self.solver.assert(z3_expr.not());
 
         // Step 6: Check satisfiability
         let result = match self.solver.check() {
@@ -409,11 +429,32 @@ impl<'r> AxiomVerifier<'r> {
 
             self.solver.push();
 
-            let z3_expr1 = self.kleis_to_z3(expr1, &HashMap::new())?;
-            let z3_expr2 = self.kleis_to_z3(expr2, &HashMap::new())?;
+            let z3_dyn1 = self.kleis_to_z3_dynamic(expr1, &HashMap::new())?;
+            let z3_dyn2 = self.kleis_to_z3_dynamic(expr2, &HashMap::new())?;
 
-            // Check if expr1 ≠ expr2 is unsatisfiable
-            self.solver.assert(&z3_expr1.eq(&z3_expr2).not());
+            // Check if expr1 ≠ expr2 is unsatisfiable (handle mixed types)
+            let equality = if z3_dyn1.sort_kind() == z3_dyn2.sort_kind() {
+                z3_dyn1.eq(&z3_dyn2)
+            } else {
+                // Mixed types - convert to Real if one is Real and other is Int
+                let l_real = z3_dyn1
+                    .as_real()
+                    .or_else(|| z3_dyn1.as_int().map(|i| i.to_real()));
+                let r_real = z3_dyn2
+                    .as_real()
+                    .or_else(|| z3_dyn2.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    l.eq(&r)
+                } else {
+                    return Err(format!(
+                        "Cannot compare values of different sorts: {:?} vs {:?}",
+                        z3_dyn1.sort_kind(),
+                        z3_dyn2.sort_kind()
+                    ));
+                }
+            };
+            self.solver.assert(equality.not());
 
             let result = matches!(self.solver.check(), SatResult::Unsat);
 
@@ -467,7 +508,7 @@ impl<'r> AxiomVerifier<'r> {
         FuncDecl::new(name, &domain_refs, &Sort::int())
     }
 
-    /// Generic translator: Kleis Expression → Z3 AST
+    /// Generic translator: Kleis Expression → Z3 AST (Dynamic type)
     ///
     /// **NO HARDCODING!** This function handles ANY expression by:
     /// - Reading operation names from Expression
@@ -475,47 +516,46 @@ impl<'r> AxiomVerifier<'r> {
     /// - Mapping operations generically
     /// - Looking up identity elements from structures
     ///
+    /// Returns Dynamic which can be Int, Bool, Real, etc. depending on context.
     /// Operations not recognized as built-ins are treated as uninterpreted functions.
     #[cfg(feature = "axiom-verification")]
-    fn kleis_to_z3(
+    fn kleis_to_z3_dynamic(
         &mut self,
         expr: &Expression,
-        vars: &HashMap<String, Int>,
-    ) -> Result<Bool, String> {
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Dynamic, String> {
         match expr {
-            // Variables and identity elements: look up in environment
+            // Variables: return actual Z3 variable
             Expression::Object(name) => {
                 // 1. Check if it's a quantified variable
-                if let Some(_var) = vars.get(name) {
-                    // For now, return a placeholder boolean
-                    // TODO: Properly handle typed variables
-                    return Ok(Bool::from_bool(true));
+                if let Some(var) = vars.get(name) {
+                    // Return the actual Z3 Dynamic variable
+                    return Ok(var.clone());
                 }
 
                 // 2. Check if it's an identity element (zero, one, e, etc.)
-                if self.identity_elements.contains_key(name) {
-                    // Found an identity element!
-                    // For now, return success - full implementation would use the constant
-                    return Ok(Bool::from_bool(true));
+                if let Some(identity) = self.identity_elements.get(name) {
+                    // Return the actual identity constant (already Dynamic)
+                    return Ok(identity.clone());
                 }
 
                 // 3. Not found
                 Err(format!("Undefined variable or identity: {}", name))
             }
 
-            // Constants: convert to Z3
+            // Constants: convert to Z3 Int
             Expression::Const(s) => {
                 // Try to parse as number
                 if let Ok(n) = s.parse::<i64>() {
-                    let _ = Int::from_i64(n);
-                    Ok(Bool::from_bool(true)) // Placeholder
+                    let z3_int = Int::from_i64(n);
+                    Ok(z3_int.into())
                 } else {
                     Err(format!("Cannot convert constant to Z3: {}", s))
                 }
             }
 
             // Operations: map by name
-            Expression::Operation { name, args } => self.operation_to_z3(name, args, vars),
+            Expression::Operation { name, args } => self.operation_to_z3_dynamic(name, args, vars),
 
             // Quantifiers: handle forall/exists
             Expression::Quantifier {
@@ -523,153 +563,304 @@ impl<'r> AxiomVerifier<'r> {
                 variables,
                 where_clause,
                 body,
-            } => self.quantifier_to_z3(quantifier, variables, where_clause.as_ref(), body, vars),
+            } => {
+                let bool_result = self.quantifier_to_z3(
+                    quantifier,
+                    variables,
+                    where_clause.as_ref().map(|b| &**b),
+                    body,
+                    vars,
+                )?;
+                Ok(bool_result.into())
+            }
 
             _ => Err(format!("Unsupported expression type for Z3: {:?}", expr)),
         }
     }
 
-    /// Map Kleis operations to Z3 operations
+    /// Map Kleis operations to Z3 operations (returns Dynamic)
     ///
     /// First tries built-in Z3 theories, then falls back to uninterpreted functions
     /// for custom operations defined in structures.
     #[cfg(feature = "axiom-verification")]
-    fn operation_to_z3(
+    fn operation_to_z3_dynamic(
         &mut self,
         name: &str,
         args: &[Expression],
-        vars: &HashMap<String, Int>,
-    ) -> Result<Bool, String> {
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Dynamic, String> {
         match name {
-            // Equality
+            // Equality returns Bool - handle mixed Int/Real types
             "equals" | "eq" => {
                 if args.len() != 2 {
                     return Err("equals requires 2 arguments".to_string());
                 }
-                let left = self.kleis_expr_to_z3_int(&args[0], vars)?;
-                let right = self.kleis_expr_to_z3_int(&args[1], vars)?;
-                Ok(left.eq(&right))
+                let left = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right = self.kleis_to_z3_dynamic(&args[1], vars)?;
+
+                // If types match, use direct equality
+                if left.sort_kind() == right.sort_kind() {
+                    return Ok(left.eq(&right).into());
+                }
+
+                // Handle mixed Int/Real - convert both to Real
+                let l_real = left
+                    .as_real()
+                    .or_else(|| left.as_int().map(|i| i.to_real()));
+                let r_real = right
+                    .as_real()
+                    .or_else(|| right.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    Ok(l.eq(&r).into())
+                } else {
+                    // Fall back to Dynamic equality (may fail if sorts differ)
+                    Ok(left.eq(&right).into())
+                }
             }
 
-            // Comparisons
+            // Comparisons return Bool
             "less_than" | "lt" => {
                 if args.len() != 2 {
                     return Err("less_than requires 2 arguments".to_string());
                 }
-                let left = self.kleis_expr_to_z3_int(&args[0], vars)?;
-                let right = self.kleis_expr_to_z3_int(&args[1], vars)?;
-                Ok(left.lt(&right))
+                let left_dyn = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right_dyn = self.kleis_to_z3_dynamic(&args[1], vars)?;
+                let left = left_dyn.as_int().ok_or("less_than requires Int")?;
+                let right = right_dyn.as_int().ok_or("less_than requires Int")?;
+                Ok(left.lt(&right).into())
             }
 
             "greater_than" | "gt" => {
                 if args.len() != 2 {
                     return Err("greater_than requires 2 arguments".to_string());
                 }
-                let left = self.kleis_expr_to_z3_int(&args[0], vars)?;
-                let right = self.kleis_expr_to_z3_int(&args[1], vars)?;
-                Ok(left.gt(&right))
+                let left_dyn = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right_dyn = self.kleis_to_z3_dynamic(&args[1], vars)?;
+                let left = left_dyn.as_int().ok_or("greater_than requires Int")?;
+                let right = right_dyn.as_int().ok_or("greater_than requires Int")?;
+                Ok(left.gt(&right).into())
             }
 
             "leq" => {
                 if args.len() != 2 {
                     return Err("leq requires 2 arguments".to_string());
                 }
-                let left = self.kleis_expr_to_z3_int(&args[0], vars)?;
-                let right = self.kleis_expr_to_z3_int(&args[1], vars)?;
-                Ok(left.le(&right))
+                let left_dyn = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right_dyn = self.kleis_to_z3_dynamic(&args[1], vars)?;
+                let left = left_dyn.as_int().ok_or("leq requires Int")?;
+                let right = right_dyn.as_int().ok_or("leq requires Int")?;
+                Ok(left.le(&right).into())
             }
 
             "geq" => {
                 if args.len() != 2 {
                     return Err("geq requires 2 arguments".to_string());
                 }
-                let left = self.kleis_expr_to_z3_int(&args[0], vars)?;
-                let right = self.kleis_expr_to_z3_int(&args[1], vars)?;
-                Ok(left.ge(&right))
+                let left_dyn = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right_dyn = self.kleis_to_z3_dynamic(&args[1], vars)?;
+                let left = left_dyn.as_int().ok_or("geq requires Int")?;
+                let right = right_dyn.as_int().ok_or("geq requires Int")?;
+                Ok(left.ge(&right).into())
             }
 
-            // Boolean operations
+            // Boolean operations return Bool
             "and" | "logical_and" => {
                 if args.len() != 2 {
                     return Err("and requires 2 arguments".to_string());
                 }
-                let left = self.kleis_to_z3(&args[0], vars)?;
-                let right = self.kleis_to_z3(&args[1], vars)?;
-                Ok(Bool::and(&[&left, &right]))
+                let left_dyn = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right_dyn = self.kleis_to_z3_dynamic(&args[1], vars)?;
+                let left = left_dyn.as_bool().ok_or("and requires Bool")?;
+                let right = right_dyn.as_bool().ok_or("and requires Bool")?;
+                Ok(Bool::and(&[&left, &right]).into())
             }
 
             "or" | "logical_or" => {
                 if args.len() != 2 {
                     return Err("or requires 2 arguments".to_string());
                 }
-                let left = self.kleis_to_z3(&args[0], vars)?;
-                let right = self.kleis_to_z3(&args[1], vars)?;
-                Ok(Bool::or(&[&left, &right]))
+                let left_dyn = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right_dyn = self.kleis_to_z3_dynamic(&args[1], vars)?;
+                let left = left_dyn.as_bool().ok_or("or requires Bool")?;
+                let right = right_dyn.as_bool().ok_or("or requires Bool")?;
+                Ok(Bool::or(&[&left, &right]).into())
             }
 
             "not" | "logical_not" => {
                 if args.len() != 1 {
                     return Err("not requires 1 argument".to_string());
                 }
-                let arg = self.kleis_to_z3(&args[0], vars)?;
-                Ok(arg.not())
+                let arg_dyn = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let arg = arg_dyn.as_bool().ok_or("not requires Bool")?;
+                Ok(arg.not().into())
             }
 
-            // Implication: P ⟹ Q is equivalent to ¬P ∨ Q
+            // Implication returns Bool
             "implies" => {
                 if args.len() != 2 {
                     return Err("implies requires 2 arguments".to_string());
                 }
-                let left = self.kleis_to_z3(&args[0], vars)?;
-                let right = self.kleis_to_z3(&args[1], vars)?;
-                Ok(left.implies(&right))
+                let left_dyn = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right_dyn = self.kleis_to_z3_dynamic(&args[1], vars)?;
+                let left = left_dyn.as_bool().ok_or("implies requires Bool")?;
+                let right = right_dyn.as_bool().ok_or("implies requires Bool")?;
+                Ok(left.implies(&right).into())
             }
 
-            // Unknown operation - use uninterpreted function
+            // Arithmetic operations - work with both Int and Real, handle mixed types
+            "plus" | "add" => {
+                if args.len() != 2 {
+                    return Err("plus requires 2 arguments".to_string());
+                }
+                let left = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right = self.kleis_to_z3_dynamic(&args[1], vars)?;
+
+                // Handle Int + Int
+                if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
+                    return Ok(Int::add(&[&l, &r]).into());
+                }
+
+                // Handle Real + Real
+                if let (Some(l), Some(r)) = (left.as_real(), right.as_real()) {
+                    return Ok(Real::add(&[&l, &r]).into());
+                }
+
+                // Handle mixed Int/Real - convert to Real
+                let l_real = left
+                    .as_real()
+                    .or_else(|| left.as_int().map(|i| i.to_real()));
+                let r_real = right
+                    .as_real()
+                    .or_else(|| right.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    Ok(Real::add(&[&l, &r]).into())
+                } else {
+                    // Fall back to uninterpreted function
+                    let func_decl = self.declare_operation("plus", 2);
+                    let ast_args: Vec<&dyn z3::ast::Ast> =
+                        vec![&left as &dyn z3::ast::Ast, &right as &dyn z3::ast::Ast];
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            "times" | "multiply" => {
+                if args.len() != 2 {
+                    return Err("times requires 2 arguments".to_string());
+                }
+                let left = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right = self.kleis_to_z3_dynamic(&args[1], vars)?;
+
+                // Handle Int * Int
+                if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
+                    return Ok(Int::mul(&[&l, &r]).into());
+                }
+
+                // Handle Real * Real
+                if let (Some(l), Some(r)) = (left.as_real(), right.as_real()) {
+                    return Ok(Real::mul(&[&l, &r]).into());
+                }
+
+                // Handle mixed Int/Real - convert to Real
+                let l_real = left
+                    .as_real()
+                    .or_else(|| left.as_int().map(|i| i.to_real()));
+                let r_real = right
+                    .as_real()
+                    .or_else(|| right.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    Ok(Real::mul(&[&l, &r]).into())
+                } else {
+                    // Fall back to uninterpreted function
+                    let func_decl = self.declare_operation("times", 2);
+                    let ast_args: Vec<&dyn z3::ast::Ast> =
+                        vec![&left as &dyn z3::ast::Ast, &right as &dyn z3::ast::Ast];
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            "minus" | "subtract" => {
+                if args.len() != 2 {
+                    return Err("minus requires 2 arguments".to_string());
+                }
+                let left = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right = self.kleis_to_z3_dynamic(&args[1], vars)?;
+
+                // Handle Int - Int
+                if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
+                    return Ok(Int::sub(&[&l, &r]).into());
+                }
+
+                // Handle Real - Real
+                if let (Some(l), Some(r)) = (left.as_real(), right.as_real()) {
+                    return Ok(Real::sub(&[&l, &r]).into());
+                }
+
+                // Handle mixed Int/Real - convert to Real
+                let l_real = left
+                    .as_real()
+                    .or_else(|| left.as_int().map(|i| i.to_real()));
+                let r_real = right
+                    .as_real()
+                    .or_else(|| right.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    Ok(Real::sub(&[&l, &r]).into())
+                } else {
+                    // Fall back to uninterpreted function
+                    let func_decl = self.declare_operation("minus", 2);
+                    let ast_args: Vec<&dyn z3::ast::Ast> =
+                        vec![&left as &dyn z3::ast::Ast, &right as &dyn z3::ast::Ast];
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Unknown operation - use uninterpreted function (returns Dynamic)
             _ => {
-                // Translate arguments to Z3 Int
                 let z3_args: Result<Vec<_>, _> = args
                     .iter()
-                    .map(|arg| self.kleis_expr_to_z3_int(arg, vars))
+                    .map(|arg| self.kleis_to_z3_dynamic(arg, vars))
                     .collect();
                 let z3_args = z3_args?;
 
-                // Declare the operation as uninterpreted function
                 let func_decl = self.declare_operation(name, args.len());
-
-                // Apply the uninterpreted function
                 let ast_args: Vec<&dyn z3::ast::Ast> =
-                    z3_args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
-                let result = func_decl.apply(&ast_args);
-
-                // For operations used in equality context, return true
-                // The actual comparison is handled by the equals operator
-                Ok(Bool::from_bool(true))
+                    z3_args.iter().map(|d| d as &dyn z3::ast::Ast).collect();
+                Ok(func_decl.apply(&ast_args))
             }
         }
     }
 
-    /// Helper: Convert Kleis expression to Z3 Int
+    /// Helper: Convert Kleis expression to Z3 Int (used by comparison operators)
     ///
     /// Handles arithmetic operations using Z3's integer theory.
     /// Also handles identity elements like zero, one, e.
     /// Falls back to uninterpreted functions for unknown operations.
     #[cfg(feature = "axiom-verification")]
+    #[allow(dead_code)] // Used internally but clippy doesn't see it
     fn kleis_expr_to_z3_int(
         &mut self,
         expr: &Expression,
-        vars: &HashMap<String, Int>,
+        vars: &HashMap<String, Dynamic>,
     ) -> Result<Int, String> {
         match expr {
             Expression::Object(name) => {
                 // 1. Check quantified variables first
                 if let Some(var) = vars.get(name) {
-                    return Ok(var.clone());
+                    // Convert Dynamic to Int
+                    return var
+                        .as_int()
+                        .ok_or_else(|| format!("Variable {} is not an Int", name));
                 }
 
                 // 2. Check identity elements (zero, one, e, etc.)
                 if let Some(identity) = self.identity_elements.get(name) {
-                    return Ok(identity.clone());
+                    // Convert Dynamic to Int
+                    return identity
+                        .as_int()
+                        .ok_or_else(|| format!("Identity element {} is not an Int", name));
                 }
 
                 // 3. Not found
@@ -754,28 +945,53 @@ impl<'r> AxiomVerifier<'r> {
         &mut self,
         _quantifier: &QuantifierKind,
         variables: &[QuantifiedVar],
-        where_clause: Option<&Box<Expression>>,
+        where_clause: Option<&Expression>,
         body: &Expression,
-        vars: &HashMap<String, Int>,
+        vars: &HashMap<String, Dynamic>,
     ) -> Result<Bool, String> {
         // Create fresh Z3 variables for quantified variables
         let mut new_vars = vars.clone();
 
         for var in variables {
-            let z3_var = Int::fresh_const(&var.name);
+            // Create variable based on type annotation
+            let z3_var: Dynamic = if let Some(type_annotation) = &var.type_annotation {
+                // Parse type annotation to determine Z3 type
+                match type_annotation.as_str() {
+                    "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
+                    "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
+                    "ℤ" | "Int" | "Z" => Int::fresh_const(&var.name).into(),
+                    _ => {
+                        // Default to Int for unknown types (M, N, etc.)
+                        Int::fresh_const(&var.name).into()
+                    }
+                }
+            } else {
+                // No type annotation, default to Int
+                Int::fresh_const(&var.name).into()
+            };
             new_vars.insert(var.name.clone(), z3_var);
         }
 
         // If there's a where clause, translate as: where_clause ⟹ body
         let body_z3 = if let Some(condition) = where_clause {
-            let condition_z3 = self.kleis_to_z3(condition, &new_vars)?;
-            let body_z3 = self.kleis_to_z3(body, &new_vars)?;
+            let condition_dyn = self.kleis_to_z3_dynamic(condition, &new_vars)?;
+            let condition_z3 = condition_dyn
+                .as_bool()
+                .ok_or_else(|| "Where clause must be boolean".to_string())?;
+
+            let body_dyn = self.kleis_to_z3_dynamic(body, &new_vars)?;
+            let body_z3 = body_dyn
+                .as_bool()
+                .ok_or_else(|| "Quantifier body must be boolean".to_string())?;
 
             // where_clause ⟹ body
             condition_z3.implies(&body_z3)
         } else {
             // No where clause, just translate body
-            self.kleis_to_z3(body, &new_vars)?
+            let body_dyn = self.kleis_to_z3_dynamic(body, &new_vars)?;
+            body_dyn
+                .as_bool()
+                .ok_or_else(|| "Quantifier body must be boolean".to_string())?
         };
 
         // For both universal and existential quantifiers,

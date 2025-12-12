@@ -23,6 +23,12 @@ pub struct PlaceholderInfo {
     pub marker: String,
 }
 
+impl Default for ConversionContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConversionContext {
     pub fn new() -> Self {
         ConversionContext {
@@ -31,6 +37,8 @@ impl ConversionContext {
     }
 
     /// Generate unique marker for a placeholder
+    /// Reserved for future placeholder tracking
+    #[allow(dead_code)]
     fn create_marker(&mut self, id: usize) -> String {
         format!("⟨⟨PH{}⟩⟩", id)
     }

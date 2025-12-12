@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 // Tests for stdlib pattern matching functions
 //
 // This file tests that the functions defined in stdlib/types.kleis

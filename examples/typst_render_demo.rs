@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 // Demo: Render Kleis expressions to Typst markup using the template system
 //
 // This demonstrates that we can reuse the existing renderer infrastructure

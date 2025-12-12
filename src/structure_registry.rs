@@ -1,31 +1,31 @@
-///! Structure Registry for parametric structure types
-///!
-///! Maps structure definitions to enable generic handling of structure types
-///! in type signatures and expressions.
-///!
-///! This complements DataTypeRegistry (for `data` types) by handling
-///! structure types (defined with `structure` keyword).
-///!
-///! Example:
-///! ```ignore
-///! // In stdlib/matrices.kleis:
-///! structure Matrix(m: Nat, n: Nat, T) {
-///!     operation transpose : Matrix(n, m, T)
-///! }
-///!
-///! // In user code:
-///! structure Tensor(i: Nat, j: Nat, k: Nat, T) {
-///!     operation contract : Tensor(i, j, k, T) → Scalar
-///! }
-///!
-///! // StructureRegistry allows these to be looked up generically:
-///! let mut registry = StructureRegistry::new();
-///! registry.register(matrix_def)?;
-///! registry.register(tensor_def)?;
-///!
-///! let matrix_def = registry.get("Matrix").unwrap();
-///! assert_eq!(matrix_def.type_params.len(), 3); // m, n, T
-///! ```
+//! Structure Registry for parametric structure types
+//!
+//! Maps structure definitions to enable generic handling of structure types
+//! in type signatures and expressions.
+//!
+//! This complements DataTypeRegistry (for `data` types) by handling
+//! structure types (defined with `structure` keyword).
+//!
+//! Example:
+//! ```ignore
+//! // In stdlib/matrices.kleis:
+//! structure Matrix(m: Nat, n: Nat, T) {
+//!     operation transpose : Matrix(n, m, T)
+//! }
+//!
+//! // In user code:
+//! structure Tensor(i: Nat, j: Nat, k: Nat, T) {
+//!     operation contract : Tensor(i, j, k, T) → Scalar
+//! }
+//!
+//! // StructureRegistry allows these to be looked up generically:
+//! let mut registry = StructureRegistry::new();
+//! registry.register(matrix_def)?;
+//! registry.register(tensor_def)?;
+//!
+//! let matrix_def = registry.get("Matrix").unwrap();
+//! assert_eq!(matrix_def.type_params.len(), 3); // m, n, T
+//! ```
 use crate::kleis_ast::StructureDef;
 use std::collections::HashMap;
 
@@ -214,7 +214,7 @@ impl StructureRegistry {
     pub fn register_implements(&mut self, impl_def: crate::kleis_ast::ImplementsDef) {
         self.implements
             .entry(impl_def.structure_name.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(impl_def);
     }
 

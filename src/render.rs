@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use std::collections::HashMap;
 
 // === Symbolic Model ===
@@ -148,6 +150,7 @@ fn m2(a11: Expression, a12: Expression, a21: Expression, a22: Expression) -> Exp
     )
 }
 #[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
 fn m3(
     a11: Expression,
     a12: Expression,
@@ -458,6 +461,7 @@ fn pmatrix2(a11: Expression, a12: Expression, a21: Expression, a22: Expression) 
     )
 }
 #[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
 fn pmatrix3(
     a11: Expression,
     a12: Expression,
@@ -552,6 +556,7 @@ fn vmatrix2(a11: Expression, a12: Expression, a21: Expression, a22: Expression) 
     )
 }
 #[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
 fn vmatrix3(
     a11: Expression,
     a12: Expression,
@@ -814,7 +819,7 @@ fn render_expression_internal(
 
             // For Piecewise: extract number of cases and handle List format
             let is_piecewise = name == "Piecewise";
-            let piecewise_cases = if is_piecewise && args.len() >= 1 {
+            let piecewise_cases = if is_piecewise && !args.is_empty() {
                 match &args[0] {
                     Expression::Const(s) => s.parse::<usize>().unwrap_or(2),
                     _ => 2,
@@ -940,7 +945,7 @@ fn render_expression_internal(
                 let joined = rendered_args.join(", ");
                 result = result.replace("{args}", &joined);
             }
-            if let Some(first) = rendered_args.get(0) {
+            if let Some(first) = rendered_args.first() {
                 result = result.replace("{arg}", first);
                 result = result.replace("{left}", first);
                 result = result.replace("{field}", first);
@@ -1506,7 +1511,7 @@ fn infer_matrix_dimensions(total: usize) -> (usize, usize) {
     // Try common rectangular dimensions
     // Check if it's a nice factorization
     for rows in 1..=10 {
-        if total % rows == 0 {
+        if total.is_multiple_of(rows) {
             let cols = total / rows;
             if cols <= 10 {
                 return (rows, cols);
@@ -4323,9 +4328,9 @@ mod tests {
         // ⟨ψ| Ĥ |ψ⟩
         let ctx = build_default_context();
         let psi = o("\\psi");
-        let hamiltonian = o("\\hat{H}");
-        let bra_psi = bra(psi.clone());
-        let ket_psi = ket(psi);
+        let _hamiltonian = o("\\hat{H}");
+        let _bra_psi = bra(psi.clone());
+        let _ket_psi = ket(psi);
 
         // Build as: bra * operator * ket (using inner for now)
         // Full version would be: ⟨ψ| Ĥ |ψ⟩
@@ -5044,6 +5049,8 @@ mod tests {
 }
 
 // === Gallery collector ===
+#[allow(clippy::vec_init_then_push)]
+#[allow(clippy::items_after_test_module)]
 pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     let ctx = build_default_context();
     let mut out: Vec<(String, String)> = Vec::new();

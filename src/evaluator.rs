@@ -1,33 +1,33 @@
-///! Symbolic Evaluator for Kleis (Wire 3: Self-Hosting)
-///!
-///! This module provides symbolic evaluation of Kleis expressions, including
-///! user-defined functions (`define` statements).
-///!
-///! **Key Concept**: Kleis is a symbolic math system, not a computational interpreter.
-///! "Evaluation" means symbolic manipulation: substituting variables and simplifying expressions.
-///!
-///! ## Capabilities
-///!
-///! 1. **Function Storage**: Store function definitions as closures
-///! 2. **Function Application**: Apply functions via symbolic substitution
-///! 3. **Pattern Matching**: Delegate to PatternMatcher for match expressions
-///!
-///! ## Examples
-///!
-///! ```ignore
-///! let mut eval = Evaluator::new();
-///!
-///! // Load function: define double(x) = x + x
-///! eval.load_function("double", vec!["x"],
-///!     Expression::Operation {
-///!         name: "plus",
-///!         args: vec![Object("x"), Object("x")]
-///!     });
-///!
-///! // Apply: double(5)
-///! let result = eval.apply_function("double", vec![Const("5")])?;
-///! // result = plus(5, 5) (symbolic, not computed to 10)
-///! ```
+//! Symbolic Evaluator for Kleis (Wire 3: Self-Hosting)
+//!
+//! This module provides symbolic evaluation of Kleis expressions, including
+//! user-defined functions (`define` statements).
+//!
+//! **Key Concept**: Kleis is a symbolic math system, not a computational interpreter.
+//! "Evaluation" means symbolic manipulation: substituting variables and simplifying expressions.
+//!
+//! ## Capabilities
+//!
+//! 1. **Function Storage**: Store function definitions as closures
+//! 2. **Function Application**: Apply functions via symbolic substitution
+//! 3. **Pattern Matching**: Delegate to PatternMatcher for match expressions
+//!
+//! ## Examples
+//!
+//! ```ignore
+//! let mut eval = Evaluator::new();
+//!
+//! // Load function: define double(x) = x + x
+//! eval.load_function("double", vec!["x"],
+//!     Expression::Operation {
+//!         name: "plus",
+//!         args: vec![Object("x"), Object("x")]
+//!     });
+//!
+//! // Apply: double(5)
+//! let result = eval.apply_function("double", vec![Const("5")])?;
+//! // result = plus(5, 5) (symbolic, not computed to 10)
+//! ```
 use crate::ast::Expression;
 use crate::kleis_ast::{FunctionDef, Program, TopLevel};
 use crate::pattern_matcher::PatternMatcher;
@@ -52,6 +52,8 @@ pub struct Evaluator {
     functions: HashMap<String, Closure>,
 
     /// Variable bindings (for evaluation context)
+    /// Reserved for future use in evaluation context
+    #[allow(dead_code)]
     bindings: HashMap<String, Expression>,
 
     /// Pattern matcher for match expressions
@@ -139,6 +141,7 @@ impl Evaluator {
     ///
     /// Recursively traverses the expression tree and replaces Object(name)
     /// with the bound value from the substitution map.
+    #[allow(clippy::only_used_in_recursion)]
     fn substitute(&self, expr: &Expression, subst: &HashMap<String, Expression>) -> Expression {
         match expr {
             Expression::Object(name) => {

@@ -1,17 +1,17 @@
-///! Type Context Builder - Connects parsed structures to type inference
-///!
-///! This module builds a TypeContext from parsed Kleis programs:
-///! 1. Loads structure definitions (abstract operations)
-///! 2. Loads implements blocks (concrete bindings)
-///! 3. Builds operation registry
-///! 4. Provides query interface for type checking
-///!
-///! Example:
-///! ```
-///! let program = parse_kleis_program("structure Numeric(N) { ... }")?;
-///! let ctx = TypeContextBuilder::from_program(program)?;
-///! ctx.supports_operation("abs", &Type::Real); // true
-///! ```
+//! Type Context Builder - Connects parsed structures to type inference
+//!
+//! This module builds a TypeContext from parsed Kleis programs:
+//! 1. Loads structure definitions (abstract operations)
+//! 2. Loads implements blocks (concrete bindings)
+//! 3. Builds operation registry
+//! 4. Provides query interface for type checking
+//!
+//! Example:
+//! ```ignore
+//! let program = parse_kleis_program("structure Numeric(N) { ... }")?;
+//! let ctx = TypeContextBuilder::from_program(program)?;
+//! ctx.supports_operation("abs", &Type::Real); // true
+//! ```
 use crate::kleis_ast::{
     ImplMember, ImplementsDef, Program, StructureDef, StructureMember, TopLevel, TypeExpr,
 };
@@ -39,6 +39,12 @@ pub struct OperationRegistry {
     type_to_structures: HashMap<String, Vec<String>>,
 }
 
+impl Default for OperationRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OperationRegistry {
     pub fn new() -> Self {
         OperationRegistry {
@@ -56,7 +62,7 @@ impl OperationRegistry {
 
         self.structure_to_operations
             .entry(structure_name.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(operation_name.to_string());
     }
 
@@ -71,7 +77,7 @@ impl OperationRegistry {
         // Record that this type implements this structure
         self.type_to_structures
             .entry(type_name.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(structure_name.to_string());
 
         // Record the concrete implementation
@@ -135,7 +141,7 @@ impl OperationRegistry {
         for (structure, ops) in other.structure_to_operations {
             self.structure_to_operations
                 .entry(structure)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .extend(ops);
         }
 
@@ -148,7 +154,7 @@ impl OperationRegistry {
         for (ty, structures) in other.type_to_structures {
             self.type_to_structures
                 .entry(ty)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .extend(structures);
         }
 
@@ -186,6 +192,7 @@ impl TypeContextBuilder {
     pub fn merge(&mut self, other: TypeContextBuilder) -> Result<(), String> {
         // Merge structures (check for conflicts)
         for (name, structure) in other.structures {
+            #[allow(clippy::map_entry)]
             if self.structures.contains_key(&name) {
                 // Structure already exists - this is OK if they're identical
                 // For now, we'll just warn and skip
@@ -351,6 +358,7 @@ impl TypeContextBuilder {
         Ok(())
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn type_expr_to_string(&self, type_expr: &TypeExpr) -> String {
         match type_expr {
             TypeExpr::Named(s) => s.clone(),
@@ -429,6 +437,7 @@ impl TypeContextBuilder {
     }
 
     /// Helper: Convert Type to type name for registry lookup
+    #[allow(clippy::only_used_in_recursion)]
     fn type_to_name(&self, ty: &Type) -> Option<String> {
         match ty {
             // Bootstrap types
@@ -568,11 +577,11 @@ impl TypeContextBuilder {
 
                     // GENERIC validation: Check registry for structure implementation
                     // Works for built-in types (ℝ, Matrix) AND user-defined types!
-                    self.validate_structure_implementation(&structure_name, op_name, arg_types)?;
+                    self.validate_structure_implementation(structure_name, op_name, arg_types)?;
 
                     // Then delegate to SignatureInterpreter for type inference
                     let structure = self
-                        .get_structure(&structure_name)
+                        .get_structure(structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
                     let structure_registry = self.build_structure_registry();
@@ -585,7 +594,7 @@ impl TypeContextBuilder {
                     // Operation found in registry - try SignatureInterpreter as fallback!
                     // This is the ADR-016 ideal: Just interpret the signature from the structure
                     let structure = self
-                        .get_structure(&structure_name)
+                        .get_structure(structure_name)
                         .ok_or_else(|| format!("Structure '{}' not found", structure_name))?;
 
                     let structure_registry = self.build_structure_registry();

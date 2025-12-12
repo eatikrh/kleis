@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 /// Z3 and E-Unification (Equational Unification)
 ///
 /// Testing if Z3 can help with unification modulo equational theories.

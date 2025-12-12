@@ -1,13 +1,13 @@
-///! Type Checker - Connects Type Context Registry to HM Inference
-///!
-///! This module bridges:
-///! - TypeContextBuilder (knows which types support which operations)
-///! - TypeInference (Hindley-Milner algorithm)
-///!
-///! Together they provide:
-///! - Type checking with user-defined types
-///! - Helpful error messages
-///! - Suggestions based on available operations
+//! Type Checker - Connects Type Context Registry to HM Inference
+//!
+//! This module bridges:
+//! - TypeContextBuilder (knows which types support which operations)
+//! - TypeInference (Hindley-Milner algorithm)
+//!
+//! Together they provide:
+//! - Type checking with user-defined types
+//! - Helpful error messages
+//! - Suggestions based on available operations
 use crate::ast::Expression;
 use crate::kleis_ast::TypeExpr;
 use crate::type_context::TypeContextBuilder;
@@ -409,7 +409,7 @@ mod tests {
         checker.bind("x", &TypeExpr::Named("ℝ".to_string()));
 
         // Check: abs(x)
-        let expr = parse_kleis("abs(x)").unwrap();
+        let _expr = parse_kleis("abs(x)").unwrap();
 
         // Query support (doesn't actually type check yet, just queries registry)
         assert!(checker.type_supports_operation("ℝ", "abs"));

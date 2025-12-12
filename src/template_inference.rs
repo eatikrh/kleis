@@ -98,7 +98,7 @@ fn try_infer_logical_implication(expr: &Expression) -> Option<Expression> {
 
     // Look for \Rightarrow, \Leftarrow, or \Leftrightarrow in the chain
     for i in 1..terms.len() - 1 {
-        let (op_name, arrow_symbol) = match &terms[i] {
+        let (op_name, _arrow_symbol) = match &terms[i] {
             Expression::Object(s) if s == "\\Rightarrow" => ("implies", "\\Rightarrow"),
             Expression::Object(s) if s == "\\Leftarrow" => ("implied_by", "\\Leftarrow"),
             Expression::Object(s) if s == "\\Leftrightarrow" => ("iff", "\\Leftrightarrow"),

@@ -2169,12 +2169,9 @@ mod tests {
         let result = parse_latex("F(x, y)");
         assert!(result.is_ok());
         let expr = result.unwrap();
-        match expr {
-            Expression::Operation { name, args } => {
-                // Should detect as function call or implicit multiply with group
-                assert!(args.len() >= 2);
-            }
-            _ => {}
+        if let Expression::Operation { name: _, args } = expr {
+            // Should detect as function call or implicit multiply with group
+            assert!(args.len() >= 2);
         }
     }
 
