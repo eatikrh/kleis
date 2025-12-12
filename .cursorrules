@@ -37,6 +37,115 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 - Ask for clarification when uncertain
 - Be respectful of the user's workflow and preferences
 
+## Refactoring and Code Quality Rules
+
+**CRITICAL: No shortcuts, no technical debt, no half-measures.**
+
+### Rule: Actually Use What You Build
+
+**When implementing abstractions or refactoring:**
+
+❌ **WRONG - Adding alongside old code:**
+```rust
+struct MyModule {
+    old_impl: OldWay,      // Keep old code
+    new_backend: NewWay,   // Add new abstraction alongside
+}
+// Result: Duplication, unclear which is used, technical debt
+```
+
+✅ **CORRECT - Replace, don't duplicate:**
+```rust
+struct MyModule {
+    backend: NewWay,       // Only the new abstraction
+}
+// Old code DELETED, not commented out
+// All tests verify the new way works
+```
+
+**Key Principles:**
+
+1. **Test the abstraction immediately** - Don't just build it, USE it
+2. **Remove old code** - Delete it entirely, don't leave it "just in case"
+3. **Run full test suite** - Not just unit tests, run ALL tests (cargo test, not --lib)
+4. **Verify through tests** - Tests must exercise the new code path
+
+**Example from Session:**
+- Built Z3Backend abstraction
+- Initially just added it alongside old Solver
+- User caught it: "You didn't actually switch to using it!"
+- Fixed: Removed 642 lines of duplicate code, all tests through abstraction
+
+### Rule: Remove Dead Code Systematically
+
+**When refactoring, identify what's actually used:**
+
+**Process:**
+```
+1. Comment out old code (to see what breaks)
+2. Run cargo check - see compilation errors
+3. Fix each error by using new abstraction
+4. Verify with cargo test (ALL tests!)
+5. Delete old code completely (don't leave commented out)
+6. Run quality gates (fmt, clippy, test)
+```
+
+**Don't guess - Let the compiler tell you:**
+- Compiler errors show exactly what's still used
+- Dead code warnings show what can be deleted
+- Don't leave "just in case" code behind
+
+**Why this matters:**
+- Technical debt compounds over time
+- Unclear which code path is active
+- Future maintainers confused
+- Tests might not cover new code
+
+### Rule: Think Through Architecture
+
+**Before implementing, ask:**
+
+1. **"What if the feature is disabled?"**
+   - Check `#[cfg(not(feature = "..."))]` case
+   - Ensure struct fields are properly feature-gated
+   
+2. **"What state belongs where?"**
+   - Backend state vs. high-level state
+   - Who owns what data?
+   
+3. **"Can this be misused?"**
+   - Abstraction boundaries clear?
+   - Types prevent invalid usage?
+
+**Example from Session:**
+- User asked: "What happens if we don't have a backend?"
+- Made me realize declared_ops should be in backend, not verifier
+- Proper ownership: backend tracks its own state
+
+### Rule: Quality Gates Are Not Optional
+
+**NEVER skip quality checks to "save time":**
+
+```bash
+# ALWAYS run all three:
+cargo fmt --all
+cargo clippy --all-targets --all-features  
+cargo test  # NOT cargo test --lib, run ALL tests!
+```
+
+**Why each matters:**
+- **fmt:** Pre-push hook will reject unformatted code
+- **clippy:** Catches bugs and anti-patterns
+- **test:** Proves your changes actually work
+
+**If you skip them:**
+- GitHub CI will fail (wastes time)
+- Pre-push hook blocks you (embarrassing)
+- Bugs slip through (costly)
+
+**The Architect's Motto:**
+"No shortcuts for getting a clean build or saving time. Don't make tests lenient. If you're about to change or delete tests, ask first."
+
 ## Website Stats Update Rule
 
 **CRITICAL: Update kleis.io landing page stats at the start of each session.**
