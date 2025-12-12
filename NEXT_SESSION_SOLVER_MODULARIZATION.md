@@ -522,6 +522,26 @@ path = "~/.kleis/plugins/my_op.so"
 - [ ] Review MCP specification (optional)
 - [ ] Review serde TOML parsing examples (optional)
 
+## 🔍 CRITICAL: Reference Z3 Source Code
+
+**⚠️ IMPORTANT: Read the code at `/Users/eatik_1/Documents/git/cee/Z3` while modularizing the solver**
+
+**Why this is critical:**
+- Z3 source has real-world examples of proper API usage
+- `/Users/eatik_1/Documents/git/cee/Z3/z3.rs/z3/tests/lib.rs` - Complete test examples
+- Shows `RecFuncDecl` usage, quantifier patterns, model evaluation
+- We just learned: RecFuncDecl (not FuncDecl) is correct for defined functions
+- More discoveries likely as we refactor!
+
+**Useful files:**
+- `Z3/z3.rs/z3/tests/lib.rs` - Rust API examples
+- `Z3/z3.rs/z3/src/` - Implementation details
+- `Z3/z3/doc/` - Z3 documentation
+- `Z3/z3/examples/` - C++/Python examples for reference
+
+**Today's lesson:** We would have avoided test failures if we'd read the Z3 tests first!  
+**Next session:** Reference Z3 source code as we design the abstraction layer.
+
 ---
 
 ## 🎉 Current State (End of This Session)
