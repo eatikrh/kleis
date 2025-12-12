@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn test_is_available() {
         use super::discovery;
-        
+
         #[cfg(feature = "axiom-verification")]
         assert!(discovery::is_available("Z3"));
 
