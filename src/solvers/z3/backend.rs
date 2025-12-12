@@ -315,6 +315,60 @@ impl<'r> Z3Backend<'r> {
             assertion_count: 0, // TODO: Track assertions
         }
     }
+
+    // TODO: These methods are temporary to support AxiomVerifier's axiom loading
+    // Should be refactored when axiom loading is moved to backend properly
+
+    /// Load an identity element (nullary operation like zero, one, e)
+    pub fn load_identity_element(&mut self, name: &str) {
+        if !self.identity_elements.contains_key(name) {
+            let z3_const: Dynamic = Int::fresh_const(name).into();
+            self.identity_elements.insert(name.to_string(), z3_const);
+            println!("   📌 Loaded identity element: {}", name);
+        }
+    }
+
+    /// Translate Kleis expression to Z3 and assert it (for axiom loading)
+    pub fn assert_kleis_expression(&mut self, expr: &Expression) -> Result<(), String> {
+        let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
+        let z3_bool = z3_expr
+            .as_bool()
+            .ok_or_else(|| "Expression must be boolean for assertion".to_string())?;
+        self.solver.assert(&z3_bool);
+        Ok(())
+    }
+
+    /// Declare a function and assert its definition (for function loading)
+    pub fn declare_and_define_function(
+        &mut self,
+        name: &str,
+        params: &[String],
+        body: &Expression,
+    ) -> Result<(), String> {
+        // Create fresh Z3 variables for parameters
+        let mut z3_vars = HashMap::new();
+        let mut param_ints = Vec::new();
+
+        for param in params {
+            let z3_var = Int::fresh_const(param);
+            param_ints.push(z3_var.clone());
+            z3_vars.insert(param.clone(), z3_var.into());
+        }
+
+        // Translate function body
+        let body_z3 = self.kleis_to_z3(body, &z3_vars)?;
+
+        // Declare function
+        let func_decl = self.declare_uninterpreted(name, params.len());
+
+        // Create application and assert definition
+        let ast_args: Vec<&dyn Ast> = param_ints.iter().map(|p| p as &dyn Ast).collect();
+        let func_app = func_decl.apply(&ast_args);
+        let definition = func_app.eq(&body_z3);
+        self.solver.assert(&definition);
+
+        Ok(())
+    }
 }
 
 impl<'r> SolverBackend for Z3Backend<'r> {
