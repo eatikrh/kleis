@@ -477,7 +477,11 @@ impl<'r> AxiomVerifier<'r> {
     ///
     /// Operations not recognized as built-ins are treated as uninterpreted functions.
     #[cfg(feature = "axiom-verification")]
-    fn kleis_to_z3(&mut self, expr: &Expression, vars: &HashMap<String, Int>) -> Result<Bool, String> {
+    fn kleis_to_z3(
+        &mut self,
+        expr: &Expression,
+        vars: &HashMap<String, Int>,
+    ) -> Result<Bool, String> {
         match expr {
             // Variables and identity elements: look up in environment
             Expression::Object(name) => {
