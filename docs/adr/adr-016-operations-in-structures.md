@@ -469,7 +469,7 @@ structure PurchaseOrder {
 
 - [stdlib/prelude.kleis](../../stdlib/prelude.kleis) - Existing pattern
 - [ADR-015](adr-015-text-as-source-of-truth.md) - Text representation
-- [TYPE_CHECKING_NEXT_STEPS.md](type-system/TYPE_CHECKING_NEXT_STEPS.md) - Updated roadmap
+- [TYPE_CHECKING_NEXT_STEPS.md](../archive/type-system-roadmaps/TYPE_CHECKING_NEXT_STEPS.md) - Updated roadmap
 
 ---
 

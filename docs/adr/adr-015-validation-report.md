@@ -330,8 +330,7 @@ Expected output: All tests pass ✅
 ## References
 
 - [ADR-015](adr-015-text-as-source-of-truth.md) - Full design document
-- [Test Source](../src/bin/test_adr015_poc.rs) - Executable test code
-- [Implementation Plan](IMPLEMENTATION_NEXT_STEPS.md) - Next steps
+- [Test Source](../../src/bin/test_adr015_poc.rs) - Executable test code
 
 ---
 

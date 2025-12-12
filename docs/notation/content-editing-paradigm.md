@@ -2,10 +2,10 @@
 
 **Date:** December 6, 2024  
 **Status:** Design Discussion (led to ADR-015)  
-**Formal Decision:** [ADR-015: Text as Source of Truth](adr-015-text-as-source-of-truth.md)  
+**Formal Decision:** [ADR-015: Text as Source of Truth](../adr/adr-015-text-as-source-of-truth.md)  
 **Related:** Grammar v0.3, Equation Editor, Notebook System
 
-> **Note:** This document captures the design discussion. For the formal decisions, see [ADR-015](adr-015-text-as-source-of-truth.md).
+> **Note:** This document captures the design discussion. For the formal decisions, see [ADR-015](../adr/adr-015-text-as-source-of-truth.md).
 
 ---
 
@@ -196,7 +196,7 @@ The visual editor becomes a **type annotation tool**:
 
 ## Design Decisions → See ADR-015
 
-**The formal decisions are documented in [ADR-015: Text as Source of Truth](adr-015-text-as-source-of-truth.md).**
+**The formal decisions are documented in [ADR-015: Text as Source of Truth](../adr/adr-015-text-as-source-of-truth.md).**
 
 This section captures the design discussion that led to those decisions.
 
