@@ -16,6 +16,7 @@
 use crate::ast::{Expression, QuantifiedVar, QuantifierKind};
 use crate::solvers::backend::{SolverBackend, SolverStats, VerificationResult};
 use crate::solvers::capabilities::SolverCapabilities;
+use crate::solvers::result_converter::ResultConverter;
 use crate::solvers::z3::converter::Z3ResultConverter;
 use crate::solvers::z3::translators::{arithmetic, boolean, comparison};
 use crate::structure_registry::StructureRegistry;
@@ -358,14 +359,114 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         Ok(result)
     }
 
-    fn evaluate(&mut self, _expr: &Expression) -> Result<Expression, String> {
-        // TODO: Implement evaluation using Z3's model evaluation
-        Err("evaluate() not yet implemented for Z3Backend".to_string())
+    fn evaluate(&mut self, expr: &Expression) -> Result<Expression, String> {
+        // Translate Kleis expression to Z3
+        let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
+        
+        // For evaluation, we need a concrete value
+        // Use a temporary solver to check satisfiability and get a model
+        let temp_solver = Solver::new();
+        
+        // For constant expressions, we can try to extract the value directly
+        // For symbolic expressions, we need a model
+        
+        // Try to get concrete value directly
+        if let Some(int_val) = z3_expr.as_int() {
+            if let Some(value) = int_val.as_i64() {
+                return Ok(Expression::Const(value.to_string()));
+            }
+        }
+        
+        if let Some(bool_val) = z3_expr.as_bool() {
+            if let Some(value) = bool_val.as_bool() {
+                return Ok(Expression::Const(value.to_string()));
+            }
+        }
+        
+        if let Some(real_val) = z3_expr.as_real() {
+            if let Some((num, den)) = real_val.as_rational() {
+                if den == 1 {
+                    return Ok(Expression::Const(num.to_string()));
+                } else {
+                    let decimal = num as f64 / den as f64;
+                    return Ok(Expression::Const(decimal.to_string()));
+                }
+            }
+        }
+        
+        // For symbolic expressions, try to get a satisfying model
+        temp_solver.push();
+        
+        // Create a fresh variable and assert it equals our expression
+        let result_var = Int::fresh_const("eval_result");
+        
+        // Try to cast z3_expr to Int and assert equality
+        if let Some(int_expr) = z3_expr.as_int() {
+            temp_solver.assert(&result_var.eq(&int_expr));
+            
+            match temp_solver.check() {
+                SatResult::Sat => {
+                    if let Some(model) = temp_solver.get_model() {
+                        if let Some(evaluated) = model.eval(&result_var, true) {
+                            // Convert Z3 result to Kleis Expression using converter
+                            let z3_dynamic: Dynamic = evaluated.into();
+                            return self.converter.to_expression(&z3_dynamic);
+                        }
+                    }
+                }
+                _ => return Err("Cannot evaluate expression - no satisfying assignment".to_string()),
+            }
+        }
+        
+        temp_solver.pop(1);
+        
+        // Fallback: return string representation
+        Ok(Expression::Const(z3_expr.to_string()))
     }
 
-    fn simplify(&mut self, _expr: &Expression) -> Result<Expression, String> {
-        // TODO: Implement simplification using Z3's simplify()
-        Err("simplify() not yet implemented for Z3Backend".to_string())
+    fn simplify(&mut self, expr: &Expression) -> Result<Expression, String> {
+        // Translate Kleis expression to Z3
+        let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
+        
+        // Use Z3's simplify method
+        let simplified = z3_expr.simplify();
+        
+        // Convert simplified Z3 expression back to Kleis Expression
+        // CRITICAL: This maintains the abstraction boundary!
+        
+        // Check if it's a concrete value we can extract
+        if let Some(int_val) = simplified.as_int() {
+            if let Some(value) = int_val.as_i64() {
+                return Ok(Expression::Const(value.to_string()));
+            }
+            // Large integer or symbolic
+            return Ok(Expression::Const(int_val.to_string()));
+        }
+        
+        if let Some(bool_val) = simplified.as_bool() {
+            if let Some(value) = bool_val.as_bool() {
+                return Ok(Expression::Const(value.to_string()));
+            }
+            // Symbolic boolean
+            return Ok(Expression::Const(bool_val.to_string()));
+        }
+        
+        if let Some(real_val) = simplified.as_real() {
+            if let Some((num, den)) = real_val.as_rational() {
+                if den == 1 {
+                    return Ok(Expression::Const(num.to_string()));
+                } else {
+                    let decimal = num as f64 / den as f64;
+                    return Ok(Expression::Const(decimal.to_string()));
+                }
+            }
+            return Ok(Expression::Const(real_val.to_string()));
+        }
+        
+        // For complex expressions that can't be simplified to constants,
+        // we need to reconstruct the Kleis AST from Z3's simplified form
+        // For now, return string representation (TODO: proper AST reconstruction)
+        Ok(Expression::Const(simplified.to_string()))
     }
 
     fn are_equivalent(&mut self, expr1: &Expression, expr2: &Expression) -> Result<bool, String> {
@@ -459,6 +560,68 @@ mod tests {
         // Should not panic
         backend.push();
         backend.pop(1);
+    }
+
+    #[test]
+    fn test_evaluate_returns_kleis_ast() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+        
+        // Simple arithmetic: 2 + 3
+        let expr = Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Const("2".to_string()),
+                Expression::Const("3".to_string()),
+            ],
+        };
+        
+        let result = backend.evaluate(&expr).unwrap();
+        
+        // Result MUST be Kleis Expression, not Z3 type!
+        match result {
+            Expression::Const(s) => {
+                assert_eq!(s, "5", "2 + 3 should evaluate to 5");
+            }
+            _ => panic!("Expected Expression::Const, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_simplify_returns_kleis_ast() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+        
+        // Expression: x + 0 (should simplify to x in ideal case, but at minimum returns Expression)
+        let expr = Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Const("42".to_string()),
+                Expression::Const("0".to_string()),
+            ],
+        };
+        
+        let result = backend.simplify(&expr).unwrap();
+        
+        // Result MUST be Kleis Expression, not Z3 type!
+        match result {
+            Expression::Const(s) => {
+                assert_eq!(s, "42", "42 + 0 should simplify to 42");
+            }
+            _ => panic!("Expected Expression::Const, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_evaluate_concrete_constant() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+        
+        // Already a constant
+        let expr = Expression::Const("123".to_string());
+        let result = backend.evaluate(&expr).unwrap();
+        
+        assert_eq!(result, Expression::Const("123".to_string()));
     }
 }
 
