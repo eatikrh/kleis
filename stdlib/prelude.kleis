@@ -250,7 +250,7 @@ define sqrt2 : ℝ = 1.41421356237309504880  // √2
 // define i : ℂ = ... (TODO: needs complex literal syntax)
 
 // ============================================
-// BASIC ARITHMETIC OPERATIONS (for compatibility)
+// BASIC OPERATIONS (for compatibility)
 // ============================================
 
 // Basic arithmetic structure for backward compatibility with tests
@@ -261,12 +261,46 @@ structure Arithmetic(T) {
   operation divide : T → T → T
 }
 
+// Equality operations (work for any type)
+structure Equatable(T) {
+  operation equals : T → T → Bool
+  operation not_equals : T → T → Bool
+}
+
+// Ordering operations (only for types with order)
+structure Ordered(T) {
+  operation less_than : T → T → Bool
+  operation greater_than : T → T → Bool
+  operation less_equal : T → T → Bool
+  operation greater_equal : T → T → Bool
+}
+
 // Arithmetic for scalars
 implements Arithmetic(ℝ) {
   operation plus = builtin_add
   operation minus = builtin_sub
   operation times = builtin_mul
   operation divide = builtin_div
+}
+
+// Equality for scalars
+implements Equatable(ℝ) {
+  operation equals = builtin_eq
+  operation not_equals = builtin_neq
+}
+
+// Equality for matrices (component-wise)
+implements Equatable(Matrix(m, n, ℝ)) {
+  operation equals = builtin_matrix_eq
+  operation not_equals = builtin_matrix_neq
+}
+
+// Ordering only for scalars (not matrices!)
+implements Ordered(ℝ) {
+  operation less_than = builtin_lt
+  operation greater_than = builtin_gt
+  operation less_equal = builtin_le
+  operation greater_equal = builtin_ge
 }
 
 // ============================================
