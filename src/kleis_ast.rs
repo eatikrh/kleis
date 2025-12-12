@@ -79,6 +79,10 @@ pub enum StructureMember {
         structure_type: TypeExpr,      // e.g., AbelianGroup(R)
         members: Vec<StructureMember>, // Recursive!
     },
+
+    /// Function definition (v0.6): derived operations with default implementations
+    /// Example: define (-)(x, y) = x + negate(y)
+    FunctionDef(FunctionDef),
 }
 
 /// Operation declaration

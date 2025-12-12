@@ -13,7 +13,7 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 
 ### Core Concepts
 - **Syntax Reference:** `syntax.md` - Kleis language syntax
-- **Grammar:** `grammar/kleis_grammar_v03.md` - Formal grammar specification (v0.3)
+- **Grammar:** `grammar/kleis_grammar_v06.md` - Formal grammar specification (v0.6)
 - **Vision:** `kleis_vision_executable_math.md` - Future roadmap
 
 ### Ontology Theories
@@ -97,7 +97,7 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 - [`testing/`](testing/README.md) - Test data and testing strategies
 
 **Technical Specifications:**
-- [`grammar/`](grammar/) - Formal grammar specifications (EBNF, ANTLR4, v0.5)
+- [`grammar/`](grammar/) - Formal grammar specifications (EBNF, ANTLR4, v0.6)
 - [`type-system/`](type-system/) - Type inference and checking documentation
 - [`parser-implementation/`](parser-implementation/) - Parser compatibility analyses
 - [`notation/`](notation/) - Notation design documents and test cases
@@ -123,11 +123,12 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 
 ### Syntax & Grammar
 - **`syntax.md`** - Complete syntax reference
-- **`grammar/kleis_grammar_v03.md`** - EBNF grammar specification (v0.3)
-- **`grammar/kleis_grammar_v03.ebnf`** - Machine-readable EBNF (v0.3)
-- **`grammar/Kleis_v03.g4`** - ANTLR4 grammar (v0.3)
-- **`Kleis.g4`** - ANTLR4 grammar
-- **`kleis.pest`** - Pest parser grammar
+- **`grammar/kleis_grammar_v06.md`** - EBNF grammar specification (v0.6) ⭐ CURRENT
+- **`grammar/kleis_grammar_v06.ebnf`** - Machine-readable EBNF (v0.6)
+- **`grammar/Kleis_v06.g4`** - ANTLR4 grammar (v0.6)
+- **Historical:** `grammar/kleis_grammar_v05.md`, `kleis_grammar_v04.md`, `kleis_grammar_v03.md`
+- **`Kleis.g4`** - ANTLR4 grammar (legacy)
+- **`kleis.pest`** - Pest parser grammar (legacy)
 
 ### Expression System
 - **Types:** Const, Object, Operation
@@ -213,7 +214,7 @@ docs/
 │   ├── UNIVERSAL_CONSTANTS_FINDING.md  # Research discovery
 │   └── PHYSICAL_CONSTANTS_PALETTE.md   # Design document
 │
-├── grammar/                            # Grammar specifications (v0.5)
+├── grammar/                            # Grammar specifications (v0.6)
 ├── type-system/                        # Type system docs
 ├── guides/                             # Implementation guides
 │   ├── GITHUB_ACTIONS_SETUP.md         # CI/CD guide

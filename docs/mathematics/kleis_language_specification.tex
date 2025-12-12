@@ -6,7 +6,7 @@
 \geometry{margin=1in}
 
 \title{\textbf{Kleis Language Specification}\\
-Version 0.5 (Draft)}
+Version 0.6 (Updated December 2024)}
 \author{Kleis Project}
 \date{}
 
@@ -273,7 +273,21 @@ define id(x : T) = x
 define square(x) : ℝ = x * x
 \end{verbatim}
 
-Definitions inside structures extend the algebraic signature.
+Definitions inside structures extend the algebraic signature (Grammar v0.6):
+
+\begin{verbatim}
+structure Ring(R) {
+    operation (+) : R × R → R
+    operation negate : R → R
+    operation (×) : R × R → R
+    
+    // Derived operation with default implementation
+    operation (-) : R × R → R
+    define (-)(x, y) = x + negate(y)
+}
+\end{verbatim}
+
+This allows structures to provide default implementations of derived operations.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Expressions}

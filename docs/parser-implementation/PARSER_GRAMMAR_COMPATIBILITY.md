@@ -1,20 +1,20 @@
 # Kleis Parser vs Formal Grammar Compatibility
 
-**Date:** December 11, 2024 (Updated after Z3 fixes)  
-**Formal Grammar:** Kleis v0.5 (with pattern matching + quantifiers + logic + where clauses)  
+**Date:** December 12, 2024 (Updated for Grammar v0.6)  
+**Formal Grammar:** Kleis v0.6 (with functions in structures)  
 **Parser Implementation:** `src/kleis_parser.rs`  
-**Branch:** `feature/phase-3-where-clauses`
+**Branch:** `main`
 
 ---
 
 ## TL;DR
 
-✅ **Parser implements ~60% of formal grammar v0.5, with complete algebraic type system including inheritance and compositional algebra**
+✅ **Parser implements ~60% of formal grammar v0.6, with complete algebraic type system including inheritance and compositional algebra**
 
-**Coverage:** ~60% of formal grammar (+20% from Dec 10 sessions!)  
+**Coverage:** ~60% of formal grammar (+Functions in structures from Dec 12!)  
 **Purpose:** Complete algebraic type system with theorem proving, generic constraints, inheritance, and compositional structures  
-**Status:** Phase 1, 2, 3 COMPLETE! Where clauses, nested structures, extends, define operators, and Z3 integration all working  
-**Tests:** 426+ passing (421 library + 5 Z3 proof tests - ALL RIGOROUS ✅)
+**Status:** Phase 1, 2, 3 COMPLETE! Grammar v0.6 with functions in structures, where clauses, nested structures, extends, and Z3 integration all working  
+**Tests:** 600+ passing (421 unit + 200+ integration + NEW grammar v0.6 tests - ALL RIGOROUS ✅)
 
 ---
 
@@ -22,7 +22,7 @@
 
 ### ✅ Fully Supported
 
-| Feature | Grammar v0.5 | kleis_parser.rs | Status |
+| Feature | Grammar v0.6 | kleis_parser.rs | Status |
 |---------|--------------|-----------------|--------|
 | **Data types** | `data Bool = True \| False` | ✅ Complete | ✅ Works |
 | **Pattern matching** | `match x { True => 1 \| False => 0 }` | ✅ Complete | ✅ Works |
@@ -44,10 +44,11 @@
 | **Where clauses** | `implements Foo(T) where Bar(T)` | ✅ Complete | ✅ **NEW!** |
 | **Nested structures** | `structure additive : Group(R) { ... }` | ✅ Complete | ✅ **NEW!** |
 | **Extends keyword** | `structure Monoid(M) extends Semigroup(M)` | ✅ Complete | ✅ **NEW!** |
-| **Define with operators** | `define (-)(x, y) = x + negate(y)` | ✅ Complete | ✅ **NEW!** |
-| **Custom operators** | `operation (•) : S → S → S` | ✅ Complete | ✅ **NEW!** |
+| **Define with operators** | `define (-)(x, y) = x + negate(y)` | ✅ Complete | ✅ Works |
+| **Custom operators** | `operation (•) : S → S → S` | ✅ Complete | ✅ Works |
+| **Functions in structures** | `define (-)` inside structure | ✅ Complete | ✅ **v0.6!** |
 | **Comments** | `// line`, `/* block */` | ✅ Complete | ✅ Works |
-| **Axiom verification** | Z3 theorem proving | ✅ Working | ✅ **NEW!** |
+| **Axiom verification** | Z3 theorem proving | ✅ Working | ✅ Works |
 
 **Pattern Matching Features:**
 - Wildcard: `_`
@@ -78,7 +79,7 @@
 
 ### ❌ Not Yet Supported
 
-| Feature | Grammar v0.5 | Status | Priority |
+| Feature | Grammar v0.6 | Status | Priority |
 |---------|--------------|--------|----------|
 | **Prefix operators (general)** | `-x`, `∇f`, `√x` | ⚠️ Only `¬` | Medium |
 | **Postfix operators** | `n!`, `Aᵀ`, `A†` | ❌ Missing | Medium |
@@ -532,11 +533,11 @@ Used for:
 
 ---
 
-## Comparison with Grammar v0.5
+## Comparison with Grammar v0.6
 
 ### Core Expression Grammar
 
-**Formal grammar v0.5:**
+**Formal grammar v0.6:**
 ```ebnf
 expression
     ::= primary
@@ -946,7 +947,8 @@ This is **sufficient for:**
 
 ## Related Documents
 
-- **[Kleis Grammar v0.5](../grammar/kleis_grammar_v05.md)** - Complete formal specification
+- **[Kleis Grammar v0.6](../grammar/kleis_grammar_v06.md)** - Complete formal specification (CURRENT)
+- **[Kleis Grammar v0.5](../grammar/kleis_grammar_v05.md)** - Historical specification
 - **[Parser Status](KLEIS_PARSER_STATUS.md)** - Implementation details
 - **[ADR-007](../adr/adr-007-bootstrap-grammar.md)** - Bootstrap strategy (~30% → gradual expansion)
 - **[ADR-015](../adr/adr-015-text-as-source-of-truth.md)** - Why we need Kleis text parser

@@ -1753,22 +1753,10 @@ impl KleisParser {
                     type_signature: type_sig,
                 });
             } else if self.peek_word("define") {
-                // define f(x) = expr (inline function definition)
-                // Skip for now - not yet supported in structure members
-                // TODO: Add FunctionDef variant to StructureMember enum
-                for _ in 0..6 {
-                    self.advance();
-                }
-                self.skip_whitespace();
-
-                // Skip until we hit a newline or the next member
-                while let Some(ch) = self.peek() {
-                    if ch == '\n' {
-                        self.advance();
-                        break;
-                    }
-                    self.advance();
-                }
+                // define f(x) = expr (inline function definition in structure)
+                // Grammar v0.6: functionDef is now allowed in structureMember
+                let func_def = self.parse_function_def()?;
+                members.push(StructureMember::FunctionDef(func_def));
             } else if self.peek_word("axiom") {
                 // Skip "axiom"
                 for _ in 0..5 {
