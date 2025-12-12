@@ -1,0 +1,73 @@
+# Z3 Solver Capabilities Declaration
+# MCP-style capability manifest
+# See: docs/session-2024-12-12/SOLVER_MCP_STYLE_CAPABILITIES.md
+
+[solver]
+name = "Z3"
+version = "4.12.0"
+type = "smt"
+description = "Z3 Theorem Prover from Microsoft Research - SMT solver with support for arithmetic, boolean logic, quantifiers, and uninterpreted functions"
+
+[capabilities]
+# Supported theories
+theories = [
+    "arithmetic",      # Int and Real arithmetic
+    "boolean",         # Propositional logic
+    "equality",        # Equality reasoning
+    "uninterpreted_functions"  # Abstract operations
+]
+
+# Native operation support (15 operations with Z3 translators)
+[capabilities.operations]
+
+# Equality (works with any type)
+equals = { arity = 2, theory = "Any", native = true }
+eq = { arity = 2, theory = "Any", native = true }
+
+# Comparisons (Int and Real)
+less_than = { arity = 2, theory = "Int/Real", native = true }
+lt = { arity = 2, theory = "Int/Real", native = true }
+greater_than = { arity = 2, theory = "Int/Real", native = true }
+gt = { arity = 2, theory = "Int/Real", native = true }
+leq = { arity = 2, theory = "Int/Real", native = true }
+geq = { arity = 2, theory = "Int/Real", native = true }
+
+# Boolean operations
+and = { arity = 2, theory = "Bool", native = true }
+logical_and = { arity = 2, theory = "Bool", native = true }
+or = { arity = 2, theory = "Bool", native = true }
+logical_or = { arity = 2, theory = "Bool", native = true }
+not = { arity = 1, theory = "Bool", native = true }
+logical_not = { arity = 1, theory = "Bool", native = true }
+implies = { arity = 2, theory = "Bool", native = true }
+
+# Arithmetic operations (Int and Real)
+plus = { arity = 2, theory = "Int/Real", native = true }
+add = { arity = 2, theory = "Int/Real", native = true }
+minus = { arity = 2, theory = "Int/Real", native = true }
+subtract = { arity = 2, theory = "Int/Real", native = true }
+times = { arity = 2, theory = "Int/Real", native = true }
+multiply = { arity = 2, theory = "Int/Real", native = true }
+neg = { arity = 1, theory = "Int/Real", native = true }
+negate = { arity = 1, theory = "Int/Real", native = true }
+
+# Example: Operations not natively supported (will be uninterpreted)
+# These are documented here but handled as uninterpreted functions in Z3
+
+# Note: Z3 supports many more operations via its built-in theories,
+# but these are the ones explicitly translated in our current implementation.
+# Other operations (sin, cos, matrix_multiply, etc.) are treated as
+# uninterpreted functions, which is correct for theorem proving!
+
+[capabilities.features]
+quantifiers = true
+uninterpreted_functions = true
+recursive_functions = true
+evaluation = true
+simplification = false  # Z3 has simplify() but not always reliable
+proof_generation = false  # Available in Z3 but not exposed yet
+
+[capabilities.performance]
+max_axioms = 10000  # Z3 can handle thousands of axioms efficiently
+timeout_ms = 5000   # Default timeout for SMT queries
+
