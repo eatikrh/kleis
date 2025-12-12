@@ -372,6 +372,18 @@ impl TypeContextBuilder {
                 format!("({})", types_str.join(" × "))
             }
             TypeExpr::Var(v) => v.clone(),
+            TypeExpr::ForAll { vars, body } => {
+                // Format: ∀(n : ℕ, T). Vector(n) → ℝ
+                let vars_str: Vec<String> = vars
+                    .iter()
+                    .map(|(name, ty)| format!("{} : {}", name, self.type_expr_to_string(ty)))
+                    .collect();
+                format!(
+                    "∀({}). {}",
+                    vars_str.join(", "),
+                    self.type_expr_to_string(body)
+                )
+            }
         }
     }
 
@@ -665,7 +677,7 @@ impl TypeContextBuilder {
 
     /// Build a StructureRegistry from loaded structures
     /// This enables generic handling of parametric structure types in signatures
-    fn build_structure_registry(&self) -> crate::structure_registry::StructureRegistry {
+    pub fn build_structure_registry(&self) -> crate::structure_registry::StructureRegistry {
         use crate::structure_registry::StructureRegistry;
         let mut registry = StructureRegistry::new();
 

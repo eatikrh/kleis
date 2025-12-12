@@ -83,20 +83,20 @@ impl TypeChecker {
             .map_err(|e| format!("Failed to load stdlib/types.kleis: {}", e))?;
 
         // PHASE 2: Load structures and operations
-        // Load minimal prelude (most features work, except product types in signatures)
+        // Load full prelude (complete algebraic hierarchy with axioms)
         // Parser now supports:
-        //   ✅ Operator symbols in parens: (•), (⊗)
-        //   ✅ Axioms with universal quantifiers: ∀(x y z : S)
-        //   ✅ Nested structures
-        //   ✅ Extends keyword (inheritance)
-        //   ✅ Where clauses (generic constraints)
-        //   ✅ Define with operators
-        // Still needs:
-        //   ⚠️ Product types in signatures: S × S → R (vs curried S → S → R)
-        let minimal_prelude = include_str!("../stdlib/minimal_prelude.kleis");
+        //   ✅ Operator symbols in definitions: operation (×) : ...
+        //   ✅ Quantified type signatures: operation dot : ∀(n : ℕ). Vector(n) → ℝ
+        //   ✅ Axioms with quantifiers: axiom assoc: ∀(x y z : S). (x • y) • z = x • (y • z)
+        //   ✅ Nested structures: structure additive : AbelianGroup(R) { ... }
+        //   ✅ Extends keyword: structure Group(G) extends Monoid(G)
+        //   ✅ Over clauses: structure VectorSpace(V) over Field(F)
+        //   ✅ Where clauses: where ...
+        //   ✅ Define with operators: define (-)(x, y) = ...
+        let prelude = include_str!("../stdlib/prelude.kleis");
         checker
-            .load_kleis(minimal_prelude)
-            .map_err(|e| format!("Failed to load stdlib/minimal_prelude.kleis: {}", e))?;
+            .load_kleis(prelude)
+            .map_err(|e| format!("Failed to load stdlib/prelude.kleis: {}", e))?;
 
         // Load matrices
         let matrices = include_str!("../stdlib/matrices.kleis");
@@ -370,6 +370,12 @@ impl TypeChecker {
     pub fn types_supporting(&self, operation_name: &str) -> Vec<String> {
         self.context_builder.types_supporting(operation_name)
     }
+
+    /// Get the structure registry containing all loaded structures and axioms
+    /// This is useful for axiom verification and querying structure definitions
+    pub fn get_structure_registry(&self) -> crate::structure_registry::StructureRegistry {
+        self.context_builder.build_structure_registry()
+    }
 }
 
 impl Default for TypeChecker {
@@ -572,7 +578,7 @@ mod tests {
             checker.inference.data_registry().has_variant("Scalar")
         );
 
-        // Should have loaded minimal_prelude and matrices
+        // Should have loaded prelude and matrices
         assert!(checker.type_supports_operation("ℝ", "plus"));
     }
 

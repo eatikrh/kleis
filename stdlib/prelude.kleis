@@ -6,7 +6,7 @@
 // Version: 0.1.0
 // ============================================
 
-// TODO: Parser doesn't support annotations yet
+// Annotations (grammar supports them, not yet implemented in parser)
 // @library("std.prelude")
 // @version("0.1.0")
 
@@ -172,71 +172,215 @@ implements VectorSpace(Matrix(m, n, ℝ)) over Field(ℝ) {
 // VECTOR OPERATIONS
 // ============================================
 
-// Dot product (inner product)
+// Dot product (inner product): u · v = Σᵢ uᵢvᵢ
 operation dot : ∀(n : ℕ). Vector(n) × Vector(n) → ℝ
-// TODO: define dot(u, v) = Σᵢ uᵢ × vᵢ (summation/subscript syntax not implemented yet)
 
-// Cross product (3D only)
+// Cross product (3D only): u × v
 operation cross : Vector(3) × Vector(3) → Vector(3)
-// TODO: define cross([u₁,u₂,u₃], [v₁,v₂,v₃]) = [...] (subscript syntax not implemented yet)
 
-// Norm (Euclidean)
+// Norm (Euclidean): ||v|| = √(v · v)
 operation norm : ∀(n : ℕ). Vector(n) → ℝ
-// TODO: define norm(v) = √(dot(v, v)) (sqrt syntax not implemented yet)
+
+// Square root function
+operation sqrt : ℝ → ℝ
 
 // ============================================
 // MATRIX OPERATIONS
 // ============================================
 
-// Matrix multiplication
+// Matrix multiplication: A × B
 operation (×) : ∀(m n p : ℕ, T). Matrix(m, n, T) × Matrix(n, p, T) → Matrix(m, p, T)
 
-// Transpose
+// Transpose: Aᵀ (notation: A^T or A')
 operation transpose : ∀(m n : ℕ, T). Matrix(m, n, T) → Matrix(n, m, T)
-// TODO: notation transpose(A) = A^T (parser not implemented yet)
 
-// Determinant (square matrices only) - returns element type T
+// Determinant: det(A) for square matrices
 operation det : ∀(n : ℕ, T). Matrix(n, n, T) → T
 
-// Trace (square matrices only) - returns element type T
+// Trace: tr(A) = Σᵢ Aᵢᵢ for square matrices
 operation trace : ∀(n : ℕ, T). Matrix(n, n, T) → T
-// TODO: define trace(A) = Σᵢ Aᵢᵢ (summation syntax not implemented yet)
 
 // ============================================
 // CALCULUS OPERATIONS
 // ============================================
 
-// Ordinary derivative
-operation d/dx : (ℝ → ℝ) → (ℝ → ℝ)
+// Functional notation for derivatives (following Mathematica's approach)
+// 
+// **Design:** Separation of concerns
+//   - CODE uses valid identifiers: gradient, divergence, curl
+//   - RENDERING uses mathematical notation: ∇f, ∂f/∂x, ∇·F, ∇×F
+//
+// Just like Mathematica:
+//   - You write:  D[f, x]     or   gradient(f)
+//   - You see:    ∂f/∂x       or   ∇f
+//
+// This keeps the grammar simple while allowing beautiful mathematical output!
 
-// Partial derivative
-operation ∂/∂x : ScalarField(ℝⁿ) → ScalarField(ℝⁿ)
+// NOTE: Higher-order function types (functions returning functions) require
+// parentheses in type signatures, which parser doesn't support yet.
+// TODO: Add when parser supports parenthesized types: (ℝ → ℝ) → (ℝ → ℝ)
 
-// Gradient
-operation ∇ : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
+// For now, calculus operations declared as builtins (implementation in Rust)
+// These would be used like: derivative(f, x), gradient(F), etc.
 
-// Divergence
-operation div : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
-// TODO: notation div(F) = ∇ · F (parser not implemented yet)
+// Gradient: ∇f in mathematical notation
+// Returns vector of all partial derivatives
+// RENDER AS: ∇f
+operation gradient : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
 
-// Curl (3D only)
+// Divergence: ∇ · F in mathematical notation
+// RENDER AS: ∇·F  
+operation divergence : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
+
+// Curl: ∇ × F in mathematical notation (3D only)
+// RENDER AS: ∇×F
 operation curl : VectorField(ℝ³) → VectorField(ℝ³)
-// TODO: notation curl(F) = ∇ × F (parser not implemented yet)
-
-// Definite integral
-operation ∫ : (ℝ → ℝ) → ℝ → ℝ → ℝ
 
 // ============================================
-// MATHEMATICAL CONSTANTS
+// MATHEMATICAL CONSTANTS  
 // ============================================
 
-define π : ℝ = 3.14159265358979323846
+// Use ASCII names for constants (Unicode symbols in identifiers not yet supported)
+define pi : ℝ = 3.14159265358979323846
 define e : ℝ = 2.71828182845904523536
-define φ : ℝ = 1.61803398874989484820  // Golden ratio
-define √2 : ℝ = 1.41421356237309504880
+define phi : ℝ = 1.61803398874989484820  // Golden ratio (φ)
+define sqrt2 : ℝ = 1.41421356237309504880  // √2
 
-// Complex unit
-define i : ℂ = √(-1)
+// Complex unit (i = √(-1))
+// define i : ℂ = ... (TODO: needs complex literal syntax)
+
+// ============================================
+// BASIC OPERATIONS (for compatibility)
+// ============================================
+// These structures provide operations needed by equation editor and tests
+
+// Basic arithmetic operations
+structure Arithmetic(T) {
+  operation plus : T → T → T
+  operation minus : T → T → T
+  operation times : T → T → T
+  operation divide : T → T → T
+  operation scalar_divide : T → T → T
+  operation scalar_multiply : T → T → T
+  operation frac : T → T → T
+  operation parens : T → T
+  operation brackets : T → T
+  operation braces : T → T
+  operation angle_brackets : T → T
+}
+
+// Piecewise functions: f(x) = { expr1 if cond1, expr2 if cond2, ... }
+structure Piecewise(n: Nat, T) {
+  operation Piecewise : Nat → List(T) → List(Bool) → T
+}
+
+// Equality operations (work for any type)
+structure Equatable(T) {
+  operation equals : T → T → Bool
+  operation not_equals : T → T → Bool
+}
+
+// Ordering operations (only for types with order)
+structure Ordered(T) {
+  operation less_than : T → T → Bool
+  operation greater_than : T → T → Bool
+  operation less_equal : T → T → Bool
+  operation greater_equal : T → T → Bool
+  operation leq : T → T → Bool
+  operation geq : T → T → Bool
+  operation neq : T → T → Bool
+  operation approx : T → T → Bool
+}
+
+// Logical operations
+structure LogicalOps(T) {
+  operation logical_and : T → T → T
+  operation logical_or : T → T → T
+  operation logical_not : T → T
+}
+
+// Numeric operations (beyond basic arithmetic)
+structure Numeric(N) {
+  operation abs : N → N
+  operation floor : N → N
+  operation sqrt : N → N
+  operation power : N → N → N
+  operation sup : N → N → N  // Superscript rendering
+  operation sub : N → N → N  // Subscript rendering
+}
+
+// Calculus operations (for equation editor)
+structure Differentiable(F) {
+  operation derivative : F → F
+  operation d_dx : F → F
+  operation partial : F → F
+}
+
+structure Integrable(F) {
+  operation integral : F → ℝ
+  operation int_bounds : F → ℝ → ℝ → F → ℝ
+}
+
+// Arithmetic for scalars
+implements Arithmetic(ℝ) {
+  operation plus = builtin_add
+  operation minus = builtin_sub
+  operation times = builtin_mul
+  operation divide = builtin_div
+  operation scalar_divide = builtin_div
+  operation scalar_multiply = builtin_mul
+  operation frac = builtin_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Piecewise for reals
+implements Piecewise(n, ℝ) {
+  operation Piecewise = builtin_piecewise
+}
+
+// Equality for scalars
+implements Equatable(ℝ) {
+  operation equals = builtin_eq
+  operation not_equals = builtin_neq
+}
+
+// Equality for matrices (component-wise)
+implements Equatable(Matrix(m, n, ℝ)) {
+  operation equals = builtin_matrix_eq
+  operation not_equals = builtin_matrix_neq
+}
+
+// Ordering for scalars (not matrices!)
+implements Ordered(ℝ) {
+  operation less_than = builtin_lt
+  operation greater_than = builtin_gt
+  operation less_equal = builtin_le
+  operation greater_equal = builtin_ge
+  operation leq = builtin_le
+  operation geq = builtin_ge
+  operation neq = builtin_neq
+  operation approx = builtin_approx
+}
+
+// Logical operations for booleans
+implements LogicalOps(Bool) {
+  operation logical_and = builtin_and
+  operation logical_or = builtin_or
+  operation logical_not = builtin_not
+}
+
+// Numeric operations for reals
+implements Numeric(ℝ) {
+  operation abs = builtin_abs
+  operation floor = builtin_floor
+  operation sqrt = builtin_sqrt
+  operation power = builtin_pow
+  operation sup = builtin_superscript
+  operation sub = builtin_subscript
+}
 
 // ============================================
 // COMMON FUNCTIONS

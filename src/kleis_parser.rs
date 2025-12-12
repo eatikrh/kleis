@@ -995,9 +995,14 @@ impl KleisParser {
     }
 
     /// Parse a type expression
-    /// Examples: ℝ, Vector(3), Set(ℤ), ℝ → ℝ
+    /// Examples: ℝ, Vector(3), Set(ℤ), ℝ → ℝ, ∀(n : ℕ). Vector(n) → ℝ
     pub fn parse_type(&mut self) -> Result<TypeExpr, KleisParseError> {
         self.skip_whitespace();
+
+        // Check for quantified type: ∀(vars). body
+        if self.peek() == Some('∀') || self.peek_word("forall") {
+            return self.parse_forall_type();
+        }
 
         // Parse base type - could be identifier or number (for dimension literals)
         let base_name = if self.peek().map_or(false, |ch| ch.is_numeric()) {
@@ -1075,6 +1080,117 @@ impl KleisParser {
         }
 
         Ok(ty)
+    }
+
+    /// Parse a quantified (forall) type
+    /// Examples:
+    ///   ∀(n : ℕ). Vector(n) → ℝ
+    ///   ∀(m n p : ℕ, T). Matrix(m,n,T) × Matrix(n,p,T) → Matrix(m,p,T)
+    fn parse_forall_type(&mut self) -> Result<TypeExpr, KleisParseError> {
+        self.skip_whitespace();
+
+        // Parse quantifier symbol
+        if self.peek() == Some('∀') {
+            self.advance();
+        } else if self.consume_word("forall") {
+            // Already consumed
+        } else {
+            return Err(KleisParseError {
+                message: "Expected '∀' or 'forall'".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Expect '('
+        if self.advance() != Some('(') {
+            return Err(KleisParseError {
+                message: "Expected '(' after forall quantifier".to_string(),
+                position: self.pos,
+            });
+        }
+
+        // Parse variable declarations
+        // Can be: n : ℕ  or  m n p : ℕ, T : Type
+        let mut vars = Vec::new();
+
+        loop {
+            self.skip_whitespace();
+
+            if self.peek() == Some(')') {
+                break;
+            }
+
+            // Parse variable names (can be multiple with same type)
+            let mut var_names = Vec::new();
+            var_names.push(self.parse_identifier()?);
+
+            self.skip_whitespace();
+
+            // Check for more variable names before the colon or delimiter
+            while self.peek() != Some(':') && self.peek() != Some(',') && self.peek() != Some(')') {
+                var_names.push(self.parse_identifier()?);
+                self.skip_whitespace();
+            }
+
+            // Type annotation is optional - if no ':', use implicit Type kind
+            let var_type = if self.peek() == Some(':') {
+                self.advance(); // consume ':'
+                self.skip_whitespace();
+                self.parse_type()?
+            } else {
+                // No type annotation - implicit Type kind for type variables
+                TypeExpr::Named("Type".to_string())
+            };
+
+            // Add all variables with this type
+            for var_name in var_names {
+                vars.push((var_name, var_type.clone()));
+            }
+
+            self.skip_whitespace();
+
+            // Check for comma (more variables) or closing paren
+            if self.peek() == Some(',') {
+                self.advance();
+            } else if self.peek() == Some(')') {
+                break;
+            } else {
+                return Err(KleisParseError {
+                    message: "Expected ',' or ')' in forall variable list".to_string(),
+                    position: self.pos,
+                });
+            }
+        }
+
+        // Consume ')'
+        if self.advance() != Some(')') {
+            return Err(KleisParseError {
+                message: "Expected ')' after forall variables".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Expect '.'
+        if self.advance() != Some('.') {
+            return Err(KleisParseError {
+                message: "Expected '.' after forall variables".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+
+        // Parse the body type
+        let body = self.parse_type()?;
+
+        Ok(TypeExpr::ForAll {
+            vars,
+            body: Box::new(body),
+        })
     }
 
     fn peek_ahead(&self, offset: usize) -> Option<char> {

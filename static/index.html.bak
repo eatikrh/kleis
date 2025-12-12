@@ -1,0 +1,3621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kleis Equation Editor - Demo v2.0</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .mode-toggle {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .mode-btn {
+            padding: 8px 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .mode-btn.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+        }
+        
+        .structural-editor {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            min-height: 400px;
+            max-height: 800px;
+            display: flex;
+            align-items: flex-start;  /* Changed from center to top-align */
+            justify-content: flex-start;  /* Changed from center to left-align */
+            overflow: auto;
+            overflow-x: auto;  /* Explicit horizontal scroll */
+            overflow-y: auto;  /* Explicit vertical scroll */
+            position: relative;
+            resize: both;  /* Allow manual resizing */
+        }
+        
+        .structural-editor:focus-within {
+            border-color: #667eea;
+        }
+        
+        .structural-editor svg {
+            transform-origin: center center;
+            transition: transform 0.2s;
+            min-width: 300px;
+            min-height: 100px;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            padding: 4px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Typst Overlays */
+        .arg-overlay {
+            fill: rgba(40, 167, 69, 0.1);
+            stroke: #28a745;
+            stroke-width: 1.5px;
+            stroke-dasharray: 4,2;
+            rx: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .arg-overlay:hover {
+            stroke-width: 2.5px;
+            fill: rgba(40, 167, 69, 0.2);
+        }
+        .arg-overlay:focus {
+            stroke-width: 3px;
+            stroke: #ff9800;
+            outline: none;
+        }
+        .placeholder-overlay {
+            fill: rgba(102, 126, 234, 0.1);
+            stroke: #667eea;
+            stroke-width: 1.5px;
+            stroke-dasharray: 4,2;
+            rx: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .placeholder-overlay:hover {
+            stroke: #5568d3;
+            stroke-width: 2.5px;
+            fill: rgba(102, 126, 234, 0.2);
+        }
+        
+        .arg-overlay.active-marker, .placeholder-overlay.active-marker {
+            stroke: #ff6b6b !important;
+            stroke-width: 3px !important;
+            fill: rgba(255, 107, 107, 0.3) !important;
+            animation: pulse-marker 1s infinite;
+        }
+        
+        @keyframes pulse-marker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .panel h2 {
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 1.3em;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .preview-box {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 30px;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+        
+        .button-group {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .secondary {
+            background: #6c757d;
+        }
+        
+        .secondary:hover {
+            background: #5a6268;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .gallery-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .gallery-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .gallery-title {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        /* Symbol Palette Styles */
+        .symbol-palette {
+            background: #ffffff;
+            border: 2px solid #d0d0d0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .palette-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        
+        .palette-tab {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.2s;
+        }
+        
+        .palette-tab:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .palette-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .symbol-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 8px;
+        }
+        
+        .symbol-btn {
+            padding: 12px;
+            background: white;
+            border: 2px solid #d0d0d0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.4em;
+            text-align: center;
+            transition: all 0.2s;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2d3748;
+            font-weight: 600;
+        }
+        
+        .symbol-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .symbol-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .template-btn {
+            padding: 10px 14px;
+            background: white;
+            border: 2px solid #d0d0d0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+            color: #2d3748;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .template-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Clean Math Button Style (for MathJax-rendered buttons) */
+        .math-btn {
+            min-width: 70px;
+            height: 56px;
+            padding: 10px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            background: linear-gradient(to bottom, #ffffff, #fafafa);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            user-select: none;
+        }
+
+        .math-btn:hover {
+            border-color: #4CAF50;
+            background: white;
+            box-shadow: 
+                0 2px 8px rgba(76, 175, 80, 0.2),
+                0 4px 16px rgba(76, 175, 80, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .math-btn:hover .MathJax,
+        .math-btn:hover mjx-container {
+            color: #333 !important;
+        }
+
+        .math-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            background: #f5f5f5;
+        }
+
+        /* Tooltip for math buttons */
+        .math-btn[data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: -36px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            font-size: 11px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .math-btn:hover[data-tooltip]::after {
+            opacity: 1;
+        }
+
+        /* MathJax rendered content in buttons */
+        .math-btn .MathJax {
+            font-size: 20px !important;
+            color: #333 !important;
+        }
+
+        .math-btn .MathJax_SVG {
+            vertical-align: middle !important;
+        }
+        
+        .math-btn .MathJax_SVG svg {
+            fill: #333 !important;
+        }
+        
+        /* Ensure math content is visible */
+        .math-btn mjx-container {
+            color: #333 !important;
+        }
+        
+        .math-btn mjx-container svg {
+            fill: #333 !important;
+        }
+        
+        /* ===== Inline Editing Styles ===== */
+        
+        /* Inline editor input field */
+        .inline-edit-input {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #4CAF50;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-family: 'Latin Modern Math', 'Cambria Math', 'STIX Two Math', serif;
+            font-size: 18px;
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+            outline: none;
+            color: #333;
+        }
+
+        .inline-edit-input:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
+        }
+        
+        .inline-edit-input.error {
+            border-color: #f44336;
+            box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
+        }
+        
+        /* Marker being edited inline */
+        .arg-overlay.editing-inline {
+            fill: rgba(76, 175, 80, 0.3) !important;
+            stroke: #4CAF50 !important;
+            stroke-width: 3px !important;
+        }
+        
+        /* Button state indicators during inline editing */
+        body.inline-editing .math-btn[data-button-type="symbol"] {
+            /* Symbols are safe - subtle green tint */
+            background: linear-gradient(to bottom, #f0fff0, #e8f5e8);
+        }
+        
+        body.inline-editing .math-btn[data-button-type="template"],
+        body.inline-editing .math-btn[data-button-type="function"] {
+            /* Templates will replace - orange border */
+            border-color: #FF9800;
+            border-style: dashed;
+        }
+        
+        /* Confirmation modal */
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .confirm-modal.show {
+            display: flex;
+        }
+        
+        .confirm-modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            animation: modalSlideIn 0.2s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .confirm-modal h3 {
+            margin: 0 0 12px 0;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .confirm-modal p {
+            margin: 0 0 20px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .confirm-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        /* Matrix Builder Modal */
+        .matrix-builder-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .matrix-builder-modal.show {
+            display: flex;
+        }
+        
+        .matrix-builder-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            min-width: 400px;
+            animation: modalSlideIn 0.2s ease-out;
+        }
+        
+        .matrix-builder-content h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .matrix-grid-selector {
+            display: inline-grid;
+            grid-template-columns: repeat(6, 30px);
+            grid-template-rows: repeat(6, 30px);
+            gap: 2px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .matrix-grid-cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        
+        .matrix-grid-cell.hover {
+            background: #667eea;
+            border-color: #667eea;
+        }
+        
+        .matrix-size-display {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        
+        .matrix-inputs {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .matrix-input-group {
+            flex: 1;
+        }
+        
+        .matrix-input-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .matrix-input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .matrix-input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .matrix-delimiter-group {
+            margin-bottom: 20px;
+        }
+        
+        .matrix-delimiter-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .matrix-delimiter-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .matrix-delimiter-btn {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .matrix-delimiter-btn:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        
+        .matrix-delimiter-btn.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        
+        .matrix-builder-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        .btn-primary, .btn-secondary {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #45a049;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 Kleis Equation Editor</h1>
+            <p class="subtitle">Mathematical Notation Renderer - 54 Templates • Enhanced Structural Mode v2.1</p>
+            <div class="mode-toggle">
+                <button class="mode-btn active" onclick="setEditorMode('text')">📝 Text Mode</button>
+                <button class="mode-btn" onclick="setEditorMode('structural')">🔧 Structural Mode</button>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <!-- Input Panel -->
+            <div class="panel">
+                <h2><span id="inputLabel">📝 LaTeX Input</span></h2>
+                
+                <!-- Text Mode Input -->
+                <textarea id="latexInput" placeholder="Enter LaTeX equation here...
+Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
+                
+                <!-- Structural Mode Editor -->
+                <div id="structuralEditor" class="structural-editor" style="display:none;">
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoomIn()" title="Zoom In (Cmd +)">+</button>
+                        <button class="zoom-btn" onclick="zoomReset()" title="Reset Zoom (Cmd 0)">⊙</button>
+                        <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out (Cmd -)">−</button>
+                    </div>
+                    <span style="color: #999;">Click a template button to start building...</span>
+                    
+                    <!-- Inline editor (foreignObject - added dynamically to SVG) -->
+                    <!-- This template is cloned into SVG when needed -->
+                    <template id="inline-editor-template">
+                        <foreignObject id="inline-editor-foreign" x="0" y="0" width="200" height="40" style="display:none; overflow:visible;">
+                            <input type="text" 
+                                   id="inline-input"
+                                   class="inline-edit-input"
+                                   autocomplete="off"
+                                   spellcheck="false"
+                                   placeholder="Type or click symbols..." />
+                        </foreignObject>
+                    </template>
+                </div>
+                
+                <!-- Confirmation Modal for Template Insertion -->
+                <div id="replace-confirm-modal" class="confirm-modal">
+                    <div class="confirm-modal-content">
+                        <h3>Replace with template?</h3>
+                        <p id="replace-message">You've typed text. Insert template instead?</p>
+                        <div class="confirm-modal-buttons">
+                            <button id="replace-confirm-no" class="btn-secondary">Keep Typing</button>
+                            <button id="replace-confirm-yes" class="btn-primary">Insert Template</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Matrix Builder Modal -->
+                <div id="matrix-builder-modal" class="matrix-builder-modal">
+                    <div class="matrix-builder-content">
+                        <h3>🔢 Create Matrix</h3>
+                        
+                        <!-- Grid Selector -->
+                        <div>
+                            <div class="matrix-grid-selector" id="matrix-grid-selector">
+                                <!-- 6x6 grid cells will be generated by JavaScript -->
+                            </div>
+                            <div class="matrix-size-display" id="matrix-size-display">
+                                Select size (hover over grid)
+                            </div>
+                        </div>
+                        
+                        <!-- Numeric Inputs -->
+                        <div class="matrix-inputs">
+                            <div class="matrix-input-group">
+                                <label for="matrix-rows-input">Rows:</label>
+                                <input type="number" id="matrix-rows-input" min="1" max="10" value="2">
+                            </div>
+                            <div class="matrix-input-group">
+                                <label for="matrix-cols-input">Columns:</label>
+                                <input type="number" id="matrix-cols-input" min="1" max="10" value="2">
+                            </div>
+                        </div>
+                        
+                        <!-- Delimiter Selector -->
+                        <div class="matrix-delimiter-group">
+                            <label>Delimiter:</label>
+                            <div class="matrix-delimiter-options">
+                                <button class="matrix-delimiter-btn selected" data-delimiter="bmatrix">
+                                    <span>[ ]</span>
+                                    <span>Square brackets</span>
+                                </button>
+                                <button class="matrix-delimiter-btn" data-delimiter="pmatrix">
+                                    <span>( )</span>
+                                    <span>Parentheses</span>
+                                </button>
+                                <button class="matrix-delimiter-btn" data-delimiter="vmatrix">
+                                    <span>| |</span>
+                                    <span>Determinant</span>
+                                </button>
+                                <button class="matrix-delimiter-btn" data-delimiter="Bmatrix">
+                                    <span>{ }</span>
+                                    <span>Curly braces</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="matrix-builder-buttons">
+                            <button class="btn-secondary" onclick="closeMatrixBuilder()">Cancel</button>
+                            <button class="btn-primary" onclick="createMatrixFromBuilder()">Create Matrix</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Piecewise Function Builder Modal -->
+                <div id="piecewise-builder-modal" class="matrix-builder-modal">
+                    <div class="matrix-builder-content">
+                        <h3>📐 Create Piecewise Function</h3>
+                        
+                        <!-- Case Count Input -->
+                        <div class="matrix-inputs">
+                            <div class="matrix-input-group">
+                                <label for="piecewise-cases-input">Number of cases:</label>
+                                <input type="number" id="piecewise-cases-input" min="2" max="10" value="2" oninput="updatePiecewisePreview()">
+                            </div>
+                        </div>
+                        
+                        <!-- Preview -->
+                        <div class="matrix-size-display" id="piecewise-preview">
+                            f(x) = { expr₁  if cond₁
+                                   { expr₂  if cond₂
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="matrix-builder-buttons">
+                            <button class="btn-secondary" onclick="closePiecewiseBuilder()">Cancel</button>
+                            <button class="btn-primary" onclick="createPiecewiseFromBuilder()">Create Piecewise</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="structuralControls" style="display:none; margin-top: 10px;">
+                    <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="showBoundingBoxes" checked onchange="toggleBoundingBoxes()" style="margin-right: 8px;">
+                        <span style="font-size: 0.9em; color: #666;">Show Interactive Overlays</span>
+                    </label>
+                    <div style="float: right; display: flex; gap: 5px;">
+                        <button id="undoBtn" class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="undo()" disabled title="Undo (Cmd+Z)">↶ Undo</button>
+                        <button id="redoBtn" class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="redo()" disabled title="Redo (Cmd+Shift+Z)">↷ Redo</button>
+                        <button class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="resetStructuralEditor()">Clear</button>
+                    </div>
+                    <!-- Type Indicator (NEW!) -->
+                    <div id="type-indicator" style="margin-top: 10px; padding: 12px; background: #f5f5f5; border-radius: 6px; border-left: 4px solid #999; display: none; font-family: monospace; font-size: 13px;">
+                        <span id="type-indicator-content" style="color: #999;">⏳ Type checking...</span>
+                    </div>
+                    <div style="clear: both; margin-top: 10px; font-size: 0.85em; color: #999;">
+                        💡 <strong>Navigation:</strong> ↓/→ next marker • ↑/← prev marker • Enter to edit • Esc to deselect<br>
+                        💡 <strong>Editing:</strong> Cmd+Z undo • Cmd+Shift+Z redo • Click marker then palette to insert<br>
+                        💡 <strong>View:</strong> Drag corner to resize • Cmd+/− to zoom • Canvas scrollable<br>
+                        <button class="secondary" style="padding: 4px 12px; font-size: 11px; margin-top: 8px;" onclick="toggleDebugPanel()">🐛 Debug AST</button>
+                    </div>
+                    
+                    <!-- Debug Panel -->
+                    <div id="debugPanel" style="display:none; margin-top: 15px; padding: 15px; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <strong style="font-family: sans-serif; color: #667eea;">🐛 AST Debug View</strong>
+                            <div>
+                                <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="copyASTToClipboard()">📋 Copy</button>
+                                <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="downloadAST()">💾 Download</button>
+                                <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="toggleDebugPanel()">✖</button>
+                            </div>
+                        </div>
+                        <pre id="debugASTContent" style="margin: 0; white-space: pre-wrap; word-wrap: break-word; background: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;"></pre>
+                    </div>
+                </div>
+                
+                <!-- Symbol Palette -->
+                <div class="symbol-palette">
+                    <div class="palette-tabs">
+                        <button class="palette-tab active" onclick="showPalette('basics', this)">Basics</button>
+                        <button class="palette-tab" onclick="showPalette('fences', this)">Fences</button>
+                        <button class="palette-tab" onclick="showPalette('accents', this)">Accents</button>
+                        <button class="palette-tab" onclick="showPalette('calculus', this)">Calculus</button>
+                        <button class="palette-tab" onclick="showPalette('linear', this)">Linear Algebra</button>
+                        <button class="palette-tab" onclick="showPalette('greek', this)">Greek</button>
+                        <button class="palette-tab" onclick="showPalette('logic', this)">Logic & Sets</button>
+                        <button class="palette-tab" onclick="showPalette('physics', this)">Physics</button>
+                        <button class="palette-tab" onclick="showPalette('pot', this)">POT</button>
+                    </div>
+                    
+                    <!-- Basics -->
+                    <div id="palette-basics" class="symbol-grid">
+                        <button class="math-btn" onclick="insertSymbol('+')" data-tooltip="Plus">\(+\)</button>
+                        <button class="math-btn" onclick="insertSymbol('-')" data-tooltip="Minus">\(-\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\times')" data-tooltip="Times">\(\times\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\div')" data-tooltip="Divide">\(\div\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\pm')" data-tooltip="Plus-Minus">\(\pm\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\mp')" data-tooltip="Minus-Plus">\(\mp\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\cdot')" data-tooltip="Dot">\(\cdot\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\ast')" data-tooltip="Asterisk">\(\ast\)</button>
+                        <button class="math-btn" onclick="insertSymbol('=')" data-tooltip="Equal">\(=\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\neq')" data-tooltip="Not Equal">\(\neq\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\infty')" data-tooltip="Infinity">\(\infty\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\square')" data-tooltip="Box">\(\square\)</button>
+                        
+                        <button class="math-btn" onclick="insertTemplate('□ = □')" data-tooltip="Equality">\(a = b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ + □')" data-tooltip="Addition">\(a + b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ - □')" data-tooltip="Subtraction">\(a - b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□ \\cdot □')" data-tooltip="Multiplication">\(a \cdot b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('-□')" data-tooltip="Negate">\(-x\)</button>
+                        <button class="math-btn" onclick="insertTemplate('±')" data-tooltip="Plus-Minus">\(\pm\)</button>
+                        
+                        <button class="math-btn" onclick="insertTemplate('\\frac{□}{□}')" data-tooltip="Fraction">\(\frac{a}{b}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\sqrt{□}')" data-tooltip="Square Root">\(\sqrt{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\sqrt[□]{□}')" data-tooltip="Nth Root">\(\sqrt[n]{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□^{□}')" data-tooltip="Power">\(x^n\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□_{□}')" data-tooltip="Subscript">\(x_i\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□^{□}_{□}')" data-tooltip="Sup-Sub">\(T^i_j\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□_{□}^{□}')" data-tooltip="Sub-Sup">\(T_j^i\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□_{□ □}')" data-tooltip="Covariant Tensor">\(g_{\mu\nu}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□^{□ □}_{□ □}')" data-tooltip="Riemann Tensor">\(R^{\mu\nu}_{\rho\sigma}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\binom{□}{□}')" data-tooltip="Binomial">\(\binom{n}{k}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('□!')" data-tooltip="Factorial">\(n!\)</button>
+                        
+                        <button class="math-btn" onclick="insertTemplate('\\sin(□)')" data-tooltip="Sine">\(\sin(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\cos(□)')" data-tooltip="Cosine">\(\cos(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\tan(□)')" data-tooltip="Tangent">\(\tan(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\arcsin(□)')" data-tooltip="Arcsine">\(\arcsin(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\arccos(□)')" data-tooltip="Arccosine">\(\arccos(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\arctan(□)')" data-tooltip="Arctangent">\(\arctan(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\ln(□)')" data-tooltip="Natural Log">\(\ln(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\log(□)')" data-tooltip="Logarithm">\(\log(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\exp(□)')" data-tooltip="Exponential">\(\exp(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('e^{□}')" data-tooltip="e to the power">\(e^x\)</button>
+                        
+                        <button class="math-btn" onclick="showPiecewiseBuilder()" data-tooltip="Piecewise Function Builder" style="min-width: 90px;">\(\begin{cases}f_1 & c_1\\f_2 & c_2\end{cases}\)</button>
+                    </div>
+                    
+                    <!-- Fences & Grouping -->
+                    <div id="palette-fences" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('\\left(□\\right)')" data-tooltip="Parentheses">\((x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left[□\\right]')" data-tooltip="Square Brackets">\([x]\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\{□\\right\\}')" data-tooltip="Curly Braces">\(\{x\}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\langle □ \\right\\rangle')" data-tooltip="Angle Brackets">\(\langle x \rangle\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left|□\\right|')" data-tooltip="Absolute Value">\(|x|\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\|□\\right\\|')" data-tooltip="Norm">\(\|v\|\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\lfloor □ \\right\\rfloor')" data-tooltip="Floor">\(\lfloor x \rfloor\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\left\\lceil □ \\right\\rceil')" data-tooltip="Ceiling">\(\lceil x \rceil\)</button>
+                    </div>
+                    
+                    <!-- Accents & Styling -->
+                    <div id="palette-accents" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('\\dot{□}')" data-tooltip="Dot Accent">\(\dot{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\ddot{□}')" data-tooltip="Double Dot">\(\ddot{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\hat{□}')" data-tooltip="Hat">\(\hat{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\bar{□}')" data-tooltip="Bar">\(\bar{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\tilde{□}')" data-tooltip="Tilde">\(\tilde{x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\overline{□}')" data-tooltip="Overline">\(\overline{ABC}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\underline{□}')" data-tooltip="Underline">\(\underline{ABC}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\vec{□}')" data-tooltip="Vector Arrow">\(\vec{v}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathbf{□}')" data-tooltip="Bold">\(\mathbf{x}\)</button>
+                    </div>
+                    
+                    <!-- Calculus & Analysis -->
+                    <div id="palette-calculus" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('\\int_{□}^{□} □ \\, dx')" data-tooltip="Definite Integral">\(\int_a^b f\,dx\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\sum_{□}^{□} □')" data-tooltip="Summation">\(\sum_{i=1}^n a_i\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\prod_{□}^{□} □')" data-tooltip="Product">\(\prod_{i=1}^n a_i\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\lim_{□ \\to □} □')" data-tooltip="Limit">\(\lim_{x\to 0} f(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\frac{d □}{d □}')" data-tooltip="Derivative">\(\frac{df}{dx}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\frac{\\partial □}{\\partial □}')" data-tooltip="Partial Derivative">\(\frac{\partial f}{\partial x}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\nabla □')" data-tooltip="Gradient">\(\nabla f\)</button>
+                        
+                        <!-- Integral Transforms -->
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{F}[□](□)')" data-tooltip="Fourier Transform">\(\mathcal{F}[f](\omega)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{F}^{-1}[□](□)')" data-tooltip="Inverse Fourier">\(\mathcal{F}^{-1}[F](t)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{L}[□](□)')" data-tooltip="Laplace Transform">\(\mathcal{L}[f](s)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{L}^{-1}[□](□)')" data-tooltip="Inverse Laplace">\(\mathcal{L}^{-1}[F](t)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('(□ \\ast □)(□)')" data-tooltip="Convolution">\((f \ast g)(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\int_{□} □ □ \\, d□')" data-tooltip="Kernel Integral">\(\int_D K f\,d\mu\)</button>
+                        <button class="math-btn" onclick="insertTemplate('G(□, □)')" data-tooltip="Green's Function">\(G(x,m)\)</button>
+                    </div>
+                    
+                    <!-- POT (Projected Ontology Theory) -->
+                    <div id="palette-pot" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('\\Pi[□](□)')" data-tooltip="Projection Operator">\(\Pi[\psi](x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\int_{□} □ \\, d\\mu(□)')" data-tooltip="Modal Integral">\(\int_M f\,d\mu(m)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('K(□, □)')" data-tooltip="Projection Kernel">\(K(x,m)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('c(□)')" data-tooltip="Causal Bound (VSL)">\(c(x)\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathrm{Residue}[□, □]')" data-tooltip="Projection Residue">\(\mathrm{Residue}[\Pi, X]\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{M}_{□}')" data-tooltip="Modal Space">\(\mathcal{M}_H\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathbb{R}^4')" data-tooltip="Spacetime">\(\mathbb{R}^4\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathcal{H}_{□}')" data-tooltip="Hont (Hilbert Ontology)">\(\mathcal{H}_\infty\)</button>
+                    </div>
+                    
+                    <!-- Linear Algebra & Matrices -->
+                    <div id="palette-linear" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertMatrixFromPalette(2, 2, 'bmatrix')" data-tooltip="Matrix 2×2 [brackets]">\(\begin{bmatrix}a&b\\c&d\end{bmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(3, 3, 'bmatrix')" data-tooltip="Matrix 3×3 [brackets]">\(\begin{bmatrix}a&b&c\\d&e&f\\g&h&i\end{bmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(2, 2, 'pmatrix')" data-tooltip="Matrix 2×2 (parens)">\(\begin{pmatrix}a&b\\c&d\end{pmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(3, 3, 'pmatrix')" data-tooltip="Matrix 3×3 (parens)">\(\begin{pmatrix}a&b&c\\d&e&f\\g&h&i\end{pmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(2, 2, 'vmatrix')" data-tooltip="Determinant 2×2">\(\begin{vmatrix}a&b\\c&d\end{vmatrix}\)</button>
+                        <button class="math-btn" onclick="insertMatrixFromPalette(3, 3, 'vmatrix')" data-tooltip="Determinant 3×3">\(\begin{vmatrix}a&b&c\\d&e&f\\g&h&i\end{vmatrix}\)</button>
+                        <button class="math-btn" onclick="showMatrixBuilder()" data-tooltip="Custom Matrix Builder">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="28" viewBox="0 0 64 48">
+                                <g stroke="#333" stroke-width="2.5" fill="none">
+                                    <path d="M 12 6 L 8 6 L 8 42 L 12 42"/>
+                                    <path d="M 52 6 L 56 6 L 56 42 L 52 42"/>
+                                </g>
+                                <g stroke="#666" stroke-width="1.8" fill="none" opacity="0.7">
+                                    <line x1="22" y1="12" x2="22" y2="36"/>
+                                    <line x1="30" y1="12" x2="30" y2="36"/>
+                                    <line x1="38" y1="12" x2="38" y2="36"/>
+                                    <line x1="46" y1="12" x2="46" y2="36"/>
+                                    <line x1="14" y1="18" x2="50" y2="18"/>
+                                    <line x1="14" y1="24" x2="50" y2="24"/>
+                                    <line x1="14" y1="30" x2="50" y2="30"/>
+                                    <line x1="14" y1="36" x2="50" y2="36"/>
+                                </g>
+                                <g transform="translate(50, 36)">
+                                    <circle cx="0" cy="0" r="7" fill="#4CAF50" stroke="white" stroke-width="1.5"/>
+                                    <g stroke="white" stroke-width="2.2" stroke-linecap="round">
+                                        <line x1="-3" y1="0" x2="3" y2="0"/>
+                                        <line x1="0" y1="-3" x2="0" y2="3"/>
+                                    </g>
+                                </g>
+                            </svg>
+                        </button>
+                        <button class="math-btn" onclick="insertTemplate('\\mathbf{v}')" data-tooltip="Bold Vector">\(\mathbf{v}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\vec{v}')" data-tooltip="Vector Arrow">\(\vec{v}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('A \\bullet B')" data-tooltip="Matrix Multiplication">\(A \bullet B\)</button>
+                        <button class="math-btn" onclick="insertTemplate('a \\cdot b')" data-tooltip="Dot Product">\(a \cdot b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('a \\times b')" data-tooltip="Cross Product">\(a \times b\)</button>
+                    </div>
+                    
+                    <!-- Greek Letters -->
+                    <div id="palette-greek" class="symbol-grid" style="display:none;">
+                        <button class="math-btn" onclick="insertSymbol('\\alpha')" data-tooltip="alpha">\(\alpha\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\beta')" data-tooltip="beta">\(\beta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\gamma')" data-tooltip="gamma">\(\gamma\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\delta')" data-tooltip="delta">\(\delta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\epsilon')" data-tooltip="epsilon">\(\epsilon\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\zeta')" data-tooltip="zeta">\(\zeta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\eta')" data-tooltip="eta">\(\eta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\theta')" data-tooltip="theta">\(\theta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\iota')" data-tooltip="iota">\(\iota\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\kappa')" data-tooltip="kappa">\(\kappa\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\lambda')" data-tooltip="lambda">\(\lambda\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\mu')" data-tooltip="mu">\(\mu\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\nu')" data-tooltip="nu">\(\nu\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\xi')" data-tooltip="xi">\(\xi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\omicron')" data-tooltip="omicron">\(o\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\pi')" data-tooltip="pi">\(\pi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\rho')" data-tooltip="rho">\(\rho\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\sigma')" data-tooltip="sigma">\(\sigma\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\tau')" data-tooltip="tau">\(\tau\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\upsilon')" data-tooltip="upsilon">\(\upsilon\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\phi')" data-tooltip="phi">\(\phi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\chi')" data-tooltip="chi">\(\chi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\psi')" data-tooltip="psi">\(\psi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\omega')" data-tooltip="omega">\(\omega\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Gamma')" data-tooltip="Gamma">\(\Gamma\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Delta')" data-tooltip="Delta">\(\Delta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Theta')" data-tooltip="Theta">\(\Theta\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Lambda')" data-tooltip="Lambda">\(\Lambda\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Xi')" data-tooltip="Xi">\(\Xi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Pi')" data-tooltip="Pi">\(\Pi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Sigma')" data-tooltip="Sigma">\(\Sigma\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Upsilon')" data-tooltip="Upsilon">\(\Upsilon\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Phi')" data-tooltip="Phi">\(\Phi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Psi')" data-tooltip="Psi">\(\Psi\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Omega')" data-tooltip="Omega">\(\Omega\)</button>
+                    </div>
+                    
+                    <!-- Logic & Set Theory -->
+                    <div id="palette-logic" class="symbol-grid" style="display:none;">
+                        <button class="math-btn" onclick="insertSymbol('\\text{True}')" data-tooltip="Boolean True">\(\text{True}\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\text{False}')" data-tooltip="Boolean False">\(\text{False}\)</button>
+                        
+                        <button class="math-btn" onclick="insertTemplate('equals')" data-tooltip="Equals">\(a = b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('neq')" data-tooltip="Not Equal">\(a \neq b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('less_than')" data-tooltip="Less Than">\(a < b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('greater_than')" data-tooltip="Greater Than">\(a > b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('leq')" data-tooltip="Less or Equal">\(a \leq b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('geq')" data-tooltip="Greater or Equal">\(a \geq b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('approx')" data-tooltip="Approximately Equal">\(a \approx b\)</button>
+                        
+                        <button class="math-btn" onclick="insertTemplate('logical_and')" data-tooltip="Logical AND">\(a \land b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('logical_or')" data-tooltip="Logical OR">\(a \lor b\)</button>
+                        <button class="math-btn" onclick="insertTemplate('logical_not')" data-tooltip="Logical NOT">\(\lnot p\)</button>
+                        
+                        <button class="math-btn" onclick="insertSymbol('\\equiv')" data-tooltip="Equivalent">\(\equiv\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\in')" data-tooltip="Element Of">\(\in\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\notin')" data-tooltip="Not Element Of">\(\notin\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\subset')" data-tooltip="Subset">\(\subset\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\subseteq')" data-tooltip="Subset or Equal">\(\subseteq\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\cup')" data-tooltip="Union">\(\cup\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\cap')" data-tooltip="Intersection">\(\cap\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\emptyset')" data-tooltip="Empty Set">\(\emptyset\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\to')" data-tooltip="Maps To">\(\to\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Rightarrow')" data-tooltip="Implies">\(\Rightarrow\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\Leftrightarrow')" data-tooltip="If and Only If">\(\Leftrightarrow\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\forall')" data-tooltip="For All">\(\forall\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\exists')" data-tooltip="There Exists">\(\exists\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\neg')" data-tooltip="Not">\(\neg\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\land')" data-tooltip="And">\(\land\)</button>
+                        <button class="math-btn" onclick="insertSymbol('\\lor')" data-tooltip="Or">\(\lor\)</button>
+                    </div>
+                    
+                    <!-- Physics & Advanced -->
+                    <div id="palette-physics" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
+                        <button class="math-btn" onclick="insertTemplate('|□\\rangle')" data-tooltip="Ket">\(|\psi\rangle\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\langle□|')" data-tooltip="Bra">\(\langle\phi|\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\langle□|□\\rangle')" data-tooltip="Inner Product">\(\langle\phi|\psi\rangle\)</button>
+                        <button class="math-btn" onclick="insertTemplate('|□\\rangle\\langle□|')" data-tooltip="Outer Product">\(|\psi\rangle\langle\phi|\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\langle □ \\rangle')" data-tooltip="Expectation Value">\(\langle A \rangle\)</button>
+                        <button class="math-btn" onclick="insertTemplate('[□, □]')" data-tooltip="Commutator">\([A, B]\)</button>
+                        <button class="math-btn" onclick="insertTemplate('\\Gamma^{□}_{□ □}')" data-tooltip="Christoffel Symbol">\(\Gamma^\lambda_{\mu\nu}\)</button>
+                        <button class="math-btn" onclick="insertTemplate('R^{□}_{□ □ □}')" data-tooltip="Riemann Tensor">\(R^\rho_{\sigma\mu\nu}\)</button>
+                    </div>
+                </div>
+                
+                <div class="button-group" id="textControls">
+                    <button onclick="renderEquation()">🎨 Render</button>
+                    <button class="secondary" onclick="clearInput()">🗑️ Clear</button>
+                </div>
+                <div id="status"></div>
+            </div>
+            
+            <!-- Preview -->
+            <div class="panel">
+                <h2>👁️ Preview</h2>
+                <div class="preview-box" id="preview">
+                    Enter LaTeX and click Render
+                </div>
+            </div>
+            
+            <!-- Gallery -->
+            <div class="panel full-width">
+                <h2>🎨 Gallery (Click to Load)</h2>
+                <button onclick="loadGallery()">📚 Load Gallery Examples</button>
+                <div class="gallery-grid" id="gallery"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let editorMode = 'text';
+        let currentAST = null;
+        let nextPlaceholderId = 0;
+        
+        // FEATURE FLAG: Coordinate system preference
+        // Set to 'semantic' to prefer semantic bounding boxes (better for complex layouts)
+        // Set to 'placeholder' to prefer placeholder positions (current behavior)
+        const COORDINATE_PREFERENCE = 'placeholder';  // Use placeholder positions (span-based IDs)
+        
+        // Active edit marker tracking
+        let activeEditMarker = null;  // {id, path, nodeId}
+        
+        // Undo/Redo stacks
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_UNDO_HISTORY = 50;
+        
+        function log(msg) { console.log(msg); }
+        function showStatus(msg, type) {
+            const el = document.getElementById('status');
+            if(el) {
+                el.innerHTML = msg;
+                el.className = `status ${type}`;
+            }
+        }
+        
+        // === Undo/Redo System ===
+        
+        function saveToUndoStack() {
+            if (currentAST) {
+                // Deep clone the current state
+                const state = JSON.parse(JSON.stringify(currentAST));
+                undoStack.push(state);
+                
+                // Limit stack size
+                if (undoStack.length > MAX_UNDO_HISTORY) {
+                    undoStack.shift();
+                }
+                
+                // Clear redo stack on new action
+                redoStack = [];
+                
+                updateUndoRedoButtons();
+            }
+        }
+        
+        function undo() {
+            if (undoStack.length === 0) {
+                showStatus('Nothing to undo', 'error');
+                return;
+            }
+            
+            // Save current state to redo stack
+            if (currentAST) {
+                redoStack.push(JSON.parse(JSON.stringify(currentAST)));
+            }
+            
+            // Restore previous state
+            currentAST = undoStack.pop();
+            renderStructuralEditor();
+            updateUndoRedoButtons();
+            showStatus('✅ Undo', 'success');
+        }
+        
+        function redo() {
+            if (redoStack.length === 0) {
+                showStatus('Nothing to redo', 'error');
+                return;
+            }
+            
+            // Save current state to undo stack
+            if (currentAST) {
+                undoStack.push(JSON.parse(JSON.stringify(currentAST)));
+            }
+            
+            // Restore next state
+            currentAST = redoStack.pop();
+            renderStructuralEditor();
+            updateUndoRedoButtons();
+            showStatus('✅ Redo', 'success');
+        }
+        
+        function updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+            
+            if (undoBtn) {
+                undoBtn.disabled = undoStack.length === 0;
+                undoBtn.title = `Undo (${undoStack.length} actions)`;
+            }
+            if (redoBtn) {
+                redoBtn.disabled = redoStack.length === 0;
+                redoBtn.title = `Redo (${redoStack.length} actions)`;
+            }
+        }
+        
+        // Keyboard shortcuts for undo/redo, zoom, and navigation
+        document.addEventListener('keydown', (e) => {
+            if (editorMode === 'structural') {
+                // Don't intercept if user is typing in an input field
+                if (e.target.matches('input, textarea')) {
+                    return;
+                }
+                
+                // Undo/Redo
+                if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    undo();
+                } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
+                    e.preventDefault();
+                    redo();
+                }
+                // Zoom
+                else if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
+                    e.preventDefault();
+                    zoomIn();
+                } else if ((e.metaKey || e.ctrlKey) && e.key === '-') {
+                    e.preventDefault();
+                    zoomOut();
+                } else if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+                    e.preventDefault();
+                    zoomReset();
+                }
+                // Arrow key navigation between markers (like MathType)
+                else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    focusNextMarker();
+                } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    focusPrevMarker();
+                }
+                // Tab also works (existing feature, keep it)
+                else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        focusPrevMarker();
+                    } else {
+                        focusNextMarker();
+                    }
+                }
+                // Enter to edit active marker
+                else if (e.key === 'Enter' && activeEditMarker) {
+                    e.preventDefault();
+                    editActiveMarker();
+                }
+                // Escape to clear selection
+                else if (e.key === 'Escape' && activeEditMarker) {
+                    e.preventDefault();
+                    clearActiveMarker();
+                }
+            }
+        });
+        
+        // === Zoom Controls ===
+        
+        let currentZoom = 1.0;
+        const ZOOM_STEP = 0.2;
+        const MIN_ZOOM = 0.5;
+        const MAX_ZOOM = 3.0;
+        
+        function zoomIn() {
+            currentZoom = Math.min(MAX_ZOOM, currentZoom + ZOOM_STEP);
+            applyZoom();
+        }
+        
+        function zoomOut() {
+            currentZoom = Math.max(MIN_ZOOM, currentZoom - ZOOM_STEP);
+            applyZoom();
+        }
+        
+        function zoomReset() {
+            currentZoom = 1.0;
+            applyZoom();
+        }
+        
+        function applyZoom() {
+            const svg = document.querySelector('#structuralEditor svg');
+            if (svg) {
+                svg.style.transform = `scale(${currentZoom})`;
+            }
+            
+            // Also scale overlays
+            const overlays = document.querySelectorAll('#arg-overlays rect');
+            overlays.forEach(rect => {
+                // Overlays are inside SVG, so they scale automatically
+            });
+            
+            showStatus(`🔍 Zoom: ${(currentZoom * 100).toFixed(0)}%`, 'info');
+        }
+        
+        // === Marker Navigation (MathType-style) ===
+        
+        function getAllMarkers() {
+            return Array.from(document.querySelectorAll('.arg-overlay, .placeholder-overlay'));
+        }
+        
+        function focusNextMarker() {
+            const markers = getAllMarkers();
+            if (markers.length === 0) {
+                showStatus('No markers available', 'error');
+                return;
+            }
+            
+            let currentIndex = -1;
+            if (activeEditMarker) {
+                // Find currently active marker (compare as strings)
+                currentIndex = markers.findIndex(m => 
+                    m.getAttribute('data-slot-id') === activeEditMarker.id
+                );
+            }
+            
+            // Move to next marker (wrap around)
+            const nextIndex = (currentIndex + 1) % markers.length;
+            const nextMarker = markers[nextIndex];
+            
+            // Extract data from marker
+            const slotId = nextMarker.getAttribute('data-slot-id'); // Keep as string (UUID or ph{number})
+            const pathStr = nextMarker.getAttribute('data-path');
+            const nodeId = nextMarker.getAttribute('data-node-id');
+            const path = pathStr ? JSON.parse(pathStr.replace(/&quot;/g, '"')) : [];
+            
+            // Set as active without showing prompt
+            activeEditMarker = {id: slotId, path: path, nodeId: nodeId};
+            
+            // Update visual state
+            document.querySelectorAll('.arg-overlay, .placeholder-overlay').forEach(el => {
+                el.classList.remove('active-marker');
+            });
+            nextMarker.classList.add('active-marker');
+            nextMarker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            showStatus(`📍 Marker ${slotId} selected. Press Enter to edit, or click template to insert.`, 'info');
+        }
+        
+        function focusPrevMarker() {
+            const markers = getAllMarkers();
+            if (markers.length === 0) {
+                showStatus('No markers available', 'error');
+                return;
+            }
+            
+            let currentIndex = -1;
+            if (activeEditMarker) {
+                // Compare as strings
+                currentIndex = markers.findIndex(m => 
+                    m.getAttribute('data-slot-id') === activeEditMarker.id
+                );
+            }
+            
+            // Move to previous marker (wrap around)
+            const prevIndex = currentIndex <= 0 ? markers.length - 1 : currentIndex - 1;
+            const prevMarker = markers[prevIndex];
+            
+            // Extract data from marker
+            const slotId = prevMarker.getAttribute('data-slot-id'); // Keep as string (UUID or ph{number})
+            const pathStr = prevMarker.getAttribute('data-path');
+            const nodeId = prevMarker.getAttribute('data-node-id');
+            const path = pathStr ? JSON.parse(pathStr.replace(/&quot;/g, '"')) : [];
+            
+            // Set as active without showing prompt
+            activeEditMarker = {id: slotId, path: path, nodeId: nodeId};
+            
+            // Update visual state
+            document.querySelectorAll('.arg-overlay, .placeholder-overlay').forEach(el => {
+                el.classList.remove('active-marker');
+            });
+            prevMarker.classList.add('active-marker');
+            prevMarker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            showStatus(`📍 Marker ${slotId} selected. Press Enter to edit, or click template to insert.`, 'info');
+        }
+        
+        function editActiveMarker() {
+            if (!activeEditMarker) {
+                showStatus('No marker selected', 'error');
+                return;
+            }
+            
+            // Trigger the edit prompt for active marker
+            const node = getNodeAtPath(currentAST, activeEditMarker.path);
+            let val = "";
+            if (node.Const) val = node.Const;
+            if (node.Object) val = node.Object;
+            
+            const input = prompt("Enter value:", val);
+            if (input !== null) {
+                saveToUndoStack();
+                const newNode = parseSimpleInput(input);
+                setNodeAtPath(currentAST, activeEditMarker.path, newNode);
+                activeEditMarker = null;
+                renderStructuralEditor();
+            }
+        }
+        
+        function clearActiveMarker() {
+            activeEditMarker = null;
+            document.querySelectorAll('.arg-overlay, .placeholder-overlay').forEach(el => {
+                el.classList.remove('active-marker');
+            });
+            showStatus('Selection cleared', 'info');
+        }
+        
+        // === Debug Panel ===
+        
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debugPanel');
+            const content = document.getElementById('debugASTContent');
+            
+            if (panel.style.display === 'none') {
+                // Show panel and update content
+                panel.style.display = 'block';
+                updateDebugPanel();
+            } else {
+                // Hide panel
+                panel.style.display = 'none';
+            }
+        }
+        
+        // Store last render response for debug panel
+        let lastRenderResponse = null;
+        
+        function updateDebugPanel() {
+            const content = document.getElementById('debugASTContent');
+            
+            if (!currentAST) {
+                content.textContent = 'No AST available. Create an expression first.';
+                return;
+            }
+            
+            // Format AST as readable JSON
+            const astJSON = JSON.stringify(currentAST, null, 2);
+            
+            // Add tree visualization
+            const treeView = formatASTAsTree(currentAST, 0);
+            
+            // Format marker placement info
+            let markerInfo = '=== Marker Placement Info ===\n\n';
+            if (lastRenderResponse) {
+                markerInfo += '--- Placeholders (from square glyph extraction) ---\n';
+                if (lastRenderResponse.placeholders && lastRenderResponse.placeholders.length > 0) {
+                    lastRenderResponse.placeholders.forEach(ph => {
+                        markerInfo += `  ID ${ph.id}: (x=${ph.x.toFixed(2)}, y=${ph.y.toFixed(2)}, w=${ph.width}, h=${ph.height})\n`;
+                    });
+                } else {
+                    markerInfo += '  (none)\n';
+                }
+                
+                markerInfo += '\n--- Argument Bounding Boxes (semantic) ---\n';
+                if (lastRenderResponse.argument_bounding_boxes && lastRenderResponse.argument_bounding_boxes.length > 0) {
+                    lastRenderResponse.argument_bounding_boxes.forEach(bbox => {
+                        markerInfo += `  Arg ${bbox.arg_index} [${bbox.node_id}]: (x=${bbox.x.toFixed(2)}, y=${bbox.y.toFixed(2)}, w=${bbox.width.toFixed(2)}, h=${bbox.height.toFixed(2)})\n`;
+                    });
+                } else {
+                    markerInfo += '  (none)\n';
+                }
+                
+                markerInfo += '\n--- Argument Slots (all editable positions) ---\n';
+                if (lastRenderResponse.argument_slots && lastRenderResponse.argument_slots.length > 0) {
+                    lastRenderResponse.argument_slots.forEach(slot => {
+                        markerInfo += `  Slot ${slot.id}: is_placeholder=${slot.is_placeholder}, hint="${slot.hint}", path=[${slot.path}], role=${slot.role || 'null'}\n`;
+                    });
+                } else {
+                    markerInfo += '  (none)\n';
+                }
+                
+                markerInfo += '\n--- Coordinate System Used ---\n';
+                markerInfo += `  COORDINATE_PREFERENCE = '${COORDINATE_PREFERENCE}'\n`;
+                markerInfo += `  (semantic-first uses argument_bounding_boxes primarily)\n`;
+            } else {
+                markerInfo += '(Render the expression first to see marker data)\n';
+            }
+            
+            content.textContent = '=== AST Structure ===\n\n' + astJSON + '\n\n' + 
+                                  '=== Tree View ===\n\n' + treeView + '\n\n' +
+                                  '=== Statistics ===\n\n' +
+                                  `Placeholders: ${countPlaceholdersInAST(currentAST)}\n` +
+                                  `Operations: ${countOperationsInAST(currentAST)}\n` +
+                                  `Depth: ${getASTDepth(currentAST)}\n` +
+                                  `Total nodes: ${countNodesInAST(currentAST)}\n\n` +
+                                  markerInfo;
+        }
+        
+        function formatASTAsTree(node, depth) {
+            const indent = '  '.repeat(depth);
+            
+            if (node.Placeholder) {
+                return `${indent}□ Placeholder(id=${node.Placeholder.id}, hint="${node.Placeholder.hint}")`;
+            } else if (node.Const) {
+                return `${indent}# Const("${node.Const}")`;
+            } else if (node.Object) {
+                return `${indent}○ Object("${node.Object}")`;
+            } else if (node.Operation) {
+                let result = `${indent}⊕ Operation("${node.Operation.name}")\n`;
+                node.Operation.args.forEach((arg, i) => {
+                    result += `${indent}├─[${i}] ${formatASTAsTree(arg, depth + 1).trim()}\n`;
+                });
+                return result.trimEnd();
+            }
+            return `${indent}? Unknown`;
+        }
+        
+        function countPlaceholdersInAST(node) {
+            if (node.Placeholder) return 1;
+            if (node.Operation) {
+                return node.Operation.args.reduce((sum, arg) => sum + countPlaceholdersInAST(arg), 0);
+            }
+            return 0;
+        }
+        
+        function countOperationsInAST(node) {
+            if (node.Operation) {
+                return 1 + node.Operation.args.reduce((sum, arg) => sum + countOperationsInAST(arg), 0);
+            }
+            return 0;
+        }
+        
+        function getASTDepth(node) {
+            if (node.Operation) {
+                return 1 + Math.max(...node.Operation.args.map(arg => getASTDepth(arg)), 0);
+            }
+            return 1;
+        }
+        
+        function countNodesInAST(node) {
+            if (node.Operation) {
+                return 1 + node.Operation.args.reduce((sum, arg) => sum + countNodesInAST(arg), 0);
+            }
+            return 1;
+        }
+        
+        function copyASTToClipboard() {
+            if (!currentAST) {
+                alert('No AST to copy');
+                return;
+            }
+            
+            const astJSON = JSON.stringify(currentAST, null, 2);
+            navigator.clipboard.writeText(astJSON).then(() => {
+                showStatus('✅ AST copied to clipboard', 'success');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showStatus('❌ Failed to copy', 'error');
+            });
+        }
+        
+        function downloadAST() {
+            if (!currentAST) {
+                alert('No AST to download');
+                return;
+            }
+            
+            const astJSON = JSON.stringify(currentAST, null, 2);
+            const blob = new Blob([astJSON], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kleis_ast_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showStatus('✅ AST downloaded', 'success');
+        }
+
+        // --- Text Mode Functions ---
+        async function renderEquation() {
+            const latexInput = document.getElementById('latexInput');
+            if(!latexInput) return;
+            
+            const latex = latexInput.value;
+            const previewDiv = document.getElementById('preview');
+            
+            if (!latex.trim()) {
+                showStatus('Please enter a LaTeX equation', 'error');
+                return;
+            }
+            
+            try {
+                previewDiv.innerHTML = `\\[${latex}\\]`;
+                if (window.MathJax) await MathJax.typesetPromise([previewDiv]);
+                showStatus('✅ Rendered successfully!', 'success');
+            } catch (error) {
+                showStatus('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        function insertSymbol(latex) {
+            if (editorMode === 'structural') {
+                // If inline editor is active, append symbol to input
+                if (isInlineEditorActive()) {
+                    appendToInlineEditor(latex);
+                    return;
+                }
+                
+                // In structural mode, insert symbol into active placeholder
+                if (activeEditMarker) {
+                    // Replace the placeholder at the active path with a Const node
+                    const symbolNode = { Const: latex };
+                    setNodeAtPath(currentAST, activeEditMarker.path, symbolNode);
+                    
+                    // Clear active marker
+                    activeEditMarker = null;
+                    document.querySelectorAll('.arg-overlay').forEach(el => {
+                        el.classList.remove('active-marker');
+                    });
+                    
+                    // Re-render
+                    renderStructuralEditor();
+                    showStatus('✅ Symbol inserted', 'success');
+                } else {
+                    // No marker selected - create a simple expression with the symbol
+                    currentAST = { Const: latex };
+                    renderStructuralEditor();
+                    showStatus('✅ Symbol inserted', 'success');
+                }
+                return;
+            }
+            
+            const textarea = document.getElementById('latexInput');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            textarea.value = text.substring(0, start) + latex + text.substring(end);
+            const newPos = start + latex.length;
+            textarea.setSelectionRange(newPos, newPos);
+            textarea.focus();
+            renderEquation();
+        }
+
+        function insertTemplate(template) {
+            if (editorMode === 'structural') {
+                // If inline editor is active, check if user has typed something
+                if (isInlineEditorActive()) {
+                    const currentInput = inlineEditorState.input.value.trim();
+                    if (currentInput) {
+                        // Show confirmation before replacing
+                        showReplaceConfirmation(currentInput, template);
+                        return;
+                    } else {
+                        // Empty input - just close and insert template
+                        hideInlineEditor(false);
+                    }
+                }
+                
+                if (activeEditMarker) {
+                    // INSERT AT ACTIVE MARKER
+                    insertStructuralTemplateAt(template, activeEditMarker.path);
+                } else {
+                    // NO MARKER SELECTED - Replace whole AST
+                    insertStructuralTemplate(template);
+                }
+            } else {
+                const textarea = document.getElementById('latexInput');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = textarea.value;
+                textarea.value = text.substring(0, start) + template + text.substring(end);
+                // Position cursor at first placeholder
+                const placeholderIdx = template.indexOf('□');
+                const newPos = start + (placeholderIdx >= 0 ? placeholderIdx : template.length);
+                textarea.setSelectionRange(newPos, newPos + (placeholderIdx >= 0 ? 1 : 0));
+                textarea.focus();
+            }
+        }
+        
+        function insertStructuralTemplateAt(latexTemplate, path) {
+            console.log('insertStructuralTemplateAt:', latexTemplate, 'at path:', path);
+            
+            const name = templateMap[latexTemplate];
+            if (!name) {
+                alert('Template not implemented in structural mode yet.');
+                return;
+            }
+            
+            let ast = astTemplates[name];
+            if (!ast) {
+                ast = { Placeholder: { id: nextPlaceholderId++, hint: name } };
+            } else {
+                ast = JSON.parse(JSON.stringify(ast));
+                renumberPlaceholders(ast);
+            }
+            
+            // Insert at the specified path
+            setNodeAtPath(currentAST, path, ast);
+            
+            // Clear active marker
+            activeEditMarker = null;
+            document.querySelectorAll('.arg-overlay').forEach(el => {
+                el.classList.remove('active-marker');
+            });
+            
+            // Re-render
+            renderStructuralEditor();
+            showStatus('✅ Template inserted', 'success');
+        }
+
+        // --- Structural Mode Functions ---
+        
+        // Map palette templates to AST templates
+        const templateMap = {
+            // Basic
+            '\\frac{□}{□}': 'fraction',
+            '\\sqrt{□}': 'sqrt',
+            '\\sqrt[□]{□}': 'nthroot',
+            '□^{□}': 'power',
+            '□_{□}': 'subscript',
+            '□^{□}_{□}': 'tensor_mixed',
+            '□_{□}^{□}': 'subsup',
+            '□_{□ □}': 'tensor_lower_pair',
+            '□^{□ □}_{□ □}': 'tensor_2up_2down',
+            // Legacy (kept for compatibility)
+            'x^{□}': 'power',
+            'x_{□}': 'subscript',
+            'x^{□}_{□}': 'tensor_mixed',
+            '\\binom{□}{□}': 'binomial',
+            '□!': 'factorial',
+            '\\lfloor □ \\rfloor': 'floor',
+            '\\lceil □ \\rceil': 'ceiling',
+            '\\left\\lfloor □ \\right\\rfloor': 'floor',
+            '\\left\\lceil □ \\right\\rceil': 'ceiling',
+            
+            // Brackets & Grouping
+            '\\left(□\\right)': 'parens',
+            '\\left[□\\right]': 'brackets',
+            '\\left\\{□\\right\\}': 'braces',
+            '\\left\\langle □ \\right\\rangle': 'angle_brackets',
+            '\\left|□\\right|': 'abs',
+            '\\left\\|□\\right\\|': 'norm',
+            
+            '□ = □': 'equals',
+            '□ + □': 'plus',
+            '□ - □': 'minus',
+            '□ \\cdot □': 'times',
+            '-□': 'negate',
+            '±': 'plus_minus_literal',
+            
+            equals: 'equals',
+            less_than: 'less_than',
+            greater_than: 'greater_than',
+            leq: 'leq',
+            geq: 'geq',
+            neq: 'neq',
+            approx: 'approx',
+            logical_and: 'logical_and',
+            logical_or: 'logical_or',
+            logical_not: 'logical_not',
+            
+            // Calculus
+            '\\int_{□}^{□} □ \\, dx': 'integral',
+            '\\sum_{□}^{□} □': 'sum',
+            '\\prod_{□}^{□} □': 'product',
+            '\\lim_{□ \\to □} □': 'limit',
+            '\\partial_{□} □': 'partial',
+            '\\frac{\\partial □}{\\partial □}': 'partial',
+            '\\frac{d □}{d □}': 'derivative',
+            '\\nabla □': 'gradient',
+            
+            // Matrices
+            '\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}': 'matrix2x2',
+            '\\begin{bmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{bmatrix}': 'matrix3x3',
+            '\\begin{pmatrix}□&□\\\\□&□\\end{pmatrix}': 'pmatrix2x2',
+            '\\begin{pmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{pmatrix}': 'pmatrix3x3',
+            '\\begin{vmatrix}□&□\\\\□&□\\end{vmatrix}': 'vmatrix2x2',
+            '\\begin{vmatrix}□&□&□\\\\□&□&□\\\\□&□&□\\end{vmatrix}': 'vmatrix3x3',
+            
+            // Quantum
+            '|□\\rangle': 'ket',
+            '\\langle□|': 'bra',
+            '\\langle□|□\\rangle': 'inner',
+            '|□\\rangle\\langle□|': 'outer',
+            '[□, □]': 'commutator',
+            '\\langle □ \\rangle': 'expectation',
+            
+            // Vectors
+            '\\mathbf{v}': 'vector_bold',
+            '\\vec{v}': 'vector_arrow',
+            'a \\cdot b': 'dot',
+            'a \\times b': 'cross',
+            'A \\bullet B': 'matrix_multiply',
+            '\\|v\\|': 'norm',
+            '|x|': 'abs',
+            
+            // Functions
+            '\\sin(□)': 'sin',
+            '\\cos(□)': 'cos',
+            '\\tan(□)': 'tan',
+            '\\arcsin(□)': 'arcsin',
+            '\\arccos(□)': 'arccos',
+            '\\arctan(□)': 'arctan',
+            '\\ln(□)': 'ln',
+            '\\log(□)': 'log',
+            '\\exp(□)': 'exp',
+            'e^{□}': 'exp_e',
+            
+            // Accents
+            '\\dot{□}': 'dot_accent',
+            '\\ddot{□}': 'ddot_accent',
+            '\\hat{□}': 'hat',
+            '\\bar{□}': 'bar',
+            '\\tilde{□}': 'tilde',
+            
+            // Tensors
+            '\\Gamma^{□}_{□ □}': 'christoffel',
+            'R^{□}_{□ □ □}': 'riemann',
+            
+            // Integral Transforms
+            '\\mathcal{F}[□](□)': 'fourier_transform',
+            '\\mathcal{F}^{-1}[□](□)': 'inverse_fourier',
+            '\\mathcal{L}[□](□)': 'laplace_transform',
+            '\\mathcal{L}^{-1}[□](□)': 'inverse_laplace',
+            '(□ \\ast □)(□)': 'convolution',
+            '\\int_{□} □ □ \\, d□': 'kernel_integral',
+            'G(□, □)': 'greens_function',
+            
+            // POT Operations
+            '\\Pi[□](□)': 'projection',
+            '\\int_{□} □ \\, d\\mu(□)': 'modal_integral',
+            'K(□, □)': 'projection_kernel',
+            'c(□)': 'causal_bound',
+            '\\mathrm{Residue}[□, □]': 'projection_residue',
+            '\\mathcal{M}_{□}': 'modal_space',
+            '\\mathbb{R}^4': 'spacetime',
+            '\\mathcal{H}_{□}': 'hont'
+        };
+
+        // AST Templates definitions (simplified for client-side creation)
+        // Ideally these should come from server, but hardcoding for responsiveness
+        const astTemplates = {
+            // Basic
+            fraction: { Operation: { name: 'scalar_divide', args: [{Placeholder:{id:0,hint:'numerator'}}, {Placeholder:{id:1,hint:'denominator'}}] } },
+            power: { Operation: { name: 'sup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'exponent'}}] } },
+            subscript: { Operation: { name: 'sub', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}] } },
+            sqrt: { Operation: { name: 'sqrt', args: [{Placeholder:{id:0,hint:'radicand'}}] } },
+            nthroot: { Operation: { name: 'nth_root', args: [{Placeholder:{id:0,hint:'index'}}, {Placeholder:{id:1,hint:'radicand'}}] } },
+            binomial: { Operation: { name: 'binomial', args: [{Placeholder:{id:0,hint:'n'}}, {Placeholder:{id:1,hint:'k'}}] } },
+            factorial: { Operation: { name: 'factorial', args: [{Placeholder:{id:0,hint:'n'}}] } },
+            floor: { Operation: { name: 'floor', args: [{Placeholder:{id:0,hint:'x'}}] } },
+            ceiling: { Operation: { name: 'ceiling', args: [{Placeholder:{id:0,hint:'x'}}] } },
+            tensor_mixed: { Operation: { name: 'index_mixed', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower'}}] } },
+            equals: { Operation: { name: 'equals', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            plus: { Operation: { name: 'plus', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            minus: { Operation: { name: 'minus', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            times: { Operation: { name: 'scalar_multiply', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            matrix_multiply: { Operation: { name: 'multiply', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            negate: { Operation: { name: 'minus', args: [{Const:'0'}, {Placeholder:{id:0,hint:'value'}}] } },
+            plus_minus_literal: { Object: '\\pm' },
+            
+            less_than: { Operation: { name: 'less_than', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            greater_than: { Operation: { name: 'greater_than', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            leq: { Operation: { name: 'leq', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            geq: { Operation: { name: 'geq', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            neq: { Operation: { name: 'neq', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            approx: { Operation: { name: 'approx', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            logical_and: { Operation: { name: 'logical_and', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            logical_or: { Operation: { name: 'logical_or', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            logical_not: { Operation: { name: 'logical_not', args: [{Placeholder:{id:0,hint:'arg'}}] } },
+            
+            // Calculus
+            integral: { Operation: { name: 'int_bounds', args: [{Placeholder:{id:0,hint:'integrand'}}, {Placeholder:{id:1,hint:'lower'}}, {Placeholder:{id:2,hint:'upper'}}, {Placeholder:{id:3,hint:'variable'}}] } },
+            sum: { Operation: { name: 'sum_bounds', args: [{Placeholder:{id:0,hint:'body'}}, {Placeholder:{id:1,hint:'from'}}, {Placeholder:{id:2,hint:'to'}}] } },
+            product: { Operation: { name: 'prod_bounds', args: [{Placeholder:{id:0,hint:'body'}}, {Placeholder:{id:1,hint:'from'}}, {Placeholder:{id:2,hint:'to'}}] } },
+            limit: { Operation: { name: 'lim', args: [{Placeholder:{id:0,hint:'body'}}, {Placeholder:{id:1,hint:'var'}}, {Placeholder:{id:2,hint:'target'}}] } },
+            partial: { Operation: { name: 'd_part', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            derivative: { Operation: { name: 'd_dt', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            gradient: { Operation: { name: 'grad', args: [{Placeholder:{id:0,hint:'function'}}] } },
+            
+            // Matrices (NEW FORMAT: Matrix(rows, cols, [elements]) - FIXED ARITY!)
+            matrix2x2: { Operation: { name: 'Matrix', args: [{Const:'2'}, {Const:'2'}, {List: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}]}] } },
+            matrix3x3: { Operation: { name: 'Matrix', args: [{Const:'3'}, {Const:'3'}, {List: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}]}] } },
+            pmatrix2x2: { Operation: { name: 'PMatrix', args: [{Const:'2'}, {Const:'2'}, {List: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}]}] } },
+            pmatrix3x3: { Operation: { name: 'PMatrix', args: [{Const:'3'}, {Const:'3'}, {List: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}]}] } },
+            vmatrix2x2: { Operation: { name: 'VMatrix', args: [{Const:'2'}, {Const:'2'}, {List: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a21'}}, {Placeholder:{id:3,hint:'a22'}}]}] } },
+            vmatrix3x3: { Operation: { name: 'VMatrix', args: [{Const:'3'}, {Const:'3'}, {List: [{Placeholder:{id:0,hint:'a11'}}, {Placeholder:{id:1,hint:'a12'}}, {Placeholder:{id:2,hint:'a13'}}, {Placeholder:{id:3,hint:'a21'}}, {Placeholder:{id:4,hint:'a22'}}, {Placeholder:{id:5,hint:'a23'}}, {Placeholder:{id:6,hint:'a31'}}, {Placeholder:{id:7,hint:'a32'}}, {Placeholder:{id:8,hint:'a33'}}]}] } },
+            
+            // Quantum
+            ket: { Operation: { name: 'ket', args: [{Placeholder:{id:0,hint:'state'}}] } },
+            bra: { Operation: { name: 'bra', args: [{Placeholder:{id:0,hint:'state'}}] } },
+            inner: { Operation: { name: 'inner', args: [{Placeholder:{id:0,hint:'bra'}}, {Placeholder:{id:1,hint:'ket'}}] } },
+            outer: { Operation: { name: 'outer', args: [{Placeholder:{id:0,hint:'ket'}}, {Placeholder:{id:1,hint:'bra'}}] } },
+            commutator: { Operation: { name: 'commutator', args: [{Placeholder:{id:0,hint:'A'}}, {Placeholder:{id:1,hint:'B'}}] } },
+            expectation: { Operation: { name: 'expectation', args: [{Placeholder:{id:0,hint:'operator'}}] } },
+            
+            // Integral Transforms
+            fourier_transform: { Operation: { name: 'fourier_transform', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            inverse_fourier: { Operation: { name: 'inverse_fourier', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            laplace_transform: { Operation: { name: 'laplace_transform', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            inverse_laplace: { Operation: { name: 'inverse_laplace', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            convolution: { Operation: { name: 'convolution', args: [{Placeholder:{id:0,hint:'f'}}, {Placeholder:{id:1,hint:'g'}}, {Placeholder:{id:2,hint:'variable'}}] } },
+            kernel_integral: { Operation: { name: 'kernel_integral', args: [{Placeholder:{id:0,hint:'kernel'}}, {Placeholder:{id:1,hint:'function'}}, {Placeholder:{id:2,hint:'domain'}}, {Placeholder:{id:3,hint:'variable'}}] } },
+            greens_function: { Operation: { name: 'greens_function', args: [{Placeholder:{id:0,hint:'point_x'}}, {Placeholder:{id:1,hint:'source_m'}}] } },
+            
+            // POT Operations
+            projection: { Operation: { name: 'projection', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'variable'}}] } },
+            modal_integral: { Operation: { name: 'modal_integral', args: [{Placeholder:{id:0,hint:'function'}}, {Placeholder:{id:1,hint:'modal_space'}}, {Placeholder:{id:2,hint:'variable'}}] } },
+            projection_kernel: { Operation: { name: 'projection_kernel', args: [{Placeholder:{id:0,hint:'spacetime_point'}}, {Placeholder:{id:1,hint:'modal_state'}}] } },
+            causal_bound: { Operation: { name: 'causal_bound', args: [{Placeholder:{id:0,hint:'point'}}] } },
+            projection_residue: { Operation: { name: 'projection_residue', args: [{Placeholder:{id:0,hint:'projection'}}, {Placeholder:{id:1,hint:'structure'}}] } },
+            modal_space: { Operation: { name: 'modal_space', args: [{Placeholder:{id:0,hint:'name'}}] } },
+            spacetime: { Operation: { name: 'spacetime', args: [] } },
+            hont: { Operation: { name: 'hont', args: [{Placeholder:{id:0,hint:'dimension'}}] } },
+            
+            // Vectors
+            vector_bold: { Operation: { name: 'vector_bold', args: [{Placeholder:{id:0,hint:'vector'}}] } },
+            vector_arrow: { Operation: { name: 'vector_arrow', args: [{Placeholder:{id:0,hint:'vector'}}] } },
+            dot: { Operation: { name: 'dot', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            cross: { Operation: { name: 'cross', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
+            norm: { Operation: { name: 'norm', args: [{Placeholder:{id:0,hint:'vector'}}] } },
+            abs: { Operation: { name: 'abs', args: [{Placeholder:{id:0,hint:'value'}}] } },
+            
+            // Brackets & Grouping
+            parens: { Operation: { name: 'parens', args: [{Placeholder:{id:0,hint:'content'}}] } },
+            brackets: { Operation: { name: 'brackets', args: [{Placeholder:{id:0,hint:'content'}}] } },
+            braces: { Operation: { name: 'braces', args: [{Placeholder:{id:0,hint:'content'}}] } },
+            angle_brackets: { Operation: { name: 'angle_brackets', args: [{Placeholder:{id:0,hint:'content'}}] } },
+            
+            // Functions
+            sin: { Operation: { name: 'sin', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            cos: { Operation: { name: 'cos', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            tan: { Operation: { name: 'tan', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            arcsin: { Operation: { name: 'arcsin', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            arccos: { Operation: { name: 'arccos', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            arctan: { Operation: { name: 'arctan', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            ln: { Operation: { name: 'ln', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            log: { Operation: { name: 'log', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            exp: { Operation: { name: 'exp', args: [{Placeholder:{id:0,hint:'argument'}}] } },
+            exp_e: { Operation: { name: 'sup', args: [{Object: 'e'}, {Placeholder:{id:0,hint:'exponent'}}] } },
+            
+            // Accents
+            dot_accent: { Operation: { name: 'dot_accent', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            ddot_accent: { Operation: { name: 'ddot_accent', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            hat: { Operation: { name: 'hat', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            bar: { Operation: { name: 'bar', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            tilde: { Operation: { name: 'tilde', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            
+            // Tensors
+            subsup: { Operation: { name: 'subsup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}, {Placeholder:{id:2,hint:'superscript'}}] } },
+            tensor_upper_pair: { Operation: { name: 'index_pair', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'idx1'}}, {Placeholder:{id:2,hint:'idx2'}}] } },
+            tensor_lower_pair: { Operation: { name: 'tensor_lower_pair', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
+            tensor_1up_3down: { Operation: { name: 'tensor_1up_3down', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower1'}}, {Placeholder:{id:3,hint:'lower2'}}, {Placeholder:{id:4,hint:'lower3'}}] } },
+            tensor_2up_2down: { Operation: { name: 'tensor_2up_2down', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper1'}}, {Placeholder:{id:2,hint:'upper2'}}, {Placeholder:{id:3,hint:'lower1'}}, {Placeholder:{id:4,hint:'lower2'}}] } },
+            christoffel: { Operation: { name: 'gamma', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
+            riemann: { Operation: { name: 'riemann', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}, {Placeholder:{id:3,hint:'lower3'}}] } },
+            
+            // Fallback for others - creates empty placeholder
+            default: { Placeholder: { id: 0, hint: 'expression' } }
+        };
+
+        function insertStructuralTemplate(latexTemplate) {
+            const name = templateMap[latexTemplate];
+            console.log('insertStructuralTemplate called with:', latexTemplate);
+            console.log('Mapped to template name:', name);
+            
+            if (!name) {
+                alert('Template not implemented in structural mode yet.');
+                return;
+            }
+            
+            // Save to undo stack before modifying
+            saveToUndoStack();
+            
+            // Use specific AST or generic
+            let ast = astTemplates[name];
+            console.log('AST template before clone:', ast);
+            
+            if (!ast) {
+                console.log('No AST template found, using fallback');
+                ast = { Placeholder: { id: nextPlaceholderId++, hint: name } };
+            } else {
+                ast = JSON.parse(JSON.stringify(ast));
+                console.log('AST after clone:', ast);
+                renumberPlaceholders(ast);
+                console.log('AST after renumber:', ast);
+            }
+            
+            currentAST = ast;
+            console.log('Final currentAST:', currentAST);
+            renderStructuralEditor();
+        }
+
+        function renumberPlaceholders(node) {
+            console.log('renumberPlaceholders called on:', node);
+            if (node.Placeholder) {
+                const oldId = node.Placeholder.id;
+                node.Placeholder.id = nextPlaceholderId++;
+                console.log(`  Renumbered placeholder: ${oldId} → ${node.Placeholder.id}`);
+            } else if (node.Operation) {
+                console.log(`  Processing operation: ${node.Operation.name} with ${node.Operation.args.length} args`);
+                node.Operation.args.forEach(renumberPlaceholders);
+            } else if (node.Object !== undefined) {
+                console.log(`  Found Object: "${node.Object}"`);
+            } else if (node.Const !== undefined) {
+                console.log(`  Found Const: "${node.Const}"`);
+            } else {
+                console.log('  Unknown node type:', node);
+            }
+        }
+
+        // ===== INLINE EDITING SYSTEM =====
+        
+        let inlineEditorState = {
+            active: false,
+            foreignObject: null,
+            input: null,
+            marker: null,
+            pendingTemplate: null
+        };
+        
+        // Classify button types (symbol vs template)
+        function classifyButtonType(latex) {
+            // Single character symbols
+            if (/^[a-zA-Z0-9+\-=×÷±∓·∗∞<>]$/.test(latex)) return 'symbol';
+            
+            // Greek letters
+            if (/^\\(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega)$/.test(latex)) return 'symbol';
+            if (/^\\(Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)$/.test(latex)) return 'symbol';
+            
+            // Logic and set symbols
+            if (/^\\(leq|geq|neq|approx|equiv|in|notin|subset|subseteq|cup|cap|emptyset|to|Rightarrow|Leftrightarrow|forall|exists|neg|land|lor)$/.test(latex)) return 'symbol';
+            
+            // Math symbols
+            if (/^\\(times|div|cdot|pm|mp|ast|partial|nabla|infty|square)$/.test(latex)) return 'symbol';
+            
+            // Functions with arguments
+            if (/\\(sin|cos|tan|arcsin|arccos|arctan|ln|log|exp)\(/.test(latex)) return 'function';
+            
+            // Templates with placeholders or structure
+            if (latex.includes('□') || latex.includes('\\frac') || latex.includes('\\begin') ||
+                latex.includes('\\sqrt') || latex.includes('\\int') || latex.includes('\\sum') ||
+                latex.includes('\\left') || latex.includes('\\langle') || latex.includes('\\binom')) {
+                return 'template';
+            }
+            
+            // Default to symbol (safer)
+            return 'symbol';
+        }
+        
+        function isInlineEditorActive() {
+            return inlineEditorState.active && inlineEditorState.foreignObject && 
+                   inlineEditorState.foreignObject.style.display !== 'none';
+        }
+        
+        function showInlineEditor(marker) {
+            console.log('showInlineEditor called with marker:', marker);
+            inlineEditorState.marker = marker;
+            inlineEditorState.active = true;
+            
+            // Find or create foreignObject in the SVG
+            const svg = document.querySelector('#structuralEditor svg');
+            console.log('Found SVG:', svg);
+            if (!svg) {
+                console.error('No SVG found! Cannot show inline editor.');
+                return;
+            }
+            
+            let foreignObject = svg.querySelector('#inline-editor-foreign');
+            console.log('Existing foreignObject:', foreignObject);
+            
+            if (!foreignObject) {
+                console.log('Creating new foreignObject');
+                // Create foreignObject
+                foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+                foreignObject.id = 'inline-editor-foreign';
+                svg.appendChild(foreignObject);
+                console.log('ForeignObject appended to SVG');
+                
+                // Create wrapper div (foreignObject needs HTML content in proper namespace)
+                const wrapper = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+                wrapper.style.width = '100%';
+                wrapper.style.height = '100%';
+                
+                // Create input inside wrapper
+                const input = document.createElementNS('http://www.w3.org/1999/xhtml', 'input');
+                input.setAttribute('type', 'text');
+                input.setAttribute('id', 'inline-input');
+                input.setAttribute('class', 'inline-edit-input');
+                input.setAttribute('autocomplete', 'off');
+                input.setAttribute('spellcheck', 'false');
+                input.setAttribute('placeholder', 'Type or click symbols...');
+                input.style.width = '100%';
+                input.style.height = '100%';
+                input.style.boxSizing = 'border-box';
+                
+                wrapper.appendChild(input);
+                foreignObject.appendChild(wrapper);
+                console.log('Input element created in XHTML wrapper');
+                
+                // Setup keyboard handlers
+                setupInlineEditorHandlers(input);
+                console.log('Keyboard handlers setup');
+            }
+            
+            inlineEditorState.foreignObject = foreignObject;
+            inlineEditorState.input = foreignObject.querySelector('input') || document.getElementById('inline-input');
+            console.log('State updated. Input:', inlineEditorState.input);
+            
+            if (!inlineEditorState.input) {
+                console.error('ERROR: Could not find input element!');
+                return;
+            }
+            
+            // Position at marker location (ensure it stays within SVG viewport)
+            const bbox = marker.bbox;
+            console.log('Marker bbox:', bbox);
+            
+            // Ensure position is not negative
+            const posX = Math.max(0, bbox.x - 10);
+            const posY = Math.max(0, bbox.y - 5);
+            const width = Math.max(200, bbox.width + 40);
+            const height = Math.max(40, bbox.height + 10);
+            
+            foreignObject.setAttribute('x', posX);
+            foreignObject.setAttribute('y', posY);
+            foreignObject.setAttribute('width', width);
+            foreignObject.setAttribute('height', height);
+            console.log('ForeignObject positioned at:', { x: posX, y: posY, width, height });
+            
+            foreignObject.style.display = 'block';
+            foreignObject.style.overflow = 'visible';
+            foreignObject.style.pointerEvents = 'all';
+            foreignObject.setAttribute('visibility', 'visible');
+            console.log('ForeignObject display set to block, visibility ensured');
+            
+            // Get current value if any
+            const currentValue = getNodeValueAtPath(currentAST, marker.path);
+            inlineEditorState.input.value = currentValue || '';
+            console.log('Input value set to:', currentValue);
+            
+            // Focus and select
+            setTimeout(() => {
+                inlineEditorState.input.focus();
+                inlineEditorState.input.select();
+                console.log('Input focused and selected');
+            }, 10);
+            
+            // Visual feedback
+            marker.element.classList.add('editing-inline');
+            document.body.classList.add('inline-editing');
+            console.log('Visual feedback added. Editor should be visible now!');
+            
+            // Enable click-outside handler after editor is shown
+            if (window.enableClickOutside) {
+                window.enableClickOutside();
+            }
+        }
+        
+        function hideInlineEditor(commit = true) {
+            console.log('hideInlineEditor called, commit:', commit);
+            console.trace('hideInlineEditor call stack');
+            if (!inlineEditorState.active) {
+                console.log('Inline editor not active, returning');
+                return;
+            }
+            
+            if (commit && inlineEditorState.marker) {
+                const value = inlineEditorState.input.value.trim();
+                if (value) {
+                    try {
+                        const node = parseSimpleInput(value);
+                        setNodeAtPath(currentAST, inlineEditorState.marker.path, node);
+                        renderStructuralEditor();
+                        showStatus('✅ Value updated', 'success');
+                    } catch (error) {
+                        console.error('Inline edit error:', error);
+                        showStatus('⚠️ Invalid input', 'error');
+                        return; // Don't close on error
+                    }
+                }
+            }
+            
+            // Clean up
+            if (inlineEditorState.foreignObject) {
+                inlineEditorState.foreignObject.style.display = 'none';
+            }
+            if (inlineEditorState.input) {
+                inlineEditorState.input.value = '';
+                inlineEditorState.input.classList.remove('error');
+            }
+            if (inlineEditorState.marker && inlineEditorState.marker.element) {
+                inlineEditorState.marker.element.classList.remove('editing-inline');
+            }
+            
+            document.body.classList.remove('inline-editing');
+            inlineEditorState.active = false;
+            inlineEditorState.marker = null;
+        }
+        
+        function appendToInlineEditor(text) {
+            if (!isInlineEditorActive()) return;
+            
+            const input = inlineEditorState.input;
+            const start = input.selectionStart || 0;
+            const end = input.selectionEnd || 0;
+            const currentValue = input.value;
+            
+            input.value = currentValue.substring(0, start) + text + currentValue.substring(end);
+            
+            const newPos = start + text.length;
+            input.setSelectionRange(newPos, newPos);
+            input.focus();
+        }
+        
+        function setupInlineEditorHandlers(input) {
+            // Keyboard shortcuts
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    hideInlineEditor(true); // Commit
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    hideInlineEditor(false); // Cancel
+                } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    hideInlineEditor(true); // Commit and move to next
+                    // TODO: Focus next placeholder
+                }
+            });
+            
+            // Click outside to commit (with debounce to prevent immediate firing)
+            let clickOutsideEnabled = false;
+            document.addEventListener('click', (e) => {
+                if (!clickOutsideEnabled) return;
+                
+                if (isInlineEditorActive()) {
+                    const foreignObject = inlineEditorState.foreignObject;
+                    const modal = document.getElementById('replace-confirm-modal');
+                    
+                    // Don't close if clicking inside editor or modal or SVG overlays
+                    if (foreignObject && !foreignObject.contains(e.target) &&
+                        !modal.contains(e.target) &&
+                        !e.target.closest('.math-btn') &&
+                        !e.target.closest('.arg-overlay')) {
+                        console.log('Click outside detected, hiding inline editor');
+                        hideInlineEditor(true);
+                    }
+                }
+            });
+            
+            // Enable click-outside handler after a short delay
+            window.enableClickOutside = function() {
+                setTimeout(() => {
+                    clickOutsideEnabled = true;
+                    console.log('Click outside handler enabled');
+                }, 100);
+            };
+        }
+        
+        function getNodeValueAtPath(ast, path) {
+            if (!ast || path.length === 0) return '';
+            
+            let current = ast;
+            for (let i = 0; i < path.length; i++) {
+                if (current.Operation) {
+                    current = current.Operation.args[path[i]];
+                } else if (current.List && Array.isArray(current.List)) {
+                    current = current.List[path[i]];
+                } else {
+                    console.warn('getNodeValueAtPath: cannot traverse at path', path, 'step', i);
+                    return '';
+                }
+            }
+            
+            if (current.Const) return current.Const;
+            if (current.Object) return current.Object;
+            return '';
+        }
+        
+        function showReplaceConfirmation(currentText, template) {
+            inlineEditorState.pendingTemplate = template;
+            
+            const modal = document.getElementById('replace-confirm-modal');
+            const message = document.getElementById('replace-message');
+            
+            message.textContent = `Replace "${currentText}" with template?`;
+            modal.classList.add('show');
+            
+            // Setup button handlers
+            document.getElementById('replace-confirm-yes').onclick = () => {
+                modal.classList.remove('show');
+                const marker = inlineEditorState.marker;
+                hideInlineEditor(false); // Don't commit text
+                insertTemplate(template); // Insert template at marker
+            };
+            
+            document.getElementById('replace-confirm-no').onclick = () => {
+                modal.classList.remove('show');
+                if (inlineEditorState.input) {
+                    inlineEditorState.input.focus();
+                }
+            };
+        }
+        
+        async function renderStructuralEditor() {
+            const container = document.getElementById('structuralEditor');
+            const preview = document.getElementById('preview');
+            
+            if (!currentAST) {
+                container.innerHTML = '<span style="color: #999;">Click a template button to start building...</span>';
+                preview.innerHTML = 'Structural mode active';
+                return;
+            }
+            
+            container.innerHTML = '<div style="text-align:center">🔄 Rendering...</div>';
+            
+            try {
+                console.log('renderStructuralEditor: sending AST to /api/render_typst', currentAST);
+                const response = await fetch(`${API_BASE}/render_typst`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ast: currentAST })
+                });
+                console.log('renderStructuralEditor: response status', response.status);
+                
+                const data = await response.json();
+                console.log('renderStructuralEditor: response payload', data);
+                
+                // Store for debug panel
+                lastRenderResponse = data;
+                
+                if (data.success) {
+                    let svg = data.svg;
+                    
+                    // Inject overlays
+                    if (data.argument_slots && data.argument_slots.length > 0) {
+                        let overlayElements = [];
+                        
+                        // Global transform extraction
+                        let globalOffsetX = 0;
+                        let globalOffsetY = 0;
+                        const svgMatch = /<g[^>]*transform="translate\(([\d.-]+)[ ,]+([\d.-]+)\)"/.exec(svg);
+                        if (svgMatch) {
+                            globalOffsetX = parseFloat(svgMatch[1]);
+                            globalOffsetY = parseFloat(svgMatch[2]);
+                        }
+                        
+                        // Check if this is a matrix operation - if so, infer grid positions
+                const isMatrix = currentAST.Operation && 
+                               (currentAST.Operation.name.startsWith('matrix') || 
+                                currentAST.Operation.name.startsWith('pmatrix') ||
+                                currentAST.Operation.name.startsWith('vmatrix'));
+                
+                        // OPTION B IMPLEMENTATION: Only show markers for leaf nodes (not parent operations)
+                        // Build a set of parent node IDs (nodes that have children)
+                        const parentNodeIds = new Set();
+                        data.argument_slots.forEach(slot => {
+                            const nodeId = nodeIdFromPath(slot.path || []);
+                            // If any slot's path is longer and starts with this nodeId, it's a parent
+                            data.argument_slots.forEach(otherSlot => {
+                                const otherNodeId = nodeIdFromPath(otherSlot.path || []);
+                                if (otherNodeId.startsWith(nodeId + '.')) {
+                                    parentNodeIds.add(nodeId);
+                                }
+                            });
+                        });
+                        console.log(`Identified ${parentNodeIds.size} parent nodes (will hide their markers)`);
+                
+                        data.argument_slots.forEach((slot, index) => {
+                            // FILTER: Skip parent operations, only show leaf nodes
+                            const nodeId = nodeIdFromPath(slot.path || []);
+                            if (parentNodeIds.has(nodeId)) {
+                                console.log(`  Skipping parent node ${nodeId} (has children)`);
+                                return; // Skip this slot
+                            }
+                            let rectX, rectY, rectWidth, rectHeight;
+                            let foundPosition = false;
+                            let currentNodeId = null;  // Store node_id for this slot
+                            const role = slot.role || null;
+                            
+                            // Use coordinate system based on COORDINATE_PREFERENCE flag
+                            if (COORDINATE_PREFERENCE === 'semantic') {
+                                // NEW APPROACH: Try semantic bounding box FIRST
+                                const nodePathId = nodeIdFromPath(slot.path || []);
+                                const bbox = data.argument_bounding_boxes && 
+                                            data.argument_bounding_boxes.find(b => b.node_id === nodePathId);
+                                
+                                if (bbox) {
+                                    rectX = bbox.x - 3;
+                                    rectY = bbox.y - 3;
+                                    rectWidth = bbox.width + 6;
+                                    rectHeight = bbox.height + 6;
+                                    foundPosition = true;
+                                    currentNodeId = bbox.node_id;
+                                    console.log(`✅ Slot ${slot.id}: Using semantic bbox (x=${bbox.x.toFixed(1)}, y=${bbox.y.toFixed(1)}) node=${nodePathId}`);
+                                } else {
+                                    // Fallback to placeholder position
+                                    const ph = data.placeholders && data.placeholders.find(p => p.id === slot.id);
+                                    if (ph) {
+                                        rectX = ph.x - 3;
+                                        rectY = ph.y - 3;
+                                        rectWidth = ph.width + 6;
+                                        rectHeight = ph.height + 6;
+                                        foundPosition = true;
+                                        console.log(`⚠️ Slot ${slot.id}: Fallback to placeholder (x=${ph.x.toFixed(1)}, y=${ph.y.toFixed(1)})`);
+                                    } else {
+                                        console.error(`❌ Slot ${slot.id}: No position found!`);
+                                    }
+                                }
+                            } else {
+                // CURRENT APPROACH: Try placeholder position FIRST (default)
+                // For placeholder slots, extract numeric ID from "ph{number}" format
+                // For filled slots (UUID), try matching by position in placeholder array
+                let searchId = null;
+                if (slot.is_placeholder && typeof slot.id === 'string' && slot.id.startsWith('ph')) {
+                    searchId = parseInt(slot.id.substring(2));
+                } else if (typeof slot.id === 'number') {
+                    searchId = slot.id;
+                }
+                
+                const ph = searchId !== null && data.placeholders && data.placeholders.find(p => p.id === searchId);
+                                if (ph) {
+                                    rectX = ph.x - 3;
+                                    rectY = ph.y - 3;
+                                    rectWidth = ph.width + 6;
+                                    rectHeight = ph.height + 6;
+                                    foundPosition = true;
+                                    console.log(`✅ Slot ${slot.id}: Using placeholder (x=${ph.x.toFixed(1)}, y=${ph.y.toFixed(1)})`);
+                                } else {
+                                    // Fallback to semantic bounding box
+                                    const nodePathId = nodeIdFromPath(slot.path || []);
+                                    const bbox = data.argument_bounding_boxes && 
+                                                data.argument_bounding_boxes.find(b => b.node_id === nodePathId);
+                                    
+                                    if (bbox) {
+                                        // Add more padding to prevent bunching
+                                        const padding = 5;
+                                        rectX = bbox.x - padding;
+                                        rectY = bbox.y - padding;
+                                        rectWidth = bbox.width + (padding * 2);
+                                        rectHeight = bbox.height + (padding * 2);
+                                        foundPosition = true;
+                                        currentNodeId = bbox.node_id;
+                                        console.log(`⚠️ Slot ${slot.id}: Using semantic bbox (x=${bbox.x.toFixed(1)}, y=${bbox.y.toFixed(1)}) node=${nodePathId}`);
+                                    } else {
+                                        // Last resort: infer position from grid structure
+                                        // For matrix cells, use existing placeholder positions to infer grid
+                                        if (data.placeholders && data.placeholders.length >= 2) {
+                                            const xCoords = [...new Set(data.placeholders.map(p => Math.round(p.x / 10) * 10))].sort((a,b) => a-b);
+                                            const yCoords = [...new Set(data.placeholders.map(p => Math.round(p.y / 10) * 10))].sort((a,b) => a-b);
+                                            
+                                            if (xCoords.length > 0 && yCoords.length > 0) {
+                                                // Assume row-major order based on slot path
+                                                const pathIdx = slot.path && slot.path.length > 0 ? slot.path[slot.path.length - 1] : index;
+                                                const cols = xCoords.length;
+                                                const rowIdx = Math.floor(pathIdx / cols);
+                                                const colIdx = pathIdx % cols;
+                                                
+                                                if (colIdx < xCoords.length && rowIdx < yCoords.length) {
+                                                    // Find actual x/y from nearest placeholder in that grid position
+                                                    const nearestPh = data.placeholders.find(p => 
+                                                        Math.abs(Math.round(p.x / 10) * 10 - xCoords[colIdx]) < 5 &&
+                                                        Math.abs(Math.round(p.y / 10) * 10 - yCoords[rowIdx]) < 5
+                                                    );
+                                                    
+                                                    if (nearestPh) {
+                                                        rectX = nearestPh.x - 3;
+                                                        rectY = nearestPh.y - 3;
+                                                    } else {
+                                                        rectX = xCoords[colIdx] - 3;
+                                                        rectY = yCoords[rowIdx] - 3;
+                                                    }
+                                                    rectWidth = 24;
+                                                    rectHeight = 24;
+                                                    foundPosition = true;
+                                                    console.log(`🔧 Slot ${slot.id}: Inferred from grid (row=${rowIdx}, col=${colIdx})`);
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (!foundPosition) {
+                                            console.error(`❌ Slot ${slot.id}: No position found!`);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Matrix-specific fix: If position seems wrong or missing, infer from grid
+                            if (isMatrix && (!foundPosition || (foundPosition && index >= 2))) {
+                                // For matrix2x2: 4 args (2 rows × 2 cols)
+                                // For matrix3x3: 9 args (3 rows × 3 cols)
+                                const isMatrix2x2 = currentAST.Operation.name.includes('2x2');
+                                const isMatrix3x3 = currentAST.Operation.name.includes('3x3');
+                                const cols = isMatrix2x2 ? 2 : (isMatrix3x3 ? 3 : 2);
+                                
+                                // Get first arg's nested path to understand matrix structure
+                                const firstArg = data.argument_slots[0];
+                                const hasNestedOps = firstArg && firstArg.path && firstArg.path.length > 1;
+                                
+                                if (hasNestedOps) {
+                                    // Matrix contains nested operations (like sub)
+                                    // Use first few known-good bounding boxes to establish grid
+                                    const knownGoodBoxes = data.argument_bounding_boxes
+                                        .filter(b => b.node_id.match(/^0\.\d+\.0$/));  // Top-level args
+                                    
+                                    if (knownGoodBoxes.length >= 2) {
+                                        // Calculate cell matrix index from slot path
+                                        const cellIndex = slot.path[0];  // Matrix arg index
+                                        const row = Math.floor(cellIndex / cols);
+                                        const col = cellIndex % cols;
+                                        
+                                        // Use first cell as anchor
+                                        const anchor = knownGoodBoxes[0];
+                                        const colSpacing = knownGoodBoxes.length > 1 ? 
+                                                         knownGoodBoxes[1].x - knownGoodBoxes[0].x : 43;
+                                        const rowSpacing = 28.7;  // Typical Typst matrix row spacing
+                                        
+                                        rectX = anchor.x + (col * colSpacing);
+                                        rectY = anchor.y + (row * rowSpacing);
+                                        rectWidth = anchor.width;
+                                        rectHeight = anchor.height;
+                                        
+                                        // Adjust for subscript role
+                                        if (role === 'subscript') {
+                                            rectX += 13;
+                                            rectY += 6;
+                                            rectWidth *= 0.5;
+                                            rectHeight *= 0.5;
+                                        }
+                                        
+                                        foundPosition = true;
+                                        console.log(`🔧 Slot ${slot.id}: Matrix grid inference (row=${row}, col=${col}, x=${rectX.toFixed(1)}, y=${rectY.toFixed(1)})`);
+                                    }
+                                }
+                            }
+                            
+                            if (foundPosition) {
+                                const widthFactor = role === 'base' ? 0.6 : 0.5;
+                                const heightFactor = role === 'base' ? 0.65 : 0.5;
+
+                                const originalWidth = rectWidth;
+                                const originalHeight = rectHeight;
+
+                                rectWidth = Math.max(6, rectWidth * widthFactor);
+                                rectHeight = Math.max(6, rectHeight * heightFactor);
+
+                                const centerShiftX = (originalWidth - rectWidth) / 2;
+                                let centerShiftY = (originalHeight - rectHeight) / 2;
+
+                                rectX += centerShiftX;
+                                rectY += centerShiftY;
+
+                                if (role === 'superscript') {
+                                    const shift = Math.max(4, rectHeight * 0.4);
+                                    rectY -= shift;
+                                    rectHeight = Math.max(6, rectHeight * 0.8);
+                                } else if (role === 'subscript') {
+                                    const shift = Math.max(4, rectHeight * 0.4);
+                                    rectY += shift;
+                                    rectHeight = Math.max(6, rectHeight * 0.8);
+                                } else if (role === 'base') {
+                                    const superscriptShift = Math.max(4, rectHeight * 0.4);
+                                    // align top edge with superscript top
+                                    rectY -= superscriptShift;
+                                    rectHeight = Math.max(6, rectHeight + superscriptShift);
+                                }
+                                const color = slot.is_placeholder ? '#667eea' : '#28a745';
+                                const fillColor = slot.is_placeholder ? 'rgba(240, 244, 255, 0.3)' : 'rgba(40, 167, 69, 0.2)';
+                                
+                                const pathStr = JSON.stringify(slot.path).replace(/"/g, '&quot;');
+                                
+                                // Use stored node_id or compute from path
+                                const nodeId = currentNodeId || nodeIdFromPath(slot.path || []);
+                                const rect = `<rect x="${rectX}" y="${rectY}" width="${rectWidth}" height="${rectHeight}"
+                                    fill="${fillColor}" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" rx="3"
+                                    class="arg-overlay" data-slot-id="${slot.id}" data-path="${pathStr}" data-node-id="${nodeId}"
+                                    style="cursor: pointer;"
+                                    tabindex="0" focusable="true"
+                                    onclick="handleSlotClick(event, '${slot.id}', ${pathStr}, '${nodeId}')"
+                                    onkeydown="handleSlotKeydown(event, '${slot.id}', ${pathStr}, '${nodeId}')" />`;
+                                overlayElements.push(rect);
+                            }
+                        });
+                        
+                        if (overlayElements.length > 0) {
+                            console.log(`Creating ${overlayElements.length} overlay elements`);
+                            svg = svg.replace('</svg>', `<g id="arg-overlays" visibility="visible">${overlayElements.join('')}</g></svg>`);
+                            console.log('Overlays injected into SVG');
+                        } else {
+                            console.warn('No overlay elements created!');
+                        }
+                    }
+                    
+                    console.log('Setting container.innerHTML with SVG');
+                    
+                    // Save foreignObject if it exists (to preserve inline editor)
+                    const existingForeignObject = container.querySelector('#inline-editor-foreign');
+                    console.log('Existing foreignObject before render:', existingForeignObject);
+                    
+                    container.innerHTML = svg;
+                    preview.innerHTML = svg;
+                    console.log('SVG rendered to DOM');
+                    
+                    // Restore foreignObject after innerHTML replacement
+                    if (existingForeignObject) {
+                        const newSvg = container.querySelector('svg');
+                        if (newSvg) {
+                            newSvg.appendChild(existingForeignObject);
+                            console.log('ForeignObject restored after render');
+                        }
+                    }
+                    
+                    // Reset zoom to 1.0 (natural size) - content-aware viewBox handles sizing
+                    currentZoom = 1.0;
+                    const svgElement = container.querySelector('svg');
+                    if (svgElement) {
+                        svgElement.style.transform = 'scale(1.0)';
+                        const viewBox = svgElement.getAttribute('viewBox');
+                        if (viewBox) {
+                            const parts = viewBox.split(/\s+/).map(parseFloat);
+                            if (parts.length === 4) {
+                                console.log(`📏 Rendered at natural size: viewBox ${parts[2].toFixed(0)}×${parts[3].toFixed(0)}pt`);
+                            }
+                        }
+                    }
+                    
+                    // Verify overlays are in DOM
+                    setTimeout(() => {
+                        const overlayGroup = document.querySelector('#arg-overlays');
+                        if (overlayGroup) {
+                            console.log(`✅ Overlay group found with ${overlayGroup.children.length} children`);
+                        } else {
+                            console.error('❌ Overlay group not found in DOM!');
+                        }
+                    }, 100);
+                    
+                    // Update debug panel if visible
+                    const debugPanel = document.getElementById('debugPanel');
+                    if (debugPanel && debugPanel.style.display !== 'none') {
+                        updateDebugPanel();
+                    }
+                    
+                    // Trigger type checking (debounced)
+                    checkTypesDebounced();
+                } else {
+                    showStatus('Render failed: ' + data.error, 'error');
+                    console.error('renderStructuralEditor: backend reported failure', data);
+                }
+            } catch (e) {
+                showStatus('Network error: ' + e.message, 'error');
+                console.error('renderStructuralEditor: fetch threw error', e);
+            }
+        }
+
+        function nodeIdFromPath(pathArray) {
+            const segments = [0];
+            if (Array.isArray(pathArray)) {
+                pathArray.forEach((idx) => segments.push(idx));
+            }
+            return segments.join('.');
+        }
+
+        function getNodeById(ast, nodeId) {
+            // Parse node ID like "0.1.2" into path [0, 1, 2]
+            const pathParts = nodeId.split('.').map(Number);
+            
+            // Navigate AST following the path
+            let node = ast;
+            for (let i = 1; i < pathParts.length; i++) {  // Skip first "0" (root)
+                if (node.Operation && node.Operation.args) {
+                    node = node.Operation.args[pathParts[i]];
+                } else if (node.List && Array.isArray(node.List)) {
+                    // Handle List nodes - traverse into list elements
+                    node = node.List[pathParts[i]];
+                } else {
+                    console.warn('Could not navigate to node:', nodeId, 'at step', i, 'node:', node);
+                    return ast;  // Fallback to root
+                }
+            }
+            return node;
+        }
+        
+        window.handleSlotClick = function(event, id, path, nodeId) {
+            console.log('Clicked slot:', { id, path, nodeId });
+            console.log('Event object:', event);
+            
+            // Stop propagation to prevent document click handler from firing
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            
+            try {
+                // Check if modifier key was pressed
+                const isModifierClick = event && (event.shiftKey || event.ctrlKey || event.metaKey);
+                console.log('Modifier click?', isModifierClick);
+                
+                // Save to undo stack before any modification
+                saveToUndoStack();
+                console.log('Undo stack saved');
+                
+                // Set as active marker
+                activeEditMarker = {
+                    id: id, 
+                    path: path, 
+                    nodeId: nodeId,
+                    element: event.target,
+                    bbox: {
+                        x: parseFloat(event.target.getAttribute('x')),
+                        y: parseFloat(event.target.getAttribute('y')),
+                        width: parseFloat(event.target.getAttribute('width')),
+                        height: parseFloat(event.target.getAttribute('height'))
+                    }
+                };
+                console.log('Active marker set:', activeEditMarker);
+                
+                // Highlight active marker
+                document.querySelectorAll('.arg-overlay').forEach(el => {
+                    el.classList.remove('active-marker');
+                });
+                if (event.target) event.target.classList.add('active-marker');
+                console.log('Marker highlighted');
+                
+                // Get current value
+                const node = nodeId ? getNodeById(currentAST, nodeId) : getNodeAtPath(currentAST, path);
+                let val = "";
+                if (node && node.Const) val = node.Const;
+                if (node && node.Object) val = node.Object;
+                console.log('Current value:', val);
+                
+                if (isModifierClick) {
+                    // Shift/Ctrl+Click → Show dialog (existing behavior)
+                    console.log('Opening dialog mode');
+                    showStatus('📍 Marker selected (dialog mode).', 'info');
+                    const input = prompt("Enter value (or click Cancel to insert template from palette):", val);
+                    if (input !== null) {
+                        const newNode = parseSimpleInput(input);
+                        setNodeAtPath(currentAST, path, newNode);
+                        activeEditMarker = null;
+                        renderStructuralEditor();
+                    }
+                } else {
+                    // Regular click → Show inline editor (NEW!)
+                    console.log('Opening inline editor mode');
+                    showStatus('✨ Inline edit mode. Type directly or click symbols.', 'info');
+                    console.log('About to call showInlineEditor with:', activeEditMarker);
+                    showInlineEditor(activeEditMarker);
+                    console.log('showInlineEditor returned');
+                }
+            } catch (error) {
+                console.error('Error in handleSlotClick:', error);
+                alert('Error: ' + error.message);
+            }
+            // If cancelled, activeEditMarker stays set for palette insertion
+        };
+
+        window.handleSlotKeydown = function(event, id, path, nodeId) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleSlotClick(id, path, nodeId);
+            }
+        };
+        
+        function getNodeAtPath(ast, path) {
+            let current = ast;
+            if (path.length === 0) return current;
+            if (current.Operation) {
+                return getNodeAtPath(current.Operation.args[path[0]], path.slice(1));
+            }
+            return current;
+        }
+        
+        function setNodeAtPath(ast, path, newValue) {
+            if (path.length === 0) return;
+            let current = ast;
+            for (let i = 0; i < path.length - 1; i++) {
+                if (current.Operation) {
+                    current = current.Operation.args[path[i]];
+                } else if (current.List && Array.isArray(current.List)) {
+                    current = current.List[path[i]];
+                } else {
+                    console.error('setNodeAtPath: cannot traverse node at path', path, 'step', i);
+                    return;
+                }
+            }
+            
+            // Set the final value
+            const lastIndex = path[path.length - 1];
+            if (current.Operation && current.Operation.args) {
+                current.Operation.args[lastIndex] = newValue;
+            } else if (current.List && Array.isArray(current.List)) {
+                current.List[lastIndex] = newValue;
+            } else {
+                console.error('setNodeAtPath: cannot set value on node at path', path);
+            }
+        }
+        
+        function parseSimpleInput(input) {
+            if (!input) return { Placeholder: { id: nextPlaceholderId++, hint: 'val' } };
+            if (/^-?\d+(\.\d+)?$/.test(input)) return { Const: input };
+            return { Object: input };
+        }
+
+        window.toggleBoundingBoxes = function() {
+            const checkbox = document.getElementById('showBoundingBoxes');
+            const svg = document.querySelector('#structuralEditor svg');
+            if (svg) {
+                const g = svg.querySelector('#arg-overlays');
+                if (g) g.setAttribute('visibility', checkbox.checked ? 'visible' : 'hidden');
+            }
+        };
+
+        window.resetStructuralEditor = function() {
+            currentAST = null;
+            nextPlaceholderId = 0;
+            renderStructuralEditor();
+        };
+
+        // === Type Checking Functions ===
+        
+        let typeCheckTimeout = null;
+        
+        async function checkTypesDebounced() {
+            // Clear existing timeout
+            clearTimeout(typeCheckTimeout);
+            
+            // Debounce: wait 500ms before checking
+            typeCheckTimeout = setTimeout(async () => {
+                await checkTypes();
+            }, 500);
+        }
+        
+        async function checkTypes() {
+            if (!currentAST) {
+                hideTypeIndicator();
+                return;
+            }
+            
+            try {
+                const indicator = document.getElementById('type-indicator');
+                const content = document.getElementById('type-indicator-content');
+                
+                // Show loading state
+                indicator.style.display = 'block';
+                indicator.style.borderLeftColor = '#999';
+                content.innerHTML = '⏳ Type checking...';
+                content.style.color = '#999';
+                
+                const response = await fetch(`${API_BASE}/type_check`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ast: currentAST })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Success - show type
+                    indicator.style.borderLeftColor = '#4CAF50';
+                    content.innerHTML = `<span style="color: #4CAF50;">✓ Type:</span> <span style="color: #333; font-weight: 600;">${result.type_name}</span>`;
+                    
+                    if (result.suggestion) {
+                        content.innerHTML += `<br><span style="color: #FF9800; font-size: 12px;">💡 ${result.suggestion}</span>`;
+                    }
+                } else {
+                    // Error - show error message
+                    indicator.style.borderLeftColor = '#f44336';
+                    content.innerHTML = `<span style="color: #f44336;">✗ ${result.error}</span>`;
+                    
+                    if (result.suggestion) {
+                        content.innerHTML += `<br><span style="color: #FF9800; font-size: 12px;">💡 ${result.suggestion}</span>`;
+                    }
+                }
+            } catch (error) {
+                console.error('Type check failed:', error);
+                hideTypeIndicator();
+            }
+        }
+        
+        function hideTypeIndicator() {
+            const indicator = document.getElementById('type-indicator');
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        window.setEditorMode = function(mode) {
+            editorMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active'); // This will refer to the clicked button
+            
+            const textControls = document.getElementById('textControls');
+            const latexInput = document.getElementById('latexInput');
+            const structEditor = document.getElementById('structuralEditor');
+            const structControls = document.getElementById('structuralControls');
+            const inputLabel = document.getElementById('inputLabel');
+            
+            if (mode === 'text') {
+                textControls.style.display = 'flex';
+                latexInput.style.display = 'block';
+                structEditor.style.display = 'none';
+                structControls.style.display = 'none';
+                inputLabel.textContent = '📝 LaTeX Input';
+                
+                // Convert structural AST back to LaTeX
+                if (currentAST) {
+                    convertStructuralToText();
+                }
+            } else {
+                textControls.style.display = 'none';
+                latexInput.style.display = 'none';
+                structEditor.style.display = 'flex';
+                structControls.style.display = 'block';
+                inputLabel.textContent = '🔧 Structural Editor';
+                
+                // Convert LaTeX from text mode to structural AST
+                const latex = latexInput.value.trim();
+                if (latex && !currentAST) {
+                    convertTextToStructural(latex);
+                } else if (!currentAST) {
+                    resetStructuralEditor();
+                }
+            }
+        };
+        
+        async function convertStructuralToText() {
+            try {
+                showStatus('Converting to LaTeX...', 'info');
+                
+                // Render AST to LaTeX via API
+                const response = await fetch(`${API_BASE}/render_ast`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        ast: currentAST,
+                        format: 'latex'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to render AST to LaTeX');
+                }
+                
+                const data = await response.json();
+                
+                // Update text input with rendered LaTeX
+                const latexInput = document.getElementById('latexInput');
+                latexInput.value = data.output;
+                
+                // Render preview
+                await renderEquation();
+                showStatus('✅ Converted to text mode!', 'success');
+            } catch (error) {
+                showStatus('❌ Error converting: ' + error.message, 'error');
+                console.error('Conversion error:', error);
+            }
+        }
+        
+        async function convertTextToStructural(latex) {
+            // Save the current AST in case parsing fails
+            const previousAST = currentAST;
+            
+            try {
+                showStatus('Converting LaTeX to structural format...', 'info');
+                
+                // Parse LaTeX to AST via API
+                const response = await fetch(`${API_BASE}/parse`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latex })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to parse LaTeX');
+                }
+                
+                const data = await response.json();
+                currentAST = data.ast;
+                
+                // Render the structural editor with the parsed AST
+                await renderStructuralEditor();
+                showStatus('✅ Converted to structural mode!', 'success');
+            } catch (error) {
+                showStatus('❌ Error parsing LaTeX: ' + error.message + ' (keeping previous AST)', 'error');
+                console.error('Conversion error:', error);
+                
+                // Restore previous AST if it existed, otherwise reset
+                if (previousAST) {
+                    currentAST = previousAST;
+                    await renderStructuralEditor();
+                } else {
+                    resetStructuralEditor();
+                }
+            }
+        }
+        
+        window.showPalette = function(name, btn) {
+            document.querySelectorAll('[id^="palette-"]').forEach(p => p.style.display = 'none');
+            const palette = document.getElementById(`palette-${name}`);
+            if(palette) palette.style.display = 'grid';
+            
+            document.querySelectorAll('.palette-tab').forEach(t => t.classList.remove('active'));
+            if(btn) btn.classList.add('active');
+        };
+        
+        async function loadGallery() {
+            const galleryDiv = document.getElementById('gallery');
+            galleryDiv.innerHTML = 'Loading...';
+            try {
+                const res = await fetch(`${API_BASE}/gallery`);
+                const data = await res.json();
+                galleryDiv.innerHTML = '';
+                data.examples.forEach(ex => {
+                    const el = document.createElement('div');
+                    el.className = 'gallery-item';
+                    el.innerHTML = `<div class="gallery-title">${ex.title}</div><div>\\[${ex.latex}\\]</div>`;
+                    el.onclick = () => loadExample(ex.latex);
+                    galleryDiv.appendChild(el);
+                });
+                if (window.MathJax) MathJax.typesetPromise([galleryDiv]);
+            } catch (e) {
+                galleryDiv.innerHTML = 'Error loading gallery';
+            }
+        }
+        
+        window.loadExample = async function(latex) {
+            // Always update text input regardless of mode
+            const input = document.getElementById('latexInput');
+            if(input) input.value = latex;
+            
+            if (editorMode === 'structural') {
+                // Parse LaTeX to AST via server
+                try {
+                    // Show loading state in editor
+                    const container = document.getElementById('structuralEditor');
+                    container.innerHTML = '<div style="text-align:center">🔄 Parsing LaTeX...</div>';
+                    
+                    const response = await fetch(`${API_BASE}/parse`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ latex })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.ast) {
+                        currentAST = data.ast;
+                        // Reset placeholder counter to avoid ID collisions with any existing IDs (though parsed AST usually has none)
+                        // We start higher to avoid conflict with any 0-indexed ones if they exist
+                        nextPlaceholderId = 10000; 
+                        
+                        renderStructuralEditor();
+                        showStatus('✅ Loaded into Structural Editor', 'success');
+                    } else {
+                        showStatus('❌ Parse failed: ' + (data.error || 'Unknown error'), 'error');
+                        // Fallback to text mode after short delay
+                        setTimeout(() => {
+                            setEditorMode('text');
+                            renderEquation();
+                        }, 1000);
+                    }
+                } catch (e) {
+                    showStatus('❌ Network error: ' + e.message, 'error');
+                }
+            } else {
+                renderEquation();
+            }
+        };
+        
+        window.clearInput = function() {
+            const input = document.getElementById('latexInput');
+            if(input) input.value = '';
+            const preview = document.getElementById('preview');
+            if(preview) preview.innerHTML = '';
+        };
+
+        window.onload = () => {
+            loadGallery();
+            
+            // Verify new code loaded
+            const templateCount = Object.keys(astTemplates).length;
+            console.log(`✅ Kleis Editor v2.1 loaded with ${templateCount} AST templates`);
+            
+            if (templateCount < 50) {
+                console.error(`⚠️ WARNING: Only ${templateCount} templates loaded! Expected 54. Browser cache issue!`);
+                alert(`⚠️ OLD VERSION LOADED!\n\nOnly ${templateCount} templates found.\nExpected: 54 templates\n\nPlease:\n1. Close this tab\n2. Open in incognito mode (Cmd+Shift+N)\n3. Or clear browser cache completely`);
+            } else {
+                console.log('✅ All templates loaded correctly');
+                console.log('sqrt template:', astTemplates.sqrt);
+            }
+        };
+        
+        // Classify all palette buttons by type
+        function classifyAllButtons() {
+            document.querySelectorAll('.math-btn').forEach(btn => {
+                const onclick = btn.getAttribute('onclick');
+                if (!onclick) return;
+                
+                // Extract latex template from onclick
+                const match = onclick.match(/insert(Symbol|Template)\('([^']+)'\)/);
+                if (!match) return;
+                
+                const [_, funcType, latex] = match;
+                const buttonType = funcType === 'Symbol' ? 'symbol' : classifyButtonType(latex);
+                
+                btn.setAttribute('data-button-type', buttonType);
+                console.log(`Button "${latex.substring(0, 20)}" classified as: ${buttonType}`);
+            });
+            console.log('✓ All palette buttons classified');
+        }
+        
+        // Initialize inline editing system
+        function initializeInlineEditing() {
+            // Classify buttons
+            classifyAllButtons();
+            
+            // Setup keyboard shortcuts are already in setupInlineEditorHandlers
+            console.log('✓ Inline editing system initialized');
+        }
+        
+        // === Matrix Builder Functions ===
+        
+        let matrixBuilderState = {
+            rows: 2,
+            cols: 2,
+            delimiter: 'bmatrix',
+            locked: false  // Track if selection is locked
+        };
+        
+        function initializeMatrixBuilder() {
+            const gridSelector = document.getElementById('matrix-grid-selector');
+            
+            // Create 6x6 grid
+            for (let row = 0; row < 6; row++) {
+                for (let col = 0; col < 6; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'matrix-grid-cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    cell.addEventListener('mouseenter', (e) => {
+                        // Only respond to hover if not locked
+                        if (!matrixBuilderState.locked) {
+                            highlightMatrixGrid(row + 1, col + 1);
+                        }
+                    });
+                    
+                    cell.addEventListener('click', (e) => {
+                        // Lock the selection on click
+                        matrixBuilderState.locked = true;
+                        selectMatrixSize(row + 1, col + 1);
+                        highlightMatrixGrid(row + 1, col + 1);
+                        updateSizeDisplay();
+                    });
+                    
+                    gridSelector.appendChild(cell);
+                }
+            }
+            
+            // Clear highlighting when mouse leaves the grid
+            gridSelector.addEventListener('mouseleave', () => {
+                // Keep the current selected size, just remove the visual highlighting
+                clearMatrixGrid();
+                // Restore the selected size from state
+                if (matrixBuilderState.rows <= 6 && matrixBuilderState.cols <= 6) {
+                    highlightMatrixGrid(matrixBuilderState.rows, matrixBuilderState.cols);
+                }
+            });
+            
+            // Setup numeric inputs
+            document.getElementById('matrix-rows-input').addEventListener('input', (e) => {
+                const value = Math.max(1, Math.min(10, parseInt(e.target.value) || 2));
+                e.target.value = value;
+                matrixBuilderState.rows = value;
+                matrixBuilderState.cols = parseInt(document.getElementById('matrix-cols-input').value) || 2;
+                matrixBuilderState.locked = false;  // Unlock when typing
+                updateSizeDisplay();
+                // Update grid visual if within 6×6, otherwise clear it
+                if (value <= 6 && matrixBuilderState.cols <= 6) {
+                    highlightMatrixGrid(value, matrixBuilderState.cols);
+                } else {
+                    clearMatrixGrid();
+                }
+            });
+            
+            document.getElementById('matrix-cols-input').addEventListener('input', (e) => {
+                const value = Math.max(1, Math.min(10, parseInt(e.target.value) || 2));
+                e.target.value = value;
+                matrixBuilderState.cols = value;
+                matrixBuilderState.rows = parseInt(document.getElementById('matrix-rows-input').value) || 2;
+                matrixBuilderState.locked = false;  // Unlock when typing
+                updateSizeDisplay();
+                // Update grid visual if within 6×6, otherwise clear it
+                if (matrixBuilderState.rows <= 6 && value <= 6) {
+                    highlightMatrixGrid(matrixBuilderState.rows, value);
+                } else {
+                    clearMatrixGrid();
+                }
+            });
+            
+            // Setup delimiter buttons
+            document.querySelectorAll('.matrix-delimiter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.matrix-delimiter-btn').forEach(b => 
+                        b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    matrixBuilderState.delimiter = btn.dataset.delimiter;
+                });
+            });
+            
+            console.log('✓ Matrix builder initialized');
+        }
+        
+        function showMatrixBuilder() {
+            const modal = document.getElementById('matrix-builder-modal');
+            modal.classList.add('show');
+            
+            // Reset to defaults (unlocked)
+            matrixBuilderState = { rows: 2, cols: 2, delimiter: 'bmatrix', locked: false };
+            document.getElementById('matrix-rows-input').value = 2;
+            document.getElementById('matrix-cols-input').value = 2;
+            document.querySelectorAll('.matrix-delimiter-btn').forEach(b => 
+                b.classList.remove('selected'));
+            document.querySelector('[data-delimiter="bmatrix"]').classList.add('selected');
+            
+            clearMatrixGrid();
+            highlightMatrixGrid(2, 2);
+        }
+        
+        function closeMatrixBuilder() {
+            const modal = document.getElementById('matrix-builder-modal');
+            modal.classList.remove('show');
+            clearMatrixGrid();
+        }
+        
+        function highlightMatrixGrid(rows, cols) {
+            const cells = document.querySelectorAll('.matrix-grid-cell');
+            cells.forEach(cell => {
+                const cellRow = parseInt(cell.dataset.row);
+                const cellCol = parseInt(cell.dataset.col);
+                if (cellRow < rows && cellCol < cols) {
+                    cell.classList.add('hover');
+                } else {
+                    cell.classList.remove('hover');
+                }
+            });
+            
+            matrixBuilderState.rows = rows;
+            matrixBuilderState.cols = cols;
+            document.getElementById('matrix-rows-input').value = rows;
+            document.getElementById('matrix-cols-input').value = cols;
+            updateSizeDisplay();
+        }
+        
+        function clearMatrixGrid() {
+            document.querySelectorAll('.matrix-grid-cell').forEach(cell => {
+                cell.classList.remove('hover');
+            });
+        }
+        
+        function selectMatrixSize(rows, cols) {
+            matrixBuilderState.rows = rows;
+            matrixBuilderState.cols = cols;
+            document.getElementById('matrix-rows-input').value = rows;
+            document.getElementById('matrix-cols-input').value = cols;
+            updateSizeDisplay();
+        }
+        
+        function updateSizeDisplay() {
+            const display = document.getElementById('matrix-size-display');
+            display.textContent = `${matrixBuilderState.rows} × ${matrixBuilderState.cols}`;
+        }
+        
+        // Generic matrix creation (used by both Matrix Builder and palette buttons)
+        function createMatrixAST(rows, cols, delimiter) {
+            const totalElements = rows * cols;
+            const args = [];
+            
+            // Generate placeholders for each cell using nextPlaceholderId
+            for (let i = 0; i < totalElements; i++) {
+                const row = Math.floor(i / cols) + 1;
+                const col = (i % cols) + 1;
+                args.push({
+                    Placeholder: {
+                        id: nextPlaceholderId++,  // Coordinates with existing IDs!
+                        hint: `a${row}${col}`
+                    }
+                });
+            }
+            
+            // Determine operation name based on delimiter
+            let opName;
+            if (delimiter === 'pmatrix') {
+                opName = 'PMatrix';
+            } else if (delimiter === 'vmatrix') {
+                opName = 'VMatrix';
+            } else {
+                opName = 'Matrix';  // includes bmatrix and plain matrix
+            }
+            
+            // NEW FORMAT: Matrix(rows, cols, [elements]) with List literal
+            return {
+                Operation: {
+                    name: opName,
+                    args: [
+                        { Const: String(rows) },
+                        { Const: String(cols) },
+                        { List: args }
+                    ]
+                }
+            };
+        }
+        
+        function createMatrixFromBuilder() {
+            const { rows, cols, delimiter } = matrixBuilderState;
+            
+            if (editorMode === 'structural') {
+                // Use shared matrix creation function
+                const ast = createMatrixAST(rows, cols, delimiter);
+                
+                // Save to undo stack
+                saveToUndoStack();
+                
+                // Check if inserting at active marker or replacing whole AST
+                if (activeEditMarker) {
+                    // INSERT AT ACTIVE MARKER (like other templates)
+                    setNodeAtPath(currentAST, activeEditMarker.path, ast);
+                    
+                    // Clear active marker
+                    activeEditMarker = null;
+                    document.querySelectorAll('.arg-overlay').forEach(el => {
+                        el.classList.remove('active-marker');
+                    });
+                } else {
+                    // NO MARKER - Replace whole AST
+                    currentAST = ast;
+                }
+                
+                // Render
+                renderStructuralEditor();
+                
+                showStatus(`✅ Created ${rows}×${cols} matrix`, 'success');
+            } else {
+                // Text mode: Generate LaTeX template
+                let latex = `\\begin{${delimiter}}`;
+                
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        latex += '□';
+                        if (c < cols - 1) latex += '&';
+                    }
+                    if (r < rows - 1) latex += '\\\\';
+                }
+                
+                latex += `\\end{${delimiter}}`;
+                
+                // Insert template in text mode
+                const textarea = document.getElementById('latexInput');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = textarea.value;
+                textarea.value = text.substring(0, start) + latex + text.substring(end);
+                const newPos = start + latex.length;
+                textarea.setSelectionRange(newPos, newPos);
+                textarea.focus();
+                
+                showStatus(`✅ Created ${rows}×${cols} matrix`, 'success');
+            }
+            
+            // Close modal
+            closeMatrixBuilder();
+        }
+        
+        // Close modal when clicking outside
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('matrix-builder-modal');
+            if (e.target === modal) {
+                closeMatrixBuilder();
+            }
+        });
+        
+        // Initialize matrix builder on load
+        window.addEventListener('load', initializeMatrixBuilder);
+        
+        // === Piecewise Function Builder Functions ===
+        
+        function showPiecewiseBuilder() {
+            const modal = document.getElementById('piecewise-builder-modal');
+            modal.classList.add('show');
+            
+            // Reset to defaults
+            document.getElementById('piecewise-cases-input').value = 2;
+            updatePiecewisePreview();
+        }
+        
+        function closePiecewiseBuilder() {
+            const modal = document.getElementById('piecewise-builder-modal');
+            modal.classList.remove('show');
+        }
+        
+        function updatePiecewisePreview() {
+            const cases = parseInt(document.getElementById('piecewise-cases-input').value) || 2;
+            const preview = document.getElementById('piecewise-preview');
+            
+            let text = 'f(x) = {';
+            for (let i = 1; i <= cases; i++) {
+                text += ` expr${i}  if cond${i}`;
+                if (i < cases) text += '\n       {';
+            }
+            
+            preview.textContent = text;
+        }
+        
+        function createPiecewiseFromBuilder() {
+            const cases = parseInt(document.getElementById('piecewise-cases-input').value) || 2;
+            
+            if (editorMode === 'structural') {
+                // Create AST directly for structural mode
+                const exprs = [];
+                const conds = [];
+                
+                // Generate separate lists for expressions and conditions
+                for (let i = 0; i < cases; i++) {
+                    exprs.push({
+                        Placeholder: {
+                            id: nextPlaceholderId++,
+                            hint: `expr${i+1}`
+                        }
+                    });
+                    conds.push({
+                        Placeholder: {
+                            id: nextPlaceholderId++,
+                            hint: `cond${i+1}`
+                        }
+                    });
+                }
+                
+                // Create AST: Piecewise(n, [exprs], [conds])
+                // Like Matrix(m, n, [elements])
+                const ast = {
+                    Operation: {
+                        name: 'Piecewise',
+                        args: [
+                            { Const: String(cases) },
+                            { List: exprs },
+                            { List: conds }
+                        ]
+                    }
+                };
+                
+                // Insert into active marker or replace AST
+                if (activeEditMarker) {
+                    // INSERT AT ACTIVE MARKER (like matrix builder)
+                    setNodeAtPath(currentAST, activeEditMarker.path, ast);
+                    
+                    // Clear active marker
+                    activeEditMarker = null;
+                    document.querySelectorAll('.arg-overlay').forEach(el => {
+                        el.classList.remove('active-marker');
+                    });
+                } else {
+                    // NO MARKER - Replace whole AST
+                    saveToUndoStack();
+                    currentAST = ast;
+                }
+                
+                // Render
+                renderStructuralEditor();
+                
+                showStatus(`✅ Created ${cases}-case piecewise function`, 'success');
+            } else {
+                // Text mode: Generate LaTeX template
+                let latex = '\\begin{cases}';
+                
+                for (let i = 0; i < cases; i++) {
+                    latex += '□ & \\text{if } □';
+                    if (i < cases - 1) latex += '\\\\';
+                }
+                
+                latex += '\\end{cases}';
+                
+                // Insert template in text mode
+                const textarea = document.getElementById('latexInput');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = textarea.value;
+                textarea.value = text.substring(0, start) + latex + text.substring(end);
+                const newPos = start + latex.length;
+                textarea.setSelectionRange(newPos, newPos);
+                textarea.focus();
+                
+                showStatus(`✅ Created ${cases}-case piecewise function`, 'success');
+            }
+            
+            // Close modal
+            closePiecewiseBuilder();
+        }
+        
+        // Close piecewise modal when clicking outside
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('piecewise-builder-modal');
+            if (e.target === modal) {
+                closePiecewiseBuilder();
+            }
+        });
+        
+        // Render MathJax in palette buttons
+        if (window.MathJax) {
+            MathJax.typesetPromise(document.querySelectorAll('.math-btn'))
+                .then(() => {
+                    console.log('✓ Palette buttons rendered with MathJax');
+                    // Initialize inline editing after MathJax renders
+                    initializeInlineEditing();
+                })
+                .catch(err => console.error('MathJax rendering failed:', err));
+        } else {
+            // Initialize even if MathJax isn't available
+            initializeInlineEditing();
+        }
+    </script>
+</body>
+</html>
