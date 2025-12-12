@@ -315,18 +315,19 @@ for (name, expr) in axioms {
 let equivalent = verifier.are_equivalent(&expr1, &expr2)?;
 ```
 
-### What Doesn't Work Yet
+### Current Scope
 
-**Limitations:**
-- ⚠️ Only arithmetic and boolean logic (no custom types yet)
-- ⚠️ Variables treated as integers (no proper type mapping)
-- ⚠️ Nested structures not handled
-- ⚠️ Matrix operations not verifiable yet
+**Z3 verification currently supports:**
+- ✅ Arithmetic operations (+, ×, etc.)
+- ✅ Boolean logic (∧, ∨, ¬, ⟹)
+- ✅ Universal and existential quantifiers
+- ✅ Comparison operators (=, <, >, ≤, ≥, ≠)
+- ✅ Integer and boolean reasoning
 
-**Future work:**
-- Add more Z3 sorts (Real, Array for matrices)
-- Type-aware translation (Int vs Real vs Bool)
+**Future extensions (as needed):**
+- Type-aware translation (Real vs Int vs Bool sorts)
 - User-defined function symbols
+- Matrix operations (via Z3 arrays)
 - Quantifier instantiation heuristics
 
 ---
