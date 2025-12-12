@@ -1756,21 +1756,52 @@ impl KleisParser {
                 });
             } else if self.peek_word("define") {
                 // define f(x) = expr (inline function definition)
-                // Skip for now - not yet supported in structure members
-                // TODO: Add FunctionDef variant to StructureMember enum
+                // Parse it properly instead of skipping
                 for _ in 0..6 {
-                    self.advance();
+                    self.advance(); // consume "define"
                 }
                 self.skip_whitespace();
 
-                // Skip until we hit a newline or the next member
-                while let Some(ch) = self.peek() {
-                    if ch == '\n' {
-                        self.advance();
-                        break;
-                    }
-                    self.advance();
+                // Parse function name (can be operator symbol)
+                let func_name = self.parse_operation_name()?;
+                self.skip_whitespace();
+
+                // Parse parameters
+                if self.advance() != Some('(') {
+                    return Err(KleisParseError {
+                        message: "Expected '(' after function name in define".to_string(),
+                        position: self.pos,
+                    });
                 }
+
+                let params = self.parse_params()?;
+                self.skip_whitespace();
+
+                if self.advance() != Some(')') {
+                    return Err(KleisParseError {
+                        message: "Expected ')' after parameters in define".to_string(),
+                        position: self.pos,
+                    });
+                }
+                self.skip_whitespace();
+
+                // Expect '='
+                if self.advance() != Some('=') {
+                    return Err(KleisParseError {
+                        message: "Expected '=' after function signature".to_string(),
+                        position: self.pos,
+                    });
+                }
+                self.skip_whitespace();
+
+                // Parse function body
+                let body = self.parse_expression()?;
+
+                members.push(StructureMember::InlineFunction {
+                    name: func_name,
+                    params,
+                    body,
+                });
             } else if self.peek_word("axiom") {
                 // Skip "axiom"
                 for _ in 0..5 {

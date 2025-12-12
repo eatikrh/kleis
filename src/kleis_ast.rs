@@ -79,6 +79,14 @@ pub enum StructureMember {
         structure_type: TypeExpr,      // e.g., AbelianGroup(R)
         members: Vec<StructureMember>, // Recursive!
     },
+
+    /// Inline function definition: define f(x, y) = expr
+    /// Example: define (-)(x, y) = x + negate(y)
+    InlineFunction {
+        name: String,
+        params: Vec<String>,
+        body: Expression,
+    },
 }
 
 /// Operation declaration
