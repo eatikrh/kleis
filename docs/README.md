@@ -61,7 +61,7 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 ### Session 2024-12-07: Type System & Stdlib Integration ⭐
 **Focus:** Connecting standard library to type inference  
 **Status:** ✅ Complete - ADR-016 compliance achieved  
-**See:** [Session Summary](session-2024-12-07/README.md)
+**See:** Session archived
 
 **Achievements:**
 - ✅ Stdlib loading infrastructure
@@ -73,7 +73,7 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 ### Session 2024-12-06: Notation Design + Type Checking
 **Focus:** Notation design + Type checking infrastructure  
 **Status:** ✅ Complete with working implementation  
-**See:** [Session Summary](session-2024-12-06/README.md)
+**See:** Session archived
 
 ### Session 2024-12-09: Matrix Improvements & Reality Check ⭐⭐
 **Focus:** Matrix system cleanup + Testing & honest assessment  
