@@ -16,6 +16,12 @@ pub struct FontMetrics {
     pub extensible_chars: HashMap<char, ExtensibleChar>,
 }
 
+impl Default for FontMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FontMetrics {
     /// Create empty metrics (placeholder)
     pub fn new() -> Self {

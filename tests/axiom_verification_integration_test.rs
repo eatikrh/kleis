@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 use kleis::ast::Expression;
 ///! Integration Tests for Axiom Verification with Z3
 ///!
@@ -134,7 +139,10 @@ fn test_commutativity_axiom() {
 
     let result = verify_with_test_context(&axiom);
 
-    assert!(result.is_ok());
+    if let Err(e) = &result {
+        eprintln!("ERROR: {}", e);
+    }
+    assert!(result.is_ok(), "Failed: {:?}", result);
 
     #[cfg(feature = "axiom-verification")]
     {

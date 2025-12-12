@@ -1,23 +1,23 @@
-///! Signature Interpreter - Parse and Apply Type Signatures
-///!
-///! This is the KEY to ADR-016 compliance!
-///!
-///! Instead of hardcoding operation rules in Rust,
-///! we READ type signatures from Kleis structures and INTERPRET them.
-///!
-///! Example from stdlib/matrices.kleis:
-///!   structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
-///!       operation multiply : Matrix(m, p, T)
-///!   }
-///!
-///! Given: multiply(Matrix(2, 3), Matrix(3, 5))
-///!
-///! Interpretation:
-///! 1. Structure params: m, n, p, T
-///! 2. Unify with args: m=2, n=3, p=5, T=ℝ
-///! 3. Result type: Matrix(m, p, T) = Matrix(2, 5, ℝ)
-///!
-///! This is SELF-HOSTING: Kleis defines Kleis!
+//! Signature Interpreter - Parse and Apply Type Signatures
+//!
+//! This is the KEY to ADR-016 compliance!
+//!
+//! Instead of hardcoding operation rules in Rust,
+//! we READ type signatures from Kleis structures and INTERPRET them.
+//!
+//! Example from stdlib/matrices.kleis:
+//!   structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
+//!       operation multiply : Matrix(m, p, T)
+//!   }
+//!
+//! Given: multiply(Matrix(2, 3), Matrix(3, 5))
+//!
+//! Interpretation:
+//! 1. Structure params: m, n, p, T
+//! 2. Unify with args: m=2, n=3, p=5, T=ℝ
+//! 3. Result type: Matrix(m, p, T) = Matrix(2, 5, ℝ)
+//!
+//! This is SELF-HOSTING: Kleis defines Kleis!
 use crate::data_registry::DataTypeRegistry;
 use crate::kleis_ast::{StructureDef, StructureMember, TypeExpr};
 use crate::structure_registry::StructureRegistry;
@@ -136,6 +136,7 @@ impl SignatureInterpreter {
     ///
     /// For single-arg operations: Matrix(m, n, T) (no arrow)
     /// Returns: ([], Matrix(m,n,T)) - result is the type itself
+    #[allow(clippy::only_used_in_recursion)]
     fn parse_function_signature(
         &self,
         sig: &TypeExpr,

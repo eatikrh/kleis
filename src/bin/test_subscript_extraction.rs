@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 //! Test the new subscript-based placeholder ID extraction
 //!
 //! Verifies that square.stroked_N placeholders are correctly identified

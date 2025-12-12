@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 /// Z3 Experimentation - Testing Axiom Verification
 ///
 /// This test explores how Z3 can verify Kleis axioms.

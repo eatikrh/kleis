@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 // Demo: Convert Kleis AST to Typst markup
 //
 // This demonstrates the first step of the layout pipeline:

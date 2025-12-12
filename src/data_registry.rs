@@ -1,12 +1,12 @@
-///! Data Type Registry for ADR-021
-///!
-///! Maps data type definitions and their variants to enable:
-///! - Looking up variant definitions by constructor name
-///! - Retrieving data type definitions by type name
-///! - Validating uniqueness of variant names
-///!
-///! This is the foundation for dynamic type system where types
-///! are defined in Kleis files rather than hardcoded in Rust.
+//! Data Type Registry for ADR-021
+//!
+//! Maps data type definitions and their variants to enable:
+//! - Looking up variant definitions by constructor name
+//! - Retrieving data type definitions by type name
+//! - Validating uniqueness of variant names
+//!
+//! This is the foundation for dynamic type system where types
+//! are defined in Kleis files rather than hardcoded in Rust.
 use crate::kleis_ast::{DataDef, DataVariant};
 use std::collections::HashMap;
 

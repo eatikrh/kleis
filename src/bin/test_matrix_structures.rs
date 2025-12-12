@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Test parsing matrices.kleis structure definitions
 use kleis::kleis_ast::TopLevel;
 use kleis::kleis_parser::KleisParser;

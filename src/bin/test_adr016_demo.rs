@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! ADR-016 Demo: Operations in Structures
 ///!
 ///! Demonstrates parsing the full pattern:

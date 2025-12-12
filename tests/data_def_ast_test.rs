@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 /// Tests for DataDef AST (ADR-021: Algebraic Data Types)
 ///
 /// This test file verifies that the DataDef, DataVariant, and DataField

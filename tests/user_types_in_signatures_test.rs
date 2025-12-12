@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Tests for user-defined parametric types in operation signatures
 ///!
 ///! This tests the fix for SignatureInterpreter to support:

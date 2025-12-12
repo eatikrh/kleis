@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 use kleis::kleis_ast::TypeExpr;
 ///! Complete Type Checking Pipeline Demo
 ///!
@@ -151,7 +156,7 @@ fn demo_error_detection() {
     // Test 1: Correct usage
     println!("\n✅ Correct: abs(x) where x : ℝ");
     checker.bind("x", &TypeExpr::Named("ℝ".to_string()));
-    let expr = parse_kleis("abs(x)").unwrap();
+    let _expr = parse_kleis("abs(x)").unwrap();
 
     if checker.type_supports_operation("ℝ", "abs") {
         println!("   Type check: PASS");

@@ -1,34 +1,34 @@
-///! Axiom Verification using Z3 Theorem Prover
-///!
-///! This module provides verification of Kleis axioms by translating them to Z3
-///! and checking if they're satisfiable/valid.
-///!
-///! **Architecture: Incremental Z3 Solving with Smart Caching**
-///! - Long-lived Solver instance with push/pop for efficiency
-///! - Axiom filtering: Only loads relevant axioms for each query
-///! - Structure dependency analysis: Understands type relationships
-///! - Uninterpreted functions: Custom operations declared in Z3
-///! - Scales to thousands of axioms efficiently
-///!
-///! **Key Design Decisions:**
-///! - Z3 Rust bindings use global context internally (no lifetime management)
-///! - Solver persists across queries
-///! - Each verify_axiom() uses push/pop (lightweight, ~1ms)
-///! - Axioms loaded on-demand based on expression analysis
-///! - Background theory cached per structure combination
-///!
-///! **Usage:**
-///! ```rust
-///! let registry = StructureRegistry::new();
-///! let verifier = AxiomVerifier::new(&registry)?;
-///! let result = verifier.verify_axiom(&axiom)?;
-///! ```
+//! Axiom Verification using Z3 Theorem Prover
+//!
+//! This module provides verification of Kleis axioms by translating them to Z3
+//! and checking if they're satisfiable/valid.
+//!
+//! **Architecture: Incremental Z3 Solving with Smart Caching**
+//! - Long-lived Solver instance with push/pop for efficiency
+//! - Axiom filtering: Only loads relevant axioms for each query
+//! - Structure dependency analysis: Understands type relationships
+//! - Uninterpreted functions: Custom operations declared in Z3
+//! - Scales to thousands of axioms efficiently
+//!
+//! **Key Design Decisions:**
+//! - Z3 Rust bindings use global context internally (no lifetime management)
+//! - Solver persists across queries
+//! - Each verify_axiom() uses push/pop (lightweight, ~1ms)
+//! - Axioms loaded on-demand based on expression analysis
+//! - Background theory cached per structure combination
+//!
+//! **Usage:**
+//! ```ignore
+//! let registry = StructureRegistry::new();
+//! let verifier = AxiomVerifier::new(&registry)?;
+//! let result = verifier.verify_axiom(&axiom)?;
+//! ```
 use crate::ast::{Expression, QuantifiedVar, QuantifierKind};
 use crate::structure_registry::StructureRegistry;
 use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "axiom-verification")]
-use z3::ast::{Bool, Dynamic, Int};
+use z3::ast::{Bool, Dynamic, Int, Real};
 #[cfg(feature = "axiom-verification")]
 use z3::{FuncDecl, SatResult, Solver, Sort};
 
@@ -71,8 +71,8 @@ pub struct AxiomVerifier<'r> {
     #[cfg(feature = "axiom-verification")]
     /// Identity elements (zero, one, e, etc.) mapped to Z3 constants
     /// Key: element name (e.g., "zero", "one", "e")
-    /// Value: Z3 Int constant representing that identity element
-    identity_elements: HashMap<String, Int>,
+    /// Value: Z3 Dynamic constant (can be Int, Bool, etc.)
+    identity_elements: HashMap<String, Dynamic>,
 
     #[cfg(not(feature = "axiom-verification"))]
     _phantom: std::marker::PhantomData<&'r ()>,
@@ -232,7 +232,12 @@ impl<'r> AxiomVerifier<'r> {
         self.load_identity_elements_recursive(&structure.members);
 
         // Phase 2: Get and load axioms (including from nested structures)
-        self.load_axioms_recursive(&structure.members)?;
+        println!("   Loading axioms for {}...", structure_name);
+        if let Err(e) = self.load_axioms_recursive(&structure.members) {
+            eprintln!("   ❌ ERROR loading axioms: {}", e);
+            return Err(e);
+        }
+        println!("   ✅ Axioms loaded successfully");
 
         // Mark as loaded
         self.loaded_structures.insert(structure_name.to_string());
@@ -257,9 +262,16 @@ impl<'r> AxiomVerifier<'r> {
                     let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
 
                     if is_nullary {
-                        let z3_const = Int::fresh_const(name);
-                        self.identity_elements.insert(name.clone(), z3_const);
-                        println!("   📌 Loaded identity element: {}", name);
+                        // Identity elements default to Int (usually numeric: zero, one, e)
+                        // Note: If same name appears twice, they should refer to same element
+                        // so we only load once
+                        if !self.identity_elements.contains_key(name) {
+                            let z3_const: Dynamic = Int::fresh_const(name).into();
+                            self.identity_elements.insert(name.clone(), z3_const);
+                            println!("   📌 Loaded identity element: {}", name);
+                        } else {
+                            println!("   ℹ️  Identity element {} already loaded (will reuse same constant)", name);
+                        }
                     }
                 }
                 StructureMember::NestedStructure { members, .. } => {
@@ -350,9 +362,11 @@ impl<'r> AxiomVerifier<'r> {
     fn verify_axiom_impl(&mut self, expr: &Expression) -> Result<VerificationResult, String> {
         // Step 1: Analyze dependencies
         let dependencies = self.analyze_dependencies(expr);
+        eprintln!("DEBUG: Found dependencies: {:?}", dependencies);
 
         // Step 2: Ensure all required axioms are loaded
         for structure in &dependencies {
+            eprintln!("DEBUG: Loading structure: {}", structure);
             self.ensure_structure_loaded(structure)?;
         }
 
@@ -368,7 +382,7 @@ impl<'r> AxiomVerifier<'r> {
         // Step 5: For axioms, we want to check if they're always true
         // So we assert the NEGATION and check if it's unsatisfiable
         // If unsat, the original axiom is valid
-        self.solver.assert(&z3_expr.not());
+        self.solver.assert(z3_expr.not());
 
         // Step 6: Check satisfiability
         let result = match self.solver.check() {
@@ -418,9 +432,29 @@ impl<'r> AxiomVerifier<'r> {
             let z3_dyn1 = self.kleis_to_z3_dynamic(expr1, &HashMap::new())?;
             let z3_dyn2 = self.kleis_to_z3_dynamic(expr2, &HashMap::new())?;
 
-            // Check if expr1 ≠ expr2 is unsatisfiable (using Dynamic equality)
-            let equality = z3_dyn1.eq(&z3_dyn2);
-            self.solver.assert(&equality.not());
+            // Check if expr1 ≠ expr2 is unsatisfiable (handle mixed types)
+            let equality = if z3_dyn1.sort_kind() == z3_dyn2.sort_kind() {
+                z3_dyn1.eq(&z3_dyn2)
+            } else {
+                // Mixed types - convert to Real if one is Real and other is Int
+                let l_real = z3_dyn1
+                    .as_real()
+                    .or_else(|| z3_dyn1.as_int().map(|i| i.to_real()));
+                let r_real = z3_dyn2
+                    .as_real()
+                    .or_else(|| z3_dyn2.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    l.eq(&r)
+                } else {
+                    return Err(format!(
+                        "Cannot compare values of different sorts: {:?} vs {:?}",
+                        z3_dyn1.sort_kind(),
+                        z3_dyn2.sort_kind()
+                    ));
+                }
+            };
+            self.solver.assert(equality.not());
 
             let result = matches!(self.solver.check(), SatResult::Unsat);
 
@@ -488,21 +522,21 @@ impl<'r> AxiomVerifier<'r> {
     fn kleis_to_z3_dynamic(
         &mut self,
         expr: &Expression,
-        vars: &HashMap<String, Int>,
+        vars: &HashMap<String, Dynamic>,
     ) -> Result<Dynamic, String> {
         match expr {
             // Variables: return actual Z3 variable
             Expression::Object(name) => {
                 // 1. Check if it's a quantified variable
                 if let Some(var) = vars.get(name) {
-                    // Return the actual Z3 Int variable as Dynamic
-                    return Ok(var.clone().into());
+                    // Return the actual Z3 Dynamic variable
+                    return Ok(var.clone());
                 }
 
                 // 2. Check if it's an identity element (zero, one, e, etc.)
                 if let Some(identity) = self.identity_elements.get(name) {
-                    // Return the actual identity constant as Dynamic
-                    return Ok(identity.clone().into());
+                    // Return the actual identity constant (already Dynamic)
+                    return Ok(identity.clone());
                 }
 
                 // 3. Not found
@@ -533,7 +567,7 @@ impl<'r> AxiomVerifier<'r> {
                 let bool_result = self.quantifier_to_z3(
                     quantifier,
                     variables,
-                    where_clause.as_ref(),
+                    where_clause.as_ref().map(|b| &**b),
                     body,
                     vars,
                 )?;
@@ -553,17 +587,36 @@ impl<'r> AxiomVerifier<'r> {
         &mut self,
         name: &str,
         args: &[Expression],
-        vars: &HashMap<String, Int>,
+        vars: &HashMap<String, Dynamic>,
     ) -> Result<Dynamic, String> {
         match name {
-            // Equality returns Bool
+            // Equality returns Bool - handle mixed Int/Real types
             "equals" | "eq" => {
                 if args.len() != 2 {
                     return Err("equals requires 2 arguments".to_string());
                 }
                 let left = self.kleis_to_z3_dynamic(&args[0], vars)?;
                 let right = self.kleis_to_z3_dynamic(&args[1], vars)?;
-                Ok(left.eq(&right).into())
+
+                // If types match, use direct equality
+                if left.sort_kind() == right.sort_kind() {
+                    return Ok(left.eq(&right).into());
+                }
+
+                // Handle mixed Int/Real - convert both to Real
+                let l_real = left
+                    .as_real()
+                    .or_else(|| left.as_int().map(|i| i.to_real()));
+                let r_real = right
+                    .as_real()
+                    .or_else(|| right.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    Ok(l.eq(&r).into())
+                } else {
+                    // Fall back to Dynamic equality (may fail if sorts differ)
+                    Ok(left.eq(&right).into())
+                }
             }
 
             // Comparisons return Bool
@@ -655,10 +708,113 @@ impl<'r> AxiomVerifier<'r> {
                 Ok(left.implies(&right).into())
             }
 
-            // Arithmetic operations return Int (delegate to z3_int version)
-            "plus" | "times" | "minus" | "multiply" | "subtract" | "add" => {
-                let result_int = self.operation_to_z3_int(name, args, vars)?;
-                Ok(result_int.into())
+            // Arithmetic operations - work with both Int and Real, handle mixed types
+            "plus" | "add" => {
+                if args.len() != 2 {
+                    return Err("plus requires 2 arguments".to_string());
+                }
+                let left = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right = self.kleis_to_z3_dynamic(&args[1], vars)?;
+
+                // Handle Int + Int
+                if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
+                    return Ok(Int::add(&[&l, &r]).into());
+                }
+
+                // Handle Real + Real
+                if let (Some(l), Some(r)) = (left.as_real(), right.as_real()) {
+                    return Ok(Real::add(&[&l, &r]).into());
+                }
+
+                // Handle mixed Int/Real - convert to Real
+                let l_real = left
+                    .as_real()
+                    .or_else(|| left.as_int().map(|i| i.to_real()));
+                let r_real = right
+                    .as_real()
+                    .or_else(|| right.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    Ok(Real::add(&[&l, &r]).into())
+                } else {
+                    // Fall back to uninterpreted function
+                    let func_decl = self.declare_operation("plus", 2);
+                    let ast_args: Vec<&dyn z3::ast::Ast> =
+                        vec![&left as &dyn z3::ast::Ast, &right as &dyn z3::ast::Ast];
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            "times" | "multiply" => {
+                if args.len() != 2 {
+                    return Err("times requires 2 arguments".to_string());
+                }
+                let left = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right = self.kleis_to_z3_dynamic(&args[1], vars)?;
+
+                // Handle Int * Int
+                if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
+                    return Ok(Int::mul(&[&l, &r]).into());
+                }
+
+                // Handle Real * Real
+                if let (Some(l), Some(r)) = (left.as_real(), right.as_real()) {
+                    return Ok(Real::mul(&[&l, &r]).into());
+                }
+
+                // Handle mixed Int/Real - convert to Real
+                let l_real = left
+                    .as_real()
+                    .or_else(|| left.as_int().map(|i| i.to_real()));
+                let r_real = right
+                    .as_real()
+                    .or_else(|| right.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    Ok(Real::mul(&[&l, &r]).into())
+                } else {
+                    // Fall back to uninterpreted function
+                    let func_decl = self.declare_operation("times", 2);
+                    let ast_args: Vec<&dyn z3::ast::Ast> =
+                        vec![&left as &dyn z3::ast::Ast, &right as &dyn z3::ast::Ast];
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            "minus" | "subtract" => {
+                if args.len() != 2 {
+                    return Err("minus requires 2 arguments".to_string());
+                }
+                let left = self.kleis_to_z3_dynamic(&args[0], vars)?;
+                let right = self.kleis_to_z3_dynamic(&args[1], vars)?;
+
+                // Handle Int - Int
+                if let (Some(l), Some(r)) = (left.as_int(), right.as_int()) {
+                    return Ok(Int::sub(&[&l, &r]).into());
+                }
+
+                // Handle Real - Real
+                if let (Some(l), Some(r)) = (left.as_real(), right.as_real()) {
+                    return Ok(Real::sub(&[&l, &r]).into());
+                }
+
+                // Handle mixed Int/Real - convert to Real
+                let l_real = left
+                    .as_real()
+                    .or_else(|| left.as_int().map(|i| i.to_real()));
+                let r_real = right
+                    .as_real()
+                    .or_else(|| right.as_int().map(|i| i.to_real()));
+
+                if let (Some(l), Some(r)) = (l_real, r_real) {
+                    Ok(Real::sub(&[&l, &r]).into())
+                } else {
+                    // Fall back to uninterpreted function
+                    let func_decl = self.declare_operation("minus", 2);
+                    let ast_args: Vec<&dyn z3::ast::Ast> =
+                        vec![&left as &dyn z3::ast::Ast, &right as &dyn z3::ast::Ast];
+                    Ok(func_decl.apply(&ast_args))
+                }
             }
 
             // Unknown operation - use uninterpreted function (returns Dynamic)
@@ -687,18 +843,24 @@ impl<'r> AxiomVerifier<'r> {
     fn kleis_expr_to_z3_int(
         &mut self,
         expr: &Expression,
-        vars: &HashMap<String, Int>,
+        vars: &HashMap<String, Dynamic>,
     ) -> Result<Int, String> {
         match expr {
             Expression::Object(name) => {
                 // 1. Check quantified variables first
                 if let Some(var) = vars.get(name) {
-                    return Ok(var.clone());
+                    // Convert Dynamic to Int
+                    return var
+                        .as_int()
+                        .ok_or_else(|| format!("Variable {} is not an Int", name));
                 }
 
                 // 2. Check identity elements (zero, one, e, etc.)
                 if let Some(identity) = self.identity_elements.get(name) {
-                    return Ok(identity.clone());
+                    // Convert Dynamic to Int
+                    return identity
+                        .as_int()
+                        .ok_or_else(|| format!("Identity element {} is not an Int", name));
                 }
 
                 // 3. Not found
@@ -783,15 +945,30 @@ impl<'r> AxiomVerifier<'r> {
         &mut self,
         _quantifier: &QuantifierKind,
         variables: &[QuantifiedVar],
-        where_clause: Option<&Box<Expression>>,
+        where_clause: Option<&Expression>,
         body: &Expression,
-        vars: &HashMap<String, Int>,
+        vars: &HashMap<String, Dynamic>,
     ) -> Result<Bool, String> {
         // Create fresh Z3 variables for quantified variables
         let mut new_vars = vars.clone();
 
         for var in variables {
-            let z3_var = Int::fresh_const(&var.name);
+            // Create variable based on type annotation
+            let z3_var: Dynamic = if let Some(type_annotation) = &var.type_annotation {
+                // Parse type annotation to determine Z3 type
+                match type_annotation.as_str() {
+                    "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
+                    "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
+                    "ℤ" | "Int" | "Z" => Int::fresh_const(&var.name).into(),
+                    _ => {
+                        // Default to Int for unknown types (M, N, etc.)
+                        Int::fresh_const(&var.name).into()
+                    }
+                }
+            } else {
+                // No type annotation, default to Int
+                Int::fresh_const(&var.name).into()
+            };
             new_vars.insert(var.name.clone(), z3_var);
         }
 

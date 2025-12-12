@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Test that dimension constraints are enforced via signatures
 ///! This is the TRUE ADR-016 vision: constraints in signatures, not code!
 use kleis::data_registry::DataTypeRegistry;

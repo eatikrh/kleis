@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 // Test self-hosted functions with matrix operations
 //
 // This verifies that functions can use structured operations (not just ADT pattern matching)

@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Test List literal support
 use kleis::kleis_parser::parse_kleis;
 use kleis::type_inference::{Type, TypeInference};

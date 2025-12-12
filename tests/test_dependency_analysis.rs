@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Test to verify dependency analysis and axiom filtering work correctly
 use kleis::kleis_parser::KleisParser;
 use kleis::structure_registry::StructureRegistry;

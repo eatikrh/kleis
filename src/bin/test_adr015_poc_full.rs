@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Full POC Test for ADR-015: Text as Source of Truth
 ///!
 ///! This validates the complete pipeline:

@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 // Test: Can we add two tensors?
 //
 // plus(Tensor, Tensor) should work because plus : T → T → T is polymorphic

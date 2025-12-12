@@ -814,6 +814,7 @@ pub fn template_hont() -> Expression {
 // === Template Registry ===
 
 /// Get all available templates as (name, function) pairs
+#[allow(clippy::type_complexity)]
 pub fn get_all_templates() -> Vec<(&'static str, fn() -> Expression)> {
     vec![
         // Basic

@@ -1,7 +1,12 @@
-///! End-to-end tests for type system
-///!
-///! These tests verify the complete type checking pipeline works correctly
-///! from parsing through type inference to result.
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+//! End-to-end tests for type system
+//!
+//! These tests verify the complete type checking pipeline works correctly
+//! from parsing through type inference to result.
 use kleis::kleis_parser::parse_kleis;
 use kleis::type_checker::{TypeCheckResult, TypeChecker};
 use kleis::type_inference::Type;
@@ -9,7 +14,7 @@ use kleis::type_inference::Type;
 /// Helper to test that an expression type checks correctly
 /// With proper polymorphism, unbound variables may remain as type vars
 fn assert_type_checks(latex: &str, expected_type: Type) {
-    let expr = parse_kleis(latex).expect(&format!("Failed to parse: {}", latex));
+    let expr = parse_kleis(latex).unwrap_or_else(|_| panic!("Failed to parse: {}", latex));
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     match checker.check(&expr) {
@@ -34,7 +39,7 @@ fn assert_type_checks(latex: &str, expected_type: Type) {
 
 /// Helper to test that an expression fails to type check
 fn assert_type_error(latex: &str, error_substring: &str) {
-    let expr = parse_kleis(latex).expect(&format!("Failed to parse: {}", latex));
+    let expr = parse_kleis(latex).unwrap_or_else(|_| panic!("Failed to parse: {}", latex));
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     match checker.check(&expr) {

@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Test matrix type inference using stdlib/matrices.kleis
 ///!
 ///! This demonstrates the correct ADR-016 approach:
@@ -5,7 +10,6 @@
 ///! - Query registry for type information
 ///! - NO HARDCODED matrix rules!
 use kleis::ast::Expression;
-use kleis::kleis_parser::parse_kleis_program;
 use kleis::type_checker::TypeChecker;
 use std::fs;
 

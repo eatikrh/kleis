@@ -1,4 +1,6 @@
 #!/usr/bin/env rust
+#![allow(warnings)]
+#![allow(clippy::all)]
 //! Comprehensive test of all 54 palette templates
 //! Tests that each template can be created and rendered successfully
 

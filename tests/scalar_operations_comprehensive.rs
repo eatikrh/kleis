@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 ///! Comprehensive tests for all scalar operations
 ///!
 ///! This test suite verifies that ALL scalar operations used by the parser

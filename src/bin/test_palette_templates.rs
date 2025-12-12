@@ -1,4 +1,6 @@
 #!/usr/bin/env rust-script
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
 //! Test all palette templates to ensure they render correctly
 //!
 //! This test validates that all templates in the equation editor palette

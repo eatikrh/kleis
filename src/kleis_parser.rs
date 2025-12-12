@@ -1,43 +1,43 @@
-///! Kleis Text Parser - Parses Kleis text syntax into AST
-///!
-///! **IMPORTANT:** This is a SIMPLIFIED parser for ADR-015 POC validation.
-///! It implements ~40% of the formal Kleis v0.5 grammar.
-///!
-///! **What's Supported:**
-///! - Function calls: abs(x), card(S), norm(v), frac(a, b)
-///! - Operators: +, -, *, /, ^, ×, ·
-///! - Identifiers and numbers
-///! - Parentheses for grouping
-///! - Proper operator precedence
-///! - Function definitions: define f(x) = x + x
-///! - Data types: data Bool = True | False
-///! - Pattern matching: match x { True => 1 | False => 0 }
-///! - Structures and implementations
-///!
-///! **What's NOT Supported (yet):**
-///! - Prefix operators: -x, ∇f, √x
-///! - Postfix operators: n!, Aᵀ, A†
-///! - Vector literals: [1, 2, 3]
-///! - Lambda expressions: λ x . x^2
-///! - Let bindings: let x = 5 in x^2
-///! - Conditionals: if/then/else
-///! - Type annotations: x : ℝ
-///! - Relations/logic: =, <, ∧, ∨, etc.
-///! - Calculus operators as infix: ∫, ∂
-///! - Symbolic constants: π, e, i
-///! - Placeholders: □
-///!
-///! See docs/PARSER_GRAMMAR_COMPATIBILITY.md for full comparison with formal grammar.
-///!
-///! **Grammar (simplified):**
-///!   expression := term (('+' | '-') term)*
-///!   term := factor (('*' | '/') factor)*
-///!   factor := primary ('^' primary)?
-///!   primary := identifier | number | function_call | '(' expression ')'
-///!   function_call := identifier '(' arguments ')'
-///!   arguments := expression (',' expression)*
-///!
-///! **Purpose:** Validate ADR-015 design decisions, not production-ready!
+//! Kleis Text Parser - Parses Kleis text syntax into AST
+//!
+//! **IMPORTANT:** This is a SIMPLIFIED parser for ADR-015 POC validation.
+//! It implements ~40% of the formal Kleis v0.5 grammar.
+//!
+//! **What's Supported:**
+//! - Function calls: abs(x), card(S), norm(v), frac(a, b)
+//! - Operators: +, -, *, /, ^, ×, ·
+//! - Identifiers and numbers
+//! - Parentheses for grouping
+//! - Proper operator precedence
+//! - Function definitions: define f(x) = x + x
+//! - Data types: data Bool = True | False
+//! - Pattern matching: match x { True => 1 | False => 0 }
+//! - Structures and implementations
+//!
+//! **What's NOT Supported (yet):**
+//! - Prefix operators: -x, ∇f, √x
+//! - Postfix operators: n!, Aᵀ, A†
+//! - Vector literals: [1, 2, 3]
+//! - Lambda expressions: λ x . x^2
+//! - Let bindings: let x = 5 in x^2
+//! - Conditionals: if/then/else
+//! - Type annotations: x : ℝ
+//! - Relations/logic: =, <, ∧, ∨, etc.
+//! - Calculus operators as infix: ∫, ∂
+//! - Symbolic constants: π, e, i
+//! - Placeholders: □
+//!
+//! See docs/PARSER_GRAMMAR_COMPATIBILITY.md for full comparison with formal grammar.
+//!
+//! **Grammar (simplified):**
+//!   expression := term (('+' | '-') term)*
+//!   term := factor (('*' | '/') factor)*
+//!   factor := primary ('^' primary)?
+//!   primary := identifier | number | function_call | '(' expression ')'
+//!   function_call := identifier '(' arguments ')'
+//!   arguments := expression (',' expression)*
+//!
+//! **Purpose:** Validate ADR-015 design decisions, not production-ready!
 use crate::ast::{Expression, MatchCase, Pattern};
 use crate::kleis_ast::{
     DataDef, DataField, DataVariant, FunctionDef, ImplMember, Implementation, ImplementsDef,
@@ -172,7 +172,7 @@ impl KleisParser {
         let start = self.pos;
 
         // Integer part
-        if !self.peek().map_or(false, |ch| ch.is_numeric()) {
+        if !self.peek().is_some_and(|ch| ch.is_numeric()) {
             return Err(KleisParseError {
                 message: "Expected number".to_string(),
                 position: self.pos,
@@ -189,7 +189,7 @@ impl KleisParser {
 
         // Optional decimal part
         // Only consume '.' if there's a digit after it
-        if self.peek() == Some('.') && self.peek_ahead(1).map_or(false, |ch| ch.is_numeric()) {
+        if self.peek() == Some('.') && self.peek_ahead(1).is_some_and(|ch| ch.is_numeric()) {
             self.advance(); // consume '.'
             while let Some(ch) = self.peek() {
                 if ch.is_numeric() {
@@ -324,7 +324,7 @@ impl KleisParser {
         }
 
         // Number
-        if self.peek().map_or(false, |ch| ch.is_numeric()) {
+        if self.peek().is_some_and(|ch| ch.is_numeric()) {
             let num = self.parse_number()?;
             return Ok(Expression::Const(num));
         }
@@ -332,7 +332,7 @@ impl KleisParser {
         // Identifier or function call
         if self
             .peek()
-            .map_or(false, |ch| ch.is_alphabetic() || ch == '_')
+            .is_some_and(|ch| ch.is_alphabetic() || ch == '_')
         {
             let id = self.parse_identifier()?;
             self.skip_whitespace();
@@ -477,7 +477,7 @@ impl KleisParser {
 
     /// Parse comparison: A = B, A < B, etc.
     fn parse_comparison(&mut self) -> Result<Expression, KleisParseError> {
-        let mut left = self.parse_arithmetic()?;
+        let left = self.parse_arithmetic()?;
 
         self.skip_whitespace();
         let op = match self.peek() {
@@ -683,9 +683,7 @@ impl KleisParser {
         // Check for quantifier
         if let Some('∀') | Some('∃') = self.peek() {
             self.parse_quantifier()
-        } else if self.peek_word("forall") {
-            self.parse_quantifier()
-        } else if self.peek_word("exists") {
+        } else if self.peek_word("forall") || self.peek_word("exists") {
             self.parse_quantifier()
         } else {
             // Just an expression
@@ -1005,7 +1003,7 @@ impl KleisParser {
         }
 
         // Parse base type - could be identifier or number (for dimension literals)
-        let base_name = if self.peek().map_or(false, |ch| ch.is_numeric()) {
+        let base_name = if self.peek().is_some_and(|ch| ch.is_numeric()) {
             self.parse_number()?
         } else {
             self.parse_identifier()?
@@ -1342,7 +1340,7 @@ impl KleisParser {
             // Make sure it's just underscore (not part of identifier)
             if self
                 .peek()
-                .map_or(true, |ch| !ch.is_alphanumeric() && ch != '_')
+                .is_none_or(|ch| !ch.is_alphanumeric() && ch != '_')
             {
                 return Ok(Pattern::wildcard());
             }
@@ -1351,7 +1349,7 @@ impl KleisParser {
         }
 
         // Number constant
-        if self.peek().map_or(false, |ch| ch.is_numeric()) {
+        if self.peek().is_some_and(|ch| ch.is_numeric()) {
             let num = self.parse_number()?;
             return Ok(Pattern::constant(num));
         }
@@ -1359,7 +1357,7 @@ impl KleisParser {
         // Constructor or variable
         if self
             .peek()
-            .map_or(false, |ch| ch.is_alphabetic() || ch == '_')
+            .is_some_and(|ch| ch.is_alphabetic() || ch == '_')
         {
             let id = self.parse_identifier()?;
             self.skip_whitespace();

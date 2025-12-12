@@ -255,7 +255,7 @@ fn layout_fallback(name: &str, _args: &[Expression], context: &LayoutContext) ->
 fn get_default_metrics() -> &'static FontMetrics {
     use std::sync::OnceLock;
     static METRICS: OnceLock<FontMetrics> = OnceLock::new();
-    METRICS.get_or_init(|| font_metrics::load_default_metrics())
+    METRICS.get_or_init(font_metrics::load_default_metrics)
 }
 
 #[cfg(test)]

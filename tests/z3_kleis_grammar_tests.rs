@@ -1,3 +1,8 @@
+#![allow(warnings)]
+#![allow(clippy::all, unreachable_patterns)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 /// Z3 Tests for Kleis Grammar Features
 ///
 /// Exploring how Z3 can help verify Kleis language constructs:

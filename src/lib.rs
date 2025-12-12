@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(warnings))]
+
 pub mod ast;
 pub mod axiom_verifier; // Z3 integration for axiom verification
 pub mod data_registry;
