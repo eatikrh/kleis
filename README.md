@@ -565,15 +565,29 @@ See `docs/adr-005-visual-authoring.md`, `docs/kleis_vision_executable_math.md`, 
 - **[Test Guide](docs/guides/TEST_GUIDE.md)** - Testing procedures
 - **[Grammar Specification](docs/grammar/)** - Formal grammar and specifications
 
-### Architecture Decisions
+### Architecture Decisions (22 ADRs)
 - **[ADR-001](docs/adr/adr-001-scalar-multiply.md)** - Scalar multiply semantics
 - **[ADR-002](docs/adr/adr-002-eval-vs-simplify.md)** - Evaluation vs simplification
 - **[ADR-003](docs/adr/adr-003-self-hosting.md)** - Self-hosting strategy
 - **[ADR-004](docs/adr/adr-004-input-visualization.md)** - Input visualization
+- **[ADR-005](docs/adr/adr-005-visual-authoring.md)** - Visual authoring
 - **[ADR-006](docs/adr/adr-006-template-grammar-duality.md)** - Template grammar duality
 - **[ADR-007](docs/adr/adr-007-bootstrap-grammar.md)** - Bootstrap grammar
 - **[ADR-008](docs/adr/adr-008-bootstrap-grammar-boundary.md)** - Grammar boundary
 - **[ADR-009](docs/adr/adr-009-wysiwyg-structural-editor.md)** - WYSIWYG editor design
+- **[ADR-010](docs/adr/adr-010-inline-editing.md)** - Inline editing
+- **[ADR-011](docs/adr/adr-011-notebook-environment.md)** - Notebook environment
+- **[ADR-012](docs/adr/adr-012-document-authoring.md)** - Document authoring
+- **[ADR-013](docs/adr/adr-013-paper-scope-hierarchy.md)** - Paper scope hierarchy
+- **[ADR-014](docs/adr/adr-014-hindley-milner-type-system.md)** - Hindley-Milner type system
+- **[ADR-015](docs/adr/adr-015-text-as-source-of-truth.md)** - Text as source of truth
+- **[ADR-016](docs/adr/adr-016-operations-in-structures.md)** - Operations in structures
+- **[ADR-017](docs/adr/adr-017-vite-patternfly-frontend.md)** - Vite + PatternFly frontend
+- **[ADR-018](docs/adr/adr-018-universal-formalism.md)** - Universal formalism
+- **[ADR-019](docs/adr/adr-019-dimensional-type-checking.md)** - Dimensional type checking
+- **[ADR-020](docs/adr/adr-020-metalanguage-for-type-theory.md)** - Metalanguage for type theory
+- **[ADR-021](docs/adr/adr-021-algebraic-data-types.md)** - Algebraic data types
+- **[ADR-022](docs/adr/adr-022-z3-integration-for-axiom-verification.md)** - Z3 integration for axiom verification
 
 ### Theory & Foundations
 - **[Projected Ontology Theory](docs/theory/POT.md)** - POT formalism
