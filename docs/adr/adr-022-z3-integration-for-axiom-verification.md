@@ -717,10 +717,18 @@ Parser extensions have immediate value when axioms are verifiable!
 ## Status: Implemented ✅
 
 - Implementation complete: December 10, 2024
-- Tests passing: 471 ✅
+- **Full prelude migration:** December 11, 2024
+- Tests passing: 421 ✅
 - Documentation complete: ✅
 - Feature branch: `feature/full-prelude-migration`
 - Ready for merge to main
+
+**Updates (December 11, 2024):**
+- ✅ Added `TypeExpr::ForAll` for polymorphic type schemes
+- ✅ Parser supports quantified types: `∀(n : ℕ, T). Matrix(m,n,T) → ...`
+- ✅ Full `prelude.kleis` loaded with algebraic structures and axioms
+- ✅ Arithmetic operations added for test compatibility
+- ✅ All 421 tests passing with full prelude
 
 **Axiom verification is now a core Kleis capability!** 🎯
 
