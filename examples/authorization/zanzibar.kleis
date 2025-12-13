@@ -1,0 +1,146 @@
+// Zanzibar-style Relationship-Based Access Control (ReBAC)
+// Inspired by Google's authorization system for Drive, YouTube, etc.
+
+// ============================================
+// Permission Levels (numeric for Z3 compatibility)
+// ============================================
+
+// Permission constants:
+//   0 = None (no access)
+//   1 = Viewer (read only)
+//   2 = Commenter (read + comment)
+//   3 = Editor (read + comment + edit)
+//   4 = Owner (full control)
+
+// ============================================
+// Core Zanzibar Check: has_at_least
+// ============================================
+
+// Check if user has at least the required permission level
+define has_at_least(user_perm, required_perm) = 
+    if user_perm >= required_perm then 1 else 0
+
+// ============================================
+// Permission Capabilities
+// ============================================
+
+// Viewer (level 1) can read
+define can_read(perm) = has_at_least(perm, 1)
+
+// Commenter (level 2) can comment  
+define can_comment(perm) = has_at_least(perm, 2)
+
+// Editor (level 3) can edit
+define can_edit(perm) = has_at_least(perm, 3)
+
+// Owner (level 4) can delete and share
+define can_delete(perm) = has_at_least(perm, 4)
+define can_share(perm) = has_at_least(perm, 4)
+define can_transfer_ownership(perm) = has_at_least(perm, 4)
+
+// ============================================
+// Group Membership & Computed Permissions
+// ============================================
+
+// Effective permission = max(direct_perm, group_perm)
+define effective_permission(direct, group) = 
+    if direct >= group then direct else group
+
+// ============================================
+// Folder Inheritance (like Google Drive)
+// ============================================
+
+// Child inherits parent permission unless explicitly set
+define inherited_permission(child_perm, parent_perm) = 
+    if child_perm > 0 
+    then child_perm           // Explicit permission overrides
+    else parent_perm          // Inherit from parent
+
+// ============================================
+// Access Control Actions
+// ============================================
+
+// Action codes:
+//   1 = Read
+//   2 = Comment
+//   3 = Edit
+//   4 = Delete
+//   5 = Share
+
+define is_allowed(perm, action) = 
+    if action = 1 then can_read(perm)
+    else if action = 2 then can_comment(perm)
+    else if action = 3 then can_edit(perm)
+    else if action = 4 then can_delete(perm)
+    else if action = 5 then can_share(perm)
+    else 0
+
+// ============================================
+// Document Access with Folder Inheritance
+// ============================================
+
+// Check access considering folder permissions
+define doc_access(doc_perm, folder_perm, action) = 
+    let effective = inherited_permission(doc_perm, folder_perm) in
+        is_allowed(effective, action)
+
+// ============================================
+// Multi-level Group Permissions
+// ============================================
+
+// User can be in multiple groups, take highest permission
+define multi_group_permission(perm1, perm2, perm3) = 
+    effective_permission(effective_permission(perm1, perm2), perm3)
+
+// ============================================
+// Sharing Constraints
+// ============================================
+
+// Can only share if you're owner and not downgrading from your level
+define can_grant(granter_perm, grantee_perm) = 
+    if granter_perm = 4 then                    // Must be owner
+        if grantee_perm <= granter_perm then 1  // Can't grant higher than self
+        else 0
+    else 0
+
+// ============================================
+// Security Invariants
+// ============================================
+
+// These properties should always hold:
+//
+// 1. Permission hierarchy: 
+//    can_edit(p) = 1 → can_read(p) = 1
+//
+// 2. Only owners can delete:
+//    can_delete(p) = 1 → p = 4
+//
+// 3. Inheritance never exceeds parent:
+//    inherited_permission(0, parent) = parent
+//
+// 4. Effective permission is at least direct:
+//    effective_permission(direct, group) >= direct
+//
+// 5. Multi-group is at least each individual:
+//    multi_group_permission(a, b, c) >= a
+
+// ============================================
+// Example Scenarios
+// ============================================
+
+// Scenario: Alice (owner=4) shares folder with Bob (editor=3)
+// Bob can edit files, but cannot delete or reshare
+// 
+// :verify can_edit(3) = 1
+// :verify can_delete(3) = 0
+// :verify can_share(3) = 0
+
+// Scenario: Charlie has viewer(1) on doc, but editor(3) on folder
+// With inheritance, Charlie gets max permission
+//
+// :verify doc_access(1, 3, 3) = 1  // Can edit (action=3)
+
+// Scenario: Public link gives viewer access, group gives editor
+// User gets editor access
+//
+// :verify effective_permission(1, 3) = 3

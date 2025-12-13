@@ -27,7 +27,63 @@ Enable Z3 to verify properties of Kleis Algebraic Data Types (ADTs), including:
 - Full Z3 Datatype sorts not yet created (using uninterpreted functions + identity elements)
 - Constructor accessors not auto-generated
 
-### ❌ What's Still Missing (Low Priority)
+### ❌ What's Still Missing
+
+#### High Priority: Symbolic ADT Matching
+**Bug discovered Dec 13, 2024 via Zanzibar example:**
+
+When ADT constructors are passed as **symbolic arguments**, pattern matching fails:
+```kleis
+:verify perm_level(Owner) = 4
+❌ Invalid  // Should be Valid!
+```
+
+**Root cause:**
+- `Owner` is loaded as a Z3 identity element (fresh constant)
+- The pattern `match p { Owner => 4 }` compares against a different `Owner`
+- Z3 doesn't know they should be equal
+
+**Works:** Concrete constructor expressions (`Packet(4, 5, ...)`)
+**Fails:** Symbolic constructor values (`Owner`, `TCP` as function arguments)
+
+#### Solution Approach (from Type Inference)
+
+The Equation Editor's type inference handles this correctly using:
+
+1. **DataTypeRegistry** (`src/data_registry.rs`):
+   - Registers all constructors with their parent type
+   - `lookup_variant(name)` finds constructor info
+
+2. **Constructor Unification** (`src/type_inference.rs:2049`):
+   - `True` and `False` both unify to `Bool`
+   - Enables pattern matching on enum variants
+
+3. **check_pattern()** (`src/type_inference.rs:558`):
+   - Uses registry to validate patterns against scrutinee type
+   - Binds pattern variables in typing context
+
+**For Z3, we need:**
+```rust
+// When loading ADT:
+fn register_adt_for_z3(data_def: &DataDef) {
+    for (idx, variant) in data_def.variants.iter().enumerate() {
+        // Register constructor with unique tag
+        z3_constructor_tags.insert(variant.name.clone(), idx);
+    }
+}
+
+// When translating match pattern:
+fn pattern_to_condition(pattern, scrutinee) {
+    match pattern {
+        Pattern::Constructor { name, .. } => {
+            let tag = z3_constructor_tags[name];
+            // scrutinee.tag == tag
+        }
+    }
+}
+```
+
+#### Low Priority
 - Full Z3 Datatype sort creation (for exhaustiveness checking)
 - Auto-generated accessor functions (e.g., `Packet.version(pkt)`)
 
@@ -114,8 +170,39 @@ Benefits:
 - Accessor functions (`Packet.version(pkt)`)
 - Exhaustiveness checking by Z3
 
+## Theoretical Background
+
+The type inference system (Equation Editor) uses concepts from:
+
+### Hindley-Milner Type Inference
+- **Principal types**: Always infer the most general type
+- **Unification**: Make two types equal by finding substitutions
+- **Let-polymorphism**: Functions can be used at multiple types
+
+### E-Unification (Equational Unification)
+- Standard unification: `f(x) = f(y)` implies `x = y`
+- E-unification: Unification modulo equational theories
+- Relevant for ADTs: Constructor equality depends on type theory
+
+### Pattern Matching Theory
+- **Exhaustiveness checking**: All cases covered?
+- **Reachability**: Any unreachable patterns? (dead code)
+- **Constructor families**: `True`/`False` both belong to `Bool`
+
+### Key Insight for Z3
+
+The gap between type inference and Z3 is:
+
+| System | How it handles `Owner` |
+|--------|------------------------|
+| Type Inference | Looks up in `DataTypeRegistry`, knows it's a `Permission` constructor |
+| Z3 Backend | Creates fresh constant, doesn't know it's a constructor |
+
+**Fix:** Share the constructor registry between type inference and Z3 translation.
+
 ## Related
 
 - ADR-021: Algebraic Data Types
 - ADR-022: Z3 Integration
 - `examples/protocols/ipv4_types.kleis`
+- `examples/authorization/zanzibar.kleis` (discovered the symbolic ADT bug)
