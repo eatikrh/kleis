@@ -899,7 +899,9 @@ fn show_symbols() {
     println!("│   √   square root               ∛   cube root                               │");
     println!("│   ∞   infinity                  ∂   partial derivative                      │");
     println!("│   ∑   summation                 ∏   product                                 │");
-    println!("│   ∫   integral                  ∮   contour integral                        │");
+    println!("│   ∫   integral                  ∮   line/contour integral                   │");
+    println!("│   ∬   double integral           ∭   triple integral                         │");
+    println!("│   ∯   surface integral          ∇   gradient (nabla)                        │");
     println!("└─────────────────────────────────────────────────────────────────────────────┘");
     println!();
     println!("┌─────────────────────────────────────────────────────────────────────────────┐");
@@ -917,6 +919,7 @@ fn show_symbols() {
     println!("│   →   right arrow (function)    ←   left arrow                              │");
     println!("│   ↦   maps to                   ⟼   long maps to                            │");
     println!("│   ⇒   double right arrow        ⇐   double left arrow                       │");
+    println!("│   ⟹   implies (axioms)          ⟸   implied by                              │");
     println!("│   ↔   bidirectional             ⇔   double bidirectional                    │");
     println!("└─────────────────────────────────────────────────────────────────────────────┘");
     println!();
