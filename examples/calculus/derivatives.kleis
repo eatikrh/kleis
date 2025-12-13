@@ -1,11 +1,17 @@
 // Calculus Theorems in Kleis
 // Testing derivative operators and calculus axioms
 //
-// Notation Goals:
-//   d/dx f(x)      - Total derivative
-//   ∂/∂x f(x,y)    - Partial derivative
-//   ∇f             - Gradient
-//   f'             - Prime notation for derivative
+// Supported Notation:
+//   ∇f             - Gradient (prefix operator)
+//   ∂f             - Partial derivative indicator (prefix operator)
+//   f^n            - Power/exponentiation
+//   sqrt(x)        - Square root
+//   abs(x)         - Absolute value
+//
+// Function-style:
+//   deriv(f)       - Derivative
+//   partial(i, f)  - Partial derivative with respect to variable i
+//   D(f, x)        - Derivative of f with respect to x
 
 // =============================================================================
 // DATA TYPES for Calculus

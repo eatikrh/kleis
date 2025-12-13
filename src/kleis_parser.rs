@@ -302,6 +302,27 @@ impl KleisParser {
             });
         }
 
+        // Gradient: ∇f (nabla prefix operator)
+        if self.peek() == Some('∇') {
+            self.advance(); // consume ∇
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "gradient".to_string(),
+                args: vec![arg],
+            });
+        }
+
+        // Partial derivative: ∂f (partial prefix operator)
+        // For ∂/∂x notation, we'll need more complex parsing
+        if self.peek() == Some('∂') {
+            self.advance(); // consume ∂
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "partial".to_string(),
+                args: vec![arg],
+            });
+        }
+
         // Match expression
         if self.peek_word("match") {
             return self.parse_match_expr();
