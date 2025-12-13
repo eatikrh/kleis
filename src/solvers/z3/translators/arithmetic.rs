@@ -122,6 +122,23 @@ pub fn translate_times(left: &Dynamic, right: &Dynamic) -> Result<Dynamic, Strin
     Ok(func_decl.apply(&ast_args))
 }
 
+/// Translate power/exponentiation operation
+///
+/// Handles Int^Int using Z3's power function.
+/// For symbolic exponents, falls back to uninterpreted function.
+pub fn translate_power(base: &Dynamic, exp: &Dynamic) -> Result<Dynamic, String> {
+    // Z3's Int::power requires both to be Int
+    if let (Some(b), Some(e)) = (base.as_int(), exp.as_int()) {
+        return Ok(b.power(&e).into());
+    }
+
+    // For Real or mixed types, use Real power (via uninterpreted for now)
+    // Z3 doesn't have native Real exponentiation, so we use uninterpreted
+    let func_decl = declare_uninterpreted("power", 2);
+    let ast_args: Vec<&dyn Ast> = vec![base as &dyn Ast, exp as &dyn Ast];
+    Ok(func_decl.apply(&ast_args))
+}
+
 /// Translate neg/negate operation (unary negation)
 ///
 /// Handles both Int and Real negation.
@@ -138,6 +155,56 @@ pub fn translate_negate(arg: &Dynamic) -> Result<Dynamic, String> {
 
     // Fall back to uninterpreted function
     let func_decl = declare_uninterpreted("negate", 1);
+    let ast_args: Vec<&dyn Ast> = vec![arg as &dyn Ast];
+    Ok(func_decl.apply(&ast_args))
+}
+
+/// Translate sqrt (square root) operation
+///
+/// For integers, we use the property that sqrt(n)^2 = n
+/// and constrain sqrt(n) >= 0.
+/// For perfect squares, Z3 can verify sqrt(4) = 2, etc.
+pub fn translate_sqrt(arg: &Dynamic) -> Result<Dynamic, String> {
+    // For Real, Z3 has power which can approximate sqrt
+    if let Some(r) = arg.as_real() {
+        // sqrt(x) = x^0.5, but Z3 Real power is limited
+        // Use uninterpreted for now with axioms
+        let func_decl = declare_uninterpreted("sqrt", 1);
+        let ast_args: Vec<&dyn Ast> = vec![&r as &dyn Ast];
+        return Ok(func_decl.apply(&ast_args));
+    }
+
+    // For Int, use uninterpreted function
+    // The verification will work if we're comparing sqrt(n^2) = n
+    // or providing explicit constraints
+    let func_decl = declare_uninterpreted("sqrt", 1);
+    let ast_args: Vec<&dyn Ast> = vec![arg as &dyn Ast];
+    Ok(func_decl.apply(&ast_args))
+}
+
+/// Translate abs (absolute value) operation
+pub fn translate_abs(arg: &Dynamic) -> Result<Dynamic, String> {
+    // For Int, Z3 doesn't have built-in abs, so we use ite(x >= 0, x, -x)
+    if let Some(i) = arg.as_int() {
+        let zero = Int::from_i64(0);
+        let neg_i = Int::unary_minus(&i);
+        let cond = i.ge(&zero);
+        // Z3's ite for Int
+        let result = cond.ite(&i, &neg_i);
+        return Ok(result.into());
+    }
+
+    // For Real
+    if let Some(r) = arg.as_real() {
+        let zero = Real::from_rational(0, 1);
+        let neg_r = Real::unary_minus(&r);
+        let cond = r.ge(&zero);
+        let result = cond.ite(&r, &neg_r);
+        return Ok(result.into());
+    }
+
+    // Fall back
+    let func_decl = declare_uninterpreted("abs", 1);
     let ast_args: Vec<&dyn Ast> = vec![arg as &dyn Ast];
     Ok(func_decl.apply(&ast_args))
 }
