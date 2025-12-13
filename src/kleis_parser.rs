@@ -1,11 +1,13 @@
 //! Kleis Text Parser - Parses Kleis text syntax into AST
 //!
-//! **IMPORTANT:** This is a SIMPLIFIED parser for ADR-015 POC validation.
-//! It implements ~40% of the formal Kleis v0.5 grammar.
+//! **IMPORTANT:** This parser is evolving toward production readiness.
+//! It implements ~60% of the formal Kleis v0.6 grammar.
 //!
 //! **What's Supported:**
 //! - Function calls: abs(x), card(S), norm(v), frac(a, b)
 //! - Operators: +, -, *, /, ^, ×, ·
+//! - Comparison operators: <, >, <=, >=, ==, !=, =
+//! - Logical operators: and, or, not
 //! - Identifiers and numbers
 //! - Parentheses for grouping
 //! - Proper operator precedence
@@ -13,19 +15,20 @@
 //! - Data types: data Bool = True | False
 //! - Pattern matching: match x { True => 1 | False => 0 }
 //! - Structures and implementations
+//! - ✅ Let bindings: let x = 5 in x^2 (NEW Dec 2024)
+//! - ✅ Conditionals: if x > 0 then x else 0 (NEW Dec 2024)
+//! - Vector/list literals: [1, 2, 3]
+//! - Quantifiers: ∀(x : T). P(x)
 //!
 //! **What's NOT Supported (yet):**
 //! - Prefix operators: -x, ∇f, √x
 //! - Postfix operators: n!, Aᵀ, A†
-//! - Vector literals: [1, 2, 3]
 //! - Lambda expressions: λ x . x^2
-//! - Let bindings: let x = 5 in x^2
-//! - Conditionals: if/then/else
-//! - Type annotations: x : ℝ
-//! - Relations/logic: =, <, ∧, ∨, etc.
+//! - Type annotations in expressions: x : ℝ
 //! - Calculus operators as infix: ∫, ∂
 //! - Symbolic constants: π, e, i
 //! - Placeholders: □
+//! - Summation/product notation: Σ, Π
 //!
 //! See docs/PARSER_GRAMMAR_COMPATIBILITY.md for full comparison with formal grammar.
 //!

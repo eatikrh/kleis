@@ -158,6 +158,14 @@ fn kleis_to_z3(expr: &Expression) -> Result<Bool> {
             // Create fresh Z3 variables
             // Translate body recursively
         }
+        Expression::Conditional { condition, then_branch, else_branch } => {
+            // Translate to Z3's ite (if-then-else)
+            Bool::ite(cond, then_z3, else_z3)
+        }
+        Expression::Let { name, value, body } => {
+            // Extend variable context with bound value
+            // Translate body with extended context
+        }
     }
 }
 ```
