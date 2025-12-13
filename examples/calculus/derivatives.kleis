@@ -194,6 +194,59 @@ define mixed_partial_xy() = 1
 define mixed_partial_yx() = 1
 
 // =============================================================================
+// INTEGRAL STRUCTURES AND AXIOMS
+// =============================================================================
+
+structure Integrable(F) {
+    // Indefinite integral
+    operation Integrate : F -> Variable -> F
+    
+    // Fundamental Theorem of Calculus (Part 1)
+    // D(∫f dx, x) = f
+    axiom FTC1: ∀(f : F, x : Variable). D(Integrate(f, x), x) = f
+    
+    // Fundamental Theorem of Calculus (Part 2)
+    // ∫[a,b] f'(x) dx = f(b) - f(a)
+    // (Expressed as: integral of derivative equals endpoint difference)
+    
+    // Linearity
+    axiom integral_linear_add: ∀(f g : F, x : Variable). 
+        Integrate(f + g, x) = Integrate(f, x) + Integrate(g, x)
+    axiom integral_linear_scalar: ∀(c : ℝ, f : F, x : Variable).
+        Integrate(c * f, x) = c * Integrate(f, x)
+}
+
+// =============================================================================
+// INTEGRAL EXAMPLES
+// =============================================================================
+
+// Power rule for integration: ∫x^n dx = x^(n+1)/(n+1) + C
+// For integers, we express this as: (n+1) * ∫x^n dx = x^(n+1)
+// E.g., 3 * ∫x^2 dx = x^3
+
+// Definite integral: ∫[a,b] x^2 dx = b^3/3 - a^3/3
+// Using integers: 3 * ∫[0,3] x^2 dx = 27 - 0 = 27
+
+// Area under x^2 from 0 to 3 (times 3 to avoid fractions)
+define integral_x_squared_0_to_3_times_3() = 27
+
+// ∫x dx = x^2/2, so 2 * ∫[0,4] x dx = 16
+define integral_x_0_to_4_times_2() = 16
+
+// Double integral: ∬[0,1]×[0,1] 1 dA = 1 (unit square area)
+define double_integral_unit_square() = 1
+
+// Triple integral: ∭[0,1]×[0,1]×[0,1] 1 dV = 1 (unit cube volume)
+define triple_integral_unit_cube() = 1
+
+// Line integral around unit circle: ∮ F·dr
+// For F = (-y, x), ∮ F·dr = 2π (area enclosed)
+// We use integer approximation: ≈ 6
+
+// Green's Theorem: ∮ F·dr = ∬ (∂Q/∂x - ∂P/∂y) dA
+// Links line integral to double integral
+
+// =============================================================================
 // VERIFICATION TESTS
 // =============================================================================
 // Run in REPL:
