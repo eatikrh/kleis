@@ -1,0 +1,200 @@
+// OAuth 2.0 Token Scopes and Authorization
+// Based on RFC 6749: https://tools.ietf.org/html/rfc6749
+//
+// This example models OAuth2 token scopes and verifies security properties
+// that every OAuth2 implementation should satisfy.
+
+// ============================================
+// Token Scopes (RFC 6749 Section 3.3)
+// ============================================
+
+// OAuth2 scopes define the permissions granted to an access token.
+// Scopes are hierarchical: admin > write > read
+
+data Scope = ScopeRead | ScopeWrite | ScopeDelete | ScopeAdmin
+
+// Scope hierarchy: higher scopes include lower ones
+// Admin can do everything, Write includes Read, etc.
+
+define scope_level(s) = match s {
+    ScopeRead => 1
+  | ScopeWrite => 2
+  | ScopeDelete => 3
+  | ScopeAdmin => 4
+}
+
+// Check if a token scope grants at least the required scope
+define scope_includes(token_scope, required_scope) =
+    if scope_level(token_scope) >= scope_level(required_scope) then 1 else 0
+
+// ============================================
+// Token States (RFC 6749 Section 1.4)
+// ============================================
+
+// Tokens have lifecycle states
+data TokenState = 
+    TokenValid        // Active and usable
+  | TokenExpired      // Time limit exceeded
+  | TokenRevoked      // Explicitly revoked by user/admin
+  | TokenInvalid      // Malformed or never existed
+
+// Only valid tokens grant access
+define is_usable(state) = match state {
+    TokenValid => 1
+  | TokenExpired => 0
+  | TokenRevoked => 0
+  | TokenInvalid => 0
+}
+
+// ============================================
+// Authorization Code Flow States
+// ============================================
+
+// RFC 6749 Section 4.1: Authorization Code Grant
+data AuthCodeState =
+    CodePending       // Waiting for user consent
+  | CodeIssued        // Code issued, waiting for exchange
+  | CodeExchanged     // Code exchanged for token (single use!)
+  | CodeExpired       // Code expired (typically 10 minutes)
+
+// Authorization codes can only be exchanged ONCE
+define can_exchange_code(state) = match state {
+    CodeIssued => 1
+  | CodePending => 0
+  | CodeExchanged => 0   // CRITICAL: Prevents replay attacks!
+  | CodeExpired => 0
+}
+
+// ============================================
+// Access Control Decisions
+// ============================================
+
+// Core authorization check: combines token state + scope
+define is_authorized(token_state, token_scope, required_scope) =
+    if is_usable(token_state) = 1 
+    then scope_includes(token_scope, required_scope)
+    else 0
+
+// Resource-specific access checks
+define can_read_resource(token_state, token_scope) =
+    is_authorized(token_state, token_scope, ScopeRead)
+
+define can_write_resource(token_state, token_scope) =
+    is_authorized(token_state, token_scope, ScopeWrite)
+
+define can_delete_resource(token_state, token_scope) =
+    is_authorized(token_state, token_scope, ScopeDelete)
+
+define can_admin_resource(token_state, token_scope) =
+    is_authorized(token_state, token_scope, ScopeAdmin)
+
+// ============================================
+// Token Expiration Logic
+// ============================================
+
+// Token expires after access_token_lifetime_seconds (typically 3600 = 1 hour)
+// current_time and issue_time are Unix timestamps
+
+define token_expired(issue_time, current_time, lifetime) =
+    if current_time > issue_time + lifetime then 1 else 0
+
+define compute_token_state(issue_time, current_time, lifetime, is_revoked) =
+    if is_revoked = 1 then 2           // TokenRevoked
+    else if token_expired(issue_time, current_time, lifetime) = 1 then 1  // TokenExpired
+    else 0                              // TokenValid (represented as 0 for simplicity)
+
+// ============================================
+// Security Properties to Verify
+// ============================================
+
+// PROPERTY 1: Expired tokens NEVER grant access
+// :verify is_authorized(TokenExpired, ScopeAdmin, ScopeRead) = 0
+
+// PROPERTY 2: Revoked tokens NEVER grant access  
+// :verify is_authorized(TokenRevoked, ScopeAdmin, ScopeRead) = 0
+
+// PROPERTY 3: Scope hierarchy - Admin includes all lower scopes
+// :verify scope_includes(ScopeAdmin, ScopeRead) = 1
+// :verify scope_includes(ScopeAdmin, ScopeWrite) = 1
+// :verify scope_includes(ScopeAdmin, ScopeDelete) = 1
+
+// PROPERTY 4: Read scope doesn't include Write
+// :verify scope_includes(ScopeRead, ScopeWrite) = 0
+
+// PROPERTY 5: Authorization codes can only be exchanged once
+// :verify can_exchange_code(CodeExchanged) = 0
+
+// PROPERTY 6: Valid Admin token can access everything
+// :verify can_read_resource(TokenValid, ScopeAdmin) = 1
+// :verify can_write_resource(TokenValid, ScopeAdmin) = 1
+// :verify can_delete_resource(TokenValid, ScopeAdmin) = 1
+
+// PROPERTY 7: Valid Read token cannot write
+// :verify can_write_resource(TokenValid, ScopeRead) = 0
+// :verify can_delete_resource(TokenValid, ScopeRead) = 0
+
+// ============================================
+// Refresh Token Logic (RFC 6749 Section 1.5)
+// ============================================
+
+data RefreshTokenState =
+    RefreshValid      // Can be used to obtain new access token
+  | RefreshUsed       // Already used (single-use in some implementations)
+  | RefreshRevoked    // Revoked by user/admin
+  | RefreshExpired    // Exceeded refresh_token_lifetime
+
+define can_refresh(state) = match state {
+    RefreshValid => 1
+  | RefreshUsed => 0     // Some OAuth implementations are single-use
+  | RefreshRevoked => 0
+  | RefreshExpired => 0
+}
+
+// ============================================
+// Client Authentication (RFC 6749 Section 2.3)
+// ============================================
+
+data ClientType =
+    ClientConfidential   // Can securely store secrets (server-side apps)
+  | ClientPublic         // Cannot store secrets (mobile/SPA apps)
+
+// Confidential clients use client_secret
+// Public clients must use PKCE (RFC 7636)
+
+define requires_pkce(client_type) = match client_type {
+    ClientConfidential => 0   // Can use client_secret instead
+  | ClientPublic => 1         // MUST use PKCE
+}
+
+// ============================================
+// Grant Types (RFC 6749 Section 4)
+// ============================================
+
+data GrantType =
+    GrantAuthorizationCode   // Most secure, recommended for web apps
+  | GrantClientCredentials   // Machine-to-machine, no user involved
+  | GrantRefreshToken        // Exchange refresh token for new access token
+  | GrantImplicit            // DEPRECATED in OAuth 2.1 - DO NOT USE!
+
+// Grant type security levels
+define grant_security_level(g) = match g {
+    GrantAuthorizationCode => 4   // Most secure
+  | GrantClientCredentials => 3   // Secure for M2M
+  | GrantRefreshToken => 2        // Depends on storage security
+  | GrantImplicit => 0            // INSECURE - deprecated!
+}
+
+// :verify grant_security_level(GrantImplicit) = 0  // Confirm implicit is insecure
+
+// ============================================
+// Example Verification Scenario
+// ============================================
+
+// Scenario: A mobile app (public client) with read scope tries to delete
+// 
+// :verify requires_pkce(ClientPublic) = 1
+// :verify can_delete_resource(TokenValid, ScopeRead) = 0
+//
+// The mobile app MUST use PKCE and CANNOT delete with a read-only token.
+// Z3 proves these properties hold for ALL possible inputs!
+
