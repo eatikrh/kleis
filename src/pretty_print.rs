@@ -155,7 +155,7 @@ impl PrettyPrinter {
             "geq" => Some(">="),
             "and" | "logical_and" => Some("and"),
             "or" | "logical_or" => Some("or"),
-            "implies" => Some("->"),
+            "implies" => Some("⟹"),
             "compose" => Some("∘"),
             "bullet" | "op" => Some("*"),
             _ => None,
@@ -454,7 +454,7 @@ impl PrettyPrinter {
             }
             TypeExpr::Function(input, output) => {
                 format!(
-                    "{} -> {}",
+                    "{} → {}",
                     Self::format_type_expr(input),
                     Self::format_type_expr(output)
                 )
