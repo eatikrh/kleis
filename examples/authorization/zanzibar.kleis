@@ -136,11 +136,17 @@ define can_grant(granter_perm, grantee_perm) =
 // :verify can_share(3) = 0
 
 // Scenario: Charlie has viewer(1) on doc, but editor(3) on folder
-// With inheritance, Charlie gets max permission
+// NOTE: inherited_permission uses EXPLICIT permission if set (child > 0)
+// So Charlie's viewer(1) on doc takes precedence over folder editor(3)
 //
-// :verify doc_access(1, 3, 3) = 1  // Can edit (action=3)
+// :verify doc_access(1, 3, 3) = 0  // Can NOT edit - doc permission overrides folder
+
+// Scenario: Doc has NO explicit permission (0), inherits from folder
+// Charlie can edit because folder gives editor access
+//
+// :verify doc_access(0, 3, 3) = 1  // CAN edit - inherits folder's editor permission
 
 // Scenario: Public link gives viewer access, group gives editor
-// User gets editor access
+// User gets editor access (effective_permission takes MAX)
 //
 // :verify effective_permission(1, 3) = 3

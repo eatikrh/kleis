@@ -35,45 +35,42 @@ When loaded, `ICMP`, `TCP`, `UDP` are registered as Z3 identity elements.
 | IP Router | `examples/protocols/ip_router.kleis` | 14 |
 | Zanzibar Auth | `examples/authorization/zanzibar.kleis` | 13 |
 
-### 4. Bug Discovered: Symbolic ADT Matching
+### 4. ✅ Fixed: Symbolic ADT Matching Bug
 
-**The Bug:**
+**The Bug (discovered and fixed same session):**
 ```kleis
 :verify perm_level(Owner) = 4
-❌ Invalid  // Should be Valid!
+❌ Invalid  // Was failing!
+✅ Valid    // Now works!
 ```
 
 **Root Cause:**
 - `Owner` loaded as Z3 identity element (fresh constant)
-- Pattern `match p { Owner => 4 }` uses different `Owner`
-- Z3 doesn't know they should be equal
+- Pattern `match p { Owner => 4 }` couldn't compare against it
+- Z3 didn't know different constructors are distinct
 
-**Works:** Concrete expressions (`Packet(4, 5, ...)`)
-**Fails:** Symbolic values (`Owner`, `TCP` as function arguments)
+**The Fix (branch: `fix/symbolic-adt-matching`):**
 
-**Solution (documented in roadmap):**
-Share `DataTypeRegistry` between type inference and Z3. See `docs/roadmap/Z3_ADT_SUPPORT.md`.
+1. **`pattern_to_condition()` in `src/solvers/z3/backend.rs`:**
+   - Nullary constructor patterns now look up identity elements
+   - Uses Z3 equality: `scrutinee == identity_elements[constructor_name]`
+
+2. **`load_identity_element()` asserts distinctness:**
+   - New identity elements are asserted distinct from all existing ones
+   - Ensures `Owner ≠ Editor ≠ Viewer` in Z3
+
+**New Tests:**
+- `test_match_symbolic_adt_nullary_constructor` - verifies `Owner` matching
+- `test_match_symbolic_adt_different_constructors` - verifies `Editor` != `Owner`
 
 ## Commits Made
 
 1. `a6c85af` - Match translation + ADT constructors + IP Router
 2. `a7f03f7` - Zanzibar example + symbolic ADT bug documentation
-
-## Next Steps (For Future Session)
-
-### Fix Symbolic ADT Matching
-1. Create branch: `git checkout -b fix/symbolic-adt-matching`
-2. Key insight: Type inference uses `data_registry.lookup_variant()` 
-3. Z3 needs similar: constructor tags shared across translation
-4. Test: `:verify perm_level(Owner) = 4` should become ✅ Valid
-
-### Files to Reference
-- `src/data_registry.rs` - How type inference registers constructors
-- `src/type_inference.rs:558` - `check_pattern()` uses registry lookup
-- `src/type_inference.rs:2049` - Constructor unification tests
+3. (pending) - Fix symbolic ADT matching
 
 ## Quality Gates Status
-- ✅ All 487 tests passing
+- ✅ All 489 tests passing (487 + 2 new)
 - ✅ Clippy clean
 - ✅ Formatting correct
 
