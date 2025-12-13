@@ -20,7 +20,7 @@
 
 use crate::ast::{Expression, MatchCase, Pattern, QuantifiedVar, QuantifierKind};
 use crate::evaluator::Closure;
-use crate::kleis_ast::DataDef;
+use crate::kleis_ast::{DataDef, StructureDef, StructureMember};
 
 /// Pretty-printer configuration
 pub struct PrettyPrinter {
@@ -55,28 +55,60 @@ impl PrettyPrinter {
         let params = closure.params.join(", ");
         let body = self.format_expression(&closure.body);
 
-        // Always use single-line format for valid Kleis syntax
-        format!("define {}({}) = {}", name, params, body)
+        // Use multi-line format if body contains newlines
+        if body.contains('\n') {
+            // Indent the body lines
+            let indented_body = body
+                .lines()
+                .enumerate()
+                .map(|(i, line)| {
+                    if i == 0 {
+                        line.to_string()
+                    } else {
+                        format!("{}{}", self.indent, line)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            format!(
+                "define {}({}) =\n{}{}",
+                name, params, self.indent, indented_body
+            )
+        } else {
+            format!("define {}({}) = {}", name, params, body)
+        }
     }
 
     /// Format an expression to Kleis source code
     pub fn format_expression(&self, expr: &Expression) -> String {
+        self.format_at_depth(expr, 0)
+    }
+
+    /// Format an expression at a given indentation depth
+    /// This is the core recursive method that tracks nesting level
+    fn format_at_depth(&self, expr: &Expression, depth: usize) -> String {
         match expr {
             Expression::Const(s) => s.clone(),
 
             Expression::Object(name) => name.clone(),
 
-            Expression::Operation { name, args } => self.format_operation(name, args),
+            Expression::Operation { name, args } => {
+                self.format_operation_at_depth(name, args, depth)
+            }
 
             Expression::Placeholder { hint, .. } => {
                 format!("□{}", hint)
             }
 
-            Expression::Match { scrutinee, cases } => self.format_match(scrutinee, cases),
+            Expression::Match { scrutinee, cases } => {
+                self.format_match_at_depth(scrutinee, cases, depth)
+            }
 
             Expression::List(items) => {
-                let formatted: Vec<String> =
-                    items.iter().map(|e| self.format_expression(e)).collect();
+                let formatted: Vec<String> = items
+                    .iter()
+                    .map(|e| self.format_at_depth(e, depth))
+                    .collect();
                 format!("[{}]", formatted.join(", "))
             }
 
@@ -85,20 +117,28 @@ impl PrettyPrinter {
                 variables,
                 where_clause,
                 body,
-            } => self.format_quantifier(quantifier, variables, where_clause.as_deref(), body),
+            } => self.format_quantifier_at_depth(
+                quantifier,
+                variables,
+                where_clause.as_deref(),
+                body,
+                depth,
+            ),
 
             Expression::Conditional {
                 condition,
                 then_branch,
                 else_branch,
-            } => self.format_conditional(condition, then_branch, else_branch),
+            } => self.format_conditional_at_depth(condition, then_branch, else_branch, depth),
 
-            Expression::Let { name, value, body } => self.format_let(name, value, body),
+            Expression::Let { name, value, body } => {
+                self.format_let_at_depth(name, value, body, depth)
+            }
         }
     }
 
     /// Format an operation (handles infix operators specially)
-    fn format_operation(&self, name: &str, args: &[Expression]) -> String {
+    fn format_operation_at_depth(&self, name: &str, args: &[Expression], depth: usize) -> String {
         // Infix binary operators
         // Note: Use ASCII versions for comparison operators for valid round-trip parsing
         let infix_op = match name {
@@ -123,8 +163,8 @@ impl PrettyPrinter {
 
         if let Some(op) = infix_op {
             if args.len() == 2 {
-                let left = self.format_expression(&args[0]);
-                let right = self.format_expression(&args[1]);
+                let left = self.format_at_depth(&args[0], depth);
+                let right = self.format_at_depth(&args[1], depth);
                 return format!(
                     "{} {} {}",
                     self.maybe_paren(&args[0], &left),
@@ -137,11 +177,11 @@ impl PrettyPrinter {
         // Prefix unary operators
         match name {
             "neg" | "negate" if args.len() == 1 => {
-                let arg = self.format_expression(&args[0]);
+                let arg = self.format_at_depth(&args[0], depth);
                 return format!("-{}", self.maybe_paren(&args[0], &arg));
             }
             "not" | "logical_not" if args.len() == 1 => {
-                let arg = self.format_expression(&args[0]);
+                let arg = self.format_at_depth(&args[0], depth);
                 return format!("¬{}", self.maybe_paren(&args[0], &arg));
             }
             _ => {}
@@ -151,28 +191,52 @@ impl PrettyPrinter {
         if args.is_empty() {
             name.to_string()
         } else {
-            let formatted_args: Vec<String> =
-                args.iter().map(|a| self.format_expression(a)).collect();
+            let formatted_args: Vec<String> = args
+                .iter()
+                .map(|a| self.format_at_depth(a, depth))
+                .collect();
             format!("{}({})", name, formatted_args.join(", "))
         }
     }
 
-    /// Format a match expression
-    /// Note: Always use single-line format for valid round-trip parsing.
-    fn format_match(&self, scrutinee: &Expression, cases: &[MatchCase]) -> String {
-        let scrutinee_str = self.format_expression(scrutinee);
+    /// Format a match expression with proper indentation
+    fn format_match_at_depth(
+        &self,
+        scrutinee: &Expression,
+        cases: &[MatchCase],
+        depth: usize,
+    ) -> String {
+        let scrutinee_str = self.format_at_depth(scrutinee, depth);
 
-        let cases_str: Vec<String> = cases
-            .iter()
-            .map(|c| {
-                let pattern = self.format_pattern(&c.pattern);
-                let body = self.format_expression(&c.body);
-                format!("{} => {}", pattern, body)
-            })
-            .collect();
-
-        // Always use single-line format with | separator for valid Kleis syntax
-        format!("match {} {{ {} }}", scrutinee_str, cases_str.join(" | "))
+        // For many cases, use multi-line format
+        if cases.len() > 3 {
+            let indent = self.indent.repeat(depth + 1);
+            let cases_str: Vec<String> = cases
+                .iter()
+                .map(|c| {
+                    let pattern = self.format_pattern(&c.pattern);
+                    let body = self.format_at_depth(&c.body, depth + 1);
+                    format!("{}  {} => {}", indent, pattern, body)
+                })
+                .collect();
+            format!(
+                "match {} {{\n{}\n{}}}",
+                scrutinee_str,
+                cases_str.join("\n"),
+                self.indent.repeat(depth)
+            )
+        } else {
+            // Short match: single line
+            let cases_str: Vec<String> = cases
+                .iter()
+                .map(|c| {
+                    let pattern = self.format_pattern(&c.pattern);
+                    let body = self.format_at_depth(&c.body, depth);
+                    format!("{} => {}", pattern, body)
+                })
+                .collect();
+            format!("match {} {{ {} }}", scrutinee_str, cases_str.join(" | "))
+        }
     }
 
     /// Format a pattern
@@ -198,13 +262,14 @@ impl PrettyPrinter {
         }
     }
 
-    /// Format a quantifier
-    fn format_quantifier(
+    /// Format a quantifier with depth tracking
+    fn format_quantifier_at_depth(
         &self,
         quantifier: &QuantifierKind,
         variables: &[QuantifiedVar],
         where_clause: Option<&Expression>,
         body: &Expression,
+        depth: usize,
     ) -> String {
         let quant_sym = match quantifier {
             QuantifierKind::ForAll => "∀",
@@ -225,39 +290,81 @@ impl PrettyPrinter {
         let vars_part = format!("{}({})", quant_sym, vars_str.join(", "));
 
         let where_part = if let Some(cond) = where_clause {
-            format!(" where {}", self.format_expression(cond))
+            format!(" where {}", self.format_at_depth(cond, depth))
         } else {
             String::new()
         };
 
-        let body_str = self.format_expression(body);
+        let body_str = self.format_at_depth(body, depth);
 
         format!("{}{}. {}", vars_part, where_part, body_str)
     }
 
-    /// Format a conditional
-    /// Note: Kleis parser requires if/then/else on a single logical line,
-    /// so we always use single-line format for valid round-trip parsing.
-    fn format_conditional(
+    /// Format a conditional with hierarchical indentation
+    /// The AST structure drives the formatting:
+    /// - Simple conditionals stay on one line
+    /// - Chained if-else uses aligned format
+    /// - Deeply nested expressions get properly indented
+    fn format_conditional_at_depth(
         &self,
         condition: &Expression,
         then_branch: &Expression,
         else_branch: &Expression,
+        depth: usize,
     ) -> String {
-        let cond = self.format_expression(condition);
-        let then_str = self.format_expression(then_branch);
-        let else_str = self.format_expression(else_branch);
+        let cond = self.format_at_depth(condition, depth);
+        let then_str = self.format_at_depth(then_branch, depth);
 
-        // Always use single-line format for valid Kleis syntax
-        format!("if {} then {} else {}", cond, then_str, else_str)
+        // Check if this is a chained if-else (else branch is another conditional)
+        let is_chained_else = matches!(else_branch, Expression::Conditional { .. });
+
+        // Format else branch - chained conditionals stay at same depth for alignment
+        let else_str = self.format_at_depth(else_branch, depth);
+
+        // Check if we should use multi-line format
+        let total_len = cond.len() + then_str.len() + else_str.len();
+        let indent_str = self.indent.repeat(depth);
+
+        if is_chained_else {
+            // Chained if-else: put each branch on its own line
+            // Format: if cond then result\nelse if cond2 then result2\nelse result3
+            format!(
+                "if {} then {}\n{}else {}",
+                cond, then_str, indent_str, else_str
+            )
+        } else if total_len > 60 {
+            // Long expression: use multi-line with proper indentation
+            format!(
+                "if {} then {}\n{}else {}",
+                cond, then_str, indent_str, else_str
+            )
+        } else {
+            // Short expression: single line
+            format!("if {} then {} else {}", cond, then_str, else_str)
+        }
     }
 
-    /// Format a let binding
-    fn format_let(&self, name: &str, value: &Expression, body: &Expression) -> String {
-        let value_str = self.format_expression(value);
-        let body_str = self.format_expression(body);
+    /// Format a let binding with depth tracking
+    fn format_let_at_depth(
+        &self,
+        name: &str,
+        value: &Expression,
+        body: &Expression,
+        depth: usize,
+    ) -> String {
+        let value_str = self.format_at_depth(value, depth);
+        let body_str = self.format_at_depth(body, depth);
 
-        format!("let {} = {} in {}", name, value_str, body_str)
+        // For complex bodies, use multi-line format
+        if body_str.contains('\n') {
+            let indent_str = self.indent.repeat(depth);
+            format!(
+                "let {} = {} in\n{}{}",
+                name, value_str, indent_str, body_str
+            )
+        } else {
+            format!("let {} = {} in {}", name, value_str, body_str)
+        }
     }
 
     /// Add parentheses around complex expressions when needed
@@ -367,6 +474,110 @@ impl PrettyPrinter {
                     vars_str.join(", "),
                     Self::format_type_expr(body)
                 )
+            }
+        }
+    }
+
+    /// Format a structure definition
+    /// Example:
+    /// ```kleis
+    /// structure Monoid(M) {
+    ///     element identity : M
+    ///     operation op : M -> M -> M
+    ///     axiom left_identity : ∀(x : M). op(identity, x) = x
+    /// }
+    /// ```
+    pub fn format_structure(&self, structure: &StructureDef) -> String {
+        let name = &structure.name;
+
+        // Format type parameters if any
+        let params = if structure.type_params.is_empty() {
+            String::new()
+        } else {
+            let param_strs: Vec<String> = structure
+                .type_params
+                .iter()
+                .map(|p| {
+                    if let Some(ref kind) = p.kind {
+                        format!("{}: {}", p.name, kind)
+                    } else {
+                        p.name.clone()
+                    }
+                })
+                .collect();
+            format!("({})", param_strs.join(", "))
+        };
+
+        // Format extends clause if any
+        let extends = if let Some(ref parent) = structure.extends_clause {
+            format!(" extends {}", Self::format_type_expr(parent))
+        } else {
+            String::new()
+        };
+
+        // Format over clause if any
+        let over = if let Some(ref field_type) = structure.over_clause {
+            format!(" over {}", Self::format_type_expr(field_type))
+        } else {
+            String::new()
+        };
+
+        // Format members
+        let members_str = self.format_structure_members(&structure.members, 1);
+
+        format!(
+            "structure {}{}{}{} {{\n{}\n}}",
+            name, params, extends, over, members_str
+        )
+    }
+
+    /// Format structure members with proper indentation
+    fn format_structure_members(&self, members: &[StructureMember], level: usize) -> String {
+        let indent = self.indent.repeat(level);
+        let lines: Vec<String> = members
+            .iter()
+            .map(|m| format!("{}{}", indent, self.format_structure_member(m, level)))
+            .collect();
+        lines.join("\n")
+    }
+
+    /// Format a single structure member
+    fn format_structure_member(&self, member: &StructureMember, level: usize) -> String {
+        match member {
+            StructureMember::Field { name, type_expr } => {
+                format!("element {} : {}", name, Self::format_type_expr(type_expr))
+            }
+            StructureMember::Operation {
+                name,
+                type_signature,
+            } => {
+                format!(
+                    "operation {} : {}",
+                    name,
+                    Self::format_type_expr(type_signature)
+                )
+            }
+            StructureMember::Axiom { name, proposition } => {
+                format!("axiom {} : {}", name, self.format_expression(proposition))
+            }
+            StructureMember::NestedStructure {
+                name,
+                structure_type,
+                members,
+            } => {
+                let nested_members = self.format_structure_members(members, level + 1);
+                format!(
+                    "structure {} : {} {{\n{}\n{}}}",
+                    name,
+                    Self::format_type_expr(structure_type),
+                    nested_members,
+                    self.indent.repeat(level)
+                )
+            }
+            StructureMember::FunctionDef(func_def) => {
+                let params = func_def.params.join(", ");
+                let body = self.format_expression(&func_def.body);
+                format!("define {}({}) = {}", func_def.name, params, body)
             }
         }
     }
