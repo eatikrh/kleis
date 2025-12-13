@@ -148,11 +148,7 @@ impl<'r> Z3Backend<'r> {
 
                 // Convert condition to Bool
                 let cond_bool = cond_z3.as_bool().ok_or_else(|| {
-                    format!(
-                        "Conditional condition must be a boolean expression. Got sort: {:?}, condition: {:?}",
-                        cond_z3.sort_kind(),
-                        condition
-                    )
+                    "Conditional condition must be a boolean expression".to_string()
                 })?;
 
                 // Use Z3's ite (if-then-else)
