@@ -488,43 +488,82 @@ impl KleisParser {
         Ok(left)
     }
 
-    /// Parse comparison: A = B, A < B, etc.
+    /// Parse comparison: A = B, A < B, A <= B, A >= B, etc.
     fn parse_comparison(&mut self) -> Result<Expression, KleisParseError> {
         let left = self.parse_arithmetic()?;
 
         self.skip_whitespace();
-        let op = match self.peek() {
-            Some('=') => {
-                // Check if it's not ⟹ (which is handled at higher level)
-                if self.peek_ahead(1) != Some('⟹') {
-                    self.advance();
-                    Some("equals")
-                } else {
-                    None
+
+        // Check for two-character comparison operators first
+        let op = if let Some(two_char) = self.peek_n(2) {
+            match two_char.as_str() {
+                "<=" => {
+                    self.pos += 2;
+                    Some("leq")
                 }
+                ">=" => {
+                    self.pos += 2;
+                    Some("geq")
+                }
+                "!=" => {
+                    self.pos += 2;
+                    Some("neq")
+                }
+                "==" => {
+                    self.pos += 2;
+                    Some("equals")
+                }
+                _ => None,
             }
-            Some('<') => {
-                self.advance();
-                Some("less_than")
-            }
-            Some('>') => {
-                self.advance();
-                Some("greater_than")
-            }
-            Some('≤') => {
-                self.advance();
-                Some("leq")
-            }
-            Some('≥') => {
-                self.advance();
-                Some("geq")
-            }
-            Some('≠') => {
-                self.advance();
-                Some("neq")
-            }
-            _ => None,
+        } else {
+            None
         };
+
+        // If no two-char operator, check single-char operators
+        let op = op.or_else(|| {
+            match self.peek() {
+                Some('=') => {
+                    // Check if it's not ⟹ (which is handled at higher level)
+                    if self.peek_ahead(1) != Some('⟹') && self.peek_ahead(1) != Some('=') {
+                        self.advance();
+                        Some("equals")
+                    } else {
+                        None
+                    }
+                }
+                Some('<') => {
+                    // Make sure it's not <= (already handled above)
+                    if self.peek_ahead(1) != Some('=') {
+                        self.advance();
+                        Some("less_than")
+                    } else {
+                        None
+                    }
+                }
+                Some('>') => {
+                    // Make sure it's not >= (already handled above)
+                    if self.peek_ahead(1) != Some('=') {
+                        self.advance();
+                        Some("greater_than")
+                    } else {
+                        None
+                    }
+                }
+                Some('≤') => {
+                    self.advance();
+                    Some("leq")
+                }
+                Some('≥') => {
+                    self.advance();
+                    Some("geq")
+                }
+                Some('≠') => {
+                    self.advance();
+                    Some("neq")
+                }
+                _ => None,
+            }
+        });
 
         if let Some(op) = op {
             let right = self.parse_arithmetic()?;
@@ -1213,6 +1252,15 @@ impl KleisParser {
         }
     }
 
+    /// Peek at the next n characters as a string
+    fn peek_n(&self, n: usize) -> Option<String> {
+        if self.pos + n <= self.input.len() {
+            Some(self.input[self.pos..self.pos + n].iter().collect())
+        } else {
+            None
+        }
+    }
+
     /// Consume a specific string if present, return true if successful
     fn consume_str(&mut self, s: &str) -> bool {
         let chars: Vec<char> = s.chars().collect();
@@ -1376,9 +1424,36 @@ impl KleisParser {
     /// This is needed because `if a + b then` would otherwise try to parse
     /// `then` as part of the expression.
     fn parse_conditional_part(&mut self, stop_word: &str) -> Result<Expression, KleisParseError> {
-        // Parse terms and operators until we hit the stop word
-        let mut left = self.parse_primary()?;
+        // Use the proper precedence-respecting expression parser
+        // We need to parse a complete expression, but stop before the stop_word
+        // The key insight: comparison expressions are complete units
+        // So we parse at the comparison level, which respects precedence
 
+        // First, check if the expression starts with a negation or other prefix
+        self.skip_whitespace();
+
+        // Try to peek and see if we're about to hit the stop word immediately
+        if self.peek_word(stop_word) {
+            return Err(KleisParseError {
+                position: self.pos,
+                message: format!("Expected expression before '{}'", stop_word),
+            });
+        }
+
+        // Parse using the proper precedence chain, but stop at logical operators
+        // since those might interfere with the stop word
+        self.parse_conditional_part_with_precedence(stop_word)
+    }
+
+    /// Parse a conditional part respecting operator precedence
+    fn parse_conditional_part_with_precedence(
+        &mut self,
+        stop_word: &str,
+    ) -> Result<Expression, KleisParseError> {
+        // Parse comparison (which includes arithmetic with proper precedence)
+        let mut expr = self.parse_comparison()?;
+
+        // Continue parsing logical operators if present and we haven't hit stop_word
         loop {
             self.skip_whitespace();
 
@@ -1387,13 +1462,38 @@ impl KleisParser {
                 break;
             }
 
-            // Try to parse an infix operator
-            if let Some(op) = self.try_parse_infix_operator() {
+            // Check for logical operators (lower precedence than comparison)
+            if self.peek() == Some('∧') {
+                self.advance();
                 self.skip_whitespace();
-                let right = self.parse_primary()?;
-                left = Expression::Operation {
-                    name: op,
-                    args: vec![left, right],
+                let right = self.parse_comparison()?;
+                expr = Expression::Operation {
+                    name: "logical_and".to_string(),
+                    args: vec![expr, right],
+                };
+            } else if self.peek() == Some('∨') {
+                self.advance();
+                self.skip_whitespace();
+                let right = self.parse_comparison()?;
+                expr = Expression::Operation {
+                    name: "logical_or".to_string(),
+                    args: vec![expr, right],
+                };
+            } else if self.peek_n(2).as_deref() == Some("&&") {
+                self.pos += 2;
+                self.skip_whitespace();
+                let right = self.parse_comparison()?;
+                expr = Expression::Operation {
+                    name: "logical_and".to_string(),
+                    args: vec![expr, right],
+                };
+            } else if self.peek_n(2).as_deref() == Some("||") {
+                self.pos += 2;
+                self.skip_whitespace();
+                let right = self.parse_comparison()?;
+                expr = Expression::Operation {
+                    name: "logical_or".to_string(),
+                    args: vec![expr, right],
                 };
             } else {
                 // No more operators, stop
@@ -1401,7 +1501,7 @@ impl KleisParser {
             }
         }
 
-        Ok(left)
+        Ok(expr)
     }
 
     /// Try to parse an infix operator, returning None if not found

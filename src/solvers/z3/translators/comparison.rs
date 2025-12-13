@@ -215,4 +215,50 @@ mod tests {
         let result = translate_geq(&left, &right);
         assert!(result.is_ok(), "translate_geq should succeed");
     }
+
+    #[test]
+    fn test_translate_geq_with_multiply() {
+        // This reproduces the bug: geq(a, times(b, 2))
+        use z3::ast::Int as Z3Int;
+
+        // Create fresh variables using the vendored API
+        let a: Dynamic = Z3Int::fresh_const("a").into();
+        let b: Dynamic = Z3Int::fresh_const("b").into();
+        let two: Dynamic = Z3Int::from_i64(2).into();
+
+        // Multiply b * 2 using our arithmetic translator
+        let b_times_2 = super::super::arithmetic::translate_times(&b, &two).unwrap();
+
+        // Debug: check the sort of the multiplication result
+        println!("b_times_2 sort kind: {:?}", b_times_2.sort_kind());
+        println!("b_times_2 as_int: {:?}", b_times_2.as_int().is_some());
+
+        // Now try geq(a, b_times_2)
+        let result = translate_geq(&a, &b_times_2);
+        assert!(
+            result.is_ok(),
+            "translate_geq with multiply should succeed: {:?}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_geq_result_to_dynamic_and_back() {
+        use z3::ast::Int as Z3Int;
+
+        let a: Dynamic = Z3Int::fresh_const("a").into();
+        let b: Dynamic = Z3Int::fresh_const("b").into();
+
+        let bool_result = translate_geq(&a, &b).unwrap();
+
+        // Convert Bool to Dynamic
+        let dyn_result: Dynamic = bool_result.clone().into();
+
+        // Now extract it back as Bool
+        let extracted = dyn_result.as_bool();
+        assert!(
+            extracted.is_some(),
+            "Should be able to extract Bool from Dynamic"
+        );
+    }
 }
