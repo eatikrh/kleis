@@ -980,25 +980,30 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
             let expanded = expand_user_functions(&expr, evaluator);
 
             match AxiomVerifier::new(registry) {
-                Ok(mut verifier) => match verifier.verify_axiom(&expanded) {
-                    Ok(result) => match result {
-                        VerificationResult::Valid => {
-                            println!("✅ Valid");
+                Ok(mut verifier) => {
+                    // Load ADT constructors as identity elements (e.g., TCP, UDP, ICMP)
+                    verifier.load_adt_constructors(evaluator.get_adt_constructors().iter());
+
+                    match verifier.verify_axiom(&expanded) {
+                        Ok(result) => match result {
+                            VerificationResult::Valid => {
+                                println!("✅ Valid");
+                            }
+                            VerificationResult::Invalid { counterexample } => {
+                                println!("❌ Invalid - Counterexample: {}", counterexample);
+                            }
+                            VerificationResult::Unknown => {
+                                println!("❓ Unknown (Z3 couldn't determine)");
+                            }
+                            VerificationResult::Disabled => {
+                                println!("⚠️  Verification disabled");
+                            }
+                        },
+                        Err(e) => {
+                            println!("❌ Verification error: {}", e);
                         }
-                        VerificationResult::Invalid { counterexample } => {
-                            println!("❌ Invalid - Counterexample: {}", counterexample);
-                        }
-                        VerificationResult::Unknown => {
-                            println!("❓ Unknown (Z3 couldn't determine)");
-                        }
-                        VerificationResult::Disabled => {
-                            println!("⚠️  Verification disabled");
-                        }
-                    },
-                    Err(e) => {
-                        println!("❌ Verification error: {}", e);
                     }
-                },
+                }
                 Err(e) => {
                     println!("❌ Failed to initialize verifier: {}", e);
                 }
@@ -1072,6 +1077,25 @@ fn expand_user_functions(
             value: Box::new(expand_user_functions(value, evaluator)),
             body: Box::new(expand_user_functions(body, evaluator)),
         },
+        Expression::Match { scrutinee, cases } => {
+            use kleis::ast::MatchCase;
+            Expression::Match {
+                scrutinee: Box::new(expand_user_functions(scrutinee, evaluator)),
+                cases: cases
+                    .iter()
+                    .map(|c| MatchCase {
+                        pattern: c.pattern.clone(),
+                        body: expand_user_functions(&c.body, evaluator),
+                    })
+                    .collect(),
+            }
+        }
+        Expression::List(items) => Expression::List(
+            items
+                .iter()
+                .map(|i| expand_user_functions(i, evaluator))
+                .collect(),
+        ),
         // Leaf nodes - return as-is
         _ => expr.clone(),
     }
@@ -1141,8 +1165,46 @@ fn substitute_var(
                 }
             }
         }
+        Expression::Match { scrutinee, cases } => {
+            use kleis::ast::MatchCase;
+            Expression::Match {
+                scrutinee: Box::new(substitute_var(scrutinee, var_name, replacement)),
+                cases: cases
+                    .iter()
+                    .map(|c| {
+                        // Check if pattern binds this variable - if so, don't substitute in body
+                        let binds_var = pattern_binds_var(&c.pattern, var_name);
+                        MatchCase {
+                            pattern: c.pattern.clone(),
+                            body: if binds_var {
+                                c.body.clone()
+                            } else {
+                                substitute_var(&c.body, var_name, replacement)
+                            },
+                        }
+                    })
+                    .collect(),
+            }
+        }
+        Expression::List(items) => Expression::List(
+            items
+                .iter()
+                .map(|i| substitute_var(i, var_name, replacement))
+                .collect(),
+        ),
         // Leaf nodes - return as-is
         _ => expr.clone(),
+    }
+}
+
+/// Check if a pattern binds a variable name
+#[cfg(feature = "axiom-verification")]
+fn pattern_binds_var(pattern: &kleis::ast::Pattern, var_name: &str) -> bool {
+    use kleis::ast::Pattern;
+    match pattern {
+        Pattern::Variable(name) => name == var_name,
+        Pattern::Constructor { args, .. } => args.iter().any(|p| pattern_binds_var(p, var_name)),
+        Pattern::Wildcard | Pattern::Constant(_) => false,
     }
 }
 

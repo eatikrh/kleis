@@ -58,6 +58,10 @@ pub struct Evaluator {
 
     /// Pattern matcher for match expressions
     matcher: PatternMatcher,
+
+    /// ADT constructor names (nullary constructors like TCP, UDP, ICMP)
+    /// These are values that should be recognized as constants, not variables
+    adt_constructors: std::collections::HashSet<String>,
 }
 
 impl Evaluator {
@@ -67,6 +71,7 @@ impl Evaluator {
             functions: HashMap::new(),
             bindings: HashMap::new(),
             matcher: PatternMatcher,
+            adt_constructors: std::collections::HashSet::new(),
         }
     }
 
@@ -87,7 +92,23 @@ impl Evaluator {
                 self.load_function_def(func_def)?;
             }
         }
+
+        // Extract ADT constructor names (nullary constructors become constants)
+        for data_type in program.data_types() {
+            for variant in &data_type.variants {
+                // Nullary constructors (no fields) are values/constants
+                if variant.fields.is_empty() {
+                    self.adt_constructors.insert(variant.name.clone());
+                }
+            }
+        }
+
         Ok(())
+    }
+
+    /// Get the set of ADT constructor names (nullary constructors)
+    pub fn get_adt_constructors(&self) -> &std::collections::HashSet<String> {
+        &self.adt_constructors
     }
 
     /// Load function definitions from structure members (Grammar v0.6)

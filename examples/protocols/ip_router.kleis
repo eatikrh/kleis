@@ -1,0 +1,143 @@
+// IP Router - Classifying packets into route types
+// Builds on ipv4_types.kleis
+
+// ============================================
+// Route Types - Where should the packet go?
+// ============================================
+
+data RouteType = 
+    Local           // Destination is this machine (127.x.x.x or own IP)
+  | LAN             // Local Area Network (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+  | Internet        // Public internet
+  | Multicast       // Multicast group (224.x.x.x - 239.x.x.x)
+  | Broadcast       // Broadcast address (255.255.255.255)
+  | VPN             // VPN tunnel traffic
+  | Blocked         // Should be dropped (invalid or blacklisted)
+
+// ============================================
+// Address Classification
+// ============================================
+
+// Check if address is loopback (127.x.x.x)
+define is_loopback(o1, o2, o3, o4) = 
+    if o1 = 127 then 1 else 0
+
+// Check if address is private (RFC 1918)
+// 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+define is_private(o1, o2, o3, o4) = 
+    if o1 = 10 then 1 
+    else if o1 = 172 then 
+        if o2 >= 16 then if o2 <= 31 then 1 else 0 else 0
+    else if o1 = 192 then 
+        if o2 = 168 then 1 else 0
+    else 0
+
+// Check if address is multicast (224.0.0.0 - 239.255.255.255)
+define is_multicast(o1, o2, o3, o4) = 
+    if o1 >= 224 then if o1 <= 239 then 1 else 0 else 0
+
+// Check if address is broadcast
+define is_broadcast(o1, o2, o3, o4) = 
+    if o1 = 255 then 
+        if o2 = 255 then 
+            if o3 = 255 then 
+                if o4 = 255 then 1 else 0 
+            else 0 
+        else 0 
+    else 0
+
+// Check if address is link-local (169.254.x.x)
+define is_link_local(o1, o2, o3, o4) = 
+    if o1 = 169 then if o2 = 254 then 1 else 0 else 0
+
+// ============================================
+// Route Classification Logic
+// ============================================
+
+// Classify destination address into route type
+define classify_address(o1, o2, o3, o4) = 
+    if is_loopback(o1, o2, o3, o4) = 1 then 1      // Local = 1
+    else if is_broadcast(o1, o2, o3, o4) = 1 then 5 // Broadcast = 5
+    else if is_multicast(o1, o2, o3, o4) = 1 then 4 // Multicast = 4
+    else if is_private(o1, o2, o3, o4) = 1 then 2   // LAN = 2
+    else if is_link_local(o1, o2, o3, o4) = 1 then 7 // Blocked (APIPA) = 7
+    else 3                                          // Internet = 3
+
+// ============================================
+// Packet Routing
+// ============================================
+
+// Get destination octets from packet
+define get_dst_o1(pkt) = match pkt {
+    Packet(_, _, _, _, _, _, Address(o1, _, _, _)) => o1
+}
+
+define get_dst_o2(pkt) = match pkt {
+    Packet(_, _, _, _, _, _, Address(_, o2, _, _)) => o2
+}
+
+define get_dst_o3(pkt) = match pkt {
+    Packet(_, _, _, _, _, _, Address(_, _, o3, _)) => o3
+}
+
+define get_dst_o4(pkt) = match pkt {
+    Packet(_, _, _, _, _, _, Address(_, _, _, o4)) => o4
+}
+
+// Classify a packet's route
+define classify_packet_route(pkt) = 
+    classify_address(
+        get_dst_o1(pkt), 
+        get_dst_o2(pkt), 
+        get_dst_o3(pkt), 
+        get_dst_o4(pkt)
+    )
+
+// ============================================
+// Firewall Rules
+// ============================================
+
+// Should packet be allowed through firewall?
+// Block: broadcast, multicast to non-local, invalid TTL
+define firewall_allow(pkt) = match pkt {
+    Packet(v, _, _, ttl, _, _, dst) => 
+        if v = 4 then                           // Must be IPv4
+            if ttl > 0 then                     // Must have valid TTL
+                let route = classify_packet_route(pkt) in
+                    if route = 5 then 0         // Block broadcast
+                    else if route = 7 then 0    // Block link-local
+                    else 1                      // Allow others
+            else 0                              // TTL expired
+        else 0                                  // Not IPv4
+}
+
+// ============================================
+// VPN Detection
+// ============================================
+
+// Common VPN ports: 443 (HTTPS/OpenVPN), 1194 (OpenVPN), 500 (IPSec)
+// For simplicity, we use protocol field to detect VPN-like traffic
+// In real world, we'd check ports too
+
+define is_vpn_candidate(pkt) = match pkt {
+    Packet(4, _, _, _, proto, _, _) => 
+        if proto = 50 then 1    // ESP (IPSec)
+        else if proto = 51 then 1 // AH (IPSec)
+        else 0
+  | _ => 0
+}
+
+// ============================================
+// Quality of Service (QoS) Priority
+// ============================================
+
+// Assign priority based on traffic type (higher = more priority)
+define qos_priority(pkt) = match pkt {
+    Packet(4, _, _, _, proto, _, dst) =>
+        if proto = 1 then 3          // ICMP (ping) - medium priority
+        else if proto = 6 then 2     // TCP - normal priority  
+        else if proto = 17 then 4    // UDP - higher (real-time)
+        else 1                       // Other - low priority
+  | _ => 0
+}
+

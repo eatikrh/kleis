@@ -167,6 +167,20 @@ impl<'r> Z3Backend<'r> {
                 self.kleis_to_z3(body, &extended_vars)
             }
 
+            Expression::Match { scrutinee, cases } => {
+                // Translate match expression to nested ite
+                self.translate_match(scrutinee, cases, vars)
+            }
+
+            Expression::List(items) => {
+                // For now, lists are not directly translatable to Z3
+                // They're typically used in matrix constructors
+                Err(format!(
+                    "List expressions not directly supported in Z3 (use in constructors): {:?}",
+                    items.len()
+                ))
+            }
+
             _ => Err(format!("Unsupported expression type for Z3: {:?}", expr)),
         }
     }
@@ -341,6 +355,192 @@ impl<'r> Z3Backend<'r> {
         };
 
         Ok(body_z3)
+    }
+
+    /// Translate match expression to nested Z3 ite
+    fn translate_match(
+        &mut self,
+        scrutinee: &Expression,
+        cases: &[crate::ast::MatchCase],
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Dynamic, String> {
+        if cases.is_empty() {
+            return Err("Match expression must have at least one case".to_string());
+        }
+
+        // Translate scrutinee
+        let scrutinee_z3 = self.kleis_to_z3(scrutinee, vars)?;
+
+        // Build nested ite from cases (last case is the default)
+        // We process cases in reverse to build nested ite
+        let mut result: Option<Dynamic> = None;
+
+        for case in cases.iter().rev() {
+            // Try to translate this case
+            let case_result = self.translate_match_case(
+                &scrutinee_z3,
+                scrutinee,
+                &case.pattern,
+                &case.body,
+                vars,
+            )?;
+
+            match (&result, case_result) {
+                (None, body_z3) => {
+                    // Last case (or only case) - becomes the else branch
+                    result = Some(body_z3);
+                }
+                (Some(else_branch), body_z3) => {
+                    // Build condition for this pattern
+                    if let Some(condition) =
+                        self.pattern_to_condition(&scrutinee_z3, scrutinee, &case.pattern, vars)?
+                    {
+                        // ite(condition, body, else_branch)
+                        result = Some(boolean::translate_ite(&condition, &body_z3, else_branch));
+                    } else {
+                        // Wildcard or variable - always matches, replaces else
+                        result = Some(body_z3);
+                    }
+                }
+            }
+        }
+
+        result.ok_or_else(|| "Failed to translate match expression".to_string())
+    }
+
+    /// Translate a single match case
+    fn translate_match_case(
+        &mut self,
+        _scrutinee_z3: &Dynamic,
+        scrutinee_expr: &Expression,
+        pattern: &crate::ast::Pattern,
+        body: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Dynamic, String> {
+        // Extend vars with pattern bindings
+        let mut extended_vars = vars.clone();
+        self.bind_pattern_vars(&mut extended_vars, scrutinee_expr, pattern)?;
+
+        // Translate body with extended bindings
+        self.kleis_to_z3(body, &extended_vars)
+    }
+
+    /// Bind pattern variables to corresponding parts of scrutinee
+    fn bind_pattern_vars(
+        &mut self,
+        vars: &mut HashMap<String, Dynamic>,
+        scrutinee: &Expression,
+        pattern: &crate::ast::Pattern,
+    ) -> Result<(), String> {
+        use crate::ast::Pattern;
+
+        match pattern {
+            Pattern::Wildcard => Ok(()),
+            Pattern::Variable(name) => {
+                // Bind the variable to the scrutinee value
+                let scrutinee_z3 = self.kleis_to_z3(scrutinee, vars)?;
+                vars.insert(name.clone(), scrutinee_z3);
+                Ok(())
+            }
+            Pattern::Constructor { name: _, args } => {
+                // For constructor patterns, we need to extract fields
+                // This works when scrutinee is also a constructor application
+                if let Expression::Operation {
+                    name: _,
+                    args: scrutinee_args,
+                } = scrutinee
+                {
+                    if args.len() == scrutinee_args.len() {
+                        for (pat, arg) in args.iter().zip(scrutinee_args.iter()) {
+                            self.bind_pattern_vars(vars, arg, pat)?;
+                        }
+                    }
+                }
+                Ok(())
+            }
+            Pattern::Constant(_) => {
+                // Constants don't bind variables
+                Ok(())
+            }
+        }
+    }
+
+    /// Convert a pattern to a Z3 boolean condition (None for wildcard/variable)
+    fn pattern_to_condition(
+        &mut self,
+        scrutinee_z3: &Dynamic,
+        scrutinee_expr: &Expression,
+        pattern: &crate::ast::Pattern,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Option<Bool>, String> {
+        use crate::ast::Pattern;
+
+        match pattern {
+            Pattern::Wildcard => Ok(None),    // Always matches
+            Pattern::Variable(_) => Ok(None), // Always matches (binds)
+            Pattern::Constant(val) => {
+                // Check if scrutinee equals the constant
+                if let Some(scrutinee_int) = scrutinee_z3.as_int() {
+                    if let Ok(n) = val.parse::<i64>() {
+                        let const_z3 = Int::from_i64(n);
+                        Ok(Some(scrutinee_int.eq(&const_z3)))
+                    } else {
+                        Ok(None)
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+            Pattern::Constructor { name, args } => {
+                // Check if scrutinee is a constructor with matching name
+                if let Expression::Operation {
+                    name: scrutinee_name,
+                    args: scrutinee_args,
+                } = scrutinee_expr
+                {
+                    if scrutinee_name == name && args.len() == scrutinee_args.len() {
+                        // Match constructor name - check nested patterns
+                        let mut conditions = Vec::new();
+
+                        for (pat, arg) in args.iter().zip(scrutinee_args.iter()) {
+                            let arg_z3 = self.kleis_to_z3(arg, vars)?;
+                            if let Some(cond) =
+                                self.pattern_to_condition(&arg_z3, arg, pat, vars)?
+                            {
+                                conditions.push(cond);
+                            }
+                        }
+
+                        if conditions.is_empty() {
+                            // All sub-patterns are wildcards/variables
+                            Ok(Some(Bool::from_bool(true)))
+                        } else {
+                            // Combine conditions with AND
+                            let mut result = conditions[0].clone();
+                            for cond in &conditions[1..] {
+                                result = Bool::and(&[&result, cond]);
+                            }
+                            Ok(Some(result))
+                        }
+                    } else {
+                        // Different constructor - doesn't match
+                        Ok(Some(Bool::from_bool(false)))
+                    }
+                } else {
+                    // Scrutinee is not a constructor, check equality for literals
+                    if let Expression::Const(val) = scrutinee_expr {
+                        if name == val {
+                            Ok(Some(Bool::from_bool(true)))
+                        } else {
+                            Ok(Some(Bool::from_bool(false)))
+                        }
+                    } else {
+                        // Can't determine statically
+                        Ok(None)
+                    }
+                }
+            }
+        }
     }
 
     /// Get solver statistics

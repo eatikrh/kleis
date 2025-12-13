@@ -2,7 +2,7 @@
 
 **Priority:** High  
 **Estimated Effort:** 2-4 hours  
-**Status:** Planned
+**Status:** ✅ Phase 3 Complete + ADT Constructor Support
 
 ## Goal
 
@@ -11,41 +11,95 @@ Enable Z3 to verify properties of Kleis Algebraic Data Types (ADTs), including:
 - Pattern matching translation
 - Type-safe protocol verification
 
-## Current State
+## Current State (Updated Dec 13, 2024)
 
 ### ✅ What Works
 - ADT definitions parse correctly: `data Protocol = ICMP | TCP | UDP`
 - Constructors are recognized: `Packet(4, 5, 1500, 64, TCP, ...)`
-- Pattern matching in functions: `match pkt { Packet(v, ...) => ... }`
-- File loading preserves ADTs
+- **Pattern matching translation to Z3** - `match` expressions now translate to nested `ite`
+- **Variable binding in patterns** - `match pkt { Packet(v, _, _, ttl, _, _, _) => ttl }`
+- **Constructor pattern matching** - `match x { Some(a) => a | None => 0 }`
+- **Nullary ADT constructors** - `TCP`, `UDP`, `ICMP` loaded as Z3 identity elements
+- File loading preserves ADTs and registers constructors
+- REPL correctly expands functions with match before Z3 verification
 
-### ❌ What's Missing
-- Z3 translation of `match` expressions
-- Z3 Datatype sort creation
-- Constructor/accessor functions in Z3
+### ⚠️ Partial Support
+- Full Z3 Datatype sorts not yet created (using uninterpreted functions + identity elements)
+- Constructor accessors not auto-generated
 
-## Use Case: Protocol Verification
+### ❌ What's Still Missing (Low Priority)
+- Full Z3 Datatype sort creation (for exhaustiveness checking)
+- Auto-generated accessor functions (e.g., `Packet.version(pkt)`)
 
-```kleis
-// Define packet type
-data IPv4Packet = Packet(version: ℕ, ihl: ℕ, total: ℕ, ttl: ℕ, proto: Protocol)
+## Verified Examples
 
-// Validation with pattern matching
-define is_valid(pkt) = match pkt {
-    Packet(4, ihl, total, ttl, _) => 
-        if ihl >= 5 then if ttl > 0 then 1 else 0 else 0
-  | _ => 0
-}
+These now work in the REPL (including `TCP`, `UDP`, `ICMP` constructor names):
 
-// Verify: All valid packets have version 4
-:verify ∀(pkt : IPv4Packet). is_valid(pkt) = 1 → get_version(pkt) = 4
+```
+λ> :load examples/protocols/ipv4_types.kleis
+✅ Loaded: 3 functions, 0 structures, 3 data types
+
+λ> :verify get_ttl(Packet(4, 5, 100, 64, TCP, Address(192, 168, 1, 1), Address(10, 0, 0, 1))) = 64
+   📌 Loaded identity element: ICMP
+   📌 Loaded identity element: TCP
+   📌 Loaded identity element: UDP
+✅ Valid
+
+λ> :verify get_ttl(Packet(4, 5, 100, 128, ICMP, Address(1, 1, 1, 1), Address(2, 2, 2, 2))) = 128
+✅ Valid
+
+λ> :verify is_valid_version(Packet(4, 5, 100, 64, UDP, Address(1, 1, 1, 1), Address(2, 2, 2, 2))) = 1
+✅ Valid
+
+λ> :verify ∀(ttl : ℤ). get_ttl(Packet(4, 5, 100, ttl, TCP, Address(1,1,1,1), Address(2,2,2,2))) = ttl
+✅ Valid
 ```
 
-## Implementation Plan
+## Implementation Progress
 
-### Phase 1: Z3 Datatype Creation (1 hour)
+### ✅ Phase 1: Z3 Datatype Creation (Deferred)
+Using uninterpreted functions for now. Full Z3 Datatype sorts can be added later for:
+- Better error messages
+- Exhaustiveness checking
+- Accessor functions
+
+### ✅ Phase 2: Constructor Translation
+Constructors like `Packet(...)` and `Address(...)` are declared as uninterpreted functions:
+```
+🔧 Declaring uninterpreted function: Packet with arity 7
+🔧 Declaring uninterpreted function: Address with arity 4
+```
+
+### ✅ Phase 3: Match Expression Translation (COMPLETE)
+Match expressions now translate to nested Z3 `ite`:
 ```rust
 // In src/solvers/z3/backend.rs
+Expression::Match { scrutinee, cases } => {
+    self.translate_match(scrutinee, cases, vars)
+}
+```
+
+Supports:
+- Wildcard patterns: `_`
+- Variable binding: `x`
+- Constant patterns: `5`
+- Constructor patterns: `Some(x)`, `Pair(a, b)`
+- Nested patterns
+
+### ✅ Phase 4: Testing (8 tests pass)
+- `tests/match_translation_test.rs` - 8 integration tests
+- All patterns tested: wildcard, variable, constant, constructor, nested
+
+## Files Modified
+
+1. `src/solvers/z3/backend.rs` - Added `translate_match()`, `translate_match_case()`, `bind_pattern_vars()`, `pattern_to_condition()`
+2. `src/bin/repl.rs` - Added Match support to `expand_user_functions()` and `substitute_var()`
+3. `tests/match_translation_test.rs` - 8 integration tests
+
+## Future Enhancements
+
+### Full Z3 Datatype Sorts
+```rust
 fn create_z3_datatype(&self, data_def: &DataDef) -> z3::Sort {
     let datatype = z3::Datatype::new(ctx, &data_def.name);
     for variant in &data_def.variants {
@@ -55,73 +109,13 @@ fn create_z3_datatype(&self, data_def: &DataDef) -> z3::Sort {
 }
 ```
 
-### Phase 2: Constructor Translation (30 min)
-```rust
-// Translate Packet(4, 5, ...) to Z3 constructor call
-Expression::Operation { name, args } if is_constructor(name) => {
-    let constructor = get_z3_constructor(name);
-    constructor.apply(&translated_args)
-}
-```
-
-### Phase 3: Match Expression Translation (1-2 hours)
-```rust
-// Translate match to nested Z3 ite
-Expression::Match { scrutinee, cases } => {
-    // For each case:
-    //   1. Check if constructor matches
-    //   2. Bind pattern variables
-    //   3. Translate body
-    // Combine with nested ite
-}
-```
-
-### Phase 4: Testing (30 min)
-- Unit tests for each ADT operation
-- Integration test with IPv4 packet validation
-- Protocol verification tests
-
-## Z3 API Reference
-
-Z3 supports algebraic datatypes natively:
-```python
-# Python Z3 example (Rust API similar)
-Packet = Datatype('Packet')
-Packet.declare('mk_packet', 
-    ('version', IntSort()),
-    ('ihl', IntSort()),
-    ('ttl', IntSort()))
-Packet = Packet.create()
-
-# Constructor
-pkt = Packet.mk_packet(4, 5, 64)
-
-# Accessor
-version = Packet.version(pkt)
-```
-
-## Files to Modify
-
-1. `src/solvers/z3/backend.rs` - Main translation logic
-2. `src/solvers/z3/translators/` - Add `adt.rs` module
-3. `tests/adt_verification_test.rs` - Integration tests
-
-## Success Criteria
-
-```
-λ> :load examples/protocols/ipv4_types.kleis
-✅ Loaded: 3 functions, 0 structures, 3 data types
-
-λ> :verify is_valid_version(Packet(4, 5, 1500, 64, TCP, src, dst)) = 1
-✅ Valid
-
-λ> :verify ∀(pkt : IPv4Packet). is_valid(pkt) = 1 → get_version(pkt) = 4
-✅ Valid
-```
+Benefits:
+- Constructor name matching (`TCP`, `UDP`, etc.)
+- Accessor functions (`Packet.version(pkt)`)
+- Exhaustiveness checking by Z3
 
 ## Related
 
 - ADR-021: Algebraic Data Types
 - ADR-022: Z3 Integration
 - `examples/protocols/ipv4_types.kleis`
-

@@ -163,6 +163,31 @@ impl<'r> AxiomVerifier<'r> {
         Ok(())
     }
 
+    /// Load ADT constructor names as identity elements
+    ///
+    /// Nullary constructors (like TCP, UDP, ICMP) are values, not functions.
+    /// They need to be registered as Z3 constants so expressions like
+    /// `Packet(4, 5, 100, 64, TCP, src, dst)` can be translated.
+    #[cfg(feature = "axiom-verification")]
+    pub fn load_adt_constructors<I, S>(&mut self, constructors: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        for name in constructors {
+            self.backend.load_identity_element(name.as_ref());
+        }
+    }
+
+    /// Load ADT constructors (stub when feature disabled)
+    #[cfg(not(feature = "axiom-verification"))]
+    pub fn load_adt_constructors<I, S>(&mut self, _constructors: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+    }
+
     /// Analyze expression to find which structures it depends on
     ///
     /// This enables smart axiom loading - only load axioms for structures
