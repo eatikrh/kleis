@@ -1,17 +1,29 @@
 // Calculus Theorems in Kleis
 // Testing derivative operators and calculus axioms
 //
-// Supported Notation:
-//   ∇f             - Gradient (prefix operator)
-//   ∂f             - Partial derivative indicator (prefix operator)
-//   f^n            - Power/exponentiation
-//   sqrt(x)        - Square root
-//   abs(x)         - Absolute value
+// =============================================================================
+// SUPPORTED NOTATION
+// =============================================================================
 //
-// Function-style:
-//   deriv(f)       - Derivative
-//   partial(i, f)  - Partial derivative with respect to variable i
-//   D(f, x)        - Derivative of f with respect to x
+// Prefix Operators:
+//   ∇f             - Gradient (vector of all partial derivatives)
+//   -x             - Negation
+//
+// Arithmetic:
+//   f^n            - Power/exponentiation (verified in Z3)
+//   sqrt(x)        - Square root (symbolic)
+//   abs(x)         - Absolute value (verified in Z3)
+//
+// Derivative Functions (symbolic):
+//   D(f, x)        - Total derivative of f with respect to x
+//   partial(f, i)  - Partial derivative of f w.r.t. variable index i
+//   deriv(f)       - Generic derivative operator
+//
+// Note on ∂ (partial symbol):
+//   ∂ alone is NOT supported as a prefix. It's meaningless without
+//   specifying the variable. Use partial(f, x) instead.
+//   
+//   Mathematical: ∂f/∂x  →  Kleis: partial(f, X)  or  D(f, X)
 
 // =============================================================================
 // DATA TYPES for Calculus

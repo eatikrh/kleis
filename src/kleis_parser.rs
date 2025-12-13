@@ -303,6 +303,7 @@ impl KleisParser {
         }
 
         // Gradient: ∇f (nabla prefix operator)
+        // ∇f is well-defined: the vector of all partial derivatives
         if self.peek() == Some('∇') {
             self.advance(); // consume ∇
             let arg = self.parse_primary()?;
@@ -312,16 +313,9 @@ impl KleisParser {
             });
         }
 
-        // Partial derivative: ∂f (partial prefix operator)
-        // For ∂/∂x notation, we'll need more complex parsing
-        if self.peek() == Some('∂') {
-            self.advance(); // consume ∂
-            let arg = self.parse_primary()?;
-            return Ok(Expression::Operation {
-                name: "partial".to_string(),
-                args: vec![arg],
-            });
-        }
+        // Note: ∂ alone is NOT a valid prefix operator
+        // Use partial(f, x) or D(f, x) for partial derivatives
+        // The ∂ symbol requires specifying a variable
 
         // Match expression
         if self.peek_word("match") {
