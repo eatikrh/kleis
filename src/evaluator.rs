@@ -65,6 +65,9 @@ pub struct Evaluator {
 
     /// Loaded data type definitions (for export)
     data_types: Vec<crate::kleis_ast::DataDef>,
+
+    /// Loaded structure definitions (for export)
+    structures: Vec<crate::kleis_ast::StructureDef>,
 }
 
 impl Evaluator {
@@ -76,6 +79,7 @@ impl Evaluator {
             matcher: PatternMatcher,
             adt_constructors: std::collections::HashSet::new(),
             data_types: Vec::new(),
+            structures: Vec::new(),
         }
     }
 
@@ -110,6 +114,11 @@ impl Evaluator {
             }
         }
 
+        // Store structure definitions for export
+        for structure in program.structures() {
+            self.structures.push(structure.clone());
+        }
+
         Ok(())
     }
 
@@ -121,6 +130,11 @@ impl Evaluator {
     /// Get all loaded data type definitions
     pub fn get_data_types(&self) -> &[crate::kleis_ast::DataDef] {
         &self.data_types
+    }
+
+    /// Get all loaded structure definitions
+    pub fn get_structures(&self) -> &[crate::kleis_ast::StructureDef] {
+        &self.structures
     }
 
     /// Load function definitions from structure members (Grammar v0.6)

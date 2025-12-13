@@ -1295,8 +1295,9 @@ fn export_functions(path: &str, evaluator: &Evaluator) {
     let pp = PrettyPrinter::new();
     let functions = evaluator.list_functions();
     let data_types = evaluator.get_data_types();
+    let structures = evaluator.get_structures();
 
-    if functions.is_empty() && data_types.is_empty() {
+    if functions.is_empty() && data_types.is_empty() && structures.is_empty() {
         println!("No definitions to export.");
         return;
     }
@@ -1311,6 +1312,9 @@ fn export_functions(path: &str, evaluator: &Evaluator) {
 
     // Header with counts
     let mut counts = Vec::new();
+    if !structures.is_empty() {
+        counts.push(format!("{} structure(s)", structures.len()));
+    }
     if !data_types.is_empty() {
         counts.push(format!("{} data type(s)", data_types.len()));
     }
@@ -1319,7 +1323,13 @@ fn export_functions(path: &str, evaluator: &Evaluator) {
     }
     output.push_str(&format!("// {}\n\n", counts.join(", ")));
 
-    // Export data types first (they define constructors used by functions)
+    // Export structures first (they define types and axioms)
+    for structure in structures {
+        output.push_str(&pp.format_structure(structure));
+        output.push_str("\n\n");
+    }
+
+    // Export data types (they define constructors used by functions)
     for data_def in data_types {
         output.push_str(&pp.format_data_def(data_def));
         output.push_str("\n\n");
@@ -1352,7 +1362,7 @@ fn export_functions(path: &str, evaluator: &Evaluator) {
 
         match std::fs::write(&file_path, &output) {
             Ok(_) => {
-                let total = data_types.len() + sorted_functions.len();
+                let total = structures.len() + data_types.len() + sorted_functions.len();
                 println!("✅ Exported {} definition(s) to {}", total, file_path);
             }
             Err(e) => {
