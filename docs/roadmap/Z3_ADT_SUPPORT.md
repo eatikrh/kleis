@@ -2,7 +2,7 @@
 
 **Priority:** High  
 **Estimated Effort:** 2-4 hours  
-**Status:** ✅ Phase 3 Complete + ADT Constructor Support
+**Status:** ✅ Phase 4 Complete - Symbolic ADT Matching Fixed!
 
 ## Goal
 
@@ -22,66 +22,38 @@ Enable Z3 to verify properties of Kleis Algebraic Data Types (ADTs), including:
 - **Nullary ADT constructors** - `TCP`, `UDP`, `ICMP` loaded as Z3 identity elements
 - File loading preserves ADTs and registers constructors
 - REPL correctly expands functions with match before Z3 verification
+- **✅ Symbolic ADT matching** - `perm_level(Owner) = 4` now verifies correctly!
+
+### ✅ Fixed: Symbolic ADT Matching (Dec 13, 2024)
+
+**The bug (discovered via Zanzibar example):**
+```kleis
+:verify perm_level(Owner) = 4
+❌ Invalid  // Was failing!
+```
+
+**The fix (two parts):**
+
+1. **`pattern_to_condition()` in `src/solvers/z3/backend.rs`:**
+   - When matching nullary constructor patterns against symbolic scrutinee
+   - Now looks up the constructor in `identity_elements` HashMap
+   - Uses Z3 equality to compare scrutinee with the registered identity element
+
+2. **`load_identity_element()` asserts distinctness:**
+   - When loading a new identity element (ADT constructor)
+   - Asserts it's distinct from all previously loaded elements
+   - This ensures `Owner ≠ Editor ≠ Viewer` in Z3
+
+**Now works:**
+```kleis
+:verify perm_level(Owner) = 4   // ✅ Valid
+:verify perm_level(Editor) = 3  // ✅ Valid
+:verify perm_level(Viewer) = 1  // ✅ Valid
+```
 
 ### ⚠️ Partial Support
 - Full Z3 Datatype sorts not yet created (using uninterpreted functions + identity elements)
 - Constructor accessors not auto-generated
-
-### ❌ What's Still Missing
-
-#### High Priority: Symbolic ADT Matching
-**Bug discovered Dec 13, 2024 via Zanzibar example:**
-
-When ADT constructors are passed as **symbolic arguments**, pattern matching fails:
-```kleis
-:verify perm_level(Owner) = 4
-❌ Invalid  // Should be Valid!
-```
-
-**Root cause:**
-- `Owner` is loaded as a Z3 identity element (fresh constant)
-- The pattern `match p { Owner => 4 }` compares against a different `Owner`
-- Z3 doesn't know they should be equal
-
-**Works:** Concrete constructor expressions (`Packet(4, 5, ...)`)
-**Fails:** Symbolic constructor values (`Owner`, `TCP` as function arguments)
-
-#### Solution Approach (from Type Inference)
-
-The Equation Editor's type inference handles this correctly using:
-
-1. **DataTypeRegistry** (`src/data_registry.rs`):
-   - Registers all constructors with their parent type
-   - `lookup_variant(name)` finds constructor info
-
-2. **Constructor Unification** (`src/type_inference.rs:2049`):
-   - `True` and `False` both unify to `Bool`
-   - Enables pattern matching on enum variants
-
-3. **check_pattern()** (`src/type_inference.rs:558`):
-   - Uses registry to validate patterns against scrutinee type
-   - Binds pattern variables in typing context
-
-**For Z3, we need:**
-```rust
-// When loading ADT:
-fn register_adt_for_z3(data_def: &DataDef) {
-    for (idx, variant) in data_def.variants.iter().enumerate() {
-        // Register constructor with unique tag
-        z3_constructor_tags.insert(variant.name.clone(), idx);
-    }
-}
-
-// When translating match pattern:
-fn pattern_to_condition(pattern, scrutinee) {
-    match pattern {
-        Pattern::Constructor { name, .. } => {
-            let tag = z3_constructor_tags[name];
-            // scrutinee.tag == tag
-        }
-    }
-}
-```
 
 #### Low Priority
 - Full Z3 Datatype sort creation (for exhaustiveness checking)

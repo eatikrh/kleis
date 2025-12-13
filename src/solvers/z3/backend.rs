@@ -526,18 +526,38 @@ impl<'r> Z3Backend<'r> {
                         // Different constructor - doesn't match
                         Ok(Some(Bool::from_bool(false)))
                     }
-                } else {
-                    // Scrutinee is not a constructor, check equality for literals
-                    if let Expression::Const(val) = scrutinee_expr {
-                        if name == val {
-                            Ok(Some(Bool::from_bool(true)))
-                        } else {
-                            Ok(Some(Bool::from_bool(false)))
-                        }
+                } else if let Expression::Const(val) = scrutinee_expr {
+                    // Scrutinee is a literal constant
+                    if name == val {
+                        Ok(Some(Bool::from_bool(true)))
                     } else {
-                        // Can't determine statically
+                        Ok(Some(Bool::from_bool(false)))
+                    }
+                } else if args.is_empty() {
+                    // NULLARY CONSTRUCTOR PATTERN with symbolic scrutinee
+                    // This is the key fix for symbolic ADT matching!
+                    // Example: match p { Owner => 4 | ... } where p is a variable
+                    //
+                    // Check if this constructor is a known identity element
+                    // If so, compare scrutinee_z3 == identity_element[name]
+                    if let Some(constructor_z3) = self.identity_elements.get(name) {
+                        // Use Z3 equality to compare the symbolic scrutinee
+                        // with the constructor identity element
+                        let eq = comparison::translate_equals(scrutinee_z3, constructor_z3)?;
+                        Ok(Some(eq))
+                    } else {
+                        // Constructor not registered as identity element
+                        // This shouldn't happen if ADT was properly loaded
+                        eprintln!(
+                            "   ⚠️ Warning: Constructor '{}' not found in identity elements",
+                            name
+                        );
                         Ok(None)
                     }
+                } else {
+                    // Constructor with args on symbolic scrutinee - can't handle yet
+                    // Would need Z3 ADT sorts for proper handling
+                    Ok(None)
                 }
             }
         }
@@ -559,6 +579,20 @@ impl<'r> Z3Backend<'r> {
     pub fn load_identity_element(&mut self, name: &str) {
         if !self.identity_elements.contains_key(name) {
             let z3_const: Dynamic = Int::fresh_const(name).into();
+
+            // Assert this new constant is distinct from all existing identity elements
+            // This is critical for symbolic ADT matching to work correctly!
+            for (existing_name, existing_z3) in &self.identity_elements {
+                if let (Some(new_int), Some(existing_int)) =
+                    (z3_const.as_int(), existing_z3.as_int())
+                {
+                    // Assert: new_const ≠ existing_const
+                    let distinct = new_int.eq(&existing_int).not();
+                    self.solver.assert(&distinct);
+                    println!("   🔒 Asserted distinct: {} ≠ {}", name, existing_name);
+                }
+            }
+
             self.identity_elements.insert(name.to_string(), z3_const);
             println!("   📌 Loaded identity element: {}", name);
         }

@@ -296,3 +296,138 @@ fn test_match_nested_constructor() {
         other => panic!("Expected Valid, got: {:?}", other),
     }
 }
+
+/// Test symbolic ADT matching - the bug discovered Dec 13, 2024
+///
+/// This tests the case where a nullary constructor (like Owner, TCP, etc.)
+/// is passed as a symbolic argument to a function that pattern matches on it.
+///
+/// Before the fix, this failed because:
+/// - The constructor `Owner` was loaded as a Z3 identity element (fresh constant)
+/// - The pattern `Owner` in the match created a different constant
+/// - Z3 didn't know they should be equal
+///
+/// After the fix:
+/// - pattern_to_condition() checks if the pattern is a nullary constructor
+/// - If so, it compares the scrutinee with the identity element
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_match_symbolic_adt_nullary_constructor() {
+    println!("\n🧪 Testing: match with symbolic ADT nullary constructor");
+
+    // Simulate: data Permission = Owner | Editor | Viewer
+    // define perm_level(p) = match p { Owner => 4 | Editor => 3 | Viewer => 1 | _ => 0 }
+    // :verify perm_level(Owner) = 4
+
+    let registry = StructureRegistry::new();
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    // Load ADT constructors as identity elements
+    verifier.load_adt_constructors(["Owner", "Editor", "Viewer"].iter());
+
+    // Build: match Owner { Owner => 4 | Editor => 3 | Viewer => 1 | _ => 0 }
+    let match_expr = Expression::Match {
+        scrutinee: Box::new(Expression::Object("Owner".to_string())),
+        cases: vec![
+            MatchCase {
+                pattern: Pattern::Constructor {
+                    name: "Owner".to_string(),
+                    args: vec![],
+                },
+                body: Expression::Const("4".to_string()),
+            },
+            MatchCase {
+                pattern: Pattern::Constructor {
+                    name: "Editor".to_string(),
+                    args: vec![],
+                },
+                body: Expression::Const("3".to_string()),
+            },
+            MatchCase {
+                pattern: Pattern::Constructor {
+                    name: "Viewer".to_string(),
+                    args: vec![],
+                },
+                body: Expression::Const("1".to_string()),
+            },
+            MatchCase {
+                pattern: Pattern::Wildcard,
+                body: Expression::Const("0".to_string()),
+            },
+        ],
+    };
+
+    // Axiom: match Owner { ... } = 4
+    let axiom = Expression::Operation {
+        name: "equals".to_string(),
+        args: vec![match_expr, Expression::Const("4".to_string())],
+    };
+
+    match verifier.verify_axiom(&axiom) {
+        Ok(VerificationResult::Valid) => {
+            println!("   ✅ Symbolic ADT nullary constructor matching works!")
+        }
+        other => panic!("Expected Valid for perm_level(Owner) = 4, got: {:?}", other),
+    }
+}
+
+/// Test that different symbolic ADT constructors produce different results
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_match_symbolic_adt_different_constructors() {
+    println!("\n🧪 Testing: match with different symbolic ADT constructors");
+
+    let registry = StructureRegistry::new();
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    // Load ADT constructors
+    verifier.load_adt_constructors(["Owner", "Editor", "Viewer"].iter());
+
+    // Build: match Editor { Owner => 4 | Editor => 3 | Viewer => 1 | _ => 0 }
+    let match_expr = Expression::Match {
+        scrutinee: Box::new(Expression::Object("Editor".to_string())),
+        cases: vec![
+            MatchCase {
+                pattern: Pattern::Constructor {
+                    name: "Owner".to_string(),
+                    args: vec![],
+                },
+                body: Expression::Const("4".to_string()),
+            },
+            MatchCase {
+                pattern: Pattern::Constructor {
+                    name: "Editor".to_string(),
+                    args: vec![],
+                },
+                body: Expression::Const("3".to_string()),
+            },
+            MatchCase {
+                pattern: Pattern::Constructor {
+                    name: "Viewer".to_string(),
+                    args: vec![],
+                },
+                body: Expression::Const("1".to_string()),
+            },
+            MatchCase {
+                pattern: Pattern::Wildcard,
+                body: Expression::Const("0".to_string()),
+            },
+        ],
+    };
+
+    // Axiom: match Editor { ... } = 3
+    let axiom = Expression::Operation {
+        name: "equals".to_string(),
+        args: vec![match_expr, Expression::Const("3".to_string())],
+    };
+
+    match verifier.verify_axiom(&axiom) {
+        Ok(VerificationResult::Valid) => {
+            println!("   ✅ Different symbolic ADT constructors produce correct results!")
+        }
+        other => panic!(
+            "Expected Valid for perm_level(Editor) = 3, got: {:?}",
+            other
+        ),
+    }
+}
