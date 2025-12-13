@@ -1,5 +1,24 @@
 // Calculus in Kleis
-// Following Mathematica's derivative notation
+// Following Mathematica's notation for derivatives and integrals
+//
+// =============================================================================
+// INTEGRAL NOTATION (Mathematica-style)
+// =============================================================================
+//
+// Prefix operators (Unicode):
+//   ∫f             - Indefinite integral
+//   ∬f             - Double integral
+//   ∭f             - Triple integral
+//   ∮f             - Line/contour integral
+//   ∯f             - Surface integral
+//
+// Function-style (Mathematica):
+//   Integrate(f, x)        - Indefinite ∫f dx
+//   Integrate(f, x, a, b)  - Definite ∫[a,b] f dx
+//   DoubleIntegral(f, x, y) - ∬f dx dy
+//   TripleIntegral(f, x, y, z) - ∭f dx dy dz
+//   LineIntegral(F, curve)  - ∮ F · dr
+//   SurfaceIntegral(F, surface) - ∯ F · dS
 //
 // =============================================================================
 // DERIVATIVE NOTATION (Mathematica-style)

@@ -317,6 +317,63 @@ impl<'r> Z3Backend<'r> {
                 Ok(func_decl.apply(&ast_args))
             }
 
+            // Integral operators (Mathematica-style)
+            // Integrate(f, x) - indefinite integral ∫f dx
+            // Integrate(f, {x, a, b}) - definite integral ∫[a,b] f dx
+            "Integrate" | "integral" => {
+                if args.is_empty() {
+                    return Err("Integrate requires at least 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("Integrate", args.len());
+                let ast_args: Vec<&dyn z3::ast::Ast> =
+                    args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Double integral ∬
+            "DoubleIntegral" | "integral2" => {
+                if args.is_empty() {
+                    return Err("DoubleIntegral requires at least 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("DoubleIntegral", args.len());
+                let ast_args: Vec<&dyn z3::ast::Ast> =
+                    args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Triple integral ∭
+            "TripleIntegral" | "integral3" => {
+                if args.is_empty() {
+                    return Err("TripleIntegral requires at least 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("TripleIntegral", args.len());
+                let ast_args: Vec<&dyn z3::ast::Ast> =
+                    args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Line integral ∮
+            "LineIntegral" | "contour" => {
+                if args.is_empty() {
+                    return Err("LineIntegral requires at least 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("LineIntegral", args.len());
+                let ast_args: Vec<&dyn z3::ast::Ast> =
+                    args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Surface integral ∯
+            "SurfaceIntegral" | "surface" => {
+                if args.is_empty() {
+                    return Err("SurfaceIntegral requires at least 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("SurfaceIntegral", args.len());
+                let ast_args: Vec<&dyn z3::ast::Ast> =
+                    args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
             "abs" | "absolute" => {
                 if args.len() != 1 {
                     return Err("abs requires 1 argument".to_string());

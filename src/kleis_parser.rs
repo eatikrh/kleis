@@ -313,6 +313,57 @@ impl KleisParser {
             });
         }
 
+        // Integral: ∫f (integral prefix operator)
+        // For definite integrals, use Integrate(f, {x, a, b})
+        if self.peek() == Some('∫') {
+            self.advance(); // consume ∫
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "Integrate".to_string(),
+                args: vec![arg],
+            });
+        }
+
+        // Double integral: ∬f
+        if self.peek() == Some('∬') {
+            self.advance();
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "DoubleIntegral".to_string(),
+                args: vec![arg],
+            });
+        }
+
+        // Triple integral: ∭f
+        if self.peek() == Some('∭') {
+            self.advance();
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "TripleIntegral".to_string(),
+                args: vec![arg],
+            });
+        }
+
+        // Contour/line integral: ∮f
+        if self.peek() == Some('∮') {
+            self.advance();
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "LineIntegral".to_string(),
+                args: vec![arg],
+            });
+        }
+
+        // Surface integral: ∯f
+        if self.peek() == Some('∯') {
+            self.advance();
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "SurfaceIntegral".to_string(),
+                args: vec![arg],
+            });
+        }
+
         // Note: ∂ alone is NOT a valid prefix operator
         // Use partial(f, x) or D(f, x) for partial derivatives
         // The ∂ symbol requires specifying a variable
