@@ -10,6 +10,7 @@
 //!   :verify <expr> Verify with Z3
 //!   :load <file>   Load .kleis file
 //!   :env           Show defined functions
+//!   :export [file] Export definitions to .kleis file
 //!   :quit          Exit
 
 use rustyline::error::ReadlineError;
@@ -18,6 +19,7 @@ use std::path::PathBuf;
 
 use kleis::evaluator::Evaluator;
 use kleis::kleis_parser::{parse_kleis_program, KleisParser};
+use kleis::pretty_print::PrettyPrinter;
 use kleis::render::{build_default_context, render_expression, RenderTarget};
 
 #[cfg(feature = "axiom-verification")]
@@ -224,6 +226,7 @@ fn handle_command(
         ":load" | ":l" => load_file(arg, evaluator),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
+        ":export" | ":x" => export_functions(arg, evaluator),
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
@@ -254,6 +257,7 @@ fn handle_command_no_z3(line: &str, evaluator: &mut Evaluator, _ctx: &kleis::ren
         ":load" | ":l" => load_file(arg, evaluator),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
+        ":export" | ":x" => export_functions(arg, evaluator),
         _ => println!(
             "Unknown command: {}. Type :help for available commands.",
             cmd
@@ -303,6 +307,7 @@ fn print_help_main() {
     println!("  :load, :l <file>   Load a .kleis file");
     println!("  :env, :e           Show defined functions");
     println!("  :define <def>      Define a function");
+    println!("  :export, :x [file] Export definitions to .kleis (or stdout)");
     println!();
     println!("📝 Multi-line Input:");
     println!("  Method 1: End line with \\ (backslash)");
@@ -1281,6 +1286,78 @@ fn define_function(input: &str, evaluator: &mut Evaluator) {
         }
         Err(e) => {
             println!("❌ Parse error: {}", e);
+        }
+    }
+}
+
+/// Export all defined functions to a .kleis file or stdout
+fn export_functions(path: &str, evaluator: &Evaluator) {
+    let pp = PrettyPrinter::new();
+    let functions = evaluator.list_functions();
+    let data_types = evaluator.get_data_types();
+
+    if functions.is_empty() && data_types.is_empty() {
+        println!("No definitions to export.");
+        return;
+    }
+
+    // Sort functions alphabetically for consistent output
+    let mut sorted_functions = functions;
+    sorted_functions.sort();
+
+    // Generate the output
+    let mut output = String::new();
+    output.push_str("// Exported from Kleis REPL\n");
+
+    // Header with counts
+    let mut counts = Vec::new();
+    if !data_types.is_empty() {
+        counts.push(format!("{} data type(s)", data_types.len()));
+    }
+    if !sorted_functions.is_empty() {
+        counts.push(format!("{} function(s)", sorted_functions.len()));
+    }
+    output.push_str(&format!("// {}\n\n", counts.join(", ")));
+
+    // Export data types first (they define constructors used by functions)
+    for data_def in data_types {
+        output.push_str(&pp.format_data_def(data_def));
+        output.push_str("\n\n");
+    }
+
+    // Export functions
+    for name in &sorted_functions {
+        if let Some(closure) = evaluator.get_function(name) {
+            output.push_str(&pp.format_function(name, closure));
+            output.push_str("\n\n");
+        }
+    }
+
+    if path.is_empty() {
+        // Print to stdout
+        println!();
+        println!("═══════════════════════════════════════════════════════════════════════════════");
+        println!("                         EXPORTED KLEIS DEFINITIONS                            ");
+        println!("═══════════════════════════════════════════════════════════════════════════════");
+        println!();
+        print!("{}", output);
+        println!("═══════════════════════════════════════════════════════════════════════════════");
+    } else {
+        // Write to file
+        let file_path = if path.ends_with(".kleis") {
+            path.to_string()
+        } else {
+            format!("{}.kleis", path)
+        };
+
+        match std::fs::write(&file_path, &output) {
+            Ok(_) => {
+                let total = data_types.len() + sorted_functions.len();
+                println!("✅ Exported {} definition(s) to {}", total, file_path);
+            }
+            Err(e) => {
+                println!("❌ Error writing file: {}", e);
+            }
         }
     }
 }

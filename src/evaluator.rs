@@ -62,6 +62,9 @@ pub struct Evaluator {
     /// ADT constructor names (nullary constructors like TCP, UDP, ICMP)
     /// These are values that should be recognized as constants, not variables
     adt_constructors: std::collections::HashSet<String>,
+
+    /// Loaded data type definitions (for export)
+    data_types: Vec<crate::kleis_ast::DataDef>,
 }
 
 impl Evaluator {
@@ -72,6 +75,7 @@ impl Evaluator {
             bindings: HashMap::new(),
             matcher: PatternMatcher,
             adt_constructors: std::collections::HashSet::new(),
+            data_types: Vec::new(),
         }
     }
 
@@ -93,8 +97,11 @@ impl Evaluator {
             }
         }
 
-        // Extract ADT constructor names (nullary constructors become constants)
+        // Extract ADT constructor names and store data definitions
         for data_type in program.data_types() {
+            // Store the full data definition for export
+            self.data_types.push(data_type.clone());
+
             for variant in &data_type.variants {
                 // Nullary constructors (no fields) are values/constants
                 if variant.fields.is_empty() {
@@ -109,6 +116,11 @@ impl Evaluator {
     /// Get the set of ADT constructor names (nullary constructors)
     pub fn get_adt_constructors(&self) -> &std::collections::HashSet<String> {
         &self.adt_constructors
+    }
+
+    /// Get all loaded data type definitions
+    pub fn get_data_types(&self) -> &[crate::kleis_ast::DataDef] {
+        &self.data_types
     }
 
     /// Load function definitions from structure members (Grammar v0.6)

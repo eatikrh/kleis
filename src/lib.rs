@@ -9,6 +9,7 @@ pub mod kleis_parser;
 pub mod math_layout;
 pub mod parser;
 pub mod pattern_matcher;
+pub mod pretty_print; // Pretty-printer for exporting Kleis source
 pub mod render;
 pub mod signature_interpreter;
 pub mod solvers; // Pluggable solver backends (Z3, CVC5, etc.)
