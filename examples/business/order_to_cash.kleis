@@ -1,0 +1,271 @@
+// Order-to-Cash (O2C) Business Process
+// Models the complete lifecycle from order to payment
+//
+// Workflow:
+//   Order → Credit Check → Inventory Check → Fulfill → Ship → Invoice → Payment → Complete
+
+// =============================================================================
+// DATA TYPES - States and Entities
+// =============================================================================
+
+// Order lifecycle states
+data OrderStatus = 
+    Draft 
+  | Pending 
+  | CreditApproved 
+  | CreditDenied 
+  | Allocated 
+  | Fulfilled 
+  | Shipped 
+  | Invoiced 
+  | Paid 
+  | Complete 
+  | Cancelled
+
+// Payment status
+data PaymentStatus = 
+    Unpaid 
+  | PartiallyPaid 
+  | FullyPaid 
+  | Overpaid 
+  | Refunded
+
+// Shipment status  
+data ShipmentStatus = 
+    NotShipped 
+  | PickingInProgress 
+  | Packed 
+  | ShipmentShipped 
+  | InTransit 
+  | Delivered 
+  | ReturnRequested 
+  | Returned
+
+// Credit decision
+data CreditDecision = Approved | Denied | PendingReview | Escalated
+
+// =============================================================================
+// STATE TO INTEGER MAPPINGS (for Z3 verification)
+// =============================================================================
+
+define order_status_to_int(s) = match s {
+    Draft => 0
+  | Pending => 1
+  | CreditApproved => 2
+  | CreditDenied => 3
+  | Allocated => 4
+  | Fulfilled => 5
+  | Shipped => 6
+  | Invoiced => 7
+  | Paid => 8
+  | Complete => 9
+  | Cancelled => 10
+}
+
+define payment_status_to_int(s) = match s {
+    Unpaid => 0
+  | PartiallyPaid => 1
+  | FullyPaid => 2
+  | Overpaid => 3
+  | Refunded => 4
+}
+
+define credit_decision_to_int(d) = match d {
+    Approved => 1
+  | Denied => 0
+  | PendingReview => 2
+  | Escalated => 3
+}
+
+// =============================================================================
+// CORE BUSINESS RULES
+// =============================================================================
+
+// Credit utilization percentage (0-100+)
+define credit_utilization(credit_limit, order_total) =
+    order_total * 100 / credit_limit
+
+// Credit check: returns credit decision as integer
+// 1 = Approved, 0 = Denied, 2 = PendingReview
+// Approved if utilization <= 100%, PendingReview if 100-125%, Denied if > 125%
+define credit_check_decision(utilization) =
+    if utilization = 0 then 1
+    else if utilization < 100 then 1
+    else if utilization = 100 then 1
+    else if utilization < 125 then 2
+    else 0
+
+// Inventory availability check (1 = available, 0 = not available)
+define inventory_available(stock_on_hand, quantity_ordered, safety_stock) =
+    if quantity_ordered <= 0 then 0
+    else if stock_on_hand - safety_stock >= quantity_ordered then 1
+    else 0
+
+// Can we allocate inventory for this order?
+define can_allocate(credit_approved, stock_available) =
+    if credit_approved = 1 then
+        if stock_available = 1 then 1 else 0
+    else 0
+
+// =============================================================================
+// ORDER STATE TRANSITIONS
+// =============================================================================
+
+// Get next order status (as integer)
+// Uses order_status_to_int mapping
+define next_order_status(current_status, credit_approved, stock_available, shipped, payment_complete) =
+    if current_status = 0 then 1
+    else if current_status = 1 then
+        if credit_approved = 1 then 2
+        else if credit_approved = 0 then 3
+        else 1
+    else if current_status = 2 then
+        if stock_available = 1 then 4 else 2
+    else if current_status = 4 then 5
+    else if current_status = 5 then
+        if shipped = 1 then 6 else 5
+    else if current_status = 6 then 7
+    else if current_status = 7 then
+        if payment_complete = 1 then 8 else 7
+    else if current_status = 8 then 9
+    else current_status
+
+// Is this a terminal state?
+define is_terminal_state(status) =
+    if status = 9 then 1
+    else if status = 10 then 1
+    else if status = 3 then 1
+    else 0
+
+// Can order be cancelled from current state?
+define can_cancel(status) = match status {
+    Draft => 1
+  | Pending => 1
+  | CreditApproved => 1
+  | Allocated => 1
+  | Fulfilled => 0
+  | Shipped => 0
+  | Invoiced => 0
+  | Paid => 0
+  | Complete => 0
+  | CreditDenied => 0
+  | Cancelled => 0
+}
+
+// =============================================================================
+// FULFILLMENT LOGIC
+// =============================================================================
+
+// Calculate fulfillment priority (higher = more urgent)
+define fulfillment_priority(days_since_order, is_premium_customer, order_value) =
+    let base_priority = if days_since_order > 3 then 10 else days_since_order * 2 in
+    let premium_bonus = if is_premium_customer = 1 then 5 else 0 in
+    let value_bonus = if order_value > 1000 then 3 else if order_value > 500 then 1 else 0 in
+    base_priority + premium_bonus + value_bonus
+
+// Can we ship the order?
+define can_ship(order_status, items_picked, items_packed) =
+    if order_status = 5 then
+        if items_picked = items_packed then 1 else 0
+    else 0
+
+// =============================================================================
+// INVOICING RULES
+// =============================================================================
+
+// When can we generate an invoice?
+define can_invoice(order_status, shipment_delivered) =
+    if order_status = 6 then 1
+    else if shipment_delivered = 1 then 1
+    else 0
+
+// Calculate invoice amount (order total + tax + shipping - discounts)
+define invoice_amount(order_total, tax_rate, shipping_cost, discount_amount) =
+    let subtotal = order_total - discount_amount in
+    let tax = subtotal * tax_rate / 100 in
+    subtotal + tax + shipping_cost
+
+// Is discount valid?
+define valid_discount(discount_amount, order_total, max_discount_percent) =
+    if discount_amount < 0 then 0
+    else if discount_amount * 100 > order_total * max_discount_percent then 0
+    else 1
+
+// =============================================================================
+// PAYMENT PROCESSING
+// =============================================================================
+
+// Determine payment status (returns integer: 0=Unpaid, 1=Partial, 2=Full, 3=Over)
+define get_payment_status(invoice_amount, amount_paid) =
+    if amount_paid = 0 then 0
+    else if amount_paid < invoice_amount then 1
+    else if amount_paid = invoice_amount then 2
+    else 3
+
+// Can we close the order?
+define can_close_order(order_status, payment_status) =
+    if order_status = 8 then
+        if payment_status = 2 then 1
+        else if payment_status = 3 then 1
+        else 0
+    else 0
+
+// Calculate refund amount for overpayment
+define refund_amount(invoice_amount, amount_paid) =
+    if amount_paid > invoice_amount then amount_paid - invoice_amount
+    else 0
+
+// =============================================================================
+// BUSINESS INVARIANTS (Verifiable Properties)
+// =============================================================================
+
+// INVARIANT: No shipment without credit approval
+// If order is in Shipped state (6), credit must have been approved
+define shipment_requires_credit(order_status, credit_approved) =
+    if order_status = 6 then
+        if credit_approved = 1 then 1 else 0
+    else 1
+
+// INVARIANT: Order completion requires full payment
+define completion_requires_payment(order_status, payment_status) =
+    if order_status = 9 then
+        if payment_status = 2 then 1
+        else if payment_status = 3 then 1
+        else 0
+    else 1
+
+// INVARIANT: Can only progress forward (no going back)
+define valid_transition(from_status, to_status) =
+    if from_status = 10 then 0
+    else if from_status = 9 then 0
+    else if from_status = 3 then 0
+    else if to_status > from_status then 1
+    else if to_status = 10 then 1
+    else 0
+
+// =============================================================================
+// VERIFICATION TESTS
+// =============================================================================
+// Run these in the REPL:
+//
+// :verify credit_check(1000, 500) = 1
+// :verify credit_check(1000, 1500) = 0
+// :verify credit_check(1000, 850) = 2
+//
+// :verify inventory_available(100, 50, 10) = 1
+// :verify inventory_available(100, 95, 10) = 0
+//
+// :verify get_payment_status(100, 0) = 0
+// :verify get_payment_status(100, 50) = 1
+// :verify get_payment_status(100, 100) = 2
+// :verify get_payment_status(100, 120) = 3
+//
+// :verify can_cancel(Draft) = 1
+// :verify can_cancel(Shipped) = 0
+// :verify can_cancel(Complete) = 0
+//
+// :verify shipment_requires_credit(6, 1) = 1
+// :verify shipment_requires_credit(6, 0) = 0
+//
+// :verify refund_amount(100, 120) = 20
+// :verify refund_amount(100, 80) = 0
