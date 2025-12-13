@@ -5,7 +5,7 @@
 - **Type system with structures** - Algebraic hierarchy (Magma → Semigroup → Monoid → Group → Ring → Field) with generic constraints, inheritance, and compositional algebra
 - **Z3 theorem prover integration** - Verify mathematical axioms with SMT solving (5/5 dependency types rigorously proven)
 - **Kleis language** - Self-hosted type definitions, operations in structures (ADR-016), parser with ~65% grammar coverage
-- **Interactive REPL** - Prove theorems interactively, built-in syntax reference, Unicode symbol palette
+- **Interactive REPL** - Prove theorems interactively, export definitions, built-in syntax reference, Unicode symbol palette
 - **Structural equation editor** - WYSIWYG formula building with deterministic positioning and professional presentation
 - **Documentation generator** - Auto-generate beautiful docs from .kleis files (Markdown + HTML with MathJax)
 - **Universal verification vision** - Same type system for mathematics AND real-world domains (business rules, legal constraints, protocols)
@@ -133,8 +133,30 @@ cargo run --bin repl
 | `:ast <expr>` | Show parsed AST |
 | `:define f(x) = ...` | Define a function |
 | `:load file.kleis` | Load a Kleis file |
+| `:export [file]` | Export definitions to .kleis (or stdout) |
+| `:env` | Show defined functions |
 
 **Multi-line input:** Use `\` at end of line or `:{ ... :}` for blocks.
+
+**Export & Pretty-Print:**
+```
+λ> :load examples/protocols/ip_router.kleis
+✅ Loaded: 14 functions, 0 structures, 1 data types
+
+λ> :export /tmp/my_file
+✅ Exported 15 definition(s) to /tmp/my_file.kleis
+
+λ> :export                    # Print to stdout with pretty formatting
+```
+
+Exported code is beautifully formatted with hierarchical indentation:
+```kleis
+define classify_address(o1, o2, o3, o4) =
+    if is_loopback(o1, o2, o3, o4) = 1 then 1
+    else if is_broadcast(o1, o2, o3, o4) = 1 then 5
+    else if is_multicast(o1, o2, o3, o4) = 1 then 4
+    else 3
+```
 
 Then open **http://localhost:3000** in your browser for the web editor:
 
@@ -177,7 +199,33 @@ cargo test --lib
 cargo test --test z3_dependency_proof_tests --features axiom-verification
 ```
 
-**Current status:** 421 tests passing (library tests) + 5 rigorous Z3 proof tests.
+**Current status:** 495 tests passing (library + integration tests) + rigorous Z3 proof tests.
+
+### Example .kleis Files
+
+The `examples/` directory contains real-world verification examples:
+
+**Authorization (Zanzibar-style + OAuth2):**
+```bash
+:load examples/authorization/zanzibar.kleis           # Permission levels, inheritance
+:load examples/authorization/zanzibar_structures.kleis # Structure hierarchy with extends
+:load examples/authorization/oauth2_scopes.kleis      # RFC 6749 token scopes
+:load examples/authorization/oauth2_zanzibar.kleis    # Layered auth (OAuth2 + Zanzibar)
+```
+
+**Network Protocols:**
+```bash
+:load examples/protocols/ip_router.kleis   # IP packet classification, firewall rules
+```
+
+These are great for testing round-trip export:
+```
+λ> :load examples/protocols/ip_router.kleis
+λ> :export /tmp/test
+λ> :load /tmp/test.kleis
+λ> :verify is_loopback(127, 0, 0, 1) = 1
+✅ Valid
+```
 
 ### Generate PDF Gallery
 
@@ -361,7 +409,14 @@ kleis/
 │   ├── syntax.md          # Language syntax
 │   ├── POT.md             # Projected Ontology Theory
 │   └── HONT.md            # Hilbert Ontology
-├── examples/               # Example equations
+├── examples/
+│   ├── authorization/     # Zanzibar, OAuth2 examples
+│   │   ├── zanzibar.kleis
+│   │   ├── zanzibar_structures.kleis
+│   │   ├── oauth2_scopes.kleis
+│   │   └── oauth2_zanzibar.kleis
+│   └── protocols/         # Network protocol examples
+│       └── ip_router.kleis
 └── README.md
 ```
 
