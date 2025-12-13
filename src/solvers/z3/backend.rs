@@ -276,6 +276,27 @@ impl<'r> Z3Backend<'r> {
                 arithmetic::translate_times(&args[0], &args[1])
             }
 
+            "power" | "pow" | "^" => {
+                if args.len() != 2 {
+                    return Err("power requires 2 arguments".to_string());
+                }
+                arithmetic::translate_power(&args[0], &args[1])
+            }
+
+            "sqrt" => {
+                if args.len() != 1 {
+                    return Err("sqrt requires 1 argument".to_string());
+                }
+                arithmetic::translate_sqrt(&args[0])
+            }
+
+            "abs" | "absolute" => {
+                if args.len() != 1 {
+                    return Err("abs requires 1 argument".to_string());
+                }
+                arithmetic::translate_abs(&args[0])
+            }
+
             "neg" | "negate" => {
                 if args.len() != 1 {
                     return Err("negate requires 1 argument".to_string());
