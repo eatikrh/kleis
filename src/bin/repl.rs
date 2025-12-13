@@ -53,24 +53,30 @@ fn main() -> RlResult<()> {
     let registry = StructureRegistry::new();
 
     let mut multiline_buffer = String::new();
-    let mut in_multiline = false;
+    // Two separate modes: block mode (:{ ... :}) vs line continuation (\)
+    let mut in_block_mode = false;
+    let mut in_line_continuation = false;
 
     loop {
-        let prompt = if in_multiline { "   " } else { "λ> " };
+        let prompt = if in_block_mode || in_line_continuation {
+            "   "
+        } else {
+            "λ> "
+        };
         let readline = rl.readline(prompt);
 
         match readline {
             Ok(line) => {
                 let line_trimmed = line.trim();
 
-                // Handle explicit multi-line mode
+                // Handle explicit multi-line block mode (:{ ... :})
                 if line_trimmed == ":{" {
-                    in_multiline = true;
+                    in_block_mode = true;
                     multiline_buffer.clear();
                     continue;
                 }
                 if line_trimmed == ":}" {
-                    in_multiline = false;
+                    in_block_mode = false;
                     let full_input = std::mem::take(&mut multiline_buffer);
                     let full_input = full_input.trim();
                     if !full_input.is_empty() {
@@ -86,8 +92,8 @@ fn main() -> RlResult<()> {
                     continue;
                 }
 
-                // In explicit multi-line mode, accumulate
-                if in_multiline {
+                // In explicit block mode, accumulate until :}
+                if in_block_mode {
                     multiline_buffer.push_str(&line);
                     multiline_buffer.push('\n');
                     continue;
@@ -102,14 +108,14 @@ fn main() -> RlResult<()> {
                 if let Some(without_backslash) = line_trimmed.strip_suffix('\\') {
                     multiline_buffer.push_str(without_backslash);
                     multiline_buffer.push(' ');
-                    in_multiline = true;
+                    in_line_continuation = true;
                     continue;
                 }
 
-                // If we were accumulating with backslash, complete now
-                let full_input = if !multiline_buffer.is_empty() {
+                // Complete the input (either from continuation or single line)
+                let full_input = if in_line_continuation || !multiline_buffer.is_empty() {
                     multiline_buffer.push_str(line_trimmed);
-                    in_multiline = false;
+                    in_line_continuation = false;
                     std::mem::take(&mut multiline_buffer)
                 } else {
                     line_trimmed.to_string()
@@ -132,10 +138,11 @@ fn main() -> RlResult<()> {
                 );
             }
             Err(ReadlineError::Interrupted) => {
-                if in_multiline {
+                if in_block_mode || in_line_continuation {
                     println!("(multi-line cancelled)");
                     multiline_buffer.clear();
-                    in_multiline = false;
+                    in_block_mode = false;
+                    in_line_continuation = false;
                 } else {
                     println!("^C");
                 }
@@ -959,10 +966,42 @@ fn show_type(input: &str) {
     let mut parser = KleisParser::new(input);
     match parser.parse() {
         Ok(expr) => {
-            // For now, just show the expression structure
-            // Full type inference requires TypeChecker integration
-            println!("Expression parsed: {:?}", expr);
-            println!("(Full type inference coming soon)");
+            // Use the TypeChecker to infer the type
+            use kleis::type_checker::{TypeCheckResult, TypeChecker};
+
+            let mut checker = match TypeChecker::with_stdlib() {
+                Ok(tc) => tc,
+                Err(e) => {
+                    println!("⚠️  Type checker init failed: {}", e);
+                    println!("Expression: {:?}", expr);
+                    return;
+                }
+            };
+
+            match checker.check(&expr) {
+                TypeCheckResult::Success(ty) => {
+                    println!("📐 Type: {}", ty);
+                }
+                TypeCheckResult::Polymorphic {
+                    type_var,
+                    available_types,
+                } => {
+                    println!("📐 Type: {} (polymorphic)", type_var);
+                    if !available_types.is_empty() {
+                        println!("   Could be: {}", available_types.join(", "));
+                    }
+                }
+                TypeCheckResult::Error {
+                    message,
+                    suggestion,
+                } => {
+                    println!("⚠️  Type inference: {}", message);
+                    if let Some(hint) = suggestion {
+                        println!("   Hint: {}", hint);
+                    }
+                    println!("   Expression: {:?}", expr);
+                }
+            }
         }
         Err(e) => {
             println!("❌ Parse error: {}", e);
