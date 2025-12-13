@@ -372,6 +372,11 @@ impl Evaluator {
     pub fn has_function(&self, name: &str) -> bool {
         self.functions.contains_key(name)
     }
+
+    /// List all defined function names
+    pub fn list_functions(&self) -> Vec<String> {
+        self.functions.keys().cloned().collect()
+    }
 }
 
 impl Default for Evaluator {

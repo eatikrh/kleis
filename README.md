@@ -4,7 +4,8 @@
 
 - **Type system with structures** - Algebraic hierarchy (Magma → Semigroup → Monoid → Group → Ring → Field) with generic constraints, inheritance, and compositional algebra
 - **Z3 theorem prover integration** - Verify mathematical axioms with SMT solving (5/5 dependency types rigorously proven)
-- **Kleis language** - Self-hosted type definitions, operations in structures (ADR-016), parser with 60% grammar coverage
+- **Kleis language** - Self-hosted type definitions, operations in structures (ADR-016), parser with ~65% grammar coverage
+- **Interactive REPL** - Prove theorems interactively, built-in syntax reference, Unicode symbol palette
 - **Structural equation editor** - WYSIWYG formula building with deterministic positioning and professional presentation
 - **Documentation generator** - Auto-generate beautiful docs from .kleis files (Markdown + HTML with MathJax)
 - **Universal verification vision** - Same type system for mathematics AND real-world domains (business rules, legal constraints, protocols)
@@ -90,6 +91,50 @@ cargo run --bin server
 ```
 
 **Note:** Z3 integration is required for the type checker and axiom verification features.
+
+Then open **http://localhost:3000** in your browser for the web editor.
+
+### Run the Interactive REPL
+
+**The Kleis REPL provides an interactive environment for proving theorems:**
+
+```bash
+# Set Z3 header path first (same as server)
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h  # macOS ARM
+# export Z3_SYS_Z3_HEADER=/usr/local/opt/z3/include/z3.h  # macOS Intel
+# export Z3_SYS_Z3_HEADER=/usr/include/z3.h               # Linux
+
+cargo run --bin repl
+```
+
+```
+🧮 Kleis REPL v0.1.0
+   Type :help for commands, :quit to exit
+
+λ> :verify ∀(x : R, y : R). x + y = y + x
+✅ Valid
+
+λ> :verify ∀(a : R, b : R). (a + b) * (a - b) = a * a - b * b
+✅ Valid
+
+λ> :verify ∀(p : Bool, q : Bool). ¬(p ∧ q) = (¬p ∨ ¬q)
+✅ Valid   (De Morgan's Law)
+```
+
+**REPL Commands:**
+| Command | Description |
+|---------|-------------|
+| `:help` | Main help with all commands |
+| `:help rust` | Guide for Rust/Java programmers |
+| `:syntax` | Complete Kleis syntax reference |
+| `:examples` | Working examples with expected output |
+| `:symbols` | Unicode math symbols palette (copy-paste!) |
+| `:verify <expr>` | Prove theorem with Z3 |
+| `:ast <expr>` | Show parsed AST |
+| `:define f(x) = ...` | Define a function |
+| `:load file.kleis` | Load a Kleis file |
+
+**Multi-line input:** Use `\` at end of line or `:{ ... :}` for blocks.
 
 Then open **http://localhost:3000** in your browser for the web editor:
 
@@ -303,6 +348,7 @@ kleis/
 │   ├── main.rs             # CLI entry point
 │   └── bin/
 │       ├── server.rs       # HTTP server + web UI
+│       ├── repl.rs         # Interactive REPL with theorem proving
 │       ├── gallery.rs      # PDF gallery generator
 │       ├── test_parser.rs  # Parser test utility
 │       └── check_parser.rs # Parser benchmark

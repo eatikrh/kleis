@@ -30,6 +30,9 @@ uuid = { version = "1.0", features = ["v4"] }
 # Vendored z3.rs bindings (simpler API than published crate)
 z3 = { path = "vendor/z3", optional = true }
 
+# REPL (interactive shell)
+rustyline = "14.0"
+
 [features]
 # Default features (enabled by default)
 default = ["axiom-verification"]
@@ -65,6 +68,10 @@ path = "src/bin/test_guide_examples.rs"
 [[bin]]
 name = "test_top5"
 path = "src/bin/test_top5.rs"
+
+[[bin]]
+name = "repl"
+path = "src/bin/repl.rs"
 
 [[example]]
 name = "typst_demo"
