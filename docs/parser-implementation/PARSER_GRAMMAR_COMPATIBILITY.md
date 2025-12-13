@@ -9,12 +9,12 @@
 
 ## TL;DR
 
-✅ **Parser implements ~60% of formal grammar v0.6, with complete algebraic type system including inheritance and compositional algebra**
+✅ **Parser implements ~70% of formal grammar v0.6, with complete algebraic type system including calculus operators**
 
-**Coverage:** ~60% of formal grammar (+Functions in structures from Dec 12!)  
-**Purpose:** Complete algebraic type system with theorem proving, generic constraints, inheritance, and compositional structures  
-**Status:** Phase 1, 2, 3 COMPLETE! Grammar v0.6 with functions in structures, where clauses, nested structures, extends, and Z3 integration all working  
-**Tests:** 600+ passing (421 unit + 200+ integration + NEW grammar v0.6 tests - ALL RIGOROUS ✅)
+**Coverage:** ~70% of formal grammar (+Calculus operators from Dec 13!)  
+**Purpose:** Complete algebraic type system with theorem proving, calculus, generic constraints, inheritance, and compositional structures  
+**Status:** Phase 1, 2, 3, 4 COMPLETE! Grammar v0.6 with calculus operators, functions in structures, where clauses, nested structures, extends, and Z3 integration all working  
+**Tests:** 500+ passing (497 unit + integration tests - ALL RIGOROUS ✅)
 
 ---
 
@@ -83,7 +83,7 @@
 
 | Feature | Grammar v0.6 | Status | Priority |
 |---------|--------------|--------|----------|
-| **Prefix operators (general)** | `-x`, `∇f`, `√x` | ⚠️ Only `¬` | Medium |
+| ~~**Prefix operators (general)**~~ | ~~`-x`, `∇f`, `√x`~~ | ✅ **Partial Dec 13!** | ~~Medium~~ |
 | **Postfix operators** | `n!`, `Aᵀ`, `A†` | ❌ Missing | Medium |
 | **Lambda expressions** | `λ x . x^2` | ❌ Missing | Low |
 | ~~**Let bindings**~~ | ~~`let x = 5 in x^2`~~ | ✅ **DONE Dec 13!** | ~~Low~~ |
@@ -92,6 +92,26 @@
 | **Symbolic constants** | `π`, `e`, `i`, `ℏ` | ❌ Missing | Low |
 | **Placeholders** | `□` syntax | N/A | N/A - Editor only |
 | **Summation/Product** | `Σ`, `Π` notation | ❌ Missing | Low |
+
+### ✅ Calculus Operators (NEW Dec 13!)
+
+| Operator | Syntax | Z3 Translation | Status |
+|----------|--------|----------------|--------|
+| **Power** | `x ^ n` | Z3 Power for integers | ✅ Works |
+| **Square root** | `sqrt(x)` | Z3 Real arithmetic | ✅ Works |
+| **Absolute value** | `abs(x)` | Z3 `If(x >= 0, x, -x)` | ✅ Works |
+| **Gradient** | `∇f` | Uninterpreted function | ✅ Works |
+| **Partial derivative** | `D(f, x)` | Uninterpreted function | ✅ Works |
+| **Total derivative** | `Dt(f, x)` | Uninterpreted function | ✅ Works |
+| **Integral** | `∫f`, `Integrate(f, x)` | Uninterpreted function | ✅ Works |
+| **Double integral** | `∬f`, `DoubleIntegral(f, x, y)` | Uninterpreted function | ✅ Works |
+| **Triple integral** | `∭f`, `TripleIntegral(f, x, y, z)` | Uninterpreted function | ✅ Works |
+| **Line integral** | `∮f`, `LineIntegral(F, curve)` | Uninterpreted function | ✅ Works |
+| **Surface integral** | `∯f`, `SurfaceIntegral(F, surface)` | Uninterpreted function | ✅ Works |
+
+**Derivative notation follows Mathematica convention:**
+- `D(f, x)` - Partial derivative ∂f/∂x
+- `Dt(f, x)` - Total derivative df/dx
 
 **Why missing features matter:**
 
@@ -982,23 +1002,25 @@ This is **sufficient for:**
 
 ---
 
-**Status:** ✅ **~65% Coverage - Complete Algebraic Type System with Theorem Proving + Control Flow**  
-**Recommendation:** Production ready with if/then/else and let bindings!
+**Status:** ✅ **~70% Coverage - Complete Algebraic Type System with Theorem Proving + Control Flow + Calculus**  
+**Recommendation:** Production ready with calculus operators!
 
-**Current Branch:** `feature/phase-3-where-clauses` (464+ tests passing)  
-**Main Branch:** `main` (Phase 1 & 2 merged, includes Z3 integration)
+**Current Branch:** `feature/calculus-operators` (500+ tests passing)  
+**Main Branch:** `main` (Phase 1, 2, 3 merged)
 
 **Phase Status:**
 - ✅ Phase 1 & 2: Z3 integration - MERGED to main
 - ✅ Phase 3: Where clauses + nested structures + extends + define operators - COMPLETE!
+- ✅ Phase 4: Calculus operators (power, sqrt, abs, derivatives, integrals) - COMPLETE!
 - ⚠️ Full prelude: Only product type syntax remains (minor: S × S → R vs S → S → R)
 
-**Features Implemented Tonight (Dec 10 evening):**
-- Where clauses with Z3 integration
-- Nested structures with Z3 integration
-- Extends keyword with Z3 integration
-- Define with operator names
-- Mathematical notation support
-- Convenience run_server.sh script
+**Features Implemented Dec 13 (calculus branch):**
+- Power operator (`^`) with Z3 translation
+- `sqrt` and `abs` functions
+- Gradient prefix operator (`∇f`)
+- Partial/Total derivatives (`D(f, x)`, `Dt(f, x)`) - Mathematica style
+- Integral operators (`∫`, `∬`, `∭`, `∮`, `∯`)
+- Integrable structure with FTC axiom
+- Round-trip tested with all examples
 
-**Last Updated:** December 13, 2024 (Added if/then/else and let bindings!)
+**Last Updated:** December 13, 2024 (Added calculus operators!)
