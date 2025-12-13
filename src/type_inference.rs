@@ -378,6 +378,37 @@ impl TypeInference {
                 // Infer the body type (the proposition)
                 self.infer(body, context_builder)
             }
+
+            // Conditional (if-then-else): both branches must have same type
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                // Condition must be Bool
+                let cond_ty = self.infer(condition, context_builder)?;
+                self.add_constraint(cond_ty, Type::Bool);
+
+                // Both branches must have the same type
+                let then_ty = self.infer(then_branch, context_builder)?;
+                let else_ty = self.infer(else_branch, context_builder)?;
+                self.add_constraint(then_ty.clone(), else_ty);
+
+                // Return the type of the branches
+                Ok(then_ty)
+            }
+
+            // Let binding: infer value type, bind variable, infer body
+            Expression::Let { name, value, body } => {
+                // Infer type of the value
+                let value_ty = self.infer(value, context_builder)?;
+
+                // Bind the variable in context
+                self.context.bind(name.clone(), value_ty);
+
+                // Infer body type with the new binding
+                self.infer(body, context_builder)
+            }
         }
     }
 

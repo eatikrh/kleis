@@ -102,6 +102,67 @@ impl<'r> AxiomVerifier<'r> {
         })
     }
 
+    /// Load top-level function definitions from a program into Z3
+    ///
+    /// This enables user-defined functions to be used in axiom verification,
+    /// including functions that use `if/then/else` conditionals.
+    ///
+    /// # Arguments
+    /// * `program` - Parsed Kleis program containing function definitions
+    ///
+    /// # Example
+    /// ```ignore
+    /// let code = r#"
+    ///     define abs(x) = if x > 0 then x else negate(x)
+    ///     define clamp(x, lo, hi) = if x < lo then lo else if x > hi then hi else x
+    /// "#;
+    /// let program = parse_kleis_program(code)?;
+    ///
+    /// let mut verifier = AxiomVerifier::new(&registry)?;
+    /// verifier.load_program_functions(&program)?;
+    ///
+    /// // Now abs() and clamp() can be used in verification
+    /// let result = verifier.verify_axiom(&axiom_using_abs)?;
+    /// ```
+    #[cfg(feature = "axiom-verification")]
+    pub fn load_program_functions(
+        &mut self,
+        program: &crate::kleis_ast::Program,
+    ) -> Result<(), String> {
+        use crate::kleis_ast::TopLevel;
+
+        let mut count = 0;
+        for item in &program.items {
+            if let TopLevel::FunctionDef(func_def) = item {
+                self.backend.declare_and_define_function(
+                    &func_def.name,
+                    &func_def.params,
+                    &func_def.body,
+                )?;
+                println!(
+                    "   ✅ Top-level function '{}' loaded into Z3",
+                    func_def.name
+                );
+                count += 1;
+            }
+        }
+
+        if count > 0 {
+            println!("   📦 Loaded {} top-level function(s)", count);
+        }
+
+        Ok(())
+    }
+
+    /// Load program functions (stub when feature disabled)
+    #[cfg(not(feature = "axiom-verification"))]
+    pub fn load_program_functions(
+        &mut self,
+        _program: &crate::kleis_ast::Program,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
     /// Analyze expression to find which structures it depends on
     ///
     /// This enables smart axiom loading - only load axioms for structures
@@ -145,8 +206,40 @@ impl<'r> AxiomVerifier<'r> {
                 // Constants don't introduce dependencies
             }
 
-            _ => {
-                // Other expression types analyzed recursively if needed
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                // Analyze all three parts of the conditional
+                structures.extend(self.analyze_dependencies(condition));
+                structures.extend(self.analyze_dependencies(then_branch));
+                structures.extend(self.analyze_dependencies(else_branch));
+            }
+
+            Expression::Match { scrutinee, cases } => {
+                // Analyze scrutinee and all case bodies
+                structures.extend(self.analyze_dependencies(scrutinee));
+                for case in cases {
+                    structures.extend(self.analyze_dependencies(&case.body));
+                }
+            }
+
+            Expression::List(elements) => {
+                // Analyze all list elements
+                for elem in elements {
+                    structures.extend(self.analyze_dependencies(elem));
+                }
+            }
+
+            Expression::Placeholder { .. } => {
+                // Placeholders don't introduce dependencies
+            }
+
+            Expression::Let { value, body, .. } => {
+                // Analyze both the value and body of let binding
+                structures.extend(self.analyze_dependencies(value));
+                structures.extend(self.analyze_dependencies(body));
             }
         }
 

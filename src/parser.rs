@@ -1675,6 +1675,8 @@ impl Expression {
             Expression::Match { .. } => "match".to_string(),
             Expression::List(_) => "list".to_string(),
             Expression::Quantifier { .. } => "quantifier".to_string(),
+            Expression::Conditional { .. } => "conditional".to_string(),
+            Expression::Let { .. } => "let".to_string(),
         }
     }
 }

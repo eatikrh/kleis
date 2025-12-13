@@ -136,6 +136,37 @@ impl<'r> Z3Backend<'r> {
                 Ok(bool_result.into())
             }
 
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                // Translate all three parts
+                let cond_z3 = self.kleis_to_z3(condition, vars)?;
+                let then_z3 = self.kleis_to_z3(then_branch, vars)?;
+                let else_z3 = self.kleis_to_z3(else_branch, vars)?;
+
+                // Convert condition to Bool
+                let cond_bool = cond_z3.as_bool().ok_or_else(|| {
+                    "Conditional condition must be a boolean expression".to_string()
+                })?;
+
+                // Use Z3's ite (if-then-else)
+                Ok(boolean::translate_ite(&cond_bool, &then_z3, &else_z3))
+            }
+
+            Expression::Let { name, value, body } => {
+                // 1. Translate the value expression
+                let z3_value = self.kleis_to_z3(value, vars)?;
+
+                // 2. Extend vars with the new binding
+                let mut extended_vars = vars.clone();
+                extended_vars.insert(name.clone(), z3_value);
+
+                // 3. Translate body with the extended context
+                self.kleis_to_z3(body, &extended_vars)
+            }
+
             _ => Err(format!("Unsupported expression type for Z3: {:?}", expr)),
         }
     }
@@ -687,5 +718,137 @@ mod tests {
         let result = backend.evaluate(&expr).unwrap();
 
         assert_eq!(result, Expression::Const("123".to_string()));
+    }
+
+    #[test]
+    fn test_conditional_true_branch() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // if true then 42 else 0
+        let expr = Expression::Conditional {
+            condition: Box::new(Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Const("1".to_string()),
+                    Expression::Const("1".to_string()),
+                ],
+            }),
+            then_branch: Box::new(Expression::Const("42".to_string())),
+            else_branch: Box::new(Expression::Const("0".to_string())),
+        };
+
+        let result = backend.evaluate(&expr).unwrap();
+        assert_eq!(result, Expression::Const("42".to_string()));
+    }
+
+    #[test]
+    fn test_conditional_false_branch() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // if false then 42 else 0
+        let expr = Expression::Conditional {
+            condition: Box::new(Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Const("1".to_string()),
+                    Expression::Const("2".to_string()),
+                ],
+            }),
+            then_branch: Box::new(Expression::Const("42".to_string())),
+            else_branch: Box::new(Expression::Const("0".to_string())),
+        };
+
+        let result = backend.evaluate(&expr).unwrap();
+        assert_eq!(result, Expression::Const("0".to_string()));
+    }
+
+    #[test]
+    fn test_conditional_with_arithmetic() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // if 5 > 3 then 10 + 1 else 20 + 1
+        let expr = Expression::Conditional {
+            condition: Box::new(Expression::Operation {
+                name: "greater_than".to_string(),
+                args: vec![
+                    Expression::Const("5".to_string()),
+                    Expression::Const("3".to_string()),
+                ],
+            }),
+            then_branch: Box::new(Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![
+                    Expression::Const("10".to_string()),
+                    Expression::Const("1".to_string()),
+                ],
+            }),
+            else_branch: Box::new(Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![
+                    Expression::Const("20".to_string()),
+                    Expression::Const("1".to_string()),
+                ],
+            }),
+        };
+
+        let result = backend.evaluate(&expr).unwrap();
+        assert_eq!(result, Expression::Const("11".to_string()));
+    }
+
+    #[test]
+    fn test_conditional_nested() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // if 1 > 2 then 100 else (if 2 > 1 then 200 else 300)
+        let expr = Expression::Conditional {
+            condition: Box::new(Expression::Operation {
+                name: "greater_than".to_string(),
+                args: vec![
+                    Expression::Const("1".to_string()),
+                    Expression::Const("2".to_string()),
+                ],
+            }),
+            then_branch: Box::new(Expression::Const("100".to_string())),
+            else_branch: Box::new(Expression::Conditional {
+                condition: Box::new(Expression::Operation {
+                    name: "greater_than".to_string(),
+                    args: vec![
+                        Expression::Const("2".to_string()),
+                        Expression::Const("1".to_string()),
+                    ],
+                }),
+                then_branch: Box::new(Expression::Const("200".to_string())),
+                else_branch: Box::new(Expression::Const("300".to_string())),
+            }),
+        };
+
+        let result = backend.evaluate(&expr).unwrap();
+        assert_eq!(result, Expression::Const("200".to_string()));
+    }
+
+    #[test]
+    fn test_simplify_conditional() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // if true then 5 else 10 should simplify to 5
+        let expr = Expression::Conditional {
+            condition: Box::new(Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Const("1".to_string()),
+                    Expression::Const("1".to_string()),
+                ],
+            }),
+            then_branch: Box::new(Expression::Const("5".to_string())),
+            else_branch: Box::new(Expression::Const("10".to_string())),
+        };
+
+        let result = backend.simplify(&expr).unwrap();
+        assert_eq!(result, Expression::Const("5".to_string()));
     }
 }

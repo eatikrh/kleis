@@ -171,6 +171,32 @@ fn collect_slots_recursive(
                 collect_slots_recursive(elem, slots, next_auto_id, child_path, None);
             }
         }
+        Expression::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            let mut cond_path = path.clone();
+            cond_path.push(0);
+            collect_slots_recursive(condition, slots, next_auto_id, cond_path, None);
+
+            let mut then_path = path.clone();
+            then_path.push(1);
+            collect_slots_recursive(then_branch, slots, next_auto_id, then_path, None);
+
+            let mut else_path = path.clone();
+            else_path.push(2);
+            collect_slots_recursive(else_branch, slots, next_auto_id, else_path, None);
+        }
+        Expression::Let { value, body, .. } => {
+            let mut value_path = path.clone();
+            value_path.push(0);
+            collect_slots_recursive(value, slots, next_auto_id, value_path, None);
+
+            let mut body_path = path.clone();
+            body_path.push(1);
+            collect_slots_recursive(body, slots, next_auto_id, body_path, None);
+        }
     }
 }
 

@@ -272,6 +272,29 @@ impl PatternMatcher {
                 }
             }
 
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => Expression::Conditional {
+                condition: Box::new(self.substitute_bindings(condition, bindings)),
+                then_branch: Box::new(self.substitute_bindings(then_branch, bindings)),
+                else_branch: Box::new(self.substitute_bindings(else_branch, bindings)),
+            },
+
+            Expression::Let { name, value, body } => {
+                let subst_value = self.substitute_bindings(value, bindings);
+                // Create new bindings without the shadowed variable
+                let mut inner_bindings = bindings.clone();
+                inner_bindings.remove(name);
+                let subst_body = self.substitute_bindings(body, &inner_bindings);
+                Expression::Let {
+                    name: name.clone(),
+                    value: Box::new(subst_value),
+                    body: Box::new(subst_body),
+                }
+            }
+
             Expression::Placeholder { .. } | Expression::Const(_) => {
                 // Leaves don't contain variables
                 expr.clone()

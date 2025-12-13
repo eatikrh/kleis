@@ -304,6 +304,16 @@ impl KleisParser {
             return self.parse_match_expr();
         }
 
+        // Conditional: if cond then a else b
+        if self.peek_word("if") {
+            return self.parse_conditional();
+        }
+
+        // Let binding: let x = expr in body
+        if self.peek_word("let") {
+            return self.parse_let_binding();
+        }
+
         // List literal: [a, b, c]
         if self.peek() == Some('[') {
             return self.parse_list_literal();
@@ -1244,6 +1254,224 @@ impl KleisParser {
                 position: self.pos,
             })
         }
+    }
+
+    /// Parse a conditional (if-then-else) expression
+    /// Grammar: if expression then expression else expression
+    ///
+    /// Examples:
+    ///   if x > 0 then x else -x
+    ///   if condition then result1 else result2
+    ///
+    /// Note: The condition expression is parsed at comparison precedence level
+    /// to avoid ambiguity with infix operators.
+    fn parse_conditional(&mut self) -> Result<Expression, KleisParseError> {
+        // Consume 'if' keyword
+        self.expect_word("if")?;
+        self.skip_whitespace();
+
+        // Parse condition expression
+        // We need to parse until we hit 'then', so use a limited expression parse
+        let condition = self.parse_conditional_part("then")?;
+        self.skip_whitespace();
+
+        // Expect 'then' keyword
+        self.expect_word("then")?;
+        self.skip_whitespace();
+
+        // Parse then branch
+        let then_branch = self.parse_conditional_part("else")?;
+        self.skip_whitespace();
+
+        // Expect 'else' keyword
+        self.expect_word("else")?;
+        self.skip_whitespace();
+
+        // Parse else branch (can be full expression)
+        let else_branch = self.parse_expression()?;
+
+        Ok(Expression::Conditional {
+            condition: Box::new(condition),
+            then_branch: Box::new(then_branch),
+            else_branch: Box::new(else_branch),
+        })
+    }
+
+    /// Parse a let binding expression
+    /// Grammar: let identifier = expression in expression
+    ///
+    /// Examples:
+    ///   let x = 5 in x + x
+    ///   let squared = x * x in squared + 1
+    ///   let a = 1 in let b = 2 in a + b  (nested)
+    ///
+    /// Used within function definitions to introduce local bindings.
+    /// Pure semantics: the bound value is substituted into the body.
+    fn parse_let_binding(&mut self) -> Result<Expression, KleisParseError> {
+        // Consume 'let' keyword
+        self.expect_word("let")?;
+        self.skip_whitespace();
+
+        // Parse variable name
+        let name = self.parse_identifier()?;
+        self.skip_whitespace();
+
+        // Expect '='
+        self.expect_char('=')?;
+        self.skip_whitespace();
+
+        // Parse the value expression (stops at 'in')
+        let value = self.parse_let_value()?;
+        self.skip_whitespace();
+
+        // Expect 'in' keyword
+        self.expect_word("in")?;
+        self.skip_whitespace();
+
+        // Parse the body expression
+        let body = self.parse_expression()?;
+
+        Ok(Expression::Let {
+            name,
+            value: Box::new(value),
+            body: Box::new(body),
+        })
+    }
+
+    /// Parse the value part of a let binding (stops at 'in')
+    fn parse_let_value(&mut self) -> Result<Expression, KleisParseError> {
+        // Parse terms and operators until we hit 'in'
+        let mut left = self.parse_primary()?;
+
+        loop {
+            self.skip_whitespace();
+
+            // Check if we've hit 'in'
+            if self.peek_word("in") {
+                break;
+            }
+
+            // Try to parse an infix operator
+            if let Some(op) = self.try_parse_infix_operator() {
+                self.skip_whitespace();
+                let right = self.parse_primary()?;
+                left = Expression::Operation {
+                    name: op,
+                    args: vec![left, right],
+                };
+            } else {
+                // No more operators, stop
+                break;
+            }
+        }
+
+        Ok(left)
+    }
+
+    /// Parse an expression that's part of a conditional (stops at 'then' or 'else')
+    ///
+    /// This is needed because `if a + b then` would otherwise try to parse
+    /// `then` as part of the expression.
+    fn parse_conditional_part(&mut self, stop_word: &str) -> Result<Expression, KleisParseError> {
+        // Parse terms and operators until we hit the stop word
+        let mut left = self.parse_primary()?;
+
+        loop {
+            self.skip_whitespace();
+
+            // Check if we've hit the stop word
+            if self.peek_word(stop_word) {
+                break;
+            }
+
+            // Try to parse an infix operator
+            if let Some(op) = self.try_parse_infix_operator() {
+                self.skip_whitespace();
+                let right = self.parse_primary()?;
+                left = Expression::Operation {
+                    name: op,
+                    args: vec![left, right],
+                };
+            } else {
+                // No more operators, stop
+                break;
+            }
+        }
+
+        Ok(left)
+    }
+
+    /// Try to parse an infix operator, returning None if not found
+    fn try_parse_infix_operator(&mut self) -> Option<String> {
+        let start_pos = self.pos;
+
+        // Check for comparison operators first (two chars)
+        if self.pos + 1 < self.input.len() {
+            let two_chars: String = self.input[self.pos..self.pos + 2].iter().collect();
+            match two_chars.as_str() {
+                "==" => {
+                    self.pos += 2;
+                    return Some("equals".to_string());
+                }
+                "!=" | "≠" => {
+                    self.pos += 2;
+                    return Some("not_equals".to_string());
+                }
+                "<=" | "≤" => {
+                    self.pos += 2;
+                    return Some("leq".to_string());
+                }
+                ">=" | "≥" => {
+                    self.pos += 2;
+                    return Some("geq".to_string());
+                }
+                "&&" => {
+                    self.pos += 2;
+                    return Some("logical_and".to_string());
+                }
+                "||" => {
+                    self.pos += 2;
+                    return Some("logical_or".to_string());
+                }
+                _ => {}
+            }
+        }
+
+        // Single character operators
+        if let Some(ch) = self.peek() {
+            let op = match ch {
+                '+' => Some("plus".to_string()),
+                '-' => Some("minus".to_string()),
+                '*' | '×' => Some("times".to_string()),
+                '/' | '÷' => Some("divide".to_string()),
+                '<' => Some("less_than".to_string()),
+                '>' => Some("greater_than".to_string()),
+                '=' => Some("equals".to_string()),
+                '∧' => Some("logical_and".to_string()),
+                '∨' => Some("logical_or".to_string()),
+                '→' | '⟹' => Some("implies".to_string()),
+                _ => None,
+            };
+
+            if op.is_some() {
+                self.advance();
+                return op;
+            }
+        }
+
+        // Check for word operators (and, or)
+        if self.peek_word("and") {
+            self.expect_word("and").ok()?;
+            return Some("logical_and".to_string());
+        }
+        if self.peek_word("or") {
+            self.expect_word("or").ok()?;
+            return Some("logical_or".to_string());
+        }
+
+        // Restore position if nothing matched
+        self.pos = start_pos;
+        None
     }
 
     /// Parse a match expression
@@ -3530,6 +3758,407 @@ mod tests {
         match result.type_annotation.unwrap() {
             TypeExpr::Function(_, _) => {} // Success
             _ => panic!("Expected function type"),
+        }
+    }
+
+    // ===== Conditional (if-then-else) Parser Tests =====
+
+    #[test]
+    fn test_parse_conditional_simple() {
+        let code = "if x then 1 else 0";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                assert_eq!(*condition, Expression::Object("x".to_string()));
+                assert_eq!(*then_branch, Expression::Const("1".to_string()));
+                assert_eq!(*else_branch, Expression::Const("0".to_string()));
+            }
+            _ => panic!("Expected Conditional expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_conditional_with_comparison() {
+        let code = "if x > 0 then x else y";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                // Condition should be a comparison operation
+                match condition.as_ref() {
+                    Expression::Operation { name, args } => {
+                        assert_eq!(name, "greater_than");
+                        assert_eq!(args.len(), 2);
+                    }
+                    _ => panic!("Expected comparison operation in condition"),
+                }
+                assert_eq!(*then_branch, Expression::Object("x".to_string()));
+                assert_eq!(*else_branch, Expression::Object("y".to_string()));
+            }
+            _ => panic!("Expected Conditional expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_conditional_with_arithmetic() {
+        let code = "if a > b then a + 1 else b + 1";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                // Condition
+                match condition.as_ref() {
+                    Expression::Operation { name, .. } => {
+                        assert_eq!(name, "greater_than");
+                    }
+                    _ => panic!("Expected comparison"),
+                }
+                // Then branch should be a plus operation
+                match then_branch.as_ref() {
+                    Expression::Operation { name, .. } => {
+                        assert_eq!(name, "plus");
+                    }
+                    _ => panic!("Expected plus in then branch"),
+                }
+                // Else branch should be a plus operation
+                match else_branch.as_ref() {
+                    Expression::Operation { name, .. } => {
+                        assert_eq!(name, "plus");
+                    }
+                    _ => panic!("Expected plus in else branch"),
+                }
+            }
+            _ => panic!("Expected Conditional expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_conditional_nested_else() {
+        // Nested conditional in else branch
+        let code = "if a then 1 else if b then 2 else 3";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                assert_eq!(*condition, Expression::Object("a".to_string()));
+                assert_eq!(*then_branch, Expression::Const("1".to_string()));
+
+                // Else branch should be another conditional
+                match else_branch.as_ref() {
+                    Expression::Conditional {
+                        condition: inner_cond,
+                        then_branch: inner_then,
+                        else_branch: inner_else,
+                    } => {
+                        assert_eq!(**inner_cond, Expression::Object("b".to_string()));
+                        assert_eq!(**inner_then, Expression::Const("2".to_string()));
+                        assert_eq!(**inner_else, Expression::Const("3".to_string()));
+                    }
+                    _ => panic!("Expected nested conditional in else branch"),
+                }
+            }
+            _ => panic!("Expected Conditional expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_conditional_with_function_call() {
+        let code = "if valid(x) then process(x) else default()";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                match condition.as_ref() {
+                    Expression::Operation { name, args } => {
+                        assert_eq!(name, "valid");
+                        assert_eq!(args.len(), 1);
+                    }
+                    _ => panic!("Expected function call in condition"),
+                }
+                match then_branch.as_ref() {
+                    Expression::Operation { name, .. } => {
+                        assert_eq!(name, "process");
+                    }
+                    _ => panic!("Expected function call in then branch"),
+                }
+                match else_branch.as_ref() {
+                    Expression::Operation { name, args } => {
+                        assert_eq!(name, "default");
+                        assert!(args.is_empty());
+                    }
+                    _ => panic!("Expected function call in else branch"),
+                }
+            }
+            _ => panic!("Expected Conditional expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_conditional_with_equality() {
+        let code = "if x == 0 then zero else nonzero";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Conditional { condition, .. } => match condition.as_ref() {
+                Expression::Operation { name, .. } => {
+                    assert_eq!(name, "equals");
+                }
+                _ => panic!("Expected equals operation"),
+            },
+            _ => panic!("Expected Conditional expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_conditional_with_logical_and() {
+        let code = "if a && b then yes else no";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Conditional { condition, .. } => match condition.as_ref() {
+                Expression::Operation { name, args } => {
+                    assert_eq!(name, "logical_and");
+                    assert_eq!(args.len(), 2);
+                }
+                _ => panic!("Expected logical_and operation"),
+            },
+            _ => panic!("Expected Conditional expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_conditional_error_missing_then() {
+        let code = "if x 1 else 0";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse();
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().message.contains("then"));
+    }
+
+    #[test]
+    fn test_parse_conditional_error_missing_else() {
+        let code = "if x then 1";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse();
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().message.contains("else"));
+    }
+
+    #[test]
+    fn test_parse_define_with_conditional() {
+        let code = "define abs(x) = if x > 0 then x else negate(x)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "abs");
+        assert_eq!(result.params.len(), 1);
+        assert!(matches!(result.body, Expression::Conditional { .. }));
+    }
+
+    // ===== Let Binding Parser Tests =====
+
+    #[test]
+    fn test_parse_let_simple() {
+        let code = "let x = 5 in x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let { name, value, body } => {
+                assert_eq!(name, "x");
+                assert_eq!(*value, Expression::Const("5".to_string()));
+                assert_eq!(*body, Expression::Object("x".to_string()));
+            }
+            _ => panic!("Expected Let expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_with_arithmetic() {
+        let code = "let x = 5 in x + x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let { name, value, body } => {
+                assert_eq!(name, "x");
+                assert_eq!(*value, Expression::Const("5".to_string()));
+                match body.as_ref() {
+                    Expression::Operation {
+                        name: op_name,
+                        args,
+                    } => {
+                        assert_eq!(op_name, "plus");
+                        assert_eq!(args.len(), 2);
+                    }
+                    _ => panic!("Expected plus operation in body"),
+                }
+            }
+            _ => panic!("Expected Let expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_with_expression_value() {
+        let code = "let squared = x * x in squared + 1";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let { name, value, body } => {
+                assert_eq!(name, "squared");
+                match value.as_ref() {
+                    Expression::Operation { name: op_name, .. } => {
+                        assert_eq!(op_name, "times");
+                    }
+                    _ => panic!("Expected times operation in value"),
+                }
+                match body.as_ref() {
+                    Expression::Operation { name: op_name, .. } => {
+                        assert_eq!(op_name, "plus");
+                    }
+                    _ => panic!("Expected plus operation in body"),
+                }
+            }
+            _ => panic!("Expected Let expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_nested() {
+        let code = "let a = 1 in let b = 2 in a + b";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let {
+                name: outer_name,
+                value: outer_value,
+                body: outer_body,
+            } => {
+                assert_eq!(outer_name, "a");
+                assert_eq!(*outer_value, Expression::Const("1".to_string()));
+
+                // Outer body should be another let
+                match outer_body.as_ref() {
+                    Expression::Let {
+                        name: inner_name,
+                        value: inner_value,
+                        body: inner_body,
+                    } => {
+                        assert_eq!(inner_name, "b");
+                        assert_eq!(**inner_value, Expression::Const("2".to_string()));
+                        match inner_body.as_ref() {
+                            Expression::Operation { name: op_name, .. } => {
+                                assert_eq!(op_name, "plus");
+                            }
+                            _ => panic!("Expected plus in innermost body"),
+                        }
+                    }
+                    _ => panic!("Expected nested Let in outer body"),
+                }
+            }
+            _ => panic!("Expected Let expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_with_conditional() {
+        let code = "let x = 5 in if x > 0 then x else 0";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let { name, body, .. } => {
+                assert_eq!(name, "x");
+                assert!(matches!(body.as_ref(), Expression::Conditional { .. }));
+            }
+            _ => panic!("Expected Let expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_define_with_let() {
+        let code = "define quadratic(a, b, c, x) = let x2 = x * x in a * x2 + b * x + c";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "quadratic");
+        assert_eq!(result.params.len(), 4);
+        assert!(matches!(result.body, Expression::Let { .. }));
+    }
+
+    #[test]
+    fn test_parse_let_error_missing_equals() {
+        let code = "let x 5 in x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse();
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().message.contains("Expected '='"));
+    }
+
+    #[test]
+    fn test_parse_let_error_missing_in() {
+        let code = "let x = 5 x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse();
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().message.contains("in"));
+    }
+
+    #[test]
+    fn test_parse_let_with_function_call() {
+        let code = "let result = compute(a, b) in result + 1";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let { name, value, .. } => {
+                assert_eq!(name, "result");
+                match value.as_ref() {
+                    Expression::Operation {
+                        name: op_name,
+                        args,
+                    } => {
+                        assert_eq!(op_name, "compute");
+                        assert_eq!(args.len(), 2);
+                    }
+                    _ => panic!("Expected function call in value"),
+                }
+            }
+            _ => panic!("Expected Let expression"),
         }
     }
 }

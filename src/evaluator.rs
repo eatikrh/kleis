@@ -246,6 +246,32 @@ impl Evaluator {
                 )
             }
 
+            // Conditionals - substitute in all branches
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => Expression::Conditional {
+                condition: Box::new(self.substitute(condition, subst)),
+                then_branch: Box::new(self.substitute(then_branch, subst)),
+                else_branch: Box::new(self.substitute(else_branch, subst)),
+            },
+
+            // Let bindings - substitute in value and body
+            // Note: the let-bound variable shadows any outer binding
+            Expression::Let { name, value, body } => {
+                let subst_value = self.substitute(value, subst);
+                // Create new substitution map without the shadowed variable
+                let mut inner_subst = subst.clone();
+                inner_subst.remove(name);
+                let subst_body = self.substitute(body, &inner_subst);
+                Expression::Let {
+                    name: name.clone(),
+                    value: Box::new(subst_value),
+                    body: Box::new(subst_body),
+                }
+            }
+
             // Constants and placeholders don't change
             Expression::Const(_) | Expression::Placeholder { .. } => expr.clone(),
         }
@@ -297,6 +323,37 @@ impl Evaluator {
             Expression::Quantifier { .. } => {
                 // Quantifiers are for axioms, not runtime evaluation
                 Ok(expr.clone())
+            }
+
+            // Conditionals - evaluate condition and select branch
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let eval_cond = self.eval(condition)?;
+                let eval_then = self.eval(then_branch)?;
+                let eval_else = self.eval(else_branch)?;
+
+                // Return as conditional (we don't evaluate the condition itself)
+                // The actual branching is handled by Z3 or pattern matching
+                Ok(Expression::Conditional {
+                    condition: Box::new(eval_cond),
+                    then_branch: Box::new(eval_then),
+                    else_branch: Box::new(eval_else),
+                })
+            }
+
+            // Let bindings - evaluate value and substitute into body
+            Expression::Let { name, value, body } => {
+                // Evaluate the value
+                let eval_value = self.eval(value)?;
+
+                // Substitute value for name in body, then evaluate
+                let mut subst = std::collections::HashMap::new();
+                subst.insert(name.clone(), eval_value);
+                let substituted_body = self.substitute(body, &subst);
+                self.eval(&substituted_body)
             }
 
             // Atoms - return as-is

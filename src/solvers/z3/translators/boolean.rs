@@ -83,6 +83,23 @@ pub fn translate_implies(left: &Dynamic, right: &Dynamic) -> Result<Bool, String
     Ok(left_bool.implies(&right_bool))
 }
 
+/// Translate if-then-else (ite) expression
+///
+/// Takes a boolean condition and two branches of the same type.
+/// Returns the appropriate branch based on the condition value.
+///
+/// This is the core translation for Kleis's `if cond then a else b` syntax.
+/// Z3's ite is polymorphic over the branch types.
+///
+/// # Example
+/// ```ignore
+/// Kleis: if x > 0 then x else -x
+/// Z3: ite(x > 0, x, -x)
+/// ```
+pub fn translate_ite(condition: &Bool, then_branch: &Dynamic, else_branch: &Dynamic) -> Dynamic {
+    condition.ite(then_branch, else_branch)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,5 +151,42 @@ mod tests {
         // Should error because Int is not Bool
         let result = translate_and(&left, &right);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_translate_ite_bool_branches() {
+        let cond = Z3Bool::from_bool(true);
+        let then_branch: Dynamic = Z3Bool::from_bool(true).into();
+        let else_branch: Dynamic = Z3Bool::from_bool(false).into();
+
+        let result = translate_ite(&cond, &then_branch, &else_branch);
+        // Result should be a Bool (since branches are Bool)
+        assert!(result.as_bool().is_some());
+    }
+
+    #[test]
+    fn test_translate_ite_int_branches() {
+        use z3::ast::Int;
+
+        let cond = Z3Bool::from_bool(true);
+        let then_branch: Dynamic = Int::from_i64(42).into();
+        let else_branch: Dynamic = Int::from_i64(17).into();
+
+        let result = translate_ite(&cond, &then_branch, &else_branch);
+        // Result should be an Int (since branches are Int)
+        assert!(result.as_int().is_some());
+    }
+
+    #[test]
+    fn test_translate_ite_preserves_type() {
+        use z3::ast::Real;
+
+        let cond = Z3Bool::from_bool(false);
+        let then_branch: Dynamic = Real::from_real(1, 2).into(); // 0.5
+        let else_branch: Dynamic = Real::from_real(3, 4).into(); // 0.75
+
+        let result = translate_ite(&cond, &then_branch, &else_branch);
+        // Result should be a Real
+        assert!(result.as_real().is_some());
     }
 }

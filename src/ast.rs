@@ -47,6 +47,25 @@ pub enum Expression {
         where_clause: Option<Box<Expression>>,
         body: Box<Expression>,
     },
+
+    /// Conditional expression (if-then-else)
+    /// Example: if x > 0 then x else -x
+    /// Translates to Z3's ite (if-then-else) construct
+    Conditional {
+        condition: Box<Expression>,
+        then_branch: Box<Expression>,
+        else_branch: Box<Expression>,
+    },
+
+    /// Let binding expression
+    /// Example: let x = 5 in x + x
+    /// Introduces a local variable binding within a function definition.
+    /// Pure functional semantics: the bound value is substituted into the body.
+    Let {
+        name: String,
+        value: Box<Expression>,
+        body: Box<Expression>,
+    },
 }
 
 /// Kind of quantifier
@@ -153,6 +172,28 @@ impl Expression {
         }
     }
 
+    /// Create a conditional (if-then-else) expression
+    pub fn conditional(
+        condition: Expression,
+        then_branch: Expression,
+        else_branch: Expression,
+    ) -> Self {
+        Expression::Conditional {
+            condition: Box::new(condition),
+            then_branch: Box::new(then_branch),
+            else_branch: Box::new(else_branch),
+        }
+    }
+
+    /// Create a let binding expression
+    pub fn let_binding(name: impl Into<String>, value: Expression, body: Expression) -> Self {
+        Expression::Let {
+            name: name.into(),
+            value: Box::new(value),
+            body: Box::new(body),
+        }
+    }
+
     /// Traverse the expression tree to find all placeholders
     pub fn find_placeholders(&self) -> Vec<(usize, String)> {
         let mut placeholders = Vec::new();
@@ -183,6 +224,19 @@ impl Expression {
                 for item in items {
                     item.collect_placeholders(acc);
                 }
+            }
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                condition.collect_placeholders(acc);
+                then_branch.collect_placeholders(acc);
+                else_branch.collect_placeholders(acc);
+            }
+            Expression::Let { value, body, .. } => {
+                value.collect_placeholders(acc);
+                body.collect_placeholders(acc);
             }
             _ => {}
         }

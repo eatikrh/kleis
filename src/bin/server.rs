@@ -270,6 +270,28 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
                 elements.iter().map(expression_to_json).collect();
             json!({"List": elements_json})
         }
+        Expression::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            json!({
+                "Conditional": {
+                    "condition": expression_to_json(condition),
+                    "then": expression_to_json(then_branch),
+                    "else": expression_to_json(else_branch)
+                }
+            })
+        }
+        Expression::Let { name, value, body } => {
+            json!({
+                "Let": {
+                    "name": name,
+                    "value": expression_to_json(value),
+                    "body": expression_to_json(body)
+                }
+            })
+        }
     }
 }
 
@@ -669,6 +691,34 @@ fn collect_slots_recursive(
                 child_path.push(i);
                 collect_slots_recursive(elem, slots, child_path, None);
             }
+        }
+        Expression::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            // Collect slots from all three parts
+            let mut cond_path = path.clone();
+            cond_path.push(0);
+            collect_slots_recursive(condition, slots, cond_path, Some("condition".to_string()));
+
+            let mut then_path = path.clone();
+            then_path.push(1);
+            collect_slots_recursive(then_branch, slots, then_path, Some("then".to_string()));
+
+            let mut else_path = path.clone();
+            else_path.push(2);
+            collect_slots_recursive(else_branch, slots, else_path, Some("else".to_string()));
+        }
+        Expression::Let { value, body, .. } => {
+            // Collect slots from value and body
+            let mut value_path = path.clone();
+            value_path.push(0);
+            collect_slots_recursive(value, slots, value_path, Some("value".to_string()));
+
+            let mut body_path = path.clone();
+            body_path.push(1);
+            collect_slots_recursive(body, slots, body_path, Some("body".to_string()));
         }
     }
 }

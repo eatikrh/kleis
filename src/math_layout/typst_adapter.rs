@@ -98,6 +98,25 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             // For now, return placeholder text
             "\\text{match expression}".to_string()
         }
+
+        Expression::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            // Render as: "if" condition "then" then_branch "else" else_branch
+            let cond = expression_to_typst(condition, ctx);
+            let then_e = expression_to_typst(then_branch, ctx);
+            let else_e = expression_to_typst(else_branch, ctx);
+            format!("\"if\" {} \"then\" {} \"else\" {}", cond, then_e, else_e)
+        }
+
+        Expression::Let { name, value, body } => {
+            // Render as: "let" name "=" value "in" body
+            let val = expression_to_typst(value, ctx);
+            let bod = expression_to_typst(body, ctx);
+            format!("\"let\" {} \"=\" {} \"in\" {}", name, val, bod)
+        }
     }
 }
 

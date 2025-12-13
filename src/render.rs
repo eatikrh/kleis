@@ -1468,6 +1468,77 @@ fn render_expression_internal(
                 RenderTarget::Typst => format!("({})", rendered_elements.join(", ")), // Typst uses () for lists
             }
         }
+
+        Expression::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            let cond_id = format!("{}.cond", node_id);
+            let then_id = format!("{}.then", node_id);
+            let else_id = format!("{}.else", node_id);
+
+            let cond_str =
+                render_expression_internal(condition, ctx, target, &cond_id, node_id_to_uuid);
+            let then_str =
+                render_expression_internal(then_branch, ctx, target, &then_id, node_id_to_uuid);
+            let else_str =
+                render_expression_internal(else_branch, ctx, target, &else_id, node_id_to_uuid);
+
+            match target {
+                RenderTarget::Unicode => {
+                    format!("if {} then {} else {}", cond_str, then_str, else_str)
+                }
+                RenderTarget::LaTeX => {
+                    format!(
+                        r"\text{{if }} {} \text{{ then }} {} \text{{ else }} {}",
+                        cond_str, then_str, else_str
+                    )
+                }
+                RenderTarget::HTML => {
+                    format!(
+                        r#"<span class="conditional">if {} then {} else {}</span>"#,
+                        cond_str, then_str, else_str
+                    )
+                }
+                RenderTarget::Typst => {
+                    format!(
+                        r#""if " {} " then " {} " else " {}"#,
+                        cond_str, then_str, else_str
+                    )
+                }
+            }
+        }
+
+        Expression::Let { name, value, body } => {
+            let value_id = format!("{}.value", node_id);
+            let body_id = format!("{}.body", node_id);
+
+            let value_str =
+                render_expression_internal(value, ctx, target, &value_id, node_id_to_uuid);
+            let body_str = render_expression_internal(body, ctx, target, &body_id, node_id_to_uuid);
+
+            match target {
+                RenderTarget::Unicode => {
+                    format!("let {} = {} in {}", name, value_str, body_str)
+                }
+                RenderTarget::LaTeX => {
+                    format!(
+                        r"\text{{let }} {} = {} \text{{ in }} {}",
+                        name, value_str, body_str
+                    )
+                }
+                RenderTarget::HTML => {
+                    format!(
+                        r#"<span class="let-binding">let {} = {} in {}</span>"#,
+                        name, value_str, body_str
+                    )
+                }
+                RenderTarget::Typst => {
+                    format!(r#""let " {} " = " {} " in " {}"#, name, value_str, body_str)
+                }
+            }
+        }
     }
 }
 

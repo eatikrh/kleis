@@ -117,6 +117,28 @@ pub fn layout_expression(expr: &Expression, context: &LayoutContext) -> LayoutBo
             // TODO: Implement pattern matching layout
             unimplemented!("Pattern matching layout not yet implemented")
         }
+
+        Expression::Conditional { .. } => {
+            // TODO: Implement conditional layout
+            // For now, return a placeholder text
+            LayoutBox::text(
+                "if...then...else",
+                context.base_font_size,
+                FontFamily::Main,
+                false,
+            )
+        }
+
+        Expression::Let { .. } => {
+            // TODO: Implement let binding layout
+            // For now, return a placeholder text
+            LayoutBox::text(
+                "let...in...",
+                context.base_font_size,
+                FontFamily::Main,
+                false,
+            )
+        }
     }
 }
 
