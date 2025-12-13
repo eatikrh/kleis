@@ -220,7 +220,7 @@ fn handle_command(
         ":quit" | ":q" => println!("Goodbye! 👋"),
         ":ast" => show_ast(arg),
         ":type" | ":t" => show_type(arg),
-        ":verify" | ":v" => verify_expression(arg, registry),
+        ":verify" | ":v" => verify_expression(arg, registry, evaluator),
         ":load" | ":l" => load_file(arg, evaluator),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
@@ -966,7 +966,7 @@ fn show_type(input: &str) {
 }
 
 #[cfg(feature = "axiom-verification")]
-fn verify_expression(input: &str, registry: &StructureRegistry) {
+fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Evaluator) {
     if input.is_empty() {
         println!("Usage: :verify <expression>");
         return;
@@ -975,33 +975,174 @@ fn verify_expression(input: &str, registry: &StructureRegistry) {
     // Use parse_proposition to support quantifiers (∀, ∃)
     let mut parser = KleisParser::new(input);
     match parser.parse_proposition() {
-        Ok(expr) => match AxiomVerifier::new(registry) {
-            Ok(mut verifier) => match verifier.verify_axiom(&expr) {
-                Ok(result) => match result {
-                    VerificationResult::Valid => {
-                        println!("✅ Valid");
-                    }
-                    VerificationResult::Invalid { counterexample } => {
-                        println!("❌ Invalid - Counterexample: {}", counterexample);
-                    }
-                    VerificationResult::Unknown => {
-                        println!("❓ Unknown (Z3 couldn't determine)");
-                    }
-                    VerificationResult::Disabled => {
-                        println!("⚠️  Verification disabled");
+        Ok(expr) => {
+            // Expand user-defined functions before verification
+            let expanded = expand_user_functions(&expr, evaluator);
+
+            match AxiomVerifier::new(registry) {
+                Ok(mut verifier) => match verifier.verify_axiom(&expanded) {
+                    Ok(result) => match result {
+                        VerificationResult::Valid => {
+                            println!("✅ Valid");
+                        }
+                        VerificationResult::Invalid { counterexample } => {
+                            println!("❌ Invalid - Counterexample: {}", counterexample);
+                        }
+                        VerificationResult::Unknown => {
+                            println!("❓ Unknown (Z3 couldn't determine)");
+                        }
+                        VerificationResult::Disabled => {
+                            println!("⚠️  Verification disabled");
+                        }
+                    },
+                    Err(e) => {
+                        println!("❌ Verification error: {}", e);
                     }
                 },
                 Err(e) => {
-                    println!("❌ Verification error: {}", e);
+                    println!("❌ Failed to initialize verifier: {}", e);
                 }
-            },
-            Err(e) => {
-                println!("❌ Failed to initialize verifier: {}", e);
             }
-        },
+        }
         Err(e) => {
             println!("❌ Parse error: {}", e);
         }
+    }
+}
+
+/// Recursively expand user-defined functions in an expression
+#[cfg(feature = "axiom-verification")]
+fn expand_user_functions(
+    expr: &kleis::ast::Expression,
+    evaluator: &Evaluator,
+) -> kleis::ast::Expression {
+    use kleis::ast::Expression;
+
+    match expr {
+        Expression::Operation { name, args } => {
+            // First, recursively expand args
+            let expanded_args: Vec<Expression> = args
+                .iter()
+                .map(|a| expand_user_functions(a, evaluator))
+                .collect();
+
+            // Check if this is a user-defined function
+            if let Some(closure) = evaluator.get_function(name) {
+                if closure.params.len() == expanded_args.len() {
+                    // Substitute parameters with arguments
+                    let mut result = closure.body.clone();
+                    for (param, arg) in closure.params.iter().zip(expanded_args.iter()) {
+                        result = substitute_var(&result, param, arg);
+                    }
+                    // Recursively expand in case the body contains more function calls
+                    return expand_user_functions(&result, evaluator);
+                }
+            }
+
+            // Not a user function, return with expanded args
+            Expression::Operation {
+                name: name.clone(),
+                args: expanded_args,
+            }
+        }
+        Expression::Quantifier {
+            quantifier,
+            variables,
+            where_clause,
+            body,
+        } => Expression::Quantifier {
+            quantifier: quantifier.clone(),
+            variables: variables.clone(),
+            where_clause: where_clause
+                .as_ref()
+                .map(|w| Box::new(expand_user_functions(w, evaluator))),
+            body: Box::new(expand_user_functions(body, evaluator)),
+        },
+        Expression::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+        } => Expression::Conditional {
+            condition: Box::new(expand_user_functions(condition, evaluator)),
+            then_branch: Box::new(expand_user_functions(then_branch, evaluator)),
+            else_branch: Box::new(expand_user_functions(else_branch, evaluator)),
+        },
+        Expression::Let { name, value, body } => Expression::Let {
+            name: name.clone(),
+            value: Box::new(expand_user_functions(value, evaluator)),
+            body: Box::new(expand_user_functions(body, evaluator)),
+        },
+        // Leaf nodes - return as-is
+        _ => expr.clone(),
+    }
+}
+
+/// Substitute a variable name with an expression
+#[cfg(feature = "axiom-verification")]
+fn substitute_var(
+    expr: &kleis::ast::Expression,
+    var_name: &str,
+    replacement: &kleis::ast::Expression,
+) -> kleis::ast::Expression {
+    use kleis::ast::Expression;
+
+    match expr {
+        Expression::Object(name) if name == var_name => replacement.clone(),
+        Expression::Operation { name, args } => Expression::Operation {
+            name: name.clone(),
+            args: args
+                .iter()
+                .map(|a| substitute_var(a, var_name, replacement))
+                .collect(),
+        },
+        Expression::Quantifier {
+            quantifier,
+            variables,
+            where_clause,
+            body,
+        } => {
+            // Don't substitute if this quantifier binds the same variable
+            let binds_var = variables.iter().any(|v| v.name == var_name);
+            if binds_var {
+                expr.clone()
+            } else {
+                Expression::Quantifier {
+                    quantifier: quantifier.clone(),
+                    variables: variables.clone(),
+                    where_clause: where_clause
+                        .as_ref()
+                        .map(|w| Box::new(substitute_var(w, var_name, replacement))),
+                    body: Box::new(substitute_var(body, var_name, replacement)),
+                }
+            }
+        }
+        Expression::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+        } => Expression::Conditional {
+            condition: Box::new(substitute_var(condition, var_name, replacement)),
+            then_branch: Box::new(substitute_var(then_branch, var_name, replacement)),
+            else_branch: Box::new(substitute_var(else_branch, var_name, replacement)),
+        },
+        Expression::Let { name, value, body } => {
+            // Don't substitute in body if let binds the same variable
+            if name == var_name {
+                Expression::Let {
+                    name: name.clone(),
+                    value: Box::new(substitute_var(value, var_name, replacement)),
+                    body: body.clone(),
+                }
+            } else {
+                Expression::Let {
+                    name: name.clone(),
+                    value: Box::new(substitute_var(value, var_name, replacement)),
+                    body: Box::new(substitute_var(body, var_name, replacement)),
+                }
+            }
+        }
+        // Leaf nodes - return as-is
+        _ => expr.clone(),
     }
 }
 
