@@ -1,205 +1,202 @@
-// Calculus Theorems in Kleis
-// Testing derivative operators and calculus axioms
+// Calculus in Kleis
+// Following Mathematica's derivative notation
 //
 // =============================================================================
-// SUPPORTED NOTATION
+// DERIVATIVE NOTATION (Mathematica-style)
 // =============================================================================
 //
-// Prefix Operators:
-//   ∇f             - Gradient (vector of all partial derivatives)
-//   -x             - Negation
+// D(f, x)    - Partial derivative ∂f/∂x
+//              Other variables are treated as CONSTANTS
+//              D(x^2 + y^2, x) = 2*x
 //
-// Arithmetic:
-//   f^n            - Power/exponentiation (verified in Z3)
-//   sqrt(x)        - Square root (symbolic)
-//   abs(x)         - Absolute value (verified in Z3)
+// Dt(f, x)   - Total derivative df/dx  
+//              Other variables may DEPEND on x (chain rule applies)
+//              Dt(x^2 + y^2, x) = 2*x + 2*y*Dt(y, x)
 //
-// Derivative Functions (symbolic):
-//   D(f, x)        - Total derivative of f with respect to x
-//   partial(f, i)  - Partial derivative of f w.r.t. variable index i
-//   deriv(f)       - Generic derivative operator
+// D(f, x, y) - Mixed partial ∂²f/∂x∂y
+//              D(x*y, x, y) = 1
 //
-// Note on ∂ (partial symbol):
-//   ∂ alone is NOT supported as a prefix. It's meaningless without
-//   specifying the variable. Use partial(f, x) instead.
-//   
-//   Mathematical: ∂f/∂x  →  Kleis: partial(f, X)  or  D(f, X)
+// D(f, {x, n}) - nth derivative ∂ⁿf/∂xⁿ
+//              D(x^3, {x, 2}) = 6*x
+//
+// =============================================================================
+// WHEN TO USE EACH
+// =============================================================================
+//
+// Use D (partial) when:
+//   - Working with functions of multiple independent variables
+//   - Computing gradients, Jacobians, Hessians
+//   - f(x, y) where x and y vary independently
+//
+// Use Dt (total) when:
+//   - Variables depend on each other (parametric curves)
+//   - Applying chain rule: y = g(x), so dy/dx matters
+//   - Computing derivatives along paths
+//
+// =============================================================================
+// EXAMPLES
+// =============================================================================
+//
+// Partial derivatives:
+//   D(x^2 + y^2, x) = 2*x     // ∂/∂x, y is constant
+//   D(x^2 + y^2, y) = 2*y     // ∂/∂y, x is constant
+//   D(x*y, x) = y             // y is constant
+//   D(x*y, y) = x             // x is constant
+//
+// Total derivatives:
+//   Dt(x^2 + y^2, x) = 2*x + 2*y*Dt(y, x)  // chain rule included
+//   If y is constant: Dt(y, x) = 0, so result = 2*x
+//   If y = x^2: Dt(y, x) = 2*x, so result = 2*x + 2*y*2*x = 2*x + 4*x*y
+//
+// =============================================================================
 
 // =============================================================================
-// DATA TYPES for Calculus
+// DATA TYPES
 // =============================================================================
-
-// Smooth function type (C∞)
-data SmoothFunction = SmoothFn
 
 // Variables for differentiation
 data Variable = X | Y | Z | T
 
 // =============================================================================
-// STRUCTURE: Differentiable Functions
+// STRUCTURES FOR CALCULUS
 // =============================================================================
 
 structure Differentiable(F) {
-    // Derivative operator
-    operation deriv : F -> F
+    // Partial derivative operator
+    operation D : F -> Variable -> F
     
-    // Linearity of differentiation
-    axiom linearity_add: ∀(f g : F). deriv(f + g) = deriv(f) + deriv(g)
-    axiom linearity_scalar: ∀(c : ℝ, f : F). deriv(c * f) = c * deriv(f)
+    // Total derivative operator  
+    operation Dt : F -> Variable -> F
     
-    // Product rule (Leibniz)
-    axiom product_rule: ∀(f g : F). deriv(f * g) = deriv(f) * g + f * deriv(g)
+    // Linearity of partial derivative
+    axiom D_linear_add: ∀(f g : F, x : Variable). D(f + g, x) = D(f, x) + D(g, x)
+    axiom D_linear_scalar: ∀(c : ℝ, f : F, x : Variable). D(c * f, x) = c * D(f, x)
     
-    // Chain rule requires composition
-    // deriv(f ∘ g) = (deriv(f) ∘ g) * deriv(g)
+    // Partial derivative of constant is zero
+    axiom D_const: ∀(c : ℝ, x : Variable). D(c, x) = 0
+    
+    // Partial derivative of variable with respect to itself is 1
+    axiom D_var_self: ∀(x : Variable). D(x, x) = 1
+    
+    // Partial derivative of variable with respect to different variable is 0
+    axiom D_var_other: ∀(x y : Variable). x != y ⟹ D(x, y) = 0
+    
+    // Product rule (Leibniz rule)
+    axiom D_product: ∀(f g : F, x : Variable). D(f * g, x) = D(f, x) * g + f * D(g, x)
+    
+    // Chain rule for total derivative
+    axiom Dt_chain: ∀(f : F, x y : Variable). 
+        Dt(f, x) = D(f, x) + D(f, y) * Dt(y, x)
+    
+    // If y is constant with respect to x, total = partial
+    axiom Dt_const_var: ∀(f : F, x y : Variable). 
+        Dt(y, x) = 0 ⟹ Dt(f, x) = D(f, x)
 }
 
-// =============================================================================
-// MULTIVARIATE CALCULUS
-// =============================================================================
-
-structure MultivariateFunction(n : Nat) {
-    // Partial derivative with respect to variable i
-    operation partial : Nat -> Self -> Self
-    
-    // Gradient (vector of all partial derivatives)  
+structure SmoothFunction(n : Nat) {
+    // Gradient: vector of all partial derivatives
     operation gradient : Self -> Vector(n)
     
-    // Schwarz's theorem: mixed partials commute (for C² functions)
-    axiom mixed_partials: ∀(f : Self, i j : Nat). 
-        partial(i, partial(j, f)) = partial(j, partial(i, f))
+    // Laplacian: sum of second partial derivatives
+    operation laplacian : Self -> Self
     
-    // Gradient linearity
-    axiom gradient_add: ∀(f g : Self). gradient(f + g) = gradient(f) + gradient(g)
+    // Schwarz's theorem: mixed partials commute
+    axiom mixed_partials: ∀(f : Self, x y : Variable). 
+        D(D(f, x), y) = D(D(f, y), x)
 }
 
 // =============================================================================
-// FUNCTION DEFINITIONS - Calculus Rules
+// CONCRETE DERIVATIVE RULES (using integers for verification)
 // =============================================================================
 
-// Power rule: d/dx[x^n] = n * x^(n-1)
-define power_rule_deriv(n, x) = n * x^(n - 1)
+// Power rule: D(x^n, x) = n * x^(n-1)
+define power_rule(n, x) = n * x^(n - 1)
 
-// Constant rule: d/dx[c] = 0
-define constant_deriv(c) = 0
+// Verify: D(x^2, x) at x=3 should be 2*3 = 6
+define D_x_squared(x) = power_rule(2, x)
 
-// Sum rule: d/dx[f + g] = df/dx + dg/dx
-define sum_rule(df, dg) = df + dg
+// Verify: D(x^3, x) at x=2 should be 3*4 = 12
+define D_x_cubed(x) = power_rule(3, x)
 
-// Product rule: d/dx[f * g] = f' * g + f * g'
-define product_rule(f, df, g, dg) = df * g + f * dg
+// Sum rule: D(f + g, x) = D(f, x) + D(g, x)
+define sum_rule(Df, Dg) = Df + Dg
 
-// Quotient rule: d/dx[f/g] = (f'g - fg') / g²
-define quotient_rule(f, df, g, dg) = (df * g - f * dg) / (g * g)
+// Product rule: D(f * g, x) = D(f,x) * g + f * D(g,x)
+define product_rule(f, Df, g, Dg) = Df * g + f * Dg
 
-// Chain rule: d/dx[f(g(x))] = f'(g(x)) * g'(x)
-define chain_rule(df_at_g, dg) = df_at_g * dg
+// Quotient rule: D(f/g, x) = (D(f,x)*g - f*D(g,x)) / g^2
+define quotient_rule(f, Df, g, Dg) = (Df * g - f * Dg) / (g * g)
 
-// =============================================================================
-// SPECIFIC FUNCTION DERIVATIVES
-// =============================================================================
-
-// d/dx[x²] = 2x (using power rule with n=2)
-define deriv_x_squared(x) = power_rule_deriv(2, x)
-
-// d/dx[x³] = 3x²
-define deriv_x_cubed(x) = power_rule_deriv(3, x)
-
-// d/dx[1/x] = -1/x² (power rule with n=-1)
-define deriv_reciprocal(x) = power_rule_deriv(0 - 1, x)
+// Chain rule: D(f(g(x)), x) = D(f, g(x)) * D(g, x)
+define chain_rule(Df_at_g, Dg) = Df_at_g * Dg
 
 // =============================================================================
-// PARTIAL DERIVATIVES (2 variables)
+// EXAMPLE: Total vs Partial on x^2 + y^2
 // =============================================================================
 
-// For f(x,y) = x² + y², partial derivatives are:
-// ∂f/∂x = 2x
-// ∂f/∂y = 2y
+// f(x, y) = x^2 + y^2
 
-define partial_x_of_sum_squares(x, y) = 2 * x
-define partial_y_of_sum_squares(x, y) = 2 * y
+// Partial derivative D(f, x) = 2*x (y treated as constant)
+define partial_f_x(x, y) = 2 * x
 
-// For f(x,y) = x * y:
-// ∂f/∂x = y
-// ∂f/∂y = x
-define partial_x_of_product(x, y) = y
-define partial_y_of_product(x, y) = x
+// Partial derivative D(f, y) = 2*y (x treated as constant)  
+define partial_f_y(x, y) = 2 * y
 
-// Mixed partial: ∂²(xy)/∂x∂y = 1
-// (First ∂/∂y gives x, then ∂/∂x gives 1)
-define mixed_partial_xy(x, y) = 1
+// Total derivative Dt(f, x) = 2*x + 2*y*Dt(y, x)
+// If y is independent of x: Dt(y, x) = 0, so Dt(f, x) = 2*x
+// If y = x (i.e., on the line y=x): Dt(y, x) = 1, so Dt(f, x) = 2*x + 2*y
+define total_f_x_independent(x, y) = 2 * x
+define total_f_x_on_diagonal(x, y) = 2 * x + 2 * y
 
 // =============================================================================
-// GRADIENT FUNCTIONS
+// GRADIENT AND LAPLACIAN
 // =============================================================================
 
-// ∇(x² + y²) = (2x, 2y)
-define gradient_sum_squares(x, y) = [2 * x, 2 * y]
+// Gradient: ∇f = (D(f, x), D(f, y))
+// For f = x^2 + y^2: ∇f = (2x, 2y)
+define gradient_f(x, y) = [2 * x, 2 * y]
 
-// ∇(xy) = (y, x)
-define gradient_product(x, y) = [y, x]
-
-// Gradient magnitude: |∇f| = sqrt((∂f/∂x)² + (∂f/∂y)²)
-define gradient_magnitude(dx, dy) = sqrt(dx * dx + dy * dy)
-
-// =============================================================================
-// TAYLOR EXPANSION (first order)
-// =============================================================================
-
-// f(x + h) ≈ f(x) + f'(x) * h
-define taylor_first_order(f_x, df_x, h) = f_x + df_x * h
-
-// f(x + h, y + k) ≈ f(x,y) + ∂f/∂x * h + ∂f/∂y * k
-define taylor_two_var(f_xy, df_dx, df_dy, h, k) = f_xy + df_dx * h + df_dy * k
+// Laplacian: ∇²f = D(D(f, x), x) + D(D(f, y), y)
+// For f = x^2 + y^2: ∇²f = 2 + 2 = 4
+define laplacian_f() = 4
 
 // =============================================================================
-// DIFFERENTIAL OPERATORS (symbolic)
+// MIXED PARTIAL DERIVATIVES (Schwarz's theorem)
 // =============================================================================
 
-// Laplacian: ∇²f = ∂²f/∂x² + ∂²f/∂y² (in 2D)
-define laplacian_2d(d2f_dx2, d2f_dy2) = d2f_dx2 + d2f_dy2
+// For f(x, y) = x * y:
+// D(f, x) = y
+// D(D(f, x), y) = D(y, y) = 1
+// D(f, y) = x  
+// D(D(f, y), x) = D(x, x) = 1
+// So D(D(f, x), y) = D(D(f, y), x) = 1 ✓
 
-// For f(x,y) = x² + y²:
-// ∂²f/∂x² = 2, ∂²f/∂y² = 2
-// So ∇²f = 4
-define laplacian_sum_squares() = laplacian_2d(2, 2)
-
-// Divergence: ∇·F = ∂Fx/∂x + ∂Fy/∂y (for 2D vector field)
-define divergence_2d(dFx_dx, dFy_dy) = dFx_dx + dFy_dy
+define mixed_partial_xy() = 1
+define mixed_partial_yx() = 1
 
 // =============================================================================
-// THEOREMS TO VERIFY
+// VERIFICATION TESTS
 // =============================================================================
-
-// Theorem 1: Power rule is correct
-// d/dx[x²] at x=3 should give 2*3 = 6
-// :verify deriv_x_squared(3) = 6
-
-// Theorem 2: Product rule
-// d/dx[x * x] = 1*x + x*1 = 2x
-// At x=5: 2*5 = 10
+// Run in REPL:
+//
+// Power rule tests:
+// :verify D_x_squared(3) = 6
+// :verify D_x_cubed(2) = 12
+//
+// Product rule test (D(x*x, x) = 1*x + x*1 = 2x):
 // :verify product_rule(5, 1, 5, 1) = 10
-
-// Theorem 3: Chain rule
-// d/dx[(x²)²] = 2(x²) * 2x = 4x³
-// This uses chain_rule with f(u)=u², g(x)=x²
-// f'(u) = 2u, so f'(g(x)) = 2x²
-// g'(x) = 2x
-// Result: 2x² * 2x = 4x³
+//
+// Chain rule test (D((x^2)^2, x) = 2*x^2 * 2*x = 4*x^3):
 // At x=2: 4*8 = 32
 // :verify chain_rule(8, 4) = 32
-
-// Theorem 4: Quotient rule for 1/x
-// d/dx[1/x] = (0*x - 1*1)/x² = -1/x²
-// At x=2: -1/4
-// Note: Kleis uses integer arithmetic, so this needs care
-
-// Theorem 5: Mixed partials equality
-// For f(x,y) = xy:
-// ∂/∂y[∂f/∂x] = ∂/∂y[y] = 1
-// ∂/∂x[∂f/∂y] = ∂/∂x[x] = 1
-// :verify mixed_partial_xy(0, 0) = 1
-
-// Theorem 6: Laplacian of x² + y²
-// :verify laplacian_sum_squares() = 4
-
+//
+// Laplacian:
+// :verify laplacian_f() = 4
+//
+// Mixed partials (Schwarz):
+// :verify mixed_partial_xy() = mixed_partial_yx()
+//
+// Total vs partial on diagonal:
+// At (2, 2): partial = 4, total = 4 + 4 = 8
+// :verify partial_f_x(2, 2) = 4
+// :verify total_f_x_on_diagonal(2, 2) = 8

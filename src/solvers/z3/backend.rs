@@ -290,6 +290,33 @@ impl<'r> Z3Backend<'r> {
                 arithmetic::translate_sqrt(&args[0])
             }
 
+            // Derivative operators (Mathematica-style)
+            // D(f, x) - partial derivative ∂f/∂x
+            // Dt(f, x) - total derivative df/dx
+            "D" | "partial" => {
+                // D(f, x) or D(f, x, y) for mixed partials
+                if args.is_empty() {
+                    return Err("D requires at least 1 argument".to_string());
+                }
+                // Use uninterpreted function - axioms define behavior
+                let func_decl = self.declare_uninterpreted("D", args.len());
+                let ast_args: Vec<&dyn z3::ast::Ast> =
+                    args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            "Dt" | "total" => {
+                // Dt(f, x) - total derivative
+                if args.len() < 2 {
+                    return Err("Dt requires at least 2 arguments".to_string());
+                }
+                // Use uninterpreted function - axioms define behavior
+                let func_decl = self.declare_uninterpreted("Dt", args.len());
+                let ast_args: Vec<&dyn z3::ast::Ast> =
+                    args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
             "abs" | "absolute" => {
                 if args.len() != 1 {
                     return Err("abs requires 1 argument".to_string());
