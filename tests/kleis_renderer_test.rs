@@ -74,10 +74,11 @@ fn kleis_render_partial_derivative() {
     let expr = op("d_part", vec![o("f"), o("x")]);
     let out = render_expression(&expr, &ctx, &RenderTarget::Kleis);
 
-    // Grammar: derivative ::= "∂" expression "/" "∂" identifier
-    assert!(out.contains("∂"), "Should contain partial symbol");
+    // Grammar v0.7: Mathematica-style D(f, x) for partial derivative
+    assert!(out.contains("D("), "Should contain D function call");
     assert!(out.contains("f"), "Should contain function");
     assert!(out.contains("x"), "Should contain variable");
+    assert_eq!(out, "D(f, x)");
     println!("Kleis partial derivative: {}", out);
 }
 
@@ -88,10 +89,11 @@ fn kleis_render_total_derivative() {
     let expr = op("d_dt", vec![o("y"), o("t")]);
     let out = render_expression(&expr, &ctx, &RenderTarget::Kleis);
 
-    // Grammar: derivative ::= "d" expression "/" "d" identifier
-    assert!(out.contains("d"), "Should contain d symbol");
+    // Grammar v0.7: Mathematica-style Dt(y, t) for total derivative
+    assert!(out.contains("Dt("), "Should contain Dt function call");
     assert!(out.contains("y"), "Should contain function");
     assert!(out.contains("t"), "Should contain variable");
+    assert_eq!(out, "Dt(y, t)");
     println!("Kleis total derivative: {}", out);
 }
 
@@ -102,9 +104,11 @@ fn kleis_render_limit() {
     let expr = op("lim", vec![o("f(x)"), o("x"), c("0")]);
     let out = render_expression(&expr, &ctx, &RenderTarget::Kleis);
 
-    // Limit syntax (proposed for grammar)
-    assert!(out.contains("lim"), "Should contain lim");
-    assert!(out.contains("→"), "Should contain arrow");
+    // Grammar v0.7: Limit(body, var, target)
+    assert!(out.contains("Limit("), "Should contain Limit function call");
+    assert!(out.contains("f(x)"), "Should contain body");
+    assert!(out.contains("x"), "Should contain variable");
+    assert!(out.contains("0"), "Should contain target");
     println!("Kleis limit: {}", out);
 }
 

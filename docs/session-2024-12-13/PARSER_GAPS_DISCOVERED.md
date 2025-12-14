@@ -1,5 +1,19 @@
 # Parser Gaps Discovered by Level 2 Tests
 
+## Design Principle
+
+**The official Kleis grammar (`docs/grammar/kleis_grammar_v07.ebnf`) is the source of truth.**
+
+**Grammar v0.7 BREAKING CHANGES (Dec 13, 2024):**
+- `∂f/∂x` and `df/dx` notation **REMOVED**
+- Use Mathematica-style: `D(f, x)` for partial, `Dt(f, x)` for total derivative
+- Added `Limit(body, var, target)` for limits
+
+1. **Parser** must implement what the grammar defines
+2. **Renderer** must output grammar-conforming syntax
+3. If renderer outputs non-grammar syntax → **fix the renderer**
+4. If parser doesn't support grammar syntax → **fix the parser**
+
 ## Summary
 
 Level 2 round-trip tests revealed **11 parser gaps**. These must be fixed to complete the Equation Editor → Kleis verification pipeline.
@@ -24,19 +38,20 @@ Level 2 round-trip tests revealed **11 parser gaps**. These must be fixed to com
 
 ### ❌ FAILED (Parser gaps)
 
-| # | Expression | Rendered | Error |
-|---|------------|----------|-------|
-| 1 | Integral w/ bounds | `∫_{{0}}^{{1}} f dx` | `Unexpected character: '{'` |
-| 2 | Summation | `Σ_{{i=1}}^{{n}} a_i` | `Unexpected character: '{'` |
-| 3 | Product | `Π_{{i=1}}^{{n}} a_i` | `Unexpected character: '{'` |
-| 4 | Limit | `lim_{{x→0}} f(x)` | `Unexpected character: '{'` |
-| 5 | Partial derivative | `∂f/∂x` | `Expected expression` |
-| 6 | Set membership | `x ∈ S` | `Unexpected character: '∈'` |
-| 7 | Bra notation | `⟨φ\|` | `Expected expression` |
-| 8 | Ket notation | `\|ψ⟩` | `Expected expression` |
-| 9 | Placeholder | `□` | `Expected expression` |
-| 10 | Forall | `∀(P(x)). x` | `Expected expression` |
-| 11 | Exists | `∃(P(x)). x` | `Expected expression` |
+| # | Expression | Rendered | Error | Status |
+|---|------------|----------|-------|--------|
+| 1 | Integral w/ bounds | `∫_{{0}}^{{1}} f dx` | `Unexpected character: '{'` | Pending |
+| 2 | Summation | `Σ_{{i=1}}^{{n}} a_i` | `Unexpected character: '{'` | Pending |
+| 3 | Product | `Π_{{i=1}}^{{n}} a_i` | `Unexpected character: '{'` | Pending |
+| 4 | Limit | `Limit(f, x, 0)` | Needs function call parsing | **Fixed in v0.7** |
+| 5 | Partial derivative | `D(f, x)` | Function call works | **Fixed in v0.7** |
+| 6 | Total derivative | `Dt(y, t)` | Function call works | **Fixed in v0.7** |
+| 7 | Set membership | `x ∈ S` | `Unexpected character: '∈'` | Pending |
+| 8 | Bra notation | `⟨φ\|` | `Expected expression` | Pending |
+| 9 | Ket notation | `\|ψ⟩` | `Expected expression` | Pending |
+| 10 | Placeholder | `□` | `Expected expression` | Pending |
+| 11 | Forall | `∀(P(x)). x` | `Expected expression` | Pending |
+| 12 | Exists | `∃(P(x)). x` | `Expected expression` | Pending |
 
 ---
 
@@ -184,34 +199,62 @@ So the rendering IS correct, but the parse result puts things in different arg p
 
 ---
 
-## Decision: Function-Call Style for Calculus
+## Design Principle: Renderer Shows What Parser Must Support
 
-Given the complexity of subscript/superscript parsing, recommend:
+**CRITICAL:** The Kleis renderer outputs the FULL semantic representation.
+The parser must adapt to support it, NOT the other way around.
 
-**Use function-call style for all calculus operations:**
+This approach ensures we discover ALL parser gaps rather than hiding them
+by dumbing down the renderer output.
 
-| Visual | Kleis Syntax |
-|--------|--------------|
-| ∫₀¹ f dx | `Integrate(f, x, 0, 1)` |
-| Σᵢ₌₁ⁿ aᵢ | `Sum(a_i, i, 1, n)` |
-| Πᵢ₌₁ⁿ aᵢ | `Product(a_i, i, 1, n)` |
-| limₓ→₀ f(x) | `Limit(f(x), x, 0)` |
-| ∂f/∂x | `D(f, x)` |
+**Renderer outputs (canonical Kleis syntax):**
+```
+∫_{0}^{1} f dx      ← Parser must learn to parse this
+Σ_{i=1}^{n} a_i     ← Parser must learn to parse this
+∂f/∂x               ← Parser must learn to parse this
+x ∈ S               ← Parser must learn to parse this
+□                   ← Parser must learn to parse this
+```
 
-This is the Mathematica style and:
-- Already works with current parser for function calls
-- Unambiguous semantics
-- Easy for Z3 translation
-- Matches existing `D(f, x)` and `Integrate(f, x)` patterns
+**NOT:** Simplify renderer to match parser limitations.
 
 ---
 
-## Action Items
+## Action Items (Parser Must Catch Up)
 
-1. [ ] Update Kleis templates to use function-call style
-2. [ ] Add `Σ`, `Π` as prefix operators (for simple cases)
-3. [ ] Add `∈` as infix operator
-4. [ ] Add `□` placeholder support
-5. [ ] Add bra/ket support (lower priority)
-6. [ ] Update tests to verify fixes
+### ✅ RESOLVED in Grammar v0.7
+
+5. [x] **Partial derivatives** → Use `D(f, x)` (Mathematica-style)
+6. [x] **Total derivatives** → Use `Dt(f, x)` (Mathematica-style)  
+7. [x] **Limits** → Use `Limit(body, var, target)` (function-call style)
+
+### High Priority (Calculus)
+
+1. [ ] **Add subscript/superscript parsing** for `_{...}^{...}` syntax
+   - Needed for: `∫_{a}^{b}`, `Σ_{i=1}^{n}`, `Π_{i=1}^{n}`
+   - OR use function-call alternatives: `Integrate(f, x, a, b)`, `Sum(expr, i, 1, n)`, `Product(expr, i, 1, n)`
+
+2. [ ] **Add `Σ` as prefix operator** with subscript/superscript support
+   - Grammar: `summation ::= "Σ" [ subscript ] [ superscript ] expression`
+
+3. [ ] **Add `Π` as prefix operator** with subscript/superscript support
+   - Grammar: `productNotation ::= "Π" [ subscript ] [ superscript ] expression`
+
+### Medium Priority (Logic & Sets)
+
+6. [ ] **Add `∈` as infix operator**
+   - `x ∈ S` → `in_set(x, S)`
+
+7. [ ] **Add `□` placeholder parsing**
+   - Grammar already has: `placeholder ::= "□"`
+
+### Lower Priority (Quantum)
+
+8. [ ] **Add bra notation** `⟨...|`
+9. [ ] **Add ket notation** `|...⟩`
+
+### Verification
+
+10. [ ] Re-run Level 2 tests after each parser fix
+11. [ ] All 26 tests should eventually pass
 

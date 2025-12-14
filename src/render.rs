@@ -3731,18 +3731,18 @@ pub fn build_default_context() -> GlyphContext {
         "Π_{{{from}}}^{{{to}}} {body}".to_string(),
     );
     kleis_templates.insert("prod_index".to_string(), "Π_{{{from}}} {body}".to_string());
-    // derivative ::= "d" expression "/" "d" identifier | "∂" expression "/" "∂" identifier
-    kleis_templates.insert("d_dt".to_string(), "d{num}/d{den}".to_string());
-    kleis_templates.insert("d_part".to_string(), "∂{num}/∂{den}".to_string());
-    kleis_templates.insert("d2_part".to_string(), "∂²{num}/∂{den}²".to_string());
-    // Limit - NOTE: Not in grammar v0.5, proposing: lim_{var→target} body
+    // v0.7: Mathematica-style derivatives - D() for partial, Dt() for total
+    kleis_templates.insert("d_dt".to_string(), "Dt({num}, {den})".to_string());
+    kleis_templates.insert("d_part".to_string(), "D({num}, {den})".to_string());
+    kleis_templates.insert("d2_part".to_string(), "D({num}, {den}, {den})".to_string());
+    // v0.7: Limit notation - Limit(body, var, target)
     kleis_templates.insert(
         "lim".to_string(),
-        "lim_{{{var}→{target}}} {body}".to_string(),
+        "Limit({body}, {var}, {target})".to_string(),
     );
     kleis_templates.insert(
         "limit".to_string(),
-        "lim_{{{var}→{target}}} {body}".to_string(),
+        "Limit({body}, {var}, {target})".to_string(),
     );
     // Gradient (prefix operator per grammar)
     kleis_templates.insert("grad".to_string(), "∇{arg}".to_string());

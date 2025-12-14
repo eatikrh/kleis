@@ -46,7 +46,12 @@ fn roundtrip_simple_variable() {
     let expr = o("x");
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
-    assert!(parsed.is_ok(), "Failed to parse: {} -> {:?}", rendered, parsed);
+    assert!(
+        parsed.is_ok(),
+        "Failed to parse: {} -> {:?}",
+        rendered,
+        parsed
+    );
 }
 
 #[test]
@@ -54,7 +59,12 @@ fn roundtrip_simple_constant() {
     let expr = c("42");
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
-    assert!(parsed.is_ok(), "Failed to parse: {} -> {:?}", rendered, parsed);
+    assert!(
+        parsed.is_ok(),
+        "Failed to parse: {} -> {:?}",
+        rendered,
+        parsed
+    );
 }
 
 #[test]
@@ -62,7 +72,12 @@ fn roundtrip_addition() {
     let expr = op("plus", vec![o("a"), o("b")]);
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
-    assert!(parsed.is_ok(), "Failed to parse: {} -> {:?}", rendered, parsed);
+    assert!(
+        parsed.is_ok(),
+        "Failed to parse: {} -> {:?}",
+        rendered,
+        parsed
+    );
 }
 
 #[test]
@@ -79,7 +94,12 @@ fn roundtrip_power() {
     let expr = op("power", vec![o("x"), c("2")]);
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
-    assert!(parsed.is_ok(), "Failed to parse: {} -> {:?}", rendered, parsed);
+    assert!(
+        parsed.is_ok(),
+        "Failed to parse: {} -> {:?}",
+        rendered,
+        parsed
+    );
 }
 
 // ============================================================
@@ -94,14 +114,19 @@ fn roundtrip_gradient() {
     println!("Rendered: {}", rendered);
     println!("Parse result: {:?}", parsed);
     // This should work - ∇ is a prefix operator
-    assert!(parsed.is_ok(), "Failed to parse gradient: {} -> {:?}", rendered, parsed);
+    assert!(
+        parsed.is_ok(),
+        "Failed to parse gradient: {} -> {:?}",
+        rendered,
+        parsed
+    );
 }
 
 #[test]
 fn roundtrip_integral_simple() {
     // ∫f - simple indefinite integral (prefix operator)
-    let expr = op("Integrate", vec![o("f")]);
-    let ctx = build_default_context();
+    let _expr = op("Integrate", vec![o("f")]);
+    let _ctx = build_default_context();
     // Render manually since we don't have a template for simple Integrate
     let rendered = "∫f";
     let parsed = parse_kleis(rendered).map_err(|e| format!("{:?}", e));
@@ -142,32 +167,44 @@ fn roundtrip_product() {
 
 #[test]
 fn roundtrip_partial_derivative() {
-    // ∂f/∂x
+    // Grammar v0.7: D(f, x) - Mathematica-style partial derivative
     let expr = op("d_part", vec![o("f"), o("x")]);
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
+    assert_eq!(
+        rendered, "D(f, x)",
+        "Should render as Mathematica-style D()"
+    );
     println!("Parse result: {:?}", parsed);
-    // ∂f/∂x format - parser may not support this notation
+    // Parser should handle D(f, x) as function call
 }
 
 #[test]
 fn roundtrip_total_derivative() {
-    // dy/dt
+    // Grammar v0.7: Dt(y, t) - Mathematica-style total derivative
     let expr = op("d_dt", vec![o("y"), o("t")]);
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
+    assert_eq!(
+        rendered, "Dt(y, t)",
+        "Should render as Mathematica-style Dt()"
+    );
     println!("Parse result: {:?}", parsed);
-    // df/dx format - parser may treat / as division
+    // Parser should handle Dt(y, t) as function call
 }
 
 #[test]
 fn roundtrip_limit() {
-    // lim_{x→0} f(x)
+    // Grammar v0.7: Limit(body, var, target) - function call style
     let expr = op("lim", vec![o("f(x)"), o("x"), c("0")]);
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
+    assert!(
+        rendered.contains("Limit("),
+        "Should render as Limit function call"
+    );
     println!("Parse result: {:?}", parsed);
-    // This will likely FAIL - lim not in grammar!
+    // Parser should handle Limit(f, x, 0) as function call
 }
 
 // ============================================================
@@ -212,7 +249,12 @@ fn roundtrip_equals() {
     let expr = op("equals", vec![o("a"), o("b")]);
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
-    assert!(parsed.is_ok(), "Failed to parse: {} -> {:?}", rendered, parsed);
+    assert!(
+        parsed.is_ok(),
+        "Failed to parse: {} -> {:?}",
+        rendered,
+        parsed
+    );
 }
 
 #[test]
@@ -221,7 +263,12 @@ fn roundtrip_less_than() {
     let expr = op("less_than", vec![o("a"), o("b")]);
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
-    assert!(parsed.is_ok(), "Failed to parse: {} -> {:?}", rendered, parsed);
+    assert!(
+        parsed.is_ok(),
+        "Failed to parse: {} -> {:?}",
+        rendered,
+        parsed
+    );
 }
 
 #[test]
@@ -327,4 +374,3 @@ fn roundtrip_placeholder() {
     println!("Parse result: {:?}", parsed);
     // □ is in grammar but may not be in parser
 }
-
