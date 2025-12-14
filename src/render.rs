@@ -10,6 +10,7 @@ pub enum RenderTarget {
     LaTeX,
     HTML,
     Typst, // Typst markup for math layout engine
+    Kleis, // Kleis text syntax for verification
 }
 
 // === Glyph + Template Context ===
@@ -23,6 +24,8 @@ pub struct GlyphContext {
     html_templates: HashMap<String, String>,
     typst_glyphs: HashMap<String, String>,
     typst_templates: HashMap<String, String>,
+    kleis_glyphs: HashMap<String, String>,
+    kleis_templates: HashMap<String, String>,
 }
 
 // === Expression Builders (ergonomic helpers) ===
@@ -653,6 +656,7 @@ fn render_expression_internal(
                     format!(r#"<span class="math-const">{}</span>"#, escape_html(name))
                 }
                 RenderTarget::Typst => latex_to_typst_symbol(name), // Convert LaTeX symbols to Typst
+                RenderTarget::Kleis => name.clone(),                // Constants pass through as-is
             }
         }
         Expression::Object(name) => {
@@ -664,6 +668,13 @@ fn render_expression_internal(
                     escape_html(&latex_to_unicode(name))
                 ),
                 RenderTarget::Typst => latex_to_typst_symbol(name), // Convert LaTeX symbols to Typst
+                RenderTarget::Kleis => {
+                    // Convert LaTeX symbols to Unicode for Kleis
+                    ctx.kleis_glyphs
+                        .get(name)
+                        .cloned()
+                        .unwrap_or_else(|| latex_to_unicode(name))
+                }
             }
         }
         Expression::Placeholder { id, hint } => {
@@ -681,6 +692,8 @@ fn render_expression_internal(
                 // The syntax #[#box[...]<label>] switches to markup mode where labels work
                 // This produces <g data-typst-label="ph0"> in the SVG output
                 RenderTarget::Typst => format!("#[#box[$square.stroked$]<ph{}>]", id),
+                // Kleis grammar: placeholder ::= "□"
+                RenderTarget::Kleis => "□".to_string(),
             }
         }
         Expression::Operation { name, args } => {
@@ -794,6 +807,15 @@ fn render_expression_internal(
                         })
                         .unwrap_or_else(|| format!("{}({})", name, "{args}"));
                     let glyph = ctx.typst_glyphs.get(name).unwrap_or(name);
+                    (template, glyph)
+                }
+                RenderTarget::Kleis => {
+                    // Use Kleis templates for verification syntax
+                    let template = ctx.kleis_templates.get(name).cloned().unwrap_or_else(|| {
+                        // Default: function call syntax name(arg1, arg2, ...)
+                        format!("{}({{args}})", name)
+                    });
+                    let glyph = ctx.kleis_glyphs.get(name).unwrap_or(name);
                     (template, glyph)
                 }
             };
@@ -1308,7 +1330,7 @@ fn render_expression_internal(
                                 // LaTeX: same format
                                 case_rows.push(format!("{} & {}", rendered_expr, rendered_cond));
                             }
-                            RenderTarget::Unicode => {
+                            RenderTarget::Unicode | RenderTarget::Kleis => {
                                 case_rows.push(format!("{}  if {}", rendered_expr, rendered_cond));
                             }
                         }
@@ -1325,7 +1347,7 @@ fn render_expression_internal(
                         result =
                             format!(r"\begin{{cases}}{}\end{{cases}}", case_rows.join(r" \\ "));
                     }
-                    RenderTarget::Unicode => {
+                    RenderTarget::Unicode | RenderTarget::Kleis => {
                         result = format!("{{ {} }}", case_rows.join(" ; "));
                     }
                 }
@@ -1380,6 +1402,8 @@ fn render_expression_internal(
                 RenderTarget::LaTeX => r"\text{match}".to_string(),
                 RenderTarget::HTML => r#"<span class="match-expr">match</span>"#.to_string(),
                 RenderTarget::Typst => "\\text{match}".to_string(),
+                // Kleis has native match syntax
+                RenderTarget::Kleis => "match { ... }".to_string(),
             }
         }
 
@@ -1393,13 +1417,13 @@ fn render_expression_internal(
             let _ = where_clause; // TODO: Render where clause in output
             let quant_symbol = match quantifier {
                 crate::ast::QuantifierKind::ForAll => match target {
-                    RenderTarget::Unicode => "∀",
+                    RenderTarget::Unicode | RenderTarget::Kleis => "∀",
                     RenderTarget::LaTeX => r"\forall",
                     RenderTarget::HTML => "∀",
                     RenderTarget::Typst => "forall",
                 },
                 crate::ast::QuantifierKind::Exists => match target {
-                    RenderTarget::Unicode => "∃",
+                    RenderTarget::Unicode | RenderTarget::Kleis => "∃",
                     RenderTarget::LaTeX => r"\exists",
                     RenderTarget::HTML => "∃",
                     RenderTarget::Typst => "exists",
@@ -1422,7 +1446,7 @@ fn render_expression_internal(
             let body_str = render_expression_internal(body, ctx, target, &body_id, node_id_to_uuid);
 
             match target {
-                RenderTarget::Unicode | RenderTarget::HTML => {
+                RenderTarget::Unicode | RenderTarget::HTML | RenderTarget::Kleis => {
                     format!("{}({}). {}", quant_symbol, vars_str, body_str)
                 }
                 RenderTarget::LaTeX => {
@@ -1457,7 +1481,9 @@ fn render_expression_internal(
                 .collect();
 
             match target {
-                RenderTarget::Unicode => format!("[{}]", rendered_elements.join(", ")),
+                RenderTarget::Unicode | RenderTarget::Kleis => {
+                    format!("[{}]", rendered_elements.join(", "))
+                }
                 RenderTarget::LaTeX => format!(r"\left[{}\right]", rendered_elements.join(", ")),
                 RenderTarget::HTML => {
                     format!(
@@ -1486,7 +1512,8 @@ fn render_expression_internal(
                 render_expression_internal(else_branch, ctx, target, &else_id, node_id_to_uuid);
 
             match target {
-                RenderTarget::Unicode => {
+                RenderTarget::Unicode | RenderTarget::Kleis => {
+                    // Kleis grammar: conditional ::= "if" expression "then" expression "else" expression
                     format!("if {} then {} else {}", cond_str, then_str, else_str)
                 }
                 RenderTarget::LaTeX => {
@@ -1519,7 +1546,8 @@ fn render_expression_internal(
             let body_str = render_expression_internal(body, ctx, target, &body_id, node_id_to_uuid);
 
             match target {
-                RenderTarget::Unicode => {
+                RenderTarget::Unicode | RenderTarget::Kleis => {
+                    // Kleis grammar: letBinding ::= "let" identifier ... "=" expression "in" expression
                     format!("let {} = {} in {}", name, value_str, body_str)
                 }
                 RenderTarget::LaTeX => {
@@ -3639,6 +3667,171 @@ pub fn build_default_context() -> GlyphContext {
 
     // TODO: Add more Typst templates as needed
 
+    // === Kleis Glyphs ===
+    // Kleis uses Unicode directly for most symbols
+    let mut kleis_glyphs = HashMap::new();
+    // Greek letters (keep as Unicode)
+    kleis_glyphs.insert("\\alpha".to_string(), "α".to_string());
+    kleis_glyphs.insert("\\beta".to_string(), "β".to_string());
+    kleis_glyphs.insert("\\gamma".to_string(), "γ".to_string());
+    kleis_glyphs.insert("\\delta".to_string(), "δ".to_string());
+    kleis_glyphs.insert("\\epsilon".to_string(), "ε".to_string());
+    kleis_glyphs.insert("\\zeta".to_string(), "ζ".to_string());
+    kleis_glyphs.insert("\\eta".to_string(), "η".to_string());
+    kleis_glyphs.insert("\\theta".to_string(), "θ".to_string());
+    kleis_glyphs.insert("\\lambda".to_string(), "λ".to_string());
+    kleis_glyphs.insert("\\mu".to_string(), "μ".to_string());
+    kleis_glyphs.insert("\\nu".to_string(), "ν".to_string());
+    kleis_glyphs.insert("\\xi".to_string(), "ξ".to_string());
+    kleis_glyphs.insert("\\pi".to_string(), "π".to_string());
+    kleis_glyphs.insert("\\rho".to_string(), "ρ".to_string());
+    kleis_glyphs.insert("\\sigma".to_string(), "σ".to_string());
+    kleis_glyphs.insert("\\tau".to_string(), "τ".to_string());
+    kleis_glyphs.insert("\\phi".to_string(), "φ".to_string());
+    kleis_glyphs.insert("\\chi".to_string(), "χ".to_string());
+    kleis_glyphs.insert("\\psi".to_string(), "ψ".to_string());
+    kleis_glyphs.insert("\\omega".to_string(), "ω".to_string());
+    // Uppercase Greek
+    kleis_glyphs.insert("\\Gamma".to_string(), "Γ".to_string());
+    kleis_glyphs.insert("\\Delta".to_string(), "Δ".to_string());
+    kleis_glyphs.insert("\\Theta".to_string(), "Θ".to_string());
+    kleis_glyphs.insert("\\Lambda".to_string(), "Λ".to_string());
+    kleis_glyphs.insert("\\Xi".to_string(), "Ξ".to_string());
+    kleis_glyphs.insert("\\Pi".to_string(), "Π".to_string());
+    kleis_glyphs.insert("\\Sigma".to_string(), "Σ".to_string());
+    kleis_glyphs.insert("\\Phi".to_string(), "Φ".to_string());
+    kleis_glyphs.insert("\\Psi".to_string(), "Ψ".to_string());
+    kleis_glyphs.insert("\\Omega".to_string(), "Ω".to_string());
+    // Special symbols
+    kleis_glyphs.insert("\\infty".to_string(), "∞".to_string());
+    kleis_glyphs.insert("\\partial".to_string(), "∂".to_string());
+    kleis_glyphs.insert("\\nabla".to_string(), "∇".to_string());
+    kleis_glyphs.insert("\\hbar".to_string(), "ℏ".to_string());
+    kleis_glyphs.insert("\\emptyset".to_string(), "∅".to_string());
+
+    // === Kleis Templates ===
+    // These output Kleis syntax conforming to the grammar
+    let mut kleis_templates = HashMap::new();
+
+    // Calculus - conforming to grammar:
+    // integral ::= "∫" [ subscript ] [ superscript ] expression [ "d" identifier ]
+    kleis_templates.insert(
+        "int_bounds".to_string(),
+        "∫_{{{lower}}}^{{{upper}}} {integrand} d{int_var}".to_string(),
+    );
+    // summation ::= "Σ" [ subscript ] [ superscript ] expression
+    kleis_templates.insert(
+        "sum_bounds".to_string(),
+        "Σ_{{{from}}}^{{{to}}} {body}".to_string(),
+    );
+    kleis_templates.insert("sum_index".to_string(), "Σ_{{{from}}} {body}".to_string());
+    // product ::= "Π" [ subscript ] [ superscript ] expression
+    kleis_templates.insert(
+        "prod_bounds".to_string(),
+        "Π_{{{from}}}^{{{to}}} {body}".to_string(),
+    );
+    kleis_templates.insert("prod_index".to_string(), "Π_{{{from}}} {body}".to_string());
+    // derivative ::= "d" expression "/" "d" identifier | "∂" expression "/" "∂" identifier
+    kleis_templates.insert("d_dt".to_string(), "d{num}/d{den}".to_string());
+    kleis_templates.insert("d_part".to_string(), "∂{num}/∂{den}".to_string());
+    kleis_templates.insert("d2_part".to_string(), "∂²{num}/∂{den}²".to_string());
+    // Limit - NOTE: Not in grammar v0.5, proposing: lim_{var→target} body
+    kleis_templates.insert(
+        "lim".to_string(),
+        "lim_{{{var}→{target}}} {body}".to_string(),
+    );
+    kleis_templates.insert(
+        "limit".to_string(),
+        "lim_{{{var}→{target}}} {body}".to_string(),
+    );
+    // Gradient (prefix operator per grammar)
+    kleis_templates.insert("grad".to_string(), "∇{arg}".to_string());
+    kleis_templates.insert("gradient".to_string(), "∇{arg}".to_string());
+
+    // Arithmetic
+    kleis_templates.insert("plus".to_string(), "({left} + {right})".to_string());
+    kleis_templates.insert("minus".to_string(), "({left} - {right})".to_string());
+    kleis_templates.insert(
+        "scalar_multiply".to_string(),
+        "({left} × {right})".to_string(),
+    );
+    kleis_templates.insert("multiply".to_string(), "({left} × {right})".to_string());
+    kleis_templates.insert(
+        "scalar_divide".to_string(),
+        "({left} / {right})".to_string(),
+    );
+    kleis_templates.insert("power".to_string(), "{base}^{exponent}".to_string());
+    kleis_templates.insert("negate".to_string(), "-{arg}".to_string());
+
+    // Comparison/Relations
+    kleis_templates.insert("equals".to_string(), "{left} = {right}".to_string());
+    kleis_templates.insert("not_equal".to_string(), "{left} ≠ {right}".to_string());
+    kleis_templates.insert("less_than".to_string(), "{left} < {right}".to_string());
+    kleis_templates.insert("greater_than".to_string(), "{left} > {right}".to_string());
+    kleis_templates.insert("leq".to_string(), "{left} ≤ {right}".to_string());
+    kleis_templates.insert("geq".to_string(), "{left} ≥ {right}".to_string());
+    kleis_templates.insert("approx".to_string(), "{left} ≈ {right}".to_string());
+    kleis_templates.insert("equiv".to_string(), "{left} ≡ {right}".to_string());
+
+    // Logic
+    kleis_templates.insert("implies".to_string(), "({left} ⟹ {right})".to_string());
+    kleis_templates.insert("iff".to_string(), "({left} ⟺ {right})".to_string());
+    kleis_templates.insert("logical_and".to_string(), "({left} ∧ {right})".to_string());
+    kleis_templates.insert("logical_or".to_string(), "({left} ∨ {right})".to_string());
+    kleis_templates.insert("logical_not".to_string(), "¬{arg}".to_string());
+    // Quantifiers
+    kleis_templates.insert("forall".to_string(), "∀({var}). {body}".to_string());
+    kleis_templates.insert("exists".to_string(), "∃({var}). {body}".to_string());
+
+    // Set operations
+    kleis_templates.insert("in_set".to_string(), "{left} ∈ {right}".to_string());
+    kleis_templates.insert("not_in_set".to_string(), "{left} ∉ {right}".to_string());
+    kleis_templates.insert("subset".to_string(), "{left} ⊂ {right}".to_string());
+    kleis_templates.insert("subseteq".to_string(), "{left} ⊆ {right}".to_string());
+    kleis_templates.insert("union".to_string(), "({left} ∪ {right})".to_string());
+    kleis_templates.insert("intersection".to_string(), "({left} ∩ {right})".to_string());
+
+    // Functions (function call syntax)
+    kleis_templates.insert("sqrt".to_string(), "√{arg}".to_string());
+    kleis_templates.insert("abs".to_string(), "abs({arg})".to_string());
+    kleis_templates.insert("norm".to_string(), "norm({arg})".to_string());
+    kleis_templates.insert("sin".to_string(), "sin({arg})".to_string());
+    kleis_templates.insert("cos".to_string(), "cos({arg})".to_string());
+    kleis_templates.insert("tan".to_string(), "tan({arg})".to_string());
+    kleis_templates.insert("exp".to_string(), "exp({arg})".to_string());
+    kleis_templates.insert("ln".to_string(), "ln({arg})".to_string());
+    kleis_templates.insert("log".to_string(), "log({arg})".to_string());
+
+    // Brackets & grouping
+    kleis_templates.insert("parens".to_string(), "({content})".to_string());
+    kleis_templates.insert("brackets".to_string(), "[{content}]".to_string());
+    kleis_templates.insert("braces".to_string(), "{{{content}}}".to_string());
+
+    // Subscript/superscript
+    kleis_templates.insert("sub".to_string(), "{base}_{{{right}}}".to_string());
+    kleis_templates.insert("sup".to_string(), "{base}^{{{right}}}".to_string());
+    kleis_templates.insert(
+        "subsup".to_string(),
+        "{base}_{{{subscript}}}^{{{superscript}}}".to_string(),
+    );
+
+    // Matrix/Vector (use Kleis list syntax)
+    kleis_templates.insert("transpose".to_string(), "{arg}ᵀ".to_string());
+    kleis_templates.insert("det".to_string(), "det({arg})".to_string());
+    kleis_templates.insert("trace".to_string(), "trace({arg})".to_string());
+    kleis_templates.insert("vector_bold".to_string(), "{arg}".to_string());
+    kleis_templates.insert("vector_arrow".to_string(), "{arg}".to_string());
+
+    // Dot/cross products
+    kleis_templates.insert("dot".to_string(), "({left} · {right})".to_string());
+    kleis_templates.insert("cross".to_string(), "({left} × {right})".to_string());
+    kleis_templates.insert("inner".to_string(), "⟨{left}, {right}⟩".to_string());
+
+    // Quantum notation
+    kleis_templates.insert("ket".to_string(), "|{arg}⟩".to_string());
+    kleis_templates.insert("bra".to_string(), "⟨{arg}|".to_string());
+    kleis_templates.insert("braket".to_string(), "⟨{left}|{right}⟩".to_string());
+
     GlyphContext {
         unicode_glyphs,
         unicode_templates,
@@ -3648,6 +3841,8 @@ pub fn build_default_context() -> GlyphContext {
         html_templates,
         typst_glyphs,
         typst_templates,
+        kleis_glyphs,
+        kleis_templates,
     }
 }
 
