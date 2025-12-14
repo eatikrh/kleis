@@ -1,0 +1,246 @@
+// ============================================
+// Kleis Standard Library - Calculus
+// ============================================
+// Mathematica-style calculus operations
+// Grammar: v0.7
+// Version: 0.1.0
+// ============================================
+
+// ============================================
+// DERIVATIVE OPERATIONS (Mathematica-style)
+// ============================================
+//
+// D(f, x)      - Partial derivative ∂f/∂x
+// D(f, x, y)   - Mixed partial ∂²f/∂x∂y
+// Dt(f, x)     - Total derivative df/dx (chain rule)
+// ============================================
+
+structure Differentiable(F) {
+    // Partial derivative: other variables treated as constants
+    operation D : F × Variable → F
+    
+    // Total derivative: chain rule applies to all dependencies
+    operation Dt : F × Variable → F
+    
+    // --- Linearity ---
+    axiom D_additive:
+        ∀(f g : F)(x : Variable). D(f + g, x) = D(f, x) + D(g, x)
+    
+    axiom D_scalar:
+        ∀(c : ℝ)(f : F)(x : Variable). D(c × f, x) = c × D(f, x)
+    
+    // --- Constants and Variables ---
+    axiom D_const:
+        ∀(c : ℝ)(x : Variable). D(c, x) = 0
+    
+    axiom D_var_self:
+        ∀(x : Variable). D(x, x) = 1
+    
+    axiom D_var_other:
+        ∀(x y : Variable). x ≠ y ⟹ D(x, y) = 0
+    
+    // --- Product Rule (Leibniz) ---
+    axiom D_product:
+        ∀(f g : F)(x : Variable). D(f × g, x) = D(f, x) × g + f × D(g, x)
+    
+    // --- Quotient Rule ---
+    axiom D_quotient:
+        ∀(f g : F)(x : Variable). g ≠ 0 ⟹ 
+            D(f / g, x) = (D(f, x) × g - f × D(g, x)) / (g × g)
+    
+    // --- Chain Rule (Total Derivative) ---
+    axiom Dt_chain:
+        ∀(f : F)(x y : Variable). 
+            Dt(f, x) = D(f, x) + D(f, y) × Dt(y, x)
+    
+    // --- Total = Partial when variable is independent ---
+    axiom Dt_independent:
+        ∀(f : F)(x y : Variable). 
+            Dt(y, x) = 0 ⟹ Dt(f, x) = D(f, x)
+}
+
+// ============================================
+// SMOOTH FUNCTIONS (Higher Derivatives)
+// ============================================
+
+structure SmoothFunction(F) extends Differentiable(F) {
+    // Schwarz's Theorem: mixed partials commute
+    axiom mixed_partials_commute:
+        ∀(f : F)(x y : Variable). D(D(f, x), y) = D(D(f, y), x)
+    
+    // Power rule: D(x^n, x) = n × x^(n-1)
+    axiom D_power:
+        ∀(x : Variable)(n : ℕ). D(x^n, x) = n × x^(n - 1)
+}
+
+// ============================================
+// INTEGRATION
+// ============================================
+//
+// Integrate(f, x)        - Indefinite integral ∫f dx
+// Integrate(f, x, a, b)  - Definite integral ∫[a,b] f dx
+// ============================================
+
+structure Integrable(F) {
+    // Indefinite integral (antiderivative)
+    operation Integrate : F × Variable → F
+    
+    // --- Fundamental Theorem of Calculus ---
+    // Derivative of integral is the integrand
+    axiom FTC_part1:
+        ∀(f : F)(x : Variable). D(Integrate(f, x), x) = f
+    
+    // Integral of derivative is the function (up to constant)
+    // ∫[a,b] D(f,x) dx = f(b) - f(a)
+    
+    // --- Linearity ---
+    axiom integrate_additive:
+        ∀(f g : F)(x : Variable). 
+            Integrate(f + g, x) = Integrate(f, x) + Integrate(g, x)
+    
+    axiom integrate_scalar:
+        ∀(c : ℝ)(f : F)(x : Variable). 
+            Integrate(c × f, x) = c × Integrate(f, x)
+    
+    // --- Power Rule ---
+    // ∫x^n dx = x^(n+1)/(n+1) for n ≠ -1
+    axiom integrate_power:
+        ∀(x : Variable)(n : ℕ). n ≠ 0 ⟹
+            (n + 1) × Integrate(x^n, x) = x^(n + 1)
+}
+
+// ============================================
+// LIMITS
+// ============================================
+//
+// Limit(f, x, a)  - lim_{x→a} f
+// ============================================
+
+structure HasLimit(F) {
+    operation Limit : F × Variable × F → F
+    
+    // --- Limit Laws ---
+    axiom limit_additive:
+        ∀(f g : F)(x : Variable)(a : F).
+            Limit(f + g, x, a) = Limit(f, x, a) + Limit(g, x, a)
+    
+    axiom limit_scalar:
+        ∀(c : ℝ)(f : F)(x : Variable)(a : F).
+            Limit(c × f, x, a) = c × Limit(f, x, a)
+    
+    axiom limit_product:
+        ∀(f g : F)(x : Variable)(a : F).
+            Limit(f × g, x, a) = Limit(f, x, a) × Limit(g, x, a)
+    
+    axiom limit_quotient:
+        ∀(f g : F)(x : Variable)(a : F). Limit(g, x, a) ≠ 0 ⟹
+            Limit(f / g, x, a) = Limit(f, x, a) / Limit(g, x, a)
+    
+    // Continuous function: limit equals value
+    axiom limit_continuous:
+        ∀(f : F)(x : Variable)(a : F). 
+            Limit(f, x, a) = f  // when f is continuous at a
+}
+
+// ============================================
+// SUMMATION
+// ============================================
+//
+// Sum(expr, i, a, b)  - Σ_{i=a}^{b} expr
+// ============================================
+
+structure Summable(F) {
+    operation Sum : F × Variable × ℕ × ℕ → F
+    
+    // --- Linearity ---
+    axiom sum_additive:
+        ∀(f g : F)(i : Variable)(a b : ℕ).
+            Sum(f + g, i, a, b) = Sum(f, i, a, b) + Sum(g, i, a, b)
+    
+    axiom sum_scalar:
+        ∀(c : ℝ)(f : F)(i : Variable)(a b : ℕ).
+            Sum(c × f, i, a, b) = c × Sum(f, i, a, b)
+    
+    // --- Telescoping ---
+    axiom sum_telescoping:
+        ∀(f : F)(i : Variable)(a b : ℕ).
+            Sum(f(i + 1) - f(i), i, a, b) = f(b + 1) - f(a)
+    
+    // --- Split Range ---
+    axiom sum_split:
+        ∀(f : F)(i : Variable)(a b c : ℕ). a ≤ b ∧ b ≤ c ⟹
+            Sum(f, i, a, c) = Sum(f, i, a, b) + Sum(f, i, b + 1, c)
+    
+    // --- Known Sums ---
+    axiom sum_constant:
+        ∀(c : ℝ)(i : Variable)(a b : ℕ).
+            Sum(c, i, a, b) = c × (b - a + 1)
+    
+    axiom sum_linear:
+        ∀(i : Variable)(n : ℕ).
+            2 × Sum(i, i, 1, n) = n × (n + 1)
+    
+    axiom sum_squares:
+        ∀(i : Variable)(n : ℕ).
+            6 × Sum(i × i, i, 1, n) = n × (n + 1) × (2 × n + 1)
+}
+
+// ============================================
+// PRODUCT (PRODUCTORY)
+// ============================================
+//
+// Product(expr, i, a, b)  - Π_{i=a}^{b} expr
+// ============================================
+
+structure Productable(F) {
+    operation Product : F × Variable × ℕ × ℕ → F
+    
+    // --- Multiplicativity ---
+    axiom product_multiplicative:
+        ∀(f g : F)(i : Variable)(a b : ℕ).
+            Product(f × g, i, a, b) = Product(f, i, a, b) × Product(g, i, a, b)
+    
+    axiom product_power:
+        ∀(c : ℝ)(f : F)(i : Variable)(a b : ℕ).
+            Product(c × f, i, a, b) = c^(b - a + 1) × Product(f, i, a, b)
+    
+    // --- Factorial ---
+    axiom product_factorial:
+        ∀(i : Variable)(n : ℕ).
+            Product(i, i, 1, n) = n!
+    
+    // --- Empty Product ---
+    axiom product_empty:
+        ∀(f : F)(i : Variable)(a b : ℕ). a > b ⟹
+            Product(f, i, a, b) = 1
+}
+
+// ============================================
+// GRADIENT AND VECTOR CALCULUS
+// ============================================
+
+structure VectorCalculus(F, n : ℕ) extends Differentiable(F) {
+    // Gradient: ∇f = (D(f, x₁), D(f, x₂), ..., D(f, xₙ))
+    operation gradient : F → Vector(n)
+    
+    // Laplacian: ∇²f = Σ D(D(f, xᵢ), xᵢ)
+    operation laplacian : F → F
+    
+    // Divergence: ∇·F for vector field F
+    operation divergence : Vector(n) → F
+    
+    // Curl (3D only): ∇×F
+    operation curl : Vector(3) → Vector(3)
+    
+    // --- Laplacian is trace of Hessian ---
+    axiom laplacian_def:
+        ∀(f : F). laplacian(f) = Sum(D(D(f, x(i)), x(i)), i, 1, n)
+}
+
+// ============================================
+// TYPE ALIAS: Variable
+// ============================================
+
+data Variable = X | Y | Z | T | R | Theta | Phi
+
+
