@@ -124,6 +124,17 @@ struct VerifyResponse {
     error: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+struct CheckSatResponse {
+    success: bool,
+    result: String, // "satisfiable", "unsatisfiable", "unknown", "error", "incomplete"
+    kleis_syntax: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    example: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
 // Shared application state
 #[derive(Clone)]
 struct AppState {
@@ -161,6 +172,7 @@ async fn main() {
         .route("/api/type_check", post(type_check_handler))
         .route("/api/render_kleis", post(render_kleis_handler))
         .route("/api/verify", post(verify_handler))
+        .route("/api/check_sat", post(check_sat_handler))
         .route("/api/operations", get(operations_handler))
         .route("/api/gallery", get(gallery_handler))
         .route("/health", get(health_handler))
@@ -907,6 +919,25 @@ async fn verify_handler(
         }
     };
 
+    // Check for unfilled placeholders before verification
+    let placeholders = expr.find_placeholders();
+    if !placeholders.is_empty() {
+        let placeholder_hints: Vec<String> = placeholders
+            .iter()
+            .map(|(_, hint)| format!("\"{}\"", hint))
+            .collect();
+        return Json(VerifyResponse {
+            success: false,
+            result: "incomplete".to_string(),
+            kleis_syntax: String::new(),
+            counterexample: None,
+            error: Some(format!(
+                "Please fill in all placeholders before verifying. Unfilled: {}",
+                placeholder_hints.join(", ")
+            )),
+        });
+    }
+
     // Render to Kleis syntax first
     let ctx = kleis::render::build_default_context();
     let kleis_syntax =
@@ -952,6 +983,96 @@ async fn verify_handler(
             kleis_syntax,
             counterexample: None,
             error: Some(format!("Verification error: {}", e)),
+        }),
+    }
+}
+
+// Check satisfiability with Z3 (existence check: "Can this be true?")
+async fn check_sat_handler(
+    State(_state): State<Arc<AppState>>,
+    Json(req): Json<VerifyRequest>,
+) -> impl IntoResponse {
+    use kleis::solvers::backend::SolverBackend;
+    use kleis::structure_registry::StructureRegistry;
+
+    // Parse AST from JSON
+    let expr = match json_to_expression(&req.ast) {
+        Ok(e) => e,
+        Err(e) => {
+            return Json(CheckSatResponse {
+                success: false,
+                result: "error".to_string(),
+                kleis_syntax: String::new(),
+                example: None,
+                error: Some(format!("Failed to parse AST: {}", e)),
+            });
+        }
+    };
+
+    // Check for unfilled placeholders before checking satisfiability
+    let placeholders = expr.find_placeholders();
+    if !placeholders.is_empty() {
+        let placeholder_hints: Vec<String> = placeholders
+            .iter()
+            .map(|(_, hint)| format!("\"{}\"", hint))
+            .collect();
+        return Json(CheckSatResponse {
+            success: false,
+            result: "incomplete".to_string(),
+            kleis_syntax: String::new(),
+            example: None,
+            error: Some(format!(
+                "Please fill in all placeholders first. Unfilled: {}",
+                placeholder_hints.join(", ")
+            )),
+        });
+    }
+
+    // Render to Kleis syntax first
+    let ctx = kleis::render::build_default_context();
+    let kleis_syntax =
+        kleis::render::render_expression(&expr, &ctx, &kleis::render::RenderTarget::Kleis);
+
+    // Create Z3 backend and check satisfiability
+    let registry = StructureRegistry::default();
+    let mut backend = match kleis::solvers::z3::backend::Z3Backend::new(&registry) {
+        Ok(b) => b,
+        Err(e) => {
+            return Json(CheckSatResponse {
+                success: false,
+                result: "error".to_string(),
+                kleis_syntax,
+                example: None,
+                error: Some(format!("Failed to create Z3 backend: {}", e)),
+            });
+        }
+    };
+
+    // Check satisfiability
+    match backend.check_satisfiability(&expr) {
+        Ok(result) => {
+            use kleis::solvers::backend::SatisfiabilityResult;
+            let (result_str, example) = match result {
+                SatisfiabilityResult::Satisfiable { example } => {
+                    ("satisfiable".to_string(), Some(example))
+                }
+                SatisfiabilityResult::Unsatisfiable => ("unsatisfiable".to_string(), None),
+                SatisfiabilityResult::Unknown => ("unknown".to_string(), None),
+            };
+            Json(CheckSatResponse {
+                success: true,
+                result: result_str,
+                kleis_syntax,
+                example,
+                error: None,
+            })
+        }
+        Err(e) => Json(CheckSatResponse {
+            success: false,
+            result: "error".to_string(),
+            kleis_syntax,
+            example: None,
+            error: Some(format!("Satisfiability check error: {}", e)),
         }),
     }
 }

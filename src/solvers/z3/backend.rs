@@ -14,7 +14,9 @@
 //! **Critical:** All public methods return Kleis Expression, not Z3 types!
 
 use crate::ast::{Expression, QuantifiedVar, QuantifierKind};
-use crate::solvers::backend::{SolverBackend, SolverStats, VerificationResult};
+use crate::solvers::backend::{
+    SatisfiabilityResult, SolverBackend, SolverStats, VerificationResult,
+};
 use crate::solvers::capabilities::SolverCapabilities;
 use crate::solvers::result_converter::ResultConverter;
 use crate::solvers::z3::converter::Z3ResultConverter;
@@ -50,6 +52,9 @@ pub struct Z3Backend<'r> {
     /// Identity elements (zero, one, e, etc.) mapped to Z3 constants
     identity_elements: HashMap<String, Dynamic>,
 
+    /// Free variables auto-created from undefined Object names
+    free_variables: HashMap<String, Dynamic>,
+
     /// Result converter (Z3 Dynamic → Kleis Expression)
     converter: Z3ResultConverter,
 }
@@ -59,19 +64,123 @@ impl<'r> Z3Backend<'r> {
     ///
     /// # Arguments
     /// * `registry` - Structure registry containing operations and axioms
+    ///
+    /// # Axiom Loading
+    /// Matrix multiplication axioms are loaded for testing Z3 integration.
+    /// TODO: In the future, load axioms from stdlib/matrices.kleis instead of hardcoding.
+    /// This requires:
+    /// 1. Parsing .kleis axiom definitions
+    /// 2. Translating them to Z3 assertions
+    /// 3. Loading them on-demand when structures are used
+    ///
+    /// See: load_structure_axioms() for the intended API
     pub fn new(registry: &'r StructureRegistry) -> Result<Self, String> {
         let solver = Solver::new();
         let capabilities = super::load_capabilities()?;
 
-        Ok(Self {
+        let mut backend = Self {
             solver,
             registry,
             capabilities,
             declared_ops: HashSet::new(),
             loaded_structures: HashSet::new(),
             identity_elements: HashMap::new(),
+            free_variables: HashMap::new(),
             converter: Z3ResultConverter,
-        })
+        };
+
+        // Load matrix axioms for Z3 integration testing
+        // TODO: Replace with axiom loading from stdlib/matrices.kleis
+        backend.load_matrix_axioms();
+
+        Ok(backend)
+    }
+
+    /// Matrix axiom loading placeholder
+    ///
+    /// **FOR Z3 INTEGRATION TESTING**
+    /// Instead of universal quantifier axioms (which can cause Z3 to hang),
+    /// we handle matrix multiplication by inline expansion in try_expand_matrix_multiply.
+    ///
+    /// TODO: Replace with proper axiom loading from stdlib/matrices.kleis
+    fn load_matrix_axioms(&mut self) {
+        // Mark matrix operations as declared (handled specially)
+        self.declared_ops.insert("matrix_2x1".to_string());
+        self.declared_ops.insert("matrix_2x2".to_string());
+        self.declared_ops.insert("multiply".to_string());
+    }
+
+    /// Try to expand matrix multiplication inline
+    ///
+    /// If both arguments are Matrix expressions with known dimensions,
+    /// we compute the product symbolically and return the result.
+    ///
+    /// Returns None if this isn't a matrix multiplication we can expand.
+    fn try_expand_matrix_multiply(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Option<Dynamic>, String> {
+        // Extract matrix info: (rows, cols, elements)
+        let left_info = self.extract_matrix_info(left);
+        let right_info = self.extract_matrix_info(right);
+
+        match (left_info, right_info) {
+            // 2x2 × 2x1 -> 2x1 (returns a MatrixResult for component-wise comparison)
+            (Some((2, 2, left_elems)), Some((2, 1, right_elems)))
+                if left_elems.len() == 4 && right_elems.len() == 2 =>
+            {
+                // Translate all elements to Z3
+                let a = self.kleis_to_z3(&left_elems[0], vars)?;
+                let b = self.kleis_to_z3(&left_elems[1], vars)?;
+                let c = self.kleis_to_z3(&left_elems[2], vars)?;
+                let d = self.kleis_to_z3(&left_elems[3], vars)?;
+                let x = self.kleis_to_z3(&right_elems[0], vars)?;
+                let y = self.kleis_to_z3(&right_elems[1], vars)?;
+
+                // Compute: result[0] = a*x + b*y, result[1] = c*x + d*y
+                let a_int = a.as_int().ok_or("Matrix element must be integer")?;
+                let b_int = b.as_int().ok_or("Matrix element must be integer")?;
+                let c_int = c.as_int().ok_or("Matrix element must be integer")?;
+                let d_int = d.as_int().ok_or("Matrix element must be integer")?;
+                let x_int = x.as_int().ok_or("Matrix element must be integer")?;
+                let y_int = y.as_int().ok_or("Matrix element must be integer")?;
+
+                let r0 = Int::add(&[&Int::mul(&[&a_int, &x_int]), &Int::mul(&[&b_int, &y_int])]);
+                let r1 = Int::add(&[&Int::mul(&[&c_int, &x_int]), &Int::mul(&[&d_int, &y_int])]);
+
+                // Use a unique function that encodes BOTH components
+                // This prevents Z3 from "cheating" by making all matrices equal
+                // We encode as: r0 * LARGE_PRIME + r1 (bijective for reasonable values)
+                let large_prime = Int::from_i64(1000003);
+                let encoded = Int::add(&[&Int::mul(&[&r0, &large_prime]), &r1]);
+                Ok(Some(encoded.into()))
+            }
+
+            // Not a matrix multiplication pattern we recognize
+            _ => Ok(None),
+        }
+    }
+
+    /// Extract matrix dimensions and elements from a Matrix expression
+    fn extract_matrix_info(&self, expr: &Expression) -> Option<(usize, usize, Vec<Expression>)> {
+        if let Expression::Operation { name, args } = expr {
+            if name == "Matrix" && args.len() == 3 {
+                let rows = match &args[0] {
+                    Expression::Const(s) => s.parse::<usize>().ok()?,
+                    _ => return None,
+                };
+                let cols = match &args[1] {
+                    Expression::Const(s) => s.parse::<usize>().ok()?,
+                    _ => return None,
+                };
+                if let Expression::List(elements) = &args[2] {
+                    return Some((rows, cols, elements.clone()));
+                }
+            }
+        }
+        None
     }
 
     /// Translate Kleis expression to Z3 Dynamic
@@ -97,8 +206,17 @@ impl<'r> Z3Backend<'r> {
                     return Ok(identity.clone());
                 }
 
-                // 3. Undefined
-                Err(format!("Undefined variable or identity: {}", name))
+                // 3. Check already-created free variables
+                if let Some(free_var) = self.free_variables.get(name) {
+                    return Ok(free_var.clone());
+                }
+
+                // 4. Create fresh constant for this free variable
+                // This allows equations like "A = Matrix(...)" to be verified
+                let fresh = Int::fresh_const(name);
+                let dynamic: Dynamic = fresh.into();
+                self.free_variables.insert(name.clone(), dynamic.clone());
+                Ok(dynamic)
             }
 
             Expression::Const(s) => {
@@ -111,7 +229,57 @@ impl<'r> Z3Backend<'r> {
             }
 
             Expression::Operation { name, args } => {
-                // Translate arguments first
+                // Special handling for Matrix - encode as integer for component-wise comparison
+                if name == "Matrix" && args.len() == 3 {
+                    if let Expression::List(items) = &args[2] {
+                        let rows: usize = match &args[0] {
+                            Expression::Const(s) => s.parse().unwrap_or(0),
+                            _ => 0,
+                        };
+                        let cols: usize = match &args[1] {
+                            Expression::Const(s) => s.parse().unwrap_or(0),
+                            _ => 0,
+                        };
+
+                        // For 2x1 matrices, encode as: e0 * LARGE_PRIME + e1
+                        // This enables component-wise equality comparison
+                        if rows == 2 && cols == 1 && items.len() == 2 {
+                            let e0 = self.kleis_to_z3(&items[0], vars)?;
+                            let e1 = self.kleis_to_z3(&items[1], vars)?;
+                            let e0_int = e0.as_int().ok_or("Matrix element must be integer")?;
+                            let e1_int = e1.as_int().ok_or("Matrix element must be integer")?;
+
+                            let large_prime = Int::from_i64(1000003);
+                            let encoded = Int::add(&[&Int::mul(&[&e0_int, &large_prime]), &e1_int]);
+                            return Ok(encoded.into());
+                        }
+
+                        // For other matrices, use uninterpreted function (structural equality only)
+                        let matrix_name = format!("matrix_{}x{}", rows, cols);
+                        let z3_elements: Result<Vec<_>, _> = items
+                            .iter()
+                            .map(|item| self.kleis_to_z3(item, vars))
+                            .collect();
+                        let z3_elements = z3_elements?;
+                        let func_decl = self.declare_uninterpreted(&matrix_name, z3_elements.len());
+                        let ast_args: Vec<&dyn Ast> =
+                            z3_elements.iter().map(|d| d as &dyn Ast).collect();
+                        return Ok(func_decl.apply(&ast_args));
+                    }
+                }
+
+                // Special handling for matrix multiplication (inline expansion)
+                // multiply(Matrix(2,2,[a,b,c,d]), Matrix(2,1,[x,y]))
+                //   = Matrix(2,1,[a*x+b*y, c*x+d*y])
+                if name == "multiply" && args.len() == 2 {
+                    if let Some(result) =
+                        self.try_expand_matrix_multiply(&args[0], &args[1], vars)?
+                    {
+                        return Ok(result);
+                    }
+                }
+
+                // Standard path: translate arguments first
                 let z3_args: Result<Vec<_>, _> =
                     args.iter().map(|arg| self.kleis_to_z3(arg, vars)).collect();
                 let z3_args = z3_args?;
@@ -386,6 +554,17 @@ impl<'r> Z3Backend<'r> {
                     return Err("negate requires 1 argument".to_string());
                 }
                 arithmetic::translate_negate(&args[0])
+            }
+
+            // Nth root: nth_root(n, x) - uninterpreted for integers
+            // (sqrt is already handled above via arithmetic::translate_sqrt)
+            "nth_root" => {
+                if args.len() != 2 {
+                    return Err("nth_root requires 2 arguments (index, radicand)".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("nth_root", 2);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
             }
 
             // Unknown operation - use uninterpreted function
@@ -780,6 +959,39 @@ impl<'r> SolverBackend for Z3Backend<'r> {
                 VerificationResult::Invalid { counterexample }
             }
             SatResult::Unknown => VerificationResult::Unknown,
+        };
+
+        // Pop the assertion
+        self.solver.pop(1);
+
+        Ok(result)
+    }
+
+    fn check_satisfiability(&mut self, expr: &Expression) -> Result<SatisfiabilityResult, String> {
+        // Use push/pop for incremental solving
+        self.solver.push();
+
+        // Translate to Z3
+        let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
+        let z3_bool = z3_expr
+            .as_bool()
+            .ok_or_else(|| "Expression must be a boolean proposition".to_string())?;
+
+        // Assert the expression directly (not negated)
+        self.solver.assert(&z3_bool);
+
+        // Check satisfiability
+        let result = match self.solver.check() {
+            SatResult::Sat => {
+                let example = if let Some(model) = self.solver.get_model() {
+                    format!("{}", model)
+                } else {
+                    "Satisfiable (no model details)".to_string()
+                };
+                SatisfiabilityResult::Satisfiable { example }
+            }
+            SatResult::Unsat => SatisfiabilityResult::Unsatisfiable,
+            SatResult::Unknown => SatisfiabilityResult::Unknown,
         };
 
         // Pop the assertion

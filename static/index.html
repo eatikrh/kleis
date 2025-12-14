@@ -914,6 +914,8 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button id="undoBtn" class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="undo()" disabled title="Undo (Cmd+Z)">↶ Undo</button>
                         <button id="redoBtn" class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="redo()" disabled title="Redo (Cmd+Shift+Z)">↷ Redo</button>
                         <button class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="resetStructuralEditor()">Clear</button>
+                        <button style="padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="verifyWithZ3()" title="Verify validity (always true?)">✓ Verify</button>
+                        <button style="padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="checkSatisfiable()" title="Check satisfiability (can be true?)">∃ Sat?</button>
                     </div>
                     <!-- Type Indicator (NEW!) -->
                     <div id="type-indicator" style="margin-top: 10px; padding: 12px; background: #f5f5f5; border-radius: 6px; border-left: 4px solid #999; display: none; font-family: monospace; font-size: 13px;">
@@ -1770,6 +1772,79 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             }
         }
 
+        // Check satisfiability with Z3 (existence check: "Can this be true?")
+        async function checkSatisfiable() {
+            // Get AST - either from structural editor or parse LaTeX
+            let ast;
+            if (editorMode === 'structural' && currentAST) {
+                ast = currentAST;
+            } else {
+                // Parse LaTeX first
+                const latexInput = document.getElementById('latexInput');
+                if (!latexInput || !latexInput.value.trim()) {
+                    showStatus('Please enter an expression to check', 'error');
+                    return;
+                }
+                try {
+                    const parseResponse = await fetch(`${API_BASE}/parse`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ latex: latexInput.value })
+                    });
+                    const parseResult = await parseResponse.json();
+                    if (!parseResult.success) {
+                        showStatus('❌ Parse error: ' + parseResult.error, 'error');
+                        return;
+                    }
+                    ast = parseResult.ast;
+                } catch (e) {
+                    showStatus('❌ Failed to parse: ' + e.message, 'error');
+                    return;
+                }
+            }
+
+            showStatus('🔄 Checking satisfiability...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/check_sat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ast: ast })
+                });
+                const result = await response.json();
+
+                if (!result.success) {
+                    showStatus('❌ Check error: ' + result.error, 'error');
+                    return;
+                }
+
+                // Display result
+                const resultEmoji = result.result === 'satisfiable' ? '✅' :
+                                   result.result === 'unsatisfiable' ? '❌' :
+                                   result.result === 'unknown' ? '❓' : '⚠️';
+                
+                let message = `${resultEmoji} SAT: ${result.result.toUpperCase()}`;
+                if (result.kleis_syntax) {
+                    message += `\n📝 Kleis: ${result.kleis_syntax}`;
+                }
+                if (result.example) {
+                    message += `\n💡 Example: ${result.example}`;
+                }
+                
+                showStatus(message, result.result === 'satisfiable' ? 'success' : 
+                                   result.result === 'unsatisfiable' ? 'error' : 'warning');
+
+                // Also show in debug panel if open
+                const debugContent = document.getElementById('debugASTContent');
+                if (debugContent) {
+                    const existingContent = debugContent.textContent;
+                    debugContent.textContent = `--- SAT Check ---\nResult: ${result.result}\nKleis: ${result.kleis_syntax}\n${result.example ? 'Example: ' + result.example : ''}\n\n${existingContent}`;
+                }
+            } catch (e) {
+                showStatus('❌ SAT check failed: ' + e.message, 'error');
+            }
+        }
+
         function insertSymbol(latex) {
             if (editorMode === 'structural') {
                 // If inline editor is active, append symbol to input
@@ -2014,7 +2089,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         const astTemplates = {
             // Basic
             fraction: { Operation: { name: 'scalar_divide', args: [{Placeholder:{id:0,hint:'numerator'}}, {Placeholder:{id:1,hint:'denominator'}}] } },
-            power: { Operation: { name: 'sup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'exponent'}}] } },
+            power: { Operation: { name: 'power', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'exponent'}}] } },
             subscript: { Operation: { name: 'sub', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}] } },
             sqrt: { Operation: { name: 'sqrt', args: [{Placeholder:{id:0,hint:'radicand'}}] } },
             nthroot: { Operation: { name: 'nth_root', args: [{Placeholder:{id:0,hint:'index'}}, {Placeholder:{id:1,hint:'radicand'}}] } },
