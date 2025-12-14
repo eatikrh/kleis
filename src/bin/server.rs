@@ -93,6 +93,37 @@ struct TypeCheckResponse {
     suggestion: Option<String>,
 }
 
+// Kleis rendering request/response
+#[derive(Debug, Deserialize)]
+struct RenderKleisRequest {
+    ast: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+struct RenderKleisResponse {
+    kleis: String,
+    success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
+// Z3 verification request/response
+#[derive(Debug, Deserialize)]
+struct VerifyRequest {
+    ast: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+struct VerifyResponse {
+    success: bool,
+    result: String, // "valid", "invalid", "unknown", "error"
+    kleis_syntax: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    counterexample: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
 // Shared application state
 #[derive(Clone)]
 struct AppState {
@@ -128,6 +159,8 @@ async fn main() {
         .route("/api/render_typst", post(render_typst_handler))
         .route("/api/parse", post(parse_handler))
         .route("/api/type_check", post(type_check_handler))
+        .route("/api/render_kleis", post(render_kleis_handler))
+        .route("/api/verify", post(verify_handler))
         .route("/api/operations", get(operations_handler))
         .route("/api/gallery", get(gallery_handler))
         .route("/health", get(health_handler))
@@ -820,6 +853,106 @@ async fn type_check_handler(
                 suggestion: Some("Type is polymorphic - needs more context".to_string()),
             })
         }
+    }
+}
+
+// Render AST to Kleis syntax
+async fn render_kleis_handler(
+    State(_state): State<Arc<AppState>>,
+    Json(req): Json<RenderKleisRequest>,
+) -> impl IntoResponse {
+    // Parse AST from JSON
+    let expr = match json_to_expression(&req.ast) {
+        Ok(e) => e,
+        Err(e) => {
+            return Json(RenderKleisResponse {
+                kleis: String::new(),
+                success: false,
+                error: Some(format!("Failed to parse AST: {}", e)),
+            });
+        }
+    };
+
+    // Render to Kleis syntax
+    let ctx = kleis::render::build_default_context();
+    let kleis_output =
+        kleis::render::render_expression(&expr, &ctx, &kleis::render::RenderTarget::Kleis);
+
+    Json(RenderKleisResponse {
+        kleis: kleis_output,
+        success: true,
+        error: None,
+    })
+}
+
+// Verify AST with Z3
+async fn verify_handler(
+    State(_state): State<Arc<AppState>>,
+    Json(req): Json<VerifyRequest>,
+) -> impl IntoResponse {
+    use kleis::solvers::backend::SolverBackend;
+    use kleis::structure_registry::StructureRegistry;
+
+    // Parse AST from JSON
+    let expr = match json_to_expression(&req.ast) {
+        Ok(e) => e,
+        Err(e) => {
+            return Json(VerifyResponse {
+                success: false,
+                result: "error".to_string(),
+                kleis_syntax: String::new(),
+                counterexample: None,
+                error: Some(format!("Failed to parse AST: {}", e)),
+            });
+        }
+    };
+
+    // Render to Kleis syntax first
+    let ctx = kleis::render::build_default_context();
+    let kleis_syntax =
+        kleis::render::render_expression(&expr, &ctx, &kleis::render::RenderTarget::Kleis);
+
+    // Create Z3 backend and verify
+    let registry = StructureRegistry::default();
+    let mut backend = match kleis::solvers::z3::backend::Z3Backend::new(&registry) {
+        Ok(b) => b,
+        Err(e) => {
+            return Json(VerifyResponse {
+                success: false,
+                result: "error".to_string(),
+                kleis_syntax,
+                counterexample: None,
+                error: Some(format!("Failed to create Z3 backend: {}", e)),
+            });
+        }
+    };
+
+    // Try to verify
+    match backend.verify_axiom(&expr) {
+        Ok(result) => {
+            use kleis::solvers::backend::VerificationResult;
+            let (result_str, counterexample) = match result {
+                VerificationResult::Valid => ("valid".to_string(), None),
+                VerificationResult::Invalid { counterexample } => {
+                    ("invalid".to_string(), Some(counterexample))
+                }
+                VerificationResult::Unknown => ("unknown".to_string(), None),
+            };
+            Json(VerifyResponse {
+                success: true,
+                result: result_str,
+                kleis_syntax,
+                counterexample,
+                error: None,
+            })
+        }
+        Err(e) => Json(VerifyResponse {
+            success: false,
+            result: "error".to_string(),
+            kleis_syntax,
+            counterexample: None,
+            error: Some(format!("Verification error: {}", e)),
+        }),
     }
 }
 

@@ -1188,6 +1188,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 
                 <div class="button-group" id="textControls">
                     <button onclick="renderEquation()">🎨 Render</button>
+                    <button onclick="verifyWithZ3()" style="background: linear-gradient(135deg, #10b981, #059669);">✓ Verify</button>
                     <button class="secondary" onclick="clearInput()">🗑️ Clear</button>
                 </div>
                 <div id="status"></div>
@@ -1693,6 +1694,79 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 showStatus('✅ Rendered successfully!', 'success');
             } catch (error) {
                 showStatus('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        // Verify current expression with Z3
+        async function verifyWithZ3() {
+            // Get AST - either from structural editor or parse LaTeX
+            let ast;
+            if (editorMode === 'structural' && currentAST) {
+                ast = currentAST;
+            } else {
+                // Parse LaTeX first
+                const latexInput = document.getElementById('latexInput');
+                if (!latexInput || !latexInput.value.trim()) {
+                    showStatus('Please enter an expression to verify', 'error');
+                    return;
+                }
+                try {
+                    const parseResponse = await fetch(`${API_BASE}/parse`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ latex: latexInput.value })
+                    });
+                    const parseResult = await parseResponse.json();
+                    if (!parseResult.success) {
+                        showStatus('❌ Parse error: ' + parseResult.error, 'error');
+                        return;
+                    }
+                    ast = parseResult.ast;
+                } catch (e) {
+                    showStatus('❌ Failed to parse: ' + e.message, 'error');
+                    return;
+                }
+            }
+
+            showStatus('🔄 Verifying with Z3...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ast: ast })
+                });
+                const result = await response.json();
+
+                if (!result.success) {
+                    showStatus('❌ Verification error: ' + result.error, 'error');
+                    return;
+                }
+
+                // Display result
+                const resultEmoji = result.result === 'valid' ? '✅' :
+                                   result.result === 'invalid' ? '❌' :
+                                   result.result === 'unknown' ? '❓' : '⚠️';
+                
+                let message = `${resultEmoji} Z3: ${result.result.toUpperCase()}`;
+                if (result.kleis_syntax) {
+                    message += `\n📝 Kleis: ${result.kleis_syntax}`;
+                }
+                if (result.counterexample) {
+                    message += `\n⚡ Counterexample: ${result.counterexample}`;
+                }
+                
+                showStatus(message, result.result === 'valid' ? 'success' : 
+                                   result.result === 'invalid' ? 'error' : 'warning');
+
+                // Also show in debug panel if open
+                const debugContent = document.getElementById('debugASTContent');
+                if (debugContent) {
+                    const existingContent = debugContent.textContent;
+                    debugContent.textContent = `--- Z3 Verification ---\nResult: ${result.result}\nKleis: ${result.kleis_syntax}\n${result.counterexample ? 'Counterexample: ' + result.counterexample : ''}\n\n${existingContent}`;
+                }
+            } catch (e) {
+                showStatus('❌ Verification failed: ' + e.message, 'error');
             }
         }
 
