@@ -54,15 +54,11 @@ fn verify_pipeline(expr: &Expression) -> (String, Result<Expression, String>, bo
     let z3_ok = if let Ok(ref parsed_expr) = parsed {
         // Check if Z3 can translate the expression
         let registry = StructureRegistry::default();
-        match Z3Backend::new(&registry) {
-            Ok(mut backend) => {
-                // Try to verify - if it doesn't crash, Z3 can handle it
-                match backend.verify_axiom(parsed_expr) {
-                    Ok(_) => true,
-                    Err(_) => false, // Z3 couldn't process
-                }
-            }
-            Err(_) => false,
+        if let Ok(mut backend) = Z3Backend::new(&registry) {
+            // Try to verify - if it doesn't crash, Z3 can handle it
+            backend.verify_axiom(parsed_expr).is_ok()
+        } else {
+            false
         }
     } else {
         false
