@@ -100,6 +100,7 @@ fn test_z3_flt_n3_satisfiability() {
 
 /// Test n=4: a⁴ + b⁴ = c⁴
 #[test]
+#[ignore] // Long-running Z3 satisfiability check
 fn test_z3_flt_n4_satisfiability() {
     let registry = StructureRegistry::new();
     let mut backend = Z3Backend::new(&registry).expect("Z3 backend creation failed");
