@@ -7,15 +7,15 @@
 
 | Tab | Buttons | Kleis Renderer | Notes |
 |-----|---------|----------------|-------|
-| **Basics** | 15+ | ✅ Mostly done | Arithmetic, equals, subscript/superscript |
-| **Fences** | 8 | ⚠️ Partial | Need parens, brackets, braces templates |
-| **Accents** | 9 | ⚠️ Partial | dot, hat, bar, vec |
-| **Calculus** | 14 | ✅ Done | D(), Dt(), Integrate(), Limit(), Sum(), Product() |
-| **Linear Algebra** | 12 | ⚠️ Partial | Matrices, vectors, det, trace |
-| **Greek** | 35 | ✅ Done | All Greek letters have glyphs |
-| **Logic & Sets** | 18+ | ✅ Mostly done | ∧, ∨, ¬, ∈, ⊂, quantifiers |
-| **Physics** | 8 | ⚠️ Partial | Bra-ket needs work |
-| **POT** | 8 | ❌ Not started | Projection operators |
+| **Basics** | 15+ | ✅ Complete | Arithmetic, ±, ∓, ∗ all done |
+| **Fences** | 8 | ✅ Complete | parens, brackets, floor, ceiling |
+| **Accents** | 9 | ✅ Complete | dot, hat, bar, tilde, vec |
+| **Calculus** | 14 | ✅ Complete | D(), Dt(), Fourier(), Laplace(), Convolve() |
+| **Linear Algebra** | 12 | ⚠️ Partial | Matrices need literal syntax |
+| **Greek** | 35 | ✅ Complete | All Greek letters have glyphs |
+| **Logic & Sets** | 18+ | ✅ Complete | ∧, ∨, ¬, ∈, ⊂, quantifiers |
+| **Physics** | 8 | ⚠️ Partial | Bra-ket parser issue |
+| **POT** | 8 | ⚠️ Partial | Function call syntax works |
 
 ---
 
@@ -28,10 +28,10 @@
 | Minus | `-` | `minus` | ✅ |
 | Times | `\times` | `multiply` | ✅ |
 | Divide | `\div` | `scalar_divide` | ✅ |
-| Plus-Minus | `\pm` | - | ❌ Need template |
-| Minus-Plus | `\mp` | - | ❌ Need template |
+| Plus-Minus | `\pm` | `plus_minus` → `PlusMinus(a, b)` | ✅ |
+| Minus-Plus | `\mp` | `minus_plus` → `MinusPlus(a, b)` | ✅ |
 | Dot | `\cdot` | `dot` | ✅ |
-| Asterisk | `\ast` | - | ❌ Need template |
+| Asterisk | `\ast` | `star` → `(a ∗ b)` | ✅ |
 | Equal | `=` | `equals` | ✅ |
 | Not Equal | `\neq` | `not_equal` | ✅ |
 | Infinity | `\infty` | glyph | ✅ |
@@ -41,7 +41,7 @@
 | Subscript | `_{}` | `sub` | ✅ |
 | Root | `\sqrt{}` | `sqrt` | ✅ |
 
-### Fences Tab ⚠️
+### Fences Tab ✅
 
 | Button | LaTeX | Kleis Template | Status |
 |--------|-------|----------------|--------|
@@ -51,20 +51,20 @@
 | Angle | `\langle\rangle` | `inner` | ✅ |
 | Absolute | `\left\|\right\|` | `abs` | ✅ |
 | Norm | `\|\cdot\|` | `norm` | ✅ |
-| Floor | `\lfloor\rfloor` | - | ❌ Need template |
-| Ceiling | `\lceil\rceil` | - | ❌ Need template |
+| Floor | `\lfloor\rfloor` | `floor` → `floor(x)` | ✅ |
+| Ceiling | `\lceil\rceil` | `ceiling` → `ceiling(x)` | ✅ |
 
-### Accents Tab ⚠️
+### Accents Tab ✅
 
 | Button | LaTeX | Kleis Template | Status |
 |--------|-------|----------------|--------|
-| Dot | `\dot{}` | - | ❌ Need template |
-| Double Dot | `\ddot{}` | - | ❌ Need template |
-| Hat | `\hat{}` | - | ❌ Need template |
-| Bar | `\bar{}` | - | ❌ Need template |
-| Tilde | `\tilde{}` | - | ❌ Need template |
-| Overline | `\overline{}` | - | ❌ Need template |
-| Underline | `\underline{}` | - | ❌ Need template |
+| Dot | `\dot{}` | `dot_accent` → `ẋ` | ✅ |
+| Double Dot | `\ddot{}` | `ddot_accent` → `ẍ` | ✅ |
+| Hat | `\hat{}` | `hat` → `x̂` | ✅ |
+| Bar | `\bar{}` | `bar` → `x̄` | ✅ |
+| Tilde | `\tilde{}` | `tilde_accent` → `x̃` | ✅ |
+| Overline | `\overline{}` | `overline(x)` | ✅ |
+| Underline | `\underline{}` | `underline(x)` | ✅ |
 | Vector | `\vec{}` | `vector_arrow` | ✅ |
 | Bold | `\mathbf{}` | `vector_bold` | ✅ |
 
@@ -79,13 +79,13 @@
 | Derivative | `\frac{d}{dx}` | `d_dt` → `Dt(f, x)` | ✅ |
 | Partial | `\frac{\partial}{\partial}` | `d_part` → `D(f, x)` | ✅ |
 | Gradient | `\nabla` | `gradient` → `∇f` | ✅ |
-| Fourier | `\mathcal{F}[]` | - | ❌ Need template |
-| Inv Fourier | `\mathcal{F}^{-1}[]` | - | ❌ Need template |
-| Laplace | `\mathcal{L}[]` | - | ❌ Need template |
-| Inv Laplace | `\mathcal{L}^{-1}[]` | - | ❌ Need template |
-| Convolution | `\ast` | - | ❌ Need template |
-| Kernel Integral | `\int_{} K \, d\mu` | - | ❌ Need template |
-| Green's Function | `G(x, m)` | - | ❌ Function call works |
+| Fourier | `\mathcal{F}[]` | `fourier` → `Fourier(f, ω)` | ✅ |
+| Inv Fourier | `\mathcal{F}^{-1}[]` | `inv_fourier` → `InvFourier(F, t)` | ✅ |
+| Laplace | `\mathcal{L}[]` | `laplace` → `Laplace(f, s)` | ✅ |
+| Inv Laplace | `\mathcal{L}^{-1}[]` | `inv_laplace` → `InvLaplace(F, t)` | ✅ |
+| Convolution | `\ast` | `convolution` → `Convolve(f, g)` | ✅ |
+| Kernel Integral | `\int_{} K \, d\mu` | Standard integral template | ✅ |
+| Green's Function | `G(x, m)` | Function call syntax | ✅ |
 
 ### Linear Algebra Tab ⚠️
 
@@ -195,12 +195,14 @@ All Greek letters have Kleis glyphs:
 
 | Category | Coverage |
 |----------|----------|
-| Core Arithmetic | 95% |
+| Core Arithmetic | 100% ✅ |
+| Fences | 100% ✅ |
+| Accents | 100% ✅ |
 | Calculus | 100% ✅ |
 | Logic/Sets | 100% ✅ |
 | Greek | 100% ✅ |
-| Linear Algebra | 60% |
-| Physics | 30% |
-| POT | 20% |
-| **Overall** | **~75%** |
+| Linear Algebra | 70% |
+| Physics | 40% |
+| POT | 40% |
+| **Overall** | **~90%** |
 

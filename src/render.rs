@@ -3708,6 +3708,11 @@ pub fn build_default_context() -> GlyphContext {
     kleis_glyphs.insert("\\nabla".to_string(), "∇".to_string());
     kleis_glyphs.insert("\\hbar".to_string(), "ℏ".to_string());
     kleis_glyphs.insert("\\emptyset".to_string(), "∅".to_string());
+    // Branching operators
+    kleis_glyphs.insert("\\pm".to_string(), "±".to_string());
+    kleis_glyphs.insert("\\mp".to_string(), "∓".to_string());
+    // Star/asterisk (convolution, adjoint)
+    kleis_glyphs.insert("\\ast".to_string(), "∗".to_string());
 
     // === Kleis Templates ===
     // These output Kleis syntax conforming to the grammar
@@ -3747,6 +3752,18 @@ pub fn build_default_context() -> GlyphContext {
     // Gradient (prefix operator per grammar)
     kleis_templates.insert("grad".to_string(), "∇{arg}".to_string());
     kleis_templates.insert("gradient".to_string(), "∇{arg}".to_string());
+
+    // Integral transforms
+    kleis_templates.insert("fourier".to_string(), "Fourier({func}, {var})".to_string());
+    kleis_templates.insert(
+        "inv_fourier".to_string(),
+        "InvFourier({func}, {var})".to_string(),
+    );
+    kleis_templates.insert("laplace".to_string(), "Laplace({func}, {var})".to_string());
+    kleis_templates.insert(
+        "inv_laplace".to_string(),
+        "InvLaplace({func}, {var})".to_string(),
+    );
 
     // Arithmetic
     kleis_templates.insert("plus".to_string(), "({left} + {right})".to_string());
@@ -3822,10 +3839,43 @@ pub fn build_default_context() -> GlyphContext {
     kleis_templates.insert("vector_bold".to_string(), "{arg}".to_string());
     kleis_templates.insert("vector_arrow".to_string(), "{arg}".to_string());
 
+    // Accents (physics/mechanics notation)
+    kleis_templates.insert("dot_accent".to_string(), "{arg}̇".to_string()); // combining dot
+    kleis_templates.insert("ddot_accent".to_string(), "{arg}̈".to_string()); // combining double dot
+    kleis_templates.insert("hat".to_string(), "{arg}̂".to_string()); // combining circumflex
+    kleis_templates.insert("bar".to_string(), "{arg}̄".to_string()); // combining macron
+    kleis_templates.insert("tilde_accent".to_string(), "{arg}̃".to_string()); // combining tilde
+    kleis_templates.insert("overline".to_string(), "overline({arg})".to_string());
+    kleis_templates.insert("underline".to_string(), "underline({arg})".to_string());
+
+    // Floor/ceiling
+    kleis_templates.insert("floor".to_string(), "floor({arg})".to_string());
+    kleis_templates.insert("ceiling".to_string(), "ceiling({arg})".to_string());
+
     // Dot/cross products
     kleis_templates.insert("dot".to_string(), "({left} · {right})".to_string());
     kleis_templates.insert("cross".to_string(), "({left} × {right})".to_string());
     kleis_templates.insert("inner".to_string(), "⟨{left}, {right}⟩".to_string());
+
+    // Branching operators: ± and ∓ represent TWO values
+    // a ± b = {a + b, a - b} - e.g., quadratic formula gives two roots
+    // We use a constructor to preserve the semantic meaning
+    kleis_templates.insert(
+        "plus_minus".to_string(),
+        "PlusMinus({left}, {right})".to_string(),
+    );
+    kleis_templates.insert(
+        "minus_plus".to_string(),
+        "MinusPlus({left}, {right})".to_string(),
+    );
+
+    // Star/asterisk: context-dependent operation
+    // Convolution in signal processing: (f ∗ g)(t) = ∫ f(τ)g(t-τ) dτ
+    kleis_templates.insert("star".to_string(), "({left} ∗ {right})".to_string());
+    kleis_templates.insert(
+        "convolution".to_string(),
+        "Convolve({left}, {right})".to_string(),
+    );
 
     // Quantum notation
     kleis_templates.insert("ket".to_string(), "|{arg}⟩".to_string());
