@@ -479,12 +479,14 @@ integral
       | "Integrate" "(" expression "," identifier "," expression "," expression ")"
       ;
 
-(* v0.7 NEW: Limit notation *)
+(* v0.7 NOTE: Limit is a standard function call - no special grammar rule needed *)
+(* Limit(body, var, target) is just: expression "(" arguments ")" *)
+(* This rule is here for documentation only: *)
 limit
     ::= "Limit" "(" expression "," identifier "," expression ")"
       ;
 
-(* 
+(*
   v0.7 REMOVED: Old derivative notation
   
   derivative
@@ -492,9 +494,12 @@ limit
         | "∂" expression "/" "∂" identifier
         ;
   
-  Use instead:
+  Use instead (standard function calls - no special grammar needed):
     D(f, x)   - Partial derivative
     Dt(f, x)  - Total derivative
+    
+  These are regular function applications, covered by:
+    expression ::= expression "(" [ arguments ] ")"
 *)
 
 subscript ::= "_" ( identifier | "{" expression "}" ) ;

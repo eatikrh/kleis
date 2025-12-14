@@ -224,9 +224,11 @@ x ∈ S               ← Parser must learn to parse this
 
 ### ✅ RESOLVED in Grammar v0.7
 
-5. [x] **Partial derivatives** → Use `D(f, x)` (Mathematica-style)
-6. [x] **Total derivatives** → Use `Dt(f, x)` (Mathematica-style)  
-7. [x] **Limits** → Use `Limit(body, var, target)` (function-call style)
+5. [x] **Partial derivatives** → `D(f, x)` (standard function call - no special grammar)
+6. [x] **Total derivatives** → `Dt(f, x)` (standard function call - no special grammar)  
+7. [x] **Limits** → `Limit(body, var, target)` (standard function call - no special grammar)
+
+**Note:** These work because they're regular function applications, which the grammar already supports via `expression ::= expression "(" [ arguments ] ")"`
 
 ### High Priority (Calculus)
 
