@@ -165,8 +165,23 @@ AST: Operation { name: "int_bounds", args: [f, 0, n, x] }
   └── Typst:  $ integral_0^n f dif x $
 ```
 
+### 9. Testing Ladder Methodology ✅
+
+**Document Created:**
+- `docs/session-2024-12-13/TESTING_LADDER.md`
+
+**Three-Level Testing Strategy:**
+
+```
+Level 1: AST → Render → Assert symbols (CURRENT - naive)
+Level 2: AST → Render → PARSE → reveals parser gaps
+Level 3: AST → Render → Parse → Z3 VERIFY → reveals Z3 gaps
+```
+
+This incremental approach systematically discovers ALL gaps rather than guessing.
+
 ## Quality Gates Status
-- ✅ All 489 tests passing (487 + 2 new)
+- ✅ All 497+ tests passing (16 new Kleis renderer tests)
 - ✅ Clippy clean
 - ✅ Formatting correct
 
