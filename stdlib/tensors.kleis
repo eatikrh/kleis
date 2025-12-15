@@ -200,6 +200,9 @@ implements EinsteinTensor(dim) {
  *   - riemann(R, ρ, σ, μ, ν) → displays as R^ρ_σμν
  * 
  * These are used by the UI palette to create properly indexed tensor expressions.
+ * 
+ * Note: The visual editor uses display symbols (Γ, R, g) which are mapped to
+ * tensor types at the UI level. Full type checking integration is future work.
  */
 structure TensorNotation(T) {
     operation gamma : T → T → T → T → T

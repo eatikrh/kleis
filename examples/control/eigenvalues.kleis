@@ -1,0 +1,216 @@
+// =============================================================================
+// Eigenvalue Computation: Closed-Form Solutions
+// =============================================================================
+// 
+// This example demonstrates symbolic eigenvalue calculation for small matrices
+// using closed-form solutions. These are exact (no numerical approximation).
+//
+// For control systems: eigenvalues determine stability!
+//   • All Re(λ) < 0  →  Stable (continuous-time)
+//   • All |λ| < 1    →  Stable (discrete-time)
+// =============================================================================
+
+
+// =============================================================================
+// 2×2 Eigenvalues: Quadratic Formula
+// =============================================================================
+// 
+// For matrix A = [[a, b], [c, d]]
+// Characteristic polynomial: λ² - tr(A)·λ + det(A) = 0
+// 
+// where:
+//   tr(A)  = a + d           (trace)
+//   det(A) = a·d - b·c       (determinant)
+//
+// Eigenvalues by quadratic formula:
+//   λ₁,₂ = (tr ± √(tr² - 4·det)) / 2
+
+structure Matrix2x2() {
+    element a : ℝ
+    element b : ℝ  
+    element c : ℝ
+    element d : ℝ
+    
+    // Derived quantities
+    operation trace : ℝ
+    operation det : ℝ
+    operation discriminant : ℝ
+    
+    axiom trace_def: trace = a + d
+    axiom det_def: det = a * d - b * c
+    axiom discriminant_def: discriminant = trace² - 4 * det
+}
+
+// Eigenvalue pair for 2×2 matrix
+structure Eigenvalues2x2() {
+    element λ₁ : ℂ
+    element λ₂ : ℂ
+}
+
+// Closed-form eigenvalue computation
+operation eigenvalues : Matrix2x2 → Eigenvalues2x2
+
+axiom eigenvalues_2x2:
+    ∀ M : Matrix2x2 .
+    let tr = M.trace in
+    let disc = M.discriminant in
+    eigenvalues(M) = Eigenvalues2x2 {
+        λ₁ = (tr + sqrt(disc)) / 2,
+        λ₂ = (tr - sqrt(disc)) / 2
+    }
+
+// Stability condition: both eigenvalues have negative real part
+operation is_stable : Matrix2x2 → Bool
+
+axiom stability_condition_2x2:
+    ∀ M : Matrix2x2 .
+    is_stable(M) ↔ (Re(eigenvalues(M).λ₁) < 0 ∧ Re(eigenvalues(M).λ₂) < 0)
+
+// Equivalent condition using trace and determinant (faster to check!)
+axiom hurwitz_2x2:
+    ∀ M : Matrix2x2 .
+    is_stable(M) ↔ (M.trace < 0 ∧ M.det > 0)
+
+
+// =============================================================================
+// 3×3 Eigenvalues: Cardano's Formula
+// =============================================================================
+//
+// For matrix A (3×3), characteristic polynomial is:
+//   λ³ - p·λ² + q·λ - r = 0
+//
+// where:
+//   p = tr(A)                           (trace)
+//   q = (tr(A)² - tr(A²)) / 2           (sum of 2×2 principal minors)
+//   r = det(A)                          (determinant)
+//
+// Cardano's formula gives exact solutions (may involve complex cube roots)
+
+structure Matrix3x3() {
+    element a₁₁ : ℝ    element a₁₂ : ℝ    element a₁₃ : ℝ
+    element a₂₁ : ℝ    element a₂₂ : ℝ    element a₂₃ : ℝ
+    element a₃₁ : ℝ    element a₃₂ : ℝ    element a₃₃ : ℝ
+    
+    // Coefficients of characteristic polynomial
+    operation p : ℝ  // coefficient of λ²
+    operation q : ℝ  // coefficient of λ
+    operation r : ℝ  // constant term (det)
+    
+    axiom p_def: p = a₁₁ + a₂₂ + a₃₃  // trace
+    
+    axiom q_def: q = (a₁₁*a₂₂ - a₁₂*a₂₁) 
+                   + (a₁₁*a₃₃ - a₁₃*a₃₁) 
+                   + (a₂₂*a₃₃ - a₂₃*a₃₂)
+    
+    axiom r_def: r = a₁₁*(a₂₂*a₃₃ - a₂₃*a₃₂) 
+                   - a₁₂*(a₂₁*a₃₃ - a₂₃*a₃₁) 
+                   + a₁₃*(a₂₁*a₃₂ - a₂₂*a₃₁)
+}
+
+structure Eigenvalues3x3() {
+    element λ₁ : ℂ
+    element λ₂ : ℂ
+    element λ₃ : ℂ
+}
+
+// Cardano's method: reduce to depressed cubic t³ + at + b = 0
+// where t = λ - p/3
+operation eigenvalues : Matrix3x3 → Eigenvalues3x3
+
+axiom eigenvalues_3x3_cardano:
+    ∀ M : Matrix3x3 .
+    let p = M.p in
+    let q = M.q in
+    let r = M.r in
+    // Depressed cubic coefficients
+    let a = q - p²/3 in
+    let b = r - p*q/3 + 2*p³/27 in
+    // Cardano discriminant
+    let Δ = -4*a³ - 27*b² in
+    // Solutions via Cardano (simplified for real case)
+    let Q = (a/3) in
+    let R = (b/2) in
+    let D = Q³ + R² in
+    // When D ≥ 0: one real, two complex conjugate
+    // When D < 0: three distinct real (use trigonometric method)
+    eigenvalues(M) = cardano_solve(p, a, b, D)
+
+// Routh-Hurwitz stability criterion for 3×3
+// All eigenvalues have Re(λ) < 0 iff:
+//   p > 0, r > 0, and p·q > r
+operation is_stable : Matrix3x3 → Bool
+
+axiom hurwitz_3x3:
+    ∀ M : Matrix3x3 .
+    is_stable(M) ↔ (M.p > 0 ∧ M.r > 0 ∧ M.p * M.q > M.r)
+
+
+// =============================================================================
+// Example: Mass-Spring-Damper System
+// =============================================================================
+//
+//   m·ẍ + c·ẋ + k·x = 0
+//
+// State-space form: ẋ = A·x where
+//   x = [position, velocity]ᵀ
+//   A = [[0, 1], [-k/m, -c/m]]
+//
+// System is stable iff c > 0 and k > 0 (positive damping and stiffness)
+
+let mass_spring_damper = λ m : ℝ . λ c : ℝ . λ k : ℝ .
+    Matrix2x2 {
+        a = 0,      b = 1,
+        c = -k/m,   d = -c/m
+    }
+
+// Verify: for m=1, c=2, k=3 the system is stable
+let example_system = mass_spring_damper(1, 2, 3)
+
+// trace = 0 + (-2) = -2 < 0 ✓
+// det = 0·(-2) - 1·(-3) = 3 > 0 ✓
+// Therefore stable by Hurwitz criterion!
+
+verify is_stable(example_system)
+
+
+// =============================================================================
+// Example: Inverted Pendulum (Unstable Open-Loop)
+// =============================================================================
+//
+// Linearized about upright position:
+//   A = [[0, 1], [g/L, 0]]
+//
+// where g = gravity, L = pendulum length
+// 
+// This is UNSTABLE (one positive eigenvalue)
+
+let inverted_pendulum = λ g : ℝ . λ L : ℝ .
+    Matrix2x2 {
+        a = 0,    b = 1,
+        c = g/L,  d = 0
+    }
+
+let pendulum = inverted_pendulum(9.81, 1.0)
+
+// trace = 0 (not < 0!)
+// det = 0·0 - 1·9.81 = -9.81 < 0 (not > 0!)
+// Therefore UNSTABLE - needs a controller!
+
+verify ¬is_stable(pendulum)
+
+
+// =============================================================================
+// Control Design Preview
+// =============================================================================
+//
+// To stabilize the inverted pendulum, we add state feedback:
+//   u = -K·x = -[k₁, k₂]·[θ, θ̇]ᵀ
+//
+// Closed-loop: A_cl = A - B·K
+//
+// Choose K such that A_cl has eigenvalues with Re(λ) < 0
+// This is pole placement / LQR design!
+//
+// See: lqg_controller.kleis for full LQG design example
+
+

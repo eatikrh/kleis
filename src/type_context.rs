@@ -559,6 +559,29 @@ impl TypeContextBuilder {
         arg_types: &[Type],
         data_registry: &crate::data_registry::DataTypeRegistry,
     ) -> Result<Type, String> {
+        // Handle formatting-only operations (display, not semantic)
+        // These return the type of their first argument (the base)
+        match op_name {
+            // Display annotations
+            "subsup" | "subscript" | "tilde" | "hat" | "bar" | "vec" | "dot" | "ddot" |
+            "vector_arrow" | "vector_bold" | "overline" | "underline" |
+            // Tensor index formatting (legacy palette operations)
+            "index_mixed" | "index_pair" | "tensor_lower_pair" | 
+            "tensor_1up_3down" | "tensor_2up_2down" | "tensor_upper_pair" => {
+                // Formatting operations: type is the type of the base (first arg)
+                if arg_types.is_empty() {
+                    // No args - use Scalar data type
+                    return Ok(Type::Data {
+                        type_name: "Type".to_string(),
+                        constructor: "Scalar".to_string(),
+                        args: vec![],
+                    });
+                }
+                return Ok(arg_types[0].clone());
+            }
+            _ => {}
+        }
+
         // Query registry for operation
         if let Some(structure_name) = self.registry.structure_for_operation(op_name) {
             // Found the structure that defines this operation

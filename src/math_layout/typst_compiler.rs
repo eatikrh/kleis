@@ -14,9 +14,10 @@ use typst::utils::LazyHash;
 use typst::{Library, World};
 
 use crate::ast::Expression;
+use crate::editor_ast::EditorNode;
 use crate::render::{
-    build_default_context, render_expression, render_expression_with_ids, GlyphContext,
-    RenderTarget,
+    build_default_context, render_editor_node_with_uuids, render_expression,
+    render_expression_with_ids, GlyphContext, RenderTarget,
 };
 
 /// Minimal World implementation for Typst compilation
@@ -160,6 +161,166 @@ pub fn compile_with_semantic_boxes_and_slots(
     )?;
 
     Ok(output)
+}
+
+/// Compile EditorNode with UUID-based slot tracking (parallel to compile_with_semantic_boxes_and_slots)
+pub fn compile_editor_node_with_semantic_boxes(
+    node: &EditorNode,
+    placeholder_ids: &[usize],
+    all_slot_ids: &[usize],
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
+) -> Result<CompiledOutput, String> {
+    eprintln!("=== compile_editor_node_with_semantic_boxes ===");
+    eprintln!("placeholder_ids: {:?}", placeholder_ids);
+    eprintln!("all_slot_ids: {:?}", all_slot_ids);
+    eprintln!("UUID map entries: {}", node_id_to_uuid.len());
+
+    let ctx = build_default_context();
+    let full_markup =
+        render_editor_node_with_uuids(node, &ctx, &RenderTarget::Typst, node_id_to_uuid);
+    eprintln!("Full markup: {}", full_markup);
+
+    let mut output = compile_math_to_svg_with_ids(&full_markup, placeholder_ids, all_slot_ids)?;
+
+    // Extract labeled positions from SVG
+    let labeled_positions = extract_positions_from_labels(&output.svg)?;
+    eprintln!("Extracted {} labeled positions", labeled_positions.len());
+
+    // Extract UUID-based labels for filled slots
+    let uuid_positions = extract_uuid_positions(&output.svg)?;
+    eprintln!("Extracted {} UUID-based positions", uuid_positions.len());
+
+    // For EditorNode, we use a simpler extraction approach
+    output.argument_bounding_boxes = extract_semantic_argument_boxes_from_editor_node(
+        node,
+        &ctx,
+        &labeled_positions,
+        node_id_to_uuid,
+        &uuid_positions,
+    )?;
+
+    Ok(output)
+}
+
+/// Extract argument boxes from EditorNode (simpler than Expression version)
+fn extract_semantic_argument_boxes_from_editor_node(
+    node: &EditorNode,
+    _ctx: &GlyphContext,
+    labeled_positions: &[PlaceholderPosition],
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
+    uuid_positions: &std::collections::HashMap<String, (f64, f64, f64, f64)>,
+) -> Result<Vec<ArgumentBoundingBox>, String> {
+    let mut boxes = Vec::new();
+    let mut placeholder_idx = 0;
+
+    // Build UUID->Position lookup
+    let uuid_to_position: std::collections::HashMap<_, _> = uuid_positions.clone();
+
+    extract_boxes_recursive_editor(
+        node,
+        &mut boxes,
+        &mut placeholder_idx,
+        labeled_positions,
+        &uuid_to_position,
+        node_id_to_uuid,
+        vec![],
+        "0",
+    );
+
+    Ok(boxes)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn extract_boxes_recursive_editor(
+    node: &EditorNode,
+    boxes: &mut Vec<ArgumentBoundingBox>,
+    placeholder_idx: &mut usize,
+    labeled_positions: &[PlaceholderPosition],
+    uuid_positions: &std::collections::HashMap<String, (f64, f64, f64, f64)>,
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
+    path: Vec<usize>,
+    node_id: &str,
+) {
+    match node {
+        EditorNode::Placeholder { placeholder: _ } => {
+            // Get position from labeled positions by index
+            if let Some(pos) = labeled_positions.get(*placeholder_idx) {
+                boxes.push(ArgumentBoundingBox {
+                    arg_index: pos.id,
+                    node_id: node_id.to_string(),
+                    x: pos.x,
+                    y: pos.y,
+                    width: pos.width,
+                    height: pos.height,
+                });
+            }
+            *placeholder_idx += 1;
+        }
+        EditorNode::Operation { operation } => {
+            // Check if this node has a UUID position
+            if let Some(uuid) = node_id_to_uuid.get(node_id) {
+                if let Some((x, y, w, h)) = uuid_positions.get(uuid) {
+                    boxes.push(ArgumentBoundingBox {
+                        arg_index: 0, // Will be filled by caller
+                        node_id: node_id.to_string(),
+                        x: *x,
+                        y: *y,
+                        width: *w,
+                        height: *h,
+                    });
+                }
+            }
+
+            // Recurse into args
+            for (i, arg) in operation.args.iter().enumerate() {
+                let mut child_path = path.clone();
+                child_path.push(i);
+                let child_id = format!("{}.{}", node_id, i);
+                extract_boxes_recursive_editor(
+                    arg,
+                    boxes,
+                    placeholder_idx,
+                    labeled_positions,
+                    uuid_positions,
+                    node_id_to_uuid,
+                    child_path,
+                    &child_id,
+                );
+            }
+        }
+        EditorNode::List { list } => {
+            for (i, elem) in list.iter().enumerate() {
+                let mut child_path = path.clone();
+                child_path.push(i);
+                let child_id = format!("{}.{}", node_id, i);
+                extract_boxes_recursive_editor(
+                    elem,
+                    boxes,
+                    placeholder_idx,
+                    labeled_positions,
+                    uuid_positions,
+                    node_id_to_uuid,
+                    child_path,
+                    &child_id,
+                );
+            }
+        }
+        EditorNode::Object { .. } | EditorNode::Const { .. } => {
+            // Check if this node has a UUID position
+            if let Some(uuid) = node_id_to_uuid.get(node_id) {
+                if let Some((x, y, w, h)) = uuid_positions.get(uuid) {
+                    boxes.push(ArgumentBoundingBox {
+                        arg_index: 0,
+                        node_id: node_id.to_string(),
+                        x: *x,
+                        y: *y,
+                        width: *w,
+                        height: *h,
+                    });
+                }
+            }
+        }
+    }
 }
 
 /// Extract argument bounding boxes for every AST node using recursive semantic grouping

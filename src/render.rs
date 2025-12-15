@@ -964,6 +964,56 @@ fn render_expression_internal(
                 return tensor_result;
             }
 
+            // Handle generic "tensor" operation (from EditorNode conversion)
+            // args[0] = symbol, args[1:] = indices (treated as upper by default)
+            if name == "tensor" && !args.is_empty() {
+                let symbol = render_expression_internal(
+                    &args[0],
+                    ctx,
+                    target,
+                    &format!("{}.0", node_id),
+                    node_id_to_uuid,
+                );
+                let indices: Vec<String> = args[1..]
+                    .iter()
+                    .enumerate()
+                    .map(|(i, arg)| {
+                        render_expression_internal(
+                            arg,
+                            ctx,
+                            target,
+                            &format!("{}.{}", node_id, i + 1),
+                            node_id_to_uuid,
+                        )
+                    })
+                    .collect();
+
+                // Without metadata, treat all indices as upper (superscript)
+                return match target {
+                    RenderTarget::LaTeX => {
+                        if indices.is_empty() {
+                            symbol
+                        } else {
+                            format!("{}^{{{}}}", symbol, indices.join(" "))
+                        }
+                    }
+                    RenderTarget::Typst => {
+                        if indices.is_empty() {
+                            symbol
+                        } else {
+                            format!("{}^({})", symbol, indices.join(" "))
+                        }
+                    }
+                    _ => {
+                        if indices.is_empty() {
+                            symbol
+                        } else {
+                            format!("{}^{}", symbol, indices.join(""))
+                        }
+                    }
+                };
+            }
+
             let (template, glyph) = match target {
                 RenderTarget::Unicode => {
                     let template = ctx
@@ -6422,4 +6472,395 @@ pub fn collect_samples_for_gallery() -> Vec<(String, String)> {
     out.push(("Matrix with ellipsis".into(), "\\begin{bmatrix}a_{11} & \\cdots & a_{1n}\\\\\\vdots & \\ddots & \\vdots\\\\a_{m1} & \\cdots & a_{mn}\\end{bmatrix}".to_string()));
 
     out
+}
+
+// =============================================================================
+// EditorNode Renderer - For Visual Editor AST
+// =============================================================================
+//
+// This renderer handles EditorNode (from editor_ast.rs), which is separate from
+// the Kleis Core Expression. EditorNode has rich metadata like `kind` and
+// `metadata.indexStructure` for proper visual rendering.
+
+use crate::editor_ast::{EditorNode, OperationData};
+
+/// Render EditorNode to the specified target format
+pub fn render_editor_node(node: &EditorNode, ctx: &GlyphContext, target: &RenderTarget) -> String {
+    render_editor_node_with_uuids(node, ctx, target, &std::collections::HashMap::new())
+}
+
+/// Render EditorNode with UUID map for position tracking of filled values
+pub fn render_editor_node_with_uuids(
+    node: &EditorNode,
+    ctx: &GlyphContext,
+    target: &RenderTarget,
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
+) -> String {
+    render_editor_node_internal(node, ctx, target, "0", node_id_to_uuid)
+}
+
+fn render_editor_node_internal(
+    node: &EditorNode,
+    ctx: &GlyphContext,
+    target: &RenderTarget,
+    node_id: &str,
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
+) -> String {
+    match node {
+        EditorNode::Object { object } => {
+            let rendered = render_object_for_target(object, target);
+            // Add UUID label for Typst to enable position extraction for filled values
+            if matches!(target, RenderTarget::Typst) {
+                if let Some(uuid) = node_id_to_uuid.get(node_id) {
+                    // Use same format as matrix builder: #[#box[$content$]<label>]
+                    format!("#[#box[${}$]<id{}>]", rendered, uuid)
+                } else {
+                    rendered
+                }
+            } else {
+                rendered
+            }
+        }
+
+        EditorNode::Const { value } => {
+            // Add UUID label for Typst to enable position extraction
+            if matches!(target, RenderTarget::Typst) {
+                if let Some(uuid) = node_id_to_uuid.get(node_id) {
+                    // Use same format as matrix builder: #[#box[$content$]<label>]
+                    format!("#[#box[${}$]<id{}>]", value, uuid)
+                } else {
+                    value.clone()
+                }
+            } else {
+                value.clone()
+            }
+        }
+
+        EditorNode::Placeholder { placeholder } => {
+            let hint = placeholder.hint.as_deref().unwrap_or("□");
+            match target {
+                RenderTarget::LaTeX => format!("\\square_{{{}}}", hint),
+                // Use labeled box for SVG extraction via data-typst-label attribute
+                RenderTarget::Typst => format!("#[#box[$square.stroked$]<ph{}>]", placeholder.id),
+                RenderTarget::HTML => format!(
+                    "<span class=\"placeholder\" data-hint=\"{}\">□</span>",
+                    hint
+                ),
+                RenderTarget::Unicode | RenderTarget::Kleis => "□".to_string(),
+            }
+        }
+
+        EditorNode::Operation { operation } => {
+            render_operation(operation, ctx, target, node_id, node_id_to_uuid)
+        }
+
+        EditorNode::List { list } => {
+            let rendered: Vec<String> = list
+                .iter()
+                .enumerate()
+                .map(|(i, elem)| {
+                    let child_id = format!("{}.{}", node_id, i);
+                    render_editor_node_internal(elem, ctx, target, &child_id, node_id_to_uuid)
+                })
+                .collect();
+            format!("[{}]", rendered.join(", "))
+        }
+    }
+}
+
+/// Render an object/symbol for the target format
+fn render_object_for_target(s: &str, target: &RenderTarget) -> String {
+    match target {
+        RenderTarget::LaTeX => {
+            // Convert Greek letters to LaTeX commands
+            match s {
+                "α" => "\\alpha".to_string(),
+                "β" => "\\beta".to_string(),
+                "γ" => "\\gamma".to_string(),
+                "δ" => "\\delta".to_string(),
+                "ε" => "\\epsilon".to_string(),
+                "ζ" => "\\zeta".to_string(),
+                "η" => "\\eta".to_string(),
+                "θ" => "\\theta".to_string(),
+                "ι" => "\\iota".to_string(),
+                "κ" => "\\kappa".to_string(),
+                "λ" => "\\lambda".to_string(),
+                "μ" => "\\mu".to_string(),
+                "ν" => "\\nu".to_string(),
+                "ξ" => "\\xi".to_string(),
+                "π" => "\\pi".to_string(),
+                "ρ" => "\\rho".to_string(),
+                "σ" => "\\sigma".to_string(),
+                "τ" => "\\tau".to_string(),
+                "υ" => "\\upsilon".to_string(),
+                "φ" => "\\phi".to_string(),
+                "χ" => "\\chi".to_string(),
+                "ψ" => "\\psi".to_string(),
+                "ω" => "\\omega".to_string(),
+                "Γ" => "\\Gamma".to_string(),
+                "Δ" => "\\Delta".to_string(),
+                "Θ" => "\\Theta".to_string(),
+                "Λ" => "\\Lambda".to_string(),
+                "Ξ" => "\\Xi".to_string(),
+                "Π" => "\\Pi".to_string(),
+                "Σ" => "\\Sigma".to_string(),
+                "Φ" => "\\Phi".to_string(),
+                "Ψ" => "\\Psi".to_string(),
+                "Ω" => "\\Omega".to_string(),
+                _ => s.to_string(),
+            }
+        }
+        _ => s.to_string(),
+    }
+}
+
+/// Convert EditorNode to Expression (for using battle-tested Expression renderer)
+/// Note: This loses `kind` and `metadata`, so only use for operations that don't need them
+fn editor_node_to_expression(node: &EditorNode) -> Expression {
+    match node {
+        EditorNode::Const { value } => Expression::Const(value.clone()),
+        EditorNode::Object { object } => Expression::Object(object.clone()),
+        EditorNode::Placeholder { placeholder } => Expression::Placeholder {
+            id: placeholder.id,
+            hint: placeholder.hint.clone().unwrap_or_else(|| "□".to_string()),
+        },
+        EditorNode::Operation { operation } => Expression::Operation {
+            name: operation.name.clone(),
+            args: operation
+                .args
+                .iter()
+                .map(editor_node_to_expression)
+                .collect(),
+        },
+        EditorNode::List { list } => {
+            Expression::List(list.iter().map(editor_node_to_expression).collect())
+        }
+    }
+}
+
+/// Render an Operation based on its `kind` field
+fn render_operation(
+    op: &OperationData,
+    ctx: &GlyphContext,
+    target: &RenderTarget,
+    node_id: &str,
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
+) -> String {
+    // Check the `kind` field for semantic rendering that NEEDS metadata
+    match op.kind.as_deref() {
+        Some("tensor") => {
+            // Tensors need indexStructure metadata - use special renderer
+            let rendered_args: Vec<String> = op
+                .args
+                .iter()
+                .enumerate()
+                .map(|(i, arg)| {
+                    let child_id = format!("{}.{}", node_id, i);
+                    render_editor_node_internal(arg, ctx, target, &child_id, node_id_to_uuid)
+                })
+                .collect();
+            render_tensor(op, &rendered_args, target)
+        }
+        _ => {
+            // For everything else: convert to Expression and use the battle-tested renderer
+            // This handles Matrix, sin, cos, parens, integrals, etc. correctly
+            let expr = Expression::Operation {
+                name: op.name.clone(),
+                args: op.args.iter().map(editor_node_to_expression).collect(),
+            };
+            // Pass UUID map - matrix dimensions are filtered out at slot collection time,
+            // not here. This allows filled matrix elements to have clickable overlays.
+            render_expression_internal(&expr, ctx, target, node_id, node_id_to_uuid)
+        }
+    }
+}
+
+/// Render a tensor with proper index positioning (needs indexStructure metadata)
+fn render_tensor(op: &OperationData, rendered_args: &[String], target: &RenderTarget) -> String {
+    // New structure: args[0] = symbol, args[1:] = indices
+    // indexStructure describes args[1:], not args[0]
+    let symbol = if !rendered_args.is_empty() {
+        rendered_args[0].clone()
+    } else {
+        // Fallback to op.name for backward compatibility
+        render_object_for_target(&op.name, target)
+    };
+
+    // Indices are args[1:]
+    let indices = if rendered_args.len() > 1 {
+        &rendered_args[1..]
+    } else {
+        &[]
+    };
+
+    // Get index structure from metadata, or infer from negate wrappers
+    let index_structure: Vec<&str> = op
+        .metadata
+        .as_ref()
+        .and_then(|m| m.get("indexStructure"))
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
+        .unwrap_or_else(|| {
+            // Default: all upper indices
+            indices.iter().map(|_| "up").collect()
+        });
+
+    // Collect upper and lower indices
+    let mut upper_indices = Vec::new();
+    let mut lower_indices = Vec::new();
+
+    for (i, idx) in indices.iter().enumerate() {
+        let position = index_structure.get(i).copied().unwrap_or("up");
+        if position == "down" {
+            lower_indices.push(idx.as_str());
+        } else {
+            upper_indices.push(idx.as_str());
+        }
+    }
+
+    match target {
+        RenderTarget::LaTeX => {
+            let upper = if upper_indices.is_empty() {
+                String::new()
+            } else {
+                format!("^{{{}}}", upper_indices.join(" "))
+            };
+            let lower = if lower_indices.is_empty() {
+                String::new()
+            } else {
+                format!("_{{{}}}", lower_indices.join(" "))
+            };
+            format!("{}{}{}", symbol, upper, lower)
+        }
+        RenderTarget::Typst => {
+            let upper = if upper_indices.is_empty() {
+                String::new()
+            } else {
+                format!("^({})", upper_indices.join(" "))
+            };
+            let lower = if lower_indices.is_empty() {
+                String::new()
+            } else {
+                format!("_({})", lower_indices.join(" "))
+            };
+            format!("{}{}{}", symbol, upper, lower)
+        }
+        RenderTarget::HTML => {
+            let upper = if upper_indices.is_empty() {
+                String::new()
+            } else {
+                format!("<sup>{}</sup>", upper_indices.join(""))
+            };
+            let lower = if lower_indices.is_empty() {
+                String::new()
+            } else {
+                format!("<sub>{}</sub>", lower_indices.join(""))
+            };
+            format!("{}{}{}", symbol, upper, lower)
+        }
+        RenderTarget::Unicode => {
+            // Unicode: use combining characters or simple notation
+            let upper = upper_indices.join("");
+            let lower = lower_indices.join("");
+            if upper.is_empty() && lower.is_empty() {
+                symbol
+            } else if upper.is_empty() {
+                format!("{}_{}", symbol, lower)
+            } else if lower.is_empty() {
+                format!("{}^{}", symbol, upper)
+            } else {
+                format!("{}^{} _{}", symbol, upper, lower)
+            }
+        }
+        RenderTarget::Kleis => {
+            // xAct notation: T(μ, -ν) for T^μ_ν
+            // Symbol is rendered_args[0], indices are rendered_args[1:]
+            let args_with_signs: Vec<String> = indices
+                .iter()
+                .enumerate()
+                .map(|(i, idx)| {
+                    let position = index_structure.get(i).copied().unwrap_or("up");
+                    if position == "down" {
+                        format!("-{}", idx)
+                    } else {
+                        idx.to_string()
+                    }
+                })
+                .collect();
+            format!("{}({})", symbol, args_with_signs.join(", "))
+        }
+    }
+}
+
+#[cfg(test)]
+mod editor_node_tests {
+    use super::*;
+    use crate::editor_ast::EditorNode;
+
+    #[test]
+    fn test_render_simple_object() {
+        let ctx = build_default_context();
+        let node = EditorNode::object("x");
+
+        assert_eq!(render_editor_node(&node, &ctx, &RenderTarget::Unicode), "x");
+        assert_eq!(render_editor_node(&node, &ctx, &RenderTarget::LaTeX), "x");
+    }
+
+    #[test]
+    fn test_render_greek_letter() {
+        let ctx = build_default_context();
+        let node = EditorNode::object("λ");
+
+        assert_eq!(render_editor_node(&node, &ctx, &RenderTarget::Unicode), "λ");
+        assert_eq!(
+            render_editor_node(&node, &ctx, &RenderTarget::LaTeX),
+            "\\lambda"
+        );
+    }
+
+    #[test]
+    fn test_render_tensor() {
+        let ctx = build_default_context();
+        let tensor = EditorNode::tensor(
+            "Γ",
+            vec![
+                EditorNode::object("λ"),
+                EditorNode::object("μ"),
+                EditorNode::object("ν"),
+            ],
+            vec!["up", "down", "down"],
+        );
+
+        let latex = render_editor_node(&tensor, &ctx, &RenderTarget::LaTeX);
+        assert!(latex.contains("\\Gamma"));
+        assert!(latex.contains("^{\\lambda}"));
+        assert!(latex.contains("_{\\mu \\nu}"));
+
+        let kleis = render_editor_node(&tensor, &ctx, &RenderTarget::Kleis);
+        assert_eq!(kleis, "Γ(λ, -μ, -ν)");
+    }
+
+    #[test]
+    fn test_render_tensor_html() {
+        let ctx = build_default_context();
+        let tensor = EditorNode::tensor(
+            "g",
+            vec![EditorNode::object("μ"), EditorNode::object("ν")],
+            vec!["down", "down"],
+        );
+
+        let html = render_editor_node(&tensor, &ctx, &RenderTarget::HTML);
+        assert!(html.contains("<sub>"));
+        assert!(html.contains("μν"));
+    }
+
+    #[test]
+    fn test_render_operation_fallback() {
+        let ctx = build_default_context();
+        let node = EditorNode::operation("sin", vec![EditorNode::object("x")]);
+
+        let latex = render_editor_node(&node, &ctx, &RenderTarget::LaTeX);
+        // Should use template lookup
+        assert!(latex.contains("sin"));
+    }
 }
