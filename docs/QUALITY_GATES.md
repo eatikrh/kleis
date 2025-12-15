@@ -1,7 +1,7 @@
 # Quality Gates for Kleis Development
 
 **Purpose:** Ensure code quality before committing  
-**Updated:** December 10, 2024 - Added Z3 verification tests
+**Updated:** December 10, 2025 - Added Z3 verification tests
 
 ---
 
@@ -76,7 +76,7 @@ cargo test --features axiom-verification
 - `tests/over_clause_z3_test.rs` - Over clause
 - `tests/z3_dependency_proof_tests.rs` - Dependency proofs
 
-**Known issue (Dec 10, 2024):**
+**Known issue (Dec 10, 2025):**
 - 3 out of 5 proof tests pass rigorously
 - 2 tests need operation registration fixes (see NEXT_SESSION_PRIORITY.md)
 - All other Z3 tests pass
@@ -199,7 +199,7 @@ GitHub Actions automatically sets Z3 variables per platform. See `.github/workfl
 
 ---
 
-## Current Known Issues (Dec 10, 2024)
+## Current Known Issues (Dec 10, 2025)
 
 ### Z3 Proof Tests
 
@@ -247,6 +247,6 @@ GitHub Actions automatically sets Z3 variables per platform. See `.github/workfl
 
 ---
 
-**Last Updated:** December 10, 2024  
+**Last Updated:** December 10, 2025  
 **Next Review:** After fixing extends tests (NEXT_SESSION_PRIORITY.md)
 

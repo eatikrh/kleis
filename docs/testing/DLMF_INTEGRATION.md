@@ -182,6 +182,6 @@ python3 scripts/fetch_dlmf.py --chapters 5,10,25
 ---
 
 **Status**: ✅ Complete - 36 equations ready for testing  
-**Generated**: 2024-12-03  
+**Generated**: 2025-12-03  
 **Maintainer**: Automated via `scripts/fetch_dlmf_v2.py`
 

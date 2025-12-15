@@ -32,6 +32,19 @@ pub enum VerificationResult {
     Unknown,
 }
 
+/// Result of satisfiability check
+#[derive(Debug, Clone, PartialEq)]
+pub enum SatisfiabilityResult {
+    /// Expression is satisfiable (there exists an assignment that makes it true)
+    Satisfiable { example: String },
+
+    /// Expression is unsatisfiable (no assignment can make it true)
+    Unsatisfiable,
+
+    /// Solver couldn't determine (timeout, too complex, etc.)
+    Unknown,
+}
+
 /// Main solver abstraction trait
 ///
 /// Implementations wrap specific solvers (Z3, CVC5, etc.) and translate between
@@ -64,10 +77,12 @@ pub trait SolverBackend {
         self.capabilities().has_operation(op)
     }
 
-    /// Verify an axiom using the solver
+    /// Verify an axiom using the solver (validity check)
     ///
-    /// Checks if the axiom holds for all inputs by asserting its negation
+    /// Checks if the axiom holds for ALL inputs by asserting its negation
     /// and checking satisfiability. If unsat, axiom is valid.
+    ///
+    /// Use this for: axioms, tautologies, universal truths
     ///
     /// # Arguments
     /// * `axiom` - Kleis expression (should be a boolean proposition)
@@ -77,6 +92,21 @@ pub trait SolverBackend {
     /// - `Invalid { counterexample }` - Found assignment that violates axiom
     /// - `Unknown` - Solver couldn't determine (timeout, too complex)
     fn verify_axiom(&mut self, axiom: &Expression) -> Result<VerificationResult, String>;
+
+    /// Check if an expression is satisfiable (existence check)
+    ///
+    /// Checks if there EXISTS an assignment that makes the expression true.
+    ///
+    /// Use this for: definitions, equations, "can this happen?" questions
+    ///
+    /// # Arguments
+    /// * `expr` - Kleis expression (should be a boolean proposition)
+    ///
+    /// # Returns
+    /// - `Satisfiable { example }` - Found assignment that makes it true
+    /// - `Unsatisfiable` - No assignment can make it true
+    /// - `Unknown` - Solver couldn't determine
+    fn check_satisfiability(&mut self, expr: &Expression) -> Result<SatisfiabilityResult, String>;
 
     /// Evaluate an expression to a concrete value
     ///

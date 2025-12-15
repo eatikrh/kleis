@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Status:** ✅ Production Ready  
-**Last Updated:** December 2024
+**Last Updated:** December 2025
 
 ---
 
@@ -705,7 +705,7 @@ Right: 𝓗_("Hont")     → Type: "Hont"  (with quotes!)
 
 ## Changelog
 
-**v1.0 (2024-12-05):**
+**v1.0 (2025-12-05):**
 - ✅ Added 16 operations (7 transforms + 8 POT + 1 Green's)
 - ✅ Full rendering support (4 targets)
 - ✅ Palette integration complete

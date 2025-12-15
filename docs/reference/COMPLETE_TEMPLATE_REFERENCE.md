@@ -145,7 +145,7 @@ All brackets auto-scale to content height.
 
 ---
 
-## New Templates (2024-12-03)
+## New Templates (2025-12-03)
 
 ### Summary of Additions
 
@@ -228,6 +228,6 @@ Essential tensor operations now fully covered:
 ---
 
 **Status**: ✅ Complete - Ready for production  
-**Date**: 2024-12-03  
+**Date**: 2025-12-03  
 **Templates Count**: 60+ templates across all categories
 

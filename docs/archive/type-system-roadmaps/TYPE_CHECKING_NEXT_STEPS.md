@@ -1,6 +1,6 @@
 # Type Checking - Next Steps After ADR-015
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Status:** Roadmap  
 **Context:** Connects ADR-015 (text/parsing) → Type Inference POC
 

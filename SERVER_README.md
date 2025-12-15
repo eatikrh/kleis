@@ -350,7 +350,7 @@ Renderer is generally robust. If parsing succeeds, rendering should not fail. Un
 
 ## 📊 Performance
 
-### Benchmarks (on 2024 MacBook)
+### Benchmarks (on 2025 MacBook)
 
 - **Simple equation** (`\frac{1}{2}`): ~0.1ms parse + render
 - **Complex matrix:** ~1-2ms

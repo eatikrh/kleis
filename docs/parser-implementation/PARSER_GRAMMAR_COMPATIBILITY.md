@@ -1,6 +1,6 @@
 # Kleis Parser vs Formal Grammar Compatibility
 
-**Date:** December 13, 2024 (Updated for if/then/else and let bindings)  
+**Date:** December 13, 2025 (Updated for if/then/else and let bindings)  
 **Formal Grammar:** Kleis v0.6 (with functions in structures)  
 **Parser Implementation:** `src/kleis_parser.rs`  
 **Branch:** `main`
@@ -18,7 +18,7 @@
 
 ---
 
-## What's Supported NOW (December 2024 - Evening Update)
+## What's Supported NOW (December 2025 - Evening Update)
 
 ### ✅ Fully Supported
 
@@ -139,24 +139,24 @@
 
 ### Version History
 
-**v0.3 (December 6, 2024):**
+**v0.3 (December 6, 2025):**
 - Basic expressions: identifiers, numbers, operators
 - Function calls with precedence
 - ~30% grammar coverage
 
-**v0.4 (December 7-8, 2024):**
+**v0.4 (December 7-8, 2025):**
 - Added structure definitions
 - Added implements blocks
 - ~35% grammar coverage
 
-**v0.5 (December 8, 2024 - Morning):**
+**v0.5 (December 8, 2025 - Morning):**
 - Added data type definitions
 - Added pattern matching (complete!)
 - Added function definitions
 - Added List literal AST support
 - ~40-45% grammar coverage
 
-**v0.5.1 (December 10, 2024 - Evening):** ✨ **Z3 Integration**
+**v0.5.1 (December 10, 2025 - Evening):** ✨ **Z3 Integration**
 - Added universal quantifiers (`∀`, `∃`)
 - Added existential quantifiers
 - Added operator symbols in declarations
@@ -165,35 +165,35 @@
 - Created axiom verifier (`src/axiom_verifier.rs`)
 - **~52% grammar coverage** (+12 percentage points!)
 
-**v0.5.2 (December 10, 2024 - Late Evening):** ✨ **Where Clauses**
+**v0.5.2 (December 10, 2025 - Late Evening):** ✨ **Where Clauses**
 - Added where clause support to implements blocks
 - Syntax: `implements Foo(T) where Bar(T) { ... }`
 - Integrated with Z3 (constrained axioms available)
 - Recursive constraint loading
 - **~55% grammar coverage** (+3 percentage points!)
 
-**v0.5.3 (December 10, 2024 - Very Late Evening):** ✨ **Nested Structures**
+**v0.5.3 (December 10, 2025 - Very Late Evening):** ✨ **Nested Structures**
 - Added nested structure support (compositional algebra!)
 - Syntax: `structure Ring(R) { structure additive : Group(R) { ... } }`
 - Integrated with Z3 (nested axioms/identities available)
 - Arbitrary nesting depth supported
 - **~58% grammar coverage** (+3 percentage points!)
 
-**v0.5.4 (December 10, 2024 - Ultra Late Evening):** ✨ **Extends Keyword**
+**v0.5.4 (December 10, 2025 - Ultra Late Evening):** ✨ **Extends Keyword**
 - Added structure inheritance with extends
 - Syntax: `structure Monoid(M) extends Semigroup(M) { ... }`
 - Integrated with Z3 (parent axioms automatically loaded!)
 - Transitive inheritance (4+ levels working)
 - **~60% grammar coverage** (+2 percentage points!)
 
-**v0.5.5 (December 10, 2024 - Final):** ✨ **Define with Operators**
+**v0.5.5 (December 10, 2025 - Final):** ✨ **Define with Operators**
 - Enabled operator names in define statements
 - Syntax: `define (-)(x, y) = x + negate(y)`
 - Works with all operators: +, -, ×, ⊗, ∘
 - One-line change (parse_identifier → parse_operation_name)
 - **~60% grammar coverage** (refinement)
 
-**v0.5.6 (December 11, 2024):** 🔧 **Quality & Documentation**
+**v0.5.6 (December 11, 2025):** 🔧 **Quality & Documentation**
 - Fixed Z3 dependency analysis bug (nullary operations like `e`, `zero`, `one` now found)
 - All 5/5 Z3 proof tests pass - mathematical rigor achieved! ✅
 - Created `kleis_doc` tool: generates HTML/Markdown docs from .kleis files
@@ -202,7 +202,7 @@
 - Updated compatibility doc with custom operators and comments
 - 426+ tests passing (421 library + 5 Z3 proof tests)
 
-**v0.6.0 (December 13, 2024):** ✨ **Control Flow Constructs**
+**v0.6.0 (December 13, 2025):** ✨ **Control Flow Constructs**
 - Added `if/then/else` conditionals with Z3 `ite` translation
 - Added `let x = value in body` bindings with context extension
 - Pure functional semantics: let bindings extend variable context
@@ -357,7 +357,7 @@ structure Monoid(M) extends Semigroup(M) {  // ✅ Parser now supports 'extends'
 
 ---
 
-## Z3 Theorem Proving Integration (December 10, 2024 - Evening) 🎯
+## Z3 Theorem Proving Integration (December 10, 2025 - Evening) 🎯
 
 ### Major Achievement: Axioms Are Now Verifiable!
 
@@ -530,7 +530,7 @@ Parses: (exact same AST!)
 
 ---
 
-## Recent Additions (December 8-10, 2024)
+## Recent Additions (December 8-10, 2025)
 
 ### Pattern Matching (Complete!)
 
@@ -630,7 +630,7 @@ implements Matrix(m, n, ℝ) {
 
 All of this **parses and type-checks** today! ✅
 
-### ✅ Now Supported (As of Dec 10, 2024):
+### ✅ Now Supported (As of Dec 10, 2025):
 
 ```kleis
 // Operator symbols - NOW WORKS! ✅
@@ -660,7 +660,7 @@ implements Foo(T) where Bar(T) { ... }  // ❌ Not yet supported
 
 ## Why We Have Both "Minimal" and "Full" Stdlib
 
-**Status Update (Dec 10, 2024):**
+**Status Update (Dec 10, 2025):**
 
 **Minimal versions** (works on main branch):
 - Use syntax parser CAN handle
@@ -685,7 +685,7 @@ implements Foo(T) where Bar(T) { ... }  // ❌ Not yet supported
 
 ## Path to Full Grammar Support
 
-### ✅ Recently Completed (Dec 10, 2024)
+### ✅ Recently Completed (Dec 10, 2025)
 
 **1. Operator Symbols in Definitions** ✅ **DONE!**
 ```kleis
@@ -888,7 +888,7 @@ structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
 
 ## Next Steps
 
-### ✅ Phase 1 & 2 Complete! (Dec 10, 2024)
+### ✅ Phase 1 & 2 Complete! (Dec 10, 2025)
 
 **Completed in Z3 Integration Branch:**
 - ✅ Operator symbols: `operation (×)`
@@ -941,7 +941,7 @@ structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
 
 ### ✅ Parser Successfully Supports Core Language + Theorem Proving
 
-**What works (Dec 10, 2024):**
+**What works (Dec 10, 2025):**
 - Complete pattern matching ⭐
 - Data type definitions ⭐
 - Function definitions ⭐
@@ -963,7 +963,7 @@ This is **sufficient for:**
 - **Checking mathematical properties formally** ⭐
 - **Control flow in function definitions (if/then/else, let)** ⭐ **NEW!**
 
-### ✅ Major Extensions Complete (Dec 10, 2024)
+### ✅ Major Extensions Complete (Dec 10, 2025)
 
 **Recently Implemented:**
 1. ✅ Operator symbols: `(×)`, `(⊗)` - **DONE!**
@@ -973,7 +973,7 @@ This is **sufficient for:**
 
 ### ✅ All Core Features Implemented!
 
-**Completed (Dec 10, 2024):**
+**Completed (Dec 10, 2025):**
 1. ✅ `extends` keyword - Structure inheritance **DONE!**
 2. ✅ `define` with operators - Operator definitions **DONE!**
 3. ✅ Nested structures - Compositional algebra **DONE!**
@@ -1023,4 +1023,4 @@ This is **sufficient for:**
 - Integrable structure with FTC axiom
 - Round-trip tested with all examples
 
-**Last Updated:** December 13, 2024 (Added calculus operators!)
+**Last Updated:** December 13, 2025 (Added calculus operators!)

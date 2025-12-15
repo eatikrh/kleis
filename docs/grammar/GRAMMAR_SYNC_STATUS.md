@@ -1,20 +1,58 @@
 # Grammar Synchronization Status
 
-**Date:** December 12, 2024  
-**Status:** ✅ SYNCHRONIZED
+**Date:** December 13, 2025  
+**Status:** ⚠️ PENDING SYNC (v0.7 needs G4 update)
 
 ## File Versions
 
 | File | Version | Last Updated | Status |
 |------|---------|--------------|--------|
-| `kleis_grammar_v06.ebnf` | v0.6 | Dec 12, 2024 | ✅ Reference |
-| `Kleis_v06.g4` | v0.6 | Dec 12, 2024 | ✅ Synced |
-| `kleis_grammar_v06.md` | v0.6 | Dec 12, 2024 | ✅ Documented |
-| `vscode-kleis/docs/grammar/kleis_grammar_v06.ebnf` | v0.6 | Dec 12, 2024 | ✅ Synced |
+| `kleis_grammar_v07.ebnf` | v0.7 | Dec 13, 2025 | ✅ Reference |
+| `kleis_grammar_v07.md` | v0.7 | Dec 13, 2025 | ✅ Documented |
+| `Kleis_v07.g4` | v0.7 | - | ⚠️ TODO |
+| `vscode-kleis/docs/grammar/` | v0.6 | Dec 12, 2025 | ⚠️ Needs v0.7 |
 
 ---
 
-## Changes Applied (Dec 12, 2024)
+## Changes Applied (Dec 13, 2025)
+
+### Grammar v0.7 - Mathematica-Style Calculus (BREAKING CHANGE)
+
+**REMOVED** - Old derivative notation:
+```kleis
+// No longer valid Kleis:
+∂f/∂x
+df/dx  
+∂²f/∂x∂y
+```
+
+**ADDED** - Mathematica-style derivatives:
+```kleis
+D(f, x)         // Partial derivative
+D(f, x, y)      // Mixed partial
+Dt(f, x)        // Total derivative (chain rule)
+```
+
+**ADDED** - Limit notation:
+```kleis
+Limit(f, x, a)  // lim_{x→a} f
+```
+
+**ADDED** - Function-call alternatives for calculus:
+```kleis
+Sum(expr, i, 1, n)        // Alternative to Σ_{i=1}^{n}
+Product(expr, i, 1, n)    // Alternative to Π_{i=1}^{n}
+Integrate(f, x, a, b)     // Alternative to ∫_a^b f dx
+```
+
+**Rationale:**
+- Function-call syntax is unambiguous to parse
+- Follows Mathematica conventions
+- Structural editor renders visual ∂f/∂x → D(f, x) for verification
+
+---
+
+## Changes Applied (Dec 12, 2025)
 
 ### Grammar v0.6 - Functions in Structures
 
@@ -41,7 +79,7 @@ structureMember
 
 ---
 
-## Previous Changes (Dec 11, 2024)
+## Previous Changes (Dec 11, 2025)
 
 ### 1. Named Operations Support
 
@@ -197,20 +235,27 @@ implements Ring(ℤ) {
 
 ## Version History
 
-**v0.6 (Dec 12, 2024):**
+**v0.7 (Dec 13, 2025): BREAKING**
+- REMOVED: `∂f/∂x` and `df/dx` derivative notation
+- ADDED: Mathematica-style `D(f, x)`, `Dt(f, x)`
+- ADDED: `Limit(f, x, a)` for limits
+- ADDED: Function-call alternatives for Sum, Product, Integrate
+- Removed `∂` from prefixOp (no longer standalone prefix)
+
+**v0.6 (Dec 12, 2025):**
 - Added `functionDef` to `structureMember`
 - Enables derived operations in structures
 - Resolves TODO #11
 
-**v0.5.1 (Dec 11, 2024):**
+**v0.5.1 (Dec 11, 2025):**
 - Added custom operator support (Unicode math symbols)
 - Added named operation support
 
-**v0.5 (Dec 8, 2024):**
+**v0.5 (Dec 8, 2025):**
 - Added pattern matching
 - Completes ADR-021
 
 ---
 
-**Status:** ✅ Grammars are now synchronized as of Dec 12, 2024 (v0.6)
+**Status:** ⚠️ v0.7 EBNF complete, G4 pending sync
 

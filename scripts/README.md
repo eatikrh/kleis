@@ -34,7 +34,7 @@ Utility scripts for development and maintenance.
 ```
 
 **If checks fail:**
-See troubleshooting guide in `docs/session-2024-12-10/Z3_BUILD_SETUP.md`
+See troubleshooting guide in `docs/session-2025-12-10/Z3_BUILD_SETUP.md`
 
 ---
 

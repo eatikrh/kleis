@@ -1,6 +1,6 @@
 # Kleis Equation Editor - Technical Reference
 
-**Last Updated:** November 24, 2024  
+**Last Updated:** November 24, 2025  
 **Version:** 2.1
 
 ---
@@ -89,7 +89,7 @@ for signature in signatures {
 
 ### Decision 1: Semantic-First Coordinates
 
-**Date:** November 24, 2024  
+**Date:** November 24, 2025  
 **Rationale:** Semantic boxes work excellently on complex equations  
 **Implementation:** Feature flag `COORDINATE_PREFERENCE = 'semantic'`  
 **Result:** Improved alignment from 26% to 98%
@@ -102,7 +102,7 @@ for signature in signatures {
 
 ### Decision 2: square.stroked for Placeholders
 
-**Date:** November 24, 2024  
+**Date:** November 24, 2025  
 **Problem:** `#sym.square` invalid in Typst math mode  
 **Solution:** Use `square.stroked` (valid math mode syntax)  
 **Result:** Structural mode compiles successfully
@@ -118,7 +118,7 @@ Expression::Placeholder => "square.stroked"  // ✅ Math mode
 
 ### Decision 3: macron() for Bar Accent
 
-**Date:** November 24, 2024  
+**Date:** November 24, 2025  
 **Problem:** `overline()` creates full overline, not short bar  
 **Solution:** Use `macron()` for short bar accent (matches LaTeX `\bar`)  
 **Result:** Bar alignment fixed (bad → good)
@@ -192,7 +192,7 @@ const templateMap = {
 
 ## Testing Results
 
-### Systematic Testing (November 24, 2024)
+### Systematic Testing (November 24, 2025)
 
 **Method:** Visual inspection of all 54 templates  
 **Tool:** edit_marker_positioning_test.html  
@@ -331,14 +331,14 @@ const templateMap = {
 
 ## Version History
 
-### v2.1 (November 24, 2024)
+### v2.1 (November 24, 2025)
 - Added 25 new templates (29 → 54)
 - Implemented semantic-first coordinates
 - Fixed 5 critical bugs
 - Achieved 98% perfect alignment
 - Comprehensive documentation
 
-### v2.0 (November 22, 2024)
+### v2.0 (November 22, 2025)
 - Initial structural editor implementation
 - Two-pass semantic rendering
 - Basic template support

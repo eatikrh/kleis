@@ -1,7 +1,7 @@
 # Kleis Standard Library
 
 **Location:** `stdlib/`  
-**Language:** Kleis v0.5 (with pattern matching)  
+**Language:** Kleis v0.7 (Mathematica-style calculus)  
 **Purpose:** Bootstrap the type system with fundamental mathematical structures
 
 ---
@@ -46,7 +46,18 @@ The Kleis standard library is written **in Kleis itself** (self-hosting). It pro
 
 ### Domain-Specific Libraries
 
-**`tensors.kleis`** (~260 lines) ✨ NEW!
+**`calculus.kleis`** (~230 lines) ✨ NEW!
+- Derivative structures: `Differentiable`, `SmoothFunction`
+- Integration: `Integrable` with Fundamental Theorem of Calculus
+- Limits: `HasLimit` with limit laws
+- Summation: `Summable` with known sums (linear, quadratic)
+- Products: `Productable` with factorial
+- Vector Calculus: gradient, laplacian, divergence, curl
+- Mathematica-style: `D(f,x)`, `Dt(f,x)`, `Integrate`, `Limit`, `Sum`, `Product`
+
+**Status:** ✅ Defined, ⬜ Not yet loaded by default
+
+**`tensors.kleis`** (~260 lines)
 - General Relativity tensor operations
 - Curvature: Riemann, Ricci, Einstein, Weyl tensors
 - Connection: Christoffel symbols, covariant derivative
@@ -230,7 +241,7 @@ ctx.load_kleis_definitions(&user_workspace)?;
 
 ## Grammar Conformance
 
-All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.5**:
+All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.7**:
 
 ✅ Structure definitions  
 ✅ Operation declarations  
@@ -240,11 +251,13 @@ All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.5**:
 ✅ Type annotations with `:`  
 ✅ Library annotations with `@`  
 ✅ Algebraic data types with `data` (v0.4)  
-✅ Pattern matching with `match` (v0.5)  
+✅ Pattern matching with `match` (v0.5)
+✅ Derived functions in structures (v0.6)
+✅ Mathematica-style calculus: `D()`, `Dt()`, `Limit()` (v0.7)  
 
 ---
 
-## Status (December 9, 2024)
+## Status (December 9, 2025)
 
 **Files Written:** ✅ `types.kleis`, `minimal_prelude.kleis`, `matrices.kleis`, `tensors.kleis`  
 **Grammar:** ✅ v0.5 formalized (with pattern matching!)  

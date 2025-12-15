@@ -1,6 +1,6 @@
 # ADR-022: Z3 Integration for Axiom Verification
 
-**Date:** 2024-12-10  
+**Date:** 2025-12-10  
 **Status:** Accepted  
 **Deciders:** Architecture team  
 **Related:** ADR-014 (Hindley-Milner Type System), ADR-015 (Text as Source of Truth), ADR-016 (Operations in Structures)
@@ -507,7 +507,7 @@ New module `src/axiom_verifier.rs`:
 
 ## Implementation Summary
 
-### What We Built (December 10, 2024)
+### What We Built (December 10, 2025)
 
 **Phase 1: Foundation**
 1. Universal quantifiers (`∀`, `∃`)
@@ -724,14 +724,14 @@ Parser extensions have immediate value when axioms are verifiable!
 
 ## Status: Implemented ✅
 
-- Implementation complete: December 10, 2024
-- **Full prelude migration:** December 11, 2024
+- Implementation complete: December 10, 2025
+- **Full prelude migration:** December 11, 2025
 - Tests passing: 421 ✅
 - Documentation complete: ✅
 - Feature branch: `feature/full-prelude-migration`
 - Ready for merge to main
 
-**Updates (December 11, 2024):**
+**Updates (December 11, 2025):**
 - ✅ Added `TypeExpr::ForAll` for polymorphic type schemes
 - ✅ Parser supports quantified types: `∀(n : ℕ, T). Matrix(m,n,T) → ...`
 - ✅ Full `prelude.kleis` loaded with algebraic structures and axioms
@@ -745,11 +745,11 @@ Parser extensions have immediate value when axioms are verifiable!
 ## References
 
 **Documentation:**
-- `docs/session-2024-12-10/Z3_BUILD_SETUP.md` - Complete setup guide
-- `docs/session-2024-12-10/Z3_GRAMMAR_ROADMAP.md` - Implementation plan
-- `docs/session-2024-12-10/PHASE_1_AND_2_COMPLETE.md` - Achievement summary
-- `docs/session-2024-12-10/HOW_Z3_DOES_E_UNIFICATION.md` - Z3 internals
-- `docs/session-2024-12-10/Z3_AST_VS_KLEIS_AST.md` - Architecture comparison
+- `docs/session-2025-12-10/Z3_BUILD_SETUP.md` - Complete setup guide
+- `docs/session-2025-12-10/Z3_GRAMMAR_ROADMAP.md` - Implementation plan
+- `docs/session-2025-12-10/PHASE_1_AND_2_COMPLETE.md` - Achievement summary
+- `docs/session-2025-12-10/HOW_Z3_DOES_E_UNIFICATION.md` - Z3 internals
+- `docs/session-2025-12-10/Z3_AST_VS_KLEIS_AST.md` - Architecture comparison
 
 **Code:**
 - `src/axiom_verifier.rs` - Main implementation

@@ -1,6 +1,6 @@
 # Pattern Matching Grammar Extension for Kleis v0.5
 
-**Date:** December 8, 2024  
+**Date:** December 8, 2025  
 **Status:** 📋 PROPOSED (Implementation in progress)  
 **Base:** Kleis Grammar v0.4 (with algebraic data types)
 
@@ -838,7 +838,7 @@ Kleis v0.3 (Bootstrap)
   
 Kleis v0.4 (+ ADR-021 Part 1)
   ├─ Everything from v0.3
-  └─ Data type definitions     ← Implemented Dec 8, 2024
+  └─ Data type definitions     ← Implemented Dec 8, 2025
   
 Kleis v0.5 (+ ADR-021 Part 2)
   ├─ Everything from v0.4
@@ -887,8 +887,8 @@ Kleis v1.0 (Full Grammar)
 
 - **ADR-021:** Algebraic Data Types (pattern matching is Part 2)
 - **Kleis v0.4 Grammar:** `docs/grammar/kleis_grammar_v04.ebnf`
-- **Implementation Plan:** `docs/session-2024-12-08/PATTERN_MATCHING_IMPLEMENTATION_PLAN.md`
-- **Value Proposition:** `docs/session-2024-12-08/WHY_PATTERN_MATCHING_MATTERS.md`
+- **Implementation Plan:** `docs/session-2025-12-08/PATTERN_MATCHING_IMPLEMENTATION_PLAN.md`
+- **Value Proposition:** `docs/session-2025-12-08/WHY_PATTERN_MATCHING_MATTERS.md`
 
 ---
 

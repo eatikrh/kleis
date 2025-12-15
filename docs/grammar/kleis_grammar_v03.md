@@ -1,6 +1,6 @@
 # Kleis Grammar v0.3 – Type System Integration
 
-**Date:** December 2024  
+**Date:** December 2025  
 **Status:** Working Draft  
 **Based on:** stdlib/prelude.kleis and ADR-014
 
@@ -625,9 +625,9 @@ define i : ℂ = √(-1)
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v0.1 | 2024-11 | Initial design |
-| v0.2 | 2024-12-01 | Objects, morphisms, equality types |
-| **v0.3** | **2024-12-05** | **Type system, structures, inference** |
+| v0.1 | 2025-11 | Initial design |
+| v0.2 | 2025-12-01 | Objects, morphisms, equality types |
+| **v0.3** | **2025-12-05** | **Type system, structures, inference** |
 
 ---
 

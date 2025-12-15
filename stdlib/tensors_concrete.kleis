@@ -1,0 +1,224 @@
+// Kleis Standard Library - Concrete Tensors
+// Component-based tensor operations for Z3 verification
+//
+// Unlike tensors.kleis (abstract/symbolic), this file defines tensors
+// with explicit components that Z3 can compute and verify.
+//
+// **Key Difference:**
+//   Abstract: g(-μ, -ν) - symbolic, Z3 treats as uninterpreted
+//   Concrete: Metric(4, [[-1,0,0,0], [0,1,0,0], ...]) - Z3 computes explicitly
+
+// ============================================
+// Rank-2 Tensor (Matrix-like, with indices)
+// ============================================
+
+// A rank-2 tensor with explicit components
+// Tensor2(dim, components) where components is a dim×dim matrix
+// 
+// Example: Minkowski metric η_μν
+//   Tensor2(4, [[-1, 0, 0, 0],
+//               [0, 1, 0, 0],
+//               [0, 0, 1, 0],
+//               [0, 0, 0, 1]])
+//
+// Index convention:
+//   Tensor2(dim, components) represents T_μν (both lower)
+//   For T^μν (both upper), use inverse
+//   For T^μ_ν (mixed), use contraction with metric
+
+structure Tensor2(dim: Nat) {
+    // Get component at indices (i, j)
+    operation component : Tensor2(dim) → Nat → Nat → ℝ
+    
+    // Tensor addition (component-wise)
+    operation add : Tensor2(dim) → Tensor2(dim) → Tensor2(dim)
+    
+    // Scalar multiplication
+    operation scale : ℝ → Tensor2(dim) → Tensor2(dim)
+    
+    // Tensor contraction (trace): T^μ_μ = Σ_μ T_μμ
+    operation trace : Tensor2(dim) → ℝ
+    
+    // Component-wise axioms
+    axiom add_components : ∀ A : Tensor2(dim) . ∀ B : Tensor2(dim) .
+        ∀ i : Nat . ∀ j : Nat .
+        component(add(A, B), i, j) = plus(component(A, i, j), component(B, i, j))
+    
+    axiom scale_components : ∀ c : ℝ . ∀ T : Tensor2(dim) .
+        ∀ i : Nat . ∀ j : Nat .
+        component(scale(c, T), i, j) = times(c, component(T, i, j))
+    
+    axiom trace_definition : ∀ T : Tensor2(dim) .
+        trace(T) = sum_diag(T, dim)
+}
+
+// ============================================
+// Metric Tensor (Concrete)
+// ============================================
+
+// Metric tensor with explicit inverse relationship
+// g_μν and g^μν satisfy: g^μρ g_ρν = δ^μ_ν
+structure MetricConcrete(dim: Nat) {
+    operation g_down : Tensor2(dim)      // g_μν (covariant)
+    operation g_up : Tensor2(dim)        // g^μν (contravariant = inverse)
+    
+    // Metric-inverse relationship
+    // g^μρ g_ρν = δ^μ_ν (Kronecker delta)
+    axiom metric_inverse : ∀ i : Nat . ∀ j : Nat .
+        contract_index(g_up, g_down, i, j) = delta(i, j)
+    
+    // Symmetry
+    axiom g_symmetric : ∀ i : Nat . ∀ j : Nat .
+        component(g_down, i, j) = component(g_down, j, i)
+}
+
+// ============================================
+// Index Raising/Lowering (Concrete)
+// ============================================
+
+// Raise/lower indices using metric contraction
+structure IndexOps(dim: Nat) {
+    // Lower index: V_μ = g_μν V^ν
+    operation lower_index : Tensor2(dim) → Vector(dim) → Covector(dim)
+    
+    // Raise index: V^μ = g^μν V_ν
+    operation raise_index : Tensor2(dim) → Covector(dim) → Vector(dim)
+    
+    // Concrete contraction definitions
+    axiom lower_definition : ∀ g : Tensor2(dim) . ∀ V : Vector(dim) .
+        ∀ i : Nat .
+        component(lower_index(g, V), i) = contract_vec(g, V, i, dim)
+    
+    axiom raise_definition : ∀ g_inv : Tensor2(dim) . ∀ W : Covector(dim) .
+        ∀ i : Nat .
+        component(raise_index(g_inv, W), i) = contract_vec(g_inv, W, i, dim)
+    
+    // The key identity: raise(g_inv, lower(g, V)) = V
+    // This FOLLOWS from metric_inverse axiom!
+    axiom raise_lower_identity : ∀ g : Tensor2(dim) . ∀ g_inv : Tensor2(dim) .
+        ∀ V : Vector(dim) .
+        raise_index(g_inv, lower_index(g, V)) = V
+}
+
+// ============================================
+// Contraction Operations
+// ============================================
+
+// Explicit contraction that Z3 can compute
+structure Contraction(dim: Nat) {
+    // Contract two tensors on one index
+    // Result: C_μν = A_μρ B^ρ_ν = Σ_ρ A_μρ B_ρν
+    operation contract : Tensor2(dim) → Tensor2(dim) → Tensor2(dim)
+    
+    // Contract vector with tensor
+    // Result: W_μ = T_μν V^ν = Σ_ν T_μν V_ν
+    operation contract_vec : Tensor2(dim) → Vector(dim) → Nat → Nat → ℝ
+    
+    // Contraction computed as sum
+    axiom contract_definition : ∀ A : Tensor2(dim) . ∀ B : Tensor2(dim) .
+        ∀ i : Nat . ∀ j : Nat .
+        component(contract(A, B), i, j) = 
+            sum_product(A, B, i, j, dim)
+}
+
+// ============================================
+// Standard Metrics (Concrete Components)
+// ============================================
+
+// Minkowski metric (flat spacetime)
+// η_μν = diag(-1, 1, 1, 1)
+structure Minkowski {
+    operation eta : Tensor2(4)
+    
+    // Explicit components
+    axiom eta_00 : component(eta, 0, 0) = negate(1)
+    axiom eta_11 : component(eta, 1, 1) = 1
+    axiom eta_22 : component(eta, 2, 2) = 1
+    axiom eta_33 : component(eta, 3, 3) = 1
+    
+    // Off-diagonal = 0
+    axiom eta_off_diag : ∀ i : Nat . ∀ j : Nat .
+        not(equals(i, j)) implies component(eta, i, j) = 0
+    
+    // Self-inverse (η^μν = η_μν for Minkowski)
+    axiom eta_self_inverse : ∀ i : Nat . ∀ j : Nat .
+        contract_index(eta, eta, i, j) = delta(i, j)
+}
+
+// Schwarzschild metric (black hole)
+// g_μν depends on r (radial coordinate) and M (mass)
+structure Schwarzschild(M: ℝ) {
+    operation g : ℝ → Tensor2(4)  // g(r) returns metric at radius r
+    
+    // Schwarzschild factor: f(r) = 1 - 2GM/r
+    operation schwarzschild_factor : ℝ → ℝ
+    
+    axiom factor_def : ∀ r : ℝ .
+        schwarzschild_factor(r) = minus(1, divide(times(2, M), r))
+    
+    // Components (in Schwarzschild coordinates t, r, θ, φ)
+    axiom g_tt : ∀ r : ℝ .
+        component(g(r), 0, 0) = negate(schwarzschild_factor(r))
+    
+    axiom g_rr : ∀ r : ℝ .
+        component(g(r), 1, 1) = divide(1, schwarzschild_factor(r))
+    
+    axiom g_theta_theta : ∀ r : ℝ .
+        component(g(r), 2, 2) = times(r, r)
+    
+    axiom g_phi_phi : ∀ r : ℝ . ∀ theta : ℝ .
+        component(g(r), 3, 3) = times(times(r, r), times(sin(theta), sin(theta)))
+}
+
+// ============================================
+// Helper Operations for Z3
+// ============================================
+
+// Sum over diagonal (for trace)
+// sum_diag(T, n) = Σ_{i=0}^{n-1} T_ii
+structure SumHelpers(dim: Nat) {
+    operation sum_diag : Tensor2(dim) → Nat → ℝ
+    operation sum_product : Tensor2(dim) → Tensor2(dim) → Nat → Nat → Nat → ℝ
+    operation delta : Nat → Nat → ℝ
+    
+    // Kronecker delta
+    axiom delta_same : ∀ i : Nat . delta(i, i) = 1
+    axiom delta_diff : ∀ i : Nat . ∀ j : Nat .
+        not(equals(i, j)) implies delta(i, j) = 0
+    
+    // Sum definitions (recursive)
+    // Base case
+    axiom sum_diag_base : ∀ T : Tensor2(dim) .
+        sum_diag(T, 0) = 0
+    
+    // Recursive case
+    axiom sum_diag_rec : ∀ T : Tensor2(dim) . ∀ n : Nat .
+        sum_diag(T, plus(n, 1)) = plus(sum_diag(T, n), component(T, n, n))
+    
+    // Sum of products (for contraction)
+    axiom sum_product_base : ∀ A : Tensor2(dim) . ∀ B : Tensor2(dim) .
+        ∀ i : Nat . ∀ j : Nat .
+        sum_product(A, B, i, j, 0) = 0
+    
+    axiom sum_product_rec : ∀ A : Tensor2(dim) . ∀ B : Tensor2(dim) .
+        ∀ i : Nat . ∀ j : Nat . ∀ k : Nat .
+        sum_product(A, B, i, j, plus(k, 1)) = 
+            plus(sum_product(A, B, i, j, k),
+                 times(component(A, i, k), component(B, k, j)))
+}
+
+// ============================================
+// Vector Types
+// ============================================
+
+// Contravariant vector V^μ
+structure Vector(dim: Nat) {
+    operation component : Vector(dim) → Nat → ℝ
+}
+
+// Covariant vector (1-form) V_μ
+structure Covector(dim: Nat) {
+    operation component : Covector(dim) → Nat → ℝ
+}
+
+

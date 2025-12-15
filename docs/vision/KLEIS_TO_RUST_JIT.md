@@ -1,6 +1,6 @@
 # Kleis-to-Rust JIT Compiler (Future Vision)
 
-**Date:** December 8, 2024  
+**Date:** December 8, 2025  
 **Context:** Post ADR-021 (Self-hosting type system)  
 **Status:** 💡 Future idea for performance optimization
 

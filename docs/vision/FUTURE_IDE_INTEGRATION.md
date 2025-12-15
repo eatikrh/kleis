@@ -165,6 +165,6 @@ app.whenReady().then(() => {
 
 ---
 
-**Date documented:** December 3, 2024  
+**Date documented:** December 3, 2025  
 **Revisit:** Q4 2027 or when core is feature-complete
 

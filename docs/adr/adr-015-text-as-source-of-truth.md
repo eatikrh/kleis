@@ -1,6 +1,6 @@
 # ADR-015: Text as Source of Truth for Kleis Notation
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Status:** Accepted  
 **Related:** ADR-009 (WYSIWYG Editor), ADR-010 (Inline Editing), ADR-011 (Notebook Environment)
 
@@ -627,7 +627,7 @@ Real-time collaboration (like Overleaf):
 
 **Status:** Accepted ✅
 
-**Date:** December 6, 2024
+**Date:** December 6, 2025
 
 **Decision Makers:** Design session participants
 
@@ -655,5 +655,5 @@ Real-time collaboration (like Overleaf):
 
 ---
 
-**Last Updated:** December 6, 2024
+**Last Updated:** December 6, 2025
 

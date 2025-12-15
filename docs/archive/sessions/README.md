@@ -6,9 +6,9 @@ Historical session reports moved from docs root to keep recent documentation cle
 
 ---
 
-## Session 2024-12-07: Type System & Stdlib Integration ⭐
+## Session 2025-12-07: Type System & Stdlib Integration ⭐
 
-**Date:** December 7, 2024  
+**Date:** December 7, 2025  
 **Focus:** Connecting standard library to type inference  
 **Status:** ✅ Complete - ADR-016 compliance achieved
 
@@ -28,9 +28,9 @@ Historical session reports moved from docs root to keep recent documentation cle
 
 ---
 
-## Session 2024-12-06: Notation Design + Type Checking
+## Session 2025-12-06: Notation Design + Type Checking
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Focus:** Notation design + Type checking infrastructure  
 **Status:** ✅ Complete with working implementation
 
@@ -54,7 +54,7 @@ Historical session reports moved from docs root to keep recent documentation cle
 ## Navigation
 
 **Parent:** [docs/README.md](../../README.md)  
-**Current Sessions:** [docs/](../../) (session-2024-12-08, session-2024-12-09)  
+**Current Sessions:** [docs/](../../) (session-2025-12-08, session-2025-12-09)  
 **Archive Root:** [docs/archive/](../)
 
 ---
@@ -71,5 +71,5 @@ Sessions remain accessible but don't clutter active documentation.
 
 ---
 
-**Last Updated:** December 9, 2024
+**Last Updated:** December 9, 2025
 

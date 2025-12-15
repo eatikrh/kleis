@@ -1,6 +1,6 @@
 # Computational Complexity Analysis of Kleis
 
-**Date:** December 8, 2024  
+**Date:** December 8, 2025  
 **Status:** Analysis of current implementation  
 **Context:** Post ADR-021 (self-hosting type system)
 

@@ -1,6 +1,6 @@
 # Updated Roadmap: Operations in Structures (ADR-016)
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Decision:** ADR-016 - Operations belong in structures  
 **Impact:** Updated implementation plan
 

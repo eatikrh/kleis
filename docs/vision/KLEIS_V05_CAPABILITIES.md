@@ -1,6 +1,6 @@
 # Kleis v0.5 Capabilities - What Can It Do Now?
 
-**Date:** December 8, 2024  
+**Date:** December 8, 2025  
 **Grammar Version:** v0.5 (with pattern matching)  
 **Status:** Analyzing new capabilities enabled by recent features
 
@@ -1096,7 +1096,7 @@ All can be added later without breaking existing code.
 
 ## The Practical Question: What Would You Use It For?
 
-### Today (December 2024)
+### Today (December 2025)
 
 **Educational:**
 - ✅ Teach type systems

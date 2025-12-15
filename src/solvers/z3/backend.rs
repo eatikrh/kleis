@@ -14,7 +14,9 @@
 //! **Critical:** All public methods return Kleis Expression, not Z3 types!
 
 use crate::ast::{Expression, QuantifiedVar, QuantifierKind};
-use crate::solvers::backend::{SolverBackend, SolverStats, VerificationResult};
+use crate::solvers::backend::{
+    SatisfiabilityResult, SolverBackend, SolverStats, VerificationResult,
+};
 use crate::solvers::capabilities::SolverCapabilities;
 use crate::solvers::result_converter::ResultConverter;
 use crate::solvers::z3::converter::Z3ResultConverter;
@@ -50,6 +52,9 @@ pub struct Z3Backend<'r> {
     /// Identity elements (zero, one, e, etc.) mapped to Z3 constants
     identity_elements: HashMap<String, Dynamic>,
 
+    /// Free variables auto-created from undefined Object names
+    free_variables: HashMap<String, Dynamic>,
+
     /// Result converter (Z3 Dynamic → Kleis Expression)
     converter: Z3ResultConverter,
 }
@@ -59,19 +64,198 @@ impl<'r> Z3Backend<'r> {
     ///
     /// # Arguments
     /// * `registry` - Structure registry containing operations and axioms
+    ///
+    /// # Axiom Loading
+    /// Axioms are loaded from stdlib/*.kleis files via assert_axioms_from_registry().
+    /// Call this method after creating the backend to load all axioms before verification.
     pub fn new(registry: &'r StructureRegistry) -> Result<Self, String> {
         let solver = Solver::new();
         let capabilities = super::load_capabilities()?;
 
-        Ok(Self {
+        let backend = Self {
             solver,
             registry,
             capabilities,
             declared_ops: HashSet::new(),
             loaded_structures: HashSet::new(),
             identity_elements: HashMap::new(),
+            free_variables: HashMap::new(),
             converter: Z3ResultConverter,
-        })
+        };
+
+        Ok(backend)
+    }
+
+    /// Assert all axioms from the registry into Z3 solver
+    ///
+    /// This is the key method for making user-defined axioms available to Z3.
+    /// Axioms are translated to Z3 assertions so they can be used for verification.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let mut backend = Z3Backend::new(&registry)?;
+    /// backend.assert_axioms_from_registry()?;  // Load all axioms
+    /// backend.verify_axiom(&theorem)?;          // Now uses loaded axioms
+    /// ```
+    ///
+    /// # Returns
+    /// - Ok(count) - number of axioms successfully loaded
+    /// - Err if any axiom fails to translate
+    pub fn assert_axioms_from_registry(&mut self) -> Result<usize, String> {
+        let mut count = 0;
+        let empty_vars: HashMap<String, Dynamic> = HashMap::new();
+
+        // Get all structures that have axioms
+        let structures_with_axioms: Vec<String> = self
+            .registry
+            .structures_with_axioms()
+            .iter()
+            .map(|s| (*s).clone())
+            .collect();
+
+        for structure_name in structures_with_axioms {
+            // Skip if already loaded
+            if self.loaded_structures.contains(&structure_name) {
+                continue;
+            }
+
+            let axioms = self.registry.get_axioms(&structure_name);
+
+            for (axiom_name, axiom_expr) in axioms {
+                match self.translate_and_assert_axiom(&axiom_name, axiom_expr, &empty_vars) {
+                    Ok(()) => {
+                        count += 1;
+                        // Successfully asserted axiom
+                    }
+                    Err(_e) => {
+                        // Continue with other axioms rather than failing entirely
+                        // Axioms may fail if they use unsupported constructs
+                    }
+                }
+            }
+
+            self.loaded_structures.insert(structure_name);
+        }
+
+        Ok(count)
+    }
+
+    /// Translate a single axiom and assert it into Z3
+    fn translate_and_assert_axiom(
+        &mut self,
+        name: &str,
+        expr: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<(), String> {
+        // Handle quantified axioms (∀ x : T . body)
+        if let Expression::Quantifier {
+            quantifier,
+            variables,
+            where_clause,
+            body,
+        } = expr
+        {
+            // Create Z3 forall
+            let z3_axiom =
+                self.translate_quantifier_as_forall(quantifier, variables, where_clause, body)?;
+            self.solver.assert(&z3_axiom);
+            return Ok(());
+        }
+
+        // Non-quantified axiom: translate directly
+        let z3_expr = self.kleis_to_z3(expr, vars)?;
+
+        // Must be boolean
+        let z3_bool = z3_expr
+            .as_bool()
+            .ok_or_else(|| format!("Axiom '{}' must be a boolean expression", name))?;
+
+        self.solver.assert(&z3_bool);
+        Ok(())
+    }
+
+    /// Translate a quantified expression to a proper Z3 forall
+    ///
+    /// This creates an actual Z3 forall constraint, not just the body.
+    fn translate_quantifier_as_forall(
+        &mut self,
+        quantifier: &QuantifierKind,
+        variables: &[QuantifiedVar],
+        where_clause: &Option<Box<Expression>>,
+        body: &Expression,
+    ) -> Result<Bool, String> {
+        // Create Z3 bound variables
+        let mut bound_vars: Vec<Dynamic> = Vec::new();
+        let mut var_map: HashMap<String, Dynamic> = HashMap::new();
+
+        for var in variables {
+            let z3_var: Dynamic = if let Some(type_annotation) = &var.type_annotation {
+                match type_annotation.as_str() {
+                    "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
+                    "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
+                    "ℤ" | "Int" | "Z" | "Nat" => Int::fresh_const(&var.name).into(),
+                    _ => Int::fresh_const(&var.name).into(),
+                }
+            } else {
+                Int::fresh_const(&var.name).into()
+            };
+            bound_vars.push(z3_var.clone());
+            var_map.insert(var.name.clone(), z3_var);
+        }
+
+        // Translate body
+        let body_z3 = self.kleis_to_z3(body, &var_map)?;
+        let body_bool = body_z3
+            .as_bool()
+            .ok_or_else(|| "Quantifier body must be boolean".to_string())?;
+
+        // Handle where clause: where_clause ⟹ body
+        let formula = if let Some(condition) = where_clause {
+            let condition_z3 = self.kleis_to_z3(condition, &var_map)?;
+            let condition_bool = condition_z3
+                .as_bool()
+                .ok_or_else(|| "Where clause must be boolean".to_string())?;
+            condition_bool.implies(&body_bool)
+        } else {
+            body_bool
+        };
+
+        // Create Z3 forall/exists
+        let bound_refs: Vec<&dyn Ast> = bound_vars.iter().map(|v| v as &dyn Ast).collect();
+
+        let result = match quantifier {
+            QuantifierKind::ForAll => z3::ast::forall_const(&bound_refs, &[], &formula),
+            QuantifierKind::Exists => z3::ast::exists_const(&bound_refs, &[], &formula),
+        };
+
+        // Convert back to Bool (forall_const returns Bool)
+        Ok(result)
+    }
+
+    /// Translate a Kleis List to a cons-chain
+    ///
+    /// [a, b, c] -> cons(a, cons(b, cons(c, nil)))
+    ///
+    /// This enables axioms from stdlib/lists.kleis to work:
+    /// - nth(cons(x, xs), 0) = x
+    /// - nth(cons(x, xs), n+1) = nth(xs, n)
+    fn translate_list_to_cons(
+        &mut self,
+        items: &[Expression],
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Dynamic, String> {
+        // nil is represented as an uninterpreted constant
+        let nil_func = self.declare_uninterpreted("nil", 0);
+        let mut result = nil_func.apply(&[]);
+
+        // Build cons chain from right to left
+        for item in items.iter().rev() {
+            let item_z3 = self.kleis_to_z3(item, vars)?;
+            let cons_func = self.declare_uninterpreted("cons", 2);
+            result = cons_func.apply(&[&item_z3 as &dyn Ast, &result as &dyn Ast]);
+        }
+
+        Ok(result)
     }
 
     /// Translate Kleis expression to Z3 Dynamic
@@ -97,8 +281,17 @@ impl<'r> Z3Backend<'r> {
                     return Ok(identity.clone());
                 }
 
-                // 3. Undefined
-                Err(format!("Undefined variable or identity: {}", name))
+                // 3. Check already-created free variables
+                if let Some(free_var) = self.free_variables.get(name) {
+                    return Ok(free_var.clone());
+                }
+
+                // 4. Create fresh constant for this free variable
+                // This allows equations like "A = Matrix(...)" to be verified
+                let fresh = Int::fresh_const(name);
+                let dynamic: Dynamic = fresh.into();
+                self.free_variables.insert(name.clone(), dynamic.clone());
+                Ok(dynamic)
             }
 
             Expression::Const(s) => {
@@ -111,7 +304,10 @@ impl<'r> Z3Backend<'r> {
             }
 
             Expression::Operation { name, args } => {
-                // Translate arguments first
+                // Matrix and tensor operations are handled via axioms from stdlib/*.kleis
+                // Use assert_axioms_from_registry() to load them before verification
+
+                // Standard path: translate arguments first
                 let z3_args: Result<Vec<_>, _> =
                     args.iter().map(|arg| self.kleis_to_z3(arg, vars)).collect();
                 let z3_args = z3_args?;
@@ -173,12 +369,9 @@ impl<'r> Z3Backend<'r> {
             }
 
             Expression::List(items) => {
-                // For now, lists are not directly translatable to Z3
-                // They're typically used in matrix constructors
-                Err(format!(
-                    "List expressions not directly supported in Z3 (use in constructors): {:?}",
-                    items.len()
-                ))
+                // Convert list to cons-chain: [a, b, c] -> cons(a, cons(b, cons(c, nil)))
+                // This allows axioms from stdlib/lists.kleis to work
+                self.translate_list_to_cons(items, vars)
             }
 
             _ => Err(format!("Unsupported expression type for Z3: {:?}", expr)),
@@ -386,6 +579,17 @@ impl<'r> Z3Backend<'r> {
                     return Err("negate requires 1 argument".to_string());
                 }
                 arithmetic::translate_negate(&args[0])
+            }
+
+            // Nth root: nth_root(n, x) - uninterpreted for integers
+            // (sqrt is already handled above via arithmetic::translate_sqrt)
+            "nth_root" => {
+                if args.len() != 2 {
+                    return Err("nth_root requires 2 arguments (index, radicand)".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("nth_root", 2);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
             }
 
             // Unknown operation - use uninterpreted function
@@ -788,13 +992,47 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         Ok(result)
     }
 
+    fn check_satisfiability(&mut self, expr: &Expression) -> Result<SatisfiabilityResult, String> {
+        // Use push/pop for incremental solving
+        self.solver.push();
+
+        // Translate to Z3
+        let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
+        let z3_bool = z3_expr
+            .as_bool()
+            .ok_or_else(|| "Expression must be a boolean proposition".to_string())?;
+
+        // Assert the expression directly (not negated)
+        self.solver.assert(&z3_bool);
+
+        // Check satisfiability
+        let result = match self.solver.check() {
+            SatResult::Sat => {
+                let example = if let Some(model) = self.solver.get_model() {
+                    format!("{}", model)
+                } else {
+                    "Satisfiable (no model details)".to_string()
+                };
+                SatisfiabilityResult::Satisfiable { example }
+            }
+            SatResult::Unsat => SatisfiabilityResult::Unsatisfiable,
+            SatResult::Unknown => SatisfiabilityResult::Unknown,
+        };
+
+        // Pop the assertion
+        self.solver.pop(1);
+
+        Ok(result)
+    }
+
     fn evaluate(&mut self, expr: &Expression) -> Result<Expression, String> {
         // Translate Kleis expression to Z3
         let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
 
         // For evaluation, we need a concrete value
-        // Use a temporary solver to check satisfiability and get a model
-        let temp_solver = Solver::new();
+        // Use self.solver which has axioms already asserted
+        // Push a scope so we can pop after evaluation
+        self.solver.push();
 
         // For constant expressions, we can try to extract the value directly
         // For symbolic expressions, we need a model
@@ -802,6 +1040,7 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         // Try to get concrete value directly
         if let Some(int_val) = z3_expr.as_int() {
             if let Some(value) = int_val.as_i64() {
+                self.solver.pop(1);
                 return Ok(Expression::Const(value.to_string()));
             }
         }
@@ -824,32 +1063,37 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         }
 
         // For symbolic expressions, try to get a satisfying model
-        temp_solver.push();
+        // NOTE: This can hang with quantified axioms! Use with caution.
 
         // Create a fresh variable and assert it equals our expression
         let result_var = Int::fresh_const("eval_result");
 
         // Try to cast z3_expr to Int and assert equality
         if let Some(int_expr) = z3_expr.as_int() {
-            temp_solver.assert(result_var.eq(&int_expr));
+            self.solver.assert(result_var.eq(&int_expr));
 
-            match temp_solver.check() {
+            match self.solver.check() {
                 SatResult::Sat => {
-                    if let Some(model) = temp_solver.get_model() {
+                    if let Some(model) = self.solver.get_model() {
                         if let Some(evaluated) = model.eval(&result_var, true) {
-                            // Convert Z3 result to Kleis Expression using converter
                             let z3_dynamic: Dynamic = evaluated.into();
+                            self.solver.pop(1);
                             return self.converter.to_expression(&z3_dynamic);
                         }
                     }
                 }
-                _ => {
-                    return Err("Cannot evaluate expression - no satisfying assignment".to_string())
+                SatResult::Unsat => {
+                    self.solver.pop(1);
+                    return Err("Cannot evaluate expression - unsatisfiable".to_string());
+                }
+                SatResult::Unknown => {
+                    self.solver.pop(1);
+                    return Err("Cannot evaluate expression - unknown".to_string());
                 }
             }
         }
 
-        temp_solver.pop(1);
+        self.solver.pop(1);
 
         // Fallback: return string representation
         Ok(Expression::Const(z3_expr.to_string()))

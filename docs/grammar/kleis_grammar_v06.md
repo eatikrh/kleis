@@ -1,6 +1,6 @@
 # Kleis Grammar v0.6 - Functions in Structures
 
-**Date:** December 12, 2024  
+**Date:** December 12, 2025  
 **Status:** ✅ IMPLEMENTED  
 **Base:** Kleis Grammar v0.5 (with pattern matching)
 
@@ -294,18 +294,18 @@ structure Ring(R) {
 
 ## Version History
 
-**v0.6 (2024-12-12):**
+**v0.6 (2025-12-12):**
 - Added `functionDef` to `structureMember`
 - Enables derived operations in structures
 - Resolves TODO #11
 
-**v0.5 (2024-12-08):**
+**v0.5 (2025-12-08):**
 - Added pattern matching
 
-**v0.4 (2024-12-08):**
+**v0.4 (2025-12-08):**
 - Added algebraic data types
 
-**v0.3 (2024-12-05):**
+**v0.3 (2025-12-05):**
 - Type system with polymorphism
 
 ---
@@ -313,7 +313,7 @@ structure Ring(R) {
 ## References
 
 - **TODO #11:** `src/kleis_parser.rs:1758`
-- **Rationale:** `docs/session-2024-12-12/GRAMMAR_V06_RATIONALE.md`
+- **Rationale:** `docs/session-2025-12-12/GRAMMAR_V06_RATIONALE.md`
 - **Examples:** `stdlib/prelude.kleis` (Ring, Field structures)
 - **EBNF:** `docs/grammar/kleis_grammar_v06.ebnf`
 - **ANTLR4:** `docs/grammar/Kleis_v06.g4`

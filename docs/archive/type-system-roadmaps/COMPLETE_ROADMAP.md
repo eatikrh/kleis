@@ -1,6 +1,6 @@
 # Complete Type Checking Roadmap
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Status:** Connecting ADR-015 + Type Inference → Full Type Checking
 
 ---

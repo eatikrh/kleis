@@ -1,6 +1,6 @@
 # Kleis REPL - Design Document
 
-**Date:** December 11, 2024  
+**Date:** December 11, 2025  
 **Status:** Proposal - Pre-cursor to Kleis Notebook  
 **Priority:** After documentation consolidation
 

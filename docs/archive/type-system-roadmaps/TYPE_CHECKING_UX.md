@@ -1,6 +1,6 @@
 # Type Checking UX Design
 
-**Date:** December 2024  
+**Date:** December 2025  
 **Status:** Design Specification  
 **Consolidated from:** INCREMENTAL_TYPE_CHECKING.md, USER_DEFINED_TYPES.md
 

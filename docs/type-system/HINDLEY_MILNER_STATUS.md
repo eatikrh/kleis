@@ -1,6 +1,6 @@
 # Hindley-Milner Implementation Status
 
-**Date:** December 6, 2024 (Updated: December 9, 2024)  
+**Date:** December 6, 2025 (Updated: December 9, 2025)  
 **Question:** Are we properly following Hindley-Milner like Haskell?  
 **Answer:** ✅ **YES! It's already implemented!**
 
@@ -383,7 +383,7 @@ The core algorithm is correct. What we're adding (ADR-016) is:
 **Question:** Are we following Hindley-Milner properly?  
 **Answer:** ✅ **YES! Core algorithm is already implemented!**
 
-**What we have (as of Dec 9, 2024):**
+**What we have (as of Dec 9, 2025):**
 - ✅ Proper HM type inference
 - ✅ Unification with occurs check
 - ✅ Constraint solving
