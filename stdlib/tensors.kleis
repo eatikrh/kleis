@@ -4,6 +4,18 @@
 // Tensors are fundamental to Einstein's field equations and curved spacetime.
 // This file defines tensor structures following ADR-016.
 //
+// **xAct/xTensor-Style Notation**
+//
+// We use xAct-style notation where:
+//   - Positive index → contravariant (upper): T(μ, ρ) → T^μρ
+//   - Negative index → covariant (lower): T(-μ, -ν) → T_μν
+//   - Mixed: T(μ, -ν) → T^μ_ν
+//
+// Examples:
+//   g(-μ, -ν)              // Metric tensor g_μν
+//   Γ(λ, -μ, -ν)          // Christoffel symbol Γ^λ_μν
+//   R(ρ, -σ, -μ, -ν)      // Riemann tensor R^ρ_σμν
+//
 // Tensors are parametric over:
 //   - Rank: (contravariant, covariant) index counts
 //   - Dimension: spacetime dimension (typically 4 for GR)
@@ -446,5 +458,153 @@ implements StandardMetrics(dim) {
     operation schwarzschild = builtin_schwarzschild_metric
     operation kerr = builtin_kerr_metric
     operation flrw = builtin_flrw_metric
+}
+
+// ============================================
+// xAct/xTensor-Style Tensor Algebra
+// ============================================
+//
+// These structures define tensor operations using xAct-style notation.
+// The sign of indices determines variance:
+//   - Positive (μ): contravariant (upper index)
+//   - Negative (-μ): covariant (lower index)
+
+/* Index Contraction (Einstein Summation)
+ * 
+ * When a contravariant index and covariant index share the same name,
+ * they are contracted (summed over).
+ * 
+ * Example: T(μ, -μ) = Σ_μ T^μ_μ (trace)
+ * 
+ * Axiom: Contraction of repeated indices produces a lower-rank tensor.
+ */
+structure IndexContraction(dim: Nat) {
+    operation contract : Tensor(1, 1, dim, ℝ) → ℝ
+    
+    // Contraction is well-defined (returns a value)
+    // Note: Type judgments (expr : Type) require parser extension
+    // For now, we document the type in the operation signature above
+}
+
+implements IndexContraction(dim) {
+    operation contract = builtin_trace
+}
+
+/* Metric Index Raising/Lowering
+ * 
+ * The metric tensor relates contravariant and covariant indices:
+ *   - Raise: V^μ = g^{μν} V_ν
+ *   - Lower: V_μ = g_{μν} V^ν
+ * 
+ * xAct notation:
+ *   - V(μ) raised from V(-μ) using g(μ, ν)
+ *   - V(-μ) lowered from V(μ) using g(-μ, -ν)
+ */
+structure MetricIndexOps(dim: Nat) {
+    operation raise : Tensor(2, 0, dim, ℝ) → Tensor(0, 1, dim, ℝ) → Tensor(1, 0, dim, ℝ)
+    operation lower : Tensor(0, 2, dim, ℝ) → Tensor(1, 0, dim, ℝ) → Tensor(0, 1, dim, ℝ)
+    
+    // Raising then lowering returns original
+    axiom raise_lower_identity : ∀ g_up : Tensor(2, 0, dim, ℝ) .
+        ∀ g_down : Tensor(0, 2, dim, ℝ) .
+        ∀ V : Tensor(1, 0, dim, ℝ) .
+        raise(g_up, lower(g_down, V)) = V
+    
+    // Lowering then raising returns original
+    axiom lower_raise_identity : ∀ g_up : Tensor(2, 0, dim, ℝ) .
+        ∀ g_down : Tensor(0, 2, dim, ℝ) .
+        ∀ W : Tensor(0, 1, dim, ℝ) .
+        lower(g_down, raise(g_up, W)) = W
+}
+
+implements MetricIndexOps(dim) {
+    operation raise = builtin_raise_with_metric
+    operation lower = builtin_lower_with_metric
+}
+
+/* Metric Tensor Symmetry
+ * 
+ * The metric tensor is symmetric: g_μν = g_νμ
+ * In xAct notation: g(-μ, -ν) = g(-ν, -μ)
+ */
+structure MetricSymmetry(dim: Nat) {
+    axiom metric_symmetric : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ μ : Nat . ∀ ν : Nat .
+        component(g, μ, ν) = component(g, ν, μ)
+}
+
+/* Riemann Tensor Symmetries
+ * 
+ * The Riemann tensor R^ρ_σμν has several symmetries:
+ *   1. Antisymmetric in last two indices: R^ρ_σμν = -R^ρ_σνμ
+ *   2. First Bianchi identity: R^ρ_[σμν] = 0 (cyclic sum)
+ */
+structure RiemannSymmetries(dim: Nat) {
+    // Antisymmetry in μ, ν
+    axiom riemann_antisym_34 : ∀ R : Tensor(1, 3, dim, ℝ) .
+        ∀ ρ : Nat . ∀ σ : Nat . ∀ μ : Nat . ∀ ν : Nat .
+        component4(R, ρ, σ, μ, ν) = negate(component4(R, ρ, σ, ν, μ))
+    
+    // First Bianchi identity (cyclic sum = 0)
+    axiom riemann_bianchi_1 : ∀ R : Tensor(1, 3, dim, ℝ) .
+        ∀ ρ : Nat . ∀ σ : Nat . ∀ μ : Nat . ∀ ν : Nat .
+        plus(component4(R, ρ, σ, μ, ν),
+             plus(component4(R, ρ, μ, ν, σ),
+                  component4(R, ρ, ν, σ, μ))) = 0
+}
+
+/* Christoffel Symbol Symmetry
+ * 
+ * Christoffel symbols Γ^λ_μν are symmetric in lower indices: Γ^λ_μν = Γ^λ_νμ
+ * In xAct notation: Γ(λ, -μ, -ν) = Γ(λ, -ν, -μ)
+ */
+structure ChristoffelSymmetry(dim: Nat) {
+    axiom christoffel_symmetric : ∀ Γ : Tensor(1, 2, dim, ℝ) .
+        ∀ λ : Nat . ∀ μ : Nat . ∀ ν : Nat .
+        component3(Γ, λ, μ, ν) = component3(Γ, λ, ν, μ)
+}
+
+/* Tensor Addition
+ * 
+ * Tensors of the same rank can be added component-wise.
+ */
+structure TensorAddition(upper: Nat, lower: Nat, dim: Nat) {
+    operation add : Tensor(upper, lower, dim, ℝ) → Tensor(upper, lower, dim, ℝ) → Tensor(upper, lower, dim, ℝ)
+    
+    // Commutativity
+    axiom add_commutative : ∀ A : Tensor(upper, lower, dim, ℝ) .
+        ∀ B : Tensor(upper, lower, dim, ℝ) .
+        add(A, B) = add(B, A)
+    
+    // Associativity
+    axiom add_associative : ∀ A : Tensor(upper, lower, dim, ℝ) .
+        ∀ B : Tensor(upper, lower, dim, ℝ) .
+        ∀ C : Tensor(upper, lower, dim, ℝ) .
+        add(add(A, B), C) = add(A, add(B, C))
+}
+
+implements TensorAddition(upper, lower, dim) {
+    operation add = builtin_tensor_add
+}
+
+/* Scalar Multiplication
+ * 
+ * Tensors can be multiplied by scalars.
+ */
+structure TensorScalarMult(upper: Nat, lower: Nat, dim: Nat) {
+    operation scale : ℝ → Tensor(upper, lower, dim, ℝ) → Tensor(upper, lower, dim, ℝ)
+    
+    // Distributivity over scalar addition
+    axiom scale_distributes : ∀ a : ℝ . ∀ b : ℝ .
+        ∀ T : Tensor(upper, lower, dim, ℝ) .
+        scale(plus(a, b), T) = add(scale(a, T), scale(b, T))
+    
+    // Identity: scaling by 1 does nothing
+    axiom scale_identity : ∀ T : Tensor(upper, lower, dim, ℝ) .
+        scale(1, T) = T
+}
+
+implements TensorScalarMult(upper, lower, dim) {
+    operation scale = builtin_tensor_scale
 }
 

@@ -183,6 +183,219 @@ impl<'r> Z3Backend<'r> {
         None
     }
 
+    // =========================================
+    // Tensor Expansion Methods (Concrete Tensors)
+    // =========================================
+
+    /// Extract Tensor2 info: (dimension, components)
+    /// Tensor2(dim, [component_list])
+    fn extract_tensor2_info(&self, expr: &Expression) -> Option<(usize, Vec<Expression>)> {
+        if let Expression::Operation { name, args } = expr {
+            if name == "Tensor2" && args.len() == 2 {
+                let dim = match &args[0] {
+                    Expression::Const(s) => s.parse::<usize>().ok()?,
+                    _ => return None,
+                };
+                if let Expression::List(elements) = &args[1] {
+                    // For a dim×dim tensor, we expect dim² elements
+                    if elements.len() == dim * dim {
+                        return Some((dim, elements.clone()));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Extract Vector info: (dimension, components)
+    /// Vector(dim, [component_list])
+    fn extract_vector_info(&self, expr: &Expression) -> Option<(usize, Vec<Expression>)> {
+        if let Expression::Operation { name, args } = expr {
+            if name == "Vector" && args.len() == 2 {
+                let dim = match &args[0] {
+                    Expression::Const(s) => s.parse::<usize>().ok()?,
+                    _ => return None,
+                };
+                if let Expression::List(elements) = &args[1] {
+                    if elements.len() == dim {
+                        return Some((dim, elements.clone()));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Expand tensor contraction: A_μρ B^ρ_ν = Σ_ρ A_μρ * B_ρν
+    /// Returns encoded result matrix for Z3
+    fn try_expand_tensor_contraction(
+        &mut self,
+        left: &Expression,
+        right: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Option<Dynamic>, String> {
+        let left_info = self.extract_tensor2_info(left);
+        let right_info = self.extract_tensor2_info(right);
+
+        match (left_info, right_info) {
+            (Some((dim, left_elems)), Some((dim2, right_elems))) if dim == dim2 => {
+                // Contract: C_ij = Σ_k A_ik * B_kj
+                // For small dimensions (2, 3, 4), expand explicitly
+                if dim > 4 {
+                    return Ok(None); // Fall back to uninterpreted for large tensors
+                }
+
+                let mut result_terms: Vec<Int> = Vec::with_capacity(dim * dim);
+
+                for i in 0..dim {
+                    for j in 0..dim {
+                        // C_ij = Σ_k A_ik * B_kj
+                        let mut sum_terms: Vec<Int> = Vec::new();
+                        for k in 0..dim {
+                            let a_idx = i * dim + k;
+                            let b_idx = k * dim + j;
+
+                            let a_z3 = self.kleis_to_z3(&left_elems[a_idx], vars)?;
+                            let b_z3 = self.kleis_to_z3(&right_elems[b_idx], vars)?;
+
+                            let a_int =
+                                a_z3.as_int().ok_or("Tensor element must be integer/real")?;
+                            let b_int =
+                                b_z3.as_int().ok_or("Tensor element must be integer/real")?;
+
+                            sum_terms.push(Int::mul(&[&a_int, &b_int]));
+                        }
+
+                        // Sum all terms for this component
+                        let refs: Vec<&Int> = sum_terms.iter().collect();
+                        result_terms.push(Int::add(&refs));
+                    }
+                }
+
+                // Encode result using large primes (similar to matrix)
+                // This encodes all components into a single Z3 integer
+                let prime = Int::from_i64(1000003);
+                let mut encoded = Int::from_i64(0);
+                for term in result_terms.iter().rev() {
+                    encoded = Int::add(&[&Int::mul(&[&encoded, &prime]), term]);
+                }
+
+                Ok(Some(encoded.into()))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// Expand tensor trace: Tr(T) = Σ_μ T_μμ
+    fn try_expand_tensor_trace(
+        &mut self,
+        tensor: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Option<Dynamic>, String> {
+        if let Some((dim, elems)) = self.extract_tensor2_info(tensor) {
+            // Trace = sum of diagonal elements
+            let mut diag_terms: Vec<Int> = Vec::new();
+            for i in 0..dim {
+                let diag_idx = i * dim + i; // Element T_ii
+                let elem_z3 = self.kleis_to_z3(&elems[diag_idx], vars)?;
+                let elem_int = elem_z3
+                    .as_int()
+                    .ok_or("Tensor element must be integer/real")?;
+                diag_terms.push(elem_int);
+            }
+
+            let refs: Vec<&Int> = diag_terms.iter().collect();
+            Ok(Some(Int::add(&refs).into()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Expand index lowering: V_μ = g_μν V^ν
+    fn try_expand_index_lower(
+        &mut self,
+        metric: &Expression,
+        vector: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Option<Dynamic>, String> {
+        let metric_info = self.extract_tensor2_info(metric);
+        let vector_info = self.extract_vector_info(vector);
+
+        match (metric_info, vector_info) {
+            (Some((dim, g_elems)), Some((vdim, v_elems))) if dim == vdim => {
+                // W_μ = g_μν V^ν = Σ_ν g_μν * V_ν
+                let mut result_terms: Vec<Int> = Vec::with_capacity(dim);
+
+                for mu in 0..dim {
+                    let mut sum_terms: Vec<Int> = Vec::new();
+                    #[allow(clippy::needless_range_loop)]
+                    for nu in 0..dim {
+                        let g_idx = mu * dim + nu;
+                        let g_z3 = self.kleis_to_z3(&g_elems[g_idx], vars)?;
+                        let v_z3 = self.kleis_to_z3(&v_elems[nu], vars)?;
+
+                        let g_int = g_z3.as_int().ok_or("Metric element must be integer")?;
+                        let v_int = v_z3.as_int().ok_or("Vector element must be integer")?;
+
+                        sum_terms.push(Int::mul(&[&g_int, &v_int]));
+                    }
+                    let refs: Vec<&Int> = sum_terms.iter().collect();
+                    result_terms.push(Int::add(&refs));
+                }
+
+                // Encode result vector
+                let prime = Int::from_i64(1000003);
+                let mut encoded = Int::from_i64(0);
+                for term in result_terms.iter().rev() {
+                    encoded = Int::add(&[&Int::mul(&[&encoded, &prime]), term]);
+                }
+
+                Ok(Some(encoded.into()))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// Expand index raising: V^μ = g^μν V_ν
+    fn try_expand_index_raise(
+        &mut self,
+        inv_metric: &Expression,
+        covector: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Option<Dynamic>, String> {
+        // Same logic as lower_index, just uses inverse metric
+        self.try_expand_index_lower(inv_metric, covector, vars)
+    }
+
+    /// Expand tensor component access: component(T, i, j)
+    fn try_expand_tensor_component(
+        &mut self,
+        tensor: &Expression,
+        idx_i: &Expression,
+        idx_j: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Option<Dynamic>, String> {
+        if let Some((dim, elems)) = self.extract_tensor2_info(tensor) {
+            // Only expand if indices are concrete constants
+            let i = match idx_i {
+                Expression::Const(s) => s.parse::<usize>().ok(),
+                _ => None,
+            };
+            let j = match idx_j {
+                Expression::Const(s) => s.parse::<usize>().ok(),
+                _ => None,
+            };
+
+            if let (Some(i_val), Some(j_val)) = (i, j) {
+                if i_val < dim && j_val < dim {
+                    let elem_idx = i_val * dim + j_val;
+                    return self.kleis_to_z3(&elems[elem_idx], vars).map(Some);
+                }
+            }
+        }
+        Ok(None)
+    }
+
     /// Translate Kleis expression to Z3 Dynamic
     ///
     /// This is the core translation function. It recursively converts
@@ -274,6 +487,51 @@ impl<'r> Z3Backend<'r> {
                 if name == "multiply" && args.len() == 2 {
                     if let Some(result) =
                         self.try_expand_matrix_multiply(&args[0], &args[1], vars)?
+                    {
+                        return Ok(result);
+                    }
+                }
+
+                // Tensor contraction expansion
+                // contract(Tensor2(dim, components), Tensor2(dim, components))
+                //   = Sum over contracted index
+                if name == "contract" && args.len() == 2 {
+                    if let Some(result) =
+                        self.try_expand_tensor_contraction(&args[0], &args[1], vars)?
+                    {
+                        return Ok(result);
+                    }
+                }
+
+                // Tensor trace expansion
+                // trace(Tensor2(dim, components)) = sum of diagonal
+                if name == "trace" && args.len() == 1 {
+                    if let Some(result) = self.try_expand_tensor_trace(&args[0], vars)? {
+                        return Ok(result);
+                    }
+                }
+
+                // Index lowering with metric
+                // lower_index(g, V) = g_μν V^ν (contraction)
+                if name == "lower_index" && args.len() == 2 {
+                    if let Some(result) = self.try_expand_index_lower(&args[0], &args[1], vars)? {
+                        return Ok(result);
+                    }
+                }
+
+                // Index raising with inverse metric
+                // raise_index(g_inv, W) = g^μν W_ν (contraction)
+                if name == "raise_index" && args.len() == 2 {
+                    if let Some(result) = self.try_expand_index_raise(&args[0], &args[1], vars)? {
+                        return Ok(result);
+                    }
+                }
+
+                // Tensor component access
+                // component(T, i, j) -> T_ij value
+                if name == "component" && args.len() == 3 {
+                    if let Some(result) =
+                        self.try_expand_tensor_component(&args[0], &args[1], &args[2], vars)?
                     {
                         return Ok(result);
                     }

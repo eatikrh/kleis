@@ -11,7 +11,7 @@
 | **Fences** | 8 | ✅ Complete | parens, brackets, floor, ceiling |
 | **Accents** | 9 | ✅ Complete | dot, hat, bar, tilde, vec |
 | **Calculus** | 14 | ✅ Complete | D(), Dt(), Fourier(), Laplace(), Convolve() |
-| **Linear Algebra** | 12 | ⚠️ Partial | Matrices need literal syntax |
+| **Linear Algebra** | 12 | ✅ Complete | Matrix builder creates valid Kleis |
 | **Greek** | 35 | ✅ Complete | All Greek letters have glyphs |
 | **Logic & Sets** | 18+ | ✅ Complete | ∧, ∨, ¬, ∈, ⊂, quantifiers |
 | **Physics** | 8 | ⚠️ Partial | Bra-ket parser issue |
@@ -87,18 +87,18 @@
 | Kernel Integral | `\int_{} K \, d\mu` | Standard integral template | ✅ |
 | Green's Function | `G(x, m)` | Function call syntax | ✅ |
 
-### Linear Algebra Tab ⚠️
+### Linear Algebra Tab ✅
 
 | Button | LaTeX | Kleis Template | Status |
 |--------|-------|----------------|--------|
-| Matrix 2×2 | `\begin{bmatrix}...\end{bmatrix}` | - | ❌ Need matrix template |
-| Matrix 3×3 | `\begin{bmatrix}...\end{bmatrix}` | - | ❌ Need matrix template |
-| pmatrix | `\begin{pmatrix}...\end{pmatrix}` | - | ❌ |
-| Determinant | `\begin{vmatrix}...\end{vmatrix}` | `det` | ✅ (for det(A)) |
-| Matrix Builder | custom | - | ❌ |
+| Matrix 2×2 | `\begin{bmatrix}...\end{bmatrix}` | `Matrix(2, 2, [a,b,c,d])` | ✅ |
+| Matrix 3×3 | `\begin{bmatrix}...\end{bmatrix}` | `Matrix(3, 3, [...])` | ✅ |
+| pmatrix | `\begin{pmatrix}...\end{pmatrix}` | `PMatrix(2, 2, [...])` | ✅ |
+| Determinant | `\begin{vmatrix}...\end{vmatrix}` | `VMatrix(2, 2, [...])` | ✅ |
+| Matrix Builder | custom | `Matrix(n, m, [...])` | ✅ |
 | Bold Vector | `\mathbf{v}` | `vector_bold` | ✅ |
 | Arrow Vector | `\vec{v}` | `vector_arrow` | ✅ |
-| Matrix Mult | `A \bullet B` | - | ❌ Need template |
+| Matrix Mult | `A \bullet B` | `multiply(A, B)` | ✅ |
 | Dot Product | `a \cdot b` | `dot` | ✅ |
 | Cross Product | `a \times b` | `cross` | ✅ |
 | Transpose | `^T` | `transpose` | ✅ |
@@ -177,12 +177,12 @@ All Greek letters have Kleis glyphs:
 - [x] Limit(f, x, a) - Limit
 - [x] ∇f - Gradient
 
-### Medium Priority (Add Templates)
-- [ ] floor, ceiling fences
-- [ ] dot, hat, bar, tilde accents
-- [ ] Fourier, Laplace transforms
-- [ ] Convolution
-- [ ] Matrix literals
+### Medium Priority (Already Complete ✅)
+- [x] floor, ceiling fences
+- [x] dot, hat, bar, tilde accents
+- [x] Fourier, Laplace transforms
+- [x] Convolution
+- [x] Matrix literals (Matrix builder works!)
 
 ### Lower Priority (Physics/POT)
 - [ ] Bra-ket notation (parser fix needed)
@@ -201,8 +201,8 @@ All Greek letters have Kleis glyphs:
 | Calculus | 100% ✅ |
 | Logic/Sets | 100% ✅ |
 | Greek | 100% ✅ |
-| Linear Algebra | 70% |
+| Linear Algebra | 100% ✅ |
 | Physics | 40% |
 | POT | 40% |
-| **Overall** | **~90%** |
+| **Overall** | **~95%** |
 

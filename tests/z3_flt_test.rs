@@ -70,6 +70,7 @@ fn build_flt_n3() -> Expression {
 
 /// Test: Can Z3 find integer solutions to a³ + b³ = c³?
 #[test]
+#[ignore] // Long-running Z3 satisfiability check
 fn test_z3_flt_n3_satisfiability() {
     let registry = StructureRegistry::new();
     let mut backend = Z3Backend::new(&registry).expect("Z3 backend creation failed");

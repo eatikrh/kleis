@@ -639,6 +639,200 @@ fn render_literal_chain(
     }
 }
 
+/// xAct/xTensor-style tensor notation detection and rendering
+///
+/// Pattern: T(μ, -ν, ρ, -σ) where:
+/// - Positive args (Object) → contravariant (upper) indices
+/// - Negative args (negate(Object)) → covariant (lower) indices
+///
+/// Renders as: T^{μρ}_{νσ} (upper indices first, then lower)
+///
+/// Returns None if the expression doesn't match the xAct tensor pattern.
+fn try_render_xact_tensor(
+    name: &str,
+    args: &[Expression],
+    ctx: &GlyphContext,
+    target: &RenderTarget,
+    node_id: &str,
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
+) -> Option<String> {
+    // Must have at least one argument (index)
+    if args.is_empty() {
+        return None;
+    }
+
+    // Check if ALL args match the xAct pattern (Object or negate(Object))
+    // The KEY distinguishing feature of xAct tensor notation is the presence
+    // of at least one covariant (negated) index: T(μ, -ν)
+    // Without a negated index, it's just a regular function call: f(x)
+    let mut upper_indices: Vec<String> = Vec::new();
+    let mut lower_indices: Vec<String> = Vec::new();
+    let mut has_covariant_index = false;
+
+    for (i, arg) in args.iter().enumerate() {
+        let child_id = format!("{}.{}", node_id, i);
+
+        match arg {
+            // Positive index (contravariant/upper): just an Object
+            Expression::Object(_) => {
+                let rendered =
+                    render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
+                upper_indices.push(rendered);
+            }
+            // Negative index (covariant/lower): negate(Object)
+            Expression::Operation {
+                name: op_name,
+                args: inner_args,
+            } if op_name == "negate" && inner_args.len() == 1 => {
+                if let Expression::Object(_) = &inner_args[0] {
+                    has_covariant_index = true;
+                    let inner_id = format!("{}.0", child_id);
+                    let rendered = render_expression_internal(
+                        &inner_args[0],
+                        ctx,
+                        target,
+                        &inner_id,
+                        node_id_to_uuid,
+                    );
+                    lower_indices.push(rendered);
+                } else {
+                    // negate of something other than Object - not xAct pattern
+                    return None;
+                }
+            }
+            // Any other pattern - not xAct tensor notation
+            _ => return None,
+        }
+    }
+
+    // xAct tensor notation REQUIRES at least one covariant (negated) index
+    // This is what distinguishes T(μ, -ν) from f(x)
+    if !has_covariant_index {
+        return None;
+    }
+
+    // Render the tensor name
+    let tensor_name = match target {
+        RenderTarget::Unicode => ctx
+            .unicode_glyphs
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| latex_to_unicode(name)),
+        RenderTarget::LaTeX => ctx
+            .latex_glyphs
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| name.to_string()),
+        RenderTarget::HTML => ctx
+            .html_glyphs
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| name.to_string()),
+        RenderTarget::Typst => ctx
+            .typst_glyphs
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| latex_to_typst_symbol(name)),
+        RenderTarget::Kleis => ctx
+            .kleis_glyphs
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| name.to_string()),
+    };
+
+    // Build the rendered tensor based on target format
+    let result = match target {
+        RenderTarget::Unicode => {
+            // T^{μρ}_{νσ} using Unicode superscript/subscript
+            let mut result = tensor_name;
+            if !upper_indices.is_empty() {
+                result.push_str(&format!("^{{{}}}", upper_indices.join("")));
+            }
+            if !lower_indices.is_empty() {
+                result.push_str(&format!("_{{{}}}", lower_indices.join("")));
+            }
+            result
+        }
+        RenderTarget::LaTeX => {
+            // T^{\mu\rho}_{\nu\sigma}
+            let mut result = tensor_name;
+            if !upper_indices.is_empty() {
+                if upper_indices.len() == 1 {
+                    result.push_str(&format!("^{{{}}}", upper_indices[0]));
+                } else {
+                    result.push_str(&format!("^{{{}}}", upper_indices.join(" ")));
+                }
+            }
+            if !lower_indices.is_empty() {
+                if lower_indices.len() == 1 {
+                    result.push_str(&format!("_{{{}}}", lower_indices[0]));
+                } else {
+                    result.push_str(&format!("_{{{}}}", lower_indices.join(" ")));
+                }
+            }
+            result
+        }
+        RenderTarget::HTML => {
+            // T<sup>μρ</sup><sub>νσ</sub>
+            let mut result = format!(r#"<span class="tensor">{}"#, tensor_name);
+            if !upper_indices.is_empty() {
+                result.push_str(&format!("<sup>{}</sup>", upper_indices.join("")));
+            }
+            if !lower_indices.is_empty() {
+                result.push_str(&format!("<sub>{}</sub>", lower_indices.join("")));
+            }
+            result.push_str("</span>");
+            result
+        }
+        RenderTarget::Typst => {
+            // T^(μρ)_(νσ)
+            let mut result = tensor_name;
+            if !upper_indices.is_empty() {
+                result.push_str(&format!("^({})", upper_indices.join(" ")));
+            }
+            if !lower_indices.is_empty() {
+                result.push_str(&format!("_({})", lower_indices.join(" ")));
+            }
+            result
+        }
+        RenderTarget::Kleis => {
+            // Kleis syntax: T(μ, -ν) - original notation preserved
+            let all_args: Vec<String> = args
+                .iter()
+                .enumerate()
+                .map(|(i, arg)| {
+                    let child_id = format!("{}.{}", node_id, i);
+                    match arg {
+                        Expression::Object(idx) => idx.clone(),
+                        Expression::Operation {
+                            name: op,
+                            args: inner,
+                        } if op == "negate" && inner.len() == 1 => {
+                            if let Expression::Object(idx) = &inner[0] {
+                                format!("-{}", idx)
+                            } else {
+                                render_expression_internal(
+                                    arg,
+                                    ctx,
+                                    target,
+                                    &child_id,
+                                    node_id_to_uuid,
+                                )
+                            }
+                        }
+                        _ => {
+                            render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid)
+                        }
+                    }
+                })
+                .collect();
+            format!("{}({})", tensor_name, all_args.join(", "))
+        }
+    };
+
+    Some(result)
+}
+
 /// Internal rendering with path tracking for semantic markers
 fn render_expression_internal(
     expr: &Expression,
@@ -760,6 +954,14 @@ fn render_expression_internal(
                         return format!("-{}", operand);
                     }
                 }
+            }
+
+            // xAct/xTensor-style tensor notation: T(μ, -ν) → T^μ_ν
+            // Detect pattern: operation with args that are identifiers or negate(identifier)
+            if let Some(tensor_result) =
+                try_render_xact_tensor(name, args, ctx, target, node_id, node_id_to_uuid)
+            {
+                return tensor_result;
             }
 
             let (template, glyph) = match target {

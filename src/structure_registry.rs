@@ -58,6 +58,75 @@ impl StructureRegistry {
         }
     }
 
+    /// Load structures from a Kleis file
+    ///
+    /// Parses the file and registers all structures found.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let mut registry = StructureRegistry::new();
+    /// registry.load_from_file("stdlib/tensors.kleis")?;
+    /// assert!(registry.has_structure("Tensor"));
+    /// ```
+    pub fn load_from_file(&mut self, path: &str) -> Result<usize, String> {
+        use crate::kleis_ast::TopLevel;
+        use crate::kleis_parser::KleisParser;
+
+        // Read file
+        let content =
+            std::fs::read_to_string(path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+
+        // Parse
+        let mut parser = KleisParser::new(&content);
+        let program = parser
+            .parse_program()
+            .map_err(|e| format!("Failed to parse {}: {}", path, e))?;
+
+        // Register structures
+        let mut count = 0;
+        for top_level in program.items {
+            if let TopLevel::StructureDef(def) = top_level {
+                // Skip if already registered (allows multiple loads)
+                if !self.has_structure(&def.name) {
+                    self.register(def)?;
+                    count += 1;
+                }
+            }
+        }
+
+        Ok(count)
+    }
+
+    /// Load all standard library files
+    ///
+    /// Loads structures from stdlib/*.kleis files in order.
+    /// Returns the total number of structures loaded.
+    pub fn load_stdlib(&mut self) -> Result<usize, String> {
+        let stdlib_files = [
+            "stdlib/types.kleis",
+            "stdlib/minimal_prelude.kleis",
+            "stdlib/matrices.kleis",
+            "stdlib/tensors.kleis",
+        ];
+
+        let mut total = 0;
+        for file in &stdlib_files {
+            if std::path::Path::new(file).exists() {
+                match self.load_from_file(file) {
+                    Ok(count) => {
+                        total += count;
+                        println!("   📚 Loaded {} structures from {}", count, file);
+                    }
+                    Err(e) => {
+                        eprintln!("   ⚠️ Warning: {}", e);
+                    }
+                }
+            }
+        }
+
+        Ok(total)
+    }
+
     /// Register a structure definition
     ///
     /// This adds the structure to the registry.

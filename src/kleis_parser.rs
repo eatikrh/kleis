@@ -835,12 +835,15 @@ impl KleisParser {
 
         self.skip_whitespace();
 
-        // Expect '('
-        if self.advance() != Some('(') {
-            return Err(KleisParseError {
-                message: "Expected '(' after quantifier".to_string(),
-                position: self.pos,
-            });
+        // Parentheses are optional per grammar v0.7:
+        // forAllProp ::= forAllQuantifier variables [ whereClause ] "." proposition
+        //
+        // Both forms are valid:
+        //   ∀(x : T). expr     // With parentheses (original)
+        //   ∀ x : T . expr     // Without parentheses (grammar v0.7)
+        let has_parens = self.peek() == Some('(');
+        if has_parens {
+            self.advance(); // consume '('
         }
 
         // Parse variable list: x : T or x y z : T
@@ -848,15 +851,16 @@ impl KleisParser {
 
         self.skip_whitespace();
 
-        // Expect ')'
-        if self.advance() != Some(')') {
-            return Err(KleisParseError {
-                message: "Expected ')' after quantified variables".to_string(),
-                position: self.pos,
-            });
+        // Expect ')' only if we had '('
+        if has_parens {
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after quantified variables".to_string(),
+                    position: self.pos,
+                });
+            }
+            self.skip_whitespace();
         }
-
-        self.skip_whitespace();
 
         // Optional where clause: where x ≠ zero
         let where_clause = if self.peek_word("where") {
@@ -988,8 +992,8 @@ impl KleisParser {
         loop {
             self.skip_whitespace();
 
-            // Check if we're done (hit closing paren or 'where')
-            if self.peek() == Some(')') || self.peek_word("where") {
+            // Check if we're done (hit closing paren, 'where', or '.' for no-parens case)
+            if self.peek() == Some(')') || self.peek() == Some('.') || self.peek_word("where") {
                 break;
             }
 
@@ -1034,8 +1038,8 @@ impl KleisParser {
 
             self.skip_whitespace();
 
-            // Parse type annotation
-            let type_name = self.parse_identifier()?;
+            // Parse type annotation - can be simple (M) or parametric (Tensor(1, 1, dim, ℝ))
+            let type_name = self.parse_type_annotation_for_quantifier()?;
 
             // Create QuantifiedVar for each name with the same type
             for name in names {
@@ -1065,6 +1069,62 @@ impl KleisParser {
         }
 
         Ok(all_vars)
+    }
+
+    /// Parse a type annotation for quantified variables
+    ///
+    /// Can be simple (M, ℝ, Nat) or parametric (Tensor(1, 1, dim, ℝ))
+    /// Returns the type as a string (for now, until we have proper TypeExpr in QuantifiedVar)
+    fn parse_type_annotation_for_quantifier(&mut self) -> Result<String, KleisParseError> {
+        self.skip_whitespace();
+
+        // Parse the base type name
+        let base_name = self.parse_identifier()?;
+
+        self.skip_whitespace();
+
+        // Check for parametric type: Type(...)
+        if self.peek() == Some('(') {
+            self.advance(); // consume '('
+
+            let mut result = base_name;
+            result.push('(');
+
+            // Parse arguments, handling nested parens
+            let mut paren_depth = 1;
+            while paren_depth > 0 {
+                if let Some(ch) = self.peek() {
+                    match ch {
+                        '(' => {
+                            paren_depth += 1;
+                            result.push(ch);
+                            self.advance();
+                        }
+                        ')' => {
+                            paren_depth -= 1;
+                            if paren_depth > 0 {
+                                result.push(ch);
+                            }
+                            self.advance();
+                        }
+                        _ => {
+                            result.push(ch);
+                            self.advance();
+                        }
+                    }
+                } else {
+                    return Err(KleisParseError {
+                        message: "Unexpected end of input in type annotation".to_string(),
+                        position: self.pos,
+                    });
+                }
+            }
+            result.push(')');
+            Ok(result)
+        } else {
+            // Simple type
+            Ok(base_name)
+        }
     }
 
     /// Check if the next word matches (without consuming)

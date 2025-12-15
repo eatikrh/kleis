@@ -51,6 +51,30 @@ data Type =
   | Tensor(dims: List(Nat))
 
 // ============================================
+// Tensor Index Types (xAct/xTensor-style)
+// ============================================
+//
+// xAct-style tensor notation:
+//   T(μ, -ν) where positive = contravariant, negative = covariant
+//
+// These data types track the index structure of tensors.
+
+// Index variance: up (contravariant) or down (covariant)
+data IndexVariance = Contravariant | Covariant
+
+// A single tensor index with its name and variance
+// Example: TIdx("μ", Contravariant) for upper index μ
+data TensorIdx = TIdx(name: String, variance: IndexVariance)
+
+// Tensor rank as (contravariant count, covariant count)
+// Example: Rank(1, 2) for a (1,2)-tensor like Γ^μ_νρ
+data TensorRank = Rank(upper: Nat, lower: Nat)
+
+// xAct-style tensor type with explicit index structure
+// Example: T^μ_ν has indices [TIdx("μ", Contravariant), TIdx("ν", Covariant)]
+data TensorType = TensorT(name: String, indices: List(TensorIdx))
+
+// ============================================
 // Bootstrap Types
 // ============================================
 
