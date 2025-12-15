@@ -1,6 +1,32 @@
 # Next Session: Equation Editor & Kleis Grammar Alignment
 
 ---
+## 🚀 FUTURE VISION: Kleis Notebook (Dec 14, 2024)
+
+The Equation Editor will evolve into a **Kleis Notebook** - a mathematically-aware 
+editor that combines:
+
+1. **File Loading** - Load `.kleis` files (axioms, structures, theorems)
+2. **File Editing** - Edit `.kleis` files with palette-based math input
+3. **Palette Input** - Click symbols (∀, ∂, ∫, Σ, Γ) to build expressions
+4. **Verification** - Z3-backed theorem proving against loaded axioms
+5. **Notebook Cells** - Multiple expressions, each independently verifiable
+
+### Evolution Roadmap
+
+| Stage | Name | Description |
+|-------|------|-------------|
+| ✅ Now | Equation Editor | Single expression, render to multiple formats |
+| 🔄 Next | Kleis Editor | Load/edit `.kleis` files, palette for axiom authoring |
+| 🔮 Future | Kleis Notebook | Multi-cell, proofs, dependency tracking, exports |
+
+### Key Insight (Dec 14, 2024)
+
+Now that `StructureRegistry.load_from_file()` and `Z3Backend.assert_axioms_from_registry()` 
+work, the Equation Editor can load user-provided `.kleis` files and verify expressions 
+against custom axioms. This is the foundation for the Kleis Notebook.
+
+---
 ## ⚠️ CRITICAL ARCHITECTURE LESSONS (Dec 14, 2024)
 
 **Read this first before making changes to AST or renderers.**
