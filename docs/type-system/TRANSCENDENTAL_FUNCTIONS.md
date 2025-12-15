@@ -1,6 +1,6 @@
 # Transcendental Functions: Type System vs Backend Limitations
 
-**Date:** December 12, 2024  
+**Date:** December 12, 2025  
 **Context:** Solver abstraction layer refactoring  
 **Status:** Documented behavior (not a bug)
 

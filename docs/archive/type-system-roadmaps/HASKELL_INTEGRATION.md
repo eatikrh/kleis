@@ -1,6 +1,6 @@
 # Integrating Haskell's Type System into Kleis
 
-**Date:** December 2024  
+**Date:** December 2025  
 **Status:** Design Document  
 **Consolidated from:** 5 source documents
 

@@ -65,5 +65,5 @@ The DLMF equations provide:
 
 ---
 
-**Last Updated:** December 9, 2024
+**Last Updated:** December 9, 2025
 

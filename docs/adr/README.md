@@ -173,5 +173,5 @@ When creating a new ADR:
 ---
 
 **Total ADRs:** 22  
-**Last Updated:** December 9, 2024
+**Last Updated:** December 9, 2025
 

@@ -133,7 +133,7 @@ The parser handles most common LaTeX mathematical expressions from standard math
 
 ## 🔧 **Known Issues**
 
-### ~~Complex Matrix Cells~~ ✅ FIXED (November 22, 2024)
+### ~~Complex Matrix Cells~~ ✅ FIXED (November 22, 2025)
 ~~Matrix cells with complex expressions may parse as string objects rather than structured expressions.~~
 
 **Status:** Matrix cells now parse as full expressions! Commands like `\frac`, `\sqrt`, `\sin`, etc. are properly preserved and parsed.
@@ -163,7 +163,7 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 ### Phase 2: Remaining Features (**COMPLETE!**)
 1. ✅ **Text mode** - Support `\text{...}` for annotations (**DONE**)
 2. ✅ **Accent commands** - `\bar`, `\tilde`, `\overline`, `\dot`, `\ddot` (**DONE**)
-3. ✅ **Matrix cell parsing** - Full expression parsing inside matrix cells (**DONE - November 22, 2024**)
+3. ✅ **Matrix cell parsing** - Full expression parsing inside matrix cells (**DONE - November 22, 2025**)
 4. **More environments** - Uppercase variants like `Bmatrix`, `Vmatrix` (low priority, lowercase variants already work)
 
 **Target:** 80% → 85% coverage (**achieved!**)
@@ -181,7 +181,7 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 ## 🧪 **Testing**
 
 ### Current Test Suite - VERIFIED BY RUNNING ALL TESTS
-- **417 total tests** passing ✅ (verified November 22, 2024)
+- **417 total tests** passing ✅ (verified November 22, 2025)
   - **260 unit+golden tests** (`cargo test`)
     - **114 parser unit tests** in `parser.rs` (includes 5 new matrix cell parsing tests)
     - **92 renderer tests** in `render.rs`
@@ -195,7 +195,7 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 
 **Coverage Detail:** The test suite covers all documented LaTeX patterns with unit tests, golden file tests, and comprehensive integration validation.
 
-**Recent Additions (November 22, 2024):**
+**Recent Additions (November 22, 2025):**
 - Binomial coefficient: `\binom{n}{k}` (3 tests)
 - Floor function: `\lfloor x \rfloor` (4 tests)
 - Ceiling function: `\lceil x \rceil` (2 tests)
@@ -326,10 +326,10 @@ To add parser support for a new LaTeX construct:
 
 ---
 
-**Last Updated:** November 22, 2024  
+**Last Updated:** November 22, 2025  
 **Parser Version:** 0.1.0  
 **Status:** Phase 2 features complete (Text Mode + Accents + Ellipsis + **Matrix Cell Parsing** + **Combinatorics**), **80.2% measured coverage**, 426/426 tests passing ✅  
 **Coverage Detail:** Parser 78.5% | Renderer 82.2% | 95.2% function coverage  
 **Test Breakdown:** 215 unit (123 parser + 92 renderer) | 54 golden | 157 integration (109 roundtrip + 21 guide + 11 check + 9 parser + 7 top5)  
-**Recent Additions:** Binomial coefficient, floor & ceiling functions (Nov 22, 2024)  
+**Recent Additions:** Binomial coefficient, floor & ceiling functions (Nov 22, 2025)  
 **Maintainer:** Kleis Development Team

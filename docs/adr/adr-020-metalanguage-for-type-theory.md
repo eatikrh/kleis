@@ -1,6 +1,6 @@
 # ADR-020: Kleis as Metalanguage for Type Theory
 
-**Date:** December 8, 2024  
+**Date:** December 8, 2025  
 **Status:** Accepted  
 **Author:** Dr. Engin Atik  
 **Related:** ADR-014 (Type System), ADR-016 (Operations in Structures), FORMAL_SPECIFICATION.md

@@ -65,7 +65,7 @@ Contents:
 
 **For performance optimization work.**
 
-Date: December 8, 2024  
+Date: December 8, 2025  
 Context: Post ADR-021 (self-hosting type system)
 
 ---
@@ -107,5 +107,5 @@ Contents:
 
 ---
 
-**Last Updated:** December 9, 2024
+**Last Updated:** December 9, 2025
 

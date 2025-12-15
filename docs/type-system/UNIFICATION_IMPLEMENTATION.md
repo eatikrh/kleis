@@ -1,6 +1,6 @@
 # Unification Implementation in Kleis
 
-**Date:** December 9, 2024  
+**Date:** December 9, 2025  
 **Context:** Self-hosting implementation (Wire 2 fix)  
 **Reference:** `docs/type-system/UnifChapter.pdf`
 
@@ -691,7 +691,7 @@ Different brick colors (True vs False) don't matter if they fit the same bluepri
 
 ## Decision Record: Unification Approach for Kleis
 
-**Date:** December 9, 2024  
+**Date:** December 9, 2025  
 **Context:** Self-hosting implementation complete, planning future enhancements
 
 ### Current Implementation (Phase 3) ✅
@@ -741,7 +741,7 @@ structure Numeric(N) { operation abs : N → N }
    - Mathematical meaning: Infinite sequences, streams, coinduction
    - Algorithm: Uniform semi-unification
    - Complexity: O(n α(n)) for decidability
-   - **Decision:** ❌ **NO** - Kleis remains finite (Dec 9, 2024)
+   - **Decision:** ❌ **NO** - Kleis remains finite (Dec 9, 2025)
    - **Rationale:** No mathematical use cases, finite types are simpler and sufficient
 
 2. **Subtyping with Constraints**

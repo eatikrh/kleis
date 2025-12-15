@@ -1,6 +1,6 @@
 # kleis_ast.rs vs Formal Grammar Comparison
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Question:** Do the AST concepts match the formal Kleis v0.3 grammar?
 
 ---

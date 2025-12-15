@@ -1,6 +1,6 @@
 # ADR-015 Validation Report
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Status:** ✅ **VALIDATED** - Design proven with executable test  
 **Test:** `src/bin/test_adr015_poc.rs`
 
@@ -92,7 +92,7 @@ Key Validation:
 
 ---
 
-### Full Implementation (December 6, 2024)
+### Full Implementation (December 6, 2025)
 
 **Added:** Simplified Kleis text parser (`src/kleis_parser.rs`)
 
@@ -336,7 +336,7 @@ Expected output: All tests pass ✅
 
 **Status:** ✅ **FULLY VALIDATED - Parser Implemented!**
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Tests:** Executable POC + Full parser tests - ALL PASSING  
 **Parser:** `src/kleis_parser.rs` - Complete  
 **Next:** Implement renderer updates and stdlib definitions

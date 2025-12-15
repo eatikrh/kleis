@@ -1,6 +1,6 @@
 # Kleis Grammar v0.7 - Mathematica-Style Calculus
 
-**Date:** 2024-12-13  
+**Date:** 2025-12-13  
 **Status:** Official  
 
 ## Breaking Changes

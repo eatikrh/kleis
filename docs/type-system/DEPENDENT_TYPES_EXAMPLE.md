@@ -1,6 +1,6 @@
 # Dependent Types: Currency Example
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Question:** How to express: "Can't add Money with different currencies"  
 **Answer:** Make currency part of the type!
 

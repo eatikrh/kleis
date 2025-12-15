@@ -1,6 +1,6 @@
 # ADR-018: Universal Formalism with Domain-Specific Rendering
 
-**Date:** December 7, 2024  
+**Date:** December 7, 2025  
 **Status:** Accepted  
 **Related:** ADR-014 (Type System), ADR-016 (Operations in Structures), ADR-003 (Self-Hosting)
 
@@ -764,6 +764,6 @@ Like how:
 
 ---
 
-**Last Updated:** December 7, 2024  
+**Last Updated:** December 7, 2025  
 **Decision:** Universal formalism with domain-specific rendering ✅
 

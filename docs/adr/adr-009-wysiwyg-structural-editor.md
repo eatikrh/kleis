@@ -1,7 +1,7 @@
 # ADR-009: Structural Editor with User-Extensible Templates
 
 **Status:** Proposed  
-**Date:** 2024-11-21  
+**Date:** 2025-11-21  
 **Context:** With unified AST (ast.rs), parser, and renderer integration complete  
 **Extends:** ADR-006 (Template-Grammar Duality), ADR-005 (Visual Authoring), ADR-004 (Input Strategy)
 
@@ -4082,7 +4082,7 @@ The structural approach turns a complex problem (arbitrary text manipulation) in
 
 ### Layout Engine Implementation Decision
 
-**Decision (2024-11-22):** Use **Typst** as the math layout engine instead of porting KaTeX.
+**Decision (2025-11-22):** Use **Typst** as the math layout engine instead of porting KaTeX.
 
 **Rationale:**
 
@@ -4205,7 +4205,7 @@ pub fn layout_expression(expr: &Expression) -> LayoutBox
 
 ## Architectural Decision: LaTeX Parsing vs. Template-Based Semantic Inference
 
-**Date:** 2024-11-23  
+**Date:** 2025-11-23  
 **Decision:** Treat quantifiers (`\forall`, `\exists`) and similar constructs as **flat symbols** in the parser, not structural operators.
 
 ### The Problem
@@ -4293,7 +4293,7 @@ This architecture allows the structural editor to work with clean ASTs while gra
 ---
 
 **Status:** Architecture validated, foundation complete, layout engine selected (Typst), ready for implementation  
-**Date Updated:** 2024-11-22  
+**Date Updated:** 2025-11-22  
 **Layout Engine:** Typst (Rust library)  
 **Estimated Timeline:** 2-4 weeks for MVP with Typst vs. 6-12 months porting KaTeX  
 **Impact:** Transforms fixed-notation editor into **extensible mathematical language authoring system**  

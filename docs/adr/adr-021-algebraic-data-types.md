@@ -1,7 +1,7 @@
 # ADR-021: Algebraic Data Types
 
-**Date Proposed:** December 8, 2024  
-**Date Implemented:** December 8-12, 2024  
+**Date Proposed:** December 8, 2025  
+**Date Implemented:** December 8-12, 2025  
 **Status:** ✅ COMPLETE (All practical goals achieved)  
 **Author:** Dr. Engin Atik  
 **Related:** ADR-020 (Metalanguage), ADR-007 (Bootstrap Grammar), ADR-016 (Self-Hosting)
@@ -10,7 +10,7 @@
 
 ## Implementation Status Summary
 
-**✅ COMPLETE (December 8-12, 2024):**
+**✅ COMPLETE (December 8-12, 2025):**
 - Parser for `data` declarations (`kleis_parser.rs` lines 2268-2441)
 - Pattern matching syntax (`kleis_parser.rs` lines 1250-1423)
 - AST support (`ast.rs` - `Expression::Match`, `Pattern`, `MatchCase`)
@@ -50,7 +50,7 @@ During ADR-020 discussion, Dr. Atik observed:
 
 ---
 
-## What Was Actually Implemented (December 2024)
+## What Was Actually Implemented (December 2025)
 
 ### ✅ **Complete Implementation Details**
 
@@ -106,12 +106,12 @@ define head(list) = match list { Nil => None | Cons(h, _) => Some(h) }
 
 **6. Test Coverage**
 - 20+ parser tests (lines 2801-3315 in `kleis_parser.rs`)
-- All passing as of December 12, 2024
+- All passing as of December 12, 2025
 - Tests cover: simple enums, parametric types, nested patterns, multi-field variants
 
 ---
 
-## Original Proposal (December 8, 2024)
+## Original Proposal (December 8, 2025)
 
 ### **Add `data` keyword to Kleis grammar**
 
@@ -152,7 +152,7 @@ fn infer_matrix_constructor(...) {
 }
 ```
 
-**After (IMPLEMENTED December 2024):**
+**After (IMPLEMENTED December 2025):**
 ```rust
 // src/type_inference.rs lines 1176-1182
 pub fn matrix(m: usize, n: usize, elem_type: Type) -> Type {
@@ -173,7 +173,7 @@ pub fn matrix(m: usize, n: usize, elem_type: Type) -> Type {
 
 ### **2. ✅ COMPLETE: Type System Extensibility**
 
-**Current Status (December 2024) - COMPLETE:**
+**Current Status (December 2025) - COMPLETE:**
 
 Type enum in Rust is the **runtime interpreter** (correct architecture!).
 Users define types in Kleis using **generic `Type::Data` variant**:
@@ -401,7 +401,7 @@ let t = Matrix(2, 3)  // ← Just data construction!
 
 ## Implementation Path
 
-### ✅ **Phase 2.5: Add `data` Support** (COMPLETED December 8-12, 2024)
+### ✅ **Phase 2.5: Add `data` Support** (COMPLETED December 8-12, 2025)
 
 **Implementation details:**
 
@@ -548,7 +548,7 @@ data Type = Scalar | Matrix(Nat, Nat) | ...
 
 ## Action Items
 
-### ✅ **Completed (December 8-12, 2024):**
+### ✅ **Completed (December 8-12, 2025):**
 1. ✅ Document the vision (this ADR)
 2. ✅ Add to Phase 2.5 roadmap
 3. ✅ Design `data` syntax carefully
@@ -618,7 +618,7 @@ data Type = Scalar | Matrix(Nat, Nat) | ...
 
 ## Current Status & Next Steps
 
-**✅ FOUNDATION COMPLETE (December 2024)**
+**✅ FOUNDATION COMPLETE (December 2025)**
 
 **Timeline achieved:**
 - ✅ Phase 2 (weeks 1-4): Parser extension

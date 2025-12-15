@@ -1,10 +1,10 @@
 # ADR-016: Operations Belong in Structures
 
-**Date:** December 6, 2024  
-**Status:** ✅ Accepted and IMPLEMENTED (v0.5.0, December 8, 2024)  
+**Date:** December 6, 2025  
+**Status:** ✅ Accepted and IMPLEMENTED (v0.5.0, December 8, 2025)  
 **Related:** ADR-015 (Text as Source of Truth), ADR-014 (Type System), ADR-019 (Dimensional Analysis)
 
-**Implementation:** Sessions 2024-12-07, 2024-12-08  
+**Implementation:** Sessions 2025-12-07, 2025-12-08  
 **Key Achievement:** TRUE self-hosting - operations in Kleis, constraints enforced by signatures
 
 ---
@@ -451,8 +451,8 @@ structure PurchaseOrder {
 - `stdlib/matrices.kleis` - Matrix operation definitions
 
 **Documentation:**
-- Session 2024-12-07: Initial implementation
-- Session 2024-12-08: SignatureInterpreter improvements
+- Session 2025-12-07: Initial implementation
+- Session 2025-12-08: SignatureInterpreter improvements
 - FORMAL_SPECIFICATION.md: Formal semantics
 
 **This ADR is now FULLY REALIZED in code!** ✅
@@ -473,6 +473,6 @@ structure PurchaseOrder {
 
 ---
 
-**Last Updated:** December 6, 2024  
+**Last Updated:** December 6, 2025  
 **Decision:** Operations in structures (Option B) ✅
 

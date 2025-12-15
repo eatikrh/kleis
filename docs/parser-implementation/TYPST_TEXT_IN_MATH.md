@@ -1,6 +1,6 @@
 # Typst: Text in Math Mode
 
-**Date:** 2024-12-05  
+**Date:** 2025-12-05  
 **Status:** Important Usage Guide
 
 ## The Issue

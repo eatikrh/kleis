@@ -1,6 +1,6 @@
 # Template Implementation Strategy for Kleis Structural Editor
 
-**Date:** 2024-11-22  
+**Date:** 2025-11-22  
 **Status:** Design Document  
 **Related ADRs:** [ADR-006](../adr/adr-006-template-grammar-duality.md), [ADR-009](../adr/adr-009-wysiwyg-structural-editor.md)
 

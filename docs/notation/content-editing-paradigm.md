@@ -1,6 +1,6 @@
 # Content Editing Paradigm in Kleis
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Status:** Design Discussion (led to ADR-015)  
 **Formal Decision:** [ADR-015: Text as Source of Truth](../adr/adr-015-text-as-source-of-truth.md)  
 **Related:** Grammar v0.3, Equation Editor, Notebook System

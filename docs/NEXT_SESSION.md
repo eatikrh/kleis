@@ -1,7 +1,7 @@
 # Next Session: Equation Editor & Kleis Grammar Alignment
 
 ---
-## 🚀 FUTURE VISION: Kleis Notebook (Dec 14, 2024)
+## 🚀 FUTURE VISION: Kleis Notebook (Dec 14, 2025)
 
 The Equation Editor will evolve into a **Kleis Notebook** - a mathematically-aware 
 editor that combines:
@@ -20,14 +20,14 @@ editor that combines:
 | 🔄 Next | Kleis Editor | Load/edit `.kleis` files, palette for axiom authoring |
 | 🔮 Future | Kleis Notebook | Multi-cell, proofs, dependency tracking, exports |
 
-### Key Insight (Dec 14, 2024)
+### Key Insight (Dec 14, 2025)
 
 Now that `StructureRegistry.load_from_file()` and `Z3Backend.assert_axioms_from_registry()` 
 work, the Equation Editor can load user-provided `.kleis` files and verify expressions 
 against custom axioms. This is the foundation for the Kleis Notebook.
 
 ---
-## ⚠️ CRITICAL ARCHITECTURE LESSONS (Dec 14, 2024)
+## ⚠️ CRITICAL ARCHITECTURE LESSONS (Dec 14, 2025)
 
 **Read this first before making changes to AST or renderers.**
 
@@ -157,7 +157,7 @@ Clarify and implement the separation between:
 
 ## Design Decision: xAct/xTensor-Style Tensor Notation
 
-**Date:** Dec 14, 2024
+**Date:** Dec 14, 2025
 
 Kleis will implement **xAct/xTensor-style** tensor notation (from Mathematica's tensor calculus package).
 
@@ -178,7 +178,7 @@ T(μ, -ν) × V(ν)       // = T^μ_ν V^ν (contracts on ν)
 - ✅ **No backslashes** - Fits Kleis Unicode aesthetic
 - ✅ **Proven** - Used by physicists in Mathematica for GR calculations
 
-### Implementation Status (Dec 14, 2024):
+### Implementation Status (Dec 14, 2025):
 1. ✅ **Renderer**: xAct detection implemented - `T(μ, -ν)` displays as `T^μ_ν` (8 tests)
 2. ❌ **Type system**: Using generic `Data` types (consistent with matrices, per ADR-021)
 3. ✅ **stdlib/tensors.kleis**: Axioms added (metric symmetry, Christoffel symmetry, Riemann antisymmetry)
@@ -222,7 +222,7 @@ In current templates, the tensor name is a placeholder argument (operation name 
 - Z3 treats tensor operations as unconstrained uninterpreted functions
 - Tensor symmetry checks return "Satisfiable" with arbitrary assignments
 
-**What was built (Dec 14, 2024):**
+**What was built (Dec 14, 2025):**
 1. ✅ `StructureRegistry.load_from_file()` - Parses Kleis files into registry
 2. ✅ `StructureRegistry.load_stdlib()` - Loads all stdlib files
 3. ✅ `AxiomVerifier` already has `load_axioms_recursive()` that asserts axioms in Z3
@@ -250,7 +250,7 @@ solver.assert(&metric_sym);
 
 ---
 
-## ✅ FIXED: Editor AST Uses Semantic Names (Dec 14, 2024)
+## ✅ FIXED: Editor AST Uses Semantic Names (Dec 14, 2025)
 
 **Issue:** Editor AST was mistakenly changed to xAct-style (wrong layer).
 
@@ -361,5 +361,40 @@ Then `insertTemplate()` just does: `astTemplates[name]` - one step.
 **Not blocking - cosmetic cleanup. Current system works.**
 
 ---
-*Created: Dec 14, 2024*
+
+## ❓ QUESTION FOR NEXT SESSION (Dec 14, 2025)
+
+**Topic:** Tensor palette button design - how to handle arg[0]
+
+**Current state:**
+```javascript
+christoffel: { Operation: { name: 'gamma', args: [
+    {Object: ''},                           // arg[0]: EMPTY (unused)
+    {Placeholder:{id:0,hint:'upper'}},      // arg[1]
+    {Placeholder:{id:1,hint:'lower1'}},     // arg[2]
+    {Placeholder:{id:2,hint:'lower2'}}      // arg[3]
+] } }
+```
+
+The empty `{Object: ''}` is currently unused - the Γ symbol is hardcoded in templates.
+
+**Two approaches to fix:**
+
+| Approach | Operation name | arg[0] | Example |
+|----------|---------------|--------|---------|
+| **Minimal** | Keep `'gamma'` | Fill with `'Γ'` | `{ name: 'gamma', args: [{Object: 'Γ'}, ...] }` |
+| **Generic** | Change to `'tensor'` | Use for symbol | `{ name: 'tensor', args: [{Object: 'Γ'}, ...] }` |
+
+**Considerations:**
+- arg[0] could also be reserved for other future uses:
+  - Metric context (`{Object: 'g'}` for "Christoffel of metric g")
+  - Connection name
+  - Variant marker (bar, tilde)
+  - Children/nested structure
+
+**Question to answer:**
+Which approach should we take, and what should arg[0] represent?
+
+---
+*Created: Dec 14, 2025*
 

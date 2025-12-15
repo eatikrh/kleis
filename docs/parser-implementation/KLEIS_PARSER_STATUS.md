@@ -1,7 +1,7 @@
 # Kleis Language Parser - Current Status
 
 **Parser:** `src/kleis_parser.rs`  
-**Last Updated:** December 8, 2024  
+**Last Updated:** December 8, 2025  
 **Grammar Version:** v0.3 (POC - ~30% coverage)  
 **Status:** Working for Phase 1, ready for Phase 2 extension
 

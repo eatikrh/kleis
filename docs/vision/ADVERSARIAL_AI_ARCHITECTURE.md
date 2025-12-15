@@ -1,6 +1,6 @@
 # Adversarial AI Architecture: LLM + Kleis
 
-**Date:** December 11, 2024  
+**Date:** December 11, 2025  
 **Context:** Post-prelude migration discussion  
 **Status:** Vision Document
 
@@ -358,7 +358,7 @@ forall x :: T. P x  -- New syntax to learn
 
 ## Implementation Status
 
-### Already Working (December 11, 2024)
+### Already Working (December 11, 2025)
 
 ✅ **Parser:** Can read quantified axioms  
 ✅ **Z3 Integration:** Verifies axioms with uninterpreted functions  
@@ -625,7 +625,7 @@ structure TokenContract {
 
 ## Technical Implementation
 
-### Current (December 2024)
+### Current (December 2025)
 
 **What works:**
 ```rust

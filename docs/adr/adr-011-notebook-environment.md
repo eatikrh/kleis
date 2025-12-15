@@ -93,7 +93,7 @@ JSON format with execution results, saved outputs:
   "metadata": {
     "title": "Classical Mechanics",
     "author": "user",
-    "created": "2024-12-03"
+    "created": "2025-12-03"
   },
   "contexts": {
     "physics": {

@@ -1,6 +1,6 @@
 # Kleis Grammar v0.4 – Algebraic Data Types
 
-**Date:** December 8, 2024  
+**Date:** December 8, 2025  
 **Status:** Working Draft  
 **Based on:** ADR-021 (Algebraic Data Types) and v0.3 grammar  
 **Major Addition:** Data type definitions for self-hosting
@@ -357,7 +357,7 @@ data Formula =
 
 ## Grammar Change Log
 
-### Version 0.4 (2024-12-08) – Algebraic Data Types
+### Version 0.4 (2025-12-08) – Algebraic Data Types
 
 **Major additions:**
 - `dataDef` declaration for algebraic data types
@@ -369,7 +369,7 @@ data Formula =
 
 **Impact:** Transformative - makes Kleis truly self-hosting!
 
-### Version 0.3 (2024-12-05) – Type System
+### Version 0.3 (2025-12-05) – Type System
 
 - Hindley-Milner type inference
 - Polymorphic types with constraints

@@ -257,7 +257,7 @@ All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.7**:
 
 ---
 
-## Status (December 9, 2024)
+## Status (December 9, 2025)
 
 **Files Written:** ✅ `types.kleis`, `minimal_prelude.kleis`, `matrices.kleis`, `tensors.kleis`  
 **Grammar:** ✅ v0.5 formalized (with pattern matching!)  

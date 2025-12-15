@@ -1,6 +1,6 @@
 # Type Context and Operation Registry
 
-**Date:** December 2024  
+**Date:** December 2025  
 **Status:** Design Specification  
 **Consolidated from:** TYPE_CONTEXT_BOOTSTRAP.md + OPERATION_BASED_TYPE_INFERENCE.md
 

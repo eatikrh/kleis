@@ -158,5 +158,5 @@ This document explores an interesting mathematical idea as a test case for Kleis
 
 ---
 
-*Session: December 13, 2024*
+*Session: December 13, 2025*
 

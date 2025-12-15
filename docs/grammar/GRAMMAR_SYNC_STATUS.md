@@ -1,20 +1,20 @@
 # Grammar Synchronization Status
 
-**Date:** December 13, 2024  
+**Date:** December 13, 2025  
 **Status:** ⚠️ PENDING SYNC (v0.7 needs G4 update)
 
 ## File Versions
 
 | File | Version | Last Updated | Status |
 |------|---------|--------------|--------|
-| `kleis_grammar_v07.ebnf` | v0.7 | Dec 13, 2024 | ✅ Reference |
-| `kleis_grammar_v07.md` | v0.7 | Dec 13, 2024 | ✅ Documented |
+| `kleis_grammar_v07.ebnf` | v0.7 | Dec 13, 2025 | ✅ Reference |
+| `kleis_grammar_v07.md` | v0.7 | Dec 13, 2025 | ✅ Documented |
 | `Kleis_v07.g4` | v0.7 | - | ⚠️ TODO |
-| `vscode-kleis/docs/grammar/` | v0.6 | Dec 12, 2024 | ⚠️ Needs v0.7 |
+| `vscode-kleis/docs/grammar/` | v0.6 | Dec 12, 2025 | ⚠️ Needs v0.7 |
 
 ---
 
-## Changes Applied (Dec 13, 2024)
+## Changes Applied (Dec 13, 2025)
 
 ### Grammar v0.7 - Mathematica-Style Calculus (BREAKING CHANGE)
 
@@ -52,7 +52,7 @@ Integrate(f, x, a, b)     // Alternative to ∫_a^b f dx
 
 ---
 
-## Changes Applied (Dec 12, 2024)
+## Changes Applied (Dec 12, 2025)
 
 ### Grammar v0.6 - Functions in Structures
 
@@ -79,7 +79,7 @@ structureMember
 
 ---
 
-## Previous Changes (Dec 11, 2024)
+## Previous Changes (Dec 11, 2025)
 
 ### 1. Named Operations Support
 
@@ -235,23 +235,23 @@ implements Ring(ℤ) {
 
 ## Version History
 
-**v0.7 (Dec 13, 2024): BREAKING**
+**v0.7 (Dec 13, 2025): BREAKING**
 - REMOVED: `∂f/∂x` and `df/dx` derivative notation
 - ADDED: Mathematica-style `D(f, x)`, `Dt(f, x)`
 - ADDED: `Limit(f, x, a)` for limits
 - ADDED: Function-call alternatives for Sum, Product, Integrate
 - Removed `∂` from prefixOp (no longer standalone prefix)
 
-**v0.6 (Dec 12, 2024):**
+**v0.6 (Dec 12, 2025):**
 - Added `functionDef` to `structureMember`
 - Enables derived operations in structures
 - Resolves TODO #11
 
-**v0.5.1 (Dec 11, 2024):**
+**v0.5.1 (Dec 11, 2025):**
 - Added custom operator support (Unicode math symbols)
 - Added named operation support
 
-**v0.5 (Dec 8, 2024):**
+**v0.5 (Dec 8, 2025):**
 - Added pattern matching
 - Completes ADR-021
 

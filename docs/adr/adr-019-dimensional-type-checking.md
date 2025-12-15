@@ -1,6 +1,6 @@
 # ADR-019: Dimensional Type Checking
 
-**Date:** December 7, 2024  
+**Date:** December 7, 2025  
 **Status:** Accepted  
 **Context:** Type system implementation, matrix dimension checking  
 **Related:** ADR-014 (Hindley-Milner), ADR-016 (Operations in Structures)
@@ -334,7 +334,7 @@ structure Tensor(shape: List(Nat)) {
 ### **Kleis Docs**
 
 - `src/type_inference.rs:238-290` - Matrix constructor (current hack)
-- `docs/session-2024-12-07/MATRIX_CONSTRUCTOR_ISSUE.md` - Technical debt
+- `docs/session-2025-12-07/MATRIX_CONSTRUCTOR_ISSUE.md` - Technical debt
 - `docs/theory/DIMENSIONAL_ANALYSIS_ANALOGY.md` - This insight
 
 ---

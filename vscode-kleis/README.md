@@ -123,7 +123,7 @@ Contributions welcome! See: https://github.com/eatikrh/kleis
 
 ## License
 
-MIT License - Copyright (c) 2024 Engin Atik
+MIT License - Copyright (c) 2025 Engin Atik
 
 ---
 

@@ -1,6 +1,6 @@
 # Parser ↔ Renderer Compatibility Analysis
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Status:** Mostly compatible, needs renderer additions
 
 ---

@@ -1,6 +1,6 @@
 # LLMs Writing Kleis Code - The Future
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Insight:** Most Kleis code will be written BY LLMs, verified BY type system  
 **Status:** Already happening!
 

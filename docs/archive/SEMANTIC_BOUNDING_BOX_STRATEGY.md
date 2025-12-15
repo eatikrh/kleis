@@ -1,6 +1,6 @@
 # Semantic Bounding Box Strategy
 
-**Date:** 2024-11-23  
+**Date:** 2025-11-23  
 **Goal:** Map layout bounding boxes to AST arguments using semantic information  
 **Status:** Design Phase
 

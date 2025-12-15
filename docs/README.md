@@ -6,184 +6,28 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 
 ## 📚 Quick Links
 
-### Getting Started
-- **Main README:** `../README.md` - Project overview and quick start
-- **Server API:** `../SERVER_README.md` - HTTP API reference
-- **Parser Status:** `../PARSER_TODO.md` - LaTeX parser capabilities
-
-### Core Concepts
-- **Syntax Reference:** `syntax.md` - Kleis language syntax
-- **Grammar:** `grammar/kleis_grammar_v06.md` - Formal grammar specification (v0.6)
-- **Vision:** `kleis_vision_executable_math.md` - Future roadmap
-
-### Ontology Theories
-- **POT:** `POT.md` - Projected Ontology Theory
-- **HONT:** `HONT.md` - Hilbert Ontology
-- **Papers:** `hont/` - LaTeX papers and PDFs
+| Document | Description |
+|----------|-------------|
+| [NEXT_SESSION.md](NEXT_SESSION.md) | **Start here** - Current priorities and context |
+| [adr/README.md](adr/README.md) | Architecture Decision Records (22 ADRs) |
+| [grammar/kleis_grammar_v07.md](grammar/kleis_grammar_v07.md) | Current grammar specification |
+| [../README.md](../README.md) | Project overview |
 
 ---
 
 ## 🏗️ Architecture Decision Records (ADRs)
 
-**All ADRs consolidated in:** [`adr/`](adr/README.md) directory
+**Directory:** [`adr/`](adr/README.md)
 
-**22 ADRs** documenting key design choices across:
-- Core language design (ADR-001 to ADR-003)
-- Type system (ADR-014 to ADR-021)
-- User interface & editing (ADR-004, ADR-005, ADR-009 to ADR-012, ADR-017)
-- Grammar & parsing (ADR-006 to ADR-008)
-- Formalism & theory (ADR-013, ADR-018)
+**22 ADRs** documenting key design choices:
 
-**Key ADRs:**
-- ⭐ **[ADR-015: Text as Source of Truth](adr/adr-015-text-as-source-of-truth.md)** - Notation system foundation
-- ⭐ **[ADR-016: Operations in Structures](adr/adr-016-operations-in-structures.md)** - Type system architecture
-- ⭐ **[ADR-021: Algebraic Data Types](adr/adr-021-algebraic-data-types.md)** - Pattern matching system
-
-**See:** [adr/README.md](adr/README.md) for complete index with descriptions
-
----
-
-## 📝 Recent Sessions
-
-### Session 2024-12-08: Signature-Driven Type System ⭐⭐
-**Focus:** SignatureInterpreter improvements + End-to-end testing  
-**Status:** ✅ Complete - Phase 1: 80% done  
-**See:** [Session Summary](session-2024-12-08/README.md)
-
-**Achievements:**
-- ✅ Match statement: 229 → 61 lines (73% reduction!)
-- ✅ SignatureInterpreter enforces dimension constraints
-- ✅ Pattern-based (zero hardcoded operation names)
-- ✅ TRUE user-extensibility (Matrix = User operations)
-- ✅ 364 tests passing, browser verified
-- ✅ Tagged: v0.5.0-signature-driven
-
-### Session 2024-12-07: Type System & Stdlib Integration ⭐
-**Focus:** Connecting standard library to type inference  
-**Status:** ✅ Complete - ADR-016 compliance achieved  
-**See:** Session archived
-
-**Achievements:**
-- ✅ Stdlib loading infrastructure
-- ✅ Reduced hardcoded operations by 88%
-- ✅ ADR-016 compliant (operations in structures)
-- ✅ Type system now self-hosting
-- ✅ Working in browser with comprehensive tests
-
-### Session 2024-12-06: Notation Design + Type Checking
-**Focus:** Notation design + Type checking infrastructure  
-**Status:** ✅ Complete with working implementation  
-**See:** Session archived
-
-### Session 2024-12-09: Matrix Improvements & Reality Check ⭐⭐
-**Focus:** Matrix system cleanup + Testing & honest assessment  
-**Status:** ✅ Complete - All pushed to GitHub  
-**See:** [Session Summary](session-2024-12-09/README.md)
-
-**Achievements:**
-- ✅ Matrix constructor cleanup (generic, zero hardcoding)
-- ✅ Recursive type unification (block matrices work!)
-- ✅ Tensor operations for General Relativity
-- ✅ 12 new stdlib function tests
-- ✅ Honest documentation of self-hosting limitations
-- ✅ 425 tests passing, all quality gates pass
-
-### Subdirectories
-
-**Core Documentation:**
-- [`adr/`](adr/README.md) - **Architecture Decision Records (22 ADRs)** ⭐
-- [`reference/`](reference/README.md) - **Reference documentation** (overview, technical specs, templates, analysis)
-- [`guides/`](guides/) - Implementation guides and best practices
-- [`testing/`](testing/README.md) - Test data and testing strategies
-
-**Technical Specifications:**
-- [`grammar/`](grammar/) - Formal grammar specifications (EBNF, ANTLR4, v0.6)
-- [`type-system/`](type-system/) - Type inference and checking documentation
-- [`parser-implementation/`](parser-implementation/) - Parser compatibility analyses
-- [`notation/`](notation/) - Notation design documents and test cases
-
-**Vision & Theory:**
-- [`vision/`](vision/) - Future roadmap and vision documents
-- [`theory/`](theory/) - Mathematical theory documents
-- [`hont/`](hont/) - HONT/POT papers (LaTeX + PDF)
-- [`LLMs/`](LLMs/) - LLM integration research
-
-**Session Reports:** (Last 2-3 sessions)
-- [`session-2024-12-10/`](session-2024-12-10/README.md) - Self-hosting actually fixed ⭐⭐
-- [`session-2024-12-09/`](session-2024-12-09/README.md) - Matrix improvements & reality check
-- [`session-2024-12-08/`](session-2024-12-08/README.md) - Signature-driven type system
-
-**Archive:**
-- [`archive/`](archive/) - Historical documents and deprecated content
-- [`archive/sessions/`](archive/sessions/README.md) - Archived session reports (2024-12-06, 2024-12-07)
-
----
-
-## 📖 Language Reference
-
-### Syntax & Grammar
-- **`syntax.md`** - Complete syntax reference
-- **`grammar/kleis_grammar_v06.md`** - EBNF grammar specification (v0.6) ⭐ CURRENT
-- **`grammar/kleis_grammar_v06.ebnf`** - Machine-readable EBNF (v0.6)
-- **`grammar/Kleis_v06.g4`** - ANTLR4 grammar (v0.6)
-- **Historical:** `grammar/kleis_grammar_v05.md`, `kleis_grammar_v04.md`, `kleis_grammar_v03.md`
-- **`Kleis.g4`** - ANTLR4 grammar (legacy)
-- **`kleis.pest`** - Pest parser grammar (legacy)
-
-### Expression System
-- **Types:** Const, Object, Operation
-- **Operations:** 56 mathematical operations (see main README)
-- **Rendering:** Unicode and LaTeX output formats
-
----
-
-## 🔬 Ontology Theories
-
-### Projected Ontology Theory (POT)
-Modal ontological framework for expressing projection, residue, and emergent phenomena.
-
-**Files:**
-- `POT.md` - Overview
-- `hont/projected_ontology_theory.pdf` - Full paper
-- `hont/projected_ontology_theory_naive_questions.pdf` - Q&A
-
-### Hilbert Ontology (HONT)
-Metaphysical clarity meets mathematical structure.
-
-**Files:**
-- `HONT.md` - Overview
-- `hont/hont_modal_enrichment.pdf` - Modal enrichment paper
-- `hont/POT_Hont_Session_Summary_1_Simple.pdf` - Session summary
-
-### Related Papers
-- `hont/dirac_leap_credit.pdf` - Dirac's contribution
-- `hont/philosophy_101_lost.pdf` - Philosophical foundations
-- `hont/justice_factcheck.pdf` - Justice perspective
-
----
-
-## 🎯 Vision Documents
-
-### Future Roadmap
-- **`kleis_vision_executable_math.md`** - Vision for executable mathematics
-  - Living framework for mathematical structure
-  - Package distribution system
-  - Visual authoring environment
-
-### Key Concepts
-1. **Executable Notation** - Notation becomes computable
-2. **Shareable Algebra** - Math systems as software packages
-3. **Visual Reasoning** - Symbolic reasoning as a shared visual medium
-
----
-
-## 🤖 LLM Integration
-
-Research on integrating Kleis with Large Language Models:
-
-- **`LLMs/Tracer_Framework_Report_fixed.pdf`** - Tracer framework for formal reasoning
-
-Future goal: LLMs output formal Kleis DSL instead of natural language, creating provable reasoning chains.
+| Key ADRs | Description |
+|----------|-------------|
+| [ADR-011](adr/adr-011-notebook-environment.md) | Kleis Notebook Environment |
+| [ADR-015](adr/adr-015-text-as-source-of-truth.md) | Text as Source of Truth |
+| [ADR-016](adr/adr-016-operations-in-structures.md) | Operations in Structures |
+| [ADR-021](adr/adr-021-algebraic-data-types.md) | Algebraic Data Types |
+| [ADR-022](adr/adr-022-z3-integration-for-axiom-verification.md) | Z3 Integration |
 
 ---
 
@@ -191,87 +35,90 @@ Future goal: LLMs output formal Kleis DSL instead of natural language, creating 
 
 ```
 docs/
-├── README.md                           # This file - main navigation
+├── NEXT_SESSION.md          # ⭐ Current priorities and context
+├── QUALITY_GATES.md         # Quality standards
 │
-├── adr/                                # ⭐ Architecture Decision Records
-│   ├── README.md                       # ADR index (22 ADRs)
-│   ├── adr-001-scalar-multiply.md
-│   ├── adr-002-eval-vs-simplify.md
-│   └── ... (20 more ADRs)
+├── adr/                     # Architecture Decision Records (22 ADRs)
+├── grammar/                 # Grammar specs (v03-v07, EBNF, ANTLR4)
+├── guides/                  # Implementation guides
+├── type-system/             # Type inference documentation
+├── parser-implementation/   # Parser status and compatibility
+├── notation/                # Notation design documents
+├── solver-abstraction/      # Z3 solver architecture
+├── testing/                 # Test strategies
 │
-├── reference/                          # ⭐ Reference Documentation
-│   ├── README.md                       # Reference index
-│   ├── KLEIS_OVERVIEW.md               # Project overview
-│   ├── TECHNICAL_REFERENCE.md          # Technical specs
-│   ├── COMPLETE_TEMPLATE_REFERENCE.md  # Template system
-│   ├── COMPUTATIONAL_COMPLEXITY.md     # Performance analysis
-│   └── HARD_PROBLEMS_AHEAD.md          # Future challenges
+├── vision/                  # Future roadmap documents
+├── theory/                  # Mathematical theory
+├── mathematics/             # Research papers (TeX + PDF)
+├── hont/                    # HONT/POT papers (TeX + PDF)
+├── LLMs/                    # LLM integration research
 │
-├── session-2024-12-09/                 # ⭐ Latest session
-│   ├── README.md                       # Session navigation
-│   ├── SESSION_SUMMARY.md              # Complete summary
-│   ├── SESSION_CORRECTION.md           # Critical reality check
-│   ├── UNIVERSAL_CONSTANTS_FINDING.md  # Research discovery
-│   └── PHYSICAL_CONSTANTS_PALETTE.md   # Design document
+├── proposals/               # Proposed features
+├── reference/               # Reference documentation
 │
-├── grammar/                            # Grammar specifications (v0.6)
-├── type-system/                        # Type system docs
-├── guides/                             # Implementation guides
-│   ├── GITHUB_ACTIONS_SETUP.md         # CI/CD guide
-│   ├── PALETTE_GUIDE.md
-│   └── ...
-├── testing/                            # Test data & strategies
-│   ├── README.md
-│   └── DLMF_INTEGRATION.md             # NIST test equations
-├── parser-implementation/              # Parser analyses
-│   ├── KLEIS_PARSER_STATUS.md          # Parser status
-│   └── ...
-├── notation/                           # Notation design
-├── theory/                             # Mathematical theory
-├── vision/                             # Future roadmap
-├── hont/                               # HONT/POT papers (LaTeX + PDF)
-├── LLMs/                               # LLM integration research
-└── archive/                            # Historical documents
+├── session-2025-12-13/      # Current session (only active session)
+│
+└── archive/                 # Historical documents
+    └── sessions/            # All past sessions (12-03 through 12-12)
 ```
 
 ---
 
-## 🔗 External Links
+## 📝 Current Session
 
-- **Project Repository:** (Add GitHub URL when available)
-- **Issue Tracker:** (Add issue tracker URL)
-- **Discussions:** (Add discussions URL)
+### Session 2025-12-13 (Active)
+**Focus:** Palette Kleis coverage, AST translation
 
----
+**Files:**
+- `PALETTE_KLEIS_COVERAGE.md` - Analysis of palette button coverage
+- `AST_TRANSLATION_PROBLEM.md` - Editor AST → Kleis translation
+- `SESSION_SUMMARY.md` - Session summary
 
-## 📝 Contributing to Documentation
-
-### Adding New ADRs
-
-```markdown
-# ADR-XXX: Title
-
-## Status
-Proposed / Accepted / Deprecated
-
-## Context
-Why is this decision needed?
-
-## Decision
-What did we decide?
-
-## Consequences
-What are the implications?
-```
-
-### Updating Documentation
-
-1. Keep ADRs immutable (add new ADRs instead of editing)
-2. Update syntax.md when language changes
-3. Update this README when adding new documentation
-4. Keep code examples up to date
+**Next:** Kleis Notebook development (ADR-011)
 
 ---
 
-**Last Updated:** December 9, 2024
+## 📖 Key References
 
+### Grammar (Current: v0.7)
+- [`grammar/kleis_grammar_v07.md`](grammar/kleis_grammar_v07.md) - Human-readable spec
+- [`grammar/kleis_grammar_v07.ebnf`](grammar/kleis_grammar_v07.ebnf) - Machine-readable EBNF
+- `grammar/Kleis_v06.g4` - ANTLR4 grammar
+
+### Type System
+- [`type-system/FORMAL_SPECIFICATION.md`](type-system/FORMAL_SPECIFICATION.md) - Formal spec
+- [`type-system/HINDLEY_MILNER_STATUS.md`](type-system/HINDLEY_MILNER_STATUS.md) - HM implementation
+
+### Guides
+- [`guides/PALETTE_GUIDE.md`](guides/PALETTE_GUIDE.md) - Equation Editor palette
+- [`guides/TEST_GUIDE.md`](guides/TEST_GUIDE.md) - Testing guide
+
+---
+
+## 🔬 Research Papers
+
+### Projected Ontology Theory (POT)
+- `hont/projected_ontology_theory.pdf`
+- `hont/projected_ontology_theory_naive_questions.pdf`
+
+### Mathematics
+- `mathematics/` - 15+ research papers (TeX + PDF)
+
+### LLM Integration
+- `LLMs/Tracer_Framework_Report_fixed.pdf`
+
+---
+
+## 📦 Archive
+
+Past sessions and deprecated documents are in [`archive/`](archive/).
+
+| Archived | Content |
+|----------|---------|
+| `archive/sessions/` | Sessions 2025-12-03 through 2025-12-12 |
+| `archive/type-system-roadmaps/` | Historical type system plans |
+| `archive/grammar/` | Old grammar versions |
+
+---
+
+**Last Updated:** December 15, 2025

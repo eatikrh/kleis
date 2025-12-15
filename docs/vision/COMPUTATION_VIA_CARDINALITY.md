@@ -1,6 +1,6 @@
 # Computation via Cardinality - The Cartesian Product Insight
 
-**Date:** December 8, 2024  
+**Date:** December 8, 2025  
 **Insight:** "If we define Cartesian product, we can slip in multiplication"  
 **Significance:** Reveals that Kleis CAN compute, just not numerically!
 

@@ -1,6 +1,6 @@
 # Notation System - Proof of Concept Tests
 
-**Date:** December 6, 2024  
+**Date:** December 6, 2025  
 **Purpose:** Validate design decisions with concrete test cases  
 **Status:** Proposed Tests
 
@@ -682,7 +682,7 @@ $ git log -p equations.kleis
 ```diff
 commit abc123...
 Author: Bob <bob@example.com>
-Date:   Fri Dec 6 2024
+Date:   Fri Dec 6 2025
 
     Fix distance formula sign
     

@@ -1,6 +1,6 @@
 # Kleis: Symbolic vs Numeric Evaluation
 
-**Date:** December 8, 2024  
+**Date:** December 8, 2025  
 **Question:** "Can Kleis add numbers?"  
 **Short Answer:** It depends what you mean by "add"!
 

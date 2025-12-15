@@ -253,9 +253,9 @@ structure FinancialStatement {
 }
 
 // Company submits financials
-acme_2024: FinancialStatement = {...}
+acme_2025: FinancialStatement = {...}
 
-verify acme_2024
+verify acme_2025
 // ❌ balance_sheet: Assets - Liabilities - Equity = $1.2M (should be 0)
 // ❌ depreciation_correct: Building depreciation incorrect
 // ⚠️  benford_law: First digit distribution suspicious (possible fraud flag)
@@ -571,13 +571,13 @@ structure BusinessExpense {
         expense.personal_benefit_percentage < 0.1
 }
 
-// Standard deduction (2024 example)
-axiom standard_deduction_2024:
+// Standard deduction (2025 example)
+axiom standard_deduction_2025:
     standard_deduction(Single) = 14600
     standard_deduction(MarriedFilingJointly) = 29200
     standard_deduction(HeadOfHousehold) = 21900
 
-// Tax brackets (2024)
+// Tax brackets (2025)
 operation tax_liability : (Currency, FilingStatus) → Currency
     // No ambiguity - exact formula
     match (status, taxable_income) {
@@ -657,7 +657,7 @@ my_return: TaxReturn = {
 }
 
 // Instant verification against tax code
-verify my_return against us_tax_code_2024
+verify my_return against us_tax_code_2025
 // ❌ business_expense(500, "office supplies"): 
 //    Not ordinary for your industry (software, remote work)
 //    Did you mean "home office equipment"?
@@ -670,9 +670,9 @@ verify my_return against us_tax_code_2024
 
 **4. Version Control for Laws**
 ```bash
-git diff us_tax_code_2023.kleis us_tax_code_2024.kleis
+git diff us_tax_code_2023.kleis us_tax_code_2025.kleis
 
-+ axiom energy_credit_2024:
++ axiom energy_credit_2025:
 +     solar_installation.credit_rate = 0.30
 - axiom energy_credit_2023:
 -     solar_installation.credit_rate = 0.26
@@ -683,7 +683,7 @@ git diff us_tax_code_2023.kleis us_tax_code_2024.kleis
 **5. Impact Analysis Before Passing Laws**
 ```kleis
 // Proposed change: Increase standard deduction
-axiom proposed_standard_deduction_2024:
+axiom proposed_standard_deduction_2025:
     standard_deduction(Single) = 16000  // Up from 14600
 
 // Simulate impact on 150M returns

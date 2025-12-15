@@ -2,7 +2,7 @@
 
 ## Status
 **Proposed** - Extension of ADR-011 for complete document authoring  
-**Updated:** December 6, 2024 - References ADR-015 for text representation
+**Updated:** December 6, 2025 - References ADR-015 for text representation
 
 ## Context
 
@@ -353,7 +353,7 @@ Kleis Notebook → .ipynb
 ┌────────────────────────────────────────┐
 │ # Title: [Your Paper Title]            │
 │ Authors: [Names]                       │
-│ Date: [2024-12-03]                     │
+│ Date: [2025-12-03]                     │
 ├────────────────────────────────────────┤
 │ ## Abstract                            │
 │ [Text cell]                            │
@@ -954,7 +954,7 @@ let typst_doc = format!(r#"
 metadata:
   title: "Classical Mechanics"
   authors: ["John Doe", "Jane Smith"]
-  date: 2024-12-03
+  date: 2025-12-03
   keywords: ["physics", "mechanics", "energy"]
   export_template: "research_paper"
 ---
