@@ -107,7 +107,7 @@
       "patterns": [
         {
           "name": "keyword.control.kleis",
-          "match": "\\b(data|structure|implements|operation|element|axiom|supports|notation|define|let|in|if|then|else|match|type|object|const|narrow|over|extends|verify|where)\\b"
+          "match": "\\b(data|structure|implements|operation|element|axiom|supports|notation|define|let|in|if|then|else|match|type|object|const|narrow|over|extends|verify|where|Sum|Product|Integrate|Limit|D|Dt)\\b"
         }
       ]
     },
@@ -133,7 +133,7 @@
       "patterns": [
         {
           "name": "keyword.operator.kleis",
-          "match": "(==|!=|<=|>=|->|=>|→|⇒|⟹|⊗|∘|∗|×|·|\\+|-|\\*|/|\\^|=|≠|<|>|≤|≥|≈|≡|~|∈|∉|⊂|⊆|∧|∨|¬|∂|∇|∫|√|!|†|ᵀ|\\^T|d/dx)"
+          "match": "(==|!=|<=|>=|->|=>|→|⇒|⟹|⊗|∘|∗|×|·|\\+|-|\\*|/|\\^|=|≠|<|>|≤|≥|≈|≡|~|∈|∉|⊂|⊆|∧|∨|¬|∇|∫|√|!|†|ᵀ|\\^T)"
         }
         ,
         {

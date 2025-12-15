@@ -334,7 +334,7 @@ structure Tensor(shape: List(Nat)) {
 ### **Kleis Docs**
 
 - `src/type_inference.rs:238-290` - Matrix constructor (current hack)
-- `docs/session-2025-12-07/MATRIX_CONSTRUCTOR_ISSUE.md` - Technical debt
+- `docs/archive/sessions/session-2025-12-07/MATRIX_CONSTRUCTOR_ISSUE.md` - Technical debt
 - `docs/theory/DIMENSIONAL_ANALYSIS_ANALOGY.md` - This insight
 
 ---

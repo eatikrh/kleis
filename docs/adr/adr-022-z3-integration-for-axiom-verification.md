@@ -745,11 +745,11 @@ Parser extensions have immediate value when axioms are verifiable!
 ## References
 
 **Documentation:**
-- `docs/session-2025-12-10/Z3_BUILD_SETUP.md` - Complete setup guide
-- `docs/session-2025-12-10/Z3_GRAMMAR_ROADMAP.md` - Implementation plan
-- `docs/session-2025-12-10/PHASE_1_AND_2_COMPLETE.md` - Achievement summary
-- `docs/session-2025-12-10/HOW_Z3_DOES_E_UNIFICATION.md` - Z3 internals
-- `docs/session-2025-12-10/Z3_AST_VS_KLEIS_AST.md` - Architecture comparison
+- `docs/archive/sessions/session-2025-12-10/Z3_BUILD_SETUP.md` - Complete setup guide
+- `docs/archive/sessions/session-2025-12-10/Z3_GRAMMAR_ROADMAP.md` - Implementation plan
+- `docs/archive/sessions/session-2025-12-10/PHASE_1_AND_2_COMPLETE.md` - Achievement summary
+- `docs/archive/sessions/session-2025-12-10/HOW_Z3_DOES_E_UNIFICATION.md` - Z3 internals
+- `docs/archive/sessions/session-2025-12-10/Z3_AST_VS_KLEIS_AST.md` - Architecture comparison
 
 **Code:**
 - `src/axiom_verifier.rs` - Main implementation

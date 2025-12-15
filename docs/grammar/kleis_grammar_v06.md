@@ -313,7 +313,7 @@ structure Ring(R) {
 ## References
 
 - **TODO #11:** `src/kleis_parser.rs:1758`
-- **Rationale:** `docs/session-2025-12-12/GRAMMAR_V06_RATIONALE.md`
+- **Rationale:** `docs/archive/sessions/session-2025-12-12/GRAMMAR_V06_RATIONALE.md`
 - **Examples:** `stdlib/prelude.kleis` (Ring, Field structures)
 - **EBNF:** `docs/grammar/kleis_grammar_v06.ebnf`
 - **ANTLR4:** `docs/grammar/Kleis_v06.g4`

@@ -806,7 +806,7 @@ Allow users to register operation translators at runtime:
 - **This document** - Architecture overview
 - `src/solvers/backend.rs` - Trait definitions
 - `src/solvers/z3/capabilities.toml` - Z3 manifest
-- `docs/session-2025-12-12/TRANSCENDENTAL_FUNCTIONS.md` - Why matrix transcendentals are valid
+- `docs/archive/sessions/session-2025-12-12/TRANSCENDENTAL_FUNCTIONS.md` - Why matrix transcendentals are valid
 
 ### Related ADRs
 - ADR-022: Z3 Integration (previous hardcoded approach)
@@ -819,7 +819,7 @@ Allow users to register operation translators at runtime:
 
 ### Session Documentation
 - `NEXT_SESSION_SOLVER_MODULARIZATION.md` - Original plan
-- `docs/session-2025-12-12/README.md` - Session summary
+- `docs/archive/sessions/session-2025-12-12/README.md` - Session summary
 
 ---
 

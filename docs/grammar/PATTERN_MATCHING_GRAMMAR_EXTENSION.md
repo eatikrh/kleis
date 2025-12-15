@@ -887,8 +887,8 @@ Kleis v1.0 (Full Grammar)
 
 - **ADR-021:** Algebraic Data Types (pattern matching is Part 2)
 - **Kleis v0.4 Grammar:** `docs/grammar/kleis_grammar_v04.ebnf`
-- **Implementation Plan:** `docs/session-2025-12-08/PATTERN_MATCHING_IMPLEMENTATION_PLAN.md`
-- **Value Proposition:** `docs/session-2025-12-08/WHY_PATTERN_MATCHING_MATTERS.md`
+- **Implementation Plan:** `docs/archive/sessions/session-2025-12-08/PATTERN_MATCHING_IMPLEMENTATION_PLAN.md`
+- **Value Proposition:** `docs/archive/sessions/session-2025-12-08/WHY_PATTERN_MATCHING_MATTERS.md`
 
 ---
 
