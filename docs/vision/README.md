@@ -302,3 +302,62 @@ verify safety envelopes around neural components."*
 
 — Kleis Vision Statement, Dec 2025
 
+---
+
+## Future Direction: Crystallized Intelligence Units (CIMs)
+
+A longer-term vision connects Kleis with **modular AI architecture**:
+
+### The Concept
+
+**Crystallized Intelligence Units (CIMs)** are specialized, task-bound AI modules 
+extracted from larger networks using techniques like the Lottery Ticket Hypothesis.
+
+| Property | AGI/LLM | CIM |
+|----------|---------|-----|
+| Scope | Unbounded | Bounded task |
+| Behavior | Probabilistic | Deterministic |
+| Size | 10¹² params | 10⁶ params |
+| Verification | Impossible | **Feasible** |
+
+### The Pipeline
+
+```
+Giant LLM (unverifiable)
+    ↓ Lottery Ticket Hypothesis
+Sparse Subnet for Task X
+    ↓ Crystallization  
+CIM: Task-Specific Module
+    ↓ Kleis Verification
+Certified CIM ✓
+```
+
+### Kleis as CIM Certification
+
+```kleis
+structure CIM(input: Type, output: Type) {
+    element network : SparseNN(input, output)
+    element bounds : Region(input)
+    
+    axiom bounded_output:
+        ∀ x ∈ bounds . network(x) ∈ safe_region
+    
+    axiom deterministic:
+        ∀ x . network(x) = network(x)
+}
+```
+
+### Why This Matters
+
+- CIMs are the *what* — modular, specialized AI
+- Kleis is the *how* — formal verification of each module
+- Together: **Verified AI systems** built from proven components
+
+This connects to ongoing research in lottery ticket hypothesis and neural 
+network pruning, where sparse subnetworks can match full network performance 
+while being tractable for formal analysis.
+
+---
+
+*Research direction noted: Dec 2025*
+
