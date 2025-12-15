@@ -1,65 +1,63 @@
--- =============================================================================
--- LQG Controller Design: Linear Quadratic Gaussian
--- =============================================================================
---
--- LQG combines two optimal designs:
---   1. LQR (Linear Quadratic Regulator) - optimal state feedback
---   2. Kalman Filter - optimal state estimation
---
--- Result: Optimal output feedback controller for systems with noise
---
--- =============================================================================
+// =============================================================================
+// LQG Controller Design: Linear Quadratic Gaussian
+// =============================================================================
+//
+// LQG combines two optimal designs:
+//   1. LQR (Linear Quadratic Regulator) - optimal state feedback
+//   2. Kalman Filter - optimal state estimation
+//
+// Result: Optimal output feedback controller for systems with noise
+//
+// =============================================================================
 
-import stdlib.matrices
-import examples.control.eigenvalues
 
--- =============================================================================
--- System Model with Noise
--- =============================================================================
---
--- State dynamics:    ẋ = A·x + B·u + w    (w = process noise)
--- Measurement:       y = C·x + v          (v = measurement noise)
---
--- Noise assumptions:
---   E[w·wᵀ] = W   (process noise covariance)
---   E[v·vᵀ] = V   (measurement noise covariance)
+// =============================================================================
+// System Model with Noise
+// =============================================================================
+//
+// State dynamics:    ẋ = A·x + B·u + w    (w = process noise)
+// Measurement:       y = C·x + v          (v = measurement noise)
+//
+// Noise assumptions:
+//   E[w·wᵀ] = W   (process noise covariance)
+//   E[v·vᵀ] = V   (measurement noise covariance)
 
 structure LinearSystem(n: Nat, m: Nat, p: Nat) {
-    -- System matrices
-    field A : Matrix(n, n, ℝ)   -- State dynamics
-    field B : Matrix(n, m, ℝ)   -- Input matrix
-    field C : Matrix(p, n, ℝ)   -- Output matrix
+    // System matrices
+    element A : Matrix(n, n, ℝ)   // State dynamics
+    element B : Matrix(n, m, ℝ)   // Input matrix
+    element C : Matrix(p, n, ℝ)   // Output matrix
     
-    -- Noise covariances
-    field W : Matrix(n, n, ℝ)   -- Process noise covariance
-    field V : Matrix(p, p, ℝ)   -- Measurement noise covariance
+    // Noise covariances
+    element W : Matrix(n, n, ℝ)   // Process noise covariance
+    element V : Matrix(p, p, ℝ)   // Measurement noise covariance
 }
 
--- =============================================================================
--- Part 1: LQR - Optimal State Feedback
--- =============================================================================
---
--- Cost function to minimize:
---   J = ∫₀^∞ (xᵀQx + uᵀRu) dt
---
--- where Q ≥ 0 (state penalty) and R > 0 (control effort penalty)
---
--- Optimal control law: u = -K·x
--- where K = R⁻¹·Bᵀ·P
--- and P solves the Control Algebraic Riccati Equation (CARE):
---   AᵀP + PA - P·B·R⁻¹·Bᵀ·P + Q = 0
+// =============================================================================
+// Part 1: LQR - Optimal State Feedback
+// =============================================================================
+//
+// Cost function to minimize:
+//   J = ∫₀^∞ (xᵀQx + uᵀRu) dt
+//
+// where Q ≥ 0 (state penalty) and R > 0 (control effort penalty)
+//
+// Optimal control law: u = -K·x
+// where K = R⁻¹·Bᵀ·P
+// and P solves the Control Algebraic Riccati Equation (CARE):
+//   AᵀP + PA - P·B·R⁻¹·Bᵀ·P + Q = 0
 
 structure LQRProblem(n: Nat, m: Nat) {
-    field A : Matrix(n, n, ℝ)
-    field B : Matrix(n, m, ℝ)
-    field Q : Matrix(n, n, ℝ)   -- State cost (Q ≥ 0)
-    field R : Matrix(m, m, ℝ)   -- Control cost (R > 0)
+    element A : Matrix(n, n, ℝ)
+    element B : Matrix(n, m, ℝ)
+    element Q : Matrix(n, n, ℝ)   // State cost (Q ≥ 0)
+    element R : Matrix(m, m, ℝ)   // Control cost (R > 0)
 }
 
--- Solution to the Riccati equation
+// Solution to the Riccati equation
 operation care_solution : LQRProblem(n, m) → Matrix(n, n, ℝ)
 
--- Optimal feedback gain
+// Optimal feedback gain
 operation lqr_gain : LQRProblem(n, m) → Matrix(m, n, ℝ)
 
 axiom lqr_gain_formula:
@@ -67,7 +65,7 @@ axiom lqr_gain_formula:
     let P = care_solution(prob) in
     lqr_gain(prob) = inv(prob.R) · transpose(prob.B) · P
 
--- Closed-loop stability guarantee
+// Closed-loop stability guarantee
 axiom lqr_stability:
     ∀ prob : LQRProblem(n, m) .
     let K = lqr_gain(prob) in
@@ -75,29 +73,29 @@ axiom lqr_stability:
     is_stable(A_cl)
 
 
--- =============================================================================
--- Part 2: Kalman Filter - Optimal State Estimation
--- =============================================================================
---
--- State estimate dynamics:
---   x̂̇ = A·x̂ + B·u + L·(y - C·x̂)
---
--- where L is the Kalman gain:
---   L = S·Cᵀ·V⁻¹
--- and S solves the Filter Algebraic Riccati Equation (FARE):
---   A·S + S·Aᵀ - S·Cᵀ·V⁻¹·C·S + W = 0
+// =============================================================================
+// Part 2: Kalman Filter - Optimal State Estimation
+// =============================================================================
+//
+// State estimate dynamics:
+//   x̂̇ = A·x̂ + B·u + L·(y - C·x̂)
+//
+// where L is the Kalman gain:
+//   L = S·Cᵀ·V⁻¹
+// and S solves the Filter Algebraic Riccati Equation (FARE):
+//   A·S + S·Aᵀ - S·Cᵀ·V⁻¹·C·S + W = 0
 
 structure KalmanProblem(n: Nat, p: Nat) {
-    field A : Matrix(n, n, ℝ)
-    field C : Matrix(p, n, ℝ)
-    field W : Matrix(n, n, ℝ)   -- Process noise covariance
-    field V : Matrix(p, p, ℝ)   -- Measurement noise covariance
+    element A : Matrix(n, n, ℝ)
+    element C : Matrix(p, n, ℝ)
+    element W : Matrix(n, n, ℝ)   // Process noise covariance
+    element V : Matrix(p, p, ℝ)   // Measurement noise covariance
 }
 
--- Solution to the filter Riccati equation
+// Solution to the filter Riccati equation
 operation fare_solution : KalmanProblem(n, p) → Matrix(n, n, ℝ)
 
--- Kalman filter gain
+// Kalman filter gain
 operation kalman_gain : KalmanProblem(n, p) → Matrix(n, p, ℝ)
 
 axiom kalman_gain_formula:
@@ -105,7 +103,7 @@ axiom kalman_gain_formula:
     let S = fare_solution(prob) in
     kalman_gain(prob) = S · transpose(prob.C) · inv(prob.V)
 
--- Estimation error convergence
+// Estimation error convergence
 axiom kalman_stability:
     ∀ prob : KalmanProblem(n, p) .
     let L = kalman_gain(prob) in
@@ -113,33 +111,33 @@ axiom kalman_stability:
     is_stable(A_obs)
 
 
--- =============================================================================
--- Part 3: LQG Controller - Combining LQR + Kalman
--- =============================================================================
---
--- LQG Controller structure:
---   x̂̇ = (A - B·K - L·C)·x̂ + L·y
---   u = -K·x̂
---
--- Separation Principle: LQR and Kalman can be designed independently!
--- The combined system is stable if both are stable.
+// =============================================================================
+// Part 3: LQG Controller - Combining LQR + Kalman
+// =============================================================================
+//
+// LQG Controller structure:
+//   x̂̇ = (A - B·K - L·C)·x̂ + L·y
+//   u = -K·x̂
+//
+// Separation Principle: LQR and Kalman can be designed independently!
+// The combined system is stable if both are stable.
 
 structure LQGController(n: Nat, m: Nat, p: Nat) {
-    field K : Matrix(m, n, ℝ)   -- State feedback gain (from LQR)
-    field L : Matrix(n, p, ℝ)   -- Observer gain (from Kalman)
-    field A : Matrix(n, n, ℝ)   -- System A matrix
-    field B : Matrix(n, m, ℝ)   -- System B matrix
-    field C : Matrix(p, n, ℝ)   -- System C matrix
+    element K : Matrix(m, n, ℝ)   // State feedback gain (from LQR)
+    element L : Matrix(n, p, ℝ)   // Observer gain (from Kalman)
+    element A : Matrix(n, n, ℝ)   // System A matrix
+    element B : Matrix(n, m, ℝ)   // System B matrix
+    element C : Matrix(p, n, ℝ)   // System C matrix
 }
 
--- Controller dynamics matrix
+// Controller dynamics matrix
 operation controller_A : LQGController(n, m, p) → Matrix(n, n, ℝ)
 
 axiom controller_dynamics:
     ∀ ctrl : LQGController(n, m, p) .
     controller_A(ctrl) = ctrl.A - ctrl.B · ctrl.K - ctrl.L · ctrl.C
 
--- Design function: build LQG controller from system and cost matrices
+// Design function: build LQG controller from system and cost matrices
 operation design_lqg : LinearSystem(n, m, p) → Matrix(n, n, ℝ) → Matrix(m, m, ℝ) 
                      → LQGController(n, m, p)
 
@@ -158,27 +156,27 @@ axiom lqg_design:
     }
 
 
--- =============================================================================
--- Example: Stabilizing the Inverted Pendulum
--- =============================================================================
---
--- From eigenvalues.kleis, the inverted pendulum is unstable:
---   A = [[0, 1], [g/L, 0]]
---
--- Let's design an LQG controller to stabilize it!
+// =============================================================================
+// Example: Stabilizing the Inverted Pendulum
+// =============================================================================
+//
+// From eigenvalues.kleis, the inverted pendulum is unstable:
+//   A = [[0, 1], [g/L, 0]]
+//
+// Let's design an LQG controller to stabilize it!
 
 let g = 9.81
 let L = 1.0
-let m_pend = 0.5  -- pendulum mass
+let m_pend = 0.5  // pendulum mass
 
--- System matrices (with motor input)
+// System matrices (with motor input)
 let A_pend = Matrix2x2 { a = 0, b = 1, c = g/L, d = 0 }
-let B_pend = [[0], [1/(m_pend * L²)]]  -- torque input
-let C_pend = [[1, 0]]                   -- measure angle only
+let B_pend = [[0], [1/(m_pend * L²)]]  // torque input
+let C_pend = [[1, 0]]                   // measure angle only
 
--- Noise covariances
-let W_pend = [[0.01, 0], [0, 0.01]]    -- process noise
-let V_pend = [[0.001]]                  -- measurement noise
+// Noise covariances
+let W_pend = [[0.01, 0], [0, 0.01]]    // process noise
+let V_pend = [[0.001]]                  // measurement noise
 
 let pendulum_system = LinearSystem {
     A = A_pend,
@@ -188,48 +186,48 @@ let pendulum_system = LinearSystem {
     V = V_pend
 }
 
--- LQR cost matrices: penalize angle deviation and control effort
-let Q_cost = [[10, 0], [0, 1]]   -- High penalty on angle, low on velocity
-let R_cost = [[0.1]]              -- Moderate control cost
+// LQR cost matrices: penalize angle deviation and control effort
+let Q_cost = [[10, 0], [0, 1]]   // High penalty on angle, low on velocity
+let R_cost = [[0.1]]              // Moderate control cost
 
--- Design the LQG controller
+// Design the LQG controller
 let pendulum_controller = design_lqg(pendulum_system, Q_cost, R_cost)
 
--- Verify closed-loop stability!
+// Verify closed-loop stability!
 let A_closed_loop = A_pend - B_pend · pendulum_controller.K
 
-verify is_stable(A_closed_loop)  -- Should now be stable!
+verify is_stable(A_closed_loop)  // Should now be stable!
 
 
--- =============================================================================
--- Riccati Equation: Closed-Form for 2×2 (Special Case)
--- =============================================================================
---
--- For simple 2×2 systems, the Riccati equation can be solved analytically.
--- General case requires numerical iteration (Newton-Raphson, Schur method).
+// =============================================================================
+// Riccati Equation: Closed-Form for 2×2 (Special Case)
+// =============================================================================
+//
+// For simple 2×2 systems, the Riccati equation can be solved analytically.
+// General case requires numerical iteration (Newton-Raphson, Schur method).
 
--- For diagonal Q and scalar R, simplified CARE solution exists
+// For diagonal Q and scalar R, simplified CARE solution exists
 axiom care_2x2_diagonal:
     ∀ A : Matrix2x2 . ∀ b : Vector(2, ℝ) . ∀ q₁ q₂ r : ℝ .
     let Q = [[q₁, 0], [0, q₂]] in
     let R = [[r]] in
     let B = [[b.x], [b.y]] in
-    -- P = [[p₁₁, p₁₂], [p₁₂, p₂₂]] symmetric
-    -- Solve system of 3 equations (Hamiltonian eigenvalue method)
+    // P = [[p₁₁, p₁₂], [p₁₂, p₂₂]] symmetric
+    // Solve system of 3 equations (Hamiltonian eigenvalue method)
     care_solution(LQRProblem { A = A, B = B, Q = Q, R = R }) = 
         hamiltonian_method(A, B, Q, R)
 
 
--- =============================================================================
--- Loop Transfer Recovery (LTR)
--- =============================================================================
---
--- LTR is a technique to recover the robustness of full-state feedback
--- when using an observer-based controller.
---
--- Key idea: As observer gains → ∞, loop transfer → LQR loop transfer
---
--- In practice: Scale W → ρ·W and let ρ → ∞
+// =============================================================================
+// Loop Transfer Recovery (LTR)
+// =============================================================================
+//
+// LTR is a technique to recover the robustness of full-state feedback
+// when using an observer-based controller.
+//
+// Key idea: As observer gains → ∞, loop transfer → LQR loop transfer
+//
+// In practice: Scale W → ρ·W and let ρ → ∞
 
 operation ltr_recovery : LinearSystem(n, m, p) → ℝ → LQGController(n, m, p)
 
@@ -240,27 +238,27 @@ axiom ltr_limit:
         loop_transfer(design_lqg(sys_scaled, Q, R))
     ) = loop_transfer_lqr(sys, Q, R)
 
--- LTR provides robustness margins:
---   Gain margin ≥ 1/2 to ∞  (−6dB to +∞dB)
---   Phase margin ≥ 60°
+// LTR provides robustness margins:
+//   Gain margin ≥ 1/2 to ∞  (−6dB to +∞dB)
+//   Phase margin ≥ 60°
 
 
--- =============================================================================
--- Summary: LQG Design Workflow
--- =============================================================================
---
--- 1. Model the system: A, B, C matrices + noise covariances W, V
--- 2. Choose cost matrices: Q (state penalty), R (control penalty)
--- 3. Solve CARE → get LQR gain K
--- 4. Solve FARE → get Kalman gain L  
--- 5. Combine into LQG controller
--- 6. Verify closed-loop stability
--- 7. (Optional) Apply LTR for robustness
---
--- Kleis enables:
---   ✓ Symbolic manipulation of controller equations
---   ✓ Verification of stability properties
---   ✓ Closed-form solutions for small systems
---   ✓ Type-checked matrix dimensions
+// =============================================================================
+// Summary: LQG Design Workflow
+// =============================================================================
+//
+// 1. Model the system: A, B, C matrices + noise covariances W, V
+// 2. Choose cost matrices: Q (state penalty), R (control penalty)
+// 3. Solve CARE → get LQR gain K
+// 4. Solve FARE → get Kalman gain L  
+// 5. Combine into LQG controller
+// 6. Verify closed-loop stability
+// 7. (Optional) Apply LTR for robustness
+//
+// Kleis enables:
+//   ✓ Symbolic manipulation of controller equations
+//   ✓ Verification of stability properties
+//   ✓ Closed-form solutions for small systems
+//   ✓ Type-checked matrix dimensions
 
 

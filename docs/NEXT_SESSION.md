@@ -586,3 +586,48 @@ fn render_operation(op: &OperationData, ...) -> String {
 ---
 *Resolved: Dec 15, 2025*
 
+---
+## 📋 TODO: Parser Feature Gaps (Dec 15, 2025)
+
+The current Kleis parser implements ~30% of the v0.7 grammar. Here are the notable gaps:
+
+### Missing Top-Level Declarations
+
+| Feature | Grammar v0.7 | Parser | Notes |
+|---------|--------------|--------|-------|
+| `import` / `include` | ❌ Not in grammar | ❌ Not implemented | **Priority: HIGH** - need for modular files |
+| Top-level `axiom` | ✅ | ❌ | Axioms only work inside structures |
+| Top-level `let` | ✅ | ❌ | Let bindings only in expressions |
+| Top-level `verify` | ✅ | ❌ | Verification statements |
+
+### Comment Syntax Discrepancy
+
+| Style | Grammar | Parser |
+|-------|---------|--------|
+| `-- comment` | ✅ Defined | ❌ Not recognized |
+| `// comment` | ✅ Defined | ✅ Works |
+| `/* block */` | ✅ Defined | ✅ Works |
+
+**Action:** Examples should use `//` comments for parser compatibility.
+
+### What Works
+
+| Feature | Status |
+|---------|--------|
+| `structure` with `element`, `operation`, `axiom` | ✅ |
+| Parameterized structures `(n: Nat, T: Type)` | ✅ |
+| `data` type definitions with variants | ✅ |
+| `implements` blocks | ✅ |
+| Top-level `operation` declarations | ✅ |
+| `define` function definitions | ✅ |
+
+### Next Steps
+
+1. **Add `import`/`include` support** - Allow loading other .kleis files
+2. **Add `--` comment support** - Match grammar specification
+3. **Add top-level `axiom`** - For standalone axiom declarations
+4. **Add top-level `let`/`verify`** - For example files and notebooks
+
+---
+*Noted: Dec 15, 2025*
+
