@@ -233,8 +233,17 @@ Classical control:
 Neural network:
   u = NN(x) = σ(Wₙ·σ(Wₙ₋₁·...σ(W₁·x)))
   Verify: ∀x ∈ ℝⁿ, system stable with u = NN(x)
-  Complexity: NP-hard, often intractable ❌
+  
+  Problem: ReLU/activation functions create piecewise-linear regions
+           n neurons → up to 2ⁿ linear regions to analyze
+           Verification must consider all reachable regions
+  
+  Complexity: Combinatorial explosion (exponential in network size) ❌
 ```
+
+Note: Some NN verification problems are formally NP-complete (Katz et al. 2017),
+but the practical barrier is the combinatorial explosion from activation 
+bifurcations, not just worst-case complexity class.
 
 ### What Kleis CAN Do for NN Systems
 
