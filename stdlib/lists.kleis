@@ -1,0 +1,90 @@
+// Kleis Standard Library - List Operations
+// Provides list indexing axioms for Z3 to evaluate list element access
+//
+// Key axiom: nth(list, index) returns the element at position index
+// This enables concrete computation of matrix/tensor components
+
+// List element access
+structure ListOps(T) {
+    // Get element at index (0-based)
+    operation nth : List(T) → Nat → T
+    
+    // List head (first element)
+    operation head : List(T) → T
+    
+    // List tail (all but first)
+    operation tail : List(T) → List(T)
+    
+    // List length
+    operation length : List(T) → Nat
+    
+    // Core axioms for list access
+    // nth([x, ...rest], 0) = x
+    axiom nth_zero : ∀ x : T . ∀ xs : List(T) .
+        equals(nth(cons(x, xs), 0), x)
+    
+    // nth([x, ...rest], n+1) = nth(rest, n)
+    axiom nth_succ : ∀ x : T . ∀ xs : List(T) . ∀ n : Nat .
+        equals(nth(cons(x, xs), plus(n, 1)), nth(xs, n))
+    
+    // head([x, ...rest]) = x
+    axiom head_cons : ∀ x : T . ∀ xs : List(T) .
+        equals(head(cons(x, xs)), x)
+    
+    // tail([x, ...rest]) = rest
+    axiom tail_cons : ∀ x : T . ∀ xs : List(T) .
+        equals(tail(cons(x, xs)), xs)
+    
+    // length([]) = 0
+    axiom length_nil : equals(length(nil), 0)
+    
+    // length([x, ...rest]) = 1 + length(rest)
+    axiom length_cons : ∀ x : T . ∀ xs : List(T) .
+        equals(length(cons(x, xs)), plus(1, length(xs)))
+}
+
+// Concrete list literals
+// These axioms allow Z3 to reason about list literals like [1, 2, 3, 4]
+structure ListLiterals(T) {
+    // Two-element list
+    axiom list2 : ∀ a : T . ∀ b : T .
+        equals(list(a, b), cons(a, cons(b, nil)))
+    
+    // Three-element list
+    axiom list3 : ∀ a : T . ∀ b : T . ∀ c : T .
+        equals(list(a, b, c), cons(a, cons(b, cons(c, nil))))
+    
+    // Four-element list (for 2x2 matrices/tensors)
+    axiom list4 : ∀ a : T . ∀ b : T . ∀ c : T . ∀ d : T .
+        equals(list(a, b, c, d), cons(a, cons(b, cons(c, cons(d, nil)))))
+}
+
+// Matrix/Tensor component access via list indexing
+structure MatrixComponents(m: Nat, n: Nat, T) {
+    // Matrix element at (i, j) = nth(elements, i*n + j)
+    axiom matrix_element : ∀ elems : List(T) . ∀ i : Nat . ∀ j : Nat .
+        equals(
+            element(Matrix(m, n, elems), i, j),
+            nth(elems, plus(times(i, n), j))
+        )
+}
+
+structure Tensor2Components(dim: Nat) {
+    // Tensor2 component at (i, j) = nth(elements, i*dim + j)
+    axiom tensor2_component : ∀ elems : List(ℝ) . ∀ i : Nat . ∀ j : Nat .
+        equals(
+            component(Tensor2(dim, elems), i, j),
+            nth(elems, plus(times(i, dim), j))
+        )
+}
+
+// Vector component access
+structure VectorComponents(dim: Nat) {
+    // Vector component at i = nth(elements, i)
+    axiom vector_component : ∀ elems : List(ℝ) . ∀ i : Nat .
+        equals(
+            component(Vector(dim, elems), i),
+            nth(elems, i)
+        )
+}
+

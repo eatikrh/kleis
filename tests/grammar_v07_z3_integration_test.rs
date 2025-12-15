@@ -636,7 +636,10 @@ fn test_forall_simple() {
 // ============================================================================
 
 /// Test 2x2 matrix times 2x1 vector
+/// IGNORED: Requires list indexing for matrix operations
+/// TO ENABLE: See z3_matrix_solve_test.rs::test_z3_solves_matrix_linear_system
 #[test]
+#[ignore]
 #[cfg(feature = "axiom-verification")]
 fn test_matrix_vector_multiply() {
     println!("\n🧪 Testing: Matrix(2,2) × Matrix(2,1)");

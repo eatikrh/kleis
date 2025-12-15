@@ -1575,6 +1575,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "comemo",
+ "kleis-test-macros",
  "regex",
  "roxmltree",
  "rustyline",
@@ -1590,6 +1591,15 @@ dependencies = [
  "typst-svg",
  "uuid",
  "z3",
+]
+
+[[package]]
+name = "kleis-test-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

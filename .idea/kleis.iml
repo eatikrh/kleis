@@ -11,6 +11,7 @@
       <sourceFolder url="file://$MODULE_DIR$/vendor/z3-sys/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/vendor/z3/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/vendor/z3/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/kleis-test-macros/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

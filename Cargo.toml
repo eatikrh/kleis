@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "render"]
+members = [".", "render", "kleis-test-macros"]
 
 [package]
 name = "kleis"
@@ -76,3 +76,6 @@ path = "src/bin/repl.rs"
 [[example]]
 name = "typst_demo"
 path = "examples/typst_demo.rs"
+
+[dev-dependencies]
+kleis-test-macros = { path = "kleis-test-macros" }

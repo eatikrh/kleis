@@ -5,6 +5,38 @@
 
 **Read this first before making changes to AST or renderers.**
 
+### Lesson 0: Equation Editor MUST NOT Hang
+
+**The Equation Editor cannot tolerate operations that hang forever.**
+
+When the user clicks "Verify" or "Evaluate", the response must come back in reasonable time.
+This means we CANNOT use Z3 with universal quantifier axioms for concrete computation.
+
+| Operation | Approach | Speed | Safe for Editor? |
+|-----------|----------|-------|------------------|
+| **Evaluation** (compute value) | Inline expansion in Rust | Fast | ✅ YES |
+| **Evaluation** (compute value) | Z3 with ∀ axioms | HANGS | ❌ NO |
+| **Verification** (sat/unsat) | Z3 with ∀ axioms | Usually fast | ⚠️ With timeout |
+| **Satisfiability** (find model) | Z3 with ∀ axioms | Can be slow | ⚠️ With timeout |
+
+**Why Z3 + ∀ axioms hangs on evaluation:**
+```
+Query: nth([1,2,3], 1) = ?
+
+Axiom: ∀ x . ∀ xs . nth(cons(x, xs), 0) = x
+Axiom: ∀ x . ∀ xs . ∀ n . nth(cons(x, xs), n+1) = nth(xs, n)
+
+Z3 E-matching: Must try all instantiations of x, xs, n...
+Result: Combinatorial explosion → HANGS FOREVER
+```
+
+**Rule:** For concrete computation in the Equation Editor, use **inline expansion** 
+(direct Rust computation), NOT axiom-based Z3 reasoning.
+
+Axioms are for VERIFICATION ("is this true?"), not EVALUATION ("what is the value?").
+
+---
+
 ### Lesson 1: Two Different ASTs Exist
 
 | AST Type | Created By | Purpose | Format |

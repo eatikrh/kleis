@@ -66,19 +66,13 @@ impl<'r> Z3Backend<'r> {
     /// * `registry` - Structure registry containing operations and axioms
     ///
     /// # Axiom Loading
-    /// Matrix multiplication axioms are loaded for testing Z3 integration.
-    /// TODO: In the future, load axioms from stdlib/matrices.kleis instead of hardcoding.
-    /// This requires:
-    /// 1. Parsing .kleis axiom definitions
-    /// 2. Translating them to Z3 assertions
-    /// 3. Loading them on-demand when structures are used
-    ///
-    /// See: load_structure_axioms() for the intended API
+    /// Axioms are loaded from stdlib/*.kleis files via assert_axioms_from_registry().
+    /// Call this method after creating the backend to load all axioms before verification.
     pub fn new(registry: &'r StructureRegistry) -> Result<Self, String> {
         let solver = Solver::new();
         let capabilities = super::load_capabilities()?;
 
-        let mut backend = Self {
+        let backend = Self {
             solver,
             registry,
             capabilities,
@@ -89,311 +83,179 @@ impl<'r> Z3Backend<'r> {
             converter: Z3ResultConverter,
         };
 
-        // Load matrix axioms for Z3 integration testing
-        // TODO: Replace with axiom loading from stdlib/matrices.kleis
-        backend.load_matrix_axioms();
-
         Ok(backend)
     }
 
-    /// Matrix axiom loading placeholder
+    /// Assert all axioms from the registry into Z3 solver
     ///
-    /// **FOR Z3 INTEGRATION TESTING**
-    /// Instead of universal quantifier axioms (which can cause Z3 to hang),
-    /// we handle matrix multiplication by inline expansion in try_expand_matrix_multiply.
+    /// This is the key method for making user-defined axioms available to Z3.
+    /// Axioms are translated to Z3 assertions so they can be used for verification.
     ///
-    /// TODO: Replace with proper axiom loading from stdlib/matrices.kleis
-    fn load_matrix_axioms(&mut self) {
-        // Mark matrix operations as declared (handled specially)
-        self.declared_ops.insert("matrix_2x1".to_string());
-        self.declared_ops.insert("matrix_2x2".to_string());
-        self.declared_ops.insert("multiply".to_string());
-    }
-
-    /// Try to expand matrix multiplication inline
+    /// # Example
+    /// ```ignore
+    /// let mut backend = Z3Backend::new(&registry)?;
+    /// backend.assert_axioms_from_registry()?;  // Load all axioms
+    /// backend.verify_axiom(&theorem)?;          // Now uses loaded axioms
+    /// ```
     ///
-    /// If both arguments are Matrix expressions with known dimensions,
-    /// we compute the product symbolically and return the result.
-    ///
-    /// Returns None if this isn't a matrix multiplication we can expand.
-    fn try_expand_matrix_multiply(
-        &mut self,
-        left: &Expression,
-        right: &Expression,
-        vars: &HashMap<String, Dynamic>,
-    ) -> Result<Option<Dynamic>, String> {
-        // Extract matrix info: (rows, cols, elements)
-        let left_info = self.extract_matrix_info(left);
-        let right_info = self.extract_matrix_info(right);
+    /// # Returns
+    /// - Ok(count) - number of axioms successfully loaded
+    /// - Err if any axiom fails to translate
+    pub fn assert_axioms_from_registry(&mut self) -> Result<usize, String> {
+        let mut count = 0;
+        let empty_vars: HashMap<String, Dynamic> = HashMap::new();
 
-        match (left_info, right_info) {
-            // 2x2 × 2x1 -> 2x1 (returns a MatrixResult for component-wise comparison)
-            (Some((2, 2, left_elems)), Some((2, 1, right_elems)))
-                if left_elems.len() == 4 && right_elems.len() == 2 =>
-            {
-                // Translate all elements to Z3
-                let a = self.kleis_to_z3(&left_elems[0], vars)?;
-                let b = self.kleis_to_z3(&left_elems[1], vars)?;
-                let c = self.kleis_to_z3(&left_elems[2], vars)?;
-                let d = self.kleis_to_z3(&left_elems[3], vars)?;
-                let x = self.kleis_to_z3(&right_elems[0], vars)?;
-                let y = self.kleis_to_z3(&right_elems[1], vars)?;
+        // Get all structures that have axioms
+        let structures_with_axioms: Vec<String> = self
+            .registry
+            .structures_with_axioms()
+            .iter()
+            .map(|s| (*s).clone())
+            .collect();
 
-                // Compute: result[0] = a*x + b*y, result[1] = c*x + d*y
-                let a_int = a.as_int().ok_or("Matrix element must be integer")?;
-                let b_int = b.as_int().ok_or("Matrix element must be integer")?;
-                let c_int = c.as_int().ok_or("Matrix element must be integer")?;
-                let d_int = d.as_int().ok_or("Matrix element must be integer")?;
-                let x_int = x.as_int().ok_or("Matrix element must be integer")?;
-                let y_int = y.as_int().ok_or("Matrix element must be integer")?;
-
-                let r0 = Int::add(&[&Int::mul(&[&a_int, &x_int]), &Int::mul(&[&b_int, &y_int])]);
-                let r1 = Int::add(&[&Int::mul(&[&c_int, &x_int]), &Int::mul(&[&d_int, &y_int])]);
-
-                // Use a unique function that encodes BOTH components
-                // This prevents Z3 from "cheating" by making all matrices equal
-                // We encode as: r0 * LARGE_PRIME + r1 (bijective for reasonable values)
-                let large_prime = Int::from_i64(1000003);
-                let encoded = Int::add(&[&Int::mul(&[&r0, &large_prime]), &r1]);
-                Ok(Some(encoded.into()))
+        for structure_name in structures_with_axioms {
+            // Skip if already loaded
+            if self.loaded_structures.contains(&structure_name) {
+                continue;
             }
 
-            // Not a matrix multiplication pattern we recognize
-            _ => Ok(None),
-        }
-    }
+            let axioms = self.registry.get_axioms(&structure_name);
 
-    /// Extract matrix dimensions and elements from a Matrix expression
-    fn extract_matrix_info(&self, expr: &Expression) -> Option<(usize, usize, Vec<Expression>)> {
-        if let Expression::Operation { name, args } = expr {
-            if name == "Matrix" && args.len() == 3 {
-                let rows = match &args[0] {
-                    Expression::Const(s) => s.parse::<usize>().ok()?,
-                    _ => return None,
-                };
-                let cols = match &args[1] {
-                    Expression::Const(s) => s.parse::<usize>().ok()?,
-                    _ => return None,
-                };
-                if let Expression::List(elements) = &args[2] {
-                    return Some((rows, cols, elements.clone()));
-                }
-            }
-        }
-        None
-    }
-
-    // =========================================
-    // Tensor Expansion Methods (Concrete Tensors)
-    // =========================================
-
-    /// Extract Tensor2 info: (dimension, components)
-    /// Tensor2(dim, [component_list])
-    fn extract_tensor2_info(&self, expr: &Expression) -> Option<(usize, Vec<Expression>)> {
-        if let Expression::Operation { name, args } = expr {
-            if name == "Tensor2" && args.len() == 2 {
-                let dim = match &args[0] {
-                    Expression::Const(s) => s.parse::<usize>().ok()?,
-                    _ => return None,
-                };
-                if let Expression::List(elements) = &args[1] {
-                    // For a dim×dim tensor, we expect dim² elements
-                    if elements.len() == dim * dim {
-                        return Some((dim, elements.clone()));
+            for (axiom_name, axiom_expr) in axioms {
+                match self.translate_and_assert_axiom(&axiom_name, axiom_expr, &empty_vars) {
+                    Ok(()) => {
+                        count += 1;
+                        // Successfully asserted axiom
+                    }
+                    Err(_e) => {
+                        // Continue with other axioms rather than failing entirely
+                        // Axioms may fail if they use unsupported constructs
                     }
                 }
             }
+
+            self.loaded_structures.insert(structure_name);
         }
-        None
+
+        Ok(count)
     }
 
-    /// Extract Vector info: (dimension, components)
-    /// Vector(dim, [component_list])
-    fn extract_vector_info(&self, expr: &Expression) -> Option<(usize, Vec<Expression>)> {
-        if let Expression::Operation { name, args } = expr {
-            if name == "Vector" && args.len() == 2 {
-                let dim = match &args[0] {
-                    Expression::Const(s) => s.parse::<usize>().ok()?,
-                    _ => return None,
-                };
-                if let Expression::List(elements) = &args[1] {
-                    if elements.len() == dim {
-                        return Some((dim, elements.clone()));
-                    }
-                }
-            }
-        }
-        None
-    }
-
-    /// Expand tensor contraction: A_μρ B^ρ_ν = Σ_ρ A_μρ * B_ρν
-    /// Returns encoded result matrix for Z3
-    fn try_expand_tensor_contraction(
+    /// Translate a single axiom and assert it into Z3
+    fn translate_and_assert_axiom(
         &mut self,
-        left: &Expression,
-        right: &Expression,
+        name: &str,
+        expr: &Expression,
         vars: &HashMap<String, Dynamic>,
-    ) -> Result<Option<Dynamic>, String> {
-        let left_info = self.extract_tensor2_info(left);
-        let right_info = self.extract_tensor2_info(right);
-
-        match (left_info, right_info) {
-            (Some((dim, left_elems)), Some((dim2, right_elems))) if dim == dim2 => {
-                // Contract: C_ij = Σ_k A_ik * B_kj
-                // For small dimensions (2, 3, 4), expand explicitly
-                if dim > 4 {
-                    return Ok(None); // Fall back to uninterpreted for large tensors
-                }
-
-                let mut result_terms: Vec<Int> = Vec::with_capacity(dim * dim);
-
-                for i in 0..dim {
-                    for j in 0..dim {
-                        // C_ij = Σ_k A_ik * B_kj
-                        let mut sum_terms: Vec<Int> = Vec::new();
-                        for k in 0..dim {
-                            let a_idx = i * dim + k;
-                            let b_idx = k * dim + j;
-
-                            let a_z3 = self.kleis_to_z3(&left_elems[a_idx], vars)?;
-                            let b_z3 = self.kleis_to_z3(&right_elems[b_idx], vars)?;
-
-                            let a_int =
-                                a_z3.as_int().ok_or("Tensor element must be integer/real")?;
-                            let b_int =
-                                b_z3.as_int().ok_or("Tensor element must be integer/real")?;
-
-                            sum_terms.push(Int::mul(&[&a_int, &b_int]));
-                        }
-
-                        // Sum all terms for this component
-                        let refs: Vec<&Int> = sum_terms.iter().collect();
-                        result_terms.push(Int::add(&refs));
-                    }
-                }
-
-                // Encode result using large primes (similar to matrix)
-                // This encodes all components into a single Z3 integer
-                let prime = Int::from_i64(1000003);
-                let mut encoded = Int::from_i64(0);
-                for term in result_terms.iter().rev() {
-                    encoded = Int::add(&[&Int::mul(&[&encoded, &prime]), term]);
-                }
-
-                Ok(Some(encoded.into()))
-            }
-            _ => Ok(None),
+    ) -> Result<(), String> {
+        // Handle quantified axioms (∀ x : T . body)
+        if let Expression::Quantifier {
+            quantifier,
+            variables,
+            where_clause,
+            body,
+        } = expr
+        {
+            // Create Z3 forall
+            let z3_axiom =
+                self.translate_quantifier_as_forall(quantifier, variables, where_clause, body)?;
+            self.solver.assert(&z3_axiom);
+            return Ok(());
         }
+
+        // Non-quantified axiom: translate directly
+        let z3_expr = self.kleis_to_z3(expr, vars)?;
+
+        // Must be boolean
+        let z3_bool = z3_expr
+            .as_bool()
+            .ok_or_else(|| format!("Axiom '{}' must be a boolean expression", name))?;
+
+        self.solver.assert(&z3_bool);
+        Ok(())
     }
 
-    /// Expand tensor trace: Tr(T) = Σ_μ T_μμ
-    fn try_expand_tensor_trace(
+    /// Translate a quantified expression to a proper Z3 forall
+    ///
+    /// This creates an actual Z3 forall constraint, not just the body.
+    fn translate_quantifier_as_forall(
         &mut self,
-        tensor: &Expression,
-        vars: &HashMap<String, Dynamic>,
-    ) -> Result<Option<Dynamic>, String> {
-        if let Some((dim, elems)) = self.extract_tensor2_info(tensor) {
-            // Trace = sum of diagonal elements
-            let mut diag_terms: Vec<Int> = Vec::new();
-            for i in 0..dim {
-                let diag_idx = i * dim + i; // Element T_ii
-                let elem_z3 = self.kleis_to_z3(&elems[diag_idx], vars)?;
-                let elem_int = elem_z3
-                    .as_int()
-                    .ok_or("Tensor element must be integer/real")?;
-                diag_terms.push(elem_int);
-            }
+        quantifier: &QuantifierKind,
+        variables: &[QuantifiedVar],
+        where_clause: &Option<Box<Expression>>,
+        body: &Expression,
+    ) -> Result<Bool, String> {
+        // Create Z3 bound variables
+        let mut bound_vars: Vec<Dynamic> = Vec::new();
+        let mut var_map: HashMap<String, Dynamic> = HashMap::new();
 
-            let refs: Vec<&Int> = diag_terms.iter().collect();
-            Ok(Some(Int::add(&refs).into()))
+        for var in variables {
+            let z3_var: Dynamic = if let Some(type_annotation) = &var.type_annotation {
+                match type_annotation.as_str() {
+                    "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
+                    "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
+                    "ℤ" | "Int" | "Z" | "Nat" => Int::fresh_const(&var.name).into(),
+                    _ => Int::fresh_const(&var.name).into(),
+                }
+            } else {
+                Int::fresh_const(&var.name).into()
+            };
+            bound_vars.push(z3_var.clone());
+            var_map.insert(var.name.clone(), z3_var);
+        }
+
+        // Translate body
+        let body_z3 = self.kleis_to_z3(body, &var_map)?;
+        let body_bool = body_z3
+            .as_bool()
+            .ok_or_else(|| "Quantifier body must be boolean".to_string())?;
+
+        // Handle where clause: where_clause ⟹ body
+        let formula = if let Some(condition) = where_clause {
+            let condition_z3 = self.kleis_to_z3(condition, &var_map)?;
+            let condition_bool = condition_z3
+                .as_bool()
+                .ok_or_else(|| "Where clause must be boolean".to_string())?;
+            condition_bool.implies(&body_bool)
         } else {
-            Ok(None)
-        }
+            body_bool
+        };
+
+        // Create Z3 forall/exists
+        let bound_refs: Vec<&dyn Ast> = bound_vars.iter().map(|v| v as &dyn Ast).collect();
+
+        let result = match quantifier {
+            QuantifierKind::ForAll => z3::ast::forall_const(&bound_refs, &[], &formula),
+            QuantifierKind::Exists => z3::ast::exists_const(&bound_refs, &[], &formula),
+        };
+
+        // Convert back to Bool (forall_const returns Bool)
+        Ok(result)
     }
 
-    /// Expand index lowering: V_μ = g_μν V^ν
-    fn try_expand_index_lower(
+    /// Translate a Kleis List to a cons-chain
+    ///
+    /// [a, b, c] -> cons(a, cons(b, cons(c, nil)))
+    ///
+    /// This enables axioms from stdlib/lists.kleis to work:
+    /// - nth(cons(x, xs), 0) = x
+    /// - nth(cons(x, xs), n+1) = nth(xs, n)
+    fn translate_list_to_cons(
         &mut self,
-        metric: &Expression,
-        vector: &Expression,
+        items: &[Expression],
         vars: &HashMap<String, Dynamic>,
-    ) -> Result<Option<Dynamic>, String> {
-        let metric_info = self.extract_tensor2_info(metric);
-        let vector_info = self.extract_vector_info(vector);
+    ) -> Result<Dynamic, String> {
+        // nil is represented as an uninterpreted constant
+        let nil_func = self.declare_uninterpreted("nil", 0);
+        let mut result = nil_func.apply(&[]);
 
-        match (metric_info, vector_info) {
-            (Some((dim, g_elems)), Some((vdim, v_elems))) if dim == vdim => {
-                // W_μ = g_μν V^ν = Σ_ν g_μν * V_ν
-                let mut result_terms: Vec<Int> = Vec::with_capacity(dim);
-
-                for mu in 0..dim {
-                    let mut sum_terms: Vec<Int> = Vec::new();
-                    #[allow(clippy::needless_range_loop)]
-                    for nu in 0..dim {
-                        let g_idx = mu * dim + nu;
-                        let g_z3 = self.kleis_to_z3(&g_elems[g_idx], vars)?;
-                        let v_z3 = self.kleis_to_z3(&v_elems[nu], vars)?;
-
-                        let g_int = g_z3.as_int().ok_or("Metric element must be integer")?;
-                        let v_int = v_z3.as_int().ok_or("Vector element must be integer")?;
-
-                        sum_terms.push(Int::mul(&[&g_int, &v_int]));
-                    }
-                    let refs: Vec<&Int> = sum_terms.iter().collect();
-                    result_terms.push(Int::add(&refs));
-                }
-
-                // Encode result vector
-                let prime = Int::from_i64(1000003);
-                let mut encoded = Int::from_i64(0);
-                for term in result_terms.iter().rev() {
-                    encoded = Int::add(&[&Int::mul(&[&encoded, &prime]), term]);
-                }
-
-                Ok(Some(encoded.into()))
-            }
-            _ => Ok(None),
+        // Build cons chain from right to left
+        for item in items.iter().rev() {
+            let item_z3 = self.kleis_to_z3(item, vars)?;
+            let cons_func = self.declare_uninterpreted("cons", 2);
+            result = cons_func.apply(&[&item_z3 as &dyn Ast, &result as &dyn Ast]);
         }
-    }
 
-    /// Expand index raising: V^μ = g^μν V_ν
-    fn try_expand_index_raise(
-        &mut self,
-        inv_metric: &Expression,
-        covector: &Expression,
-        vars: &HashMap<String, Dynamic>,
-    ) -> Result<Option<Dynamic>, String> {
-        // Same logic as lower_index, just uses inverse metric
-        self.try_expand_index_lower(inv_metric, covector, vars)
-    }
-
-    /// Expand tensor component access: component(T, i, j)
-    fn try_expand_tensor_component(
-        &mut self,
-        tensor: &Expression,
-        idx_i: &Expression,
-        idx_j: &Expression,
-        vars: &HashMap<String, Dynamic>,
-    ) -> Result<Option<Dynamic>, String> {
-        if let Some((dim, elems)) = self.extract_tensor2_info(tensor) {
-            // Only expand if indices are concrete constants
-            let i = match idx_i {
-                Expression::Const(s) => s.parse::<usize>().ok(),
-                _ => None,
-            };
-            let j = match idx_j {
-                Expression::Const(s) => s.parse::<usize>().ok(),
-                _ => None,
-            };
-
-            if let (Some(i_val), Some(j_val)) = (i, j) {
-                if i_val < dim && j_val < dim {
-                    let elem_idx = i_val * dim + j_val;
-                    return self.kleis_to_z3(&elems[elem_idx], vars).map(Some);
-                }
-            }
-        }
-        Ok(None)
+        Ok(result)
     }
 
     /// Translate Kleis expression to Z3 Dynamic
@@ -442,100 +304,8 @@ impl<'r> Z3Backend<'r> {
             }
 
             Expression::Operation { name, args } => {
-                // Special handling for Matrix - encode as integer for component-wise comparison
-                if name == "Matrix" && args.len() == 3 {
-                    if let Expression::List(items) = &args[2] {
-                        let rows: usize = match &args[0] {
-                            Expression::Const(s) => s.parse().unwrap_or(0),
-                            _ => 0,
-                        };
-                        let cols: usize = match &args[1] {
-                            Expression::Const(s) => s.parse().unwrap_or(0),
-                            _ => 0,
-                        };
-
-                        // For 2x1 matrices, encode as: e0 * LARGE_PRIME + e1
-                        // This enables component-wise equality comparison
-                        if rows == 2 && cols == 1 && items.len() == 2 {
-                            let e0 = self.kleis_to_z3(&items[0], vars)?;
-                            let e1 = self.kleis_to_z3(&items[1], vars)?;
-                            let e0_int = e0.as_int().ok_or("Matrix element must be integer")?;
-                            let e1_int = e1.as_int().ok_or("Matrix element must be integer")?;
-
-                            let large_prime = Int::from_i64(1000003);
-                            let encoded = Int::add(&[&Int::mul(&[&e0_int, &large_prime]), &e1_int]);
-                            return Ok(encoded.into());
-                        }
-
-                        // For other matrices, use uninterpreted function (structural equality only)
-                        let matrix_name = format!("matrix_{}x{}", rows, cols);
-                        let z3_elements: Result<Vec<_>, _> = items
-                            .iter()
-                            .map(|item| self.kleis_to_z3(item, vars))
-                            .collect();
-                        let z3_elements = z3_elements?;
-                        let func_decl = self.declare_uninterpreted(&matrix_name, z3_elements.len());
-                        let ast_args: Vec<&dyn Ast> =
-                            z3_elements.iter().map(|d| d as &dyn Ast).collect();
-                        return Ok(func_decl.apply(&ast_args));
-                    }
-                }
-
-                // Special handling for matrix multiplication (inline expansion)
-                // multiply(Matrix(2,2,[a,b,c,d]), Matrix(2,1,[x,y]))
-                //   = Matrix(2,1,[a*x+b*y, c*x+d*y])
-                if name == "multiply" && args.len() == 2 {
-                    if let Some(result) =
-                        self.try_expand_matrix_multiply(&args[0], &args[1], vars)?
-                    {
-                        return Ok(result);
-                    }
-                }
-
-                // Tensor contraction expansion
-                // contract(Tensor2(dim, components), Tensor2(dim, components))
-                //   = Sum over contracted index
-                if name == "contract" && args.len() == 2 {
-                    if let Some(result) =
-                        self.try_expand_tensor_contraction(&args[0], &args[1], vars)?
-                    {
-                        return Ok(result);
-                    }
-                }
-
-                // Tensor trace expansion
-                // trace(Tensor2(dim, components)) = sum of diagonal
-                if name == "trace" && args.len() == 1 {
-                    if let Some(result) = self.try_expand_tensor_trace(&args[0], vars)? {
-                        return Ok(result);
-                    }
-                }
-
-                // Index lowering with metric
-                // lower_index(g, V) = g_μν V^ν (contraction)
-                if name == "lower_index" && args.len() == 2 {
-                    if let Some(result) = self.try_expand_index_lower(&args[0], &args[1], vars)? {
-                        return Ok(result);
-                    }
-                }
-
-                // Index raising with inverse metric
-                // raise_index(g_inv, W) = g^μν W_ν (contraction)
-                if name == "raise_index" && args.len() == 2 {
-                    if let Some(result) = self.try_expand_index_raise(&args[0], &args[1], vars)? {
-                        return Ok(result);
-                    }
-                }
-
-                // Tensor component access
-                // component(T, i, j) -> T_ij value
-                if name == "component" && args.len() == 3 {
-                    if let Some(result) =
-                        self.try_expand_tensor_component(&args[0], &args[1], &args[2], vars)?
-                    {
-                        return Ok(result);
-                    }
-                }
+                // Matrix and tensor operations are handled via axioms from stdlib/*.kleis
+                // Use assert_axioms_from_registry() to load them before verification
 
                 // Standard path: translate arguments first
                 let z3_args: Result<Vec<_>, _> =
@@ -599,12 +369,9 @@ impl<'r> Z3Backend<'r> {
             }
 
             Expression::List(items) => {
-                // For now, lists are not directly translatable to Z3
-                // They're typically used in matrix constructors
-                Err(format!(
-                    "List expressions not directly supported in Z3 (use in constructors): {:?}",
-                    items.len()
-                ))
+                // Convert list to cons-chain: [a, b, c] -> cons(a, cons(b, cons(c, nil)))
+                // This allows axioms from stdlib/lists.kleis to work
+                self.translate_list_to_cons(items, vars)
             }
 
             _ => Err(format!("Unsupported expression type for Z3: {:?}", expr)),
@@ -1263,8 +1030,9 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
 
         // For evaluation, we need a concrete value
-        // Use a temporary solver to check satisfiability and get a model
-        let temp_solver = Solver::new();
+        // Use self.solver which has axioms already asserted
+        // Push a scope so we can pop after evaluation
+        self.solver.push();
 
         // For constant expressions, we can try to extract the value directly
         // For symbolic expressions, we need a model
@@ -1272,6 +1040,7 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         // Try to get concrete value directly
         if let Some(int_val) = z3_expr.as_int() {
             if let Some(value) = int_val.as_i64() {
+                self.solver.pop(1);
                 return Ok(Expression::Const(value.to_string()));
             }
         }
@@ -1294,32 +1063,37 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         }
 
         // For symbolic expressions, try to get a satisfying model
-        temp_solver.push();
+        // NOTE: This can hang with quantified axioms! Use with caution.
 
         // Create a fresh variable and assert it equals our expression
         let result_var = Int::fresh_const("eval_result");
 
         // Try to cast z3_expr to Int and assert equality
         if let Some(int_expr) = z3_expr.as_int() {
-            temp_solver.assert(result_var.eq(&int_expr));
+            self.solver.assert(&result_var.eq(&int_expr));
 
-            match temp_solver.check() {
+            match self.solver.check() {
                 SatResult::Sat => {
-                    if let Some(model) = temp_solver.get_model() {
+                    if let Some(model) = self.solver.get_model() {
                         if let Some(evaluated) = model.eval(&result_var, true) {
-                            // Convert Z3 result to Kleis Expression using converter
                             let z3_dynamic: Dynamic = evaluated.into();
+                            self.solver.pop(1);
                             return self.converter.to_expression(&z3_dynamic);
                         }
                     }
                 }
-                _ => {
-                    return Err("Cannot evaluate expression - no satisfying assignment".to_string())
+                SatResult::Unsat => {
+                    self.solver.pop(1);
+                    return Err("Cannot evaluate expression - unsatisfiable".to_string());
+                }
+                SatResult::Unknown => {
+                    self.solver.pop(1);
+                    return Err("Cannot evaluate expression - unknown".to_string());
                 }
             }
         }
 
-        temp_solver.pop(1);
+        self.solver.pop(1);
 
         // Fallback: return string representation
         Ok(Expression::Const(z3_expr.to_string()))

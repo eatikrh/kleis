@@ -37,6 +37,45 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 - Ask for clarification when uncertain
 - Be respectful of the user's workflow and preferences
 
+## Z3 and Equation Editor Performance Rules
+
+**CRITICAL: The Equation Editor MUST NOT hang waiting for Z3.**
+
+### The Problem: Universal Quantifiers + Evaluation = HANG
+
+When Z3 has axioms with universal quantifiers (∀), asking it to **evaluate** 
+concrete expressions causes a combinatorial explosion:
+
+```
+Axiom: ∀ x . ∀ xs . nth(cons(x, xs), 0) = x
+Query: evaluate(nth([1,2,3], 1))
+
+Z3 E-matching tries ALL possible instantiations of x and xs...
+Result: HANGS FOREVER
+```
+
+### What Works vs What Hangs
+
+| Operation | Method | Result |
+|-----------|--------|--------|
+| **Evaluate** `nth([1,2,3], 1)` | Z3 + ∀ axioms | ❌ HANGS |
+| **Evaluate** `nth([1,2,3], 1)` | Inline Rust expansion | ✅ Fast |
+| **Verify** `g(μ,ν) = g(ν,μ)` satisfiable? | Z3 + ∀ axioms | ✅ Fast |
+| **Verify** complex theorem | Z3 + ∀ axioms | ⚠️ May be slow |
+
+### Rules
+
+1. **For concrete computation in Equation Editor:** Use inline Rust expansion
+2. **For verification/satisfiability:** Z3 with axioms is OK (with timeout)
+3. **Never call Z3 evaluate() with quantified axioms loaded**
+4. **Always add timeout for Z3 operations exposed to users**
+
+### Architecture Decision
+
+Axioms are for VERIFICATION ("is this true?"), not EVALUATION ("what is 2+2?").
+
+For evaluation, Rust computes directly and tells Z3 the answer.
+
 ## Editor AST vs Kleis AST Architecture
 
 **CRITICAL: There are TWO different ASTs in this project. Do not confuse them.**
