@@ -1183,6 +1183,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="math-btn" onclick="insertTemplate('|□\\rangle\\langle□|')" data-tooltip="Outer Product">\(|\psi\rangle\langle\phi|\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\langle □ \\rangle')" data-tooltip="Expectation Value">\(\langle A \rangle\)</button>
                         <button class="math-btn" onclick="insertTemplate('[□, □]')" data-tooltip="Commutator">\([A, B]\)</button>
+                        <button class="math-btn" onclick="insertTemplate('g_{□ □}')" data-tooltip="Metric Tensor">\(g_{\mu\nu}\)</button>
                         <button class="math-btn" onclick="insertTemplate('\\Gamma^{□}_{□ □}')" data-tooltip="Christoffel Symbol">\(\Gamma^\lambda_{\mu\nu}\)</button>
                         <button class="math-btn" onclick="insertTemplate('R^{□}_{□ □ □}')" data-tooltip="Riemann Tensor">\(R^\rho_{\sigma\mu\nu}\)</button>
                     </div>
@@ -1845,18 +1846,42 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             }
         }
 
+        // Convert LaTeX commands to Unicode for display
+        function latexToUnicode(latex) {
+            const map = {
+                '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ',
+                '\\epsilon': 'ε', '\\zeta': 'ζ', '\\eta': 'η', '\\theta': 'θ',
+                '\\iota': 'ι', '\\kappa': 'κ', '\\lambda': 'λ', '\\mu': 'μ',
+                '\\nu': 'ν', '\\xi': 'ξ', '\\omicron': 'ο', '\\pi': 'π',
+                '\\rho': 'ρ', '\\sigma': 'σ', '\\tau': 'τ', '\\upsilon': 'υ',
+                '\\phi': 'φ', '\\chi': 'χ', '\\psi': 'ψ', '\\omega': 'ω',
+                '\\Gamma': 'Γ', '\\Delta': 'Δ', '\\Theta': 'Θ', '\\Lambda': 'Λ',
+                '\\Xi': 'Ξ', '\\Pi': 'Π', '\\Sigma': 'Σ', '\\Upsilon': 'Υ',
+                '\\Phi': 'Φ', '\\Psi': 'Ψ', '\\Omega': 'Ω',
+                '\\times': '×', '\\div': '÷', '\\pm': '±', '\\mp': '∓',
+                '\\cdot': '·', '\\ast': '∗', '\\neq': '≠', '\\infty': '∞',
+                '\\equiv': '≡', '\\in': '∈', '\\notin': '∉', '\\subset': '⊂',
+                '\\forall': '∀', '\\exists': '∃', '\\nabla': 'nabla', '\\partial': '∂',
+                '\\square': '□'
+            };
+            return map[latex] || latex;
+        }
+
         function insertSymbol(latex) {
+            // Convert LaTeX to Unicode for structural mode
+            const symbol = latexToUnicode(latex);
+            
             if (editorMode === 'structural') {
                 // If inline editor is active, append symbol to input
                 if (isInlineEditorActive()) {
-                    appendToInlineEditor(latex);
+                    appendToInlineEditor(symbol);
                     return;
                 }
                 
                 // In structural mode, insert symbol into active placeholder
                 if (activeEditMarker) {
-                    // Replace the placeholder at the active path with a Const node
-                    const symbolNode = { Const: latex };
+                    // Replace the placeholder at the active path with an Object node (Unicode symbol)
+                    const symbolNode = { Object: symbol };
                     setNodeAtPath(currentAST, activeEditMarker.path, symbolNode);
                     
                     // Clear active marker
@@ -1870,7 +1895,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     showStatus('✅ Symbol inserted', 'success');
                 } else {
                     // No marker selected - create a simple expression with the symbol
-                    currentAST = { Const: latex };
+                    currentAST = { Object: symbol };
                     renderStructuralEditor();
                     showStatus('✅ Symbol inserted', 'success');
                 }
@@ -2060,9 +2085,10 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             '\\bar{□}': 'bar',
             '\\tilde{□}': 'tilde',
             
-            // Tensors
+            // Tensors (with kind/metadata for proper rendering)
             '\\Gamma^{□}_{□ □}': 'christoffel',
             'R^{□}_{□ □ □}': 'riemann',
+            'g_{□ □}': 'metric',
             
             // Integral Transforms
             '\\mathcal{F}[□](□)': 'fourier_transform',
@@ -2197,10 +2223,41 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             subsup: { Operation: { name: 'subsup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}, {Placeholder:{id:2,hint:'superscript'}}] } },
             tensor_upper_pair: { Operation: { name: 'index_pair', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'idx1'}}, {Placeholder:{id:2,hint:'idx2'}}] } },
             tensor_lower_pair: { Operation: { name: 'tensor_lower_pair', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
-            tensor_1up_3down: { Operation: { name: 'tensor_1up_3down', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower1'}}, {Placeholder:{id:3,hint:'lower2'}}, {Placeholder:{id:4,hint:'lower3'}}] } },
-            tensor_2up_2down: { Operation: { name: 'tensor_2up_2down', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper1'}}, {Placeholder:{id:2,hint:'upper2'}}, {Placeholder:{id:3,hint:'lower1'}}, {Placeholder:{id:4,hint:'lower2'}}] } },
-            christoffel: { Operation: { name: 'gamma', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
-            riemann: { Operation: { name: 'riemann', args: [{Object: ''}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}, {Placeholder:{id:3,hint:'lower3'}}] } },
+            // Metric tensor g_μν - uses new EditorNode format with kind/metadata
+            // Tensors: args[0] = editable symbol, args[1:] = indices
+            // indexStructure describes args[1:], not args[0]
+            metric: { Operation: { 
+                name: 'tensor', 
+                kind: 'tensor',
+                args: [{Object:'g'}, {Placeholder:{id:0,hint:'idx1'}}, {Placeholder:{id:1,hint:'idx2'}}],
+                metadata: { indexStructure: ['down', 'down'] }
+            } },
+            tensor_1up_3down: { Operation: { 
+                name: 'tensor', 
+                kind: 'tensor',
+                args: [{Placeholder:{id:0,hint:'symbol'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower1'}}, {Placeholder:{id:3,hint:'lower2'}}, {Placeholder:{id:4,hint:'lower3'}}],
+                metadata: { indexStructure: ['up', 'down', 'down', 'down'] }
+            } },
+            tensor_2up_2down: { Operation: { 
+                name: 'tensor', 
+                kind: 'tensor',
+                args: [{Placeholder:{id:0,hint:'symbol'}}, {Placeholder:{id:1,hint:'upper1'}}, {Placeholder:{id:2,hint:'upper2'}}, {Placeholder:{id:3,hint:'lower1'}}, {Placeholder:{id:4,hint:'lower2'}}],
+                metadata: { indexStructure: ['up', 'up', 'down', 'down'] }
+            } },
+            // Christoffel symbol Γ^λ_μν - symbol is editable (default 'Γ')
+            christoffel: { Operation: { 
+                name: 'tensor', 
+                kind: 'tensor',
+                args: [{Object:'Γ'}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}],
+                metadata: { indexStructure: ['up', 'down', 'down'] }
+            } },
+            // Riemann tensor R^ρ_σμν - symbol is editable (default 'R')
+            riemann: { Operation: { 
+                name: 'tensor', 
+                kind: 'tensor',
+                args: [{Object:'R'}, {Placeholder:{id:0,hint:'upper'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}, {Placeholder:{id:3,hint:'lower3'}}],
+                metadata: { indexStructure: ['up', 'down', 'down', 'down'] }
+            } },
             
             // Fallback for others - creates empty placeholder
             default: { Placeholder: { id: 0, hint: 'expression' } }
@@ -2414,17 +2471,20 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             
             if (commit && inlineEditorState.marker) {
                 const value = inlineEditorState.input.value.trim();
-                if (value) {
-                    try {
-                        const node = parseSimpleInput(value);
-                        setNodeAtPath(currentAST, inlineEditorState.marker.path, node);
-                        renderStructuralEditor();
+                try {
+                    // parseSimpleInput handles empty input by creating a Placeholder
+                    const node = parseSimpleInput(value);
+                    setNodeAtPath(currentAST, inlineEditorState.marker.path, node);
+                    renderStructuralEditor();
+                    if (value) {
                         showStatus('✅ Value updated', 'success');
-                    } catch (error) {
-                        console.error('Inline edit error:', error);
-                        showStatus('⚠️ Invalid input', 'error');
-                        return; // Don't close on error
+                    } else {
+                        showStatus('✅ Cleared to placeholder', 'success');
                     }
+                } catch (error) {
+                    console.error('Inline edit error:', error);
+                    showStatus('⚠️ Invalid input', 'error');
+                    return; // Don't close on error
                 }
             }
             

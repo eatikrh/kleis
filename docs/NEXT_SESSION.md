@@ -362,39 +362,227 @@ Then `insertTemplate()` just does: `astTemplates[name]` - one step.
 
 ---
 
-## ❓ QUESTION FOR NEXT SESSION (Dec 14, 2025)
+## ✅ RESOLVED: Two-AST Architecture (Dec 15, 2025)
 
-**Topic:** Tensor palette button design - how to handle arg[0]
+**Decision:** Separate Kleis Core AST (`Expression`) from Visual Editor AST (`EditorNode`)
 
-**Current state:**
-```javascript
-christoffel: { Operation: { name: 'gamma', args: [
-    {Object: ''},                           // arg[0]: EMPTY (unused)
-    {Placeholder:{id:0,hint:'upper'}},      // arg[1]
-    {Placeholder:{id:1,hint:'lower1'}},     // arg[2]
-    {Placeholder:{id:2,hint:'lower2'}}      // arg[3]
-] } }
+### The Problem (Was)
+
+Initially tried to add `kind` and `metadata` fields to `Expression::Operation`. 
+This polluted the Kleis Core AST with Editor-specific concerns.
+
+**Key insight from discussion:**
+> "I would want to have a clean AST for the Kleis grammar and structures. If we 
+> were to define Kleis AST in Kleis these elements that are related to Equation 
+> Editor and not to Kleis core will create some problems at least conceptually."
+
+### The Solution: Two Separate AST Types
+
+| Type | Location | Purpose | Contains |
+|------|----------|---------|----------|
+| **`Expression`** | `src/ast.rs` | Kleis Core (language semantics) | Pure, grammar-based |
+| **`EditorNode`** | `src/editor_ast.rs` | Visual Editor (rendering) | `kind`, `metadata`, display hints |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Kleis Core AST (Expression)                 │
+│  • Pure, grammar-based                                          │
+│  • No rendering concerns                                        │
+│  • Source: Kleis Parser                                         │
+│  • Used for: Verification, Evaluation, Type Checking            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ translate_to_editor()
+┌─────────────────────────────────────────────────────────────────┐
+│                     Visual AST (EditorNode)                     │
+│  • Rich, with rendering metadata                                │
+│  • kind, indexStructure, display hints                          │
+│  • Source: Editor palette OR translated from Core AST           │
+│  • Used for: Visual Rendering, Visual Editing                   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-The empty `{Object: ''}` is currently unused - the Γ symbol is hardcoded in templates.
+### EditorNode Structure
 
-**Two approaches to fix:**
+```rust
+// src/editor_ast.rs
+pub enum EditorNode {
+    Object { object: String },
+    Const { value: String },
+    Placeholder { placeholder: PlaceholderData },
+    Operation { operation: OperationData },
+    List { list: Vec<EditorNode> },
+}
 
-| Approach | Operation name | arg[0] | Example |
-|----------|---------------|--------|---------|
-| **Minimal** | Keep `'gamma'` | Fill with `'Γ'` | `{ name: 'gamma', args: [{Object: 'Γ'}, ...] }` |
-| **Generic** | Change to `'tensor'` | Use for symbol | `{ name: 'tensor', args: [{Object: 'Γ'}, ...] }` |
+pub struct OperationData {
+    pub name: String,                           // Display symbol: 'Γ', '∫'
+    pub args: Vec<EditorNode>,                  // Arguments
+    pub kind: Option<String>,                   // 'tensor', 'integral', etc.
+    pub metadata: Option<HashMap<String, Value>>, // indexStructure, etc.
+}
+```
 
-**Considerations:**
-- arg[0] could also be reserved for other future uses:
-  - Metric context (`{Object: 'g'}` for "Christoffel of metric g")
-  - Connection name
-  - Variant marker (bar, tilde)
-  - Children/nested structure
+### Translation: Kleis Core → Visual AST
 
-**Question to answer:**
-Which approach should we take, and what should arg[0] represent?
+When visually editing parsed Kleis code:
+
+```rust
+// src/editor_ast.rs
+pub fn translate_to_editor(expr: &Expression) -> EditorNode {
+    // 1. Recognize known tensor symbols (Γ, R, g)
+    // 2. Infer index structure from negate() wrappers
+    // 3. Add kind: 'tensor', metadata: { indexStructure: [...] }
+    // ...
+}
+```
+
+**Example:**
+```kleis
+Γ(λ, -μ, -ν)  // Kleis text
+```
+→ Parser → `Expression::Operation { name: "Γ", args: [λ, negate(μ), negate(ν)] }`
+→ `translate_to_editor()` →
+```rust
+EditorNode::Operation {
+    name: "Γ",
+    args: [...],
+    kind: Some("tensor"),
+    metadata: Some({ indexStructure: ["up", "down", "down"] })
+}
+```
+
+### Benefits
+
+1. **Kleis Core stays pure** - Self-hosting ready, no rendering pollution
+2. **Editor AST can evolve independently** - Add UI concerns without affecting language
+3. **Translation is explicit** - Clear where semantic enrichment happens
+4. **One renderer** - Only handles `EditorNode` (not two types)
+
+### Implementation Status
+
+| Step | Status |
+|------|--------|
+| Create `EditorNode` type | ✅ Done |
+| Create `translate_to_editor()` | ✅ Done |
+| Update renderer to use `EditorNode` | ✅ Done (mixed-mode) |
+| Update server API to accept `EditorNode` | ✅ Done |
+| Update palette buttons to generate `EditorNode` | ✅ Done (tensors) |
+| Make tensor symbol editable (args[0]) | ✅ Done |
+
+### Files Created/Modified
+
+- ✅ **NEW:** `src/editor_ast.rs` - EditorNode type + translation
+- ✅ `src/lib.rs` - Added `editor_ast` module
+- ✅ `src/render.rs` - Uses EditorNode (mixed-mode: tensor special, rest via Expression)
+- ✅ `src/bin/server.rs` - Handles EditorNode for rendering and type checking
+- ✅ `static/index.html` - Tensor palette generates `kind: "tensor"`, `metadata: {indexStructure: [...]}`
+
+### What We're NOT Changing
+
+- `Expression` in `src/ast.rs` - stays clean
+- Kleis parser (`kleis_parser.rs`) - untouched
+- Kleis grammar (`kleis_grammar_v07.ebnf`) - untouched
+- Matrix handling - untouched (it works!)
 
 ---
-*Created: Dec 14, 2025*
+
+## ✅ RESOLVED: Mixed-Mode Rendering Strategy (Dec 15, 2025)
+
+**Decision:** EditorNode rendering uses Expression renderer for most operations, with special handling only for tensors.
+
+### The Problem
+
+When we created `EditorNode`, we initially tried to create a separate rendering path (`render_editor_node_internal`). This led to:
+
+1. **Ad-hoc fixes** - Adding `{content}`, `{argument}`, `{value}` substitutions one by one
+2. **Duplicate code** - Reimplementing matrix handling, piecewise functions, etc.
+3. **Breaking changes** - Every palette button broke until we fixed its specific template
+
+### The Solution: EditorNode → Expression → Render
+
+For operations that don't need `EditorNode`-specific metadata:
+
+```rust
+fn render_operation(op: &OperationData, ...) -> String {
+    match op.kind.as_deref() {
+        Some("tensor") => {
+            // Tensors NEED indexStructure metadata - special handling
+            render_tensor(op, &rendered_args, target)
+        }
+        _ => {
+            // Convert to Expression, use battle-tested renderer
+            let expr = editor_node_to_expression(&EditorNode::Operation { operation: op.clone() });
+            render_expression_internal(&expr, ctx, target, node_id, node_id_to_uuid)
+        }
+    }
+}
+```
+
+### Why This Works
+
+| Operation Type | Loses Fidelity? | Why |
+|---------------|-----------------|-----|
+| Matrix, sin, parens, etc. | ❌ NO | `kind` = None, `metadata` = None |
+| Tensors with `indexStructure` | ⚠️ YES | `metadata` is lost in conversion |
+
+For tensors, we use special handling. For everything else, we convert losslessly.
+
+### Benefits
+
+1. **No code duplication** - Matrix, trig, brackets, etc. use existing renderer
+2. **Battle-tested** - Expression renderer handles 100+ templates correctly
+3. **Easy to extend** - Just add `kind` cases for operations that need metadata
+
+### Code Removed
+
+- `render_matrix_editor` (98 lines) - was duplicating Expression matrix logic
+- `render_integral` - unused placeholder
+- `render_derivative` - unused placeholder
+- `render_by_template` (131 lines) - incomplete reimplementation
+
+### ⚠️ FUTURE WARNING: translate_to_editor() Complications
+
+When we implement `translate_to_editor(Expression) -> EditorNode` for visual editing of parsed Kleis code, this mixed-mode rendering may cause issues:
+
+1. **Round-trip problem:** 
+   - Parse Kleis → `Expression`
+   - Translate → `EditorNode` (adds `kind`, `metadata`)
+   - Render → calls `editor_node_to_expression()` (loses `kind`, `metadata`)
+   - Now we're back to `Expression` anyway!
+
+2. **Double work:**
+   - `translate_to_editor()` enriches AST with tensor metadata
+   - `render_operation()` converts back to Expression for non-tensors
+   - Wasted enrichment
+
+3. **Inconsistent paths:**
+   - Tensors: EditorNode → render_tensor (uses metadata)
+   - Everything else: EditorNode → Expression → render_expression (ignores metadata)
+
+### Future Option: Full EditorNode Rendering
+
+When ready, we could implement full `EditorNode` rendering:
+
+```rust
+// FUTURE: All operations rendered from EditorNode directly
+fn render_operation(op: &OperationData, ...) -> String {
+    match op.kind.as_deref() {
+        Some("tensor") => render_tensor(op, ...),
+        Some("integral") => render_integral(op, ...),  // Uses bounds metadata
+        Some("matrix") => render_matrix(op, ...),       // Uses dimensions metadata
+        _ => render_generic_operation(op, ...)          // Template lookup
+    }
+}
+```
+
+**Not doing this now because:**
+- Most operations don't need metadata
+- Expression renderer is comprehensive and tested
+- Would require porting 500+ lines of template handling
+
+**Flagged for future consideration when we need operation-specific metadata beyond tensors.**
+
+---
+*Resolved: Dec 15, 2025*
 

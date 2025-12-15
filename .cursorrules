@@ -37,6 +37,27 @@ Local commits are "safe harbors" - checkpoints the user can return to.
 - Ask for clarification when uncertain
 - Be respectful of the user's workflow and preferences
 
+## Server Process Management
+
+**Always use `lsof` to find and kill processes on specific ports.**
+
+```bash
+# Kill process on port 3000
+lsof -ti:3000 | xargs kill -9
+
+# Then start new server
+cargo run --bin server
+```
+
+**Why:**
+- `pkill` may not find the right process
+- `lsof -ti:PORT` reliably finds the exact process using that port
+- Avoids "Address already in use" errors
+
+**Never use:**
+- `pkill -f server` (too broad, may miss the target)
+- `killall` (imprecise)
+
 ## Z3 and Equation Editor Performance Rules
 
 **CRITICAL: The Equation Editor MUST NOT hang waiting for Z3.**

@@ -393,23 +393,130 @@ fn json_to_expression(json: &serde_json::Value) -> Result<kleis::ast::Expression
     Err(format!("Invalid expression JSON: {:?}", json))
 }
 
-// Handler for rendering from AST
+// =============================================================================
+// EditorNode JSON conversion - for Visual Editor AST
+// =============================================================================
+
+/// Convert JSON to EditorNode (Visual Editor AST with kind/metadata support)
+fn json_to_editor_node(json: &serde_json::Value) -> Result<kleis::editor_ast::EditorNode, String> {
+    use kleis::editor_ast::{EditorNode, OperationData, PlaceholderData};
+
+    if let Some(obj) = json.as_object() {
+        // Handle Const
+        if let Some(const_val) = obj.get("Const") {
+            if let Some(s) = const_val.as_str() {
+                return Ok(EditorNode::Const {
+                    value: s.to_string(),
+                });
+            }
+        }
+        // Handle Object
+        else if let Some(obj_val) = obj.get("Object") {
+            if let Some(s) = obj_val.as_str() {
+                return Ok(EditorNode::Object {
+                    object: s.to_string(),
+                });
+            }
+        }
+        // Handle Placeholder
+        else if let Some(placeholder_val) = obj.get("Placeholder") {
+            if let Some(placeholder_obj) = placeholder_val.as_object() {
+                let id = placeholder_obj
+                    .get("id")
+                    .and_then(|v| v.as_u64())
+                    .ok_or("Missing or invalid placeholder id")? as usize;
+                let hint = placeholder_obj
+                    .get("hint")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                return Ok(EditorNode::Placeholder {
+                    placeholder: PlaceholderData { id, hint },
+                });
+            }
+        }
+        // Handle Operation (with optional kind/metadata)
+        else if let Some(op_val) = obj.get("Operation") {
+            if let Some(op_obj) = op_val.as_object() {
+                let name = op_obj
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .ok_or("Missing or invalid operation name")?
+                    .to_string();
+
+                let args_json = op_obj
+                    .get("args")
+                    .and_then(|v| v.as_array())
+                    .ok_or("Missing or invalid operation args")?;
+
+                let args: Result<Vec<EditorNode>, String> =
+                    args_json.iter().map(json_to_editor_node).collect();
+
+                // Extract optional kind
+                let kind = op_obj
+                    .get("kind")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
+                // Extract optional metadata
+                let metadata = op_obj.get("metadata").and_then(|v| {
+                    if let Some(meta_obj) = v.as_object() {
+                        let map: std::collections::HashMap<String, serde_json::Value> = meta_obj
+                            .iter()
+                            .map(|(k, v)| (k.clone(), v.clone()))
+                            .collect();
+                        if map.is_empty() {
+                            None
+                        } else {
+                            Some(map)
+                        }
+                    } else {
+                        None
+                    }
+                });
+
+                return Ok(EditorNode::Operation {
+                    operation: OperationData {
+                        name,
+                        args: args?,
+                        kind,
+                        metadata,
+                    },
+                });
+            }
+        }
+        // Handle List
+        else if let Some(list_val) = obj.get("List") {
+            if let Some(list_array) = list_val.as_array() {
+                let elements: Result<Vec<EditorNode>, String> =
+                    list_array.iter().map(json_to_editor_node).collect();
+                return Ok(EditorNode::List { list: elements? });
+            }
+        }
+    }
+
+    Err(format!("Invalid EditorNode JSON: {:?}", json))
+}
+
+// Handler for rendering from AST (uses EditorNode renderer)
 async fn render_ast_handler(
     State(_state): State<Arc<AppState>>,
     Json(req): Json<RenderASTRequest>,
 ) -> impl IntoResponse {
-    match json_to_expression(&req.ast) {
-        Ok(expr) => {
-            let format = req.format.as_deref().unwrap_or("html");
-            let target = match format {
-                "unicode" => kleis::render::RenderTarget::Unicode,
-                "latex" => kleis::render::RenderTarget::LaTeX,
-                _ => kleis::render::RenderTarget::HTML,
-            };
+    let format = req.format.as_deref().unwrap_or("html");
+    let target = match format {
+        "unicode" => kleis::render::RenderTarget::Unicode,
+        "latex" => kleis::render::RenderTarget::LaTeX,
+        "typst" => kleis::render::RenderTarget::Typst,
+        "kleis" => kleis::render::RenderTarget::Kleis,
+        _ => kleis::render::RenderTarget::HTML,
+    };
 
-            let ctx = kleis::render::build_default_context();
-            let output = kleis::render::render_expression(&expr, &ctx, &target);
+    let ctx = kleis::render::build_default_context();
 
+    // Parse as EditorNode - works for both old format (kind: None) and new format
+    match json_to_editor_node(&req.ast) {
+        Ok(node) => {
+            let output = kleis::render::render_editor_node(&node, &ctx, &target);
             let response = RenderASTResponse {
                 output,
                 format: format.to_string(),
@@ -421,7 +528,7 @@ async fn render_ast_handler(
         Err(e) => {
             let response = RenderASTResponse {
                 output: String::new(),
-                format: req.format.unwrap_or_else(|| "html".to_string()),
+                format: format.to_string(),
                 success: false,
                 error: Some(format!("Invalid AST: {}", e)),
             };
@@ -483,12 +590,12 @@ async fn render_typst_handler(
     eprintln!("=== render_typst_handler called ===");
     eprintln!("Received AST JSON: {:?}", req.ast);
 
-    match json_to_expression(&req.ast) {
-        Ok(expr) => {
-            eprintln!("Parsed Expression: {:#?}", expr);
+    match json_to_editor_node(&req.ast) {
+        Ok(node) => {
+            eprintln!("Parsed EditorNode: {:#?}", node);
 
             // Collect ALL argument slots with their info (empty or filled)
-            let arg_slots = collect_argument_slots(&expr);
+            let arg_slots = collect_argument_slots_from_editor_node(&node);
             eprintln!("Argument slots: {} total", arg_slots.len());
 
             for (i, slot) in arg_slots.iter().enumerate() {
@@ -579,8 +686,8 @@ async fn render_typst_handler(
 
             // Compile with Typst using semantic bounding box extraction
             // Pass both unfilled_ids (for placeholder squares) and all_slot_ids (for filled content)
-            match kleis::math_layout::compile_with_semantic_boxes_and_slots(
-                &expr,
+            match kleis::math_layout::compile_editor_node_with_semantic_boxes(
+                &node,
                 &unfilled_ids,
                 &all_slot_ids,
                 &node_id_to_uuid,
@@ -768,6 +875,149 @@ fn collect_slots_recursive(
     }
 }
 
+/// Tensor info extracted from EditorNode
+struct TensorInfo {
+    name: String,
+    upper_count: usize, // contravariant indices
+    lower_count: usize, // covariant indices
+}
+
+/// Check if the root operation is a formatting-only operation (not semantic)
+/// These are valid for rendering but don't have mathematical types
+fn is_formatting_operation(node: &kleis::editor_ast::EditorNode) -> Option<String> {
+    use kleis::editor_ast::EditorNode;
+
+    match node {
+        EditorNode::Operation { operation } => {
+            // List of formatting-only operations
+            match operation.name.as_str() {
+                "subsup" => Some("Display: base with sub/superscript".to_string()),
+                "subscript" => Some("Display: base with subscript".to_string()),
+                "superscript" | "power" => None, // power is semantic (exponentiation)
+                "tilde" => Some("Display: variable with tilde".to_string()),
+                "hat" => Some("Display: variable with hat".to_string()),
+                "bar" => Some("Display: variable with bar".to_string()),
+                "vec" => Some("Display: vector notation".to_string()),
+                "dot" => Some("Display: time derivative (dot)".to_string()),
+                "ddot" => Some("Display: second time derivative (double dot)".to_string()),
+                _ => {
+                    // Check nested operations (e.g., equals with formatting inside)
+                    // Only return formatting type if the ROOT is formatting
+                    None
+                }
+            }
+        }
+        _ => None,
+    }
+}
+
+// Recursively search for tensor operations in EditorNode
+fn find_tensor_in_editor_node(node: &kleis::editor_ast::EditorNode) -> Option<TensorInfo> {
+    use kleis::editor_ast::EditorNode;
+
+    match node {
+        EditorNode::Operation { operation } => {
+            // Check if this operation is a tensor
+            if operation.kind.as_deref() == Some("tensor") {
+                // New structure: args[0] = symbol, args[1:] = indices
+                // indexStructure describes args[1:], not args[0]
+                let symbol = if !operation.args.is_empty() {
+                    // Extract symbol from args[0]
+                    match &operation.args[0] {
+                        EditorNode::Object { object } => object.clone(),
+                        EditorNode::Const { value } => value.to_string(),
+                        EditorNode::Placeholder { placeholder } => {
+                            placeholder.hint.clone().unwrap_or_else(|| "T".to_string())
+                        }
+                        _ => "T".to_string(),
+                    }
+                } else {
+                    // Fallback to operation name for backward compatibility
+                    operation.name.clone()
+                };
+
+                // Extract index structure from metadata
+                let (upper, lower) = if let Some(meta) = &operation.metadata {
+                    if let Some(idx_struct) = meta.get("indexStructure") {
+                        if let Some(arr) = idx_struct.as_array() {
+                            let up = arr.iter().filter(|v| v.as_str() == Some("up")).count();
+                            let down = arr.iter().filter(|v| v.as_str() == Some("down")).count();
+                            (up, down)
+                        } else {
+                            (0, 0)
+                        }
+                    } else {
+                        (0, 0)
+                    }
+                } else {
+                    // Infer from number of args (excluding symbol at args[0])
+                    let num_indices = if operation.args.len() > 1 {
+                        operation.args.len() - 1
+                    } else {
+                        0
+                    };
+                    (0, num_indices)
+                };
+
+                return Some(TensorInfo {
+                    name: symbol,
+                    upper_count: upper,
+                    lower_count: lower,
+                });
+            }
+            // Recursively check args
+            for arg in &operation.args {
+                if let Some(info) = find_tensor_in_editor_node(arg) {
+                    return Some(info);
+                }
+            }
+            None
+        }
+        EditorNode::List { list } => {
+            for elem in list {
+                if let Some(info) = find_tensor_in_editor_node(elem) {
+                    return Some(info);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+// Convert EditorNode back to Expression for type checking
+fn editor_node_to_expression(
+    node: &kleis::editor_ast::EditorNode,
+) -> Result<kleis::ast::Expression, String> {
+    use kleis::ast::Expression;
+    use kleis::editor_ast::EditorNode;
+
+    match node {
+        EditorNode::Const { value } => Ok(Expression::Const(value.clone())),
+        EditorNode::Object { object } => Ok(Expression::Object(object.clone())),
+        EditorNode::Placeholder { placeholder } => Ok(Expression::Placeholder {
+            id: placeholder.id,
+            hint: placeholder.hint.clone().unwrap_or_else(|| "□".to_string()),
+        }),
+        EditorNode::Operation { operation } => {
+            let args: Result<Vec<Expression>, String> = operation
+                .args
+                .iter()
+                .map(editor_node_to_expression)
+                .collect();
+            Ok(Expression::Operation {
+                name: operation.name.clone(),
+                args: args?,
+            })
+        }
+        EditorNode::List { list } => {
+            let elements: Result<Vec<Expression>, String> =
+                list.iter().map(editor_node_to_expression).collect();
+            Ok(Expression::List(elements?))
+        }
+    }
+}
+
 fn determine_arg_role(op_name: &str, arg_index: usize) -> Option<String> {
     match op_name {
         "sup" | "power" => match arg_index {
@@ -787,6 +1037,87 @@ fn determine_arg_role(op_name: &str, arg_index: usize) -> Option<String> {
             _ => None,
         },
         _ => None,
+    }
+}
+
+// Collect ALL argument slots from EditorNode (both empty and filled)
+fn collect_argument_slots_from_editor_node(
+    node: &kleis::editor_ast::EditorNode,
+) -> Vec<ArgumentSlot> {
+    let mut slots = Vec::new();
+    collect_editor_slots_recursive(node, &mut slots, vec![], None);
+    slots
+}
+
+fn collect_editor_slots_recursive(
+    node: &kleis::editor_ast::EditorNode,
+    slots: &mut Vec<ArgumentSlot>,
+    path: Vec<usize>,
+    role: Option<String>,
+) {
+    use kleis::editor_ast::EditorNode;
+
+    match node {
+        EditorNode::Placeholder { placeholder } => {
+            slots.push(ArgumentSlot {
+                id: format!("ph{}", placeholder.id),
+                path: path.clone(),
+                hint: placeholder.hint.clone().unwrap_or_else(|| "□".to_string()),
+                is_placeholder: true,
+                role: role.clone(),
+            });
+        }
+        EditorNode::Const { value } => {
+            let uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
+            slots.push(ArgumentSlot {
+                id: uuid,
+                path: path.clone(),
+                hint: format!("value: {}", value),
+                is_placeholder: false,
+                role: role.clone(),
+            });
+        }
+        EditorNode::Object { object } => {
+            let uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
+            slots.push(ArgumentSlot {
+                id: uuid,
+                path: path.clone(),
+                hint: format!("value: {}", object),
+                is_placeholder: false,
+                role: role.clone(),
+            });
+        }
+        EditorNode::Operation { operation } => {
+            // Don't create slots for operations themselves - they're not editable
+            // Only their arguments (placeholders, objects, constants) are editable
+
+            // Recursively process each argument
+            for (i, arg) in operation.args.iter().enumerate() {
+                // Skip structural arguments that are not user-editable content:
+                // - Matrix: first two args are dimensions (rows, cols)
+                // - Piecewise: first arg is case count
+                let is_structural = match operation.name.as_str() {
+                    "Matrix" => i < 2,
+                    "Piecewise" => i == 0,
+                    _ => false,
+                };
+                if is_structural {
+                    continue;
+                }
+
+                let mut child_path = path.clone();
+                child_path.push(i);
+                let child_role = determine_arg_role(&operation.name, i);
+                collect_editor_slots_recursive(arg, slots, child_path, child_role);
+            }
+        }
+        EditorNode::List { list } => {
+            for (i, elem) in list.iter().enumerate() {
+                let mut child_path = path.clone();
+                child_path.push(i);
+                collect_editor_slots_recursive(elem, slots, child_path, None);
+            }
+        }
     }
 }
 
@@ -810,14 +1141,86 @@ async fn type_check_handler(
         });
     }
 
-    // Parse AST from JSON
-    let expr: kleis::ast::Expression = match serde_json::from_value(req.ast) {
-        Ok(e) => e,
+    // Parse AST from JSON - try EditorNode first
+    let editor_node = match json_to_editor_node(&req.ast) {
+        Ok(n) => n,
         Err(e) => {
             return Json(TypeCheckResponse {
                 success: false,
                 type_name: None,
                 error: Some(format!("Failed to parse AST: {}", e)),
+                suggestion: None,
+            });
+        }
+    };
+
+    // Check if this is a formatting-only operation (display, not semantic)
+    // These are valid for rendering but have no mathematical type
+    if let Some(format_type) = is_formatting_operation(&editor_node) {
+        return Json(TypeCheckResponse {
+            success: true,
+            type_name: Some(format_type),
+            error: None,
+            suggestion: Some(
+                "💡 This is a formatting operation - type depends on content.".to_string(),
+            ),
+        });
+    }
+
+    // Check if this is a tensor operation - handle specially since type checker
+    // doesn't yet support Unicode operation names like Γ, R, g
+    if let Some(info) = find_tensor_in_editor_node(&editor_node) {
+        // Known tensors get friendly descriptions
+        let tensor_type = match info.name.as_str() {
+            "Γ" => format!(
+                "Tensor({}, {}, dim, ℝ) — Christoffel symbol Γ^λ_μν",
+                info.upper_count, info.lower_count
+            ),
+            "R" => format!(
+                "Tensor({}, {}, dim, ℝ) — Riemann tensor R^ρ_σμν",
+                info.upper_count, info.lower_count
+            ),
+            "g" => format!(
+                "Tensor({}, {}, dim, ℝ) — Metric tensor g_μν",
+                info.upper_count, info.lower_count
+            ),
+            // Generic tensors: infer type from index structure
+            _ => {
+                let index_notation = format!(
+                    "{}{}",
+                    if info.upper_count > 0 {
+                        format!("^{{{}}}", "μ".repeat(info.upper_count))
+                    } else {
+                        String::new()
+                    },
+                    if info.lower_count > 0 {
+                        format!("_{{{}}}", "ν".repeat(info.lower_count))
+                    } else {
+                        String::new()
+                    }
+                );
+                format!(
+                    "Tensor({}, {}, dim, ℝ) — {}{}",
+                    info.upper_count, info.lower_count, info.name, index_notation
+                )
+            }
+        };
+        return Json(TypeCheckResponse {
+            success: true,
+            type_name: Some(tensor_type),
+            error: None,
+            suggestion: None,
+        });
+    }
+
+    // Convert EditorNode to Expression for type checking
+    let expr = match editor_node_to_expression(&editor_node) {
+        Ok(e) => e,
+        Err(e) => {
+            return Json(TypeCheckResponse {
+                success: false,
+                type_name: None,
+                error: Some(format!("Failed to convert to Expression: {}", e)),
                 suggestion: None,
             });
         }
