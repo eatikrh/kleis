@@ -2545,11 +2545,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     const foreignObject = inlineEditorState.foreignObject;
                     const modal = document.getElementById('replace-confirm-modal');
                     
-                    // Don't close if clicking inside editor or modal or SVG overlays
+                    // Don't close if clicking inside editor or modal or SVG overlays or builder modals
                     if (foreignObject && !foreignObject.contains(e.target) &&
                         !modal.contains(e.target) &&
                         !e.target.closest('.math-btn') &&
-                        !e.target.closest('.arg-overlay')) {
+                        !e.target.closest('.arg-overlay') &&
+                        !e.target.closest('.matrix-builder-modal')) {
                         console.log('Click outside detected, hiding inline editor');
                         hideInlineEditor(true);
                     }
