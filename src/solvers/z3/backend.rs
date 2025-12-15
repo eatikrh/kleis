@@ -1070,7 +1070,7 @@ impl<'r> SolverBackend for Z3Backend<'r> {
 
         // Try to cast z3_expr to Int and assert equality
         if let Some(int_expr) = z3_expr.as_int() {
-            self.solver.assert(&result_var.eq(&int_expr));
+            self.solver.assert(result_var.eq(&int_expr));
 
             match self.solver.check() {
                 SatResult::Sat => {
