@@ -564,6 +564,7 @@ impl TypeContextBuilder {
         match op_name {
             // Display annotations
             "subsup" | "subscript" | "tilde" | "hat" | "bar" | "vec" | "dot" | "ddot" |
+            "vector_arrow" | "vector_bold" | "overline" | "underline" |
             // Tensor index formatting (legacy palette operations)
             "index_mixed" | "index_pair" | "tensor_lower_pair" | 
             "tensor_1up_3down" | "tensor_2up_2down" | "tensor_upper_pair" => {
