@@ -1,0 +1,29 @@
+/* Kleis Equation Editor - PatternFly Edition */
+
+.editor-main {
+  background: var(--pf-v5-global--BackgroundColor--100);
+  border-radius: var(--pf-v5-global--BorderRadius--sm);
+  padding: 16px;
+  min-height: 400px;
+}
+
+.palette-container {
+  background: var(--pf-v5-global--BackgroundColor--200);
+  border-radius: var(--pf-v5-global--BorderRadius--sm);
+  padding: 8px;
+}
+
+.palette-buttons button {
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .pf-v5-l-split {
+    flex-direction: column;
+  }
+  
+  .pf-v5-l-split__item {
+    width: 100% !important;
+  }
+}
