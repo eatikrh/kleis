@@ -25,10 +25,10 @@
 //! - Postfix operators: n!, Aᵀ, A†
 //! - Lambda expressions: λ x . x^2
 //! - Type annotations in expressions: x : ℝ
-//! - Placeholders: □
 //! - Summation/product notation: Σ, Π
 //!
 //! NOTE: π, e, i are parsed as identifiers (user-defined, domain-specific)
+//! NOTE: □ (placeholder) is an editor concept, not a Kleis language construct
 //!
 //! See docs/parser-implementation/PARSER_GRAMMAR_COMPATIBILITY.md for full comparison.
 //!
