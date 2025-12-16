@@ -121,11 +121,6 @@ Z3 verifies axioms automatically:
 | **Functions** | sin, cos, exp, ln, sqrt, factorial |
 | **Logic** | implies, forall, exists, in_set |
 
-### Parser (~80% LaTeX coverage)
-
-✅ Fractions, roots, subscripts, superscripts, Greek letters, matrices, bra-ket, operators  
-❌ Complex piecewise blocks, advanced delimiters
-
 See `PARSER_TODO.md` for details.
 
 ---
