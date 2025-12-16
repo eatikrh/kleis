@@ -163,8 +163,10 @@ kleis/
 ├── stdlib/             # Standard library (.kleis files)
 ├── examples/           # Example .kleis files
 │   ├── authorization/  # Zanzibar, OAuth2
-│   ├── protocols/      # IP router
-│   └── control/        # Control theory (LQG, eigenvalues)
+│   ├── business/       # Purchase orders, inventory
+│   ├── calculus/       # Derivatives, integrals
+│   ├── control/        # Control theory (LQG, eigenvalues)
+│   └── protocols/      # IP router
 ├── docs/               # Documentation
 │   ├── adr/            # 22 Architecture Decision Records
 │   ├── grammar/        # Formal grammar (v03-v07)
