@@ -148,8 +148,9 @@ See `PARSER_TODO.md` for details.
 kleis/
 ├── src/
 │   ├── render.rs       # Renderer (100+ operations)
-│   ├── editor_ast.rs   # Editor AST translation layer
+│   ├── kleis_ast.rs    # Kleis AST (structures, functions, programs)
 │   ├── kleis_parser.rs # Kleis language parser (.kleis files)
+│   ├── editor_ast.rs   # Editor AST translation layer
 │   ├── parser.rs       # LaTeX parser
 │   └── bin/
 │       ├── server.rs   # HTTP server + web UI
