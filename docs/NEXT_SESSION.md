@@ -1,6 +1,112 @@
-# Next Session: Equation Editor & Kleis Grammar Alignment
+# Next Session: PatternFly Equation Editor Migration
 
 ---
+
+## 🎯 IMMEDIATE TASK: PatternFly Equation Editor (Dec 15, 2025)
+
+### The Goal
+
+Create a PatternFly/React version of the Equation Editor while keeping `static/index.html` intact as the reference implementation.
+
+### Strategy: Web of Trust for Migration
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Reference Implementation (static/index.html)               │
+│  ├─ 3,860 lines vanilla JS                                  │
+│  ├─ Known working state                                     │
+│  └─ FROZEN - do not modify during migration                 │
+└─────────────────────────────────────────────────────────────┘
+                              ↕  Compare outputs
+┌─────────────────────────────────────────────────────────────┐
+│  New Implementation (patternfly-editor/)                    │
+│  ├─ React + PatternFly                                      │
+│  ├─ Component-based architecture                            │
+│  └─ Built incrementally, verified against reference         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Proposed Directory Structure
+
+```
+kleis/
+├── static/index.html          ← FROZEN reference
+├── patternfly-editor/         ← NEW React app
+│   ├── package.json
+│   ├── src/
+│   │   ├── App.tsx
+│   │   ├── components/
+│   │   │   ├── Palette/
+│   │   │   │   ├── PaletteTabs.tsx
+│   │   │   │   ├── PaletteButton.tsx
+│   │   │   │   └── buttonConfigs.ts    ← Data from astTemplates
+│   │   │   ├── Editor/
+│   │   │   │   ├── StructuralEditor.tsx
+│   │   │   │   ├── InlineEditor.tsx
+│   │   │   │   └── SvgOverlay.tsx
+│   │   │   └── Preview/
+│   │   │       └── MathPreview.tsx
+│   │   ├── hooks/
+│   │   │   ├── useAST.ts
+│   │   │   ├── useTypeCheck.ts
+│   │   │   └── useUndoRedo.ts
+│   │   └── api/
+│   │       └── kleis.ts          ← Same API calls to Rust backend
+│   └── tests/
+│       └── comparison.test.ts    ← Verify outputs match reference
+```
+
+### Verification Checklist
+
+| Test | Reference Output | New Implementation |
+|------|------------------|-------------------|
+| Click "fraction" button | `{Operation: {name: 'scalar_divide', ...}}` | Same AST |
+| Click "Christoffel" button | `{Operation: {name: 'tensor', kind: 'tensor', ...}}` | Same AST |
+| Render 2×2 matrix | SVG with placeholders | Identical SVG |
+| Type check Γ tensor | `Tensor(1, 2, dim, ℝ)` | Same type result |
+| Fill placeholder with "α" | Green box, value updated | Same behavior |
+| Undo/Redo | Stack works correctly | Same behavior |
+
+### Milestones
+
+| Milestone | Description | Verification |
+|-----------|-------------|--------------|
+| **M1: Scaffold** | PatternFly app renders, connects to API | API calls work |
+| **M2: One Button** | Fraction button works | AST matches reference |
+| **M3: Palette Tabs** | All tabs render | Visual parity |
+| **M4: All Buttons** | All 54+ templates work | All ASTs match |
+| **M5: SVG Rendering** | Typst SVG displays | Identical output |
+| **M6: Overlays** | Clickable markers work | Same UX |
+| **M7: Inline Editor** | Type in placeholders | Same behavior |
+| **M8: Type Checking** | Live type feedback | Same results |
+| **M9: Undo/Redo** | History works | Same behavior |
+| **M10: Parity** | Feature-complete | Ready to replace |
+
+### Benefits of React/PatternFly
+
+1. **Component Testing** - Safety net for visual bugs (currently missing)
+2. **Flexible Tabs** - Move buttons between tabs = move line in array
+3. **State Management** - Clean, predictable, debuggable
+4. **Design System** - Professional UX out of the box
+5. **Future: Kleis Notebook** - Multi-cell support becomes feasible
+
+### Branch
+
+```
+feature/patternfly-editor
+```
+
+### First Session Tasks
+
+1. [ ] Create `patternfly-editor/` directory
+2. [ ] Initialize React + TypeScript + PatternFly
+3. [ ] Create basic App component with header
+4. [ ] Add one palette button (fraction)
+5. [ ] Verify AST output matches `static/index.html`
+6. [ ] Commit: "feat: PatternFly editor scaffold with first button"
+
+---
+
 ## 🚀 FUTURE VISION: Kleis Notebook (Dec 14, 2025)
 
 The Equation Editor will evolve into a **Kleis Notebook** - a mathematically-aware 
@@ -630,4 +736,137 @@ The current Kleis parser implements ~30% of the v0.7 grammar. Here are the notab
 
 ---
 *Noted: Dec 15, 2025*
+
+---
+
+## 📋 ROADMAP: Kleis Notebook Prerequisites (Dec 15, 2025)
+
+### The Dependency Chain
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  PatternFly Equation Editor                                 │ ← FIRST
+│  • React component architecture                             │
+│  • Proper state management                                  │
+│  • Testable components (safety net for visual bugs)         │
+│  • Flexible palette organization                            │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Complete AST Separation                                    │
+│  • Full EditorNode renderer (no dispatch to Expression)     │
+│  • Robust translate_to_editor() for parsed Kleis            │
+│  • translate_to_expression() for verification               │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Complete Equation Editor Palette                           │
+│  • Functions: f(x), λ x . body                              │
+│  • Let bindings: let x = ... in ...                         │
+│  • Conditionals: if/then/else                               │
+│  • Quantifiers: ∀, ∃                                        │
+│  • Sets: { x | condition }                                  │
+│  • Pattern matching: match ... with ...                     │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Structure Editors (NEW)                                    │
+│  • structure { ... } editor                                 │
+│  • implements { ... } editor                                │
+│  • data Type = ... editor                                   │
+│  • operation name : Type editor                             │
+│  • axiom name : Expression editor                           │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Kleis Notebook                                             │ ← GOAL
+│  • Multi-cell document                                      │
+│  • Cell types: Expression, Structure, Verify, Output        │
+│  • Dependency tracking between cells                        │
+│  • Export to .kleis files                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why PatternFly Migration is Critical
+
+**Current state (vanilla JS):**
+```
+static/index.html
+├─ 3,860 lines of vanilla JavaScript
+├─ DOM manipulation everywhere
+├─ State scattered across global variables
+├─ No component reuse
+├─ Fragile event handling
+└─ Moving buttons between tabs = edit HTML + handlers + test
+```
+
+**Target (PatternFly/React):**
+```jsx
+// Palette buttons as data
+const tensorButtons = [
+  { symbol: 'Γ', name: 'christoffel', kind: 'tensor', indices: ['up','down','down'] },
+  { symbol: 'R', name: 'riemann', kind: 'tensor', indices: ['up','down','down','down'] },
+  { symbol: 'g', name: 'metric', kind: 'tensor', indices: ['down','down'] },
+];
+
+// Tabs are just configuration
+<PaletteTabs>
+  <Tab title="Tensors" buttons={tensorButtons} />
+  <Tab title="Physics" buttons={physicsButtons} />
+</PaletteTabs>
+
+// Moving a button = move one line in the array
+```
+
+### ⚠️ Equation Editor Fragility Warning
+
+**From this session (Dec 15, 2025):**
+
+The Equation Editor is a **high-coupling, low-tolerance system**:
+
+```
+Templates ←→ Renderer ←→ Typst ←→ SVG extraction
+    ↕            ↕          ↕           ↕
+Placeholders ←→ UUIDs ←→ Coordinates ←→ Overlays
+    ↕            ↕          ↕           ↕
+Click handlers ←→ Inline editor ←→ AST updates
+
+Change one thing → 5 things break
+```
+
+**What happened this session:**
+- Changed tensor structure → broke `parens`, `sin`, `Matrix`
+- Fixed rendering → broke coordinate extraction
+- Fixed coordinates → edit markers shifted
+- Fixed markers → piecewise builder cleared expressions
+
+**The prudent approach:**
+
+| ❌ Don't | ✅ Do |
+|----------|------|
+| "Let's overhaul the AST" | One palette button at a time |
+| "Add all missing operations" | Add one, test thoroughly |
+| "Refactor rendering" | Surgical changes with full test coverage |
+| Big bang changes | Incremental with verification at each step |
+
+**Key insight:** Visual bugs have no automated safety net (unlike parser/type errors).
+The "web of trust" doesn't fully cover the UI layer yet. PatternFly + React component
+testing will provide that missing safety net.
+
+### Proposed Tab Structure (Post-PatternFly)
+
+| Tab | Contents |
+|-----|----------|
+| **Tensors** | Γ, R, g, generic tensor, index operations |
+| **Matrices** | Matrix builder, determinant, trace, inverse |
+| **Calculus** | ∂, ∫, Σ, Π, limits |
+| **Functions** | sin, cos, exp, log, custom f(x) |
+| **Logic** | ∀, ∃, ∧, ∨, →, = |
+| **Physics** | ℏ, c, α, Schrödinger, Dirac |
+| **Greek** | α, β, γ, ... (input helpers) |
+
+Users could customize their own tabs (not feasible with vanilla JS).
+
+---
+*Recorded: Dec 15, 2025*
 

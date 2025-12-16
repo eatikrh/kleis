@@ -361,3 +361,100 @@ while being tractable for formal analysis.
 
 *Research direction noted: Dec 2025*
 
+---
+
+## Development Philosophy: Web of Trust
+
+**The same philosophy that underlies Kleis is applied to building Kleis itself.**
+
+### The Insight
+
+> "I know this process since humans do hallucinate also."
+
+The verification net wasn't invented for LLMs — it's the same process used for 
+human knowledge production:
+
+| Domain | Verification System | Catches |
+|--------|-------------------|---------|
+| Science | Peer review | Bias, errors |
+| Finance | Double-entry accounting | Arithmetic mistakes |
+| Aviation | Checklists | Human forgetfulness |
+| Law | Multiple witnesses | False memory |
+| Math | Formal proofs | Logical errors |
+| Software | Type systems | Programming errors |
+
+### The Kleis Development Web of Trust
+
+```
+                    Web of Trust
+                    
+     ┌──────────────────────────────────────────┐
+     │                                          │
+     │   ┌─────────┐     ┌──────────────────┐  │
+     │   │ Parser  │────→│ Syntax verified  │  │
+     │   └─────────┘     └──────────────────┘  │
+     │        ↓                                 │
+     │   ┌─────────┐     ┌──────────────────┐  │
+     │   │  REPL   │────→│ Execution works  │  │
+     │   └─────────┘     └──────────────────┘  │
+     │        ↓                                 │
+     │   ┌─────────┐     ┌──────────────────┐  │
+     │   │ Pretty  │────→│ Round-trip match │  │
+     │   │ Printer │     │ Parser(PP(AST))  │  │
+     │   └─────────┘     └──────────────────┘  │
+     │        ↓                                 │
+     │   ┌─────────┐     ┌──────────────────┐  │
+     │   │   Z3    │────→│ Axioms verified  │  │
+     │   └─────────┘     └──────────────────┘  │
+     │        ↓                                 │
+     │   ┌─────────┐     ┌──────────────────┐  │
+     │   │  Tests  │────→│ 495+ pass always │  │
+     │   └─────────┘     └──────────────────┘  │
+     │        ↓                                 │
+     │   ┌─────────┐     ┌──────────────────┐  │
+     │   │Equation │────→│ Full stack works │  │
+     │   │ Editor  │     └──────────────────┘  │
+     │   └─────────┘                           │
+     │        ↓                                 │
+     │   ┌─────────┐     ┌──────────────────┐  │
+     │   │  Human  │────→│ Final sanity     │  │
+     │   └─────────┘     └──────────────────┘  │
+     │                                          │
+     └──────────────────────────────────────────┘
+```
+
+### If the LLM Hallucninates...
+
+| Layer | Catches |
+|-------|---------|
+| Parser | Wrong syntax |
+| Type checker | Wrong types |
+| Z3 | Invalid axioms |
+| Pretty print round-trip | Lossy representation |
+| Tests (pre-push gates) | Regressions |
+| Equation Editor | Integration breaks |
+| Human review | "That doesn't look right" |
+
+**No single point of trust.**
+
+Every layer verifies the one before. LLM output passes through 7+ filters 
+before it's accepted.
+
+### The Key Principle
+
+> "That's not 'trust the LLM' — that's 'trust the verification net'."
+
+The philosophy, applied to the building process itself.
+
+### Gap: Visual Layer
+
+One weakness: the Equation Editor's visual rendering layer has no automated 
+safety net. Visual bugs are caught only by human eyes.
+
+**Solution:** PatternFly/React migration will provide component testing, 
+adding the missing layer to the web of trust.
+
+---
+
+*Development methodology documented: Dec 15, 2025*
+

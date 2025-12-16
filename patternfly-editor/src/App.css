@@ -1,0 +1,571 @@
+/* Kleis Equation Editor - PatternFly Edition */
+/* Inspired by static/index.html reference implementation */
+
+/* ─────────────────────────────────────────────────────────────
+   Header Styles
+   ───────────────────────────────────────────────────────────── */
+
+/* Custom header - simple flexbox layout */
+.kleis-custom-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  gap: 16px;
+}
+
+.kleis-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.kleis-logo {
+  height: 48px;
+  width: auto;
+  filter: brightness(0) invert(1);
+}
+
+.kleis-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.kleis-title h1 {
+  color: white;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.kleis-subtitle {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Main Page
+   ───────────────────────────────────────────────────────────── */
+
+.kleis-page {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  min-height: 100vh;
+}
+
+.kleis-main {
+  padding: 24px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Editor Card
+   ───────────────────────────────────────────────────────────── */
+
+.editor-card {
+  --pf-v5-c-card--BackgroundColor: white;
+}
+
+.editor-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.zoom-level {
+  min-width: 50px;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #667eea;
+  font-weight: 500;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Structural Editor Area
+   ───────────────────────────────────────────────────────────── */
+
+.structural-editor {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 24px;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: border-color 0.2s;
+  overflow: auto;
+}
+
+.structural-editor:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.empty-editor {
+  text-align: center;
+  color: #6c757d;
+  padding: 40px;
+}
+
+.empty-editor p {
+  margin: 8px 0;
+}
+
+.empty-editor .hint {
+  font-size: 0.875rem;
+  color: #adb5bd;
+}
+
+/* Equation placeholder preview */
+.equation-placeholder {
+  text-align: center;
+}
+
+.placeholder-box {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px dashed #667eea;
+  border-radius: 8px;
+  padding: 24px 48px;
+  margin-bottom: 16px;
+}
+
+.operation-preview {
+  font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', serif;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.arg-box {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 0 2px;
+}
+
+.placeholder-hint {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.placeholder-hint small {
+  color: #adb5bd;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   LaTeX Input (Text Mode)
+   ───────────────────────────────────────────────────────────── */
+
+.latex-input {
+  width: 100%;
+  min-height: 200px;
+  padding: 16px;
+  font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.latex-input:focus {
+  border-color: #667eea;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Symbol Palette Card
+   ───────────────────────────────────────────────────────────── */
+
+.palette-card {
+  --pf-v5-c-card--BackgroundColor: #fafbfc;
+}
+
+/* Override PatternFly tab styling */
+.palette-card .pf-v5-c-tabs__link {
+  --pf-v5-c-tabs__link--after--BorderColor: #667eea;
+}
+
+.palette-card .pf-v5-c-tabs__item.pf-m-current .pf-v5-c-tabs__link {
+  --pf-v5-c-tabs__link--after--BorderColor: #667eea;
+  color: #667eea;
+}
+
+/* Math buttons in palette */
+.palette-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px; /* Closer together */
+  padding: 12px;
+}
+
+.palette-buttons button,
+.palette-buttons .math-btn,
+.palette-buttons .pf-v5-c-button {
+  font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', serif !important;
+  font-size: 1.25rem !important;
+  min-width: 54px;
+  min-height: 44px;
+  transition: all 0.15s;
+  border-radius: 4px !important; /* Slightly rounded rectangles */
+}
+
+.palette-buttons button:hover,
+.palette-buttons .math-btn:hover,
+.palette-buttons .pf-v5-c-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+/* MathJax-rendered content in buttons */
+.math-btn .math-btn-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.math-btn .MathJax {
+  font-size: 20px !important;
+  color: #333 !important;
+}
+
+.math-btn .MathJax_SVG {
+  vertical-align: middle !important;
+}
+
+.math-btn .MathJax_SVG svg {
+  fill: #333 !important;
+}
+
+/* Ensure math content is visible */
+.math-btn mjx-container {
+  color: #333 !important;
+}
+
+.math-btn mjx-container svg {
+  fill: #333 !important;
+}
+
+.math-btn:hover .MathJax_SVG svg,
+.math-btn:hover mjx-container svg {
+  fill: #333 !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Output Panels
+   ───────────────────────────────────────────────────────────── */
+
+.type-badge {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+
+.muted {
+  color: #adb5bd;
+  font-style: italic;
+}
+
+.ast-code {
+  font-size: 0.75rem;
+  max-height: 200px;
+  overflow: auto;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Server Status & Alerts
+   ───────────────────────────────────────────────────────────── */
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.server-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.status-connected {
+  color: #3e8635;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-disconnected {
+  color: #c9190b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.server-alert {
+  margin-bottom: 16px;
+}
+
+.server-alert code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Loading & Error States
+   ───────────────────────────────────────────────────────────── */
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #6c757d;
+}
+
+.loading-state p,
+.error-state p {
+  margin-top: 12px;
+}
+
+.error-state {
+  color: #c9190b;
+}
+
+.error-state svg {
+  font-size: 2rem;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SVG Container & Overlays
+   ───────────────────────────────────────────────────────────── */
+
+.svg-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.svg-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* SVG overlay styling - these are SVG <rect> elements */
+.arg-overlay {
+  fill: rgba(40, 167, 69, 0.1);
+  stroke: #28a745;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4, 2;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.arg-overlay:hover {
+  stroke-width: 2.5px;
+  fill: rgba(40, 167, 69, 0.2);
+}
+
+.arg-overlay:focus {
+  stroke-width: 3px;
+  stroke: #ff9800;
+  outline: none;
+}
+
+.placeholder-overlay {
+  fill: rgba(102, 126, 234, 0.1);
+  stroke: #667eea;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4, 2;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.placeholder-overlay:hover {
+  stroke: #5568d3;
+  stroke-width: 2.5px;
+  fill: rgba(102, 126, 234, 0.2);
+}
+
+/* Active marker styling - red/pink highlight (matches static/index.html) */
+.placeholder-overlay.active-marker,
+.arg-overlay.active-marker {
+  stroke: #ff6b6b !important;
+  stroke-width: 4px !important;  /* Bold stroke for selected marker */
+  fill: rgba(255, 107, 107, 0.3) !important;
+  /* animation disabled to reduce CPU usage */
+  /* animation: pulse-marker 1s infinite; */
+}
+
+/* Ensure inline style doesn't override active-marker class */
+.placeholder-overlay.active-marker[style*="stroke-width"],
+.arg-overlay.active-marker[style*="stroke-width"] {
+  stroke-width: 4px !important;
+}
+
+@keyframes pulse-marker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Inline editor styles */
+/* Inline editor input field (like static/index.html) */
+.inline-edit-input {
+  width: 100%;
+  height: 100%;
+  border: 2px solid #4CAF50;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: 'Latin Modern Math', 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+  outline: none;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.inline-edit-input:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
+}
+
+.inline-edit-input.error {
+  border-color: #f44336;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
+}
+
+/* Marker being edited inline */
+.arg-overlay.editing-inline,
+.placeholder-overlay.editing-inline {
+  fill: rgba(76, 175, 80, 0.3) !important;
+  stroke: #4CAF50 !important;
+  stroke-width: 3px !important;
+}
+
+/* ForeignObject containing inline editor */
+svg foreignObject#inline-editor-foreign {
+  display: block !important;
+  visibility: visible !important;
+  overflow: visible !important;
+  pointer-events: all !important;
+  z-index: 1000;
+}
+
+svg foreignObject#inline-editor-foreign div {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* Button state indicators during inline editing */
+body.inline-editing .math-btn[data-button-type="symbol"] {
+  /* Symbols are safe - subtle green tint */
+  background: linear-gradient(to bottom, #f0fff0, #e8f5e8);
+}
+
+body.inline-editing .math-btn[data-button-type="template"],
+body.inline-editing .math-btn[data-button-type="function"] {
+  /* Templates will replace - orange border */
+  border-color: #FF9800;
+  border-style: dashed;
+}
+
+.inline-edit-input {
+  width: 100%;
+  height: 100%;
+  padding: 4px 8px;
+  border: 2px solid #667eea;
+  border-radius: 4px;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.inline-edit-input:focus {
+  border-color: #5568d3;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+}
+
+.svg-editor-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Template Count Badge
+   ───────────────────────────────────────────────────────────── */
+
+.template-count {
+  font-size: 0.75rem;
+  font-weight: normal;
+  background: #667eea;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 12px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Responsive
+   ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 992px) {
+  .kleis-brand {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .kleis-logo {
+    height: 36px;
+  }
+  
+  .kleis-title h1 {
+    font-size: 1.5rem;
+  }
+  
+  .kleis-subtitle {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .editor-card-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .zoom-controls {
+    width: 100%;
+    justify-content: center;
+  }
+}
