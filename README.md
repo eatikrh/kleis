@@ -149,6 +149,7 @@ kleis/
 ├── src/
 │   ├── render.rs       # Renderer (100+ operations)
 │   ├── editor_ast.rs   # Editor AST translation layer
+│   ├── kleis_parser.rs # Kleis language parser (.kleis files)
 │   ├── parser.rs       # LaTeX parser
 │   └── bin/
 │       ├── server.rs   # HTTP server + web UI
