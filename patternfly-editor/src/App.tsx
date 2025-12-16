@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Page,
   PageSection,
@@ -20,17 +20,22 @@ import {
   Panel,
   PanelMain,
   PanelMainBody,
+  Alert,
+  Spinner,
 } from '@patternfly/react-core';
 import { 
   SearchPlusIcon, 
   SearchMinusIcon, 
   UndoIcon, 
   RedoIcon,
-  SyncIcon 
+  SyncIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
 } from '@patternfly/react-icons';
 
-import { PaletteTabs } from './components/Palette';
+import { PaletteTabs, getTemplateCount } from './components/Palette';
 import type { EditorNode } from './types/ast';
+import { useServerStatus, useRenderTypst, useTypeCheck, useKleisOutput } from './hooks/useKleisAPI';
 
 import './App.css';
 
@@ -40,14 +45,27 @@ function App() {
   const [mode, setMode] = useState<EditorMode>('structural');
   const [currentAST, setCurrentAST] = useState<EditorNode | null>(null);
   const [zoom, setZoom] = useState(100);
-  const [svgContent, setSvgContent] = useState<string>('');
   const [latexInput, setLatexInput] = useState('');
+  
+  // API hooks
+  const { isConnected, checking: checkingServer } = useServerStatus();
+  const { svg, placeholders, loading: renderLoading, error: renderError, render: renderSvg } = useRenderTypst();
+  const { type: typeResult, loading: typeLoading, error: typeError, check: checkType } = useTypeCheck();
+  const { output: kleisOutput, loading: kleisLoading, render: renderKleisOutput } = useKleisOutput();
 
-  const handleInsert = (ast: EditorNode) => {
+  // Auto-render when AST changes
+  useEffect(() => {
+    if (currentAST && isConnected) {
+      renderSvg(currentAST);
+      checkType(currentAST);
+      renderKleisOutput(currentAST);
+    }
+  }, [currentAST, isConnected, renderSvg, checkType, renderKleisOutput]);
+
+  const handleInsert = useCallback((ast: EditorNode) => {
     setCurrentAST(ast);
     console.log('Generated AST:', JSON.stringify(ast, null, 2));
-    // TODO: Send to backend for rendering
-  };
+  }, []);
 
   const handleZoomIn = () => setZoom(z => Math.min(z + 25, 200));
   const handleZoomOut = () => setZoom(z => Math.max(z - 25, 50));
@@ -66,20 +84,35 @@ function App() {
         </MastheadBrand>
       </MastheadMain>
       <MastheadContent>
-        <ToggleGroup aria-label="Editor mode">
-          <ToggleGroupItem
-            text="Structural"
-            buttonId="structural"
-            isSelected={mode === 'structural'}
-            onChange={() => setMode('structural')}
-          />
-          <ToggleGroupItem
-            text="Text"
-            buttonId="text"
-            isSelected={mode === 'text'}
-            onChange={() => setMode('text')}
-          />
-        </ToggleGroup>
+        <div className="header-controls">
+          <ToggleGroup aria-label="Editor mode">
+            <ToggleGroupItem
+              text="Structural"
+              buttonId="structural"
+              isSelected={mode === 'structural'}
+              onChange={() => setMode('structural')}
+            />
+            <ToggleGroupItem
+              text="Text"
+              buttonId="text"
+              isSelected={mode === 'text'}
+              onChange={() => setMode('text')}
+            />
+          </ToggleGroup>
+          <div className="server-status">
+            {checkingServer ? (
+              <Spinner size="sm" />
+            ) : isConnected ? (
+              <span className="status-connected">
+                <CheckCircleIcon /> Server
+              </span>
+            ) : (
+              <span className="status-disconnected">
+                <ExclamationCircleIcon /> Offline
+              </span>
+            )}
+          </div>
+        </div>
       </MastheadContent>
     </Masthead>
   );
@@ -87,6 +120,17 @@ function App() {
   return (
     <Page masthead={masthead} className="kleis-page">
       <PageSection className="kleis-main">
+        {!isConnected && !checkingServer && (
+          <Alert 
+            variant="warning" 
+            isInline 
+            title="Backend server not connected"
+            className="server-alert"
+          >
+            Run <code>cargo run --bin server</code> to enable rendering and type checking.
+          </Alert>
+        )}
+        
         <Grid hasGutter>
           {/* Main Editor Panel */}
           <GridItem span={12}>
@@ -120,10 +164,23 @@ function App() {
                 {mode === 'structural' ? (
                   <div 
                     className="structural-editor"
-                    style={{ transform: `scale(${zoom / 100})` }}
+                    style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top left' }}
                   >
-                    {svgContent ? (
-                      <div dangerouslySetInnerHTML={{ __html: svgContent }} />
+                    {renderLoading ? (
+                      <div className="loading-state">
+                        <Spinner size="lg" />
+                        <p>Rendering equation...</p>
+                      </div>
+                    ) : svg ? (
+                      <div 
+                        className="svg-container"
+                        dangerouslySetInnerHTML={{ __html: svg }} 
+                      />
+                    ) : renderError ? (
+                      <div className="error-state">
+                        <ExclamationCircleIcon />
+                        <p>Render error: {renderError}</p>
+                      </div>
                     ) : currentAST ? (
                       <div className="equation-placeholder">
                         <div className="placeholder-box">
@@ -141,15 +198,34 @@ function App() {
                           )}
                         </div>
                         <p className="placeholder-hint">
-                          Click palette buttons to build your equation.
-                          <br />
-                          <small>SVG rendering will connect to Rust backend.</small>
+                          {isConnected 
+                            ? 'Equation will render shortly...'
+                            : 'Start server for SVG rendering'}
                         </p>
                       </div>
                     ) : (
                       <div className="empty-editor">
                         <p>Click a symbol in the palette below to start building your equation.</p>
                         <p className="hint">The equation will appear here with clickable placeholders.</p>
+                      </div>
+                    )}
+                    
+                    {/* Placeholder overlays would go here */}
+                    {placeholders.length > 0 && (
+                      <div className="placeholder-overlays">
+                        {placeholders.map((pos) => (
+                          <div
+                            key={pos.id}
+                            className="placeholder-overlay"
+                            style={{
+                              left: pos.x,
+                              top: pos.y,
+                              width: pos.width,
+                              height: pos.height,
+                            }}
+                            onClick={() => console.log('Clicked placeholder:', pos.id)}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>
@@ -169,7 +245,10 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"
           {/* Symbol Palette */}
           <GridItem span={12}>
             <Card className="palette-card">
-              <CardTitle>🎨 Symbol Palette</CardTitle>
+              <CardTitle>
+                🎨 Symbol Palette
+                <span className="template-count">{getTemplateCount()} templates</span>
+              </CardTitle>
               <CardBody>
                 <PaletteTabs onInsert={handleInsert} />
               </CardBody>
@@ -181,12 +260,24 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"
             <Card>
               <CardTitle>🔍 Type Info</CardTitle>
               <CardBody>
-                {currentAST ? (
+                {typeLoading ? (
+                  <Spinner size="sm" />
+                ) : typeError ? (
+                  <Alert variant="danger" isInline isPlain title={typeError} />
+                ) : typeResult ? (
+                  <Panel>
+                    <PanelMain>
+                      <PanelMainBody>
+                        <p><strong>Type:</strong> <span className="type-badge">{typeResult}</span></p>
+                      </PanelMainBody>
+                    </PanelMain>
+                  </Panel>
+                ) : currentAST ? (
                   <Panel>
                     <PanelMain>
                       <PanelMainBody>
                         <p><strong>Operation:</strong> {'Operation' in currentAST ? currentAST.Operation.name : 'N/A'}</p>
-                        <p><strong>Type:</strong> <span className="type-badge">Checking...</span></p>
+                        <p><strong>Type:</strong> <span className="type-badge">{isConnected ? 'Checking...' : 'Start server'}</span></p>
                       </PanelMainBody>
                     </PanelMain>
                   </Panel>
@@ -201,7 +292,13 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"
             <Card>
               <CardTitle>📤 Kleis Output</CardTitle>
               <CardBody>
-                {currentAST ? (
+                {kleisLoading ? (
+                  <Spinner size="sm" />
+                ) : kleisOutput ? (
+                  <CodeBlock>
+                    <CodeBlockCode>{kleisOutput}</CodeBlockCode>
+                  </CodeBlock>
+                ) : currentAST ? (
                   <CodeBlock>
                     <CodeBlockCode>
                       {'Operation' in currentAST 
