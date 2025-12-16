@@ -12,7 +12,7 @@ import { placeholder, operation } from '../../types/ast';
 
 // Helper for creating Const nodes
 function constNode(value: string): EditorNode {
-  return { Const: { value } };
+  return { Const: value };  // Backend expects { Const: "2" } format, not { Const: { value: "2" } }
 }
 
 // Helper for creating Object nodes
@@ -320,6 +320,49 @@ export const astTemplates: Record<string, EditorNode> = {
   infinity: objectNode('∞'),
   pi_const: objectNode('π'),
   euler_e: objectNode('e'),
+  
+  // ─────────────────────────────────────────────────────────────
+  // Greek Letters (lowercase)
+  // ─────────────────────────────────────────────────────────────
+  alpha: objectNode('α'),
+  beta: objectNode('β'),
+  gamma: objectNode('γ'),
+  delta: objectNode('δ'),
+  epsilon: objectNode('ε'),
+  zeta: objectNode('ζ'),
+  eta: objectNode('η'),
+  theta: objectNode('θ'),
+  iota: objectNode('ι'),
+  kappa: objectNode('κ'),
+  lambda: objectNode('λ'),
+  mu: objectNode('μ'),
+  nu: objectNode('ν'),
+  xi: objectNode('ξ'),
+  omicron: objectNode('ο'),
+  pi: objectNode('π'),
+  rho: objectNode('ρ'),
+  sigma: objectNode('σ'),
+  tau: objectNode('τ'),
+  upsilon: objectNode('υ'),
+  phi: objectNode('φ'),
+  chi: objectNode('χ'),
+  psi: objectNode('ψ'),
+  omega: objectNode('ω'),
+  
+  // ─────────────────────────────────────────────────────────────
+  // Greek Letters (uppercase)
+  // ─────────────────────────────────────────────────────────────
+  Gamma: objectNode('Γ'),
+  Delta: objectNode('Δ'),
+  Theta: objectNode('Θ'),
+  Lambda: objectNode('Λ'),
+  Xi: objectNode('Ξ'),
+  Pi: objectNode('Π'),
+  Sigma: objectNode('Σ'),
+  Upsilon: objectNode('Υ'),
+  Phi: objectNode('Φ'),
+  Psi: objectNode('Ψ'),
+  Omega: objectNode('Ω'),
 };
 
 /**

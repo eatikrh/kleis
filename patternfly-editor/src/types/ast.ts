@@ -26,7 +26,7 @@ export interface OperationData {
  */
 export type EditorNode = 
   | { Object: string }
-  | { Const: { value: string } }
+  | { Const: string }  // Backend expects { Const: "2" } format, not { Const: { value: "2" } }
   | { Placeholder: PlaceholderData }
   | { Operation: OperationData }
   | { List: EditorNode[] };

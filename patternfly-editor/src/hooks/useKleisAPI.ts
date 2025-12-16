@@ -12,6 +12,8 @@ import {
   type RenderTypstResponse,
   type TypeCheckResponse,
   type PlaceholderPosition,
+  type ArgumentSlot,
+  type ArgumentBoundingBox,
 } from '../api/kleis';
 
 // ─────────────────────────────────────────────────────────────
@@ -31,8 +33,8 @@ export function useServerStatus() {
 
   useEffect(() => {
     checkConnection();
-    // Check every 10 seconds
-    const interval = setInterval(checkConnection, 10000);
+    // Check every 30 seconds (reduced from 10 to lower CPU usage)
+    const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
   }, [checkConnection]);
 
@@ -46,6 +48,8 @@ export function useServerStatus() {
 export function useRenderTypst() {
   const [svg, setSvg] = useState<string>('');
   const [placeholders, setPlaceholders] = useState<PlaceholderPosition[]>([]);
+  const [argumentSlots, setArgumentSlots] = useState<ArgumentSlot[]>([]);
+  const [argumentBoundingBoxes, setArgumentBoundingBoxes] = useState<ArgumentBoundingBox[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,11 +61,15 @@ export function useRenderTypst() {
     
     if (result.success && result.svg) {
       setSvg(result.svg);
-      setPlaceholders(result.placeholder_positions || []);
+      setPlaceholders(result.placeholders || []);  // Backend uses "placeholders" not "placeholder_positions"
+      setArgumentSlots(result.argument_slots || []);
+      setArgumentBoundingBoxes(result.argument_bounding_boxes || []);
     } else {
       setError(result.error || 'Render failed');
       setSvg('');
       setPlaceholders([]);
+      setArgumentSlots([]);
+      setArgumentBoundingBoxes([]);
     }
     
     setLoading(false);
@@ -71,10 +79,12 @@ export function useRenderTypst() {
   const clear = useCallback(() => {
     setSvg('');
     setPlaceholders([]);
+    setArgumentSlots([]);
+    setArgumentBoundingBoxes([]);
     setError(null);
   }, []);
 
-  return { svg, placeholders, loading, error, render, clear };
+  return { svg, placeholders, argumentSlots, argumentBoundingBoxes, loading, error, render, clear };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -92,8 +102,8 @@ export function useTypeCheck() {
     
     const result: TypeCheckResponse = await typeCheck(ast);
     
-    if (result.success && result.type) {
-      setType(result.type);
+    if (result.success && result.type_name) {
+      setType(result.type_name);
     } else {
       setError(result.error || 'Type check failed');
       setType(null);

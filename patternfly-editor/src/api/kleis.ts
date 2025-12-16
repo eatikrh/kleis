@@ -15,16 +15,35 @@ const API_BASE = 'http://localhost:3000/api';
 // Types
 // ─────────────────────────────────────────────────────────────
 
+export interface ArgumentSlot {
+  id: string;
+  path: number[];
+  hint: string;
+  is_placeholder: boolean;
+  role?: string;
+}
+
+export interface ArgumentBoundingBox {
+  arg_index: number;
+  node_id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface RenderTypstResponse {
   success: boolean;
   svg?: string;
-  placeholder_positions?: PlaceholderPosition[];
+  placeholders?: PlaceholderPosition[];  // Backend uses "placeholders" not "placeholder_positions"
+  argument_slots?: ArgumentSlot[];
+  argument_bounding_boxes?: ArgumentBoundingBox[];
   semantic_boxes?: SemanticBox[];
   error?: string;
 }
 
 export interface PlaceholderPosition {
-  id: string;
+  id: number;  // Backend returns numeric IDs
   x: number;
   y: number;
   width: number;
@@ -42,9 +61,10 @@ export interface SemanticBox {
 
 export interface TypeCheckResponse {
   success: boolean;
-  type?: string;
+  type_name?: string;  // Server returns 'type_name', not 'type'
   constraints?: string[];
   error?: string;
+  suggestion?: string;
 }
 
 export interface RenderASTResponse {
@@ -55,8 +75,17 @@ export interface RenderASTResponse {
 
 export interface VerifyResponse {
   success: boolean;
-  result?: 'Valid' | 'Invalid' | 'Unknown';
-  message?: string;
+  result?: string; // "valid", "invalid", "unknown", "error", "incomplete"
+  kleis_syntax?: string;
+  counterexample?: string;
+  error?: string;
+}
+
+export interface CheckSatResponse {
+  success: boolean;
+  result?: string; // "satisfiable", "unsatisfiable", "unknown", "error", "incomplete"
+  kleis_syntax?: string;
+  example?: string;
   error?: string;
 }
 
@@ -170,6 +199,30 @@ export async function renderKleis(ast: EditorNode): Promise<RenderASTResponse> {
 export async function verify(ast: EditorNode): Promise<VerifyResponse> {
   try {
     const response = await fetch(`${API_BASE}/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ast }),
+    });
+    
+    if (!response.ok) {
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+    
+    return await response.json();
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Network error' 
+    };
+  }
+}
+
+/**
+ * Check satisfiability of an expression using Z3
+ */
+export async function checkSat(ast: EditorNode): Promise<CheckSatResponse> {
+  try {
+    const response = await fetch(`${API_BASE}/check_sat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ast }),

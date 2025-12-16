@@ -5,8 +5,16 @@
    Header Styles
    ───────────────────────────────────────────────────────────── */
 
-.kleis-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+/* Custom header - simple flexbox layout */
+.kleis-custom-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  gap: 16px;
 }
 
 .kleis-brand {
@@ -97,7 +105,7 @@
   justify-content: center;
   position: relative;
   transition: border-color 0.2s;
-  transform-origin: top left;
+  overflow: auto;
 }
 
 .structural-editor:focus-within {
@@ -200,21 +208,60 @@
 .palette-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px; /* Closer together */
   padding: 12px;
 }
 
-.palette-buttons button {
+.palette-buttons button,
+.palette-buttons .math-btn,
+.palette-buttons .pf-v5-c-button {
   font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', serif !important;
   font-size: 1.25rem !important;
   min-width: 54px;
   min-height: 44px;
   transition: all 0.15s;
+  border-radius: 4px !important; /* Slightly rounded rectangles */
 }
 
-.palette-buttons button:hover {
+.palette-buttons button:hover,
+.palette-buttons .math-btn:hover,
+.palette-buttons .pf-v5-c-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+/* MathJax-rendered content in buttons */
+.math-btn .math-btn-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.math-btn .MathJax {
+  font-size: 20px !important;
+  color: #333 !important;
+}
+
+.math-btn .MathJax_SVG {
+  vertical-align: middle !important;
+}
+
+.math-btn .MathJax_SVG svg {
+  fill: #333 !important;
+}
+
+/* Ensure math content is visible */
+.math-btn mjx-container {
+  color: #333 !important;
+}
+
+.math-btn mjx-container svg {
+  fill: #333 !important;
+}
+
+.math-btn:hover .MathJax_SVG svg,
+.math-btn:hover mjx-container svg {
+  fill: #333 !important;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -329,34 +376,148 @@
   height: auto;
 }
 
-.placeholder-overlays {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
+/* SVG overlay styling - these are SVG <rect> elements */
+.arg-overlay {
+  fill: rgba(40, 167, 69, 0.1);
+  stroke: #28a745;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4, 2;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.arg-overlay:hover {
+  stroke-width: 2.5px;
+  fill: rgba(40, 167, 69, 0.2);
+}
+
+.arg-overlay:focus {
+  stroke-width: 3px;
+  stroke: #ff9800;
+  outline: none;
 }
 
 .placeholder-overlay {
-  position: absolute;
-  border: 2px dashed #28a745;
-  background: rgba(40, 167, 69, 0.1);
-  border-radius: 3px;
+  fill: rgba(102, 126, 234, 0.1);
+  stroke: #667eea;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4, 2;
   cursor: pointer;
-  pointer-events: auto;
-  transition: all 0.15s;
+  transition: all 0.2s;
 }
 
 .placeholder-overlay:hover {
-  background: rgba(40, 167, 69, 0.25);
-  border-color: #1e7e34;
+  stroke: #5568d3;
+  stroke-width: 2.5px;
+  fill: rgba(102, 126, 234, 0.2);
 }
 
-.placeholder-overlay:focus {
+/* Active marker styling - red/pink highlight (matches static/index.html) */
+.placeholder-overlay.active-marker,
+.arg-overlay.active-marker {
+  stroke: #ff6b6b !important;
+  stroke-width: 4px !important;  /* Bold stroke for selected marker */
+  fill: rgba(255, 107, 107, 0.3) !important;
+  /* animation disabled to reduce CPU usage */
+  /* animation: pulse-marker 1s infinite; */
+}
+
+/* Ensure inline style doesn't override active-marker class */
+.placeholder-overlay.active-marker[style*="stroke-width"],
+.arg-overlay.active-marker[style*="stroke-width"] {
+  stroke-width: 4px !important;
+}
+
+@keyframes pulse-marker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Inline editor styles */
+/* Inline editor input field (like static/index.html) */
+.inline-edit-input {
+  width: 100%;
+  height: 100%;
+  border: 2px solid #4CAF50;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: 'Latin Modern Math', 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
   outline: none;
-  border-color: #ff9800;
-  box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.25);
+  color: #333;
+  box-sizing: border-box;
+}
+
+.inline-edit-input:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
+}
+
+.inline-edit-input.error {
+  border-color: #f44336;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
+}
+
+/* Marker being edited inline */
+.arg-overlay.editing-inline,
+.placeholder-overlay.editing-inline {
+  fill: rgba(76, 175, 80, 0.3) !important;
+  stroke: #4CAF50 !important;
+  stroke-width: 3px !important;
+}
+
+/* ForeignObject containing inline editor */
+svg foreignObject#inline-editor-foreign {
+  display: block !important;
+  visibility: visible !important;
+  overflow: visible !important;
+  pointer-events: all !important;
+  z-index: 1000;
+}
+
+svg foreignObject#inline-editor-foreign div {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* Button state indicators during inline editing */
+body.inline-editing .math-btn[data-button-type="symbol"] {
+  /* Symbols are safe - subtle green tint */
+  background: linear-gradient(to bottom, #f0fff0, #e8f5e8);
+}
+
+body.inline-editing .math-btn[data-button-type="template"],
+body.inline-editing .math-btn[data-button-type="function"] {
+  /* Templates will replace - orange border */
+  border-color: #FF9800;
+  border-style: dashed;
+}
+
+.inline-edit-input {
+  width: 100%;
+  height: 100%;
+  padding: 4px 8px;
+  border: 2px solid #667eea;
+  border-radius: 4px;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.inline-edit-input:focus {
+  border-color: #5568d3;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+}
+
+.svg-editor-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 /* ─────────────────────────────────────────────────────────────
