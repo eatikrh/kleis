@@ -25,9 +25,10 @@
 //! - Postfix operators: n!, Aᵀ, A†
 //! - Lambda expressions: λ x . x^2
 //! - Type annotations in expressions: x : ℝ
-//! - Symbolic constants: π, e, i (parsed as identifiers)
 //! - Placeholders: □
 //! - Summation/product notation: Σ, Π
+//!
+//! NOTE: π, e, i are parsed as identifiers (user-defined, domain-specific)
 //!
 //! See docs/parser-implementation/PARSER_GRAMMAR_COMPATIBILITY.md for full comparison.
 //!
