@@ -41,7 +41,13 @@ npm run dev
 # Then open http://localhost:5173
 ```
 
-The PatternFly editor is a modern React/TypeScript reimplementation with component-based architecture and PatternFly 5 design system.
+**For full functionality** (rendering, type checking), also run the backend:
+```bash
+# In another terminal
+./run_server.sh   # Starts backend on port 3000
+```
+
+The PatternFly editor is a React/TypeScript reimplementation with hot reloading, component-based architecture, and PatternFly 5 design system.
 
 ### Run the REPL
 
