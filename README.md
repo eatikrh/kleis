@@ -15,7 +15,7 @@
 
 ## 🚀 Quick Start
 
-### Run the Web Editor
+### Run the Web Editor (Original)
 
 ```bash
 ./run_server.sh
@@ -31,6 +31,17 @@ export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
 
 cargo run --bin server
 ```
+
+### Run the PatternFly Editor (React)
+
+```bash
+cd patternfly-editor
+npm install
+npm run dev
+# Then open http://localhost:5173
+```
+
+The PatternFly editor is a modern React/TypeScript reimplementation with component-based architecture and PatternFly 5 design system.
 
 ### Run the REPL
 
@@ -131,16 +142,21 @@ See `PARSER_TODO.md` for details.
 kleis/
 ├── src/
 │   ├── render.rs       # Renderer (100+ operations)
+│   ├── editor_ast.rs   # Editor AST translation layer
 │   ├── parser.rs       # LaTeX parser
 │   └── bin/
 │       ├── server.rs   # HTTP server + web UI
 │       ├── repl.rs     # Interactive REPL
 │       └── gallery.rs  # PDF gallery generator
-├── static/index.html   # Web equation editor
+├── static/index.html   # Original web equation editor
+├── patternfly-editor/  # React/PatternFly equation editor
+│   ├── src/components/ # React components
+│   └── src/hooks/      # Custom hooks
 ├── stdlib/             # Standard library (.kleis files)
 ├── examples/           # Example .kleis files
 │   ├── authorization/  # Zanzibar, OAuth2
-│   └── protocols/      # IP router
+│   ├── protocols/      # IP router
+│   └── control/        # Control theory (LQG, eigenvalues)
 ├── docs/               # Documentation
 │   ├── adr/            # 22 Architecture Decision Records
 │   ├── grammar/        # Formal grammar (v03-v07)
