@@ -1,7 +1,7 @@
 # Kleis Parser vs Formal Grammar Compatibility
 
-**Date:** December 13, 2025 (Updated for if/then/else and let bindings)  
-**Formal Grammar:** Kleis v0.6 (with functions in structures)  
+**Date:** December 16, 2025 (Updated for type aliases and parenthesized types)  
+**Formal Grammar:** Kleis v0.7  
 **Parser Implementation:** `src/kleis_parser.rs`  
 **Branch:** `main`
 
@@ -9,16 +9,16 @@
 
 ## TL;DR
 
-✅ **Parser implements ~70% of formal grammar v0.6, with complete algebraic type system including calculus operators**
+✅ **Parser implements ~70% of formal grammar v0.7, with complete algebraic type system including calculus operators**
 
-**Coverage:** ~70% of formal grammar (+Calculus operators from Dec 13!)  
+**Coverage:** ~70% of formal grammar (+Type aliases and parenthesized types from Dec 16!)  
 **Purpose:** Complete algebraic type system with theorem proving, calculus, generic constraints, inheritance, and compositional structures  
-**Status:** Phase 1, 2, 3, 4 COMPLETE! Grammar v0.6 with calculus operators, functions in structures, where clauses, nested structures, extends, and Z3 integration all working  
-**Tests:** 500+ passing (497 unit + integration tests - ALL RIGOROUS ✅)
+**Status:** Phase 1, 2, 3, 4 COMPLETE! Grammar v0.7 with type aliases, parenthesized types, calculus operators, functions in structures, where clauses, nested structures, extends, and Z3 integration all working  
+**Tests:** 521+ passing unit tests + 17 round-trip tests - ALL RIGOROUS ✅
 
 ---
 
-## What's Supported NOW (December 2025 - Evening Update)
+## What's Supported NOW (December 16, 2025)
 
 ### ✅ Fully Supported
 
@@ -27,6 +27,8 @@
 | **Data types** | `data Bool = True \| False` | ✅ Complete | ✅ Works |
 | **Pattern matching** | `match x { True => 1 \| False => 0 }` | ✅ Complete | ✅ Works |
 | **Function definitions** | `define f(x) = x + x` | ✅ Complete | ✅ Works |
+| **Type aliases** | `type Name = Type` | ✅ Complete | ✅ **NEW Dec 16!** |
+| **Parenthesized types** | `(ℝ → ℝ) → ℝ` | ✅ Complete | ✅ **NEW Dec 16!** |
 | **List literals** | `[1, 2, 3]` | ✅ In AST | ✅ Works |
 | **Structure definitions** | `structure Matrix(m, n, T) { ... }` | ✅ Complete | ✅ Works |
 | **Implements blocks** | `implements Matrix(m, n, ℝ) { ... }` | ✅ Complete | ✅ Works |
@@ -73,7 +75,7 @@
 - Implication: `p ⟹ q` (IMPLIES)
 - Proper precedence chain
 
-**Total Major Features:** ~26 supported ✅ (+2 from Dec 13: conditionals, let bindings; +12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
+**Total Major Features:** ~28 supported ✅ (+2 from Dec 16: type aliases, parenthesized types; +2 from Dec 13: conditionals, let bindings; +12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
 
 ---
 
@@ -212,6 +214,15 @@
 - **~65% grammar coverage** (+5 percentage points!)
 - 487+ unit tests + integration tests passing
 
+**v0.7.0 (December 16, 2025):** ✨ **Type System Enhancements**
+- Added `type Name = Type` aliases with full normalization
+- Added parenthesized types: `(ℝ → ℝ) → ℝ` for higher-order functions
+- Pretty printer extended for all TopLevel constructs
+- Round-trip test: parse → print → parse with 17/17 tests passing
+- REPL reports type alias count on `:load`
+- **~70% grammar coverage** (+5 percentage points!)
+- 521+ unit tests passing
+
 ---
 
 ## Coverage Breakdown
@@ -256,11 +267,11 @@
 5. ~~❌ Conditionals (if/then/else)~~ ✅ **DONE Dec 13!**
 6. ❌ Type annotations in expressions
 7. ❌ Symbolic constants
-8. ❌ Type aliases
+8. ~~❌ Type aliases~~ ✅ **DONE Dec 16!**
 9. ❌ Summation/Product notation (Σ, Π)
 
-**Major Feature Coverage:** 26/31 = **84%** of major constructs (+2 from Dec 13!)  
-**Overall Grammar Coverage:** **~65%** (accounting for all production rules, operators, etc.)
+**Major Feature Coverage:** 28/31 = **90%** of major constructs (+2 from Dec 16: type aliases, parenthesized types)  
+**Overall Grammar Coverage:** **~70%** (accounting for all production rules, operators, etc.)
 
 ---
 
@@ -1023,4 +1034,4 @@ This is **sufficient for:**
 - Integrable structure with FTC axiom
 - Round-trip tested with all examples
 
-**Last Updated:** December 13, 2025 (Added calculus operators!)
+**Last Updated:** December 16, 2025 (Added type aliases, parenthesized types, round-trip test)

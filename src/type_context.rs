@@ -175,6 +175,9 @@ pub struct TypeContextBuilder {
 
     /// Type context (for inference)
     context: TypeContext,
+
+    /// Type aliases: name -> underlying type expression
+    type_aliases: HashMap<String, TypeExpr>,
 }
 
 impl TypeContextBuilder {
@@ -184,6 +187,7 @@ impl TypeContextBuilder {
             implements: Vec::new(),
             registry: OperationRegistry::new(),
             context: TypeContext::new(),
+            type_aliases: HashMap::new(),
         }
     }
 
@@ -208,6 +212,11 @@ impl TypeContextBuilder {
         // Merge operation registry
         self.registry.merge(other.registry)?;
 
+        // Merge aliases
+        for (name, aliased) in other.type_aliases {
+            self.type_aliases.entry(name).or_insert(aliased);
+        }
+
         // Context merging is not needed (it's ephemeral)
 
         Ok(())
@@ -216,6 +225,15 @@ impl TypeContextBuilder {
     /// Build type context from a parsed program
     pub fn from_program(program: Program) -> Result<Self, String> {
         let mut builder = Self::new();
+
+        // Phase 0: Register type aliases
+        for item in &program.items {
+            if let TopLevel::TypeAlias(alias) = item {
+                builder
+                    .type_aliases
+                    .insert(alias.name.clone(), alias.type_expr.clone());
+            }
+        }
 
         // Phase 1: Register all structures (abstract operations)
         for item in &program.items {
@@ -245,8 +263,8 @@ impl TypeContextBuilder {
         // Register operations from this structure (including nested)
         self.register_operations_recursive(&structure.name, &structure.members);
 
-        self.structures
-            .insert(structure.name.clone(), structure.clone());
+        let normalized = self.normalize_structure(structure)?;
+        self.structures.insert(structure.name.clone(), normalized);
         Ok(())
     }
 
@@ -289,7 +307,8 @@ impl TypeContextBuilder {
 
         // Extract type name from type_args (use first arg for now, TODO: handle multiple)
         let type_name = if let Some(first_arg) = impl_def.type_args.first() {
-            self.type_expr_to_string(first_arg)
+            let norm = self.normalize_type_expr(first_arg)?;
+            self.type_expr_to_string(&norm)
         } else {
             return Err(format!(
                 "Implements block for {} has no type arguments",
@@ -399,6 +418,118 @@ impl TypeContextBuilder {
                 )
             }
         }
+    }
+
+    /// Normalize a TypeExpr by expanding type aliases (with cycle guard)
+    fn normalize_type_expr(&self, ty: &TypeExpr) -> Result<TypeExpr, String> {
+        fn helper(
+            ty: &TypeExpr,
+            aliases: &HashMap<String, TypeExpr>,
+            stack: &mut Vec<String>,
+        ) -> Result<TypeExpr, String> {
+            match ty {
+                TypeExpr::Named(n) => {
+                    if let Some(alias) = aliases.get(n) {
+                        if stack.contains(n) {
+                            return Err(format!("Cyclic type alias detected: {}", n));
+                        }
+                        stack.push(n.clone());
+                        let expanded = helper(alias, aliases, stack)?;
+                        stack.pop();
+                        Ok(expanded)
+                    } else {
+                        Ok(TypeExpr::Named(n.clone()))
+                    }
+                }
+                TypeExpr::Parametric(name, params) => {
+                    let params_norm = params
+                        .iter()
+                        .map(|p| helper(p, aliases, stack))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    Ok(TypeExpr::Parametric(name.clone(), params_norm))
+                }
+                TypeExpr::Function(from, to) => {
+                    let from_n = helper(from, aliases, stack)?;
+                    let to_n = helper(to, aliases, stack)?;
+                    Ok(TypeExpr::Function(Box::new(from_n), Box::new(to_n)))
+                }
+                TypeExpr::Product(types) => {
+                    let types_norm = types
+                        .iter()
+                        .map(|t| helper(t, aliases, stack))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    Ok(TypeExpr::Product(types_norm))
+                }
+                TypeExpr::Var(v) => Ok(TypeExpr::Var(v.clone())),
+                TypeExpr::ForAll { vars, body } => {
+                    let vars_norm = vars
+                        .iter()
+                        .map(|(n, t)| {
+                            let nt = helper(t, aliases, stack)?;
+                            Ok((n.clone(), nt))
+                        })
+                        .collect::<Result<Vec<_>, String>>()?;
+                    let body_norm = helper(body, aliases, stack)?;
+                    Ok(TypeExpr::ForAll {
+                        vars: vars_norm,
+                        body: Box::new(body_norm),
+                    })
+                }
+            }
+        }
+
+        let mut stack = Vec::new();
+        helper(ty, &self.type_aliases, &mut stack)
+    }
+
+    /// Normalize all type expressions inside a structure definition
+    fn normalize_structure(&self, structure: &StructureDef) -> Result<StructureDef, String> {
+        let mut s = structure.clone();
+
+        if let Some(ext) = &s.extends_clause {
+            s.extends_clause = Some(self.normalize_type_expr(ext)?);
+        }
+        if let Some(over) = &s.over_clause {
+            s.over_clause = Some(self.normalize_type_expr(over)?);
+        }
+
+        // Normalize members in place
+        for member in s.members.iter_mut() {
+            match member {
+                StructureMember::Operation { type_signature, .. } => {
+                    *type_signature = self.normalize_type_expr(type_signature)?;
+                }
+                StructureMember::Field { type_expr, .. } => {
+                    *type_expr = self.normalize_type_expr(type_expr)?;
+                }
+                StructureMember::Axiom { .. } => {}
+                StructureMember::NestedStructure {
+                    structure_type,
+                    members,
+                    ..
+                } => {
+                    *structure_type = self.normalize_type_expr(structure_type)?;
+                    // Recurse into nested members
+                    let nested = StructureDef {
+                        name: "".to_string(),
+                        type_params: vec![],
+                        members: members.clone(),
+                        extends_clause: None,
+                        over_clause: None,
+                    };
+                    let normalized = self.normalize_structure(&nested)?;
+                    *members = normalized.members;
+                }
+                StructureMember::FunctionDef(func_def) => {
+                    if let Some(annotation) = &func_def.type_annotation {
+                        let norm = self.normalize_type_expr(annotation)?;
+                        func_def.type_annotation = Some(norm);
+                    }
+                }
+            }
+        }
+
+        Ok(s)
     }
 
     /// Get the operation registry
@@ -750,7 +881,16 @@ impl Default for TypeContextBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::kleis_ast::Implementation;
     use crate::kleis_parser::parse_kleis_program;
+
+    fn builder_with_aliases(map: &[(&str, TypeExpr)]) -> TypeContextBuilder {
+        let mut b = TypeContextBuilder::new();
+        for (k, v) in map {
+            b.type_aliases.insert((*k).to_string(), v.clone());
+        }
+        b
+    }
 
     #[test]
     fn test_build_context_from_numeric() {
@@ -871,5 +1011,80 @@ mod tests {
         let suggestion = builder.suggest_operation("Set(T)", "abs");
         assert!(suggestion.is_some());
         assert!(suggestion.unwrap().contains("card")); // Should suggest card
+    }
+
+    #[test]
+    fn normalize_simple_alias() {
+        let b = builder_with_aliases(&[("Real", TypeExpr::Named("ℝ".to_string()))]);
+        let norm = b
+            .normalize_type_expr(&TypeExpr::Named("Real".to_string()))
+            .unwrap();
+        assert_eq!(norm, TypeExpr::Named("ℝ".to_string()));
+    }
+
+    #[test]
+    fn normalize_parametric_alias_chain() {
+        let b = builder_with_aliases(&[
+            ("Real", TypeExpr::Named("ℝ".to_string())),
+            (
+                "VecReal",
+                TypeExpr::Parametric(
+                    "Vector".to_string(),
+                    vec![TypeExpr::Named("Real".to_string())],
+                ),
+            ),
+        ]);
+        let norm = b
+            .normalize_type_expr(&TypeExpr::Named("VecReal".to_string()))
+            .unwrap();
+        assert_eq!(
+            norm,
+            TypeExpr::Parametric("Vector".to_string(), vec![TypeExpr::Named("ℝ".to_string())])
+        );
+    }
+
+    #[test]
+    fn normalize_detects_cycle() {
+        let mut b = TypeContextBuilder::new();
+        b.type_aliases
+            .insert("A".to_string(), TypeExpr::Named("B".to_string()));
+        b.type_aliases
+            .insert("B".to_string(), TypeExpr::Named("A".to_string()));
+        let err = b.normalize_type_expr(&TypeExpr::Named("A".to_string()));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn implements_uses_normalized_type_name() {
+        // alias Real = ℝ; implements Numeric(Real) { operation abs = builtin_abs }
+        let mut b = builder_with_aliases(&[("Real", TypeExpr::Named("ℝ".to_string()))]);
+
+        // minimal structure placeholder so register_implements can validate
+        let numeric = StructureDef {
+            name: "Numeric".to_string(),
+            type_params: vec![],
+            members: vec![],
+            extends_clause: None,
+            over_clause: None,
+        };
+        b.structures.insert("Numeric".to_string(), numeric);
+
+        let impl_def = ImplementsDef {
+            structure_name: "Numeric".to_string(),
+            type_args: vec![TypeExpr::Named("Real".to_string())],
+            members: vec![ImplMember::Operation {
+                name: "abs".to_string(),
+                implementation: Implementation::Builtin("builtin_abs".to_string()),
+            }],
+            over_clause: None,
+            where_clause: None,
+        };
+
+        b.register_implements(&impl_def).unwrap();
+
+        // Registry should store the expanded type name (ℝ) implementing Numeric
+        let structures = b.registry.type_to_structures.get("ℝ");
+        assert!(structures.is_some());
+        assert!(structures.unwrap().contains(&"Numeric".to_string()));
     }
 }
