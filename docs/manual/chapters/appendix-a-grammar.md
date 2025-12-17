@@ -113,10 +113,13 @@ match expr {
 
 ### Lambda Expressions
 
+> 🚧 **Coming Soon:** We're working on implementing lambdas!
+
 ```kleis
 \x. body                    // Single parameter
 \x y. body                  // Multiple parameters
 λx. body                    // Unicode lambda
+(\x. x + 1)(5)              // Immediate application
 ```
 
 ### Lists

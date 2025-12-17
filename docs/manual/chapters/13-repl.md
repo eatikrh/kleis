@@ -134,7 +134,7 @@ Loaded 3 definitions
 >>> :type let x = 5 in x + 1
 let x = 5 in x + 1 : ℤ
 
->>> :type \x. x + 1
+>>> :type \x. x + 1      // Coming soon!
 λx. x + 1 : ℤ → ℤ
 ```
 

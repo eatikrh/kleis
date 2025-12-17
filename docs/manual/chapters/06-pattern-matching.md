@@ -347,14 +347,18 @@ define list_last(xs) =
         Cons(_, t) => list_last(t)
     }
 
-// 2.
-define list_reverse(xs) =
-    let aux = \acc xs.
-        match xs {
-            Nil => acc
-            Cons(h, t) => aux(Cons(h, acc), t)
-        }
-    in aux(Nil, xs)
+// 2. Using a helper function (or lambda when available)
+define reverse_helper(acc, xs) =
+    match xs {
+        Nil => acc
+        Cons(h, t) => reverse_helper(Cons(h, acc), t)
+    }
+define list_reverse(xs) = reverse_helper(Nil, xs)
+
+// With lambda (coming soon!):
+// define list_reverse(xs) =
+//     let aux = \acc xs. match xs { Nil => acc | Cons(h,t) => aux(Cons(h,acc), t) }
+//     in aux(Nil, xs)
 
 // 3.
 define option_map(f, opt) =

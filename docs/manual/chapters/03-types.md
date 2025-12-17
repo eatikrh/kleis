@@ -195,11 +195,14 @@ integral : (ℝ → ℝ) → ℝ → ℝ → ℝ
 ### Type Annotations with Functions
 
 ```kleis
-// Annotate a lambda
-let f : ℝ → ℝ = (\x. x^2) in f(5)
-
 // Annotate a higher-order parameter
 define twice(f : A → A, x : A) : A = f(f(x))
+
+// Annotate a lambda (coming soon!)
+let f : ℝ → ℝ = (\x. x^2) in f(5)
+
+// Current alternative: use define
+define square(x : ℝ) : ℝ = x^2
 ```
 
 ---

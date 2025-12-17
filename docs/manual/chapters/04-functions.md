@@ -186,21 +186,53 @@ define compose(f, g, x) = f(g(x))
 
 ## Anonymous Functions (Lambdas)
 
-Create functions without names using `λ` or `\`:
+> 🚧 **Coming Soon:** Lambda expressions are currently being implemented.
+> The syntax below shows what's coming — we're working on it!
+
+Lambda expressions (also called anonymous functions) let you create functions without giving them a name. Use `λ` or `\`:
 
 ```kleis
->>> (\x. x + 1)(5)
-6
-
->>> (λx. x * x)(4)
-16
+\x. x + 1           // A function that adds 1
+λx. x * x           // A function that squares (using Unicode λ)
+\x y. x + y         // Multiple parameters
 ```
 
-### With Multiple Parameters
+### How Lambdas Work
+
+The syntax `\x. body` means "a function that takes `x` and returns `body`":
 
 ```kleis
->>> (\x y. x + y)(3, 4)
-7
+(\x. x + 1)(5)      // Apply to 5 → returns 6
+(λx. x * x)(4)      // Apply to 4 → returns 16
+(\x y. x + y)(3, 4) // Apply to 3, 4 → returns 7
+```
+
+### Why Lambdas Matter
+
+Lambdas are essential for higher-order functions:
+
+```kleis
+// Pass a function to map
+map(\x. x * 2, [1, 2, 3])    // → [2, 4, 6]
+
+// Create functions on the fly
+let double = \x. x + x in double(5)  // → 10
+
+// Function composition
+let f = \x. x + 1 in
+let g = \x. x * 2 in
+f(g(3))  // → 7
+```
+
+### Current Workaround
+
+Until lambdas are implemented, use named functions:
+
+```kleis
+// Instead of: map(\x. x * 2, xs)
+// Use:
+define double(x) = x * 2
+map(double, xs)
 ```
 
 ---
@@ -264,7 +296,7 @@ define sum_to(n) =
 - Use `let` for local definitions
 - Recursion is natural and encouraged
 - Higher-order functions take functions as arguments
-- Lambda expressions create anonymous functions
+- Lambda expressions create anonymous functions (coming soon!)
 
 ---
 
