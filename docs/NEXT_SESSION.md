@@ -319,6 +319,37 @@ In current templates, the tensor name is a placeholder argument (operation name 
 
 ---
 
+## BUG: Tensor Indices Become All Contravariant in Equations (Dec 16, 2025)
+
+**Symptom:** When a tensor is part of an equation (e.g., `□ = R^{μνρσ}`), all indices render as upper (contravariant), even though `EditorNode` contains correct `indexStructure: ['up', 'down', 'down', 'down']`.
+
+**Works:** Tensor alone in AST renders correctly with mixed indices.
+**Broken:** Tensor nested inside `equals` operation loses index variance.
+
+**Root Cause:** In `src/render.rs:6664-6675`, `render_operation` handles tensors specially, BUT for non-tensor operations (like `equals`), it converts children to `Expression` via `editor_node_to_expression`, which **loses** the `kind` and `metadata` fields.
+
+```rust
+// This loses tensor metadata!
+let expr = Expression::Operation {
+    name: op.name.clone(),
+    args: op.args.iter().map(editor_node_to_expression).collect(),  // ← metadata lost here
+};
+```
+
+**Proper Fix:** Full EditorNode rendering architecture:
+1. Make `render_editor_node_internal` handle ALL operations directly
+2. Never convert EditorNode to Expression for rendering
+3. Expression rendering should convert TO EditorNode first, or EditorNode should be primary
+
+**Scope:** ~500-1000 lines refactor of render.rs
+**Workaround:** None (tensors in equations will show all upper indices)
+
+**Files:**
+- `src/render.rs` - `render_operation`, `editor_node_to_expression`
+- `src/editor_ast.rs` - `EditorNode`, `OperationData` (has `kind`, `metadata`)
+
+---
+
 ## TODO: Z3 Axiom Loading from Kleis Files
 
 **Problem:** Tensor axioms are defined in `stdlib/tensors.kleis` but Z3 doesn't know about them.
