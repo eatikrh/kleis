@@ -629,7 +629,197 @@ impl EditorRenderContext {
             "exp({arg})",
         );
 
-        // More will be added as needed...
+        // Additional operations from palette
+        self.add_template(
+            "nth_root",
+            "ⁿ√{radicand}",
+            "\\sqrt[{index}]{{{radicand}}}",
+            "<sup>{index}</sup>√{radicand}",
+            "root({index}, {radicand})",
+            "nth_root({index}, {radicand})",
+        );
+        self.add_template(
+            "binomial",
+            "C({n},{k})",
+            "\\binom{{{n}}}{{{k}}}",
+            "C({n},{k})",
+            "binom({n}, {k})",
+            "binomial({n}, {k})",
+        );
+        self.add_template(
+            "floor",
+            "⌊{x}⌋",
+            "\\lfloor {x} \\rfloor",
+            "⌊{x}⌋",
+            "floor({x})",
+            "floor({x})",
+        );
+        self.add_template(
+            "ceiling",
+            "⌈{x}⌉",
+            "\\lceil {x} \\rceil",
+            "⌈{x}⌉",
+            "ceil({x})",
+            "ceiling({x})",
+        );
+        self.add_template(
+            "approx",
+            "{left} ≈ {right}",
+            "{left} \\approx {right}",
+            "{left} ≈ {right}",
+            "{left} approx {right}",
+            "approx({left}, {right})",
+        );
+        // Logical operators (aliases for and/or/not)
+        self.add_template(
+            "logical_and",
+            "{left} ∧ {right}",
+            "{left} \\land {right}",
+            "{left} ∧ {right}",
+            "{left} and {right}",
+            "and({left}, {right})",
+        );
+        self.add_template(
+            "logical_or",
+            "{left} ∨ {right}",
+            "{left} \\lor {right}",
+            "{left} ∨ {right}",
+            "{left} or {right}",
+            "or({left}, {right})",
+        );
+        self.add_template(
+            "logical_not",
+            "¬{arg}",
+            "\\lnot {arg}",
+            "¬{arg}",
+            "not {arg}",
+            "not({arg})",
+        );
+        // Quantum operations
+        self.add_template(
+            "outer",
+            "|{ket}⟩⟨{bra}|",
+            "|{ket}\\rangle\\langle{bra}|",
+            "|{ket}⟩⟨{bra}|",
+            "ket({ket}) bra({bra})",
+            "outer({ket}, {bra})",
+        );
+        self.add_template(
+            "commutator",
+            "[{A}, {B}]",
+            "[{A}, {B}]",
+            "[{A}, {B}]",
+            "[{A}, {B}]",
+            "commutator({A}, {B})",
+        );
+        self.add_template(
+            "expectation",
+            "⟨{operator}⟩",
+            "\\langle {operator} \\rangle",
+            "⟨{operator}⟩",
+            "angle.l {operator} angle.r",
+            "expectation({operator})",
+        );
+        // Vector operations
+        self.add_template(
+            "vector_bold",
+            "{vector}",
+            "\\mathbf{{{vector}}}",
+            "<b>{vector}</b>",
+            "bold({vector})",
+            "vector({vector})",
+        );
+        self.add_template(
+            "vector_arrow",
+            "{vector}⃗",
+            "\\vec{{{vector}}}",
+            "{vector}⃗",
+            "arrow({vector})",
+            "vector({vector})",
+        );
+        self.add_template(
+            "dot",
+            "{left} · {right}",
+            "{left} \\cdot {right}",
+            "{left} · {right}",
+            "{left} dot {right}",
+            "dot({left}, {right})",
+        );
+        self.add_template(
+            "cross",
+            "{left} × {right}",
+            "{left} \\times {right}",
+            "{left} × {right}",
+            "{left} times {right}",
+            "cross({left}, {right})",
+        );
+        // Bracket types
+        self.add_template(
+            "angle_brackets",
+            "⟨{content}⟩",
+            "\\langle {content} \\rangle",
+            "⟨{content}⟩",
+            "angle.l {content} angle.r",
+            "angle({content})",
+        );
+        // Accents
+        self.add_template(
+            "dot_accent",
+            "{variable}̇",
+            "\\dot{{{variable}}}",
+            "{variable}̇",
+            "dot({variable})",
+            "dot({variable})",
+        );
+        self.add_template(
+            "ddot_accent",
+            "{variable}̈",
+            "\\ddot{{{variable}}}",
+            "{variable}̈",
+            "dot.double({variable})",
+            "ddot({variable})",
+        );
+        // Transforms (placeholder templates - can be enhanced)
+        self.add_template(
+            "fourier_transform",
+            "ℱ[{function}]",
+            "\\mathcal{{F}}[{function}]",
+            "ℱ[{function}]",
+            "cal(F)[{function}]",
+            "fourier({function})",
+        );
+        self.add_template(
+            "inverse_fourier",
+            "ℱ⁻¹[{function}]",
+            "\\mathcal{{F}}^{{-1}}[{function}]",
+            "ℱ⁻¹[{function}]",
+            "cal(F)^(-1)[{function}]",
+            "inverse_fourier({function})",
+        );
+        self.add_template(
+            "laplace_transform",
+            "ℒ[{function}]",
+            "\\mathcal{{L}}[{function}]",
+            "ℒ[{function}]",
+            "cal(L)[{function}]",
+            "laplace({function})",
+        );
+        self.add_template(
+            "inverse_laplace",
+            "ℒ⁻¹[{function}]",
+            "\\mathcal{{L}}^{{-1}}[{function}]",
+            "ℒ⁻¹[{function}]",
+            "cal(L)^(-1)[{function}]",
+            "inverse_laplace({function})",
+        );
+        self.add_template(
+            "convolution",
+            "{f} ∗ {g}",
+            "{f} * {g}",
+            "{f} ∗ {g}",
+            "{f} ast {g}",
+            "convolution({f}, {g})",
+        );
     }
 
     fn add_template(
