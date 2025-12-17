@@ -9,9 +9,9 @@
 
 ## TL;DR
 
-✅ **Parser implements ~75% of formal grammar v0.7, with complete algebraic type system including calculus operators**
+✅ **Parser implements ~80% of formal grammar v0.7, with complete algebraic type system including calculus operators**
 
-**Coverage:** ~75% of formal grammar (+Postfix operators from Dec 17!)  
+**Coverage:** ~80% of formal grammar (prefix operators more complete than previously documented)  
 **Purpose:** Complete algebraic type system with theorem proving, calculus, generic constraints, inheritance, and compositional structures  
 **Status:** Phase 1, 2, 3, 4 COMPLETE! Grammar v0.7 with type aliases, parenthesized types, calculus operators, functions in structures, where clauses, nested structures, extends, and Z3 integration all working  
 **Tests:** 521+ passing unit tests + 17 round-trip tests - ALL RIGOROUS ✅
@@ -281,10 +281,11 @@
 28. ✅ **Postfix operators (`n!`, `Aᵀ`, `A†`)** ⭐ **NEW Dec 17!**
 29. ✅ **Type aliases (`type Name = Type`)** ⭐ Dec 16
 
-**Not Implemented (3):**
+**Not Implemented (2):**
 1. ❌ Lambda expressions (`λ x . x^2`)
 2. ❌ Summation/Product notation (`Σ`, `Π`)
-3. ❌ Additional prefix operators (only `¬`, `-`, `∇`, `∫` currently work)
+
+**Note:** Prefix operators are well-supported: `-`, `¬`, `∇`, `∫`, `∬`, `∭`, `∮`, `∯` (8 total)
 
 **Previously marked missing, now implemented:**
 - ~~Let bindings~~ ✅ **DONE Dec 13!**
@@ -292,8 +293,8 @@
 - ~~Postfix operators~~ ✅ **DONE Dec 17!**
 - ~~Type aliases~~ ✅ **DONE Dec 16!**
 
-**Major Feature Coverage:** 30/32 = **94%** of major constructs (+2 from Dec 17: postfix operators, type aliases fix)  
-**Overall Grammar Coverage:** **~75%** (accounting for all production rules, operators, etc.)
+**Major Feature Coverage:** 30/32 = **94%** of major constructs  
+**Overall Grammar Coverage:** **~80%** (prefix operators more complete than previously documented)
 
 ---
 
