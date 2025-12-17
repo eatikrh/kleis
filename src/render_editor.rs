@@ -404,6 +404,162 @@ impl EditorRenderContext {
             "curl({arg})",
         );
 
+        // Unary operations
+        self.add_template(
+            "negate",
+            "-{arg}",
+            "-{arg}",
+            "-{arg}",
+            "-{arg}",
+            "negate({arg})",
+        );
+        self.add_template(
+            "abs",
+            "|{arg}|",
+            "\\left|{arg}\\right|",
+            "|{arg}|",
+            "abs({arg})",
+            "abs({arg})",
+        );
+        self.add_template(
+            "norm",
+            "‖{arg}‖",
+            "\\left\\|{arg}\\right\\|",
+            "‖{arg}‖",
+            "norm({arg})",
+            "norm({arg})",
+        );
+        self.add_template(
+            "factorial",
+            "{arg}!",
+            "{arg}!",
+            "{arg}!",
+            "{arg}!",
+            "factorial({arg})",
+        );
+
+        // Derivatives
+        self.add_template(
+            "d_dt",
+            "d{num}/d{den}",
+            "\\frac{{\\mathrm{{d}}{num}}}{{\\mathrm{{d}}{den}}}",
+            "d{num}/d{den}",
+            "dif {num} / dif {den}",
+            "Dt({num}, {den})",
+        );
+        self.add_template(
+            "d_part",
+            "∂{num}/∂{den}",
+            "\\frac{{\\partial {num}}}{{\\partial {den}}}",
+            "∂{num}/∂{den}",
+            "diff {num} / diff {den}",
+            "D({num}, {den})",
+        );
+
+        // Limits
+        self.add_template(
+            "lim",
+            "lim_{var}→{target} {body}",
+            "\\lim_{{var} \\to {target}} {body}",
+            "lim<sub>{var}→{target}</sub> {body}",
+            "lim_({var} arrow {target}) {body}",
+            "Limit({body}, {var}, {target})",
+        );
+
+        // Summation and product
+        self.add_template(
+            "sum_bounds",
+            "Σ_{from}^{to} {body}",
+            "\\sum_{{{from}}}^{{{to}}} {body}",
+            "Σ<sub>{from}</sub><sup>{to}</sup> {body}",
+            "sum_({from})^({to}) {body}",
+            "Sum({body}, {from}, {to})",
+        );
+        self.add_template(
+            "prod_bounds",
+            "Π_{from}^{to} {body}",
+            "\\prod_{{{from}}}^{{{to}}} {body}",
+            "Π<sub>{from}</sub><sup>{to}</sup> {body}",
+            "product_({from})^({to}) {body}",
+            "Product({body}, {from}, {to})",
+        );
+
+        // More trig
+        self.add_template(
+            "arcsin",
+            "arcsin({arg})",
+            "\\arcsin\\left({arg}\\right)",
+            "arcsin({arg})",
+            "arcsin({arg})",
+            "arcsin({arg})",
+        );
+        self.add_template(
+            "arccos",
+            "arccos({arg})",
+            "\\arccos\\left({arg}\\right)",
+            "arccos({arg})",
+            "arccos({arg})",
+            "arccos({arg})",
+        );
+        self.add_template(
+            "arctan",
+            "arctan({arg})",
+            "\\arctan\\left({arg}\\right)",
+            "arctan({arg})",
+            "arctan({arg})",
+            "arctan({arg})",
+        );
+        self.add_template(
+            "sinh",
+            "sinh({arg})",
+            "\\sinh\\left({arg}\\right)",
+            "sinh({arg})",
+            "sinh({arg})",
+            "sinh({arg})",
+        );
+        self.add_template(
+            "cosh",
+            "cosh({arg})",
+            "\\cosh\\left({arg}\\right)",
+            "cosh({arg})",
+            "cosh({arg})",
+            "cosh({arg})",
+        );
+        self.add_template(
+            "tanh",
+            "tanh({arg})",
+            "\\tanh\\left({arg}\\right)",
+            "tanh({arg})",
+            "tanh({arg})",
+            "tanh({arg})",
+        );
+
+        // Logarithms
+        self.add_template(
+            "log",
+            "log({arg})",
+            "\\log\\left({arg}\\right)",
+            "log({arg})",
+            "log({arg})",
+            "log({arg})",
+        );
+        self.add_template(
+            "ln",
+            "ln({arg})",
+            "\\ln\\left({arg}\\right)",
+            "ln({arg})",
+            "ln({arg})",
+            "ln({arg})",
+        );
+        self.add_template(
+            "exp",
+            "exp({arg})",
+            "e^{{{arg}}}",
+            "e<sup>{arg}</sup>",
+            "e^({arg})",
+            "exp({arg})",
+        );
+
         // More will be added as needed...
     }
 
@@ -672,8 +828,10 @@ fn render_operation(
     let is_fixed_matrix = op.name.starts_with("matrix")
         || op.name.starts_with("pmatrix")
         || op.name.starts_with("vmatrix");
+    let is_piecewise =
+        op.name == "Piecewise" || op.name == "cases2" || op.name == "cases3" || op.name == "cases";
 
-    // For matrix constructors, extract dimensions first
+    // For matrix constructors
     if is_matrix_constructor {
         return render_matrix_constructor(op, ctx, target, node_id, node_id_to_uuid);
     }
@@ -681,6 +839,11 @@ fn render_operation(
     // For fixed-size matrices (matrix2x2, pmatrix3x3, etc.)
     if is_fixed_matrix {
         return render_fixed_matrix(op, ctx, target, node_id, node_id_to_uuid);
+    }
+
+    // For piecewise functions
+    if is_piecewise {
+        return render_piecewise(op, ctx, target, node_id, node_id_to_uuid);
     }
 
     // Pre-render ALL children as EditorNode (preserves metadata!)
@@ -985,10 +1148,7 @@ fn render_matrix_content(
                     content.push_str("; ");
                 }
             }
-            format!(
-                "mat(delim: \"{}{}\", {})",
-                left_delim, right_delim, content
-            )
+            format!("mat(delim: \"{}{}\", {})", left_delim, right_delim, content)
         }
 
         RenderTarget::HTML => {
@@ -1062,6 +1222,161 @@ fn parse_matrix_dimensions(name: &str) -> Option<(usize, usize)> {
         Some((rows, cols))
     } else {
         None
+    }
+}
+
+// =============================================================================
+// Piecewise Function Rendering
+// =============================================================================
+
+/// Render piecewise functions (cases2, cases3, Piecewise)
+fn render_piecewise(
+    op: &OperationData,
+    ctx: &EditorRenderContext,
+    target: &RenderTarget,
+    node_id: &str,
+    node_id_to_uuid: &HashMap<String, String>,
+) -> String {
+    match op.name.as_str() {
+        "cases2" => render_cases_n(op, ctx, target, node_id, node_id_to_uuid, 2),
+        "cases3" => render_cases_n(op, ctx, target, node_id, node_id_to_uuid, 3),
+        "Piecewise" => render_piecewise_constructor(op, ctx, target, node_id, node_id_to_uuid),
+        _ => render_cases_n(op, ctx, target, node_id, node_id_to_uuid, 2), // default
+    }
+}
+
+/// Render cases2/cases3 format: (expr1, cond1, expr2, cond2, ...)
+fn render_cases_n(
+    op: &OperationData,
+    ctx: &EditorRenderContext,
+    target: &RenderTarget,
+    node_id: &str,
+    node_id_to_uuid: &HashMap<String, String>,
+    n_cases: usize,
+) -> String {
+    // Args are interleaved: expr1, cond1, expr2, cond2, ...
+    let mut cases: Vec<(String, String)> = Vec::new();
+
+    for i in 0..n_cases {
+        let expr_idx = i * 2;
+        let cond_idx = i * 2 + 1;
+
+        let expr = if let Some(e) = op.args.get(expr_idx) {
+            let child_id = format!("{}.{}", node_id, expr_idx);
+            render_internal(e, ctx, target, &child_id, node_id_to_uuid)
+        } else {
+            "□".to_string()
+        };
+
+        let cond = if let Some(c) = op.args.get(cond_idx) {
+            let child_id = format!("{}.{}", node_id, cond_idx);
+            render_internal(c, ctx, target, &child_id, node_id_to_uuid)
+        } else {
+            "□".to_string()
+        };
+
+        cases.push((expr, cond));
+    }
+
+    render_cases_content(&cases, target)
+}
+
+/// Render Piecewise(n, [exprs...], [conds...]) format
+fn render_piecewise_constructor(
+    op: &OperationData,
+    ctx: &EditorRenderContext,
+    target: &RenderTarget,
+    node_id: &str,
+    node_id_to_uuid: &HashMap<String, String>,
+) -> String {
+    // Format: Piecewise(n, [expr1, expr2, ...], [cond1, cond2, ...])
+    let n_cases = if let Some(EditorNode::Const { value }) = op.args.first() {
+        value.parse::<usize>().unwrap_or(2)
+    } else {
+        2
+    };
+
+    // Get expressions list
+    let exprs: Vec<&EditorNode> = if let Some(EditorNode::List { list }) = op.args.get(1) {
+        list.iter().collect()
+    } else {
+        vec![]
+    };
+
+    // Get conditions list
+    let conds: Vec<&EditorNode> = if let Some(EditorNode::List { list }) = op.args.get(2) {
+        list.iter().collect()
+    } else {
+        vec![]
+    };
+
+    let mut cases: Vec<(String, String)> = Vec::new();
+
+    for i in 0..n_cases {
+        let expr = if let Some(e) = exprs.get(i) {
+            let child_id = format!("{}.1.{}", node_id, i);
+            render_internal(e, ctx, target, &child_id, node_id_to_uuid)
+        } else {
+            "□".to_string()
+        };
+
+        let cond = if let Some(c) = conds.get(i) {
+            let child_id = format!("{}.2.{}", node_id, i);
+            render_internal(c, ctx, target, &child_id, node_id_to_uuid)
+        } else {
+            "□".to_string()
+        };
+
+        cases.push((expr, cond));
+    }
+
+    render_cases_content(&cases, target)
+}
+
+/// Render cases content for all targets
+fn render_cases_content(cases: &[(String, String)], target: &RenderTarget) -> String {
+    match target {
+        RenderTarget::LaTeX => {
+            let mut content = String::from("\\begin{cases}\n");
+            for (expr, cond) in cases {
+                content.push_str(&format!("  {} & \\text{{if }} {} \\\\\n", expr, cond));
+            }
+            content.push_str("\\end{cases}");
+            content
+        }
+
+        RenderTarget::Typst => {
+            let mut content = String::from("cases(\n");
+            for (i, (expr, cond)) in cases.iter().enumerate() {
+                if i > 0 {
+                    content.push_str(",\n");
+                }
+                content.push_str(&format!("  {} \"if\" {}", expr, cond));
+            }
+            content.push_str("\n)");
+            content
+        }
+
+        RenderTarget::HTML => {
+            let mut content = String::from("<table class=\"cases\">");
+            for (expr, cond) in cases {
+                content.push_str(&format!("<tr><td>{}</td><td>if {}</td></tr>", expr, cond));
+            }
+            content.push_str("</table>");
+            content
+        }
+
+        RenderTarget::Unicode | RenderTarget::Kleis => {
+            let mut content = String::from("{ ");
+            for (i, (expr, cond)) in cases.iter().enumerate() {
+                if i > 0 {
+                    content.push_str("; ");
+                }
+                content.push_str(&format!("{} if {}", expr, cond));
+            }
+            content.push_str(" }");
+            content
+        }
     }
 }
 
@@ -1363,5 +1678,84 @@ mod tests {
         assert!(result.contains("a"));
         assert!(result.contains("b"));
         assert!(result.contains("c"));
+    }
+
+    #[test]
+    fn test_render_cases2_latex() {
+        let ctx = EditorRenderContext::new();
+        // |x| = { x if x >= 0; -x if x < 0 }
+        let node = EditorNode::operation(
+            "cases2",
+            vec![
+                EditorNode::object("x"),
+                EditorNode::operation(
+                    "geq",
+                    vec![EditorNode::object("x"), EditorNode::constant("0")],
+                ),
+                EditorNode::operation("negate", vec![EditorNode::object("x")]),
+                EditorNode::operation(
+                    "lt",
+                    vec![EditorNode::object("x"), EditorNode::constant("0")],
+                ),
+            ],
+        );
+        let result = render(&node, &ctx, &RenderTarget::LaTeX);
+        assert!(result.contains("\\begin{cases}"));
+        assert!(result.contains("\\end{cases}"));
+    }
+
+    #[test]
+    fn test_render_cases3_unicode() {
+        let ctx = EditorRenderContext::new();
+        // sign(x) = { 1 if x > 0; 0 if x = 0; -1 if x < 0 }
+        let node = EditorNode::operation(
+            "cases3",
+            vec![
+                EditorNode::constant("1"),
+                EditorNode::operation(
+                    "gt",
+                    vec![EditorNode::object("x"), EditorNode::constant("0")],
+                ),
+                EditorNode::constant("0"),
+                EditorNode::operation(
+                    "equals",
+                    vec![EditorNode::object("x"), EditorNode::constant("0")],
+                ),
+                EditorNode::operation("negate", vec![EditorNode::constant("1")]),
+                EditorNode::operation(
+                    "lt",
+                    vec![EditorNode::object("x"), EditorNode::constant("0")],
+                ),
+            ],
+        );
+        let result = render(&node, &ctx, &RenderTarget::Unicode);
+        assert!(result.contains("1"));
+        assert!(result.contains("0"));
+        assert!(result.contains("if"));
+    }
+
+    #[test]
+    fn test_render_sqrt_latex() {
+        let ctx = EditorRenderContext::new();
+        let node = EditorNode::operation("sqrt", vec![EditorNode::object("x")]);
+        let result = render(&node, &ctx, &RenderTarget::LaTeX);
+        assert!(result.contains("\\sqrt"));
+    }
+
+    #[test]
+    fn test_render_integral_latex() {
+        let ctx = EditorRenderContext::new();
+        // ∫_0^1 x dx
+        let node = EditorNode::operation(
+            "int_bounds",
+            vec![
+                EditorNode::object("x"),
+                EditorNode::constant("0"),
+                EditorNode::constant("1"),
+                EditorNode::object("x"),
+            ],
+        );
+        let result = render(&node, &ctx, &RenderTarget::LaTeX);
+        assert!(result.contains("\\int"));
     }
 }
