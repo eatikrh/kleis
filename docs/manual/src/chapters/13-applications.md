@@ -169,8 +169,9 @@ structure LagrangianMechanics(n : ℕ) {
     operation lagrangian : ℝ
     
     // Euler-Lagrange equations
+    // Using Mathematica-style: Dt for total derivative, D for partial
     axiom euler_lagrange : ∀ i : ℕ . i < n →
-        d/dt(∂L/∂q_dot(i)) = ∂L/∂q(i)
+        Dt(D(lagrangian, q_dot(i)), t) = D(lagrangian, q(i))
 }
 ```
 
