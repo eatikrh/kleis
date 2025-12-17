@@ -78,7 +78,7 @@
 - Implication: `p ⟹ q` (IMPLIES)
 - Proper precedence chain
 
-**Total Major Features:** ~29 supported ✅ (+3 from Dec 17: typed let bindings, type ascription, postfix operators; +2 from Dec 13: conditionals, let bindings; +12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
+**Total Major Features:** ~30 supported ✅ (+3 from Dec 17: typed let bindings, type ascription, postfix operators; +2 from Dec 16: type aliases, parenthesized types; +2 from Dec 13: conditionals, let bindings; +12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
 
 ---
 
@@ -279,18 +279,20 @@
 26. ✅ **Let bindings (`let x = 5 in x + x`)** ⭐ Dec 13
 27. ✅ **Typed let bindings (`let x : ℝ = 5 in x^2`)** ⭐ **NEW Dec 17!**
 28. ✅ **Postfix operators (`n!`, `Aᵀ`, `A†`)** ⭐ **NEW Dec 17!**
+29. ✅ **Type aliases (`type Name = Type`)** ⭐ Dec 16
 
-**Not Implemented (2):**
-1. ❌ Prefix operators (general - only `¬`, `-`, `∇`, `∫` work)
-2. ❌ Lambda expressions
-4. ~~❌ Let bindings~~ ✅ **DONE Dec 13!**
-5. ~~❌ Conditionals (if/then/else)~~ ✅ **DONE Dec 13!**
-6. ✅ Type annotations (in let bindings, define, structures, quantifiers)
-7. ✅ Symbolic constants (defined in stdlib, not language - see ADR-016)
-8. ❌ Type aliases
-9. ❌ Summation/Product notation (Σ, Π)
+**Not Implemented (3):**
+1. ❌ Lambda expressions (`λ x . x^2`)
+2. ❌ Summation/Product notation (`Σ`, `Π`)
+3. ❌ Additional prefix operators (only `¬`, `-`, `∇`, `∫` currently work)
 
-**Major Feature Coverage:** 29/31 = **94%** of major constructs (+1 from Dec 17: postfix operators)  
+**Previously marked missing, now implemented:**
+- ~~Let bindings~~ ✅ **DONE Dec 13!**
+- ~~Conditionals (if/then/else)~~ ✅ **DONE Dec 13!**
+- ~~Postfix operators~~ ✅ **DONE Dec 17!**
+- ~~Type aliases~~ ✅ **DONE Dec 16!**
+
+**Major Feature Coverage:** 30/32 = **94%** of major constructs (+2 from Dec 17: postfix operators, type aliases fix)  
 **Overall Grammar Coverage:** **~75%** (accounting for all production rules, operators, etc.)
 
 ---
