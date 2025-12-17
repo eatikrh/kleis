@@ -5343,4 +5343,34 @@ mod tests {
             panic!("Expected Lambda expression, got {:?}", result);
         }
     }
+
+    #[test]
+    fn test_parse_define_with_lambda() {
+        // define add = λ x . λ y . x + y (curried function definition)
+        let code = "define add = λ x . λ y . x + y";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "add");
+        assert!(result.params.is_empty()); // No traditional params, lambda captures them
+
+        // Body should be a lambda
+        if let Expression::Lambda { params, body } = result.body {
+            assert_eq!(params.len(), 1);
+            assert_eq!(params[0].name, "x");
+            // Inner body should be another lambda
+            if let Expression::Lambda {
+                params: inner_params,
+                ..
+            } = *body
+            {
+                assert_eq!(inner_params.len(), 1);
+                assert_eq!(inner_params[0].name, "y");
+            } else {
+                panic!("Expected nested Lambda");
+            }
+        } else {
+            panic!("Expected Lambda expression, got {:?}", result.body);
+        }
+    }
 }
