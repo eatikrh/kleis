@@ -4,13 +4,13 @@
 
 The basic conditional expression:
 
-```text
+```kleis
 if condition then value1 else value2
 ```
 
 Examples:
 
-```text
+```kleis
 define positive_check(x) = if x > 0 then "positive" else "non-positive"
 
 define factorial(n) = if n = 0 then 1 else n * factorial(n - 1)
@@ -22,7 +22,7 @@ define abs(x) = if x ≥ 0 then x else -x
 
 In Kleis, `if-then-else` is an expression that returns a value:
 
-```text
+```kleis
 define doubled_abs(x) =
     let result = if x > 0 then x else -x in
     result * 2
@@ -33,7 +33,7 @@ define doubled_abs(x) =
 
 ## Nested Conditionals
 
-```text
+```kleis
 define sign(x) =
     if x > 0 then 1
     else if x < 0 then -1
@@ -51,7 +51,7 @@ define grade(score) =
 
 Pattern matching with guards is often cleaner:
 
-```text
+```kleis
 // With if-then-else
 define classify_if(n) =
     if n < 0 then "negative"
@@ -71,7 +71,7 @@ define classify_match(n) =
 
 Mathematicians love piecewise definitions:
 
-```text
+```kleis
 // Absolute value
 define abs_fn(x) =
     if x ≥ 0 then x else -x
@@ -93,7 +93,7 @@ define piecewise_f(x) =
 
 Conditions can be complex:
 
-```text
+```kleis
 define quadrant(x, y) =
     if x > 0 ∧ y > 0 then "first quadrant"
     else if x < 0 ∧ y > 0 then "second quadrant"
@@ -106,7 +106,7 @@ define quadrant(x, y) =
 
 Kleis uses short-circuit evaluation for `∧` and `∨`:
 
-```text
+```kleis
 // If x = 0, division is never evaluated
 define check_ratio(x, y) =
     if x ≠ 0 ∧ y/x > 1 then "big ratio" else "safe"

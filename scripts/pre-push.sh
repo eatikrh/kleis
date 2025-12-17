@@ -72,11 +72,25 @@ fi
 echo "✅ All tests passed"
 echo ""
 
+# Gate 4: Validate manual examples
+echo "4️⃣  Validating manual documentation examples..."
+if ! python3 scripts/validate_manual_examples.py 2>&1 | tee /tmp/kleis_manual_output.txt | grep -q "All.*files passed"; then
+    echo ""
+    echo "❌ Manual validation failed!"
+    echo "   Some documentation examples have issues"
+    echo "   Run: python3 scripts/validate_manual_examples.py"
+    echo ""
+    exit 1
+fi
+echo "✅ Manual examples validated"
+echo ""
+
 echo "🎉 All quality gates passed! Proceeding with push..."
 echo ""
 echo "📊 Summary:"
 echo "   • Code formatted correctly"
 echo "   • Clippy completed"
 echo "   • All tests passing (unit + integration)"
+echo "   • Manual examples validated"
 echo ""
 

@@ -4,7 +4,7 @@
 
 Functions are defined with `define`:
 
-```text
+```kleis
 define square(x) = x * x
 define cube(x) = x * x * x
 define add(x, y) = x + y
@@ -14,7 +14,7 @@ define add(x, y) = x + y
 
 For clarity and safety, add type annotations:
 
-```text
+```kleis
 define square(x : ℝ) : ℝ = x * x
 
 define distance(x : ℝ, y : ℝ) : ℝ = sqrt(x^2 + y^2)
@@ -26,7 +26,7 @@ define normalize(v : Vector(3)) : Vector(3) = v / magnitude(v)
 
 Functions can take multiple parameters:
 
-```text
+```kleis
 define add(x, y) = x + y
 define volume_box(l, w, h) = l * w * h
 define dot_product(a, b, c, x, y, z) = a*x + b*y + c*z
@@ -36,7 +36,7 @@ define dot_product(a, b, c, x, y, z) = a*x + b*y + c*z
 
 Functions can call themselves:
 
-```text
+```kleis
 define factorial(n : ℕ) : ℕ =
     if n = 0 then 1
     else n * factorial(n - 1)
@@ -51,14 +51,14 @@ define fibonacci(n : ℕ) : ℕ =
 Kleis includes standard mathematical functions:
 
 ### Trigonometric
-```text
+```kleis
 sin(x)      cos(x)      tan(x)
 asin(x)     acos(x)     atan(x)
 sinh(x)     cosh(x)     tanh(x)
 ```
 
 ### Exponential and Logarithmic
-```text
+```kleis
 exp(x)      // e^x
 ln(x)       // natural log
 log(x)      // base-10 log
@@ -66,7 +66,7 @@ log(b, x)   // log base b of x
 ```
 
 ### Other
-```text
+```kleis
 sqrt(x)     // square root
 abs(x)      // absolute value
 floor(x)    // round down
@@ -79,7 +79,7 @@ max(x, y)   // maximum
 
 Lambda expressions allow you to create anonymous functions inline:
 
-```text
+```kleis
 define square_lambda = λ x . x * x
 define increment = lambda x . x + 1
 define add_lambda = λ x . λ y . x + y
@@ -89,7 +89,7 @@ define curried_add = λ x . λ y . x + y
 
 Lambda expressions are first-class values - you can pass them to functions:
 
-```text
+```kleis
 // Pass lambda to higher-order function
 define doubled_list = map(λ x . x * 2, [1, 2, 3])
 
@@ -101,7 +101,7 @@ define result = apply(λ x . x + 1, 5)
 
 Functions can take functions as arguments:
 
-```text
+```kleis
 // Apply a function twice
 define apply_twice(f, x) = f(f(x))
 
@@ -114,7 +114,7 @@ define result = apply_twice(inc, 5)   // Result: 7
 
 With lambda expressions, you can create curried functions:
 
-```text
+```kleis
 // Curried addition
 define add = λ x . λ y . x + y
 

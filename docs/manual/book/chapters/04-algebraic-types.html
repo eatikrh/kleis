@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-708a4678.js";
+            window.path_to_searchindex_js = "../searchindex-999a887c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -204,45 +204,45 @@ structure Person {
 <h2 id="sum-types-variants"><a class="header" href="#sum-types-variants">Sum Types (Variants)</a></h2>
 <p>A sum type represents alternatives:</p>
 <pre><code class="language-kleis">// A shape is a Circle OR a Rectangle OR a Triangle
-enum Shape {
+data Shape {
     Circle(radius : ℝ)
     Rectangle(width : ℝ, height : ℝ)
     Triangle(a : ℝ, b : ℝ, c : ℝ)
 }
 
 // An optional value is Some(value) OR None
-enum Option(T) {
+data Option(T) {
     Some(value : T)
     None
 }
 
 // A result is Ok(value) OR Err(message)
-enum Result(T, E) {
+data Result(T, E) {
     Ok(value : T)
     Err(error : E)
 }
 </code></pre>
 <h2 id="pattern-matching-with-adts"><a class="header" href="#pattern-matching-with-adts">Pattern Matching with ADTs</a></h2>
 <p>ADTs shine with pattern matching:</p>
-<pre><code class="language-kleis">define area(shape : Shape) : ℝ =
+<pre><code class="language-kleis">define area(shape) =
     match shape {
         Circle(r) =&gt; π * r^2
         Rectangle(w, h) =&gt; w * h
         Triangle(a, b, c) =&gt; 
             let s = (a + b + c) / 2 in
-            sqrt(s * (s-a) * (s-b) * (s-c))  // Heron's formula
+            sqrt(s * (s-a) * (s-b) * (s-c))
     }
 </code></pre>
 <h2 id="recursive-types"><a class="header" href="#recursive-types">Recursive Types</a></h2>
 <p>Types can refer to themselves:</p>
 <pre><code class="language-kleis">// A list is either empty (Nil) or a value followed by another list (Cons)
-enum List(T) {
+data List(T) {
     Nil
     Cons(head : T, tail : List(T))
 }
 
 // A binary tree
-enum Tree(T) {
+data Tree(T) {
     Leaf(value : T)
     Node(left : Tree(T), value : T, right : Tree(T))
 }
@@ -261,7 +261,7 @@ enum Tree(T) {
 </ul>
 <h2 id="practical-example-expression-trees"><a class="header" href="#practical-example-expression-trees">Practical Example: Expression Trees</a></h2>
 <p>ADTs are perfect for representing mathematical expressions:</p>
-<pre><code class="language-kleis">enum Expr {
+<pre><code class="language-kleis">data Expr {
     Const(value : ℝ)
     Var(name : String)
     Add(left : Expr, right : Expr)
@@ -269,8 +269,7 @@ enum Tree(T) {
     Neg(inner : Expr)
 }
 
-// Evaluate an expression given variable values
-define eval(expr : Expr, env : Map(String, ℝ)) : ℝ =
+define eval(expr, env) =
     match expr {
         Const(v) =&gt; v
         Var(name) =&gt; lookup(env, name)

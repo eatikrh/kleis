@@ -4,7 +4,7 @@
 
 Structures define mathematical objects with their properties and operations. Think of them as "blueprints" for mathematical concepts.
 
-```text
+```kleis
 structure Vector(n : ℕ) {
     // Operations this structure supports
     operation add : Vector(n) → Vector(n)
@@ -19,7 +19,7 @@ structure Vector(n : ℕ) {
 
 ## Structure Syntax
 
-```text
+```kleis
 structure Name(parameters) {
     // Fields (data) - no "field" keyword needed
     field1 : Type1
@@ -35,7 +35,7 @@ structure Name(parameters) {
 
 ## Example: Complex Numbers
 
-```text
+```kleis
 structure Complex {
     re : ℝ  // real part
     im : ℝ  // imaginary part
@@ -60,7 +60,7 @@ structure Complex {
 
 Structures can have type parameters:
 
-```text
+```kleis
 structure Matrix(m : ℕ, n : ℕ, T) {
     operation transpose : Matrix(n, m, T)
     operation add : Matrix(m, n, T) → Matrix(m, n, T)
@@ -84,7 +84,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 
 Structures can contain other structures. This enables compositional algebra — defining complex structures from simpler parts:
 
-```text
+```kleis
 structure Ring(R) {
     // A ring has an additive group
     structure additive : AbelianGroup(R) {
@@ -107,7 +107,7 @@ structure Ring(R) {
 
 Nested structures can go arbitrarily deep:
 
-```text
+```kleis
 structure VectorSpace(V, F) {
     structure vectors : AbelianGroup(V) {
         operation add : V × V → V
@@ -129,7 +129,7 @@ When using Z3 verification, axioms from nested structures are automatically avai
 
 Structures can extend other structures:
 
-```text
+```kleis
 structure Monoid(M) {
     e : M
     operation mul : M × M → M
@@ -154,7 +154,7 @@ structure AbelianGroup(G) extends Group(G) {
 
 Constrain type parameters:
 
-```text
+```kleis
 structure VectorSpace(V, F) where F : Field {
     operation add : V × V → V
     operation scale : F × V → V
@@ -168,7 +168,7 @@ structure VectorSpace(V, F) where F : Field {
 
 Many mathematical structures are defined "over" a base structure. A vector space is defined over a field, a module over a ring:
 
-```text
+```kleis
 // Vector space over a field
 structure VectorSpace(V) over Field(F) {
     operation add : V × V → V
@@ -202,7 +202,7 @@ When you use `over`, Kleis automatically makes the base structure's axioms avail
 
 Kleis shines for differential geometry:
 
-```text
+```kleis
 structure Manifold(M, dim : ℕ) {
     operation tangent : M → TangentSpace(M)
     operation metric : M → Tensor(0, 2)

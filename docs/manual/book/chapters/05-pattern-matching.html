@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-708a4678.js";
+            window.path_to_searchindex_js = "../searchindex-999a887c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -183,68 +183,75 @@
                         <h1 id="pattern-matching"><a class="header" href="#pattern-matching">Pattern Matching</a></h1>
 <h2 id="the-power-of-match"><a class="header" href="#the-power-of-match">The Power of Match</a></h2>
 <p>Pattern matching is one of Kleis’s most powerful features. It lets you destructure data and handle different cases elegantly:</p>
-<pre><code class="language-kleis">define describe(n : ℤ) : String =
+<pre><code class="language-kleis">define describe(n) =
     match n {
-        0 =&gt; "zero"
-        1 =&gt; "one"
-        _ =&gt; "many"
+        0 =&gt; 0
+        1 =&gt; 1
+        _ =&gt; 2
     }
 </code></pre>
 <h2 id="basic-patterns"><a class="header" href="#basic-patterns">Basic Patterns</a></h2>
 <h3 id="literal-patterns"><a class="header" href="#literal-patterns">Literal Patterns</a></h3>
 <p>Match exact values:</p>
-<pre><code class="language-kleis">match x {
-    0 =&gt; "zero"
-    1 =&gt; "one"
-    42 =&gt; "the answer"
-    _ =&gt; "something else"
-}
+<pre><code class="language-kleis">define describe_literal(x) =
+    match x {
+        0 =&gt; "zero"
+        1 =&gt; "one"
+        42 =&gt; "the answer"
+        _ =&gt; "something else"
+    }
 </code></pre>
 <h3 id="variable-patterns"><a class="header" href="#variable-patterns">Variable Patterns</a></h3>
 <p>Bind matched values to names:</p>
-<pre><code class="language-kleis">match point {
-    Point(x, y) =&gt; x + y  // x and y are bound
-}
+<pre><code class="language-kleis">define sum_point(point) =
+    match point {
+        Point(x, y) =&gt; x + y
+    }
 </code></pre>
 <h3 id="wildcard-pattern"><a class="header" href="#wildcard-pattern">Wildcard Pattern</a></h3>
 <p>The underscore <code>_</code> matches anything:</p>
-<pre><code class="language-kleis">match pair {
-    (_, 0) =&gt; "second is zero"
-    (0, _) =&gt; "first is zero"
-    _ =&gt; "neither is zero"
-}
+<pre><code class="language-kleis">define describe_pair(pair) =
+    match pair {
+        (_, 0) =&gt; "second is zero"
+        (0, _) =&gt; "first is zero"
+        _ =&gt; "neither is zero"
+    }
 </code></pre>
 <h2 id="nested-patterns"><a class="header" href="#nested-patterns">Nested Patterns</a></h2>
 <p>Patterns can be nested arbitrarily:</p>
-<pre><code class="language-kleis">match tree {
-    Leaf(v) =&gt; v
-    Node(Leaf(l), v, Leaf(r)) =&gt; l + v + r  // Both children are leaves
-    Node(left, v, right) =&gt; v + sum(left) + sum(right)
-}
+<pre><code class="language-kleis">define sum_tree(tree) =
+    match tree {
+        Leaf(v) =&gt; v
+        Node(Leaf(l), v, Leaf(r)) =&gt; l + v + r
+        Node(left, v, right) =&gt; v + sum_tree(left) + sum_tree(right)
+    }
 </code></pre>
 <h2 id="guards"><a class="header" href="#guards">Guards</a></h2>
 <p>Add conditions to patterns with <code>if</code>:</p>
-<pre><code class="language-kleis">match n {
-    x if x &lt; 0 =&gt; "negative"
-    x if x &gt; 0 =&gt; "positive"
-    _ =&gt; "zero"
-}
+<pre><code class="language-kleis">define sign(n) =
+    match n {
+        x if x &lt; 0 =&gt; "negative"
+        x if x &gt; 0 =&gt; "positive"
+        _ =&gt; "zero"
+    }
 </code></pre>
 <h2 id="as-patterns"><a class="header" href="#as-patterns">As-Patterns</a></h2>
 <p>Bind the whole match while also destructuring:</p>
-<pre><code class="language-kleis">match list {
-    Cons(h, t) as whole =&gt; 
-        if h &gt; 10 then whole
-        else t
-}
+<pre><code class="language-kleis">define filter_head(list) =
+    match list {
+        Cons(h, t) as whole =&gt; 
+            if h &gt; 10 then whole
+            else t
+        Nil =&gt; Nil
+    }
 </code></pre>
 <h2 id="pattern-matching-in-let"><a class="header" href="#pattern-matching-in-let">Pattern Matching in Let</a></h2>
 <p>Destructure directly in let bindings:</p>
-<pre><code class="language-kleis">let Point(x, y) = origin in
-    x^2 + y^2
+<pre><code class="language-kleis">define distance_squared(origin) =
+    let Point(x, y) = origin in x^2 + y^2
 
-let (first, second, _) = triple in
-    first + second
+define sum_first_two(triple) =
+    let (first, second, _) = triple in first + second
 </code></pre>
 <h2 id="pattern-matching-in-function-parameters"><a class="header" href="#pattern-matching-in-function-parameters">Pattern Matching in Function Parameters</a></h2>
 <p>With lambda expressions now available, you can combine them with match:</p>
@@ -261,20 +268,21 @@ define snd = λ pair . match pair { (_, b) =&gt; b }
 <h2 id="exhaustiveness"><a class="header" href="#exhaustiveness">Exhaustiveness</a></h2>
 <p>Kleis checks that your patterns cover all cases:</p>
 <pre><code class="language-kleis">// ⚠️ Warning: non-exhaustive patterns
-match opt {
-    Some(x) =&gt; x
-    // Missing: None case!
-}
+define incomplete(opt) =
+    match opt {
+        Some(x) =&gt; x
+    }
 
 // ✓ Complete
-match opt {
-    Some(x) =&gt; x
-    None =&gt; 0
-}
+define complete(opt) =
+    match opt {
+        Some(x) =&gt; x
+        None =&gt; 0
+    }
 </code></pre>
 <h2 id="real-world-example-symbolic-differentiation"><a class="header" href="#real-world-example-symbolic-differentiation">Real-World Example: Symbolic Differentiation</a></h2>
 <p>Pattern matching makes symbolic math elegant:</p>
-<pre><code class="language-kleis">define diff(expr : Expr, var : String) : Expr =
+<pre><code class="language-kleis">define diff(expr, var) =
     match expr {
         Const(_) =&gt; Const(0)
         
@@ -285,7 +293,7 @@ match opt {
         Add(f, g) =&gt; 
             Add(diff(f, var), diff(g, var))
         
-        Mul(f, g) =&gt;  // Product rule
+        Mul(f, g) =&gt;
             Add(Mul(diff(f, var), g), 
                 Mul(f, diff(g, var)))
         

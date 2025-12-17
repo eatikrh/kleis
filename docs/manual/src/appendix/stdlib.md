@@ -6,7 +6,7 @@ The Kleis standard library provides foundational types, structures, and operatio
 
 ### Numeric Types
 
-```text
+```kleis
 // These are primitive types built into Kleis:
 ℕ  (or Nat)      // Natural numbers (0, 1, 2, ...)
 ℤ  (or Int)      // Integers (..., -1, 0, 1, ...)
@@ -16,13 +16,13 @@ The Kleis standard library provides foundational types, structures, and operatio
 
 ### Boolean Type
 
-```text
+```kleis
 Bool  // True or False
 ```
 
 ### Unit Type
 
-```text
+```kleis
 Unit  // Single value: ()
 ```
 
@@ -30,7 +30,7 @@ Unit  // Single value: ()
 
 ### List
 
-```text
+```kleis
 structure List(T) {
     operation head : T
     operation tail : List(T)
@@ -43,7 +43,7 @@ structure List(T) {
 
 ### Vector
 
-```text
+```kleis
 structure Vector(n : ℕ, T) {
     operation get : ℕ → T
     operation length : ℕ
@@ -55,7 +55,7 @@ structure Vector(n : ℕ, T) {
 
 ### Matrix
 
-```text
+```kleis
 structure Matrix(m : ℕ, n : ℕ, T) {
     operation get : ℕ × ℕ → T
     operation rows : ℕ
@@ -77,7 +77,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 
 ### Monoid
 
-```text
+```kleis
 structure Monoid(M) {
     e : M                         // Identity element
     operation mul : M × M → M     // Binary operation
@@ -91,7 +91,7 @@ structure Monoid(M) {
 
 ### Group
 
-```text
+```kleis
 structure Group(G) extends Monoid(G) {
     operation inv : G → G         // Inverse
     
@@ -102,7 +102,7 @@ structure Group(G) extends Monoid(G) {
 
 ### Ring
 
-```text
+```kleis
 structure Ring(R) {
     operation zero : R
     operation one : R
@@ -118,7 +118,7 @@ structure Ring(R) {
 
 ### Field
 
-```text
+```kleis
 structure Field(F) extends Ring(F) {
     operation inv : F → F  // Multiplicative inverse (for non-zero)
     
@@ -129,7 +129,7 @@ structure Field(F) extends Ring(F) {
 
 ### Vector Space
 
-```text
+```kleis
 structure VectorSpace(V, F) where F : Field {
     operation add : V × V → V
     operation scale : F × V → V
@@ -145,7 +145,7 @@ structure VectorSpace(V, F) where F : Field {
 
 ### Metric Space
 
-```text
+```kleis
 structure MetricSpace(M) {
     operation distance : M × M → ℝ
     
@@ -159,7 +159,7 @@ structure MetricSpace(M) {
 
 ### Manifold
 
-```text
+```kleis
 structure Manifold(M, dim : ℕ) {
     operation tangent : M → TangentSpace(dim)
     operation chart : M → Vector(dim, ℝ)  // Local coordinates
@@ -168,7 +168,7 @@ structure Manifold(M, dim : ℕ) {
 
 ### Riemannian Manifold
 
-```text
+```kleis
 structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
     operation metric : M → Matrix(dim, dim, ℝ)
     operation christoffel : M → Tensor(1, 2)
@@ -182,7 +182,7 @@ structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
 
 ### Option
 
-```text
+```kleis
 data Option(T) {
     Some(value : T)
     None
@@ -204,7 +204,7 @@ define unwrap_or(opt, default) =
 
 ### Result
 
-```text
+```kleis
 data Result(T, E) {
     Ok(value : T)
     Err(error : E)
@@ -235,7 +235,7 @@ Loaded standard library.
 
 In files:
 
-```text
+```kleis
 import stdlib.prelude
 import stdlib.linear_algebra
 import stdlib.differential_geometry

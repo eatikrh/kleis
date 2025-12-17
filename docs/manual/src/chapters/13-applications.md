@@ -4,7 +4,7 @@
 
 Kleis excels at differential geometry calculations:
 
-```text
+```kleis
 // Christoffel symbols for spherical coordinates
 structure SphericalMetric {
     operation metric : (ℝ, ℝ) → Matrix(2, 2, ℝ)
@@ -28,7 +28,7 @@ implements SphericalMetric {
 
 ## Tensor Calculus
 
-```text
+```kleis
 // Einstein field equations
 structure EinsteinEquations {
     // Ricci tensor
@@ -45,7 +45,7 @@ structure EinsteinEquations {
 
 ## Symbolic Differentiation
 
-```text
+```kleis
 data Expr {
     Const(value : ℝ)
     Var(name : String)
@@ -82,7 +82,7 @@ define diff(e, x) =
 
 ## Linear Algebra
 
-```text
+```kleis
 structure LinearSystem(n : ℕ) {
     operation solve : Matrix(n, n, ℝ) × Vector(n, ℝ) → Vector(n, ℝ)
     
@@ -105,7 +105,7 @@ structure Eigen(n : ℕ) {
 
 ## Quantum Mechanics
 
-```text
+```kleis
 structure QuantumState(n : ℕ) {
     amplitudes : Vector(n, ℂ)
     
@@ -129,7 +129,7 @@ define expectation(psi, O) =
 
 ## Category Theory
 
-```text
+```kleis
 structure Category(Obj, Mor) {
     operation id : Obj → Mor
     operation compose : Mor × Mor → Mor
@@ -160,7 +160,7 @@ structure Functor(C, D) {
 
 ## Physics: Classical Mechanics
 
-```text
+```kleis
 structure LagrangianMechanics(n : ℕ) {
     // Generalized coordinates and velocities
     operation q : ℕ → ℝ     // Position

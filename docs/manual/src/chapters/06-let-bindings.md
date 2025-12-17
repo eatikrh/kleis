@@ -4,20 +4,20 @@
 
 Let bindings introduce local variables with limited scope. They're essential for breaking complex expressions into readable parts.
 
-```text
+```kleis
 define square_five = let x = 5 in x * x
 // Result: 25
 ```
 
 ## Basic Syntax
 
-```text
+```kleis
 let <name> = <value> in <body>
 ```
 
 The variable `name` is only visible within `body`:
 
-```text
+```kleis
 define circle_area = let radius = 10 in π * radius^2
 // Result: 314.159...
 // 'radius' is not visible outside the let binding
@@ -27,7 +27,7 @@ define circle_area = let radius = 10 in π * radius^2
 
 Add explicit types for clarity:
 
-```text
+```kleis
 define typed_example1 = let x : ℝ = 3.14 in x * 2
 define typed_example2 = let n : ℕ = 42 in factorial(n)
 define typed_example3 = let v : Vector(3) = [1, 2, 3] in magnitude(v)
@@ -37,7 +37,7 @@ define typed_example3 = let v : Vector(3) = [1, 2, 3] in magnitude(v)
 
 Chain multiple bindings:
 
-```text
+```kleis
 define nested_example =
     let x = 5 in
     let y = 3 in
@@ -50,7 +50,7 @@ define nested_example =
 
 Inner bindings can shadow outer ones:
 
-```text
+```kleis
 define shadowing_example =
     let x = 1 in
     let x = x + 1 in
@@ -65,7 +65,7 @@ Each `let` creates a new scope where `x` is rebound.
 
 In Kleis, `let x = e in body` is equivalent to substituting `e` for `x` in `body`:
 
-```text
+```kleis
 define substitution_demo = let x = 5 in x + x
 // is the same as:
 define substitution_result = 5 + 5
@@ -77,7 +77,7 @@ This is **pure functional semantics** — no mutation, no side effects.
 
 ### Quadratic Formula
 
-```text
+```kleis
 define quadratic_roots(a, b, c) =
     let discriminant = b^2 - 4*a*c in
     let sqrt_d = sqrt(discriminant) in
@@ -87,7 +87,7 @@ define quadratic_roots(a, b, c) =
 
 ### Heron's Formula
 
-```text
+```kleis
 define triangle_area(a, b, c) =
     let s = (a + b + c) / 2 in
         sqrt(s * (s - a) * (s - b) * (s - c))
@@ -95,7 +95,7 @@ define triangle_area(a, b, c) =
 
 ### Complex Calculations
 
-```text
+```kleis
 define schwarzschild_metric(r, M) =
     let rs = 2 * G * M / c^2 in
     let factor = 1 - rs / r in
@@ -110,7 +110,7 @@ define schwarzschild_metric(r, M) =
 | Named function/constant | Temporary binding |
 | Visible everywhere | Visible only in body |
 
-```text
+```kleis
 // Global constant
 define pi = 3.14159
 

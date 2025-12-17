@@ -99,7 +99,7 @@ The number of possible values follows algebra:
 
 ADTs are perfect for representing mathematical expressions:
 
-```text
+```kleis
 data Expr {
     Const(value : ℝ)
     Var(name : String)

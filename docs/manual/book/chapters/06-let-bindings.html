@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-708a4678.js";
+            window.path_to_searchindex_js = "../searchindex-999a887c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -183,67 +183,67 @@
                         <h1 id="let-bindings"><a class="header" href="#let-bindings">Let Bindings</a></h1>
 <h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
 <p>Let bindings introduce local variables with limited scope. They’re essential for breaking complex expressions into readable parts.</p>
-<pre><code class="language-kleis">let x = 5 in x * x
+<pre><code class="language-kleis">define square_five = let x = 5 in x * x
 // Result: 25
 </code></pre>
 <h2 id="basic-syntax"><a class="header" href="#basic-syntax">Basic Syntax</a></h2>
 <pre><code class="language-kleis">let &lt;name&gt; = &lt;value&gt; in &lt;body&gt;
 </code></pre>
 <p>The variable <code>name</code> is only visible within <code>body</code>:</p>
-<pre><code class="language-kleis">let radius = 10 in
-    π * radius^2
+<pre><code class="language-kleis">define circle_area = let radius = 10 in π * radius^2
 // Result: 314.159...
-
-// 'radius' is not visible here!
+// 'radius' is not visible outside the let binding
 </code></pre>
 <h2 id="with-type-annotations"><a class="header" href="#with-type-annotations">With Type Annotations</a></h2>
 <p>Add explicit types for clarity:</p>
-<pre><code class="language-kleis">let x : ℝ = 3.14 in x * 2
-let n : ℕ = 42 in factorial(n)
-let v : Vector(3) = [1, 2, 3] in magnitude(v)
+<pre><code class="language-kleis">define typed_example1 = let x : ℝ = 3.14 in x * 2
+define typed_example2 = let n : ℕ = 42 in factorial(n)
+define typed_example3 = let v : Vector(3) = [1, 2, 3] in magnitude(v)
 </code></pre>
 <h2 id="nested-let-bindings"><a class="header" href="#nested-let-bindings">Nested Let Bindings</a></h2>
 <p>Chain multiple bindings:</p>
-<pre><code class="language-kleis">let x = 5 in
-let y = 3 in
-let z = x + y in
-    x * y * z
+<pre><code class="language-kleis">define nested_example =
+    let x = 5 in
+    let y = 3 in
+    let z = x + y in
+        x * y * z
 // Result: 5 * 3 * 8 = 120
 </code></pre>
 <h2 id="shadowing"><a class="header" href="#shadowing">Shadowing</a></h2>
 <p>Inner bindings can shadow outer ones:</p>
-<pre><code class="language-kleis">let x = 1 in
-let x = x + 1 in
-let x = x * 2 in
-    x
+<pre><code class="language-kleis">define shadowing_example =
+    let x = 1 in
+    let x = x + 1 in
+    let x = x * 2 in
+        x
 // Result: 4  (not 1!)
 </code></pre>
 <p>Each <code>let</code> creates a new scope where <code>x</code> is rebound.</p>
 <h2 id="pure-substitution-semantics"><a class="header" href="#pure-substitution-semantics">Pure Substitution Semantics</a></h2>
 <p>In Kleis, <code>let x = e in body</code> is equivalent to substituting <code>e</code> for <code>x</code> in <code>body</code>:</p>
-<pre><code class="language-kleis">let x = 5 in x + x
+<pre><code class="language-kleis">define substitution_demo = let x = 5 in x + x
 // is the same as:
-5 + 5
+define substitution_result = 5 + 5
 </code></pre>
 <p>This is <strong>pure functional semantics</strong> — no mutation, no side effects.</p>
 <h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
 <h3 id="quadratic-formula"><a class="header" href="#quadratic-formula">Quadratic Formula</a></h3>
-<pre><code class="language-kleis">define quadratic_roots(a : ℝ, b : ℝ, c : ℝ) : (ℝ, ℝ) =
+<pre><code class="language-kleis">define quadratic_roots(a, b, c) =
     let discriminant = b^2 - 4*a*c in
     let sqrt_d = sqrt(discriminant) in
     let denom = 2 * a in
         ((-b + sqrt_d) / denom, (-b - sqrt_d) / denom)
 </code></pre>
 <h3 id="herons-formula"><a class="header" href="#herons-formula">Heron’s Formula</a></h3>
-<pre><code class="language-kleis">define triangle_area(a : ℝ, b : ℝ, c : ℝ) : ℝ =
-    let s = (a + b + c) / 2 in  // semi-perimeter
+<pre><code class="language-kleis">define triangle_area(a, b, c) =
+    let s = (a + b + c) / 2 in
         sqrt(s * (s - a) * (s - b) * (s - c))
 </code></pre>
 <h3 id="complex-calculations"><a class="header" href="#complex-calculations">Complex Calculations</a></h3>
-<pre><code class="language-kleis">define schwarzschild_metric(r : ℝ, M : ℝ) : ℝ =
-    let rs = 2 * G * M / c^2 in      // Schwarzschild radius
+<pre><code class="language-kleis">define schwarzschild_metric(r, M) =
+    let rs = 2 * G * M / c^2 in
     let factor = 1 - rs / r in
-        -c^2 * factor                 // g_tt component
+        -c^2 * factor
 </code></pre>
 <h2 id="let-vs-define"><a class="header" href="#let-vs-define">Let vs Define</a></h2>
 <div class="table-wrapper">
@@ -261,9 +261,8 @@ let x = x * 2 in
 <pre><code class="language-kleis">// Global constant
 define pi = 3.14159
 
-// Local temporary
-let two_pi = 2 * pi in
-    two_pi * radius
+// Local temporary in a function
+define circumference(radius) = let two_pi = 2 * pi in two_pi * radius
 </code></pre>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
 <p>Learn about quantifiers and logic!</p>

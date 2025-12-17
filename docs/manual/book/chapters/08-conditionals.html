@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-708a4678.js";
+            window.path_to_searchindex_js = "../searchindex-999a887c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -186,27 +186,28 @@
 <pre><code class="language-kleis">if condition then value1 else value2
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-kleis">if x &gt; 0 then "positive" else "non-positive"
+<pre><code class="language-kleis">define positive_check(x) = if x &gt; 0 then "positive" else "non-positive"
 
-if n = 0 then 1 else n * factorial(n - 1)
+define factorial(n) = if n = 0 then 1 else n * factorial(n - 1)
 
-define abs(x : ℝ) : ℝ = if x ≥ 0 then x else -x
+define abs(x) = if x ≥ 0 then x else -x
 </code></pre>
 <h2 id="conditionals-are-expressions"><a class="header" href="#conditionals-are-expressions">Conditionals Are Expressions</a></h2>
 <p>In Kleis, <code>if-then-else</code> is an expression that returns a value:</p>
-<pre><code class="language-kleis">let result = if x &gt; 0 then x else -x in
+<pre><code class="language-kleis">define doubled_abs(x) =
+    let result = if x &gt; 0 then x else -x in
     result * 2
 
 // Both branches must have compatible types!
-if True then 42 else "hello"  // ❌ Type error!
+// if True then 42 else "hello"  // ❌ Type error!
 </code></pre>
 <h2 id="nested-conditionals"><a class="header" href="#nested-conditionals">Nested Conditionals</a></h2>
-<pre><code class="language-kleis">define sign(x : ℝ) : ℤ =
+<pre><code class="language-kleis">define sign(x) =
     if x &gt; 0 then 1
     else if x &lt; 0 then -1
     else 0
 
-define grade(score : ℕ) : String =
+define grade(score) =
     if score ≥ 90 then "A"
     else if score ≥ 80 then "B"
     else if score ≥ 70 then "C"
@@ -216,13 +217,13 @@ define grade(score : ℕ) : String =
 <h2 id="guards-vs-if-then-else"><a class="header" href="#guards-vs-if-then-else">Guards vs If-Then-Else</a></h2>
 <p>Pattern matching with guards is often cleaner:</p>
 <pre><code class="language-kleis">// With if-then-else
-define classify(n : ℤ) : String =
+define classify_if(n) =
     if n &lt; 0 then "negative"
     else if n = 0 then "zero"
     else "positive"
 
 // With pattern matching and guards
-define classify(n : ℤ) : String =
+define classify_match(n) =
     match n {
         x if x &lt; 0 =&gt; "negative"
         0 =&gt; "zero"
@@ -232,33 +233,35 @@ define classify(n : ℤ) : String =
 <h2 id="piecewise-functions"><a class="header" href="#piecewise-functions">Piecewise Functions</a></h2>
 <p>Mathematicians love piecewise definitions:</p>
 <pre><code class="language-kleis">// Absolute value
-define abs(x : ℝ) : ℝ =
+define abs_fn(x) =
     if x ≥ 0 then x else -x
 
 // Heaviside step function
-define heaviside(x : ℝ) : ℝ =
+define heaviside(x) =
     if x &lt; 0 then 0
     else if x = 0 then 0.5
     else 1
 
 // Piecewise polynomial
-define f(x : ℝ) : ℝ =
+define piecewise_f(x) =
     if x &lt; 0 then x^2
     else if x &lt; 1 then x
     else 2 - x
 </code></pre>
 <h2 id="boolean-expressions"><a class="header" href="#boolean-expressions">Boolean Expressions</a></h2>
 <p>Conditions can be complex:</p>
-<pre><code class="language-kleis">if x &gt; 0 ∧ y &gt; 0 then "first quadrant"
-else if x &lt; 0 ∧ y &gt; 0 then "second quadrant"
-else if x &lt; 0 ∧ y &lt; 0 then "third quadrant"
-else if x &gt; 0 ∧ y &lt; 0 then "fourth quadrant"
-else "on an axis"
+<pre><code class="language-kleis">define quadrant(x, y) =
+    if x &gt; 0 ∧ y &gt; 0 then "first quadrant"
+    else if x &lt; 0 ∧ y &gt; 0 then "second quadrant"
+    else if x &lt; 0 ∧ y &lt; 0 then "third quadrant"
+    else if x &gt; 0 ∧ y &lt; 0 then "fourth quadrant"
+    else "on an axis"
 </code></pre>
 <h2 id="short-circuit-evaluation"><a class="header" href="#short-circuit-evaluation">Short-Circuit Evaluation</a></h2>
 <p>Kleis uses short-circuit evaluation for <code>∧</code> and <code>∨</code>:</p>
 <pre><code class="language-kleis">// If x = 0, division is never evaluated
-if x ≠ 0 ∧ y/x &gt; 1 then "big ratio" else "safe"
+define check_ratio(x, y) =
+    if x ≠ 0 ∧ y/x &gt; 1 then "big ratio" else "safe"
 </code></pre>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
 <p>Learn about structures for defining mathematical objects!</p>

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-708a4678.js";
+            window.path_to_searchindex_js = "../searchindex-999a887c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -202,7 +202,7 @@ declaration ::= libraryAnnotation
 versionAnnotation ::= "@version" "(" string ")"
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-kleis">@library("stdlib/algebra")
+<pre><code class="language-text">@library("stdlib/algebra")
 @version("0.7")
 </code></pre>
 <h2 id="data-type-definitions"><a class="header" href="#data-type-definitions">Data Type Definitions</a></h2>
@@ -215,9 +215,14 @@ dataField ::= identifier ":" type    // Named field
             | type                   // Positional field
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-kleis">data Bool = True | False
-data Option(T) = None | Some(T)
-data Type = Scalar | Vector(n: Nat) | Matrix(m: Nat, n: Nat)
+<pre><code class="language-text">data Bool {
+    True
+    False
+}
+data Option(T) {
+    None
+    Some(value : T)
+}
 </code></pre>
 <h2 id="pattern-matching"><a class="header" href="#pattern-matching">Pattern Matching</a></h2>
 <pre><code class="language-ebnf">matchExpr ::= "match" expression "{" matchCases "}"
@@ -230,7 +235,7 @@ pattern ::= "_"                              // Wildcard
           | number | string | boolean        // Constant
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-kleis">match x { True =&gt; 1 | False =&gt; 0 }
+<pre><code class="language-text">match x { True =&gt; 1 | False =&gt; 0 }
 match opt { None =&gt; 0 | Some(x) =&gt; x }
 match result { Ok(Some(x)) =&gt; x | Ok(None) =&gt; 0 | Err(_) =&gt; -1 }
 </code></pre>
@@ -249,10 +254,10 @@ structureMember ::= operationDecl
                   | functionDef
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-kleis">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
+<pre><code class="language-text">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
     operation (·) : F × V → V
     
-    axiom scalar_distributive : ∀ a b : F . ∀ v : V .
+    axiom scalar_distributive : ∀(a : F)(b : F)(v : V).
         (a + b) · v = a · v + b · v
 }
 </code></pre>
@@ -267,9 +272,9 @@ operationImpl ::= "operation" operatorSymbol "=" implementation
                 | "operation" operatorSymbol "(" params ")" "=" expression
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-kleis">implements Ring(ℝ) {
-    operation (+) = builtin_add
-    operation (*) = builtin_mul
+<pre><code class="language-text">implements Ring(ℝ) {
+    operation add = builtin_add
+    operation mul = builtin_mul
     element zero = 0
     element one = 1
 }
@@ -281,7 +286,7 @@ operationImpl ::= "operation" operatorSymbol "=" implementation
 param ::= identifier [ ":" type ]
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-kleis">define pi = 3.14159
+<pre><code class="language-text">define pi = 3.14159
 define square(x) = x * x
 define add(x: ℝ, y: ℝ) : ℝ = x + y
 </code></pre>
@@ -303,7 +308,7 @@ functionType ::= type "→" type | type "-&gt;" type
 typeAlias ::= "type" identifier "=" type
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-kleis">ℝ                    // Real numbers
+<pre><code class="language-text">ℝ                    // Real numbers
 Vector(3)            // Parameterized type
 ℝ → ℝ               // Function type
 (ℝ → ℝ) → ℝ         // Higher-order function
@@ -333,7 +338,7 @@ placeholder ::= "□"
          | "lambda" params "." expression
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-kleis">λ x . x + 1              // Simple lambda
+<pre><code class="language-text">λ x . x + 1              // Simple lambda
 λ x y . x * y            // Multiple parameters
 λ (x : ℝ) . x^2          // With type annotation
 lambda x . x             // Using keyword
@@ -342,7 +347,7 @@ lambda x . x             // Using keyword
 <pre><code class="language-ebnf">letBinding ::= "let" identifier [ typeAnnotation ] "=" expression "in" expression
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-kleis">let x = 5 in x + x
+<pre><code class="language-text">let x = 5 in x + x
 let x : ℝ = 3.14 in x * 2
 let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
 </code></pre>
@@ -350,7 +355,7 @@ let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
 <pre><code class="language-ebnf">conditional ::= "if" expression "then" expression "else" expression
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-kleis">if x &gt; 0 then x else -x
+<pre><code class="language-text">if x &gt; 0 then x else -x
 </code></pre>
 <h2 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h2>
 <pre><code class="language-ebnf">forAllProp ::= ("∀" | "forall") variables [ whereClause ] "." proposition
@@ -363,9 +368,9 @@ varDecl ::= identifier [ ":" type ]
 whereClause ::= "where" expression
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-kleis">∀ x : ℝ . x + 0 = x
-∃ x : ℤ . x * x = 4
-∀ (a b : ℝ) where a ≠ 0 . a * (1/a) = 1
+<pre><code class="language-text">∀(x : ℝ). x + 0 = x
+∃(x : ℤ). x * x = 4
+∀(a : ℝ)(b : ℝ) where a ≠ 0 . a * (1/a) = 1
 </code></pre>
 <h2 id="calculus-notation-v07"><a class="header" href="#calculus-notation-v07">Calculus Notation (v0.7)</a></h2>
 <p>Kleis uses Mathematica-style notation for calculus operations:</p>

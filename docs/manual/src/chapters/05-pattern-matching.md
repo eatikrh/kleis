@@ -4,7 +4,7 @@
 
 Pattern matching is one of Kleis's most powerful features. It lets you destructure data and handle different cases elegantly:
 
-```text
+```kleis
 define describe(n) =
     match n {
         0 => 0
@@ -19,7 +19,7 @@ define describe(n) =
 
 Match exact values:
 
-```text
+```kleis
 define describe_literal(x) =
     match x {
         0 => "zero"
@@ -33,7 +33,7 @@ define describe_literal(x) =
 
 Bind matched values to names:
 
-```text
+```kleis
 define sum_point(point) =
     match point {
         Point(x, y) => x + y
@@ -44,7 +44,7 @@ define sum_point(point) =
 
 The underscore `_` matches anything:
 
-```text
+```kleis
 define describe_pair(pair) =
     match pair {
         (_, 0) => "second is zero"
@@ -57,7 +57,7 @@ define describe_pair(pair) =
 
 Patterns can be nested arbitrarily:
 
-```text
+```kleis
 define sum_tree(tree) =
     match tree {
         Leaf(v) => v
@@ -70,7 +70,7 @@ define sum_tree(tree) =
 
 Add conditions to patterns with `if`:
 
-```text
+```kleis
 define sign(n) =
     match n {
         x if x < 0 => "negative"
@@ -83,7 +83,7 @@ define sign(n) =
 
 Bind the whole match while also destructuring:
 
-```text
+```kleis
 define filter_head(list) =
     match list {
         Cons(h, t) as whole => 
@@ -97,7 +97,7 @@ define filter_head(list) =
 
 Destructure directly in let bindings:
 
-```text
+```kleis
 define distance_squared(origin) =
     let Point(x, y) = origin in x^2 + y^2
 
@@ -109,7 +109,7 @@ define sum_first_two(triple) =
 
 With lambda expressions now available, you can combine them with match:
 
-```text
+```kleis
 // Pattern matching with lambdas
 define fst = λ pair . match pair { (a, _) => a }
 define snd = λ pair . match pair { (_, b) => b }
@@ -117,7 +117,7 @@ define snd = λ pair . match pair { (_, b) => b }
 
 **Alternative workaround:**
 
-```text
+```kleis
 define fst(pair) = 
     match pair {
         (a, _) => a
@@ -128,7 +128,7 @@ define fst(pair) =
 
 Kleis checks that your patterns cover all cases:
 
-```text
+```kleis
 // ⚠️ Warning: non-exhaustive patterns
 define incomplete(opt) =
     match opt {
@@ -147,7 +147,7 @@ define complete(opt) =
 
 Pattern matching makes symbolic math elegant:
 
-```text
+```kleis
 define diff(expr, var) =
     match expr {
         Const(_) => Const(0)

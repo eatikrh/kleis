@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-708a4678.js";
+            window.path_to_searchindex_js = "../searchindex-999a887c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -183,10 +183,10 @@
                         <h1 id="starting-out"><a class="header" href="#starting-out">Starting Out</a></h1>
 <h2 id="your-first-kleis-expression"><a class="header" href="#your-first-kleis-expression">Your First Kleis Expression</a></h2>
 <p>The simplest things in Kleis are <strong>expressions</strong>. An expression is anything that has a value:</p>
-<pre><code class="language-kleis">42              // A number
-3.14159         // A decimal
-x + y           // An arithmetic expression
-sin(θ)          // A function call
+<pre><code class="language-kleis">define answer = 42              // A number
+define pi_approx = 3.14159      // A decimal
+define sum(x, y) = x + y        // An arithmetic expression
+define angle_sin(θ) = sin(θ)    // A function call
 </code></pre>
 <h2 id="the-repl"><a class="header" href="#the-repl">The REPL</a></h2>
 <p>The easiest way to experiment with Kleis is the <strong>REPL</strong> (Read-Eval-Print Loop):</p>
@@ -202,11 +202,11 @@ kleis&gt; let x = 5 in x * x
 </code></pre>
 <h2 id="basic-arithmetic"><a class="header" href="#basic-arithmetic">Basic Arithmetic</a></h2>
 <p>Kleis supports the usual arithmetic operations:</p>
-<pre><code class="language-kleis">2 + 3       // Addition: 5
-10 - 4      // Subtraction: 6
-3 * 7       // Multiplication: 21
-15 / 3      // Division: 5
-2 ^ 10      // Exponentiation: 1024
+<pre><code class="language-kleis">define add_example = 2 + 3       // Addition: 5
+define sub_example = 10 - 4      // Subtraction: 6
+define mul_example = 3 * 7       // Multiplication: 21
+define div_example = 15 / 3      // Division: 5
+define pow_example = 2 ^ 10      // Exponentiation: 1024
 </code></pre>
 <h2 id="variables-and-definitions"><a class="header" href="#variables-and-definitions">Variables and Definitions</a></h2>
 <p>Use <code>define</code> to create named values:</p>
@@ -236,11 +236,9 @@ define α = 0.5
 define β = 1.0
 define θ = π / 4
 
-// Mathematical symbols
-∀ x . x = x           // Universal quantifier
-∃ y . y &gt; 0           // Existential quantifier
-x ∈ ℝ                 // Set membership
-A ⊆ B                 // Subset
+// Mathematical symbols in axioms
+axiom reflexivity : ∀(x : ℝ). x = x           // Universal quantifier
+axiom positive_exists : ∃(y : ℝ). y &gt; 0       // Existential quantifier
 </code></pre>
 <p>You can use ASCII alternatives too:</p>
 <div class="table-wrapper">

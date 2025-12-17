@@ -12,7 +12,7 @@
 
 Use `verify` to check a statement:
 
-```text
+```kleis
 axiom commutativity : ∀(x : ℝ)(y : ℝ). x + y = y + x
 // Z3 verifies: ✓ Valid
 
@@ -27,7 +27,7 @@ axiom all_positive : ∀(x : ℝ). x > 0
 
 Z3 handles universal and existential quantifiers:
 
-```text
+```kleis
 axiom additive_identity : ∀(x : ℝ). x + 0 = x
 // Z3 verifies: ✓ Valid
 
@@ -45,7 +45,7 @@ axiom complex_sqrt_neg1 : ∃(x : ℂ). x * x = -1
 
 Verify that definitions satisfy axioms:
 
-```text
+```kleis
 structure Group(G) {
     e : G
     operation mul : G × G → G
@@ -71,7 +71,7 @@ implements Group(ℤ) {
 
 Prove that premises imply conclusions:
 
-```text
+```kleis
 // If x > 0 and y > 0, then x + y > 0
 axiom sum_positive : ∀(x : ℝ)(y : ℝ). (x > 0 ∧ y > 0) → x + y > 0
 // Z3 verifies: ✓ Valid
@@ -86,7 +86,7 @@ axiom triangle_ineq : ∀(x : ℝ)(y : ℝ)(a : ℝ)(b : ℝ).
 
 When verification fails, Z3 provides counterexamples:
 
-```text
+```kleis
 axiom square_equals_self : ∀(x : ℝ). x^2 = x
 // Z3: ✗ Invalid, Counterexample: x = 2 (since 4 ≠ 2)
 
@@ -98,7 +98,7 @@ axiom positive_greater_than_one : ∀(n : ℕ). n > 0 → n > 1
 
 Complex statements may time out:
 
-```text
+```kleis
 // Very complex statement
 verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
 // Result: ⏱ Timeout (statement too complex)
@@ -127,7 +127,7 @@ verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
 4. **Use `verify`** for additional properties
 5. **Examine counterexamples** when verification fails
 
-```text
+```kleis
 // Step 1: Define structure
 structure Ring(R) {
     zero : R

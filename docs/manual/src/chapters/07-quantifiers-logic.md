@@ -4,7 +4,7 @@
 
 The universal quantifier expresses "for all":
 
-```text
+```kleis
 // Quantified propositions (used inside axioms)
 axiom reflexivity : ∀(x : ℝ). x = x
 axiom additive_identity : ∀(x : ℝ). x + 0 = x
@@ -17,7 +17,7 @@ ASCII alternative: `forall x . ...`
 
 The existential quantifier expresses "there exists":
 
-```text
+```kleis
 // Existential quantifiers
 axiom positive_exists : ∃(x : ℝ). x > 0
 axiom sqrt2_exists : ∃(y : ℝ). y * y = 2
@@ -30,7 +30,7 @@ ASCII alternative: `exists x . ...`
 
 Build complex statements:
 
-```text
+```kleis
 // Every number has a successor
 axiom successor : ∀(n : ℕ). ∃(m : ℕ). m = n + 1
 
@@ -42,35 +42,35 @@ axiom density : ∀(x : ℝ)(y : ℝ). x < y → ∃(q : ℚ). x < q ∧ q < y
 
 ### Conjunction (∧ / and)
 
-```text
+```kleis
 define in_range(x) = x > 0 ∧ x < 10     // x is between 0 and 10
 define false_example = True ∧ False     // False
 ```
 
 ### Disjunction (∨ / or)
 
-```text
+```kleis
 define is_binary(x) = x = 0 ∨ x = 1    // x is 0 or 1
 define true_example = True ∨ False     // True
 ```
 
 ### Implication (→ / implies)
 
-```text
+```kleis
 define sqrt_real(x) = x > 0 → sqrt(x) ∈ ℝ    // If positive, has real square root
 define implication(P, Q) = P → Q              // If P then Q
 ```
 
 ### Negation (¬ / not)
 
-```text
+```kleis
 define nonzero(x) = ¬(x = 0)     // x is not zero
 define not_true = ¬True          // False
 ```
 
 ### Biconditional (↔ / iff)
 
-```text
+```kleis
 define zero_iff_square_zero(x) = x = 0 ↔ x * x = 0  // x is zero iff x² is zero
 ```
 
@@ -78,7 +78,7 @@ define zero_iff_square_zero(x) = x = 0 ↔ x * x = 0  // x is zero iff x² is ze
 
 Restrict the domain:
 
-```text
+```kleis
 axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
 axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
 ```
@@ -87,7 +87,7 @@ axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
 
 Quantifiers are essential in structure axioms:
 
-```text
+```kleis
 structure Group(G) {
     e : G                      // Identity element
     operation mul : G × G → G
@@ -104,7 +104,7 @@ structure Group(G) {
 
 Kleis uses Z3 to check quantified statements:
 
-```text
+```kleis
 // Z3 can verify this is always true:
 axiom add_zero : ∀(x : ℝ). x + 0 = x
 

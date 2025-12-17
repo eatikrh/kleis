@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-708a4678.js";
+            window.path_to_searchindex_js = "../searchindex-999a887c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -234,18 +234,18 @@ max(x, y)   // maximum
 </code></pre>
 <h2 id="lambda-expressions-anonymous-functions"><a class="header" href="#lambda-expressions-anonymous-functions">Lambda Expressions (Anonymous Functions)</a></h2>
 <p>Lambda expressions allow you to create anonymous functions inline:</p>
-<pre><code class="language-kleis">λ x . x * x           // square function
-lambda x . x + 1      // increment (using keyword)
-λ x y . x + y         // multiple parameters
-λ (x : ℝ) . x^2       // with type annotation
-λ x . λ y . x + y     // curried addition (nested)
+<pre><code class="language-kleis">define square_lambda = λ x . x * x
+define increment = lambda x . x + 1
+define add_lambda = λ x . λ y . x + y
+define square_typed = λ (x : ℝ) . x^2
+define curried_add = λ x . λ y . x + y
 </code></pre>
 <p>Lambda expressions are first-class values - you can pass them to functions:</p>
 <pre><code class="language-kleis">// Pass lambda to higher-order function
-map(λ x . x * 2, [1, 2, 3])
+define doubled_list = map(λ x . x * 2, [1, 2, 3])
 
 // Or define inline
-apply(λ x . x + 1, 5)
+define result = apply(λ x . x + 1, 5)
 </code></pre>
 <h2 id="higher-order-functions"><a class="header" href="#higher-order-functions">Higher-Order Functions</a></h2>
 <p>Functions can take functions as arguments:</p>
@@ -254,7 +254,7 @@ define apply_twice(f, x) = f(f(x))
 
 // Example usage:
 define inc(x) = x + 1
-apply_twice(inc, 5)   // Result: 7
+define result = apply_twice(inc, 5)   // Result: 7
 </code></pre>
 <h2 id="partial-application-and-currying"><a class="header" href="#partial-application-and-currying">Partial Application and Currying</a></h2>
 <p>With lambda expressions, you can create curried functions:</p>
@@ -262,8 +262,8 @@ apply_twice(inc, 5)   // Result: 7
 define add = λ x . λ y . x + y
 
 // Partial application creates specialized functions
-define add5 = add(5)    // λ y . 5 + y
-add5(3)                 // Result: 8
+define add5 = add(5)           // λ y . 5 + y
+define eight = add5(3)         // Result: 8
 </code></pre>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
 <p>Learn about algebraic data types for structured data!</p>

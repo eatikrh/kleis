@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-708a4678.js";
+            window.path_to_searchindex_js = "../searchindex-999a887c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -282,15 +282,15 @@
 </div>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
-<pre><code class="language-kleis">2 + 3 * 4        // 14 (not 20)
-(2 + 3) * 4      // 20
-2 ^ 3 ^ 2        // 512 (= 2^9, right associative)
--x^2             // -(x^2), not (-x)^2
+<pre><code class="language-kleis">define ex1 = 2 + 3 * 4        // 14 (not 20)
+define ex2 = (2 + 3) * 4      // 20
+define ex3 = 2 ^ 3 ^ 2        // 512 (= 2^9, right associative)
+define neg_sq(x) = -x^2       // -(x^2), not (-x)^2
 </code></pre>
 <h3 id="logical"><a class="header" href="#logical">Logical</a></h3>
-<pre><code class="language-kleis">P ∧ Q ∨ R        // (P ∧ Q) ∨ R
-P → Q → R        // P → (Q → R) (right associative)
-¬P ∧ Q           // (¬P) ∧ Q
+<pre><code class="language-kleis">define logic1(P, Q, R) = P ∧ Q ∨ R        // (P ∧ Q) ∨ R
+define logic2(P, Q, R) = P → Q → R        // P → (Q → R) (right associative)
+define logic3(P, Q) = ¬P ∧ Q              // (¬P) ∧ Q
 </code></pre>
 <h3 id="type-expressions"><a class="header" href="#type-expressions">Type Expressions</a></h3>
 <pre><code class="language-kleis">ℝ → ℝ → ℝ        // ℝ → (ℝ → ℝ) (curried binary function)

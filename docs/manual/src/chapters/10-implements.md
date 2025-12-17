@@ -4,7 +4,7 @@
 
 A `structure` declares what operations exist. An `implements` block provides the actual definitions:
 
-```text
+```kleis
 structure Addable(T) {
     operation add : T × T → T
 }
@@ -20,7 +20,7 @@ implements Addable(ℤ) {
 
 ## Full Example: Complex Numbers
 
-```text
+```kleis
 // Declare the structure
 structure Complex {
     re : ℝ
@@ -45,7 +45,7 @@ implements Complex {
 
 Implement structures with type parameters:
 
-```text
+```kleis
 structure Stack(T) {
     operation push : T → Stack(T)
     operation pop : Stack(T)
@@ -65,7 +65,7 @@ implements Stack(ℤ) {
 
 The same structure can have multiple implementations:
 
-```text
+```kleis
 structure Orderable(T) {
     operation compare : T × T → Ordering
 }
@@ -80,7 +80,7 @@ implements Orderable(ℤ) {
 
 When a structure extends another, implement all operations:
 
-```text
+```kleis
 structure Monoid(M) {
     operation e : M
     operation mul : M × M → M
@@ -102,7 +102,7 @@ implements Group(ℤ) {
 
 Some operations can't be defined in pure Kleis — they need native code. The `builtin_` prefix connects Kleis to underlying implementations:
 
-```text
+```kleis
 implements Matrix(m, n, ℝ) {
     operation transpose = builtin_transpose
     operation add = builtin_matrix_add
@@ -127,7 +127,7 @@ This enables:
 
 Imagine:
 
-```text
+```kleis
 structure NetworkInterface(N) {
     operation send : Packet → Result(Unit, Error)
     operation receive : Unit → Result(Packet, Error)
@@ -150,7 +150,7 @@ This is how Kleis becomes a **universal verification platform** — not just for
 
 Kleis + Z3 can verify that implementations satisfy axioms:
 
-```text
+```kleis
 structure Monoid(M) {
     e : M
     operation mul : M × M → M

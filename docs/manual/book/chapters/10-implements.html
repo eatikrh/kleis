@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-708a4678.js";
+            window.path_to_searchindex_js = "../searchindex-999a887c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -198,8 +198,8 @@ implements Addable(ℤ) {
 <h2 id="full-example-complex-numbers"><a class="header" href="#full-example-complex-numbers">Full Example: Complex Numbers</a></h2>
 <pre><code class="language-kleis">// Declare the structure
 structure Complex {
-    field re : ℝ
-    field im : ℝ
+    re : ℝ
+    im : ℝ
     
     operation add : Complex → Complex
     operation mul : Complex → Complex
@@ -209,21 +209,9 @@ structure Complex {
 
 // Implement the operations
 implements Complex {
-    operation add(z, w) = Complex {
-        re = z.re + w.re,
-        im = z.im + w.im
-    }
-    
-    operation mul(z, w) = Complex {
-        re = z.re * w.re - z.im * w.im,
-        im = z.re * w.im + z.im * w.re
-    }
-    
-    operation conj(z) = Complex {
-        re = z.re,
-        im = -z.im
-    }
-    
+    operation add(z, w) = builtin_complex_add
+    operation mul(z, w) = builtin_complex_mul
+    operation conj(z) = builtin_complex_conj
     operation mag(z) = sqrt(z.re^2 + z.im^2)
 }
 </code></pre>
@@ -237,11 +225,10 @@ implements Complex {
 }
 
 implements Stack(ℤ) {
-    // Implementation for integer stacks
-    operation push(x, s) = Cons(x, s)
-    operation pop(s) = match s { Cons(_, rest) =&gt; rest }
-    operation top(s) = match s { Cons(x, _) =&gt; x }
-    operation empty(s) = match s { Nil =&gt; True, _ =&gt; False }
+    operation push = builtin_stack_push
+    operation pop = builtin_stack_pop
+    operation top = builtin_stack_top
+    operation empty = builtin_stack_empty
 }
 </code></pre>
 <h2 id="multiple-implementations"><a class="header" href="#multiple-implementations">Multiple Implementations</a></h2>
@@ -252,18 +239,7 @@ implements Stack(ℤ) {
 
 // Natural ordering
 implements Orderable(ℤ) {
-    operation compare(x, y) =
-        if x &lt; y then LT
-        else if x &gt; y then GT
-        else EQ
-}
-
-// Reverse ordering (for max-heaps, etc.)
-implements Orderable(ℤ) as ReverseOrder {
-    operation compare(x, y) =
-        if x &gt; y then LT
-        else if x &lt; y then GT
-        else EQ
+    operation compare = builtin_int_compare
 }
 </code></pre>
 <h2 id="implementing-extended-structures"><a class="header" href="#implementing-extended-structures">Implementing Extended Structures</a></h2>
@@ -309,10 +285,10 @@ implements Group(ℤ) {
 <h3 id="the-vision-hardware-as-structures"><a class="header" href="#the-vision-hardware-as-structures">The Vision: Hardware as Structures</a></h3>
 <p>Imagine:</p>
 <pre><code class="language-kleis">structure NetworkInterface(N) {
-    operation send : Packet → Result((), Error)
-    operation receive : () → Result(Packet, Error)
+    operation send : Packet → Result(Unit, Error)
+    operation receive : Unit → Result(Packet, Error)
     
-    axiom delivery : ∀ p : Packet . 
+    axiom delivery : ∀(p : Packet).
         connected → eventually(delivered(p))
 }
 
@@ -326,17 +302,17 @@ implements NetworkInterface(EthernetCard) {
 <h2 id="verification-of-implementations"><a class="header" href="#verification-of-implementations">Verification of Implementations</a></h2>
 <p>Kleis + Z3 can verify that implementations satisfy axioms:</p>
 <pre><code class="language-kleis">structure Monoid(M) {
-    operation e : M
+    e : M
     operation mul : M × M → M
     
-    axiom identity : ∀ x : M . mul(e, x) = x ∧ mul(x, e) = x
-    axiom associative : ∀ x : M . ∀ y : M . ∀ z : M .
+    axiom identity : ∀(x : M). mul(e, x) = x ∧ mul(x, e) = x
+    axiom associative : ∀(x : M)(y : M)(z : M).
         mul(mul(x, y), z) = mul(x, mul(y, z))
 }
 
 implements Monoid(String) {
-    operation e = ""
-    operation mul(s1, s2) = concat(s1, s2)
+    element e = ""
+    operation mul = builtin_concat
 }
 
 // Kleis can verify:

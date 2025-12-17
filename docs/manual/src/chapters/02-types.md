@@ -90,7 +90,7 @@ The parentheses matter! Compare:
 
 Types can have parameters:
 
-```text
+```kleis
 // Parametric type examples:
 List(ℤ)           // List of integers
 Matrix(3, 3, ℝ)   // 3×3 matrix of reals
