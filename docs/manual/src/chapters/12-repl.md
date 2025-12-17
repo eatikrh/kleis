@@ -29,21 +29,34 @@ sin(divide(π, 2))
 
 ## Defining Functions
 
-Define functions interactively:
+The REPL prompt evaluates **expressions**, not declarations. To define functions, use `:load` with a `.kleis` file:
 
 ```
 λ> define square(x) = x * x
 ❌ Parse error: Kleis parse error at position 7: Unexpected character: 's'
+```
+
+Instead, create a file `mymath.kleis`:
+
+```kleis
+define square(x) = x * x
+define compose(f, g, x) = f(g(x))
+```
+
+Then load it in the REPL:
+
+```
+λ> :load mymath.kleis
+✅ Loaded: 2 functions, 0 structures, 0 data types, 0 type aliases
 
 λ> square(7)
-square(7)
-
-λ> define compose(f, g, x) = f(g(x))
-❌ Parse error: Kleis parse error at position 7: Unexpected character: 'c'
+times(7, 7)
 
 λ> compose(square, square, 2)
 compose(square, square, 2)
 ```
+
+> **Note:** The REPL performs symbolic evaluation. `square(7)` becomes `times(7, 7)` rather than computing `49`. This is by design - Kleis focuses on symbolic manipulation and verification, not numeric computation.
 
 ## Working with Types
 
