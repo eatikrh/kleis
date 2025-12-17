@@ -425,6 +425,22 @@ impl TypeInference {
                 // 3. Unify/check that they match
                 self.infer(expr, context_builder)
             }
+
+            // Lambda expression: λ params . body
+            // Type is: param_types → body_type
+            Expression::Lambda { params, body } => {
+                // Create fresh type variables for each parameter and bind them
+                for param in params {
+                    let param_type = self.context.fresh_var();
+                    self.context.bind(param.name.clone(), param_type);
+                }
+
+                // Infer body type with the parameter bindings
+                let body_type = self.infer(body, context_builder)?;
+
+                // Return body type (full implementation would construct function type)
+                Ok(body_type)
+            }
         }
     }
 

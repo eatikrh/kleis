@@ -148,6 +148,21 @@ impl PrettyPrinter {
                 let inner = self.format_at_depth(expr, depth);
                 format!("({}) : {}", inner, type_annotation)
             }
+
+            Expression::Lambda { params, body } => {
+                let param_strs: Vec<_> = params
+                    .iter()
+                    .map(|p| {
+                        if let Some(ty) = &p.type_annotation {
+                            format!("({} : {})", p.name, ty)
+                        } else {
+                            p.name.clone()
+                        }
+                    })
+                    .collect();
+                let body_str = self.format_at_depth(body, depth);
+                format!("λ {} . {}", param_strs.join(" "), body_str)
+            }
         }
     }
 

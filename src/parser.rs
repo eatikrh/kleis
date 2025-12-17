@@ -1678,6 +1678,7 @@ impl Expression {
             Expression::Conditional { .. } => "conditional".to_string(),
             Expression::Let { .. } => "let".to_string(),
             Expression::Ascription { .. } => "ascription".to_string(),
+            Expression::Lambda { .. } => "lambda".to_string(),
         }
     }
 }

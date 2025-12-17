@@ -27,7 +27,7 @@ let result = if x > 0 then x else -x in
     result * 2
 
 -- Both branches must have compatible types!
-if True then 42 else "hello"  -- ❌ Type error!
+if True then 42 else "hello"  // ❌ Type error!
 ```
 
 ## Nested Conditionals

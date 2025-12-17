@@ -13,7 +13,7 @@ expression ::= literal
              | let_expression
              | match_expression
              | quantified_expression
-             | lambda_expression        (* Coming soon *)
+             | lambda_expression
              | ascription_expression
              | '(' expression ')'
 
@@ -86,13 +86,20 @@ quantifier ::= '∀' | 'forall' | '∃' | 'exists'
 
 ## Lambda Expressions
 
-> 🚧 **Coming Soon: We're working on it!**
-
 ```ebnf
-(* Planned syntax - not yet implemented *)
-lambda_expression ::= 'λ' identifier '.' expression
-                    | '\' identifier '->' expression
+lambda_expression ::= 'λ' parameters '.' expression
+                    | 'lambda' parameters '.' expression
+
+parameters ::= parameter+
+parameter ::= identifier
+            | '(' identifier ':' type ')'
 ```
+
+Examples:
+- `λ x . x + 1` - simple lambda
+- `λ x y . x * y` - multiple parameters
+- `λ (x : ℝ) . x^2` - with type annotation
+- `lambda x . x` - using keyword
 
 ## Types
 

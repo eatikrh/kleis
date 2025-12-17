@@ -6,12 +6,12 @@ Structures define mathematical objects with their properties and operations. Thi
 
 ```kleis
 structure Vector(n : ℕ) {
-    -- Operations this structure supports
+    // Operations this structure supports
     operation add : Vector(n) → Vector(n)
     operation scale : ℝ → Vector(n)
     operation dot : Vector(n) → ℝ
     
-    -- Properties that must hold
+    // Properties that must hold
     axiom commutative : ∀ u : Vector(n) . ∀ v : Vector(n) .
         add(u, v) = add(v, u)
 }
@@ -21,14 +21,14 @@ structure Vector(n : ℕ) {
 
 ```kleis
 structure Name(parameters) {
-    -- Fields (data)
+    // Fields (data)
     field1 : Type1
     field2 : Type2
     
-    -- Operations (functions)
+    // Operations (functions)
     operation op1 : InputType → OutputType
     
-    -- Axioms (properties)
+    // Axioms (properties)
     axiom property : logical_statement
 }
 ```
@@ -37,13 +37,13 @@ structure Name(parameters) {
 
 ```kleis
 structure Complex {
-    field re : ℝ  -- real part
-    field im : ℝ  -- imaginary part
+    field re : ℝ  // real part
+    field im : ℝ  // imaginary part
     
     operation add : Complex → Complex
     operation mul : Complex → Complex
-    operation conj : Complex           -- conjugate
-    operation mag : ℝ                  -- magnitude
+    operation conj : Complex           // conjugate
+    operation mag : ℝ                  // magnitude
     
     axiom add_commutative : ∀ z : Complex . ∀ w : Complex .
         add(z, w) = add(w, z)
@@ -86,20 +86,20 @@ Structures can contain other structures. This enables compositional algebra — 
 
 ```kleis
 structure Ring(R) {
-    -- A ring has an additive group
+    // A ring has an additive group
     structure additive : AbelianGroup(R) {
         operation (+) : R × R → R
         operation negate : R → R
         element zero : R
     }
     
-    -- And a multiplicative monoid
+    // And a multiplicative monoid
     structure multiplicative : Monoid(R) {
         operation (×) : R × R → R
         element one : R
     }
     
-    -- With distributivity connecting them
+    // With distributivity connecting them
     axiom distributive : ∀ x : R . ∀ y : R . ∀ z : R .
         x × (y + z) = (x × y) + (x × z)
 }
@@ -218,7 +218,7 @@ structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
     operation scalar_curvature : M → ℝ
     
     axiom first_bianchi : ∀ p : M .
-        -- R^a_{bcd} + R^a_{cdb} + R^a_{dbc} = 0
+        // R^a_{bcd} + R^a_{cdb} + R^a_{dbc} = 0
         cyclic_sum(riemann(p)) = 0
 }
 ```

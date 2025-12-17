@@ -1848,6 +1848,41 @@ fn render_expression_internal(
                 }
             }
         }
+
+        Expression::Lambda { params, body } => {
+            let body_id = format!("{}.body", node_id);
+            let body_str = render_expression_internal(body, ctx, target, &body_id, node_id_to_uuid);
+
+            let param_strs: Vec<_> = params
+                .iter()
+                .map(|p| {
+                    if let Some(ty) = &p.type_annotation {
+                        format!("({} : {})", p.name, ty)
+                    } else {
+                        p.name.clone()
+                    }
+                })
+                .collect();
+            let params_joined = param_strs.join(" ");
+
+            match target {
+                RenderTarget::Unicode | RenderTarget::Kleis => {
+                    format!("λ {} . {}", params_joined, body_str)
+                }
+                RenderTarget::LaTeX => {
+                    format!(r"\lambda {} . {}", params_joined, body_str)
+                }
+                RenderTarget::HTML => {
+                    format!(
+                        r#"<span class="lambda">λ {} . {}</span>"#,
+                        params_joined, body_str
+                    )
+                }
+                RenderTarget::Typst => {
+                    format!(r#"λ {} . {}"#, params_joined, body_str)
+                }
+            }
+        }
     }
 }
 

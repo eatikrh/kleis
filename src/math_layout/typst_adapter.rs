@@ -128,6 +128,21 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             let inner = expression_to_typst(expr, ctx);
             format!("({}) : {}", inner, type_annotation)
         }
+
+        Expression::Lambda { params, body } => {
+            let param_strs: Vec<_> = params
+                .iter()
+                .map(|p| {
+                    if let Some(ty) = &p.type_annotation {
+                        format!("({} : {})", p.name, ty)
+                    } else {
+                        p.name.clone()
+                    }
+                })
+                .collect();
+            let body_str = expression_to_typst(body, ctx);
+            format!("λ {} . {}", param_strs.join(" "), body_str)
+        }
     }
 }
 

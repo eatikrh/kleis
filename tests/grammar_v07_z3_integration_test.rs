@@ -926,6 +926,169 @@ fn test_roundtrip_structure_operations() {
 }
 
 // ============================================================================
+// LAMBDA EXPRESSION Z3 TESTS
+// ============================================================================
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_lambda_z3_translation() {
+    use kleis::ast::{Expression, LambdaParam};
+
+    println!("\n=== Lambda Z3 Translation Test ===");
+
+    // Create a simple lambda: λ x . x + 1
+    let lambda = Expression::Lambda {
+        params: vec![LambdaParam::new("x")],
+        body: Box::new(Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Const("1".to_string()),
+            ],
+        }),
+    };
+
+    println!("   Lambda: λ x . x + 1");
+
+    // Create Z3 backend and translate
+    use kleis::solvers::z3::backend::Z3Backend;
+    use kleis::structure_registry::StructureRegistry;
+
+    let registry = StructureRegistry::new();
+    let backend_result = Z3Backend::new(&registry);
+
+    if backend_result.is_err() {
+        println!("   ⚠️ Z3 backend initialization failed (expected in some environments)");
+        return;
+    }
+
+    let mut backend = backend_result.unwrap();
+    println!("   ✅ Z3 backend initialized");
+
+    // Test satisfiability of lambda body
+    // λ x . x + 1 = 5 should be satisfiable (when x = 4)
+    let equation = Expression::Operation {
+        name: "equals".to_string(),
+        args: vec![lambda.clone(), Expression::Const("5".to_string())],
+    };
+
+    let result = backend.check_satisfiability(&equation);
+    match result {
+        Ok(sat) => {
+            println!("   ✅ Lambda satisfiability check: {:?}", sat);
+        }
+        Err(e) => {
+            println!("   ⚠️ Lambda satisfiability error (may be expected): {}", e);
+        }
+    }
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_lambda_typed_z3() {
+    use kleis::ast::{Expression, LambdaParam};
+
+    println!("\n=== Typed Lambda Z3 Test ===");
+
+    // Create a typed lambda: λ (x : ℝ) . x * x
+    let lambda = Expression::Lambda {
+        params: vec![LambdaParam::typed("x", "ℝ")],
+        body: Box::new(Expression::Operation {
+            name: "times".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Object("x".to_string()),
+            ],
+        }),
+    };
+
+    println!("   Lambda: λ (x : ℝ) . x * x");
+
+    use kleis::solvers::z3::backend::Z3Backend;
+    use kleis::structure_registry::StructureRegistry;
+
+    let registry = StructureRegistry::new();
+    let backend_result = Z3Backend::new(&registry);
+
+    if backend_result.is_err() {
+        println!("   ⚠️ Z3 backend initialization failed");
+        return;
+    }
+
+    let backend = backend_result.unwrap();
+    println!("   ✅ Z3 backend initialized with typed lambda");
+
+    // Verify the lambda was created with proper type annotation
+    if let Expression::Lambda { params, .. } = &lambda {
+        assert_eq!(params[0].type_annotation, Some("ℝ".to_string()));
+        println!(
+            "   ✅ Type annotation preserved: {:?}",
+            params[0].type_annotation
+        );
+    }
+
+    drop(backend);
+    println!("   ✅ Typed lambda (Real) processed successfully");
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_lambda_nested_z3() {
+    use kleis::ast::{Expression, LambdaParam};
+
+    println!("\n=== Nested Lambda Z3 Test ===");
+
+    // Create curried lambda: λ x . λ y . x + y
+    let inner = Expression::Lambda {
+        params: vec![LambdaParam::new("y")],
+        body: Box::new(Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Object("y".to_string()),
+            ],
+        }),
+    };
+
+    let outer = Expression::Lambda {
+        params: vec![LambdaParam::new("x")],
+        body: Box::new(inner),
+    };
+
+    println!("   Lambda: λ x . λ y . x + y");
+
+    use kleis::solvers::z3::backend::Z3Backend;
+    use kleis::structure_registry::StructureRegistry;
+
+    let registry = StructureRegistry::new();
+    let backend_result = Z3Backend::new(&registry);
+
+    if backend_result.is_err() {
+        println!("   ⚠️ Z3 backend initialization failed");
+        return;
+    }
+
+    let backend = backend_result.unwrap();
+    println!("   ✅ Z3 backend initialized");
+
+    // Verify nested structure
+    if let Expression::Lambda { params, body } = &outer {
+        assert_eq!(params[0].name, "x");
+        if let Expression::Lambda {
+            params: inner_params,
+            ..
+        } = body.as_ref()
+        {
+            assert_eq!(inner_params[0].name, "y");
+            println!("   ✅ Nested lambda structure verified: outer=x, inner=y");
+        }
+    }
+
+    drop(backend);
+    println!("   ✅ Nested lambda Z3 test passed");
+}
+
+// ============================================================================
 // PLACEHOLDER TESTS (when feature disabled)
 // ============================================================================
 

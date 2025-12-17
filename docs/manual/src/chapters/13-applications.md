@@ -12,17 +12,17 @@ structure SphericalMetric {
 }
 
 implements SphericalMetric {
-    -- Metric tensor: ds² = r²(dθ² + sin²θ dφ²)
+    // Metric tensor: ds² = r²(dθ² + sin²θ dφ²)
     operation metric(r, θ) = Matrix [
         [r^2, 0],
         [0, r^2 * sin(θ)^2]
     ]
     
-    -- Christoffel symbols Γⁱⱼₖ
+    // Christoffel symbols Γⁱⱼₖ
     operation christoffel(r, θ) = 
         let g = metric(r, θ) in
         let g_inv = inverse(g) in
-        -- ... compute from metric derivatives
+        // ... compute from metric derivatives
 }
 ```
 
@@ -31,11 +31,11 @@ implements SphericalMetric {
 ```kleis
 -- Einstein field equations
 structure EinsteinEquations {
-    -- Ricci tensor
+    // Ricci tensor
     operation ricci : Manifold → Tensor(0, 2)
-    -- Scalar curvature
+    // Scalar curvature
     operation scalar : Manifold → ℝ
-    -- Einstein tensor
+    // Einstein tensor
     operation einstein : Manifold → Tensor(0, 2)
     
     axiom einstein_tensor : ∀ M : Manifold .
@@ -65,13 +65,13 @@ define diff(e : Expr, x : String) : Expr =
         
         Add(f, g) => Add(diff(f, x), diff(g, x))
         
-        Mul(f, g) => -- Product rule
+        Mul(f, g) => // Product rule
             Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
             
-        Pow(f, Const(n)) => -- Power rule
+        Pow(f, Const(n)) => // Power rule
             Mul(Mul(Const(n), Pow(f, Const(n - 1))), diff(f, x))
             
-        Sin(f) => Mul(Cos(f), diff(f, x))  -- Chain rule
+        Sin(f) => Mul(Cos(f), diff(f, x))  // Chain rule
         Cos(f) => Mul(Mul(Const(-1), Sin(f)), diff(f, x))
         Exp(f) => Mul(Exp(f), diff(f, x))
         Ln(f) => Mul(Pow(f, Const(-1)), diff(f, x))
@@ -84,7 +84,7 @@ define diff(e : Expr, x : String) : Expr =
 structure LinearSystem(n : ℕ) {
     operation solve : Matrix(n, n, ℝ) × Vector(n, ℝ) → Vector(n, ℝ)
     
-    -- Solution satisfies Ax = b
+    // Solution satisfies Ax = b
     axiom solution_correct : ∀ A : Matrix(n, n, ℝ) . ∀ b : Vector(n, ℝ) .
         det(A) ≠ 0 → mul(A, solve(A, b)) = b
 }
@@ -107,7 +107,7 @@ structure Eigen(n : ℕ) {
 structure QuantumState(n : ℕ) {
     field amplitudes : Vector(n, ℂ)
     
-    -- States must be normalized
+    // States must be normalized
     axiom normalized : ∀ ψ : QuantumState(n) .
         sum(map(λ a . abs(a)^2, ψ.amplitudes)) = 1
 }
@@ -115,7 +115,7 @@ structure QuantumState(n : ℕ) {
 structure Observable(n : ℕ) {
     operation matrix : Matrix(n, n, ℂ)
     
-    -- Observables are Hermitian
+    // Observables are Hermitian
     axiom hermitian : ∀ O : Observable(n) .
         O.matrix = conjugate_transpose(O.matrix)
 }
@@ -160,15 +160,15 @@ structure Functor(C : Category, D : Category) {
 
 ```kleis
 structure LagrangianMechanics(n : ℕ) {
-    -- Generalized coordinates and velocities
-    operation q : ℕ → ℝ     -- Position
-    operation q_dot : ℕ → ℝ  -- Velocity
-    operation t : ℝ          -- Time
+    // Generalized coordinates and velocities
+    operation q : ℕ → ℝ     // Position
+    operation q_dot : ℕ → ℝ  // Velocity
+    operation t : ℝ          // Time
     
-    -- Lagrangian L = T - V
+    // Lagrangian L = T - V
     operation lagrangian : ℝ
     
-    -- Euler-Lagrange equations
+    // Euler-Lagrange equations
     axiom euler_lagrange : ∀ i : ℕ . i < n →
         d/dt(∂L/∂q_dot(i)) = ∂L/∂q(i)
 }

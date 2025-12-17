@@ -59,45 +59,42 @@ sinh(x)     cosh(x)     tanh(x)
 
 ### Exponential and Logarithmic
 ```kleis
-exp(x)      -- e^x
-ln(x)       -- natural log
-log(x)      -- base-10 log
-log(b, x)   -- log base b of x
+exp(x)      // e^x
+ln(x)       // natural log
+log(x)      // base-10 log
+log(b, x)   // log base b of x
 ```
 
 ### Other
 ```kleis
-sqrt(x)     -- square root
-abs(x)      -- absolute value
-floor(x)    -- round down
-ceil(x)     -- round up
-min(x, y)   -- minimum
-max(x, y)   -- maximum
+sqrt(x)     // square root
+abs(x)      // absolute value
+floor(x)    // round down
+ceil(x)     // round up
+min(x, y)   // minimum
+max(x, y)   // maximum
 ```
 
 ## Lambda Expressions (Anonymous Functions)
 
-> 🚧 **Coming Soon: We're working on it!**
->
-> Lambda expressions allow you to create anonymous functions inline.
-> This feature is planned but not yet implemented in the parser.
-
-Lambda expressions will let you write:
+Lambda expressions allow you to create anonymous functions inline:
 
 ```kleis
--- Planned syntax (not yet working):
-λ x . x * x           -- square function
-\x -> x + 1           -- increment (ASCII alternative)
-λ x . λ y . x + y     -- curried addition
+λ x . x * x           // square function
+lambda x . x + 1      // increment (using keyword)
+λ x y . x + y         // multiple parameters
+λ (x : ℝ) . x^2       // with type annotation
+λ x . λ y . x + y     // curried addition (nested)
 ```
 
-**Current workaround:** Use named functions with `define`:
+Lambda expressions are first-class values - you can pass them to functions:
 
 ```kleis
--- Instead of: map(λ x . x * 2, list)
--- Define a helper:
-define double(x) = x * 2
--- Then use it: map(double, list)
+-- Pass lambda to higher-order function
+map(λ x . x * 2, [1, 2, 3])
+
+-- Or define inline
+apply(λ x . x + 1, 5)
 ```
 
 ## Higher-Order Functions
@@ -110,15 +107,21 @@ define apply_twice(f, x) = f(f(x))
 
 -- Example usage:
 define inc(x) = x + 1
-apply_twice(inc, 5)   -- Result: 7
+apply_twice(inc, 5)   // Result: 7
 ```
 
-## Partial Application
+## Partial Application and Currying
 
-> 🚧 **Coming Soon**
->
-> Partial application (currying) will be supported once lambda
-> expressions are implemented.
+With lambda expressions, you can create curried functions:
+
+```kleis
+-- Curried addition
+define add = λ x . λ y . x + y
+
+-- Partial application creates specialized functions
+define add5 = add(5)    // λ y . 5 + y
+add5(3)                 // Result: 8
+```
 
 ## What's Next?
 

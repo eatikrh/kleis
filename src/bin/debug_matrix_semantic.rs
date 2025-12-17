@@ -201,6 +201,10 @@ fn collect_slots_recursive(
             // Collect slots from inner expression
             collect_slots_recursive(expr, slots, next_auto_id, path, role);
         }
+        Expression::Lambda { body, .. } => {
+            // Collect slots from lambda body
+            collect_slots_recursive(body, slots, next_auto_id, path, role);
+        }
     }
 }
 

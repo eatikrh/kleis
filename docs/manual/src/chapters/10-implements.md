@@ -66,7 +66,7 @@ structure Stack(T) {
 }
 
 implements Stack(ℤ) {
-    -- Implementation for integer stacks
+    // Implementation for integer stacks
     operation push(x, s) = Cons(x, s)
     operation pop(s) = match s { Cons(_, rest) => rest }
     operation top(s) = match s { Cons(x, _) => x }

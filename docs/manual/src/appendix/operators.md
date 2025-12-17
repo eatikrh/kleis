@@ -75,26 +75,26 @@ From lowest to highest precedence:
 ### Arithmetic
 
 ```kleis
-2 + 3 * 4        -- 14 (not 20)
-(2 + 3) * 4      -- 20
-2 ^ 3 ^ 2        -- 512 (= 2^9, right associative)
--x^2             -- -(x^2), not (-x)^2
+2 + 3 * 4        // 14 (not 20)
+(2 + 3) * 4      // 20
+2 ^ 3 ^ 2        // 512 (= 2^9, right associative)
+-x^2             // -(x^2), not (-x)^2
 ```
 
 ### Logical
 
 ```kleis
-P ∧ Q ∨ R        -- (P ∧ Q) ∨ R
-P → Q → R        -- P → (Q → R) (right associative)
-¬P ∧ Q           -- (¬P) ∧ Q
+P ∧ Q ∨ R        // (P ∧ Q) ∨ R
+P → Q → R        // P → (Q → R) (right associative)
+¬P ∧ Q           // (¬P) ∧ Q
 ```
 
 ### Type Expressions
 
 ```kleis
-ℝ → ℝ → ℝ        -- ℝ → (ℝ → ℝ) (curried binary function)
-(ℝ → ℝ) → ℝ      -- Higher-order: takes function, returns value
-ℝ × ℝ → ℝ        -- Takes pair, returns value
+ℝ → ℝ → ℝ        // ℝ → (ℝ → ℝ) (curried binary function)
+(ℝ → ℝ) → ℝ      // Higher-order: takes function, returns value
+ℝ × ℝ → ℝ        // Takes pair, returns value
 ```
 
 ## Built-in Functions
@@ -102,13 +102,13 @@ P → Q → R        -- P → (Q → R) (right associative)
 ### Mathematical Functions
 
 ```kleis
-sqrt(x)          -- Square root
-abs(x)           -- Absolute value
-floor(x)         -- Round down
-ceil(x)          -- Round up
-round(x)         -- Round to nearest
-min(x, y)        -- Minimum
-max(x, y)        -- Maximum
+sqrt(x)          // Square root
+abs(x)           // Absolute value
+floor(x)         // Round down
+ceil(x)          // Round up
+round(x)         // Round to nearest
+min(x, y)        // Minimum
+max(x, y)        // Maximum
 ```
 
 ### Trigonometric Functions
@@ -122,16 +122,16 @@ sinh(x)  cosh(x)  tanh(x)
 ### Exponential and Logarithmic
 
 ```kleis
-exp(x)           -- e^x
-ln(x)            -- Natural logarithm
-log(x)           -- Base-10 logarithm
-log(b, x)        -- Logarithm base b
+exp(x)           // e^x
+ln(x)            // Natural logarithm
+log(x)           // Base-10 logarithm
+log(b, x)        // Logarithm base b
 ```
 
 ### Constants
 
 ```kleis
-π                -- Pi (3.14159...)
-e                -- Euler's number (2.71828...)
-i                -- Imaginary unit
+π                // Pi (3.14159...)
+e                // Euler's number (2.71828...)
+i                // Imaginary unit
 ```

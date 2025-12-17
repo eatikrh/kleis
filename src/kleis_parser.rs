@@ -397,6 +397,11 @@ impl KleisParser {
             return self.parse_let_binding();
         }
 
+        // Lambda expression: λ params . body or lambda params . body
+        if self.peek_word("lambda") || self.peek() == Some('λ') {
+            return self.parse_lambda();
+        }
+
         // List literal: [a, b, c]
         if self.peek() == Some('[') {
             return self.parse_list_literal();
@@ -1626,6 +1631,100 @@ impl KleisParser {
             value: Box::new(value),
             body: Box::new(body),
         })
+    }
+
+    /// Parse a lambda expression
+    /// Grammar: lambda ::= "λ" params "." expression | "lambda" params "." expression
+    ///
+    /// Examples:
+    ///   λ x . x + 1
+    ///   λ x y . x * y
+    ///   λ (x : ℝ) . x^2
+    ///   lambda x . x
+    fn parse_lambda(&mut self) -> Result<Expression, KleisParseError> {
+        // Consume 'λ' or 'lambda' keyword
+        if self.peek() == Some('λ') {
+            self.advance();
+        } else {
+            self.expect_word("lambda")?;
+        }
+        self.skip_whitespace();
+
+        // Parse parameters (one or more identifiers, optionally with types)
+        let mut params = Vec::new();
+        loop {
+            self.skip_whitespace();
+
+            // Check for '.' which ends the parameter list
+            if self.peek() == Some('.') {
+                break;
+            }
+
+            // Parse parameter (with optional type annotation)
+            let param = self.parse_lambda_param()?;
+            params.push(param);
+        }
+
+        // Must have at least one parameter
+        if params.is_empty() {
+            return Err(KleisParseError {
+                message: "Lambda expression requires at least one parameter".to_string(),
+                position: self.pos,
+            });
+        }
+
+        // Consume '.'
+        self.expect_char('.')?;
+        self.skip_whitespace();
+
+        // Parse the body expression
+        let body = self.parse_expression()?;
+
+        Ok(Expression::Lambda {
+            params,
+            body: Box::new(body),
+        })
+    }
+
+    /// Parse a single lambda parameter
+    /// Can be: x or (x : Type)
+    fn parse_lambda_param(&mut self) -> Result<crate::ast::LambdaParam, KleisParseError> {
+        if self.peek() == Some('(') {
+            // Typed parameter: (x : Type)
+            self.advance(); // consume '('
+            self.skip_whitespace();
+
+            let name = self.parse_identifier()?;
+            self.skip_whitespace();
+
+            // Expect ':'
+            self.expect_char(':')?;
+            self.skip_whitespace();
+
+            // Parse type
+            let ty = self.parse_type()?;
+            self.skip_whitespace();
+
+            // Expect ')'
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after typed parameter".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            Ok(crate::ast::LambdaParam {
+                name,
+                type_annotation: Some(ty.to_string()),
+            })
+        } else {
+            // Simple parameter: x
+            let name = self.parse_identifier()?;
+            Ok(crate::ast::LambdaParam {
+                name,
+                type_annotation: None,
+            })
+        }
     }
 
     /// Parse the value part of a let binding (stops at 'in')
@@ -5102,6 +5201,176 @@ mod tests {
             }
         } else {
             panic!("Expected times operation");
+        }
+    }
+
+    // ========================================
+    // LAMBDA EXPRESSION TESTS
+    // ========================================
+
+    #[test]
+    fn test_parse_lambda_simple() {
+        // λ x . x
+        let mut parser = KleisParser::new("λ x . x");
+        let result = parser.parse().unwrap();
+        if let Expression::Lambda { params, body } = result {
+            assert_eq!(params.len(), 1);
+            assert_eq!(params[0].name, "x");
+            assert!(params[0].type_annotation.is_none());
+            assert!(matches!(*body, Expression::Object(ref name) if name == "x"));
+        } else {
+            panic!("Expected Lambda expression, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_lambda_keyword() {
+        // lambda x . x (using keyword instead of symbol)
+        let mut parser = KleisParser::new("lambda x . x");
+        let result = parser.parse().unwrap();
+        if let Expression::Lambda { params, body } = result {
+            assert_eq!(params.len(), 1);
+            assert_eq!(params[0].name, "x");
+            assert!(matches!(*body, Expression::Object(ref name) if name == "x"));
+        } else {
+            panic!("Expected Lambda expression, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_lambda_multiple_params() {
+        // λ x y . x + y
+        let mut parser = KleisParser::new("λ x y . x + y");
+        let result = parser.parse().unwrap();
+        if let Expression::Lambda { params, body } = result {
+            assert_eq!(params.len(), 2);
+            assert_eq!(params[0].name, "x");
+            assert_eq!(params[1].name, "y");
+            assert!(matches!(*body, Expression::Operation { ref name, .. } if name == "plus"));
+        } else {
+            panic!("Expected Lambda expression, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_lambda_typed_param() {
+        // λ (x : ℝ) . x^2
+        let mut parser = KleisParser::new("λ (x : ℝ) . x^2");
+        let result = parser.parse().unwrap();
+        if let Expression::Lambda { params, body } = result {
+            assert_eq!(params.len(), 1);
+            assert_eq!(params[0].name, "x");
+            assert_eq!(params[0].type_annotation, Some("ℝ".to_string()));
+            assert!(matches!(*body, Expression::Operation { ref name, .. } if name == "power"));
+        } else {
+            panic!("Expected Lambda expression, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_lambda_multiple_typed_params() {
+        // λ (x : ℝ) (y : ℝ) . x * y
+        let mut parser = KleisParser::new("λ (x : ℝ) (y : ℝ) . x * y");
+        let result = parser.parse().unwrap();
+        if let Expression::Lambda { params, body } = result {
+            assert_eq!(params.len(), 2);
+            assert_eq!(params[0].name, "x");
+            assert_eq!(params[0].type_annotation, Some("ℝ".to_string()));
+            assert_eq!(params[1].name, "y");
+            assert_eq!(params[1].type_annotation, Some("ℝ".to_string()));
+            assert!(matches!(*body, Expression::Operation { ref name, .. } if name == "times"));
+        } else {
+            panic!("Expected Lambda expression, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_lambda_nested() {
+        // λ x . λ y . x + y (curried function)
+        let mut parser = KleisParser::new("λ x . λ y . x + y");
+        let result = parser.parse().unwrap();
+        if let Expression::Lambda { params, body } = result {
+            assert_eq!(params.len(), 1);
+            assert_eq!(params[0].name, "x");
+            // Body should be another lambda
+            if let Expression::Lambda {
+                params: inner_params,
+                body: inner_body,
+            } = *body
+            {
+                assert_eq!(inner_params.len(), 1);
+                assert_eq!(inner_params[0].name, "y");
+                assert!(
+                    matches!(*inner_body, Expression::Operation { ref name, .. } if name == "plus")
+                );
+            } else {
+                panic!("Expected nested Lambda");
+            }
+        } else {
+            panic!("Expected Lambda expression, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_lambda_in_expression() {
+        // f(λ x . x + 1)
+        let mut parser = KleisParser::new("f(λ x . x + 1)");
+        let result = parser.parse().unwrap();
+        if let Expression::Operation { name, args } = result {
+            assert_eq!(name, "f");
+            assert_eq!(args.len(), 1);
+            assert!(matches!(args[0], Expression::Lambda { .. }));
+        } else {
+            panic!("Expected Operation, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_lambda_with_function_body() {
+        // λ f . f(0)
+        let mut parser = KleisParser::new("λ f . f(0)");
+        let result = parser.parse().unwrap();
+        if let Expression::Lambda { params, body } = result {
+            assert_eq!(params.len(), 1);
+            assert_eq!(params[0].name, "f");
+            if let Expression::Operation { name, args } = *body {
+                assert_eq!(name, "f");
+                assert_eq!(args.len(), 1);
+            } else {
+                panic!("Expected function call in body");
+            }
+        } else {
+            panic!("Expected Lambda expression, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_define_with_lambda() {
+        // define add = λ x . λ y . x + y (curried function definition)
+        let code = "define add = λ x . λ y . x + y";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "add");
+        assert!(result.params.is_empty()); // No traditional params, lambda captures them
+
+        // Body should be a lambda
+        if let Expression::Lambda { params, body } = result.body {
+            assert_eq!(params.len(), 1);
+            assert_eq!(params[0].name, "x");
+            // Inner body should be another lambda
+            if let Expression::Lambda {
+                params: inner_params,
+                ..
+            } = *body
+            {
+                assert_eq!(inner_params.len(), 1);
+                assert_eq!(inner_params[0].name, "y");
+            } else {
+                panic!("Expected nested Lambda");
+            }
+        } else {
+            panic!("Expected Lambda expression, got {:?}", result.body);
         }
     }
 }

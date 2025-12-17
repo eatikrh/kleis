@@ -152,6 +152,17 @@ pub fn layout_expression(expr: &Expression, context: &LayoutContext) -> LayoutBo
                 false,
             )
         }
+
+        Expression::Lambda { params, .. } => {
+            // For now, return a placeholder text
+            let param_names: Vec<_> = params.iter().map(|p| p.name.as_str()).collect();
+            LayoutBox::text(
+                &format!("λ {} . ...", param_names.join(" ")),
+                context.base_font_size,
+                FontFamily::Main,
+                false,
+            )
+        }
     }
 }
 
