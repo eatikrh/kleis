@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
+            window.path_to_searchindex_js = "../searchindex-86870fa1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -184,16 +184,16 @@
 <p>The Kleis standard library provides foundational types, structures, and operations.</p>
 <h2 id="core-types"><a class="header" href="#core-types">Core Types</a></h2>
 <h3 id="numeric-types"><a class="header" href="#numeric-types">Numeric Types</a></h3>
-<pre><code class="language-kleis">-- Natural numbers (0, 1, 2, ...)
+<pre><code class="language-kleis">// Natural numbers (0, 1, 2, ...)
 ℕ  // or Nat
 
--- Integers (..., -1, 0, 1, ...)
+// Integers (..., -1, 0, 1, ...)
 ℤ  // or Int
 
--- Real numbers
+// Real numbers
 ℝ  // or Real
 
--- Complex numbers
+// Complex numbers
 ℂ  // or Complex
 </code></pre>
 <h3 id="boolean-type"><a class="header" href="#boolean-type">Boolean Type</a></h3>
@@ -326,7 +326,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     None
 }
 
--- Operations
+// Operations
 define is_some(opt : Option(T)) : Bool =
     match opt { Some(_) =&gt; True, None =&gt; False }
 
@@ -339,7 +339,7 @@ define unwrap_or(opt : Option(T), default : T) : T =
     Err(error : E)
 }
 
--- Operations
+// Operations
 define is_ok(res : Result(T, E)) : Bool =
     match res { Ok(_) =&gt; True, Err(_) =&gt; False }
 

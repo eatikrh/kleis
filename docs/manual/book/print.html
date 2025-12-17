@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a7c66518.js";
+            window.path_to_searchindex_js = "searchindex-86870fa1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f10a7c19.js"></script>
@@ -214,13 +214,13 @@
 </ol>
 <h2 id="a-taste-of-kleis"><a class="header" href="#a-taste-of-kleis">A Taste of Kleis</a></h2>
 <p>Here’s what Kleis looks like:</p>
-<pre><code class="language-kleis">-- Define a function
+<pre><code class="language-kleis">// Define a function
 define square(x) = x * x
 
--- With type annotation
+// With type annotation
 define double(x : ℝ) : ℝ = x + x
 
--- Create a structure
+// Create a structure
 structure Vector(n : ℕ) {
     axiom dimension : n ≥ 1
     operation dot : Vector(n) → ℝ
@@ -350,34 +350,34 @@ True : Bool         // True is a boolean
 </div>
 <h2 id="type-annotations"><a class="header" href="#type-annotations">Type Annotations</a></h2>
 <p>You can explicitly annotate types with <code>:</code>:</p>
-<pre><code class="language-kleis">-- Variable annotation
+<pre><code class="language-kleis">// Variable annotation
 let x : ℝ = 3.14 in x * 2
 
--- Function parameter and return types
+// Function parameter and return types
 define f(x : ℝ) : ℝ = x * x
 
--- Expression-level annotation (ascription)
+// Expression-level annotation (ascription)
 (a + b) : ℝ
 </code></pre>
 <h2 id="function-types"><a class="header" href="#function-types">Function Types</a></h2>
 <p>Functions have types too! The notation <code>A → B</code> means “a function from A to B”:</p>
-<pre><code class="language-kleis">-- square takes a Real and returns a Real
+<pre><code class="language-kleis">// square takes a Real and returns a Real
 define square(x : ℝ) : ℝ = x * x
--- Type: ℝ → ℝ
+// Type: ℝ → ℝ
 
--- add takes two Reals and returns a Real
+// add takes two Reals and returns a Real
 define add(x : ℝ, y : ℝ) : ℝ = x + y
--- Type: ℝ × ℝ → ℝ (or equivalently: ℝ → ℝ → ℝ)
+// Type: ℝ × ℝ → ℝ (or equivalently: ℝ → ℝ → ℝ)
 </code></pre>
 <h3 id="higher-order-function-types"><a class="header" href="#higher-order-function-types">Higher-Order Function Types</a></h3>
 <p>Functions can take other functions as arguments or return functions. These are called <strong>higher-order functions</strong>:</p>
-<pre><code class="language-kleis">-- A function that takes a function as an argument
+<pre><code class="language-kleis">// A function that takes a function as an argument
 define apply_twice(f : ℝ → ℝ, x : ℝ) : ℝ = f(f(x))
--- Type: (ℝ → ℝ) × ℝ → ℝ
+// Type: (ℝ → ℝ) × ℝ → ℝ
 
--- A function that returns a function
+// A function that returns a function
 define make_adder(n : ℝ) : ℝ → ℝ = ???
--- Type: ℝ → (ℝ → ℝ)
+// Type: ℝ → (ℝ → ℝ)
 </code></pre>
 <p>The parentheses matter! Compare:</p>
 <ul>
@@ -402,22 +402,22 @@ define make_adder(n : ℝ) : ℝ → ℝ = ???
 </div>
 <h2 id="parametric-types"><a class="header" href="#parametric-types">Parametric Types</a></h2>
 <p>Types can have parameters:</p>
-<pre><code class="language-kleis">-- List of integers
+<pre><code class="language-kleis">// List of integers
 List(ℤ)
 
--- Matrix with dimensions
+// Matrix with dimensions
 Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 
--- Vector with dimension
+// Vector with dimension
 Vector(4)          // 4-dimensional vector
 </code></pre>
 <h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
 <p>Kleis often infers types automatically:</p>
 <pre><code class="language-kleis">define double(x) = x + x
--- Kleis infers: double : ℝ → ℝ (or more general)
+// Kleis infers: double : ℝ → ℝ (or more general)
 
 let y = 5 in y * y
--- Kleis infers: y : ℤ
+// Kleis infers: y : ℤ
 </code></pre>
 <p>But explicit types make code clearer and catch errors earlier!</p>
 <h2 id="the-type-hierarchy"><a class="header" href="#the-type-hierarchy">The Type Hierarchy</a></h2>
@@ -499,27 +499,27 @@ lambda x . x + 1      // increment (using keyword)
 λ x . λ y . x + y     // curried addition (nested)
 </code></pre>
 <p>Lambda expressions are first-class values - you can pass them to functions:</p>
-<pre><code class="language-kleis">-- Pass lambda to higher-order function
+<pre><code class="language-kleis">// Pass lambda to higher-order function
 map(λ x . x * 2, [1, 2, 3])
 
--- Or define inline
+// Or define inline
 apply(λ x . x + 1, 5)
 </code></pre>
 <h2 id="higher-order-functions"><a class="header" href="#higher-order-functions">Higher-Order Functions</a></h2>
 <p>Functions can take functions as arguments:</p>
-<pre><code class="language-kleis">-- Apply a function twice
+<pre><code class="language-kleis">// Apply a function twice
 define apply_twice(f, x) = f(f(x))
 
--- Example usage:
+// Example usage:
 define inc(x) = x + 1
 apply_twice(inc, 5)   // Result: 7
 </code></pre>
 <h2 id="partial-application-and-currying"><a class="header" href="#partial-application-and-currying">Partial Application and Currying</a></h2>
 <p>With lambda expressions, you can create curried functions:</p>
-<pre><code class="language-kleis">-- Curried addition
+<pre><code class="language-kleis">// Curried addition
 define add = λ x . λ y . x + y
 
--- Partial application creates specialized functions
+// Partial application creates specialized functions
 define add5 = add(5)    // λ y . 5 + y
 add5(3)                 // Result: 8
 </code></pre>
@@ -536,13 +536,13 @@ add5(3)                 // Result: 8
 </ul>
 <h2 id="product-types"><a class="header" href="#product-types">Product Types</a></h2>
 <p>A product type combines multiple values:</p>
-<pre><code class="language-kleis">-- A point has an x AND a y
+<pre><code class="language-kleis">// A point has an x AND a y
 structure Point {
     x : ℝ
     y : ℝ
 }
 
--- A person has a name AND an age
+// A person has a name AND an age
 structure Person {
     name : String
     age : ℕ
@@ -550,20 +550,20 @@ structure Person {
 </code></pre>
 <h2 id="sum-types-variants"><a class="header" href="#sum-types-variants">Sum Types (Variants)</a></h2>
 <p>A sum type represents alternatives:</p>
-<pre><code class="language-kleis">-- A shape is a Circle OR a Rectangle OR a Triangle
+<pre><code class="language-kleis">// A shape is a Circle OR a Rectangle OR a Triangle
 enum Shape {
     Circle(radius : ℝ)
     Rectangle(width : ℝ, height : ℝ)
     Triangle(a : ℝ, b : ℝ, c : ℝ)
 }
 
--- An optional value is Some(value) OR None
+// An optional value is Some(value) OR None
 enum Option(T) {
     Some(value : T)
     None
 }
 
--- A result is Ok(value) OR Err(message)
+// A result is Ok(value) OR Err(message)
 enum Result(T, E) {
     Ok(value : T)
     Err(error : E)
@@ -582,13 +582,13 @@ enum Result(T, E) {
 </code></pre>
 <h2 id="recursive-types"><a class="header" href="#recursive-types">Recursive Types</a></h2>
 <p>Types can refer to themselves:</p>
-<pre><code class="language-kleis">-- A list is either empty (Nil) or a value followed by another list (Cons)
+<pre><code class="language-kleis">// A list is either empty (Nil) or a value followed by another list (Cons)
 enum List(T) {
     Nil
     Cons(head : T, tail : List(T))
 }
 
--- A binary tree
+// A binary tree
 enum Tree(T) {
     Leaf(value : T)
     Node(left : Tree(T), value : T, right : Tree(T))
@@ -616,7 +616,7 @@ enum Tree(T) {
     Neg(inner : Expr)
 }
 
--- Evaluate an expression given variable values
+// Evaluate an expression given variable values
 define eval(expr : Expr, env : Map(String, ℝ)) : ℝ =
     match expr {
         Const(v) =&gt; v
@@ -751,7 +751,7 @@ match opt {
 <h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
 <p>Let bindings introduce local variables with limited scope. They’re essential for breaking complex expressions into readable parts.</p>
 <pre><code class="language-kleis">let x = 5 in x * x
--- Result: 25
+// Result: 25
 </code></pre>
 <h2 id="basic-syntax"><a class="header" href="#basic-syntax">Basic Syntax</a></h2>
 <pre><code class="language-kleis">let &lt;name&gt; = &lt;value&gt; in &lt;body&gt;
@@ -759,9 +759,9 @@ match opt {
 <p>The variable <code>name</code> is only visible within <code>body</code>:</p>
 <pre><code class="language-kleis">let radius = 10 in
     π * radius^2
--- Result: 314.159...
+// Result: 314.159...
 
--- 'radius' is not visible here!
+// 'radius' is not visible here!
 </code></pre>
 <h2 id="with-type-annotations"><a class="header" href="#with-type-annotations">With Type Annotations</a></h2>
 <p>Add explicit types for clarity:</p>
@@ -775,7 +775,7 @@ let v : Vector(3) = [1, 2, 3] in magnitude(v)
 let y = 3 in
 let z = x + y in
     x * y * z
--- Result: 5 * 3 * 8 = 120
+// Result: 5 * 3 * 8 = 120
 </code></pre>
 <h2 id="shadowing"><a class="header" href="#shadowing">Shadowing</a></h2>
 <p>Inner bindings can shadow outer ones:</p>
@@ -783,13 +783,13 @@ let z = x + y in
 let x = x + 1 in
 let x = x * 2 in
     x
--- Result: 4  (not 1!)
+// Result: 4  (not 1!)
 </code></pre>
 <p>Each <code>let</code> creates a new scope where <code>x</code> is rebound.</p>
 <h2 id="pure-substitution-semantics"><a class="header" href="#pure-substitution-semantics">Pure Substitution Semantics</a></h2>
 <p>In Kleis, <code>let x = e in body</code> is equivalent to substituting <code>e</code> for <code>x</code> in <code>body</code>:</p>
 <pre><code class="language-kleis">let x = 5 in x + x
--- is the same as:
+// is the same as:
 5 + 5
 </code></pre>
 <p>This is <strong>pure functional semantics</strong> — no mutation, no side effects.</p>
@@ -825,10 +825,10 @@ let x = x * 2 in
 </tbody>
 </table>
 </div>
-<pre><code class="language-kleis">-- Global constant
+<pre><code class="language-kleis">// Global constant
 define pi = 3.14159
 
--- Local temporary
+// Local temporary
 let two_pi = 2 * pi in
     two_pi * radius
 </code></pre>
@@ -853,10 +853,10 @@ let two_pi = 2 * pi in
 <p>ASCII alternative: <code>exists x . ...</code></p>
 <h2 id="combining-quantifiers"><a class="header" href="#combining-quantifiers">Combining Quantifiers</a></h2>
 <p>Build complex statements:</p>
-<pre><code class="language-kleis">-- Every number has a successor
+<pre><code class="language-kleis">// Every number has a successor
 ∀ n : ℕ . ∃ m : ℕ . m = n + 1
 
--- Density of rationals: between any two reals is a rational
+// Density of rationals: between any two reals is a rational
 ∀ x : ℝ . ∀ y : ℝ . x &lt; y → ∃ q : ℚ . x &lt; q ∧ q &lt; y
 </code></pre>
 <h2 id="logical-connectives"><a class="header" href="#logical-connectives">Logical Connectives</a></h2>
@@ -899,12 +899,12 @@ P → Q                   // If P then Q
 </code></pre>
 <h2 id="verification-with-z3"><a class="header" href="#verification-with-z3">Verification with Z3</a></h2>
 <p>Kleis uses Z3 to check quantified statements:</p>
-<pre><code class="language-kleis">-- Z3 can verify this is always true:
+<pre><code class="language-kleis">// Z3 can verify this is always true:
 verify ∀ x : ℝ . x + 0 = x
 
--- Z3 can find a counterexample for this:
+// Z3 can find a counterexample for this:
 verify ∀ x : ℝ . x &gt; 0
--- Counterexample: x = -1
+// Counterexample: x = -1
 </code></pre>
 <h2 id="truth-tables"><a class="header" href="#truth-tables">Truth Tables</a></h2>
 <div class="table-wrapper">
@@ -941,7 +941,7 @@ define abs(x : ℝ) : ℝ = if x ≥ 0 then x else -x
 <pre><code class="language-kleis">let result = if x &gt; 0 then x else -x in
     result * 2
 
--- Both branches must have compatible types!
+// Both branches must have compatible types!
 if True then 42 else "hello"  // ❌ Type error!
 </code></pre>
 <h2 id="nested-conditionals"><a class="header" href="#nested-conditionals">Nested Conditionals</a></h2>
@@ -959,13 +959,13 @@ define grade(score : ℕ) : String =
 </code></pre>
 <h2 id="guards-vs-if-then-else"><a class="header" href="#guards-vs-if-then-else">Guards vs If-Then-Else</a></h2>
 <p>Pattern matching with guards is often cleaner:</p>
-<pre><code class="language-kleis">-- With if-then-else
+<pre><code class="language-kleis">// With if-then-else
 define classify(n : ℤ) : String =
     if n &lt; 0 then "negative"
     else if n = 0 then "zero"
     else "positive"
 
--- With pattern matching and guards
+// With pattern matching and guards
 define classify(n : ℤ) : String =
     match n {
         x if x &lt; 0 =&gt; "negative"
@@ -975,17 +975,17 @@ define classify(n : ℤ) : String =
 </code></pre>
 <h2 id="piecewise-functions"><a class="header" href="#piecewise-functions">Piecewise Functions</a></h2>
 <p>Mathematicians love piecewise definitions:</p>
-<pre><code class="language-kleis">-- Absolute value
+<pre><code class="language-kleis">// Absolute value
 define abs(x : ℝ) : ℝ =
     if x ≥ 0 then x else -x
 
--- Heaviside step function
+// Heaviside step function
 define heaviside(x : ℝ) : ℝ =
     if x &lt; 0 then 0
     else if x = 0 then 0.5
     else 1
 
--- Piecewise polynomial
+// Piecewise polynomial
 define f(x : ℝ) : ℝ =
     if x &lt; 0 then x^2
     else if x &lt; 1 then x
@@ -1001,7 +1001,7 @@ else "on an axis"
 </code></pre>
 <h2 id="short-circuit-evaluation"><a class="header" href="#short-circuit-evaluation">Short-Circuit Evaluation</a></h2>
 <p>Kleis uses short-circuit evaluation for <code>∧</code> and <code>∨</code>:</p>
-<pre><code class="language-kleis">-- If x = 0, division is never evaluated
+<pre><code class="language-kleis">// If x = 0, division is never evaluated
 if x ≠ 0 ∧ y/x &gt; 1 then "big ratio" else "safe"
 </code></pre>
 <h2 id="whats-next-7"><a class="header" href="#whats-next-7">What’s Next?</a></h2>
@@ -1065,7 +1065,7 @@ if x ≠ 0 ∧ y/x &gt; 1 then "big ratio" else "safe"
         transpose(transpose(A)) = A
 }
 
--- Square matrices have more operations
+// Square matrices have more operations
 structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     operation det : T
     operation trace : T
@@ -1145,7 +1145,7 @@ structure AbelianGroup(G) extends Group(G) {
 </code></pre>
 <h2 id="the-over-keyword"><a class="header" href="#the-over-keyword">The <code>over</code> Keyword</a></h2>
 <p>Many mathematical structures are defined “over” a base structure. A vector space is defined over a field, a module over a ring:</p>
-<pre><code class="language-kleis">-- Vector space over a field
+<pre><code class="language-kleis">// Vector space over a field
 structure VectorSpace(V) over Field(F) {
     operation (+) : V × V → V
     operation (·) : F × V → V
@@ -1155,13 +1155,13 @@ structure VectorSpace(V) over Field(F) {
         a · (u + v) = (a · u) + (a · v)
 }
 
--- Module over a ring (generalization of vector space)
+// Module over a ring (generalization of vector space)
 structure Module(M) over Ring(R) {
     operation (+) : M × M → M
     operation (·) : R × M → M
 }
 
--- Algebra over a ring
+// Algebra over a ring
 structure Algebra(A) over Ring(R) {
     operation (+) : A × A → A
     operation (·) : R × A → A
@@ -1213,7 +1213,7 @@ implements Addable(ℤ) {
 }
 </code></pre>
 <h2 id="full-example-complex-numbers"><a class="header" href="#full-example-complex-numbers">Full Example: Complex Numbers</a></h2>
-<pre><code class="language-kleis">-- Declare the structure
+<pre><code class="language-kleis">// Declare the structure
 structure Complex {
     field re : ℝ
     field im : ℝ
@@ -1224,7 +1224,7 @@ structure Complex {
     operation mag : ℝ
 }
 
--- Implement the operations
+// Implement the operations
 implements Complex {
     operation add(z, w) = Complex {
         re = z.re + w.re,
@@ -1267,7 +1267,7 @@ implements Stack(ℤ) {
     operation compare : T × T → Ordering
 }
 
--- Natural ordering
+// Natural ordering
 implements Orderable(ℤ) {
     operation compare(x, y) =
         if x &lt; y then LT
@@ -1275,7 +1275,7 @@ implements Orderable(ℤ) {
         else EQ
 }
 
--- Reverse ordering (for max-heaps, etc.)
+// Reverse ordering (for max-heaps, etc.)
 implements Orderable(ℤ) as ReverseOrder {
     operation compare(x, y) =
         if x &gt; y then LT
@@ -1294,7 +1294,7 @@ structure Group(G) extends Monoid(G) {
     operation inv : G → G
 }
 
--- Must implement both Monoid and Group operations
+// Must implement both Monoid and Group operations
 implements Group(ℤ) {
     operation e = 0
     operation mul(x, y) = x + y
@@ -1356,10 +1356,10 @@ implements Monoid(String) {
     operation mul(s1, s2) = concat(s1, s2)
 }
 
--- Kleis can verify:
--- 1. concat("", s) = s for all s ✓
--- 2. concat(s, "") = s for all s ✓
--- 3. concat(concat(a, b), c) = concat(a, concat(b, c)) ✓
+// Kleis can verify:
+// 1. concat("", s) = s for all s ✓
+// 2. concat(s, "") = s for all s ✓
+// 3. concat(concat(a, b), c) = concat(a, concat(b, c)) ✓
 </code></pre>
 <h2 id="whats-next-9"><a class="header" href="#whats-next-9">What’s Next?</a></h2>
 <p>Learn about Z3 verification in depth!</p>
@@ -1376,28 +1376,28 @@ implements Monoid(String) {
 <h2 id="basic-verification"><a class="header" href="#basic-verification">Basic Verification</a></h2>
 <p>Use <code>verify</code> to check a statement:</p>
 <pre><code class="language-kleis">verify x + y = y + x
--- Result: ✓ Valid (commutativity of addition)
+// Result: ✓ Valid (commutativity of addition)
 
 verify x * 0 = 0
--- Result: ✓ Valid
+// Result: ✓ Valid
 
 verify x &gt; 0
--- Result: ✗ Invalid
--- Counterexample: x = -1
+// Result: ✗ Invalid
+// Counterexample: x = -1
 </code></pre>
 <h2 id="verifying-quantified-statements"><a class="header" href="#verifying-quantified-statements">Verifying Quantified Statements</a></h2>
 <p>Z3 handles universal and existential quantifiers:</p>
 <pre><code class="language-kleis">verify ∀ x : ℝ . x + 0 = x
--- Result: ✓ Valid
+// Result: ✓ Valid
 
 verify ∀ x : ℝ . x * x ≥ 0
--- Result: ✓ Valid (squares are non-negative)
+// Result: ✓ Valid (squares are non-negative)
 
 verify ∃ x : ℝ . x * x = -1
--- Result: ✗ Invalid (no real square root of -1)
+// Result: ✗ Invalid (no real square root of -1)
 
 verify ∃ x : ℂ . x * x = -1
--- Result: ✓ Valid (x = i works)
+// Result: ✓ Valid (x = i works)
 </code></pre>
 <h2 id="checking-axioms"><a class="header" href="#checking-axioms">Checking Axioms</a></h2>
 <p>Verify that definitions satisfy axioms:</p>
@@ -1412,40 +1412,40 @@ verify ∃ x : ℂ . x * x = -1
         mul(mul(x, y), z) = mul(x, mul(y, z))
 }
 
--- Define integers with addition
+// Define integers with addition
 implements Group(ℤ) {
     operation e = 0
     operation mul(x, y) = x + y
     operation inv(x) = -x
 }
 
--- Kleis verifies each axiom automatically!
+// Kleis verifies each axiom automatically!
 </code></pre>
 <h2 id="implication-verification"><a class="header" href="#implication-verification">Implication Verification</a></h2>
 <p>Prove that premises imply conclusions:</p>
-<pre><code class="language-kleis">-- If x &gt; 0 and y &gt; 0, then x + y &gt; 0
+<pre><code class="language-kleis">// If x &gt; 0 and y &gt; 0, then x + y &gt; 0
 verify (x &gt; 0 ∧ y &gt; 0) → x + y &gt; 0
--- Result: ✓ Valid
+// Result: ✓ Valid
 
--- Triangle inequality
+// Triangle inequality
 verify (abs(x) ≤ a ∧ abs(y) ≤ b) → abs(x + y) ≤ a + b
--- Result: ✓ Valid
+// Result: ✓ Valid
 </code></pre>
 <h2 id="counterexamples"><a class="header" href="#counterexamples">Counterexamples</a></h2>
 <p>When verification fails, Z3 provides counterexamples:</p>
 <pre><code class="language-kleis">verify ∀ x : ℝ . x^2 = x
--- Result: ✗ Invalid
--- Counterexample: x = 2 (since 4 ≠ 2)
+// Result: ✗ Invalid
+// Counterexample: x = 2 (since 4 ≠ 2)
 
 verify ∀ n : ℕ . n &gt; 0 → n &gt; 1
--- Result: ✗ Invalid
--- Counterexample: n = 1
+// Result: ✗ Invalid
+// Counterexample: n = 1
 </code></pre>
 <h2 id="timeout-and-limits"><a class="header" href="#timeout-and-limits">Timeout and Limits</a></h2>
 <p>Complex statements may time out:</p>
-<pre><code class="language-kleis">-- Very complex statement
+<pre><code class="language-kleis">// Very complex statement
 verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
--- Result: ⏱ Timeout (statement too complex)
+// Result: ⏱ Timeout (statement too complex)
 </code></pre>
 <h2 id="what-z3-can-and-cannot-do"><a class="header" href="#what-z3-can-and-cannot-do">What Z3 Can and Cannot Do</a></h2>
 <h3 id="z3-excels-at"><a class="header" href="#z3-excels-at">Z3 Excels At:</a></h3>
@@ -1471,7 +1471,7 @@ verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
 <li><strong>Use <code>verify</code></strong> for additional properties</li>
 <li><strong>Examine counterexamples</strong> when verification fails</li>
 </ol>
-<pre><code class="language-kleis">-- Step 1: Define structure
+<pre><code class="language-kleis">// Step 1: Define structure
 structure Ring(R) {
     operation zero : R
     operation one : R
@@ -1484,7 +1484,7 @@ structure Ring(R) {
     // ... more axioms
 }
 
--- Step 2: Implement for integers
+// Step 2: Implement for integers
 implements Ring(ℤ) {
     operation zero = 0
     operation one = 1
@@ -1493,11 +1493,11 @@ implements Ring(ℤ) {
     operation neg(x) = -x
 }
 
--- Step 3: Auto-verification happens!
+// Step 3: Auto-verification happens!
 
--- Step 4: Check additional properties
+// Step 4: Check additional properties
 verify ∀ x : ℤ . mul(x, zero) = zero
--- Result: ✓ Valid
+// Result: ✓ Valid
 </code></pre>
 <h2 id="whats-next-10"><a class="header" href="#whats-next-10">What’s Next?</a></h2>
 <p>Try the interactive REPL!</p>
@@ -1636,7 +1636,7 @@ Goodbye!
 <h1 id="applications"><a class="header" href="#applications">Applications</a></h1>
 <h2 id="differential-geometry"><a class="header" href="#differential-geometry">Differential Geometry</a></h2>
 <p>Kleis excels at differential geometry calculations:</p>
-<pre><code class="language-kleis">-- Christoffel symbols for spherical coordinates
+<pre><code class="language-kleis">// Christoffel symbols for spherical coordinates
 structure SphericalMetric {
     operation metric : (ℝ, ℝ) → Matrix(2, 2, ℝ)
     operation christoffel : (ℝ, ℝ) → Tensor(1, 2)
@@ -1657,7 +1657,7 @@ implements SphericalMetric {
 }
 </code></pre>
 <h2 id="tensor-calculus"><a class="header" href="#tensor-calculus">Tensor Calculus</a></h2>
-<pre><code class="language-kleis">-- Einstein field equations
+<pre><code class="language-kleis">// Einstein field equations
 structure EinsteinEquations {
     // Ricci tensor
     operation ricci : Manifold → Tensor(0, 2)
@@ -1711,7 +1711,7 @@ define diff(e : Expr, x : String) : Expr =
         det(A) ≠ 0 → mul(A, solve(A, b)) = b
 }
 
--- Eigenvalue problem
+// Eigenvalue problem
 structure Eigen(n : ℕ) {
     operation eigenvalues : Matrix(n, n, ℂ) → List(ℂ)
     operation eigenvectors : Matrix(n, n, ℂ) → List(Vector(n, ℂ))
@@ -1739,7 +1739,7 @@ structure Observable(n : ℕ) {
         O.matrix = conjugate_transpose(O.matrix)
 }
 
--- Expectation value
+// Expectation value
 define expectation(ψ : QuantumState(n), O : Observable(n)) : ℝ =
     real(inner_product(ψ.amplitudes, mul(O.matrix, ψ.amplitudes)))
 </code></pre>
@@ -1944,10 +1944,11 @@ operation_impl ::= 'operation' identifier parameters? '=' expression
 </table>
 </div>
 <h2 id="comments-1"><a class="header" href="#comments-1">Comments</a></h2>
-<pre><code class="language-ebnf">line_comment ::= '--' [^\n]*
+<pre><code class="language-ebnf">line_comment ::= '//' [^\n]*
 
-block_comment ::= '{-' .* '-}'
+block_comment ::= '/*' .* '*/'
 </code></pre>
+<p><strong>Note:</strong> Kleis uses C-style comments (<code>//</code> and <code>/* */</code>), not Haskell-style (<code>--</code> and <code>{- -}</code>).</p>
 <h2 id="unicode-equivalents"><a class="header" href="#unicode-equivalents">Unicode Equivalents</a></h2>
 <div class="table-wrapper">
 <table>
@@ -2122,16 +2123,16 @@ i                // Imaginary unit
 <p>The Kleis standard library provides foundational types, structures, and operations.</p>
 <h2 id="core-types"><a class="header" href="#core-types">Core Types</a></h2>
 <h3 id="numeric-types-1"><a class="header" href="#numeric-types-1">Numeric Types</a></h3>
-<pre><code class="language-kleis">-- Natural numbers (0, 1, 2, ...)
+<pre><code class="language-kleis">// Natural numbers (0, 1, 2, ...)
 ℕ  // or Nat
 
--- Integers (..., -1, 0, 1, ...)
+// Integers (..., -1, 0, 1, ...)
 ℤ  // or Int
 
--- Real numbers
+// Real numbers
 ℝ  // or Real
 
--- Complex numbers
+// Complex numbers
 ℂ  // or Complex
 </code></pre>
 <h3 id="boolean-type"><a class="header" href="#boolean-type">Boolean Type</a></h3>
@@ -2264,7 +2265,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     None
 }
 
--- Operations
+// Operations
 define is_some(opt : Option(T)) : Bool =
     match opt { Some(_) =&gt; True, None =&gt; False }
 
@@ -2277,7 +2278,7 @@ define unwrap_or(opt : Option(T), default : T) : T =
     Err(error : E)
 }
 
--- Operations
+// Operations
 define is_ok(res : Result(T, E)) : Bool =
     match res { Ok(_) =&gt; True, Err(_) =&gt; False }
 

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
+            window.path_to_searchindex_js = "../searchindex-86870fa1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -237,7 +237,7 @@
         transpose(transpose(A)) = A
 }
 
--- Square matrices have more operations
+// Square matrices have more operations
 structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     operation det : T
     operation trace : T
@@ -317,7 +317,7 @@ structure AbelianGroup(G) extends Group(G) {
 </code></pre>
 <h2 id="the-over-keyword"><a class="header" href="#the-over-keyword">The <code>over</code> Keyword</a></h2>
 <p>Many mathematical structures are defined “over” a base structure. A vector space is defined over a field, a module over a ring:</p>
-<pre><code class="language-kleis">-- Vector space over a field
+<pre><code class="language-kleis">// Vector space over a field
 structure VectorSpace(V) over Field(F) {
     operation (+) : V × V → V
     operation (·) : F × V → V
@@ -327,13 +327,13 @@ structure VectorSpace(V) over Field(F) {
         a · (u + v) = (a · u) + (a · v)
 }
 
--- Module over a ring (generalization of vector space)
+// Module over a ring (generalization of vector space)
 structure Module(M) over Ring(R) {
     operation (+) : M × M → M
     operation (·) : R × M → M
 }
 
--- Algebra over a ring
+// Algebra over a ring
 structure Algebra(A) over Ring(R) {
     operation (+) : A × A → A
     operation (·) : R × A → A

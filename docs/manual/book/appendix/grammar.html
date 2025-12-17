@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
+            window.path_to_searchindex_js = "../searchindex-86870fa1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -332,10 +332,11 @@ operation_impl ::= 'operation' identifier parameters? '=' expression
 </table>
 </div>
 <h2 id="comments"><a class="header" href="#comments">Comments</a></h2>
-<pre><code class="language-ebnf">line_comment ::= '--' [^\n]*
+<pre><code class="language-ebnf">line_comment ::= '//' [^\n]*
 
-block_comment ::= '{-' .* '-}'
+block_comment ::= '/*' .* '*/'
 </code></pre>
+<p><strong>Note:</strong> Kleis uses C-style comments (<code>//</code> and <code>/* */</code>), not Haskell-style (<code>--</code> and <code>{- -}</code>).</p>
 <h2 id="unicode-equivalents"><a class="header" href="#unicode-equivalents">Unicode Equivalents</a></h2>
 <div class="table-wrapper">
 <table>

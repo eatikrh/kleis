@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
+            window.path_to_searchindex_js = "../searchindex-86870fa1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -189,13 +189,13 @@
 </ul>
 <h2 id="product-types"><a class="header" href="#product-types">Product Types</a></h2>
 <p>A product type combines multiple values:</p>
-<pre><code class="language-kleis">-- A point has an x AND a y
+<pre><code class="language-kleis">// A point has an x AND a y
 structure Point {
     x : ℝ
     y : ℝ
 }
 
--- A person has a name AND an age
+// A person has a name AND an age
 structure Person {
     name : String
     age : ℕ
@@ -203,20 +203,20 @@ structure Person {
 </code></pre>
 <h2 id="sum-types-variants"><a class="header" href="#sum-types-variants">Sum Types (Variants)</a></h2>
 <p>A sum type represents alternatives:</p>
-<pre><code class="language-kleis">-- A shape is a Circle OR a Rectangle OR a Triangle
+<pre><code class="language-kleis">// A shape is a Circle OR a Rectangle OR a Triangle
 enum Shape {
     Circle(radius : ℝ)
     Rectangle(width : ℝ, height : ℝ)
     Triangle(a : ℝ, b : ℝ, c : ℝ)
 }
 
--- An optional value is Some(value) OR None
+// An optional value is Some(value) OR None
 enum Option(T) {
     Some(value : T)
     None
 }
 
--- A result is Ok(value) OR Err(message)
+// A result is Ok(value) OR Err(message)
 enum Result(T, E) {
     Ok(value : T)
     Err(error : E)
@@ -235,13 +235,13 @@ enum Result(T, E) {
 </code></pre>
 <h2 id="recursive-types"><a class="header" href="#recursive-types">Recursive Types</a></h2>
 <p>Types can refer to themselves:</p>
-<pre><code class="language-kleis">-- A list is either empty (Nil) or a value followed by another list (Cons)
+<pre><code class="language-kleis">// A list is either empty (Nil) or a value followed by another list (Cons)
 enum List(T) {
     Nil
     Cons(head : T, tail : List(T))
 }
 
--- A binary tree
+// A binary tree
 enum Tree(T) {
     Leaf(value : T)
     Node(left : Tree(T), value : T, right : Tree(T))
@@ -269,7 +269,7 @@ enum Tree(T) {
     Neg(inner : Expr)
 }
 
--- Evaluate an expression given variable values
+// Evaluate an expression given variable values
 define eval(expr : Expr, env : Map(String, ℝ)) : ℝ =
     match expr {
         Const(v) =&gt; v

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
+            window.path_to_searchindex_js = "../searchindex-86870fa1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -183,7 +183,7 @@
                         <h1 id="applications"><a class="header" href="#applications">Applications</a></h1>
 <h2 id="differential-geometry"><a class="header" href="#differential-geometry">Differential Geometry</a></h2>
 <p>Kleis excels at differential geometry calculations:</p>
-<pre><code class="language-kleis">-- Christoffel symbols for spherical coordinates
+<pre><code class="language-kleis">// Christoffel symbols for spherical coordinates
 structure SphericalMetric {
     operation metric : (ℝ, ℝ) → Matrix(2, 2, ℝ)
     operation christoffel : (ℝ, ℝ) → Tensor(1, 2)
@@ -204,7 +204,7 @@ implements SphericalMetric {
 }
 </code></pre>
 <h2 id="tensor-calculus"><a class="header" href="#tensor-calculus">Tensor Calculus</a></h2>
-<pre><code class="language-kleis">-- Einstein field equations
+<pre><code class="language-kleis">// Einstein field equations
 structure EinsteinEquations {
     // Ricci tensor
     operation ricci : Manifold → Tensor(0, 2)
@@ -258,7 +258,7 @@ define diff(e : Expr, x : String) : Expr =
         det(A) ≠ 0 → mul(A, solve(A, b)) = b
 }
 
--- Eigenvalue problem
+// Eigenvalue problem
 structure Eigen(n : ℕ) {
     operation eigenvalues : Matrix(n, n, ℂ) → List(ℂ)
     operation eigenvectors : Matrix(n, n, ℂ) → List(Vector(n, ℂ))
@@ -286,7 +286,7 @@ structure Observable(n : ℕ) {
         O.matrix = conjugate_transpose(O.matrix)
 }
 
--- Expectation value
+// Expectation value
 define expectation(ψ : QuantumState(n), O : Observable(n)) : ℝ =
     real(inner_product(ψ.amplitudes, mul(O.matrix, ψ.amplitudes)))
 </code></pre>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a7c66518.js";
+            window.path_to_searchindex_js = "searchindex-86870fa1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f10a7c19.js"></script>
@@ -216,13 +216,13 @@
 </ol>
 <h2 id="a-taste-of-kleis"><a class="header" href="#a-taste-of-kleis">A Taste of Kleis</a></h2>
 <p>Here’s what Kleis looks like:</p>
-<pre><code class="language-kleis">-- Define a function
+<pre><code class="language-kleis">// Define a function
 define square(x) = x * x
 
--- With type annotation
+// With type annotation
 define double(x : ℝ) : ℝ = x + x
 
--- Create a structure
+// Create a structure
 structure Vector(n : ℕ) {
     axiom dimension : n ≥ 1
     operation dot : Vector(n) → ℝ

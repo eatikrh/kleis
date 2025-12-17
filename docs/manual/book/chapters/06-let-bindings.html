@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
+            window.path_to_searchindex_js = "../searchindex-86870fa1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -184,7 +184,7 @@
 <h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
 <p>Let bindings introduce local variables with limited scope. They’re essential for breaking complex expressions into readable parts.</p>
 <pre><code class="language-kleis">let x = 5 in x * x
--- Result: 25
+// Result: 25
 </code></pre>
 <h2 id="basic-syntax"><a class="header" href="#basic-syntax">Basic Syntax</a></h2>
 <pre><code class="language-kleis">let &lt;name&gt; = &lt;value&gt; in &lt;body&gt;
@@ -192,9 +192,9 @@
 <p>The variable <code>name</code> is only visible within <code>body</code>:</p>
 <pre><code class="language-kleis">let radius = 10 in
     π * radius^2
--- Result: 314.159...
+// Result: 314.159...
 
--- 'radius' is not visible here!
+// 'radius' is not visible here!
 </code></pre>
 <h2 id="with-type-annotations"><a class="header" href="#with-type-annotations">With Type Annotations</a></h2>
 <p>Add explicit types for clarity:</p>
@@ -208,7 +208,7 @@ let v : Vector(3) = [1, 2, 3] in magnitude(v)
 let y = 3 in
 let z = x + y in
     x * y * z
--- Result: 5 * 3 * 8 = 120
+// Result: 5 * 3 * 8 = 120
 </code></pre>
 <h2 id="shadowing"><a class="header" href="#shadowing">Shadowing</a></h2>
 <p>Inner bindings can shadow outer ones:</p>
@@ -216,13 +216,13 @@ let z = x + y in
 let x = x + 1 in
 let x = x * 2 in
     x
--- Result: 4  (not 1!)
+// Result: 4  (not 1!)
 </code></pre>
 <p>Each <code>let</code> creates a new scope where <code>x</code> is rebound.</p>
 <h2 id="pure-substitution-semantics"><a class="header" href="#pure-substitution-semantics">Pure Substitution Semantics</a></h2>
 <p>In Kleis, <code>let x = e in body</code> is equivalent to substituting <code>e</code> for <code>x</code> in <code>body</code>:</p>
 <pre><code class="language-kleis">let x = 5 in x + x
--- is the same as:
+// is the same as:
 5 + 5
 </code></pre>
 <p>This is <strong>pure functional semantics</strong> — no mutation, no side effects.</p>
@@ -258,10 +258,10 @@ let x = x * 2 in
 </tbody>
 </table>
 </div>
-<pre><code class="language-kleis">-- Global constant
+<pre><code class="language-kleis">// Global constant
 define pi = 3.14159
 
--- Local temporary
+// Local temporary
 let two_pi = 2 * pi in
     two_pi * radius
 </code></pre>

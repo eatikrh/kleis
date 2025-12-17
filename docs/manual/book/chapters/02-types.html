@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
+            window.path_to_searchindex_js = "../searchindex-86870fa1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -216,34 +216,34 @@ True : Bool         // True is a boolean
 </div>
 <h2 id="type-annotations"><a class="header" href="#type-annotations">Type Annotations</a></h2>
 <p>You can explicitly annotate types with <code>:</code>:</p>
-<pre><code class="language-kleis">-- Variable annotation
+<pre><code class="language-kleis">// Variable annotation
 let x : ℝ = 3.14 in x * 2
 
--- Function parameter and return types
+// Function parameter and return types
 define f(x : ℝ) : ℝ = x * x
 
--- Expression-level annotation (ascription)
+// Expression-level annotation (ascription)
 (a + b) : ℝ
 </code></pre>
 <h2 id="function-types"><a class="header" href="#function-types">Function Types</a></h2>
 <p>Functions have types too! The notation <code>A → B</code> means “a function from A to B”:</p>
-<pre><code class="language-kleis">-- square takes a Real and returns a Real
+<pre><code class="language-kleis">// square takes a Real and returns a Real
 define square(x : ℝ) : ℝ = x * x
--- Type: ℝ → ℝ
+// Type: ℝ → ℝ
 
--- add takes two Reals and returns a Real
+// add takes two Reals and returns a Real
 define add(x : ℝ, y : ℝ) : ℝ = x + y
--- Type: ℝ × ℝ → ℝ (or equivalently: ℝ → ℝ → ℝ)
+// Type: ℝ × ℝ → ℝ (or equivalently: ℝ → ℝ → ℝ)
 </code></pre>
 <h3 id="higher-order-function-types"><a class="header" href="#higher-order-function-types">Higher-Order Function Types</a></h3>
 <p>Functions can take other functions as arguments or return functions. These are called <strong>higher-order functions</strong>:</p>
-<pre><code class="language-kleis">-- A function that takes a function as an argument
+<pre><code class="language-kleis">// A function that takes a function as an argument
 define apply_twice(f : ℝ → ℝ, x : ℝ) : ℝ = f(f(x))
--- Type: (ℝ → ℝ) × ℝ → ℝ
+// Type: (ℝ → ℝ) × ℝ → ℝ
 
--- A function that returns a function
+// A function that returns a function
 define make_adder(n : ℝ) : ℝ → ℝ = ???
--- Type: ℝ → (ℝ → ℝ)
+// Type: ℝ → (ℝ → ℝ)
 </code></pre>
 <p>The parentheses matter! Compare:</p>
 <ul>
@@ -268,22 +268,22 @@ define make_adder(n : ℝ) : ℝ → ℝ = ???
 </div>
 <h2 id="parametric-types"><a class="header" href="#parametric-types">Parametric Types</a></h2>
 <p>Types can have parameters:</p>
-<pre><code class="language-kleis">-- List of integers
+<pre><code class="language-kleis">// List of integers
 List(ℤ)
 
--- Matrix with dimensions
+// Matrix with dimensions
 Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 
--- Vector with dimension
+// Vector with dimension
 Vector(4)          // 4-dimensional vector
 </code></pre>
 <h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
 <p>Kleis often infers types automatically:</p>
 <pre><code class="language-kleis">define double(x) = x + x
--- Kleis infers: double : ℝ → ℝ (or more general)
+// Kleis infers: double : ℝ → ℝ (or more general)
 
 let y = 5 in y * y
--- Kleis infers: y : ℤ
+// Kleis infers: y : ℤ
 </code></pre>
 <p>But explicit types make code clearer and catch errors earlier!</p>
 <h2 id="the-type-hierarchy"><a class="header" href="#the-type-hierarchy">The Type Hierarchy</a></h2>
