@@ -17,14 +17,14 @@ kleis>
 Enter expressions to evaluate them:
 
 ```
-kleis> 2 + 2
-4
+λ> 2 + 2
+2 + 2
 
-kleis> let x = 5 in x * x
-25
+λ> let x = 5 in x * x
+times(5, 5)
 
-kleis> sin(π / 2)
-1.0
+λ> sin(π / 2)
+sin(divide(π, 2))
 ```
 
 ## Defining Functions
@@ -32,17 +32,17 @@ kleis> sin(π / 2)
 Define functions interactively:
 
 ```
-kleis> define square(x) = x * x
-Defined: square
+λ> define square(x) = x * x
+❌ Parse error: Kleis parse error at position 7: Unexpected character: 's'
 
-kleis> square(7)
-49
+λ> square(7)
+square(7)
 
-kleis> define compose(f, g, x) = f(g(x))
-Defined: compose
+λ> define compose(f, g, x) = f(g(x))
+❌ Parse error: Kleis parse error at position 7: Unexpected character: 'c'
 
-kleis> compose(square, square, 2)
-16
+λ> compose(square, square, 2)
+compose(square, square, 2)
 ```
 
 ## Working with Types
@@ -50,14 +50,14 @@ kleis> compose(square, square, 2)
 Check types and use annotations:
 
 ```
-kleis> :type 42
-42 : ℤ
+λ> type 42
+❌ Parse error: Kleis parse error at position 5: Unexpected character: '4'
 
-kleis> :type sin
-sin : ℝ → ℝ
+λ> :type sin
+📐 Type: α0
 
-kleis> let x : ℝ = 3.14 in x * 2
-6.28
+λ> let x : ℝ = 3.14 in x * 2
+times(3.14, 2)
 ```
 
 ## REPL Commands
