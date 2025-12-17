@@ -111,6 +111,25 @@ impl EditorRenderContext {
             "{left} times {right}",
             "times({left}, {right})",
         );
+        // Implicit multiply uses small space in LaTeX
+        self.add_template(
+            "multiply",
+            "{left} {right}",
+            "{left} \\, {right}",
+            "{left} × {right}",
+            "{left} * {right}",
+            "multiply({left}, {right})",
+        );
+        // divide: render.rs falls back to function notation
+        // so we match that for compatibility
+        self.add_template(
+            "divide",
+            "{left}/{right}",
+            "divide({left}, {right})",
+            "{left}/{right}",
+            "{left}/{right}",
+            "divide({left}, {right})",
+        );
         self.add_template(
             "scalar_divide",
             "{num}/{den}",
@@ -1647,6 +1666,89 @@ mod tests {
             let node = EditorNode::operation("sin", vec![EditorNode::object("x")]);
             let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
             assert_eq!(new, old, "Sin should match");
+        }
+
+        #[test]
+        fn compare_fraction() {
+            let node = EditorNode::operation(
+                "frac",
+                vec![EditorNode::object("a"), EditorNode::object("b")],
+            );
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Fraction should match");
+        }
+
+        #[test]
+        fn compare_subscript() {
+            let node = EditorNode::operation(
+                "sub",
+                vec![EditorNode::object("x"), EditorNode::constant("0")],
+            );
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Subscript should match");
+        }
+
+        #[test]
+        fn compare_superscript() {
+            let node = EditorNode::operation(
+                "sup",
+                vec![EditorNode::object("x"), EditorNode::constant("2")],
+            );
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Superscript should match");
+        }
+
+        #[test]
+        fn compare_greek_letter_unicode() {
+            let node = EditorNode::object("α");
+            let (new, old) = compare_renderers(&node, &RenderTarget::Unicode);
+            assert_eq!(new, old, "Greek letter unicode should match");
+        }
+
+        #[test]
+        fn compare_tensor_kleis_target() {
+            let tensor = EditorNode::tensor(
+                "Γ",
+                vec![
+                    EditorNode::object("λ"),
+                    EditorNode::object("μ"),
+                    EditorNode::object("ν"),
+                ],
+                vec!["up", "down", "down"],
+            );
+            let (new, old) = compare_renderers(&tensor, &RenderTarget::Kleis);
+            assert_eq!(new, old, "Tensor Kleis output should match");
+        }
+
+        #[test]
+        fn compare_tensor_html_target() {
+            let tensor = EditorNode::tensor(
+                "g",
+                vec![EditorNode::object("μ"), EditorNode::object("ν")],
+                vec!["down", "down"],
+            );
+            let (new, old) = compare_renderers(&tensor, &RenderTarget::HTML);
+            assert_eq!(new, old, "Tensor HTML output should match");
+        }
+
+        #[test]
+        fn compare_multiply() {
+            let node = EditorNode::operation(
+                "multiply",
+                vec![EditorNode::object("a"), EditorNode::object("b")],
+            );
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Multiply should match");
+        }
+
+        #[test]
+        fn compare_divide() {
+            let node = EditorNode::operation(
+                "divide",
+                vec![EditorNode::object("a"), EditorNode::object("b")],
+            );
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Divide should match");
         }
     }
 
