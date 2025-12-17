@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3188c1c7.js";
+            window.path_to_searchindex_js = "searchindex-96b6425c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f10a7c19.js"></script>
@@ -1080,6 +1080,43 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
         det(mul(A, B)) = det(A) * det(B)
 }
 </code></pre>
+<h2 id="nested-structures"><a class="header" href="#nested-structures">Nested Structures</a></h2>
+<p>Structures can contain other structures. This enables compositional algebra — defining complex structures from simpler parts:</p>
+<pre><code class="language-kleis">structure Ring(R) {
+    -- A ring has an additive group
+    structure additive : AbelianGroup(R) {
+        operation (+) : R × R → R
+        operation negate : R → R
+        element zero : R
+    }
+    
+    -- And a multiplicative monoid
+    structure multiplicative : Monoid(R) {
+        operation (×) : R × R → R
+        element one : R
+    }
+    
+    -- With distributivity connecting them
+    axiom distributive : ∀ x : R . ∀ y : R . ∀ z : R .
+        x × (y + z) = (x × y) + (x × z)
+}
+</code></pre>
+<p>Nested structures can go arbitrarily deep:</p>
+<pre><code class="language-kleis">structure VectorSpace(V, F) {
+    structure vectors : AbelianGroup(V) {
+        operation (+) : V × V → V
+        operation zero : V
+    }
+    
+    structure scalars : Field(F) {
+        operation (+) : F × F → F
+        operation (×) : F × F → F
+    }
+    
+    operation scale : F × V → V
+}
+</code></pre>
+<p>When using Z3 verification, axioms from nested structures are automatically available.</p>
 <h2 id="the-extends-keyword"><a class="header" href="#the-extends-keyword">The <code>extends</code> Keyword</a></h2>
 <p>Structures can extend other structures:</p>
 <pre><code class="language-kleis">structure Monoid(M) {
@@ -1111,6 +1148,35 @@ structure AbelianGroup(G) extends Group(G) {
         scale(a, add(u, v)) = add(scale(a, u), scale(a, v))
 }
 </code></pre>
+<h2 id="the-over-keyword"><a class="header" href="#the-over-keyword">The <code>over</code> Keyword</a></h2>
+<p>Many mathematical structures are defined “over” a base structure. A vector space is defined over a field, a module over a ring:</p>
+<pre><code class="language-kleis">-- Vector space over a field
+structure VectorSpace(V) over Field(F) {
+    operation (+) : V × V → V
+    operation (·) : F × V → V
+    
+    axiom scalar_identity : ∀ v : V . 1 · v = v
+    axiom distributive : ∀ a : F . ∀ u : V . ∀ v : V .
+        a · (u + v) = (a · u) + (a · v)
+}
+
+-- Module over a ring (generalization of vector space)
+structure Module(M) over Ring(R) {
+    operation (+) : M × M → M
+    operation (·) : R × M → M
+}
+
+-- Algebra over a ring
+structure Algebra(A) over Ring(R) {
+    operation (+) : A × A → A
+    operation (·) : R × A → A
+    operation (*) : A × A → A
+    
+    axiom bilinear : ∀ r : R . ∀ a : A . ∀ b : A .
+        r · (a * b) = (r · a) * b
+}
+</code></pre>
+<p>When you use <code>over</code>, Kleis automatically makes the base structure’s axioms available for verification. For example, when verifying <code>VectorSpace</code> axioms, Z3 knows that <code>F</code> satisfies all <code>Field</code> axioms.</p>
 <h2 id="differential-geometry-structures"><a class="header" href="#differential-geometry-structures">Differential Geometry Structures</a></h2>
 <p>Kleis shines for differential geometry:</p>
 <pre><code class="language-kleis">structure Manifold(M, dim : ℕ) {
@@ -1787,7 +1853,7 @@ type_constructor ::= identifier
 type_args ::= '(' type (',' type)* ')'
 </code></pre>
 <h2 id="structures-1"><a class="header" href="#structures-1">Structures</a></h2>
-<pre><code class="language-ebnf">structure ::= 'structure' identifier type_params? extends? where? '{' structure_body '}'
+<pre><code class="language-ebnf">structure ::= 'structure' identifier type_params? extends? over? where? '{' structure_body '}'
 
 type_params ::= '(' param_decl (',' param_decl)* ')'
 
@@ -1795,13 +1861,17 @@ param_decl ::= identifier ':' type
 
 extends ::= 'extends' type (',' type)*
 
+over ::= 'over' type
+
 where ::= 'where' constraint (',' constraint)*
 
 constraint ::= identifier ':' type
 
-structure_body ::= (field | operation | axiom)*
+structure_body ::= (field | operation | axiom | nested_structure)*
 
 field ::= 'field' identifier ':' type
+
+nested_structure ::= 'structure' identifier ':' type ('{' structure_body '}')?
 
 operation ::= 'operation' identifier ':' type
             | 'operation' identifier parameters ':' type

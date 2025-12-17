@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3188c1c7.js";
+            window.path_to_searchindex_js = "../searchindex-96b6425c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -270,7 +270,7 @@ type_constructor ::= identifier
 type_args ::= '(' type (',' type)* ')'
 </code></pre>
 <h2 id="structures"><a class="header" href="#structures">Structures</a></h2>
-<pre><code class="language-ebnf">structure ::= 'structure' identifier type_params? extends? where? '{' structure_body '}'
+<pre><code class="language-ebnf">structure ::= 'structure' identifier type_params? extends? over? where? '{' structure_body '}'
 
 type_params ::= '(' param_decl (',' param_decl)* ')'
 
@@ -278,13 +278,17 @@ param_decl ::= identifier ':' type
 
 extends ::= 'extends' type (',' type)*
 
+over ::= 'over' type
+
 where ::= 'where' constraint (',' constraint)*
 
 constraint ::= identifier ':' type
 
-structure_body ::= (field | operation | axiom)*
+structure_body ::= (field | operation | axiom | nested_structure)*
 
 field ::= 'field' identifier ':' type
+
+nested_structure ::= 'structure' identifier ':' type ('{' structure_body '}')?
 
 operation ::= 'operation' identifier ':' type
             | 'operation' identifier parameters ':' type
