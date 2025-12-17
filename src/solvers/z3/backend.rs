@@ -14,6 +14,7 @@
 //! **Critical:** All public methods return Kleis Expression, not Z3 types!
 
 use crate::ast::{Expression, QuantifiedVar, QuantifierKind};
+use crate::evaluator::Evaluator;
 use crate::solvers::backend::{
     SatisfiabilityResult, SolverBackend, SolverStats, VerificationResult,
 };
@@ -138,6 +139,42 @@ impl<'r> Z3Backend<'r> {
         }
 
         Ok(count)
+    }
+
+    // =========================================================================
+    // Beta Reduction Integration
+    // =========================================================================
+
+    /// Pre-reduce an expression using beta reduction before Z3 translation
+    ///
+    /// This applies beta reduction to any lambda applications in the expression,
+    /// converting `(λ x . x + 1)(5)` to `5 + 1` before Z3 sees it.
+    ///
+    /// # Why This Matters
+    /// Z3 can't directly apply lambda expressions. By reducing them first,
+    /// we convert lambda applications into simpler expressions Z3 can verify.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let expr = parse_expression("(λ x . x + 1)(5) = 6")?;
+    /// let reduced = backend.beta_reduce_expression(&expr)?;
+    /// // reduced = "5 + 1 = 6"
+    /// backend.check_satisfiability(&reduced)?;
+    /// ```
+    pub fn beta_reduce_expression(&self, expr: &Expression) -> Result<Expression, String> {
+        let evaluator = Evaluator::new();
+        evaluator.reduce_to_normal_form(expr)
+    }
+
+    /// Check satisfiability with automatic beta reduction
+    ///
+    /// This is like `check_satisfiability` but first reduces any lambda expressions.
+    pub fn check_satisfiability_with_reduction(
+        &mut self,
+        expr: &Expression,
+    ) -> Result<SatisfiabilityResult, String> {
+        let reduced = self.beta_reduce_expression(expr)?;
+        self.check_satisfiability(&reduced)
     }
 
     /// Translate a single axiom and assert it into Z3
@@ -386,8 +423,9 @@ impl<'r> Z3Backend<'r> {
                 // Translate the lambda body with parameters bound as fresh Int variables.
                 // This allows Z3 to reason about the body symbolically.
                 //
-                // For full lambda calculus semantics (beta-reduction, higher-order),
-                // the expression should be reduced before reaching Z3.
+                // NOTE: For lambda applications like (λ x . x + 1)(5), use
+                // check_satisfiability_with_reduction() which performs beta reduction
+                // before Z3 translation, converting it to 5 + 1.
                 let mut new_vars = vars.clone();
                 for param in params {
                     // Create fresh variable for each lambda parameter

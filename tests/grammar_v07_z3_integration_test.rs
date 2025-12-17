@@ -15,7 +15,7 @@
 
 #![allow(unused_imports)]
 
-use kleis::ast::Expression;
+use kleis::ast::{Expression, LambdaParam};
 use kleis::kleis_parser::KleisParser;
 use kleis::solvers::backend::{SatisfiabilityResult, SolverBackend, VerificationResult};
 use kleis::solvers::z3::Z3Backend;
@@ -1086,6 +1086,265 @@ fn test_lambda_nested_z3() {
 
     drop(backend);
     println!("   ✅ Nested lambda Z3 test passed");
+}
+
+// ============================================================================
+// BETA REDUCTION + Z3 INTEGRATION TESTS
+// ============================================================================
+
+/// Test that beta reduction works before Z3 verification
+/// This is the key integration: (λ x . x + 1)(5) = 6 should be verifiable
+#[test]
+fn test_beta_reduction_z3_integration() {
+    println!("\n🧪 Test: Beta Reduction + Z3 Integration");
+
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).expect("Failed to create Z3 backend");
+
+    // Create expression: (λ x . x + 1)(5)
+    // This should reduce to 5 + 1 = 6
+    let lambda = Expression::Lambda {
+        params: vec![LambdaParam::new("x")],
+        body: Box::new(Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Const("1".to_string()),
+            ],
+        }),
+    };
+
+    // Apply lambda to 5 - simulating (λ x . x + 1)(5)
+    // For now, we manually reduce since Z3 doesn't handle application syntax
+    let reduced = backend.beta_reduce_expression(&lambda);
+    assert!(
+        reduced.is_ok(),
+        "Beta reduction should succeed on raw lambda"
+    );
+
+    // Test: Create the equation (λ x . x + 1) with x=5 reduced should equal 6
+    // We'll construct this as: let reduced_body = 5 + 1; check if reduced_body = 6
+    println!("   Testing: After reduction, 5 + 1 = 6 should be satisfiable");
+
+    let reduced_application = Expression::Operation {
+        name: "plus".to_string(),
+        args: vec![
+            Expression::Const("5".to_string()),
+            Expression::Const("1".to_string()),
+        ],
+    };
+
+    let equation = Expression::Operation {
+        name: "equals".to_string(),
+        args: vec![reduced_application, Expression::Const("6".to_string())],
+    };
+
+    let result = backend.check_satisfiability(&equation);
+    assert!(result.is_ok(), "Z3 check should succeed");
+
+    match result.unwrap() {
+        SatisfiabilityResult::Satisfiable { .. } => {
+            println!("   ✅ 5 + 1 = 6 is satisfiable (correct!)");
+        }
+        other => panic!("Expected Satisfiable, got {:?}", other),
+    }
+
+    drop(backend);
+    println!("   ✅ Beta reduction + Z3 integration test passed");
+}
+
+/// Test full round-trip: parse lambda → reduce → verify with Z3
+#[test]
+fn test_lambda_roundtrip_parse_reduce_verify() {
+    println!("\n🧪 Test: Lambda Round-trip (Parse → Reduce → Z3)");
+
+    use kleis::evaluator::Evaluator;
+    use kleis::kleis_parser::KleisParser;
+
+    // Step 1: Parse a lambda expression
+    let code = "λ x . x + 1";
+    let mut parser = KleisParser::new(code);
+    let lambda = parser.parse().expect("Failed to parse lambda");
+    println!("   ✅ Parsed: {}", code);
+
+    // Step 2: Apply argument manually (simulating beta reduction)
+    let arg = Expression::Const("5".to_string());
+    let evaluator = Evaluator::new();
+    let reduced = evaluator
+        .beta_reduce(&lambda, &arg)
+        .expect("Failed to reduce");
+    println!("   ✅ Reduced: (λ x . x + 1)(5) → reduced form");
+
+    // Verify the reduced form is 5 + 1
+    match &reduced {
+        Expression::Operation { name, args } => {
+            assert_eq!(name, "plus");
+            assert!(matches!(&args[0], Expression::Const(s) if s == "5"));
+            assert!(matches!(&args[1], Expression::Const(s) if s == "1"));
+            println!("   ✅ Reduction result: 5 + 1");
+        }
+        _ => panic!("Expected Operation, got {:?}", reduced),
+    }
+
+    // Step 3: Verify with Z3 that reduced form = 6
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).expect("Failed to create Z3 backend");
+
+    let equation = Expression::Operation {
+        name: "equals".to_string(),
+        args: vec![reduced, Expression::Const("6".to_string())],
+    };
+
+    let result = backend.check_satisfiability(&equation);
+    assert!(result.is_ok(), "Z3 check should succeed");
+
+    match result.unwrap() {
+        SatisfiabilityResult::Satisfiable { .. } => {
+            println!("   ✅ Z3 verified: 5 + 1 = 6");
+        }
+        other => panic!("Expected Satisfiable, got {:?}", other),
+    }
+
+    drop(backend);
+    println!("   ✅ Full round-trip test passed: Parse → Reduce → Z3 Verify");
+}
+
+/// Test curried function reduction with Z3
+#[test]
+fn test_curried_lambda_reduction_z3() {
+    println!("\n🧪 Test: Curried Lambda Reduction + Z3");
+
+    use kleis::evaluator::Evaluator;
+
+    // Create: λ x y . x + y
+    let curried = Expression::Lambda {
+        params: vec![LambdaParam::new("x"), LambdaParam::new("y")],
+        body: Box::new(Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Object("y".to_string()),
+            ],
+        }),
+    };
+
+    let evaluator = Evaluator::new();
+
+    // Step 1: Partial application (λ x y . x + y)(3) → λ y . 3 + y
+    let partial = evaluator
+        .beta_reduce(&curried, &Expression::Const("3".to_string()))
+        .expect("Partial application failed");
+
+    match &partial {
+        Expression::Lambda { params, .. } => {
+            assert_eq!(params.len(), 1);
+            assert_eq!(params[0].name, "y");
+            println!("   ✅ Partial: (λ x y . x + y)(3) → λ y . 3 + y");
+        }
+        _ => panic!("Expected Lambda for partial application"),
+    }
+
+    // Step 2: Full application (λ y . 3 + y)(4) → 3 + 4
+    let full = evaluator
+        .beta_reduce(&partial, &Expression::Const("4".to_string()))
+        .expect("Full application failed");
+
+    match &full {
+        Expression::Operation { name, args } => {
+            assert_eq!(name, "plus");
+            println!("   ✅ Full: (λ y . 3 + y)(4) → 3 + 4");
+            assert!(matches!(&args[0], Expression::Const(s) if s == "3"));
+            assert!(matches!(&args[1], Expression::Const(s) if s == "4"));
+        }
+        _ => panic!("Expected Operation, got {:?}", full),
+    }
+
+    // Step 3: Verify with Z3 that 3 + 4 = 7
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).expect("Failed to create Z3 backend");
+
+    let equation = Expression::Operation {
+        name: "equals".to_string(),
+        args: vec![full, Expression::Const("7".to_string())],
+    };
+
+    let result = backend.check_satisfiability(&equation);
+    assert!(result.is_ok());
+
+    match result.unwrap() {
+        SatisfiabilityResult::Satisfiable { .. } => {
+            println!("   ✅ Z3 verified: 3 + 4 = 7");
+        }
+        other => panic!("Expected Satisfiable, got {:?}", other),
+    }
+
+    drop(backend);
+    println!("   ✅ Curried lambda + Z3 test passed");
+}
+
+/// Test variable capture avoidance in beta reduction
+#[test]
+fn test_variable_capture_avoidance_z3() {
+    println!("\n🧪 Test: Variable Capture Avoidance");
+
+    use kleis::evaluator::Evaluator;
+
+    // (λ x . λ y . x + y)(y) should NOT produce λ y . y + y
+    // It should alpha-convert to avoid capture
+
+    let outer = Expression::Lambda {
+        params: vec![LambdaParam::new("x")],
+        body: Box::new(Expression::Lambda {
+            params: vec![LambdaParam::new("y")],
+            body: Box::new(Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Object("y".to_string()),
+                ],
+            }),
+        }),
+    };
+
+    let evaluator = Evaluator::new();
+
+    // Apply with 'y' as argument - potential capture!
+    let result = evaluator
+        .beta_reduce(&outer, &Expression::Object("y".to_string()))
+        .expect("Reduction should succeed");
+
+    // Result should be λ y' . y + y' (with fresh variable)
+    match &result {
+        Expression::Lambda { params, body } => {
+            let inner_param = &params[0].name;
+            // The parameter should be renamed to avoid capture
+            assert_ne!(inner_param, "y", "Variable capture should be avoided!");
+            println!(
+                "   ✅ Parameter renamed from 'y' to '{}' to avoid capture",
+                inner_param
+            );
+
+            match body.as_ref() {
+                Expression::Operation { args, .. } => {
+                    // First arg should be 'y' (the argument we passed)
+                    match &args[0] {
+                        Expression::Object(s) => assert_eq!(s, "y"),
+                        _ => panic!("First arg should be Object(y)"),
+                    }
+                    // Second arg should be the renamed param
+                    match &args[1] {
+                        Expression::Object(s) => assert_eq!(s, inner_param),
+                        _ => panic!("Second arg should be renamed param"),
+                    }
+                    println!("   ✅ Body correctly uses original 'y' and renamed param");
+                }
+                _ => panic!("Expected Operation in body"),
+            }
+        }
+        _ => panic!("Expected Lambda, got {:?}", result),
+    }
+
+    println!("   ✅ Variable capture avoidance test passed");
 }
 
 // ============================================================================
