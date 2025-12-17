@@ -309,6 +309,21 @@ impl PatternMatcher {
                 type_annotation: type_annotation.clone(),
             },
 
+            Expression::Lambda { params, body } => {
+                // Filter out bindings that are shadowed by lambda params
+                let shadowed: std::collections::HashSet<_> =
+                    params.iter().map(|p| p.name.as_str()).collect();
+                let filtered_bindings: std::collections::HashMap<_, _> = bindings
+                    .iter()
+                    .filter(|(k, _)| !shadowed.contains(k.as_str()))
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
+                Expression::Lambda {
+                    params: params.clone(),
+                    body: Box::new(self.substitute_bindings(body, &filtered_bindings)),
+                }
+            }
+
             Expression::Placeholder { .. } | Expression::Const(_) => {
                 // Leaves don't contain variables
                 expr.clone()

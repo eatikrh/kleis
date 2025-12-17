@@ -334,6 +334,22 @@ impl Evaluator {
                 type_annotation: type_annotation.clone(),
             },
 
+            // Lambda - substitute in body, avoiding capture
+            Expression::Lambda { params, body } => {
+                // Filter out substitutions for variables that are shadowed by lambda params
+                let shadowed: std::collections::HashSet<_> =
+                    params.iter().map(|p| p.name.clone()).collect();
+                let filtered_subst: std::collections::HashMap<_, _> = subst
+                    .iter()
+                    .filter(|(k, _)| !shadowed.contains(*k))
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
+                Expression::Lambda {
+                    params: params.clone(),
+                    body: Box::new(self.substitute(body, &filtered_subst)),
+                }
+            }
+
             // Constants and placeholders don't change
             Expression::Const(_) | Expression::Placeholder { .. } => expr.clone(),
         }
@@ -423,6 +439,9 @@ impl Evaluator {
             // Type ascription - evaluate inner expression, discard type annotation
             // (type checking happens at type-check time, not evaluation time)
             Expression::Ascription { expr: inner, .. } => self.eval(inner),
+
+            // Lambda - return as a value (closures are values)
+            Expression::Lambda { .. } => Ok(expr.clone()),
 
             // Atoms - return as-is
             Expression::Const(_) | Expression::Object(_) | Expression::Placeholder { .. } => {

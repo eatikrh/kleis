@@ -346,11 +346,26 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
         Expression::Ascription {
             expr,
             type_annotation,
-        } => {
+        } => json!({
+            "Ascription": {
+                "expr": expression_to_json(expr),
+                "type_annotation": type_annotation
+            }
+        }),
+        Expression::Lambda { params, body } => {
+            let param_objs: Vec<_> = params
+                .iter()
+                .map(|p| {
+                    json!({
+                        "name": p.name,
+                        "type_annotation": p.type_annotation
+                    })
+                })
+                .collect();
             json!({
-                "Ascription": {
-                    "expr": expression_to_json(expr),
-                    "type_annotation": type_annotation
+                "Lambda": {
+                    "params": param_objs,
+                    "body": expression_to_json(body)
                 }
             })
         }
@@ -892,6 +907,10 @@ fn collect_slots_recursive(
         Expression::Ascription { expr, .. } => {
             // Collect slots from inner expression
             collect_slots_recursive(expr, slots, path, role);
+        }
+        Expression::Lambda { body, .. } => {
+            // Collect slots from lambda body
+            collect_slots_recursive(body, slots, path, role);
         }
     }
 }

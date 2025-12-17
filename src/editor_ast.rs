@@ -300,6 +300,10 @@ fn translate_with_context(expr: &Expression, ctx: &TranslationContext) -> Editor
             // For now, just show as a placeholder (similar to Let)
             EditorNode::object(format!("[ascription: {}]", type_annotation))
         }
+        Expression::Lambda { params, .. } => {
+            let param_names: Vec<_> = params.iter().map(|p| p.name.as_str()).collect();
+            EditorNode::object(format!("[λ {}]", param_names.join(" ")))
+        }
     }
 }
 

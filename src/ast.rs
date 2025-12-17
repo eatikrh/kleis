@@ -80,6 +80,15 @@ pub enum Expression {
         /// The type annotation (e.g., "ℝ", "Vector(3)", "ℝ → ℝ")
         type_annotation: String,
     },
+
+    /// Lambda expression (anonymous function)
+    /// Example: λ x . x + 1 or lambda x y . x * y
+    /// With type annotations: λ (x : ℝ) . x^2
+    /// Grammar: lambda ::= "λ" params "." expression | "lambda" params "." expression
+    Lambda {
+        params: Vec<LambdaParam>,
+        body: Box<Expression>,
+    },
 }
 
 /// Kind of quantifier
@@ -104,6 +113,31 @@ impl QuantifiedVar {
         QuantifiedVar {
             name: name.into(),
             type_annotation: type_annotation.map(|t| t.into()),
+        }
+    }
+}
+
+/// A lambda parameter with optional type annotation
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LambdaParam {
+    pub name: String,
+    pub type_annotation: Option<String>, // e.g., "ℝ", "ℤ", "Vector(3)"
+}
+
+impl LambdaParam {
+    /// Create a lambda parameter without type annotation
+    pub fn new(name: impl Into<String>) -> Self {
+        LambdaParam {
+            name: name.into(),
+            type_annotation: None,
+        }
+    }
+
+    /// Create a lambda parameter with type annotation
+    pub fn typed(name: impl Into<String>, type_annotation: impl Into<String>) -> Self {
+        LambdaParam {
+            name: name.into(),
+            type_annotation: Some(type_annotation.into()),
         }
     }
 }
@@ -233,6 +267,15 @@ impl Expression {
         }
     }
 
+    /// Create a lambda expression
+    /// Example: lambda(vec![param("x")], body) for λ x . body
+    pub fn lambda(params: Vec<LambdaParam>, body: Expression) -> Self {
+        Expression::Lambda {
+            params,
+            body: Box::new(body),
+        }
+    }
+
     /// Traverse the expression tree to find all placeholders
     pub fn find_placeholders(&self) -> Vec<(usize, String)> {
         let mut placeholders = Vec::new();
@@ -279,6 +322,9 @@ impl Expression {
             }
             Expression::Ascription { expr, .. } => {
                 expr.collect_placeholders(acc);
+            }
+            Expression::Lambda { body, .. } => {
+                body.collect_placeholders(acc);
             }
             _ => {}
         }

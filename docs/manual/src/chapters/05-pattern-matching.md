@@ -34,7 +34,7 @@ Bind matched values to names:
 
 ```kleis
 match point {
-    Point(x, y) => x + y  -- x and y are bound
+    Point(x, y) => x + y  // x and y are bound
 }
 ```
 
@@ -57,7 +57,7 @@ Patterns can be nested arbitrarily:
 ```kleis
 match tree {
     Leaf(v) => v
-    Node(Leaf(l), v, Leaf(r)) => l + v + r  -- Both children are leaves
+    Node(Leaf(l), v, Leaf(r)) => l + v + r  // Both children are leaves
     Node(left, v, right) => v + sum(left) + sum(right)
 }
 ```
@@ -100,20 +100,15 @@ let (first, second, _) = triple in
 
 ## Pattern Matching in Function Parameters
 
-> 🚧 **Coming Soon: We're working on it!**
->
-> Pattern matching directly in function parameters requires lambda
-> expressions, which are not yet implemented.
-
-Planned syntax:
+With lambda expressions now available, you can combine them with match:
 
 ```kleis
--- Planned (not yet working):
-define fst((a, _)) = a
-define snd((_, b)) = b
+// Pattern matching with lambdas
+define fst = λ pair . match pair { (a, _) => a }
+define snd = λ pair . match pair { (_, b) => b }
 ```
 
-**Current workaround:**
+**Alternative workaround:**
 
 ```kleis
 define fst(pair) = 
@@ -127,13 +122,13 @@ define fst(pair) =
 Kleis checks that your patterns cover all cases:
 
 ```kleis
--- ⚠️ Warning: non-exhaustive patterns
+// ⚠️ Warning: non-exhaustive patterns
 match opt {
     Some(x) => x
-    -- Missing: None case!
+    // Missing: None case!
 }
 
--- ✓ Complete
+// ✓ Complete
 match opt {
     Some(x) => x
     None => 0
@@ -156,7 +151,7 @@ define diff(expr : Expr, var : String) : Expr =
         Add(f, g) => 
             Add(diff(f, var), diff(g, var))
         
-        Mul(f, g) =>  -- Product rule
+        Mul(f, g) =>  // Product rule
             Add(Mul(diff(f, var), g), 
                 Mul(f, diff(g, var)))
         

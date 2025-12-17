@@ -8,28 +8,28 @@ The Kleis standard library provides foundational types, structures, and operatio
 
 ```kleis
 -- Natural numbers (0, 1, 2, ...)
-ℕ  -- or Nat
+ℕ  // or Nat
 
 -- Integers (..., -1, 0, 1, ...)
-ℤ  -- or Int
+ℤ  // or Int
 
 -- Real numbers
-ℝ  -- or Real
+ℝ  // or Real
 
 -- Complex numbers
-ℂ  -- or Complex
+ℂ  // or Complex
 ```
 
 ### Boolean Type
 
 ```kleis
-Bool  -- True or False
+Bool  // True or False
 ```
 
 ### Unit Type
 
 ```kleis
-Unit  -- Single value: ()
+Unit  // Single value: ()
 ```
 
 ## Collection Types
@@ -86,8 +86,8 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 
 ```kleis
 structure Monoid(M) {
-    operation e : M               -- Identity element
-    operation mul : M × M → M     -- Binary operation
+    operation e : M               // Identity element
+    operation mul : M × M → M     // Binary operation
     
     axiom identity_left : ∀ x : M . mul(e, x) = x
     axiom identity_right : ∀ x : M . mul(x, e) = x
@@ -100,7 +100,7 @@ structure Monoid(M) {
 
 ```kleis
 structure Group(G) extends Monoid(G) {
-    operation inv : G → G         -- Inverse
+    operation inv : G → G         // Inverse
     
     axiom inverse_left : ∀ x : G . mul(inv(x), x) = e
     axiom inverse_right : ∀ x : G . mul(x, inv(x)) = e
@@ -117,9 +117,9 @@ structure Ring(R) {
     operation mul : R × R → R
     operation neg : R → R
     
-    -- (R, add, zero) is an abelian group
-    -- (R, mul, one) is a monoid
-    -- mul distributes over add
+    // (R, add, zero) is an abelian group
+    // (R, mul, one) is a monoid
+    // mul distributes over add
 }
 ```
 
@@ -127,7 +127,7 @@ structure Ring(R) {
 
 ```kleis
 structure Field(F) extends Ring(F) {
-    operation inv : F → F  -- Multiplicative inverse (for non-zero)
+    operation inv : F → F  // Multiplicative inverse (for non-zero)
     
     axiom mul_inverse : ∀ x : F . x ≠ zero → mul(x, inv(x)) = one
     axiom mul_commutative : ∀ x : F . ∀ y : F . mul(x, y) = mul(y, x)
@@ -142,9 +142,9 @@ structure VectorSpace(V, F) where F : Field {
     operation scale : F × V → V
     operation zero : V
     
-    -- (V, add, zero) is an abelian group
-    -- scale distributes over add
-    -- scale is associative with field multiplication
+    // (V, add, zero) is an abelian group
+    // scale distributes over add
+    // scale is associative with field multiplication
 }
 ```
 
@@ -169,7 +169,7 @@ structure MetricSpace(M) {
 ```kleis
 structure Manifold(M, dim : ℕ) {
     operation tangent : M → TangentSpace(dim)
-    operation chart : M → ℝ^dim  -- Local coordinates
+    operation chart : M → ℝ^dim  // Local coordinates
 }
 ```
 
@@ -240,11 +240,11 @@ import stdlib.differential_geometry
 
 ```
 stdlib/
-├── prelude.kleis          -- Core types and functions
-├── numeric.kleis          -- Numeric operations
-├── collections.kleis      -- List, Vector, Matrix
-├── algebraic.kleis        -- Group, Ring, Field, etc.
-├── linear_algebra.kleis   -- Matrix operations
-├── differential_geometry.kleis  -- Manifolds, tensors
-└── category_theory.kleis  -- Categories, functors
+├── prelude.kleis          // Core types and functions
+├── numeric.kleis          // Numeric operations
+├── collections.kleis      // List, Vector, Matrix
+├── algebraic.kleis        // Group, Ring, Field, etc.
+├── linear_algebra.kleis   // Matrix operations
+├── differential_geometry.kleis  // Manifolds, tensors
+└── category_theory.kleis  // Categories, functors
 ```

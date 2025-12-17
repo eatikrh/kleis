@@ -89,7 +89,7 @@ define quadratic_roots(a : ℝ, b : ℝ, c : ℝ) : (ℝ, ℝ) =
 
 ```kleis
 define triangle_area(a : ℝ, b : ℝ, c : ℝ) : ℝ =
-    let s = (a + b + c) / 2 in  -- semi-perimeter
+    let s = (a + b + c) / 2 in  // semi-perimeter
         sqrt(s * (s - a) * (s - b) * (s - c))
 ```
 
@@ -97,9 +97,9 @@ define triangle_area(a : ℝ, b : ℝ, c : ℝ) : ℝ =
 
 ```kleis
 define schwarzschild_metric(r : ℝ, M : ℝ) : ℝ =
-    let rs = 2 * G * M / c^2 in      -- Schwarzschild radius
+    let rs = 2 * G * M / c^2 in      // Schwarzschild radius
     let factor = 1 - rs / r in
-        -c^2 * factor                 -- g_tt component
+        -c^2 * factor                 // g_tt component
 ```
 
 ## Let vs Define

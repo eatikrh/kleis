@@ -61,7 +61,7 @@ define area(shape : Shape) : ℝ =
         Rectangle(w, h) => w * h
         Triangle(a, b, c) => 
             let s = (a + b + c) / 2 in
-            sqrt(s * (s-a) * (s-b) * (s-c))  -- Heron's formula
+            sqrt(s * (s-a) * (s-b) * (s-c))  // Heron's formula
     }
 ```
 

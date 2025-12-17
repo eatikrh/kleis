@@ -5,9 +5,9 @@
 The universal quantifier expresses "for all":
 
 ```kleis
-∀ x . x = x                      -- Everything equals itself
-∀ x . x + 0 = x                  -- Zero is additive identity
-∀ x . ∀ y . x + y = y + x        -- Addition is commutative
+∀ x . x = x                      // Everything equals itself
+∀ x . x + 0 = x                  // Zero is additive identity
+∀ x . ∀ y . x + y = y + x        // Addition is commutative
 ```
 
 ASCII alternative: `forall x . ...`
@@ -17,9 +17,9 @@ ASCII alternative: `forall x . ...`
 The existential quantifier expresses "there exists":
 
 ```kleis
-∃ x . x > 0                      -- Some number is positive
-∃ y . y * y = 2                  -- Square root of 2 exists
-∃ x . ∃ y . x ≠ y                -- At least two things exist
+∃ x . x > 0                      // Some number is positive
+∃ y . y * y = 2                  // Square root of 2 exists
+∃ x . ∃ y . x ≠ y                // At least two things exist
 ```
 
 ASCII alternative: `exists x . ...`
@@ -41,35 +41,35 @@ Build complex statements:
 ### Conjunction (∧ / and)
 
 ```kleis
-x > 0 ∧ x < 10     -- x is between 0 and 10
-True ∧ False       -- False
+x > 0 ∧ x < 10     // x is between 0 and 10
+True ∧ False       // False
 ```
 
 ### Disjunction (∨ / or)
 
 ```kleis
-x = 0 ∨ x = 1      -- x is 0 or 1
-True ∨ False       -- True
+x = 0 ∨ x = 1      // x is 0 or 1
+True ∨ False       // True
 ```
 
 ### Implication (→ / implies)
 
 ```kleis
-x > 0 → sqrt(x) ∈ ℝ    -- If positive, has real square root
-P → Q                   -- If P then Q
+x > 0 → sqrt(x) ∈ ℝ    // If positive, has real square root
+P → Q                   // If P then Q
 ```
 
 ### Negation (¬ / not)
 
 ```kleis
-¬(x = 0)           -- x is not zero
-¬True              -- False
+¬(x = 0)           // x is not zero
+¬True              // False
 ```
 
 ### Biconditional (↔ / iff)
 
 ```kleis
-x = 0 ↔ x * x = 0  -- x is zero iff x² is zero
+x = 0 ↔ x * x = 0  // x is zero iff x² is zero
 ```
 
 ## Type Constraints in Quantifiers
@@ -77,8 +77,8 @@ x = 0 ↔ x * x = 0  -- x is zero iff x² is zero
 Restrict the domain:
 
 ```kleis
-∀ x : ℕ . x ≥ 0                  -- All naturals are non-negative
-∀ M : Matrix(n, n) . det(M * M⁻¹) = 1   -- Determinant property
+∀ x : ℕ . x ≥ 0                  // All naturals are non-negative
+∀ M : Matrix(n, n) . det(M * M⁻¹) = 1   // Determinant property
 ```
 
 ## Using Quantifiers in Axioms
@@ -87,7 +87,7 @@ Quantifiers are essential in structure axioms:
 
 ```kleis
 structure Group(G) {
-    operation e : G                      -- Identity element
+    operation e : G                      // Identity element
     operation mul : G × G → G
     operation inv : G → G
     

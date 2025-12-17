@@ -90,7 +90,7 @@
 |---------|--------------|--------|----------|
 | ~~**Prefix operators (general)**~~ | ~~`-x`, `∇f`, `√x`~~ | ✅ **Partial Dec 13!** | ~~Medium~~ |
 | ~~**Postfix operators**~~ | ~~`n!`, `Aᵀ`, `A†`~~ | ✅ **DONE Dec 17!** | ~~Medium~~ |
-| **Lambda expressions** | `λ x . x^2` | ❌ Missing | Low |
+| ~~**Lambda expressions**~~ | ~~`λ x . x^2`~~ | ✅ **DONE Dec 17!** | ~~Low~~ |
 | ~~**Let bindings**~~ | ~~`let x = 5 in x^2`~~ | ✅ **DONE Dec 13!** | ~~Low~~ |
 | ~~**Conditionals**~~ | ~~`if x > 0 then x else -x`~~ | ✅ **DONE Dec 13!** | ~~Low~~ |
 | **Type annotations** | `let x : ℝ`, `define f(x: ℝ)` | ✅ Complete | ✅ Dec 17 |
@@ -133,7 +133,7 @@
 - Type annotations: Explicit type declarations
 
 **Low priority (can work around):**
-- Lambda: Can use function definitions instead
+- ~~Lambda: Can use function definitions instead~~ ✅ **IMPLEMENTED Dec 17!**
 - ~~Let, if: Can use function definitions instead~~ ✅ **IMPLEMENTED Dec 13!**
 - Symbolic constants: Can use variables
 - Placeholders: Editor generates them, parser doesn't need to parse them
@@ -281,9 +281,11 @@
 28. ✅ **Postfix operators (`n!`, `Aᵀ`, `A†`)** ⭐ **NEW Dec 17!**
 29. ✅ **Type aliases (`type Name = Type`)** ⭐ Dec 16
 
-**Not Implemented (2):**
-1. ❌ Lambda expressions (`λ x . x^2`)
-2. ❌ Summation/Product notation (`Σ`, `Π`)
+**Not Implemented (1):**
+1. ❌ Summation/Product notation (`Σ`, `Π`)
+
+**Recently Implemented:**
+30. ✅ **Lambda expressions (`λ x . x^2`)** ⭐ Dec 17
 
 **Note:** Prefix operators are well-supported: `-`, `¬`, `∇`, `∫`, `∬`, `∭`, `∮`, `∯` (8 total)
 
@@ -618,7 +620,7 @@ expression
       | expression '(' arguments ')'      (* ✅ Supported *)
       | '[' expressions ']'               (* ✅ Supported! *)
       | matchExpr                          (* ✅ Supported! *)
-      | lambda                             (* ❌ Not supported *)
+      | lambda                             (* ✅ NEW Dec 17! *)
       | letBinding                         (* ✅ NEW Dec 13! *)
       | conditional                        (* ✅ NEW Dec 13! *)
       ;
@@ -677,11 +679,13 @@ axiom commutativity: ∀(x y : S). x • y = y • x
 axiom identity: ∀(x : M). (x ∧ True) ⟹ x
 ```
 
-### ❌ Still Cannot Write (Parser Limitation):
+### ✅ Now Supported (Dec 17, 2024):
 
 ```kleis
-// Lambda expressions
-map(λ x . x^2, [1,2,3])      // ❌ Not yet supported
+// Lambda expressions - NOW SUPPORTED!
+map(λ x . x^2, [1,2,3])      // ✅ Works!
+λ x y . x + y                 // ✅ Multiple parameters
+λ (x : ℝ) . x^2               // ✅ With type annotations
 
 // Vector literals in source
 v = [1, 2, 3]                // ❌ Not yet supported (but AST supports it!)
@@ -800,9 +804,9 @@ Fully integrated with Z3! Axioms from nested structures available!
 
 ### Low Priority (Nice to Have)
 
-**4. Lambda Expressions** (2-3 hours)
-- `λ x . x^2`
-- Can use `define` instead
+~~**4. Lambda Expressions** (2-3 hours)~~ ✅ **DONE Dec 17!**
+- ~~`λ x . x^2`~~
+- ~~Can use `define` instead~~
 
 ~~**5. Let Bindings**~~ ✅ **DONE Dec 13!**
 - `let x = 5 in x^2`
@@ -965,8 +969,8 @@ structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
 4. Type annotations `x : ℝ`
 
 **Advanced Features:**
-1. Lambda expressions
-2. Let bindings
+1. ~~Lambda expressions~~ ✅ **DONE Dec 17!**
+2. ~~Let bindings~~ ✅ **DONE Dec 13!**
 3. Advanced pattern features (guards, as-patterns)
 
 ---

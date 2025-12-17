@@ -5,9 +5,9 @@
 Types are the foundation of Kleis. Every expression has a type, and the type system catches errors before they become problems.
 
 ```kleis
-42 : ℤ              -- 42 is an integer
-3.14 : ℝ            -- 3.14 is a real number
-True : Bool         -- True is a boolean
+42 : ℤ              // 42 is an integer
+3.14 : ℝ            // 3.14 is a real number
+True : Bool         // True is a boolean
 ```
 
 ## Built-in Types
@@ -95,10 +95,10 @@ Types can have parameters:
 List(ℤ)
 
 -- Matrix with dimensions
-Matrix(3, 3, ℝ)   -- 3×3 matrix of reals
+Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 
 -- Vector with dimension
-Vector(4)          -- 4-dimensional vector
+Vector(4)          // 4-dimensional vector
 ```
 
 ## Type Inference

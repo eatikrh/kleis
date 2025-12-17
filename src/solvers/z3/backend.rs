@@ -376,7 +376,43 @@ impl<'r> Z3Backend<'r> {
                 self.translate_list_to_cons(items, vars)
             }
 
-            _ => Err(format!("Unsupported expression type for Z3: {:?}", expr)),
+            Expression::Ascription { expr, .. } => {
+                // Type annotations don't affect Z3 semantics - just translate the inner expression
+                self.kleis_to_z3(expr, vars)
+            }
+
+            Expression::Lambda { params, body } => {
+                // Lambda expressions in Z3 context:
+                // Translate the lambda body with parameters bound as fresh Int variables.
+                // This allows Z3 to reason about the body symbolically.
+                //
+                // For full lambda calculus semantics (beta-reduction, higher-order),
+                // the expression should be reduced before reaching Z3.
+                let mut new_vars = vars.clone();
+                for param in params {
+                    // Create fresh variable for each lambda parameter
+                    // Use type annotation if available, default to Int
+                    let z3_var: Dynamic = if let Some(ref ty) = param.type_annotation {
+                        match ty.as_str() {
+                            "Bool" | "Boolean" => Bool::fresh_const(&param.name).into(),
+                            "ℝ" | "Real" | "R" => Real::fresh_const(&param.name).into(),
+                            _ => Int::fresh_const(&param.name).into(),
+                        }
+                    } else {
+                        Int::fresh_const(&param.name).into()
+                    };
+                    new_vars.insert(param.name.clone(), z3_var);
+                }
+                self.kleis_to_z3(body, &new_vars)
+            }
+
+            Expression::Placeholder { .. } => {
+                // Placeholders shouldn't reach Z3 - they're for the editor
+                Err(
+                    "Placeholder expressions cannot be verified - fill in all slots first"
+                        .to_string(),
+                )
+            }
         }
     }
 

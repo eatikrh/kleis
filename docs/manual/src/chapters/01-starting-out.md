@@ -5,10 +5,10 @@
 The simplest things in Kleis are **expressions**. An expression is anything that has a value:
 
 ```kleis
-42              -- A number
-3.14159         -- A decimal
-x + y           -- An arithmetic expression
-sin(θ)          -- A function call
+42              // A number
+3.14159         // A decimal
+x + y           // An arithmetic expression
+sin(θ)          // A function call
 ```
 
 ## The REPL
@@ -32,11 +32,11 @@ kleis> let x = 5 in x * x
 Kleis supports the usual arithmetic operations:
 
 ```kleis
-2 + 3       -- Addition: 5
-10 - 4      -- Subtraction: 6
-3 * 7       -- Multiplication: 21
-15 / 3      -- Division: 5
-2 ^ 10      -- Exponentiation: 1024
+2 + 3       // Addition: 5
+10 - 4      // Subtraction: 6
+3 * 7       // Multiplication: 21
+15 / 3      // Division: 5
+2 ^ 10      // Exponentiation: 1024
 ```
 
 ## Variables and Definitions
@@ -59,16 +59,16 @@ define area_circle(r) = pi * r^2
 
 ## Comments
 
-Kleis uses `--` for single-line comments:
+Kleis uses C-style comments:
 
 ```kleis
--- This is a comment
-define x = 42  -- Inline comment
+// This is a single-line comment
+define x = 42  // Inline comment
 
-{- 
+/* 
    Multi-line comments
-   use curly braces with dashes
--}
+   use slash-star syntax
+*/
 ```
 
 ## Unicode Support
@@ -76,16 +76,16 @@ define x = 42  -- Inline comment
 Kleis embraces mathematical notation with full Unicode support:
 
 ```kleis
--- Greek letters
+// Greek letters
 define α = 0.5
 define β = 1.0
 define θ = π / 4
 
--- Mathematical symbols
-∀ x . x = x           -- Universal quantifier
-∃ y . y > 0           -- Existential quantifier
-x ∈ ℝ                 -- Set membership
-A ⊆ B                 -- Subset
+// Mathematical symbols
+∀ x . x = x           // Universal quantifier
+∃ y . y > 0           // Existential quantifier
+x ∈ ℝ                 // Set membership
+A ⊆ B                 // Subset
 ```
 
 You can use ASCII alternatives too:

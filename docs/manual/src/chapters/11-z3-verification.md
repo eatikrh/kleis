@@ -140,7 +140,7 @@ structure Ring(R) {
     
     axiom add_assoc : ∀ a : R . ∀ b : R . ∀ c : R .
         add(add(a, b), c) = add(a, add(b, c))
-    -- ... more axioms
+    // ... more axioms
 }
 
 -- Step 2: Implement for integers

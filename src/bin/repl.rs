@@ -1149,6 +1149,17 @@ fn expand_user_functions(
                 .map(|i| expand_user_functions(i, evaluator))
                 .collect(),
         ),
+        Expression::Lambda { params, body } => Expression::Lambda {
+            params: params.clone(),
+            body: Box::new(expand_user_functions(body, evaluator)),
+        },
+        Expression::Ascription {
+            expr: inner,
+            type_annotation,
+        } => Expression::Ascription {
+            expr: Box::new(expand_user_functions(inner, evaluator)),
+            type_annotation: type_annotation.clone(),
+        },
         // Leaf nodes - return as-is
         _ => expr.clone(),
     }
@@ -1252,6 +1263,25 @@ fn substitute_var(
                 .map(|i| substitute_var(i, var_name, replacement))
                 .collect(),
         ),
+        Expression::Lambda { params, body } => {
+            // Don't substitute in body if lambda binds the same variable
+            let shadows = params.iter().any(|p| p.name == var_name);
+            if shadows {
+                expr.clone()
+            } else {
+                Expression::Lambda {
+                    params: params.clone(),
+                    body: Box::new(substitute_var(body, var_name, replacement)),
+                }
+            }
+        }
+        Expression::Ascription {
+            expr: inner,
+            type_annotation,
+        } => Expression::Ascription {
+            expr: Box::new(substitute_var(inner, var_name, replacement)),
+            type_annotation: type_annotation.clone(),
+        },
         // Leaf nodes - return as-is
         _ => expr.clone(),
     }

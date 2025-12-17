@@ -112,31 +112,36 @@ Defined: factorial
 
 ## Lambda Expressions in REPL
 
-> 🚧 **Coming Soon: We're working on it!**
->
-> Lambda expressions are not yet implemented. Use named functions instead:
+Lambda expressions work in the REPL:
 
 ```
-kleis> -- Instead of: (\x -> x * 2)
-kleis> define double(x) = x * 2
+kleis> λ x . x * 2
+λ x . x * 2
+
+kleis> (λ x . x + 1)(5)
+6
+
+kleis> define double = λ x . x * 2
 Defined: double
 
 kleis> double(21)
 42
 ```
 
+You can use both the `λ` symbol and the `lambda` keyword.
+
 ## Example Session
 
 ```
-kleis> -- Define a structure
+kleis> // Define a structure
 kleis> structure Point { x : ℝ, y : ℝ }
 
-kleis> -- Create a point
+kleis> // Create a point
 kleis> let p = Point { x = 3, y = 4 } in
 ...>     sqrt(p.x^2 + p.y^2)
 5.0
 
-kleis> -- Verify properties
+kleis> // Verify properties
 kleis> verify ∀ a : ℝ . ∀ b : ℝ . (a + b)^2 = a^2 + 2*a*b + b^2
 ✓ Valid
 
