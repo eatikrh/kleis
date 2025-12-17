@@ -124,7 +124,7 @@ implements Group(ℤ) {
 
 ## Builtin Operations
 
-Some operations map to built-in primitives:
+Some operations can't be defined in pure Kleis — they need native code. The `builtin_` prefix connects Kleis to underlying implementations:
 
 ```kleis
 implements Matrix(m, n, ℝ) {
@@ -133,6 +133,42 @@ implements Matrix(m, n, ℝ) {
     operation mul = builtin_matrix_mul
 }
 ```
+
+### How Builtins Work
+
+When Kleis sees `builtin_foo`, it:
+1. Looks up `foo` in the native runtime
+2. Calls the Rust/C/hardware implementation
+3. Returns the result to Kleis
+
+This enables:
+- **Performance**: Native BLAS for matrix operations
+- **Hardware access**: GPUs, network cards, sensors
+- **System calls**: File I/O, networking, threading
+- **FFI**: Calling existing libraries
+
+### The Vision: Hardware as Structures
+
+Imagine:
+
+```kleis
+structure NetworkInterface(N) {
+    operation send : Packet → Result((), Error)
+    operation receive : () → Result(Packet, Error)
+    
+    axiom delivery : ∀ p : Packet . 
+        connected → eventually(delivered(p))
+}
+
+implements NetworkInterface(EthernetCard) {
+    operation send = builtin_eth_send
+    operation receive = builtin_eth_receive
+}
+```
+
+The **axioms** define the contract. The **builtins** provide the implementation. Z3 can verify that higher-level protocols satisfy their specifications *given* the hardware axioms.
+
+This is how Kleis becomes a **universal verification platform** — not just for math, but for any system with verifiable properties.
 
 ## Verification of Implementations
 
