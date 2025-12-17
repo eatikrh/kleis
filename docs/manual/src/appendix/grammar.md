@@ -118,13 +118,15 @@ type_args ::= '(' type (',' type)* ')'
 ## Structures
 
 ```ebnf
-structure ::= 'structure' identifier type_params? extends? where? '{' structure_body '}'
+structure ::= 'structure' identifier type_params? extends? over? where? '{' structure_body '}'
 
 type_params ::= '(' param_decl (',' param_decl)* ')'
 
 param_decl ::= identifier ':' type
 
 extends ::= 'extends' type (',' type)*
+
+over ::= 'over' type
 
 where ::= 'where' constraint (',' constraint)*
 

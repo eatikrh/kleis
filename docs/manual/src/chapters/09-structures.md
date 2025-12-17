@@ -119,6 +119,40 @@ structure VectorSpace(V, F) where F : Field {
 }
 ```
 
+## The `over` Keyword
+
+Many mathematical structures are defined "over" a base structure. A vector space is defined over a field, a module over a ring:
+
+```kleis
+-- Vector space over a field
+structure VectorSpace(V) over Field(F) {
+    operation (+) : V × V → V
+    operation (·) : F × V → V
+    
+    axiom scalar_identity : ∀ v : V . 1 · v = v
+    axiom distributive : ∀ a : F . ∀ u : V . ∀ v : V .
+        a · (u + v) = (a · u) + (a · v)
+}
+
+-- Module over a ring (generalization of vector space)
+structure Module(M) over Ring(R) {
+    operation (+) : M × M → M
+    operation (·) : R × M → M
+}
+
+-- Algebra over a ring
+structure Algebra(A) over Ring(R) {
+    operation (+) : A × A → A
+    operation (·) : R × A → A
+    operation (*) : A × A → A
+    
+    axiom bilinear : ∀ r : R . ∀ a : A . ∀ b : A .
+        r · (a * b) = (r · a) * b
+}
+```
+
+When you use `over`, Kleis automatically makes the base structure's axioms available for verification. For example, when verifying `VectorSpace` axioms, Z3 knows that `F` satisfies all `Field` axioms.
+
 ## Differential Geometry Structures
 
 Kleis shines for differential geometry:
