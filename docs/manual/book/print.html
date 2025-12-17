@@ -1,0 +1,2251 @@
+<!DOCTYPE HTML>
+<html lang="en" class="navy sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Learn You Some Kleis</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A fun, illustrated guide to the Kleis mathematical language">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "navy";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-3188c1c7.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-f10a7c19.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Learn You Some Kleis</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="learn-you-some-kleis-for-great-good"><a class="header" href="#learn-you-some-kleis-for-great-good">Learn You Some Kleis for Great Good!</a></h1>
+<blockquote>
+<p><em>“Mathematics is the language with which God has written the universe.”</em> — Galileo Galilei</p>
+</blockquote>
+<p>Welcome to <strong>Learn You Some Kleis</strong>, an illustrated guide to the Kleis mathematical language!</p>
+<h2 id="what-is-kleis"><a class="header" href="#what-is-kleis">What is Kleis?</a></h2>
+<p>Kleis is a <strong>mathematical expression language</strong> designed for:</p>
+<ul>
+<li>📐 <strong>Symbolic mathematics</strong> — work with expressions, not just numbers</li>
+<li>✅ <strong>Formal verification</strong> — prove properties with Z3 theorem prover</li>
+<li>🏗️ <strong>Extensible structures</strong> — define your own mathematical objects</li>
+<li>🔬 <strong>Scientific computing</strong> — differential geometry, tensor calculus, and more</li>
+</ul>
+<h2 id="who-is-this-for"><a class="header" href="#who-is-this-for">Who is This For?</a></h2>
+<p>This guide is for anyone who:</p>
+<ul>
+<li>Wants to express mathematical ideas precisely</li>
+<li>Is curious about formal verification</li>
+<li>Enjoys functional programming (Haskell, ML, etc.)</li>
+<li>Works with differential geometry or tensor calculus</li>
+</ul>
+<h2 id="how-to-read-this-guide"><a class="header" href="#how-to-read-this-guide">How to Read This Guide</a></h2>
+<p>Each chapter builds on the previous ones. We start with the basics:</p>
+<ol>
+<li><strong>Types</strong> — the foundation of everything</li>
+<li><strong>Functions</strong> — defining computations</li>
+<li><strong>Structures</strong> — building mathematical objects</li>
+</ol>
+<p>Then we explore advanced features:</p>
+<ol start="4">
+<li><strong>Pattern matching</strong> — elegant case analysis</li>
+<li><strong>Verification</strong> — proving things with Z3</li>
+<li><strong>Applications</strong> — real-world examples</li>
+</ol>
+<h2 id="a-taste-of-kleis"><a class="header" href="#a-taste-of-kleis">A Taste of Kleis</a></h2>
+<p>Here’s what Kleis looks like:</p>
+<pre><code class="language-kleis">-- Define a function
+define square(x) = x * x
+
+-- With type annotation
+define double(x : ℝ) : ℝ = x + x
+
+-- Create a structure
+structure Vector(n : ℕ) {
+    axiom dimension : n ≥ 1
+    operation dot : Vector(n) → ℝ
+}
+</code></pre>
+<h2 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h2>
+<p>Ready? Let’s dive in!</p>
+<p>→ <a href="#starting-out">Start with Chapter 1: Starting Out</a></p>
+<hr>
+<p><em>This guide is inspired by <a href="http://learnyouahaskell.com/">Learn You a Haskell</a> and <a href="https://learnyousomeerlang.com/">Learn You Some Erlang</a>.</em></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="starting-out"><a class="header" href="#starting-out">Starting Out</a></h1>
+<h2 id="your-first-kleis-expression"><a class="header" href="#your-first-kleis-expression">Your First Kleis Expression</a></h2>
+<p>The simplest things in Kleis are <strong>expressions</strong>. An expression is anything that has a value:</p>
+<pre><code class="language-kleis">42              -- A number
+3.14159         -- A decimal
+x + y           -- An arithmetic expression
+sin(θ)          -- A function call
+</code></pre>
+<h2 id="the-repl"><a class="header" href="#the-repl">The REPL</a></h2>
+<p>The easiest way to experiment with Kleis is the <strong>REPL</strong> (Read-Eval-Print Loop):</p>
+<pre><code class="language-bash">$ cargo run --bin repl
+Kleis REPL v0.7
+Type 'help' for commands, 'quit' to exit.
+
+kleis&gt; 2 + 2
+4
+
+kleis&gt; let x = 5 in x * x
+25
+</code></pre>
+<h2 id="basic-arithmetic"><a class="header" href="#basic-arithmetic">Basic Arithmetic</a></h2>
+<p>Kleis supports the usual arithmetic operations:</p>
+<pre><code class="language-kleis">2 + 3       -- Addition: 5
+10 - 4      -- Subtraction: 6
+3 * 7       -- Multiplication: 21
+15 / 3      -- Division: 5
+2 ^ 10      -- Exponentiation: 1024
+</code></pre>
+<h2 id="variables-and-definitions"><a class="header" href="#variables-and-definitions">Variables and Definitions</a></h2>
+<p>Use <code>define</code> to create named values:</p>
+<pre><code class="language-kleis">define pi = 3.14159
+define e = 2.71828
+define golden_ratio = (1 + sqrt(5)) / 2
+</code></pre>
+<p>Functions are defined similarly:</p>
+<pre><code class="language-kleis">define square(x) = x * x
+define cube(x) = x * x * x
+define area_circle(r) = pi * r^2
+</code></pre>
+<h2 id="comments"><a class="header" href="#comments">Comments</a></h2>
+<p>Kleis uses <code>--</code> for single-line comments:</p>
+<pre><code class="language-kleis">-- This is a comment
+define x = 42  -- Inline comment
+
+{- 
+   Multi-line comments
+   use curly braces with dashes
+-}
+</code></pre>
+<h2 id="unicode-support"><a class="header" href="#unicode-support">Unicode Support</a></h2>
+<p>Kleis embraces mathematical notation with full Unicode support:</p>
+<pre><code class="language-kleis">-- Greek letters
+define α = 0.5
+define β = 1.0
+define θ = π / 4
+
+-- Mathematical symbols
+∀ x . x = x           -- Universal quantifier
+∃ y . y &gt; 0           -- Existential quantifier
+x ∈ ℝ                 -- Set membership
+A ⊆ B                 -- Subset
+</code></pre>
+<p>You can use ASCII alternatives too:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Unicode</th><th>ASCII Alternative</th></tr>
+</thead>
+<tbody>
+<tr><td><code>∀</code></td><td><code>forall</code></td></tr>
+<tr><td><code>∃</code></td><td><code>exists</code></td></tr>
+<tr><td><code>→</code></td><td><code>-&gt;</code></td></tr>
+<tr><td><code>×</code></td><td><code>*</code></td></tr>
+<tr><td><code>ℝ</code></td><td><code>Real</code></td></tr>
+<tr><td><code>ℕ</code></td><td><code>Nat</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
+<p>Now that you can write basic expressions, let’s learn about the type system!</p>
+<p>→ <a href="#types-and-values">Next: Types and Values</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="types-and-values"><a class="header" href="#types-and-values">Types and Values</a></h1>
+<h2 id="why-types-matter"><a class="header" href="#why-types-matter">Why Types Matter</a></h2>
+<p>Types are the foundation of Kleis. Every expression has a type, and the type system catches errors before they become problems.</p>
+<pre><code class="language-kleis">42 : ℤ              -- 42 is an integer
+3.14 : ℝ            -- 3.14 is a real number
+True : Bool         -- True is a boolean
+</code></pre>
+<h2 id="built-in-types"><a class="header" href="#built-in-types">Built-in Types</a></h2>
+<h3 id="numeric-types"><a class="header" href="#numeric-types">Numeric Types</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Description</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ℕ</code> (or <code>Nat</code>)</td><td>Natural numbers (0, 1, 2, …)</td><td><code>0</code>, <code>42</code>, <code>100</code></td></tr>
+<tr><td><code>ℤ</code> (or <code>Int</code>)</td><td>Integers (…, -1, 0, 1, …)</td><td><code>-5</code>, <code>0</code>, <code>17</code></td></tr>
+<tr><td><code>ℝ</code> (or <code>Real</code>)</td><td>Real numbers</td><td><code>3.14</code>, <code>-2.5</code>, <code>√2</code></td></tr>
+<tr><td><code>ℂ</code> (or <code>Complex</code>)</td><td>Complex numbers</td><td><code>3 + 4i</code>, <code>i</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="other-basic-types"><a class="header" href="#other-basic-types">Other Basic Types</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Description</th><th>Values</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Bool</code></td><td>Booleans</td><td><code>True</code>, <code>False</code></td></tr>
+<tr><td><code>Unit</code></td><td>Unit type (like void)</td><td><code>()</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="type-annotations"><a class="header" href="#type-annotations">Type Annotations</a></h2>
+<p>You can explicitly annotate types with <code>:</code>:</p>
+<pre><code class="language-kleis">-- Variable annotation
+let x : ℝ = 3.14 in x * 2
+
+-- Function parameter and return types
+define f(x : ℝ) : ℝ = x * x
+
+-- Expression-level annotation (ascription)
+(a + b) : ℝ
+</code></pre>
+<h2 id="function-types"><a class="header" href="#function-types">Function Types</a></h2>
+<p>Functions have types too! The notation <code>A → B</code> means “a function from A to B”:</p>
+<pre><code class="language-kleis">-- square takes a Real and returns a Real
+define square(x : ℝ) : ℝ = x * x
+-- Type: ℝ → ℝ
+
+-- add takes two Reals and returns a Real
+define add(x : ℝ, y : ℝ) : ℝ = x + y
+-- Type: ℝ × ℝ → ℝ (or equivalently: ℝ → ℝ → ℝ)
+</code></pre>
+<h3 id="higher-order-function-types"><a class="header" href="#higher-order-function-types">Higher-Order Function Types</a></h3>
+<p>Functions can take other functions as arguments or return functions. These are called <strong>higher-order functions</strong>:</p>
+<pre><code class="language-kleis">-- A function that takes a function as an argument
+define apply_twice(f : ℝ → ℝ, x : ℝ) : ℝ = f(f(x))
+-- Type: (ℝ → ℝ) × ℝ → ℝ
+
+-- A function that returns a function
+define make_adder(n : ℝ) : ℝ → ℝ = ???
+-- Type: ℝ → (ℝ → ℝ)
+</code></pre>
+<p>The parentheses matter! Compare:</p>
+<ul>
+<li><code>(ℝ → ℝ) → ℝ</code> — takes a function, returns a number</li>
+<li><code>ℝ → (ℝ → ℝ)</code> — takes a number, returns a function</li>
+<li><code>ℝ → ℝ → ℝ</code> — curried function (associates right: <code>ℝ → (ℝ → ℝ)</code>)</li>
+</ul>
+<h3 id="function-type-examples"><a class="header" href="#function-type-examples">Function Type Examples</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ℝ → ℝ</code></td><td>Function from real to real</td></tr>
+<tr><td><code>ℝ → ℝ → ℝ</code></td><td>Curried binary function</td></tr>
+<tr><td><code>(ℝ → ℝ) → ℝ</code></td><td>Takes a function, returns a value (e.g., definite integral)</td></tr>
+<tr><td><code>ℝ → (ℝ → ℝ)</code></td><td>Returns a function (function factory)</td></tr>
+<tr><td><code>(ℝ → ℝ) → (ℝ → ℝ)</code></td><td>Function transformer (e.g., derivative operator)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="parametric-types"><a class="header" href="#parametric-types">Parametric Types</a></h2>
+<p>Types can have parameters:</p>
+<pre><code class="language-kleis">-- List of integers
+List(ℤ)
+
+-- Matrix with dimensions
+Matrix(3, 3, ℝ)   -- 3×3 matrix of reals
+
+-- Vector with dimension
+Vector(4)          -- 4-dimensional vector
+</code></pre>
+<h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
+<p>Kleis often infers types automatically:</p>
+<pre><code class="language-kleis">define double(x) = x + x
+-- Kleis infers: double : ℝ → ℝ (or more general)
+
+let y = 5 in y * y
+-- Kleis infers: y : ℤ
+</code></pre>
+<p>But explicit types make code clearer and catch errors earlier!</p>
+<h2 id="the-type-hierarchy"><a class="header" href="#the-type-hierarchy">The Type Hierarchy</a></h2>
+<pre><code>        Any
+       /   \
+    Scalar  Collection
+    /    \       |
+   ℂ    Bool   List
+   |           /   \
+   ℝ      Vector  Matrix
+   |
+   ℤ
+   |
+   ℕ
+</code></pre>
+<p>Note: <code>ℕ ⊂ ℤ ⊂ ℝ ⊂ ℂ</code> (natural numbers are integers are reals are complex)</p>
+<h2 id="whats-next-1"><a class="header" href="#whats-next-1">What’s Next?</a></h2>
+<p>Types are the foundation. Now let’s see how to define functions!</p>
+<p>→ <a href="#functions">Next: Functions</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="functions"><a class="header" href="#functions">Functions</a></h1>
+<h2 id="defining-functions"><a class="header" href="#defining-functions">Defining Functions</a></h2>
+<p>Functions are defined with <code>define</code>:</p>
+<pre><code class="language-kleis">define square(x) = x * x
+define cube(x) = x * x * x
+define add(x, y) = x + y
+</code></pre>
+<h2 id="functions-with-type-annotations"><a class="header" href="#functions-with-type-annotations">Functions with Type Annotations</a></h2>
+<p>For clarity and safety, add type annotations:</p>
+<pre><code class="language-kleis">define square(x : ℝ) : ℝ = x * x
+
+define distance(x : ℝ, y : ℝ) : ℝ = sqrt(x^2 + y^2)
+
+define normalize(v : Vector(3)) : Vector(3) = v / magnitude(v)
+</code></pre>
+<h2 id="multi-parameter-functions"><a class="header" href="#multi-parameter-functions">Multi-Parameter Functions</a></h2>
+<p>Functions can take multiple parameters:</p>
+<pre><code class="language-kleis">define add(x, y) = x + y
+define volume_box(l, w, h) = l * w * h
+define dot_product(a, b, c, x, y, z) = a*x + b*y + c*z
+</code></pre>
+<h2 id="recursive-functions"><a class="header" href="#recursive-functions">Recursive Functions</a></h2>
+<p>Functions can call themselves:</p>
+<pre><code class="language-kleis">define factorial(n : ℕ) : ℕ =
+    if n = 0 then 1
+    else n * factorial(n - 1)
+
+define fibonacci(n : ℕ) : ℕ =
+    if n ≤ 1 then n
+    else fibonacci(n-1) + fibonacci(n-2)
+</code></pre>
+<h2 id="built-in-mathematical-functions"><a class="header" href="#built-in-mathematical-functions">Built-in Mathematical Functions</a></h2>
+<p>Kleis includes standard mathematical functions:</p>
+<h3 id="trigonometric"><a class="header" href="#trigonometric">Trigonometric</a></h3>
+<pre><code class="language-kleis">sin(x)      cos(x)      tan(x)
+asin(x)     acos(x)     atan(x)
+sinh(x)     cosh(x)     tanh(x)
+</code></pre>
+<h3 id="exponential-and-logarithmic"><a class="header" href="#exponential-and-logarithmic">Exponential and Logarithmic</a></h3>
+<pre><code class="language-kleis">exp(x)      -- e^x
+ln(x)       -- natural log
+log(x)      -- base-10 log
+log(b, x)   -- log base b of x
+</code></pre>
+<h3 id="other"><a class="header" href="#other">Other</a></h3>
+<pre><code class="language-kleis">sqrt(x)     -- square root
+abs(x)      -- absolute value
+floor(x)    -- round down
+ceil(x)     -- round up
+min(x, y)   -- minimum
+max(x, y)   -- maximum
+</code></pre>
+<h2 id="lambda-expressions-anonymous-functions"><a class="header" href="#lambda-expressions-anonymous-functions">Lambda Expressions (Anonymous Functions)</a></h2>
+<blockquote>
+<p>🚧 <strong>Coming Soon: We’re working on it!</strong></p>
+<p>Lambda expressions allow you to create anonymous functions inline.
+This feature is planned but not yet implemented in the parser.</p>
+</blockquote>
+<p>Lambda expressions will let you write:</p>
+<pre><code class="language-kleis">-- Planned syntax (not yet working):
+λ x . x * x           -- square function
+\x -&gt; x + 1           -- increment (ASCII alternative)
+λ x . λ y . x + y     -- curried addition
+</code></pre>
+<p><strong>Current workaround:</strong> Use named functions with <code>define</code>:</p>
+<pre><code class="language-kleis">-- Instead of: map(λ x . x * 2, list)
+-- Define a helper:
+define double(x) = x * 2
+-- Then use it: map(double, list)
+</code></pre>
+<h2 id="higher-order-functions"><a class="header" href="#higher-order-functions">Higher-Order Functions</a></h2>
+<p>Functions can take functions as arguments:</p>
+<pre><code class="language-kleis">-- Apply a function twice
+define apply_twice(f, x) = f(f(x))
+
+-- Example usage:
+define inc(x) = x + 1
+apply_twice(inc, 5)   -- Result: 7
+</code></pre>
+<h2 id="partial-application"><a class="header" href="#partial-application">Partial Application</a></h2>
+<blockquote>
+<p>🚧 <strong>Coming Soon</strong></p>
+<p>Partial application (currying) will be supported once lambda
+expressions are implemented.</p>
+</blockquote>
+<h2 id="whats-next-2"><a class="header" href="#whats-next-2">What’s Next?</a></h2>
+<p>Learn about algebraic data types for structured data!</p>
+<p>→ <a href="#algebraic-data-types">Next: Algebraic Types</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="algebraic-data-types"><a class="header" href="#algebraic-data-types">Algebraic Data Types</a></h1>
+<h2 id="what-are-adts"><a class="header" href="#what-are-adts">What Are ADTs?</a></h2>
+<p>Algebraic Data Types (ADTs) let you define custom data structures by combining simpler types. There are two main kinds:</p>
+<ul>
+<li><strong>Product types</strong> — “this AND that” (records, tuples)</li>
+<li><strong>Sum types</strong> — “this OR that” (variants, enums)</li>
+</ul>
+<h2 id="product-types"><a class="header" href="#product-types">Product Types</a></h2>
+<p>A product type combines multiple values:</p>
+<pre><code class="language-kleis">-- A point has an x AND a y
+structure Point {
+    x : ℝ
+    y : ℝ
+}
+
+-- A person has a name AND an age
+structure Person {
+    name : String
+    age : ℕ
+}
+</code></pre>
+<h2 id="sum-types-variants"><a class="header" href="#sum-types-variants">Sum Types (Variants)</a></h2>
+<p>A sum type represents alternatives:</p>
+<pre><code class="language-kleis">-- A shape is a Circle OR a Rectangle OR a Triangle
+enum Shape {
+    Circle(radius : ℝ)
+    Rectangle(width : ℝ, height : ℝ)
+    Triangle(a : ℝ, b : ℝ, c : ℝ)
+}
+
+-- An optional value is Some(value) OR None
+enum Option(T) {
+    Some(value : T)
+    None
+}
+
+-- A result is Ok(value) OR Err(message)
+enum Result(T, E) {
+    Ok(value : T)
+    Err(error : E)
+}
+</code></pre>
+<h2 id="pattern-matching-with-adts"><a class="header" href="#pattern-matching-with-adts">Pattern Matching with ADTs</a></h2>
+<p>ADTs shine with pattern matching:</p>
+<pre><code class="language-kleis">define area(shape : Shape) : ℝ =
+    match shape {
+        Circle(r) =&gt; π * r^2
+        Rectangle(w, h) =&gt; w * h
+        Triangle(a, b, c) =&gt; 
+            let s = (a + b + c) / 2 in
+            sqrt(s * (s-a) * (s-b) * (s-c))  -- Heron's formula
+    }
+</code></pre>
+<h2 id="recursive-types"><a class="header" href="#recursive-types">Recursive Types</a></h2>
+<p>Types can refer to themselves:</p>
+<pre><code class="language-kleis">-- A list is either empty (Nil) or a value followed by another list (Cons)
+enum List(T) {
+    Nil
+    Cons(head : T, tail : List(T))
+}
+
+-- A binary tree
+enum Tree(T) {
+    Leaf(value : T)
+    Node(left : Tree(T), value : T, right : Tree(T))
+}
+</code></pre>
+<h2 id="the-mathematical-perspective"><a class="header" href="#the-mathematical-perspective">The Mathematical Perspective</a></h2>
+<p>Why “algebraic”?</p>
+<ul>
+<li><strong>Product types</strong> correspond to multiplication: <code>Point = ℝ × ℝ</code></li>
+<li><strong>Sum types</strong> correspond to addition: <code>Option(T) = T + 1</code></li>
+</ul>
+<p>The number of possible values follows algebra:</p>
+<ul>
+<li><code>Bool</code> has 2 values</li>
+<li><code>Bool × Bool</code> has 2 × 2 = 4 values</li>
+<li><code>Bool + Bool</code> has 2 + 2 = 4 values</li>
+</ul>
+<h2 id="practical-example-expression-trees"><a class="header" href="#practical-example-expression-trees">Practical Example: Expression Trees</a></h2>
+<p>ADTs are perfect for representing mathematical expressions:</p>
+<pre><code class="language-kleis">enum Expr {
+    Const(value : ℝ)
+    Var(name : String)
+    Add(left : Expr, right : Expr)
+    Mul(left : Expr, right : Expr)
+    Neg(inner : Expr)
+}
+
+-- Evaluate an expression given variable values
+define eval(expr : Expr, env : Map(String, ℝ)) : ℝ =
+    match expr {
+        Const(v) =&gt; v
+        Var(name) =&gt; lookup(env, name)
+        Add(l, r) =&gt; eval(l, env) + eval(r, env)
+        Mul(l, r) =&gt; eval(l, env) * eval(r, env)
+        Neg(e) =&gt; -eval(e, env)
+    }
+</code></pre>
+<h2 id="whats-next-3"><a class="header" href="#whats-next-3">What’s Next?</a></h2>
+<p>Let’s dive deeper into pattern matching!</p>
+<p>→ <a href="#pattern-matching">Next: Pattern Matching</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="pattern-matching"><a class="header" href="#pattern-matching">Pattern Matching</a></h1>
+<h2 id="the-power-of-match"><a class="header" href="#the-power-of-match">The Power of Match</a></h2>
+<p>Pattern matching is one of Kleis’s most powerful features. It lets you destructure data and handle different cases elegantly:</p>
+<pre><code class="language-kleis">define describe(n : ℤ) : String =
+    match n {
+        0 =&gt; "zero"
+        1 =&gt; "one"
+        _ =&gt; "many"
+    }
+</code></pre>
+<h2 id="basic-patterns"><a class="header" href="#basic-patterns">Basic Patterns</a></h2>
+<h3 id="literal-patterns"><a class="header" href="#literal-patterns">Literal Patterns</a></h3>
+<p>Match exact values:</p>
+<pre><code class="language-kleis">match x {
+    0 =&gt; "zero"
+    1 =&gt; "one"
+    42 =&gt; "the answer"
+    _ =&gt; "something else"
+}
+</code></pre>
+<h3 id="variable-patterns"><a class="header" href="#variable-patterns">Variable Patterns</a></h3>
+<p>Bind matched values to names:</p>
+<pre><code class="language-kleis">match point {
+    Point(x, y) =&gt; x + y  -- x and y are bound
+}
+</code></pre>
+<h3 id="wildcard-pattern"><a class="header" href="#wildcard-pattern">Wildcard Pattern</a></h3>
+<p>The underscore <code>_</code> matches anything:</p>
+<pre><code class="language-kleis">match pair {
+    (_, 0) =&gt; "second is zero"
+    (0, _) =&gt; "first is zero"
+    _ =&gt; "neither is zero"
+}
+</code></pre>
+<h2 id="nested-patterns"><a class="header" href="#nested-patterns">Nested Patterns</a></h2>
+<p>Patterns can be nested arbitrarily:</p>
+<pre><code class="language-kleis">match tree {
+    Leaf(v) =&gt; v
+    Node(Leaf(l), v, Leaf(r)) =&gt; l + v + r  -- Both children are leaves
+    Node(left, v, right) =&gt; v + sum(left) + sum(right)
+}
+</code></pre>
+<h2 id="guards"><a class="header" href="#guards">Guards</a></h2>
+<p>Add conditions to patterns with <code>if</code>:</p>
+<pre><code class="language-kleis">match n {
+    x if x &lt; 0 =&gt; "negative"
+    x if x &gt; 0 =&gt; "positive"
+    _ =&gt; "zero"
+}
+</code></pre>
+<h2 id="as-patterns"><a class="header" href="#as-patterns">As-Patterns</a></h2>
+<p>Bind the whole match while also destructuring:</p>
+<pre><code class="language-kleis">match list {
+    Cons(h, t) as whole =&gt; 
+        if h &gt; 10 then whole
+        else t
+}
+</code></pre>
+<h2 id="pattern-matching-in-let"><a class="header" href="#pattern-matching-in-let">Pattern Matching in Let</a></h2>
+<p>Destructure directly in let bindings:</p>
+<pre><code class="language-kleis">let Point(x, y) = origin in
+    x^2 + y^2
+
+let (first, second, _) = triple in
+    first + second
+</code></pre>
+<h2 id="pattern-matching-in-function-parameters"><a class="header" href="#pattern-matching-in-function-parameters">Pattern Matching in Function Parameters</a></h2>
+<blockquote>
+<p>🚧 <strong>Coming Soon: We’re working on it!</strong></p>
+<p>Pattern matching directly in function parameters requires lambda
+expressions, which are not yet implemented.</p>
+</blockquote>
+<p>Planned syntax:</p>
+<pre><code class="language-kleis">-- Planned (not yet working):
+define fst((a, _)) = a
+define snd((_, b)) = b
+</code></pre>
+<p><strong>Current workaround:</strong></p>
+<pre><code class="language-kleis">define fst(pair) = 
+    match pair {
+        (a, _) =&gt; a
+    }
+</code></pre>
+<h2 id="exhaustiveness"><a class="header" href="#exhaustiveness">Exhaustiveness</a></h2>
+<p>Kleis checks that your patterns cover all cases:</p>
+<pre><code class="language-kleis">-- ⚠️ Warning: non-exhaustive patterns
+match opt {
+    Some(x) =&gt; x
+    -- Missing: None case!
+}
+
+-- ✓ Complete
+match opt {
+    Some(x) =&gt; x
+    None =&gt; 0
+}
+</code></pre>
+<h2 id="real-world-example-symbolic-differentiation"><a class="header" href="#real-world-example-symbolic-differentiation">Real-World Example: Symbolic Differentiation</a></h2>
+<p>Pattern matching makes symbolic math elegant:</p>
+<pre><code class="language-kleis">define diff(expr : Expr, var : String) : Expr =
+    match expr {
+        Const(_) =&gt; Const(0)
+        
+        Var(name) =&gt; 
+            if name = var then Const(1)
+            else Const(0)
+        
+        Add(f, g) =&gt; 
+            Add(diff(f, var), diff(g, var))
+        
+        Mul(f, g) =&gt;  -- Product rule
+            Add(Mul(diff(f, var), g), 
+                Mul(f, diff(g, var)))
+        
+        Neg(f) =&gt; 
+            Neg(diff(f, var))
+    }
+</code></pre>
+<h2 id="whats-next-4"><a class="header" href="#whats-next-4">What’s Next?</a></h2>
+<p>Learn about let bindings for local definitions!</p>
+<p>→ <a href="#let-bindings">Next: Let Bindings</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="let-bindings"><a class="header" href="#let-bindings">Let Bindings</a></h1>
+<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
+<p>Let bindings introduce local variables with limited scope. They’re essential for breaking complex expressions into readable parts.</p>
+<pre><code class="language-kleis">let x = 5 in x * x
+-- Result: 25
+</code></pre>
+<h2 id="basic-syntax"><a class="header" href="#basic-syntax">Basic Syntax</a></h2>
+<pre><code class="language-kleis">let &lt;name&gt; = &lt;value&gt; in &lt;body&gt;
+</code></pre>
+<p>The variable <code>name</code> is only visible within <code>body</code>:</p>
+<pre><code class="language-kleis">let radius = 10 in
+    π * radius^2
+-- Result: 314.159...
+
+-- 'radius' is not visible here!
+</code></pre>
+<h2 id="with-type-annotations"><a class="header" href="#with-type-annotations">With Type Annotations</a></h2>
+<p>Add explicit types for clarity:</p>
+<pre><code class="language-kleis">let x : ℝ = 3.14 in x * 2
+let n : ℕ = 42 in factorial(n)
+let v : Vector(3) = [1, 2, 3] in magnitude(v)
+</code></pre>
+<h2 id="nested-let-bindings"><a class="header" href="#nested-let-bindings">Nested Let Bindings</a></h2>
+<p>Chain multiple bindings:</p>
+<pre><code class="language-kleis">let x = 5 in
+let y = 3 in
+let z = x + y in
+    x * y * z
+-- Result: 5 * 3 * 8 = 120
+</code></pre>
+<h2 id="shadowing"><a class="header" href="#shadowing">Shadowing</a></h2>
+<p>Inner bindings can shadow outer ones:</p>
+<pre><code class="language-kleis">let x = 1 in
+let x = x + 1 in
+let x = x * 2 in
+    x
+-- Result: 4  (not 1!)
+</code></pre>
+<p>Each <code>let</code> creates a new scope where <code>x</code> is rebound.</p>
+<h2 id="pure-substitution-semantics"><a class="header" href="#pure-substitution-semantics">Pure Substitution Semantics</a></h2>
+<p>In Kleis, <code>let x = e in body</code> is equivalent to substituting <code>e</code> for <code>x</code> in <code>body</code>:</p>
+<pre><code class="language-kleis">let x = 5 in x + x
+-- is the same as:
+5 + 5
+</code></pre>
+<p>This is <strong>pure functional semantics</strong> — no mutation, no side effects.</p>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="quadratic-formula"><a class="header" href="#quadratic-formula">Quadratic Formula</a></h3>
+<pre><code class="language-kleis">define quadratic_roots(a : ℝ, b : ℝ, c : ℝ) : (ℝ, ℝ) =
+    let discriminant = b^2 - 4*a*c in
+    let sqrt_d = sqrt(discriminant) in
+    let denom = 2 * a in
+        ((-b + sqrt_d) / denom, (-b - sqrt_d) / denom)
+</code></pre>
+<h3 id="herons-formula"><a class="header" href="#herons-formula">Heron’s Formula</a></h3>
+<pre><code class="language-kleis">define triangle_area(a : ℝ, b : ℝ, c : ℝ) : ℝ =
+    let s = (a + b + c) / 2 in  -- semi-perimeter
+        sqrt(s * (s - a) * (s - b) * (s - c))
+</code></pre>
+<h3 id="complex-calculations"><a class="header" href="#complex-calculations">Complex Calculations</a></h3>
+<pre><code class="language-kleis">define schwarzschild_metric(r : ℝ, M : ℝ) : ℝ =
+    let rs = 2 * G * M / c^2 in      -- Schwarzschild radius
+    let factor = 1 - rs / r in
+        -c^2 * factor                 -- g_tt component
+</code></pre>
+<h2 id="let-vs-define"><a class="header" href="#let-vs-define">Let vs Define</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th><code>define</code></th><th><code>let ... in</code></th></tr>
+</thead>
+<tbody>
+<tr><td>Top-level, global</td><td>Local scope only</td></tr>
+<tr><td>Named function/constant</td><td>Temporary binding</td></tr>
+<tr><td>Visible everywhere</td><td>Visible only in body</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-kleis">-- Global constant
+define pi = 3.14159
+
+-- Local temporary
+let two_pi = 2 * pi in
+    two_pi * radius
+</code></pre>
+<h2 id="whats-next-5"><a class="header" href="#whats-next-5">What’s Next?</a></h2>
+<p>Learn about quantifiers and logic!</p>
+<p>→ <a href="#quantifiers-and-logic">Next: Quantifiers and Logic</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="quantifiers-and-logic"><a class="header" href="#quantifiers-and-logic">Quantifiers and Logic</a></h1>
+<h2 id="universal-quantifier-"><a class="header" href="#universal-quantifier-">Universal Quantifier (∀)</a></h2>
+<p>The universal quantifier expresses “for all”:</p>
+<pre><code class="language-kleis">∀ x . x = x                      -- Everything equals itself
+∀ x . x + 0 = x                  -- Zero is additive identity
+∀ x . ∀ y . x + y = y + x        -- Addition is commutative
+</code></pre>
+<p>ASCII alternative: <code>forall x . ...</code></p>
+<h2 id="existential-quantifier-"><a class="header" href="#existential-quantifier-">Existential Quantifier (∃)</a></h2>
+<p>The existential quantifier expresses “there exists”:</p>
+<pre><code class="language-kleis">∃ x . x &gt; 0                      -- Some number is positive
+∃ y . y * y = 2                  -- Square root of 2 exists
+∃ x . ∃ y . x ≠ y                -- At least two things exist
+</code></pre>
+<p>ASCII alternative: <code>exists x . ...</code></p>
+<h2 id="combining-quantifiers"><a class="header" href="#combining-quantifiers">Combining Quantifiers</a></h2>
+<p>Build complex statements:</p>
+<pre><code class="language-kleis">-- Every number has a successor
+∀ n : ℕ . ∃ m : ℕ . m = n + 1
+
+-- Density of rationals: between any two reals is a rational
+∀ x : ℝ . ∀ y : ℝ . x &lt; y → ∃ q : ℚ . x &lt; q ∧ q &lt; y
+</code></pre>
+<h2 id="logical-connectives"><a class="header" href="#logical-connectives">Logical Connectives</a></h2>
+<h3 id="conjunction---and"><a class="header" href="#conjunction---and">Conjunction (∧ / and)</a></h3>
+<pre><code class="language-kleis">x &gt; 0 ∧ x &lt; 10     -- x is between 0 and 10
+True ∧ False       -- False
+</code></pre>
+<h3 id="disjunction---or"><a class="header" href="#disjunction---or">Disjunction (∨ / or)</a></h3>
+<pre><code class="language-kleis">x = 0 ∨ x = 1      -- x is 0 or 1
+True ∨ False       -- True
+</code></pre>
+<h3 id="implication---implies"><a class="header" href="#implication---implies">Implication (→ / implies)</a></h3>
+<pre><code class="language-kleis">x &gt; 0 → sqrt(x) ∈ ℝ    -- If positive, has real square root
+P → Q                   -- If P then Q
+</code></pre>
+<h3 id="negation---not"><a class="header" href="#negation---not">Negation (¬ / not)</a></h3>
+<pre><code class="language-kleis">¬(x = 0)           -- x is not zero
+¬True              -- False
+</code></pre>
+<h3 id="biconditional---iff"><a class="header" href="#biconditional---iff">Biconditional (↔ / iff)</a></h3>
+<pre><code class="language-kleis">x = 0 ↔ x * x = 0  -- x is zero iff x² is zero
+</code></pre>
+<h2 id="type-constraints-in-quantifiers"><a class="header" href="#type-constraints-in-quantifiers">Type Constraints in Quantifiers</a></h2>
+<p>Restrict the domain:</p>
+<pre><code class="language-kleis">∀ x : ℕ . x ≥ 0                  -- All naturals are non-negative
+∀ M : Matrix(n, n) . det(M * M⁻¹) = 1   -- Determinant property
+</code></pre>
+<h2 id="using-quantifiers-in-axioms"><a class="header" href="#using-quantifiers-in-axioms">Using Quantifiers in Axioms</a></h2>
+<p>Quantifiers are essential in structure axioms:</p>
+<pre><code class="language-kleis">structure Group(G) {
+    operation e : G                      -- Identity element
+    operation mul : G × G → G
+    operation inv : G → G
+    
+    axiom identity : ∀ x : G . mul(e, x) = x ∧ mul(x, e) = x
+    axiom inverse : ∀ x : G . mul(x, inv(x)) = e
+    axiom associative : ∀ x : G . ∀ y : G . ∀ z : G .
+        mul(mul(x, y), z) = mul(x, mul(y, z))
+}
+</code></pre>
+<h2 id="verification-with-z3"><a class="header" href="#verification-with-z3">Verification with Z3</a></h2>
+<p>Kleis uses Z3 to check quantified statements:</p>
+<pre><code class="language-kleis">-- Z3 can verify this is always true:
+verify ∀ x : ℝ . x + 0 = x
+
+-- Z3 can find a counterexample for this:
+verify ∀ x : ℝ . x &gt; 0
+-- Counterexample: x = -1
+</code></pre>
+<h2 id="truth-tables"><a class="header" href="#truth-tables">Truth Tables</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>P</th><th>Q</th><th>P ∧ Q</th><th>P ∨ Q</th><th>P → Q</th><th>¬P</th></tr>
+</thead>
+<tbody>
+<tr><td>T</td><td>T</td><td>T</td><td>T</td><td>T</td><td>F</td></tr>
+<tr><td>T</td><td>F</td><td>F</td><td>T</td><td>F</td><td>F</td></tr>
+<tr><td>F</td><td>T</td><td>F</td><td>T</td><td>T</td><td>T</td></tr>
+<tr><td>F</td><td>F</td><td>F</td><td>F</td><td>T</td><td>T</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="whats-next-6"><a class="header" href="#whats-next-6">What’s Next?</a></h2>
+<p>Learn about conditional expressions!</p>
+<p>→ <a href="#conditionals">Next: Conditionals</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="conditionals"><a class="header" href="#conditionals">Conditionals</a></h1>
+<h2 id="if-then-else"><a class="header" href="#if-then-else">If-Then-Else</a></h2>
+<p>The basic conditional expression:</p>
+<pre><code class="language-kleis">if condition then value1 else value2
+</code></pre>
+<p>Examples:</p>
+<pre><code class="language-kleis">if x &gt; 0 then "positive" else "non-positive"
+
+if n = 0 then 1 else n * factorial(n - 1)
+
+define abs(x : ℝ) : ℝ = if x ≥ 0 then x else -x
+</code></pre>
+<h2 id="conditionals-are-expressions"><a class="header" href="#conditionals-are-expressions">Conditionals Are Expressions</a></h2>
+<p>In Kleis, <code>if-then-else</code> is an expression that returns a value:</p>
+<pre><code class="language-kleis">let result = if x &gt; 0 then x else -x in
+    result * 2
+
+-- Both branches must have compatible types!
+if True then 42 else "hello"  -- ❌ Type error!
+</code></pre>
+<h2 id="nested-conditionals"><a class="header" href="#nested-conditionals">Nested Conditionals</a></h2>
+<pre><code class="language-kleis">define sign(x : ℝ) : ℤ =
+    if x &gt; 0 then 1
+    else if x &lt; 0 then -1
+    else 0
+
+define grade(score : ℕ) : String =
+    if score ≥ 90 then "A"
+    else if score ≥ 80 then "B"
+    else if score ≥ 70 then "C"
+    else if score ≥ 60 then "D"
+    else "F"
+</code></pre>
+<h2 id="guards-vs-if-then-else"><a class="header" href="#guards-vs-if-then-else">Guards vs If-Then-Else</a></h2>
+<p>Pattern matching with guards is often cleaner:</p>
+<pre><code class="language-kleis">-- With if-then-else
+define classify(n : ℤ) : String =
+    if n &lt; 0 then "negative"
+    else if n = 0 then "zero"
+    else "positive"
+
+-- With pattern matching and guards
+define classify(n : ℤ) : String =
+    match n {
+        x if x &lt; 0 =&gt; "negative"
+        0 =&gt; "zero"
+        _ =&gt; "positive"
+    }
+</code></pre>
+<h2 id="piecewise-functions"><a class="header" href="#piecewise-functions">Piecewise Functions</a></h2>
+<p>Mathematicians love piecewise definitions:</p>
+<pre><code class="language-kleis">-- Absolute value
+define abs(x : ℝ) : ℝ =
+    if x ≥ 0 then x else -x
+
+-- Heaviside step function
+define heaviside(x : ℝ) : ℝ =
+    if x &lt; 0 then 0
+    else if x = 0 then 0.5
+    else 1
+
+-- Piecewise polynomial
+define f(x : ℝ) : ℝ =
+    if x &lt; 0 then x^2
+    else if x &lt; 1 then x
+    else 2 - x
+</code></pre>
+<h2 id="boolean-expressions"><a class="header" href="#boolean-expressions">Boolean Expressions</a></h2>
+<p>Conditions can be complex:</p>
+<pre><code class="language-kleis">if x &gt; 0 ∧ y &gt; 0 then "first quadrant"
+else if x &lt; 0 ∧ y &gt; 0 then "second quadrant"
+else if x &lt; 0 ∧ y &lt; 0 then "third quadrant"
+else if x &gt; 0 ∧ y &lt; 0 then "fourth quadrant"
+else "on an axis"
+</code></pre>
+<h2 id="short-circuit-evaluation"><a class="header" href="#short-circuit-evaluation">Short-Circuit Evaluation</a></h2>
+<p>Kleis uses short-circuit evaluation for <code>∧</code> and <code>∨</code>:</p>
+<pre><code class="language-kleis">-- If x = 0, division is never evaluated
+if x ≠ 0 ∧ y/x &gt; 1 then "big ratio" else "safe"
+</code></pre>
+<h2 id="whats-next-7"><a class="header" href="#whats-next-7">What’s Next?</a></h2>
+<p>Learn about structures for defining mathematical objects!</p>
+<p>→ <a href="#structures">Next: Structures</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="structures"><a class="header" href="#structures">Structures</a></h1>
+<h2 id="what-are-structures"><a class="header" href="#what-are-structures">What Are Structures?</a></h2>
+<p>Structures define mathematical objects with their properties and operations. Think of them as “blueprints” for mathematical concepts.</p>
+<pre><code class="language-kleis">structure Vector(n : ℕ) {
+    -- Operations this structure supports
+    operation add : Vector(n) → Vector(n)
+    operation scale : ℝ → Vector(n)
+    operation dot : Vector(n) → ℝ
+    
+    -- Properties that must hold
+    axiom commutative : ∀ u : Vector(n) . ∀ v : Vector(n) .
+        add(u, v) = add(v, u)
+}
+</code></pre>
+<h2 id="structure-syntax"><a class="header" href="#structure-syntax">Structure Syntax</a></h2>
+<pre><code class="language-kleis">structure Name(parameters) {
+    -- Fields (data)
+    field1 : Type1
+    field2 : Type2
+    
+    -- Operations (functions)
+    operation op1 : InputType → OutputType
+    
+    -- Axioms (properties)
+    axiom property : logical_statement
+}
+</code></pre>
+<h2 id="example-complex-numbers"><a class="header" href="#example-complex-numbers">Example: Complex Numbers</a></h2>
+<pre><code class="language-kleis">structure Complex {
+    field re : ℝ  -- real part
+    field im : ℝ  -- imaginary part
+    
+    operation add : Complex → Complex
+    operation mul : Complex → Complex
+    operation conj : Complex           -- conjugate
+    operation mag : ℝ                  -- magnitude
+    
+    axiom add_commutative : ∀ z : Complex . ∀ w : Complex .
+        add(z, w) = add(w, z)
+        
+    axiom magnitude_positive : ∀ z : Complex .
+        mag(z) ≥ 0
+        
+    axiom conj_involution : ∀ z : Complex .
+        conj(conj(z)) = z
+}
+</code></pre>
+<h2 id="parametric-structures"><a class="header" href="#parametric-structures">Parametric Structures</a></h2>
+<p>Structures can have type parameters:</p>
+<pre><code class="language-kleis">structure Matrix(m : ℕ, n : ℕ, T) {
+    operation transpose : Matrix(n, m, T)
+    operation add : Matrix(m, n, T) → Matrix(m, n, T)
+    
+    axiom transpose_involution : ∀ A : Matrix(m, n, T) .
+        transpose(transpose(A)) = A
+}
+
+-- Square matrices have more operations
+structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
+    operation det : T
+    operation trace : T
+    operation inv : SquareMatrix(n, T)
+    
+    axiom det_mul : ∀ A : SquareMatrix(n, T) . ∀ B : SquareMatrix(n, T) .
+        det(mul(A, B)) = det(A) * det(B)
+}
+</code></pre>
+<h2 id="the-extends-keyword"><a class="header" href="#the-extends-keyword">The <code>extends</code> Keyword</a></h2>
+<p>Structures can extend other structures:</p>
+<pre><code class="language-kleis">structure Monoid(M) {
+    operation e : M
+    operation mul : M × M → M
+    
+    axiom identity : ∀ x : M . mul(e, x) = x ∧ mul(x, e) = x
+    axiom associative : ∀ x : M . ∀ y : M . ∀ z : M .
+        mul(mul(x, y), z) = mul(x, mul(y, z))
+}
+
+structure Group(G) extends Monoid(G) {
+    operation inv : G → G
+    
+    axiom inverse : ∀ x : G . mul(x, inv(x)) = e ∧ mul(inv(x), x) = e
+}
+
+structure AbelianGroup(G) extends Group(G) {
+    axiom commutative : ∀ x : G . ∀ y : G . mul(x, y) = mul(y, x)
+}
+</code></pre>
+<h2 id="the-where-clause"><a class="header" href="#the-where-clause">The <code>where</code> Clause</a></h2>
+<p>Constrain type parameters:</p>
+<pre><code class="language-kleis">structure VectorSpace(V, F) where F : Field {
+    operation add : V × V → V
+    operation scale : F × V → V
+    
+    axiom distributive : ∀ a : F . ∀ u : V . ∀ v : V .
+        scale(a, add(u, v)) = add(scale(a, u), scale(a, v))
+}
+</code></pre>
+<h2 id="differential-geometry-structures"><a class="header" href="#differential-geometry-structures">Differential Geometry Structures</a></h2>
+<p>Kleis shines for differential geometry:</p>
+<pre><code class="language-kleis">structure Manifold(M, dim : ℕ) {
+    operation tangent : M → TangentSpace(M)
+    operation metric : M → Tensor(0, 2)
+    
+    axiom metric_symmetric : ∀ p : M .
+        metric(p) = transpose(metric(p))
+}
+
+structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
+    operation christoffel : M → Tensor(1, 2)
+    operation riemann : M → Tensor(1, 3)
+    operation ricci : M → Tensor(0, 2)
+    operation scalar_curvature : M → ℝ
+    
+    axiom first_bianchi : ∀ p : M .
+        -- R^a_{bcd} + R^a_{cdb} + R^a_{dbc} = 0
+        cyclic_sum(riemann(p)) = 0
+}
+</code></pre>
+<h2 id="whats-next-8"><a class="header" href="#whats-next-8">What’s Next?</a></h2>
+<p>Learn how to implement structures!</p>
+<p>→ <a href="#implements">Next: Implements</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="implements"><a class="header" href="#implements">Implements</a></h1>
+<h2 id="from-structure-to-implementation"><a class="header" href="#from-structure-to-implementation">From Structure to Implementation</a></h2>
+<p>A <code>structure</code> declares what operations exist. An <code>implements</code> block provides the actual definitions:</p>
+<pre><code class="language-kleis">structure Addable(T) {
+    operation add : T × T → T
+}
+
+implements Addable(ℝ) {
+    operation add(x, y) = x + y
+}
+
+implements Addable(ℤ) {
+    operation add(x, y) = x + y
+}
+</code></pre>
+<h2 id="full-example-complex-numbers"><a class="header" href="#full-example-complex-numbers">Full Example: Complex Numbers</a></h2>
+<pre><code class="language-kleis">-- Declare the structure
+structure Complex {
+    field re : ℝ
+    field im : ℝ
+    
+    operation add : Complex → Complex
+    operation mul : Complex → Complex
+    operation conj : Complex
+    operation mag : ℝ
+}
+
+-- Implement the operations
+implements Complex {
+    operation add(z, w) = Complex {
+        re = z.re + w.re,
+        im = z.im + w.im
+    }
+    
+    operation mul(z, w) = Complex {
+        re = z.re * w.re - z.im * w.im,
+        im = z.re * w.im + z.im * w.re
+    }
+    
+    operation conj(z) = Complex {
+        re = z.re,
+        im = -z.im
+    }
+    
+    operation mag(z) = sqrt(z.re^2 + z.im^2)
+}
+</code></pre>
+<h2 id="parametric-implementations"><a class="header" href="#parametric-implementations">Parametric Implementations</a></h2>
+<p>Implement structures with type parameters:</p>
+<pre><code class="language-kleis">structure Stack(T) {
+    operation push : T → Stack(T)
+    operation pop : Stack(T)
+    operation top : T
+    operation empty : Bool
+}
+
+implements Stack(ℤ) {
+    -- Implementation for integer stacks
+    operation push(x, s) = Cons(x, s)
+    operation pop(s) = match s { Cons(_, rest) =&gt; rest }
+    operation top(s) = match s { Cons(x, _) =&gt; x }
+    operation empty(s) = match s { Nil =&gt; True, _ =&gt; False }
+}
+</code></pre>
+<h2 id="multiple-implementations"><a class="header" href="#multiple-implementations">Multiple Implementations</a></h2>
+<p>The same structure can have multiple implementations:</p>
+<pre><code class="language-kleis">structure Orderable(T) {
+    operation compare : T × T → Ordering
+}
+
+-- Natural ordering
+implements Orderable(ℤ) {
+    operation compare(x, y) =
+        if x &lt; y then LT
+        else if x &gt; y then GT
+        else EQ
+}
+
+-- Reverse ordering (for max-heaps, etc.)
+implements Orderable(ℤ) as ReverseOrder {
+    operation compare(x, y) =
+        if x &gt; y then LT
+        else if x &lt; y then GT
+        else EQ
+}
+</code></pre>
+<h2 id="implementing-extended-structures"><a class="header" href="#implementing-extended-structures">Implementing Extended Structures</a></h2>
+<p>When a structure extends another, implement all operations:</p>
+<pre><code class="language-kleis">structure Monoid(M) {
+    operation e : M
+    operation mul : M × M → M
+}
+
+structure Group(G) extends Monoid(G) {
+    operation inv : G → G
+}
+
+-- Must implement both Monoid and Group operations
+implements Group(ℤ) {
+    operation e = 0
+    operation mul(x, y) = x + y
+    operation inv(x) = -x
+}
+</code></pre>
+<h2 id="builtin-operations"><a class="header" href="#builtin-operations">Builtin Operations</a></h2>
+<p>Some operations map to built-in primitives:</p>
+<pre><code class="language-kleis">implements Matrix(m, n, ℝ) {
+    operation transpose = builtin_transpose
+    operation add = builtin_matrix_add
+    operation mul = builtin_matrix_mul
+}
+</code></pre>
+<h2 id="verification-of-implementations"><a class="header" href="#verification-of-implementations">Verification of Implementations</a></h2>
+<p>Kleis + Z3 can verify that implementations satisfy axioms:</p>
+<pre><code class="language-kleis">structure Monoid(M) {
+    operation e : M
+    operation mul : M × M → M
+    
+    axiom identity : ∀ x : M . mul(e, x) = x ∧ mul(x, e) = x
+    axiom associative : ∀ x : M . ∀ y : M . ∀ z : M .
+        mul(mul(x, y), z) = mul(x, mul(y, z))
+}
+
+implements Monoid(String) {
+    operation e = ""
+    operation mul(s1, s2) = concat(s1, s2)
+}
+
+-- Kleis can verify:
+-- 1. concat("", s) = s for all s ✓
+-- 2. concat(s, "") = s for all s ✓
+-- 3. concat(concat(a, b), c) = concat(a, concat(b, c)) ✓
+</code></pre>
+<h2 id="whats-next-9"><a class="header" href="#whats-next-9">What’s Next?</a></h2>
+<p>Learn about Z3 verification in depth!</p>
+<p>→ <a href="#z3-verification">Next: Z3 Verification</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="z3-verification"><a class="header" href="#z3-verification">Z3 Verification</a></h1>
+<h2 id="what-is-z3"><a class="header" href="#what-is-z3">What is Z3?</a></h2>
+<p><a href="https://github.com/Z3Prover/z3">Z3</a> is a theorem prover from Microsoft Research. Kleis uses Z3 to:</p>
+<ul>
+<li><strong>Verify</strong> mathematical statements</li>
+<li><strong>Find counterexamples</strong> when statements are false</li>
+<li><strong>Check</strong> that implementations satisfy axioms</li>
+</ul>
+<h2 id="basic-verification"><a class="header" href="#basic-verification">Basic Verification</a></h2>
+<p>Use <code>verify</code> to check a statement:</p>
+<pre><code class="language-kleis">verify x + y = y + x
+-- Result: ✓ Valid (commutativity of addition)
+
+verify x * 0 = 0
+-- Result: ✓ Valid
+
+verify x &gt; 0
+-- Result: ✗ Invalid
+-- Counterexample: x = -1
+</code></pre>
+<h2 id="verifying-quantified-statements"><a class="header" href="#verifying-quantified-statements">Verifying Quantified Statements</a></h2>
+<p>Z3 handles universal and existential quantifiers:</p>
+<pre><code class="language-kleis">verify ∀ x : ℝ . x + 0 = x
+-- Result: ✓ Valid
+
+verify ∀ x : ℝ . x * x ≥ 0
+-- Result: ✓ Valid (squares are non-negative)
+
+verify ∃ x : ℝ . x * x = -1
+-- Result: ✗ Invalid (no real square root of -1)
+
+verify ∃ x : ℂ . x * x = -1
+-- Result: ✓ Valid (x = i works)
+</code></pre>
+<h2 id="checking-axioms"><a class="header" href="#checking-axioms">Checking Axioms</a></h2>
+<p>Verify that definitions satisfy axioms:</p>
+<pre><code class="language-kleis">structure Group(G) {
+    operation e : G
+    operation mul : G × G → G
+    operation inv : G → G
+    
+    axiom identity : ∀ x : G . mul(e, x) = x
+    axiom inverse : ∀ x : G . mul(x, inv(x)) = e
+    axiom associative : ∀ x : G . ∀ y : G . ∀ z : G .
+        mul(mul(x, y), z) = mul(x, mul(y, z))
+}
+
+-- Define integers with addition
+implements Group(ℤ) {
+    operation e = 0
+    operation mul(x, y) = x + y
+    operation inv(x) = -x
+}
+
+-- Kleis verifies each axiom automatically!
+</code></pre>
+<h2 id="implication-verification"><a class="header" href="#implication-verification">Implication Verification</a></h2>
+<p>Prove that premises imply conclusions:</p>
+<pre><code class="language-kleis">-- If x &gt; 0 and y &gt; 0, then x + y &gt; 0
+verify (x &gt; 0 ∧ y &gt; 0) → x + y &gt; 0
+-- Result: ✓ Valid
+
+-- Triangle inequality
+verify (abs(x) ≤ a ∧ abs(y) ≤ b) → abs(x + y) ≤ a + b
+-- Result: ✓ Valid
+</code></pre>
+<h2 id="counterexamples"><a class="header" href="#counterexamples">Counterexamples</a></h2>
+<p>When verification fails, Z3 provides counterexamples:</p>
+<pre><code class="language-kleis">verify ∀ x : ℝ . x^2 = x
+-- Result: ✗ Invalid
+-- Counterexample: x = 2 (since 4 ≠ 2)
+
+verify ∀ n : ℕ . n &gt; 0 → n &gt; 1
+-- Result: ✗ Invalid
+-- Counterexample: n = 1
+</code></pre>
+<h2 id="timeout-and-limits"><a class="header" href="#timeout-and-limits">Timeout and Limits</a></h2>
+<p>Complex statements may time out:</p>
+<pre><code class="language-kleis">-- Very complex statement
+verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
+-- Result: ⏱ Timeout (statement too complex)
+</code></pre>
+<h2 id="what-z3-can-and-cannot-do"><a class="header" href="#what-z3-can-and-cannot-do">What Z3 Can and Cannot Do</a></h2>
+<h3 id="z3-excels-at"><a class="header" href="#z3-excels-at">Z3 Excels At:</a></h3>
+<ul>
+<li>Linear arithmetic</li>
+<li>Boolean logic</li>
+<li>Array reasoning</li>
+<li>Simple quantifiers</li>
+<li>Algebraic identities</li>
+</ul>
+<h3 id="z3-struggles-with"><a class="header" href="#z3-struggles-with">Z3 Struggles With:</a></h3>
+<ul>
+<li>Non-linear real arithmetic (undecidable in general)</li>
+<li>Very deep quantifier nesting</li>
+<li>Transcendental functions (sin, cos, exp)</li>
+<li>Infinite structures</li>
+</ul>
+<h2 id="practical-workflow"><a class="header" href="#practical-workflow">Practical Workflow</a></h2>
+<ol>
+<li><strong>Write structure with axioms</strong></li>
+<li><strong>Implement operations</strong></li>
+<li><strong>Kleis auto-verifies</strong> axioms are satisfied</li>
+<li><strong>Use <code>verify</code></strong> for additional properties</li>
+<li><strong>Examine counterexamples</strong> when verification fails</li>
+</ol>
+<pre><code class="language-kleis">-- Step 1: Define structure
+structure Ring(R) {
+    operation zero : R
+    operation one : R
+    operation add : R × R → R
+    operation mul : R × R → R
+    operation neg : R → R
+    
+    axiom add_assoc : ∀ a : R . ∀ b : R . ∀ c : R .
+        add(add(a, b), c) = add(a, add(b, c))
+    -- ... more axioms
+}
+
+-- Step 2: Implement for integers
+implements Ring(ℤ) {
+    operation zero = 0
+    operation one = 1
+    operation add(x, y) = x + y
+    operation mul(x, y) = x * y
+    operation neg(x) = -x
+}
+
+-- Step 3: Auto-verification happens!
+
+-- Step 4: Check additional properties
+verify ∀ x : ℤ . mul(x, zero) = zero
+-- Result: ✓ Valid
+</code></pre>
+<h2 id="whats-next-10"><a class="header" href="#whats-next-10">What’s Next?</a></h2>
+<p>Try the interactive REPL!</p>
+<p>→ <a href="#the-repl-1">Next: The REPL</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="the-repl-1"><a class="header" href="#the-repl-1">The REPL</a></h1>
+<h2 id="what-is-the-repl"><a class="header" href="#what-is-the-repl">What is the REPL?</a></h2>
+<p>The REPL (Read-Eval-Print Loop) is an interactive environment for experimenting with Kleis:</p>
+<pre><code class="language-bash">$ cargo run --bin repl
+Kleis REPL v0.7
+Type 'help' for commands, 'quit' to exit.
+
+kleis&gt;
+</code></pre>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
+<p>Enter expressions to evaluate them:</p>
+<pre><code>kleis&gt; 2 + 2
+4
+
+kleis&gt; let x = 5 in x * x
+25
+
+kleis&gt; sin(π / 2)
+1.0
+</code></pre>
+<h2 id="defining-functions-1"><a class="header" href="#defining-functions-1">Defining Functions</a></h2>
+<p>Define functions interactively:</p>
+<pre><code>kleis&gt; define square(x) = x * x
+Defined: square
+
+kleis&gt; square(7)
+49
+
+kleis&gt; define compose(f, g, x) = f(g(x))
+Defined: compose
+
+kleis&gt; compose(square, square, 2)
+16
+</code></pre>
+<h2 id="working-with-types"><a class="header" href="#working-with-types">Working with Types</a></h2>
+<p>Check types and use annotations:</p>
+<pre><code>kleis&gt; :type 42
+42 : ℤ
+
+kleis&gt; :type sin
+sin : ℝ → ℝ
+
+kleis&gt; let x : ℝ = 3.14 in x * 2
+6.28
+</code></pre>
+<h2 id="repl-commands"><a class="header" href="#repl-commands">REPL Commands</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>:help</code> or <code>?</code></td><td>Show help</td></tr>
+<tr><td><code>:type &lt;expr&gt;</code></td><td>Show expression type</td></tr>
+<tr><td><code>:quit</code> or <code>q</code></td><td>Exit REPL</td></tr>
+<tr><td><code>:clear</code></td><td>Clear definitions</td></tr>
+<tr><td><code>:load &lt;file&gt;</code></td><td>Load Kleis file</td></tr>
+<tr><td><code>:env</code></td><td>Show current environment</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="loading-files"><a class="header" href="#loading-files">Loading Files</a></h2>
+<p>Load Kleis source files:</p>
+<pre><code>kleis&gt; :load stdlib/prelude.kleis
+Loaded: stdlib/prelude.kleis
+
+kleis&gt; :load examples/geometry.kleis
+Loaded: examples/geometry.kleis
+</code></pre>
+<h2 id="verification-in-repl"><a class="header" href="#verification-in-repl">Verification in REPL</a></h2>
+<p>Run verifications interactively:</p>
+<pre><code>kleis&gt; verify x + y = y + x
+✓ Valid
+
+kleis&gt; verify ∀ n : ℕ . n ≥ 0
+✓ Valid
+
+kleis&gt; verify x &gt; 0
+✗ Invalid
+Counterexample: x = -1
+</code></pre>
+<h2 id="multi-line-input"><a class="header" href="#multi-line-input">Multi-line Input</a></h2>
+<p>For complex expressions, use continuation:</p>
+<pre><code>kleis&gt; define factorial(n) =
+...&gt;     if n = 0 then 1
+...&gt;     else n * factorial(n - 1)
+Defined: factorial
+</code></pre>
+<h2 id="lambda-expressions-in-repl"><a class="header" href="#lambda-expressions-in-repl">Lambda Expressions in REPL</a></h2>
+<blockquote>
+<p>🚧 <strong>Coming Soon: We’re working on it!</strong></p>
+<p>Lambda expressions are not yet implemented. Use named functions instead:</p>
+</blockquote>
+<pre><code>kleis&gt; -- Instead of: (\x -&gt; x * 2)
+kleis&gt; define double(x) = x * 2
+Defined: double
+
+kleis&gt; double(21)
+42
+</code></pre>
+<h2 id="example-session"><a class="header" href="#example-session">Example Session</a></h2>
+<pre><code>kleis&gt; -- Define a structure
+kleis&gt; structure Point { x : ℝ, y : ℝ }
+
+kleis&gt; -- Create a point
+kleis&gt; let p = Point { x = 3, y = 4 } in
+...&gt;     sqrt(p.x^2 + p.y^2)
+5.0
+
+kleis&gt; -- Verify properties
+kleis&gt; verify ∀ a : ℝ . ∀ b : ℝ . (a + b)^2 = a^2 + 2*a*b + b^2
+✓ Valid
+
+kleis&gt; :quit
+Goodbye!
+</code></pre>
+<h2 id="tips-and-tricks"><a class="header" href="#tips-and-tricks">Tips and Tricks</a></h2>
+<ol>
+<li><strong>Use tab completion</strong> for function names</li>
+<li><strong>Arrow keys</strong> navigate history</li>
+<li><strong>Ctrl+C</strong> cancels current input</li>
+<li><strong>Ctrl+D</strong> exits (like <code>:quit</code>)</li>
+</ol>
+<h2 id="whats-next-11"><a class="header" href="#whats-next-11">What’s Next?</a></h2>
+<p>See practical applications!</p>
+<p>→ <a href="#applications">Next: Applications</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="applications"><a class="header" href="#applications">Applications</a></h1>
+<h2 id="differential-geometry"><a class="header" href="#differential-geometry">Differential Geometry</a></h2>
+<p>Kleis excels at differential geometry calculations:</p>
+<pre><code class="language-kleis">-- Christoffel symbols for spherical coordinates
+structure SphericalMetric {
+    operation metric : (ℝ, ℝ) → Matrix(2, 2, ℝ)
+    operation christoffel : (ℝ, ℝ) → Tensor(1, 2)
+}
+
+implements SphericalMetric {
+    -- Metric tensor: ds² = r²(dθ² + sin²θ dφ²)
+    operation metric(r, θ) = Matrix [
+        [r^2, 0],
+        [0, r^2 * sin(θ)^2]
+    ]
+    
+    -- Christoffel symbols Γⁱⱼₖ
+    operation christoffel(r, θ) = 
+        let g = metric(r, θ) in
+        let g_inv = inverse(g) in
+        -- ... compute from metric derivatives
+}
+</code></pre>
+<h2 id="tensor-calculus"><a class="header" href="#tensor-calculus">Tensor Calculus</a></h2>
+<pre><code class="language-kleis">-- Einstein field equations
+structure EinsteinEquations {
+    -- Ricci tensor
+    operation ricci : Manifold → Tensor(0, 2)
+    -- Scalar curvature
+    operation scalar : Manifold → ℝ
+    -- Einstein tensor
+    operation einstein : Manifold → Tensor(0, 2)
+    
+    axiom einstein_tensor : ∀ M : Manifold .
+        einstein(M) = ricci(M) - (scalar(M) / 2) * metric(M)
+}
+</code></pre>
+<h2 id="symbolic-differentiation"><a class="header" href="#symbolic-differentiation">Symbolic Differentiation</a></h2>
+<pre><code class="language-kleis">enum Expr {
+    Const(ℝ)
+    Var(String)
+    Add(Expr, Expr)
+    Mul(Expr, Expr)
+    Pow(Expr, Expr)
+    Sin(Expr)
+    Cos(Expr)
+    Exp(Expr)
+    Ln(Expr)
+}
+
+define diff(e : Expr, x : String) : Expr =
+    match e {
+        Const(_) =&gt; Const(0)
+        Var(y) =&gt; if y = x then Const(1) else Const(0)
+        
+        Add(f, g) =&gt; Add(diff(f, x), diff(g, x))
+        
+        Mul(f, g) =&gt; -- Product rule
+            Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
+            
+        Pow(f, Const(n)) =&gt; -- Power rule
+            Mul(Mul(Const(n), Pow(f, Const(n - 1))), diff(f, x))
+            
+        Sin(f) =&gt; Mul(Cos(f), diff(f, x))  -- Chain rule
+        Cos(f) =&gt; Mul(Mul(Const(-1), Sin(f)), diff(f, x))
+        Exp(f) =&gt; Mul(Exp(f), diff(f, x))
+        Ln(f) =&gt; Mul(Pow(f, Const(-1)), diff(f, x))
+    }
+</code></pre>
+<h2 id="linear-algebra"><a class="header" href="#linear-algebra">Linear Algebra</a></h2>
+<pre><code class="language-kleis">structure LinearSystem(n : ℕ) {
+    operation solve : Matrix(n, n, ℝ) × Vector(n, ℝ) → Vector(n, ℝ)
+    
+    -- Solution satisfies Ax = b
+    axiom solution_correct : ∀ A : Matrix(n, n, ℝ) . ∀ b : Vector(n, ℝ) .
+        det(A) ≠ 0 → mul(A, solve(A, b)) = b
+}
+
+-- Eigenvalue problem
+structure Eigen(n : ℕ) {
+    operation eigenvalues : Matrix(n, n, ℂ) → List(ℂ)
+    operation eigenvectors : Matrix(n, n, ℂ) → List(Vector(n, ℂ))
+    
+    axiom eigenpair : ∀ A : Matrix(n, n, ℂ) . ∀ i : ℕ .
+        let λ = nth(eigenvalues(A), i) in
+        let v = nth(eigenvectors(A), i) in
+            mul(A, v) = scale(λ, v)
+}
+</code></pre>
+<h2 id="quantum-mechanics"><a class="header" href="#quantum-mechanics">Quantum Mechanics</a></h2>
+<pre><code class="language-kleis">structure QuantumState(n : ℕ) {
+    field amplitudes : Vector(n, ℂ)
+    
+    -- States must be normalized
+    axiom normalized : ∀ ψ : QuantumState(n) .
+        sum(map(λ a . abs(a)^2, ψ.amplitudes)) = 1
+}
+
+structure Observable(n : ℕ) {
+    operation matrix : Matrix(n, n, ℂ)
+    
+    -- Observables are Hermitian
+    axiom hermitian : ∀ O : Observable(n) .
+        O.matrix = conjugate_transpose(O.matrix)
+}
+
+-- Expectation value
+define expectation(ψ : QuantumState(n), O : Observable(n)) : ℝ =
+    real(inner_product(ψ.amplitudes, mul(O.matrix, ψ.amplitudes)))
+</code></pre>
+<h2 id="category-theory"><a class="header" href="#category-theory">Category Theory</a></h2>
+<pre><code class="language-kleis">structure Category(Obj, Mor) {
+    operation id : Obj → Mor
+    operation compose : Mor × Mor → Mor
+    operation dom : Mor → Obj
+    operation cod : Mor → Obj
+    
+    axiom identity_left : ∀ f : Mor .
+        compose(id(cod(f)), f) = f
+        
+    axiom identity_right : ∀ f : Mor .
+        compose(f, id(dom(f))) = f
+        
+    axiom associativity : ∀ f : Mor . ∀ g : Mor . ∀ h : Mor .
+        compose(compose(h, g), f) = compose(h, compose(g, f))
+}
+
+structure Functor(C : Category, D : Category) {
+    operation map_obj : C.Obj → D.Obj
+    operation map_mor : C.Mor → D.Mor
+    
+    axiom preserves_id : ∀ x : C.Obj .
+        map_mor(C.id(x)) = D.id(map_obj(x))
+        
+    axiom preserves_compose : ∀ f : C.Mor . ∀ g : C.Mor .
+        map_mor(C.compose(g, f)) = D.compose(map_mor(g), map_mor(f))
+}
+</code></pre>
+<h2 id="physics-classical-mechanics"><a class="header" href="#physics-classical-mechanics">Physics: Classical Mechanics</a></h2>
+<pre><code class="language-kleis">structure LagrangianMechanics(n : ℕ) {
+    -- Generalized coordinates and velocities
+    operation q : ℕ → ℝ     -- Position
+    operation q_dot : ℕ → ℝ  -- Velocity
+    operation t : ℝ          -- Time
+    
+    -- Lagrangian L = T - V
+    operation lagrangian : ℝ
+    
+    -- Euler-Lagrange equations
+    axiom euler_lagrange : ∀ i : ℕ . i &lt; n →
+        d/dt(∂L/∂q_dot(i)) = ∂L/∂q(i)
+}
+</code></pre>
+<h2 id="whats-next-12"><a class="header" href="#whats-next-12">What’s Next?</a></h2>
+<p>Check out the reference appendices!</p>
+<p>→ <a href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a>
+→ <a href="#appendix-b-operators">Appendix B: Operators</a>
+→ <a href="#appendix-c-standard-library">Appendix C: Standard Library</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
+<p>This appendix provides a condensed reference to Kleis syntax.</p>
+<h2 id="expressions"><a class="header" href="#expressions">Expressions</a></h2>
+<pre><code class="language-ebnf">expression ::= literal
+             | identifier
+             | expression operator expression
+             | function_call
+             | if_expression
+             | let_expression
+             | match_expression
+             | quantified_expression
+             | lambda_expression        (* Coming soon *)
+             | ascription_expression
+             | '(' expression ')'
+
+literal ::= number | boolean | string
+
+function_call ::= identifier '(' arguments? ')'
+
+arguments ::= expression (',' expression)*
+</code></pre>
+<h2 id="definitions"><a class="header" href="#definitions">Definitions</a></h2>
+<pre><code class="language-ebnf">definition ::= 'define' identifier parameters? '=' expression
+             | 'define' identifier parameters? ':' type '=' expression
+
+parameters ::= '(' parameter_list ')'
+
+parameter_list ::= parameter (',' parameter)*
+
+parameter ::= identifier
+            | identifier ':' type
+</code></pre>
+<h2 id="let-bindings-1"><a class="header" href="#let-bindings-1">Let Bindings</a></h2>
+<pre><code class="language-ebnf">let_expression ::= 'let' identifier '=' expression 'in' expression
+                 | 'let' identifier ':' type '=' expression 'in' expression
+</code></pre>
+<h2 id="type-ascription"><a class="header" href="#type-ascription">Type Ascription</a></h2>
+<pre><code class="language-ebnf">ascription_expression ::= expression ':' type
+</code></pre>
+<h2 id="conditionals-1"><a class="header" href="#conditionals-1">Conditionals</a></h2>
+<pre><code class="language-ebnf">if_expression ::= 'if' expression 'then' expression 'else' expression
+</code></pre>
+<h2 id="pattern-matching-1"><a class="header" href="#pattern-matching-1">Pattern Matching</a></h2>
+<pre><code class="language-ebnf">match_expression ::= 'match' expression '{' match_arms '}'
+
+match_arms ::= match_arm (',' match_arm)* ','?
+
+match_arm ::= pattern guard? '=&gt;' expression
+
+pattern ::= '_'
+          | literal
+          | identifier
+          | constructor '(' patterns? ')'
+          | '(' patterns ')'
+
+guard ::= 'if' expression
+</code></pre>
+<h2 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h2>
+<pre><code class="language-ebnf">quantified_expression ::= quantifier identifier ':' type '.' expression
+                        | quantifier identifier '.' expression
+
+quantifier ::= '∀' | 'forall' | '∃' | 'exists'
+</code></pre>
+<h2 id="lambda-expressions"><a class="header" href="#lambda-expressions">Lambda Expressions</a></h2>
+<blockquote>
+<p>🚧 <strong>Coming Soon: We’re working on it!</strong></p>
+</blockquote>
+<pre><code class="language-ebnf">(* Planned syntax - not yet implemented *)
+lambda_expression ::= 'λ' identifier '.' expression
+                    | '\' identifier '-&gt;' expression
+</code></pre>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<pre><code class="language-ebnf">type ::= base_type
+       | type '-&gt;' type                (* function type *)
+       | type '×' type                 (* product type *)
+       | type_constructor type_args?
+       | '(' type ')'
+
+base_type ::= 'ℕ' | 'Nat'
+            | 'ℤ' | 'Int'
+            | 'ℝ' | 'Real'
+            | 'ℂ' | 'Complex'
+            | 'Bool'
+            | 'Unit'
+
+type_constructor ::= identifier
+
+type_args ::= '(' type (',' type)* ')'
+</code></pre>
+<h2 id="structures-1"><a class="header" href="#structures-1">Structures</a></h2>
+<pre><code class="language-ebnf">structure ::= 'structure' identifier type_params? extends? where? '{' structure_body '}'
+
+type_params ::= '(' param_decl (',' param_decl)* ')'
+
+param_decl ::= identifier ':' type
+
+extends ::= 'extends' type (',' type)*
+
+where ::= 'where' constraint (',' constraint)*
+
+constraint ::= identifier ':' type
+
+structure_body ::= (field | operation | axiom)*
+
+field ::= 'field' identifier ':' type
+
+operation ::= 'operation' identifier ':' type
+            | 'operation' identifier parameters ':' type
+
+axiom ::= 'axiom' identifier ':' expression
+</code></pre>
+<h2 id="implements-1"><a class="header" href="#implements-1">Implements</a></h2>
+<pre><code class="language-ebnf">implements ::= 'implements' type ('as' identifier)? '{' impl_body '}'
+
+impl_body ::= operation_impl*
+
+operation_impl ::= 'operation' identifier parameters? '=' expression
+                 | 'operation' identifier '=' 'builtin_' identifier
+</code></pre>
+<h2 id="operators-by-precedence-low-to-high"><a class="header" href="#operators-by-precedence-low-to-high">Operators (by precedence, low to high)</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Precedence</th><th>Operators</th><th>Associativity</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td><code>↔</code> <code>iff</code></td><td>Left</td></tr>
+<tr><td>2</td><td><code>→</code> <code>implies</code></td><td>Right</td></tr>
+<tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
+<tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
+<tr><td>5</td><td><code>¬</code> <code>not</code></td><td>Prefix</td></tr>
+<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-assoc</td></tr>
+<tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
+<tr><td>8</td><td><code>*</code> <code>/</code></td><td>Left</td></tr>
+<tr><td>9</td><td><code>^</code></td><td>Right</td></tr>
+<tr><td>10</td><td><code>-</code> (unary)</td><td>Prefix</td></tr>
+<tr><td>11</td><td>Function application</td><td>Left</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="comments-1"><a class="header" href="#comments-1">Comments</a></h2>
+<pre><code class="language-ebnf">line_comment ::= '--' [^\n]*
+
+block_comment ::= '{-' .* '-}'
+</code></pre>
+<h2 id="unicode-equivalents"><a class="header" href="#unicode-equivalents">Unicode Equivalents</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Unicode</th><th>ASCII</th></tr>
+</thead>
+<tbody>
+<tr><td><code>∀</code></td><td><code>forall</code></td></tr>
+<tr><td><code>∃</code></td><td><code>exists</code></td></tr>
+<tr><td><code>→</code></td><td><code>-&gt;</code></td></tr>
+<tr><td><code>×</code></td><td><code>*</code></td></tr>
+<tr><td><code>∧</code></td><td><code>and</code>, <code>/\</code></td></tr>
+<tr><td><code>∨</code></td><td><code>or</code>, <code>\/</code></td></tr>
+<tr><td><code>¬</code></td><td><code>not</code>, <code>~</code></td></tr>
+<tr><td><code>≤</code></td><td><code>&lt;=</code></td></tr>
+<tr><td><code>≥</code></td><td><code>&gt;=</code></td></tr>
+<tr><td><code>≠</code></td><td><code>!=</code>, <code>/=</code></td></tr>
+<tr><td><code>ℕ</code></td><td><code>Nat</code></td></tr>
+<tr><td><code>ℤ</code></td><td><code>Int</code></td></tr>
+<tr><td><code>ℝ</code></td><td><code>Real</code></td></tr>
+<tr><td><code>ℂ</code></td><td><code>Complex</code></td></tr>
+<tr><td><code>λ</code></td><td><code>\</code></td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="appendix-b-operators"><a class="header" href="#appendix-b-operators">Appendix B: Operators</a></h1>
+<h2 id="arithmetic-operators"><a class="header" href="#arithmetic-operators">Arithmetic Operators</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operator</th><th>Name</th><th>Example</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td><code>+</code></td><td>Addition</td><td><code>3 + 4</code></td><td><code>7</code></td></tr>
+<tr><td><code>-</code></td><td>Subtraction</td><td><code>10 - 3</code></td><td><code>7</code></td></tr>
+<tr><td><code>*</code></td><td>Multiplication</td><td><code>6 * 7</code></td><td><code>42</code></td></tr>
+<tr><td><code>/</code></td><td>Division</td><td><code>15 / 3</code></td><td><code>5</code></td></tr>
+<tr><td><code>^</code></td><td>Exponentiation</td><td><code>2 ^ 10</code></td><td><code>1024</code></td></tr>
+<tr><td><code>-</code> (unary)</td><td>Negation</td><td><code>-5</code></td><td><code>-5</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="comparison-operators"><a class="header" href="#comparison-operators">Comparison Operators</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>=</code></td><td></td><td>Equality</td><td><code>x = y</code></td></tr>
+<tr><td><code>!=</code></td><td><code>≠</code></td><td>Inequality</td><td><code>x ≠ y</code></td></tr>
+<tr><td><code>&lt;</code></td><td></td><td>Less than</td><td><code>x &lt; y</code></td></tr>
+<tr><td><code>&gt;</code></td><td></td><td>Greater than</td><td><code>x &gt; y</code></td></tr>
+<tr><td><code>&lt;=</code></td><td><code>≤</code></td><td>Less or equal</td><td><code>x ≤ y</code></td></tr>
+<tr><td><code>&gt;=</code></td><td><code>≥</code></td><td>Greater or equal</td><td><code>x ≥ y</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="logical-operators"><a class="header" href="#logical-operators">Logical Operators</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>and</code></td><td><code>∧</code></td><td>Conjunction</td><td><code>P ∧ Q</code></td></tr>
+<tr><td><code>or</code></td><td><code>∨</code></td><td>Disjunction</td><td><code>P ∨ Q</code></td></tr>
+<tr><td><code>not</code></td><td><code>¬</code></td><td>Negation</td><td><code>¬P</code></td></tr>
+<tr><td><code>implies</code></td><td><code>→</code></td><td>Implication</td><td><code>P → Q</code></td></tr>
+<tr><td><code>iff</code></td><td><code>↔</code></td><td>Biconditional</td><td><code>P ↔ Q</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="set-operators"><a class="header" href="#set-operators">Set Operators</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>in</code></td><td><code>∈</code></td><td>Membership</td><td><code>x ∈ S</code></td></tr>
+<tr><td><code>notin</code></td><td><code>∉</code></td><td>Non-membership</td><td><code>x ∉ S</code></td></tr>
+<tr><td><code>subset</code></td><td><code>⊆</code></td><td>Subset</td><td><code>A ⊆ B</code></td></tr>
+<tr><td><code>superset</code></td><td><code>⊇</code></td><td>Superset</td><td><code>A ⊇ B</code></td></tr>
+<tr><td><code>union</code></td><td><code>∪</code></td><td>Union</td><td><code>A ∪ B</code></td></tr>
+<tr><td><code>intersect</code></td><td><code>∩</code></td><td>Intersection</td><td><code>A ∩ B</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="type-operators"><a class="header" href="#type-operators">Type Operators</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operator</th><th>Name</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>→</code></td><td>Function type</td><td><code>ℝ → ℝ</code></td></tr>
+<tr><td><code>×</code></td><td>Product type</td><td><code>ℝ × ℝ</code></td></tr>
+<tr><td><code>:</code></td><td>Type annotation</td><td><code>x : ℝ</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="precedence-table"><a class="header" href="#precedence-table">Precedence Table</a></h2>
+<p>From lowest to highest precedence:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Level</th><th>Operators</th><th>Associativity</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td><code>↔</code></td><td>Left</td></tr>
+<tr><td>2</td><td><code>→</code> (logical)</td><td>Right</td></tr>
+<tr><td>3</td><td><code>∨</code></td><td>Left</td></tr>
+<tr><td>4</td><td><code>∧</code></td><td>Left</td></tr>
+<tr><td>5</td><td><code>¬</code></td><td>Prefix</td></tr>
+<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>None</td></tr>
+<tr><td>7</td><td><code>∪</code> <code>∩</code></td><td>Left</td></tr>
+<tr><td>8</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
+<tr><td>9</td><td><code>*</code> <code>/</code></td><td>Left</td></tr>
+<tr><td>10</td><td><code>^</code></td><td>Right</td></tr>
+<tr><td>11</td><td><code>-</code> (unary)</td><td>Prefix</td></tr>
+<tr><td>12</td><td><code>.</code> (field access)</td><td>Left</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
+<pre><code class="language-kleis">2 + 3 * 4        -- 14 (not 20)
+(2 + 3) * 4      -- 20
+2 ^ 3 ^ 2        -- 512 (= 2^9, right associative)
+-x^2             -- -(x^2), not (-x)^2
+</code></pre>
+<h3 id="logical"><a class="header" href="#logical">Logical</a></h3>
+<pre><code class="language-kleis">P ∧ Q ∨ R        -- (P ∧ Q) ∨ R
+P → Q → R        -- P → (Q → R) (right associative)
+¬P ∧ Q           -- (¬P) ∧ Q
+</code></pre>
+<h3 id="type-expressions"><a class="header" href="#type-expressions">Type Expressions</a></h3>
+<pre><code class="language-kleis">ℝ → ℝ → ℝ        -- ℝ → (ℝ → ℝ) (curried binary function)
+(ℝ → ℝ) → ℝ      -- Higher-order: takes function, returns value
+ℝ × ℝ → ℝ        -- Takes pair, returns value
+</code></pre>
+<h2 id="built-in-functions"><a class="header" href="#built-in-functions">Built-in Functions</a></h2>
+<h3 id="mathematical-functions"><a class="header" href="#mathematical-functions">Mathematical Functions</a></h3>
+<pre><code class="language-kleis">sqrt(x)          -- Square root
+abs(x)           -- Absolute value
+floor(x)         -- Round down
+ceil(x)          -- Round up
+round(x)         -- Round to nearest
+min(x, y)        -- Minimum
+max(x, y)        -- Maximum
+</code></pre>
+<h3 id="trigonometric-functions"><a class="header" href="#trigonometric-functions">Trigonometric Functions</a></h3>
+<pre><code class="language-kleis">sin(x)   cos(x)   tan(x)
+asin(x)  acos(x)  atan(x)
+sinh(x)  cosh(x)  tanh(x)
+</code></pre>
+<h3 id="exponential-and-logarithmic-1"><a class="header" href="#exponential-and-logarithmic-1">Exponential and Logarithmic</a></h3>
+<pre><code class="language-kleis">exp(x)           -- e^x
+ln(x)            -- Natural logarithm
+log(x)           -- Base-10 logarithm
+log(b, x)        -- Logarithm base b
+</code></pre>
+<h3 id="constants"><a class="header" href="#constants">Constants</a></h3>
+<pre><code class="language-kleis">π                -- Pi (3.14159...)
+e                -- Euler's number (2.71828...)
+i                -- Imaginary unit
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="appendix-c-standard-library"><a class="header" href="#appendix-c-standard-library">Appendix C: Standard Library</a></h1>
+<p>The Kleis standard library provides foundational types, structures, and operations.</p>
+<h2 id="core-types"><a class="header" href="#core-types">Core Types</a></h2>
+<h3 id="numeric-types-1"><a class="header" href="#numeric-types-1">Numeric Types</a></h3>
+<pre><code class="language-kleis">-- Natural numbers (0, 1, 2, ...)
+ℕ  -- or Nat
+
+-- Integers (..., -1, 0, 1, ...)
+ℤ  -- or Int
+
+-- Real numbers
+ℝ  -- or Real
+
+-- Complex numbers
+ℂ  -- or Complex
+</code></pre>
+<h3 id="boolean-type"><a class="header" href="#boolean-type">Boolean Type</a></h3>
+<pre><code class="language-kleis">Bool  -- True or False
+</code></pre>
+<h3 id="unit-type"><a class="header" href="#unit-type">Unit Type</a></h3>
+<pre><code class="language-kleis">Unit  -- Single value: ()
+</code></pre>
+<h2 id="collection-types"><a class="header" href="#collection-types">Collection Types</a></h2>
+<h3 id="list"><a class="header" href="#list">List</a></h3>
+<pre><code class="language-kleis">structure List(T) {
+    operation head : T
+    operation tail : List(T)
+    operation length : ℕ
+    operation append : List(T) → List(T)
+    operation map : (T → U) → List(U)
+    operation filter : (T → Bool) → List(T)
+    operation fold : (U × T → U) → U → U
+}
+</code></pre>
+<h3 id="vector"><a class="header" href="#vector">Vector</a></h3>
+<pre><code class="language-kleis">structure Vector(n : ℕ, T) {
+    operation get : ℕ → T
+    operation length : ℕ
+    operation dot : Vector(n, T) → T
+    operation magnitude : ℝ
+    operation normalize : Vector(n, T)
+}
+</code></pre>
+<h3 id="matrix"><a class="header" href="#matrix">Matrix</a></h3>
+<pre><code class="language-kleis">structure Matrix(m : ℕ, n : ℕ, T) {
+    operation get : ℕ × ℕ → T
+    operation rows : ℕ
+    operation cols : ℕ
+    operation transpose : Matrix(n, m, T)
+    operation add : Matrix(m, n, T) → Matrix(m, n, T)
+    operation mul : Matrix(n, p, T) → Matrix(m, p, T)
+}
+
+structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
+    operation det : T
+    operation trace : T
+    operation inv : SquareMatrix(n, T)
+    operation eigenvalues : List(ℂ)
+}
+</code></pre>
+<h2 id="algebraic-structures"><a class="header" href="#algebraic-structures">Algebraic Structures</a></h2>
+<h3 id="monoid"><a class="header" href="#monoid">Monoid</a></h3>
+<pre><code class="language-kleis">structure Monoid(M) {
+    operation e : M               -- Identity element
+    operation mul : M × M → M     -- Binary operation
+    
+    axiom identity_left : ∀ x : M . mul(e, x) = x
+    axiom identity_right : ∀ x : M . mul(x, e) = x
+    axiom associative : ∀ x : M . ∀ y : M . ∀ z : M .
+        mul(mul(x, y), z) = mul(x, mul(y, z))
+}
+</code></pre>
+<h3 id="group"><a class="header" href="#group">Group</a></h3>
+<pre><code class="language-kleis">structure Group(G) extends Monoid(G) {
+    operation inv : G → G         -- Inverse
+    
+    axiom inverse_left : ∀ x : G . mul(inv(x), x) = e
+    axiom inverse_right : ∀ x : G . mul(x, inv(x)) = e
+}
+</code></pre>
+<h3 id="ring"><a class="header" href="#ring">Ring</a></h3>
+<pre><code class="language-kleis">structure Ring(R) {
+    operation zero : R
+    operation one : R
+    operation add : R × R → R
+    operation mul : R × R → R
+    operation neg : R → R
+    
+    -- (R, add, zero) is an abelian group
+    -- (R, mul, one) is a monoid
+    -- mul distributes over add
+}
+</code></pre>
+<h3 id="field"><a class="header" href="#field">Field</a></h3>
+<pre><code class="language-kleis">structure Field(F) extends Ring(F) {
+    operation inv : F → F  -- Multiplicative inverse (for non-zero)
+    
+    axiom mul_inverse : ∀ x : F . x ≠ zero → mul(x, inv(x)) = one
+    axiom mul_commutative : ∀ x : F . ∀ y : F . mul(x, y) = mul(y, x)
+}
+</code></pre>
+<h3 id="vector-space"><a class="header" href="#vector-space">Vector Space</a></h3>
+<pre><code class="language-kleis">structure VectorSpace(V, F) where F : Field {
+    operation add : V × V → V
+    operation scale : F × V → V
+    operation zero : V
+    
+    -- (V, add, zero) is an abelian group
+    -- scale distributes over add
+    -- scale is associative with field multiplication
+}
+</code></pre>
+<h2 id="geometric-structures"><a class="header" href="#geometric-structures">Geometric Structures</a></h2>
+<h3 id="metric-space"><a class="header" href="#metric-space">Metric Space</a></h3>
+<pre><code class="language-kleis">structure MetricSpace(M) {
+    operation distance : M × M → ℝ
+    
+    axiom non_negative : ∀ x : M . ∀ y : M . distance(x, y) ≥ 0
+    axiom identity : ∀ x : M . ∀ y : M . distance(x, y) = 0 ↔ x = y
+    axiom symmetric : ∀ x : M . ∀ y : M . distance(x, y) = distance(y, x)
+    axiom triangle : ∀ x : M . ∀ y : M . ∀ z : M .
+        distance(x, z) ≤ distance(x, y) + distance(y, z)
+}
+</code></pre>
+<h3 id="manifold"><a class="header" href="#manifold">Manifold</a></h3>
+<pre><code class="language-kleis">structure Manifold(M, dim : ℕ) {
+    operation tangent : M → TangentSpace(dim)
+    operation chart : M → ℝ^dim  -- Local coordinates
+}
+</code></pre>
+<h3 id="riemannian-manifold"><a class="header" href="#riemannian-manifold">Riemannian Manifold</a></h3>
+<pre><code class="language-kleis">structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
+    operation metric : M → Matrix(dim, dim, ℝ)
+    operation christoffel : M → Tensor(1, 2)
+    operation riemann : M → Tensor(1, 3)
+    operation ricci : M → Matrix(dim, dim, ℝ)
+    operation scalar_curvature : M → ℝ
+}
+</code></pre>
+<h2 id="option-and-result-types"><a class="header" href="#option-and-result-types">Option and Result Types</a></h2>
+<h3 id="option"><a class="header" href="#option">Option</a></h3>
+<pre><code class="language-kleis">enum Option(T) {
+    Some(value : T)
+    None
+}
+
+-- Operations
+define is_some(opt : Option(T)) : Bool =
+    match opt { Some(_) =&gt; True, None =&gt; False }
+
+define unwrap_or(opt : Option(T), default : T) : T =
+    match opt { Some(v) =&gt; v, None =&gt; default }
+</code></pre>
+<h3 id="result"><a class="header" href="#result">Result</a></h3>
+<pre><code class="language-kleis">enum Result(T, E) {
+    Ok(value : T)
+    Err(error : E)
+}
+
+-- Operations
+define is_ok(res : Result(T, E)) : Bool =
+    match res { Ok(_) =&gt; True, Err(_) =&gt; False }
+
+define map(res : Result(T, E), f : T → U) : Result(U, E) =
+    match res { Ok(v) =&gt; Ok(f(v)), Err(e) =&gt; Err(e) }
+</code></pre>
+<h2 id="loading-the-standard-library"><a class="header" href="#loading-the-standard-library">Loading the Standard Library</a></h2>
+<p>In the REPL:</p>
+<pre><code>kleis&gt; :load stdlib/prelude.kleis
+Loaded standard library.
+</code></pre>
+<p>In files:</p>
+<pre><code class="language-kleis">import stdlib.prelude
+import stdlib.linear_algebra
+import stdlib.differential_geometry
+</code></pre>
+<h2 id="file-organization"><a class="header" href="#file-organization">File Organization</a></h2>
+<pre><code>stdlib/
+├── prelude.kleis          -- Core types and functions
+├── numeric.kleis          -- Numeric operations
+├── collections.kleis      -- List, Vector, Matrix
+├── algebraic.kleis        -- Group, Ring, Field, etc.
+├── linear_algebra.kleis   -- Matrix operations
+├── differential_geometry.kleis  -- Manifolds, tensors
+└── category_theory.kleis  -- Categories, functors
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
