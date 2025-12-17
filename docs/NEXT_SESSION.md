@@ -1,109 +1,94 @@
-# Next Session: PatternFly Equation Editor Migration
+# Next Session: PatternFly Equation Editor - Final Parity
 
 ---
 
-## 🎯 IMMEDIATE TASK: PatternFly Equation Editor (Dec 15, 2025)
+## ✅ COMPLETED: PatternFly Equation Editor Migration (Dec 16, 2025)
 
-### The Goal
+The PatternFly/React version of the Equation Editor is **nearly feature-complete**.
 
-Create a PatternFly/React version of the Equation Editor while keeping `static/index.html` intact as the reference implementation.
+### Milestone Status
 
-### Strategy: Web of Trust for Migration
+| Milestone | Description | Status |
+|-----------|-------------|--------|
+| **M1: Scaffold** | PatternFly app renders, connects to API | ✅ Done |
+| **M2: One Button** | Fraction button works | ✅ Done |
+| **M3: Palette Tabs** | All tabs render | ✅ Done |
+| **M4: All Buttons** | 100+ templates across 11 tabs | ✅ Done |
+| **M5: SVG Rendering** | Typst SVG displays via backend | ✅ Done |
+| **M6: Overlays** | Clickable placeholder markers | ✅ Done |
+| **M7: Inline Editor** | Type in placeholders | ✅ Done |
+| **M8: Type Checking** | Live type feedback via backend | ✅ Done |
+| **M9: Undo/Redo** | History stack with keyboard shortcuts | ✅ Done |
+| **M10: Parity** | Feature-complete | 🔄 Testing |
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Reference Implementation (static/index.html)               │
-│  ├─ 3,860 lines vanilla JS                                  │
-│  ├─ Known working state                                     │
-│  └─ FROZEN - do not modify during migration                 │
-└─────────────────────────────────────────────────────────────┘
-                              ↕  Compare outputs
-┌─────────────────────────────────────────────────────────────┐
-│  New Implementation (patternfly-editor/)                    │
-│  ├─ React + PatternFly                                      │
-│  ├─ Component-based architecture                            │
-│  └─ Built incrementally, verified against reference         │
-└─────────────────────────────────────────────────────────────┘
-```
+### Implemented Features
 
-### Proposed Directory Structure
+**Palette Tabs (11 total):**
+- Basics (27 buttons)
+- Fences (8 buttons)
+- Accents (9 buttons)
+- Calculus (15 buttons)
+- Linear Algebra (12 buttons + Matrix Builder)
+- Functions (10 buttons)
+- Logic & Sets (23 buttons)
+- Physics (9 buttons)
+- Tensors (8 buttons)
+- Transforms (5 buttons)
+- Greek (35 buttons)
 
-```
-kleis/
-├── static/index.html          ← FROZEN reference
-├── patternfly-editor/         ← NEW React app
-│   ├── package.json
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── components/
-│   │   │   ├── Palette/
-│   │   │   │   ├── PaletteTabs.tsx
-│   │   │   │   ├── PaletteButton.tsx
-│   │   │   │   └── buttonConfigs.ts    ← Data from astTemplates
-│   │   │   ├── Editor/
-│   │   │   │   ├── StructuralEditor.tsx
-│   │   │   │   ├── InlineEditor.tsx
-│   │   │   │   └── SvgOverlay.tsx
-│   │   │   └── Preview/
-│   │   │       └── MathPreview.tsx
-│   │   ├── hooks/
-│   │   │   ├── useAST.ts
-│   │   │   ├── useTypeCheck.ts
-│   │   │   └── useUndoRedo.ts
-│   │   └── api/
-│   │       └── kleis.ts          ← Same API calls to Rust backend
-│   └── tests/
-│       └── comparison.test.ts    ← Verify outputs match reference
-```
+**Builders:**
+- Matrix Builder (custom dimensions)
+- Piecewise Function Builder
 
-### Verification Checklist
+**Hooks:**
+- `useAST` - AST state management
+- `useUndoRedo` - History with Cmd+Z/Cmd+Shift+Z
+- `useKleisAPI` - Backend communication
+- `useVerify` - Z3 verification
 
-| Test | Reference Output | New Implementation |
-|------|------------------|-------------------|
-| Click "fraction" button | `{Operation: {name: 'scalar_divide', ...}}` | Same AST |
-| Click "Christoffel" button | `{Operation: {name: 'tensor', kind: 'tensor', ...}}` | Same AST |
-| Render 2×2 matrix | SVG with placeholders | Identical SVG |
-| Type check Γ tensor | `Tensor(1, 2, dim, ℝ)` | Same type result |
-| Fill placeholder with "α" | Green box, value updated | Same behavior |
-| Undo/Redo | Stack works correctly | Same behavior |
-
-### Milestones
-
-| Milestone | Description | Verification |
-|-----------|-------------|--------------|
-| **M1: Scaffold** | PatternFly app renders, connects to API | API calls work |
-| **M2: One Button** | Fraction button works | AST matches reference |
-| **M3: Palette Tabs** | All tabs render | Visual parity |
-| **M4: All Buttons** | All 54+ templates work | All ASTs match |
-| **M5: SVG Rendering** | Typst SVG displays | Identical output |
-| **M6: Overlays** | Clickable markers work | Same UX |
-| **M7: Inline Editor** | Type in placeholders | Same behavior |
-| **M8: Type Checking** | Live type feedback | Same results |
-| **M9: Undo/Redo** | History works | Same behavior |
-| **M10: Parity** | Feature-complete | Ready to replace |
-
-### Benefits of React/PatternFly
-
-1. **Component Testing** - Safety net for visual bugs (currently missing)
-2. **Flexible Tabs** - Move buttons between tabs = move line in array
-3. **State Management** - Clean, predictable, debuggable
-4. **Design System** - Professional UX out of the box
-5. **Future: Kleis Notebook** - Multi-cell support becomes feasible
-
-### Branch
+### Directory Structure (Actual)
 
 ```
-feature/patternfly-editor
+patternfly-editor/
+├── src/
+│   ├── App.tsx                 # Main application (780 lines)
+│   ├── api/kleis.ts           # Backend API client
+│   ├── components/
+│   │   ├── Palette/
+│   │   │   ├── astTemplates.ts    # 100+ AST templates
+│   │   │   ├── buttonConfigs.ts   # Tab/button definitions
+│   │   │   ├── PaletteButton.tsx
+│   │   │   ├── PaletteTabs.tsx
+│   │   │   └── MathJaxButton.tsx  # LaTeX-rendered buttons
+│   │   ├── Editor/
+│   │   │   ├── SVGEditor.tsx      # Interactive SVG display
+│   │   │   ├── InlineEditor.tsx   # Placeholder text input
+│   │   │   ├── MatrixBuilder.tsx  # Custom matrix modal
+│   │   │   └── PiecewiseBuilder.tsx
+│   │   └── Preview/
+│   │       └── ASTPreview.tsx
+│   ├── hooks/
+│   │   ├── useAST.ts
+│   │   ├── useKleisAPI.ts
+│   │   ├── useUndoRedo.ts
+│   │   └── useVerify.ts
+│   ├── types/ast.ts           # EditorNode TypeScript types
+│   └── utils/astUtils.ts      # AST manipulation helpers
 ```
 
-### First Session Tasks
+## 🎯 REMAINING FOR M10: Final Parity
 
-1. [ ] Create `patternfly-editor/` directory
-2. [ ] Initialize React + TypeScript + PatternFly
-3. [ ] Create basic App component with header
-4. [ ] Add one palette button (fraction)
-5. [ ] Verify AST output matches `static/index.html`
-6. [ ] Commit: "feat: PatternFly editor scaffold with first button"
+### Must Have
+
+1. [ ] **Export buttons** - Export to LaTeX/Typst/Kleis syntax
+2. [ ] **Text mode** - LaTeX input parsing (UI exists, not wired)
+3. [ ] **Comparison tests** - Automated verification vs `static/index.html`
+
+### Nice to Have
+
+4. [ ] Visual regression tests (screenshot comparison)
+5. [ ] Keyboard shortcut reference panel
+6. [ ] Custom palette organization (user can reorganize tabs)
 
 ---
 

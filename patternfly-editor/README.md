@@ -60,13 +60,20 @@ src/
 | M1 | Scaffold + PatternFly | ✅ |
 | M2 | One button (fraction) | ✅ |
 | M3 | Palette tabs | ✅ |
-| M4 | All buttons | 🔄 |
-| M5 | SVG rendering | ⏳ |
-| M6 | Click overlays | ⏳ |
-| M7 | Inline editor | ⏳ |
-| M8 | Type checking | ⏳ |
-| M9 | Undo/redo | ⏳ |
-| M10 | Feature parity | ⏳ |
+| M4 | All buttons (100+ templates) | ✅ |
+| M5 | SVG rendering (Typst backend) | ✅ |
+| M6 | Click overlays | ✅ |
+| M7 | Inline editor | ✅ |
+| M8 | Type checking | ✅ |
+| M9 | Undo/redo | ✅ |
+| M10 | Feature parity | 🔄 (testing) |
+
+### M10 Remaining Items
+
+- [ ] Comparison test suite (automated verification against `static/index.html`)
+- [ ] Export to LaTeX/Typst/Kleis (Export buttons)
+- [ ] Text mode LaTeX input (partial - UI exists, parsing not wired)
+- [ ] Edge case testing (complex nested expressions)
 
 ## Benefits Over Reference Implementation
 

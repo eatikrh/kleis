@@ -6639,6 +6639,9 @@ fn editor_node_to_expression(node: &EditorNode) -> Expression {
 }
 
 /// Render an Operation based on its `kind` field
+///
+/// This function renders EditorNode operations directly without converting to Expression.
+/// The goal is to preserve metadata (kind, indexStructure) through the rendering pipeline.
 fn render_operation(
     op: &OperationData,
     ctx: &GlyphContext,
@@ -6662,17 +6665,269 @@ fn render_operation(
             render_tensor(op, &rendered_args, target)
         }
         _ => {
-            // For everything else: convert to Expression and use the battle-tested renderer
-            // This handles Matrix, sin, cos, parens, integrals, etc. correctly
-            let expr = Expression::Operation {
-                name: op.name.clone(),
-                args: op.args.iter().map(editor_node_to_expression).collect(),
-            };
-            // Pass UUID map - matrix dimensions are filtered out at slot collection time,
-            // not here. This allows filled matrix elements to have clickable overlays.
-            render_expression_internal(&expr, ctx, target, node_id, node_id_to_uuid)
+            // Render EditorNode operation directly using shared template logic
+            // This avoids converting to Expression (which loses kind/metadata)
+            render_editor_operation_direct(op, ctx, target, node_id, node_id_to_uuid)
         }
     }
+}
+
+/// Render an EditorNode operation directly using template lookup and substitution.
+/// This is the EditorNode equivalent of the Expression operation rendering.
+fn render_editor_operation_direct(
+    op: &OperationData,
+    ctx: &GlyphContext,
+    target: &RenderTarget,
+    node_id: &str,
+    node_id_to_uuid: &std::collections::HashMap<String, String>,
+) -> String {
+    let name = &op.name;
+    let args = &op.args;
+
+    // Special handling for function_call: render as funcname(arg1, arg2, ...)
+    if name == "function_call" && !args.is_empty() {
+        let func_name_id = format!("{}.0", node_id);
+        let func_name = render_editor_node_internal(&args[0], ctx, target, &func_name_id, node_id_to_uuid);
+
+        let func_args: Vec<String> = args[1..]
+            .iter()
+            .enumerate()
+            .map(|(i, arg)| {
+                let arg_id = format!("{}.{}", node_id, i + 1);
+                let rendered = render_editor_node_internal(arg, ctx, target, &arg_id, node_id_to_uuid);
+                
+                if *target == RenderTarget::Typst {
+                    if let Some(uuid) = node_id_to_uuid.get(&arg_id) {
+                        return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+                    }
+                }
+                rendered
+            })
+            .collect();
+
+        return format!("{}({})", func_name, func_args.join(", "));
+    }
+
+    // Special handling for unary minus: minus(0, x) -> -x
+    if name == "minus" && args.len() == 2 {
+        if let EditorNode::Const { value } = &args[0] {
+            if value == "0" {
+                let operand_id = format!("{}.1", node_id);
+                let operand = render_editor_node_internal(&args[1], ctx, target, &operand_id, node_id_to_uuid);
+                
+                if *target == RenderTarget::Typst {
+                    if let Some(uuid) = node_id_to_uuid.get(&operand_id) {
+                        return format!("-#[#box[${}$]<id{}>]", operand, uuid);
+                    }
+                }
+                return format!("-{}", operand);
+            }
+        }
+    }
+
+    // For Matrix, Piecewise, and other complex operations:
+    // Convert to Expression for now (these have intricate List handling)
+    // TODO: Implement direct EditorNode handling for these
+    let is_complex_operation = matches!(
+        name.as_str(),
+        "Matrix" | "PMatrix" | "VMatrix" | "BMatrix" | "Piecewise" | "literal_chain"
+    );
+    
+    if is_complex_operation {
+        // Fall back to Expression renderer for complex operations
+        let expr = Expression::Operation {
+            name: op.name.clone(),
+            args: op.args.iter().map(editor_node_to_expression).collect(),
+        };
+        return render_expression_internal(&expr, ctx, target, node_id, node_id_to_uuid);
+    }
+
+    // Standard template-based rendering for simple operations
+    // Get template for the target
+    let (template, glyph) = get_template_for_target(name, ctx, target);
+
+    // Render all args
+    let rendered_args: Vec<String> = args
+        .iter()
+        .enumerate()
+        .map(|(i, arg)| {
+            let child_id = format!("{}.{}", node_id, i);
+            let rendered = render_editor_node_internal(arg, ctx, target, &child_id, node_id_to_uuid);
+            
+            // For Typst: wrap with UUID label if available
+            if *target == RenderTarget::Typst {
+                if let Some(uuid) = node_id_to_uuid.get(&child_id) {
+                    return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+                }
+            }
+            rendered
+        })
+        .collect();
+
+    // Apply template substitution
+    apply_template_substitution(name, &template, &glyph, &rendered_args, target)
+}
+
+/// Get template and glyph for an operation from the context
+fn get_template_for_target(name: &str, ctx: &GlyphContext, target: &RenderTarget) -> (String, String) {
+    match target {
+        RenderTarget::Unicode => {
+            let template = ctx.unicode_templates.get(name).cloned()
+                .unwrap_or_else(|| format!("{}({{args}})", name));
+            let glyph = ctx.unicode_glyphs.get(name).cloned().unwrap_or_else(|| name.to_string());
+            (template, glyph)
+        }
+        RenderTarget::LaTeX => {
+            let template = ctx.latex_templates.get(name).cloned()
+                .unwrap_or_else(|| format!("{}({{args}})", name));
+            let glyph = ctx.latex_glyphs.get(name).cloned().unwrap_or_else(|| name.to_string());
+            (template, glyph)
+        }
+        RenderTarget::HTML => {
+            let template = ctx.html_templates.get(name).cloned()
+                .unwrap_or_else(|| format!("{}({{args}})", name));
+            let glyph = ctx.html_glyphs.get(name).cloned().unwrap_or_else(|| name.to_string());
+            (template, glyph)
+        }
+        RenderTarget::Typst => {
+            let template = ctx.typst_templates.get(name).cloned()
+                .or_else(|| {
+                    if name.starts_with("matrix") {
+                        ctx.typst_templates.get("matrix").cloned()
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| format!("{}({{args}})", name));
+            let glyph = ctx.typst_glyphs.get(name).cloned().unwrap_or_else(|| name.to_string());
+            (template, glyph)
+        }
+        RenderTarget::Kleis => {
+            let template = ctx.kleis_templates.get(name).cloned()
+                .unwrap_or_else(|| format!("{}({{args}})", name));
+            let glyph = ctx.kleis_glyphs.get(name).cloned().unwrap_or_else(|| name.to_string());
+            (template, glyph)
+        }
+    }
+}
+
+/// Apply template substitution with rendered args
+/// This is the shared logic used by both Expression and EditorNode rendering
+fn apply_template_substitution(
+    name: &str,
+    template: &str,
+    glyph: &str,
+    rendered_args: &[String],
+    target: &RenderTarget,
+) -> String {
+    let mut result = template.to_string();
+    
+    // Basic substitutions
+    result = result.replace("{glyph}", glyph);
+    
+    // Replace {args} with comma-separated args
+    if result.contains("{args}") {
+        let joined = rendered_args.join(", ");
+        result = result.replace("{args}", &joined);
+    }
+    
+    // Positional argument substitutions
+    if let Some(first) = rendered_args.first() {
+        result = result.replace("{arg}", first);
+        result = result.replace("{left}", first);
+        result = result.replace("{content}", first);
+        result = result.replace("{base}", first);
+        result = result.replace("{num}", first);
+        result = result.replace("{integrand}", first);
+        result = result.replace("{body}", first);
+        result = result.replace("{function}", first);
+        result = result.replace("{argument}", first);
+        result = result.replace("{value}", first);
+        result = result.replace("{vector}", first);
+        result = result.replace("{state}", first);
+        result = result.replace("{operator}", first);
+        result = result.replace("{A}", first);
+        result = result.replace("{bra}", first);
+        result = result.replace("{field}", first);
+        if name != "inner" {
+            result = result.replace("{ket}", first);
+        }
+        if name == "convolution" {
+            result = result.replace("{f}", first);
+        }
+    }
+    
+    if let Some(second) = rendered_args.get(1) {
+        result = result.replace("{right}", second);
+        result = result.replace("{den}", second);
+        result = result.replace("{exponent}", second);
+        result = result.replace("{from}", second);
+        result = result.replace("{variable}", second);
+        result = result.replace("{var}", second);
+        result = result.replace("{subscript}", second);
+        result = result.replace("{sub}", second);
+        result = result.replace("{idx1}", second);
+        result = result.replace("{surface}", second);
+        result = result.replace("{B}", second);
+        if name == "inner" {
+            result = result.replace("{ket}", second);
+        }
+        if name == "index_mixed" {
+            result = result.replace("{upper}", second);
+        }
+        if name == "int_bounds" {
+            result = result.replace("{lower}", second);
+        }
+        if name == "convolution" {
+            result = result.replace("{g}", second);
+        }
+    }
+    
+    if let Some(third) = rendered_args.get(2) {
+        result = result.replace("{to}", third);
+        result = result.replace("{idx2}", third);
+        if name == "index_mixed" {
+            result = result.replace("{lower}", third);
+        }
+        if name == "int_bounds" {
+            result = result.replace("{upper}", third);
+        }
+        if name == "subsup" {
+            result = result.replace("{superscript}", third);
+        }
+        if name == "lim" || name == "limit" {
+            result = result.replace("{target}", third);
+        }
+        if name == "convolution" {
+            result = result.replace("{variable}", third);
+        }
+    }
+    
+    if let Some(fourth) = rendered_args.get(3) {
+        result = result.replace("{idx3}", fourth);
+        if name == "int_bounds" {
+            result = result.replace("{variable}", fourth);
+        }
+        if name != "int_bounds" {
+            result = result.replace("{to}", fourth);
+        }
+    }
+    
+    if let Some(fifth) = rendered_args.get(4) {
+        result = result.replace("{idx4}", fifth);
+    }
+    
+    if let Some(sixth) = rendered_args.get(5) {
+        result = result.replace("{idx5}", sixth);
+    }
+    
+    // Fix double braces for vector wrappers in LaTeX
+    if *target == RenderTarget::LaTeX && (name == "vector_arrow" || name == "vector_bold") {
+        result = result.replace("{{", "{");
+        result = result.replace("}}", "}");
+    }
+    
+    result
 }
 
 /// Render a tensor with proper index positioning (needs indexStructure metadata)
