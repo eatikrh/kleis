@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-86870fa1.js";
+            window.path_to_searchindex_js = "searchindex-708a4678.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f10a7c19.js"></script>
@@ -1782,8 +1782,9 @@ structure Functor(C : Category, D : Category) {
     operation lagrangian : ℝ
     
     // Euler-Lagrange equations
+    // Using Mathematica-style: Dt for total derivative, D for partial
     axiom euler_lagrange : ∀ i : ℕ . i &lt; n →
-        d/dt(∂L/∂q_dot(i)) = ∂L/∂q(i)
+        Dt(D(lagrangian, q_dot(i)), t) = D(lagrangian, q(i))
 }
 </code></pre>
 <h2 id="whats-next-12"><a class="header" href="#whats-next-12">What’s Next?</a></h2>
@@ -1793,136 +1794,220 @@ structure Functor(C : Category, D : Category) {
 → <a href="#appendix-c-standard-library">Appendix C: Standard Library</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
-<p>This appendix provides a condensed reference to Kleis syntax.</p>
-<h2 id="expressions"><a class="header" href="#expressions">Expressions</a></h2>
-<pre><code class="language-ebnf">expression ::= literal
-             | identifier
-             | expression operator expression
-             | function_call
-             | if_expression
-             | let_expression
-             | match_expression
-             | quantified_expression
-             | lambda_expression
-             | ascription_expression
-             | '(' expression ')'
+<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.7).</p>
+<blockquote>
+<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v07.ebnf</code> for the full EBNF specification.</p>
+</blockquote>
+<h2 id="program-structure"><a class="header" href="#program-structure">Program Structure</a></h2>
+<pre><code class="language-ebnf">program ::= { declaration }
 
-literal ::= number | boolean | string
-
-function_call ::= identifier '(' arguments? ')'
-
-arguments ::= expression (',' expression)*
+declaration ::= libraryAnnotation
+              | versionAnnotation
+              | structureDef
+              | implementsDef
+              | dataDef
+              | functionDef
+              | operationDecl
+              | typeAlias
 </code></pre>
-<h2 id="definitions"><a class="header" href="#definitions">Definitions</a></h2>
-<pre><code class="language-ebnf">definition ::= 'define' identifier parameters? '=' expression
-             | 'define' identifier parameters? ':' type '=' expression
-
-parameters ::= '(' parameter_list ')'
-
-parameter_list ::= parameter (',' parameter)*
-
-parameter ::= identifier
-            | identifier ':' type
+<h2 id="annotations"><a class="header" href="#annotations">Annotations</a></h2>
+<pre><code class="language-ebnf">libraryAnnotation ::= "@library" "(" string ")"
+versionAnnotation ::= "@version" "(" string ")"
 </code></pre>
-<h2 id="let-bindings-1"><a class="header" href="#let-bindings-1">Let Bindings</a></h2>
-<pre><code class="language-ebnf">let_expression ::= 'let' identifier '=' expression 'in' expression
-                 | 'let' identifier ':' type '=' expression 'in' expression
+<p>Example:</p>
+<pre><code class="language-kleis">@library("stdlib/algebra")
+@version("0.7")
 </code></pre>
-<h2 id="type-ascription"><a class="header" href="#type-ascription">Type Ascription</a></h2>
-<pre><code class="language-ebnf">ascription_expression ::= expression ':' type
-</code></pre>
-<h2 id="conditionals-1"><a class="header" href="#conditionals-1">Conditionals</a></h2>
-<pre><code class="language-ebnf">if_expression ::= 'if' expression 'then' expression 'else' expression
-</code></pre>
-<h2 id="pattern-matching-1"><a class="header" href="#pattern-matching-1">Pattern Matching</a></h2>
-<pre><code class="language-ebnf">match_expression ::= 'match' expression '{' match_arms '}'
+<h2 id="data-type-definitions"><a class="header" href="#data-type-definitions">Data Type Definitions</a></h2>
+<pre><code class="language-ebnf">dataDef ::= "data" identifier [ "(" typeParams ")" ] "="
+            dataVariant { "|" dataVariant }
 
-match_arms ::= match_arm (',' match_arm)* ','?
+dataVariant ::= identifier [ "(" dataFields ")" ]
 
-match_arm ::= pattern guard? '=&gt;' expression
-
-pattern ::= '_'
-          | literal
-          | identifier
-          | constructor '(' patterns? ')'
-          | '(' patterns ')'
-
-guard ::= 'if' expression
-</code></pre>
-<h2 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h2>
-<pre><code class="language-ebnf">quantified_expression ::= quantifier identifier ':' type '.' expression
-                        | quantifier identifier '.' expression
-
-quantifier ::= '∀' | 'forall' | '∃' | 'exists'
-</code></pre>
-<h2 id="lambda-expressions"><a class="header" href="#lambda-expressions">Lambda Expressions</a></h2>
-<pre><code class="language-ebnf">lambda_expression ::= 'λ' parameters '.' expression
-                    | 'lambda' parameters '.' expression
-
-parameters ::= parameter+
-parameter ::= identifier
-            | '(' identifier ':' type ')'
+dataField ::= identifier ":" type    // Named field
+            | type                   // Positional field
 </code></pre>
 <p>Examples:</p>
-<ul>
-<li><code>λ x . x + 1</code> - simple lambda</li>
-<li><code>λ x y . x * y</code> - multiple parameters</li>
-<li><code>λ (x : ℝ) . x^2</code> - with type annotation</li>
-<li><code>lambda x . x</code> - using keyword</li>
-</ul>
-<h2 id="types"><a class="header" href="#types">Types</a></h2>
-<pre><code class="language-ebnf">type ::= base_type
-       | type '-&gt;' type                (* function type *)
-       | type '×' type                 (* product type *)
-       | type_constructor type_args?
-       | '(' type ')'
-
-base_type ::= 'ℕ' | 'Nat'
-            | 'ℤ' | 'Int'
-            | 'ℝ' | 'Real'
-            | 'ℂ' | 'Complex'
-            | 'Bool'
-            | 'Unit'
-
-type_constructor ::= identifier
-
-type_args ::= '(' type (',' type)* ')'
+<pre><code class="language-kleis">data Bool = True | False
+data Option(T) = None | Some(T)
+data Type = Scalar | Vector(n: Nat) | Matrix(m: Nat, n: Nat)
 </code></pre>
-<h2 id="structures-1"><a class="header" href="#structures-1">Structures</a></h2>
-<pre><code class="language-ebnf">structure ::= 'structure' identifier type_params? extends? over? where? '{' structure_body '}'
+<h2 id="pattern-matching-1"><a class="header" href="#pattern-matching-1">Pattern Matching</a></h2>
+<pre><code class="language-ebnf">matchExpr ::= "match" expression "{" matchCases "}"
 
-type_params ::= '(' param_decl (',' param_decl)* ')'
+matchCase ::= pattern "=&gt;" expression
 
-param_decl ::= identifier ':' type
+pattern ::= "_"                              // Wildcard
+          | identifier                       // Variable
+          | identifier [ "(" patternArgs ")" ]  // Constructor
+          | number | string | boolean        // Constant
+</code></pre>
+<p>Examples:</p>
+<pre><code class="language-kleis">match x { True =&gt; 1 | False =&gt; 0 }
+match opt { None =&gt; 0 | Some(x) =&gt; x }
+match result { Ok(Some(x)) =&gt; x | Ok(None) =&gt; 0 | Err(_) =&gt; -1 }
+</code></pre>
+<h2 id="structure-definitions"><a class="header" href="#structure-definitions">Structure Definitions</a></h2>
+<pre><code class="language-ebnf">structureDef ::= "structure" identifier "(" typeParams ")"
+                 [ extendsClause ] [ overClause ]
+                 "{" { structureMember } "}"
 
-extends ::= 'extends' type (',' type)*
+extendsClause ::= "extends" identifier [ "(" typeArgs ")" ]
+overClause ::= "over" "Field" "(" type ")"
 
-over ::= 'over' type
-
-where ::= 'where' constraint (',' constraint)*
-
-constraint ::= identifier ':' type
-
-structure_body ::= (field | operation | axiom | nested_structure)*
-
-field ::= 'field' identifier ':' type
-
-nested_structure ::= 'structure' identifier ':' type ('{' structure_body '}')?
-
-operation ::= 'operation' identifier ':' type
-            | 'operation' identifier parameters ':' type
-
-axiom ::= 'axiom' identifier ':' expression
+structureMember ::= operationDecl
+                  | elementDecl
+                  | axiomDecl
+                  | nestedStructure
+                  | functionDef
+</code></pre>
+<p>Example:</p>
+<pre><code class="language-kleis">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
+    operation (·) : F × V → V
+    
+    axiom scalar_distributive : ∀ a b : F . ∀ v : V .
+        (a + b) · v = a · v + b · v
+}
 </code></pre>
 <h2 id="implements-1"><a class="header" href="#implements-1">Implements</a></h2>
-<pre><code class="language-ebnf">implements ::= 'implements' type ('as' identifier)? '{' impl_body '}'
+<pre><code class="language-ebnf">implementsDef ::= "implements" identifier "(" typeArgs ")"
+                  [ overClause ]
+                  [ "{" { implMember } "}" ]
 
-impl_body ::= operation_impl*
+implMember ::= elementImpl | operationImpl | verifyStmt
 
-operation_impl ::= 'operation' identifier parameters? '=' expression
-                 | 'operation' identifier '=' 'builtin_' identifier
+operationImpl ::= "operation" operatorSymbol "=" implementation
+                | "operation" operatorSymbol "(" params ")" "=" expression
 </code></pre>
-<h2 id="operators-by-precedence-low-to-high"><a class="header" href="#operators-by-precedence-low-to-high">Operators (by precedence, low to high)</a></h2>
+<p>Example:</p>
+<pre><code class="language-kleis">implements Ring(ℝ) {
+    operation (+) = builtin_add
+    operation (*) = builtin_mul
+    element zero = 0
+    element one = 1
+}
+</code></pre>
+<h2 id="function-definitions"><a class="header" href="#function-definitions">Function Definitions</a></h2>
+<pre><code class="language-ebnf">functionDef ::= "define" identifier [ typeAnnotation ] "=" expression
+              | "define" identifier "(" params ")" [ ":" type ] "=" expression
+
+param ::= identifier [ ":" type ]
+</code></pre>
+<p>Examples:</p>
+<pre><code class="language-kleis">define pi = 3.14159
+define square(x) = x * x
+define add(x: ℝ, y: ℝ) : ℝ = x + y
+</code></pre>
+<h2 id="type-system"><a class="header" href="#type-system">Type System</a></h2>
+<pre><code class="language-ebnf">type ::= primitiveType
+       | parametricType
+       | functionType
+       | typeVariable
+       | "(" type ")"
+
+primitiveType ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
+                | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
+                | "Bool" | "String"
+
+parametricType ::= identifier "(" typeArgs ")"
+
+functionType ::= type "→" type | type "-&gt;" type
+
+typeAlias ::= "type" identifier "=" type
+</code></pre>
+<p>Examples:</p>
+<pre><code class="language-kleis">ℝ                    // Real numbers
+Vector(3)            // Parameterized type
+ℝ → ℝ               // Function type
+(ℝ → ℝ) → ℝ         // Higher-order function
+type RealFunc = ℝ → ℝ  // Type alias
+</code></pre>
+<h2 id="expressions"><a class="header" href="#expressions">Expressions</a></h2>
+<pre><code class="language-ebnf">expression ::= primary
+             | matchExpr
+             | prefixOp expression
+             | expression postfixOp
+             | expression infixOp expression
+             | expression "(" [ arguments ] ")"
+             | "[" [ expressions ] "]"           // List literal
+             | lambda
+             | letBinding
+             | conditional
+
+primary ::= identifier | number | string | symbolicConstant
+          | "(" expression ")" | placeholder
+
+symbolicConstant ::= "π" | "e" | "i" | "ℏ" | "c" | "φ" | "∞" | "∅"
+
+placeholder ::= "□"
+</code></pre>
+<h2 id="lambda-expressions"><a class="header" href="#lambda-expressions">Lambda Expressions</a></h2>
+<pre><code class="language-ebnf">lambda ::= "λ" params "." expression
+         | "lambda" params "." expression
+</code></pre>
+<p>Examples:</p>
+<pre><code class="language-kleis">λ x . x + 1              // Simple lambda
+λ x y . x * y            // Multiple parameters
+λ (x : ℝ) . x^2          // With type annotation
+lambda x . x             // Using keyword
+</code></pre>
+<h2 id="let-bindings-1"><a class="header" href="#let-bindings-1">Let Bindings</a></h2>
+<pre><code class="language-ebnf">letBinding ::= "let" identifier [ typeAnnotation ] "=" expression "in" expression
+</code></pre>
+<p>Examples:</p>
+<pre><code class="language-kleis">let x = 5 in x + x
+let x : ℝ = 3.14 in x * 2
+let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
+</code></pre>
+<h2 id="conditionals-1"><a class="header" href="#conditionals-1">Conditionals</a></h2>
+<pre><code class="language-ebnf">conditional ::= "if" expression "then" expression "else" expression
+</code></pre>
+<p>Example:</p>
+<pre><code class="language-kleis">if x &gt; 0 then x else -x
+</code></pre>
+<h2 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h2>
+<pre><code class="language-ebnf">forAllProp ::= ("∀" | "forall") variables [ whereClause ] "." proposition
+existsProp ::= ("∃" | "exists") variables [ whereClause ] "." proposition
+
+varDecl ::= identifier [ ":" type ]
+          | identifier "∈" type
+          | "(" identifier { identifier } ":" type ")"
+
+whereClause ::= "where" expression
+</code></pre>
+<p>Examples:</p>
+<pre><code class="language-kleis">∀ x : ℝ . x + 0 = x
+∃ x : ℤ . x * x = 4
+∀ (a b : ℝ) where a ≠ 0 . a * (1/a) = 1
+</code></pre>
+<h2 id="calculus-notation-v07"><a class="header" href="#calculus-notation-v07">Calculus Notation (v0.7)</a></h2>
+<p>Kleis uses Mathematica-style notation for calculus operations:</p>
+<pre><code class="language-ebnf">// Derivatives (function calls)
+D(f, x)              // Partial derivative ∂f/∂x
+D(f, x, y)           // Mixed partial ∂²f/∂x∂y
+D(f, {x, n})         // nth derivative ∂ⁿf/∂xⁿ
+Dt(f, x)             // Total derivative df/dx
+
+// Integrals
+Integrate(f, x)           // Indefinite ∫f dx
+Integrate(f, x, a, b)     // Definite ∫[a,b] f dx
+
+// Sums and Products
+Sum(expr, i, 1, n)        // Σᵢ₌₁ⁿ expr
+Product(expr, i, 1, n)    // Πᵢ₌₁ⁿ expr
+
+// Limits
+Limit(f, x, a)            // lim_{x→a} f
+</code></pre>
+<p>Note: Legacy notation like <code>∂f/∂x</code> and <code>df/dx</code> is deprecated. Use <code>D(f, x)</code> and <code>Dt(f, x)</code> instead.</p>
+<h2 id="operators"><a class="header" href="#operators">Operators</a></h2>
+<h3 id="prefix-operators"><a class="header" href="#prefix-operators">Prefix Operators</a></h3>
+<pre><code class="language-ebnf">prefixOp ::= "-" | "¬" | "∇" | "√" | "∫" | "∬" | "∭" | "∮" | "∯"
+</code></pre>
+<h3 id="postfix-operators"><a class="header" href="#postfix-operators">Postfix Operators</a></h3>
+<pre><code class="language-ebnf">postfixOp ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
+</code></pre>
+<h3 id="infix-operators-by-precedence-low-to-high"><a class="header" href="#infix-operators-by-precedence-low-to-high">Infix Operators (by precedence, low to high)</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -1930,50 +2015,69 @@ operation_impl ::= 'operation' identifier parameters? '=' expression
 </thead>
 <tbody>
 <tr><td>1</td><td><code>↔</code> <code>iff</code></td><td>Left</td></tr>
-<tr><td>2</td><td><code>→</code> <code>implies</code></td><td>Right</td></tr>
+<tr><td>2</td><td><code>→</code> <code>implies</code> <code>⟹</code> <code>⇒</code></td><td>Right</td></tr>
 <tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
 <tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
-<tr><td>5</td><td><code>¬</code> <code>not</code></td><td>Prefix</td></tr>
-<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-assoc</td></tr>
+<tr><td>5</td><td><code>¬</code> <code>not</code> (prefix)</td><td>Prefix</td></tr>
+<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code> <code>≈</code> <code>≡</code> <code>∈</code> <code>∉</code></td><td>Non-assoc</td></tr>
 <tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
-<tr><td>8</td><td><code>*</code> <code>/</code></td><td>Left</td></tr>
+<tr><td>8</td><td><code>*</code> <code>×</code> <code>/</code> <code>·</code></td><td>Left</td></tr>
 <tr><td>9</td><td><code>^</code></td><td>Right</td></tr>
 <tr><td>10</td><td><code>-</code> (unary)</td><td>Prefix</td></tr>
 <tr><td>11</td><td>Function application</td><td>Left</td></tr>
+<tr><td>12</td><td>Postfix (<code>!</code>, <code>ᵀ</code>, <code>†</code>)</td><td>Postfix</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="comments-1"><a class="header" href="#comments-1">Comments</a></h2>
-<pre><code class="language-ebnf">line_comment ::= '//' [^\n]*
-
-block_comment ::= '/*' .* '*/'
+<pre><code class="language-ebnf">lineComment ::= "//" { any character except newline } newline
+blockComment ::= "/*" { any character } "*/"
 </code></pre>
 <p><strong>Note:</strong> Kleis uses C-style comments (<code>//</code> and <code>/* */</code>), not Haskell-style (<code>--</code> and <code>{- -}</code>).</p>
 <h2 id="unicode-equivalents"><a class="header" href="#unicode-equivalents">Unicode Equivalents</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Unicode</th><th>ASCII</th></tr>
+<tr><th>Unicode</th><th>ASCII</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>∀</code></td><td><code>forall</code></td></tr>
-<tr><td><code>∃</code></td><td><code>exists</code></td></tr>
-<tr><td><code>→</code></td><td><code>-&gt;</code></td></tr>
-<tr><td><code>×</code></td><td><code>*</code></td></tr>
-<tr><td><code>∧</code></td><td><code>and</code>, <code>/\</code></td></tr>
-<tr><td><code>∨</code></td><td><code>or</code>, <code>\/</code></td></tr>
-<tr><td><code>¬</code></td><td><code>not</code>, <code>~</code></td></tr>
-<tr><td><code>≤</code></td><td><code>&lt;=</code></td></tr>
-<tr><td><code>≥</code></td><td><code>&gt;=</code></td></tr>
-<tr><td><code>≠</code></td><td><code>!=</code>, <code>/=</code></td></tr>
-<tr><td><code>ℕ</code></td><td><code>Nat</code></td></tr>
-<tr><td><code>ℤ</code></td><td><code>Int</code></td></tr>
-<tr><td><code>ℝ</code></td><td><code>Real</code></td></tr>
-<tr><td><code>ℂ</code></td><td><code>Complex</code></td></tr>
-<tr><td><code>λ</code></td><td><code>\</code></td></tr>
+<tr><td><code>∀</code></td><td><code>forall</code></td><td>Universal quantifier</td></tr>
+<tr><td><code>∃</code></td><td><code>exists</code></td><td>Existential quantifier</td></tr>
+<tr><td><code>→</code></td><td><code>-&gt;</code></td><td>Function type / implies</td></tr>
+<tr><td><code>×</code></td><td><code>*</code></td><td>Product type / multiplication</td></tr>
+<tr><td><code>∧</code></td><td><code>and</code>, <code>/\</code></td><td>Logical and</td></tr>
+<tr><td><code>∨</code></td><td><code>or</code>, <code>\/</code></td><td>Logical or</td></tr>
+<tr><td><code>¬</code></td><td><code>not</code>, <code>~</code></td><td>Logical not</td></tr>
+<tr><td><code>≤</code></td><td><code>&lt;=</code></td><td>Less or equal</td></tr>
+<tr><td><code>≥</code></td><td><code>&gt;=</code></td><td>Greater or equal</td></tr>
+<tr><td><code>≠</code></td><td><code>!=</code>, <code>/=</code></td><td>Not equal</td></tr>
+<tr><td><code>ℕ</code></td><td><code>Nat</code></td><td>Natural numbers</td></tr>
+<tr><td><code>ℤ</code></td><td><code>Int</code></td><td>Integers</td></tr>
+<tr><td><code>ℝ</code></td><td><code>Real</code></td><td>Real numbers</td></tr>
+<tr><td><code>ℂ</code></td><td><code>Complex</code></td><td>Complex numbers</td></tr>
+<tr><td><code>λ</code></td><td><code>lambda</code></td><td>Lambda</td></tr>
+<tr><td><code>π</code></td><td><code>pi</code></td><td>Pi constant</td></tr>
+<tr><td><code>∞</code></td><td><code>infinity</code></td><td>Infinity</td></tr>
 </tbody>
 </table>
 </div>
+<h2 id="lexical-elements"><a class="header" href="#lexical-elements">Lexical Elements</a></h2>
+<pre><code class="language-ebnf">identifier ::= letter { letter | digit | "_" }
+
+number ::= integer | decimal | scientific
+integer ::= digit { digit }
+decimal ::= digit { digit } "." { digit }
+scientific ::= decimal ("e" | "E") ["+"|"-"] digit { digit }
+
+string ::= '"' { character } '"'
+
+letter ::= "a".."z" | "A".."Z" | greekLetter
+digit ::= "0".."9"
+
+greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
+             | "ι" | "κ" | "λ" | "μ" | "ν" | "ξ" | "ο" | "π"
+             | "ρ" | "σ" | "τ" | "υ" | "φ" | "χ" | "ψ" | "ω"
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-b-operators"><a class="header" href="#appendix-b-operators">Appendix B: Operators</a></h1>
 <h2 id="arithmetic-operators"><a class="header" href="#arithmetic-operators">Arithmetic Operators</a></h2>

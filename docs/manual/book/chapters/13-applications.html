@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-86870fa1.js";
+            window.path_to_searchindex_js = "../searchindex-708a4678.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -329,8 +329,9 @@ structure Functor(C : Category, D : Category) {
     operation lagrangian : ℝ
     
     // Euler-Lagrange equations
+    // Using Mathematica-style: Dt for total derivative, D for partial
     axiom euler_lagrange : ∀ i : ℕ . i &lt; n →
-        d/dt(∂L/∂q_dot(i)) = ∂L/∂q(i)
+        Dt(D(lagrangian, q_dot(i)), t) = D(lagrangian, q(i))
 }
 </code></pre>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
