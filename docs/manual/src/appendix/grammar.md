@@ -132,9 +132,11 @@ where ::= 'where' constraint (',' constraint)*
 
 constraint ::= identifier ':' type
 
-structure_body ::= (field | operation | axiom)*
+structure_body ::= (field | operation | axiom | nested_structure)*
 
 field ::= 'field' identifier ':' type
+
+nested_structure ::= 'structure' identifier ':' type ('{' structure_body '}')?
 
 operation ::= 'operation' identifier ':' type
             | 'operation' identifier parameters ':' type

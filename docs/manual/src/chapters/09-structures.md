@@ -80,6 +80,51 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 }
 ```
 
+## Nested Structures
+
+Structures can contain other structures. This enables compositional algebra — defining complex structures from simpler parts:
+
+```kleis
+structure Ring(R) {
+    -- A ring has an additive group
+    structure additive : AbelianGroup(R) {
+        operation (+) : R × R → R
+        operation negate : R → R
+        element zero : R
+    }
+    
+    -- And a multiplicative monoid
+    structure multiplicative : Monoid(R) {
+        operation (×) : R × R → R
+        element one : R
+    }
+    
+    -- With distributivity connecting them
+    axiom distributive : ∀ x : R . ∀ y : R . ∀ z : R .
+        x × (y + z) = (x × y) + (x × z)
+}
+```
+
+Nested structures can go arbitrarily deep:
+
+```kleis
+structure VectorSpace(V, F) {
+    structure vectors : AbelianGroup(V) {
+        operation (+) : V × V → V
+        operation zero : V
+    }
+    
+    structure scalars : Field(F) {
+        operation (+) : F × F → F
+        operation (×) : F × F → F
+    }
+    
+    operation scale : F × V → V
+}
+```
+
+When using Z3 verification, axioms from nested structures are automatically available.
+
 ## The `extends` Keyword
 
 Structures can extend other structures:
