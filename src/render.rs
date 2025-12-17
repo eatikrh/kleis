@@ -1821,6 +1821,33 @@ fn render_expression_internal(
                 }
             }
         }
+
+        Expression::Ascription {
+            expr,
+            type_annotation,
+        } => {
+            let inner_id = format!("{}.inner", node_id);
+            let inner_str =
+                render_expression_internal(expr, ctx, target, &inner_id, node_id_to_uuid);
+
+            match target {
+                RenderTarget::Unicode | RenderTarget::Kleis => {
+                    format!("({}) : {}", inner_str, type_annotation)
+                }
+                RenderTarget::LaTeX => {
+                    format!(r"({}) : {}", inner_str, type_annotation)
+                }
+                RenderTarget::HTML => {
+                    format!(
+                        r#"<span class="type-ascription">({}) : {}</span>"#,
+                        inner_str, type_annotation
+                    )
+                }
+                RenderTarget::Typst => {
+                    format!(r#"({}) : {}"#, inner_str, type_annotation)
+                }
+            }
+        }
     }
 }
 

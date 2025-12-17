@@ -69,6 +69,17 @@ pub enum Expression {
         value: Box<Expression>,
         body: Box<Expression>,
     },
+
+    /// Type ascription expression
+    /// Example: (a + b) : ℝ
+    /// Annotates an expression with an explicit type.
+    /// Used for disambiguation, documentation, or type checking.
+    /// Follows Haskell convention: expr :: Type (we use single colon)
+    Ascription {
+        expr: Box<Expression>,
+        /// The type annotation (e.g., "ℝ", "Vector(3)", "ℝ → ℝ")
+        type_annotation: String,
+    },
 }
 
 /// Kind of quantifier
@@ -213,6 +224,15 @@ impl Expression {
         }
     }
 
+    /// Create a type ascription expression
+    /// Example: ascription(expr, "ℝ") for (expr) : ℝ
+    pub fn ascription(expr: Expression, type_annotation: impl Into<String>) -> Self {
+        Expression::Ascription {
+            expr: Box::new(expr),
+            type_annotation: type_annotation.into(),
+        }
+    }
+
     /// Traverse the expression tree to find all placeholders
     pub fn find_placeholders(&self) -> Vec<(usize, String)> {
         let mut placeholders = Vec::new();
@@ -256,6 +276,9 @@ impl Expression {
             Expression::Let { value, body, .. } => {
                 value.collect_placeholders(acc);
                 body.collect_placeholders(acc);
+            }
+            Expression::Ascription { expr, .. } => {
+                expr.collect_placeholders(acc);
             }
             _ => {}
         }

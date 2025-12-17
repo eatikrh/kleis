@@ -325,6 +325,15 @@ impl Evaluator {
                 }
             }
 
+            // Type ascription - substitute in inner expression
+            Expression::Ascription {
+                expr: inner,
+                type_annotation,
+            } => Expression::Ascription {
+                expr: Box::new(self.substitute(inner, subst)),
+                type_annotation: type_annotation.clone(),
+            },
+
             // Constants and placeholders don't change
             Expression::Const(_) | Expression::Placeholder { .. } => expr.clone(),
         }
@@ -410,6 +419,10 @@ impl Evaluator {
                 let substituted_body = self.substitute(body, &subst);
                 self.eval(&substituted_body)
             }
+
+            // Type ascription - evaluate inner expression, discard type annotation
+            // (type checking happens at type-check time, not evaluation time)
+            Expression::Ascription { expr: inner, .. } => self.eval(inner),
 
             // Atoms - return as-is
             Expression::Const(_) | Expression::Object(_) | Expression::Placeholder { .. } => {

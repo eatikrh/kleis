@@ -301,6 +301,14 @@ impl PatternMatcher {
                 }
             }
 
+            Expression::Ascription {
+                expr: inner,
+                type_annotation,
+            } => Expression::Ascription {
+                expr: Box::new(self.substitute_bindings(inner, bindings)),
+                type_annotation: type_annotation.clone(),
+            },
+
             Expression::Placeholder { .. } | Expression::Const(_) => {
                 // Leaves don't contain variables
                 expr.clone()

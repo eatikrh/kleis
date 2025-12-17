@@ -268,6 +268,28 @@ typeAnnotation ::= ":" type ;
 
 ---
 
+## Related: Type Ascription
+
+Kleis also supports **expression-level type ascription** (Haskell-style):
+
+```kleis
+x : ℝ                    // Simple variable ascription
+(a + b) : ℝ              // Expression with type annotation
+sqrt(x) : ℝ              // Function result with type
+M : Matrix(3, 3, ℝ)      // Parametric type ascription
+```
+
+**Difference from let bindings:**
+- `let x : ℝ = 5 in x` — binds `x` with type annotation in body
+- `x : ℝ` — annotates existing expression (no new binding)
+
+Type ascription is useful for:
+1. **Disambiguation** when inference is ambiguous
+2. **Documentation** of expected types
+3. **Type checking** at specific points
+
+---
+
 ## See Also
 
 - [Kleis Grammar v0.7](../grammar/kleis_grammar_v07.md) - Full grammar specification

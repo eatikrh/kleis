@@ -413,6 +413,18 @@ impl TypeInference {
                 // Infer body type with the new binding
                 self.infer(body, context_builder)
             }
+
+            // Type ascription: (expr) : Type
+            // The type annotation specifies the expected type
+            // TODO: Parse the type_annotation string into Type and verify it matches inferred type
+            Expression::Ascription { expr, .. } => {
+                // For now, just infer the inner expression's type
+                // Full implementation would:
+                // 1. Parse type_annotation string to Type
+                // 2. Infer expr type
+                // 3. Unify/check that they match
+                self.infer(expr, context_builder)
+            }
         }
     }
 

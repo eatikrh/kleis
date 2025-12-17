@@ -343,6 +343,17 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
                 }
             })
         }
+        Expression::Ascription {
+            expr,
+            type_annotation,
+        } => {
+            json!({
+                "Ascription": {
+                    "expr": expression_to_json(expr),
+                    "type_annotation": type_annotation
+                }
+            })
+        }
     }
 }
 
@@ -877,6 +888,10 @@ fn collect_slots_recursive(
             let mut body_path = path.clone();
             body_path.push(1);
             collect_slots_recursive(body, slots, body_path, Some("body".to_string()));
+        }
+        Expression::Ascription { expr, .. } => {
+            // Collect slots from inner expression
+            collect_slots_recursive(expr, slots, path, role);
         }
     }
 }

@@ -119,6 +119,15 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             let bod = expression_to_typst(body, ctx);
             format!("\"let\" {} \"=\" {} \"in\" {}", name, val, bod)
         }
+
+        Expression::Ascription {
+            expr,
+            type_annotation,
+        } => {
+            // Render as: (expr) : Type
+            let inner = expression_to_typst(expr, ctx);
+            format!("({}) : {}", inner, type_annotation)
+        }
     }
 }
 

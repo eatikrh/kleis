@@ -137,6 +137,14 @@ impl PrettyPrinter {
                 value,
                 body,
             } => self.format_let_at_depth(name, type_annotation.as_deref(), value, body, depth),
+
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                let inner = self.format_at_depth(expr, depth);
+                format!("({}) : {}", inner, type_annotation)
+            }
         }
     }
 

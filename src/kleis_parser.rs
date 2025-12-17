@@ -481,8 +481,36 @@ impl KleisParser {
     }
 
     fn parse_expression(&mut self) -> Result<Expression, KleisParseError> {
-        // Parse logical expression (lowest precedence)
-        self.parse_implication()
+        // Parse logical expression, then check for type ascription (lowest precedence)
+        let expr = self.parse_implication()?;
+
+        // Check for type ascription: expr : Type
+        self.skip_whitespace();
+        if self.peek() == Some(':') {
+            // Make sure it's not part of another construct
+            // Check if next non-whitespace after ':' looks like a type (identifier)
+            let saved_pos = self.pos;
+            self.advance(); // consume ':'
+            self.skip_whitespace();
+
+            // If we see an identifier (type name), it's ascription
+            // If we see '=' or other operator, it's not ascription (restore position)
+            if self
+                .peek()
+                .is_some_and(|ch| ch.is_alphabetic() || ch == '∀')
+            {
+                let type_expr = self.parse_type()?;
+                return Ok(Expression::Ascription {
+                    expr: Box::new(expr),
+                    type_annotation: type_expr.to_string(),
+                });
+            } else {
+                // Not ascription, restore position
+                self.pos = saved_pos;
+            }
+        }
+
+        Ok(expr)
     }
 
     /// Parse implication: A ⟹ B
@@ -4569,5 +4597,154 @@ mod tests {
             }
             _ => panic!("Expected Let in function body"),
         }
+    }
+
+    // ==========================================================================
+    // Type Ascription Tests (ADR-016: Expression-level type annotations)
+    // ==========================================================================
+
+    #[test]
+    fn test_parse_simple_ascription() {
+        // Simple expression with type ascription: x : ℝ
+        let code = "x : ℝ";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                assert_eq!(*expr, Expression::Object("x".to_string()));
+                assert_eq!(type_annotation, "ℝ");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_arithmetic_ascription() {
+        // Arithmetic expression with type ascription: (a + b) : ℝ
+        let code = "(a + b) : ℝ";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                match *expr {
+                    Expression::Operation { ref name, .. } => {
+                        assert_eq!(name, "plus");
+                    }
+                    _ => panic!("Expected plus operation in ascription"),
+                }
+                assert_eq!(type_annotation, "ℝ");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_parametric_type_ascription() {
+        // Expression with parametric type: v : Vector(3)
+        let code = "v : Vector(3)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                assert_eq!(*expr, Expression::Object("v".to_string()));
+                assert_eq!(type_annotation, "Vector(3)");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_matrix_type_ascription() {
+        // Matrix with type ascription: M : Matrix(3, 3, ℝ)
+        let code = "M : Matrix(3, 3, ℝ)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                assert_eq!(*expr, Expression::Object("M".to_string()));
+                assert_eq!(type_annotation, "Matrix(3, 3, ℝ)");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_ascription_with_complex_expression() {
+        // Complex expression: (x * y + z) : ℝ
+        let code = "(x * y + z) : ℝ";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                type_annotation, ..
+            } => {
+                assert_eq!(type_annotation, "ℝ");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_function_call_ascription() {
+        // Function call with ascription: sqrt(x) : ℝ
+        let code = "sqrt(x) : ℝ";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                match *expr {
+                    Expression::Operation { ref name, .. } => {
+                        assert_eq!(name, "sqrt");
+                    }
+                    _ => panic!("Expected sqrt operation in ascription"),
+                }
+                assert_eq!(type_annotation, "ℝ");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_ascription_vs_let_distinction() {
+        // Make sure we don't confuse ascription with let binding
+        // let x : ℝ = 5 in x  → Let expression
+        // x : ℝ              → Ascription expression
+
+        let let_code = "let x : ℝ = 5 in x";
+        let mut let_parser = KleisParser::new(let_code);
+        let let_result = let_parser.parse().unwrap();
+        assert!(
+            matches!(let_result, Expression::Let { .. }),
+            "Should parse as Let"
+        );
+
+        let asc_code = "x : ℝ";
+        let mut asc_parser = KleisParser::new(asc_code);
+        let asc_result = asc_parser.parse().unwrap();
+        assert!(
+            matches!(asc_result, Expression::Ascription { .. }),
+            "Should parse as Ascription"
+        );
     }
 }

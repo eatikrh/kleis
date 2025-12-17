@@ -52,6 +52,7 @@
 | **Conditionals** | `if x > 0 then x else 0` | ✅ Complete | ✅ **NEW Dec 13!** |
 | **Let bindings** | `let x = 5 in x + x` | ✅ Complete | ✅ Dec 13 |
 | **Typed let bindings** | `let x : ℝ = 5 in x^2` | ✅ Complete | ✅ **NEW Dec 17!** |
+| **Type ascription** | `(a + b) : ℝ` | ✅ Complete | ✅ **NEW Dec 17!** |
 
 **Pattern Matching Features:**
 - Wildcard: `_`
@@ -74,7 +75,7 @@
 - Implication: `p ⟹ q` (IMPLIES)
 - Proper precedence chain
 
-**Total Major Features:** ~27 supported ✅ (+1 from Dec 17: typed let bindings; +2 from Dec 13: conditionals, let bindings; +12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
+**Total Major Features:** ~28 supported ✅ (+2 from Dec 17: typed let bindings, type ascription; +2 from Dec 13: conditionals, let bindings; +12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
 
 ---
 
@@ -202,6 +203,14 @@
 - Documented comment support: `//` line and `/* */` block comments fully work
 - Updated compatibility doc with custom operators and comments
 - 426+ tests passing (421 library + 5 Z3 proof tests)
+
+**v0.6.2 (December 17, 2025):** ✨ **Type Ascription** (Haskell-style)
+- Added `Expression::Ascription` variant for expression-level type annotations
+- Syntax: `(a + b) : ℝ`, `v : Vector(3)`, `M : Matrix(3, 3, ℝ)`
+- Parser recognizes `: Type` at end of expressions (lowest precedence)
+- 7 new parser tests for type ascription
+- Updated all pattern matches across codebase (16 files)
+- Updated documentation in `docs/guides/LET_BINDINGS.md`
 
 **v0.6.1 (December 17, 2025):** ✨ **Typed Let Bindings**
 - Added optional type annotations to let bindings: `let x : ℝ = 5 in x^2`
