@@ -1,7 +1,7 @@
 //! Kleis Text Parser - Parses Kleis text syntax into AST
 //!
 //! **IMPORTANT:** This parser is evolving toward production readiness.
-//! It implements ~80% of the formal Kleis v0.7 grammar.
+//! It implements ~85% of the formal Kleis v0.7 grammar.
 //!
 //! **What's Supported:**
 //! - Function calls: abs(x), card(S), norm(v), frac(a, b)
@@ -9,6 +9,8 @@
 //! - Comparison operators: <, >, <=, >=, ==, !=, =
 //! - Logical operators: and, or, not, ¬
 //! - Prefix operators: -x (negate), ∇f (gradient), ∫f (integrate)
+//! - Postfix operators: n! (factorial), Aᵀ (transpose), A† (dagger/adjoint)
+//! - Type ascription: (a + b) : ℝ
 //! - Identifiers and numbers
 //! - Parentheses for grouping
 //! - Proper operator precedence
@@ -16,15 +18,13 @@
 //! - Data types: data Bool = True | False
 //! - Pattern matching: match x { True => 1 | False => 0 }
 //! - Structures and implementations
-//! - Let bindings: let x = 5 in x^2
+//! - Let bindings: let x = 5 in x^2, let x : ℝ = 5 in x^2
 //! - Conditionals: if x > 0 then x else 0
 //! - Vector/list literals: [1, 2, 3]
 //! - Quantifiers: ∀(x : T). P(x)
 //!
 //! **What's NOT Supported (yet):**
-//! - Postfix operators: n!, Aᵀ, A†
 //! - Lambda expressions: λ x . x^2
-//! - Type annotations in expressions: x : ℝ
 //! - Summation/product notation: Σ, Π
 //!
 //! NOTE: π, e, i are parsed as identifiers (user-defined, domain-specific)
@@ -143,12 +143,26 @@ impl KleisParser {
         }
     }
 
+    /// Check if a character is a postfix operator symbol
+    /// These should NOT be included in identifiers even though they may be alphabetic in Unicode
+    fn is_postfix_operator(ch: char) -> bool {
+        matches!(ch, 'ᵀ' | '†' | '′' | '″' | '‴' | '⁺' | '⁻' | '⁎' | '˟')
+        // ᵀ = transpose
+        // † = dagger/adjoint
+        // ′ = prime (derivative notation like f′)
+        // ″ = double prime
+        // ‴ = triple prime
+        // ⁺ = superscript plus
+        // ⁻ = superscript minus
+        // Note: ! is handled separately (ASCII, already excluded from identifiers)
+    }
+
     fn parse_identifier(&mut self) -> Result<String, KleisParseError> {
         let start = self.pos;
 
-        // First character must be letter or underscore
+        // First character must be letter or underscore, but NOT a postfix operator
         match self.peek() {
-            Some(ch) if ch.is_alphabetic() || ch == '_' => {
+            Some(ch) if (ch.is_alphabetic() || ch == '_') && !Self::is_postfix_operator(ch) => {
                 self.advance();
             }
             _ => {
@@ -159,9 +173,9 @@ impl KleisParser {
             }
         }
 
-        // Subsequent characters can be alphanumeric or underscore
+        // Subsequent characters can be alphanumeric or underscore, but NOT postfix operators
         while let Some(ch) = self.peek() {
-            if ch.is_alphanumeric() || ch == '_' {
+            if (ch.is_alphanumeric() || ch == '_') && !Self::is_postfix_operator(ch) {
                 self.advance();
             } else {
                 break;
@@ -4959,5 +4973,135 @@ mod tests {
             matches!(asc_result, Expression::Ascription { .. }),
             "Should parse as Ascription"
         );
+    }
+
+    // ========================================
+    // POSTFIX OPERATOR TESTS
+    // ========================================
+
+    #[test]
+    fn test_parse_factorial() {
+        let mut parser = KleisParser::new("n!");
+        let result = parser.parse().unwrap();
+        assert!(matches!(
+            result,
+            Expression::Operation { name, args } if name == "factorial" && args.len() == 1
+        ));
+    }
+
+    #[test]
+    fn test_parse_factorial_expression() {
+        // (n + 1)!
+        let mut parser = KleisParser::new("(n + 1)!");
+        let result = parser.parse().unwrap();
+        if let Expression::Operation { name, args } = result {
+            assert_eq!(name, "factorial");
+            assert_eq!(args.len(), 1);
+            // The argument should be (n + 1)
+            assert!(matches!(args[0], Expression::Operation { ref name, .. } if name == "plus"));
+        } else {
+            panic!("Expected Operation");
+        }
+    }
+
+    #[test]
+    fn test_parse_transpose() {
+        let mut parser = KleisParser::new("Aᵀ");
+        let result = parser.parse().unwrap();
+        assert!(matches!(
+            result,
+            Expression::Operation { name, args } if name == "transpose" && args.len() == 1
+        ));
+    }
+
+    #[test]
+    fn test_parse_dagger() {
+        let mut parser = KleisParser::new("A†");
+        let result = parser.parse().unwrap();
+        assert!(matches!(
+            result,
+            Expression::Operation { name, args } if name == "dagger" && args.len() == 1
+        ));
+    }
+
+    #[test]
+    fn test_parse_chained_postfix() {
+        // A!ᵀ should parse as transpose(factorial(A))
+        let mut parser = KleisParser::new("A!ᵀ");
+        let result = parser.parse().unwrap();
+        if let Expression::Operation { name, args } = result {
+            assert_eq!(name, "transpose");
+            assert_eq!(args.len(), 1);
+            // Inner should be factorial(A)
+            if let Expression::Operation {
+                name: inner_name,
+                args: inner_args,
+            } = &args[0]
+            {
+                assert_eq!(inner_name, "factorial");
+                assert_eq!(inner_args.len(), 1);
+            } else {
+                panic!("Expected inner factorial operation");
+            }
+        } else {
+            panic!("Expected Operation");
+        }
+    }
+
+    #[test]
+    fn test_parse_postfix_with_power() {
+        // n!^2 should parse as power(factorial(n), 2)
+        let mut parser = KleisParser::new("n!^2");
+        let result = parser.parse().unwrap();
+        if let Expression::Operation { name, args } = result {
+            assert_eq!(name, "power");
+            assert_eq!(args.len(), 2);
+            // Left should be factorial(n)
+            if let Expression::Operation {
+                name: left_name, ..
+            } = &args[0]
+            {
+                assert_eq!(left_name, "factorial");
+            } else {
+                panic!("Expected factorial on left of power");
+            }
+        } else {
+            panic!("Expected power operation");
+        }
+    }
+
+    #[test]
+    fn test_parse_factorial_not_confused_with_not_equal() {
+        // n != m should NOT be factorial, should be neq (not equal)
+        let mut parser = KleisParser::new("n != m");
+        let result = parser.parse().unwrap();
+        if let Expression::Operation { name, args } = result {
+            assert_eq!(name, "neq"); // Parser uses "neq" for !=
+            assert_eq!(args.len(), 2);
+        } else {
+            panic!("Expected neq operation");
+        }
+    }
+
+    #[test]
+    fn test_parse_matrix_transpose_multiply() {
+        // Aᵀ * B
+        let mut parser = KleisParser::new("Aᵀ * B");
+        let result = parser.parse().unwrap();
+        if let Expression::Operation { name, args } = result {
+            assert_eq!(name, "times");
+            assert_eq!(args.len(), 2);
+            // Left should be transpose(A)
+            if let Expression::Operation {
+                name: left_name, ..
+            } = &args[0]
+            {
+                assert_eq!(left_name, "transpose");
+            } else {
+                panic!("Expected transpose on left");
+            }
+        } else {
+            panic!("Expected times operation");
+        }
     }
 }
