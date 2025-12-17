@@ -1,7 +1,7 @@
 # Kleis Parser vs Formal Grammar Compatibility
 
-**Date:** December 13, 2025 (Updated for if/then/else and let bindings)  
-**Formal Grammar:** Kleis v0.6 (with functions in structures)  
+**Date:** December 17, 2025 (Updated for typed let bindings)  
+**Formal Grammar:** Kleis v0.7 (Mathematica-style calculus)  
 **Parser Implementation:** `src/kleis_parser.rs`  
 **Branch:** `main`
 
@@ -50,7 +50,8 @@
 | **Comments** | `// line`, `/* block */` | ✅ Complete | ✅ Works |
 | **Axiom verification** | Z3 theorem proving | ✅ Working | ✅ Works |
 | **Conditionals** | `if x > 0 then x else 0` | ✅ Complete | ✅ **NEW Dec 13!** |
-| **Let bindings** | `let x = 5 in x + x` | ✅ Complete | ✅ **NEW Dec 13!** |
+| **Let bindings** | `let x = 5 in x + x` | ✅ Complete | ✅ Dec 13 |
+| **Typed let bindings** | `let x : ℝ = 5 in x^2` | ✅ Complete | ✅ **NEW Dec 17!** |
 
 **Pattern Matching Features:**
 - Wildcard: `_`
@@ -73,7 +74,7 @@
 - Implication: `p ⟹ q` (IMPLIES)
 - Proper precedence chain
 
-**Total Major Features:** ~26 supported ✅ (+2 from Dec 13: conditionals, let bindings; +12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
+**Total Major Features:** ~27 supported ✅ (+1 from Dec 17: typed let bindings; +2 from Dec 13: conditionals, let bindings; +12 from Dec 10-11 sessions: quantifiers, logic, where clauses, nested structures, extends, define operators, custom operators, comments)
 
 ---
 
@@ -88,8 +89,8 @@
 | **Lambda expressions** | `λ x . x^2` | ❌ Missing | Low |
 | ~~**Let bindings**~~ | ~~`let x = 5 in x^2`~~ | ✅ **DONE Dec 13!** | ~~Low~~ |
 | ~~**Conditionals**~~ | ~~`if x > 0 then x else -x`~~ | ✅ **DONE Dec 13!** | ~~Low~~ |
-| **Type annotations** | `x : ℝ` in expressions | ❌ Missing | Medium |
-| **Symbolic constants** | `π`, `e`, `i`, `ℏ` | ❌ Missing | Low |
+| **Type annotations** | `let x : ℝ`, `define f(x: ℝ)` | ✅ Complete | ✅ Dec 17 |
+| **Symbolic constants** | `π`, `e`, `i`, `ℏ` | ✅ N/A | Defined in stdlib |
 | **Placeholders** | `□` syntax | N/A | N/A - Editor only |
 | **Summation/Product** | `Σ`, `Π` notation | ❌ Missing | Low |
 
@@ -202,6 +203,14 @@
 - Updated compatibility doc with custom operators and comments
 - 426+ tests passing (421 library + 5 Z3 proof tests)
 
+**v0.6.1 (December 17, 2025):** ✨ **Typed Let Bindings**
+- Added optional type annotations to let bindings: `let x : ℝ = 5 in x^2`
+- Implemented `Display` for `TypeExpr` for type-to-string conversion
+- Added `let_binding_typed()` helper function to AST
+- Updated pretty printer to output `let x : T = e in body`
+- 7 new parser tests for typed let bindings
+- Added comprehensive documentation: `docs/guides/LET_BINDINGS.md`
+
 **v0.6.0 (December 13, 2025):** ✨ **Control Flow Constructs**
 - Added `if/then/else` conditionals with Z3 `ite` translation
 - Added `let x = value in body` bindings with context extension
@@ -220,7 +229,7 @@
 
 **Total features in formal grammar:** ~25 major constructs
 
-**Implemented (26):** ⭐ **+2 from Dec 13 session (if/then/else, let bindings)**
+**Implemented (27):** ⭐ **+1 from Dec 17 (typed let bindings); +2 from Dec 13 (if/then/else, let bindings)**
 1. ✅ Basic expressions (identifiers, numbers)
 2. ✅ Infix operators with precedence
 3. ✅ Function calls
@@ -246,16 +255,17 @@
 23. ✅ **Axiom verification (Z3)** ⭐
 24. ✅ **Generic constraint verification** ⭐
 25. ✅ **Conditionals (`if x > 0 then x else 0`)** ⭐ **NEW Dec 13!**
-26. ✅ **Let bindings (`let x = 5 in x + x`)** ⭐ **NEW Dec 13!**
+26. ✅ **Let bindings (`let x = 5 in x + x`)** ⭐ Dec 13
+27. ✅ **Typed let bindings (`let x : ℝ = 5 in x^2`)** ⭐ **NEW Dec 17!**
 
-**Not Implemented (6):**
+**Not Implemented (3):**
 1. ❌ Prefix operators (general - only `¬` works)
 2. ❌ Postfix operators
 3. ❌ Lambda expressions
 4. ~~❌ Let bindings~~ ✅ **DONE Dec 13!**
 5. ~~❌ Conditionals (if/then/else)~~ ✅ **DONE Dec 13!**
-6. ❌ Type annotations in expressions
-7. ❌ Symbolic constants
+6. ✅ Type annotations (in let bindings, define, structures, quantifiers)
+7. ✅ Symbolic constants (defined in stdlib, not language - see ADR-016)
 8. ❌ Type aliases
 9. ❌ Summation/Product notation (Σ, Π)
 
