@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cd7554b3.js";
+            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -191,7 +191,7 @@
              | let_expression
              | match_expression
              | quantified_expression
-             | lambda_expression        (* Coming soon *)
+             | lambda_expression
              | ascription_expression
              | '(' expression ')'
 
@@ -244,13 +244,20 @@ guard ::= 'if' expression
 quantifier ::= '∀' | 'forall' | '∃' | 'exists'
 </code></pre>
 <h2 id="lambda-expressions"><a class="header" href="#lambda-expressions">Lambda Expressions</a></h2>
-<blockquote>
-<p>🚧 <strong>Coming Soon: We’re working on it!</strong></p>
-</blockquote>
-<pre><code class="language-ebnf">(* Planned syntax - not yet implemented *)
-lambda_expression ::= 'λ' identifier '.' expression
-                    | '\' identifier '-&gt;' expression
+<pre><code class="language-ebnf">lambda_expression ::= 'λ' parameters '.' expression
+                    | 'lambda' parameters '.' expression
+
+parameters ::= parameter+
+parameter ::= identifier
+            | '(' identifier ':' type ')'
 </code></pre>
+<p>Examples:</p>
+<ul>
+<li><code>λ x . x + 1</code> - simple lambda</li>
+<li><code>λ x y . x * y</code> - multiple parameters</li>
+<li><code>λ (x : ℝ) . x^2</code> - with type annotation</li>
+<li><code>lambda x . x</code> - using keyword</li>
+</ul>
 <h2 id="types"><a class="header" href="#types">Types</a></h2>
 <pre><code class="language-ebnf">type ::= base_type
        | type '-&gt;' type                (* function type *)

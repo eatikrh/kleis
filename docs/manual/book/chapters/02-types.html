@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cd7554b3.js";
+            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -183,9 +183,9 @@
                         <h1 id="types-and-values"><a class="header" href="#types-and-values">Types and Values</a></h1>
 <h2 id="why-types-matter"><a class="header" href="#why-types-matter">Why Types Matter</a></h2>
 <p>Types are the foundation of Kleis. Every expression has a type, and the type system catches errors before they become problems.</p>
-<pre><code class="language-kleis">42 : ℤ              -- 42 is an integer
-3.14 : ℝ            -- 3.14 is a real number
-True : Bool         -- True is a boolean
+<pre><code class="language-kleis">42 : ℤ              // 42 is an integer
+3.14 : ℝ            // 3.14 is a real number
+True : Bool         // True is a boolean
 </code></pre>
 <h2 id="built-in-types"><a class="header" href="#built-in-types">Built-in Types</a></h2>
 <h3 id="numeric-types"><a class="header" href="#numeric-types">Numeric Types</a></h3>
@@ -272,10 +272,10 @@ define make_adder(n : ℝ) : ℝ → ℝ = ???
 List(ℤ)
 
 -- Matrix with dimensions
-Matrix(3, 3, ℝ)   -- 3×3 matrix of reals
+Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 
 -- Vector with dimension
-Vector(4)          -- 4-dimensional vector
+Vector(4)          // 4-dimensional vector
 </code></pre>
 <h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
 <p>Kleis often infers types automatically:</p>

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cd7554b3.js";
+            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -236,14 +236,14 @@ let x = x * 2 in
 </code></pre>
 <h3 id="herons-formula"><a class="header" href="#herons-formula">Heron’s Formula</a></h3>
 <pre><code class="language-kleis">define triangle_area(a : ℝ, b : ℝ, c : ℝ) : ℝ =
-    let s = (a + b + c) / 2 in  -- semi-perimeter
+    let s = (a + b + c) / 2 in  // semi-perimeter
         sqrt(s * (s - a) * (s - b) * (s - c))
 </code></pre>
 <h3 id="complex-calculations"><a class="header" href="#complex-calculations">Complex Calculations</a></h3>
 <pre><code class="language-kleis">define schwarzschild_metric(r : ℝ, M : ℝ) : ℝ =
-    let rs = 2 * G * M / c^2 in      -- Schwarzschild radius
+    let rs = 2 * G * M / c^2 in      // Schwarzschild radius
     let factor = 1 - rs / r in
-        -c^2 * factor                 -- g_tt component
+        -c^2 * factor                 // g_tt component
 </code></pre>
 <h2 id="let-vs-define"><a class="header" href="#let-vs-define">Let vs Define</a></h2>
 <div class="table-wrapper">

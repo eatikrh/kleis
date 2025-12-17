@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cd7554b3.js";
+            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -219,36 +219,33 @@ asin(x)     acos(x)     atan(x)
 sinh(x)     cosh(x)     tanh(x)
 </code></pre>
 <h3 id="exponential-and-logarithmic"><a class="header" href="#exponential-and-logarithmic">Exponential and Logarithmic</a></h3>
-<pre><code class="language-kleis">exp(x)      -- e^x
-ln(x)       -- natural log
-log(x)      -- base-10 log
-log(b, x)   -- log base b of x
+<pre><code class="language-kleis">exp(x)      // e^x
+ln(x)       // natural log
+log(x)      // base-10 log
+log(b, x)   // log base b of x
 </code></pre>
 <h3 id="other"><a class="header" href="#other">Other</a></h3>
-<pre><code class="language-kleis">sqrt(x)     -- square root
-abs(x)      -- absolute value
-floor(x)    -- round down
-ceil(x)     -- round up
-min(x, y)   -- minimum
-max(x, y)   -- maximum
+<pre><code class="language-kleis">sqrt(x)     // square root
+abs(x)      // absolute value
+floor(x)    // round down
+ceil(x)     // round up
+min(x, y)   // minimum
+max(x, y)   // maximum
 </code></pre>
 <h2 id="lambda-expressions-anonymous-functions"><a class="header" href="#lambda-expressions-anonymous-functions">Lambda Expressions (Anonymous Functions)</a></h2>
-<blockquote>
-<p>🚧 <strong>Coming Soon: We’re working on it!</strong></p>
-<p>Lambda expressions allow you to create anonymous functions inline.
-This feature is planned but not yet implemented in the parser.</p>
-</blockquote>
-<p>Lambda expressions will let you write:</p>
-<pre><code class="language-kleis">-- Planned syntax (not yet working):
-λ x . x * x           -- square function
-\x -&gt; x + 1           -- increment (ASCII alternative)
-λ x . λ y . x + y     -- curried addition
+<p>Lambda expressions allow you to create anonymous functions inline:</p>
+<pre><code class="language-kleis">λ x . x * x           // square function
+lambda x . x + 1      // increment (using keyword)
+λ x y . x + y         // multiple parameters
+λ (x : ℝ) . x^2       // with type annotation
+λ x . λ y . x + y     // curried addition (nested)
 </code></pre>
-<p><strong>Current workaround:</strong> Use named functions with <code>define</code>:</p>
-<pre><code class="language-kleis">-- Instead of: map(λ x . x * 2, list)
--- Define a helper:
-define double(x) = x * 2
--- Then use it: map(double, list)
+<p>Lambda expressions are first-class values - you can pass them to functions:</p>
+<pre><code class="language-kleis">-- Pass lambda to higher-order function
+map(λ x . x * 2, [1, 2, 3])
+
+-- Or define inline
+apply(λ x . x + 1, 5)
 </code></pre>
 <h2 id="higher-order-functions"><a class="header" href="#higher-order-functions">Higher-Order Functions</a></h2>
 <p>Functions can take functions as arguments:</p>
@@ -257,14 +254,17 @@ define apply_twice(f, x) = f(f(x))
 
 -- Example usage:
 define inc(x) = x + 1
-apply_twice(inc, 5)   -- Result: 7
+apply_twice(inc, 5)   // Result: 7
 </code></pre>
-<h2 id="partial-application"><a class="header" href="#partial-application">Partial Application</a></h2>
-<blockquote>
-<p>🚧 <strong>Coming Soon</strong></p>
-<p>Partial application (currying) will be supported once lambda
-expressions are implemented.</p>
-</blockquote>
+<h2 id="partial-application-and-currying"><a class="header" href="#partial-application-and-currying">Partial Application and Currying</a></h2>
+<p>With lambda expressions, you can create curried functions:</p>
+<pre><code class="language-kleis">-- Curried addition
+define add = λ x . λ y . x + y
+
+-- Partial application creates specialized functions
+define add5 = add(5)    // λ y . 5 + y
+add5(3)                 // Result: 8
+</code></pre>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
 <p>Learn about algebraic data types for structured data!</p>
 <p>→ <a href="./04-algebraic-types.html">Next: Algebraic Types</a></p>

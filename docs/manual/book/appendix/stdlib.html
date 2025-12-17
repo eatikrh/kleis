@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cd7554b3.js";
+            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -185,22 +185,22 @@
 <h2 id="core-types"><a class="header" href="#core-types">Core Types</a></h2>
 <h3 id="numeric-types"><a class="header" href="#numeric-types">Numeric Types</a></h3>
 <pre><code class="language-kleis">-- Natural numbers (0, 1, 2, ...)
-ℕ  -- or Nat
+ℕ  // or Nat
 
 -- Integers (..., -1, 0, 1, ...)
-ℤ  -- or Int
+ℤ  // or Int
 
 -- Real numbers
-ℝ  -- or Real
+ℝ  // or Real
 
 -- Complex numbers
-ℂ  -- or Complex
+ℂ  // or Complex
 </code></pre>
 <h3 id="boolean-type"><a class="header" href="#boolean-type">Boolean Type</a></h3>
-<pre><code class="language-kleis">Bool  -- True or False
+<pre><code class="language-kleis">Bool  // True or False
 </code></pre>
 <h3 id="unit-type"><a class="header" href="#unit-type">Unit Type</a></h3>
-<pre><code class="language-kleis">Unit  -- Single value: ()
+<pre><code class="language-kleis">Unit  // Single value: ()
 </code></pre>
 <h2 id="collection-types"><a class="header" href="#collection-types">Collection Types</a></h2>
 <h3 id="list"><a class="header" href="#list">List</a></h3>
@@ -243,8 +243,8 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 <h2 id="algebraic-structures"><a class="header" href="#algebraic-structures">Algebraic Structures</a></h2>
 <h3 id="monoid"><a class="header" href="#monoid">Monoid</a></h3>
 <pre><code class="language-kleis">structure Monoid(M) {
-    operation e : M               -- Identity element
-    operation mul : M × M → M     -- Binary operation
+    operation e : M               // Identity element
+    operation mul : M × M → M     // Binary operation
     
     axiom identity_left : ∀ x : M . mul(e, x) = x
     axiom identity_right : ∀ x : M . mul(x, e) = x
@@ -254,7 +254,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 </code></pre>
 <h3 id="group"><a class="header" href="#group">Group</a></h3>
 <pre><code class="language-kleis">structure Group(G) extends Monoid(G) {
-    operation inv : G → G         -- Inverse
+    operation inv : G → G         // Inverse
     
     axiom inverse_left : ∀ x : G . mul(inv(x), x) = e
     axiom inverse_right : ∀ x : G . mul(x, inv(x)) = e
@@ -268,14 +268,14 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     operation mul : R × R → R
     operation neg : R → R
     
-    -- (R, add, zero) is an abelian group
-    -- (R, mul, one) is a monoid
-    -- mul distributes over add
+    // (R, add, zero) is an abelian group
+    // (R, mul, one) is a monoid
+    // mul distributes over add
 }
 </code></pre>
 <h3 id="field"><a class="header" href="#field">Field</a></h3>
 <pre><code class="language-kleis">structure Field(F) extends Ring(F) {
-    operation inv : F → F  -- Multiplicative inverse (for non-zero)
+    operation inv : F → F  // Multiplicative inverse (for non-zero)
     
     axiom mul_inverse : ∀ x : F . x ≠ zero → mul(x, inv(x)) = one
     axiom mul_commutative : ∀ x : F . ∀ y : F . mul(x, y) = mul(y, x)
@@ -287,9 +287,9 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     operation scale : F × V → V
     operation zero : V
     
-    -- (V, add, zero) is an abelian group
-    -- scale distributes over add
-    -- scale is associative with field multiplication
+    // (V, add, zero) is an abelian group
+    // scale distributes over add
+    // scale is associative with field multiplication
 }
 </code></pre>
 <h2 id="geometric-structures"><a class="header" href="#geometric-structures">Geometric Structures</a></h2>
@@ -307,7 +307,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 <h3 id="manifold"><a class="header" href="#manifold">Manifold</a></h3>
 <pre><code class="language-kleis">structure Manifold(M, dim : ℕ) {
     operation tangent : M → TangentSpace(dim)
-    operation chart : M → ℝ^dim  -- Local coordinates
+    operation chart : M → ℝ^dim  // Local coordinates
 }
 </code></pre>
 <h3 id="riemannian-manifold"><a class="header" href="#riemannian-manifold">Riemannian Manifold</a></h3>
@@ -358,13 +358,13 @@ import stdlib.differential_geometry
 </code></pre>
 <h2 id="file-organization"><a class="header" href="#file-organization">File Organization</a></h2>
 <pre><code>stdlib/
-├── prelude.kleis          -- Core types and functions
-├── numeric.kleis          -- Numeric operations
-├── collections.kleis      -- List, Vector, Matrix
-├── algebraic.kleis        -- Group, Ring, Field, etc.
-├── linear_algebra.kleis   -- Matrix operations
-├── differential_geometry.kleis  -- Manifolds, tensors
-└── category_theory.kleis  -- Categories, functors
+├── prelude.kleis          // Core types and functions
+├── numeric.kleis          // Numeric operations
+├── collections.kleis      // List, Vector, Matrix
+├── algebraic.kleis        // Group, Ring, Field, etc.
+├── linear_algebra.kleis   // Matrix operations
+├── differential_geometry.kleis  // Manifolds, tensors
+└── category_theory.kleis  // Categories, functors
 </code></pre>
 
                     </main>

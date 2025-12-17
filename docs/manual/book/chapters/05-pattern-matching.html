@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cd7554b3.js";
+            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -203,7 +203,7 @@
 <h3 id="variable-patterns"><a class="header" href="#variable-patterns">Variable Patterns</a></h3>
 <p>Bind matched values to names:</p>
 <pre><code class="language-kleis">match point {
-    Point(x, y) =&gt; x + y  -- x and y are bound
+    Point(x, y) =&gt; x + y  // x and y are bound
 }
 </code></pre>
 <h3 id="wildcard-pattern"><a class="header" href="#wildcard-pattern">Wildcard Pattern</a></h3>
@@ -218,7 +218,7 @@
 <p>Patterns can be nested arbitrarily:</p>
 <pre><code class="language-kleis">match tree {
     Leaf(v) =&gt; v
-    Node(Leaf(l), v, Leaf(r)) =&gt; l + v + r  -- Both children are leaves
+    Node(Leaf(l), v, Leaf(r)) =&gt; l + v + r  // Both children are leaves
     Node(left, v, right) =&gt; v + sum(left) + sum(right)
 }
 </code></pre>
@@ -247,17 +247,12 @@ let (first, second, _) = triple in
     first + second
 </code></pre>
 <h2 id="pattern-matching-in-function-parameters"><a class="header" href="#pattern-matching-in-function-parameters">Pattern Matching in Function Parameters</a></h2>
-<blockquote>
-<p>🚧 <strong>Coming Soon: We’re working on it!</strong></p>
-<p>Pattern matching directly in function parameters requires lambda
-expressions, which are not yet implemented.</p>
-</blockquote>
-<p>Planned syntax:</p>
-<pre><code class="language-kleis">-- Planned (not yet working):
-define fst((a, _)) = a
-define snd((_, b)) = b
+<p>With lambda expressions now available, you can combine them with match:</p>
+<pre><code class="language-kleis">// Pattern matching with lambdas
+define fst = λ pair . match pair { (a, _) =&gt; a }
+define snd = λ pair . match pair { (_, b) =&gt; b }
 </code></pre>
-<p><strong>Current workaround:</strong></p>
+<p><strong>Alternative workaround:</strong></p>
 <pre><code class="language-kleis">define fst(pair) = 
     match pair {
         (a, _) =&gt; a
@@ -265,13 +260,13 @@ define snd((_, b)) = b
 </code></pre>
 <h2 id="exhaustiveness"><a class="header" href="#exhaustiveness">Exhaustiveness</a></h2>
 <p>Kleis checks that your patterns cover all cases:</p>
-<pre><code class="language-kleis">-- ⚠️ Warning: non-exhaustive patterns
+<pre><code class="language-kleis">// ⚠️ Warning: non-exhaustive patterns
 match opt {
     Some(x) =&gt; x
-    -- Missing: None case!
+    // Missing: None case!
 }
 
--- ✓ Complete
+// ✓ Complete
 match opt {
     Some(x) =&gt; x
     None =&gt; 0
@@ -290,7 +285,7 @@ match opt {
         Add(f, g) =&gt; 
             Add(diff(f, var), diff(g, var))
         
-        Mul(f, g) =&gt;  -- Product rule
+        Mul(f, g) =&gt;  // Product rule
             Add(Mul(diff(f, var), g), 
                 Mul(f, diff(g, var)))
         

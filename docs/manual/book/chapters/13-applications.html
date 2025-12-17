@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cd7554b3.js";
+            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -190,27 +190,27 @@ structure SphericalMetric {
 }
 
 implements SphericalMetric {
-    -- Metric tensor: ds² = r²(dθ² + sin²θ dφ²)
+    // Metric tensor: ds² = r²(dθ² + sin²θ dφ²)
     operation metric(r, θ) = Matrix [
         [r^2, 0],
         [0, r^2 * sin(θ)^2]
     ]
     
-    -- Christoffel symbols Γⁱⱼₖ
+    // Christoffel symbols Γⁱⱼₖ
     operation christoffel(r, θ) = 
         let g = metric(r, θ) in
         let g_inv = inverse(g) in
-        -- ... compute from metric derivatives
+        // ... compute from metric derivatives
 }
 </code></pre>
 <h2 id="tensor-calculus"><a class="header" href="#tensor-calculus">Tensor Calculus</a></h2>
 <pre><code class="language-kleis">-- Einstein field equations
 structure EinsteinEquations {
-    -- Ricci tensor
+    // Ricci tensor
     operation ricci : Manifold → Tensor(0, 2)
-    -- Scalar curvature
+    // Scalar curvature
     operation scalar : Manifold → ℝ
-    -- Einstein tensor
+    // Einstein tensor
     operation einstein : Manifold → Tensor(0, 2)
     
     axiom einstein_tensor : ∀ M : Manifold .
@@ -237,13 +237,13 @@ define diff(e : Expr, x : String) : Expr =
         
         Add(f, g) =&gt; Add(diff(f, x), diff(g, x))
         
-        Mul(f, g) =&gt; -- Product rule
+        Mul(f, g) =&gt; // Product rule
             Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
             
-        Pow(f, Const(n)) =&gt; -- Power rule
+        Pow(f, Const(n)) =&gt; // Power rule
             Mul(Mul(Const(n), Pow(f, Const(n - 1))), diff(f, x))
             
-        Sin(f) =&gt; Mul(Cos(f), diff(f, x))  -- Chain rule
+        Sin(f) =&gt; Mul(Cos(f), diff(f, x))  // Chain rule
         Cos(f) =&gt; Mul(Mul(Const(-1), Sin(f)), diff(f, x))
         Exp(f) =&gt; Mul(Exp(f), diff(f, x))
         Ln(f) =&gt; Mul(Pow(f, Const(-1)), diff(f, x))
@@ -253,7 +253,7 @@ define diff(e : Expr, x : String) : Expr =
 <pre><code class="language-kleis">structure LinearSystem(n : ℕ) {
     operation solve : Matrix(n, n, ℝ) × Vector(n, ℝ) → Vector(n, ℝ)
     
-    -- Solution satisfies Ax = b
+    // Solution satisfies Ax = b
     axiom solution_correct : ∀ A : Matrix(n, n, ℝ) . ∀ b : Vector(n, ℝ) .
         det(A) ≠ 0 → mul(A, solve(A, b)) = b
 }
@@ -273,7 +273,7 @@ structure Eigen(n : ℕ) {
 <pre><code class="language-kleis">structure QuantumState(n : ℕ) {
     field amplitudes : Vector(n, ℂ)
     
-    -- States must be normalized
+    // States must be normalized
     axiom normalized : ∀ ψ : QuantumState(n) .
         sum(map(λ a . abs(a)^2, ψ.amplitudes)) = 1
 }
@@ -281,7 +281,7 @@ structure Eigen(n : ℕ) {
 structure Observable(n : ℕ) {
     operation matrix : Matrix(n, n, ℂ)
     
-    -- Observables are Hermitian
+    // Observables are Hermitian
     axiom hermitian : ∀ O : Observable(n) .
         O.matrix = conjugate_transpose(O.matrix)
 }
@@ -320,15 +320,15 @@ structure Functor(C : Category, D : Category) {
 </code></pre>
 <h2 id="physics-classical-mechanics"><a class="header" href="#physics-classical-mechanics">Physics: Classical Mechanics</a></h2>
 <pre><code class="language-kleis">structure LagrangianMechanics(n : ℕ) {
-    -- Generalized coordinates and velocities
-    operation q : ℕ → ℝ     -- Position
-    operation q_dot : ℕ → ℝ  -- Velocity
-    operation t : ℝ          -- Time
+    // Generalized coordinates and velocities
+    operation q : ℕ → ℝ     // Position
+    operation q_dot : ℕ → ℝ  // Velocity
+    operation t : ℝ          // Time
     
-    -- Lagrangian L = T - V
+    // Lagrangian L = T - V
     operation lagrangian : ℝ
     
-    -- Euler-Lagrange equations
+    // Euler-Lagrange equations
     axiom euler_lagrange : ∀ i : ℕ . i &lt; n →
         d/dt(∂L/∂q_dot(i)) = ∂L/∂q(i)
 }

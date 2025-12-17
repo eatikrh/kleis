@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cd7554b3.js";
+            window.path_to_searchindex_js = "../searchindex-a7c66518.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -269,27 +269,30 @@ Counterexample: x = -1
 Defined: factorial
 </code></pre>
 <h2 id="lambda-expressions-in-repl"><a class="header" href="#lambda-expressions-in-repl">Lambda Expressions in REPL</a></h2>
-<blockquote>
-<p>🚧 <strong>Coming Soon: We’re working on it!</strong></p>
-<p>Lambda expressions are not yet implemented. Use named functions instead:</p>
-</blockquote>
-<pre><code>kleis&gt; -- Instead of: (\x -&gt; x * 2)
-kleis&gt; define double(x) = x * 2
+<p>Lambda expressions work in the REPL:</p>
+<pre><code>kleis&gt; λ x . x * 2
+λ x . x * 2
+
+kleis&gt; (λ x . x + 1)(5)
+6
+
+kleis&gt; define double = λ x . x * 2
 Defined: double
 
 kleis&gt; double(21)
 42
 </code></pre>
+<p>You can use both the <code>λ</code> symbol and the <code>lambda</code> keyword.</p>
 <h2 id="example-session"><a class="header" href="#example-session">Example Session</a></h2>
-<pre><code>kleis&gt; -- Define a structure
+<pre><code>kleis&gt; // Define a structure
 kleis&gt; structure Point { x : ℝ, y : ℝ }
 
-kleis&gt; -- Create a point
+kleis&gt; // Create a point
 kleis&gt; let p = Point { x = 3, y = 4 } in
 ...&gt;     sqrt(p.x^2 + p.y^2)
 5.0
 
-kleis&gt; -- Verify properties
+kleis&gt; // Verify properties
 kleis&gt; verify ∀ a : ℝ . ∀ b : ℝ . (a + b)^2 = a^2 + 2*a*b + b^2
 ✓ Valid
 
