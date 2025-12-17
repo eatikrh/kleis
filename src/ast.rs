@@ -59,12 +59,26 @@ pub enum Expression {
 
     /// Let binding expression
     /// Example: let x = 5 in x + x
+    /// With type annotation: let x : ℝ = 5 in x^2
     /// Introduces a local variable binding within a function definition.
     /// Pure functional semantics: the bound value is substituted into the body.
     Let {
         name: String,
+        /// Optional type annotation (e.g., "ℝ", "ℤ", "Vector(3)")
+        type_annotation: Option<String>,
         value: Box<Expression>,
         body: Box<Expression>,
+    },
+
+    /// Type ascription expression
+    /// Example: (a + b) : ℝ
+    /// Annotates an expression with an explicit type.
+    /// Used for disambiguation, documentation, or type checking.
+    /// Follows Haskell convention: expr :: Type (we use single colon)
+    Ascription {
+        expr: Box<Expression>,
+        /// The type annotation (e.g., "ℝ", "Vector(3)", "ℝ → ℝ")
+        type_annotation: String,
     },
 }
 
@@ -185,12 +199,37 @@ impl Expression {
         }
     }
 
-    /// Create a let binding expression
+    /// Create a let binding expression without type annotation
     pub fn let_binding(name: impl Into<String>, value: Expression, body: Expression) -> Self {
         Expression::Let {
             name: name.into(),
+            type_annotation: None,
             value: Box::new(value),
             body: Box::new(body),
+        }
+    }
+
+    /// Create a let binding expression with optional type annotation
+    pub fn let_binding_typed(
+        name: impl Into<String>,
+        type_annotation: Option<impl Into<String>>,
+        value: Expression,
+        body: Expression,
+    ) -> Self {
+        Expression::Let {
+            name: name.into(),
+            type_annotation: type_annotation.map(|t| t.into()),
+            value: Box::new(value),
+            body: Box::new(body),
+        }
+    }
+
+    /// Create a type ascription expression
+    /// Example: ascription(expr, "ℝ") for (expr) : ℝ
+    pub fn ascription(expr: Expression, type_annotation: impl Into<String>) -> Self {
+        Expression::Ascription {
+            expr: Box::new(expr),
+            type_annotation: type_annotation.into(),
         }
     }
 
@@ -237,6 +276,9 @@ impl Expression {
             Expression::Let { value, body, .. } => {
                 value.collect_placeholders(acc);
                 body.collect_placeholders(acc);
+            }
+            Expression::Ascription { expr, .. } => {
+                expr.collect_placeholders(acc);
             }
             _ => {}
         }

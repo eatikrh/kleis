@@ -282,7 +282,12 @@ impl PatternMatcher {
                 else_branch: Box::new(self.substitute_bindings(else_branch, bindings)),
             },
 
-            Expression::Let { name, value, body } => {
+            Expression::Let {
+                name,
+                type_annotation,
+                value,
+                body,
+            } => {
                 let subst_value = self.substitute_bindings(value, bindings);
                 // Create new bindings without the shadowed variable
                 let mut inner_bindings = bindings.clone();
@@ -290,10 +295,19 @@ impl PatternMatcher {
                 let subst_body = self.substitute_bindings(body, &inner_bindings);
                 Expression::Let {
                     name: name.clone(),
+                    type_annotation: type_annotation.clone(),
                     value: Box::new(subst_value),
                     body: Box::new(subst_body),
                 }
             }
+
+            Expression::Ascription {
+                expr: inner,
+                type_annotation,
+            } => Expression::Ascription {
+                expr: Box::new(self.substitute_bindings(inner, bindings)),
+                type_annotation: type_annotation.clone(),
+            },
 
             Expression::Placeholder { .. } | Expression::Const(_) => {
                 // Leaves don't contain variables

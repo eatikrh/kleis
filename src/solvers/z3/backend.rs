@@ -351,7 +351,9 @@ impl<'r> Z3Backend<'r> {
                 Ok(boolean::translate_ite(&cond_bool, &then_z3, &else_z3))
             }
 
-            Expression::Let { name, value, body } => {
+            Expression::Let {
+                name, value, body, ..
+            } => {
                 // 1. Translate the value expression
                 let z3_value = self.kleis_to_z3(value, vars)?;
 

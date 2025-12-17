@@ -1119,8 +1119,14 @@ fn expand_user_functions(
             then_branch: Box::new(expand_user_functions(then_branch, evaluator)),
             else_branch: Box::new(expand_user_functions(else_branch, evaluator)),
         },
-        Expression::Let { name, value, body } => Expression::Let {
+        Expression::Let {
+            name,
+            type_annotation,
+            value,
+            body,
+        } => Expression::Let {
             name: name.clone(),
+            type_annotation: type_annotation.clone(),
             value: Box::new(expand_user_functions(value, evaluator)),
             body: Box::new(expand_user_functions(body, evaluator)),
         },
@@ -1196,17 +1202,24 @@ fn substitute_var(
             then_branch: Box::new(substitute_var(then_branch, var_name, replacement)),
             else_branch: Box::new(substitute_var(else_branch, var_name, replacement)),
         },
-        Expression::Let { name, value, body } => {
+        Expression::Let {
+            name,
+            type_annotation,
+            value,
+            body,
+        } => {
             // Don't substitute in body if let binds the same variable
             if name == var_name {
                 Expression::Let {
                     name: name.clone(),
+                    type_annotation: type_annotation.clone(),
                     value: Box::new(substitute_var(value, var_name, replacement)),
                     body: body.clone(),
                 }
             } else {
                 Expression::Let {
                     name: name.clone(),
+                    type_annotation: type_annotation.clone(),
                     value: Box::new(substitute_var(value, var_name, replacement)),
                     body: Box::new(substitute_var(body, var_name, replacement)),
                 }
@@ -1272,10 +1285,11 @@ fn load_file(path: &str, evaluator: &mut Evaluator) {
                 let func_count = program.functions().len();
                 let struct_count = program.structures().len();
                 let data_count = program.data_types().len();
+                let alias_count = program.type_aliases().len();
 
                 println!(
-                    "✅ Loaded: {} functions, {} structures, {} data types",
-                    func_count, struct_count, data_count
+                    "✅ Loaded: {} functions, {} structures, {} data types, {} type aliases",
+                    func_count, struct_count, data_count, alias_count
                 );
             }
             Err(e) => {

@@ -139,6 +139,19 @@ pub fn layout_expression(expr: &Expression, context: &LayoutContext) -> LayoutBo
                 false,
             )
         }
+
+        Expression::Ascription {
+            type_annotation, ..
+        } => {
+            // For now, return a placeholder text (similar to Let)
+            // Full layout would show: (inner) : Type
+            LayoutBox::text(
+                &format!("(...) : {}", type_annotation),
+                context.base_font_size,
+                FontFamily::Main,
+                false,
+            )
+        }
     }
 }
 

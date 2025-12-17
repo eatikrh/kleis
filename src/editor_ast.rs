@@ -293,6 +293,13 @@ fn translate_with_context(expr: &Expression, ctx: &TranslationContext) -> Editor
         Expression::Conditional { .. } => EditorNode::object("[if-then-else]"),
 
         Expression::Let { .. } => EditorNode::object("[let]"),
+
+        Expression::Ascription {
+            type_annotation, ..
+        } => {
+            // For now, just show as a placeholder (similar to Let)
+            EditorNode::object(format!("[ascription: {}]", type_annotation))
+        }
     }
 }
 
