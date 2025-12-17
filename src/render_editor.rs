@@ -982,6 +982,12 @@ fn render_tensor(op: &OperationData, rendered_args: &[String], target: &RenderTa
             indices.iter().map(|_| "up").collect()
         });
 
+    // DEBUG: trace tensor rendering
+    eprintln!(
+        "[render_tensor] symbol={:?}, indices={:?}, index_structure={:?}, metadata={:?}",
+        symbol, indices, index_structure, op.metadata
+    );
+
     // Collect upper and lower indices
     let mut upper_indices = Vec::new();
     let mut lower_indices = Vec::new();
