@@ -190,14 +190,32 @@ Some(Some(x))   // Nested
 
 ## Types
 
+### Basic Types
+
 ```kleis
 ℝ               // Real numbers (or: Real)
 ℤ               // Integers (or: Int)
 ℕ               // Natural numbers (or: Nat)
 Bool            // Booleans
-T → U           // Function type
+```
+
+### Function Types
+
+```kleis
+T → U           // Function from T to U
+ℝ → ℝ           // Real to real
+ℤ → Bool        // Integer to boolean
+ℝ → ℝ → ℝ       // Two reals to real (= ℝ → (ℝ → ℝ), right-assoc)
+(ℝ → ℝ) → ℝ     // Function to real (higher-order)
+(A → B) → List(A) → List(B)  // Generic higher-order
+```
+
+### Compound Types
+
+```kleis
 (T, U)          // Tuple/product type
 List(T)         // Parametric type
+Option(T)       // Optional value
 Vector(3)       // Type with value parameter
 Matrix(m, n, F) // Multiple parameters
 ```

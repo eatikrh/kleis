@@ -137,6 +137,73 @@ let maybe_x : Option(ℝ) = Some(5.0) in
 
 ---
 
+## Function Types
+
+Functions have types too! The syntax is `Input → Output`.
+
+### Basic Function Types
+
+```kleis
+ℝ → ℝ                   // Takes a real, returns a real
+ℤ → Bool                // Takes an integer, returns a boolean
+ℝ → ℝ → ℝ               // Takes two reals, returns a real (curried)
+```
+
+### Reading Function Types
+
+`→` is **right-associative**, so:
+
+```kleis
+ℝ → ℝ → ℝ   =   ℝ → (ℝ → ℝ)
+```
+
+This means "a function that takes ℝ and returns a function ℝ → ℝ" (currying).
+
+### Higher-Order Function Types
+
+Functions can take other functions as arguments:
+
+```kleis
+(ℝ → ℝ) → ℝ             // Takes a function, returns a real
+(ℝ → ℝ) → (ℝ → ℝ)       // Takes a function, returns a function
+(A → B) → List(A) → List(B)  // map's type!
+```
+
+### Examples
+
+```kleis
+// sqrt takes a real and returns a real
+sqrt : ℝ → ℝ
+
+// Binary operations take two arguments
+(+) : ℝ → ℝ → ℝ
+
+// map takes a function and a list
+map : (A → B) → List(A) → List(B)
+
+// apply_twice takes a function and a value
+define apply_twice(f : ℝ → ℝ, x : ℝ) : ℝ = f(f(x))
+// Type: (ℝ → ℝ) → ℝ → ℝ
+
+// derivative takes a function, returns a function
+derivative : (ℝ → ℝ) → (ℝ → ℝ)
+
+// integral takes a function and bounds, returns a real
+integral : (ℝ → ℝ) → ℝ → ℝ → ℝ
+```
+
+### Type Annotations with Functions
+
+```kleis
+// Annotate a lambda
+let f : ℝ → ℝ = (\x. x^2) in f(5)
+
+// Annotate a higher-order parameter
+define twice(f : A → A, x : A) : A = f(f(x))
+```
+
+---
+
 ## Type Variables
 
 Sometimes you want to write code that works with *any* type. Use type variables:
