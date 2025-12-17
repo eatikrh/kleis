@@ -131,9 +131,12 @@ impl PrettyPrinter {
                 else_branch,
             } => self.format_conditional_at_depth(condition, then_branch, else_branch, depth),
 
-            Expression::Let { name, value, body } => {
-                self.format_let_at_depth(name, value, body, depth)
-            }
+            Expression::Let {
+                name,
+                type_annotation,
+                value,
+                body,
+            } => self.format_let_at_depth(name, type_annotation.as_deref(), value, body, depth),
         }
     }
 
@@ -348,6 +351,7 @@ impl PrettyPrinter {
     fn format_let_at_depth(
         &self,
         name: &str,
+        type_annotation: Option<&str>,
         value: &Expression,
         body: &Expression,
         depth: usize,
@@ -355,15 +359,21 @@ impl PrettyPrinter {
         let value_str = self.format_at_depth(value, depth);
         let body_str = self.format_at_depth(body, depth);
 
+        // Build the let binding with optional type annotation
+        let binding = match type_annotation {
+            Some(ty) => format!("{} : {}", name, ty),
+            None => name.to_string(),
+        };
+
         // For complex bodies, use multi-line format
         if body_str.contains('\n') {
             let indent_str = self.indent.repeat(depth);
             format!(
                 "let {} = {} in\n{}{}",
-                name, value_str, indent_str, body_str
+                binding, value_str, indent_str, body_str
             )
         } else {
-            format!("let {} = {} in {}", name, value_str, body_str)
+            format!("let {} = {} in {}", binding, value_str, body_str)
         }
     }
 
@@ -649,6 +659,7 @@ mod tests {
         let pp = PrettyPrinter::new();
         let expr = Expression::Let {
             name: "y".to_string(),
+            type_annotation: None,
             value: Box::new(Expression::Const("5".to_string())),
             body: Box::new(Expression::Operation {
                 name: "plus".to_string(),
@@ -659,6 +670,18 @@ mod tests {
             }),
         };
         assert_eq!(pp.format_expression(&expr), "let y = 5 in y + y");
+    }
+
+    #[test]
+    fn test_format_let_with_type() {
+        let pp = PrettyPrinter::new();
+        let expr = Expression::Let {
+            name: "x".to_string(),
+            type_annotation: Some("ℝ".to_string()),
+            value: Box::new(Expression::Const("5".to_string())),
+            body: Box::new(Expression::Object("x".to_string())),
+        };
+        assert_eq!(pp.format_expression(&expr), "let x : ℝ = 5 in x");
     }
 
     #[test]

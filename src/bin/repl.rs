@@ -1119,8 +1119,14 @@ fn expand_user_functions(
             then_branch: Box::new(expand_user_functions(then_branch, evaluator)),
             else_branch: Box::new(expand_user_functions(else_branch, evaluator)),
         },
-        Expression::Let { name, value, body } => Expression::Let {
+        Expression::Let {
+            name,
+            type_annotation,
+            value,
+            body,
+        } => Expression::Let {
             name: name.clone(),
+            type_annotation: type_annotation.clone(),
             value: Box::new(expand_user_functions(value, evaluator)),
             body: Box::new(expand_user_functions(body, evaluator)),
         },
@@ -1196,17 +1202,24 @@ fn substitute_var(
             then_branch: Box::new(substitute_var(then_branch, var_name, replacement)),
             else_branch: Box::new(substitute_var(else_branch, var_name, replacement)),
         },
-        Expression::Let { name, value, body } => {
+        Expression::Let {
+            name,
+            type_annotation,
+            value,
+            body,
+        } => {
             // Don't substitute in body if let binds the same variable
             if name == var_name {
                 Expression::Let {
                     name: name.clone(),
+                    type_annotation: type_annotation.clone(),
                     value: Box::new(substitute_var(value, var_name, replacement)),
                     body: body.clone(),
                 }
             } else {
                 Expression::Let {
                     name: name.clone(),
+                    type_annotation: type_annotation.clone(),
                     value: Box::new(substitute_var(value, var_name, replacement)),
                     body: Box::new(substitute_var(body, var_name, replacement)),
                 }

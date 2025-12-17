@@ -59,10 +59,13 @@ pub enum Expression {
 
     /// Let binding expression
     /// Example: let x = 5 in x + x
+    /// With type annotation: let x : ℝ = 5 in x^2
     /// Introduces a local variable binding within a function definition.
     /// Pure functional semantics: the bound value is substituted into the body.
     Let {
         name: String,
+        /// Optional type annotation (e.g., "ℝ", "ℤ", "Vector(3)")
+        type_annotation: Option<String>,
         value: Box<Expression>,
         body: Box<Expression>,
     },
@@ -185,10 +188,26 @@ impl Expression {
         }
     }
 
-    /// Create a let binding expression
+    /// Create a let binding expression without type annotation
     pub fn let_binding(name: impl Into<String>, value: Expression, body: Expression) -> Self {
         Expression::Let {
             name: name.into(),
+            type_annotation: None,
+            value: Box::new(value),
+            body: Box::new(body),
+        }
+    }
+
+    /// Create a let binding expression with optional type annotation
+    pub fn let_binding_typed(
+        name: impl Into<String>,
+        type_annotation: Option<impl Into<String>>,
+        value: Expression,
+        body: Expression,
+    ) -> Self {
+        Expression::Let {
+            name: name.into(),
+            type_annotation: type_annotation.map(|t| t.into()),
             value: Box::new(value),
             body: Box::new(body),
         }

@@ -399,7 +399,11 @@ impl TypeInference {
             }
 
             // Let binding: infer value type, bind variable, infer body
-            Expression::Let { name, value, body } => {
+            // Note: type_annotation is parsed but not yet used for type checking
+            // TODO: When type_annotation is present, verify value_ty matches it
+            Expression::Let {
+                name, value, body, ..
+            } => {
                 // Infer type of the value
                 let value_ty = self.infer(value, context_builder)?;
 

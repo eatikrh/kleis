@@ -328,10 +328,16 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
                 }
             })
         }
-        Expression::Let { name, value, body } => {
+        Expression::Let {
+            name,
+            type_annotation,
+            value,
+            body,
+        } => {
             json!({
                 "Let": {
                     "name": name,
+                    "type_annotation": type_annotation,
                     "value": expression_to_json(value),
                     "body": expression_to_json(body)
                 }

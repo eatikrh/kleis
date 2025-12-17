@@ -1789,7 +1789,9 @@ fn render_expression_internal(
             }
         }
 
-        Expression::Let { name, value, body } => {
+        Expression::Let {
+            name, value, body, ..
+        } => {
             let value_id = format!("{}.value", node_id);
             let body_id = format!("{}.body", node_id);
 

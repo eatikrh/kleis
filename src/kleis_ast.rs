@@ -257,6 +257,31 @@ impl TypeExpr {
     }
 }
 
+impl std::fmt::Display for TypeExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TypeExpr::Named(name) => write!(f, "{}", name),
+            TypeExpr::Parametric(name, params) => {
+                let params_str: Vec<String> = params.iter().map(|p| p.to_string()).collect();
+                write!(f, "{}({})", name, params_str.join(", "))
+            }
+            TypeExpr::Function(from, to) => write!(f, "{} → {}", from, to),
+            TypeExpr::Product(types) => {
+                let types_str: Vec<String> = types.iter().map(|t| t.to_string()).collect();
+                write!(f, "{}", types_str.join(" × "))
+            }
+            TypeExpr::Var(name) => write!(f, "{}", name),
+            TypeExpr::ForAll { vars, body } => {
+                let vars_str: Vec<String> = vars
+                    .iter()
+                    .map(|(name, ty)| format!("{} : {}", name, ty))
+                    .collect();
+                write!(f, "∀({}). {}", vars_str.join(", "), body)
+            }
+        }
+    }
+}
+
 /// Complete program
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {

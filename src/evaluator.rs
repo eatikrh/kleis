@@ -306,7 +306,12 @@ impl Evaluator {
 
             // Let bindings - substitute in value and body
             // Note: the let-bound variable shadows any outer binding
-            Expression::Let { name, value, body } => {
+            Expression::Let {
+                name,
+                type_annotation,
+                value,
+                body,
+            } => {
                 let subst_value = self.substitute(value, subst);
                 // Create new substitution map without the shadowed variable
                 let mut inner_subst = subst.clone();
@@ -314,6 +319,7 @@ impl Evaluator {
                 let subst_body = self.substitute(body, &inner_subst);
                 Expression::Let {
                     name: name.clone(),
+                    type_annotation: type_annotation.clone(),
                     value: Box::new(subst_value),
                     body: Box::new(subst_body),
                 }
@@ -392,7 +398,9 @@ impl Evaluator {
             }
 
             // Let bindings - evaluate value and substitute into body
-            Expression::Let { name, value, body } => {
+            Expression::Let {
+                name, value, body, ..
+            } => {
                 // Evaluate the value
                 let eval_value = self.eval(value)?;
 
