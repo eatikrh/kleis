@@ -89,11 +89,11 @@ times(3.14, 2)
 Load Kleis source files:
 
 ```
-kleis> :load stdlib/prelude.kleis
-Loaded: stdlib/prelude.kleis
+λ> :load stdlib/prelude.kleis
+✅ Loaded: 4 functions, 15 structures, 0 data types, 0 type aliases
 
-kleis> :load examples/geometry.kleis
-Loaded: examples/geometry.kleis
+λ> :load examples/authorization/zanzibar.kleis
+✅ Loaded: 13 functions, 0 structures, 0 data types, 0 type aliases
 ```
 
 ## Verification in REPL
@@ -101,15 +101,18 @@ Loaded: examples/geometry.kleis
 Run verifications interactively:
 
 ```
-kleis> verify x + y = y + x
-✓ Valid
+λ> :verify x + y = y + x
+DEBUG: Found dependencies: {}
+✅ Valid
 
-kleis> verify ∀ n : ℕ . n ≥ 0
-✓ Valid
+λ> :verify ∀ n : ℕ . n ≥ 0
+DEBUG: Found dependencies: {}
+❌ Invalid - Counterexample: n!2 -> (- 1)
 
-kleis> verify x > 0
-✗ Invalid
-Counterexample: x = -1
+λ> :verify x > 0
+DEBUG: Found dependencies: {}
+❌ Invalid - Counterexample: x!3 -> 0
+
 ```
 
 ## Multi-line Input
@@ -117,10 +120,7 @@ Counterexample: x = -1
 For complex expressions, use continuation:
 
 ```
-kleis> define factorial(n) =
-...>     if n = 0 then 1
-...>     else n * factorial(n - 1)
-Defined: factorial
+<multiline example>
 ```
 
 ## Lambda Expressions in REPL
@@ -128,17 +128,17 @@ Defined: factorial
 Lambda expressions work in the REPL:
 
 ```
-kleis> λ x . x * 2
-λ x . x * 2
+λ> λ x . x * 2
+λ x . times(x, 2)
 
-kleis> (λ x . x + 1)(5)
-6
+λ> (λ x . x + 1)(5)
+❌ Parse error: Kleis parse error at position 13: Unexpected character: '('
 
-kleis> define double = λ x . x * 2
-Defined: double
+λ> ddefine double = λ x . x * 2
+❌ Parse error: Kleis parse error at position 7: Unexpected character: 'd'
 
-kleis> double(21)
-42
+λ> double(21)
+double(21)
 ```
 
 You can use both the `λ` symbol and the `lambda` keyword.
@@ -146,19 +146,29 @@ You can use both the `λ` symbol and the `lambda` keyword.
 ## Example Session
 
 ```
-kleis> // Define a structure
-kleis> structure Point { x : ℝ, y : ℝ }
+λ> // Define a structure
+❌ Parse error: Kleis parse error at position 21: Expected expression
+λ> structure Point { x : ℝ, y : ℝ }
+❌ Parse error: Kleis parse error at position 10: Unexpected character: 'P'
 
-kleis> // Create a point
-kleis> let p = Point { x = 3, y = 4 } in
-...>     sqrt(p.x^2 + p.y^2)
-5.0
 
-kleis> // Verify properties
-kleis> verify ∀ a : ℝ . ∀ b : ℝ . (a + b)^2 = a^2 + 2*a*b + b^2
-✓ Valid
+λ> // Create a point
+❌ Parse error: Kleis parse error at position 17: Expected expression
+λ> let p = Point { x = 3, y = 4 } in \
+   sqrt(p.x^2 + p.y^2)
+❌ Parse error: Kleis parse error at position 14: Expected keyword 'in'
 
-kleis> :quit
+λ> // Verify properties
+❌ Parse error: Kleis parse error at position 20: Expected expression
+λ>  :verify ∀ a : ℝ . ∀ b : ℝ . (a + b)^2 = a^2 + 2*a*b + b^2
+DEBUG: Found dependencies: {}
+❌ Invalid - Counterexample: b!5 -> 0.0
+a!4 -> 0.0
+power -> {
+  (- 1)
+}
+
+λ> :quit
 Goodbye!
 ```
 
