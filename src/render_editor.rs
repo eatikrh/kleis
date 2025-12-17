@@ -188,6 +188,15 @@ impl EditorRenderContext {
             "{left} < {right}",
             "lt({left}, {right})",
         );
+        // Alias for lt used by some AST generators
+        self.add_template(
+            "less_than",
+            "{left} < {right}",
+            "{left} < {right}",
+            "{left} &lt; {right}",
+            "{left} < {right}",
+            "less_than({left}, {right})",
+        );
         self.add_template(
             "gt",
             "{left} > {right}",
@@ -195,6 +204,15 @@ impl EditorRenderContext {
             "{left} &gt; {right}",
             "{left} > {right}",
             "gt({left}, {right})",
+        );
+        // Alias for gt used by some AST generators
+        self.add_template(
+            "greater_than",
+            "{left} > {right}",
+            "{left} > {right}",
+            "{left} &gt; {right}",
+            "{left} > {right}",
+            "greater_than({left}, {right})",
         );
         self.add_template(
             "leq",
@@ -981,12 +999,6 @@ fn render_tensor(op: &OperationData, rendered_args: &[String], target: &RenderTa
             // Default: all upper indices
             indices.iter().map(|_| "up").collect()
         });
-
-    // DEBUG: trace tensor rendering
-    eprintln!(
-        "[render_tensor] symbol={:?}, indices={:?}, index_structure={:?}, metadata={:?}",
-        symbol, indices, index_structure, op.metadata
-    );
 
     // Collect upper and lower indices
     let mut upper_indices = Vec::new();
