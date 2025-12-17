@@ -293,6 +293,6 @@ Type ascription is useful for:
 ## See Also
 
 - [Kleis Grammar v0.7](../grammar/kleis_grammar_v07.md) - Full grammar specification
-- [Pattern Matching](./PATTERN_MATCHING.md) - Using match with let bindings
-- [Conditionals](./CONDITIONALS.md) - if/then/else expressions
+- [Pattern Matching](../manual/src/chapters/05-pattern-matching.md) - Using match with let bindings
+- [Conditionals](../manual/src/chapters/08-conditionals.md) - if/then/else expressions
 
