@@ -6,15 +6,16 @@ The REPL (Read-Eval-Print Loop) is an interactive environment for experimenting 
 
 ```bash
 $ cargo run --bin repl
-Kleis REPL v0.7
-Type 'help' for commands, 'quit' to exit.
 
-kleis>
+🧮 Kleis REPL v0.1.0
+   Type :help for commands, :quit to exit
+
+λ>
 ```
 
 ## Basic Usage
 
-Enter expressions to evaluate them:
+Enter expressions to evaluate them symbolically:
 
 ```
 λ> 2 + 2
@@ -27,157 +28,141 @@ times(5, 5)
 sin(divide(π, 2))
 ```
 
-## Defining Functions
+> **Note:** The REPL performs **symbolic evaluation**, not numeric computation. Expressions are simplified symbolically, not calculated to numbers.
 
-The REPL prompt evaluates **expressions**, not declarations. To define functions, use `:load` with a `.kleis` file:
+## Loading Files
 
-```
-λ> define square(x) = x * x
-❌ Parse error: Kleis parse error at position 7: Unexpected character: 's'
-```
-
-Instead, create a file `mymath.kleis`:
-
-```kleis
-define square(x) = x * x
-define compose(f, g, x) = f(g(x))
-```
-
-Then load it in the REPL:
+The REPL prompt evaluates expressions. For definitions (`define`, `structure`, etc.), use `:load`:
 
 ```
-λ> :load mymath.kleis
-✅ Loaded: 2 functions, 0 structures, 0 data types, 0 type aliases
+λ> :load examples/protocols/stop_and_wait.kleis
+✅ Loaded: 5 functions, 0 structures, 0 data types, 0 type aliases
 
-λ> square(7)
-times(7, 7)
-
-λ> compose(square, square, 2)
-compose(square, square, 2)
+λ> :env
+📋 Defined functions:
+  next_seq (seq) = ...
+  valid_ack (sent, ack) = ...
+  receiver_accepts (expected, received) = ...
+  sender_next_state (current_seq, ack_received) = ...
+  receiver_next_state (expected, received) = ...
 ```
 
-> **Note:** The REPL performs symbolic evaluation. `square(7)` becomes `times(7, 7)` rather than computing `49`. This is by design - Kleis focuses on symbolic manipulation and verification, not numeric computation.
-
-## Working with Types
-
-Check types and use annotations:
+More examples to load:
 
 ```
-λ> type 42
-❌ Parse error: Kleis parse error at position 5: Unexpected character: '4'
+λ> :load examples/business/order_to_cash.kleis
+✅ Loaded: 7 functions, 1 structures, 0 data types, 0 type aliases
+
+λ> :load examples/control/lqg_controller.kleis
+✅ Loaded: 12 functions, 3 structures, 0 data types, 0 type aliases
+```
+
+## Verification with Z3
+
+Run verifications interactively with `:verify`:
+
+```
+λ> :verify x + y = y + x
+✅ Valid
+
+λ> :verify x > 0
+❌ Invalid - Counterexample: x!2 -> 0
+```
+
+## Lambda Expressions
+
+Lambda expressions work at the prompt:
+
+```
+λ> λ x . x * 2
+λ x . times(x, 2)
+
+λ> λ x y . x + y
+λ x y . plus(x, y)
+```
+
+## Type Inference
+
+Check types with `:type`:
+
+```
+λ> :type 42
+📐 Type: Scalar
 
 λ> :type sin
 📐 Type: α0
-
-λ> let x : ℝ = 3.14 in x * 2
-times(3.14, 2)
 ```
 
 ## REPL Commands
 
 | Command | Description |
 |---------|-------------|
-| `:help` or `?` | Show help |
-| `:type <expr>` | Show expression type |
-| `:quit` or `q` | Exit REPL |
-| `:clear` | Clear definitions |
-| `:load <file>` | Load Kleis file |
-| `:env` | Show current environment |
-
-## Loading Files
-
-Load Kleis source files:
-
-```
-λ> :load stdlib/prelude.kleis
-✅ Loaded: 4 functions, 15 structures, 0 data types, 0 type aliases
-
-λ> :load examples/authorization/zanzibar.kleis
-✅ Loaded: 13 functions, 0 structures, 0 data types, 0 type aliases
-```
-
-## Verification in REPL
-
-Run verifications interactively:
-
-```
-λ> :verify x + y = y + x
-DEBUG: Found dependencies: {}
-✅ Valid
-
-λ> :verify ∀ n : ℕ . n ≥ 0
-DEBUG: Found dependencies: {}
-❌ Invalid - Counterexample: n!2 -> (- 1)
-
-λ> :verify x > 0
-DEBUG: Found dependencies: {}
-❌ Invalid - Counterexample: x!3 -> 0
-
-```
+| `:help` | Show all commands |
+| `:load <file>` | Load a .kleis file |
+| `:env` | Show defined functions |
+| `:verify <expr>` | Verify with Z3 |
+| `:type <expr>` | Show inferred type |
+| `:ast <expr>` | Show parsed AST |
+| `:symbols` | Unicode math symbols palette |
+| `:syntax` | Complete syntax reference |
+| `:examples` | Show example expressions |
+| `:quit` | Exit REPL |
 
 ## Multi-line Input
 
-For complex expressions, use continuation:
+For complex expressions, end lines with `\` or use block mode:
 
 ```
-<multiline example>
+λ> :verify ∀(a : R, b : R). \
+   (a + b) * (a - b) = a * a - b * b
+✅ Valid
 ```
 
-## Lambda Expressions in REPL
-
-Lambda expressions work in the REPL:
+Or use `:{ ... :}` for blocks:
 
 ```
-λ> λ x . x * 2
-λ x . times(x, 2)
-
-λ> (λ x . x + 1)(5)
-❌ Parse error: Kleis parse error at position 13: Unexpected character: '('
-
-λ> ddefine double = λ x . x * 2
-❌ Parse error: Kleis parse error at position 7: Unexpected character: 'd'
-
-λ> double(21)
-double(21)
+λ> :{
+   :verify ∀(x : R, y : R, z : R).
+     (x + y) + z = x + (y + z)
+   :}
+✅ Valid
 ```
-
-You can use both the `λ` symbol and the `lambda` keyword.
 
 ## Example Session
 
 ```
-λ> // Define a structure
-❌ Parse error: Kleis parse error at position 21: Expected expression
-λ> structure Point { x : ℝ, y : ℝ }
-❌ Parse error: Kleis parse error at position 10: Unexpected character: 'P'
+ :load examples/authorization/zanzibar.kleis
+✅ Loaded: 13 functions, 0 structures, 0 data types, 0 type aliases
 
+λ> :env
+📋 Defined functions:
+  can_delete (perm) = ...
+  effective_permission (direct, group) = ...
+  inherited_permission (child_perm, parent_perm) = ...
+  has_at_least (user_perm, required_perm) = ...
+  can_share (perm) = ...
+  doc_access (doc_perm, folder_perm, action) = ...
+  multi_group_permission (perm1, perm2, perm3) = ...
+  can_read (perm) = ...
+  can_comment (perm) = ...
+  can_transfer_ownership (perm) = ...
+  can_edit (perm) = ...
+  is_allowed (perm, action) = ...
+  can_grant (granter_perm, grantee_perm) = ...
 
-λ> // Create a point
-❌ Parse error: Kleis parse error at position 17: Expected expression
-λ> let p = Point { x = 3, y = 4 } in \
-   sqrt(p.x^2 + p.y^2)
-❌ Parse error: Kleis parse error at position 14: Expected keyword 'in'
-
-λ> // Verify properties
-❌ Parse error: Kleis parse error at position 20: Expected expression
-λ>  :verify ∀ a : ℝ . ∀ b : ℝ . (a + b)^2 = a^2 + 2*a*b + b^2
-DEBUG: Found dependencies: {}
-❌ Invalid - Counterexample: b!5 -> 0.0
-a!4 -> 0.0
-power -> {
-  (- 1)
-}
+λ> :verify ∀(x : ℝ). x * x ≥ 0
+✅ Valid
 
 λ> :quit
-Goodbye!
+Goodbye! 👋
 ```
 
-## Tips and Tricks
+## Tips
 
-1. **Use tab completion** for function names
-2. **Arrow keys** navigate history
-3. **Ctrl+C** cancels current input
-4. **Ctrl+D** exits (like `:quit`)
+1. Press **Ctrl+C** to cancel input
+2. Press **Ctrl+D** or type `:quit` to exit
+3. Use `:symbols` to copy-paste Unicode math symbols
+4. Use `:help <topic>` for detailed help (e.g., `:help quantifiers`)
 
 ## What's Next?
 
