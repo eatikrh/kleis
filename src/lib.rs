@@ -12,6 +12,7 @@ pub mod parser;
 pub mod pattern_matcher;
 pub mod pretty_print; // Pretty-printer for exporting Kleis source
 pub mod render;
+pub mod render_editor; // EditorNode-only renderer (no Expression conversion)
 pub mod signature_interpreter;
 pub mod solvers; // Pluggable solver backends (Z3, CVC5, etc.)
 pub mod structure_registry;
