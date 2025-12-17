@@ -20,7 +20,10 @@
 
 use crate::ast::{Expression, MatchCase, Pattern, QuantifiedVar, QuantifierKind};
 use crate::evaluator::Closure;
-use crate::kleis_ast::{DataDef, StructureDef, StructureMember};
+use crate::kleis_ast::{
+    DataDef, FunctionDef, ImplMember, Implementation, ImplementsDef, OperationDecl, Program,
+    StructureDef, StructureMember, TopLevel, TypeAlias, WhereConstraint,
+};
 
 /// Pretty-printer configuration
 pub struct PrettyPrinter {
@@ -581,6 +584,175 @@ impl PrettyPrinter {
             }
         }
     }
+
+    /// Format a type alias
+    /// Example: type Real = ℝ
+    pub fn format_type_alias(&self, alias: &TypeAlias) -> String {
+        format!(
+            "type {} = {}",
+            alias.name,
+            Self::format_type_expr(&alias.type_expr)
+        )
+    }
+
+    /// Format an operation declaration
+    /// Example: operation add : ℝ × ℝ → ℝ
+    pub fn format_operation_decl(&self, op: &OperationDecl) -> String {
+        format!(
+            "operation {} : {}",
+            op.name,
+            Self::format_type_expr(&op.type_signature)
+        )
+    }
+
+    /// Format a function definition (AST version)
+    /// Example: define double(x) = x + x
+    /// Example: define square(x: ℝ): ℝ = x * x
+    pub fn format_function_def(&self, func: &FunctionDef) -> String {
+        let params = func.params.join(", ");
+        let body = self.format_expression(&func.body);
+
+        let type_annotation = if let Some(ref ty) = func.type_annotation {
+            format!(": {}", Self::format_type_expr(ty))
+        } else {
+            String::new()
+        };
+
+        if body.contains('\n') {
+            let indented_body = body
+                .lines()
+                .enumerate()
+                .map(|(i, line)| {
+                    if i == 0 {
+                        line.to_string()
+                    } else {
+                        format!("{}{}", self.indent, line)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            format!(
+                "define {}({}){} =\n{}{}",
+                func.name, params, type_annotation, self.indent, indented_body
+            )
+        } else {
+            format!(
+                "define {}({}){} = {}",
+                func.name, params, type_annotation, body
+            )
+        }
+    }
+
+    /// Format an implements block
+    /// Example:
+    /// ```kleis
+    /// implements Numeric(ℝ) {
+    ///     element zero = 0
+    ///     operation abs = builtin_abs
+    /// }
+    /// ```
+    pub fn format_implements(&self, impl_def: &ImplementsDef) -> String {
+        let type_args: Vec<String> = impl_def
+            .type_args
+            .iter()
+            .map(Self::format_type_expr)
+            .collect();
+
+        let over_clause = if let Some(ref over) = impl_def.over_clause {
+            format!(" over {}", Self::format_type_expr(over))
+        } else {
+            String::new()
+        };
+
+        let where_clause = if let Some(ref constraints) = impl_def.where_clause {
+            let constraints_str: Vec<String> = constraints
+                .iter()
+                .map(|c| self.format_where_constraint(c))
+                .collect();
+            format!(" where {}", constraints_str.join(", "))
+        } else {
+            String::new()
+        };
+
+        let members_str = self.format_impl_members(&impl_def.members);
+
+        format!(
+            "implements {}({}){}{} {{\n{}\n}}",
+            impl_def.structure_name,
+            type_args.join(", "),
+            over_clause,
+            where_clause,
+            members_str
+        )
+    }
+
+    /// Format a where constraint
+    fn format_where_constraint(&self, constraint: &WhereConstraint) -> String {
+        let args: Vec<String> = constraint
+            .type_args
+            .iter()
+            .map(Self::format_type_expr)
+            .collect();
+        format!("{}({})", constraint.structure_name, args.join(", "))
+    }
+
+    /// Format implementation members
+    fn format_impl_members(&self, members: &[ImplMember]) -> String {
+        let lines: Vec<String> = members
+            .iter()
+            .map(|m| format!("{}{}", self.indent, self.format_impl_member(m)))
+            .collect();
+        lines.join("\n")
+    }
+
+    /// Format a single implementation member
+    fn format_impl_member(&self, member: &ImplMember) -> String {
+        match member {
+            ImplMember::Element { name, value } => {
+                format!("element {} = {}", name, self.format_expression(value))
+            }
+            ImplMember::Operation {
+                name,
+                implementation,
+            } => match implementation {
+                Implementation::Builtin(builtin_name) => {
+                    format!("operation {} = {}", name, builtin_name)
+                }
+                Implementation::Inline { params, body } => {
+                    let params_str = params.join(", ");
+                    format!(
+                        "operation {}({}) = {}",
+                        name,
+                        params_str,
+                        self.format_expression(body)
+                    )
+                }
+            },
+        }
+    }
+
+    /// Format an entire program
+    /// Outputs all top-level declarations separated by blank lines
+    pub fn format_program(&self, program: &Program) -> String {
+        let formatted: Vec<String> = program
+            .items
+            .iter()
+            .map(|item| self.format_toplevel(item))
+            .collect();
+        formatted.join("\n\n")
+    }
+
+    /// Format a single top-level declaration
+    pub fn format_toplevel(&self, item: &TopLevel) -> String {
+        match item {
+            TopLevel::StructureDef(s) => self.format_structure(s),
+            TopLevel::ImplementsDef(i) => self.format_implements(i),
+            TopLevel::DataDef(d) => self.format_data_def(d),
+            TopLevel::OperationDecl(o) => self.format_operation_decl(o),
+            TopLevel::FunctionDef(f) => self.format_function_def(f),
+            TopLevel::TypeAlias(a) => self.format_type_alias(a),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -698,5 +870,162 @@ mod tests {
             pp.format_function("double", &closure),
             "define double(x) = x + x"
         );
+    }
+
+    #[test]
+    fn test_format_type_alias_simple() {
+        use crate::kleis_ast::TypeExpr;
+        let pp = PrettyPrinter::new();
+        let alias = TypeAlias {
+            name: "Real".to_string(),
+            type_expr: TypeExpr::Named("ℝ".to_string()),
+        };
+        assert_eq!(pp.format_type_alias(&alias), "type Real = ℝ");
+    }
+
+    #[test]
+    fn test_format_type_alias_parametric() {
+        use crate::kleis_ast::TypeExpr;
+        let pp = PrettyPrinter::new();
+        let alias = TypeAlias {
+            name: "Point".to_string(),
+            type_expr: TypeExpr::Parametric(
+                "Vector".to_string(),
+                vec![
+                    TypeExpr::Named("2".to_string()),
+                    TypeExpr::Named("ℝ".to_string()),
+                ],
+            ),
+        };
+        assert_eq!(pp.format_type_alias(&alias), "type Point = Vector(2, ℝ)");
+    }
+
+    #[test]
+    fn test_format_operation_decl() {
+        use crate::kleis_ast::TypeExpr;
+        let pp = PrettyPrinter::new();
+        let op = OperationDecl {
+            name: "add".to_string(),
+            type_signature: TypeExpr::Function(
+                Box::new(TypeExpr::Named("ℝ".to_string())),
+                Box::new(TypeExpr::Named("ℝ".to_string())),
+            ),
+        };
+        assert_eq!(pp.format_operation_decl(&op), "operation add : ℝ → ℝ");
+    }
+
+    #[test]
+    fn test_format_function_def() {
+        let pp = PrettyPrinter::new();
+        let func = FunctionDef {
+            name: "double".to_string(),
+            params: vec!["x".to_string()],
+            type_annotation: None,
+            body: Expression::Operation {
+                name: "times".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Const("2".to_string()),
+                ],
+            },
+        };
+        assert_eq!(pp.format_function_def(&func), "define double(x) = x * 2");
+    }
+
+    #[test]
+    fn test_format_function_def_with_type() {
+        use crate::kleis_ast::TypeExpr;
+        let pp = PrettyPrinter::new();
+        let func = FunctionDef {
+            name: "square".to_string(),
+            params: vec!["x".to_string()],
+            type_annotation: Some(TypeExpr::Named("ℝ".to_string())),
+            body: Expression::Operation {
+                name: "times".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Object("x".to_string()),
+                ],
+            },
+        };
+        assert_eq!(pp.format_function_def(&func), "define square(x): ℝ = x * x");
+    }
+
+    #[test]
+    fn test_format_implements() {
+        let pp = PrettyPrinter::new();
+        use crate::kleis_ast::TypeExpr;
+        let impl_def = ImplementsDef {
+            structure_name: "Numeric".to_string(),
+            type_args: vec![TypeExpr::Named("ℝ".to_string())],
+            members: vec![
+                ImplMember::Element {
+                    name: "zero".to_string(),
+                    value: Expression::Const("0".to_string()),
+                },
+                ImplMember::Operation {
+                    name: "abs".to_string(),
+                    implementation: Implementation::Builtin("builtin_abs".to_string()),
+                },
+            ],
+            over_clause: None,
+            where_clause: None,
+        };
+        let result = pp.format_implements(&impl_def);
+        assert!(result.contains("implements Numeric(ℝ)"));
+        assert!(result.contains("element zero = 0"));
+        assert!(result.contains("operation abs = builtin_abs"));
+    }
+
+    #[test]
+    fn test_format_implements_with_inline() {
+        let pp = PrettyPrinter::new();
+        use crate::kleis_ast::TypeExpr;
+        let impl_def = ImplementsDef {
+            structure_name: "Numeric".to_string(),
+            type_args: vec![TypeExpr::Named("ℝ".to_string())],
+            members: vec![ImplMember::Operation {
+                name: "negate".to_string(),
+                implementation: Implementation::Inline {
+                    params: vec!["x".to_string()],
+                    body: Expression::Operation {
+                        name: "times".to_string(),
+                        args: vec![
+                            Expression::Const("-1".to_string()),
+                            Expression::Object("x".to_string()),
+                        ],
+                    },
+                },
+            }],
+            over_clause: None,
+            where_clause: None,
+        };
+        let result = pp.format_implements(&impl_def);
+        // Output is "-1 * x" (constants don't get parenthesized)
+        assert!(result.contains("operation negate(x) = -1 * x"));
+    }
+
+    #[test]
+    fn test_format_program() {
+        use crate::kleis_ast::TypeExpr;
+        let pp = PrettyPrinter::new();
+        let program = Program {
+            items: vec![
+                TopLevel::TypeAlias(TypeAlias {
+                    name: "Real".to_string(),
+                    type_expr: TypeExpr::Named("ℝ".to_string()),
+                }),
+                TopLevel::OperationDecl(OperationDecl {
+                    name: "square".to_string(),
+                    type_signature: TypeExpr::Function(
+                        Box::new(TypeExpr::Named("Real".to_string())),
+                        Box::new(TypeExpr::Named("Real".to_string())),
+                    ),
+                }),
+            ],
+        };
+        let result = pp.format_program(&program);
+        assert!(result.contains("type Real = ℝ"));
+        assert!(result.contains("operation square : Real → Real"));
     }
 }
