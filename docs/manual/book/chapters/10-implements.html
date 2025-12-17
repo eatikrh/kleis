@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-96b6425c.js";
+            window.path_to_searchindex_js = "../searchindex-cd7554b3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -285,13 +285,44 @@ implements Group(ℤ) {
 }
 </code></pre>
 <h2 id="builtin-operations"><a class="header" href="#builtin-operations">Builtin Operations</a></h2>
-<p>Some operations map to built-in primitives:</p>
+<p>Some operations can’t be defined in pure Kleis — they need native code. The <code>builtin_</code> prefix connects Kleis to underlying implementations:</p>
 <pre><code class="language-kleis">implements Matrix(m, n, ℝ) {
     operation transpose = builtin_transpose
     operation add = builtin_matrix_add
     operation mul = builtin_matrix_mul
 }
 </code></pre>
+<h3 id="how-builtins-work"><a class="header" href="#how-builtins-work">How Builtins Work</a></h3>
+<p>When Kleis sees <code>builtin_foo</code>, it:</p>
+<ol>
+<li>Looks up <code>foo</code> in the native runtime</li>
+<li>Calls the Rust/C/hardware implementation</li>
+<li>Returns the result to Kleis</li>
+</ol>
+<p>This enables:</p>
+<ul>
+<li><strong>Performance</strong>: Native BLAS for matrix operations</li>
+<li><strong>Hardware access</strong>: GPUs, network cards, sensors</li>
+<li><strong>System calls</strong>: File I/O, networking, threading</li>
+<li><strong>FFI</strong>: Calling existing libraries</li>
+</ul>
+<h3 id="the-vision-hardware-as-structures"><a class="header" href="#the-vision-hardware-as-structures">The Vision: Hardware as Structures</a></h3>
+<p>Imagine:</p>
+<pre><code class="language-kleis">structure NetworkInterface(N) {
+    operation send : Packet → Result((), Error)
+    operation receive : () → Result(Packet, Error)
+    
+    axiom delivery : ∀ p : Packet . 
+        connected → eventually(delivered(p))
+}
+
+implements NetworkInterface(EthernetCard) {
+    operation send = builtin_eth_send
+    operation receive = builtin_eth_receive
+}
+</code></pre>
+<p>The <strong>axioms</strong> define the contract. The <strong>builtins</strong> provide the implementation. Z3 can verify that higher-level protocols satisfy their specifications <em>given</em> the hardware axioms.</p>
+<p>This is how Kleis becomes a <strong>universal verification platform</strong> — not just for math, but for any system with verifiable properties.</p>
 <h2 id="verification-of-implementations"><a class="header" href="#verification-of-implementations">Verification of Implementations</a></h2>
 <p>Kleis + Z3 can verify that implementations satisfy axioms:</p>
 <pre><code class="language-kleis">structure Monoid(M) {
