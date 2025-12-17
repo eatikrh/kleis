@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-02c5cbba.js";
+            window.path_to_searchindex_js = "searchindex-cfdf7c75.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f10a7c19.js"></script>
@@ -1485,13 +1485,14 @@ axiom mul_zero : ∀(x : ℤ). mul(x, zero) = zero
 <h2 id="what-is-the-repl"><a class="header" href="#what-is-the-repl">What is the REPL?</a></h2>
 <p>The REPL (Read-Eval-Print Loop) is an interactive environment for experimenting with Kleis:</p>
 <pre><code class="language-bash">$ cargo run --bin repl
-Kleis REPL v0.7
-Type 'help' for commands, 'quit' to exit.
 
-kleis&gt;
+🧮 Kleis REPL v0.1.0
+   Type :help for commands, :quit to exit
+
+λ&gt;
 </code></pre>
 <h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
-<p>Enter expressions to evaluate them:</p>
+<p>Enter expressions to evaluate them symbolically:</p>
 <pre><code>λ&gt; 2 + 2
 2 + 2
 
@@ -1501,38 +1502,52 @@ times(5, 5)
 λ&gt; sin(π / 2)
 sin(divide(π, 2))
 </code></pre>
-<h2 id="defining-functions-1"><a class="header" href="#defining-functions-1">Defining Functions</a></h2>
-<p>The REPL prompt evaluates <strong>expressions</strong>, not declarations. To define functions, use <code>:load</code> with a <code>.kleis</code> file:</p>
-<pre><code>λ&gt; define square(x) = x * x
-❌ Parse error: Kleis parse error at position 7: Unexpected character: 's'
-</code></pre>
-<p>Instead, create a file <code>mymath.kleis</code>:</p>
-<pre><code class="language-kleis">define square(x) = x * x
-define compose(f, g, x) = f(g(x))
-</code></pre>
-<p>Then load it in the REPL:</p>
-<pre><code>λ&gt; :load mymath.kleis
-✅ Loaded: 2 functions, 0 structures, 0 data types, 0 type aliases
-
-λ&gt; square(7)
-times(7, 7)
-
-λ&gt; compose(square, square, 2)
-compose(square, square, 2)
-</code></pre>
 <blockquote>
-<p><strong>Note:</strong> The REPL performs symbolic evaluation. <code>square(7)</code> becomes <code>times(7, 7)</code> rather than computing <code>49</code>. This is by design - Kleis focuses on symbolic manipulation and verification, not numeric computation.</p>
+<p><strong>Note:</strong> The REPL performs <strong>symbolic evaluation</strong>, not numeric computation. Expressions are simplified symbolically, not calculated to numbers.</p>
 </blockquote>
-<h2 id="working-with-types"><a class="header" href="#working-with-types">Working with Types</a></h2>
-<p>Check types and use annotations:</p>
-<pre><code>λ&gt; type 42
-❌ Parse error: Kleis parse error at position 5: Unexpected character: '4'
+<h2 id="loading-files"><a class="header" href="#loading-files">Loading Files</a></h2>
+<p>The REPL prompt evaluates expressions. For definitions (<code>define</code>, <code>structure</code>, etc.), use <code>:load</code>:</p>
+<pre><code>λ&gt; :load examples/protocols/stop_and_wait.kleis
+✅ Loaded: 5 functions, 0 structures, 0 data types, 0 type aliases
+
+λ&gt; :env
+📋 Defined functions:
+  next_seq (seq) = ...
+  valid_ack (sent, ack) = ...
+  receiver_accepts (expected, received) = ...
+  sender_next_state (current_seq, ack_received) = ...
+  receiver_next_state (expected, received) = ...
+</code></pre>
+<p>More examples to load:</p>
+<pre><code>λ&gt; :load examples/business/order_to_cash.kleis
+✅ Loaded: 7 functions, 1 structures, 0 data types, 0 type aliases
+
+λ&gt; :load examples/control/lqg_controller.kleis
+✅ Loaded: 12 functions, 3 structures, 0 data types, 0 type aliases
+</code></pre>
+<h2 id="verification-with-z3-1"><a class="header" href="#verification-with-z3-1">Verification with Z3</a></h2>
+<p>Run verifications interactively with <code>:verify</code>:</p>
+<pre><code>λ&gt; :verify x + y = y + x
+✅ Valid
+
+λ&gt; :verify x &gt; 0
+❌ Invalid - Counterexample: x!2 -&gt; 0
+</code></pre>
+<h2 id="lambda-expressions"><a class="header" href="#lambda-expressions">Lambda Expressions</a></h2>
+<p>Lambda expressions work at the prompt:</p>
+<pre><code>λ&gt; λ x . x * 2
+λ x . times(x, 2)
+
+λ&gt; λ x y . x + y
+λ x y . plus(x, y)
+</code></pre>
+<h2 id="type-inference-1"><a class="header" href="#type-inference-1">Type Inference</a></h2>
+<p>Check types with <code>:type</code>:</p>
+<pre><code>λ&gt; :type 42
+📐 Type: Scalar
 
 λ&gt; :type sin
 📐 Type: α0
-
-λ&gt; let x : ℝ = 3.14 in x * 2
-times(3.14, 2)
 </code></pre>
 <h2 id="repl-commands"><a class="header" href="#repl-commands">REPL Commands</a></h2>
 <div class="table-wrapper">
@@ -1541,89 +1556,64 @@ times(3.14, 2)
 <tr><th>Command</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>:help</code> or <code>?</code></td><td>Show help</td></tr>
-<tr><td><code>:type &lt;expr&gt;</code></td><td>Show expression type</td></tr>
-<tr><td><code>:quit</code> or <code>q</code></td><td>Exit REPL</td></tr>
-<tr><td><code>:clear</code></td><td>Clear definitions</td></tr>
-<tr><td><code>:load &lt;file&gt;</code></td><td>Load Kleis file</td></tr>
-<tr><td><code>:env</code></td><td>Show current environment</td></tr>
+<tr><td><code>:help</code></td><td>Show all commands</td></tr>
+<tr><td><code>:load &lt;file&gt;</code></td><td>Load a .kleis file</td></tr>
+<tr><td><code>:env</code></td><td>Show defined functions</td></tr>
+<tr><td><code>:verify &lt;expr&gt;</code></td><td>Verify with Z3</td></tr>
+<tr><td><code>:type &lt;expr&gt;</code></td><td>Show inferred type</td></tr>
+<tr><td><code>:ast &lt;expr&gt;</code></td><td>Show parsed AST</td></tr>
+<tr><td><code>:symbols</code></td><td>Unicode math symbols palette</td></tr>
+<tr><td><code>:syntax</code></td><td>Complete syntax reference</td></tr>
+<tr><td><code>:examples</code></td><td>Show example expressions</td></tr>
+<tr><td><code>:quit</code></td><td>Exit REPL</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="loading-files"><a class="header" href="#loading-files">Loading Files</a></h2>
-<p>Load Kleis source files:</p>
-<pre><code>λ&gt; :load stdlib/prelude.kleis
-✅ Loaded: 4 functions, 15 structures, 0 data types, 0 type aliases
-
-λ&gt; :load examples/authorization/zanzibar.kleis
-✅ Loaded: 13 functions, 0 structures, 0 data types, 0 type aliases
+<h2 id="multi-line-input"><a class="header" href="#multi-line-input">Multi-line Input</a></h2>
+<p>For complex expressions, end lines with <code>\</code> or use block mode:</p>
+<pre><code>λ&gt; :verify ∀(a : R, b : R). \
+   (a + b) * (a - b) = a * a - b * b
+✅ Valid
 </code></pre>
-<h2 id="verification-in-repl"><a class="header" href="#verification-in-repl">Verification in REPL</a></h2>
-<p>Run verifications interactively:</p>
-<pre><code>λ&gt; :verify x + y = y + x
-DEBUG: Found dependencies: {}
+<p>Or use <code>:{ ... :}</code> for blocks:</p>
+<pre><code>λ&gt; :{
+   :verify ∀(x : R, y : R, z : R).
+     (x + y) + z = x + (y + z)
+   :}
+✅ Valid
+</code></pre>
+<h2 id="example-session"><a class="header" href="#example-session">Example Session</a></h2>
+<pre><code> :load examples/authorization/zanzibar.kleis
+✅ Loaded: 13 functions, 0 structures, 0 data types, 0 type aliases
+
+λ&gt; :env
+📋 Defined functions:
+  can_delete (perm) = ...
+  effective_permission (direct, group) = ...
+  inherited_permission (child_perm, parent_perm) = ...
+  has_at_least (user_perm, required_perm) = ...
+  can_share (perm) = ...
+  doc_access (doc_perm, folder_perm, action) = ...
+  multi_group_permission (perm1, perm2, perm3) = ...
+  can_read (perm) = ...
+  can_comment (perm) = ...
+  can_transfer_ownership (perm) = ...
+  can_edit (perm) = ...
+  is_allowed (perm, action) = ...
+  can_grant (granter_perm, grantee_perm) = ...
+
+λ&gt; :verify ∀(x : ℝ). x * x ≥ 0
 ✅ Valid
 
-λ&gt; :verify ∀ n : ℕ . n ≥ 0
-DEBUG: Found dependencies: {}
-❌ Invalid - Counterexample: n!2 -&gt; (- 1)
-
-λ&gt; :verify x &gt; 0
-DEBUG: Found dependencies: {}
-❌ Invalid - Counterexample: x!3 -&gt; 0
-
-</code></pre>
-<h2 id="multi-line-input"><a class="header" href="#multi-line-input">Multi-line Input</a></h2>
-<p>For complex expressions, use continuation:</p>
-<pre><code>&lt;multiline example&gt;
-</code></pre>
-<h2 id="lambda-expressions-in-repl"><a class="header" href="#lambda-expressions-in-repl">Lambda Expressions in REPL</a></h2>
-<p>Lambda expressions work in the REPL:</p>
-<pre><code>λ&gt; λ x . x * 2
-λ x . times(x, 2)
-
-λ&gt; (λ x . x + 1)(5)
-❌ Parse error: Kleis parse error at position 13: Unexpected character: '('
-
-λ&gt; ddefine double = λ x . x * 2
-❌ Parse error: Kleis parse error at position 7: Unexpected character: 'd'
-
-λ&gt; double(21)
-double(21)
-</code></pre>
-<p>You can use both the <code>λ</code> symbol and the <code>lambda</code> keyword.</p>
-<h2 id="example-session"><a class="header" href="#example-session">Example Session</a></h2>
-<pre><code>λ&gt; // Define a structure
-❌ Parse error: Kleis parse error at position 21: Expected expression
-λ&gt; structure Point { x : ℝ, y : ℝ }
-❌ Parse error: Kleis parse error at position 10: Unexpected character: 'P'
-
-
-λ&gt; // Create a point
-❌ Parse error: Kleis parse error at position 17: Expected expression
-λ&gt; let p = Point { x = 3, y = 4 } in \
-   sqrt(p.x^2 + p.y^2)
-❌ Parse error: Kleis parse error at position 14: Expected keyword 'in'
-
-λ&gt; // Verify properties
-❌ Parse error: Kleis parse error at position 20: Expected expression
-λ&gt;  :verify ∀ a : ℝ . ∀ b : ℝ . (a + b)^2 = a^2 + 2*a*b + b^2
-DEBUG: Found dependencies: {}
-❌ Invalid - Counterexample: b!5 -&gt; 0.0
-a!4 -&gt; 0.0
-power -&gt; {
-  (- 1)
-}
-
 λ&gt; :quit
-Goodbye!
+Goodbye! 👋
 </code></pre>
-<h2 id="tips-and-tricks"><a class="header" href="#tips-and-tricks">Tips and Tricks</a></h2>
+<h2 id="tips"><a class="header" href="#tips">Tips</a></h2>
 <ol>
-<li><strong>Use tab completion</strong> for function names</li>
-<li><strong>Arrow keys</strong> navigate history</li>
-<li><strong>Ctrl+C</strong> cancels current input</li>
-<li><strong>Ctrl+D</strong> exits (like <code>:quit</code>)</li>
+<li>Press <strong>Ctrl+C</strong> to cancel input</li>
+<li>Press <strong>Ctrl+D</strong> or type <code>:quit</code> to exit</li>
+<li>Use <code>:symbols</code> to copy-paste Unicode math symbols</li>
+<li>Use <code>:help &lt;topic&gt;</code> for detailed help (e.g., <code>:help quantifiers</code>)</li>
 </ol>
 <h2 id="whats-next-11"><a class="header" href="#whats-next-11">What’s Next?</a></h2>
 <p>See practical applications!</p>
@@ -1944,7 +1934,7 @@ symbolicConstant ::= "π" | "e" | "i" | "ℏ" | "c" | "φ" | "∞" | "∅"
 
 placeholder ::= "□"
 </code></pre>
-<h2 id="lambda-expressions"><a class="header" href="#lambda-expressions">Lambda Expressions</a></h2>
+<h2 id="lambda-expressions-1"><a class="header" href="#lambda-expressions-1">Lambda Expressions</a></h2>
 <pre><code class="language-ebnf">lambda ::= "λ" params "." expression
          | "lambda" params "." expression
 </code></pre>
