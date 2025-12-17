@@ -663,7 +663,27 @@ fn render_operation(
     node_id: &str,
     node_id_to_uuid: &HashMap<String, String>,
 ) -> String {
-    // FIRST: Pre-render ALL children as EditorNode (preserves metadata!)
+    // Check for special operation types first
+    let is_tensor = op.kind.as_deref() == Some("tensor") || op.name == "tensor";
+    let is_matrix_constructor = matches!(
+        op.name.as_str(),
+        "Matrix" | "PMatrix" | "VMatrix" | "BMatrix"
+    );
+    let is_fixed_matrix = op.name.starts_with("matrix")
+        || op.name.starts_with("pmatrix")
+        || op.name.starts_with("vmatrix");
+
+    // For matrix constructors, extract dimensions first
+    if is_matrix_constructor {
+        return render_matrix_constructor(op, ctx, target, node_id, node_id_to_uuid);
+    }
+
+    // For fixed-size matrices (matrix2x2, pmatrix3x3, etc.)
+    if is_fixed_matrix {
+        return render_fixed_matrix(op, ctx, target, node_id, node_id_to_uuid);
+    }
+
+    // Pre-render ALL children as EditorNode (preserves metadata!)
     let rendered_args: Vec<String> = op
         .args
         .iter()
@@ -674,9 +694,7 @@ fn render_operation(
         })
         .collect();
 
-    // Dispatch based on kind or name
-    let is_tensor = op.kind.as_deref() == Some("tensor") || op.name == "tensor";
-
+    // Dispatch based on kind
     if is_tensor {
         return render_tensor(op, &rendered_args, target);
     }
@@ -799,6 +817,251 @@ fn render_tensor(op: &OperationData, rendered_args: &[String], target: &RenderTa
                 .collect();
             format!("{}({})", symbol, kleis_indices.join(", "))
         }
+    }
+}
+
+// =============================================================================
+// Matrix Rendering
+// =============================================================================
+
+/// Render Matrix(rows, cols, [elements...]) or Matrix(rows, cols, a, b, c, d)
+fn render_matrix_constructor(
+    op: &OperationData,
+    ctx: &EditorRenderContext,
+    target: &RenderTarget,
+    node_id: &str,
+    node_id_to_uuid: &HashMap<String, String>,
+) -> String {
+    // Extract dimensions from first two args
+    let (rows, cols) = if op.args.len() >= 2 {
+        let rows = extract_const_number(&op.args[0]).unwrap_or(2);
+        let cols = extract_const_number(&op.args[1]).unwrap_or(2);
+        (rows, cols)
+    } else {
+        (2, 2)
+    };
+
+    // Get matrix elements - either from List or remaining args
+    let elements: Vec<&EditorNode> = if op.args.len() == 3 {
+        // NEW FORMAT: Matrix(2, 2, [a, b, c, d])
+        if let EditorNode::List { list } = &op.args[2] {
+            list.iter().collect()
+        } else {
+            // Single element in 3rd position
+            vec![&op.args[2]]
+        }
+    } else if op.args.len() > 2 {
+        // OLD FORMAT: Matrix(2, 2, a, b, c, d)
+        op.args[2..].iter().collect()
+    } else {
+        vec![]
+    };
+
+    // Pre-render all elements
+    let rendered_elements: Vec<String> = elements
+        .iter()
+        .enumerate()
+        .map(|(i, elem)| {
+            let child_id = if op.args.len() == 3 {
+                // NEW FORMAT: child IDs go under the List at args[2]
+                format!("{}.2.{}", node_id, i)
+            } else {
+                // OLD FORMAT: child IDs start at args[2+i]
+                format!("{}.{}", node_id, i + 2)
+            };
+            let rendered = render_internal(elem, ctx, target, &child_id, node_id_to_uuid);
+
+            // Wrap with UUID for Typst
+            if matches!(target, RenderTarget::Typst) {
+                if let Some(uuid) = node_id_to_uuid.get(&child_id) {
+                    return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+                }
+            }
+            rendered
+        })
+        .collect();
+
+    // Build matrix content
+    render_matrix_content(&op.name, rows, cols, &rendered_elements, target)
+}
+
+/// Render fixed-size matrix (matrix2x2, pmatrix3x3, vmatrix2x2, etc.)
+fn render_fixed_matrix(
+    op: &OperationData,
+    ctx: &EditorRenderContext,
+    target: &RenderTarget,
+    node_id: &str,
+    node_id_to_uuid: &HashMap<String, String>,
+) -> String {
+    // Parse dimensions from name (e.g., "matrix2x2" -> 2, 2)
+    let (rows, cols) = parse_matrix_dimensions(&op.name).unwrap_or((2, 2));
+
+    // Pre-render all elements
+    let rendered_elements: Vec<String> = op
+        .args
+        .iter()
+        .enumerate()
+        .map(|(i, elem)| {
+            let child_id = format!("{}.{}", node_id, i);
+            let rendered = render_internal(elem, ctx, target, &child_id, node_id_to_uuid);
+
+            // Wrap with UUID for Typst
+            if matches!(target, RenderTarget::Typst) {
+                if let Some(uuid) = node_id_to_uuid.get(&child_id) {
+                    return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+                }
+            }
+            rendered
+        })
+        .collect();
+
+    // Determine matrix type from name prefix
+    let matrix_type = if op.name.starts_with("pmatrix") {
+        "PMatrix"
+    } else if op.name.starts_with("vmatrix") {
+        "VMatrix"
+    } else {
+        "Matrix"
+    };
+
+    render_matrix_content(matrix_type, rows, cols, &rendered_elements, target)
+}
+
+/// Render matrix content for all targets
+fn render_matrix_content(
+    matrix_type: &str,
+    rows: usize,
+    cols: usize,
+    elements: &[String],
+    target: &RenderTarget,
+) -> String {
+    match target {
+        RenderTarget::LaTeX => {
+            let env = match matrix_type {
+                "PMatrix" | "pmatrix" => "pmatrix",
+                "VMatrix" | "vmatrix" => "vmatrix",
+                "BMatrix" | "bmatrix" => "bmatrix",
+                _ => "matrix",
+            };
+
+            let mut content = String::new();
+            for r in 0..rows {
+                for c in 0..cols {
+                    let idx = r * cols + c;
+                    if let Some(elem) = elements.get(idx) {
+                        content.push_str(elem);
+                    }
+                    if c < cols - 1 {
+                        content.push_str(" & ");
+                    }
+                }
+                if r < rows - 1 {
+                    content.push_str(" \\\\ ");
+                }
+            }
+            format!("\\begin{{{}}} {} \\end{{{}}}", env, content, env)
+        }
+
+        RenderTarget::Typst => {
+            let (left_delim, right_delim) = match matrix_type {
+                "PMatrix" | "pmatrix" => ("(", ")"),
+                "VMatrix" | "vmatrix" => ("|", "|"),
+                "BMatrix" | "bmatrix" => ("[", "]"),
+                _ => ("(", ")"),
+            };
+
+            let mut content = String::new();
+            for r in 0..rows {
+                for c in 0..cols {
+                    let idx = r * cols + c;
+                    if let Some(elem) = elements.get(idx) {
+                        content.push_str(elem);
+                    }
+                    if c < cols - 1 {
+                        content.push_str(", ");
+                    }
+                }
+                if r < rows - 1 {
+                    content.push_str("; ");
+                }
+            }
+            format!(
+                "mat(delim: \"{}{}\", {})",
+                left_delim, right_delim, content
+            )
+        }
+
+        RenderTarget::HTML => {
+            let mut content = String::from("<table class=\"matrix\">");
+            for r in 0..rows {
+                content.push_str("<tr>");
+                for c in 0..cols {
+                    let idx = r * cols + c;
+                    content.push_str("<td>");
+                    if let Some(elem) = elements.get(idx) {
+                        content.push_str(elem);
+                    }
+                    content.push_str("</td>");
+                }
+                content.push_str("</tr>");
+            }
+            content.push_str("</table>");
+            content
+        }
+
+        RenderTarget::Unicode | RenderTarget::Kleis => {
+            let (left_delim, right_delim) = match matrix_type {
+                "PMatrix" | "pmatrix" => ("(", ")"),
+                "VMatrix" | "vmatrix" => ("|", "|"),
+                "BMatrix" | "bmatrix" => ("[", "]"),
+                _ => ("[", "]"),
+            };
+
+            let mut result = String::from(left_delim);
+            for r in 0..rows {
+                if r > 0 {
+                    result.push_str("; ");
+                }
+                for c in 0..cols {
+                    let idx = r * cols + c;
+                    if c > 0 {
+                        result.push_str(", ");
+                    }
+                    if let Some(elem) = elements.get(idx) {
+                        result.push_str(elem);
+                    }
+                }
+            }
+            result.push_str(right_delim);
+            result
+        }
+    }
+}
+
+/// Extract a number from a Const EditorNode
+fn extract_const_number(node: &EditorNode) -> Option<usize> {
+    match node {
+        EditorNode::Const { value } => value.parse().ok(),
+        _ => None,
+    }
+}
+
+/// Parse matrix dimensions from operation name (e.g., "matrix2x3" -> (2, 3))
+fn parse_matrix_dimensions(name: &str) -> Option<(usize, usize)> {
+    // Strip prefix (matrix, pmatrix, vmatrix)
+    let suffix = name
+        .strip_prefix("matrix")
+        .or_else(|| name.strip_prefix("pmatrix"))
+        .or_else(|| name.strip_prefix("vmatrix"))?;
+
+    // Parse NxM format
+    let parts: Vec<&str> = suffix.split('x').collect();
+    if parts.len() == 2 {
+        let rows = parts[0].parse().ok()?;
+        let cols = parts[1].parse().ok()?;
+        Some((rows, cols))
+    } else {
+        None
     }
 }
 
@@ -996,5 +1259,109 @@ mod tests {
         // Should render as "a + b" or similar based on template
         assert!(result.contains("a"));
         assert!(result.contains("b"));
+    }
+
+    #[test]
+    fn test_render_matrix_2x2_latex() {
+        let ctx = EditorRenderContext::new();
+        let node = EditorNode::operation(
+            "matrix2x2",
+            vec![
+                EditorNode::object("a"),
+                EditorNode::object("b"),
+                EditorNode::object("c"),
+                EditorNode::object("d"),
+            ],
+        );
+        let result = render(&node, &ctx, &RenderTarget::LaTeX);
+        assert!(result.contains("\\begin{matrix}"));
+        assert!(result.contains("\\end{matrix}"));
+        assert!(result.contains("a"));
+        assert!(result.contains("d"));
+    }
+
+    #[test]
+    fn test_render_pmatrix_2x2_latex() {
+        let ctx = EditorRenderContext::new();
+        let node = EditorNode::operation(
+            "pmatrix2x2",
+            vec![
+                EditorNode::constant("1"),
+                EditorNode::constant("0"),
+                EditorNode::constant("0"),
+                EditorNode::constant("1"),
+            ],
+        );
+        let result = render(&node, &ctx, &RenderTarget::LaTeX);
+        assert!(result.contains("\\begin{pmatrix}"));
+        assert!(result.contains("\\end{pmatrix}"));
+    }
+
+    #[test]
+    fn test_render_matrix_constructor() {
+        let ctx = EditorRenderContext::new();
+        // Matrix(2, 2, [a, b, c, d])
+        let node = EditorNode::Operation {
+            operation: OperationData {
+                name: "Matrix".to_string(),
+                args: vec![
+                    EditorNode::constant("2"),
+                    EditorNode::constant("2"),
+                    EditorNode::list(vec![
+                        EditorNode::object("a"),
+                        EditorNode::object("b"),
+                        EditorNode::object("c"),
+                        EditorNode::object("d"),
+                    ]),
+                ],
+                kind: None,
+                metadata: None,
+            },
+        };
+        let result = render(&node, &ctx, &RenderTarget::LaTeX);
+        assert!(result.contains("\\begin{matrix}"));
+        assert!(result.contains("a"));
+        assert!(result.contains("d"));
+    }
+
+    #[test]
+    fn test_render_fraction_latex() {
+        let ctx = EditorRenderContext::new();
+        let node = EditorNode::operation(
+            "scalar_divide",
+            vec![EditorNode::object("a"), EditorNode::object("b")],
+        );
+        let result = render(&node, &ctx, &RenderTarget::LaTeX);
+        assert!(result.contains("\\frac"));
+        assert!(result.contains("a"));
+        assert!(result.contains("b"));
+    }
+
+    #[test]
+    fn test_render_power_latex() {
+        let ctx = EditorRenderContext::new();
+        let node = EditorNode::operation(
+            "power",
+            vec![EditorNode::object("x"), EditorNode::constant("2")],
+        );
+        let result = render(&node, &ctx, &RenderTarget::LaTeX);
+        // Template uses {{exponent}} for LaTeX brace escaping
+        assert!(result.contains("x^"));
+        assert!(result.contains("2"));
+    }
+
+    #[test]
+    fn test_nested_operations() {
+        let ctx = EditorRenderContext::new();
+        // (a + b) * c
+        let inner = EditorNode::operation(
+            "plus",
+            vec![EditorNode::object("a"), EditorNode::object("b")],
+        );
+        let outer = EditorNode::operation("scalar_multiply", vec![inner, EditorNode::object("c")]);
+        let result = render(&outer, &ctx, &RenderTarget::Unicode);
+        assert!(result.contains("a"));
+        assert!(result.contains("b"));
+        assert!(result.contains("c"));
     }
 }
