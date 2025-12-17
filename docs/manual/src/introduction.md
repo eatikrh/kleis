@@ -62,4 +62,4 @@ Ready? Let's dive in!
 
 ---
 
-*This guide is inspired by [Learn You a Haskell](http://learnyouahaskell.com/) and [Learn You Some Erlang](https://learnyousomeerlang.com/).*
+*This guide is inspired by [Learn You a Haskell](https://learnyouahaskell.github.io/) and [Learn You Some Erlang](https://learnyousomeerlang.com/).*
