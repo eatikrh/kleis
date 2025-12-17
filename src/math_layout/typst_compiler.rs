@@ -98,7 +98,7 @@ impl World for MinimalWorld {
 // FEATURE FLAG: Enable/disable calibration
 // Set to false to skip calibration and use layout boxes as-is
 // Set to true to use calibration (current behavior)
-const USE_CALIBRATION: bool = true;
+const USE_CALIBRATION: bool = false;
 
 /// Compile with semantic bounding boxes using two-pass rendering
 ///
