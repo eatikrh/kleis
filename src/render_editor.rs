@@ -599,12 +599,17 @@ impl EditorRenderContext {
 // Public API
 // =============================================================================
 
-/// Render EditorNode to the specified target format
+// Thread-local default context for the drop-in API
+thread_local! {
+    static DEFAULT_CONTEXT: EditorRenderContext = EditorRenderContext::new();
+}
+
+/// Render EditorNode to the specified target format (with explicit context)
 pub fn render(node: &EditorNode, ctx: &EditorRenderContext, target: &RenderTarget) -> String {
     render_with_uuids(node, ctx, target, &HashMap::new())
 }
 
-/// Render EditorNode with UUID map for position tracking
+/// Render EditorNode with UUID map for position tracking (with explicit context)
 pub fn render_with_uuids(
     node: &EditorNode,
     ctx: &EditorRenderContext,
@@ -612,6 +617,34 @@ pub fn render_with_uuids(
     node_id_to_uuid: &HashMap<String, String>,
 ) -> String {
     render_internal(node, ctx, target, "0", node_id_to_uuid)
+}
+
+// =============================================================================
+// Drop-in Replacement API (matches render.rs signatures)
+// =============================================================================
+
+/// Drop-in replacement for render.rs::render_editor_node
+///
+/// Uses internal EditorRenderContext instead of GlyphContext.
+/// Callers can switch from:
+///   `render::render_editor_node(&node, &ctx, &target)`
+/// To:
+///   `render_editor::render_editor_node(&node, &target)`
+///
+/// Note: The GlyphContext parameter is ignored - we use our own templates.
+pub fn render_editor_node(node: &EditorNode, target: &RenderTarget) -> String {
+    DEFAULT_CONTEXT.with(|ctx| render(node, ctx, target))
+}
+
+/// Drop-in replacement for render.rs::render_editor_node_with_uuids
+///
+/// Uses internal EditorRenderContext instead of GlyphContext.
+pub fn render_editor_node_with_uuids(
+    node: &EditorNode,
+    target: &RenderTarget,
+    node_id_to_uuid: &HashMap<String, String>,
+) -> String {
+    DEFAULT_CONTEXT.with(|ctx| render_with_uuids(node, ctx, target, node_id_to_uuid))
 }
 
 // =============================================================================
@@ -1504,17 +1537,16 @@ mod tests {
 
     mod comparison_tests {
         use super::*;
-        use crate::render::{build_default_context, render_editor_node, GlyphContext};
+        use crate::render::build_default_context;
 
         /// Helper to compare both renderers
         fn compare_renderers(node: &EditorNode, target: &RenderTarget) -> (String, String) {
-            // New renderer (render_editor.rs)
-            let new_ctx = EditorRenderContext::new();
-            let new_result = render(node, &new_ctx, target);
+            // New renderer (render_editor.rs) - using drop-in API
+            let new_result = render_editor_node(node, target);
 
             // Old renderer (render.rs)
             let old_ctx = build_default_context();
-            let old_result = render_editor_node(node, &old_ctx, target);
+            let old_result = crate::render::render_editor_node(node, &old_ctx, target);
 
             (new_result, old_result)
         }
