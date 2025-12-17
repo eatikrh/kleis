@@ -232,11 +232,11 @@ impl EditorRenderContext {
             "{base}({upper}, -{lower})",
         );
 
-        // Trig functions
+        // Trig functions (LaTeX uses \! for small space before parens)
         self.add_template(
             "sin",
             "sin({arg})",
-            "\\sin\\left({arg}\\right)",
+            "\\sin\\!({arg})",
             "sin({arg})",
             "sin({arg})",
             "sin({arg})",
@@ -244,7 +244,7 @@ impl EditorRenderContext {
         self.add_template(
             "cos",
             "cos({arg})",
-            "\\cos\\left({arg}\\right)",
+            "\\cos\\!({arg})",
             "cos({arg})",
             "cos({arg})",
             "cos({arg})",
@@ -252,17 +252,17 @@ impl EditorRenderContext {
         self.add_template(
             "tan",
             "tan({arg})",
-            "\\tan\\left({arg}\\right)",
+            "\\tan\\!({arg})",
             "tan({arg})",
             "tan({arg})",
             "tan({arg})",
         );
 
-        // Calculus
+        // Calculus (LaTeX sqrt: {{arg}} contains {arg} for substitution)
         self.add_template(
             "sqrt",
             "√{arg}",
-            "\\sqrt{{{arg}}}",
+            "\\sqrt{{arg}}",
             "√{arg}",
             "sqrt({arg})",
             "sqrt({arg})",
@@ -1496,6 +1496,131 @@ fn apply_template_substitutions(
 mod tests {
     use super::*;
     use crate::editor_ast::EditorNode;
+
+    // -------------------------------------------------------------------------
+    // Comparison tests: render_editor.rs vs render.rs
+    // These verify our new renderer matches the original for common cases
+    // -------------------------------------------------------------------------
+
+    mod comparison_tests {
+        use super::*;
+        use crate::render::{build_default_context, render_editor_node, GlyphContext};
+
+        /// Helper to compare both renderers
+        fn compare_renderers(node: &EditorNode, target: &RenderTarget) -> (String, String) {
+            // New renderer (render_editor.rs)
+            let new_ctx = EditorRenderContext::new();
+            let new_result = render(node, &new_ctx, target);
+
+            // Old renderer (render.rs)
+            let old_ctx = build_default_context();
+            let old_result = render_editor_node(node, &old_ctx, target);
+
+            (new_result, old_result)
+        }
+
+        #[test]
+        fn compare_simple_object() {
+            let node = EditorNode::object("x");
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Simple object should match");
+        }
+
+        #[test]
+        fn compare_greek_letter() {
+            let node = EditorNode::object("α");
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Greek letter should match");
+        }
+
+        #[test]
+        fn compare_plus_operation() {
+            let node = EditorNode::operation(
+                "plus",
+                vec![EditorNode::object("a"), EditorNode::object("b")],
+            );
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Plus operation should match");
+        }
+
+        #[test]
+        fn compare_equals_operation() {
+            let node = EditorNode::operation(
+                "equals",
+                vec![EditorNode::object("x"), EditorNode::constant("5")],
+            );
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Equals operation should match");
+        }
+
+        #[test]
+        fn compare_tensor_with_mixed_indices() {
+            let tensor = EditorNode::tensor(
+                "R",
+                vec![
+                    EditorNode::object("ρ"),
+                    EditorNode::object("σ"),
+                    EditorNode::object("μ"),
+                    EditorNode::object("ν"),
+                ],
+                vec!["up", "down", "down", "down"],
+            );
+            let (new, old) = compare_renderers(&tensor, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Tensor with mixed indices should match");
+        }
+
+        #[test]
+        fn compare_tensor_inside_equals() {
+            // This is the BUG CASE - old renderer loses indexStructure
+            // New renderer should preserve it
+            let tensor = EditorNode::tensor(
+                "R",
+                vec![
+                    EditorNode::object("μ"),
+                    EditorNode::object("ν"),
+                    EditorNode::object("ρ"),
+                    EditorNode::object("σ"),
+                ],
+                vec!["up", "down", "down", "down"],
+            );
+            let equals =
+                EditorNode::operation("equals", vec![EditorNode::placeholder(0, None), tensor]);
+
+            let new_ctx = EditorRenderContext::new();
+            let new_result = render(&equals, &new_ctx, &RenderTarget::LaTeX);
+
+            // New renderer should have proper upper/lower indices
+            assert!(
+                new_result.contains("R^"),
+                "New renderer should preserve upper index"
+            );
+            assert!(
+                new_result.contains("_"),
+                "New renderer should preserve lower indices"
+            );
+
+            // Note: We intentionally don't compare with old renderer here
+            // because the old renderer has the bug we're fixing!
+        }
+
+        #[test]
+        fn compare_sqrt() {
+            let node = EditorNode::operation("sqrt", vec![EditorNode::object("x")]);
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Sqrt should match");
+        }
+
+        #[test]
+        fn compare_sin() {
+            let node = EditorNode::operation("sin", vec![EditorNode::object("x")]);
+            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "Sin should match");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Unit tests for render_editor.rs
+    // -------------------------------------------------------------------------
 
     #[test]
     fn test_render_simple_object() {
