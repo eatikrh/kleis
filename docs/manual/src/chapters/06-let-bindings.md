@@ -6,7 +6,7 @@ Let bindings introduce local variables with limited scope. They're essential for
 
 ```kleis
 let x = 5 in x * x
--- Result: 25
+// Result: 25
 ```
 
 ## Basic Syntax
@@ -20,9 +20,9 @@ The variable `name` is only visible within `body`:
 ```kleis
 let radius = 10 in
     π * radius^2
--- Result: 314.159...
+// Result: 314.159...
 
--- 'radius' is not visible here!
+// 'radius' is not visible here!
 ```
 
 ## With Type Annotations
@@ -44,7 +44,7 @@ let x = 5 in
 let y = 3 in
 let z = x + y in
     x * y * z
--- Result: 5 * 3 * 8 = 120
+// Result: 5 * 3 * 8 = 120
 ```
 
 ## Shadowing
@@ -56,7 +56,7 @@ let x = 1 in
 let x = x + 1 in
 let x = x * 2 in
     x
--- Result: 4  (not 1!)
+// Result: 4  (not 1!)
 ```
 
 Each `let` creates a new scope where `x` is rebound.
@@ -67,7 +67,7 @@ In Kleis, `let x = e in body` is equivalent to substituting `e` for `x` in `body
 
 ```kleis
 let x = 5 in x + x
--- is the same as:
+// is the same as:
 5 + 5
 ```
 
@@ -111,10 +111,10 @@ define schwarzschild_metric(r : ℝ, M : ℝ) : ℝ =
 | Visible everywhere | Visible only in body |
 
 ```kleis
--- Global constant
+// Global constant
 define pi = 3.14159
 
--- Local temporary
+// Local temporary
 let two_pi = 2 * pi in
     two_pi * radius
 ```

@@ -181,10 +181,12 @@ operation_impl ::= 'operation' identifier parameters? '=' expression
 ## Comments
 
 ```ebnf
-line_comment ::= '--' [^\n]*
+line_comment ::= '//' [^\n]*
 
-block_comment ::= '{-' .* '-}'
+block_comment ::= '/*' .* '*/'
 ```
+
+**Note:** Kleis uses C-style comments (`//` and `/* */`), not Haskell-style (`--` and `{- -}`).
 
 ## Unicode Equivalents
 

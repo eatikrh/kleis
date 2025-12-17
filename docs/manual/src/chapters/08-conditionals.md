@@ -26,7 +26,7 @@ In Kleis, `if-then-else` is an expression that returns a value:
 let result = if x > 0 then x else -x in
     result * 2
 
--- Both branches must have compatible types!
+// Both branches must have compatible types!
 if True then 42 else "hello"  // ❌ Type error!
 ```
 
@@ -51,13 +51,13 @@ define grade(score : ℕ) : String =
 Pattern matching with guards is often cleaner:
 
 ```kleis
--- With if-then-else
+// With if-then-else
 define classify(n : ℤ) : String =
     if n < 0 then "negative"
     else if n = 0 then "zero"
     else "positive"
 
--- With pattern matching and guards
+// With pattern matching and guards
 define classify(n : ℤ) : String =
     match n {
         x if x < 0 => "negative"
@@ -71,17 +71,17 @@ define classify(n : ℤ) : String =
 Mathematicians love piecewise definitions:
 
 ```kleis
--- Absolute value
+// Absolute value
 define abs(x : ℝ) : ℝ =
     if x ≥ 0 then x else -x
 
--- Heaviside step function
+// Heaviside step function
 define heaviside(x : ℝ) : ℝ =
     if x < 0 then 0
     else if x = 0 then 0.5
     else 1
 
--- Piecewise polynomial
+// Piecewise polynomial
 define f(x : ℝ) : ℝ =
     if x < 0 then x^2
     else if x < 1 then x
@@ -105,7 +105,7 @@ else "on an axis"
 Kleis uses short-circuit evaluation for `∧` and `∨`:
 
 ```kleis
--- If x = 0, division is never evaluated
+// If x = 0, division is never evaluated
 if x ≠ 0 ∧ y/x > 1 then "big ratio" else "safe"
 ```
 

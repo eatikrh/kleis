@@ -21,7 +21,7 @@ implements Addable(ℤ) {
 ## Full Example: Complex Numbers
 
 ```kleis
--- Declare the structure
+// Declare the structure
 structure Complex {
     field re : ℝ
     field im : ℝ
@@ -32,7 +32,7 @@ structure Complex {
     operation mag : ℝ
 }
 
--- Implement the operations
+// Implement the operations
 implements Complex {
     operation add(z, w) = Complex {
         re = z.re + w.re,
@@ -83,7 +83,7 @@ structure Orderable(T) {
     operation compare : T × T → Ordering
 }
 
--- Natural ordering
+// Natural ordering
 implements Orderable(ℤ) {
     operation compare(x, y) =
         if x < y then LT
@@ -91,7 +91,7 @@ implements Orderable(ℤ) {
         else EQ
 }
 
--- Reverse ordering (for max-heaps, etc.)
+// Reverse ordering (for max-heaps, etc.)
 implements Orderable(ℤ) as ReverseOrder {
     operation compare(x, y) =
         if x > y then LT
@@ -114,7 +114,7 @@ structure Group(G) extends Monoid(G) {
     operation inv : G → G
 }
 
--- Must implement both Monoid and Group operations
+// Must implement both Monoid and Group operations
 implements Group(ℤ) {
     operation e = 0
     operation mul(x, y) = x + y
@@ -189,10 +189,10 @@ implements Monoid(String) {
     operation mul(s1, s2) = concat(s1, s2)
 }
 
--- Kleis can verify:
--- 1. concat("", s) = s for all s ✓
--- 2. concat(s, "") = s for all s ✓
--- 3. concat(concat(a, b), c) = concat(a, concat(b, c)) ✓
+// Kleis can verify:
+// 1. concat("", s) = s for all s ✓
+// 2. concat(s, "") = s for all s ✓
+// 3. concat(concat(a, b), c) = concat(a, concat(b, c)) ✓
 ```
 
 ## What's Next?

@@ -69,7 +69,7 @@ structure Matrix(m : ℕ, n : ℕ, T) {
         transpose(transpose(A)) = A
 }
 
--- Square matrices have more operations
+// Square matrices have more operations
 structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     operation det : T
     operation trace : T
@@ -169,7 +169,7 @@ structure VectorSpace(V, F) where F : Field {
 Many mathematical structures are defined "over" a base structure. A vector space is defined over a field, a module over a ring:
 
 ```kleis
--- Vector space over a field
+// Vector space over a field
 structure VectorSpace(V) over Field(F) {
     operation (+) : V × V → V
     operation (·) : F × V → V
@@ -179,13 +179,13 @@ structure VectorSpace(V) over Field(F) {
         a · (u + v) = (a · u) + (a · v)
 }
 
--- Module over a ring (generalization of vector space)
+// Module over a ring (generalization of vector space)
 structure Module(M) over Ring(R) {
     operation (+) : M × M → M
     operation (·) : R × M → M
 }
 
--- Algebra over a ring
+// Algebra over a ring
 structure Algebra(A) over Ring(R) {
     operation (+) : A × A → A
     operation (·) : R × A → A

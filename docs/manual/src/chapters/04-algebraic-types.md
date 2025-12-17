@@ -12,13 +12,13 @@ Algebraic Data Types (ADTs) let you define custom data structures by combining s
 A product type combines multiple values:
 
 ```kleis
--- A point has an x AND a y
+// A point has an x AND a y
 structure Point {
     x : ℝ
     y : ℝ
 }
 
--- A person has a name AND an age
+// A person has a name AND an age
 structure Person {
     name : String
     age : ℕ
@@ -30,20 +30,20 @@ structure Person {
 A sum type represents alternatives:
 
 ```kleis
--- A shape is a Circle OR a Rectangle OR a Triangle
+// A shape is a Circle OR a Rectangle OR a Triangle
 enum Shape {
     Circle(radius : ℝ)
     Rectangle(width : ℝ, height : ℝ)
     Triangle(a : ℝ, b : ℝ, c : ℝ)
 }
 
--- An optional value is Some(value) OR None
+// An optional value is Some(value) OR None
 enum Option(T) {
     Some(value : T)
     None
 }
 
--- A result is Ok(value) OR Err(message)
+// A result is Ok(value) OR Err(message)
 enum Result(T, E) {
     Ok(value : T)
     Err(error : E)
@@ -70,13 +70,13 @@ define area(shape : Shape) : ℝ =
 Types can refer to themselves:
 
 ```kleis
--- A list is either empty (Nil) or a value followed by another list (Cons)
+// A list is either empty (Nil) or a value followed by another list (Cons)
 enum List(T) {
     Nil
     Cons(head : T, tail : List(T))
 }
 
--- A binary tree
+// A binary tree
 enum Tree(T) {
     Leaf(value : T)
     Node(left : Tree(T), value : T, right : Tree(T))
@@ -108,7 +108,7 @@ enum Expr {
     Neg(inner : Expr)
 }
 
--- Evaluate an expression given variable values
+// Evaluate an expression given variable values
 define eval(expr : Expr, env : Map(String, ℝ)) : ℝ =
     match expr {
         Const(v) => v

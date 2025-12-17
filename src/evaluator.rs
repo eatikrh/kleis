@@ -834,6 +834,7 @@ impl Evaluator {
     }
 
     /// Collect variables bound by a Pattern
+    #[allow(clippy::only_used_in_recursion)]
     fn collect_pattern_vars_from_pattern(
         &self,
         pattern: &crate::ast::Pattern,

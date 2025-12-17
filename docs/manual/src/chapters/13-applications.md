@@ -5,7 +5,7 @@
 Kleis excels at differential geometry calculations:
 
 ```kleis
--- Christoffel symbols for spherical coordinates
+// Christoffel symbols for spherical coordinates
 structure SphericalMetric {
     operation metric : (ℝ, ℝ) → Matrix(2, 2, ℝ)
     operation christoffel : (ℝ, ℝ) → Tensor(1, 2)
@@ -29,7 +29,7 @@ implements SphericalMetric {
 ## Tensor Calculus
 
 ```kleis
--- Einstein field equations
+// Einstein field equations
 structure EinsteinEquations {
     // Ricci tensor
     operation ricci : Manifold → Tensor(0, 2)
@@ -89,7 +89,7 @@ structure LinearSystem(n : ℕ) {
         det(A) ≠ 0 → mul(A, solve(A, b)) = b
 }
 
--- Eigenvalue problem
+// Eigenvalue problem
 structure Eigen(n : ℕ) {
     operation eigenvalues : Matrix(n, n, ℂ) → List(ℂ)
     operation eigenvectors : Matrix(n, n, ℂ) → List(Vector(n, ℂ))
@@ -120,7 +120,7 @@ structure Observable(n : ℕ) {
         O.matrix = conjugate_transpose(O.matrix)
 }
 
--- Expectation value
+// Expectation value
 define expectation(ψ : QuantumState(n), O : Observable(n)) : ℝ =
     real(inner_product(ψ.amplitudes, mul(O.matrix, ψ.amplitudes)))
 ```

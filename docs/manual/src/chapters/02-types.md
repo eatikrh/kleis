@@ -33,13 +33,13 @@ True : Bool         // True is a boolean
 You can explicitly annotate types with `:`:
 
 ```kleis
--- Variable annotation
+// Variable annotation
 let x : ℝ = 3.14 in x * 2
 
--- Function parameter and return types
+// Function parameter and return types
 define f(x : ℝ) : ℝ = x * x
 
--- Expression-level annotation (ascription)
+// Expression-level annotation (ascription)
 (a + b) : ℝ
 ```
 
@@ -48,13 +48,13 @@ define f(x : ℝ) : ℝ = x * x
 Functions have types too! The notation `A → B` means "a function from A to B":
 
 ```kleis
--- square takes a Real and returns a Real
+// square takes a Real and returns a Real
 define square(x : ℝ) : ℝ = x * x
--- Type: ℝ → ℝ
+// Type: ℝ → ℝ
 
--- add takes two Reals and returns a Real
+// add takes two Reals and returns a Real
 define add(x : ℝ, y : ℝ) : ℝ = x + y
--- Type: ℝ × ℝ → ℝ (or equivalently: ℝ → ℝ → ℝ)
+// Type: ℝ × ℝ → ℝ (or equivalently: ℝ → ℝ → ℝ)
 ```
 
 ### Higher-Order Function Types
@@ -62,13 +62,13 @@ define add(x : ℝ, y : ℝ) : ℝ = x + y
 Functions can take other functions as arguments or return functions. These are called **higher-order functions**:
 
 ```kleis
--- A function that takes a function as an argument
+// A function that takes a function as an argument
 define apply_twice(f : ℝ → ℝ, x : ℝ) : ℝ = f(f(x))
--- Type: (ℝ → ℝ) × ℝ → ℝ
+// Type: (ℝ → ℝ) × ℝ → ℝ
 
--- A function that returns a function
+// A function that returns a function
 define make_adder(n : ℝ) : ℝ → ℝ = ???
--- Type: ℝ → (ℝ → ℝ)
+// Type: ℝ → (ℝ → ℝ)
 ```
 
 The parentheses matter! Compare:
@@ -91,13 +91,13 @@ The parentheses matter! Compare:
 Types can have parameters:
 
 ```kleis
--- List of integers
+// List of integers
 List(ℤ)
 
--- Matrix with dimensions
+// Matrix with dimensions
 Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 
--- Vector with dimension
+// Vector with dimension
 Vector(4)          // 4-dimensional vector
 ```
 
@@ -107,10 +107,10 @@ Kleis often infers types automatically:
 
 ```kleis
 define double(x) = x + x
--- Kleis infers: double : ℝ → ℝ (or more general)
+// Kleis infers: double : ℝ → ℝ (or more general)
 
 let y = 5 in y * y
--- Kleis infers: y : ℤ
+// Kleis infers: y : ℤ
 ```
 
 But explicit types make code clearer and catch errors earlier!

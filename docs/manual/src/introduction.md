@@ -41,13 +41,13 @@ Then we explore advanced features:
 Here's what Kleis looks like:
 
 ```kleis
--- Define a function
+// Define a function
 define square(x) = x * x
 
--- With type annotation
+// With type annotation
 define double(x : ℝ) : ℝ = x + x
 
--- Create a structure
+// Create a structure
 structure Vector(n : ℕ) {
     axiom dimension : n ≥ 1
     operation dot : Vector(n) → ℝ
