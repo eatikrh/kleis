@@ -111,11 +111,22 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             format!("\"if\" {} \"then\" {} \"else\" {}", cond, then_e, else_e)
         }
 
-        Expression::Let { name, value, body } => {
+        Expression::Let {
+            name, value, body, ..
+        } => {
             // Render as: "let" name "=" value "in" body
             let val = expression_to_typst(value, ctx);
             let bod = expression_to_typst(body, ctx);
             format!("\"let\" {} \"=\" {} \"in\" {}", name, val, bod)
+        }
+
+        Expression::Ascription {
+            expr,
+            type_annotation,
+        } => {
+            // Render as: (expr) : Type
+            let inner = expression_to_typst(expr, ctx);
+            format!("({}) : {}", inner, type_annotation)
         }
     }
 }

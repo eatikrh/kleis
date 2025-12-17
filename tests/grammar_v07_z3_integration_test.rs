@@ -404,6 +404,7 @@ fn test_let_binding() {
     // let x = 5 in x + 3
     let expr = Expression::Let {
         name: "x".to_string(),
+        type_annotation: None,
         value: Box::new(Expression::Const("5".to_string())),
         body: Box::new(Expression::Operation {
             name: "plus".to_string(),
@@ -431,9 +432,11 @@ fn test_nested_let_binding() {
     // let x = 5 in let y = 3 in x * y
     let expr = Expression::Let {
         name: "x".to_string(),
+        type_annotation: None,
         value: Box::new(Expression::Const("5".to_string())),
         body: Box::new(Expression::Let {
             name: "y".to_string(),
+            type_annotation: None,
             value: Box::new(Expression::Const("3".to_string())),
             body: Box::new(Expression::Operation {
                 name: "times".to_string(),

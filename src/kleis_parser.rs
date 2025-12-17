@@ -520,8 +520,36 @@ impl KleisParser {
     }
 
     fn parse_expression(&mut self) -> Result<Expression, KleisParseError> {
-        // Parse logical expression (lowest precedence)
-        self.parse_implication()
+        // Parse logical expression, then check for type ascription (lowest precedence)
+        let expr = self.parse_implication()?;
+
+        // Check for type ascription: expr : Type
+        self.skip_whitespace();
+        if self.peek() == Some(':') {
+            // Make sure it's not part of another construct
+            // Check if next non-whitespace after ':' looks like a type (identifier)
+            let saved_pos = self.pos;
+            self.advance(); // consume ':'
+            self.skip_whitespace();
+
+            // If we see an identifier (type name), it's ascription
+            // If we see '=' or other operator, it's not ascription (restore position)
+            if self
+                .peek()
+                .is_some_and(|ch| ch.is_alphabetic() || ch == '∀')
+            {
+                let type_expr = self.parse_type()?;
+                return Ok(Expression::Ascription {
+                    expr: Box::new(expr),
+                    type_annotation: type_expr.to_string(),
+                });
+            } else {
+                // Not ascription, restore position
+                self.pos = saved_pos;
+            }
+        }
+
+        Ok(expr)
     }
 
     /// Parse implication: A ⟹ B
@@ -1533,10 +1561,11 @@ impl KleisParser {
     }
 
     /// Parse a let binding expression
-    /// Grammar: let identifier = expression in expression
+    /// Grammar: let identifier [ : type ] = expression in expression
     ///
     /// Examples:
     ///   let x = 5 in x + x
+    ///   let x : ℝ = 5 in x^2           (with type annotation)
     ///   let squared = x * x in squared + 1
     ///   let a = 1 in let b = 2 in a + b  (nested)
     ///
@@ -1550,6 +1579,17 @@ impl KleisParser {
         // Parse variable name
         let name = self.parse_identifier()?;
         self.skip_whitespace();
+
+        // Optional type annotation: : Type
+        let type_annotation = if self.peek() == Some(':') {
+            self.advance(); // consume ':'
+            self.skip_whitespace();
+            let ty = self.parse_type()?;
+            self.skip_whitespace();
+            Some(ty.to_string())
+        } else {
+            None
+        };
 
         // Expect '='
         self.expect_char('=')?;
@@ -1568,6 +1608,7 @@ impl KleisParser {
 
         Ok(Expression::Let {
             name,
+            type_annotation,
             value: Box::new(value),
             body: Box::new(body),
         })
@@ -4436,7 +4477,9 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Let { name, value, body } => {
+            Expression::Let {
+                name, value, body, ..
+            } => {
                 assert_eq!(name, "x");
                 assert_eq!(*value, Expression::Const("5".to_string()));
                 assert_eq!(*body, Expression::Object("x".to_string()));
@@ -4452,7 +4495,9 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Let { name, value, body } => {
+            Expression::Let {
+                name, value, body, ..
+            } => {
                 assert_eq!(name, "x");
                 assert_eq!(*value, Expression::Const("5".to_string()));
                 match body.as_ref() {
@@ -4477,7 +4522,9 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Let { name, value, body } => {
+            Expression::Let {
+                name, value, body, ..
+            } => {
                 assert_eq!(name, "squared");
                 match value.as_ref() {
                     Expression::Operation { name: op_name, .. } => {
@@ -4507,6 +4554,7 @@ mod tests {
                 name: outer_name,
                 value: outer_value,
                 body: outer_body,
+                ..
             } => {
                 assert_eq!(outer_name, "a");
                 assert_eq!(*outer_value, Expression::Const("1".to_string()));
@@ -4517,6 +4565,7 @@ mod tests {
                         name: inner_name,
                         value: inner_value,
                         body: inner_body,
+                        ..
                     } => {
                         assert_eq!(inner_name, "b");
                         assert_eq!(**inner_value, Expression::Const("2".to_string()));
@@ -4602,5 +4651,313 @@ mod tests {
             }
             _ => panic!("Expected Let expression"),
         }
+    }
+
+    // ===== Typed Let Binding Tests (v0.7 grammar) =====
+
+    #[test]
+    fn test_parse_let_with_simple_type() {
+        let code = "let x : ℝ = 5 in x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let {
+                name,
+                type_annotation,
+                value,
+                body,
+            } => {
+                assert_eq!(name, "x");
+                assert_eq!(type_annotation, Some("ℝ".to_string()));
+                assert_eq!(*value, Expression::Const("5".to_string()));
+                assert_eq!(*body, Expression::Object("x".to_string()));
+            }
+            _ => panic!("Expected Let expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_with_parametric_type() {
+        let code = "let v : Vector(3) = x in norm(v)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let {
+                name,
+                type_annotation,
+                ..
+            } => {
+                assert_eq!(name, "v");
+                assert_eq!(type_annotation, Some("Vector(3)".to_string()));
+            }
+            _ => panic!("Expected Let expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_with_function_type() {
+        let code = "let f : ℝ → ℝ = abs in f(x)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let {
+                name,
+                type_annotation,
+                ..
+            } => {
+                assert_eq!(name, "f");
+                assert_eq!(type_annotation, Some("ℝ → ℝ".to_string()));
+            }
+            _ => panic!("Expected Let expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_without_type_has_none() {
+        let code = "let x = 5 in x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let {
+                name,
+                type_annotation,
+                ..
+            } => {
+                assert_eq!(name, "x");
+                assert!(type_annotation.is_none());
+            }
+            _ => panic!("Expected Let expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_typed_nested() {
+        let code = "let a : ℤ = 1 in let b : ℤ = 2 in a + b";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let {
+                name: outer_name,
+                type_annotation: outer_type,
+                body: outer_body,
+                ..
+            } => {
+                assert_eq!(outer_name, "a");
+                assert_eq!(outer_type, Some("ℤ".to_string()));
+
+                match outer_body.as_ref() {
+                    Expression::Let {
+                        name: inner_name,
+                        type_annotation: inner_type,
+                        ..
+                    } => {
+                        assert_eq!(inner_name, "b");
+                        assert_eq!(*inner_type, Some("ℤ".to_string()));
+                    }
+                    _ => panic!("Expected nested Let"),
+                }
+            }
+            _ => panic!("Expected Let expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_typed_with_expression() {
+        let code = "let squared : ℝ = x * x in squared + 1";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Let {
+                name,
+                type_annotation,
+                value,
+                ..
+            } => {
+                assert_eq!(name, "squared");
+                assert_eq!(type_annotation, Some("ℝ".to_string()));
+                match value.as_ref() {
+                    Expression::Operation { name: op_name, .. } => {
+                        assert_eq!(op_name, "times");
+                    }
+                    _ => panic!("Expected times operation in value"),
+                }
+            }
+            _ => panic!("Expected Let expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_define_with_typed_let() {
+        let code = "define compute(x) = let y : ℝ = x * x in y + 1";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+
+        assert_eq!(result.name, "compute");
+        match &result.body {
+            Expression::Let {
+                name,
+                type_annotation,
+                ..
+            } => {
+                assert_eq!(name, "y");
+                assert_eq!(*type_annotation, Some("ℝ".to_string()));
+            }
+            _ => panic!("Expected Let in function body"),
+        }
+    }
+
+    // ==========================================================================
+    // Type Ascription Tests (ADR-016: Expression-level type annotations)
+    // ==========================================================================
+
+    #[test]
+    fn test_parse_simple_ascription() {
+        // Simple expression with type ascription: x : ℝ
+        let code = "x : ℝ";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                assert_eq!(*expr, Expression::Object("x".to_string()));
+                assert_eq!(type_annotation, "ℝ");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_arithmetic_ascription() {
+        // Arithmetic expression with type ascription: (a + b) : ℝ
+        let code = "(a + b) : ℝ";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                match *expr {
+                    Expression::Operation { ref name, .. } => {
+                        assert_eq!(name, "plus");
+                    }
+                    _ => panic!("Expected plus operation in ascription"),
+                }
+                assert_eq!(type_annotation, "ℝ");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_parametric_type_ascription() {
+        // Expression with parametric type: v : Vector(3)
+        let code = "v : Vector(3)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                assert_eq!(*expr, Expression::Object("v".to_string()));
+                assert_eq!(type_annotation, "Vector(3)");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_matrix_type_ascription() {
+        // Matrix with type ascription: M : Matrix(3, 3, ℝ)
+        let code = "M : Matrix(3, 3, ℝ)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                assert_eq!(*expr, Expression::Object("M".to_string()));
+                assert_eq!(type_annotation, "Matrix(3, 3, ℝ)");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_ascription_with_complex_expression() {
+        // Complex expression: (x * y + z) : ℝ
+        let code = "(x * y + z) : ℝ";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                type_annotation, ..
+            } => {
+                assert_eq!(type_annotation, "ℝ");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_function_call_ascription() {
+        // Function call with ascription: sqrt(x) : ℝ
+        let code = "sqrt(x) : ℝ";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        match result {
+            Expression::Ascription {
+                expr,
+                type_annotation,
+            } => {
+                match *expr {
+                    Expression::Operation { ref name, .. } => {
+                        assert_eq!(name, "sqrt");
+                    }
+                    _ => panic!("Expected sqrt operation in ascription"),
+                }
+                assert_eq!(type_annotation, "ℝ");
+            }
+            _ => panic!("Expected Ascription expression, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_ascription_vs_let_distinction() {
+        // Make sure we don't confuse ascription with let binding
+        // let x : ℝ = 5 in x  → Let expression
+        // x : ℝ              → Ascription expression
+
+        let let_code = "let x : ℝ = 5 in x";
+        let mut let_parser = KleisParser::new(let_code);
+        let let_result = let_parser.parse().unwrap();
+        assert!(
+            matches!(let_result, Expression::Let { .. }),
+            "Should parse as Let"
+        );
+
+        let asc_code = "x : ℝ";
+        let mut asc_parser = KleisParser::new(asc_code);
+        let asc_result = asc_parser.parse().unwrap();
+        assert!(
+            matches!(asc_result, Expression::Ascription { .. }),
+            "Should parse as Ascription"
+        );
     }
 }

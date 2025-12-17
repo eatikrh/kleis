@@ -197,6 +197,10 @@ fn collect_slots_recursive(
             body_path.push(1);
             collect_slots_recursive(body, slots, next_auto_id, body_path, None);
         }
+        Expression::Ascription { expr, .. } => {
+            // Collect slots from inner expression
+            collect_slots_recursive(expr, slots, next_auto_id, path, role);
+        }
     }
 }
 

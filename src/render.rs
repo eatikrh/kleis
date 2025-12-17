@@ -1789,7 +1789,9 @@ fn render_expression_internal(
             }
         }
 
-        Expression::Let { name, value, body } => {
+        Expression::Let {
+            name, value, body, ..
+        } => {
             let value_id = format!("{}.value", node_id);
             let body_id = format!("{}.body", node_id);
 
@@ -1816,6 +1818,33 @@ fn render_expression_internal(
                 }
                 RenderTarget::Typst => {
                     format!(r#""let " {} " = " {} " in " {}"#, name, value_str, body_str)
+                }
+            }
+        }
+
+        Expression::Ascription {
+            expr,
+            type_annotation,
+        } => {
+            let inner_id = format!("{}.inner", node_id);
+            let inner_str =
+                render_expression_internal(expr, ctx, target, &inner_id, node_id_to_uuid);
+
+            match target {
+                RenderTarget::Unicode | RenderTarget::Kleis => {
+                    format!("({}) : {}", inner_str, type_annotation)
+                }
+                RenderTarget::LaTeX => {
+                    format!(r"({}) : {}", inner_str, type_annotation)
+                }
+                RenderTarget::HTML => {
+                    format!(
+                        r#"<span class="type-ascription">({}) : {}</span>"#,
+                        inner_str, type_annotation
+                    )
+                }
+                RenderTarget::Typst => {
+                    format!(r#"({}) : {}"#, inner_str, type_annotation)
                 }
             }
         }

@@ -306,7 +306,12 @@ impl Evaluator {
 
             // Let bindings - substitute in value and body
             // Note: the let-bound variable shadows any outer binding
-            Expression::Let { name, value, body } => {
+            Expression::Let {
+                name,
+                type_annotation,
+                value,
+                body,
+            } => {
                 let subst_value = self.substitute(value, subst);
                 // Create new substitution map without the shadowed variable
                 let mut inner_subst = subst.clone();
@@ -314,10 +319,20 @@ impl Evaluator {
                 let subst_body = self.substitute(body, &inner_subst);
                 Expression::Let {
                     name: name.clone(),
+                    type_annotation: type_annotation.clone(),
                     value: Box::new(subst_value),
                     body: Box::new(subst_body),
                 }
             }
+
+            // Type ascription - substitute in inner expression
+            Expression::Ascription {
+                expr: inner,
+                type_annotation,
+            } => Expression::Ascription {
+                expr: Box::new(self.substitute(inner, subst)),
+                type_annotation: type_annotation.clone(),
+            },
 
             // Constants and placeholders don't change
             Expression::Const(_) | Expression::Placeholder { .. } => expr.clone(),
@@ -392,7 +407,9 @@ impl Evaluator {
             }
 
             // Let bindings - evaluate value and substitute into body
-            Expression::Let { name, value, body } => {
+            Expression::Let {
+                name, value, body, ..
+            } => {
                 // Evaluate the value
                 let eval_value = self.eval(value)?;
 
@@ -402,6 +419,10 @@ impl Evaluator {
                 let substituted_body = self.substitute(body, &subst);
                 self.eval(&substituted_body)
             }
+
+            // Type ascription - evaluate inner expression, discard type annotation
+            // (type checking happens at type-check time, not evaluation time)
+            Expression::Ascription { expr: inner, .. } => self.eval(inner),
 
             // Atoms - return as-is
             Expression::Const(_) | Expression::Object(_) | Expression::Placeholder { .. } => {

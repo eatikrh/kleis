@@ -253,6 +253,7 @@ fn z3_verify_let_binding() {
 
     let let_expr = Expression::Let {
         name: "x".to_string(),
+        type_annotation: None,
         value: Box::new(five),
         body: Box::new(x_plus_x),
     };

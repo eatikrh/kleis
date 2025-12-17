@@ -266,6 +266,10 @@ impl<'r> AxiomVerifier<'r> {
                 structures.extend(self.analyze_dependencies(value));
                 structures.extend(self.analyze_dependencies(body));
             }
+            Expression::Ascription { expr, .. } => {
+                // Analyze the inner expression
+                structures.extend(self.analyze_dependencies(expr));
+            }
         }
 
         structures
