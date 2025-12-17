@@ -1,0 +1,41 @@
+name: Deploy mdBook Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/manual/**'
+      - '.github/workflows/mdbook.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: 'latest'
+
+      - name: Build mdBook
+        run: |
+          cd docs/manual
+          mdbook build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/manual/book
+          destination_dir: docs/manual/book
+          cname: kleis.io
+

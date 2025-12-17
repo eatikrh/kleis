@@ -1,0 +1,14 @@
+[book]
+title = "Learn You Some Kleis"
+authors = ["Eatik"]
+description = "A fun, illustrated guide to the Kleis mathematical language"
+language = "en"
+src = "src"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/eatikrh/kleis"
+edit-url-template = "https://github.com/eatikrh/kleis/edit/main/docs/manual/{path}"
+site-url = "/docs/manual/book/"
+
