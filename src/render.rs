@@ -6676,8 +6676,10 @@ fn render_operation(
     node_id_to_uuid: &std::collections::HashMap<String, String>,
 ) -> String {
     // Check the `kind` field for semantic rendering that NEEDS metadata
-    match op.kind.as_deref() {
-        Some("tensor") => {
+    let is_tensor = op.kind.as_deref() == Some("tensor") || op.name == "tensor";
+
+    match is_tensor {
+        true => {
             // Tensors need indexStructure metadata - use special renderer
             let rendered_args: Vec<String> = op
                 .args

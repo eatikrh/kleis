@@ -216,8 +216,31 @@ fn extract_semantic_argument_boxes_from_editor_node(
     // Build UUID->Position lookup
     let uuid_to_position: std::collections::HashMap<_, _> = uuid_positions.clone();
 
+    // Tensor variance: ensure tensor op always uses tensor-aware Typst markup
+    // by tagging op.name when kind is not set
+    let mut node_for_render = node.clone();
+    fn tag_tensor_kind(n: &mut EditorNode) {
+        match n {
+            EditorNode::Operation { operation } => {
+                if operation.kind.is_none() && operation.name == "tensor" {
+                    operation.kind = Some("tensor".to_string());
+                }
+                for arg in operation.args.iter_mut() {
+                    tag_tensor_kind(arg);
+                }
+            }
+            EditorNode::List { list } => {
+                for elem in list.iter_mut() {
+                    tag_tensor_kind(elem);
+                }
+            }
+            _ => {}
+        }
+    }
+    tag_tensor_kind(&mut node_for_render);
+
     extract_boxes_recursive_editor(
-        node,
+        &node_for_render,
         &mut boxes,
         &mut placeholder_idx,
         labeled_positions,

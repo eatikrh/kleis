@@ -1285,10 +1285,11 @@ fn load_file(path: &str, evaluator: &mut Evaluator) {
                 let func_count = program.functions().len();
                 let struct_count = program.structures().len();
                 let data_count = program.data_types().len();
+                let alias_count = program.type_aliases().len();
 
                 println!(
-                    "✅ Loaded: {} functions, {} structures, {} data types",
-                    func_count, struct_count, data_count
+                    "✅ Loaded: {} functions, {} structures, {} data types, {} type aliases",
+                    func_count, struct_count, data_count, alias_count
                 );
             }
             Err(e) => {

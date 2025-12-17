@@ -366,6 +366,19 @@ impl Program {
             })
             .collect()
     }
+
+    pub fn type_aliases(&self) -> Vec<&TypeAlias> {
+        self.items
+            .iter()
+            .filter_map(|item| {
+                if let TopLevel::TypeAlias(alias) = item {
+                    Some(alias)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 }
 
 impl Default for Program {

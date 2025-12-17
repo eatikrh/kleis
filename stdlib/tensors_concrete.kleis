@@ -138,7 +138,7 @@ structure Minkowski {
     
     // Off-diagonal = 0
     axiom eta_off_diag : ∀ i : Nat . ∀ j : Nat .
-        not(equals(i, j)) implies component(eta, i, j) = 0
+        not(equals(i, j)) ⟹ component(eta, i, j) = 0
     
     // Self-inverse (η^μν = η_μν for Minkowski)
     axiom eta_self_inverse : ∀ i : Nat . ∀ j : Nat .
@@ -184,7 +184,7 @@ structure SumHelpers(dim: Nat) {
     // Kronecker delta
     axiom delta_same : ∀ i : Nat . delta(i, i) = 1
     axiom delta_diff : ∀ i : Nat . ∀ j : Nat .
-        not(equals(i, j)) implies delta(i, j) = 0
+        not(equals(i, j)) ⟹ delta(i, j) = 0
     
     // Sum definitions (recursive)
     // Base case
