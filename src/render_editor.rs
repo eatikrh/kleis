@@ -23,6 +23,38 @@
 //!
 //! No Expression conversion anywhere in the pipeline.
 //!
+//! ## Migration Guide
+//!
+//! To switch from render.rs to render_editor.rs in your code:
+//!
+//! ### Before (using render.rs):
+//! ```ignore
+//! use kleis::render::{build_default_context, render_editor_node, RenderTarget};
+//!
+//! let ctx = build_default_context();
+//! let output = render_editor_node(&node, &ctx, &RenderTarget::LaTeX);
+//! ```
+//!
+//! ### After (using render_editor.rs):
+//! ```ignore
+//! use kleis::render_editor::{render_editor_node, RenderTarget};
+//!
+//! let output = render_editor_node(&node, &RenderTarget::LaTeX);
+//! ```
+//!
+//! The new API is simpler - no need to build a context, it uses an internal default.
+//!
+//! ### For server.rs specifically:
+//! ```ignore
+//! // Change line 551 from:
+//! let output = kleis::render::render_editor_node(&node, &ctx, &target);
+//!
+//! // To:
+//! let output = kleis::render_editor::render_editor_node(&node, &target);
+//!
+//! // And remove the ctx = build_default_context() line
+//! ```
+//!
 //! ## Note on Templates
 //!
 //! This module has its own template definitions, duplicated from render.rs.
