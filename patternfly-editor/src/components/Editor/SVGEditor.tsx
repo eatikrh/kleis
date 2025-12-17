@@ -15,6 +15,7 @@ interface SVGEditorProps {
   argumentBoundingBoxes: ArgumentBoundingBox[];
   zoom: number;
   activeMarkerId: string | null;
+  showMarkers: boolean;
   inlineEditing: {
     active: boolean;
     placeholderId: string;
@@ -37,6 +38,7 @@ export function SVGEditor({
   argumentBoundingBoxes,
   zoom,
   activeMarkerId,
+  showMarkers,
   inlineEditing,
   onPlaceholderClick: _onPlaceholderClick, // Not used directly - handlers are in window
   onInlineCommit,
@@ -53,6 +55,11 @@ export function SVGEditor({
   // Compute SVG with overlays using useMemo (no setState = no infinite loops)
   // This is a direct port of static/index.html overlay generation logic
   const svgWithOverlays = useMemo(() => {
+    if (!showMarkers) {
+      prevSvgRef.current = svg;
+      return svg;
+    }
+
     // If inline editing is active, preserve previous SVG (don't regenerate)
     if (inlineEditing && inlineEditing.active) {
       return prevSvgRef.current;
@@ -250,7 +257,7 @@ export function SVGEditor({
     }
     prevSvgRef.current = result;
     return result;
-  }, [svg, placeholders, argumentSlots, argumentBoundingBoxes, inlineEditing]);
+  }, [svg, placeholders, argumentSlots, argumentBoundingBoxes, inlineEditing, showMarkers]);
 
   // Update active marker visual state when activeMarkerId changes
   // NOTE: Only depend on activeMarkerId, NOT svgWithOverlays - that was causing infinite loops

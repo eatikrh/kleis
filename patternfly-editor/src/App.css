@@ -71,6 +71,30 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  /* Ensure title/toolbar text is visible (PF v6 tokens can make it white) */
+  color: var(--pf-t--global--text--color--100, #151515) !important;
+  position: relative;
+  z-index: 2000;
+}
+
+/* Ensure card titles are visible above content */
+.pf-v6-c-card__title,
+.pf-v6-c-card__title-text {
+  color: var(--pf-t--global--text--color--100, #151515) !important;
+  position: relative;
+  z-index: 2000;
+}
+
+/* Keep zoom controls above the canvas */
+.zoom-controls {
+  position: relative;
+  z-index: 2001;
+}
+
+/* Keep card header above content */
+.pf-v6-c-card__header {
+  position: relative;
+  z-index: 2000;
 }
 
 .zoom-controls {
@@ -80,6 +104,32 @@
   background: rgba(102, 126, 234, 0.1);
   padding: 4px 8px;
   border-radius: 6px;
+}
+
+/* Force PF v6 plain button icons/text to be visible */
+.zoom-controls .pf-v6-c-button {
+  --pf-v6-c-button--m-plain--Color: var(--pf-t--global--text--color--100, #151515) !important;
+  --pf-v6-c-button--m-plain__icon--Color: var(--pf-t--global--icon--color--100, #1f1f1f) !important;
+  color: var(--pf-t--global--text--color--100, #151515) !important;
+}
+
+.zoom-controls .pf-v6-c-button svg {
+  width: 1em !important;
+  height: 1em !important;
+  fill: currentColor !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.zoom-controls .pf-v6-c-button:disabled {
+  --pf-v6-c-button--m-plain--disabled--Color: var(--pf-t--global--color--disabled--200, #a3a3a3) !important;
+  color: var(--pf-t--global--color--disabled--200, #a3a3a3) !important;
+  opacity: 0.6 !important;
+}
+
+.zoom-controls .pf-v6-c-button:disabled svg {
+  fill: var(--pf-t--global--color--disabled--200, #a3a3a3) !important;
 }
 
 .zoom-level {
@@ -104,6 +154,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  z-index: 1;  /* below header/toolbar */
   transition: border-color 0.2s;
   overflow: auto;
 }
@@ -516,6 +567,7 @@ body.inline-editing .math-btn[data-button-type="function"] {
 
 .svg-editor-container {
   position: relative;
+  z-index: 1; /* below header/toolbar */
   width: 100%;
   height: 100%;
 }

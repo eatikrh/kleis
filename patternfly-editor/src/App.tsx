@@ -10,6 +10,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
   Button,
+  Switch,
   CodeBlock,
   CodeBlockCode,
   Panel,
@@ -52,12 +53,15 @@ function App() {
   const [mode, setMode] = useState<EditorMode>('structural');
   const [zoom, setZoom] = useState(200);  // Default to 200% for better readability
   const [latexInput, setLatexInput] = useState('');
+  const [showMarkers, setShowMarkers] = useState(true);
   const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
   const [activeMarkerPath, setActiveMarkerPath] = useState<number[] | null>(null);
   // Backup ref for active path - survives blur handler race conditions
   const activeMarkerPathRef = useRef<number[] | null>(null);
   // Guard to prevent inline commit during palette insertion
   const isInsertingRef = useRef<boolean>(false);
+  // Global placeholder ID counter to ensure unique IDs across the entire AST
+  const nextPlaceholderIdRef = useRef<number>(Date.now());
   const [inlineEditing, setInlineEditing] = useState<{
     active: boolean;
     placeholderId: string;
@@ -78,6 +82,31 @@ function App() {
 
   // Undo/Redo hook
   const { currentAST, updateAST, undo, redo, canUndo, canRedo } = useUndoRedo(null);
+
+  const allocatePlaceholderIds = useCallback((node: EditorNode): EditorNode => {
+    if ('Placeholder' in node) {
+      return {
+        Placeholder: {
+          ...node.Placeholder,
+          id: nextPlaceholderIdRef.current++,
+        },
+      };
+    }
+    if ('Operation' in node) {
+      return {
+        Operation: {
+          ...node.Operation,
+          args: node.Operation.args.map(arg => allocatePlaceholderIds(arg)),
+        },
+      };
+    }
+    if ('List' in node) {
+      return {
+        List: node.List.map(item => allocatePlaceholderIds(item)),
+      };
+    }
+    return node;
+  }, []);
 
   // Define marker navigation functions BEFORE keyboard handler
   const focusNextMarker = useCallback(() => {
@@ -410,13 +439,15 @@ function App() {
     });
     
     // NOW update the AST (triggers re-render with inline editor already closed)
+    const astWithIds = allocatePlaceholderIds(ast);
+
     if (insertPath && currentAST) {
       console.log('Inserting at path:', insertPath);
-      const updatedAST = setNodeAtPath(currentAST, insertPath, ast);
+      const updatedAST = setNodeAtPath(currentAST, insertPath, astWithIds);
       updateAST(updatedAST);
     } else {
       console.log('Replacing whole AST');
-      updateAST(ast);
+      updateAST(astWithIds);
     }
     
     // Clear the guard after a short delay to ensure all stale handlers have been blocked
@@ -447,6 +478,14 @@ function App() {
   const handleZoomIn = () => setZoom(z => Math.min(z + 25, 400));
   const handleZoomOut = () => setZoom(z => Math.max(z - 25, 100));
   const handleZoomReset = () => setZoom(200);
+
+  const handleLogBoxes = useCallback(() => {
+    console.group('Overlay debug');
+    console.log('Placeholders', placeholders);
+    console.log('Argument slots', argumentSlots);
+    console.log('Argument bounding boxes', argumentBoundingBoxes);
+    console.groupEnd();
+  }, [placeholders, argumentSlots, argumentBoundingBoxes]);
   
   // Reset/clear AST to default equation
   const handleClearAST = useCallback(() => {
@@ -458,8 +497,8 @@ function App() {
     // Reset zoom
     setZoom(200);
     // Reset AST to default equals template
-    updateAST(astTemplates.equals);
-  }, [updateAST]);
+    updateAST(allocatePlaceholderIds(astTemplates.equals));
+  }, [updateAST, allocatePlaceholderIds]);
 
   return (
     <Page className="kleis-page">
@@ -551,6 +590,22 @@ function App() {
                         <RedoIcon />
                       </Button>
                       <Button 
+                        variant="plain"
+                        aria-label="Log bounding boxes"
+                        title="Log placeholder / bbox info to console"
+                        onClick={handleLogBoxes}
+                      >
+                        🐛
+                      </Button>
+                      <Switch
+                        id="toggle-markers"
+                        aria-label="Show edit markers"
+                        label="Markers"
+                        labelOff="Markers"
+                        isChecked={showMarkers}
+                        onChange={(_, checked) => setShowMarkers(checked)}
+                      />
+                      <Button 
                         variant="primary" 
                         onClick={handleVerify}
                         isDisabled={!currentAST || verifying}
@@ -587,6 +642,7 @@ function App() {
                         placeholders={placeholders}
                         argumentSlots={argumentSlots}
                         argumentBoundingBoxes={argumentBoundingBoxes}
+                        showMarkers={showMarkers}
                         zoom={zoom}
                         activeMarkerId={activeMarkerId}
                         inlineEditing={inlineEditing}
