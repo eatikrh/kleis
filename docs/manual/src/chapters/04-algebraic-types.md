@@ -31,20 +31,20 @@ A sum type represents alternatives:
 
 ```kleis
 // A shape is a Circle OR a Rectangle OR a Triangle
-enum Shape {
+data Shape {
     Circle(radius : ℝ)
     Rectangle(width : ℝ, height : ℝ)
     Triangle(a : ℝ, b : ℝ, c : ℝ)
 }
 
 // An optional value is Some(value) OR None
-enum Option(T) {
+data Option(T) {
     Some(value : T)
     None
 }
 
 // A result is Ok(value) OR Err(message)
-enum Result(T, E) {
+data Result(T, E) {
     Ok(value : T)
     Err(error : E)
 }
@@ -55,13 +55,13 @@ enum Result(T, E) {
 ADTs shine with pattern matching:
 
 ```kleis
-define area(shape : Shape) : ℝ =
+define area(shape) =
     match shape {
         Circle(r) => π * r^2
         Rectangle(w, h) => w * h
         Triangle(a, b, c) => 
             let s = (a + b + c) / 2 in
-            sqrt(s * (s-a) * (s-b) * (s-c))  // Heron's formula
+            sqrt(s * (s-a) * (s-b) * (s-c))
     }
 ```
 
@@ -71,13 +71,13 @@ Types can refer to themselves:
 
 ```kleis
 // A list is either empty (Nil) or a value followed by another list (Cons)
-enum List(T) {
+data List(T) {
     Nil
     Cons(head : T, tail : List(T))
 }
 
 // A binary tree
-enum Tree(T) {
+data Tree(T) {
     Leaf(value : T)
     Node(left : Tree(T), value : T, right : Tree(T))
 }
@@ -99,8 +99,8 @@ The number of possible values follows algebra:
 
 ADTs are perfect for representing mathematical expressions:
 
-```kleis
-enum Expr {
+```text
+data Expr {
     Const(value : ℝ)
     Var(name : String)
     Add(left : Expr, right : Expr)
@@ -108,8 +108,7 @@ enum Expr {
     Neg(inner : Expr)
 }
 
-// Evaluate an expression given variable values
-define eval(expr : Expr, env : Map(String, ℝ)) : ℝ =
+define eval(expr, env) =
     match expr {
         Const(v) => v
         Var(name) => lookup(env, name)

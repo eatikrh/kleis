@@ -4,7 +4,7 @@
 
 Kleis excels at differential geometry calculations:
 
-```kleis
+```text
 // Christoffel symbols for spherical coordinates
 structure SphericalMetric {
     operation metric : (ℝ, ℝ) → Matrix(2, 2, ℝ)
@@ -28,7 +28,7 @@ implements SphericalMetric {
 
 ## Tensor Calculus
 
-```kleis
+```text
 // Einstein field equations
 structure EinsteinEquations {
     // Ricci tensor
@@ -38,54 +38,56 @@ structure EinsteinEquations {
     // Einstein tensor
     operation einstein : Manifold → Tensor(0, 2)
     
-    axiom einstein_tensor : ∀ M : Manifold .
+    axiom einstein_tensor : ∀(M : Manifold).
         einstein(M) = ricci(M) - (scalar(M) / 2) * metric(M)
 }
 ```
 
 ## Symbolic Differentiation
 
-```kleis
-enum Expr {
-    Const(ℝ)
-    Var(String)
-    Add(Expr, Expr)
-    Mul(Expr, Expr)
-    Pow(Expr, Expr)
-    Sin(Expr)
-    Cos(Expr)
-    Exp(Expr)
-    Ln(Expr)
+```text
+data Expr {
+    Const(value : ℝ)
+    Var(name : String)
+    Add(left : Expr, right : Expr)
+    Mul(left : Expr, right : Expr)
+    Pow(base : Expr, exp : Expr)
+    Sin(arg : Expr)
+    Cos(arg : Expr)
+    Exp(arg : Expr)
+    Ln(arg : Expr)
 }
 
-define diff(e : Expr, x : String) : Expr =
+define diff(e, x) =
     match e {
         Const(_) => Const(0)
         Var(y) => if y = x then Const(1) else Const(0)
         
         Add(f, g) => Add(diff(f, x), diff(g, x))
         
-        Mul(f, g) => // Product rule
+        Mul(f, g) =>
             Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
             
-        Pow(f, Const(n)) => // Power rule
+        Pow(f, Const(n)) =>
             Mul(Mul(Const(n), Pow(f, Const(n - 1))), diff(f, x))
             
-        Sin(f) => Mul(Cos(f), diff(f, x))  // Chain rule
+        Sin(f) => Mul(Cos(f), diff(f, x))
         Cos(f) => Mul(Mul(Const(-1), Sin(f)), diff(f, x))
         Exp(f) => Mul(Exp(f), diff(f, x))
         Ln(f) => Mul(Pow(f, Const(-1)), diff(f, x))
+        
+        _ => Const(0)
     }
 ```
 
 ## Linear Algebra
 
-```kleis
+```text
 structure LinearSystem(n : ℕ) {
     operation solve : Matrix(n, n, ℝ) × Vector(n, ℝ) → Vector(n, ℝ)
     
     // Solution satisfies Ax = b
-    axiom solution_correct : ∀ A : Matrix(n, n, ℝ) . ∀ b : Vector(n, ℝ) .
+    axiom solution_correct : ∀(A : Matrix(n, n, ℝ))(b : Vector(n, ℝ)).
         det(A) ≠ 0 → mul(A, solve(A, b)) = b
 }
 
@@ -94,71 +96,71 @@ structure Eigen(n : ℕ) {
     operation eigenvalues : Matrix(n, n, ℂ) → List(ℂ)
     operation eigenvectors : Matrix(n, n, ℂ) → List(Vector(n, ℂ))
     
-    axiom eigenpair : ∀ A : Matrix(n, n, ℂ) . ∀ i : ℕ .
-        let λ = nth(eigenvalues(A), i) in
+    axiom eigenpair : ∀(A : Matrix(n, n, ℂ))(i : ℕ).
+        let lambda = nth(eigenvalues(A), i) in
         let v = nth(eigenvectors(A), i) in
-            mul(A, v) = scale(λ, v)
+            mul(A, v) = scale(lambda, v)
 }
 ```
 
 ## Quantum Mechanics
 
-```kleis
+```text
 structure QuantumState(n : ℕ) {
-    field amplitudes : Vector(n, ℂ)
+    amplitudes : Vector(n, ℂ)
     
     // States must be normalized
-    axiom normalized : ∀ ψ : QuantumState(n) .
-        sum(map(λ a . abs(a)^2, ψ.amplitudes)) = 1
+    axiom normalized : ∀(psi : QuantumState(n)).
+        sum(map(λ a . abs(a)^2, psi.amplitudes)) = 1
 }
 
 structure Observable(n : ℕ) {
     operation matrix : Matrix(n, n, ℂ)
     
     // Observables are Hermitian
-    axiom hermitian : ∀ O : Observable(n) .
+    axiom hermitian : ∀(O : Observable(n)).
         O.matrix = conjugate_transpose(O.matrix)
 }
 
 // Expectation value
-define expectation(ψ : QuantumState(n), O : Observable(n)) : ℝ =
-    real(inner_product(ψ.amplitudes, mul(O.matrix, ψ.amplitudes)))
+define expectation(psi, O) =
+    real(inner_product(psi.amplitudes, mul(O.matrix, psi.amplitudes)))
 ```
 
 ## Category Theory
 
-```kleis
+```text
 structure Category(Obj, Mor) {
     operation id : Obj → Mor
     operation compose : Mor × Mor → Mor
     operation dom : Mor → Obj
     operation cod : Mor → Obj
     
-    axiom identity_left : ∀ f : Mor .
+    axiom identity_left : ∀(f : Mor).
         compose(id(cod(f)), f) = f
         
-    axiom identity_right : ∀ f : Mor .
+    axiom identity_right : ∀(f : Mor).
         compose(f, id(dom(f))) = f
         
-    axiom associativity : ∀ f : Mor . ∀ g : Mor . ∀ h : Mor .
+    axiom associativity : ∀(f : Mor)(g : Mor)(h : Mor).
         compose(compose(h, g), f) = compose(h, compose(g, f))
 }
 
-structure Functor(C : Category, D : Category) {
-    operation map_obj : C.Obj → D.Obj
-    operation map_mor : C.Mor → D.Mor
+structure Functor(C, D) {
+    operation map_obj : C → D
+    operation map_mor : C → D
     
-    axiom preserves_id : ∀ x : C.Obj .
-        map_mor(C.id(x)) = D.id(map_obj(x))
+    axiom preserves_id : ∀(x : C).
+        map_mor(id(x)) = id(map_obj(x))
         
-    axiom preserves_compose : ∀ f : C.Mor . ∀ g : C.Mor .
-        map_mor(C.compose(g, f)) = D.compose(map_mor(g), map_mor(f))
+    axiom preserves_compose : ∀(f : C)(g : C).
+        map_mor(compose(g, f)) = compose(map_mor(g), map_mor(f))
 }
 ```
 
 ## Physics: Classical Mechanics
 
-```kleis
+```text
 structure LagrangianMechanics(n : ℕ) {
     // Generalized coordinates and velocities
     operation q : ℕ → ℝ     // Position

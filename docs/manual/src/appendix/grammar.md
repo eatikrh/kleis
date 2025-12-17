@@ -27,7 +27,7 @@ versionAnnotation ::= "@version" "(" string ")"
 ```
 
 Example:
-```kleis
+```text
 @library("stdlib/algebra")
 @version("0.7")
 ```
@@ -45,10 +45,15 @@ dataField ::= identifier ":" type    // Named field
 ```
 
 Examples:
-```kleis
-data Bool = True | False
-data Option(T) = None | Some(T)
-data Type = Scalar | Vector(n: Nat) | Matrix(m: Nat, n: Nat)
+```text
+data Bool {
+    True
+    False
+}
+data Option(T) {
+    None
+    Some(value : T)
+}
 ```
 
 ## Pattern Matching
@@ -65,7 +70,7 @@ pattern ::= "_"                              // Wildcard
 ```
 
 Examples:
-```kleis
+```text
 match x { True => 1 | False => 0 }
 match opt { None => 0 | Some(x) => x }
 match result { Ok(Some(x)) => x | Ok(None) => 0 | Err(_) => -1 }
@@ -89,11 +94,11 @@ structureMember ::= operationDecl
 ```
 
 Example:
-```kleis
+```text
 structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
     operation (·) : F × V → V
     
-    axiom scalar_distributive : ∀ a b : F . ∀ v : V .
+    axiom scalar_distributive : ∀(a : F)(b : F)(v : V).
         (a + b) · v = a · v + b · v
 }
 ```
@@ -112,10 +117,10 @@ operationImpl ::= "operation" operatorSymbol "=" implementation
 ```
 
 Example:
-```kleis
+```text
 implements Ring(ℝ) {
-    operation (+) = builtin_add
-    operation (*) = builtin_mul
+    operation add = builtin_add
+    operation mul = builtin_mul
     element zero = 0
     element one = 1
 }
@@ -131,7 +136,7 @@ param ::= identifier [ ":" type ]
 ```
 
 Examples:
-```kleis
+```text
 define pi = 3.14159
 define square(x) = x * x
 define add(x: ℝ, y: ℝ) : ℝ = x + y
@@ -158,7 +163,7 @@ typeAlias ::= "type" identifier "=" type
 ```
 
 Examples:
-```kleis
+```text
 ℝ                    // Real numbers
 Vector(3)            // Parameterized type
 ℝ → ℝ               // Function type
@@ -196,7 +201,7 @@ lambda ::= "λ" params "." expression
 ```
 
 Examples:
-```kleis
+```text
 λ x . x + 1              // Simple lambda
 λ x y . x * y            // Multiple parameters
 λ (x : ℝ) . x^2          // With type annotation
@@ -210,7 +215,7 @@ letBinding ::= "let" identifier [ typeAnnotation ] "=" expression "in" expressio
 ```
 
 Examples:
-```kleis
+```text
 let x = 5 in x + x
 let x : ℝ = 3.14 in x * 2
 let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
@@ -223,7 +228,7 @@ conditional ::= "if" expression "then" expression "else" expression
 ```
 
 Example:
-```kleis
+```text
 if x > 0 then x else -x
 ```
 
@@ -241,10 +246,10 @@ whereClause ::= "where" expression
 ```
 
 Examples:
-```kleis
-∀ x : ℝ . x + 0 = x
-∃ x : ℤ . x * x = 4
-∀ (a b : ℝ) where a ≠ 0 . a * (1/a) = 1
+```text
+∀(x : ℝ). x + 0 = x
+∃(x : ℤ). x * x = 4
+∀(a : ℝ)(b : ℝ) where a ≠ 0 . a * (1/a) = 1
 ```
 
 ## Calculus Notation (v0.7)

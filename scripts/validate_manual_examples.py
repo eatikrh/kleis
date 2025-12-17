@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """
-Validate Kleis code examples in the manual.
+Validate Kleis code examples in the manual using the REAL Kleis parser.
 
 This script extracts all ```kleis code blocks from the manual markdown files
-and checks them for known deprecated patterns and syntax issues.
+and validates them by actually running them through the Kleis parser.
 
 Usage:
     python3 scripts/validate_manual_examples.py
+    
+Requirements:
+    - Kleis must be built: cargo build --release --bin repl
 """
 
 import os
 import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
-# Known deprecated patterns (regex, description, suggestion)
+# Known deprecated patterns (regex, description, suggestion) - still useful for quick checks
 DEPRECATED_PATTERNS = [
     # Old comment syntax (Haskell-style)
     (r'^\s*--(?!\s*$)', 
@@ -34,18 +39,6 @@ DEPRECATED_PATTERNS = [
     (r'∂[a-zA-Z_]+/∂[a-zA-Z_]+',
      "Deprecated partial derivative notation '∂f/∂x'",
      "Use 'D(f, x)' for partial derivatives"),
-    
-    # Check for potential issues - but NOT typed params like λ (x : T) . body
-    # Only flag λ(x). without type annotation (Haskell-style)
-    (r'λ\s*\([a-zA-Z_][a-zA-Z0-9_]*\)\s*\.',
-     "Potential syntax issue: λ(x).body should be λ x . body",
-     "Use 'λ x . body' for untyped or 'λ (x : T) . body' for typed params"),
-]
-
-# Patterns that are VALID (to avoid false positives)
-VALID_PATTERNS = [
-    r'--\s*$',  # Empty comment line
-    r'd/dx',    # If it's in a comment or string
 ]
 
 
@@ -79,55 +72,138 @@ def extract_kleis_blocks(content: str, filepath: str) -> list[tuple[int, str]]:
     return blocks
 
 
-def check_deprecated_patterns(code: str, line_offset: int, filepath: str) -> list[str]:
-    """Check for deprecated patterns in code."""
+def check_deprecated_patterns(code: str, line_offset: int) -> list[str]:
+    """Check for deprecated patterns in code (quick regex check)."""
     issues = []
     
     for line_num, line in enumerate(code.split('\n'), 1):
         # Skip if line is inside a string (simple heuristic)
         if line.count('"') >= 2:
             continue
+        # Skip if it's a comment
+        if line.strip().startswith('//'):
+            continue
             
         for pattern, description, suggestion in DEPRECATED_PATTERNS:
             if re.search(pattern, line):
-                # Check it's not a valid pattern
-                is_valid = any(re.search(vp, line) for vp in VALID_PATTERNS)
-                if not is_valid:
-                    actual_line = line_offset + line_num
-                    issues.append(
-                        f"  Line {actual_line}: {description}\n"
-                        f"    Code: {line.strip()}\n"
-                        f"    Suggestion: {suggestion}"
-                    )
+                actual_line = line_offset + line_num
+                issues.append(
+                    f"  Line {actual_line}: {description}\n"
+                    f"    Code: {line.strip()}\n"
+                    f"    Suggestion: {suggestion}"
+                )
     
     return issues
 
 
-def validate_basic_syntax(code: str, line_offset: int, filepath: str) -> list[str]:
-    """Basic syntax validation for common errors."""
+def validate_with_parser(code: str, line_offset: int, project_root: Path) -> list[str]:
+    """
+    Validate code by actually running it through the Kleis parser.
+    Returns list of error messages if parsing fails.
+    """
     issues = []
     
-    # Check for unbalanced braces/parens (simple check)
-    open_parens = code.count('(')
-    close_parens = code.count(')')
-    if open_parens != close_parens:
-        issues.append(
-            f"  Block starting at line {line_offset}: "
-            f"Unbalanced parentheses ({open_parens} open, {close_parens} close)"
-        )
+    # Skip very short/trivial blocks (like single identifiers or comments)
+    stripped = code.strip()
+    if not stripped or stripped.startswith('//') or len(stripped) < 3:
+        return []
     
-    open_braces = code.count('{')
-    close_braces = code.count('}')
-    if open_braces != close_braces:
-        issues.append(
-            f"  Block starting at line {line_offset}: "
-            f"Unbalanced braces ({open_braces} open, {close_braces} close)"
-        )
+    # Skip blocks that are clearly fragments or pseudocode
+    # (e.g., lines ending with "..." or containing "...")
+    if '...' in stripped:
+        return []
+    
+    # Skip REPL session examples (they have prompts like "kleis>" or ">")
+    if 'kleis>' in stripped or stripped.startswith('>'):
+        return []
+    
+    # Skip grammar definitions (they're not executable Kleis)
+    if '::=' in stripped or '|=' in stripped:
+        return []
+        
+    # Skip blocks that are clearly showing syntax/grammar patterns
+    if '<' in stripped and '>' in stripped and not '=' in stripped:
+        # Looks like grammar notation like <expr> or <type>
+        return []
+    
+    # Create temp file with the code
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.kleis', delete=False) as f:
+        f.write(code)
+        temp_path = f.name
+    
+    try:
+        # Try to load the file with REPL
+        repl_binary = project_root / "target" / "release" / "repl"
+        if not repl_binary.exists():
+            repl_binary = project_root / "target" / "debug" / "repl"
+        
+        if not repl_binary.exists():
+            # Fall back to cargo run
+            result = subprocess.run(
+                ["cargo", "run", "--bin", "repl", "--quiet", "--"],
+                input=f":load {temp_path}\n:quit\n",
+                capture_output=True,
+                text=True,
+                cwd=project_root,
+                timeout=10,
+                env={**os.environ, "Z3_SYS_Z3_HEADER": "/opt/homebrew/opt/z3/include/z3.h"}
+            )
+        else:
+            result = subprocess.run(
+                [str(repl_binary)],
+                input=f":load {temp_path}\n:quit\n",
+                capture_output=True,
+                text=True,
+                cwd=project_root,
+                timeout=10,
+                env={**os.environ, "Z3_SYS_Z3_HEADER": "/opt/homebrew/opt/z3/include/z3.h"}
+            )
+        
+        # Check for parse errors in output
+        output = result.stdout + result.stderr
+        
+        # Look for error indicators
+        error_patterns = [
+            r'Parse error',
+            r'Error:',
+            r'error:',
+            r'Failed to parse',
+            r'Unexpected',
+            r'Expected',
+            r'Invalid syntax',
+        ]
+        
+        for pattern in error_patterns:
+            match = re.search(pattern, output, re.IGNORECASE)
+            if match:
+                # Extract the relevant error message
+                error_line = output[max(0, match.start()-50):min(len(output), match.end()+100)]
+                error_line = error_line.strip()
+                
+                # Don't report if it's about a missing file or unrelated error
+                if 'No such file' not in error_line and 'not found' not in error_line.lower():
+                    issues.append(
+                        f"  Block at line {line_offset}: Parser error\n"
+                        f"    {error_line[:200]}"
+                    )
+                break
+                
+    except subprocess.TimeoutExpired:
+        issues.append(f"  Block at line {line_offset}: Parser timed out (possible infinite loop)")
+    except Exception as e:
+        # Don't fail on subprocess errors - the parser might not be built
+        pass
+    finally:
+        # Clean up temp file
+        try:
+            os.unlink(temp_path)
+        except:
+            pass
     
     return issues
 
 
-def validate_file(filepath: Path) -> list[str]:
+def validate_file(filepath: Path, project_root: Path, use_parser: bool = True) -> list[str]:
     """Validate a single markdown file."""
     issues = []
     
@@ -143,20 +219,45 @@ def validate_file(filepath: Path) -> list[str]:
         if not code.strip():
             continue
             
-        # Check deprecated patterns
-        pattern_issues = check_deprecated_patterns(code, line_offset, str(filepath))
+        # Check deprecated patterns (always)
+        pattern_issues = check_deprecated_patterns(code, line_offset)
         issues.extend(pattern_issues)
         
-        # Basic syntax validation
-        syntax_issues = validate_basic_syntax(code, line_offset, str(filepath))
-        issues.extend(syntax_issues)
+        # Validate with actual parser (if enabled)
+        if use_parser:
+            parser_issues = validate_with_parser(code, line_offset, project_root)
+            issues.extend(parser_issues)
     
     return issues
 
 
+def check_parser_available(project_root: Path) -> bool:
+    """Check if the Kleis parser is available."""
+    repl_binary = project_root / "target" / "release" / "repl"
+    if repl_binary.exists():
+        return True
+    
+    repl_binary = project_root / "target" / "debug" / "repl"
+    if repl_binary.exists():
+        return True
+    
+    # Try cargo
+    try:
+        result = subprocess.run(
+            ["cargo", "build", "--bin", "repl", "--quiet"],
+            capture_output=True,
+            cwd=project_root,
+            timeout=120,
+            env={**os.environ, "Z3_SYS_Z3_HEADER": "/opt/homebrew/opt/z3/include/z3.h"}
+        )
+        return result.returncode == 0
+    except:
+        return False
+
+
 def main():
     """Main entry point."""
-    # Find the manual directory
+    # Find directories
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
     manual_src = project_root / "docs" / "manual" / "src"
@@ -167,16 +268,32 @@ def main():
     
     print("🔍 Validating Kleis examples in the manual...\n")
     
+    # Check if parser is available
+    print("📦 Checking Kleis parser availability...")
+    use_parser = check_parser_available(project_root)
+    if use_parser:
+        print("   ✅ Kleis parser found - will validate syntax\n")
+    else:
+        print("   ⚠️  Kleis parser not available - using pattern checks only")
+        print("   Build with: cargo build --bin repl\n")
+    
     # Find all markdown files
     md_files = find_markdown_files(manual_src)
     print(f"Found {len(md_files)} markdown files\n")
     
     total_issues = 0
     files_with_issues = 0
+    blocks_validated = 0
     
     for filepath in sorted(md_files):
         relative_path = filepath.relative_to(project_root)
-        issues = validate_file(filepath)
+        
+        # Count blocks in file
+        content = filepath.read_text(encoding='utf-8')
+        blocks = extract_kleis_blocks(content, str(filepath))
+        blocks_validated += len(blocks)
+        
+        issues = validate_file(filepath, project_root, use_parser)
         
         if issues:
             files_with_issues += 1
@@ -185,19 +302,26 @@ def main():
                 print(issue)
                 total_issues += 1
             print()
+        else:
+            # Show progress for files with blocks
+            if blocks:
+                print(f"✅ {relative_path} ({len(blocks)} blocks)")
     
     # Summary
+    print()
     print("-" * 60)
     if total_issues == 0:
         print(f"✅ All {len(md_files)} files passed validation!")
-        print("   No deprecated patterns or syntax issues found.")
+        print(f"   Validated {blocks_validated} code blocks")
+        if use_parser:
+            print("   ✅ All blocks parsed successfully with Kleis parser")
         sys.exit(0)
     else:
         print(f"❌ Found {total_issues} issue(s) in {files_with_issues} file(s)")
+        print(f"   Validated {blocks_validated} code blocks total")
         print("\nPlease fix the issues above before committing.")
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-

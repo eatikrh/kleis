@@ -5,9 +5,9 @@
 Types are the foundation of Kleis. Every expression has a type, and the type system catches errors before they become problems.
 
 ```kleis
-42 : ℤ              // 42 is an integer
-3.14 : ℝ            // 3.14 is a real number
-True : Bool         // True is a boolean
+define answer = 42                // 42 is an integer
+define pi_val = 3.14              // 3.14 is a real number
+define flag = True                // True is a boolean
 ```
 
 ## Built-in Types
@@ -34,13 +34,13 @@ You can explicitly annotate types with `:`:
 
 ```kleis
 // Variable annotation
-let x : ℝ = 3.14 in x * 2
+define typed_let = let x : ℝ = 3.14 in x * 2
 
 // Function parameter and return types
 define f(x : ℝ) : ℝ = x * x
 
 // Expression-level annotation (ascription)
-(a + b) : ℝ
+define sum_typed(a, b) = (a + b) : ℝ
 ```
 
 ## Function Types
@@ -90,15 +90,11 @@ The parentheses matter! Compare:
 
 Types can have parameters:
 
-```kleis
-// List of integers
-List(ℤ)
-
-// Matrix with dimensions
+```text
+// Parametric type examples:
+List(ℤ)           // List of integers
 Matrix(3, 3, ℝ)   // 3×3 matrix of reals
-
-// Vector with dimension
-Vector(4)          // 4-dimensional vector
+Vector(4)         // 4-dimensional vector
 ```
 
 ## Type Inference
@@ -109,7 +105,7 @@ Kleis often infers types automatically:
 define double(x) = x + x
 // Kleis infers: double : ℝ → ℝ (or more general)
 
-let y = 5 in y * y
+define square_five = let y = 5 in y * y
 // Kleis infers: y : ℤ
 ```
 

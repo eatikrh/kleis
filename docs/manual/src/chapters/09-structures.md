@@ -4,7 +4,7 @@
 
 Structures define mathematical objects with their properties and operations. Think of them as "blueprints" for mathematical concepts.
 
-```kleis
+```text
 structure Vector(n : ℕ) {
     // Operations this structure supports
     operation add : Vector(n) → Vector(n)
@@ -12,16 +12,16 @@ structure Vector(n : ℕ) {
     operation dot : Vector(n) → ℝ
     
     // Properties that must hold
-    axiom commutative : ∀ u : Vector(n) . ∀ v : Vector(n) .
+    axiom commutative : ∀(u : Vector(n))(v : Vector(n)).
         add(u, v) = add(v, u)
 }
 ```
 
 ## Structure Syntax
 
-```kleis
+```text
 structure Name(parameters) {
-    // Fields (data)
+    // Fields (data) - no "field" keyword needed
     field1 : Type1
     field2 : Type2
     
@@ -35,23 +35,23 @@ structure Name(parameters) {
 
 ## Example: Complex Numbers
 
-```kleis
+```text
 structure Complex {
-    field re : ℝ  // real part
-    field im : ℝ  // imaginary part
+    re : ℝ  // real part
+    im : ℝ  // imaginary part
     
     operation add : Complex → Complex
     operation mul : Complex → Complex
     operation conj : Complex           // conjugate
     operation mag : ℝ                  // magnitude
     
-    axiom add_commutative : ∀ z : Complex . ∀ w : Complex .
+    axiom add_commutative : ∀(z : Complex)(w : Complex).
         add(z, w) = add(w, z)
         
-    axiom magnitude_positive : ∀ z : Complex .
+    axiom magnitude_positive : ∀(z : Complex).
         mag(z) ≥ 0
         
-    axiom conj_involution : ∀ z : Complex .
+    axiom conj_involution : ∀(z : Complex).
         conj(conj(z)) = z
 }
 ```
@@ -60,12 +60,12 @@ structure Complex {
 
 Structures can have type parameters:
 
-```kleis
+```text
 structure Matrix(m : ℕ, n : ℕ, T) {
     operation transpose : Matrix(n, m, T)
     operation add : Matrix(m, n, T) → Matrix(m, n, T)
     
-    axiom transpose_involution : ∀ A : Matrix(m, n, T) .
+    axiom transpose_involution : ∀(A : Matrix(m, n, T)).
         transpose(transpose(A)) = A
 }
 
@@ -75,7 +75,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     operation trace : T
     operation inv : SquareMatrix(n, T)
     
-    axiom det_mul : ∀ A : SquareMatrix(n, T) . ∀ B : SquareMatrix(n, T) .
+    axiom det_mul : ∀(A : SquareMatrix(n, T))(B : SquareMatrix(n, T)).
         det(mul(A, B)) = det(A) * det(B)
 }
 ```
@@ -84,39 +84,39 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 
 Structures can contain other structures. This enables compositional algebra — defining complex structures from simpler parts:
 
-```kleis
+```text
 structure Ring(R) {
     // A ring has an additive group
     structure additive : AbelianGroup(R) {
-        operation (+) : R × R → R
+        operation add : R × R → R
         operation negate : R → R
-        element zero : R
+        zero : R
     }
     
     // And a multiplicative monoid
     structure multiplicative : Monoid(R) {
-        operation (×) : R × R → R
-        element one : R
+        operation mul : R × R → R
+        one : R
     }
     
     // With distributivity connecting them
-    axiom distributive : ∀ x : R . ∀ y : R . ∀ z : R .
-        x × (y + z) = (x × y) + (x × z)
+    axiom distributive : ∀(x : R)(y : R)(z : R).
+        mul(x, add(y, z)) = add(mul(x, y), mul(x, z))
 }
 ```
 
 Nested structures can go arbitrarily deep:
 
-```kleis
+```text
 structure VectorSpace(V, F) {
     structure vectors : AbelianGroup(V) {
-        operation (+) : V × V → V
-        operation zero : V
+        operation add : V × V → V
+        zero : V
     }
     
     structure scalars : Field(F) {
-        operation (+) : F × F → F
-        operation (×) : F × F → F
+        operation add : F × F → F
+        operation mul : F × F → F
     }
     
     operation scale : F × V → V
@@ -129,24 +129,24 @@ When using Z3 verification, axioms from nested structures are automatically avai
 
 Structures can extend other structures:
 
-```kleis
+```text
 structure Monoid(M) {
-    operation e : M
+    e : M
     operation mul : M × M → M
     
-    axiom identity : ∀ x : M . mul(e, x) = x ∧ mul(x, e) = x
-    axiom associative : ∀ x : M . ∀ y : M . ∀ z : M .
+    axiom identity : ∀(x : M). mul(e, x) = x ∧ mul(x, e) = x
+    axiom associative : ∀(x : M)(y : M)(z : M).
         mul(mul(x, y), z) = mul(x, mul(y, z))
 }
 
 structure Group(G) extends Monoid(G) {
     operation inv : G → G
     
-    axiom inverse : ∀ x : G . mul(x, inv(x)) = e ∧ mul(inv(x), x) = e
+    axiom inverse : ∀(x : G). mul(x, inv(x)) = e ∧ mul(inv(x), x) = e
 }
 
 structure AbelianGroup(G) extends Group(G) {
-    axiom commutative : ∀ x : G . ∀ y : G . mul(x, y) = mul(y, x)
+    axiom commutative : ∀(x : G)(y : G). mul(x, y) = mul(y, x)
 }
 ```
 
@@ -154,12 +154,12 @@ structure AbelianGroup(G) extends Group(G) {
 
 Constrain type parameters:
 
-```kleis
+```text
 structure VectorSpace(V, F) where F : Field {
     operation add : V × V → V
     operation scale : F × V → V
     
-    axiom distributive : ∀ a : F . ∀ u : V . ∀ v : V .
+    axiom distributive : ∀(a : F)(u : V)(v : V).
         scale(a, add(u, v)) = add(scale(a, u), scale(a, v))
 }
 ```
@@ -168,31 +168,31 @@ structure VectorSpace(V, F) where F : Field {
 
 Many mathematical structures are defined "over" a base structure. A vector space is defined over a field, a module over a ring:
 
-```kleis
+```text
 // Vector space over a field
 structure VectorSpace(V) over Field(F) {
-    operation (+) : V × V → V
-    operation (·) : F × V → V
+    operation add : V × V → V
+    operation scale : F × V → V
     
-    axiom scalar_identity : ∀ v : V . 1 · v = v
-    axiom distributive : ∀ a : F . ∀ u : V . ∀ v : V .
-        a · (u + v) = (a · u) + (a · v)
+    axiom scalar_identity : ∀(v : V). scale(1, v) = v
+    axiom distributive : ∀(a : F)(u : V)(v : V).
+        scale(a, add(u, v)) = add(scale(a, u), scale(a, v))
 }
 
 // Module over a ring (generalization of vector space)
 structure Module(M) over Ring(R) {
-    operation (+) : M × M → M
-    operation (·) : R × M → M
+    operation add : M × M → M
+    operation scale : R × M → M
 }
 
 // Algebra over a ring
 structure Algebra(A) over Ring(R) {
-    operation (+) : A × A → A
-    operation (·) : R × A → A
-    operation (*) : A × A → A
+    operation add : A × A → A
+    operation scale : R × A → A
+    operation mul : A × A → A
     
-    axiom bilinear : ∀ r : R . ∀ a : A . ∀ b : A .
-        r · (a * b) = (r · a) * b
+    axiom bilinear : ∀(r : R)(a : A)(b : A).
+        scale(r, mul(a, b)) = mul(scale(r, a), b)
 }
 ```
 
@@ -202,12 +202,12 @@ When you use `over`, Kleis automatically makes the base structure's axioms avail
 
 Kleis shines for differential geometry:
 
-```kleis
+```text
 structure Manifold(M, dim : ℕ) {
     operation tangent : M → TangentSpace(M)
     operation metric : M → Tensor(0, 2)
     
-    axiom metric_symmetric : ∀ p : M .
+    axiom metric_symmetric : ∀(p : M).
         metric(p) = transpose(metric(p))
 }
 
@@ -217,8 +217,8 @@ structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
     operation ricci : M → Tensor(0, 2)
     operation scalar_curvature : M → ℝ
     
-    axiom first_bianchi : ∀ p : M .
-        // R^a_{bcd} + R^a_{cdb} + R^a_{dbc} = 0
+    // R^a_{bcd} + R^a_{cdb} + R^a_{dbc} = 0
+    axiom first_bianchi : ∀(p : M).
         cyclic_sum(riemann(p)) = 0
 }
 ```

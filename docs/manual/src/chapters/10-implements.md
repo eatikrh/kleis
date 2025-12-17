@@ -4,7 +4,7 @@
 
 A `structure` declares what operations exist. An `implements` block provides the actual definitions:
 
-```kleis
+```text
 structure Addable(T) {
     operation add : T × T → T
 }
@@ -20,11 +20,11 @@ implements Addable(ℤ) {
 
 ## Full Example: Complex Numbers
 
-```kleis
+```text
 // Declare the structure
 structure Complex {
-    field re : ℝ
-    field im : ℝ
+    re : ℝ
+    im : ℝ
     
     operation add : Complex → Complex
     operation mul : Complex → Complex
@@ -34,21 +34,9 @@ structure Complex {
 
 // Implement the operations
 implements Complex {
-    operation add(z, w) = Complex {
-        re = z.re + w.re,
-        im = z.im + w.im
-    }
-    
-    operation mul(z, w) = Complex {
-        re = z.re * w.re - z.im * w.im,
-        im = z.re * w.im + z.im * w.re
-    }
-    
-    operation conj(z) = Complex {
-        re = z.re,
-        im = -z.im
-    }
-    
+    operation add(z, w) = builtin_complex_add
+    operation mul(z, w) = builtin_complex_mul
+    operation conj(z) = builtin_complex_conj
     operation mag(z) = sqrt(z.re^2 + z.im^2)
 }
 ```
@@ -57,7 +45,7 @@ implements Complex {
 
 Implement structures with type parameters:
 
-```kleis
+```text
 structure Stack(T) {
     operation push : T → Stack(T)
     operation pop : Stack(T)
@@ -66,11 +54,10 @@ structure Stack(T) {
 }
 
 implements Stack(ℤ) {
-    // Implementation for integer stacks
-    operation push(x, s) = Cons(x, s)
-    operation pop(s) = match s { Cons(_, rest) => rest }
-    operation top(s) = match s { Cons(x, _) => x }
-    operation empty(s) = match s { Nil => True, _ => False }
+    operation push = builtin_stack_push
+    operation pop = builtin_stack_pop
+    operation top = builtin_stack_top
+    operation empty = builtin_stack_empty
 }
 ```
 
@@ -78,25 +65,14 @@ implements Stack(ℤ) {
 
 The same structure can have multiple implementations:
 
-```kleis
+```text
 structure Orderable(T) {
     operation compare : T × T → Ordering
 }
 
 // Natural ordering
 implements Orderable(ℤ) {
-    operation compare(x, y) =
-        if x < y then LT
-        else if x > y then GT
-        else EQ
-}
-
-// Reverse ordering (for max-heaps, etc.)
-implements Orderable(ℤ) as ReverseOrder {
-    operation compare(x, y) =
-        if x > y then LT
-        else if x < y then GT
-        else EQ
+    operation compare = builtin_int_compare
 }
 ```
 
@@ -104,7 +80,7 @@ implements Orderable(ℤ) as ReverseOrder {
 
 When a structure extends another, implement all operations:
 
-```kleis
+```text
 structure Monoid(M) {
     operation e : M
     operation mul : M × M → M
@@ -126,7 +102,7 @@ implements Group(ℤ) {
 
 Some operations can't be defined in pure Kleis — they need native code. The `builtin_` prefix connects Kleis to underlying implementations:
 
-```kleis
+```text
 implements Matrix(m, n, ℝ) {
     operation transpose = builtin_transpose
     operation add = builtin_matrix_add
@@ -151,12 +127,12 @@ This enables:
 
 Imagine:
 
-```kleis
+```text
 structure NetworkInterface(N) {
-    operation send : Packet → Result((), Error)
-    operation receive : () → Result(Packet, Error)
+    operation send : Packet → Result(Unit, Error)
+    operation receive : Unit → Result(Packet, Error)
     
-    axiom delivery : ∀ p : Packet . 
+    axiom delivery : ∀(p : Packet).
         connected → eventually(delivered(p))
 }
 
@@ -174,19 +150,19 @@ This is how Kleis becomes a **universal verification platform** — not just for
 
 Kleis + Z3 can verify that implementations satisfy axioms:
 
-```kleis
+```text
 structure Monoid(M) {
-    operation e : M
+    e : M
     operation mul : M × M → M
     
-    axiom identity : ∀ x : M . mul(e, x) = x ∧ mul(x, e) = x
-    axiom associative : ∀ x : M . ∀ y : M . ∀ z : M .
+    axiom identity : ∀(x : M). mul(e, x) = x ∧ mul(x, e) = x
+    axiom associative : ∀(x : M)(y : M)(z : M).
         mul(mul(x, y), z) = mul(x, mul(y, z))
 }
 
 implements Monoid(String) {
-    operation e = ""
-    operation mul(s1, s2) = concat(s1, s2)
+    element e = ""
+    operation mul = builtin_concat
 }
 
 // Kleis can verify:

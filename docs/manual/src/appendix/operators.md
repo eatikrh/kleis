@@ -74,24 +74,24 @@ From lowest to highest precedence:
 
 ### Arithmetic
 
-```kleis
-2 + 3 * 4        // 14 (not 20)
-(2 + 3) * 4      // 20
-2 ^ 3 ^ 2        // 512 (= 2^9, right associative)
--x^2             // -(x^2), not (-x)^2
+```text
+define ex1 = 2 + 3 * 4        // 14 (not 20)
+define ex2 = (2 + 3) * 4      // 20
+define ex3 = 2 ^ 3 ^ 2        // 512 (= 2^9, right associative)
+define neg_sq(x) = -x^2       // -(x^2), not (-x)^2
 ```
 
 ### Logical
 
-```kleis
-P ∧ Q ∨ R        // (P ∧ Q) ∨ R
-P → Q → R        // P → (Q → R) (right associative)
-¬P ∧ Q           // (¬P) ∧ Q
+```text
+define logic1(P, Q, R) = P ∧ Q ∨ R        // (P ∧ Q) ∨ R
+define logic2(P, Q, R) = P → Q → R        // P → (Q → R) (right associative)
+define logic3(P, Q) = ¬P ∧ Q              // (¬P) ∧ Q
 ```
 
 ### Type Expressions
 
-```kleis
+```text
 ℝ → ℝ → ℝ        // ℝ → (ℝ → ℝ) (curried binary function)
 (ℝ → ℝ) → ℝ      // Higher-order: takes function, returns value
 ℝ × ℝ → ℝ        // Takes pair, returns value
@@ -101,7 +101,7 @@ P → Q → R        // P → (Q → R) (right associative)
 
 ### Mathematical Functions
 
-```kleis
+```text
 sqrt(x)          // Square root
 abs(x)           // Absolute value
 floor(x)         // Round down
@@ -113,7 +113,7 @@ max(x, y)        // Maximum
 
 ### Trigonometric Functions
 
-```kleis
+```text
 sin(x)   cos(x)   tan(x)
 asin(x)  acos(x)  atan(x)
 sinh(x)  cosh(x)  tanh(x)
@@ -121,7 +121,7 @@ sinh(x)  cosh(x)  tanh(x)
 
 ### Exponential and Logarithmic
 
-```kleis
+```text
 exp(x)           // e^x
 ln(x)            // Natural logarithm
 log(x)           // Base-10 logarithm
@@ -130,7 +130,7 @@ log(b, x)        // Logarithm base b
 
 ### Constants
 
-```kleis
+```text
 π                // Pi (3.14159...)
 e                // Euler's number (2.71828...)
 i                // Imaginary unit

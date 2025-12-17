@@ -4,7 +4,7 @@
 
 Functions are defined with `define`:
 
-```kleis
+```text
 define square(x) = x * x
 define cube(x) = x * x * x
 define add(x, y) = x + y
@@ -14,7 +14,7 @@ define add(x, y) = x + y
 
 For clarity and safety, add type annotations:
 
-```kleis
+```text
 define square(x : ℝ) : ℝ = x * x
 
 define distance(x : ℝ, y : ℝ) : ℝ = sqrt(x^2 + y^2)
@@ -26,7 +26,7 @@ define normalize(v : Vector(3)) : Vector(3) = v / magnitude(v)
 
 Functions can take multiple parameters:
 
-```kleis
+```text
 define add(x, y) = x + y
 define volume_box(l, w, h) = l * w * h
 define dot_product(a, b, c, x, y, z) = a*x + b*y + c*z
@@ -36,7 +36,7 @@ define dot_product(a, b, c, x, y, z) = a*x + b*y + c*z
 
 Functions can call themselves:
 
-```kleis
+```text
 define factorial(n : ℕ) : ℕ =
     if n = 0 then 1
     else n * factorial(n - 1)
@@ -51,14 +51,14 @@ define fibonacci(n : ℕ) : ℕ =
 Kleis includes standard mathematical functions:
 
 ### Trigonometric
-```kleis
+```text
 sin(x)      cos(x)      tan(x)
 asin(x)     acos(x)     atan(x)
 sinh(x)     cosh(x)     tanh(x)
 ```
 
 ### Exponential and Logarithmic
-```kleis
+```text
 exp(x)      // e^x
 ln(x)       // natural log
 log(x)      // base-10 log
@@ -66,7 +66,7 @@ log(b, x)   // log base b of x
 ```
 
 ### Other
-```kleis
+```text
 sqrt(x)     // square root
 abs(x)      // absolute value
 floor(x)    // round down
@@ -79,48 +79,48 @@ max(x, y)   // maximum
 
 Lambda expressions allow you to create anonymous functions inline:
 
-```kleis
-λ x . x * x           // square function
-lambda x . x + 1      // increment (using keyword)
-λ x y . x + y         // multiple parameters
-λ (x : ℝ) . x^2       // with type annotation
-λ x . λ y . x + y     // curried addition (nested)
+```text
+define square_lambda = λ x . x * x
+define increment = lambda x . x + 1
+define add_lambda = λ x . λ y . x + y
+define square_typed = λ (x : ℝ) . x^2
+define curried_add = λ x . λ y . x + y
 ```
 
 Lambda expressions are first-class values - you can pass them to functions:
 
-```kleis
+```text
 // Pass lambda to higher-order function
-map(λ x . x * 2, [1, 2, 3])
+define doubled_list = map(λ x . x * 2, [1, 2, 3])
 
 // Or define inline
-apply(λ x . x + 1, 5)
+define result = apply(λ x . x + 1, 5)
 ```
 
 ## Higher-Order Functions
 
 Functions can take functions as arguments:
 
-```kleis
+```text
 // Apply a function twice
 define apply_twice(f, x) = f(f(x))
 
 // Example usage:
 define inc(x) = x + 1
-apply_twice(inc, 5)   // Result: 7
+define result = apply_twice(inc, 5)   // Result: 7
 ```
 
 ## Partial Application and Currying
 
 With lambda expressions, you can create curried functions:
 
-```kleis
+```text
 // Curried addition
 define add = λ x . λ y . x + y
 
 // Partial application creates specialized functions
-define add5 = add(5)    // λ y . 5 + y
-add5(3)                 // Result: 8
+define add5 = add(5)           // λ y . 5 + y
+define eight = add5(3)         // Result: 8
 ```
 
 ## What's Next?

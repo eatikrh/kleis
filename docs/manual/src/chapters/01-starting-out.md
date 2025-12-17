@@ -5,10 +5,10 @@
 The simplest things in Kleis are **expressions**. An expression is anything that has a value:
 
 ```kleis
-42              // A number
-3.14159         // A decimal
-x + y           // An arithmetic expression
-sin(θ)          // A function call
+define answer = 42              // A number
+define pi_approx = 3.14159      // A decimal
+define sum(x, y) = x + y        // An arithmetic expression
+define angle_sin(θ) = sin(θ)    // A function call
 ```
 
 ## The REPL
@@ -32,11 +32,11 @@ kleis> let x = 5 in x * x
 Kleis supports the usual arithmetic operations:
 
 ```kleis
-2 + 3       // Addition: 5
-10 - 4      // Subtraction: 6
-3 * 7       // Multiplication: 21
-15 / 3      // Division: 5
-2 ^ 10      // Exponentiation: 1024
+define add_example = 2 + 3       // Addition: 5
+define sub_example = 10 - 4      // Subtraction: 6
+define mul_example = 3 * 7       // Multiplication: 21
+define div_example = 15 / 3      // Division: 5
+define pow_example = 2 ^ 10      // Exponentiation: 1024
 ```
 
 ## Variables and Definitions
@@ -81,11 +81,9 @@ define α = 0.5
 define β = 1.0
 define θ = π / 4
 
-// Mathematical symbols
-∀ x . x = x           // Universal quantifier
-∃ y . y > 0           // Existential quantifier
-x ∈ ℝ                 // Set membership
-A ⊆ B                 // Subset
+// Mathematical symbols in axioms
+axiom reflexivity : ∀(x : ℝ). x = x           // Universal quantifier
+axiom positive_exists : ∃(y : ℝ). y > 0       // Existential quantifier
 ```
 
 You can use ASCII alternatives too:

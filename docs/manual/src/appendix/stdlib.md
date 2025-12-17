@@ -6,29 +6,23 @@ The Kleis standard library provides foundational types, structures, and operatio
 
 ### Numeric Types
 
-```kleis
-// Natural numbers (0, 1, 2, ...)
-ℕ  // or Nat
-
-// Integers (..., -1, 0, 1, ...)
-ℤ  // or Int
-
-// Real numbers
-ℝ  // or Real
-
-// Complex numbers
-ℂ  // or Complex
+```text
+// These are primitive types built into Kleis:
+ℕ  (or Nat)      // Natural numbers (0, 1, 2, ...)
+ℤ  (or Int)      // Integers (..., -1, 0, 1, ...)
+ℝ  (or Real)     // Real numbers
+ℂ  (or Complex)  // Complex numbers
 ```
 
 ### Boolean Type
 
-```kleis
+```text
 Bool  // True or False
 ```
 
 ### Unit Type
 
-```kleis
+```text
 Unit  // Single value: ()
 ```
 
@@ -36,7 +30,7 @@ Unit  // Single value: ()
 
 ### List
 
-```kleis
+```text
 structure List(T) {
     operation head : T
     operation tail : List(T)
@@ -44,13 +38,12 @@ structure List(T) {
     operation append : List(T) → List(T)
     operation map : (T → U) → List(U)
     operation filter : (T → Bool) → List(T)
-    operation fold : (U × T → U) → U → U
 }
 ```
 
 ### Vector
 
-```kleis
+```text
 structure Vector(n : ℕ, T) {
     operation get : ℕ → T
     operation length : ℕ
@@ -62,7 +55,7 @@ structure Vector(n : ℕ, T) {
 
 ### Matrix
 
-```kleis
+```text
 structure Matrix(m : ℕ, n : ℕ, T) {
     operation get : ℕ × ℕ → T
     operation rows : ℕ
@@ -84,32 +77,32 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 
 ### Monoid
 
-```kleis
+```text
 structure Monoid(M) {
-    operation e : M               // Identity element
+    e : M                         // Identity element
     operation mul : M × M → M     // Binary operation
     
-    axiom identity_left : ∀ x : M . mul(e, x) = x
-    axiom identity_right : ∀ x : M . mul(x, e) = x
-    axiom associative : ∀ x : M . ∀ y : M . ∀ z : M .
+    axiom identity_left : ∀(x : M). mul(e, x) = x
+    axiom identity_right : ∀(x : M). mul(x, e) = x
+    axiom associative : ∀(x : M)(y : M)(z : M).
         mul(mul(x, y), z) = mul(x, mul(y, z))
 }
 ```
 
 ### Group
 
-```kleis
+```text
 structure Group(G) extends Monoid(G) {
     operation inv : G → G         // Inverse
     
-    axiom inverse_left : ∀ x : G . mul(inv(x), x) = e
-    axiom inverse_right : ∀ x : G . mul(x, inv(x)) = e
+    axiom inverse_left : ∀(x : G). mul(inv(x), x) = e
+    axiom inverse_right : ∀(x : G). mul(x, inv(x)) = e
 }
 ```
 
 ### Ring
 
-```kleis
+```text
 structure Ring(R) {
     operation zero : R
     operation one : R
@@ -125,22 +118,22 @@ structure Ring(R) {
 
 ### Field
 
-```kleis
+```text
 structure Field(F) extends Ring(F) {
     operation inv : F → F  // Multiplicative inverse (for non-zero)
     
-    axiom mul_inverse : ∀ x : F . x ≠ zero → mul(x, inv(x)) = one
-    axiom mul_commutative : ∀ x : F . ∀ y : F . mul(x, y) = mul(y, x)
+    axiom mul_inverse : ∀(x : F). x ≠ zero → mul(x, inv(x)) = one
+    axiom mul_commutative : ∀(x : F)(y : F). mul(x, y) = mul(y, x)
 }
 ```
 
 ### Vector Space
 
-```kleis
+```text
 structure VectorSpace(V, F) where F : Field {
     operation add : V × V → V
     operation scale : F × V → V
-    operation zero : V
+    zero : V
     
     // (V, add, zero) is an abelian group
     // scale distributes over add
@@ -152,30 +145,30 @@ structure VectorSpace(V, F) where F : Field {
 
 ### Metric Space
 
-```kleis
+```text
 structure MetricSpace(M) {
     operation distance : M × M → ℝ
     
-    axiom non_negative : ∀ x : M . ∀ y : M . distance(x, y) ≥ 0
-    axiom identity : ∀ x : M . ∀ y : M . distance(x, y) = 0 ↔ x = y
-    axiom symmetric : ∀ x : M . ∀ y : M . distance(x, y) = distance(y, x)
-    axiom triangle : ∀ x : M . ∀ y : M . ∀ z : M .
+    axiom non_negative : ∀(x : M)(y : M). distance(x, y) ≥ 0
+    axiom identity : ∀(x : M)(y : M). distance(x, y) = 0 ↔ x = y
+    axiom symmetric : ∀(x : M)(y : M). distance(x, y) = distance(y, x)
+    axiom triangle : ∀(x : M)(y : M)(z : M).
         distance(x, z) ≤ distance(x, y) + distance(y, z)
 }
 ```
 
 ### Manifold
 
-```kleis
+```text
 structure Manifold(M, dim : ℕ) {
     operation tangent : M → TangentSpace(dim)
-    operation chart : M → ℝ^dim  // Local coordinates
+    operation chart : M → Vector(dim, ℝ)  // Local coordinates
 }
 ```
 
 ### Riemannian Manifold
 
-```kleis
+```text
 structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
     operation metric : M → Matrix(dim, dim, ℝ)
     operation christoffel : M → Tensor(1, 2)
@@ -189,34 +182,46 @@ structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
 
 ### Option
 
-```kleis
-enum Option(T) {
+```text
+data Option(T) {
     Some(value : T)
     None
 }
 
 // Operations
-define is_some(opt : Option(T)) : Bool =
-    match opt { Some(_) => True, None => False }
+define is_some(opt) =
+    match opt {
+        Some(_) => True
+        None => False
+    }
 
-define unwrap_or(opt : Option(T), default : T) : T =
-    match opt { Some(v) => v, None => default }
+define unwrap_or(opt, default) =
+    match opt {
+        Some(v) => v
+        None => default
+    }
 ```
 
 ### Result
 
-```kleis
-enum Result(T, E) {
+```text
+data Result(T, E) {
     Ok(value : T)
     Err(error : E)
 }
 
 // Operations
-define is_ok(res : Result(T, E)) : Bool =
-    match res { Ok(_) => True, Err(_) => False }
+define is_ok(res) =
+    match res {
+        Ok(_) => True
+        Err(_) => False
+    }
 
-define map(res : Result(T, E), f : T → U) : Result(U, E) =
-    match res { Ok(v) => Ok(f(v)), Err(e) => Err(e) }
+define map_result(res, f) =
+    match res {
+        Ok(v) => Ok(f(v))
+        Err(e) => Err(e)
+    }
 ```
 
 ## Loading the Standard Library
@@ -230,7 +235,7 @@ Loaded standard library.
 
 In files:
 
-```kleis
+```text
 import stdlib.prelude
 import stdlib.linear_algebra
 import stdlib.differential_geometry

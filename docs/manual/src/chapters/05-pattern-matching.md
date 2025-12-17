@@ -4,12 +4,12 @@
 
 Pattern matching is one of Kleis's most powerful features. It lets you destructure data and handle different cases elegantly:
 
-```kleis
-define describe(n : ℤ) : String =
+```text
+define describe(n) =
     match n {
-        0 => "zero"
-        1 => "one"
-        _ => "many"
+        0 => 0
+        1 => 1
+        _ => 2
     }
 ```
 
@@ -19,90 +19,97 @@ define describe(n : ℤ) : String =
 
 Match exact values:
 
-```kleis
-match x {
-    0 => "zero"
-    1 => "one"
-    42 => "the answer"
-    _ => "something else"
-}
+```text
+define describe_literal(x) =
+    match x {
+        0 => "zero"
+        1 => "one"
+        42 => "the answer"
+        _ => "something else"
+    }
 ```
 
 ### Variable Patterns
 
 Bind matched values to names:
 
-```kleis
-match point {
-    Point(x, y) => x + y  // x and y are bound
-}
+```text
+define sum_point(point) =
+    match point {
+        Point(x, y) => x + y
+    }
 ```
 
 ### Wildcard Pattern
 
 The underscore `_` matches anything:
 
-```kleis
-match pair {
-    (_, 0) => "second is zero"
-    (0, _) => "first is zero"
-    _ => "neither is zero"
-}
+```text
+define describe_pair(pair) =
+    match pair {
+        (_, 0) => "second is zero"
+        (0, _) => "first is zero"
+        _ => "neither is zero"
+    }
 ```
 
 ## Nested Patterns
 
 Patterns can be nested arbitrarily:
 
-```kleis
-match tree {
-    Leaf(v) => v
-    Node(Leaf(l), v, Leaf(r)) => l + v + r  // Both children are leaves
-    Node(left, v, right) => v + sum(left) + sum(right)
-}
+```text
+define sum_tree(tree) =
+    match tree {
+        Leaf(v) => v
+        Node(Leaf(l), v, Leaf(r)) => l + v + r
+        Node(left, v, right) => v + sum_tree(left) + sum_tree(right)
+    }
 ```
 
 ## Guards
 
 Add conditions to patterns with `if`:
 
-```kleis
-match n {
-    x if x < 0 => "negative"
-    x if x > 0 => "positive"
-    _ => "zero"
-}
+```text
+define sign(n) =
+    match n {
+        x if x < 0 => "negative"
+        x if x > 0 => "positive"
+        _ => "zero"
+    }
 ```
 
 ## As-Patterns
 
 Bind the whole match while also destructuring:
 
-```kleis
-match list {
-    Cons(h, t) as whole => 
-        if h > 10 then whole
-        else t
-}
+```text
+define filter_head(list) =
+    match list {
+        Cons(h, t) as whole => 
+            if h > 10 then whole
+            else t
+        Nil => Nil
+    }
 ```
 
 ## Pattern Matching in Let
 
 Destructure directly in let bindings:
 
-```kleis
-let Point(x, y) = origin in
-    x^2 + y^2
+```text
+define distance_squared(origin) =
+    let Point(x, y) = origin in x^2 + y^2
 
-let (first, second, _) = triple in
-    first + second
+define sum_first_two(triple) =
+    let (first, second, _) = triple in first + second
 ```
 
 ## Pattern Matching in Function Parameters
 
 With lambda expressions now available, you can combine them with match:
 
-```kleis
+```text
 // Pattern matching with lambdas
 define fst = λ pair . match pair { (a, _) => a }
 define snd = λ pair . match pair { (_, b) => b }
@@ -110,7 +117,7 @@ define snd = λ pair . match pair { (_, b) => b }
 
 **Alternative workaround:**
 
-```kleis
+```text
 define fst(pair) = 
     match pair {
         (a, _) => a
@@ -121,26 +128,27 @@ define fst(pair) =
 
 Kleis checks that your patterns cover all cases:
 
-```kleis
+```text
 // ⚠️ Warning: non-exhaustive patterns
-match opt {
-    Some(x) => x
-    // Missing: None case!
-}
+define incomplete(opt) =
+    match opt {
+        Some(x) => x
+    }
 
 // ✓ Complete
-match opt {
-    Some(x) => x
-    None => 0
-}
+define complete(opt) =
+    match opt {
+        Some(x) => x
+        None => 0
+    }
 ```
 
 ## Real-World Example: Symbolic Differentiation
 
 Pattern matching makes symbolic math elegant:
 
-```kleis
-define diff(expr : Expr, var : String) : Expr =
+```text
+define diff(expr, var) =
     match expr {
         Const(_) => Const(0)
         
@@ -151,7 +159,7 @@ define diff(expr : Expr, var : String) : Expr =
         Add(f, g) => 
             Add(diff(f, var), diff(g, var))
         
-        Mul(f, g) =>  // Product rule
+        Mul(f, g) =>
             Add(Mul(diff(f, var), g), 
                 Mul(f, diff(g, var)))
         
