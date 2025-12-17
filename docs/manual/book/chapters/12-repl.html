@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-25c01815.js";
+            window.path_to_searchindex_js = "../searchindex-02c5cbba.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -251,60 +251,70 @@ times(3.14, 2)
 </div>
 <h2 id="loading-files"><a class="header" href="#loading-files">Loading Files</a></h2>
 <p>Load Kleis source files:</p>
-<pre><code>kleis&gt; :load stdlib/prelude.kleis
-Loaded: stdlib/prelude.kleis
+<pre><code>λ&gt; :load stdlib/prelude.kleis
+✅ Loaded: 4 functions, 15 structures, 0 data types, 0 type aliases
 
-kleis&gt; :load examples/geometry.kleis
-Loaded: examples/geometry.kleis
+λ&gt; :load examples/authorization/zanzibar.kleis
+✅ Loaded: 13 functions, 0 structures, 0 data types, 0 type aliases
 </code></pre>
 <h2 id="verification-in-repl"><a class="header" href="#verification-in-repl">Verification in REPL</a></h2>
 <p>Run verifications interactively:</p>
-<pre><code>kleis&gt; verify x + y = y + x
-✓ Valid
+<pre><code>λ&gt; :verify x + y = y + x
+DEBUG: Found dependencies: {}
+✅ Valid
 
-kleis&gt; verify ∀ n : ℕ . n ≥ 0
-✓ Valid
+λ&gt; :verify ∀ n : ℕ . n ≥ 0
+DEBUG: Found dependencies: {}
+❌ Invalid - Counterexample: n!2 -&gt; (- 1)
 
-kleis&gt; verify x &gt; 0
-✗ Invalid
-Counterexample: x = -1
+λ&gt; :verify x &gt; 0
+DEBUG: Found dependencies: {}
+❌ Invalid - Counterexample: x!3 -&gt; 0
+
 </code></pre>
 <h2 id="multi-line-input"><a class="header" href="#multi-line-input">Multi-line Input</a></h2>
 <p>For complex expressions, use continuation:</p>
-<pre><code>kleis&gt; define factorial(n) =
-...&gt;     if n = 0 then 1
-...&gt;     else n * factorial(n - 1)
-Defined: factorial
+<pre><code>&lt;multiline example&gt;
 </code></pre>
 <h2 id="lambda-expressions-in-repl"><a class="header" href="#lambda-expressions-in-repl">Lambda Expressions in REPL</a></h2>
 <p>Lambda expressions work in the REPL:</p>
-<pre><code>kleis&gt; λ x . x * 2
-λ x . x * 2
+<pre><code>λ&gt; λ x . x * 2
+λ x . times(x, 2)
 
-kleis&gt; (λ x . x + 1)(5)
-6
+λ&gt; (λ x . x + 1)(5)
+❌ Parse error: Kleis parse error at position 13: Unexpected character: '('
 
-kleis&gt; define double = λ x . x * 2
-Defined: double
+λ&gt; ddefine double = λ x . x * 2
+❌ Parse error: Kleis parse error at position 7: Unexpected character: 'd'
 
-kleis&gt; double(21)
-42
+λ&gt; double(21)
+double(21)
 </code></pre>
 <p>You can use both the <code>λ</code> symbol and the <code>lambda</code> keyword.</p>
 <h2 id="example-session"><a class="header" href="#example-session">Example Session</a></h2>
-<pre><code>kleis&gt; // Define a structure
-kleis&gt; structure Point { x : ℝ, y : ℝ }
+<pre><code>λ&gt; // Define a structure
+❌ Parse error: Kleis parse error at position 21: Expected expression
+λ&gt; structure Point { x : ℝ, y : ℝ }
+❌ Parse error: Kleis parse error at position 10: Unexpected character: 'P'
 
-kleis&gt; // Create a point
-kleis&gt; let p = Point { x = 3, y = 4 } in
-...&gt;     sqrt(p.x^2 + p.y^2)
-5.0
 
-kleis&gt; // Verify properties
-kleis&gt; verify ∀ a : ℝ . ∀ b : ℝ . (a + b)^2 = a^2 + 2*a*b + b^2
-✓ Valid
+λ&gt; // Create a point
+❌ Parse error: Kleis parse error at position 17: Expected expression
+λ&gt; let p = Point { x = 3, y = 4 } in \
+   sqrt(p.x^2 + p.y^2)
+❌ Parse error: Kleis parse error at position 14: Expected keyword 'in'
 
-kleis&gt; :quit
+λ&gt; // Verify properties
+❌ Parse error: Kleis parse error at position 20: Expected expression
+λ&gt;  :verify ∀ a : ℝ . ∀ b : ℝ . (a + b)^2 = a^2 + 2*a*b + b^2
+DEBUG: Found dependencies: {}
+❌ Invalid - Counterexample: b!5 -&gt; 0.0
+a!4 -&gt; 0.0
+power -&gt; {
+  (- 1)
+}
+
+λ&gt; :quit
 Goodbye!
 </code></pre>
 <h2 id="tips-and-tricks"><a class="header" href="#tips-and-tricks">Tips and Tricks</a></h2>
