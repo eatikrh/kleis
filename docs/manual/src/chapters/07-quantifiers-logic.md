@@ -29,10 +29,10 @@ ASCII alternative: `exists x . ...`
 Build complex statements:
 
 ```kleis
--- Every number has a successor
+// Every number has a successor
 ∀ n : ℕ . ∃ m : ℕ . m = n + 1
 
--- Density of rationals: between any two reals is a rational
+// Density of rationals: between any two reals is a rational
 ∀ x : ℝ . ∀ y : ℝ . x < y → ∃ q : ℚ . x < q ∧ q < y
 ```
 
@@ -103,12 +103,12 @@ structure Group(G) {
 Kleis uses Z3 to check quantified statements:
 
 ```kleis
--- Z3 can verify this is always true:
+// Z3 can verify this is always true:
 verify ∀ x : ℝ . x + 0 = x
 
--- Z3 can find a counterexample for this:
+// Z3 can find a counterexample for this:
 verify ∀ x : ℝ . x > 0
--- Counterexample: x = -1
+// Counterexample: x = -1
 ```
 
 ## Truth Tables

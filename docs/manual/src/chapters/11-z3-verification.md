@@ -14,14 +14,14 @@ Use `verify` to check a statement:
 
 ```kleis
 verify x + y = y + x
--- Result: ✓ Valid (commutativity of addition)
+// Result: ✓ Valid (commutativity of addition)
 
 verify x * 0 = 0
--- Result: ✓ Valid
+// Result: ✓ Valid
 
 verify x > 0
--- Result: ✗ Invalid
--- Counterexample: x = -1
+// Result: ✗ Invalid
+// Counterexample: x = -1
 ```
 
 ## Verifying Quantified Statements
@@ -30,16 +30,16 @@ Z3 handles universal and existential quantifiers:
 
 ```kleis
 verify ∀ x : ℝ . x + 0 = x
--- Result: ✓ Valid
+// Result: ✓ Valid
 
 verify ∀ x : ℝ . x * x ≥ 0
--- Result: ✓ Valid (squares are non-negative)
+// Result: ✓ Valid (squares are non-negative)
 
 verify ∃ x : ℝ . x * x = -1
--- Result: ✗ Invalid (no real square root of -1)
+// Result: ✗ Invalid (no real square root of -1)
 
 verify ∃ x : ℂ . x * x = -1
--- Result: ✓ Valid (x = i works)
+// Result: ✓ Valid (x = i works)
 ```
 
 ## Checking Axioms
@@ -58,14 +58,14 @@ structure Group(G) {
         mul(mul(x, y), z) = mul(x, mul(y, z))
 }
 
--- Define integers with addition
+// Define integers with addition
 implements Group(ℤ) {
     operation e = 0
     operation mul(x, y) = x + y
     operation inv(x) = -x
 }
 
--- Kleis verifies each axiom automatically!
+// Kleis verifies each axiom automatically!
 ```
 
 ## Implication Verification
@@ -73,13 +73,13 @@ implements Group(ℤ) {
 Prove that premises imply conclusions:
 
 ```kleis
--- If x > 0 and y > 0, then x + y > 0
+// If x > 0 and y > 0, then x + y > 0
 verify (x > 0 ∧ y > 0) → x + y > 0
--- Result: ✓ Valid
+// Result: ✓ Valid
 
--- Triangle inequality
+// Triangle inequality
 verify (abs(x) ≤ a ∧ abs(y) ≤ b) → abs(x + y) ≤ a + b
--- Result: ✓ Valid
+// Result: ✓ Valid
 ```
 
 ## Counterexamples
@@ -88,12 +88,12 @@ When verification fails, Z3 provides counterexamples:
 
 ```kleis
 verify ∀ x : ℝ . x^2 = x
--- Result: ✗ Invalid
--- Counterexample: x = 2 (since 4 ≠ 2)
+// Result: ✗ Invalid
+// Counterexample: x = 2 (since 4 ≠ 2)
 
 verify ∀ n : ℕ . n > 0 → n > 1
--- Result: ✗ Invalid
--- Counterexample: n = 1
+// Result: ✗ Invalid
+// Counterexample: n = 1
 ```
 
 ## Timeout and Limits
@@ -101,9 +101,9 @@ verify ∀ n : ℕ . n > 0 → n > 1
 Complex statements may time out:
 
 ```kleis
--- Very complex statement
+// Very complex statement
 verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
--- Result: ⏱ Timeout (statement too complex)
+// Result: ⏱ Timeout (statement too complex)
 ```
 
 ## What Z3 Can and Cannot Do
@@ -130,7 +130,7 @@ verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
 5. **Examine counterexamples** when verification fails
 
 ```kleis
--- Step 1: Define structure
+// Step 1: Define structure
 structure Ring(R) {
     operation zero : R
     operation one : R
@@ -143,7 +143,7 @@ structure Ring(R) {
     // ... more axioms
 }
 
--- Step 2: Implement for integers
+// Step 2: Implement for integers
 implements Ring(ℤ) {
     operation zero = 0
     operation one = 1
@@ -152,11 +152,11 @@ implements Ring(ℤ) {
     operation neg(x) = -x
 }
 
--- Step 3: Auto-verification happens!
+// Step 3: Auto-verification happens!
 
--- Step 4: Check additional properties
+// Step 4: Check additional properties
 verify ∀ x : ℤ . mul(x, zero) = zero
--- Result: ✓ Valid
+// Result: ✓ Valid
 ```
 
 ## What's Next?

@@ -90,10 +90,10 @@ lambda x . x + 1      // increment (using keyword)
 Lambda expressions are first-class values - you can pass them to functions:
 
 ```kleis
--- Pass lambda to higher-order function
+// Pass lambda to higher-order function
 map(λ x . x * 2, [1, 2, 3])
 
--- Or define inline
+// Or define inline
 apply(λ x . x + 1, 5)
 ```
 
@@ -102,10 +102,10 @@ apply(λ x . x + 1, 5)
 Functions can take functions as arguments:
 
 ```kleis
--- Apply a function twice
+// Apply a function twice
 define apply_twice(f, x) = f(f(x))
 
--- Example usage:
+// Example usage:
 define inc(x) = x + 1
 apply_twice(inc, 5)   // Result: 7
 ```
@@ -115,10 +115,10 @@ apply_twice(inc, 5)   // Result: 7
 With lambda expressions, you can create curried functions:
 
 ```kleis
--- Curried addition
+// Curried addition
 define add = λ x . λ y . x + y
 
--- Partial application creates specialized functions
+// Partial application creates specialized functions
 define add5 = add(5)    // λ y . 5 + y
 add5(3)                 // Result: 8
 ```

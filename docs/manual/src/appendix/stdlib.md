@@ -7,16 +7,16 @@ The Kleis standard library provides foundational types, structures, and operatio
 ### Numeric Types
 
 ```kleis
--- Natural numbers (0, 1, 2, ...)
+// Natural numbers (0, 1, 2, ...)
 ℕ  // or Nat
 
--- Integers (..., -1, 0, 1, ...)
+// Integers (..., -1, 0, 1, ...)
 ℤ  // or Int
 
--- Real numbers
+// Real numbers
 ℝ  // or Real
 
--- Complex numbers
+// Complex numbers
 ℂ  // or Complex
 ```
 
@@ -195,7 +195,7 @@ enum Option(T) {
     None
 }
 
--- Operations
+// Operations
 define is_some(opt : Option(T)) : Bool =
     match opt { Some(_) => True, None => False }
 
@@ -211,7 +211,7 @@ enum Result(T, E) {
     Err(error : E)
 }
 
--- Operations
+// Operations
 define is_ok(res : Result(T, E)) : Bool =
     match res { Ok(_) => True, Err(_) => False }
 
