@@ -28,10 +28,10 @@
 //! let result = eval.apply_function("double", vec![Const("5")])?;
 //! // result = plus(5, 5) (symbolic, not computed to 10)
 //! ```
-use crate::ast::Expression;
+use crate::ast::{Expression, LambdaParam};
 use crate::kleis_ast::{FunctionDef, Program, TopLevel};
 use crate::pattern_matcher::PatternMatcher;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Represents a user-defined function as a closure
 #[derive(Debug, Clone)]
@@ -464,6 +464,576 @@ impl Evaluator {
     pub fn list_functions(&self) -> Vec<String> {
         self.functions.keys().cloned().collect()
     }
+
+    // =========================================================================
+    // Beta Reduction for Lambda Expressions
+    // =========================================================================
+
+    /// Default fuel limit for reduction (prevents infinite loops)
+    const DEFAULT_REDUCTION_FUEL: usize = 1000;
+
+    /// Perform beta reduction: (λ x . body)(arg) → body[x := arg]
+    ///
+    /// This is the core computational step in lambda calculus.
+    /// It substitutes the argument for the bound variable in the lambda body.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// // (λ x . x + 1)(5) → 5 + 1
+    /// let lambda = Expression::Lambda { params: [x], body: x + 1 };
+    /// let result = evaluator.beta_reduce(&lambda, &Expression::Const("5"))?;
+    /// // result = Operation { name: "plus", args: [5, 1] }
+    /// ```
+    pub fn beta_reduce(&self, lambda: &Expression, arg: &Expression) -> Result<Expression, String> {
+        match lambda {
+            Expression::Lambda { params, body } => {
+                if params.is_empty() {
+                    // No params, return body as-is
+                    return Ok((**body).clone());
+                }
+
+                let param = &params[0];
+
+                // Check for potential variable capture and alpha-convert if needed
+                let safe_body = self.alpha_convert_if_needed(body, &param.name, arg);
+
+                // Build substitution map for first parameter
+                let mut subst = HashMap::new();
+                subst.insert(param.name.clone(), arg.clone());
+
+                // Substitute param with arg in body
+                let reduced_body = self.substitute(&safe_body, &subst);
+
+                if params.len() == 1 {
+                    // Fully applied single-param lambda
+                    Ok(reduced_body)
+                } else {
+                    // Partial application - return new lambda with remaining params
+                    Ok(Expression::Lambda {
+                        params: params[1..].to_vec(),
+                        body: Box::new(reduced_body),
+                    })
+                }
+            }
+            _ => Err(format!(
+                "Cannot beta-reduce non-lambda expression: {:?}",
+                lambda
+            )),
+        }
+    }
+
+    /// Beta reduce with multiple arguments (for multi-param lambdas or curried application)
+    ///
+    /// Applies arguments one at a time, handling partial application.
+    pub fn beta_reduce_multi(
+        &self,
+        lambda: &Expression,
+        args: &[Expression],
+    ) -> Result<Expression, String> {
+        let mut result = lambda.clone();
+
+        for arg in args {
+            result = self.beta_reduce(&result, arg)?;
+        }
+
+        Ok(result)
+    }
+
+    /// Reduce an expression to normal form with fuel limit
+    ///
+    /// This repeatedly applies beta reduction until no more redexes exist
+    /// or the fuel runs out (preventing infinite loops).
+    pub fn reduce_to_normal_form(&self, expr: &Expression) -> Result<Expression, String> {
+        self.reduce_with_fuel(expr, Self::DEFAULT_REDUCTION_FUEL)
+    }
+
+    /// Reduce with explicit fuel limit
+    pub fn reduce_with_fuel(&self, expr: &Expression, fuel: usize) -> Result<Expression, String> {
+        if fuel == 0 {
+            return Err(
+                "Reduction limit exceeded (possible infinite loop or very complex expression)"
+                    .to_string(),
+            );
+        }
+
+        match self.reduction_step(expr)? {
+            Some(reduced) => self.reduce_with_fuel(&reduced, fuel - 1),
+            None => Ok(expr.clone()), // Normal form reached
+        }
+    }
+
+    /// Perform a single reduction step (if possible)
+    ///
+    /// Returns Some(reduced) if a reduction was performed, None if in normal form.
+    /// Uses normal order (leftmost-outermost) reduction strategy.
+    fn reduction_step(&self, expr: &Expression) -> Result<Option<Expression>, String> {
+        match expr {
+            // Check for lambda application pattern in Operation
+            // This handles: f(arg) where f resolves to a lambda
+            Expression::Operation { name, args } => {
+                // First, check if this is a named function that's actually a lambda
+                if let Some(closure) = self.functions.get(name) {
+                    // Check if the stored function body is a lambda
+                    if matches!(closure.body, Expression::Lambda { .. })
+                        && closure.params.is_empty()
+                    {
+                        // It's a lambda assigned to a name: define f = λ x . body
+                        let lambda = &closure.body;
+                        let result = self.beta_reduce_multi(lambda, args)?;
+                        return Ok(Some(result));
+                    }
+                }
+
+                // Try to reduce arguments (normal order: left to right)
+                for (i, arg) in args.iter().enumerate() {
+                    if let Some(reduced_arg) = self.reduction_step(arg)? {
+                        let mut new_args = args.clone();
+                        new_args[i] = reduced_arg;
+                        return Ok(Some(Expression::Operation {
+                            name: name.clone(),
+                            args: new_args,
+                        }));
+                    }
+                }
+
+                Ok(None) // No reduction possible
+            }
+
+            // Lambda body reduction
+            Expression::Lambda { params, body } => {
+                if let Some(reduced_body) = self.reduction_step(body)? {
+                    Ok(Some(Expression::Lambda {
+                        params: params.clone(),
+                        body: Box::new(reduced_body),
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // Let bindings - reduce to substitution
+            Expression::Let {
+                name, value, body, ..
+            } => {
+                // Reduce value first
+                if let Some(reduced_value) = self.reduction_step(value)? {
+                    return Ok(Some(Expression::Let {
+                        name: name.clone(),
+                        type_annotation: None,
+                        value: Box::new(reduced_value),
+                        body: body.clone(),
+                    }));
+                }
+
+                // Value is in normal form, perform substitution
+                let mut subst = HashMap::new();
+                subst.insert(name.clone(), (**value).clone());
+                let result = self.substitute(body, &subst);
+                Ok(Some(result))
+            }
+
+            // Conditionals - reduce condition, then branches
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                // Try to reduce condition first
+                if let Some(reduced_cond) = self.reduction_step(condition)? {
+                    return Ok(Some(Expression::Conditional {
+                        condition: Box::new(reduced_cond),
+                        then_branch: then_branch.clone(),
+                        else_branch: else_branch.clone(),
+                    }));
+                }
+
+                // Check if condition is a boolean constant
+                match condition.as_ref() {
+                    Expression::Object(s) if s == "True" || s == "true" => {
+                        Ok(Some((**then_branch).clone()))
+                    }
+                    Expression::Object(s) if s == "False" || s == "false" => {
+                        Ok(Some((**else_branch).clone()))
+                    }
+                    _ => {
+                        // Reduce then branch
+                        if let Some(reduced) = self.reduction_step(then_branch)? {
+                            return Ok(Some(Expression::Conditional {
+                                condition: condition.clone(),
+                                then_branch: Box::new(reduced),
+                                else_branch: else_branch.clone(),
+                            }));
+                        }
+                        // Reduce else branch
+                        if let Some(reduced) = self.reduction_step(else_branch)? {
+                            return Ok(Some(Expression::Conditional {
+                                condition: condition.clone(),
+                                then_branch: then_branch.clone(),
+                                else_branch: Box::new(reduced),
+                            }));
+                        }
+                        Ok(None)
+                    }
+                }
+            }
+
+            // Ascription - reduce inner, discard type
+            Expression::Ascription { expr: inner, .. } => {
+                if let Some(reduced) = self.reduction_step(inner)? {
+                    Ok(Some(reduced))
+                } else {
+                    // Already reduced, strip ascription
+                    Ok(Some((**inner).clone()))
+                }
+            }
+
+            // List - reduce elements
+            Expression::List(elements) => {
+                for (i, elem) in elements.iter().enumerate() {
+                    if let Some(reduced) = self.reduction_step(elem)? {
+                        let mut new_elements = elements.clone();
+                        new_elements[i] = reduced;
+                        return Ok(Some(Expression::List(new_elements)));
+                    }
+                }
+                Ok(None)
+            }
+
+            // Atoms and quantifiers are already in normal form
+            Expression::Const(_)
+            | Expression::Object(_)
+            | Expression::Placeholder { .. }
+            | Expression::Quantifier { .. }
+            | Expression::Match { .. } => Ok(None),
+        }
+    }
+
+    // =========================================================================
+    // Alpha Conversion (Variable Capture Avoidance)
+    // =========================================================================
+
+    /// Check if substitution would cause variable capture and alpha-convert if needed
+    ///
+    /// Variable capture occurs when a free variable in the argument would become
+    /// bound after substitution. For example:
+    /// ```ignore
+    /// (λ x . λ y . x + y)(y)
+    /// // Naive substitution gives: λ y . y + y  (WRONG!)
+    /// // The 'y' in the argument was captured by the inner λ y
+    /// // Correct: α-convert first: λ z . y + z
+    /// ```
+    fn alpha_convert_if_needed(
+        &self,
+        body: &Expression,
+        _param: &str,
+        arg: &Expression,
+    ) -> Expression {
+        let free_in_arg = self.free_variables(arg);
+        let bound_in_body = self.bound_variables(body);
+
+        // Find variables that would be captured
+        let captures: HashSet<_> = free_in_arg.intersection(&bound_in_body).cloned().collect();
+
+        if captures.is_empty() {
+            return body.clone();
+        }
+
+        // Alpha-convert: rename captured variables in body
+        let mut result = body.clone();
+        for captured in captures {
+            let fresh = self.fresh_variable(&captured, &result, arg);
+            result = self.alpha_convert(&result, &captured, &fresh);
+        }
+
+        result
+    }
+
+    /// Get all free variables in an expression
+    fn free_variables(&self, expr: &Expression) -> HashSet<String> {
+        let mut free = HashSet::new();
+        self.collect_free_variables(expr, &mut HashSet::new(), &mut free);
+        free
+    }
+
+    /// Helper to collect free variables, tracking bound variables
+    fn collect_free_variables(
+        &self,
+        expr: &Expression,
+        bound: &mut HashSet<String>,
+        free: &mut HashSet<String>,
+    ) {
+        match expr {
+            Expression::Object(name) => {
+                if !bound.contains(name) {
+                    free.insert(name.clone());
+                }
+            }
+            Expression::Const(_) | Expression::Placeholder { .. } => {}
+            Expression::Operation { args, .. } => {
+                for arg in args {
+                    self.collect_free_variables(arg, bound, free);
+                }
+            }
+            Expression::Lambda { params, body } => {
+                let mut new_bound = bound.clone();
+                for p in params {
+                    new_bound.insert(p.name.clone());
+                }
+                self.collect_free_variables(body, &mut new_bound, free);
+            }
+            Expression::Let {
+                name, value, body, ..
+            } => {
+                self.collect_free_variables(value, bound, free);
+                let mut new_bound = bound.clone();
+                new_bound.insert(name.clone());
+                self.collect_free_variables(body, &mut new_bound, free);
+            }
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.collect_free_variables(condition, bound, free);
+                self.collect_free_variables(then_branch, bound, free);
+                self.collect_free_variables(else_branch, bound, free);
+            }
+            Expression::Quantifier {
+                variables,
+                where_clause,
+                body,
+                ..
+            } => {
+                let mut new_bound = bound.clone();
+                for v in variables {
+                    new_bound.insert(v.name.clone()); // Extract name from QuantifiedVar
+                }
+                if let Some(w) = where_clause {
+                    self.collect_free_variables(w, &mut new_bound, free);
+                }
+                self.collect_free_variables(body, &mut new_bound, free);
+            }
+            Expression::Match { scrutinee, cases } => {
+                self.collect_free_variables(scrutinee, bound, free);
+                for case in cases {
+                    // Pattern variables are bound in the case body
+                    let mut new_bound = bound.clone();
+                    self.collect_pattern_vars_from_pattern(&case.pattern, &mut new_bound);
+                    self.collect_free_variables(&case.body, &mut new_bound, free);
+                }
+            }
+            Expression::List(elements) => {
+                for elem in elements {
+                    self.collect_free_variables(elem, bound, free);
+                }
+            }
+            Expression::Ascription { expr: inner, .. } => {
+                self.collect_free_variables(inner, bound, free);
+            }
+        }
+    }
+
+    /// Collect variables bound by a Pattern
+    fn collect_pattern_vars_from_pattern(
+        &self,
+        pattern: &crate::ast::Pattern,
+        bound: &mut HashSet<String>,
+    ) {
+        use crate::ast::Pattern;
+        match pattern {
+            Pattern::Variable(name) => {
+                bound.insert(name.clone());
+            }
+            Pattern::Constructor { args, .. } => {
+                for arg in args {
+                    self.collect_pattern_vars_from_pattern(arg, bound);
+                }
+            }
+            Pattern::Wildcard | Pattern::Constant(_) => {}
+        }
+    }
+
+    /// Get all bound variables in an expression
+    fn bound_variables(&self, expr: &Expression) -> HashSet<String> {
+        let mut bound = HashSet::new();
+        self.collect_bound_variables(expr, &mut bound);
+        bound
+    }
+
+    /// Helper to collect all bound variables
+    fn collect_bound_variables(&self, expr: &Expression, bound: &mut HashSet<String>) {
+        match expr {
+            Expression::Lambda { params, body } => {
+                for p in params {
+                    bound.insert(p.name.clone());
+                }
+                self.collect_bound_variables(body, bound);
+            }
+            Expression::Let {
+                name, value, body, ..
+            } => {
+                bound.insert(name.clone());
+                self.collect_bound_variables(value, bound);
+                self.collect_bound_variables(body, bound);
+            }
+            Expression::Quantifier {
+                variables,
+                where_clause,
+                body,
+                ..
+            } => {
+                for v in variables {
+                    bound.insert(v.name.clone()); // Extract name from QuantifiedVar
+                }
+                if let Some(w) = where_clause {
+                    self.collect_bound_variables(w, bound);
+                }
+                self.collect_bound_variables(body, bound);
+            }
+            Expression::Operation { args, .. } => {
+                for arg in args {
+                    self.collect_bound_variables(arg, bound);
+                }
+            }
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.collect_bound_variables(condition, bound);
+                self.collect_bound_variables(then_branch, bound);
+                self.collect_bound_variables(else_branch, bound);
+            }
+            Expression::Match { scrutinee, cases } => {
+                self.collect_bound_variables(scrutinee, bound);
+                for case in cases {
+                    self.collect_pattern_vars_from_pattern(&case.pattern, bound);
+                    self.collect_bound_variables(&case.body, bound);
+                }
+            }
+            Expression::List(elements) => {
+                for elem in elements {
+                    self.collect_bound_variables(elem, bound);
+                }
+            }
+            Expression::Ascription { expr: inner, .. } => {
+                self.collect_bound_variables(inner, bound);
+            }
+            Expression::Const(_) | Expression::Object(_) | Expression::Placeholder { .. } => {}
+        }
+    }
+
+    /// Generate a fresh variable name that doesn't conflict
+    fn fresh_variable(&self, base: &str, expr1: &Expression, expr2: &Expression) -> String {
+        let mut all_vars = self.free_variables(expr1);
+        all_vars.extend(self.free_variables(expr2));
+        all_vars.extend(self.bound_variables(expr1));
+        all_vars.extend(self.bound_variables(expr2));
+
+        let mut candidate = format!("{}'", base);
+        let mut counter = 1;
+        while all_vars.contains(&candidate) {
+            candidate = format!("{}'{}", base, counter);
+            counter += 1;
+        }
+        candidate
+    }
+
+    /// Alpha-convert: rename all occurrences of a bound variable
+    #[allow(clippy::only_used_in_recursion)]
+    fn alpha_convert(&self, expr: &Expression, old_name: &str, new_name: &str) -> Expression {
+        match expr {
+            Expression::Lambda { params, body } => {
+                // Check if this lambda binds the old name
+                let binds_old = params.iter().any(|p| p.name == old_name);
+
+                if binds_old {
+                    // Rename the parameter and in the body
+                    let new_params: Vec<LambdaParam> = params
+                        .iter()
+                        .map(|p| {
+                            if p.name == old_name {
+                                LambdaParam {
+                                    name: new_name.to_string(),
+                                    type_annotation: p.type_annotation.clone(),
+                                }
+                            } else {
+                                p.clone()
+                            }
+                        })
+                        .collect();
+                    let new_body = self.alpha_convert(body, old_name, new_name);
+                    Expression::Lambda {
+                        params: new_params,
+                        body: Box::new(new_body),
+                    }
+                } else {
+                    // Just recurse into body
+                    Expression::Lambda {
+                        params: params.clone(),
+                        body: Box::new(self.alpha_convert(body, old_name, new_name)),
+                    }
+                }
+            }
+            Expression::Object(name) if name == old_name => {
+                Expression::Object(new_name.to_string())
+            }
+            Expression::Let {
+                name,
+                type_annotation,
+                value,
+                body,
+            } => {
+                let new_value = self.alpha_convert(value, old_name, new_name);
+                if name == old_name {
+                    Expression::Let {
+                        name: new_name.to_string(),
+                        type_annotation: type_annotation.clone(),
+                        value: Box::new(new_value),
+                        body: Box::new(self.alpha_convert(body, old_name, new_name)),
+                    }
+                } else {
+                    Expression::Let {
+                        name: name.clone(),
+                        type_annotation: type_annotation.clone(),
+                        value: Box::new(new_value),
+                        body: Box::new(self.alpha_convert(body, old_name, new_name)),
+                    }
+                }
+            }
+            Expression::Operation { name, args } => Expression::Operation {
+                name: name.clone(),
+                args: args
+                    .iter()
+                    .map(|a| self.alpha_convert(a, old_name, new_name))
+                    .collect(),
+            },
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => Expression::Conditional {
+                condition: Box::new(self.alpha_convert(condition, old_name, new_name)),
+                then_branch: Box::new(self.alpha_convert(then_branch, old_name, new_name)),
+                else_branch: Box::new(self.alpha_convert(else_branch, old_name, new_name)),
+            },
+            Expression::List(elements) => Expression::List(
+                elements
+                    .iter()
+                    .map(|e| self.alpha_convert(e, old_name, new_name))
+                    .collect(),
+            ),
+            Expression::Ascription {
+                expr: inner,
+                type_annotation,
+            } => Expression::Ascription {
+                expr: Box::new(self.alpha_convert(inner, old_name, new_name)),
+                type_annotation: type_annotation.clone(),
+            },
+            // For other expressions, just clone (or handle similarly)
+            _ => expr.clone(),
+        }
+    }
 }
 
 impl Default for Evaluator {
@@ -626,5 +1196,367 @@ mod tests {
 
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("expects 1 arguments, got 2"));
+    }
+
+    // =========================================================================
+    // Beta Reduction Tests
+    // =========================================================================
+
+    #[test]
+    fn test_beta_reduce_identity() {
+        // (λ x . x)(5) → 5
+        let eval = Evaluator::new();
+
+        let lambda = Expression::Lambda {
+            params: vec![LambdaParam::new("x")],
+            body: Box::new(Expression::Object("x".to_string())),
+        };
+
+        let result = eval
+            .beta_reduce(&lambda, &Expression::Const("5".to_string()))
+            .unwrap();
+
+        assert!(matches!(result, Expression::Const(ref s) if s == "5"));
+    }
+
+    #[test]
+    fn test_beta_reduce_simple_arithmetic() {
+        // (λ x . x + 1)(5) → 5 + 1
+        let eval = Evaluator::new();
+
+        let lambda = Expression::Lambda {
+            params: vec![LambdaParam::new("x")],
+            body: Box::new(Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Const("1".to_string()),
+                ],
+            }),
+        };
+
+        let result = eval
+            .beta_reduce(&lambda, &Expression::Const("5".to_string()))
+            .unwrap();
+
+        match result {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "plus");
+                assert!(matches!(args[0], Expression::Const(ref s) if s == "5"));
+                assert!(matches!(args[1], Expression::Const(ref s) if s == "1"));
+            }
+            _ => panic!("Expected Operation, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_beta_reduce_partial_application() {
+        // (λ x y . x + y)(3) → λ y . 3 + y
+        let eval = Evaluator::new();
+
+        let lambda = Expression::Lambda {
+            params: vec![LambdaParam::new("x"), LambdaParam::new("y")],
+            body: Box::new(Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Object("y".to_string()),
+                ],
+            }),
+        };
+
+        let result = eval
+            .beta_reduce(&lambda, &Expression::Const("3".to_string()))
+            .unwrap();
+
+        // Should be λ y . 3 + y
+        match result {
+            Expression::Lambda { params, body } => {
+                assert_eq!(params.len(), 1);
+                assert_eq!(params[0].name, "y");
+
+                match *body {
+                    Expression::Operation { name, ref args } => {
+                        assert_eq!(name, "plus");
+                        assert!(matches!(args[0], Expression::Const(ref s) if s == "3"));
+                        assert!(matches!(args[1], Expression::Object(ref s) if s == "y"));
+                    }
+                    _ => panic!("Expected Operation in body"),
+                }
+            }
+            _ => panic!("Expected Lambda, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_beta_reduce_full_application() {
+        // (λ x y . x + y)(3)(4) → 7 (symbolically: 3 + 4)
+        let eval = Evaluator::new();
+
+        let lambda = Expression::Lambda {
+            params: vec![LambdaParam::new("x"), LambdaParam::new("y")],
+            body: Box::new(Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Object("y".to_string()),
+                ],
+            }),
+        };
+
+        // Apply first argument
+        let partial = eval
+            .beta_reduce(&lambda, &Expression::Const("3".to_string()))
+            .unwrap();
+
+        // Apply second argument
+        let result = eval
+            .beta_reduce(&partial, &Expression::Const("4".to_string()))
+            .unwrap();
+
+        match result {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "plus");
+                assert!(matches!(args[0], Expression::Const(ref s) if s == "3"));
+                assert!(matches!(args[1], Expression::Const(ref s) if s == "4"));
+            }
+            _ => panic!("Expected Operation, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_beta_reduce_multi() {
+        // Apply multiple args at once: (λ x y . x * y)(2, 3) → 2 * 3
+        let eval = Evaluator::new();
+
+        let lambda = Expression::Lambda {
+            params: vec![LambdaParam::new("x"), LambdaParam::new("y")],
+            body: Box::new(Expression::Operation {
+                name: "times".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Object("y".to_string()),
+                ],
+            }),
+        };
+
+        let result = eval
+            .beta_reduce_multi(
+                &lambda,
+                &[
+                    Expression::Const("2".to_string()),
+                    Expression::Const("3".to_string()),
+                ],
+            )
+            .unwrap();
+
+        match result {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "times");
+                assert!(matches!(args[0], Expression::Const(ref s) if s == "2"));
+                assert!(matches!(args[1], Expression::Const(ref s) if s == "3"));
+            }
+            _ => panic!("Expected Operation, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_free_variables() {
+        let eval = Evaluator::new();
+
+        // x + y has free variables x, y
+        let expr = Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Object("y".to_string()),
+            ],
+        };
+
+        let free = eval.free_variables(&expr);
+        assert!(free.contains("x"));
+        assert!(free.contains("y"));
+        assert_eq!(free.len(), 2);
+    }
+
+    #[test]
+    fn test_free_variables_in_lambda() {
+        let eval = Evaluator::new();
+
+        // λ x . x + y has only y free (x is bound)
+        let lambda = Expression::Lambda {
+            params: vec![LambdaParam::new("x")],
+            body: Box::new(Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Object("y".to_string()),
+                ],
+            }),
+        };
+
+        let free = eval.free_variables(&lambda);
+        assert!(!free.contains("x")); // x is bound
+        assert!(free.contains("y")); // y is free
+        assert_eq!(free.len(), 1);
+    }
+
+    #[test]
+    fn test_bound_variables() {
+        let eval = Evaluator::new();
+
+        // λ x . λ y . x + y has bound variables x, y
+        let lambda = Expression::Lambda {
+            params: vec![LambdaParam::new("x")],
+            body: Box::new(Expression::Lambda {
+                params: vec![LambdaParam::new("y")],
+                body: Box::new(Expression::Operation {
+                    name: "plus".to_string(),
+                    args: vec![
+                        Expression::Object("x".to_string()),
+                        Expression::Object("y".to_string()),
+                    ],
+                }),
+            }),
+        };
+
+        let bound = eval.bound_variables(&lambda);
+        assert!(bound.contains("x"));
+        assert!(bound.contains("y"));
+    }
+
+    #[test]
+    fn test_alpha_conversion() {
+        let eval = Evaluator::new();
+
+        // λ y . y → λ y' . y' (when we need to rename y)
+        let lambda = Expression::Lambda {
+            params: vec![LambdaParam::new("y")],
+            body: Box::new(Expression::Object("y".to_string())),
+        };
+
+        let converted = eval.alpha_convert(&lambda, "y", "z");
+
+        match converted {
+            Expression::Lambda { params, body } => {
+                assert_eq!(params[0].name, "z");
+                assert!(matches!(*body, Expression::Object(ref s) if s == "z"));
+            }
+            _ => panic!("Expected Lambda"),
+        }
+    }
+
+    #[test]
+    fn test_variable_capture_avoidance() {
+        let eval = Evaluator::new();
+
+        // (λ x . λ y . x + y)(y) should NOT produce λ y . y + y
+        // It should alpha-convert to avoid capture: λ y' . y + y'
+        let outer_lambda = Expression::Lambda {
+            params: vec![LambdaParam::new("x")],
+            body: Box::new(Expression::Lambda {
+                params: vec![LambdaParam::new("y")],
+                body: Box::new(Expression::Operation {
+                    name: "plus".to_string(),
+                    args: vec![
+                        Expression::Object("x".to_string()),
+                        Expression::Object("y".to_string()),
+                    ],
+                }),
+            }),
+        };
+
+        // Apply with 'y' as argument (potential capture)
+        let result = eval
+            .beta_reduce(&outer_lambda, &Expression::Object("y".to_string()))
+            .unwrap();
+
+        // Result should be λ y' . y + y' (or similar fresh name)
+        match result {
+            Expression::Lambda { params, body } => {
+                let inner_param = &params[0].name;
+                // The inner param should NOT be 'y' anymore (renamed to avoid capture)
+                assert_ne!(inner_param, "y");
+
+                match *body {
+                    Expression::Operation { ref args, .. } => {
+                        // First arg should be 'y' (the argument we passed)
+                        assert!(matches!(args[0], Expression::Object(ref s) if s == "y"));
+                        // Second arg should be the renamed parameter
+                        assert!(matches!(args[1], Expression::Object(ref s) if s == inner_param));
+                    }
+                    _ => panic!("Expected Operation in body"),
+                }
+            }
+            _ => panic!("Expected Lambda, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_reduce_named_lambda_function() {
+        // define f = λ x . x + 1
+        // f(5) → 5 + 1
+        let mut eval = Evaluator::new();
+
+        let code = "define f = λ x . x + 1";
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // Create expression f(5)
+        let expr = Expression::Operation {
+            name: "f".to_string(),
+            args: vec![Expression::Const("5".to_string())],
+        };
+
+        let result = eval.reduce_to_normal_form(&expr).unwrap();
+
+        match result {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "plus");
+                assert!(matches!(args[0], Expression::Const(ref s) if s == "5"));
+                assert!(matches!(args[1], Expression::Const(ref s) if s == "1"));
+            }
+            _ => panic!("Expected Operation, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_reduce_curried_function() {
+        // define add = λ x y . x + y
+        // add(3)(4) → 3 + 4
+        let mut eval = Evaluator::new();
+
+        let code = "define add = λ x y . x + y";
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // For curried application, we need nested operations
+        // First: add(3) → λ y . 3 + y
+        let partial = Expression::Operation {
+            name: "add".to_string(),
+            args: vec![Expression::Const("3".to_string())],
+        };
+
+        let reduced_partial = eval.reduce_to_normal_form(&partial).unwrap();
+
+        // Should be a lambda
+        assert!(matches!(reduced_partial, Expression::Lambda { .. }));
+    }
+
+    #[test]
+    fn test_reduction_fuel_limit() {
+        let eval = Evaluator::new();
+
+        // Create a simple expression that would take many steps
+        let expr = Expression::Let {
+            name: "x".to_string(),
+            type_annotation: None,
+            value: Box::new(Expression::Const("1".to_string())),
+            body: Box::new(Expression::Object("x".to_string())),
+        };
+
+        // Should complete within fuel limit
+        let result = eval.reduce_with_fuel(&expr, 10);
+        assert!(result.is_ok());
     }
 }
