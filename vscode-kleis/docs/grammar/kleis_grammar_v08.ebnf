@@ -5,6 +5,7 @@
 (*   - Pattern Guards                           *)
 (*   - As-Patterns (Alias Binding)              *)
 (*   - Let Destructuring                        *)
+(*   - Import Statements                        *)
 (* Includes: Data Types, Pattern Matching,      *)
 (*           Type System, Structures, Axioms    *)
 (* ============================================ *)
@@ -13,7 +14,8 @@
 program ::= { declaration } ;
 
 declaration
-    ::= libraryAnnotation
+    ::= importDecl           (* v0.8: Module imports *)
+      | libraryAnnotation
       | versionAnnotation
       | structureDef
       | implementsDef
@@ -30,6 +32,31 @@ declaration
 
 libraryAnnotation ::= "@library" "(" string ")" ;
 versionAnnotation ::= "@version" "(" string ")" ;
+
+(* ============================================ *)
+(* IMPORT STATEMENTS - v0.8                     *)
+(* ============================================ *)
+
+(*
+  Import statements load definitions from other .kleis files.
+  
+  Syntax:
+    import "stdlib/algebra.kleis"
+    import "./local/types.kleis"
+  
+  Semantics:
+    - Loads all structures, data types, functions into current scope
+    - Cascading: imports in loaded files are also processed
+    - Circular-safe: same file loaded at most once
+    - Typically placed at beginning of file
+    
+  Path resolution:
+    - Absolute paths: used as-is
+    - "stdlib/" prefix: relative to stdlib directory
+    - Relative paths: relative to importing file's directory
+*)
+
+importDecl ::= "import" string ;
 
 (* ============================================ *)
 (* DATA TYPE DEFINITIONS (ADR-021) - v0.4      *)

@@ -815,12 +815,14 @@ The Kleis parser implements **~75% of the v0.8 grammar** for practical use. With
 
 ### Missing Top-Level Declarations
 
-| Feature | Grammar v0.8 | Parser | Notes |
-|---------|--------------|--------|-------|
-| `import` / `include` | ❌ Not in grammar | ❌ Not implemented | **Priority: HIGH** - need for modular files |
-| Top-level `axiom` | ✅ | ❌ | Axioms only work inside structures |
-| Top-level `let` | ✅ | ❌ | Let bindings only in expressions |
-| Top-level `verify` | ✅ | ❌ | Verification statements |
+| Feature | Grammar v0.8 | Parser | REPL | Priority | Notes |
+|---------|--------------|--------|------|----------|-------|
+| `import` | ✅ | ✅ | ✅ | ~~HIGH~~ **DONE** | ✅ IMPLEMENTED Dec 18, 2025 |
+| Top-level `verify` | ✅ | ❌ | ✅ `:verify` | Low | REPL already supports this! |
+| Top-level `let` | ✅ | ❌ | ✅ `:define` | Low | REPL has `:define` for functions |
+| Top-level `axiom` | ✅ | ❌ | ❌ | **Low** | Structures cover most use cases |
+
+**Note:** The REPL already supports verification via `:verify` command. Top-level `verify` in .kleis files would mainly help notebook/script workflows where you want `verify` statements alongside `define` and `structure` declarations.
 
 ### Comment Syntax
 
@@ -963,11 +965,45 @@ define filter_head(list) =
 3. ✅ **Let destructuring** - `let Point(x, y) = p in ...`
 4. ✅ **Z3 constructor destructuring** - Let patterns work with Z3 backend
 
-**Remaining parser work:**
-1. **Add `import`/`include` support** - Allow loading other .kleis files
-2. **Add `--` comment support** - Match grammar specification
-3. **Add top-level `axiom`** - For standalone axiom declarations
-4. **Add top-level `let`/`verify`** - For example files and notebooks
+**Remaining parser work (by priority):**
+1. ~~**Add `import` support**~~ - ✅ DONE (Dec 18, 2025)
+2. ~~**Add top-level `verify`**~~ - REPL already has `:verify` command
+3. ~~**Add top-level `let`**~~ - REPL already has `:define` command  
+4. ~~**Add top-level `axiom`**~~ - Structures cover most use cases
+
+**Note:** Most "missing" top-level features are available via REPL commands. The `import` feature is now complete!
+
+### ✅ `import` Statement (IMPLEMENTED Dec 18, 2025)
+
+**Syntax:**
+```kleis
+import "stdlib/algebra.kleis"
+import "tensors.kleis"
+```
+
+**Semantics:**
+- Loads all structures, data types, and functions into current scope
+- Cascading: imports in loaded files are also loaded
+- Deduplication: same file loaded only once (tracks canonical paths)
+- Circular import safe: silently skips already-loaded files (no infinite loops)
+
+**REPL integration:**
+- `:load file.kleis` automatically loads all `import` statements recursively
+- Reports total files, functions, structures, data types, and type aliases loaded
+- Example: `✅ Loaded: 3 files, 8 functions, 15 structures, 0 data types, 0 type aliases`
+
+**Path resolution:**
+1. Absolute paths: used as-is
+2. `stdlib/` prefix: relative to working directory (future: KLEIS_STDLIB_PATH)
+3. Relative paths: resolved from importing file's directory
+
+**Implementation (complete):**
+1. ✅ Added `Import(String)` to `TopLevel` enum in `kleis_ast.rs`
+2. ✅ Added `parse_import()` and `parse_string_literal()` to parser
+3. ✅ Updated `parse_program()` to recognize `import` keyword
+4. ✅ Updated `:load` in REPL with `load_file_recursive()` and `LoadStats`
+5. ✅ Circular import detection via `HashSet<PathBuf>` of canonical paths
+6. ✅ Pretty printer handles `TopLevel::Import` for serialization
 
 **std_template_lib updates (COMPLETE! Dec 18, 2025):**
 - ✅ New `control_flow.kleist` - Templates for match, let, conditional, lambda
@@ -978,6 +1014,7 @@ define filter_head(list) =
 ---
 *Noted: Dec 15, 2025*
 *Updated: Dec 18, 2025 - Grammar v0.8 pattern features COMPLETE*
+*Updated: Dec 18, 2025 - `import` statement IMPLEMENTED*
 
 ---
 

@@ -220,6 +220,46 @@ impl KleisParser {
         Ok(self.input[start..self.pos].iter().collect())
     }
 
+    /// Parse a string literal enclosed in double quotes
+    /// Example: "path/to/file.kleis"
+    fn parse_string_literal(&mut self) -> Result<String, KleisParseError> {
+        self.skip_whitespace();
+
+        if self.peek() != Some('"') {
+            return Err(KleisParseError {
+                message: "Expected '\"' to start string literal".to_string(),
+                position: self.pos,
+            });
+        }
+        self.advance(); // consume opening "
+
+        let start = self.pos;
+        while let Some(ch) = self.peek() {
+            if ch == '"' {
+                break;
+            }
+            // Handle escape sequences
+            if ch == '\\' {
+                self.advance(); // consume backslash
+                self.advance(); // consume escaped char
+            } else {
+                self.advance();
+            }
+        }
+
+        let content: String = self.input[start..self.pos].iter().collect();
+
+        if self.peek() != Some('"') {
+            return Err(KleisParseError {
+                message: "Expected '\"' to end string literal".to_string(),
+                position: self.pos,
+            });
+        }
+        self.advance(); // consume closing "
+
+        Ok(content)
+    }
+
     fn parse_arguments(&mut self) -> Result<Vec<Expression>, KleisParseError> {
         let mut args = Vec::new();
 
@@ -3208,6 +3248,20 @@ impl KleisParser {
         })
     }
 
+    /// Parse an import statement: import "path/to/file.kleis"
+    fn parse_import(&mut self) -> Result<String, KleisParseError> {
+        self.skip_whitespace();
+
+        // Consume 'import' keyword (already peeked)
+        self.expect_word("import")?;
+        self.skip_whitespace();
+
+        // Parse the path as a string literal
+        let path = self.parse_string_literal()?;
+
+        Ok(path)
+    }
+
     /// Parse a complete program (multiple top-level items)
     pub fn parse_program(&mut self) -> Result<Program, KleisParseError> {
         let mut program = Program::new();
@@ -3226,7 +3280,10 @@ impl KleisParser {
             }
 
             // Peek at next keyword
-            if self.peek_word("structure") {
+            if self.peek_word("import") {
+                let path = self.parse_import()?;
+                program.add_item(TopLevel::Import(path));
+            } else if self.peek_word("structure") {
                 let structure = self.parse_structure()?;
                 program.add_item(TopLevel::StructureDef(structure));
             } else if self.peek_word("implements") {
@@ -3246,7 +3303,7 @@ impl KleisParser {
                 program.add_item(TopLevel::FunctionDef(function_def));
             } else {
                 return Err(KleisParseError {
-                    message: "Expected 'structure', 'implements', 'data', 'operation', or 'define'"
+                    message: "Expected 'import', 'structure', 'implements', 'data', 'operation', 'type', or 'define'"
                         .to_string(),
                     position: self.pos,
                 });
@@ -5676,5 +5733,128 @@ mod tests {
         } else {
             panic!("Expected Let expression");
         }
+    }
+
+    // =========================================================================
+    // Import statement tests (Grammar v0.8)
+    // =========================================================================
+
+    #[test]
+    fn test_parse_import_simple() {
+        let code = r#"import "stdlib/algebra.kleis""#;
+        let result = parse_kleis_program(code).unwrap();
+        assert_eq!(result.items.len(), 1);
+
+        match &result.items[0] {
+            TopLevel::Import(path) => {
+                assert_eq!(path, "stdlib/algebra.kleis");
+            }
+            _ => panic!("Expected Import"),
+        }
+    }
+
+    #[test]
+    fn test_parse_import_relative_path() {
+        let code = r#"import "./local/types.kleis""#;
+        let result = parse_kleis_program(code).unwrap();
+        assert_eq!(result.items.len(), 1);
+
+        match &result.items[0] {
+            TopLevel::Import(path) => {
+                assert_eq!(path, "./local/types.kleis");
+            }
+            _ => panic!("Expected Import"),
+        }
+    }
+
+    #[test]
+    fn test_parse_import_multiple() {
+        let code = r#"
+            import "stdlib/algebra.kleis"
+            import "stdlib/calculus.kleis"
+            import "local/types.kleis"
+        "#;
+        let result = parse_kleis_program(code).unwrap();
+        assert_eq!(result.items.len(), 3);
+
+        let paths: Vec<&str> = result
+            .items
+            .iter()
+            .filter_map(|item| {
+                if let TopLevel::Import(path) = item {
+                    Some(path.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        assert_eq!(
+            paths,
+            vec![
+                "stdlib/algebra.kleis",
+                "stdlib/calculus.kleis",
+                "local/types.kleis"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_program_with_import_and_definitions() {
+        let code = r#"
+            import "stdlib/algebra.kleis"
+            
+            data Bool = True | False
+            
+            define not(b) = match b { True => False | False => True }
+        "#;
+        let result = parse_kleis_program(code).unwrap();
+
+        assert_eq!(result.items.len(), 3);
+
+        // First item should be import
+        match &result.items[0] {
+            TopLevel::Import(path) => {
+                assert_eq!(path, "stdlib/algebra.kleis");
+            }
+            _ => panic!("Expected Import as first item"),
+        }
+
+        // Second item should be data definition
+        match &result.items[1] {
+            TopLevel::DataDef(data) => {
+                assert_eq!(data.name, "Bool");
+            }
+            _ => panic!("Expected DataDef as second item"),
+        }
+
+        // Third item should be function definition
+        match &result.items[2] {
+            TopLevel::FunctionDef(func) => {
+                assert_eq!(func.name, "not");
+            }
+            _ => panic!("Expected FunctionDef as third item"),
+        }
+    }
+
+    #[test]
+    fn test_parse_string_literal() {
+        let mut parser = KleisParser::new(r#""hello world""#);
+        let result = parser.parse_string_literal().unwrap();
+        assert_eq!(result, "hello world");
+    }
+
+    #[test]
+    fn test_parse_string_literal_with_path() {
+        let mut parser = KleisParser::new(r#""path/to/file.kleis""#);
+        let result = parser.parse_string_literal().unwrap();
+        assert_eq!(result, "path/to/file.kleis");
+    }
+
+    #[test]
+    fn test_parse_string_literal_empty() {
+        let mut parser = KleisParser::new(r#""""#);
+        let result = parser.parse_string_literal().unwrap();
+        assert_eq!(result, "");
     }
 }
