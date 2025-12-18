@@ -1418,11 +1418,12 @@ fn render_matrix_content(
         }
 
         RenderTarget::Typst => {
-            let (left_delim, right_delim) = match matrix_type {
-                "PMatrix" | "pmatrix" => ("(", ")"),
-                "VMatrix" | "vmatrix" => ("|", "|"),
-                "BMatrix" | "bmatrix" => ("[", "]"),
-                _ => ("(", ")"),
+            // Typst mat() uses a single delimiter character - the closing is inferred
+            let delim = match matrix_type {
+                "PMatrix" | "pmatrix" => "(",
+                "VMatrix" | "vmatrix" => "|",
+                "BMatrix" | "bmatrix" => "[",
+                _ => "(",
             };
 
             let mut content = String::new();
@@ -1440,7 +1441,7 @@ fn render_matrix_content(
                     content.push_str("; ");
                 }
             }
-            format!("mat(delim: \"{}{}\", {})", left_delim, right_delim, content)
+            format!("mat(delim: \"{}\", {})", delim, content)
         }
 
         RenderTarget::HTML => {
