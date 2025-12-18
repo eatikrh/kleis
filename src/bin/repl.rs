@@ -50,6 +50,7 @@ fn main() -> RlResult<()> {
     // REPL state
     let mut evaluator = Evaluator::new();
     let render_ctx = build_default_context();
+    let mut imported_paths: Vec<String> = Vec::new(); // Track imports for export
 
     #[cfg(feature = "axiom-verification")]
     let registry = StructureRegistry::new();
@@ -87,6 +88,7 @@ fn main() -> RlResult<()> {
                             full_input,
                             &mut evaluator,
                             &render_ctx,
+                            &mut imported_paths,
                             #[cfg(feature = "axiom-verification")]
                             &registry,
                         );
@@ -135,6 +137,7 @@ fn main() -> RlResult<()> {
                     &full_input,
                     &mut evaluator,
                     &render_ctx,
+                    &mut imported_paths,
                     #[cfg(feature = "axiom-verification")]
                     &registry,
                 );
@@ -173,19 +176,25 @@ fn process_input(
     input: &str,
     evaluator: &mut Evaluator,
     ctx: &kleis::render::GlyphContext,
+    imported_paths: &mut Vec<String>,
     registry: &StructureRegistry,
 ) {
     if input.starts_with(':') {
-        handle_command(input, evaluator, ctx, registry);
+        handle_command(input, evaluator, ctx, imported_paths, registry);
     } else {
         eval_expression(input, evaluator, ctx);
     }
 }
 
 #[cfg(not(feature = "axiom-verification"))]
-fn process_input(input: &str, evaluator: &mut Evaluator, ctx: &kleis::render::GlyphContext) {
+fn process_input(
+    input: &str,
+    evaluator: &mut Evaluator,
+    ctx: &kleis::render::GlyphContext,
+    imported_paths: &mut Vec<String>,
+) {
     if input.starts_with(':') {
-        handle_command_no_z3(input, evaluator, ctx);
+        handle_command_no_z3(input, evaluator, ctx, imported_paths);
     } else {
         eval_expression(input, evaluator, ctx);
     }
@@ -220,6 +229,7 @@ fn handle_command(
     line: &str,
     evaluator: &mut Evaluator,
     _ctx: &kleis::render::GlyphContext,
+    imported_paths: &mut Vec<String>,
     registry: &StructureRegistry,
 ) {
     let parts: Vec<&str> = line.splitn(2, ' ').collect();
@@ -232,10 +242,10 @@ fn handle_command(
         ":ast" => show_ast(arg),
         ":type" | ":t" => show_type(arg),
         ":verify" | ":v" => verify_expression(arg, registry, evaluator),
-        ":load" | ":l" => load_file(arg, evaluator),
+        ":load" | ":l" => load_file(arg, evaluator, imported_paths),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
-        ":export" | ":x" => export_functions(arg, evaluator),
+        ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
@@ -247,7 +257,12 @@ fn handle_command(
 }
 
 #[cfg(not(feature = "axiom-verification"))]
-fn handle_command_no_z3(line: &str, evaluator: &mut Evaluator, _ctx: &kleis::render::GlyphContext) {
+fn handle_command_no_z3(
+    line: &str,
+    evaluator: &mut Evaluator,
+    _ctx: &kleis::render::GlyphContext,
+    imported_paths: &mut Vec<String>,
+) {
     let parts: Vec<&str> = line.splitn(2, ' ').collect();
     let cmd = parts[0];
     let arg = parts.get(1).map(|s| s.trim()).unwrap_or("");
@@ -263,10 +278,10 @@ fn handle_command_no_z3(line: &str, evaluator: &mut Evaluator, _ctx: &kleis::ren
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
-        ":load" | ":l" => load_file(arg, evaluator),
+        ":load" | ":l" => load_file(arg, evaluator, imported_paths),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
-        ":export" | ":x" => export_functions(arg, evaluator),
+        ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
         _ => println!(
             "Unknown command: {}. Type :help for available commands.",
             cmd
@@ -1315,7 +1330,7 @@ fn pattern_binds_var(pattern: &kleis::ast::Pattern, var_name: &str) -> bool {
     }
 }
 
-fn load_file(path: &str, evaluator: &mut Evaluator) {
+fn load_file(path: &str, evaluator: &mut Evaluator, imported_paths: &mut Vec<String>) {
     if path.is_empty() {
         println!("Usage: :load <file.kleis>");
         return;
@@ -1324,7 +1339,7 @@ fn load_file(path: &str, evaluator: &mut Evaluator) {
     let mut loaded_files: HashSet<PathBuf> = HashSet::new();
     let base_path = Path::new(path);
 
-    match load_file_recursive(base_path, evaluator, &mut loaded_files) {
+    match load_file_recursive(base_path, evaluator, &mut loaded_files, imported_paths) {
         Ok(stats) => {
             println!(
                 "✅ Loaded: {} files, {} functions, {} structures, {} data types, {} type aliases",
@@ -1375,6 +1390,7 @@ fn load_file_recursive(
     path: &Path,
     evaluator: &mut Evaluator,
     loaded_files: &mut HashSet<PathBuf>,
+    imported_paths: &mut Vec<String>,
 ) -> Result<LoadStats, String> {
     // Resolve to canonical path for circular import detection
     let canonical = path
@@ -1405,8 +1421,13 @@ fn load_file_recursive(
     // Process imports first (depth-first)
     for item in &program.items {
         if let TopLevel::Import(import_path) = item {
+            // Track this import path for later export
+            if !imported_paths.contains(import_path) {
+                imported_paths.push(import_path.clone());
+            }
+
             let resolved_path = resolve_import_path(import_path, base_dir);
-            match load_file_recursive(&resolved_path, evaluator, loaded_files) {
+            match load_file_recursive(&resolved_path, evaluator, loaded_files, imported_paths) {
                 Ok(import_stats) => {
                     stats.add(&import_stats);
                 }
@@ -1502,13 +1523,17 @@ fn define_function(input: &str, evaluator: &mut Evaluator) {
 }
 
 /// Export all defined functions to a .kleis file or stdout
-fn export_functions(path: &str, evaluator: &Evaluator) {
+fn export_functions(path: &str, evaluator: &Evaluator, imported_paths: &[String]) {
     let pp = PrettyPrinter::new();
     let functions = evaluator.list_functions();
     let data_types = evaluator.get_data_types();
     let structures = evaluator.get_structures();
 
-    if functions.is_empty() && data_types.is_empty() && structures.is_empty() {
+    if functions.is_empty()
+        && data_types.is_empty()
+        && structures.is_empty()
+        && imported_paths.is_empty()
+    {
         println!("No definitions to export.");
         return;
     }
@@ -1523,6 +1548,9 @@ fn export_functions(path: &str, evaluator: &Evaluator) {
 
     // Header with counts
     let mut counts = Vec::new();
+    if !imported_paths.is_empty() {
+        counts.push(format!("{} import(s)", imported_paths.len()));
+    }
     if !structures.is_empty() {
         counts.push(format!("{} structure(s)", structures.len()));
     }
@@ -1534,7 +1562,15 @@ fn export_functions(path: &str, evaluator: &Evaluator) {
     }
     output.push_str(&format!("// {}\n\n", counts.join(", ")));
 
-    // Export structures first (they define types and axioms)
+    // Export imports first (so dependencies are loaded first when re-loading)
+    for import_path in imported_paths {
+        output.push_str(&format!("import \"{}\"\n", import_path));
+    }
+    if !imported_paths.is_empty() {
+        output.push('\n');
+    }
+
+    // Export structures (they define types and axioms)
     for structure in structures {
         output.push_str(&pp.format_structure(structure));
         output.push_str("\n\n");
@@ -1573,7 +1609,10 @@ fn export_functions(path: &str, evaluator: &Evaluator) {
 
         match std::fs::write(&file_path, &output) {
             Ok(_) => {
-                let total = structures.len() + data_types.len() + sorted_functions.len();
+                let total = imported_paths.len()
+                    + structures.len()
+                    + data_types.len()
+                    + sorted_functions.len();
                 println!("✅ Exported {} definition(s) to {}", total, file_path);
             }
             Err(e) => {
