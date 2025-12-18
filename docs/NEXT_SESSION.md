@@ -566,10 +566,11 @@ When visually editing parsed Kleis code:
 
 ```rust
 // src/editor_ast.rs
-pub fn translate_to_editor(expr: &Expression) -> EditorNode {
-    // 1. Recognize known tensor symbols (Γ, R, g)
-    // 2. Infer index structure from negate() wrappers
-    // 3. Add kind: 'tensor', metadata: { indexStructure: [...] }
+pub fn translate_to_editor(expr: &Expression, type_ctx: &TypeContext) -> EditorNode {
+    // 1. Query TypeContext for the type of this expression
+    // 2. If type is Tensor(up, down, dim), add kind: 'tensor' and derive indexStructure
+    // 3. Infer index positions from negate() wrappers (covariant indices)
+    // Note: No Greek symbol heuristics needed - the type system knows what's a tensor
     // ...
 }
 ```
