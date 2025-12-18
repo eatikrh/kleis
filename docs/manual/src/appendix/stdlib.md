@@ -136,7 +136,7 @@ structure Field(F) extends Ring(F) {
 ### Vector Space
 
 ```kleis
-structure VectorSpace(V, F) where F : Field {
+structure VectorSpace(V, F) over Field(F) {
     operation add : V × V → V
     operation scale : F × V → V
     zero : V

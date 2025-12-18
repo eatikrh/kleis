@@ -150,20 +150,6 @@ structure AbelianGroup(G) extends Group(G) {
 }
 ```
 
-## The `where` Clause
-
-Constrain type parameters:
-
-```kleis
-structure VectorSpace(V, F) where F : Field {
-    operation add : V × V → V
-    operation scale : F × V → V
-    
-    axiom distributive : ∀(a : F)(u : V)(v : V).
-        scale(a, add(u, v)) = add(scale(a, u), scale(a, v))
-}
-```
-
 ## The `over` Keyword
 
 Many mathematical structures are defined "over" a base structure. A vector space is defined over a field, a module over a ring:
