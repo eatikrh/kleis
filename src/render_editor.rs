@@ -1434,11 +1434,13 @@ fn render_matrix_content(
                         content.push_str(elem);
                     }
                     if c < cols - 1 {
-                        content.push_str(", ");
+                        // Use generous spacing to avoid parsing issues with #[#box[...]]
+                        content.push_str(" , ");
                     }
                 }
                 if r < rows - 1 {
-                    content.push_str("; ");
+                    // Row separator with spacing
+                    content.push_str(" ; ");
                 }
             }
             format!("mat(delim: \"{}\", {})", delim, content)
