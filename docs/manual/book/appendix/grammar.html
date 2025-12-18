@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cfdf7c75.js";
+            window.path_to_searchindex_js = "../searchindex-9f09c8e6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -181,9 +181,9 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
-<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.7).</p>
+<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.8).</p>
 <blockquote>
-<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v07.ebnf</code> for the full EBNF specification.</p>
+<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v08.ebnf</code> for the full EBNF specification.</p>
 </blockquote>
 <h2 id="program-structure"><a class="header" href="#program-structure">Program Structure</a></h2>
 <pre><code class="language-ebnf">program ::= { declaration }
@@ -227,17 +227,25 @@ data Option(T) {
 <h2 id="pattern-matching"><a class="header" href="#pattern-matching">Pattern Matching</a></h2>
 <pre><code class="language-ebnf">matchExpr ::= "match" expression "{" matchCases "}"
 
-matchCase ::= pattern "=&gt;" expression
+matchCase ::= pattern [ "if" guardExpression ] "=&gt;" expression   // v0.8: guards
 
-pattern ::= "_"                              // Wildcard
-          | identifier                       // Variable
-          | identifier [ "(" patternArgs ")" ]  // Constructor
-          | number | string | boolean        // Constant
+pattern ::= basePattern [ "as" identifier ]  // v0.8: as-patterns
+
+basePattern ::= "_"                              // Wildcard
+              | identifier                       // Variable
+              | identifier [ "(" patternArgs ")" ]  // Constructor
+              | number | string | boolean        // Constant
 </code></pre>
 <p>Examples:</p>
 <pre><code class="language-text">match x { True =&gt; 1 | False =&gt; 0 }
 match opt { None =&gt; 0 | Some(x) =&gt; x }
 match result { Ok(Some(x)) =&gt; x | Ok(None) =&gt; 0 | Err(_) =&gt; -1 }
+
+// v0.8: Pattern guards
+match n { x if x &lt; 0 =&gt; "negative" | x if x &gt; 0 =&gt; "positive" | _ =&gt; "zero" }
+
+// v0.8: As-patterns
+match list { Cons(h, t) as whole =&gt; process(whole) | Nil =&gt; empty }
 </code></pre>
 <h2 id="structure-definitions"><a class="header" href="#structure-definitions">Structure Definitions</a></h2>
 <pre><code class="language-ebnf">structureDef ::= "structure" identifier "(" typeParams ")"
@@ -344,12 +352,18 @@ placeholder ::= "□"
 lambda x . x             // Using keyword
 </code></pre>
 <h2 id="let-bindings"><a class="header" href="#let-bindings">Let Bindings</a></h2>
-<pre><code class="language-ebnf">letBinding ::= "let" identifier [ typeAnnotation ] "=" expression "in" expression
+<pre><code class="language-ebnf">letBinding ::= "let" pattern [ typeAnnotation ] "=" expression "in" expression
+// Note: typeAnnotation only valid when pattern is a simple Variable
 </code></pre>
 <p>Examples:</p>
 <pre><code class="language-text">let x = 5 in x + x
 let x : ℝ = 3.14 in x * 2
 let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
+
+// v0.8: Let destructuring
+let Point(x, y) = origin in x^2 + y^2
+let Some(Pair(a, b)) = opt in a + b
+let Cons(h, _) = list in h
 </code></pre>
 <h2 id="conditionals"><a class="header" href="#conditionals">Conditionals</a></h2>
 <pre><code class="language-ebnf">conditional ::= "if" expression "then" expression "else" expression
