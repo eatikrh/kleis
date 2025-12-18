@@ -171,6 +171,27 @@ basePattern
       | variablePattern
       | constructorPattern
       | constantPattern
+      | tuplePattern        (* v0.8: Syntactic sugar for Pair, Tuple3, etc. *)
+      ;
+
+(*
+  Tuple Patterns (v0.8)
+  
+  Syntactic sugar for constructor patterns on standard tuple types.
+  
+  Examples:
+    ()           -- Desugars to Unit
+    (a, b)       -- Desugars to Pair(a, b)
+    (a, b, c)    -- Desugars to Tuple3(a, b, c)
+    (a, b, c, d) -- Desugars to Tuple4(a, b, c, d)
+    (x)          -- NOT a tuple, just grouped pattern (returns x)
+  
+  Combined with as-patterns:
+    (h, t) as pair => ...   -- Binds pair to whole, h and t to parts
+*)
+tuplePattern
+    ::= "(" ")"                                      (* Unit *)
+      | "(" pattern "," pattern { "," pattern } ")"  (* Pair or Tuple3/4 *)
       ;
 
 wildcardPattern
@@ -623,13 +644,21 @@ blockComment ::= "/*" { (* any character *) } "*/" ;
     - NEW: Pattern Guards - match x { n if n < 0 => "negative" | _ => "non-negative" }
     - NEW: As-Patterns - Cons(h, t) as whole binds both parts and whole
     - NEW: Let Destructuring - let Point(x, y) = p in x^2 + y^2
+    - NEW: Tuple Patterns - (a, b) desugars to Pair(a, b), () to Unit
     - NEW: String Literals - "hello" can be used in expressions
     - NEW: Import Statements - import "path/to/file.kleis"
+    - NEW: String Operations (stdlib/text.kleis):
+        * Basic: concat, strlen, contains, hasPrefix, hasSuffix
+        * Substring: substr, indexOf, replace, charAt
+        * Conversion: strToInt, intToStr
+        * Regex: isDigits, isAlpha, isAlphaNum, matchesRegex
     - Updated matchCase rule: pattern [ "if" guardExpression ] "=>" expression
     - Updated pattern rule: basePattern [ "as" identifier ]
+    - Updated basePattern rule: added tuplePattern alternative
     - Updated letBinding rule: "let" pattern [ typeAnnotation ] "=" expression "in" expression
     - String type in Type enum, inferred as Type::String
-    - Z3 String sort support for string literals
+    - Z3 String sort support for string literals (QF_SLIA theory)
+    - Z3 Regex support for pattern matching operations
     - Full Z3 integration for all new features
     - No breaking changes from v0.7
   
