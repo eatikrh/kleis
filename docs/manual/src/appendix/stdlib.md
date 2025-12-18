@@ -236,9 +236,9 @@ Loaded standard library.
 In files:
 
 ```kleis
-import stdlib.prelude
-import stdlib.linear_algebra
-import stdlib.differential_geometry
+import "stdlib/prelude.kleis"
+import "stdlib/linear_algebra.kleis"
+import "stdlib/differential_geometry.kleis"
 ```
 
 ## File Organization
