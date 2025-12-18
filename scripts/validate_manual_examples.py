@@ -192,12 +192,19 @@ def validate_with_kleis_cli(code: str, line_offset: int, project_root: Path, ver
                 env={**os.environ, "Z3_SYS_Z3_HEADER": "/opt/homebrew/opt/z3/include/z3.h"}
             )
         
+        # Check for parse errors in output
+        output = result.stdout + result.stderr
+        
         if verbose:
             status = "✅" if result.returncode == 0 else "❌"
             print(f"      {status} Exit code: {result.returncode}")
-        
-        # Check for parse errors in output
-        output = result.stdout + result.stderr
+            if result.returncode != 0 and output:
+                # Show the full error message (skip the "Checking..." line)
+                lines = output.strip().split('\n')
+                for line in lines:
+                    if line.startswith('📄'):
+                        continue  # Skip "Checking..." line
+                    print(f"         {line}")
         
         if result.returncode != 0:
             # Extract error message
