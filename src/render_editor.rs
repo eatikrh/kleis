@@ -143,13 +143,13 @@ impl EditorRenderContext {
             "{left} times {right}",
             "times({left}, {right})",
         );
-        // Implicit multiply uses small space in LaTeX
+        // Implicit multiply uses juxtaposition (no operator symbol)
         self.add_template(
             "multiply",
             "{left} {right}",
             "{left} \\, {right}",
             "{left} × {right}",
-            "{left} * {right}",
+            "{left} {right}", // Typst: juxtaposition, not *
             "multiply({left}, {right})",
         );
         // divide: render.rs falls back to function notation
@@ -259,9 +259,9 @@ impl EditorRenderContext {
         self.add_template(
             "braces",
             "{{{content}}}",
-            "\\left\\{{{content}}\\right\\}}",
+            "\\left\\{ {content} \\right\\}",
             "{{{content}}}",
-            "lr({{{content}}})",
+            "lr(\\{ {content} \\})", // Typst: \{ and \} for literal braces
             "{{{content}}}",
         );
 
@@ -299,6 +299,27 @@ impl EditorRenderContext {
             "{base}<sup>{upper}</sup><sub>{lower}</sub>",
             "{base}^({upper})_({lower})",
             "{base}({upper}, -{lower})",
+        );
+
+        // Tensor with two lower indices: args = [base, lower1, lower2]
+        // Uses {subscript} for second arg, {superscript} for third arg
+        self.add_template(
+            "tensor_lower_pair",
+            "{base}_{subscript} {superscript}",
+            "{base}_{{{subscript} {superscript}}}",
+            r#"{base}<sub>{subscript} {superscript}</sub>"#,
+            "{base}_({subscript} {superscript})",
+            "tensor_lower_pair({base}, {subscript}, {superscript})",
+        );
+
+        // Tensor with two upper and two lower indices: args = [base, upper1, upper2, lower1, lower2]
+        self.add_template(
+            "tensor_2up_2down",
+            "{base}^{subscript} {superscript}_{idx2} {idx3}",
+            "{base}^{{{subscript} {superscript}}}_{{{idx2} {idx3}}}",
+            r#"{base}<sup>{subscript} {superscript}</sup><sub>{idx2} {idx3}</sub>"#,
+            "{base}^({subscript} {superscript})_({idx2} {idx3})",
+            "tensor_2up_2down({base}, {subscript}, {superscript}, {idx2}, {idx3})",
         );
 
         // Trig functions (LaTeX uses \! for small space before parens)
@@ -425,17 +446,17 @@ impl EditorRenderContext {
         self.add_template(
             "ket",
             "|{arg}⟩",
-            "\\left|{arg}\\right\\rangle",
+            "|{arg}\\rangle",
             "|{arg}⟩",
-            "lr(|{arg}angle.r)",
+            "lr(| {arg} angle.r)",
             "ket({arg})",
         );
         self.add_template(
             "bra",
             "⟨{arg}|",
-            "\\left\\langle{arg}\\right|",
+            "\\langle{arg}|",
             "⟨{arg}|",
-            "lr(angle.l {arg}|)",
+            "lr(angle.l {arg} |)",
             "bra({arg})",
         );
         self.add_template(
@@ -507,22 +528,22 @@ impl EditorRenderContext {
             "factorial({arg})",
         );
 
-        // Derivatives
+        // Derivatives - args: [function, variable]
         self.add_template(
             "d_dt",
-            "d{num}/d{den}",
-            "\\frac{{\\mathrm{{d}}{num}}}{{\\mathrm{{d}}{den}}}",
-            "d{num}/d{den}",
-            "dif {num} / dif {den}",
-            "Dt({num}, {den})",
+            "d{arg}/d{right}",
+            "\\frac{{d\\,{arg}}}{{d{right}}}",
+            "d{arg}/d{right}",
+            "(d {arg})/(d {right})",
+            "Dt({arg}, {right})",
         );
         self.add_template(
             "d_part",
-            "∂{num}/∂{den}",
-            "\\frac{{\\partial {num}}}{{\\partial {den}}}",
-            "∂{num}/∂{den}",
-            "diff {num} / diff {den}",
-            "D({num}, {den})",
+            "∂{arg}/∂{right}",
+            "\\frac{{\\partial\\,{arg}}}{{\\partial {right}}}",
+            "∂{arg}/∂{right}",
+            "(diff {arg})/(diff {right})",
+            "D({arg}, {right})",
         );
 
         // Limits
@@ -630,37 +651,41 @@ impl EditorRenderContext {
         );
 
         // Additional operations from palette
+        // nth_root: args[0] = index, args[1] = radicand (matches render.rs: {left}=index, {right}=radicand)
+        // But render.rs uses: LaTeX \sqrt[{right}]{{left}}, Typst root({right}, {left})
+        // This means render.rs has args swapped: left=radicand, right=index
+        // Our AST has: args[0]=index, args[1]=radicand, so {left}=index, {right}=radicand
         self.add_template(
             "nth_root",
-            "ⁿ√{radicand}",
-            "\\sqrt[{index}]{{{radicand}}}",
-            "<sup>{index}</sup>√{radicand}",
-            "root({index}, {radicand})",
-            "nth_root({index}, {radicand})",
+            "ⁿ√({right})",
+            "\\sqrt[{left}]{{{right}}}",
+            "<sup>{left}</sup>√{right}",
+            "root({left}, {right})",
+            "nth_root({left}, {right})",
         );
         self.add_template(
             "binomial",
-            "C({n},{k})",
-            "\\binom{{{n}}}{{{k}}}",
-            "C({n},{k})",
-            "binom({n}, {k})",
-            "binomial({n}, {k})",
+            "C({left},{right})",
+            "\\binom{{{left}}}{{{right}}}",
+            "C({left},{right})",
+            "binom({left}, {right})",
+            "binomial({left}, {right})",
         );
         self.add_template(
             "floor",
-            "⌊{x}⌋",
-            "\\lfloor {x} \\rfloor",
-            "⌊{x}⌋",
-            "floor({x})",
-            "floor({x})",
+            "⌊{arg}⌋",
+            "\\lfloor {arg} \\rfloor",
+            "⌊{arg}⌋",
+            "floor({arg})",
+            "floor({arg})",
         );
         self.add_template(
             "ceiling",
-            "⌈{x}⌉",
-            "\\lceil {x} \\rceil",
-            "⌈{x}⌉",
-            "ceil({x})",
-            "ceiling({x})",
+            "⌈{arg}⌉",
+            "\\lceil {arg} \\rceil",
+            "⌈{arg}⌉",
+            "ceil({arg})",
+            "ceiling({arg})",
         );
         self.add_template(
             "approx",
@@ -717,7 +742,7 @@ impl EditorRenderContext {
             "⟨{operator}⟩",
             "\\langle {operator} \\rangle",
             "⟨{operator}⟩",
-            "angle.l {operator} angle.r",
+            "lr(angle.l {operator} angle.r)",
             "expectation({operator})",
         );
         // Vector operations
@@ -765,19 +790,51 @@ impl EditorRenderContext {
         // Accents
         self.add_template(
             "dot_accent",
-            "{variable}̇",
-            "\\dot{{{variable}}}",
-            "{variable}̇",
-            "dot({variable})",
-            "dot({variable})",
+            "{arg}̇",
+            "\\dot{{{arg}}}",
+            "{arg}̇",
+            "dot({arg})",
+            "dot({arg})",
         );
         self.add_template(
             "ddot_accent",
-            "{variable}̈",
-            "\\ddot{{{variable}}}",
-            "{variable}̈",
-            "dot.double({variable})",
-            "ddot({variable})",
+            "{arg}̈",
+            "\\ddot{{{arg}}}",
+            "{arg}̈",
+            "dot.double({arg})",
+            "ddot({arg})",
+        );
+        self.add_template(
+            "bar",
+            "{arg}̄",
+            "\\bar{{{arg}}}",
+            "{arg}̄",
+            "macron({arg})",
+            "bar({arg})",
+        );
+        self.add_template(
+            "hat",
+            "{arg}̂",
+            "\\hat{{{arg}}}",
+            "{arg}̂",
+            "hat({arg})",
+            "hat({arg})",
+        );
+        self.add_template(
+            "tilde",
+            "{arg}̃",
+            "\\tilde{{{arg}}}",
+            "{arg}̃",
+            "tilde({arg})",
+            "tilde({arg})",
+        );
+        self.add_template(
+            "overline",
+            "{arg}̅",
+            "\\overline{{{arg}}}",
+            "{arg}̅",
+            "overline({arg})",
+            "overline({arg})",
         );
         // Transforms (placeholder templates - can be enhanced)
         self.add_template(
@@ -812,13 +869,148 @@ impl EditorRenderContext {
             "cal(L)^(-1)[{function}]",
             "inverse_laplace({function})",
         );
+        // convolution: args = [f, g, variable]
         self.add_template(
             "convolution",
-            "{f} ∗ {g}",
-            "{f} * {g}",
-            "{f} ∗ {g}",
-            "{f} ast {g}",
-            "convolution({f}, {g})",
+            "({arg} ∗ {right})({superscript})",
+            "({arg} \\ast {right})({superscript})",
+            "({arg} ∗ {right})({superscript})",
+            "({arg} ast {right})({superscript})",
+            "Convolve({arg}, {right})",
+        );
+
+        // kernel_integral: args = [kernel, function, domain, variable]
+        self.add_template(
+            "kernel_integral",
+            "∫_{idx2} {arg} {right} d{idx3}",
+            "\\int_{{{idx2}}} {arg} \\, {right} \\, \\mathrm{{d}}{idx3}",
+            "∫<sub>{idx2}</sub> {arg} {right} d{idx3}",
+            "integral _({idx2}) {arg} {right} dif {idx3}",
+            "KernelIntegral({arg}, {right}, {idx2}, {idx3})",
+        );
+
+        // greens_function: args = [point_x, source_m]
+        self.add_template(
+            "greens_function",
+            "G({arg}, {right})",
+            "G({arg}, {right})",
+            "G({arg}, {right})",
+            "G({arg}, {right})",
+            "GreensFunction({arg}, {right})",
+        );
+
+        // =====================================================================
+        // POT (Projected Ontology Theory) Operations
+        // =====================================================================
+
+        // projection: args = [function, variable]
+        self.add_template(
+            "projection",
+            "Π[{arg}]({right})",
+            "\\Pi[{arg}]({right})",
+            "<span class=\"math-op\">Π</span>[{arg}]({right})",
+            "Pi[{arg}]({right})",
+            "Projection({arg}, {right})",
+        );
+
+        // modal_integral: args = [function, modal_space, variable]
+        self.add_template(
+            "modal_integral",
+            "∫_{right} {arg} dμ({idx2})",
+            "\\int_{{{right}}} {arg} \\, \\mathrm{{d}}\\mu({idx2})",
+            "∫<sub>{right}</sub> {arg} dμ({idx2})",
+            "integral _({right}) {arg} dif mu({idx2})",
+            "ModalIntegral({arg}, {right}, {idx2})",
+        );
+
+        // projection_kernel: args = [spacetime_point, modal_state]
+        self.add_template(
+            "projection_kernel",
+            "K({arg}, {right})",
+            "K({arg}, {right})",
+            "<span class=\"math-func\">K</span>({arg}, {right})",
+            "K({arg}, {right})",
+            "ProjectionKernel({arg}, {right})",
+        );
+
+        // causal_bound: args = [point]
+        self.add_template(
+            "causal_bound",
+            "c({arg})",
+            "c({arg})",
+            "<span class=\"math-func\">c</span>({arg})",
+            "c({arg})",
+            "CausalBound({arg})",
+        );
+
+        // projection_residue: args = [projection, structure]
+        self.add_template(
+            "projection_residue",
+            "Residue[{arg}, {right}]",
+            "\\mathrm{{Residue}}[{arg}, {right}]",
+            "<span class=\"math-func\">Residue</span>[{arg}, {right}]",
+            "op(\"Residue\")[{arg}, {right}]",
+            "ProjectionResidue({arg}, {right})",
+        );
+
+        // modal_space: args = [name]
+        self.add_template(
+            "modal_space",
+            "𝓜_{arg}",
+            "\\mathcal{{M}}_{{{arg}}}",
+            "<span class=\"math-script\">𝓜</span><sub>{arg}</sub>",
+            "cal(M)_({arg})",
+            "ModalSpace({arg})",
+        );
+
+        // spacetime: args = [] (no arguments)
+        self.add_template(
+            "spacetime",
+            "ℝ⁴",
+            "\\mathbb{{R}}^4",
+            "ℝ<sup>4</sup>",
+            "bb(R)^4",
+            "Spacetime",
+        );
+
+        // hont: args = [dimension]
+        self.add_template(
+            "hont",
+            "𝓗_{arg}",
+            "\\mathcal{{H}}_{{{arg}}}",
+            "<span class=\"math-script\">𝓗</span><sub>{arg}</sub>",
+            "cal(H)_({arg})",
+            "HONT({arg})",
+        );
+
+        // outer: args = [ket, bra] - for outer product |ψ⟩⟨φ|
+        self.add_template(
+            "outer",
+            "|{arg}⟩⟨{right}|",
+            "|{arg}\\rangle\\langle{right}|",
+            "|{arg}⟩⟨{right}|",
+            "lr(| {arg} angle.r angle.l {right} |)",
+            "outer({arg}, {right})",
+        );
+
+        // commutator: args = [A, B] - [A, B]
+        self.add_template(
+            "commutator",
+            "[{arg}, {right}]",
+            "[{arg}, {right}]",
+            "[{arg}, {right}]",
+            "lr([ {arg}, {right} ])",
+            "commutator({arg}, {right})",
+        );
+
+        // anticommutator: args = [A, B] - {A, B}
+        self.add_template(
+            "anticommutator",
+            "{{arg}, {right}}",
+            "\\{{{arg}, {right}\\}}",
+            "{{arg}, {right}}",
+            "lr(\\{ {arg}, {right} \\})",
+            "anticommutator({arg}, {right})",
         );
     }
 
@@ -1023,6 +1215,12 @@ fn render_object_for_target(s: &str, target: &RenderTarget) -> String {
         }
         RenderTarget::Typst => {
             // Typst uses Unicode directly for Greek letters
+            // Also handle LaTeX \text{...} conversion
+            if s.starts_with("\\text{") && s.ends_with('}') {
+                // Convert \text{True} to "True"
+                let inner = &s[6..s.len() - 1];
+                return format!("\"{}\"", inner);
+            }
             match s {
                 "α" => "alpha".to_string(),
                 "β" => "beta".to_string(),
@@ -1739,6 +1937,10 @@ fn apply_template_substitutions(
         result = result.replace("{A}", first);
         result = result.replace("{bra}", first);
         result = result.replace("{value}", first);
+        result = result.replace("{n}", first); // binomial: n choose k
+        result = result.replace("{index}", first); // nth_root: index-th root
+        result = result.replace("{operator}", first); // expectation: ⟨operator⟩
+        result = result.replace("{state}", first); // ket/bra: |state⟩, ⟨state|
     }
 
     // Second argument aliases
@@ -1753,7 +1955,9 @@ fn apply_template_substitutions(
         result = result.replace("{variable}", second);
         result = result.replace("{ket}", second);
         result = result.replace("{B}", second);
-        // For index_mixed
+        result = result.replace("{k}", second); // binomial: n choose k
+        result = result.replace("{radicand}", second); // nth_root: radicand
+                                                       // For index_mixed
         if name == "index_mixed" {
             result = result.replace("{upper}", second);
         }
@@ -1763,7 +1967,9 @@ fn apply_template_substitutions(
     if let Some(third) = rendered_args.get(2) {
         result = result.replace("{to}", third);
         result = result.replace("{idx2}", third);
-        // For index_mixed
+        result = result.replace("{superscript}", third); // subsup: base_sub^super
+        result = result.replace("{target}", third); // lim: limit target
+                                                    // For index_mixed
         if name == "index_mixed" {
             result = result.replace("{lower}", third);
         }

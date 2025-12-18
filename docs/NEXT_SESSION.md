@@ -946,6 +946,62 @@ The type checker returns the **RHS type** (Tensor) instead of **Bool**.
 
 **Expected behavior:** Type error - cannot add scalar to tensor without explicit broadcasting.
 
+### Issue: Matrix Multiply Type Inference Fails (REGRESSION)
+
+**Found during Equation Editor testing:**
+
+```
+✗ Operation 'multiply' found in structure 'MatrixMultipliable' but type inference failed: 
+  Unbound parameter: m
+```
+
+### Issue: Negate Type Inference Fails
+
+**Found during Equation Editor testing (Dec 17, 2025):**
+
+```
+✗ Operation 'negate' found in structure 'Ring' but type inference failed: 
+  Operation 'negate' not found in structure 'Ring'
+```
+
+**Note:** The error message is contradictory - says operation is found but then says not found.
+This suggests a bug in the type inference error reporting or structure traversal.
+
+**This is likely a REGRESSION** - the type checker was previously loading stdlib and matrices
+correctly. Something in the render_editor.rs changes may have broken the type context loading.
+
+**Symptoms:**
+- Operations like `multiply` are "found" in structures but fail type inference
+- Many operations show "Unknown operation" despite being in stdlib
+- Type parameters (`m`, `n`) are reported as unbound
+
+**Investigation needed:**
+- Check if server.rs TypeChecker initialization changed
+- Verify stdlib files are being parsed and loaded correctly
+- Compare with working state before render_editor.rs refactoring
+
+### Issue: Palette Button Generates Wrong AST
+
+**Found during Equation Editor testing:**
+
+The "logical not" palette button generates:
+```json
+{"Operation": {"name": "minus", "args": [{"Const": "0"}, ...]}}
+```
+
+Instead of:
+```json
+{"Operation": {"name": "logical_not", "args": [...]}}
+```
+
+**Location:** `static/index.html` - palette button configurations
+
+**Buttons needing fixes:**
+1. ~~"Logical not" - generates `minus(0, x)` instead of `logical_not(x)`~~ - **FIXED**: Was already correct
+2. ~~"Arithmetic negation" - generates `minus(0, x)` instead of `negate(x)`~~ - **FIXED**: Updated `static/index.html` line 2132
+
+**Status:** Both palette buttons now generate correct AST operations
+
 **Operations affected:**
 - `plus` - should require compatible types
 - `minus` - same issue
@@ -969,6 +1025,49 @@ The type checker returns the **RHS type** (Tensor) instead of **Bool**.
 
 The type system currently assumes definition semantics. For Piecewise conditions,
 we need assertion/predicate semantics (returns Bool).
+
+### Issue: Missing Operations in Stdlib
+
+**Found during Equation Editor testing:**
+
+Many operations have rendering templates but are not defined in stdlib, causing type checker warnings:
+
+```
+✗ Unknown operation: 'norm'
+Hint: This operation is not defined in any loaded structure.
+```
+
+**Operations missing from stdlib (have render templates but no type definitions):**
+- `norm` - vector/matrix norm → should return Scalar
+- `abs` - absolute value → should return Scalar  
+- `floor`, `ceiling` - rounding → should return Scalar (or same type as input)
+- `binomial` - binomial coefficient → should return Nat
+- `nth_root` - nth root → should return Scalar
+- `factorial` - factorial → should return Nat
+- `dot_accent`, `ddot_accent`, `bar`, `hat`, `tilde`, `overline` - accents (physics notation)
+- `sum_bounds`, `prod_bounds`, `int_bounds` - bounded summation/product/integral
+- `lim`, `d_dt`, `d_part` - limits and derivatives
+- `kernel_integral`, `convolution`, `greens_function` - advanced integrals and transforms
+- `cross`, `dot` - vector operations
+- Various quantum operators (`ket`, `bra`, `inner`, `outer`, etc.)
+- Various trig/calculus (`arcsin`, `arccos`, `arctan`, `sinh`, `cosh`, `tanh`, etc.)
+
+**Impact:**
+- Rendering works (templates exist in render_editor.rs)
+- Type checking fails (operations not in stdlib structures)
+- Users see warning but equation still renders
+
+**Operations missing render templates in render_editor.rs (Typst compile fails):**
+- `ket` - Dirac ket notation |ψ⟩ → needs template like `lr(| {arg} angle.r)`
+- `bra` - Dirac bra notation ⟨ψ| → needs template like `lr(angle.l {arg} |)`
+- Other quantum operations may also be missing
+
+**Fix needed:**
+Add these operations to appropriate stdlib files:
+- `stdlib/vectors.kleis` - norm, cross, dot
+- `stdlib/scalars.kleis` - abs, floor, ceil, nth_root
+- `stdlib/combinatorics.kleis` - binomial, factorial
+- `stdlib/quantum.kleis` - ket, bra, inner, outer, etc.
 
 ---
 
