@@ -817,7 +817,7 @@ The Kleis parser implements **~75% of the v0.8 grammar** for practical use. With
 
 | Feature | Grammar v0.8 | Parser | REPL | Priority | Notes |
 |---------|--------------|--------|------|----------|-------|
-| `import` / `include` | ❌ Not in grammar | ❌ | ❌ | **HIGH** | Need for modular files |
+| `import` | ❌ Not in grammar yet | ❌ | ❌ | **HIGH** | Need for modular files |
 | Top-level `verify` | ✅ | ❌ | ✅ `:verify` | Low | REPL already supports this! |
 | Top-level `let` | ✅ | ❌ | ✅ `:define` | Low | REPL has `:define` for functions |
 | Top-level `axiom` | ✅ | ❌ | ❌ | **Low** | Structures cover most use cases |
@@ -966,12 +966,41 @@ define filter_head(list) =
 4. ✅ **Z3 constructor destructuring** - Let patterns work with Z3 backend
 
 **Remaining parser work (by priority):**
-1. **Add `import`/`include` support** - Allow loading other .kleis files (HIGH)
+1. **Add `import` support** - Allow loading other .kleis files (HIGH)
 2. ~~**Add top-level `verify`**~~ - REPL already has `:verify` command
 3. ~~**Add top-level `let`**~~ - REPL already has `:define` command  
 4. ~~**Add top-level `axiom`**~~ - Structures cover most use cases
 
-**Note:** Most "missing" top-level features are available via REPL commands. The main gap is `import`/`include` for modular file organization.
+**Note:** Most "missing" top-level features are available via REPL commands. The main gap is `import` for modular file organization.
+
+### Design: `import` Statement (Dec 18, 2025)
+
+**Syntax:**
+```kleis
+import "stdlib/algebra.kleis"
+import "tensors.kleis"
+```
+
+**Semantics:**
+- Loads all structures, data types, and functions into current scope
+- Cascading: imports in loaded files are also loaded
+- Deduplication: same file loaded only once (tracks loaded paths)
+- Circular import detection: error if `a imports b imports a`
+
+**REPL integration:**
+- `:load file.kleis` will automatically load all `import` statements
+- Loaded files tracked to prevent duplicate loading
+
+**Path resolution (in order):**
+1. Relative to current file's directory
+2. Relative to workspace root
+3. Relative to stdlib directory
+
+**Implementation steps:**
+1. Add `import` to grammar: `importDecl ::= "import" stringLiteral`
+2. Add `Import(String)` to `TopLevel` enum in parser
+3. Update `:load` in REPL to process imports recursively
+4. Track loaded files in `HashSet<PathBuf>`
 
 **std_template_lib updates (COMPLETE! Dec 18, 2025):**
 - ✅ New `control_flow.kleist` - Templates for match, let, conditional, lambda
