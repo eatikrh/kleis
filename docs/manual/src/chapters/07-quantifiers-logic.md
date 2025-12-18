@@ -57,8 +57,8 @@ define true_example = True ∨ False     // True
 ### Implication (→ / implies)
 
 ```kleis
-define sqrt_real(x) = x > 0 → sqrt(x) ∈ ℝ    // If positive, has real square root
-define implication(P, Q) = P → Q              // If P then Q
+define positive_square(x) = x > 0 → x * x > 0   // If positive, square is positive
+define implication(P, Q) = P → Q                // If P then Q
 ```
 
 ### Negation (¬ / not)

@@ -82,7 +82,7 @@ define quadratic_roots(a, b, c) =
     let discriminant = b^2 - 4*a*c in
     let sqrt_d = sqrt(discriminant) in
     let denom = 2 * a in
-        Pair((-b + sqrt_d) / denom, (-b - sqrt_d) / denom)
+        ((-b + sqrt_d) / denom, (-b - sqrt_d) / denom)
 ```
 
 ### Heron's Formula
