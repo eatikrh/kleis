@@ -1156,8 +1156,7 @@ impl EditorRenderContext {
 | Extension | Purpose | Example |
 |-----------|---------|---------|
 | `.kleis` | Kleis programs (structures, axioms, proofs) | `stdlib/ring.kleis` |
-| `.kleist` | Rendering templates (how to display operations) | `std_template_lib/calculus.kleist` |
-| `.kpal` | Palette layout (UI tab organization) | `std_template_lib/palette.kpal` |
+| `.kleist` | Templates AND palette layout | `std_template_lib/calculus.kleist` |
 
 **Why `.kleist`?**
 - Clearly related to "Kleis" (kleis + t)
@@ -1165,27 +1164,32 @@ impl EditorRenderContext {
 - Memorable, sounds like a word
 - Literary connection: Heinrich von Kleist (German dramatist)
 
+**Block types within `.kleist` files:**
+- `@template` - Rendering templates (how to display operations)
+- `@palette` - UI layout (which buttons, which tabs, what order)
+
 ### Standard Template Library Structure
 
 ```text
 std_template_lib/
-├── basic.kleist        # +, -, ×, ÷, =, ^, _, fraction
-├── calculus.kleist     # ∫, Σ, Π, lim, d/dx, ∂/∂x
-├── quantum.kleist      # |ψ⟩, ⟨φ|, ⟨ψ|φ⟩, [A,B]
-├── tensors.kleist      # Γ, R, g, mixed indices
-├── transforms.kleist   # ℱ, ℒ, convolution
-├── pot.kleist          # Π, modal space, causal bound
-└── palette.kpal        # Tab/button layout
+├── basic.kleist        # Templates: +, -, ×, ÷, =, ^, _
+├── calculus.kleist     # Templates: ∫, Σ, Π, lim, d/dx
+├── quantum.kleist      # Templates: |ψ⟩, ⟨φ|, [A,B]
+├── tensors.kleist      # Templates: Γ, R, g indices
+├── transforms.kleist   # Templates: ℱ, ℒ, convolution
+├── pot.kleist          # Templates: Π, modal space
+└── palette.kleist      # Palette layout (tabs, groups, order)
 ```
 
-**Template file example (`calculus.kleist`):**
+**Combined example (`calculus.kleist`):**
 ```kleist
+// ============ TEMPLATES ============
+
 @template integral {
     pattern: int_bounds(integrand, from, to, variable)
     unicode: "∫_{from}^{to} {integrand} d{variable}"
     latex: "\\int_{{{from}}}^{{{to}}} {integrand} \\, \\mathrm{d}{variable}"
     typst: "integral_({from})^({to}) {integrand} dif {variable}"
-    category: "calculus"
 }
 
 @template derivative {
@@ -1193,35 +1197,77 @@ std_template_lib/
     unicode: "d{function}/d{variable}"
     latex: "\\frac{d\\,{function}}{d{variable}}"
     typst: "(d {function})/(d {variable})"
-    category: "calculus"
+}
+
+@template partial {
+    pattern: d_part(function, variable)
+    unicode: "∂{function}/∂{variable}"
+    latex: "\\frac{\\partial\\,{function}}{\\partial {variable}}"
+    typst: "(diff {function})/(diff {variable})"
 }
 ```
 
-**Palette layout (`palette.kpal`):**
-```kpal
-@palette_layout {
+**Palette layout (`palette.kleist`):**
+```kleist
+@palette {
     tab "Basics" {
-        category: "arithmetic"
-        category: "comparison"
-        category: "brackets"
+        group "Arithmetic" {
+            plus
+            minus
+            multiply
+            divide
+            power
+        }
+        
+        group "Comparison" {
+            equals
+            lt  gt
+            leq geq
+            neq
+        }
+        
+        separator
+        
+        group "Brackets" {
+            parens
+            brackets
+            braces
+            abs
+            norm
+        }
     }
     
     tab "Calculus" {
-        category: "calculus"
-        category: "limits"
-    }
-    
-    tab "Linear Algebra" {
-        category: "matrices"
-        category: "vectors"
+        group "Derivatives" {
+            derivative    shortcut: "Ctrl+D"
+            partial       shortcut: "Ctrl+Shift+D"
+        }
+        
+        group "Integrals" {
+            integral      shortcut: "Ctrl+I"
+        }
+        
+        group "Limits & Sums" {
+            lim
+            sum_bounds
+            prod_bounds
+        }
     }
     
     tab "Quantum" {
-        category: "quantum"
+        ket           shortcut: "Ctrl+K"
+        bra
+        inner
+        outer
+        commutator
+        expectation
     }
     
     tab "POT" {
-        category: "pot"
+        projection
+        modal_integral
+        causal_bound
+        hont
     }
 }
 ```
