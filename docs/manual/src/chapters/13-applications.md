@@ -105,11 +105,11 @@ structure Eigen(n : ℕ) {
 
 ```kleis
 structure QuantumState(n : ℕ) {
-    amplitudes : Vector(n, ℂ)
+    operation amplitudes : Vector(n, ℂ)
     
     // States must be normalized
     axiom normalized : ∀(psi : QuantumState(n)).
-        sum(map(λ a . abs(a)^2, psi.amplitudes)) = 1
+        sum(map(λ a . abs(a)^2, amplitudes(psi))) = 1
 }
 
 structure Observable(n : ℕ) {
@@ -117,12 +117,12 @@ structure Observable(n : ℕ) {
     
     // Observables are Hermitian
     axiom hermitian : ∀(O : Observable(n)).
-        O.matrix = conjugate_transpose(O.matrix)
+        matrix(O) = conjugate_transpose(matrix(O))
 }
 
 // Expectation value
 define expectation(psi, O) =
-    real(inner_product(psi.amplitudes, mul(O.matrix, psi.amplitudes)))
+    real(inner_product(amplitudes(psi), mul(matrix(O), amplitudes(psi))))
 ```
 
 ## Category Theory
