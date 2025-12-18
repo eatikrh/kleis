@@ -892,13 +892,23 @@ define filter_head(list) =
 
 ### Next Steps
 
+**Grammar v0.7 (current):**
 1. **Add `import`/`include` support** - Allow loading other .kleis files
 2. **Add `--` comment support** - Match grammar specification
 3. **Add top-level `axiom`** - For standalone axiom declarations
 4. **Add top-level `let`/`verify`** - For example files and notebooks
+
+**Grammar v0.8 (requires version bump):**
 5. **Add `as` pattern support** - Alias binding in pattern matching
 6. **Add pattern guards** - Conditional matching (`x if x < 0 => ...`)
 7. **Add let destructuring** - Pattern matching in let bindings (`let Point(x, y) = p in ...`)
+
+These three pattern features extend the grammar significantly:
+- New `as` keyword in pattern context
+- New `if` keyword between pattern and `=>`
+- `Let` binds to `Pattern` instead of `String`
+
+Should be done together as **Kleis Grammar v0.8: Enhanced Pattern Matching**.
 
 ---
 *Noted: Dec 15, 2025*
