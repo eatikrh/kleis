@@ -759,15 +759,49 @@ The current Kleis parser implements ~30% of the v0.7 grammar. Here are the notab
 | Top-level `operation` declarations | ✅ |
 | `define` function definitions | ✅ |
 
+### Missing Pattern Features
+
+| Pattern | Example | Status |
+|---------|---------|--------|
+| Wildcard | `_` | ✅ Works |
+| Variable | `x`, `head` | ✅ Works |
+| Constructor | `Some(x)`, `Cons(h, t)` | ✅ Works |
+| Nested | `Ok(Some(x))` | ✅ Works |
+| Constant | `0`, `42` | ✅ Works |
+| **As-pattern** | `Cons(h, t) as whole` | ❌ NOT IMPLEMENTED |
+
+**As-pattern (alias binding)** is a common feature in functional languages:
+- Haskell: `list@(x:xs)` 
+- Rust: `list @ [head, ..]`
+- OCaml: `(head :: tail) as list`
+
+**Use case:**
+```kleis
+define filter_head(list) =
+    match list {
+        Cons(h, t) as whole =>   // Bind 'whole' to the entire list
+            if h > 10 then whole  // Return entire list unchanged
+            else t                // Or return just the tail
+        Nil => Nil
+    }
+```
+
+**To implement:**
+1. Add `As { pattern: Box<Pattern>, binding: String }` to `Pattern` enum in `src/ast.rs`
+2. After parsing a pattern in `parse_pattern()`, check for `as` keyword + identifier
+3. Update evaluator's pattern matcher to bind both destructured parts AND the alias
+
 ### Next Steps
 
 1. **Add `import`/`include` support** - Allow loading other .kleis files
 2. **Add `--` comment support** - Match grammar specification
 3. **Add top-level `axiom`** - For standalone axiom declarations
 4. **Add top-level `let`/`verify`** - For example files and notebooks
+5. **Add `as` pattern support** - Alias binding in pattern matching
 
 ---
 *Noted: Dec 15, 2025*
+*Updated: Dec 18, 2025*
 
 ---
 
