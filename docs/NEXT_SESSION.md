@@ -938,6 +938,20 @@ The type checker returns the **RHS type** (Tensor) instead of **Bool**.
 - `logical_and`, `logical_or` (should require Bool args)
 - Any comparison used in Piecewise conditions
 
+### Issue: Arithmetic on Incompatible Types
+
+**Found during testing:**
+
+`1 + Γ^λ_{μν}` (scalar + tensor) is accepted with inferred type `Tensor(1, 2, dim, ℝ)`.
+
+**Expected behavior:** Type error - cannot add scalar to tensor without explicit broadcasting.
+
+**Operations affected:**
+- `plus` - should require compatible types
+- `minus` - same issue
+- `multiply` - scalar × tensor is valid, but tensor × scalar positioning matters
+- Any binary arithmetic operation
+
 **Proposed fix:**
 ```rust
 // Add neq to the match
