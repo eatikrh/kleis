@@ -34,6 +34,7 @@ use std::fmt;
 #[derive(Debug, Clone, Default)]
 pub struct KleistFile {
     pub templates: Vec<TemplateDefinition>,
+    pub tools: Vec<ToolDefinition>,
     pub palette: Option<PaletteDefinition>,
 }
 
@@ -73,6 +74,35 @@ impl TemplateDefinition {
     }
 }
 
+/// A @tool block - interactive builders that generate dynamic output
+#[derive(Debug, Clone)]
+pub struct ToolDefinition {
+    pub name: String,
+    /// SVG icon for the tool button
+    pub svg: Option<String>,
+    /// Glyph symbol (fallback if no SVG)
+    pub glyph: Option<String>,
+    /// JavaScript handler function name
+    pub handler: Option<String>,
+    /// Category for palette organization
+    pub category: Option<String>,
+    /// Whether this is a built-in tool (not user-definable)
+    pub builtin: bool,
+}
+
+impl ToolDefinition {
+    pub fn new(name: String) -> Self {
+        ToolDefinition {
+            name,
+            svg: None,
+            glyph: None,
+            handler: None,
+            category: None,
+            builtin: false,
+        }
+    }
+}
+
 /// A @palette block
 #[derive(Debug, Clone, Default)]
 pub struct PaletteDefinition {
@@ -91,14 +121,28 @@ pub struct TabDefinition {
 pub enum TabItem {
     Group(GroupDefinition),
     Template(TemplateReference),
+    Tool(ToolReference),
     Separator,
+}
+
+/// Reference to a @tool by name (e.g. @matrix_builder)
+#[derive(Debug, Clone)]
+pub struct ToolReference {
+    pub name: String,
 }
 
 /// A group of templates within a tab
 #[derive(Debug, Clone)]
 pub struct GroupDefinition {
     pub name: String,
-    pub templates: Vec<TemplateReference>,
+    pub items: Vec<GroupItem>,
+}
+
+/// An item that can appear in a group
+#[derive(Debug, Clone)]
+pub enum GroupItem {
+    Template(TemplateReference),
+    Tool(ToolReference),
 }
 
 /// A reference to a template with optional options
@@ -150,6 +194,7 @@ enum Token {
 #[derive(Debug, Clone, PartialEq)]
 enum Keyword {
     Template,
+    Tool,
     Palette,
     Tab,
     Group,
@@ -164,6 +209,8 @@ enum Keyword {
     Category,
     Svg,
     Glyph,
+    Handler,
+    Builtin,
 }
 
 struct Tokenizer<'a> {
@@ -352,6 +399,9 @@ impl<'a> Tokenizer<'a> {
             "category" => Token::Keyword(Keyword::Category),
             "svg" => Token::Keyword(Keyword::Svg),
             "glyph" => Token::Keyword(Keyword::Glyph),
+            "tool" => Token::Keyword(Keyword::Tool),
+            "handler" => Token::Keyword(Keyword::Handler),
+            "builtin" => Token::Keyword(Keyword::Builtin),
             _ => Token::Identifier(ident),
         };
         Ok(token)
@@ -426,6 +476,10 @@ impl<'a> KleistParser<'a> {
                         let template = self.parse_template()?;
                         file.templates.push(template);
                     }
+                    Token::Keyword(Keyword::Tool) => {
+                        let tool = self.parse_tool()?;
+                        file.tools.push(tool);
+                    }
                     Token::Keyword(Keyword::Palette) => {
                         let palette = self.parse_palette()?;
                         file.palette = Some(palette);
@@ -433,7 +487,7 @@ impl<'a> KleistParser<'a> {
                     _ => {
                         return Err(self
                             .tokenizer
-                            .error("Expected 'template' or 'palette' after @"))
+                            .error("Expected 'template', 'tool', or 'palette' after @"))
                     }
                 }
             } else {
@@ -515,6 +569,53 @@ impl<'a> KleistParser<'a> {
         Ok(template)
     }
 
+    fn parse_tool(&mut self) -> Result<ToolDefinition, ParseError> {
+        self.expect(Token::Keyword(Keyword::Tool))?;
+        let name = self.expect_identifier()?;
+        self.expect(Token::OpenBrace)?;
+
+        let mut tool = ToolDefinition::new(name);
+
+        while self.current != Token::CloseBrace {
+            match &self.current {
+                Token::Keyword(Keyword::Svg) => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    tool.svg = Some(self.expect_string()?);
+                }
+                Token::Keyword(Keyword::Glyph) => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    tool.glyph = Some(self.expect_string()?);
+                }
+                Token::Keyword(Keyword::Handler) => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    tool.handler = Some(self.expect_string()?);
+                }
+                Token::Keyword(Keyword::Category) => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    tool.category = Some(self.expect_string()?);
+                }
+                Token::Keyword(Keyword::Builtin) => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    let value = self.expect_string()?;
+                    tool.builtin = value == "true";
+                }
+                _ => {
+                    return Err(self
+                        .tokenizer
+                        .error(&format!("Unexpected token in tool: {:?}", self.current)))
+                }
+            }
+        }
+
+        self.expect(Token::CloseBrace)?;
+        Ok(tool)
+    }
+
     fn parse_palette(&mut self) -> Result<PaletteDefinition, ParseError> {
         self.expect(Token::Keyword(Keyword::Palette))?;
         self.expect(Token::OpenBrace)?;
@@ -560,6 +661,12 @@ impl<'a> KleistParser<'a> {
                     self.advance()?;
                     tab.items.push(TabItem::Separator);
                 }
+                Token::At => {
+                    // Tool reference: @tool_name
+                    self.advance()?;
+                    let name = self.expect_identifier()?;
+                    tab.items.push(TabItem::Tool(ToolReference { name }));
+                }
                 Token::Identifier(_) => {
                     let template_ref = self.parse_template_reference()?;
                     tab.items.push(TabItem::Template(template_ref));
@@ -583,18 +690,29 @@ impl<'a> KleistParser<'a> {
 
         let mut group = GroupDefinition {
             name,
-            templates: Vec::new(),
+            items: Vec::new(),
         };
 
         while self.current != Token::CloseBrace {
-            if let Token::Identifier(_) = &self.current {
-                let template_ref = self.parse_template_reference()?;
-                group.templates.push(template_ref);
-            } else {
-                return Err(self.tokenizer.error(&format!(
-                    "Expected template name in group, got {:?}",
-                    self.current
-                )));
+            match &self.current {
+                Token::At => {
+                    // Tool reference: @tool_name
+                    self.advance()?;
+                    let tool_name = self.expect_identifier()?;
+                    group
+                        .items
+                        .push(GroupItem::Tool(ToolReference { name: tool_name }));
+                }
+                Token::Identifier(_) => {
+                    let template_ref = self.parse_template_reference()?;
+                    group.items.push(GroupItem::Template(template_ref));
+                }
+                _ => {
+                    return Err(self.tokenizer.error(&format!(
+                        "Expected template or tool reference in group, got {:?}",
+                        self.current
+                    )));
+                }
             }
         }
 
@@ -649,6 +767,7 @@ pub fn load_kleist_directory(
         if path.extension().map(|e| e == "kleist").unwrap_or(false) {
             let file = parse_kleist_file(&path)?;
             combined.templates.extend(file.templates);
+            combined.tools.extend(file.tools);
             if file.palette.is_some() {
                 combined.palette = file.palette;
             }
@@ -800,5 +919,72 @@ mod tests {
         let palette = file.palette.unwrap();
         println!("Loaded {} tabs", palette.tabs.len());
         assert!(palette.tabs.len() >= 5, "Expected at least 5 tabs");
+
+        // Check tools were loaded
+        println!("Loaded {} tools", file.tools.len());
+        assert!(
+            file.tools.len() >= 2,
+            "Expected at least 2 tools (matrix_builder, piecewise_builder), got {}",
+            file.tools.len()
+        );
+    }
+
+    #[test]
+    fn test_parse_tool() {
+        let input = r#"
+@tool matrix_builder {
+    glyph: "⊞"
+    handler: "showMatrixBuilder"
+    category: "linear_algebra"
+    builtin: "true"
+    svg: "<svg>...</svg>"
+}
+"#;
+        let file = parse_kleist(input).unwrap();
+        assert_eq!(file.tools.len(), 1);
+        let tool = &file.tools[0];
+        assert_eq!(tool.name, "matrix_builder");
+        assert_eq!(tool.glyph.as_deref(), Some("⊞"));
+        assert_eq!(tool.handler.as_deref(), Some("showMatrixBuilder"));
+        assert_eq!(tool.category.as_deref(), Some("linear_algebra"));
+        assert!(tool.builtin);
+        assert_eq!(tool.svg.as_deref(), Some("<svg>...</svg>"));
+    }
+
+    #[test]
+    fn test_parse_tool_reference_in_palette() {
+        let input = r#"
+@palette {
+    tab "Test" {
+        group "Builders" {
+            plus
+            @matrix_builder
+        }
+        @piecewise_builder
+    }
+}
+"#;
+        let file = parse_kleist(input).unwrap();
+        let palette = file.palette.unwrap();
+        let tab = &palette.tabs[0];
+
+        // Check group has tool reference
+        if let TabItem::Group(ref group) = tab.items[0] {
+            assert_eq!(group.items.len(), 2);
+            if let GroupItem::Tool(ref tool_ref) = group.items[1] {
+                assert_eq!(tool_ref.name, "matrix_builder");
+            } else {
+                panic!("Expected tool reference");
+            }
+        } else {
+            panic!("Expected group");
+        }
+
+        // Check standalone tool reference in tab
+        if let TabItem::Tool(ref tool_ref) = tab.items[1] {
+            assert_eq!(tool_ref.name, "piecewise_builder");
+        } else {
+            panic!("Expected tool reference");
+        }
     }
 }

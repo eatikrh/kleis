@@ -4,7 +4,7 @@
 
 kleist_file = { block } ;
 
-block = template_block | palette_block | comment ;
+block = template_block | tool_block | palette_block | comment ;
 
 (* ============ TEMPLATE BLOCKS ============ *)
 
@@ -19,6 +19,18 @@ field_name = "pattern" | "unicode" | "latex" | "html" | "typst" | "kleis"
 
 field_value = string_literal ;
 
+(* ============ TOOL BLOCKS ============ *)
+(* Tools are interactive builders that generate dynamic output *)
+(* Examples: matrix_builder, piecewise_builder *)
+
+tool_block = "@tool" , identifier , "{" , tool_body , "}" ;
+
+tool_body = { tool_field } ;
+
+tool_field = tool_field_name , ":" , field_value ;
+
+tool_field_name = "svg" | "glyph" | "handler" | "category" | "builtin" ;
+
 (* ============ PALETTE BLOCKS ============ *)
 
 palette_block = "@palette" , "{" , palette_body , "}" ;
@@ -29,11 +41,13 @@ tab_definition = "tab" , string_literal , "{" , tab_body , "}" ;
 
 tab_body = { tab_item } ;
 
-tab_item = group_definition | template_reference | "separator" ;
+tab_item = group_definition | template_reference | tool_reference | "separator" ;
 
 group_definition = "group" , string_literal , "{" , group_body , "}" ;
 
-group_body = { template_reference } ;
+group_body = { template_reference | tool_reference } ;
+
+tool_reference = "@" , identifier ;  (* References @tool by name, e.g. @matrix_builder *)
 
 template_reference = identifier , [ template_options ] ;
 

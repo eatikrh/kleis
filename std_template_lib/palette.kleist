@@ -35,6 +35,12 @@
             neq
             approx
         }
+        
+        separator
+        
+        group "Builders" {
+            @piecewise_builder
+        }
     }
     
     tab "Fences" {
@@ -98,6 +104,10 @@
     }
     
     tab "Linear Algebra" {
+        group "Matrices" {
+            @matrix_builder
+        }
+        
         group "Tensors" {
             tensor_lower_pair
             tensor_2up_2down
@@ -117,8 +127,8 @@
     }
     
     tab "Greek" {
-        // Greek letters are Objects, not templates
-        // This tab would be handled specially
+        // Greek letters are Objects inserted via the symbol picker
+        @symbol_picker
     }
     
     tab "Logic" {

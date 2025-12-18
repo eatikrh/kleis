@@ -1,0 +1,36 @@
+// ============================================================================
+// Built-in Tools - Interactive builders that generate dynamic output
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/tools.kleist
+//
+// Tools differ from templates:
+// - Templates: Static rendering patterns for operations
+// - Tools: Interactive builders that create complex structures dynamically
+//
+// Tools have their own UI (dialogs, grids) and are not user-definable (yet).
+
+@tool matrix_builder {
+    glyph: "⊞"
+    handler: "showMatrixBuilder"
+    category: "linear_algebra"
+    builtin: "true"
+    svg: "<svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"2\" y=\"2\" width=\"8\" height=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/><rect x=\"14\" y=\"2\" width=\"8\" height=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/><rect x=\"2\" y=\"14\" width=\"8\" height=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/><rect x=\"14\" y=\"14\" width=\"8\" height=\"8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg>"
+}
+
+@tool piecewise_builder {
+    glyph: "{"
+    handler: "showPiecewiseBuilder"
+    category: "functions"
+    builtin: "true"
+    svg: "<svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M8 4 Q4 4 4 8 L4 10 Q4 12 2 12 Q4 12 4 14 L4 16 Q4 20 8 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/><line x1=\"10\" y1=\"8\" x2=\"22\" y2=\"8\" stroke=\"currentColor\" stroke-width=\"1.5\"/><line x1=\"10\" y1=\"16\" x2=\"22\" y2=\"16\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg>"
+}
+
+@tool symbol_picker {
+    glyph: "α"
+    handler: "showSymbolPicker"
+    category: "basics"
+    builtin: "true"
+    svg: "<svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><text x=\"12\" y=\"18\" text-anchor=\"middle\" font-size=\"16\" font-family=\"serif\">αβγ</text></svg>"
+}
+
