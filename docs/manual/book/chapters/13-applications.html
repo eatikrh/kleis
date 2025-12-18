@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c49a04.js";
+            window.path_to_searchindex_js = "../searchindex-b37c1687.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -264,18 +264,18 @@ structure Eigen(n : ℕ) {
     operation eigenvectors : Matrix(n, n, ℂ) → List(Vector(n, ℂ))
     
     axiom eigenpair : ∀(A : Matrix(n, n, ℂ))(i : ℕ).
-        let lambda = nth(eigenvalues(A), i) in
+        let lam = nth(eigenvalues(A), i) in
         let v = nth(eigenvectors(A), i) in
-            mul(A, v) = scale(lambda, v)
+            mul(A, v) = scale(lam, v)
 }
 </code></pre>
 <h2 id="quantum-mechanics"><a class="header" href="#quantum-mechanics">Quantum Mechanics</a></h2>
 <pre><code class="language-kleis">structure QuantumState(n : ℕ) {
-    amplitudes : Vector(n, ℂ)
+    operation amplitudes : Vector(n, ℂ)
     
     // States must be normalized
     axiom normalized : ∀(psi : QuantumState(n)).
-        sum(map(λ a . abs(a)^2, psi.amplitudes)) = 1
+        sum(map(λ a . abs(a)^2, amplitudes(psi))) = 1
 }
 
 structure Observable(n : ℕ) {
@@ -283,12 +283,12 @@ structure Observable(n : ℕ) {
     
     // Observables are Hermitian
     axiom hermitian : ∀(O : Observable(n)).
-        O.matrix = conjugate_transpose(O.matrix)
+        matrix(O) = conjugate_transpose(matrix(O))
 }
 
 // Expectation value
 define expectation(psi, O) =
-    real(inner_product(psi.amplitudes, mul(O.matrix, psi.amplitudes)))
+    real(inner_product(amplitudes(psi), mul(matrix(O), amplitudes(psi))))
 </code></pre>
 <h2 id="category-theory"><a class="header" href="#category-theory">Category Theory</a></h2>
 <pre><code class="language-kleis">structure Category(Obj, Mor) {

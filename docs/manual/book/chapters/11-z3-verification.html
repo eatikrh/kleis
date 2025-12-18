@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c49a04.js";
+            window.path_to_searchindex_js = "../searchindex-b37c1687.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -190,7 +190,7 @@
 </ul>
 <h2 id="basic-verification"><a class="header" href="#basic-verification">Basic Verification</a></h2>
 <p>Use <code>verify</code> to check a statement:</p>
-<pre><code class="language-kleis">axiom commutativity : ∀(x : ℝ)(y : ℝ). x + y = y + x
+<pre><code class="language-kleis example">axiom commutativity : ∀(x : ℝ)(y : ℝ). x + y = y + x
 // Z3 verifies: ✓ Valid
 
 axiom zero_annihilates : ∀(x : ℝ). x * 0 = 0
@@ -201,7 +201,7 @@ axiom all_positive : ∀(x : ℝ). x &gt; 0
 </code></pre>
 <h2 id="verifying-quantified-statements"><a class="header" href="#verifying-quantified-statements">Verifying Quantified Statements</a></h2>
 <p>Z3 handles universal and existential quantifiers:</p>
-<pre><code class="language-kleis">axiom additive_identity : ∀(x : ℝ). x + 0 = x
+<pre><code class="language-kleis example">axiom additive_identity : ∀(x : ℝ). x + 0 = x
 // Z3 verifies: ✓ Valid
 
 axiom squares_nonnegative : ∀(x : ℝ). x * x ≥ 0
@@ -237,7 +237,7 @@ implements Group(ℤ) {
 </code></pre>
 <h2 id="implication-verification"><a class="header" href="#implication-verification">Implication Verification</a></h2>
 <p>Prove that premises imply conclusions:</p>
-<pre><code class="language-kleis">// If x &gt; 0 and y &gt; 0, then x + y &gt; 0
+<pre><code class="language-kleis example">// If x &gt; 0 and y &gt; 0, then x + y &gt; 0
 axiom sum_positive : ∀(x : ℝ)(y : ℝ). (x &gt; 0 ∧ y &gt; 0) → x + y &gt; 0
 // Z3 verifies: ✓ Valid
 
@@ -248,7 +248,7 @@ axiom triangle_ineq : ∀(x : ℝ)(y : ℝ)(a : ℝ)(b : ℝ).
 </code></pre>
 <h2 id="counterexamples"><a class="header" href="#counterexamples">Counterexamples</a></h2>
 <p>When verification fails, Z3 provides counterexamples:</p>
-<pre><code class="language-kleis">axiom square_equals_self : ∀(x : ℝ). x^2 = x
+<pre><code class="language-kleis example">axiom square_equals_self : ∀(x : ℝ). x^2 = x
 // Z3: ✗ Invalid, Counterexample: x = 2 (since 4 ≠ 2)
 
 axiom positive_greater_than_one : ∀(n : ℕ). n &gt; 0 → n &gt; 1

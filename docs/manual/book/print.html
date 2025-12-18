@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a7c49a04.js";
+            window.path_to_searchindex_js = "searchindex-b37c1687.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f10a7c19.js"></script>
@@ -283,7 +283,7 @@ define x = 42  // Inline comment
 </code></pre>
 <h2 id="unicode-support"><a class="header" href="#unicode-support">Unicode Support</a></h2>
 <p>Kleis embraces mathematical notation with full Unicode support:</p>
-<pre><code class="language-kleis">// Greek letters
+<pre><code class="language-kleis example">// Greek letters
 define α = 0.5
 define β = 1.0
 define θ = π / 4
@@ -824,7 +824,7 @@ define circumference(radius) = let two_pi = 2 * pi in two_pi * radius
 <h1 id="quantifiers-and-logic"><a class="header" href="#quantifiers-and-logic">Quantifiers and Logic</a></h1>
 <h2 id="universal-quantifier-"><a class="header" href="#universal-quantifier-">Universal Quantifier (∀)</a></h2>
 <p>The universal quantifier expresses “for all”:</p>
-<pre><code class="language-kleis">// Quantified propositions (used inside axioms)
+<pre><code class="language-kleis example">// Quantified propositions (used inside axioms)
 axiom reflexivity : ∀(x : ℝ). x = x
 axiom additive_identity : ∀(x : ℝ). x + 0 = x
 axiom commutative : ∀(x : ℝ)(y : ℝ). x + y = y + x
@@ -832,7 +832,7 @@ axiom commutative : ∀(x : ℝ)(y : ℝ). x + y = y + x
 <p>ASCII alternative: <code>forall x . ...</code></p>
 <h2 id="existential-quantifier-"><a class="header" href="#existential-quantifier-">Existential Quantifier (∃)</a></h2>
 <p>The existential quantifier expresses “there exists”:</p>
-<pre><code class="language-kleis">// Existential quantifiers
+<pre><code class="language-kleis example">// Existential quantifiers
 axiom positive_exists : ∃(x : ℝ). x &gt; 0
 axiom sqrt2_exists : ∃(y : ℝ). y * y = 2
 axiom distinct_exists : ∃(x : ℝ)(y : ℝ). x ≠ y
@@ -840,7 +840,7 @@ axiom distinct_exists : ∃(x : ℝ)(y : ℝ). x ≠ y
 <p>ASCII alternative: <code>exists x . ...</code></p>
 <h2 id="combining-quantifiers"><a class="header" href="#combining-quantifiers">Combining Quantifiers</a></h2>
 <p>Build complex statements:</p>
-<pre><code class="language-kleis">// Every number has a successor
+<pre><code class="language-kleis example">// Every number has a successor
 axiom successor : ∀(n : ℕ). ∃(m : ℕ). m = n + 1
 
 // Density of rationals: between any two reals is a rational
@@ -868,7 +868,7 @@ define not_true = ¬True          // False
 </code></pre>
 <h2 id="type-constraints-in-quantifiers"><a class="header" href="#type-constraints-in-quantifiers">Type Constraints in Quantifiers</a></h2>
 <p>Restrict the domain:</p>
-<pre><code class="language-kleis">axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
+<pre><code class="language-kleis example">axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
 axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
 </code></pre>
 <h2 id="using-quantifiers-in-axioms"><a class="header" href="#using-quantifiers-in-axioms">Using Quantifiers in Axioms</a></h2>
@@ -886,7 +886,7 @@ axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
 </code></pre>
 <h2 id="verification-with-z3"><a class="header" href="#verification-with-z3">Verification with Z3</a></h2>
 <p>Kleis uses Z3 to check quantified statements:</p>
-<pre><code class="language-kleis">// Z3 can verify this is always true:
+<pre><code class="language-kleis example">// Z3 can verify this is always true:
 axiom add_zero : ∀(x : ℝ). x + 0 = x
 
 // Z3 can find a counterexample for this:
@@ -1331,7 +1331,7 @@ implements Monoid(String) {
 </ul>
 <h2 id="basic-verification"><a class="header" href="#basic-verification">Basic Verification</a></h2>
 <p>Use <code>verify</code> to check a statement:</p>
-<pre><code class="language-kleis">axiom commutativity : ∀(x : ℝ)(y : ℝ). x + y = y + x
+<pre><code class="language-kleis example">axiom commutativity : ∀(x : ℝ)(y : ℝ). x + y = y + x
 // Z3 verifies: ✓ Valid
 
 axiom zero_annihilates : ∀(x : ℝ). x * 0 = 0
@@ -1342,7 +1342,7 @@ axiom all_positive : ∀(x : ℝ). x &gt; 0
 </code></pre>
 <h2 id="verifying-quantified-statements"><a class="header" href="#verifying-quantified-statements">Verifying Quantified Statements</a></h2>
 <p>Z3 handles universal and existential quantifiers:</p>
-<pre><code class="language-kleis">axiom additive_identity : ∀(x : ℝ). x + 0 = x
+<pre><code class="language-kleis example">axiom additive_identity : ∀(x : ℝ). x + 0 = x
 // Z3 verifies: ✓ Valid
 
 axiom squares_nonnegative : ∀(x : ℝ). x * x ≥ 0
@@ -1378,7 +1378,7 @@ implements Group(ℤ) {
 </code></pre>
 <h2 id="implication-verification"><a class="header" href="#implication-verification">Implication Verification</a></h2>
 <p>Prove that premises imply conclusions:</p>
-<pre><code class="language-kleis">// If x &gt; 0 and y &gt; 0, then x + y &gt; 0
+<pre><code class="language-kleis example">// If x &gt; 0 and y &gt; 0, then x + y &gt; 0
 axiom sum_positive : ∀(x : ℝ)(y : ℝ). (x &gt; 0 ∧ y &gt; 0) → x + y &gt; 0
 // Z3 verifies: ✓ Valid
 
@@ -1389,7 +1389,7 @@ axiom triangle_ineq : ∀(x : ℝ)(y : ℝ)(a : ℝ)(b : ℝ).
 </code></pre>
 <h2 id="counterexamples"><a class="header" href="#counterexamples">Counterexamples</a></h2>
 <p>When verification fails, Z3 provides counterexamples:</p>
-<pre><code class="language-kleis">axiom square_equals_self : ∀(x : ℝ). x^2 = x
+<pre><code class="language-kleis example">axiom square_equals_self : ∀(x : ℝ). x^2 = x
 // Z3: ✗ Invalid, Counterexample: x = 2 (since 4 ≠ 2)
 
 axiom positive_greater_than_one : ∀(n : ℕ). n &gt; 0 → n &gt; 1
@@ -1678,18 +1678,18 @@ structure Eigen(n : ℕ) {
     operation eigenvectors : Matrix(n, n, ℂ) → List(Vector(n, ℂ))
     
     axiom eigenpair : ∀(A : Matrix(n, n, ℂ))(i : ℕ).
-        let lambda = nth(eigenvalues(A), i) in
+        let lam = nth(eigenvalues(A), i) in
         let v = nth(eigenvectors(A), i) in
-            mul(A, v) = scale(lambda, v)
+            mul(A, v) = scale(lam, v)
 }
 </code></pre>
 <h2 id="quantum-mechanics"><a class="header" href="#quantum-mechanics">Quantum Mechanics</a></h2>
 <pre><code class="language-kleis">structure QuantumState(n : ℕ) {
-    amplitudes : Vector(n, ℂ)
+    operation amplitudes : Vector(n, ℂ)
     
     // States must be normalized
     axiom normalized : ∀(psi : QuantumState(n)).
-        sum(map(λ a . abs(a)^2, psi.amplitudes)) = 1
+        sum(map(λ a . abs(a)^2, amplitudes(psi))) = 1
 }
 
 structure Observable(n : ℕ) {
@@ -1697,12 +1697,12 @@ structure Observable(n : ℕ) {
     
     // Observables are Hermitian
     axiom hermitian : ∀(O : Observable(n)).
-        O.matrix = conjugate_transpose(O.matrix)
+        matrix(O) = conjugate_transpose(matrix(O))
 }
 
 // Expectation value
 define expectation(psi, O) =
-    real(inner_product(psi.amplitudes, mul(O.matrix, psi.amplitudes)))
+    real(inner_product(amplitudes(psi), mul(matrix(O), amplitudes(psi))))
 </code></pre>
 <h2 id="category-theory"><a class="header" href="#category-theory">Category Theory</a></h2>
 <pre><code class="language-kleis">structure Category(Obj, Mor) {
@@ -2206,6 +2206,110 @@ log(b, x)        // Logarithm base b
 e                // Euler's number (2.71828...)
 i                // Imaginary unit
 </code></pre>
+<h2 id="reserved-keywords"><a class="header" href="#reserved-keywords">Reserved Keywords</a></h2>
+<p>The following words are reserved and cannot be used as variable or function names:</p>
+<h3 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>if</code></td><td>Conditional start</td><td><code>if x &gt; 0 then ...</code></td></tr>
+<tr><td><code>then</code></td><td>Conditional consequence</td><td><code>if P then Q else R</code></td></tr>
+<tr><td><code>else</code></td><td>Conditional alternative</td><td><code>if P then Q else R</code></td></tr>
+<tr><td><code>match</code></td><td>Pattern matching</td><td><code>match x { ... }</code></td></tr>
+<tr><td><code>let</code></td><td>Local binding</td><td><code>let x = 5 in ...</code></td></tr>
+<tr><td><code>in</code></td><td>Binding body</td><td><code>let x = 5 in x + 1</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="functions-1"><a class="header" href="#functions-1">Functions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>lambda</code></td><td>Anonymous function (ASCII)</td><td><code>lambda x . x + 1</code></td></tr>
+<tr><td><code>λ</code></td><td>Anonymous function (Unicode)</td><td><code>λ x . x + 1</code></td></tr>
+<tr><td><code>define</code></td><td>Function definition</td><td><code>define f(x) = x^2</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="quantifiers-1"><a class="header" href="#quantifiers-1">Quantifiers</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>forall</code></td><td>Universal quantifier (ASCII)</td><td><code>forall x . P(x)</code></td></tr>
+<tr><td><code>∀</code></td><td>Universal quantifier (Unicode)</td><td><code>∀(x : ℝ). x = x</code></td></tr>
+<tr><td><code>exists</code></td><td>Existential quantifier (ASCII)</td><td><code>exists x . P(x)</code></td></tr>
+<tr><td><code>∃</code></td><td>Existential quantifier (Unicode)</td><td><code>∃(x : ℝ). x &gt; 0</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="logical-operators-keyword-form"><a class="header" href="#logical-operators-keyword-form">Logical Operators (keyword form)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>and</code></td><td>Logical conjunction</td><td><code>P and Q</code></td></tr>
+<tr><td><code>or</code></td><td>Logical disjunction</td><td><code>P or Q</code></td></tr>
+<tr><td><code>not</code></td><td>Logical negation</td><td><code>not P</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="definitions"><a class="header" href="#definitions">Definitions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>structure</code></td><td>Algebraic structure</td><td><code>structure Group(G) { ... }</code></td></tr>
+<tr><td><code>implements</code></td><td>Structure implementation</td><td><code>implements Group(ℤ) { ... }</code></td></tr>
+<tr><td><code>data</code></td><td>Algebraic data type</td><td><code>data Option(T) = Some(T) | None</code></td></tr>
+<tr><td><code>type</code></td><td>Type alias</td><td><code>type Point = (ℝ, ℝ)</code></td></tr>
+<tr><td><code>operation</code></td><td>Operation declaration</td><td><code>operation add : G × G → G</code></td></tr>
+<tr><td><code>element</code></td><td>Element declaration</td><td><code>element zero : G</code></td></tr>
+<tr><td><code>axiom</code></td><td>Axiom declaration</td><td><code>axiom identity : ...</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="modifiers-and-clauses"><a class="header" href="#modifiers-and-clauses">Modifiers and Clauses</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>import</code></td><td>File import</td><td><code>import "stdlib/prelude.kleis"</code></td></tr>
+<tr><td><code>over</code></td><td>Type constraint</td><td><code>structure V over Field(F) { ... }</code></td></tr>
+<tr><td><code>extends</code></td><td>Structure extension</td><td><code>structure Ring extends Group { ... }</code></td></tr>
+<tr><td><code>as</code></td><td>Pattern alias</td><td><code>match x { y as Some(_) =&gt; ... }</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="commands"><a class="header" href="#commands">Commands</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>verify</code></td><td>Verification directive</td><td><code>:verify P ∧ Q</code></td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p><strong>Note:</strong> Using a reserved keyword as a variable name will cause a parse error.
+For example, <code>let lambda = 5</code> fails because <code>lambda</code> is reserved for anonymous functions.</p>
+</blockquote>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-c-standard-library"><a class="header" href="#appendix-c-standard-library">Appendix C: Standard Library</a></h1>
 <p>The Kleis standard library provides foundational types, structures, and operations.</p>
@@ -2381,7 +2485,7 @@ define map_result(res, f) =
 Loaded standard library.
 </code></pre>
 <p>In files:</p>
-<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+<pre><code class="language-kleis example">import "stdlib/prelude.kleis"
 import "stdlib/linear_algebra.kleis"
 import "stdlib/differential_geometry.kleis"
 </code></pre>

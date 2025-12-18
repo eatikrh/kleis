@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c49a04.js";
+            window.path_to_searchindex_js = "../searchindex-b37c1687.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -183,7 +183,7 @@
                         <h1 id="quantifiers-and-logic"><a class="header" href="#quantifiers-and-logic">Quantifiers and Logic</a></h1>
 <h2 id="universal-quantifier-"><a class="header" href="#universal-quantifier-">Universal Quantifier (∀)</a></h2>
 <p>The universal quantifier expresses “for all”:</p>
-<pre><code class="language-kleis">// Quantified propositions (used inside axioms)
+<pre><code class="language-kleis example">// Quantified propositions (used inside axioms)
 axiom reflexivity : ∀(x : ℝ). x = x
 axiom additive_identity : ∀(x : ℝ). x + 0 = x
 axiom commutative : ∀(x : ℝ)(y : ℝ). x + y = y + x
@@ -191,7 +191,7 @@ axiom commutative : ∀(x : ℝ)(y : ℝ). x + y = y + x
 <p>ASCII alternative: <code>forall x . ...</code></p>
 <h2 id="existential-quantifier-"><a class="header" href="#existential-quantifier-">Existential Quantifier (∃)</a></h2>
 <p>The existential quantifier expresses “there exists”:</p>
-<pre><code class="language-kleis">// Existential quantifiers
+<pre><code class="language-kleis example">// Existential quantifiers
 axiom positive_exists : ∃(x : ℝ). x &gt; 0
 axiom sqrt2_exists : ∃(y : ℝ). y * y = 2
 axiom distinct_exists : ∃(x : ℝ)(y : ℝ). x ≠ y
@@ -199,7 +199,7 @@ axiom distinct_exists : ∃(x : ℝ)(y : ℝ). x ≠ y
 <p>ASCII alternative: <code>exists x . ...</code></p>
 <h2 id="combining-quantifiers"><a class="header" href="#combining-quantifiers">Combining Quantifiers</a></h2>
 <p>Build complex statements:</p>
-<pre><code class="language-kleis">// Every number has a successor
+<pre><code class="language-kleis example">// Every number has a successor
 axiom successor : ∀(n : ℕ). ∃(m : ℕ). m = n + 1
 
 // Density of rationals: between any two reals is a rational
@@ -227,7 +227,7 @@ define not_true = ¬True          // False
 </code></pre>
 <h2 id="type-constraints-in-quantifiers"><a class="header" href="#type-constraints-in-quantifiers">Type Constraints in Quantifiers</a></h2>
 <p>Restrict the domain:</p>
-<pre><code class="language-kleis">axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
+<pre><code class="language-kleis example">axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
 axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
 </code></pre>
 <h2 id="using-quantifiers-in-axioms"><a class="header" href="#using-quantifiers-in-axioms">Using Quantifiers in Axioms</a></h2>
@@ -245,7 +245,7 @@ axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
 </code></pre>
 <h2 id="verification-with-z3"><a class="header" href="#verification-with-z3">Verification with Z3</a></h2>
 <p>Kleis uses Z3 to check quantified statements:</p>
-<pre><code class="language-kleis">// Z3 can verify this is always true:
+<pre><code class="language-kleis example">// Z3 can verify this is always true:
 axiom add_zero : ∀(x : ℝ). x + 0 = x
 
 // Z3 can find a counterexample for this:
