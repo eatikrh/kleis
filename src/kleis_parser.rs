@@ -5440,4 +5440,241 @@ mod tests {
             panic!("Expected Lambda expression, got {:?}", result.body);
         }
     }
+
+    // ==========================================================================
+    // Grammar v0.8: Pattern Guard Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_parse_match_with_guard() {
+        // match x { n if n < 0 => negative | _ => nonnegative }
+        let code = "match x { n if n < 0 => negative | _ => nonnegative }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        if let Expression::Match { scrutinee, cases } = result {
+            assert_eq!(*scrutinee, Expression::Object("x".to_string()));
+            assert_eq!(cases.len(), 2);
+
+            // First case has a guard
+            let case1 = &cases[0];
+            assert!(matches!(&case1.pattern, crate::ast::Pattern::Variable(n) if n == "n"));
+            assert!(case1.guard.is_some());
+
+            // Guard should be n < 0 (parsed as less_than(n, 0))
+            if let Some(guard) = &case1.guard {
+                if let Expression::Operation { name, args } = guard {
+                    assert_eq!(name, "less_than");
+                    assert_eq!(args.len(), 2);
+                } else {
+                    panic!("Expected less_than operation in guard, got {:?}", guard);
+                }
+            }
+
+            // Second case has no guard
+            let case2 = &cases[1];
+            assert!(matches!(&case2.pattern, crate::ast::Pattern::Wildcard));
+            assert!(case2.guard.is_none());
+        } else {
+            panic!("Expected Match expression, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_match_with_comparison_guard() {
+        // Test guard with infix comparison
+        let code = "match x { n if n > 0 => positive | _ => nonpositive }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        if let Expression::Match { cases, .. } = result {
+            assert_eq!(cases.len(), 2);
+
+            // First case should have guard
+            let case1 = &cases[0];
+            assert!(case1.guard.is_some());
+
+            if let Some(Expression::Operation { name, .. }) = &case1.guard {
+                assert_eq!(name, "greater_than");
+            } else {
+                panic!("Expected comparison operation in guard");
+            }
+        } else {
+            panic!("Expected Match expression");
+        }
+    }
+
+    // ==========================================================================
+    // Grammar v0.8: As-Pattern Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_parse_as_pattern() {
+        // match list { Cons(h, t) as whole => whole | Nil => Nil }
+        let code = "match list { Cons(h, t) as whole => whole | Nil => Nil }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        if let Expression::Match { cases, .. } = result {
+            assert_eq!(cases.len(), 2);
+
+            // First case should be an as-pattern
+            let case1 = &cases[0];
+            if let crate::ast::Pattern::As { pattern, binding } = &case1.pattern {
+                assert_eq!(binding, "whole");
+                // Inner pattern should be Cons(h, t)
+                if let crate::ast::Pattern::Constructor { name, args } = pattern.as_ref() {
+                    assert_eq!(name, "Cons");
+                    assert_eq!(args.len(), 2);
+                } else {
+                    panic!("Expected Constructor pattern inside As");
+                }
+            } else {
+                panic!("Expected As pattern, got {:?}", case1.pattern);
+            }
+        } else {
+            panic!("Expected Match expression");
+        }
+    }
+
+    #[test]
+    fn test_parse_nested_as_pattern() {
+        // Nested: Some(Cons(h, t) as inner) as outer
+        let code = "match x { Some(Cons(h, t) as inner) as outer => outer }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        if let Expression::Match { cases, .. } = result {
+            assert_eq!(cases.len(), 1);
+
+            // Outer pattern
+            let case = &cases[0];
+            if let crate::ast::Pattern::As {
+                pattern: outer_pattern,
+                binding: outer_binding,
+            } = &case.pattern
+            {
+                assert_eq!(outer_binding, "outer");
+
+                // Should be Some(...) constructor
+                if let crate::ast::Pattern::Constructor { name, args } = outer_pattern.as_ref() {
+                    assert_eq!(name, "Some");
+                    assert_eq!(args.len(), 1);
+
+                    // Inner should be an as-pattern too
+                    if let crate::ast::Pattern::As {
+                        pattern: inner_pattern,
+                        binding: inner_binding,
+                    } = &args[0]
+                    {
+                        assert_eq!(inner_binding, "inner");
+                        assert!(
+                            matches!(inner_pattern.as_ref(), crate::ast::Pattern::Constructor { name, .. } if name == "Cons")
+                        );
+                    } else {
+                        panic!("Expected inner As pattern");
+                    }
+                } else {
+                    panic!("Expected Some constructor");
+                }
+            } else {
+                panic!("Expected As pattern");
+            }
+        } else {
+            panic!("Expected Match expression");
+        }
+    }
+
+    // ==========================================================================
+    // Grammar v0.8: Let Destructuring Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_parse_let_destructuring() {
+        // let Point(x, y) = p in x + y
+        let code = "let Point(x, y) = p in x + y";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        if let Expression::Let {
+            pattern,
+            value,
+            body,
+            ..
+        } = result
+        {
+            // Pattern should be Point(x, y)
+            if let crate::ast::Pattern::Constructor { name, args } = pattern {
+                assert_eq!(name, "Point");
+                assert_eq!(args.len(), 2);
+                assert!(matches!(&args[0], crate::ast::Pattern::Variable(n) if n == "x"));
+                assert!(matches!(&args[1], crate::ast::Pattern::Variable(n) if n == "y"));
+            } else {
+                panic!("Expected Constructor pattern, got {:?}", pattern);
+            }
+
+            assert_eq!(*value, Expression::Object("p".to_string()));
+
+            // Body should be x + y
+            if let Expression::Operation { name, .. } = body.as_ref() {
+                assert_eq!(name, "plus");
+            } else {
+                panic!("Expected plus operation in body");
+            }
+        } else {
+            panic!("Expected Let expression, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_parse_let_destructuring_nested() {
+        // let Some(Pair(a, b)) = x in a + b
+        let code = "let Some(Pair(a, b)) = x in a + b";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        if let Expression::Let { pattern, .. } = result {
+            if let crate::ast::Pattern::Constructor { name, args } = pattern {
+                assert_eq!(name, "Some");
+                assert_eq!(args.len(), 1);
+
+                // Inner should be Pair(a, b)
+                if let crate::ast::Pattern::Constructor {
+                    name: inner_name,
+                    args: inner_args,
+                } = &args[0]
+                {
+                    assert_eq!(inner_name, "Pair");
+                    assert_eq!(inner_args.len(), 2);
+                } else {
+                    panic!("Expected inner Pair constructor");
+                }
+            } else {
+                panic!("Expected outer Some constructor");
+            }
+        } else {
+            panic!("Expected Let expression");
+        }
+    }
+
+    #[test]
+    fn test_parse_let_destructuring_with_wildcard() {
+        // let Pair(x, _) = p in x
+        let code = "let Pair(x, _) = p in x";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse().unwrap();
+
+        if let Expression::Let { pattern, .. } = result {
+            if let crate::ast::Pattern::Constructor { name, args } = pattern {
+                assert_eq!(name, "Pair");
+                assert_eq!(args.len(), 2);
+                assert!(matches!(&args[0], crate::ast::Pattern::Variable(n) if n == "x"));
+                assert!(matches!(&args[1], crate::ast::Pattern::Wildcard));
+            } else {
+                panic!("Expected Constructor pattern");
+            }
+        } else {
+            panic!("Expected Let expression");
+        }
+    }
 }
