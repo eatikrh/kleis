@@ -193,7 +193,8 @@ def validate_with_kleis_cli(code: str, line_offset: int, project_root: Path, ver
             )
         
         if verbose:
-            print(f"      ✅ Exit code: {result.returncode}")
+            status = "✅" if result.returncode == 0 else "❌"
+            print(f"      {status} Exit code: {result.returncode}")
         
         # Check for parse errors in output
         output = result.stdout + result.stderr
@@ -300,6 +301,11 @@ def main():
         action="store_true",
         help="Show detailed output: temp file paths, commands run, etc."
     )
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Show extracted code blocks (for verification)"
+    )
     args = parser.parse_args()
     
     # Find directories
@@ -342,6 +348,20 @@ def main():
         content = filepath.read_text(encoding='utf-8')
         blocks = extract_kleis_blocks(content, str(filepath))
         blocks_validated += len(blocks)
+        
+        # Show blocks if requested
+        if args.show and blocks:
+            print(f"\n📄 {relative_path}")
+            print("=" * 60)
+            for line_num, code in blocks:
+                will_parse = should_validate_block(code)
+                status = "✅ will parse" if will_parse else "⏭️  skip (fragment)"
+                print(f"\n--- Block at line {line_num} [{status}] ---")
+                # Show the code with line numbers
+                for i, line in enumerate(code.split('\n'), 1):
+                    print(f"  {i:3} | {line}")
+            print()
+            continue  # Don't validate when just showing
         
         issues, parser_checked = validate_file(filepath, project_root, strict=args.strict, verbose=args.verbose)
         parser_checked_total += parser_checked
