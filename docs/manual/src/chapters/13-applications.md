@@ -46,17 +46,15 @@ structure EinsteinEquations {
 ## Symbolic Differentiation
 
 ```kleis
-data Expr {
-    Const(value : ℝ)
-    Var(name : String)
-    Add(left : Expr, right : Expr)
-    Mul(left : Expr, right : Expr)
-    Pow(base : Expr, exp : Expr)
-    Sin(arg : Expr)
-    Cos(arg : Expr)
-    Exp(arg : Expr)
-    Ln(arg : Expr)
-}
+data Expr = Const(value : ℝ) 
+          | Var(name : String) 
+          | Add(left : Expr, right : Expr) 
+          | Mul(left : Expr, right : Expr) 
+          | Pow(base : Expr, exp : Expr)
+          | Sin(arg : Expr)
+          | Cos(arg : Expr)
+          | Exp(arg : Expr)
+          | Ln(arg : Expr)
 
 define diff(e, x) =
     match e {

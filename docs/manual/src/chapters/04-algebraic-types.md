@@ -31,23 +31,13 @@ A sum type represents alternatives:
 
 ```kleis
 // A shape is a Circle OR a Rectangle OR a Triangle
-data Shape {
-    Circle(radius : ℝ)
-    Rectangle(width : ℝ, height : ℝ)
-    Triangle(a : ℝ, b : ℝ, c : ℝ)
-}
+data Shape = Circle(radius : ℝ) | Rectangle(width : ℝ, height : ℝ) | Triangle(a : ℝ, b : ℝ, c : ℝ)
 
 // An optional value is Some(value) OR None
-data Option(T) {
-    Some(value : T)
-    None
-}
+data Option(T) = Some(value : T) | None
 
 // A result is Ok(value) OR Err(message)
-data Result(T, E) {
-    Ok(value : T)
-    Err(error : E)
-}
+data Result(T, E) = Ok(value : T) | Err(error : E)
 ```
 
 ## Pattern Matching with ADTs
@@ -100,13 +90,11 @@ The number of possible values follows algebra:
 ADTs are perfect for representing mathematical expressions:
 
 ```kleis
-data Expr {
-    Const(value : ℝ)
-    Var(name : String)
-    Add(left : Expr, right : Expr)
-    Mul(left : Expr, right : Expr)
-    Neg(inner : Expr)
-}
+data Expr = Const(value : ℝ) 
+          | Var(name : String) 
+          | Add(left : Expr, right : Expr) 
+          | Mul(left : Expr, right : Expr) 
+          | Neg(inner : Expr)
 
 define eval(expr, env) =
     match expr {

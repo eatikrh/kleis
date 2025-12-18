@@ -189,10 +189,7 @@ structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
 ### Option
 
 ```kleis
-data Option(T) {
-    Some(value : T)
-    None
-}
+data Option(T) = Some(value : T) | None
 
 // Operations
 define is_some(opt) =
@@ -211,10 +208,7 @@ define unwrap_or(opt, default) =
 ### Result
 
 ```kleis
-data Result(T, E) {
-    Ok(value : T)
-    Err(error : E)
-}
+data Result(T, E) = Ok(value : T) | Err(error : E)
 
 // Operations
 define is_ok(res) =
