@@ -303,6 +303,7 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
 
     match expr {
         Expression::Const(s) => json!({"Const": s}),
+        Expression::String(s) => json!({"String": s}),
         Expression::Object(s) => json!({"Object": s}),
         Expression::Placeholder { id, hint } => json!({"Placeholder": {"id": id, "hint": hint}}),
         Expression::Operation { name, args } => {
@@ -828,7 +829,7 @@ fn collect_slots_recursive(
                 role: role.clone(),
             });
         }
-        Expression::Const(value) | Expression::Object(value) => {
+        Expression::Const(value) | Expression::String(value) | Expression::Object(value) => {
             // Filled value - generate UUID without dashes
             let uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
             slots.push(ArgumentSlot {

@@ -204,6 +204,100 @@ impl String {
         /// Checks whether `Self` is less than or equal to the argument in lexicographic order (str.<= s1 s2)
         str_le(Z3_mk_str_le, Bool);
     }
+
+    /// Find the index of the first occurrence of `substr` in `self`, starting at `offset`.
+    /// Returns -1 if not found.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::str::FromStr;
+    /// use z3::{Config, Context, Solver, SatResult};
+    /// # use z3::ast::{Ast as _, Int, String};
+    /// #
+    /// # let solver = Solver::new();
+    /// #
+    /// let s = String::from_str("hello").unwrap();
+    /// let idx = s.index_of(&String::from_str("ll").unwrap(), &Int::from_i64(0));
+    /// // idx should be 2
+    /// ```
+    pub fn index_of<T: Into<Int>>(&self, substr: &String, offset: T) -> Int {
+        let offset = offset.into();
+        unsafe {
+            Int::wrap(
+                &self.ctx,
+                Z3_mk_seq_index(self.ctx.z3_ctx.0, self.z3_ast, substr.z3_ast, offset.z3_ast)
+                    .unwrap(),
+            )
+        }
+    }
+
+    /// Replace the first occurrence of `src` with `dst` in `self`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::str::FromStr;
+    /// use z3::{Config, Context, Solver, SatResult};
+    /// # use z3::ast::{Ast as _, String};
+    /// #
+    /// # let solver = Solver::new();
+    /// #
+    /// let s = String::from_str("hello").unwrap();
+    /// let result = s.replace(
+    ///     &String::from_str("l").unwrap(),
+    ///     &String::from_str("L").unwrap()
+    /// );
+    /// // result should be "heLlo"
+    /// ```
+    pub fn replace(&self, src: &String, dst: &String) -> String {
+        unsafe {
+            String::wrap(
+                &self.ctx,
+                Z3_mk_seq_replace(self.ctx.z3_ctx.0, self.z3_ast, src.z3_ast, dst.z3_ast).unwrap(),
+            )
+        }
+    }
+
+    /// Convert a string to an integer.
+    /// Returns -1 if the string is not a valid non-negative integer.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::str::FromStr;
+    /// use z3::{Config, Context, Solver, SatResult};
+    /// # use z3::ast::{Ast as _, Int, String};
+    /// #
+    /// # let solver = Solver::new();
+    /// #
+    /// let s = String::from_str("42").unwrap();
+    /// let n = s.to_int();
+    /// // n should be 42
+    /// ```
+    pub fn to_int(&self) -> Int {
+        unsafe {
+            Int::wrap(
+                &self.ctx,
+                Z3_mk_str_to_int(self.ctx.z3_ctx.0, self.z3_ast).unwrap(),
+            )
+        }
+    }
+
+    /// Convert an integer to a string.
+    /// Returns empty string for negative integers.
+    ///
+    /// # Examples
+    /// ```
+    /// use z3::{Config, Context, Solver, SatResult};
+    /// # use z3::ast::{Ast as _, Int, String};
+    /// #
+    /// # let solver = Solver::new();
+    /// #
+    /// let n = Int::from_i64(42);
+    /// let s = String::from_int(&n);
+    /// // s should be "42"
+    /// ```
+    pub fn from_int(n: &Int) -> String {
+        unsafe { String::wrap(&n.ctx, Z3_mk_int_to_str(n.ctx.z3_ctx.0, n.z3_ast).unwrap()) }
+    }
 }
 
 impl FromStr for String {

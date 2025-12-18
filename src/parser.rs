@@ -1654,7 +1654,9 @@ fn collapse_script_literals(expr: Expression) -> Expression {
 
 fn extract_literal_tokens(expr: &Expression) -> Option<Vec<Expression>> {
     match expr {
-        Expression::Const(_) | Expression::Object(_) => Some(vec![expr.clone()]),
+        Expression::Const(_) | Expression::String(_) | Expression::Object(_) => {
+            Some(vec![expr.clone()])
+        }
         Expression::Operation { name, args } if name == "scalar_multiply" && args.len() == 2 => {
             let mut left_tokens = extract_literal_tokens(&args[0])?;
             let mut right_tokens = extract_literal_tokens(&args[1])?;
@@ -1669,6 +1671,7 @@ impl Expression {
     fn as_string(&self) -> String {
         match self {
             Expression::Const(s) => s.clone(),
+            Expression::String(s) => s.clone(),
             Expression::Object(s) => s.clone(),
             Expression::Operation { .. } => "".to_string(),
             Expression::Placeholder { hint, .. } => hint.clone(),

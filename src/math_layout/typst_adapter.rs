@@ -77,6 +77,11 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             s.clone()
         }
 
+        Expression::String(s) => {
+            // String literal - wrap in Typst text
+            format!("\"{}\"", s)
+        }
+
         Expression::Object(s) => {
             // Variable or symbol
             // Convert LaTeX commands to Typst symbols

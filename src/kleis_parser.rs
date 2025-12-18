@@ -467,6 +467,12 @@ impl KleisParser {
             return Ok(Expression::Const(num));
         }
 
+        // String literal: "hello world"
+        if self.peek() == Some('"') {
+            let s = self.parse_string_literal()?;
+            return Ok(Expression::String(s));
+        }
+
         // Identifier or function call
         if self
             .peek()
@@ -2096,6 +2102,12 @@ impl KleisParser {
     fn parse_base_pattern(&mut self) -> Result<Pattern, KleisParseError> {
         self.skip_whitespace();
 
+        // Tuple pattern: (a, b) or (a, b, c) - syntactic sugar for Pair/Tuple constructors
+        // Grammar v0.8: Tuple patterns desugar to constructor patterns
+        if self.peek() == Some('(') {
+            return self.parse_tuple_pattern();
+        }
+
         // Wildcard: _
         if self.peek() == Some('_') {
             let start_pos = self.pos;
@@ -2115,6 +2127,12 @@ impl KleisParser {
         if self.peek().is_some_and(|ch| ch.is_numeric()) {
             let num = self.parse_number()?;
             return Ok(Pattern::constant(num));
+        }
+
+        // String constant: "hello"
+        if self.peek() == Some('"') {
+            let s = self.parse_string_literal()?;
+            return Ok(Pattern::constant(s));
         }
 
         // Constructor or variable
@@ -2183,6 +2201,79 @@ impl KleisParser {
         }
 
         Ok(args)
+    }
+
+    /// Parse a tuple pattern: (a, b) or (a, b, c)
+    ///
+    /// Tuple patterns are syntactic sugar for constructor patterns:
+    /// - (a, b) desugars to Pair(a, b)
+    /// - (a, b, c) desugars to Tuple3(a, b, c)
+    /// - (a, b, c, d) desugars to Tuple4(a, b, c, d)
+    ///
+    /// This enables Haskell/ML-style pattern matching:
+    ///   match pair { (a, _) => a }
+    ///   define fst = λ pair . match pair { (a, _) => a }
+    fn parse_tuple_pattern(&mut self) -> Result<Pattern, KleisParseError> {
+        self.expect_char('(')?;
+        self.skip_whitespace();
+
+        // Check for empty tuple (unit)
+        if self.peek() == Some(')') {
+            self.advance();
+            return Ok(Pattern::constructor("Unit", vec![]));
+        }
+
+        // Parse first pattern
+        let first = self.parse_pattern()?;
+        self.skip_whitespace();
+
+        // Single element in parens - just a grouped pattern, not a tuple
+        if self.peek() == Some(')') {
+            self.advance();
+            return Ok(first);
+        }
+
+        // Must have comma for tuple
+        if self.peek() != Some(',') {
+            return Err(KleisParseError {
+                message: "Expected ',' or ')' in tuple pattern".to_string(),
+                position: self.pos,
+            });
+        }
+
+        // Collect all elements
+        let mut elements = vec![first];
+        while self.peek() == Some(',') {
+            self.advance(); // consume comma
+            self.skip_whitespace();
+
+            // Allow trailing comma
+            if self.peek() == Some(')') {
+                break;
+            }
+
+            let elem = self.parse_pattern()?;
+            elements.push(elem);
+            self.skip_whitespace();
+        }
+
+        self.expect_char(')')?;
+
+        // Desugar to constructor based on arity
+        let constructor_name = match elements.len() {
+            2 => "Pair",
+            3 => "Tuple3",
+            4 => "Tuple4",
+            5 => "Tuple5",
+            n => {
+                return Err(KleisParseError {
+                    message: format!("Tuple patterns with {} elements not supported (max 5)", n),
+                    position: self.pos,
+                });
+            }
+        };
+
+        Ok(Pattern::constructor(constructor_name, elements))
     }
 
     /// Parse nested structure definition
@@ -5856,5 +5947,186 @@ mod tests {
         let mut parser = KleisParser::new(r#""""#);
         let result = parser.parse_string_literal().unwrap();
         assert_eq!(result, "");
+    }
+
+    // ============================================
+    // STRING LITERAL EXPRESSION TESTS (Grammar v0.8)
+    // ============================================
+
+    #[test]
+    fn test_string_expression_simple() {
+        let result = parse_kleis(r#""hello""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "hello"));
+    }
+
+    #[test]
+    fn test_string_expression_with_spaces() {
+        let result = parse_kleis(r#""hello world""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "hello world"));
+    }
+
+    #[test]
+    fn test_string_expression_empty() {
+        let result = parse_kleis(r#""""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s.is_empty()));
+    }
+
+    #[test]
+    fn test_string_in_function_call() {
+        let result = parse_kleis(r#"concat("hello", "world")"#).unwrap();
+        match result {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "concat");
+                assert_eq!(args.len(), 2);
+                assert!(matches!(&args[0], Expression::String(s) if s == "hello"));
+                assert!(matches!(&args[1], Expression::String(s) if s == "world"));
+            }
+            _ => panic!("Expected Operation"),
+        }
+    }
+
+    #[test]
+    fn test_string_in_let_binding() {
+        let result = parse_kleis(r#"let x = "test" in x"#).unwrap();
+        match result {
+            Expression::Let { value, .. } => {
+                assert!(matches!(*value, Expression::String(ref s) if s == "test"));
+            }
+            _ => panic!("Expected Let"),
+        }
+    }
+
+    #[test]
+    fn test_string_in_conditional() {
+        let result = parse_kleis(r#"if x then "yes" else "no""#).unwrap();
+        match result {
+            Expression::Conditional {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                assert!(matches!(*then_branch, Expression::String(ref s) if s == "yes"));
+                assert!(matches!(*else_branch, Expression::String(ref s) if s == "no"));
+            }
+            _ => panic!("Expected Conditional"),
+        }
+    }
+
+    #[test]
+    fn test_string_with_numbers() {
+        let result = parse_kleis(r#""test123""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "test123"));
+    }
+
+    #[test]
+    fn test_string_with_unicode() {
+        let result = parse_kleis(r#""α + β = γ""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "α + β = γ"));
+    }
+
+    // ============================================
+    // TUPLE PATTERN TESTS (Grammar v0.8)
+    // ============================================
+
+    #[test]
+    fn test_tuple_pattern_pair() {
+        let mut parser = KleisParser::new("(a, b)");
+        let result = parser.parse_pattern().unwrap();
+        match result {
+            Pattern::Constructor { name, args } => {
+                assert_eq!(name, "Pair");
+                assert_eq!(args.len(), 2);
+                assert!(matches!(&args[0], Pattern::Variable(s) if s == "a"));
+                assert!(matches!(&args[1], Pattern::Variable(s) if s == "b"));
+            }
+            _ => panic!("Expected Constructor pattern"),
+        }
+    }
+
+    #[test]
+    fn test_tuple_pattern_with_wildcard() {
+        let mut parser = KleisParser::new("(a, _)");
+        let result = parser.parse_pattern().unwrap();
+        match result {
+            Pattern::Constructor { name, args } => {
+                assert_eq!(name, "Pair");
+                assert_eq!(args.len(), 2);
+                assert!(matches!(&args[0], Pattern::Variable(s) if s == "a"));
+                assert!(matches!(&args[1], Pattern::Wildcard));
+            }
+            _ => panic!("Expected Constructor pattern"),
+        }
+    }
+
+    #[test]
+    fn test_tuple_pattern_triple() {
+        let mut parser = KleisParser::new("(a, b, c)");
+        let result = parser.parse_pattern().unwrap();
+        match result {
+            Pattern::Constructor { name, args } => {
+                assert_eq!(name, "Tuple3");
+                assert_eq!(args.len(), 3);
+            }
+            _ => panic!("Expected Constructor pattern"),
+        }
+    }
+
+    #[test]
+    fn test_tuple_pattern_nested() {
+        let mut parser = KleisParser::new("((a, b), c)");
+        let result = parser.parse_pattern().unwrap();
+        match result {
+            Pattern::Constructor { name, args } => {
+                assert_eq!(name, "Pair");
+                assert_eq!(args.len(), 2);
+                // First element is a nested Pair
+                match &args[0] {
+                    Pattern::Constructor { name, args } => {
+                        assert_eq!(name, "Pair");
+                        assert_eq!(args.len(), 2);
+                    }
+                    _ => panic!("Expected nested Pair"),
+                }
+            }
+            _ => panic!("Expected Constructor pattern"),
+        }
+    }
+
+    #[test]
+    fn test_tuple_pattern_in_match() {
+        let result = parse_kleis("match pair { (a, _) => a }").unwrap();
+        match result {
+            Expression::Match { cases, .. } => {
+                assert_eq!(cases.len(), 1);
+                match &cases[0].pattern {
+                    Pattern::Constructor { name, .. } => {
+                        assert_eq!(name, "Pair");
+                    }
+                    _ => panic!("Expected Pair pattern"),
+                }
+            }
+            _ => panic!("Expected Match"),
+        }
+    }
+
+    #[test]
+    fn test_grouped_pattern_not_tuple() {
+        // Single element in parens should not become a tuple
+        let mut parser = KleisParser::new("(x)");
+        let result = parser.parse_pattern().unwrap();
+        assert!(matches!(result, Pattern::Variable(s) if s == "x"));
+    }
+
+    #[test]
+    fn test_unit_pattern() {
+        let mut parser = KleisParser::new("()");
+        let result = parser.parse_pattern().unwrap();
+        match result {
+            Pattern::Constructor { name, args } => {
+                assert_eq!(name, "Unit");
+                assert!(args.is_empty());
+            }
+            _ => panic!("Expected Unit pattern"),
+        }
     }
 }

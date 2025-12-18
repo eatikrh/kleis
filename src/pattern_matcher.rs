@@ -373,7 +373,7 @@ impl PatternMatcher {
                 }
             }
 
-            Expression::Placeholder { .. } | Expression::Const(_) => {
+            Expression::Placeholder { .. } | Expression::Const(_) | Expression::String(_) => {
                 // Leaves don't contain variables
                 expr.clone()
             }

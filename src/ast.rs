@@ -9,6 +9,11 @@ pub enum Expression {
     /// Numeric constant (e.g., "1", "2", "3.14")
     Const(String),
 
+    /// String literal (e.g., "hello", "world")
+    /// Grammar v0.8: string ::= '"' { character } '"'
+    /// Used for text values, labels, file paths, etc.
+    String(String),
+
     /// Named object/variable (e.g., "x", "\\alpha", "\\pi")
     Object(String),
 
@@ -198,6 +203,11 @@ impl Expression {
         Expression::Const(s.into())
     }
 
+    /// Create a string literal expression
+    pub fn string(s: impl Into<String>) -> Self {
+        Expression::String(s.into())
+    }
+
     /// Create an object/variable expression
     pub fn object(s: impl Into<String>) -> Self {
         Expression::Object(s.into())
@@ -367,7 +377,8 @@ impl Expression {
             Expression::Lambda { body, .. } => {
                 body.collect_placeholders(acc);
             }
-            _ => {}
+            // Const, String, and Object are leaf nodes with no placeholders
+            Expression::Const(_) | Expression::String(_) | Expression::Object(_) => {}
         }
     }
 

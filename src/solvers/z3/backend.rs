@@ -340,6 +340,12 @@ impl<'r> Z3Backend<'r> {
                 }
             }
 
+            Expression::String(s) => {
+                // String literals are converted to Z3 String sort
+                // Note: Z3's String sort requires z3::ast::String which can represent string constants
+                Ok(z3::ast::String::from(s.clone()).into())
+            }
+
             Expression::Operation { name, args } => {
                 // Matrix and tensor operations are handled via axioms from stdlib/*.kleis
                 // Use assert_axioms_from_registry() to load them before verification
@@ -672,6 +678,258 @@ impl<'r> Z3Backend<'r> {
                 Ok(func_decl.apply(&ast_args))
             }
 
+            // ============================================
+            // STRING OPERATIONS (Grammar v0.8)
+            // These use Z3's native string theory (QF_SLIA)
+            // ============================================
+
+            // String concatenation: concat("hello", " world") = "hello world"
+            "concat" | "str_concat" | "++" => {
+                if args.len() < 2 {
+                    return Err("concat requires at least 2 arguments".to_string());
+                }
+                // Convert all args to Z3 strings and concatenate
+                let strings: Result<Vec<z3::ast::String>, String> = args
+                    .iter()
+                    .map(|a| {
+                        a.as_string()
+                            .ok_or_else(|| "concat arguments must be strings".to_string())
+                    })
+                    .collect();
+                let strings = strings?;
+                // Use Z3's concat (variadic)
+                let refs: Vec<&z3::ast::String> = strings.iter().collect();
+                Ok(z3::ast::String::concat(&refs).into())
+            }
+
+            // String length: strlen("hello") = 5
+            "strlen" | "str_len" | "length" => {
+                if args.len() != 1 {
+                    return Err("strlen requires 1 argument".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "strlen argument must be a string".to_string())?;
+                Ok(s.length().into())
+            }
+
+            // String contains: contains("hello", "ell") = True
+            "contains" | "str_contains" => {
+                if args.len() != 2 {
+                    return Err("contains requires 2 arguments".to_string());
+                }
+                let haystack = args[0]
+                    .as_string()
+                    .ok_or_else(|| "contains first argument must be a string".to_string())?;
+                let needle = args[1]
+                    .as_string()
+                    .ok_or_else(|| "contains second argument must be a string".to_string())?;
+                Ok(haystack.contains(&needle).into())
+            }
+
+            // String prefix: hasPrefix("hello", "he") = True
+            "hasPrefix" | "str_prefix" | "prefix" => {
+                if args.len() != 2 {
+                    return Err("hasPrefix requires 2 arguments".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "hasPrefix first argument must be a string".to_string())?;
+                let pre = args[1]
+                    .as_string()
+                    .ok_or_else(|| "hasPrefix second argument must be a string".to_string())?;
+                Ok(pre.prefix(&s).into())
+            }
+
+            // String suffix: hasSuffix("hello", "lo") = True
+            "hasSuffix" | "str_suffix" | "suffix" => {
+                if args.len() != 2 {
+                    return Err("hasSuffix requires 2 arguments".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "hasSuffix first argument must be a string".to_string())?;
+                let suf = args[1]
+                    .as_string()
+                    .ok_or_else(|| "hasSuffix second argument must be a string".to_string())?;
+                Ok(suf.suffix(&s).into())
+            }
+
+            // ============================================
+            // SUBSTRING OPERATIONS
+            // ============================================
+
+            // Substring extraction: substr("hello", 1, 3) = "ell"
+            "substr" | "substring" => {
+                if args.len() != 3 {
+                    return Err("substr requires 3 arguments (string, start, length)".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "substr first argument must be a string".to_string())?;
+                let start = args[1].as_int().ok_or_else(|| {
+                    "substr second argument (start) must be an integer".to_string()
+                })?;
+                let len = args[2].as_int().ok_or_else(|| {
+                    "substr third argument (length) must be an integer".to_string()
+                })?;
+                Ok(s.substr(start, len).into())
+            }
+
+            // Find index of substring: indexOf("hello", "ll", 0) = 2
+            "indexOf" | "str_indexof" | "indexof" => {
+                if args.len() != 3 {
+                    return Err(
+                        "indexOf requires 3 arguments (haystack, needle, start)".to_string()
+                    );
+                }
+                let haystack = args[0]
+                    .as_string()
+                    .ok_or_else(|| "indexOf first argument must be a string".to_string())?;
+                let needle = args[1]
+                    .as_string()
+                    .ok_or_else(|| "indexOf second argument must be a string".to_string())?;
+                let start = args[2]
+                    .as_int()
+                    .ok_or_else(|| "indexOf third argument must be an integer".to_string())?;
+                Ok(haystack.index_of(&needle, start).into())
+            }
+
+            // Replace first occurrence: replace("hello", "l", "L") = "heLlo"
+            "replace" | "str_replace" => {
+                if args.len() != 3 {
+                    return Err("replace requires 3 arguments (string, old, new)".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "replace first argument must be a string".to_string())?;
+                let old = args[1]
+                    .as_string()
+                    .ok_or_else(|| "replace second argument must be a string".to_string())?;
+                let new_str = args[2]
+                    .as_string()
+                    .ok_or_else(|| "replace third argument must be a string".to_string())?;
+                Ok(s.replace(&old, &new_str).into())
+            }
+
+            // Get character at index: charAt("hello", 0) = "h"
+            // Uses at() which returns the character at the given index as a string
+            "charAt" | "str_at" => {
+                if args.len() != 2 {
+                    return Err("charAt requires 2 arguments (string, index)".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "charAt first argument must be a string".to_string())?;
+                let idx = args[1]
+                    .as_int()
+                    .ok_or_else(|| "charAt second argument must be an integer".to_string())?;
+                Ok(s.at(idx).into())
+            }
+
+            // ============================================
+            // STRING-INTEGER CONVERSION
+            // ============================================
+
+            // String to integer: strToInt("42") = 42
+            "strToInt" | "str_to_int" | "toInt" => {
+                if args.len() != 1 {
+                    return Err("strToInt requires 1 argument".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "strToInt argument must be a string".to_string())?;
+                Ok(s.to_int().into())
+            }
+
+            // Integer to string: intToStr(42) = "42"
+            "intToStr" | "int_to_str" | "fromInt" | "intToString" => {
+                if args.len() != 1 {
+                    return Err("intToStr requires 1 argument".to_string());
+                }
+                let n = args[0]
+                    .as_int()
+                    .ok_or_else(|| "intToStr argument must be an integer".to_string())?;
+                Ok(z3::ast::String::from_int(&n).into())
+            }
+
+            // ============================================
+            // REGULAR EXPRESSION OPERATIONS
+            // ============================================
+
+            // Check if string matches regex: matchesRegex("hello", "hello")
+            // Note: The pattern is a literal string that must match exactly
+            // For more complex patterns, use the isDigits/isAlpha helpers
+            "matchesRegex" | "matches" | "str_in_re" => {
+                if args.len() != 2 {
+                    return Err("matchesRegex requires 2 arguments (string, pattern)".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "matchesRegex first argument must be a string".to_string())?;
+                let pattern = args[1]
+                    .as_string()
+                    .ok_or_else(|| "matchesRegex second argument must be a string".to_string())?;
+                // Get the pattern as a Rust string and create a literal regex
+                // Note: This treats the pattern as a literal string match
+                if let Some(pattern_str) = pattern.as_string() {
+                    let re = z3::ast::Regexp::literal(&pattern_str);
+                    Ok(s.regex_matches(&re).into())
+                } else {
+                    // Pattern is symbolic - use uninterpreted function
+                    let func_decl = self.declare_uninterpreted("matchesRegex", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Check if string contains only digits: isDigits("123") = True
+            "isDigits" | "is_digits" => {
+                if args.len() != 1 {
+                    return Err("isDigits requires 1 argument".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "isDigits argument must be a string".to_string())?;
+                // Regex for zero or more digits: [0-9]*
+                let digit = z3::ast::Regexp::range(&'0', &'9');
+                let digits_re = z3::ast::Regexp::star(&digit);
+                Ok(s.regex_matches(&digits_re).into())
+            }
+
+            // Check if string contains only letters: isAlpha("abc") = True
+            "isAlpha" | "is_alpha" => {
+                if args.len() != 1 {
+                    return Err("isAlpha requires 1 argument".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "isAlpha argument must be a string".to_string())?;
+                // Regex for letters: [a-zA-Z]*
+                let lower = z3::ast::Regexp::range(&'a', &'z');
+                let upper = z3::ast::Regexp::range(&'A', &'Z');
+                let letter = z3::ast::Regexp::union(&[&lower, &upper]);
+                let letters_re = z3::ast::Regexp::star(&letter);
+                Ok(s.regex_matches(&letters_re).into())
+            }
+
+            // Check if string is alphanumeric: isAlphaNum("abc123") = True
+            "isAlphaNum" | "is_alphanum" => {
+                if args.len() != 1 {
+                    return Err("isAlphaNum requires 1 argument".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "isAlphaNum argument must be a string".to_string())?;
+                // Regex for alphanumeric: [a-zA-Z0-9]*
+                let lower = z3::ast::Regexp::range(&'a', &'z');
+                let upper = z3::ast::Regexp::range(&'A', &'Z');
+                let digit = z3::ast::Regexp::range(&'0', &'9');
+                let alphanum = z3::ast::Regexp::union(&[&lower, &upper, &digit]);
+                let alphanum_re = z3::ast::Regexp::star(&alphanum);
+                Ok(s.regex_matches(&alphanum_re).into())
+            }
+
             // Unknown operation - use uninterpreted function
             _ => {
                 let func_decl = self.declare_uninterpreted(name, args.len());
@@ -714,6 +972,7 @@ impl<'r> Z3Backend<'r> {
                     "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
                     "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
                     "ℤ" | "Int" | "Z" => Int::fresh_const(&var.name).into(),
+                    "String" | "Str" => z3::ast::String::fresh_const(&var.name).into(),
                     _ => Int::fresh_const(&var.name).into(),
                 }
             } else {

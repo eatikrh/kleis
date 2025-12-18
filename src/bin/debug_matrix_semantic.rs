@@ -136,7 +136,7 @@ fn collect_slots_recursive(
             is_placeholder: true,
             role,
         }),
-        Expression::Const(value) | Expression::Object(value) => {
+        Expression::Const(value) | Expression::String(value) | Expression::Object(value) => {
             slots.push(ArgumentSlot {
                 id: *next_auto_id,
                 path,
