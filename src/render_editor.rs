@@ -1423,7 +1423,8 @@ fn render_matrix_content(
                 "PMatrix" | "pmatrix" => "(",
                 "VMatrix" | "vmatrix" => "|",
                 "BMatrix" | "bmatrix" => "[",
-                _ => "(",
+                // Regular Matrix uses square brackets
+                _ => "[",
             };
 
             let mut content = String::new();
