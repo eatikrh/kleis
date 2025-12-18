@@ -1126,8 +1126,9 @@ impl EditorRenderContext {
 // =============================================================================
 
 // Thread-local default context for the drop-in API
+// Uses lazy initialization to load from std_template_lib when available
 thread_local! {
-    static DEFAULT_CONTEXT: EditorRenderContext = EditorRenderContext::new();
+    static DEFAULT_CONTEXT: EditorRenderContext = EditorRenderContext::from_std_template_lib();
 }
 
 /// Render EditorNode to the specified target format (with explicit context)
