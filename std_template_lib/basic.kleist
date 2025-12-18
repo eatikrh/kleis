@@ -14,6 +14,7 @@
     typst: "{left} = {right}"
     kleis: "{left} = {right}"
     category: "arithmetic"
+    glyph: "="
 }
 
 @template plus {

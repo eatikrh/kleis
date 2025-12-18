@@ -170,6 +170,8 @@
     typst: "integral_({from})^({to}) {integrand} dif {variable}"
     kleis: "Integrate({integrand}, {variable}, {from}, {to})"
     category: "integrals"
+    glyph: "∫"
+    svg: "<svg viewBox=\"0 0 24 24\"><text x=\"12\" y=\"20\" text-anchor=\"middle\" font-size=\"20\">∫</text></svg>"
 }
 
 // ============ LIMITS & SUMS ============

@@ -49,6 +49,10 @@ pub struct TemplateDefinition {
     pub kleis: Option<String>,
     pub category: Option<String>,
     pub shortcut: Option<String>,
+    /// SVG for palette button (inline or path reference)
+    pub svg: Option<String>,
+    /// Glyph symbol for button display (e.g., "Γ", "∫", "Σ")
+    pub glyph: Option<String>,
 }
 
 impl TemplateDefinition {
@@ -63,6 +67,8 @@ impl TemplateDefinition {
             kleis: None,
             category: None,
             shortcut: None,
+            svg: None,
+            glyph: None,
         }
     }
 }
@@ -156,6 +162,8 @@ enum Keyword {
     Typst,
     Kleis,
     Category,
+    Svg,
+    Glyph,
 }
 
 struct Tokenizer<'a> {
@@ -342,6 +350,8 @@ impl<'a> Tokenizer<'a> {
             "typst" => Token::Keyword(Keyword::Typst),
             "kleis" => Token::Keyword(Keyword::Kleis),
             "category" => Token::Keyword(Keyword::Category),
+            "svg" => Token::Keyword(Keyword::Svg),
+            "glyph" => Token::Keyword(Keyword::Glyph),
             _ => Token::Identifier(ident),
         };
         Ok(token)
@@ -482,6 +492,16 @@ impl<'a> KleistParser<'a> {
                     self.advance()?;
                     self.expect(Token::Colon)?;
                     template.shortcut = Some(self.expect_string()?);
+                }
+                Token::Keyword(Keyword::Svg) => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    template.svg = Some(self.expect_string()?);
+                }
+                Token::Keyword(Keyword::Glyph) => {
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    template.glyph = Some(self.expect_string()?);
                 }
                 _ => {
                     return Err(self

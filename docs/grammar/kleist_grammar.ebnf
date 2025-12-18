@@ -14,7 +14,8 @@ template_body = { template_field } ;
 
 template_field = field_name , ":" , field_value ;
 
-field_name = "pattern" | "unicode" | "latex" | "html" | "typst" | "kleis" | "category" | "shortcut" ;
+field_name = "pattern" | "unicode" | "latex" | "html" | "typst" | "kleis" 
+           | "category" | "shortcut" | "svg" | "glyph" ;
 
 field_value = string_literal ;
 
