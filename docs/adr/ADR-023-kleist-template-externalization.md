@@ -175,6 +175,22 @@ After ADR-023:
 3. **User template directories** - `~/.kleis/templates/`
 4. **Generate palette UI** - Build React components from `palette.kleist`
 5. **Validation** - Check template placeholders match patterns
+6. **Delete render.rs** - The original 6900-line renderer is likely obsolete
+
+## Note on render.rs
+
+The original `render.rs` (6900+ lines) is **probably no longer used**. It has been superseded by `render_editor.rs` which:
+
+- Renders `EditorNode` directly (not `Expression`)
+- Preserves metadata (tensor indices, operation kinds)
+- Uses external `.kleist` templates
+
+We are **not deleting it yet** because:
+1. It serves as reference during transition
+2. Some edge cases may still need it
+3. Historical comparison is valuable
+
+A deprecation notice has been added to the top of `render.rs`.
 
 ## References
 

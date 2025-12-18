@@ -1,5 +1,28 @@
 #![allow(non_snake_case)]
 
+// =============================================================================
+// ⚠️  DEPRECATION NOTICE (December 2024)
+// =============================================================================
+// This module (render.rs) is likely OBSOLETE.
+//
+// The equation editor now uses render_editor.rs which:
+// - Renders EditorNode directly (preserves metadata like tensor indices)
+// - Loads templates from external .kleist files (std_template_lib/)
+// - Does NOT convert to/from Expression
+//
+// This file is kept for:
+// 1. Reference during transition
+// 2. Fallback if render_editor.rs has gaps
+// 3. Historical comparison
+//
+// Before deleting, verify:
+// - [ ] All render.rs callers migrated to render_editor.rs
+// - [ ] All templates exist in std_template_lib/*.kleist
+// - [ ] Integration tests pass without render.rs
+//
+// See: ADR-023-kleist-template-externalization.md
+// =============================================================================
+
 use std::collections::HashMap;
 
 // === Symbolic Model ===
