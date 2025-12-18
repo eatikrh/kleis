@@ -7,6 +7,7 @@ pub mod editor_ast; // Visual Editor AST (separate from Kleis Core AST)
 pub mod evaluator; // Wire 3: Self-hosting
 pub mod kleis_ast;
 pub mod kleis_parser;
+pub mod kleist_parser; // .kleist template file parser
 pub mod math_layout;
 pub mod parser;
 pub mod pattern_matcher;

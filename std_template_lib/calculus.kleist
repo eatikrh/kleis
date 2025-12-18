@@ -1,0 +1,268 @@
+// ============================================================================
+// Calculus Templates - Trig, Derivatives, Integrals, Limits
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/calculus.kleist
+
+// ============ TRIGONOMETRIC ============
+
+@template sin {
+    pattern: "sin(arg)"
+    unicode: "sin({arg})"
+    latex: "\\sin\\!({arg})"
+    html: "sin({arg})"
+    typst: "sin({arg})"
+    kleis: "sin({arg})"
+    category: "trig"
+}
+
+@template cos {
+    pattern: "cos(arg)"
+    unicode: "cos({arg})"
+    latex: "\\cos\\!({arg})"
+    html: "cos({arg})"
+    typst: "cos({arg})"
+    kleis: "cos({arg})"
+    category: "trig"
+}
+
+@template tan {
+    pattern: "tan(arg)"
+    unicode: "tan({arg})"
+    latex: "\\tan\\!({arg})"
+    html: "tan({arg})"
+    typst: "tan({arg})"
+    kleis: "tan({arg})"
+    category: "trig"
+}
+
+@template arcsin {
+    pattern: "arcsin(arg)"
+    unicode: "arcsin({arg})"
+    latex: "\\arcsin\\left({arg}\\right)"
+    html: "arcsin({arg})"
+    typst: "arcsin({arg})"
+    kleis: "arcsin({arg})"
+    category: "trig"
+}
+
+@template arccos {
+    pattern: "arccos(arg)"
+    unicode: "arccos({arg})"
+    latex: "\\arccos\\left({arg}\\right)"
+    html: "arccos({arg})"
+    typst: "arccos({arg})"
+    kleis: "arccos({arg})"
+    category: "trig"
+}
+
+@template arctan {
+    pattern: "arctan(arg)"
+    unicode: "arctan({arg})"
+    latex: "\\arctan\\left({arg}\\right)"
+    html: "arctan({arg})"
+    typst: "arctan({arg})"
+    kleis: "arctan({arg})"
+    category: "trig"
+}
+
+@template sinh {
+    pattern: "sinh(arg)"
+    unicode: "sinh({arg})"
+    latex: "\\sinh\\left({arg}\\right)"
+    html: "sinh({arg})"
+    typst: "sinh({arg})"
+    kleis: "sinh({arg})"
+    category: "trig"
+}
+
+@template cosh {
+    pattern: "cosh(arg)"
+    unicode: "cosh({arg})"
+    latex: "\\cosh\\left({arg}\\right)"
+    html: "cosh({arg})"
+    typst: "cosh({arg})"
+    kleis: "cosh({arg})"
+    category: "trig"
+}
+
+@template tanh {
+    pattern: "tanh(arg)"
+    unicode: "tanh({arg})"
+    latex: "\\tanh\\left({arg}\\right)"
+    html: "tanh({arg})"
+    typst: "tanh({arg})"
+    kleis: "tanh({arg})"
+    category: "trig"
+}
+
+// ============ LOGARITHMS & EXPONENTIALS ============
+
+@template log {
+    pattern: "log(arg)"
+    unicode: "log({arg})"
+    latex: "\\log\\left({arg}\\right)"
+    html: "log({arg})"
+    typst: "log({arg})"
+    kleis: "log({arg})"
+    category: "functions"
+}
+
+@template ln {
+    pattern: "ln(arg)"
+    unicode: "ln({arg})"
+    latex: "\\ln\\left({arg}\\right)"
+    html: "ln({arg})"
+    typst: "ln({arg})"
+    kleis: "ln({arg})"
+    category: "functions"
+}
+
+@template exp {
+    pattern: "exp(arg)"
+    unicode: "exp({arg})"
+    latex: "e^{{{arg}}}"
+    html: "e<sup>{arg}</sup>"
+    typst: "e^({arg})"
+    kleis: "exp({arg})"
+    category: "functions"
+}
+
+@template sqrt {
+    pattern: "sqrt(arg)"
+    unicode: "√{arg}"
+    latex: "\\sqrt{{arg}}"
+    html: "√{arg}"
+    typst: "sqrt({arg})"
+    kleis: "sqrt({arg})"
+    category: "functions"
+}
+
+// ============ DERIVATIVES ============
+
+@template d_dt {
+    pattern: "d_dt(arg, right)"
+    unicode: "d{arg}/d{right}"
+    latex: "\\frac{{d\\,{arg}}}{{d{right}}}"
+    html: "d{arg}/d{right}"
+    typst: "(d {arg})/(d {right})"
+    kleis: "Dt({arg}, {right})"
+    category: "derivatives"
+}
+
+@template d_part {
+    pattern: "d_part(arg, right)"
+    unicode: "∂{arg}/∂{right}"
+    latex: "\\frac{{\\partial\\,{arg}}}{{\\partial {right}}}"
+    html: "∂{arg}/∂{right}"
+    typst: "(diff {arg})/(diff {right})"
+    kleis: "D({arg}, {right})"
+    category: "derivatives"
+}
+
+// ============ INTEGRALS ============
+
+@template int_bounds {
+    pattern: "int_bounds(integrand, from, to, variable)"
+    unicode: "∫_{from}^{to} {integrand} d{variable}"
+    latex: "\\int_{{{from}}}^{{{to}}} {integrand} \\, \\mathrm{d}{variable}"
+    html: "∫<sub>{from}</sub><sup>{to}</sup> {integrand} d{variable}"
+    typst: "integral_({from})^({to}) {integrand} dif {variable}"
+    kleis: "Integrate({integrand}, {variable}, {from}, {to})"
+    category: "integrals"
+}
+
+// ============ LIMITS & SUMS ============
+
+@template lim {
+    pattern: "lim(body, var, target)"
+    unicode: "lim_{var}→{target} {body}"
+    latex: "\\lim_{{var} \\to {target}} {body}"
+    html: "lim<sub>{var}→{target}</sub> {body}"
+    typst: "lim_({var} arrow {target}) {body}"
+    kleis: "Limit({body}, {var}, {target})"
+    category: "limits"
+}
+
+@template sum_bounds {
+    pattern: "sum_bounds(body, from, to)"
+    unicode: "Σ_{from}^{to} {body}"
+    latex: "\\sum_{{{from}}}^{{{to}}} {body}"
+    html: "Σ<sub>{from}</sub><sup>{to}</sup> {body}"
+    typst: "sum_({from})^({to}) {body}"
+    kleis: "Sum({body}, {from}, {to})"
+    category: "limits"
+}
+
+@template prod_bounds {
+    pattern: "prod_bounds(body, from, to)"
+    unicode: "Π_{from}^{to} {body}"
+    latex: "\\prod_{{{from}}}^{{{to}}} {body}"
+    html: "Π<sub>{from}</sub><sup>{to}</sup> {body}"
+    typst: "product_({from})^({to}) {body}"
+    kleis: "Product({body}, {from}, {to})"
+    category: "limits"
+}
+
+// ============ ACCENTS ============
+
+@template dot_accent {
+    pattern: "dot_accent(arg)"
+    unicode: "{arg}̇"
+    latex: "\\dot{{{arg}}}"
+    html: "{arg}̇"
+    typst: "dot({arg})"
+    kleis: "dot({arg})"
+    category: "accents"
+}
+
+@template ddot_accent {
+    pattern: "ddot_accent(arg)"
+    unicode: "{arg}̈"
+    latex: "\\ddot{{{arg}}}"
+    html: "{arg}̈"
+    typst: "dot.double({arg})"
+    kleis: "ddot({arg})"
+    category: "accents"
+}
+
+@template bar {
+    pattern: "bar(arg)"
+    unicode: "{arg}̄"
+    latex: "\\bar{{{arg}}}"
+    html: "{arg}̄"
+    typst: "macron({arg})"
+    kleis: "bar({arg})"
+    category: "accents"
+}
+
+@template hat {
+    pattern: "hat(arg)"
+    unicode: "{arg}̂"
+    latex: "\\hat{{{arg}}}"
+    html: "{arg}̂"
+    typst: "hat({arg})"
+    kleis: "hat({arg})"
+    category: "accents"
+}
+
+@template tilde {
+    pattern: "tilde(arg)"
+    unicode: "{arg}̃"
+    latex: "\\tilde{{{arg}}}"
+    html: "{arg}̃"
+    typst: "tilde({arg})"
+    kleis: "tilde({arg})"
+    category: "accents"
+}
+
+@template overline {
+    pattern: "overline(arg)"
+    unicode: "{arg}̅"
+    latex: "\\overline{{{arg}}}"
+    html: "{arg}̅"
+    typst: "overline({arg})"
+    kleis: "overline({arg})"
+    category: "accents"
+}
+

@@ -69,6 +69,9 @@ pub use crate::render::RenderTarget;
 // Import EditorNode types - NO Expression import!
 use crate::editor_ast::{EditorNode, OperationData};
 
+// Import kleist_parser for loading templates from .kleist files
+use crate::kleist_parser::{KleistFile, TemplateDefinition};
+
 // =============================================================================
 // Template Context (self-contained, not using render.rs GlyphContext)
 // =============================================================================
@@ -92,6 +95,7 @@ impl Default for EditorRenderContext {
 }
 
 impl EditorRenderContext {
+    /// Create a new context with hardcoded templates (legacy behavior)
     pub fn new() -> Self {
         let mut ctx = EditorRenderContext {
             unicode_templates: HashMap::new(),
@@ -102,6 +106,77 @@ impl EditorRenderContext {
         };
         ctx.load_templates();
         ctx
+    }
+
+    /// Create an empty context (no templates loaded)
+    pub fn empty() -> Self {
+        EditorRenderContext {
+            unicode_templates: HashMap::new(),
+            latex_templates: HashMap::new(),
+            html_templates: HashMap::new(),
+            typst_templates: HashMap::new(),
+            kleis_templates: HashMap::new(),
+        }
+    }
+
+    /// Create a context from a parsed KleistFile
+    ///
+    /// This is the preferred way to create a context when templates are
+    /// externalized to .kleist files.
+    pub fn from_kleist_file(file: &KleistFile) -> Self {
+        let mut ctx = Self::empty();
+        for template in &file.templates {
+            ctx.add_template_from_definition(template);
+        }
+        ctx
+    }
+
+    /// Load templates from std_template_lib directory
+    ///
+    /// Returns a context loaded from std_template_lib/*.kleist files,
+    /// or falls back to hardcoded templates if directory doesn't exist.
+    pub fn from_std_template_lib() -> Self {
+        let dir = std::path::Path::new("std_template_lib");
+        if dir.exists() {
+            match crate::kleist_parser::load_kleist_directory(dir) {
+                Ok(file) => {
+                    let ctx = Self::from_kleist_file(&file);
+                    eprintln!(
+                        "[render_editor] Loaded {} templates from std_template_lib",
+                        file.templates.len()
+                    );
+                    return ctx;
+                }
+                Err(e) => {
+                    eprintln!(
+                        "[render_editor] Failed to load std_template_lib: {}, using hardcoded templates",
+                        e
+                    );
+                }
+            }
+        }
+        // Fallback to hardcoded templates
+        Self::new()
+    }
+
+    /// Add a template from a parsed TemplateDefinition
+    fn add_template_from_definition(&mut self, def: &TemplateDefinition) {
+        if let Some(ref unicode) = def.unicode {
+            self.unicode_templates
+                .insert(def.name.clone(), unicode.clone());
+        }
+        if let Some(ref latex) = def.latex {
+            self.latex_templates.insert(def.name.clone(), latex.clone());
+        }
+        if let Some(ref html) = def.html {
+            self.html_templates.insert(def.name.clone(), html.clone());
+        }
+        if let Some(ref typst) = def.typst {
+            self.typst_templates.insert(def.name.clone(), typst.clone());
+        }
+        if let Some(ref kleis) = def.kleis {
+            self.kleis_templates.insert(def.name.clone(), kleis.clone());
+        }
     }
 
     fn load_templates(&mut self) {
@@ -2466,5 +2541,60 @@ mod tests {
         );
         let result = render(&node, &ctx, &RenderTarget::LaTeX);
         assert!(result.contains("\\int"));
+    }
+
+    #[test]
+    fn test_from_std_template_lib() {
+        // Load from .kleist files
+        let kleist_ctx = EditorRenderContext::from_std_template_lib();
+
+        // Check that templates were loaded
+        assert!(
+            kleist_ctx.unicode_templates.len() >= 50,
+            "Expected at least 50 templates from kleist files, got {}",
+            kleist_ctx.unicode_templates.len()
+        );
+
+        // Test a simple operation renders correctly
+        let node = EditorNode::operation(
+            "plus",
+            vec![EditorNode::object("a"), EditorNode::object("b")],
+        );
+        let result = render(&node, &kleist_ctx, &RenderTarget::Unicode);
+        assert!(
+            result.contains("a") && result.contains("b") && result.contains("+"),
+            "Expected 'a + b', got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_kleist_vs_hardcoded_templates_match() {
+        // Compare output from hardcoded vs kleist-loaded templates
+        let hardcoded_ctx = EditorRenderContext::new();
+        let kleist_ctx = EditorRenderContext::from_std_template_lib();
+
+        // Test a few operations
+        let test_cases = vec![
+            ("plus", vec!["a", "b"]),
+            ("minus", vec!["x", "y"]),
+            ("equals", vec!["f", "g"]),
+            ("power", vec!["x", "2"]),
+            ("sin", vec!["theta"]),
+        ];
+
+        for (op_name, args) in test_cases {
+            let args_nodes: Vec<EditorNode> = args.iter().map(|s| EditorNode::object(*s)).collect();
+            let node = EditorNode::operation(op_name, args_nodes);
+
+            let hardcoded_result = render(&node, &hardcoded_ctx, &RenderTarget::LaTeX);
+            let kleist_result = render(&node, &kleist_ctx, &RenderTarget::LaTeX);
+
+            assert_eq!(
+                hardcoded_result, kleist_result,
+                "Mismatch for '{}': hardcoded='{}', kleist='{}'",
+                op_name, hardcoded_result, kleist_result
+            );
+        }
     }
 }

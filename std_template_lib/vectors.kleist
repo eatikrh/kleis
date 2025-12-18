@@ -1,0 +1,82 @@
+// ============================================================================
+// Vector Templates - Gradients, Divergence, Curl, Cross/Dot products
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/vectors.kleist
+
+// ============ VECTOR CALCULUS ============
+
+@template grad {
+    pattern: "grad(arg)"
+    unicode: "∇{arg}"
+    latex: "\\nabla {arg}"
+    html: "∇{arg}"
+    typst: "nabla {arg}"
+    kleis: "gradient({arg})"
+    category: "vectors"
+}
+
+@template div {
+    pattern: "div(arg)"
+    unicode: "∇·{arg}"
+    latex: "\\nabla \\cdot {arg}"
+    html: "∇·{arg}"
+    typst: "nabla dot {arg}"
+    kleis: "divergence({arg})"
+    category: "vectors"
+}
+
+@template curl {
+    pattern: "curl(arg)"
+    unicode: "∇×{arg}"
+    latex: "\\nabla \\times {arg}"
+    html: "∇×{arg}"
+    typst: "nabla times {arg}"
+    kleis: "curl({arg})"
+    category: "vectors"
+}
+
+// ============ VECTOR NOTATION ============
+
+@template vector_bold {
+    pattern: "vector_bold(vector)"
+    unicode: "{vector}"
+    latex: "\\mathbf{{{vector}}}"
+    html: "<b>{vector}</b>"
+    typst: "bold({vector})"
+    kleis: "vector({vector})"
+    category: "vectors"
+}
+
+@template vector_arrow {
+    pattern: "vector_arrow(vector)"
+    unicode: "{vector}⃗"
+    latex: "\\vec{{{vector}}}"
+    html: "{vector}⃗"
+    typst: "arrow({vector})"
+    kleis: "vector({vector})"
+    category: "vectors"
+}
+
+// ============ PRODUCTS ============
+
+@template dot {
+    pattern: "dot(left, right)"
+    unicode: "{left} · {right}"
+    latex: "{left} \\cdot {right}"
+    html: "{left} · {right}"
+    typst: "{left} dot {right}"
+    kleis: "dot({left}, {right})"
+    category: "vectors"
+}
+
+@template cross {
+    pattern: "cross(left, right)"
+    unicode: "{left} × {right}"
+    latex: "{left} \\times {right}"
+    html: "{left} × {right}"
+    typst: "{left} times {right}"
+    kleis: "cross({left}, {right})"
+    category: "vectors"
+}
+

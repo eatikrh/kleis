@@ -1,0 +1,82 @@
+// ============================================================================
+// Transform Templates - Fourier, Laplace, Convolution, Green's Functions
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/transforms.kleist
+
+// ============ INTEGRAL TRANSFORMS ============
+
+@template fourier_transform {
+    pattern: "fourier_transform(function)"
+    unicode: "ℱ[{function}]"
+    latex: "\\mathcal{F}[{function}]"
+    html: "ℱ[{function}]"
+    typst: "cal(F)[{function}]"
+    kleis: "fourier({function})"
+    category: "transforms"
+}
+
+@template inverse_fourier {
+    pattern: "inverse_fourier(function)"
+    unicode: "ℱ⁻¹[{function}]"
+    latex: "\\mathcal{F}^{-1}[{function}]"
+    html: "ℱ⁻¹[{function}]"
+    typst: "cal(F)^(-1)[{function}]"
+    kleis: "inverse_fourier({function})"
+    category: "transforms"
+}
+
+@template laplace_transform {
+    pattern: "laplace_transform(function)"
+    unicode: "ℒ[{function}]"
+    latex: "\\mathcal{L}[{function}]"
+    html: "ℒ[{function}]"
+    typst: "cal(L)[{function}]"
+    kleis: "laplace({function})"
+    category: "transforms"
+}
+
+@template inverse_laplace {
+    pattern: "inverse_laplace(function)"
+    unicode: "ℒ⁻¹[{function}]"
+    latex: "\\mathcal{L}^{-1}[{function}]"
+    html: "ℒ⁻¹[{function}]"
+    typst: "cal(L)^(-1)[{function}]"
+    kleis: "inverse_laplace({function})"
+    category: "transforms"
+}
+
+// ============ CONVOLUTION ============
+
+@template convolution {
+    pattern: "convolution(arg, right, superscript)"
+    unicode: "({arg} ∗ {right})({superscript})"
+    latex: "({arg} \\ast {right})({superscript})"
+    html: "({arg} ∗ {right})({superscript})"
+    typst: "({arg} ast {right})({superscript})"
+    kleis: "Convolve({arg}, {right})"
+    category: "transforms"
+}
+
+// ============ GREEN'S FUNCTIONS & KERNELS ============
+
+@template kernel_integral {
+    pattern: "kernel_integral(arg, right, idx2, idx3)"
+    unicode: "∫_{idx2} {arg} {right} d{idx3}"
+    latex: "\\int_{{{idx2}}} {arg} \\, {right} \\, \\mathrm{d}{idx3}"
+    html: "∫<sub>{idx2}</sub> {arg} {right} d{idx3}"
+    typst: "integral _({idx2}) {arg} {right} dif {idx3}"
+    kleis: "KernelIntegral({arg}, {right}, {idx2}, {idx3})"
+    category: "transforms"
+}
+
+@template greens_function {
+    pattern: "greens_function(arg, right)"
+    unicode: "G({arg}, {right})"
+    latex: "G({arg}, {right})"
+    html: "G({arg}, {right})"
+    typst: "G({arg}, {right})"
+    kleis: "GreensFunction({arg}, {right})"
+    category: "transforms"
+}
+

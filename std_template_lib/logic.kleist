@@ -1,0 +1,130 @@
+// ============================================================================
+// Logic Templates - Logical operators, Quantifiers, Sets
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/logic.kleist
+
+// ============ LOGIC ============
+
+@template implies {
+    pattern: "implies(left, right)"
+    unicode: "{left} ⟹ {right}"
+    latex: "{left} \\Rightarrow {right}"
+    html: "{left} ⟹ {right}"
+    typst: "{left} arrow.r.double {right}"
+    kleis: "implies({left}, {right})"
+    category: "logic"
+}
+
+@template iff {
+    pattern: "iff(left, right)"
+    unicode: "{left} ⟺ {right}"
+    latex: "{left} \\Leftrightarrow {right}"
+    html: "{left} ⟺ {right}"
+    typst: "{left} arrow.l.r.double {right}"
+    kleis: "iff({left}, {right})"
+    category: "logic"
+}
+
+@template and {
+    pattern: "and(left, right)"
+    unicode: "{left} ∧ {right}"
+    latex: "{left} \\land {right}"
+    html: "{left} ∧ {right}"
+    typst: "{left} and {right}"
+    kleis: "and({left}, {right})"
+    category: "logic"
+}
+
+@template or {
+    pattern: "or(left, right)"
+    unicode: "{left} ∨ {right}"
+    latex: "{left} \\lor {right}"
+    html: "{left} ∨ {right}"
+    typst: "{left} or {right}"
+    kleis: "or({left}, {right})"
+    category: "logic"
+}
+
+@template not {
+    pattern: "not(arg)"
+    unicode: "¬{arg}"
+    latex: "\\neg {arg}"
+    html: "¬{arg}"
+    typst: "not {arg}"
+    kleis: "not({arg})"
+    category: "logic"
+}
+
+@template logical_and {
+    pattern: "logical_and(left, right)"
+    unicode: "{left} ∧ {right}"
+    latex: "{left} \\land {right}"
+    html: "{left} ∧ {right}"
+    typst: "{left} and {right}"
+    kleis: "and({left}, {right})"
+    category: "logic"
+}
+
+@template logical_or {
+    pattern: "logical_or(left, right)"
+    unicode: "{left} ∨ {right}"
+    latex: "{left} \\lor {right}"
+    html: "{left} ∨ {right}"
+    typst: "{left} or {right}"
+    kleis: "or({left}, {right})"
+    category: "logic"
+}
+
+@template logical_not {
+    pattern: "logical_not(arg)"
+    unicode: "¬{arg}"
+    latex: "\\lnot {arg}"
+    html: "¬{arg}"
+    typst: "not {arg}"
+    kleis: "not({arg})"
+    category: "logic"
+}
+
+// ============ SETS ============
+
+@template in {
+    pattern: "in(left, right)"
+    unicode: "{left} ∈ {right}"
+    latex: "{left} \\in {right}"
+    html: "{left} ∈ {right}"
+    typst: "{left} in {right}"
+    kleis: "in({left}, {right})"
+    category: "sets"
+}
+
+@template subset {
+    pattern: "subset(left, right)"
+    unicode: "{left} ⊂ {right}"
+    latex: "{left} \\subset {right}"
+    html: "{left} ⊂ {right}"
+    typst: "{left} subset {right}"
+    kleis: "subset({left}, {right})"
+    category: "sets"
+}
+
+@template union {
+    pattern: "union(left, right)"
+    unicode: "{left} ∪ {right}"
+    latex: "{left} \\cup {right}"
+    html: "{left} ∪ {right}"
+    typst: "{left} union {right}"
+    kleis: "union({left}, {right})"
+    category: "sets"
+}
+
+@template intersection {
+    pattern: "intersection(left, right)"
+    unicode: "{left} ∩ {right}"
+    latex: "{left} \\cap {right}"
+    html: "{left} ∩ {right}"
+    typst: "{left} sect {right}"
+    kleis: "intersection({left}, {right})"
+    category: "sets"
+}
+
