@@ -815,12 +815,14 @@ The Kleis parser implements **~75% of the v0.8 grammar** for practical use. With
 
 ### Missing Top-Level Declarations
 
-| Feature | Grammar v0.8 | Parser | Notes |
-|---------|--------------|--------|-------|
-| `import` / `include` | ❌ Not in grammar | ❌ Not implemented | **Priority: HIGH** - need for modular files |
-| Top-level `axiom` | ✅ | ❌ | Axioms only work inside structures |
-| Top-level `let` | ✅ | ❌ | Let bindings only in expressions |
-| Top-level `verify` | ✅ | ❌ | Verification statements |
+| Feature | Grammar v0.8 | Parser | Priority | Notes |
+|---------|--------------|--------|----------|-------|
+| `import` / `include` | ❌ Not in grammar | ❌ Not implemented | **HIGH** | Need for modular files |
+| Top-level `verify` | ✅ | ❌ | Medium | Useful for notebooks |
+| Top-level `let` | ✅ | ❌ | Low | Let bindings work in expressions |
+| Top-level `axiom` | ✅ | ❌ | **Low** | Structures cover most use cases |
+
+**Note on top-level axioms:** Most axioms belong inside structures (e.g., Peano axioms → `structure Nat`, Euclid's postulates → `structure EuclideanGeometry`). Top-level axioms are mainly useful for notebook-style "assume X, verify Y" workflows.
 
 ### Comment Syntax
 
@@ -963,11 +965,11 @@ define filter_head(list) =
 3. ✅ **Let destructuring** - `let Point(x, y) = p in ...`
 4. ✅ **Z3 constructor destructuring** - Let patterns work with Z3 backend
 
-**Remaining parser work:**
-1. **Add `import`/`include` support** - Allow loading other .kleis files
-2. **Add `--` comment support** - Match grammar specification
-3. **Add top-level `axiom`** - For standalone axiom declarations
-4. **Add top-level `let`/`verify`** - For example files and notebooks
+**Remaining parser work (by priority):**
+1. **Add `import`/`include` support** - Allow loading other .kleis files (HIGH)
+2. **Add top-level `verify`** - For notebooks and example files (Medium)
+3. **Add top-level `let`** - Convenience for notebooks (Low)
+4. ~~**Add top-level `axiom`**~~ - Deprioritized: structures cover most use cases
 
 **std_template_lib updates (COMPLETE! Dec 18, 2025):**
 - ✅ New `control_flow.kleist` - Templates for match, let, conditional, lambda
