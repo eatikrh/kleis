@@ -809,9 +809,9 @@ fn render_operation(op: &OperationData, ...) -> String {
 *Resolved: Dec 15, 2025*
 
 ---
-## 📋 TODO: Parser Feature Gaps (Dec 18, 2025)
+## 📋 Parser Status: Grammar v0.8 (Updated Dec 18, 2025)
 
-The current Kleis parser implements ~35% of the v0.8 grammar. Here are the notable gaps:
+The Kleis parser implements **~75% of the v0.8 grammar** for practical use. With Grammar v0.8 pattern features now complete, here's what remains:
 
 ### Missing Top-Level Declarations
 
