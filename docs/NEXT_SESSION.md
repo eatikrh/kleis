@@ -1395,6 +1395,25 @@ impl EditorRenderContext {
 
 ## 📚 Documentation vs Reality Gaps (Dec 18, 2025)
 
+### ⚠️ REVIEW NEEDED: Pattern Matching Chapter
+
+**File:** `docs/manual/src/chapters/05-pattern-matching.md`
+
+This chapter needs strict review against actual implementation. Many features commonly shown in pattern matching tutorials are NOT implemented in Kleis:
+
+| Feature | Documented? | Implemented? |
+|---------|-------------|--------------|
+| Basic patterns (`_`, `x`, `Cons(h,t)`) | ✅ | ✅ |
+| Nested patterns | ✅ | ✅ |
+| Exhaustiveness checking | ✅ | ✅ |
+| **As-patterns** (`Cons(h,t) as whole`) | ❓ | ❌ |
+| **Pattern guards** (`x if x < 0 => ...`) | ❓ | ❌ |
+| **Let destructuring** (`let Point(x,y) = p in ...`) | ❓ | ❌ |
+
+**Action:** Review chapter to ensure it doesn't show examples that won't parse. Add "Not Yet Implemented" section if aspirational features are mentioned.
+
+---
+
 ### Issue: Complex Numbers Not Instantiable
 
 **The manual claims** (`01-starting-out.md`):
