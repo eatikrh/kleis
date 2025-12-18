@@ -488,7 +488,9 @@ relationOp
       ;
 
 logicOp
-    ::= "∧" | "∨" | "⟹" | "⟺" | "→" | "⇒"
+    ::= "∧" | "∨"                        (* and, or *)
+      | "→" | "⇒" | "⟹"                  (* implies: single, double, long *)
+      | "↔" | "⇔" | "⟺"                  (* iff: single, double, long *)
       ;
 
 operatorSymbol

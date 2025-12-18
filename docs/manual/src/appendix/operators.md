@@ -29,8 +29,11 @@
 | `and` | `∧` | Conjunction | `P ∧ Q` |
 | `or` | `∨` | Disjunction | `P ∨ Q` |
 | `not` | `¬` | Negation | `¬P` |
-| `implies` | `→` | Implication | `P → Q` |
-| `iff` | `↔` | Biconditional | `P ↔ Q` |
+| `implies` | `→` `⇒` `⟹` | Implication | `P → Q` |
+| `iff` | `↔` `⇔` `⟺` | Biconditional | `P ↔ Q` |
+
+> **Note:** All three Unicode variants for implication and biconditional are 
+> equivalent. Use whichever matches your notation conventions.
 
 ## Set Operators
 
