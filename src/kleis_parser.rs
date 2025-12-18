@@ -447,18 +447,63 @@ impl KleisParser {
             return self.parse_list_literal();
         }
 
-        // Parenthesized expression
+        // Parenthesized expression or tuple expression
+        // () -> Unit, (a) -> a, (a, b) -> Pair(a, b), (a, b, c) -> Tuple3(a, b, c)
         if self.peek() == Some('(') {
             self.advance();
-            let expr = self.parse_expression()?;
             self.skip_whitespace();
-            if self.advance() != Some(')') {
-                return Err(KleisParseError {
-                    message: "Expected ')'".to_string(),
-                    position: self.pos,
+
+            // Check for unit: ()
+            if self.peek() == Some(')') {
+                self.advance();
+                return Ok(Expression::Operation {
+                    name: "Unit".to_string(),
+                    args: vec![],
                 });
             }
-            return Ok(expr);
+
+            // Parse first expression
+            let first = self.parse_expression()?;
+            self.skip_whitespace();
+
+            // Check for comma (tuple) or closing paren (grouped expr)
+            if self.peek() == Some(',') {
+                // It's a tuple - collect all elements
+                let mut elements = vec![first];
+                while self.peek() == Some(',') {
+                    self.advance(); // consume ','
+                    self.skip_whitespace();
+                    elements.push(self.parse_expression()?);
+                    self.skip_whitespace();
+                }
+                self.expect_char(')')?;
+
+                // Desugar to Pair, Tuple3, Tuple4, etc.
+                let constructor = match elements.len() {
+                    2 => "Pair",
+                    3 => "Tuple3",
+                    4 => "Tuple4",
+                    n => {
+                        return Err(KleisParseError {
+                            message: format!("Unsupported tuple arity: {}", n),
+                            position: self.pos,
+                        });
+                    }
+                };
+                return Ok(Expression::Operation {
+                    name: constructor.to_string(),
+                    args: elements,
+                });
+            } else {
+                // Just a grouped expression
+                if self.advance() != Some(')') {
+                    return Err(KleisParseError {
+                        message: "Expected ')'".to_string(),
+                        position: self.pos,
+                    });
+                }
+                return Ok(first);
+            }
         }
 
         // Number
