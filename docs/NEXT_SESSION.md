@@ -822,15 +822,14 @@ The Kleis parser implements **~75% of the v0.8 grammar** for practical use. With
 | Top-level `let` | ✅ | ❌ | Let bindings only in expressions |
 | Top-level `verify` | ✅ | ❌ | Verification statements |
 
-### Comment Syntax Discrepancy
+### Comment Syntax
 
 | Style | Grammar | Parser |
 |-------|---------|--------|
-| `-- comment` | ✅ Defined | ❌ Not recognized |
 | `// comment` | ✅ Defined | ✅ Works |
 | `/* block */` | ✅ Defined | ✅ Works |
 
-**Action:** Examples should use `//` comments for parser compatibility.
+**Note:** The grammar only defines `//` and `/* */` comment styles. The `--` syntax seen in EBNF files is EBNF meta-notation, not Kleis syntax.
 
 ### What Works
 
