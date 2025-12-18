@@ -662,3 +662,34 @@ cd docs && mv session-YYYY-MM-DD archive/sessions/
    - Build artifacts
    - Editor temp files
 
+## Aspirational Documentation Check
+
+**Periodically check that manual examples match parser implementation.**
+
+The Kleis manual may contain "aspirational" code examples - syntax that is
+documented but not yet implemented in the parser. Use this command to find them:
+
+```bash
+python3 scripts/validate_manual_examples.py --strict --verbose
+```
+
+**Options:**
+- `--strict`: Actually run `kleis --check` on each code block
+- `--verbose`: Show temp file paths and commands being run
+- `--show`: Display all extracted code blocks for review
+
+**What it catches:**
+- Unicode operators (∧, ∨) not yet in parser
+- `where` clauses in structures
+- Parameterized data types
+- Dot notation in imports
+- Any syntax in the book that the parser can't parse
+
+**Policy:**
+- Aspirational docs don't block pushing (pre-push hook uses non-strict mode)
+- Run `--strict` periodically to track implementation gaps
+- When implementing a feature, check if manual already documents it
+- When documenting a feature, ensure parser supports it first
+
+**Suggested frequency:** Run at start of each session or before major releases.
+
