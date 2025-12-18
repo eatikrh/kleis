@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3a3ffce2.js";
+            window.path_to_searchindex_js = "../searchindex-0cf6ef68.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -283,17 +283,17 @@ define square_five = let y = 5 in y * y
 </code></pre>
 <p>But explicit types make code clearer and catch errors earlier!</p>
 <h2 id="the-type-hierarchy"><a class="header" href="#the-type-hierarchy">The Type Hierarchy</a></h2>
-<pre><code>        Any
-       /   \
-    Scalar  Collection
-    /    \       |
-   ℂ    Bool   List
-   |           /   \
-   ℝ      Vector  Matrix
-   |
-   ℤ
-   |
-   ℕ
+<pre><code>              Any
+         /    |    \
+     Scalar  String  Collection
+     /    \              |
+    ℂ    Bool          List
+    |                 /    \
+    ℝ            Vector   Matrix
+    |
+    ℤ
+    |
+    ℕ
 </code></pre>
 <p>Note: <code>ℕ ⊂ ℤ ⊂ ℝ ⊂ ℂ</code> (natural numbers are integers are reals are complex)</p>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
