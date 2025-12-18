@@ -12,6 +12,9 @@ use crate::ast::Expression;
 /// Top-level program items
 #[derive(Debug, Clone, PartialEq)]
 pub enum TopLevel {
+    /// Import statement: import "path/to/file.kleis"
+    Import(String),
+
     /// Structure definition: structure Name { members }
     StructureDef(StructureDef),
 

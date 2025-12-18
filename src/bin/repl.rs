@@ -15,9 +15,11 @@
 
 use rustyline::error::ReadlineError;
 use rustyline::{DefaultEditor, Result as RlResult};
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 
 use kleis::evaluator::Evaluator;
+use kleis::kleis_ast::TopLevel;
 use kleis::kleis_parser::{parse_kleis_program, KleisParser};
 use kleis::pretty_print::PrettyPrinter;
 use kleis::render::{build_default_context, render_expression, RenderTarget};
@@ -1319,31 +1321,139 @@ fn load_file(path: &str, evaluator: &mut Evaluator) {
         return;
     }
 
-    match std::fs::read_to_string(path) {
-        Ok(contents) => match parse_kleis_program(&contents) {
-            Ok(program) => {
-                // Load functions into evaluator
-                if let Err(e) = evaluator.load_program(&program) {
-                    println!("⚠️  Error loading into evaluator: {}", e);
-                }
+    let mut loaded_files: HashSet<PathBuf> = HashSet::new();
+    let base_path = Path::new(path);
 
-                let func_count = program.functions().len();
-                let struct_count = program.structures().len();
-                let data_count = program.data_types().len();
-                let alias_count = program.type_aliases().len();
-
-                println!(
-                    "✅ Loaded: {} functions, {} structures, {} data types, {} type aliases",
-                    func_count, struct_count, data_count, alias_count
-                );
-            }
-            Err(e) => {
-                println!("❌ Parse error: {}", e);
-            }
-        },
-        Err(e) => {
-            println!("❌ File error: {}", e);
+    match load_file_recursive(base_path, evaluator, &mut loaded_files) {
+        Ok(stats) => {
+            println!(
+                "✅ Loaded: {} files, {} functions, {} structures, {} data types, {} type aliases",
+                stats.files,
+                stats.functions,
+                stats.structures,
+                stats.data_types,
+                stats.type_aliases
+            );
         }
+        Err(e) => {
+            println!("❌ {}", e);
+        }
+    }
+}
+
+/// Stats for reporting what was loaded
+struct LoadStats {
+    files: usize,
+    functions: usize,
+    structures: usize,
+    data_types: usize,
+    type_aliases: usize,
+}
+
+impl LoadStats {
+    fn new() -> Self {
+        LoadStats {
+            files: 0,
+            functions: 0,
+            structures: 0,
+            data_types: 0,
+            type_aliases: 0,
+        }
+    }
+
+    fn add(&mut self, other: &LoadStats) {
+        self.files += other.files;
+        self.functions += other.functions;
+        self.structures += other.structures;
+        self.data_types += other.data_types;
+        self.type_aliases += other.type_aliases;
+    }
+}
+
+/// Recursively load a .kleis file and its imports
+fn load_file_recursive(
+    path: &Path,
+    evaluator: &mut Evaluator,
+    loaded_files: &mut HashSet<PathBuf>,
+) -> Result<LoadStats, String> {
+    // Resolve to canonical path for circular import detection
+    let canonical = path
+        .canonicalize()
+        .map_err(|e| format!("Cannot resolve path '{}': {}", path.display(), e))?;
+
+    // Check for circular imports
+    if loaded_files.contains(&canonical) {
+        // Already loaded, skip (not an error, just avoid reloading)
+        return Ok(LoadStats::new());
+    }
+    loaded_files.insert(canonical.clone());
+
+    // Read file contents
+    let contents = std::fs::read_to_string(path)
+        .map_err(|e| format!("File error '{}': {}", path.display(), e))?;
+
+    // Parse the program
+    let program = parse_kleis_program(&contents)
+        .map_err(|e| format!("Parse error in '{}': {}", path.display(), e))?;
+
+    let mut stats = LoadStats::new();
+    stats.files = 1;
+
+    // Get the directory containing this file for resolving relative imports
+    let base_dir = path.parent().unwrap_or(Path::new("."));
+
+    // Process imports first (depth-first)
+    for item in &program.items {
+        if let TopLevel::Import(import_path) = item {
+            let resolved_path = resolve_import_path(import_path, base_dir);
+            match load_file_recursive(&resolved_path, evaluator, loaded_files) {
+                Ok(import_stats) => {
+                    stats.add(&import_stats);
+                }
+                Err(e) => {
+                    return Err(format!(
+                        "Error loading import '{}' from '{}': {}",
+                        import_path,
+                        path.display(),
+                        e
+                    ));
+                }
+            }
+        }
+    }
+
+    // Now load this file's definitions into evaluator
+    if let Err(e) = evaluator.load_program(&program) {
+        return Err(format!(
+            "Error loading definitions from '{}': {}",
+            path.display(),
+            e
+        ));
+    }
+
+    stats.functions += program.functions().len();
+    stats.structures += program.structures().len();
+    stats.data_types += program.data_types().len();
+    stats.type_aliases += program.type_aliases().len();
+
+    Ok(stats)
+}
+
+/// Resolve an import path relative to the base directory
+fn resolve_import_path(import_path: &str, base_dir: &Path) -> PathBuf {
+    let import = Path::new(import_path);
+
+    if import.is_absolute() {
+        // Absolute path: use as-is
+        import.to_path_buf()
+    } else if import_path.starts_with("stdlib/") {
+        // Standard library path: resolve from project root or known stdlib location
+        // For now, try relative to current working directory
+        // TODO: Support KLEIS_STDLIB_PATH environment variable
+        PathBuf::from(import_path)
+    } else {
+        // Relative path: resolve from base directory
+        base_dir.join(import)
     }
 }
 

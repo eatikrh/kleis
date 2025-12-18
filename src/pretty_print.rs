@@ -797,6 +797,7 @@ impl PrettyPrinter {
     /// Format a single top-level declaration
     pub fn format_toplevel(&self, item: &TopLevel) -> String {
         match item {
+            TopLevel::Import(path) => format!("import \"{}\"", path),
             TopLevel::StructureDef(s) => self.format_structure(s),
             TopLevel::ImplementsDef(i) => self.format_implements(i),
             TopLevel::DataDef(d) => self.format_data_def(d),

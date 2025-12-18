@@ -817,7 +817,7 @@ The Kleis parser implements **~75% of the v0.8 grammar** for practical use. With
 
 | Feature | Grammar v0.8 | Parser | REPL | Priority | Notes |
 |---------|--------------|--------|------|----------|-------|
-| `import` | ❌ Not in grammar yet | ❌ | ❌ | **HIGH** | Need for modular files |
+| `import` | ✅ | ✅ | ✅ | ~~HIGH~~ **DONE** | ✅ IMPLEMENTED Dec 18, 2025 |
 | Top-level `verify` | ✅ | ❌ | ✅ `:verify` | Low | REPL already supports this! |
 | Top-level `let` | ✅ | ❌ | ✅ `:define` | Low | REPL has `:define` for functions |
 | Top-level `axiom` | ✅ | ❌ | ❌ | **Low** | Structures cover most use cases |
@@ -966,14 +966,14 @@ define filter_head(list) =
 4. ✅ **Z3 constructor destructuring** - Let patterns work with Z3 backend
 
 **Remaining parser work (by priority):**
-1. **Add `import` support** - Allow loading other .kleis files (HIGH)
+1. ~~**Add `import` support**~~ - ✅ DONE (Dec 18, 2025)
 2. ~~**Add top-level `verify`**~~ - REPL already has `:verify` command
 3. ~~**Add top-level `let`**~~ - REPL already has `:define` command  
 4. ~~**Add top-level `axiom`**~~ - Structures cover most use cases
 
-**Note:** Most "missing" top-level features are available via REPL commands. The main gap is `import` for modular file organization.
+**Note:** Most "missing" top-level features are available via REPL commands. The `import` feature is now complete!
 
-### Design: `import` Statement (Dec 18, 2025)
+### ✅ `import` Statement (IMPLEMENTED Dec 18, 2025)
 
 **Syntax:**
 ```kleis
@@ -984,23 +984,26 @@ import "tensors.kleis"
 **Semantics:**
 - Loads all structures, data types, and functions into current scope
 - Cascading: imports in loaded files are also loaded
-- Deduplication: same file loaded only once (tracks loaded paths)
-- Circular import detection: error if `a imports b imports a`
+- Deduplication: same file loaded only once (tracks canonical paths)
+- Circular import safe: silently skips already-loaded files (no infinite loops)
 
 **REPL integration:**
-- `:load file.kleis` will automatically load all `import` statements
-- Loaded files tracked to prevent duplicate loading
+- `:load file.kleis` automatically loads all `import` statements recursively
+- Reports total files, functions, structures, data types, and type aliases loaded
+- Example: `✅ Loaded: 3 files, 8 functions, 15 structures, 0 data types, 0 type aliases`
 
-**Path resolution (in order):**
-1. Relative to current file's directory
-2. Relative to workspace root
-3. Relative to stdlib directory
+**Path resolution:**
+1. Absolute paths: used as-is
+2. `stdlib/` prefix: relative to working directory (future: KLEIS_STDLIB_PATH)
+3. Relative paths: resolved from importing file's directory
 
-**Implementation steps:**
-1. Add `import` to grammar: `importDecl ::= "import" stringLiteral`
-2. Add `Import(String)` to `TopLevel` enum in parser
-3. Update `:load` in REPL to process imports recursively
-4. Track loaded files in `HashSet<PathBuf>`
+**Implementation (complete):**
+1. ✅ Added `Import(String)` to `TopLevel` enum in `kleis_ast.rs`
+2. ✅ Added `parse_import()` and `parse_string_literal()` to parser
+3. ✅ Updated `parse_program()` to recognize `import` keyword
+4. ✅ Updated `:load` in REPL with `load_file_recursive()` and `LoadStats`
+5. ✅ Circular import detection via `HashSet<PathBuf>` of canonical paths
+6. ✅ Pretty printer handles `TopLevel::Import` for serialization
 
 **std_template_lib updates (COMPLETE! Dec 18, 2025):**
 - ✅ New `control_flow.kleist` - Templates for match, let, conditional, lambda
@@ -1011,6 +1014,7 @@ import "tensors.kleis"
 ---
 *Noted: Dec 15, 2025*
 *Updated: Dec 18, 2025 - Grammar v0.8 pattern features COMPLETE*
+*Updated: Dec 18, 2025 - `import` statement IMPLEMENTED*
 
 ---
 
