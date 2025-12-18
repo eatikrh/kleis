@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-18654ed9.js";
+            window.path_to_searchindex_js = "searchindex-3a3ffce2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f10a7c19.js"></script>
@@ -868,8 +868,8 @@ define false_example = True ∧ False     // False
 define true_example = True ∨ False     // True
 </code></pre>
 <h3 id="implication---implies"><a class="header" href="#implication---implies">Implication (→ / implies)</a></h3>
-<pre><code class="language-kleis">define sqrt_real(x) = x &gt; 0 → sqrt(x) ∈ ℝ    // If positive, has real square root
-define implication(P, Q) = P → Q              // If P then Q
+<pre><code class="language-kleis">define positive_square(x) = x &gt; 0 → x * x &gt; 0   // If positive, square is positive
+define implication(P, Q) = P → Q                // If P then Q
 </code></pre>
 <h3 id="negation---not"><a class="header" href="#negation---not">Negation (¬ / not)</a></h3>
 <pre><code class="language-kleis">define nonzero(x) = ¬(x = 0)     // x is not zero
@@ -2408,9 +2408,9 @@ define map_result(res, f) =
 Loaded standard library.
 </code></pre>
 <p>In files:</p>
-<pre><code class="language-kleis">import stdlib.prelude
-import stdlib.linear_algebra
-import stdlib.differential_geometry
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+import "stdlib/linear_algebra.kleis"
+import "stdlib/differential_geometry.kleis"
 </code></pre>
 <h2 id="file-organization"><a class="header" href="#file-organization">File Organization</a></h2>
 <pre><code>stdlib/
