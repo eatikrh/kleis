@@ -878,6 +878,7 @@ impl Evaluator {
     }
 
     /// Remove all variables bound by a pattern from a substitution map
+    #[allow(clippy::only_used_in_recursion)]
     fn remove_pattern_vars_from_subst(
         &self,
         pattern: &crate::ast::Pattern,
@@ -903,6 +904,7 @@ impl Evaluator {
 
     /// Match a pattern against a value and collect variable bindings
     /// Grammar v0.8: Supports pattern destructuring in let bindings
+    #[allow(clippy::only_used_in_recursion)]
     fn match_pattern_to_bindings(
         &self,
         pattern: &crate::ast::Pattern,
@@ -969,6 +971,7 @@ impl Evaluator {
     }
 
     /// Alpha-convert a pattern (rename variables)
+    #[allow(clippy::only_used_in_recursion)]
     fn alpha_convert_pattern(
         &self,
         pattern: &crate::ast::Pattern,

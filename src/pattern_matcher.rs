@@ -381,6 +381,7 @@ impl PatternMatcher {
     }
 
     /// Remove all variables bound by a pattern from a bindings map
+    #[allow(clippy::only_used_in_recursion)]
     fn remove_pattern_vars(
         &self,
         pattern: &Pattern,
@@ -513,6 +514,7 @@ impl ExhaustivenessChecker {
     }
 
     /// Helper to collect pattern coverage info (Grammar v0.8: handles As-patterns)
+    #[allow(clippy::only_used_in_recursion)]
     fn collect_pattern_coverage<'a>(
         &self,
         pattern: &'a Pattern,

@@ -1853,7 +1853,7 @@ fn render_expression_internal(
         } => {
             let value_id = format!("{}.value", node_id);
             let body_id = format!("{}.body", node_id);
-            let pattern_str = render_pattern(pattern, &target);
+            let pattern_str = render_pattern(pattern, target);
 
             let value_str =
                 render_expression_internal(value, ctx, target, &value_id, node_id_to_uuid);
