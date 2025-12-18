@@ -678,6 +678,83 @@ impl<'r> Z3Backend<'r> {
                 Ok(func_decl.apply(&ast_args))
             }
 
+            // ============================================
+            // STRING OPERATIONS (Grammar v0.8)
+            // These use Z3's native string theory (QF_SLIA)
+            // ============================================
+
+            // String concatenation: concat("hello", " world") = "hello world"
+            "concat" | "str_concat" | "++" => {
+                if args.len() < 2 {
+                    return Err("concat requires at least 2 arguments".to_string());
+                }
+                // Convert all args to Z3 strings and concatenate
+                let strings: Result<Vec<z3::ast::String>, String> = args
+                    .iter()
+                    .map(|a| {
+                        a.as_string()
+                            .ok_or_else(|| "concat arguments must be strings".to_string())
+                    })
+                    .collect();
+                let strings = strings?;
+                // Use Z3's concat (variadic)
+                let refs: Vec<&z3::ast::String> = strings.iter().collect();
+                Ok(z3::ast::String::concat(&refs).into())
+            }
+
+            // String length: strlen("hello") = 5
+            "strlen" | "str_len" | "length" => {
+                if args.len() != 1 {
+                    return Err("strlen requires 1 argument".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "strlen argument must be a string".to_string())?;
+                Ok(s.length().into())
+            }
+
+            // String contains: contains("hello", "ell") = True
+            "contains" | "str_contains" => {
+                if args.len() != 2 {
+                    return Err("contains requires 2 arguments".to_string());
+                }
+                let haystack = args[0]
+                    .as_string()
+                    .ok_or_else(|| "contains first argument must be a string".to_string())?;
+                let needle = args[1]
+                    .as_string()
+                    .ok_or_else(|| "contains second argument must be a string".to_string())?;
+                Ok(haystack.contains(&needle).into())
+            }
+
+            // String prefix: hasPrefix("hello", "he") = True
+            "hasPrefix" | "str_prefix" | "prefix" => {
+                if args.len() != 2 {
+                    return Err("hasPrefix requires 2 arguments".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "hasPrefix first argument must be a string".to_string())?;
+                let pre = args[1]
+                    .as_string()
+                    .ok_or_else(|| "hasPrefix second argument must be a string".to_string())?;
+                Ok(pre.prefix(&s).into())
+            }
+
+            // String suffix: hasSuffix("hello", "lo") = True
+            "hasSuffix" | "str_suffix" | "suffix" => {
+                if args.len() != 2 {
+                    return Err("hasSuffix requires 2 arguments".to_string());
+                }
+                let s = args[0]
+                    .as_string()
+                    .ok_or_else(|| "hasSuffix first argument must be a string".to_string())?;
+                let suf = args[1]
+                    .as_string()
+                    .ok_or_else(|| "hasSuffix second argument must be a string".to_string())?;
+                Ok(suf.suffix(&s).into())
+            }
+
             // Unknown operation - use uninterpreted function
             _ => {
                 let func_decl = self.declare_uninterpreted(name, args.len());
@@ -720,6 +797,7 @@ impl<'r> Z3Backend<'r> {
                     "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
                     "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
                     "ℤ" | "Int" | "Z" => Int::fresh_const(&var.name).into(),
+                    "String" | "Str" => z3::ast::String::fresh_const(&var.name).into(),
                     _ => Int::fresh_const(&var.name).into(),
                 }
             } else {
