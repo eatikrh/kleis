@@ -1961,6 +1961,7 @@ impl KleisParser {
                 '-' => Some("minus".to_string()),
                 '*' | '×' => Some("times".to_string()),
                 '/' | '÷' => Some("divide".to_string()),
+                '^' => Some("power".to_string()),
                 '<' => Some("less_than".to_string()),
                 '>' => Some("greater_than".to_string()),
                 '=' => Some("equals".to_string()),
