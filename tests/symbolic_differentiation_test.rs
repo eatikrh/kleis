@@ -2,7 +2,7 @@
 //!
 //! Tests for the D(f, x) and Dt(f, x) calculus operations in Kleis.
 //!
-//! ## Grammar v0.7 Calculus Notation
+//! ## Calculus Notation (Grammar v0.7+)
 //!
 //! Kleis uses Mathematica-style function calls for derivatives:
 //! - `D(f, x)` - Partial derivative ∂f/∂x

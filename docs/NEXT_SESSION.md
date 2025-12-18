@@ -266,13 +266,14 @@ Clarify and implement the separation between:
 - **Rung 2: Kleis Renderer** - Visual rendering of Kleis AST to human-readable notation
 - **Rung 3: Kleis Language** - The formal language with its grammar and semantics
 
-### 2. Kleis Grammar v0.7 Alignment
-- Review `docs/grammar/kleis_grammar_v07.ebnf` ✓ (exists)
+### 2. Kleis Grammar v0.8 Alignment
+- Review `docs/grammar/kleis_grammar_v08.ebnf` ✓ (exists)
 - Ensure parser, renderer, and editor all conform to official grammar
+- v0.8 adds: Pattern guards, As-patterns, Let destructuring
 - Document any deviations with rationale
 
 ### 3. Z3 Backend Testing
-- Verify that grammar v0.7 expressions translate correctly to Z3
+- Verify that grammar v0.8 expressions translate correctly to Z3
 - Test edge cases: quantifiers, matrices, operations
 - Ensure round-trip: Editor → AST → Z3 → Result → Renderer
 
@@ -289,7 +290,8 @@ Clarify and implement the separation between:
 - Branch: `feature/kleis-renderer`
 
 ## Questions to Answer
-- [x] Is grammar v0.7 the current official version? **Yes**
+- [x] Is grammar v0.8 the current official version? **Yes** (Dec 18, 2025)
+- [x] What are the key differences from v0.7? **Pattern guards, As-patterns, Let destructuring**
 - [x] What are the key differences from v0.5? **Mathematica-style calculus: D(), Dt(), Integrate(), Limit()**
 - [ ] Where does the 3-rung separation break down currently?
 
@@ -759,13 +761,13 @@ fn render_operation(op: &OperationData, ...) -> String {
 *Resolved: Dec 15, 2025*
 
 ---
-## 📋 TODO: Parser Feature Gaps (Dec 15, 2025)
+## 📋 TODO: Parser Feature Gaps (Dec 18, 2025)
 
-The current Kleis parser implements ~30% of the v0.7 grammar. Here are the notable gaps:
+The current Kleis parser implements ~35% of the v0.8 grammar. Here are the notable gaps:
 
 ### Missing Top-Level Declarations
 
-| Feature | Grammar v0.7 | Parser | Notes |
+| Feature | Grammar v0.8 | Parser | Notes |
 |---------|--------------|--------|-------|
 | `import` / `include` | ❌ Not in grammar | ❌ Not implemented | **Priority: HIGH** - need for modular files |
 | Top-level `axiom` | ✅ | ❌ | Axioms only work inside structures |
@@ -892,9 +894,12 @@ define filter_head(list) =
 
 ### Next Steps
 
-**Grammar v0.7 (current):**
+**Grammar v0.8 (current):**
 1. **Add `import`/`include` support** - Allow loading other .kleis files
 2. **Add `--` comment support** - Match grammar specification
+3. ✅ **Pattern guards** - `x if x < 0 => "negative"` (implemented Dec 18)
+4. ✅ **As-patterns** - `Cons(h, t) as whole` (implemented Dec 18)
+5. ✅ **Let destructuring** - `let Point(x, y) = p in ...` (implemented Dec 18)
 3. **Add top-level `axiom`** - For standalone axiom declarations
 4. **Add top-level `let`/`verify`** - For example files and notebooks
 

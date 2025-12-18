@@ -1,12 +1,12 @@
 # Let Bindings in Kleis
 
-**Date:** December 17, 2025  
-**Status:** Implemented (v0.7 grammar)
+**Date:** December 18, 2025  
+**Status:** Implemented (v0.8 grammar)
 
 ## Syntax
 
 ```kleis
-let <name> [ : <type> ] = <value> in <body>
+let <pattern> [ : <type> ] = <value> in <body>
 ```
 
 **Examples:**
@@ -14,6 +14,11 @@ let <name> [ : <type> ] = <value> in <body>
 let x = 5 in x + x                    // Simple binding
 let x : ℝ = 5 in x^2                  // With type annotation
 let a = 1 in let b = 2 in a + b       // Nested bindings
+
+// v0.8: Let destructuring
+let Point(x, y) = p in x^2 + y^2      // Constructor pattern
+let Cons(h, t) = list in h            // Destructure list
+let Some(Pair(a, b)) = opt in a + b   // Nested destructuring
 ```
 
 ---
@@ -104,9 +109,9 @@ The difference is just **order** - Kleis puts the binding first, math puts it la
 
 ---
 
-## Type Annotations (v0.7)
+## Type Annotations
 
-You can optionally annotate the type of the bound variable:
+You can optionally annotate the type of the bound variable (only valid for simple variable patterns):
 
 ```kleis
 let x : ℝ = 5 in x^2                         // Simple type
@@ -256,14 +261,19 @@ Kleis follows the **ML/Haskell tradition** of pure, expression-based let binding
 
 ## Grammar (EBNF)
 
-From `docs/grammar/kleis_grammar_v07.ebnf`:
+From `docs/grammar/kleis_grammar_v08.ebnf`:
 
 ```ebnf
+// v0.8: Let binding supports full patterns
 letBinding
-    ::= "let" identifier [ typeAnnotation ] "=" expression "in" expression
+    ::= "let" pattern [ typeAnnotation ] "=" expression "in" expression
     ;
 
 typeAnnotation ::= ":" type ;
+
+// Note: Type annotations only valid for simple Variable patterns
+// e.g., let x : ℝ = 5 in ...  (valid)
+// e.g., let Point(x, y) : Point = p in ...  (invalid - use pattern without type)
 ```
 
 ---
@@ -292,7 +302,7 @@ Type ascription is useful for:
 
 ## See Also
 
-- [Kleis Grammar v0.7](../grammar/kleis_grammar_v07.md) - Full grammar specification
+- [Kleis Grammar v0.8](../grammar/kleis_grammar_v08.md) - Full grammar specification
 - [Pattern Matching](../manual/src/chapters/05-pattern-matching.md) - Using match with let bindings
 - [Conditionals](../manual/src/chapters/08-conditionals.md) - if/then/else expressions
 

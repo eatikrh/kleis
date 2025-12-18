@@ -10,7 +10,7 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 |----------|-------------|
 | [NEXT_SESSION.md](NEXT_SESSION.md) | **Start here** - Current priorities and context |
 | [adr/README.md](adr/README.md) | Architecture Decision Records (22 ADRs) |
-| [grammar/kleis_grammar_v07.md](grammar/kleis_grammar_v07.md) | Current grammar specification |
+| [grammar/kleis_grammar_v08.md](grammar/kleis_grammar_v08.md) | Current grammar specification |
 | [../README.md](../README.md) | Project overview |
 
 ---
@@ -39,7 +39,7 @@ docs/
 ├── QUALITY_GATES.md         # Quality standards
 │
 ├── adr/                     # Architecture Decision Records (22 ADRs)
-├── grammar/                 # Grammar specs (v03-v07, EBNF, ANTLR4)
+├── grammar/                 # Grammar specs (v03-v08, EBNF, ANTLR4)
 ├── guides/                  # Implementation guides
 ├── type-system/             # Type inference documentation
 ├── parser-implementation/   # Parser status and compatibility
@@ -80,10 +80,10 @@ docs/
 
 ## 📖 Key References
 
-### Grammar (Current: v0.7)
-- [`grammar/kleis_grammar_v07.md`](grammar/kleis_grammar_v07.md) - Human-readable spec
-- [`grammar/kleis_grammar_v07.ebnf`](grammar/kleis_grammar_v07.ebnf) - Machine-readable EBNF
-- `grammar/Kleis_v06.g4` - ANTLR4 grammar
+### Grammar (Current: v0.8)
+- [`grammar/kleis_grammar_v08.md`](grammar/kleis_grammar_v08.md) - Human-readable spec
+- [`grammar/kleis_grammar_v08.ebnf`](grammar/kleis_grammar_v08.ebnf) - Machine-readable EBNF
+- `grammar/Kleis_v07.g4` - ANTLR4 grammar (pending v0.8 sync)
 
 ### Type System
 - [`type-system/FORMAL_SPECIFICATION.md`](type-system/FORMAL_SPECIFICATION.md) - Formal spec

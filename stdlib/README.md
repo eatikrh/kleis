@@ -1,7 +1,7 @@
 # Kleis Standard Library
 
 **Location:** `stdlib/`  
-**Language:** Kleis v0.7 (Mathematica-style calculus)  
+**Language:** Kleis v0.8 (Advanced pattern matching)  
 **Purpose:** Bootstrap the type system with fundamental mathematical structures
 
 ---
@@ -241,7 +241,7 @@ ctx.load_kleis_definitions(&user_workspace)?;
 
 ## Grammar Conformance
 
-All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.7**:
+All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.8**:
 
 ✅ Structure definitions  
 ✅ Operation declarations  
@@ -253,7 +253,10 @@ All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.7**:
 ✅ Algebraic data types with `data` (v0.4)  
 ✅ Pattern matching with `match` (v0.5)
 ✅ Derived functions in structures (v0.6)
-✅ Mathematica-style calculus: `D()`, `Dt()`, `Limit()` (v0.7)  
+✅ Mathematica-style calculus: `D()`, `Dt()`, `Limit()` (v0.7)
+✅ Pattern guards: `n if n < 0 => ...` (v0.8)
+✅ As-patterns: `Cons(h, t) as whole` (v0.8)
+✅ Let destructuring: `let Point(x, y) = p in ...` (v0.8)  
 
 ---
 

@@ -1,8 +1,8 @@
 # Appendix A: Grammar Reference
 
-This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.7).
+This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.8).
 
-> **Complete Grammar:** See `docs/grammar/kleis_grammar_v07.ebnf` for the full EBNF specification.
+> **Complete Grammar:** See `docs/grammar/kleis_grammar_v08.ebnf` for the full EBNF specification.
 
 ## Program Structure
 
@@ -61,12 +61,14 @@ data Option(T) {
 ```ebnf
 matchExpr ::= "match" expression "{" matchCases "}"
 
-matchCase ::= pattern "=>" expression
+matchCase ::= pattern [ "if" guardExpression ] "=>" expression   // v0.8: guards
 
-pattern ::= "_"                              // Wildcard
-          | identifier                       // Variable
-          | identifier [ "(" patternArgs ")" ]  // Constructor
-          | number | string | boolean        // Constant
+pattern ::= basePattern [ "as" identifier ]  // v0.8: as-patterns
+
+basePattern ::= "_"                              // Wildcard
+              | identifier                       // Variable
+              | identifier [ "(" patternArgs ")" ]  // Constructor
+              | number | string | boolean        // Constant
 ```
 
 Examples:
@@ -74,6 +76,12 @@ Examples:
 match x { True => 1 | False => 0 }
 match opt { None => 0 | Some(x) => x }
 match result { Ok(Some(x)) => x | Ok(None) => 0 | Err(_) => -1 }
+
+// v0.8: Pattern guards
+match n { x if x < 0 => "negative" | x if x > 0 => "positive" | _ => "zero" }
+
+// v0.8: As-patterns
+match list { Cons(h, t) as whole => process(whole) | Nil => empty }
 ```
 
 ## Structure Definitions
@@ -211,7 +219,8 @@ lambda x . x             // Using keyword
 ## Let Bindings
 
 ```ebnf
-letBinding ::= "let" identifier [ typeAnnotation ] "=" expression "in" expression
+letBinding ::= "let" pattern [ typeAnnotation ] "=" expression "in" expression
+// Note: typeAnnotation only valid when pattern is a simple Variable
 ```
 
 Examples:
@@ -219,6 +228,11 @@ Examples:
 let x = 5 in x + x
 let x : ℝ = 3.14 in x * 2
 let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
+
+// v0.8: Let destructuring
+let Point(x, y) = origin in x^2 + y^2
+let Some(Pair(a, b)) = opt in a + b
+let Cons(h, _) = list in h
 ```
 
 ## Conditionals

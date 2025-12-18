@@ -1,16 +1,60 @@
 # Grammar Synchronization Status
 
-**Date:** December 13, 2025  
-**Status:** ⚠️ PENDING SYNC (v0.7 needs G4 update)
+**Date:** December 18, 2025  
+**Status:** ⚠️ PENDING SYNC (v0.8 needs G4 update)
 
 ## File Versions
 
 | File | Version | Last Updated | Status |
 |------|---------|--------------|--------|
-| `kleis_grammar_v07.ebnf` | v0.7 | Dec 13, 2025 | ✅ Reference |
-| `kleis_grammar_v07.md` | v0.7 | Dec 13, 2025 | ✅ Documented |
-| `Kleis_v07.g4` | v0.7 | - | ⚠️ TODO |
-| `vscode-kleis/docs/grammar/` | v0.6 | Dec 12, 2025 | ⚠️ Needs v0.7 |
+| `kleis_grammar_v08.ebnf` | v0.8 | Dec 18, 2025 | ✅ Reference |
+| `kleis_grammar_v08.md` | v0.8 | Dec 18, 2025 | ✅ Documented |
+| `kleis_grammar_v07.ebnf` | v0.7 | Dec 13, 2025 | ✅ Previous |
+| `Kleis_v08.g4` | v0.8 | - | ⚠️ TODO |
+| `vscode-kleis/docs/grammar/` | v0.8 | Dec 18, 2025 | ✅ Synced |
+
+---
+
+## Changes Applied (Dec 18, 2025)
+
+### Grammar v0.8 - Advanced Pattern Matching
+
+**ADDED** - Pattern Guards:
+```kleis
+match x {
+    n if n < 0 => "negative"
+    n if n > 0 => "positive"
+    _ => "zero"
+}
+```
+
+**ADDED** - As-Patterns (Alias Binding):
+```kleis
+match list {
+    Cons(h, t) as whole => process(h, t, whole)
+    Nil => empty
+}
+```
+
+**ADDED** - Let Destructuring:
+```kleis
+let Point(x, y) = p in x^2 + y^2
+let Some(Pair(a, b)) = opt in a + b
+```
+
+**Grammar Changes:**
+```ebnf
+// Pattern guards
+matchCase ::= pattern [ "if" guardExpression ] "=>" expression
+
+// As-patterns
+pattern ::= basePattern [ "as" identifier ]
+
+// Let destructuring
+letBinding ::= "let" pattern [ typeAnnotation ] "=" expression "in" expression
+```
+
+**No breaking changes** - v0.8 is fully backward compatible with v0.7.
 
 ---
 
@@ -235,6 +279,13 @@ implements Ring(ℤ) {
 
 ## Version History
 
+**v0.8 (Dec 18, 2025):**
+- ADDED: Pattern guards - `n if n < 0 => "negative"`
+- ADDED: As-patterns - `Cons(h, t) as whole`
+- ADDED: Let destructuring - `let Point(x, y) = p in ...`
+- Full Z3 integration for all new features
+- No breaking changes from v0.7
+
 **v0.7 (Dec 13, 2025): BREAKING**
 - REMOVED: `∂f/∂x` and `df/dx` derivative notation
 - ADDED: Mathematica-style `D(f, x)`, `Dt(f, x)`
@@ -257,5 +308,5 @@ implements Ring(ℤ) {
 
 ---
 
-**Status:** ⚠️ v0.7 EBNF complete, G4 pending sync
+**Status:** ⚠️ v0.8 EBNF complete, G4 pending sync
 
