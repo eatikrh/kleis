@@ -769,6 +769,40 @@ The current Kleis parser implements ~30% of the v0.7 grammar. Here are the notab
 | Nested | `Ok(Some(x))` | ✅ Works |
 | Constant | `0`, `42` | ✅ Works |
 | **As-pattern** | `Cons(h, t) as whole` | ❌ NOT IMPLEMENTED |
+| **Pattern guard** | `x if x < 0 => ...` | ❌ NOT IMPLEMENTED |
+
+---
+
+**Pattern guards** allow conditional matching beyond structure:
+- Haskell: `x | x < 0 -> "negative"`
+- Rust: `x if x < 0 => "negative"`
+- OCaml: `x when x < 0 -> "negative"`
+
+**Use case:**
+```kleis
+define sign(n) =
+    match n {
+        x if x < 0 => "negative"
+        x if x > 0 => "positive"  
+        _ => "zero"
+    }
+```
+
+**To implement:**
+1. Add `guard: Option<Expression>` field to `MatchCase` in `src/ast.rs`
+2. After parsing pattern, check for `if` keyword before `=>`
+3. If found, parse guard expression
+4. Update evaluator: check guard after pattern matches, before executing body
+
+**Current workaround:** Use nested if-then-else:
+```kleis
+define sign(n) =
+    if n < 0 then "negative"
+    else if n > 0 then "positive"
+    else "zero"
+```
+
+---
 
 **As-pattern (alias binding)** is a common feature in functional languages:
 - Haskell: `list@(x:xs)` 
@@ -798,6 +832,7 @@ define filter_head(list) =
 3. **Add top-level `axiom`** - For standalone axiom declarations
 4. **Add top-level `let`/`verify`** - For example files and notebooks
 5. **Add `as` pattern support** - Alias binding in pattern matching
+6. **Add pattern guards** - Conditional matching (`x if x < 0 => ...`)
 
 ---
 *Noted: Dec 15, 2025*
