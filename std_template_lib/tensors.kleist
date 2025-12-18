@@ -1,0 +1,29 @@
+// ============================================================================
+// Tensor Templates - Mixed indices, Christoffel, Riemann
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/tensors.kleist
+
+// Note: Tensor rendering with indexStructure metadata is handled specially
+// by render_editor.rs. These templates are for reference and fallback.
+
+@template tensor_lower_pair {
+    pattern: "tensor_lower_pair(base, subscript, superscript)"
+    unicode: "{base}_{subscript} {superscript}"
+    latex: "{base}_{{{subscript} {superscript}}}"
+    html: "{base}<sub>{subscript} {superscript}</sub>"
+    typst: "{base}_({subscript} {superscript})"
+    kleis: "tensor_lower_pair({base}, {subscript}, {superscript})"
+    category: "tensors"
+}
+
+@template tensor_2up_2down {
+    pattern: "tensor_2up_2down(base, subscript, superscript, idx2, idx3)"
+    unicode: "{base}^{subscript} {superscript}_{idx2} {idx3}"
+    latex: "{base}^{{{subscript} {superscript}}}_{{{idx2} {idx3}}}"
+    html: "{base}<sup>{subscript} {superscript}</sup><sub>{idx2} {idx3}</sub>"
+    typst: "{base}^({subscript} {superscript})_({idx2} {idx3})"
+    kleis: "tensor_2up_2down({base}, {subscript}, {superscript}, {idx2}, {idx3})"
+    category: "tensors"
+}
+

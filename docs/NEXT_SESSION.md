@@ -566,10 +566,11 @@ When visually editing parsed Kleis code:
 
 ```rust
 // src/editor_ast.rs
-pub fn translate_to_editor(expr: &Expression) -> EditorNode {
-    // 1. Recognize known tensor symbols (Γ, R, g)
-    // 2. Infer index structure from negate() wrappers
-    // 3. Add kind: 'tensor', metadata: { indexStructure: [...] }
+pub fn translate_to_editor(expr: &Expression, type_ctx: &TypeContext) -> EditorNode {
+    // 1. Query TypeContext for the type of this expression
+    // 2. If type is Tensor(up, down, dim), add kind: 'tensor' and derive indexStructure
+    // 3. Infer index positions from negate() wrappers (covariant indices)
+    // Note: No Greek symbol heuristics needed - the type system knows what's a tensor
     // ...
 }
 ```
@@ -899,5 +900,396 @@ testing will provide that missing safety net.
 Users could customize their own tabs (not feasible with vanilla JS).
 
 ---
-*Recorded: Dec 15, 2025*
+
+## 🔧 Type Inference Issues (Dec 17, 2025)
+
+### Issue: Comparison Operators Not Returning Bool
+
+**Found during render_editor.rs testing:**
+
+When using comparison operators (`neq`, `less_than`, etc.) in expressions like:
+```
+x ≠ Γ^λ_{μν}
+```
+
+The type checker returns the **RHS type** (Tensor) instead of **Bool**.
+
+**Root cause:** In `src/type_context.rs`:
+```rust
+// Line 725 - matches "not_equals" but NOT "neq"
+"equals" | "not_equals" => {
+    Ok(arg_types[1].clone())  // Returns RHS type, not Bool!
+}
+```
+
+**Problems:**
+1. `"neq"` is not in the match pattern (only `"not_equals"`)
+2. Even when matched, returns RHS type instead of `Bool`
+3. No type mismatch error when comparing scalar `x` with tensor `Γ`
+
+**Why this matters for Equation Editor:**
+- Piecewise functions show "if" before conditions
+- "if x < 0" implies what follows should be a **Boolean expression**
+- Type checker should validate this semantic constraint
+- Currently: `if x ≠ Tensor` is accepted when it should be an error
+
+**Operations affected:**
+- `neq` (inequality)
+- `less_than`, `greater_than` (should return Bool)
+- `logical_and`, `logical_or` (should require Bool args)
+- Any comparison used in Piecewise conditions
+
+### Issue: Arithmetic on Incompatible Types
+
+**Found during testing:**
+
+`1 + Γ^λ_{μν}` (scalar + tensor) is accepted with inferred type `Tensor(1, 2, dim, ℝ)`.
+
+**Expected behavior:** Type error - cannot add scalar to tensor without explicit broadcasting.
+
+### Issue: Matrix Multiply Type Inference Fails (REGRESSION)
+
+**Found during Equation Editor testing:**
+
+```
+✗ Operation 'multiply' found in structure 'MatrixMultipliable' but type inference failed: 
+  Unbound parameter: m
+```
+
+### Issue: Negate Type Inference Fails
+
+**Found during Equation Editor testing (Dec 17, 2025):**
+
+```
+✗ Operation 'negate' found in structure 'Ring' but type inference failed: 
+  Operation 'negate' not found in structure 'Ring'
+```
+
+**Note:** The error message is contradictory - says operation is found but then says not found.
+This suggests a bug in the type inference error reporting or structure traversal.
+
+**This is likely a REGRESSION** - the type checker was previously loading stdlib and matrices
+correctly. Something in the render_editor.rs changes may have broken the type context loading.
+
+**Symptoms:**
+- Operations like `multiply` are "found" in structures but fail type inference
+- Many operations show "Unknown operation" despite being in stdlib
+- Type parameters (`m`, `n`) are reported as unbound
+
+**Investigation needed:**
+- Check if server.rs TypeChecker initialization changed
+- Verify stdlib files are being parsed and loaded correctly
+- Compare with working state before render_editor.rs refactoring
+
+### Issue: Palette Button Generates Wrong AST
+
+**Found during Equation Editor testing:**
+
+The "logical not" palette button generates:
+```json
+{"Operation": {"name": "minus", "args": [{"Const": "0"}, ...]}}
+```
+
+Instead of:
+```json
+{"Operation": {"name": "logical_not", "args": [...]}}
+```
+
+**Location:** `static/index.html` - palette button configurations
+
+**Buttons needing fixes:**
+1. ~~"Logical not" - generates `minus(0, x)` instead of `logical_not(x)`~~ - **FIXED**: Was already correct
+2. ~~"Arithmetic negation" - generates `minus(0, x)` instead of `negate(x)`~~ - **FIXED**: Updated `static/index.html` line 2132
+
+**Status:** Both palette buttons now generate correct AST operations
+
+**Operations affected:**
+- `plus` - should require compatible types
+- `minus` - same issue
+- `multiply` - scalar × tensor is valid, but tensor × scalar positioning matters
+- Any binary arithmetic operation
+
+**Proposed fix:**
+```rust
+// Add neq to the match
+"equals" | "not_equals" | "neq" => {
+    self.check_binary_args(op_name, arg_types)?;
+    // For comparisons, verify types are compatible
+    // Then return Bool, not RHS type
+    Ok(Type::Bool)
+}
+```
+
+**Note:** This is a semantic design question - `equals` serves double duty:
+- **Definition:** `x = 5` means x has type of 5
+- **Assertion:** `x = 5` is a Bool predicate
+
+The type system currently assumes definition semantics. For Piecewise conditions,
+we need assertion/predicate semantics (returns Bool).
+
+### Issue: Missing Operations in Stdlib
+
+**Found during Equation Editor testing:**
+
+Many operations have rendering templates but are not defined in stdlib, causing type checker warnings:
+
+```
+✗ Unknown operation: 'norm'
+Hint: This operation is not defined in any loaded structure.
+```
+
+**Operations missing from stdlib (have render templates but no type definitions):**
+- `norm` - vector/matrix norm → should return Scalar
+- `abs` - absolute value → should return Scalar  
+- `floor`, `ceiling` - rounding → should return Scalar (or same type as input)
+- `binomial` - binomial coefficient → should return Nat
+- `nth_root` - nth root → should return Scalar
+- `factorial` - factorial → should return Nat
+- `dot_accent`, `ddot_accent`, `bar`, `hat`, `tilde`, `overline` - accents (physics notation)
+- `sum_bounds`, `prod_bounds`, `int_bounds` - bounded summation/product/integral
+- `lim`, `d_dt`, `d_part` - limits and derivatives
+- `kernel_integral`, `convolution`, `greens_function` - advanced integrals and transforms
+- `cross`, `dot` - vector operations
+- Various quantum operators (`ket`, `bra`, `inner`, `outer`, etc.)
+- Various trig/calculus (`arcsin`, `arccos`, `arctan`, `sinh`, `cosh`, `tanh`, etc.)
+
+**Impact:**
+- Rendering works (templates exist in render_editor.rs)
+- Type checking fails (operations not in stdlib structures)
+- Users see warning but equation still renders
+
+**Operations missing render templates in render_editor.rs (Typst compile fails):**
+- `ket` - Dirac ket notation |ψ⟩ → needs template like `lr(| {arg} angle.r)`
+- `bra` - Dirac bra notation ⟨ψ| → needs template like `lr(angle.l {arg} |)`
+- Other quantum operations may also be missing
+
+**Fix needed:**
+Add these operations to appropriate stdlib files:
+- `stdlib/vectors.kleis` - norm, cross, dot
+- `stdlib/scalars.kleis` - abs, floor, ceil, nth_root
+- `stdlib/combinatorics.kleis` - binomial, factorial
+- `stdlib/quantum.kleis` - ket, bra, inner, outer, etc.
+
+---
+
+## ✅ render_editor.rs Implementation (Dec 17, 2025)
+
+### What Was Done
+
+Created `src/render_editor.rs` - a pure EditorNode renderer that fixes the tensor
+index bug by never converting EditorNode to Expression.
+
+**Branch:** `refactor/editor-node-rendering`
+
+**The Bug Fixed:**
+```
+Before: Tensor inside equals → R^{μ ν ρ} = 0 (all upper - WRONG)
+After:  Tensor inside equals → R^{μ}_{ν ρ} = 0 (correct indices)
+```
+
+**Key Changes:**
+1. `src/render_editor.rs` - New 2000+ line renderer
+2. `src/bin/server.rs` - Wired to use render_editor for /api/render_ast
+3. `src/math_layout/typst_compiler.rs` - Wired to use render_editor for Typst
+
+**Templates Added (80+):**
+- All comparison operators (lt, gt, leq, geq, neq, less_than, greater_than)
+- All logical operators (and, or, not, logical_and, logical_or, logical_not)
+- Quantum operators (ket, bra, inner, outer, commutator, expectation)
+- Vectors (vector_bold, vector_arrow, dot, cross, norm)
+- Calculus (sqrt, int_bounds, sum_bounds, prod_bounds, lim, d_dt, d_part)
+- Transforms (fourier, laplace, inverse variants, convolution)
+- Accents (dot_accent, ddot_accent)
+- And more...
+
+**Status:** Functional, under testing. Not yet merged to main.
+
+### Future: User-Defined Templates
+
+Currently `render_editor.rs` has all 80+ templates hardcoded in `load_templates()`. For user-defined 
+notations (per ADR-009 and KLEIS_ECOSYSTEM_TOOLBOXES.md), we need dynamic template loading.
+
+**Vision:**
+```kleis
+// User defines in my-algebra.kleis:
+operation tensor_contract : (Tensor, Index, Index) -> Tensor
+template tensor_contract {
+    glyph: "⊗",
+    latex: "{tensor}^{{upper}}_{{{lower}}}",
+    typst: "{tensor}^({upper})_({lower})",
+    unicode: "{tensor}^{upper}_{lower}"
+}
+```
+
+**What `render_editor.rs` needs:**
+
+| Current | Needed |
+|---------|--------|
+| `EditorRenderContext::new()` creates fixed templates | `EditorRenderContext::from_registry(registry)` loads from registry |
+| Templates hardcoded in Rust | Templates in `.kleis` files, parsed at load time |
+| Palette buttons hardcoded in HTML/TS | Palette auto-generated from template metadata |
+
+**The bridge (future implementation):**
+```rust
+impl EditorRenderContext {
+    pub fn from_template_registry(registry: &TemplateRegistry) -> Self {
+        let mut ctx = EditorRenderContext::empty();
+        for (name, metadata) in registry.iter() {
+            ctx.add_template(
+                &name,
+                &metadata.unicode, &metadata.latex,
+                &metadata.html, &metadata.typst, &metadata.kleis,
+            );
+        }
+        ctx
+    }
+}
+```
+
+**Good news:** The HashMap-based structure in `EditorRenderContext` is already right. We just need:
+1. Parse `@template` blocks from `.kleist` files
+2. Populate a `TemplateRegistry`
+3. Pass registry to `EditorRenderContext` at startup
+
+### File Extensions
+
+| Extension | Purpose | Example |
+|-----------|---------|---------|
+| `.kleis` | Kleis programs (structures, axioms, proofs) | `stdlib/ring.kleis` |
+| `.kleist` | Templates AND palette layout | `std_template_lib/calculus.kleist` |
+
+**Why `.kleist`?**
+- Clearly related to "Kleis" (kleis + t)
+- Not used by any existing software
+- Memorable, sounds like a word
+- Literary connection: Heinrich von Kleist (German dramatist)
+
+**Block types within `.kleist` files:**
+- `@template` - Rendering templates (how to display operations)
+- `@palette` - UI layout (which buttons, which tabs, what order)
+
+### Standard Template Library Structure
+
+```text
+std_template_lib/
+├── basic.kleist        # Templates: +, -, ×, ÷, =, ^, _
+├── calculus.kleist     # Templates: ∫, Σ, Π, lim, d/dx
+├── quantum.kleist      # Templates: |ψ⟩, ⟨φ|, [A,B]
+├── tensors.kleist      # Templates: Γ, R, g indices
+├── transforms.kleist   # Templates: ℱ, ℒ, convolution
+├── pot.kleist          # Templates: Π, modal space
+└── palette.kleist      # Palette layout (tabs, groups, order)
+```
+
+**Combined example (`calculus.kleist`):**
+```kleist
+// ============ TEMPLATES ============
+
+@template integral {
+    pattern: int_bounds(integrand, from, to, variable)
+    unicode: "∫_{from}^{to} {integrand} d{variable}"
+    latex: "\\int_{{{from}}}^{{{to}}} {integrand} \\, \\mathrm{d}{variable}"
+    typst: "integral_({from})^({to}) {integrand} dif {variable}"
+}
+
+@template derivative {
+    pattern: d_dt(function, variable)
+    unicode: "d{function}/d{variable}"
+    latex: "\\frac{d\\,{function}}{d{variable}}"
+    typst: "(d {function})/(d {variable})"
+}
+
+@template partial {
+    pattern: d_part(function, variable)
+    unicode: "∂{function}/∂{variable}"
+    latex: "\\frac{\\partial\\,{function}}{\\partial {variable}}"
+    typst: "(diff {function})/(diff {variable})"
+}
+```
+
+**Palette layout (`palette.kleist`):**
+```kleist
+@palette {
+    tab "Basics" {
+        group "Arithmetic" {
+            plus
+            minus
+            multiply
+            divide
+            power
+        }
+        
+        group "Comparison" {
+            equals
+            lt  gt
+            leq geq
+            neq
+        }
+        
+        separator
+        
+        group "Brackets" {
+            parens
+            brackets
+            braces
+            abs
+            norm
+        }
+    }
+    
+    tab "Calculus" {
+        group "Derivatives" {
+            derivative    shortcut: "Ctrl+D"
+            partial       shortcut: "Ctrl+Shift+D"
+        }
+        
+        group "Integrals" {
+            integral      shortcut: "Ctrl+I"
+        }
+        
+        group "Limits & Sums" {
+            lim
+            sum_bounds
+            prod_bounds
+        }
+    }
+    
+    tab "Quantum" {
+        ket           shortcut: "Ctrl+K"
+        bra
+        inner
+        outer
+        commutator
+        expectation
+    }
+    
+    tab "POT" {
+        projection
+        modal_integral
+        causal_bound
+        hont
+    }
+}
+```
+
+**`render_editor.rs` becomes thin:**
+```rust
+impl EditorRenderContext {
+    pub fn from_std_template_lib(lib: &StdTemplateLib) -> Self {
+        let mut ctx = EditorRenderContext::empty();
+        for template in lib.templates() {
+            ctx.add_template(/* from parsed template */);
+        }
+        ctx
+    }
+}
+```
+
+**Related docs:**
+- ADR-009: WYSIWYG Structural Editor (glyph/template specs)
+- KLEIS_ECOSYSTEM_TOOLBOXES.md (template externalization)
+- docs/archive/template-implementation-strategy.md (detailed plan)
+
+---
+*Recorded: Dec 17, 2025*
 

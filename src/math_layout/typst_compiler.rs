@@ -16,9 +16,10 @@ use typst::{Library, World};
 use crate::ast::Expression;
 use crate::editor_ast::EditorNode;
 use crate::render::{
-    build_default_context, render_editor_node_with_uuids, render_expression,
-    render_expression_with_ids, GlyphContext, RenderTarget,
+    build_default_context, render_expression, render_expression_with_ids, GlyphContext,
+    RenderTarget,
 };
+use crate::render_editor::render_editor_node_with_uuids;
 
 /// Minimal World implementation for Typst compilation
 ///
@@ -175,10 +176,16 @@ pub fn compile_editor_node_with_semantic_boxes(
     eprintln!("all_slot_ids: {:?}", all_slot_ids);
     eprintln!("UUID map entries: {}", node_id_to_uuid.len());
 
-    let ctx = build_default_context();
-    let full_markup =
-        render_editor_node_with_uuids(node, &ctx, &RenderTarget::Typst, node_id_to_uuid);
+    // Using render_editor module which preserves metadata (fixes tensor index bug)
+    let full_markup = render_editor_node_with_uuids(
+        node,
+        &crate::render_editor::RenderTarget::Typst,
+        node_id_to_uuid,
+    );
     eprintln!("Full markup: {}", full_markup);
+
+    // Keep ctx for extract_semantic_argument_boxes_from_editor_node (legacy API)
+    let ctx = build_default_context();
 
     let mut output = compile_math_to_svg_with_ids(&full_markup, placeholder_ids, all_slot_ids)?;
 

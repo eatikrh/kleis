@@ -305,10 +305,27 @@ export const astTemplates: Record<string, EditorNode> = {
     placeholder(1, 'variable'),
   ]),
   
+  inverse_laplace: operation('inverse_laplace', [
+    placeholder(0, 'function'),
+    placeholder(1, 'variable'),
+  ]),
+  
   convolution: operation('convolution', [
     placeholder(0, 'f'),
     placeholder(1, 'g'),
     placeholder(2, 'variable'),
+  ]),
+  
+  kernel_integral: operation('kernel_integral', [
+    placeholder(0, 'kernel'),
+    placeholder(1, 'function'),
+    placeholder(2, 'domain'),
+    placeholder(3, 'variable'),
+  ]),
+  
+  greens_function: operation('greens_function', [
+    placeholder(0, 'point_x'),
+    placeholder(1, 'source_m'),
   ]),
   
   // ─────────────────────────────────────────────────────────────

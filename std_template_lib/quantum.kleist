@@ -1,0 +1,78 @@
+// ============================================================================
+// Quantum Templates - Bra-ket notation, Operators
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/quantum.kleist
+
+// ============ BRA-KET ============
+
+@template ket {
+    pattern: "ket(arg)"
+    unicode: "|{arg}⟩"
+    latex: "|{arg}\\rangle"
+    html: "|{arg}⟩"
+    typst: "lr(| {arg} angle.r)"
+    kleis: "ket({arg})"
+    category: "quantum"
+}
+
+@template bra {
+    pattern: "bra(arg)"
+    unicode: "⟨{arg}|"
+    latex: "\\langle{arg}|"
+    html: "⟨{arg}|"
+    typst: "lr(angle.l {arg} |)"
+    kleis: "bra({arg})"
+    category: "quantum"
+}
+
+@template inner {
+    pattern: "inner(bra, ket)"
+    unicode: "⟨{bra}|{ket}⟩"
+    latex: "\\left\\langle{bra}\\middle|{ket}\\right\\rangle"
+    html: "⟨{bra}|{ket}⟩"
+    typst: "lr(angle.l {bra}|{ket} angle.r)"
+    kleis: "inner({bra}, {ket})"
+    category: "quantum"
+}
+
+@template outer {
+    pattern: "outer(arg, right)"
+    unicode: "|{arg}⟩⟨{right}|"
+    latex: "|{arg}\\rangle\\langle{right}|"
+    html: "|{arg}⟩⟨{right}|"
+    typst: "lr(| {arg} angle.r angle.l {right} |)"
+    kleis: "outer({arg}, {right})"
+    category: "quantum"
+}
+
+@template commutator {
+    pattern: "commutator(arg, right)"
+    unicode: "[{arg}, {right}]"
+    latex: "[{arg}, {right}]"
+    html: "[{arg}, {right}]"
+    typst: "lr([ {arg}, {right} ])"
+    kleis: "commutator({arg}, {right})"
+    category: "quantum"
+}
+
+@template anticommutator {
+    pattern: "anticommutator(arg, right)"
+    unicode: "{{arg}, {right}}"
+    latex: "\\{{{arg}, {right}\\}}"
+    html: "{{arg}, {right}}"
+    typst: "lr(\\{ {arg}, {right} \\})"
+    kleis: "anticommutator({arg}, {right})"
+    category: "quantum"
+}
+
+@template expectation {
+    pattern: "expectation(operator)"
+    unicode: "⟨{operator}⟩"
+    latex: "\\langle {operator} \\rangle"
+    html: "⟨{operator}⟩"
+    typst: "lr(angle.l {operator} angle.r)"
+    kleis: "expectation({operator})"
+    category: "quantum"
+}
+

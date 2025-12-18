@@ -7,11 +7,13 @@ pub mod editor_ast; // Visual Editor AST (separate from Kleis Core AST)
 pub mod evaluator; // Wire 3: Self-hosting
 pub mod kleis_ast;
 pub mod kleis_parser;
+pub mod kleist_parser; // .kleist template file parser
 pub mod math_layout;
 pub mod parser;
 pub mod pattern_matcher;
 pub mod pretty_print; // Pretty-printer for exporting Kleis source
 pub mod render;
+pub mod render_editor; // EditorNode-only renderer (no Expression conversion)
 pub mod signature_interpreter;
 pub mod solvers; // Pluggable solver backends (Z3, CVC5, etc.)
 pub mod structure_registry;

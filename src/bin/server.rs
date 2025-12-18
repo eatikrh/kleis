@@ -536,19 +536,18 @@ async fn render_ast_handler(
 ) -> impl IntoResponse {
     let format = req.format.as_deref().unwrap_or("html");
     let target = match format {
-        "unicode" => kleis::render::RenderTarget::Unicode,
-        "latex" => kleis::render::RenderTarget::LaTeX,
-        "typst" => kleis::render::RenderTarget::Typst,
-        "kleis" => kleis::render::RenderTarget::Kleis,
-        _ => kleis::render::RenderTarget::HTML,
+        "unicode" => kleis::render_editor::RenderTarget::Unicode,
+        "latex" => kleis::render_editor::RenderTarget::LaTeX,
+        "typst" => kleis::render_editor::RenderTarget::Typst,
+        "kleis" => kleis::render_editor::RenderTarget::Kleis,
+        _ => kleis::render_editor::RenderTarget::HTML,
     };
 
-    let ctx = kleis::render::build_default_context();
-
     // Parse as EditorNode - works for both old format (kind: None) and new format
+    // Using render_editor module which preserves metadata (fixes tensor index bug)
     match json_to_editor_node(&req.ast) {
         Ok(node) => {
-            let output = kleis::render::render_editor_node(&node, &ctx, &target);
+            let output = kleis::render_editor::render_editor_node(&node, &target);
             let response = RenderASTResponse {
                 output,
                 format: format.to_string(),

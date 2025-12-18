@@ -1,0 +1,337 @@
+// ============================================================================
+// Basic Templates - Arithmetic, Comparison, Brackets
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/basic.kleist
+
+// ============ ARITHMETIC ============
+
+@template equals {
+    pattern: "equals(left, right)"
+    unicode: "{left} = {right}"
+    latex: "{left} = {right}"
+    html: "{left} = {right}"
+    typst: "{left} = {right}"
+    kleis: "{left} = {right}"
+    category: "arithmetic"
+    glyph: "="
+}
+
+@template plus {
+    pattern: "plus(left, right)"
+    unicode: "{left} + {right}"
+    latex: "{left} + {right}"
+    html: "{left} + {right}"
+    typst: "{left} + {right}"
+    kleis: "plus({left}, {right})"
+    category: "arithmetic"
+}
+
+@template minus {
+    pattern: "minus(left, right)"
+    unicode: "{left} - {right}"
+    latex: "{left} - {right}"
+    html: "{left} - {right}"
+    typst: "{left} - {right}"
+    kleis: "minus({left}, {right})"
+    category: "arithmetic"
+}
+
+@template scalar_multiply {
+    pattern: "scalar_multiply(left, right)"
+    unicode: "{left} × {right}"
+    latex: "{left} \\times {right}"
+    html: "{left} × {right}"
+    typst: "{left} times {right}"
+    kleis: "times({left}, {right})"
+    category: "arithmetic"
+}
+
+@template multiply {
+    pattern: "multiply(left, right)"
+    unicode: "{left} {right}"
+    latex: "{left} \\, {right}"
+    html: "{left} × {right}"
+    typst: "{left} {right}"
+    kleis: "multiply({left}, {right})"
+    category: "arithmetic"
+}
+
+@template divide {
+    pattern: "divide(left, right)"
+    unicode: "{left}/{right}"
+    latex: "divide({left}, {right})"
+    html: "{left}/{right}"
+    typst: "{left}/{right}"
+    kleis: "divide({left}, {right})"
+    category: "arithmetic"
+}
+
+@template scalar_divide {
+    pattern: "scalar_divide(num, den)"
+    unicode: "{num}/{den}"
+    latex: "\\frac{{{num}}}{{{den}}}"
+    html: "{num}/{den}"
+    typst: "frac({num}, {den})"
+    kleis: "divide({num}, {den})"
+    category: "arithmetic"
+}
+
+@template power {
+    pattern: "power(base, exponent)"
+    unicode: "{base}^{exponent}"
+    latex: "{base}^{{{exponent}}}"
+    html: "{base}<sup>{exponent}</sup>"
+    typst: "{base}^({exponent})"
+    kleis: "power({base}, {exponent})"
+    category: "arithmetic"
+}
+
+@template negate {
+    pattern: "negate(arg)"
+    unicode: "-{arg}"
+    latex: "-{arg}"
+    html: "-{arg}"
+    typst: "-{arg}"
+    kleis: "negate({arg})"
+    category: "arithmetic"
+}
+
+@template factorial {
+    pattern: "factorial(arg)"
+    unicode: "{arg}!"
+    latex: "{arg}!"
+    html: "{arg}!"
+    typst: "{arg}!"
+    kleis: "factorial({arg})"
+    category: "arithmetic"
+}
+
+// ============ COMPARISON ============
+
+@template lt {
+    pattern: "lt(left, right)"
+    unicode: "{left} < {right}"
+    latex: "{left} < {right}"
+    html: "{left} &lt; {right}"
+    typst: "{left} < {right}"
+    kleis: "lt({left}, {right})"
+    category: "comparison"
+}
+
+@template less_than {
+    pattern: "less_than(left, right)"
+    unicode: "{left} < {right}"
+    latex: "{left} < {right}"
+    html: "{left} &lt; {right}"
+    typst: "{left} < {right}"
+    kleis: "less_than({left}, {right})"
+    category: "comparison"
+}
+
+@template gt {
+    pattern: "gt(left, right)"
+    unicode: "{left} > {right}"
+    latex: "{left} > {right}"
+    html: "{left} &gt; {right}"
+    typst: "{left} > {right}"
+    kleis: "gt({left}, {right})"
+    category: "comparison"
+}
+
+@template greater_than {
+    pattern: "greater_than(left, right)"
+    unicode: "{left} > {right}"
+    latex: "{left} > {right}"
+    html: "{left} &gt; {right}"
+    typst: "{left} > {right}"
+    kleis: "greater_than({left}, {right})"
+    category: "comparison"
+}
+
+@template leq {
+    pattern: "leq(left, right)"
+    unicode: "{left} ≤ {right}"
+    latex: "{left} \\leq {right}"
+    html: "{left} ≤ {right}"
+    typst: "{left} <= {right}"
+    kleis: "leq({left}, {right})"
+    category: "comparison"
+}
+
+@template geq {
+    pattern: "geq(left, right)"
+    unicode: "{left} ≥ {right}"
+    latex: "{left} \\geq {right}"
+    html: "{left} ≥ {right}"
+    typst: "{left} >= {right}"
+    kleis: "geq({left}, {right})"
+    category: "comparison"
+}
+
+@template neq {
+    pattern: "neq(left, right)"
+    unicode: "{left} ≠ {right}"
+    latex: "{left} \\neq {right}"
+    html: "{left} ≠ {right}"
+    typst: "{left} != {right}"
+    kleis: "neq({left}, {right})"
+    category: "comparison"
+}
+
+@template approx {
+    pattern: "approx(left, right)"
+    unicode: "{left} ≈ {right}"
+    latex: "{left} \\approx {right}"
+    html: "{left} ≈ {right}"
+    typst: "{left} approx {right}"
+    kleis: "approx({left}, {right})"
+    category: "comparison"
+}
+
+// ============ BRACKETS ============
+
+@template parens {
+    pattern: "parens(content)"
+    unicode: "({content})"
+    latex: "\\left({content}\\right)"
+    html: "({content})"
+    typst: "lr(({content}))"
+    kleis: "({content})"
+    category: "brackets"
+}
+
+@template brackets {
+    pattern: "brackets(content)"
+    unicode: "[{content}]"
+    latex: "\\left[{content}\\right]"
+    html: "[{content}]"
+    typst: "lr([{content}])"
+    kleis: "[{content}]"
+    category: "brackets"
+}
+
+@template braces {
+    pattern: "braces(content)"
+    unicode: "{{{content}}}"
+    latex: "\\left\\{ {content} \\right\\}"
+    html: "{{{content}}}"
+    typst: "lr(\\{ {content} \\})"
+    kleis: "{{{content}}}"
+    category: "brackets"
+}
+
+@template abs {
+    pattern: "abs(arg)"
+    unicode: "|{arg}|"
+    latex: "\\left|{arg}\\right|"
+    html: "|{arg}|"
+    typst: "abs({arg})"
+    kleis: "abs({arg})"
+    category: "brackets"
+}
+
+@template norm {
+    pattern: "norm(arg)"
+    unicode: "‖{arg}‖"
+    latex: "\\left\\|{arg}\\right\\|"
+    html: "‖{arg}‖"
+    typst: "norm({arg})"
+    kleis: "norm({arg})"
+    category: "brackets"
+}
+
+@template floor {
+    pattern: "floor(arg)"
+    unicode: "⌊{arg}⌋"
+    latex: "\\lfloor {arg} \\rfloor"
+    html: "⌊{arg}⌋"
+    typst: "floor({arg})"
+    kleis: "floor({arg})"
+    category: "brackets"
+}
+
+@template ceiling {
+    pattern: "ceiling(arg)"
+    unicode: "⌈{arg}⌉"
+    latex: "\\lceil {arg} \\rceil"
+    html: "⌈{arg}⌉"
+    typst: "ceil({arg})"
+    kleis: "ceiling({arg})"
+    category: "brackets"
+}
+
+@template angle_brackets {
+    pattern: "angle_brackets(content)"
+    unicode: "⟨{content}⟩"
+    latex: "\\langle {content} \\rangle"
+    html: "⟨{content}⟩"
+    typst: "angle.l {content} angle.r"
+    kleis: "angle({content})"
+    category: "brackets"
+}
+
+// ============ SUBSCRIPT/SUPERSCRIPT ============
+
+@template sub {
+    pattern: "sub(base, subscript)"
+    unicode: "{base}_{subscript}"
+    latex: "{base}_{{{subscript}}}"
+    html: "{base}<sub>{subscript}</sub>"
+    typst: "{base}_({subscript})"
+    kleis: "{base}_{subscript}"
+    category: "indices"
+}
+
+@template sup {
+    pattern: "sup(base, sup)"
+    unicode: "{base}^{sup}"
+    latex: "{base}^{{{sup}}}"
+    html: "{base}<sup>{sup}</sup>"
+    typst: "{base}^({sup})"
+    kleis: "{base}^{sup}"
+    category: "indices"
+}
+
+@template subsup {
+    pattern: "subsup(base, subscript, superscript)"
+    unicode: "{base}_{subscript}^{superscript}"
+    latex: "{base}_{{{subscript}}}^{{{superscript}}}"
+    html: "{base}<sub>{subscript}</sub><sup>{superscript}</sup>"
+    typst: "{base}_({subscript})^({superscript})"
+    kleis: "{base}_{subscript}^{superscript}"
+    category: "indices"
+}
+
+@template index_mixed {
+    pattern: "index_mixed(base, upper, lower)"
+    unicode: "{base}^{upper}_{lower}"
+    latex: "{base}^{{{upper}}}_{{{lower}}}"
+    html: "{base}<sup>{upper}</sup><sub>{lower}</sub>"
+    typst: "{base}^({upper})_({lower})"
+    kleis: "{base}({upper}, -{lower})"
+    category: "indices"
+}
+
+// ============ SPECIAL ARITHMETIC ============
+
+@template binomial {
+    pattern: "binomial(left, right)"
+    unicode: "C({left},{right})"
+    latex: "\\binom{{{left}}}{{{right}}}"
+    html: "C({left},{right})"
+    typst: "binom({left}, {right})"
+    kleis: "binomial({left}, {right})"
+    category: "arithmetic"
+}
+
+@template nth_root {
+    pattern: "nth_root(left, right)"
+    unicode: "ⁿ√({right})"
+    latex: "\\sqrt[{left}]{{{right}}}"
+    html: "<sup>{left}</sup>√{right}"
+    typst: "root({left}, {right})"
+    kleis: "nth_root({left}, {right})"
+    category: "arithmetic"
+}
+

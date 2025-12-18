@@ -2129,7 +2129,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             minus: { Operation: { name: 'minus', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             times: { Operation: { name: 'scalar_multiply', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             matrix_multiply: { Operation: { name: 'multiply', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
-            negate: { Operation: { name: 'minus', args: [{Const:'0'}, {Placeholder:{id:0,hint:'value'}}] } },
+            negate: { Operation: { name: 'negate', args: [{Placeholder:{id:0,hint:'arg'}}] } },
             plus_minus_literal: { Object: '\\pm' },
             
             less_than: { Operation: { name: 'less_than', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },

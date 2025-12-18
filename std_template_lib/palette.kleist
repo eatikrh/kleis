@@ -1,0 +1,219 @@
+// ============================================================================
+// Palette Layout - UI organization for Kleis Equation Editor
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/palette.kleist
+
+@palette {
+    tab "Basics" {
+        group "Arithmetic" {
+            equals
+            plus
+            minus
+            multiply
+            scalar_multiply
+            divide
+            scalar_divide
+            power
+            negate
+        }
+        
+        group "Special" {
+            sqrt
+            nth_root
+            factorial
+            binomial
+        }
+        
+        separator
+        
+        group "Comparison" {
+            lt
+            gt
+            leq
+            geq
+            neq
+            approx
+        }
+        
+        separator
+        
+        group "Builders" {
+            @piecewise_builder
+        }
+    }
+    
+    tab "Fences" {
+        group "Brackets" {
+            parens
+            brackets
+            braces
+            angle_brackets
+        }
+        
+        separator
+        
+        group "Delimiters" {
+            abs
+            norm
+            floor
+            ceiling
+        }
+    }
+    
+    tab "Accents" {
+        group "Derivatives" {
+            dot_accent
+            ddot_accent
+        }
+        
+        group "Marks" {
+            bar
+            hat
+            tilde
+            overline
+        }
+        
+        separator
+        
+        group "Indices" {
+            sub
+            sup
+            subsup
+            index_mixed
+        }
+    }
+    
+    tab "Calculus" {
+        group "Derivatives" {
+            d_dt shortcut: "Ctrl+D"
+            d_part shortcut: "Ctrl+Shift+D"
+        }
+        
+        group "Integrals" {
+            int_bounds shortcut: "Ctrl+I"
+        }
+        
+        separator
+        
+        group "Limits & Sums" {
+            lim
+            sum_bounds
+            prod_bounds
+        }
+    }
+    
+    tab "Linear Algebra" {
+        group "Matrices" {
+            @matrix_builder
+        }
+        
+        group "Tensors" {
+            tensor_lower_pair
+            tensor_2up_2down
+        }
+        
+        separator
+        
+        group "Vectors" {
+            vector_bold
+            vector_arrow
+            grad
+            div
+            curl
+            dot
+            cross
+        }
+    }
+    
+    tab "Greek" {
+        // Greek letters are Objects inserted via the symbol picker
+        @symbol_picker
+    }
+    
+    tab "Logic" {
+        group "Connectives" {
+            and
+            or
+            not
+            implies
+            iff
+        }
+        
+        separator
+        
+        group "Sets" {
+            in
+            subset
+            union
+            intersection
+        }
+    }
+    
+    tab "Quantum" {
+        ket shortcut: "Ctrl+K"
+        bra
+        inner
+        outer
+        commutator
+        anticommutator
+        expectation
+    }
+    
+    tab "Transforms" {
+        group "Fourier" {
+            fourier_transform
+            inverse_fourier
+        }
+        
+        group "Laplace" {
+            laplace_transform
+            inverse_laplace
+        }
+        
+        separator
+        
+        group "Convolution" {
+            convolution
+            kernel_integral
+            greens_function
+        }
+    }
+    
+    tab "Functions" {
+        group "Trigonometric" {
+            sin
+            cos
+            tan
+            arcsin
+            arccos
+            arctan
+        }
+        
+        group "Hyperbolic" {
+            sinh
+            cosh
+            tanh
+        }
+        
+        separator
+        
+        group "Other" {
+            log
+            ln
+            exp
+        }
+    }
+    
+    tab "POT" {
+        projection
+        modal_integral
+        projection_kernel
+        causal_bound
+        projection_residue
+        modal_space
+        spacetime
+        hont
+    }
+}
+
