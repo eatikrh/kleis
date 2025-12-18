@@ -512,7 +512,8 @@ impl KleisParser {
         self.skip_whitespace();
         if self.peek() == Some('^') {
             self.advance();
-            let right = self.parse_primary_with_postfix()?;
+            // Recurse to parse_factor for right-associativity: 2^3^2 = 2^(3^2)
+            let right = self.parse_factor()?;
             left = Expression::Operation {
                 name: "power".to_string(),
                 args: vec![left, right],
