@@ -1104,6 +1104,58 @@ After:  Tensor inside equals → R^{μ}_{ν ρ} = 0 (correct indices)
 
 **Status:** Functional, under testing. Not yet merged to main.
 
+### Future: User-Defined Templates
+
+Currently `render_editor.rs` has all 80+ templates hardcoded in `load_templates()`. For user-defined 
+notations (per ADR-009 and KLEIS_ECOSYSTEM_TOOLBOXES.md), we need dynamic template loading.
+
+**Vision:**
+```kleis
+// User defines in my-algebra.kleis:
+operation tensor_contract : (Tensor, Index, Index) -> Tensor
+template tensor_contract {
+    glyph: "⊗",
+    latex: "{tensor}^{{upper}}_{{{lower}}}",
+    typst: "{tensor}^({upper})_({lower})",
+    unicode: "{tensor}^{upper}_{lower}"
+}
+```
+
+**What `render_editor.rs` needs:**
+
+| Current | Needed |
+|---------|--------|
+| `EditorRenderContext::new()` creates fixed templates | `EditorRenderContext::from_registry(registry)` loads from registry |
+| Templates hardcoded in Rust | Templates in `.kleis` files, parsed at load time |
+| Palette buttons hardcoded in HTML/TS | Palette auto-generated from template metadata |
+
+**The bridge (future implementation):**
+```rust
+impl EditorRenderContext {
+    pub fn from_template_registry(registry: &TemplateRegistry) -> Self {
+        let mut ctx = EditorRenderContext::empty();
+        for (name, metadata) in registry.iter() {
+            ctx.add_template(
+                &name,
+                &metadata.unicode, &metadata.latex,
+                &metadata.html, &metadata.typst, &metadata.kleis,
+            );
+        }
+        ctx
+    }
+}
+```
+
+**Good news:** The HashMap-based structure in `EditorRenderContext` is already right. We just need:
+1. Parse `@template` blocks from Kleis files (grammar extension)
+2. Populate a `TemplateRegistry`
+3. Pass registry to `EditorRenderContext` at startup
+
+**Related docs:**
+- ADR-009: WYSIWYG Structural Editor (glyph/template specs)
+- KLEIS_ECOSYSTEM_TOOLBOXES.md (template externalization)
+- docs/archive/template-implementation-strategy.md (detailed plan)
+
 ---
 *Recorded: Dec 17, 2025*
 
