@@ -12,7 +12,7 @@
     unicode: "α"
     latex: "\\alpha"
     typst: "alpha"
-    html: "&alpha;"
+    html: "α"
     glyph: "α"
     category: "greek"
 }
@@ -21,7 +21,7 @@
     unicode: "β"
     latex: "\\beta"
     typst: "beta"
-    html: "&beta;"
+    html: "β"
     glyph: "β"
     category: "greek"
 }
@@ -30,7 +30,7 @@
     unicode: "γ"
     latex: "\\gamma"
     typst: "gamma"
-    html: "&gamma;"
+    html: "γ"
     glyph: "γ"
     category: "greek"
 }
@@ -39,7 +39,7 @@
     unicode: "δ"
     latex: "\\delta"
     typst: "delta"
-    html: "&delta;"
+    html: "δ"
     glyph: "δ"
     category: "greek"
 }
@@ -48,7 +48,7 @@
     unicode: "ε"
     latex: "\\varepsilon"
     typst: "epsilon"
-    html: "&epsilon;"
+    html: "ε"
     glyph: "ε"
     category: "greek"
 }
@@ -57,7 +57,7 @@
     unicode: "ζ"
     latex: "\\zeta"
     typst: "zeta"
-    html: "&zeta;"
+    html: "ζ"
     glyph: "ζ"
     category: "greek"
 }
@@ -66,7 +66,7 @@
     unicode: "η"
     latex: "\\eta"
     typst: "eta"
-    html: "&eta;"
+    html: "η"
     glyph: "η"
     category: "greek"
 }
@@ -75,7 +75,7 @@
     unicode: "θ"
     latex: "\\theta"
     typst: "theta"
-    html: "&theta;"
+    html: "θ"
     glyph: "θ"
     category: "greek"
 }
@@ -84,7 +84,7 @@
     unicode: "ι"
     latex: "\\iota"
     typst: "iota"
-    html: "&iota;"
+    html: "ι"
     glyph: "ι"
     category: "greek"
 }
@@ -93,7 +93,7 @@
     unicode: "κ"
     latex: "\\kappa"
     typst: "kappa"
-    html: "&kappa;"
+    html: "κ"
     glyph: "κ"
     category: "greek"
 }
@@ -102,7 +102,7 @@
     unicode: "λ"
     latex: "\\lambda"
     typst: "lambda"
-    html: "&lambda;"
+    html: "λ"
     glyph: "λ"
     category: "greek"
 }
@@ -111,7 +111,7 @@
     unicode: "μ"
     latex: "\\mu"
     typst: "mu"
-    html: "&mu;"
+    html: "μ"
     glyph: "μ"
     category: "greek"
 }
@@ -120,7 +120,7 @@
     unicode: "ν"
     latex: "\\nu"
     typst: "nu"
-    html: "&nu;"
+    html: "ν"
     glyph: "ν"
     category: "greek"
 }
@@ -129,7 +129,7 @@
     unicode: "ξ"
     latex: "\\xi"
     typst: "xi"
-    html: "&xi;"
+    html: "ξ"
     glyph: "ξ"
     category: "greek"
 }
@@ -138,7 +138,7 @@
     unicode: "π"
     latex: "\\pi"
     typst: "pi"
-    html: "&pi;"
+    html: "π"
     glyph: "π"
     category: "greek"
 }
@@ -147,7 +147,7 @@
     unicode: "ρ"
     latex: "\\rho"
     typst: "rho"
-    html: "&rho;"
+    html: "ρ"
     glyph: "ρ"
     category: "greek"
 }
@@ -156,7 +156,7 @@
     unicode: "σ"
     latex: "\\sigma"
     typst: "sigma"
-    html: "&sigma;"
+    html: "σ"
     glyph: "σ"
     category: "greek"
 }
@@ -165,7 +165,7 @@
     unicode: "τ"
     latex: "\\tau"
     typst: "tau"
-    html: "&tau;"
+    html: "τ"
     glyph: "τ"
     category: "greek"
 }
@@ -174,7 +174,7 @@
     unicode: "υ"
     latex: "\\upsilon"
     typst: "upsilon"
-    html: "&upsilon;"
+    html: "υ"
     glyph: "υ"
     category: "greek"
 }
@@ -183,7 +183,7 @@
     unicode: "φ"
     latex: "\\varphi"
     typst: "phi"
-    html: "&phi;"
+    html: "φ"
     glyph: "φ"
     category: "greek"
 }
@@ -192,7 +192,7 @@
     unicode: "χ"
     latex: "\\chi"
     typst: "chi"
-    html: "&chi;"
+    html: "χ"
     glyph: "χ"
     category: "greek"
 }
@@ -201,7 +201,7 @@
     unicode: "ψ"
     latex: "\\psi"
     typst: "psi"
-    html: "&psi;"
+    html: "ψ"
     glyph: "ψ"
     category: "greek"
 }
@@ -210,7 +210,7 @@
     unicode: "ω"
     latex: "\\omega"
     typst: "omega"
-    html: "&omega;"
+    html: "ω"
     glyph: "ω"
     category: "greek"
 }
@@ -220,7 +220,7 @@
     unicode: "Γ"
     latex: "\\Gamma"
     typst: "Gamma"
-    html: "&Gamma;"
+    html: "Γ"
     glyph: "Γ"
     category: "greek"
 }
@@ -229,7 +229,7 @@
     unicode: "Δ"
     latex: "\\Delta"
     typst: "Delta"
-    html: "&Delta;"
+    html: "Δ"
     glyph: "Δ"
     category: "greek"
 }
@@ -238,7 +238,7 @@
     unicode: "Θ"
     latex: "\\Theta"
     typst: "Theta"
-    html: "&Theta;"
+    html: "Θ"
     glyph: "Θ"
     category: "greek"
 }
@@ -247,7 +247,7 @@
     unicode: "Λ"
     latex: "\\Lambda"
     typst: "Lambda"
-    html: "&Lambda;"
+    html: "Λ"
     glyph: "Λ"
     category: "greek"
 }
@@ -256,7 +256,7 @@
     unicode: "Ξ"
     latex: "\\Xi"
     typst: "Xi"
-    html: "&Xi;"
+    html: "Ξ"
     glyph: "Ξ"
     category: "greek"
 }
@@ -265,7 +265,7 @@
     unicode: "Π"
     latex: "\\Pi"
     typst: "Pi"
-    html: "&Pi;"
+    html: "Π"
     glyph: "Π"
     category: "greek"
 }
@@ -274,7 +274,7 @@
     unicode: "Σ"
     latex: "\\Sigma"
     typst: "Sigma"
-    html: "&Sigma;"
+    html: "Σ"
     glyph: "Σ"
     category: "greek"
 }
@@ -283,7 +283,7 @@
     unicode: "Υ"
     latex: "\\Upsilon"
     typst: "Upsilon"
-    html: "&Upsilon;"
+    html: "Υ"
     glyph: "Υ"
     category: "greek"
 }
@@ -292,7 +292,7 @@
     unicode: "Φ"
     latex: "\\Phi"
     typst: "Phi"
-    html: "&Phi;"
+    html: "Φ"
     glyph: "Φ"
     category: "greek"
 }
@@ -301,7 +301,7 @@
     unicode: "Ψ"
     latex: "\\Psi"
     typst: "Psi"
-    html: "&Psi;"
+    html: "Ψ"
     glyph: "Ψ"
     category: "greek"
 }
@@ -310,7 +310,7 @@
     unicode: "Ω"
     latex: "\\Omega"
     typst: "Omega"
-    html: "&Omega;"
+    html: "Ω"
     glyph: "Ω"
     category: "greek"
 }
@@ -320,7 +320,7 @@
     unicode: "∞"
     latex: "\\infty"
     typst: "infinity"
-    html: "&infin;"
+    html: "∞"
     glyph: "∞"
     category: "special"
 }
@@ -329,7 +329,7 @@
     unicode: "∂"
     latex: "\\partial"
     typst: "diff"
-    html: "&part;"
+    html: "∂"
     glyph: "∂"
     category: "special"
 }
@@ -338,7 +338,7 @@
     unicode: "∇"
     latex: "\\nabla"
     typst: "nabla"
-    html: "&nabla;"
+    html: "∇"
     glyph: "∇"
     category: "special"
 }
@@ -347,7 +347,7 @@
     unicode: "ℏ"
     latex: "\\hbar"
     typst: "planck.reduce"
-    html: "&hbar;"
+    html: "ℏ"
     glyph: "ℏ"
     category: "physics"
 }
@@ -356,7 +356,7 @@
     unicode: "ℓ"
     latex: "\\ell"
     typst: "ell"
-    html: "&ell;"
+    html: "ℓ"
     glyph: "ℓ"
     category: "special"
 }
