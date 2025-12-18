@@ -649,6 +649,7 @@ blockComment ::= "/*" { (* any character *) } "*/" ;
     - NEW: Import Statements - import "path/to/file.kleis"
     - FIX: → (single arrow) now works as implication operator in expressions
           (previously only ⟹ was supported; now P → Q and P ⟹ Q both work)
+    - FIX: Chained exponentiation now works: 2^3^2 = 2^(3^2) = 512 (right-associative)
     - NEW: String Operations (stdlib/text.kleis):
         * Basic: concat, strlen, contains, hasPrefix, hasSuffix
         * Substring: substr, indexOf, replace, charAt
