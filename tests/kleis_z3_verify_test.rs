@@ -252,7 +252,7 @@ fn z3_verify_let_binding() {
     let x_plus_x = op("plus", vec![x.clone(), x.clone()]);
 
     let let_expr = Expression::Let {
-        name: "x".to_string(),
+        pattern: kleis::ast::Pattern::Variable("x".to_string()),
         type_annotation: None,
         value: Box::new(five),
         body: Box::new(x_plus_x),

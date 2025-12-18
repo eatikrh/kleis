@@ -303,7 +303,7 @@ fn roundtrip_conditional() {
 fn roundtrip_let_binding() {
     // let x = 5 in x + x
     let let_expr = Expression::Let {
-        name: "x".to_string(),
+        pattern: kleis::ast::Pattern::Variable("x".to_string()),
         type_annotation: None,
         value: Box::new(c("5")),
         body: Box::new(op("plus", vec![o("x"), o("x")])),

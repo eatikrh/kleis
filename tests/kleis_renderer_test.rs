@@ -274,7 +274,7 @@ fn kleis_render_let_binding() {
 
     // Let binding
     let let_expr = Expression::Let {
-        name: "x".to_string(),
+        pattern: kleis::ast::Pattern::Variable("x".to_string()),
         type_annotation: None,
         value: Box::new(c("5")),
         body: Box::new(op("plus", vec![o("x"), o("x")])),

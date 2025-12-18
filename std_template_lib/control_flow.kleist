@@ -1,0 +1,131 @@
+// ============================================================================
+// Control Flow Templates - Pattern Matching, Let Bindings, Conditionals
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/control_flow.kleist
+// Grammar v0.8: Pattern guards, As-patterns, Let destructuring
+
+// ============ CONDITIONALS ============
+
+@template conditional {
+    pattern: "conditional(condition, then_branch, else_branch)"
+    unicode: "if {condition} then {then_branch} else {else_branch}"
+    latex: "\\text{if } {condition} \\text{ then } {then_branch} \\text{ else } {else_branch}"
+    html: "<span class=\"keyword\">if</span> {condition} <span class=\"keyword\">then</span> {then_branch} <span class=\"keyword\">else</span> {else_branch}"
+    typst: "\"if\" {condition} \"then\" {then_branch} \"else\" {else_branch}"
+    kleis: "if {condition} then {then_branch} else {else_branch}"
+    category: "control_flow"
+}
+
+// ============ LET BINDINGS (v0.8: Supports pattern destructuring) ============
+
+// Let binding with optional pattern destructuring (v0.8)
+@template let_binding {
+    pattern: "let_binding(pattern, value, body)"
+    unicode: "let {pattern} = {value} in {body}"
+    latex: "\\text{let } {pattern} = {value} \\text{ in } {body}"
+    html: "<span class=\"keyword\">let</span> {pattern} = {value} <span class=\"keyword\">in</span> {body}"
+    typst: "\"let\" {pattern} = {value} \"in\" {body}"
+    kleis: "let {pattern} = {value} in {body}"
+    category: "control_flow"
+}
+
+@template let_typed {
+    pattern: "let_typed(name, type, value, body)"
+    unicode: "let {name} : {type} = {value} in {body}"
+    latex: "\\text{let } {name} : {type} = {value} \\text{ in } {body}"
+    html: "<span class=\"keyword\">let</span> {name} : {type} = {value} <span class=\"keyword\">in</span> {body}"
+    typst: "\"let\" {name} : {type} = {value} \"in\" {body}"
+    kleis: "let {name} : {type} = {value} in {body}"
+    category: "control_flow"
+}
+
+// ============ PATTERN MATCHING (v0.8: Supports guards and as-patterns) ============
+
+@template match_expr {
+    pattern: "match_expr(scrutinee, cases)"
+    unicode: "match {scrutinee} {{ {cases} }}"
+    latex: "\\text{match } {scrutinee} \\{ {cases} \\}"
+    html: "<span class=\"keyword\">match</span> {scrutinee} {{ {cases} }}"
+    typst: "\"match\" {scrutinee} {{ {cases} }}"
+    kleis: "match {scrutinee} {{ {cases} }}"
+    category: "control_flow"
+}
+
+@template match_case {
+    pattern: "match_case(pattern, body)"
+    unicode: "{pattern} => {body}"
+    latex: "{pattern} \\Rightarrow {body}"
+    html: "{pattern} ⇒ {body}"
+    typst: "{pattern} => {body}"
+    kleis: "{pattern} => {body}"
+    category: "control_flow"
+}
+
+// v0.8: Match case with pattern guard
+@template match_case_guarded {
+    pattern: "match_case_guarded(pattern, guard, body)"
+    unicode: "{pattern} if {guard} => {body}"
+    latex: "{pattern} \\text{ if } {guard} \\Rightarrow {body}"
+    html: "{pattern} <span class=\"keyword\">if</span> {guard} ⇒ {body}"
+    typst: "{pattern} \"if\" {guard} => {body}"
+    kleis: "{pattern} if {guard} => {body}"
+    category: "control_flow"
+}
+
+// ============ PATTERNS (v0.8: As-patterns) ============
+
+@template pattern_wildcard {
+    pattern: "pattern_wildcard()"
+    unicode: "_"
+    latex: "\\_"
+    html: "_"
+    typst: "_"
+    kleis: "_"
+    category: "patterns"
+}
+
+@template pattern_constructor {
+    pattern: "pattern_constructor(name, args)"
+    unicode: "{name}({args})"
+    latex: "{name}({args})"
+    html: "{name}({args})"
+    typst: "{name}({args})"
+    kleis: "{name}({args})"
+    category: "patterns"
+}
+
+// v0.8: As-pattern for alias binding
+@template pattern_as {
+    pattern: "pattern_as(inner_pattern, binding)"
+    unicode: "{inner_pattern} as {binding}"
+    latex: "{inner_pattern} \\text{ as } {binding}"
+    html: "{inner_pattern} <span class=\"keyword\">as</span> {binding}"
+    typst: "{inner_pattern} \"as\" {binding}"
+    kleis: "{inner_pattern} as {binding}"
+    category: "patterns"
+}
+
+// ============ LAMBDA ============
+
+@template lambda {
+    pattern: "lambda(params, body)"
+    unicode: "λ{params}. {body}"
+    latex: "\\lambda {params}. {body}"
+    html: "λ{params}. {body}"
+    typst: "lambda {params}. {body}"
+    kleis: "λ {params} . {body}"
+    category: "control_flow"
+}
+
+@template lambda_typed {
+    pattern: "lambda_typed(param, type, body)"
+    unicode: "λ({param} : {type}). {body}"
+    latex: "\\lambda({param} : {type}). {body}"
+    html: "λ({param} : {type}). {body}"
+    typst: "lambda({param} : {type}). {body}"
+    kleis: "λ ({param} : {type}) . {body}"
+    category: "control_flow"
+}
+
+

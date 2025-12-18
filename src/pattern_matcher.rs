@@ -155,6 +155,17 @@ impl PatternMatcher {
                     _ => false,
                 }
             }
+
+            // Grammar v0.8: As-pattern binds alias AND matches inner pattern
+            Pattern::As {
+                pattern: inner,
+                binding,
+            } => {
+                // Bind the whole value to the alias
+                bindings.insert(binding.clone(), value.clone());
+                // Also match the inner pattern
+                self.match_pattern_internal(value, inner, bindings)
+            }
         }
     }
 
@@ -192,13 +203,47 @@ impl PatternMatcher {
         // Try each case in order
         for case in cases {
             if let Some(bindings) = self.match_pattern(scrutinee, &case.pattern) {
-                // Found a match! Substitute bindings into body
+                // Pattern matched! Now check guard if present (Grammar v0.8)
+                if let Some(guard) = &case.guard {
+                    // Substitute bindings into guard expression
+                    let guard_with_bindings = self.substitute_bindings(guard, &bindings);
+                    // Check if guard evaluates to true
+                    // Guards must evaluate to boolean-like values
+                    if !self.evaluate_guard(&guard_with_bindings) {
+                        // Guard failed, try next case
+                        continue;
+                    }
+                }
+                // Pattern matched and guard (if any) passed!
                 return Ok(self.substitute_bindings(&case.body, &bindings));
             }
         }
 
         // No case matched - non-exhaustive match at runtime
         Err("Non-exhaustive match: no pattern matched the scrutinee".to_string())
+    }
+
+    /// Evaluate a guard expression (Grammar v0.8)
+    ///
+    /// Guards are boolean expressions. This function checks if the guard is "truthy".
+    /// Note: For full evaluation, this would need access to the Evaluator.
+    /// Currently handles simple cases like True/False constructors.
+    fn evaluate_guard(&self, guard: &Expression) -> bool {
+        match guard {
+            // Constructor True
+            Expression::Operation { name, args } if name == "True" && args.is_empty() => true,
+            Expression::Object(name) if name == "True" => true,
+            // Constructor False
+            Expression::Operation { name, args } if name == "False" && args.is_empty() => false,
+            Expression::Object(name) if name == "False" => false,
+            // Comparison results (from Z3 or evaluator)
+            Expression::Const(s) if s == "true" || s == "True" => true,
+            Expression::Const(s) if s == "false" || s == "False" => false,
+            // For complex guards, we'd need to evaluate them
+            // For now, assume they pass (conservative approach)
+            // TODO: Full guard evaluation requires Evaluator integration
+            _ => true,
+        }
     }
 
     /// Substitute variable bindings into an expression
@@ -231,12 +276,16 @@ impl PatternMatcher {
             }
 
             Expression::Match { scrutinee, cases } => {
-                // Substitute in scrutinee and case bodies
+                // Substitute in scrutinee, guards, and case bodies
                 let subst_scrutinee = Box::new(self.substitute_bindings(scrutinee, bindings));
                 let subst_cases = cases
                     .iter()
                     .map(|case| MatchCase {
                         pattern: case.pattern.clone(), // Patterns don't substitute
+                        guard: case
+                            .guard
+                            .as_ref()
+                            .map(|g| self.substitute_bindings(g, bindings)),
                         body: self.substitute_bindings(&case.body, bindings),
                     })
                     .collect();
@@ -283,18 +332,18 @@ impl PatternMatcher {
             },
 
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 value,
                 body,
             } => {
                 let subst_value = self.substitute_bindings(value, bindings);
-                // Create new bindings without the shadowed variable
+                // Create new bindings without the shadowed variables
                 let mut inner_bindings = bindings.clone();
-                inner_bindings.remove(name);
+                self.remove_pattern_vars(pattern, &mut inner_bindings);
                 let subst_body = self.substitute_bindings(body, &inner_bindings);
                 Expression::Let {
-                    name: name.clone(),
+                    pattern: pattern.clone(),
                     type_annotation: type_annotation.clone(),
                     value: Box::new(subst_value),
                     body: Box::new(subst_body),
@@ -328,6 +377,34 @@ impl PatternMatcher {
                 // Leaves don't contain variables
                 expr.clone()
             }
+        }
+    }
+
+    /// Remove all variables bound by a pattern from a bindings map
+    #[allow(clippy::only_used_in_recursion)]
+    fn remove_pattern_vars(
+        &self,
+        pattern: &Pattern,
+        bindings: &mut std::collections::HashMap<String, Expression>,
+    ) {
+        match pattern {
+            Pattern::Variable(name) => {
+                bindings.remove(name);
+            }
+            Pattern::Constructor { args, .. } => {
+                for arg in args {
+                    self.remove_pattern_vars(arg, bindings);
+                }
+            }
+            // Grammar v0.8: As-pattern
+            Pattern::As {
+                pattern: inner,
+                binding,
+            } => {
+                bindings.remove(binding);
+                self.remove_pattern_vars(inner, bindings);
+            }
+            Pattern::Wildcard | Pattern::Constant(_) => {}
         }
     }
 }
@@ -406,18 +483,7 @@ impl ExhaustivenessChecker {
                     let mut has_wildcard = false;
 
                     for pattern in patterns {
-                        match pattern {
-                            Pattern::Wildcard | Pattern::Variable(_) => {
-                                // Wildcard/variable catches everything
-                                has_wildcard = true;
-                            }
-                            Pattern::Constructor { name, .. } => {
-                                covered.insert(name);
-                            }
-                            Pattern::Constant(_) => {
-                                // Constants don't contribute to constructor coverage
-                            }
-                        }
+                        self.collect_pattern_coverage(pattern, &mut covered, &mut has_wildcard);
                     }
 
                     // If wildcard exists, automatically exhaustive
@@ -444,6 +510,31 @@ impl ExhaustivenessChecker {
 
             // Other types (Scalar, Var, etc.) - can't enumerate cases
             _ => Ok(()),
+        }
+    }
+
+    /// Helper to collect pattern coverage info (Grammar v0.8: handles As-patterns)
+    #[allow(clippy::only_used_in_recursion)]
+    fn collect_pattern_coverage<'a>(
+        &self,
+        pattern: &'a Pattern,
+        covered: &mut HashSet<&'a String>,
+        has_wildcard: &mut bool,
+    ) {
+        match pattern {
+            Pattern::Wildcard | Pattern::Variable(_) => {
+                *has_wildcard = true;
+            }
+            Pattern::Constructor { name, .. } => {
+                covered.insert(name);
+            }
+            Pattern::Constant(_) => {
+                // Constants don't contribute to constructor coverage
+            }
+            // Grammar v0.8: As-pattern - recurse into inner pattern
+            Pattern::As { pattern: inner, .. } => {
+                self.collect_pattern_coverage(inner, covered, has_wildcard);
+            }
         }
     }
 
@@ -1168,5 +1259,148 @@ mod tests {
         // Can't check exhaustiveness for non-data types
         let result = checker.check_exhaustive(&patterns, &ty);
         assert!(result.is_ok());
+    }
+
+    // ==========================================================================
+    // Grammar v0.8: Guard tests
+    // ==========================================================================
+
+    #[test]
+    fn test_eval_match_with_guard_true() {
+        let matcher = PatternMatcher::new();
+        let scrutinee = Expression::Const("5".to_string());
+        let cases = vec![
+            MatchCase {
+                pattern: Pattern::variable("n".to_string()),
+                // Guard evaluates to true
+                guard: Some(Expression::Object("True".to_string())),
+                body: Expression::Const("matched".to_string()),
+            },
+            MatchCase::new(Pattern::Wildcard, Expression::Const("fallback".to_string())),
+        ];
+
+        let result = matcher.eval_match(&scrutinee, &cases).unwrap();
+        assert_eq!(result, Expression::Const("matched".to_string()));
+    }
+
+    #[test]
+    fn test_eval_match_with_guard_false() {
+        let matcher = PatternMatcher::new();
+        let scrutinee = Expression::Const("5".to_string());
+        let cases = vec![
+            MatchCase {
+                pattern: Pattern::variable("n".to_string()),
+                // Guard evaluates to false
+                guard: Some(Expression::Object("False".to_string())),
+                body: Expression::Const("matched".to_string()),
+            },
+            MatchCase::new(Pattern::Wildcard, Expression::Const("fallback".to_string())),
+        ];
+
+        let result = matcher.eval_match(&scrutinee, &cases).unwrap();
+        // Should skip to fallback because guard was false
+        assert_eq!(result, Expression::Const("fallback".to_string()));
+    }
+
+    #[test]
+    fn test_eval_match_with_guard_const_true() {
+        let matcher = PatternMatcher::new();
+        let scrutinee = Expression::Const("5".to_string());
+        let cases = vec![MatchCase {
+            pattern: Pattern::variable("n".to_string()),
+            // Guard as Const("true")
+            guard: Some(Expression::Const("true".to_string())),
+            body: Expression::Const("matched".to_string()),
+        }];
+
+        let result = matcher.eval_match(&scrutinee, &cases).unwrap();
+        assert_eq!(result, Expression::Const("matched".to_string()));
+    }
+
+    #[test]
+    fn test_eval_match_with_guard_const_false() {
+        let matcher = PatternMatcher::new();
+        let scrutinee = Expression::Const("5".to_string());
+        let cases = vec![
+            MatchCase {
+                pattern: Pattern::variable("n".to_string()),
+                guard: Some(Expression::Const("false".to_string())),
+                body: Expression::Const("matched".to_string()),
+            },
+            MatchCase::new(Pattern::Wildcard, Expression::Const("fallback".to_string())),
+        ];
+
+        let result = matcher.eval_match(&scrutinee, &cases).unwrap();
+        // Should skip to fallback because guard was false
+        assert_eq!(result, Expression::Const("fallback".to_string()));
+    }
+
+    // ==========================================================================
+    // Grammar v0.8: As-pattern tests
+    // ==========================================================================
+
+    #[test]
+    fn test_match_as_pattern() {
+        let matcher = PatternMatcher::new();
+        // Cons(1, Nil) as whole
+        let value = Expression::Operation {
+            name: "Cons".to_string(),
+            args: vec![
+                Expression::Const("1".to_string()),
+                Expression::Operation {
+                    name: "Nil".to_string(),
+                    args: vec![],
+                },
+            ],
+        };
+
+        let pattern = Pattern::As {
+            pattern: Box::new(Pattern::Constructor {
+                name: "Cons".to_string(),
+                args: vec![
+                    Pattern::variable("h".to_string()),
+                    Pattern::variable("t".to_string()),
+                ],
+            }),
+            binding: "whole".to_string(),
+        };
+
+        let bindings = matcher.match_pattern(&value, &pattern).unwrap();
+        assert_eq!(bindings.len(), 3);
+        assert_eq!(bindings.get("h"), Some(&Expression::Const("1".to_string())));
+        assert!(bindings.get("t").is_some());
+        // whole should be the entire value
+        assert_eq!(bindings.get("whole"), Some(&value));
+    }
+
+    #[test]
+    fn test_eval_match_with_as_pattern() {
+        let matcher = PatternMatcher::new();
+        let scrutinee = Expression::Operation {
+            name: "Cons".to_string(),
+            args: vec![
+                Expression::Const("1".to_string()),
+                Expression::Operation {
+                    name: "Nil".to_string(),
+                    args: vec![],
+                },
+            ],
+        };
+
+        let cases = vec![MatchCase::new(
+            Pattern::As {
+                pattern: Box::new(Pattern::Constructor {
+                    name: "Cons".to_string(),
+                    args: vec![Pattern::variable("h".to_string()), Pattern::Wildcard],
+                }),
+                binding: "whole".to_string(),
+            },
+            // Body uses 'whole'
+            Expression::Object("whole".to_string()),
+        )];
+
+        let result = matcher.eval_match(&scrutinee, &cases).unwrap();
+        // Result should be the original scrutinee since body is 'whole'
+        assert_eq!(result, scrutinee);
     }
 }

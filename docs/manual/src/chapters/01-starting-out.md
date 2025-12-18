@@ -17,14 +17,14 @@ The easiest way to experiment with Kleis is the **REPL** (Read-Eval-Print Loop):
 
 ```bash
 $ cargo run --bin repl
-Kleis REPL v0.7
-Type 'help' for commands, 'quit' to exit.
+🧮 Kleis REPL v0.1.0
+   Type :help for commands, :quit to exit
 
-kleis> 2 + 2
-4
+λ> 2 + 2
+2 + 2
 
-kleis> let x = 5 in x * x
-25
+λ>  let x = 5 in x * x
+times(5, 5)
 ```
 
 ## Basic Arithmetic
@@ -93,9 +93,7 @@ You can use ASCII alternatives too:
 | `∀`     | `forall`          |
 | `∃`     | `exists`          |
 | `→`     | `->`              |
-| `×`     | `*`               |
-| `ℝ`     | `Real`            |
-| `ℕ`     | `Nat`             |
+
 
 ## What's Next?
 

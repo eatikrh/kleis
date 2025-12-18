@@ -135,11 +135,11 @@ impl PrettyPrinter {
             } => self.format_conditional_at_depth(condition, then_branch, else_branch, depth),
 
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 value,
                 body,
-            } => self.format_let_at_depth(name, type_annotation.as_deref(), value, body, depth),
+            } => self.format_let_at_depth(pattern, type_annotation.as_deref(), value, body, depth),
 
             Expression::Ascription {
                 expr,
@@ -245,7 +245,9 @@ impl PrettyPrinter {
                 .map(|c| {
                     let pattern = self.format_pattern(&c.pattern);
                     let body = self.format_at_depth(&c.body, depth + 1);
-                    format!("{}  {} => {}", indent, pattern, body)
+                    // Grammar v0.8: Handle guard
+                    let guard_str = self.format_guard(&c.guard, depth + 1);
+                    format!("{}  {}{} => {}", indent, pattern, guard_str, body)
                 })
                 .collect();
             format!(
@@ -261,10 +263,20 @@ impl PrettyPrinter {
                 .map(|c| {
                     let pattern = self.format_pattern(&c.pattern);
                     let body = self.format_at_depth(&c.body, depth);
-                    format!("{} => {}", pattern, body)
+                    // Grammar v0.8: Handle guard
+                    let guard_str = self.format_guard(&c.guard, depth);
+                    format!("{}{} => {}", pattern, guard_str, body)
                 })
                 .collect();
             format!("match {} {{ {} }}", scrutinee_str, cases_str.join(" | "))
+        }
+    }
+
+    /// Format a guard expression (Grammar v0.8)
+    fn format_guard(&self, guard: &Option<Expression>, depth: usize) -> String {
+        match guard {
+            Some(g) => format!(" if {}", self.format_at_depth(g, depth)),
+            None => String::new(),
         }
     }
 
@@ -274,6 +286,7 @@ impl PrettyPrinter {
     }
 
     /// Inner pattern formatting (static to avoid clippy warning about self in recursion)
+    /// Grammar v0.8: Added As-pattern support
     fn format_pattern_inner(pattern: &Pattern) -> String {
         match pattern {
             Pattern::Wildcard => "_".to_string(),
@@ -287,6 +300,10 @@ impl PrettyPrinter {
                         args.iter().map(Self::format_pattern_inner).collect();
                     format!("{}({})", name, formatted_args.join(", "))
                 }
+            }
+            // Grammar v0.8: As-pattern
+            Pattern::As { pattern, binding } => {
+                format!("{} as {}", Self::format_pattern_inner(pattern), binding)
             }
         }
     }
@@ -373,10 +390,10 @@ impl PrettyPrinter {
         }
     }
 
-    /// Format a let binding with depth tracking
+    /// Format a let binding with depth tracking (Grammar v0.8: supports patterns)
     fn format_let_at_depth(
         &self,
-        name: &str,
+        pattern: &crate::ast::Pattern,
         type_annotation: Option<&str>,
         value: &Expression,
         body: &Expression,
@@ -384,11 +401,13 @@ impl PrettyPrinter {
     ) -> String {
         let value_str = self.format_at_depth(value, depth);
         let body_str = self.format_at_depth(body, depth);
+        let pattern_str = self.format_pattern(pattern);
 
         // Build the let binding with optional type annotation
+        // Note: type annotations only make sense for simple Variable patterns
         let binding = match type_annotation {
-            Some(ty) => format!("{} : {}", name, ty),
-            None => name.to_string(),
+            Some(ty) => format!("{} : {}", pattern_str, ty),
+            None => pattern_str,
         };
 
         // For complex bodies, use multi-line format
@@ -853,7 +872,7 @@ mod tests {
     fn test_format_let() {
         let pp = PrettyPrinter::new();
         let expr = Expression::Let {
-            name: "y".to_string(),
+            pattern: Pattern::Variable("y".to_string()),
             type_annotation: None,
             value: Box::new(Expression::Const("5".to_string())),
             body: Box::new(Expression::Operation {
@@ -871,7 +890,7 @@ mod tests {
     fn test_format_let_with_type() {
         let pp = PrettyPrinter::new();
         let expr = Expression::Let {
-            name: "x".to_string(),
+            pattern: Pattern::Variable("x".to_string()),
             type_annotation: Some("ℝ".to_string()),
             value: Box::new(Expression::Const("5".to_string())),
             body: Box::new(Expression::Object("x".to_string())),
@@ -887,15 +906,93 @@ mod tests {
             cases: vec![
                 MatchCase {
                     pattern: Pattern::Constant("0".to_string()),
+                    guard: None,
                     body: Expression::Const("1".to_string()),
                 },
                 MatchCase {
                     pattern: Pattern::Wildcard,
+                    guard: None,
                     body: Expression::Const("0".to_string()),
                 },
             ],
         };
         assert_eq!(pp.format_expression(&expr), "match x { 0 => 1 | _ => 0 }");
+    }
+
+    /// Grammar v0.8: Test match with pattern guards
+    #[test]
+    fn test_format_match_with_guard() {
+        let pp = PrettyPrinter::new();
+        let expr = Expression::Match {
+            scrutinee: Box::new(Expression::Object("x".to_string())),
+            cases: vec![
+                MatchCase {
+                    pattern: Pattern::variable("n".to_string()),
+                    // Guard: n < 0
+                    guard: Some(Expression::Operation {
+                        name: "lt".to_string(),
+                        args: vec![
+                            Expression::Object("n".to_string()),
+                            Expression::Const("0".to_string()),
+                        ],
+                    }),
+                    body: Expression::Const("negative".to_string()),
+                },
+                MatchCase {
+                    pattern: Pattern::Wildcard,
+                    guard: None,
+                    body: Expression::Const("non-negative".to_string()),
+                },
+            ],
+        };
+        assert_eq!(
+            pp.format_expression(&expr),
+            "match x { n if n < 0 => negative | _ => non-negative }"
+        );
+    }
+
+    /// Grammar v0.8: Test as-pattern formatting
+    #[test]
+    fn test_format_as_pattern() {
+        let pp = PrettyPrinter::new();
+        // Pattern: Cons(h, t) as whole
+        let as_pattern = Pattern::as_pattern(
+            Pattern::Constructor {
+                name: "Cons".to_string(),
+                args: vec![
+                    Pattern::variable("h".to_string()),
+                    Pattern::variable("t".to_string()),
+                ],
+            },
+            "whole".to_string(),
+        );
+        assert_eq!(pp.format_pattern(&as_pattern), "Cons(h, t) as whole");
+    }
+
+    /// Grammar v0.8: Test let destructuring formatting
+    #[test]
+    fn test_format_let_destructuring() {
+        let pp = PrettyPrinter::new();
+        // let Point(x, y) = p in x + y
+        let expr = Expression::Let {
+            pattern: Pattern::Constructor {
+                name: "Point".to_string(),
+                args: vec![
+                    Pattern::variable("x".to_string()),
+                    Pattern::variable("y".to_string()),
+                ],
+            },
+            type_annotation: None,
+            value: Box::new(Expression::Object("p".to_string())),
+            body: Box::new(Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Object("y".to_string()),
+                ],
+            }),
+        };
+        assert_eq!(pp.format_expression(&expr), "let Point(x, y) = p in x + y");
     }
 
     #[test]

@@ -7,7 +7,28 @@
 // because the markup parser handles all the complex math layout rules.
 // Then we parse the markup and extract layout information.
 
-use crate::ast::Expression;
+use crate::ast::{Expression, Pattern};
+
+/// Convert a pattern to Typst markup
+fn pattern_to_typst(pattern: &Pattern) -> String {
+    match pattern {
+        Pattern::Wildcard => "_".to_string(),
+        Pattern::Variable(name) => name.clone(),
+        Pattern::Constant(c) => c.clone(),
+        Pattern::Constructor { name, args } => {
+            if args.is_empty() {
+                name.clone()
+            } else {
+                let args_str: Vec<String> = args.iter().map(pattern_to_typst).collect();
+                format!("{}({})", name, args_str.join(", "))
+            }
+        }
+        // Grammar v0.8: As-pattern
+        Pattern::As { pattern, binding } => {
+            format!("{} \"as\" {}", pattern_to_typst(pattern), binding)
+        }
+    }
+}
 
 /// Context for tracking placeholders during conversion
 pub struct ConversionContext {
@@ -112,12 +133,16 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
         }
 
         Expression::Let {
-            name, value, body, ..
+            pattern,
+            value,
+            body,
+            ..
         } => {
-            // Render as: "let" name "=" value "in" body
+            // Render as: "let" pattern "=" value "in" body
+            let pat = pattern_to_typst(pattern);
             let val = expression_to_typst(value, ctx);
             let bod = expression_to_typst(body, ctx);
-            format!("\"let\" {} \"=\" {} \"in\" {}", name, val, bod)
+            format!("\"let\" {} \"=\" {} \"in\" {}", pat, val, bod)
         }
 
         Expression::Ascription {
