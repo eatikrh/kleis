@@ -1147,9 +1147,97 @@ impl EditorRenderContext {
 ```
 
 **Good news:** The HashMap-based structure in `EditorRenderContext` is already right. We just need:
-1. Parse `@template` blocks from Kleis files (grammar extension)
+1. Parse `@template` blocks from `.kleist` files
 2. Populate a `TemplateRegistry`
 3. Pass registry to `EditorRenderContext` at startup
+
+### File Extensions
+
+| Extension | Purpose | Example |
+|-----------|---------|---------|
+| `.kleis` | Kleis programs (structures, axioms, proofs) | `stdlib/ring.kleis` |
+| `.kleist` | Rendering templates (how to display operations) | `std_template_lib/calculus.kleist` |
+| `.kpal` | Palette layout (UI tab organization) | `std_template_lib/palette.kpal` |
+
+**Why `.kleist`?**
+- Clearly related to "Kleis" (kleis + t)
+- Not used by any existing software
+- Memorable, sounds like a word
+- Literary connection: Heinrich von Kleist (German dramatist)
+
+### Standard Template Library Structure
+
+```text
+std_template_lib/
+├── basic.kleist        # +, -, ×, ÷, =, ^, _, fraction
+├── calculus.kleist     # ∫, Σ, Π, lim, d/dx, ∂/∂x
+├── quantum.kleist      # |ψ⟩, ⟨φ|, ⟨ψ|φ⟩, [A,B]
+├── tensors.kleist      # Γ, R, g, mixed indices
+├── transforms.kleist   # ℱ, ℒ, convolution
+├── pot.kleist          # Π, modal space, causal bound
+└── palette.kpal        # Tab/button layout
+```
+
+**Template file example (`calculus.kleist`):**
+```kleist
+@template integral {
+    pattern: int_bounds(integrand, from, to, variable)
+    unicode: "∫_{from}^{to} {integrand} d{variable}"
+    latex: "\\int_{{{from}}}^{{{to}}} {integrand} \\, \\mathrm{d}{variable}"
+    typst: "integral_({from})^({to}) {integrand} dif {variable}"
+    category: "calculus"
+}
+
+@template derivative {
+    pattern: d_dt(function, variable)
+    unicode: "d{function}/d{variable}"
+    latex: "\\frac{d\\,{function}}{d{variable}}"
+    typst: "(d {function})/(d {variable})"
+    category: "calculus"
+}
+```
+
+**Palette layout (`palette.kpal`):**
+```kpal
+@palette_layout {
+    tab "Basics" {
+        category: "arithmetic"
+        category: "comparison"
+        category: "brackets"
+    }
+    
+    tab "Calculus" {
+        category: "calculus"
+        category: "limits"
+    }
+    
+    tab "Linear Algebra" {
+        category: "matrices"
+        category: "vectors"
+    }
+    
+    tab "Quantum" {
+        category: "quantum"
+    }
+    
+    tab "POT" {
+        category: "pot"
+    }
+}
+```
+
+**`render_editor.rs` becomes thin:**
+```rust
+impl EditorRenderContext {
+    pub fn from_std_template_lib(lib: &StdTemplateLib) -> Self {
+        let mut ctx = EditorRenderContext::empty();
+        for template in lib.templates() {
+            ctx.add_template(/* from parsed template */);
+        }
+        ctx
+    }
+}
+```
 
 **Related docs:**
 - ADR-009: WYSIWYG Structural Editor (glyph/template specs)
