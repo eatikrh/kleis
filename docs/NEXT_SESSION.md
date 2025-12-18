@@ -899,5 +899,97 @@ testing will provide that missing safety net.
 Users could customize their own tabs (not feasible with vanilla JS).
 
 ---
-*Recorded: Dec 15, 2025*
+
+## 🔧 Type Inference Issues (Dec 17, 2025)
+
+### Issue: Comparison Operators Not Returning Bool
+
+**Found during render_editor.rs testing:**
+
+When using comparison operators (`neq`, `less_than`, etc.) in expressions like:
+```
+x ≠ Γ^λ_{μν}
+```
+
+The type checker returns the **RHS type** (Tensor) instead of **Bool**.
+
+**Root cause:** In `src/type_context.rs`:
+```rust
+// Line 725 - matches "not_equals" but NOT "neq"
+"equals" | "not_equals" => {
+    Ok(arg_types[1].clone())  // Returns RHS type, not Bool!
+}
+```
+
+**Problems:**
+1. `"neq"` is not in the match pattern (only `"not_equals"`)
+2. Even when matched, returns RHS type instead of `Bool`
+3. No type mismatch error when comparing scalar `x` with tensor `Γ`
+
+**Why this matters for Equation Editor:**
+- Piecewise functions show "if" before conditions
+- "if x < 0" implies what follows should be a **Boolean expression**
+- Type checker should validate this semantic constraint
+- Currently: `if x ≠ Tensor` is accepted when it should be an error
+
+**Operations affected:**
+- `neq` (inequality)
+- `less_than`, `greater_than` (should return Bool)
+- `logical_and`, `logical_or` (should require Bool args)
+- Any comparison used in Piecewise conditions
+
+**Proposed fix:**
+```rust
+// Add neq to the match
+"equals" | "not_equals" | "neq" => {
+    self.check_binary_args(op_name, arg_types)?;
+    // For comparisons, verify types are compatible
+    // Then return Bool, not RHS type
+    Ok(Type::Bool)
+}
+```
+
+**Note:** This is a semantic design question - `equals` serves double duty:
+- **Definition:** `x = 5` means x has type of 5
+- **Assertion:** `x = 5` is a Bool predicate
+
+The type system currently assumes definition semantics. For Piecewise conditions,
+we need assertion/predicate semantics (returns Bool).
+
+---
+
+## ✅ render_editor.rs Implementation (Dec 17, 2025)
+
+### What Was Done
+
+Created `src/render_editor.rs` - a pure EditorNode renderer that fixes the tensor
+index bug by never converting EditorNode to Expression.
+
+**Branch:** `refactor/editor-node-rendering`
+
+**The Bug Fixed:**
+```
+Before: Tensor inside equals → R^{μ ν ρ} = 0 (all upper - WRONG)
+After:  Tensor inside equals → R^{μ}_{ν ρ} = 0 (correct indices)
+```
+
+**Key Changes:**
+1. `src/render_editor.rs` - New 2000+ line renderer
+2. `src/bin/server.rs` - Wired to use render_editor for /api/render_ast
+3. `src/math_layout/typst_compiler.rs` - Wired to use render_editor for Typst
+
+**Templates Added (80+):**
+- All comparison operators (lt, gt, leq, geq, neq, less_than, greater_than)
+- All logical operators (and, or, not, logical_and, logical_or, logical_not)
+- Quantum operators (ket, bra, inner, outer, commutator, expectation)
+- Vectors (vector_bold, vector_arrow, dot, cross, norm)
+- Calculus (sqrt, int_bounds, sum_bounds, prod_bounds, lim, d_dt, d_part)
+- Transforms (fourier, laplace, inverse variants, convolution)
+- Accents (dot_accent, ddot_accent)
+- And more...
+
+**Status:** Functional, under testing. Not yet merged to main.
+
+---
+*Recorded: Dec 17, 2025*
 
