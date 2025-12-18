@@ -538,15 +538,18 @@ fn test_match_with_constants() {
     let expr = Expression::Match {
         scrutinee: Box::new(Expression::Const("1".to_string())),
         cases: vec![
-            MatchCase { guard: None,
+            MatchCase {
+                guard: None,
                 pattern: Pattern::Constant("0".to_string()),
                 body: Expression::Const("100".to_string()),
             },
-            MatchCase { guard: None,
+            MatchCase {
+                guard: None,
                 pattern: Pattern::Constant("1".to_string()),
                 body: Expression::Const("200".to_string()),
             },
-            MatchCase { guard: None,
+            MatchCase {
+                guard: None,
                 pattern: Pattern::Wildcard,
                 body: Expression::Const("300".to_string()),
             },
@@ -574,15 +577,18 @@ fn test_match_wildcard_fallback() {
     let expr = Expression::Match {
         scrutinee: Box::new(Expression::Const("42".to_string())),
         cases: vec![
-            MatchCase { guard: None,
+            MatchCase {
+                guard: None,
                 pattern: Pattern::Constant("0".to_string()),
                 body: Expression::Const("100".to_string()),
             },
-            MatchCase { guard: None,
+            MatchCase {
+                guard: None,
                 pattern: Pattern::Constant("1".to_string()),
                 body: Expression::Const("200".to_string()),
             },
-            MatchCase { guard: None,
+            MatchCase {
+                guard: None,
                 pattern: Pattern::Wildcard,
                 body: Expression::Const("300".to_string()),
             },
