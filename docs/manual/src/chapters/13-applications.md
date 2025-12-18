@@ -95,9 +95,9 @@ structure Eigen(n : ℕ) {
     operation eigenvectors : Matrix(n, n, ℂ) → List(Vector(n, ℂ))
     
     axiom eigenpair : ∀(A : Matrix(n, n, ℂ))(i : ℕ).
-        let lambda = nth(eigenvalues(A), i) in
+        let lam = nth(eigenvalues(A), i) in
         let v = nth(eigenvectors(A), i) in
-            mul(A, v) = scale(lambda, v)
+            mul(A, v) = scale(lam, v)
 }
 ```
 
