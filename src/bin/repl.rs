@@ -242,6 +242,7 @@ fn handle_command(
         ":ast" => show_ast(arg),
         ":type" | ":t" => show_type(arg),
         ":verify" | ":v" => verify_expression(arg, registry, evaluator),
+        ":trace" | ":tr" => trace_match(arg, registry, evaluator),
         ":load" | ":l" => load_file(arg, evaluator, imported_paths),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
@@ -328,6 +329,7 @@ fn print_help_main() {
     println!("  :ast <expr>        Show parsed AST");
     println!("  :type, :t <expr>   Show inferred type");
     println!("  :verify, :v <expr> Verify expression with Z3");
+    println!("  :trace, :tr <expr> Trace match expression (show which branch matches)");
     println!("  :load, :l <file>   Load a .kleis file");
     println!("  :env, :e           Show defined functions");
     println!("  :define <def>      Define a function");
@@ -1076,6 +1078,270 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
         Err(e) => {
             println!("❌ Parse error: {}", e);
         }
+    }
+}
+
+/// Trace match expression - show which branch matches and why
+///
+/// Usage: :trace match x { 0 => "zero" | 1 => "one" | _ => "other" }
+///
+/// Output shows:
+/// - Each case with its pattern
+/// - Whether the pattern matches (✅) or not (❌)
+/// - The final result
+#[cfg(feature = "axiom-verification")]
+fn trace_match(input: &str, _registry: &StructureRegistry, evaluator: &Evaluator) {
+    use kleis::ast::Expression;
+    use kleis::pretty_print::PrettyPrinter;
+
+    let pp = PrettyPrinter::new();
+
+    if input.is_empty() {
+        println!("Usage: :trace match <scrutinee> {{ pattern => expr | ... }}");
+        println!("       :trace <any-expression>  (shows evaluation trace)");
+        println!();
+        println!("Example: :trace match 5 {{ 0 => \"zero\" | n if n > 0 => \"positive\" | _ => \"negative\" }}");
+        return;
+    }
+
+    // Parse the expression
+    let mut parser = KleisParser::new(input);
+    match parser.parse() {
+        Ok(expr) => {
+            // Check if it's a match expression
+            if let Expression::Match { scrutinee, cases } = &expr {
+                println!("🔍 Match Trace");
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                println!("Scrutinee: {}", pp.format_expression(scrutinee));
+                println!();
+
+                // Try to evaluate the scrutinee to a concrete value
+                let scrutinee_value = evaluator.eval(scrutinee).ok();
+                if let Some(ref val) = scrutinee_value {
+                    println!("Evaluated to: {}", pp.format_expression(val));
+                    println!();
+                }
+
+                // Track which case matched
+                let mut matched_case: Option<usize> = None;
+                let mut matched_result: Option<Expression> = None;
+
+                println!("Cases:");
+                for (i, case) in cases.iter().enumerate() {
+                    let pattern_str = format_pattern(&case.pattern);
+                    let guard_str = case
+                        .guard
+                        .as_ref()
+                        .map(|g| format!(" if {}", pp.format_expression(g)))
+                        .unwrap_or_default();
+
+                    // Check if this pattern matches
+                    let pattern_matches = if let Some(ref val) = scrutinee_value {
+                        check_pattern_matches(&case.pattern, val, &case.guard, evaluator)
+                    } else {
+                        // Symbolic scrutinee - we can't determine concretely
+                        PatternMatchResult::MayMatch
+                    };
+
+                    let status = match pattern_matches {
+                        PatternMatchResult::Matches => {
+                            if matched_case.is_none() {
+                                matched_case = Some(i);
+                                matched_result = Some(case.body.clone());
+                                "✅ MATCHED"
+                            } else {
+                                "⚪ (unreachable - earlier case matched)"
+                            }
+                        }
+                        PatternMatchResult::DoesNotMatch => "❌",
+                        PatternMatchResult::MayMatch => "❓ (may match)",
+                    };
+
+                    println!(
+                        "  {} Case {}: {}{} => {}",
+                        status,
+                        i + 1,
+                        pattern_str,
+                        guard_str,
+                        pp.format_expression(&case.body)
+                    );
+                }
+
+                println!();
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+                if let Some(result) = matched_result {
+                    // Try to evaluate the result
+                    let final_result = evaluator.eval(&result).unwrap_or(result);
+                    println!("Result: {}", pp.format_expression(&final_result));
+                } else if scrutinee_value.is_none() {
+                    println!("Result: ❓ (symbolic scrutinee - use :verify for Z3 analysis)");
+                } else {
+                    println!("Result: ❌ No case matched (non-exhaustive?)");
+                }
+            } else {
+                // Not a match expression - just evaluate and show steps
+                println!("🔍 Expression Trace");
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                println!("Input: {}", pp.format_expression(&expr));
+
+                match evaluator.eval(&expr) {
+                    Ok(result) => {
+                        println!("Result: {}", pp.format_expression(&result));
+                    }
+                    Err(e) => {
+                        println!("Error: {}", e);
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            println!("❌ Parse error: {}", e);
+        }
+    }
+}
+
+#[cfg(feature = "axiom-verification")]
+#[derive(Debug, Clone, PartialEq)]
+enum PatternMatchResult {
+    Matches,
+    DoesNotMatch,
+    MayMatch, // For symbolic scrutinees
+}
+
+#[cfg(feature = "axiom-verification")]
+fn format_pattern(pattern: &kleis::ast::Pattern) -> String {
+    use kleis::ast::Pattern;
+
+    match pattern {
+        Pattern::Wildcard => "_".to_string(),
+        Pattern::Variable(name) => name.clone(),
+        Pattern::Constant(val) => val.clone(),
+        Pattern::Constructor { name, args } => {
+            if args.is_empty() {
+                name.clone()
+            } else {
+                format!(
+                    "{}({})",
+                    name,
+                    args.iter()
+                        .map(format_pattern)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        Pattern::As { pattern, binding } => {
+            format!("{} as {}", format_pattern(pattern), binding)
+        }
+    }
+}
+
+#[cfg(feature = "axiom-verification")]
+fn check_pattern_matches(
+    pattern: &kleis::ast::Pattern,
+    value: &kleis::ast::Expression,
+    guard: &Option<kleis::ast::Expression>,
+    evaluator: &Evaluator,
+) -> PatternMatchResult {
+    use kleis::ast::{Expression, Pattern};
+
+    // First check if pattern structurally matches
+    let structural_match = match (pattern, value) {
+        (Pattern::Wildcard, _) => true,
+        (Pattern::Variable(_), _) => true,
+        (Pattern::Constant(p), Expression::Const(v)) => p == v,
+        (Pattern::Constant(p), Expression::String(v)) => p == v,
+        (
+            Pattern::Constructor { name: pn, args: pa },
+            Expression::Operation { name: vn, args: va },
+        ) => {
+            pn == vn
+                && pa.len() == va.len()
+                && pa.iter().zip(va.iter()).all(|(pp, vv)| {
+                    matches!(
+                        check_pattern_matches(pp, vv, &None, evaluator),
+                        PatternMatchResult::Matches
+                    )
+                })
+        }
+        (Pattern::As { pattern: inner, .. }, v) => {
+            matches!(
+                check_pattern_matches(inner, v, &None, evaluator),
+                PatternMatchResult::Matches
+            )
+        }
+        _ => false,
+    };
+
+    if !structural_match {
+        return PatternMatchResult::DoesNotMatch;
+    }
+
+    // Check guard if present
+    if let Some(guard_expr) = guard {
+        // Substitute pattern variables with their bound values
+        let substituted_guard = substitute_pattern_bindings(guard_expr, pattern, value);
+        match evaluator.eval(&substituted_guard) {
+            Ok(Expression::Const(s)) if s == "true" || s == "True" => PatternMatchResult::Matches,
+            Ok(Expression::Operation { name, args }) if name == "True" && args.is_empty() => {
+                PatternMatchResult::Matches
+            }
+            _ => PatternMatchResult::DoesNotMatch,
+        }
+    } else {
+        PatternMatchResult::Matches
+    }
+}
+
+#[cfg(feature = "axiom-verification")]
+fn substitute_pattern_bindings(
+    expr: &kleis::ast::Expression,
+    pattern: &kleis::ast::Pattern,
+    value: &kleis::ast::Expression,
+) -> kleis::ast::Expression {
+    use kleis::ast::Expression;
+
+    // Collect bindings from pattern matching
+    let mut bindings: Vec<(String, Expression)> = Vec::new();
+    collect_pattern_bindings(pattern, value, &mut bindings);
+
+    // Apply substitutions
+    let mut result = expr.clone();
+    for (name, val) in bindings {
+        result = substitute_var(&result, &name, &val);
+    }
+    result
+}
+
+#[cfg(feature = "axiom-verification")]
+fn collect_pattern_bindings(
+    pattern: &kleis::ast::Pattern,
+    value: &kleis::ast::Expression,
+    bindings: &mut Vec<(String, kleis::ast::Expression)>,
+) {
+    use kleis::ast::{Expression, Pattern};
+
+    match (pattern, value) {
+        (Pattern::Variable(name), v) => {
+            bindings.push((name.clone(), v.clone()));
+        }
+        (Pattern::Constructor { args: pa, .. }, Expression::Operation { args: va, .. }) => {
+            for (p, v) in pa.iter().zip(va.iter()) {
+                collect_pattern_bindings(p, v, bindings);
+            }
+        }
+        (
+            Pattern::As {
+                pattern: inner,
+                binding,
+            },
+            v,
+        ) => {
+            bindings.push((binding.clone(), v.clone()));
+            collect_pattern_bindings(inner, v, bindings);
+        }
+        _ => {}
     }
 }
 
