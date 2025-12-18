@@ -770,6 +770,7 @@ The current Kleis parser implements ~30% of the v0.7 grammar. Here are the notab
 | Constant | `0`, `42` | ✅ Works |
 | **As-pattern** | `Cons(h, t) as whole` | ❌ NOT IMPLEMENTED |
 | **Pattern guard** | `x if x < 0 => ...` | ❌ NOT IMPLEMENTED |
+| **Let destructuring** | `let Point(x, y) = p in ...` | ❌ NOT IMPLEMENTED |
 
 ---
 
@@ -804,6 +805,36 @@ define sign(n) =
 
 ---
 
+**Let destructuring** allows pattern matching in let bindings:
+- Haskell: `let (x, y) = point in ...`
+- Rust: `let Point { x, y } = point;`
+- OCaml: `let (x, y) = point in ...`
+
+**Use cases:**
+```kleis
+define distance_squared(origin) =
+    let Point(x, y) = origin in x^2 + y^2
+
+define sum_first_two(triple) =
+    let (first, second, _) = triple in first + second
+```
+
+**To implement:**
+1. Change `Let.name: String` to `Let.pattern: Pattern` in `src/ast.rs`
+2. Update `parse_let_binding()` to call `parse_pattern()` instead of `parse_identifier()`
+3. Update evaluator: match value against pattern, bind all extracted variables
+4. Type inference: infer types for all bound variables from pattern structure
+
+**Current workaround:** Use explicit match:
+```kleis
+define distance_squared(origin) =
+    match origin {
+        Point(x, y) => x^2 + y^2
+    }
+```
+
+---
+
 **As-pattern (alias binding)** is a common feature in functional languages:
 - Haskell: `list@(x:xs)` 
 - Rust: `list @ [head, ..]`
@@ -833,6 +864,7 @@ define filter_head(list) =
 4. **Add top-level `let`/`verify`** - For example files and notebooks
 5. **Add `as` pattern support** - Alias binding in pattern matching
 6. **Add pattern guards** - Conditional matching (`x if x < 0 => ...`)
+7. **Add let destructuring** - Pattern matching in let bindings (`let Point(x, y) = p in ...`)
 
 ---
 *Noted: Dec 15, 2025*
