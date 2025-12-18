@@ -1291,5 +1291,67 @@ impl EditorRenderContext {
 - docs/archive/template-implementation-strategy.md (detailed plan)
 
 ---
+
+## 📚 Documentation vs Reality Gaps (Dec 18, 2025)
+
+### Issue: Complex Numbers Not Instantiable
+
+**The manual claims** (`01-starting-out.md`):
+```
+ℂ (or Complex)    Complex numbers    3 + 4i, i
+```
+
+**Reality:**
+- `Complex` is a type **tag** in `stdlib/types.kleis`: `| Complex` (nullary variant)
+- No **data constructor** exists: `Complex(real: ℝ, imag: ℝ)`
+- No **literal syntax** in parser: `3 + 4i` doesn't parse
+- No **imaginary unit**: `i` is not defined
+- The only TODO is in `stdlib/prelude.kleis`: `// define i : ℂ = ... (TODO: needs complex literal syntax)`
+
+**Manual example** (`09-structures.md`) shows aspirational code:
+```kleis
+structure Complex {
+    re : ℝ  // real part
+    im : ℝ  // imaginary part
+}
+```
+
+But this is NOT in stdlib. You **cannot create complex values** currently.
+
+**Options:**
+1. Fix the documentation to say "planned, not implemented"
+2. Implement complex numbers properly:
+   - Add `data ℂ = Complex(re: ℝ, im: ℝ)` to stdlib
+   - Add literal syntax `3 + 4i` to parser
+   - Define `i : ℂ = Complex(0, 1)`
+
+### Issue: ASCII Alternatives Not All Implemented
+
+**The manual claims** (`01-starting-out.md`):
+
+| Unicode | ASCII Alternative |
+|---------|-------------------|
+| `∀`     | `forall`          |
+| `∃`     | `exists`          |
+| `→`     | `->`              |
+| `×`     | `*`               |
+| `ℝ`     | `Real`            |
+| `ℕ`     | `Nat`             |
+
+**Actual parser support:**
+
+| Claim | Status | Notes |
+|-------|--------|-------|
+| `forall` | ✅ Works | Parser line 891 |
+| `exists` | ✅ Works | Parser line 914 |
+| `->` | ✅ Works | Parser line 1337 |
+| `*` for `×` | ❌ Different | `*` = multiply, `×` = product type |
+| `Real` for `ℝ` | ❌ Not aliased | Just different identifiers |
+| `Nat` for `ℕ` | ❌ Not aliased | Just different identifiers |
+
+**Fix needed:** Either implement the aliases or correct the documentation.
+
+---
 *Recorded: Dec 17, 2025*
+*Updated: Dec 18, 2025*
 
