@@ -647,7 +647,8 @@ impl KleisParser {
 
         loop {
             self.skip_whitespace();
-            let is_implies = self.peek() == Some('⟹') || self.peek() == Some('→');
+            // Supports: → (U+2192), ⇒ (U+21D2), ⟹ (U+27F9)
+            let is_implies = matches!(self.peek(), Some('→') | Some('⇒') | Some('⟹'));
 
             if !is_implies {
                 break;
@@ -1965,7 +1966,7 @@ impl KleisParser {
                 '=' => Some("equals".to_string()),
                 '∧' => Some("logical_and".to_string()),
                 '∨' => Some("logical_or".to_string()),
-                '→' | '⟹' => Some("implies".to_string()),
+                '→' | '⇒' | '⟹' => Some("implies".to_string()),
                 '↔' | '⟺' | '⇔' => Some("iff".to_string()),
                 _ => None,
             };
