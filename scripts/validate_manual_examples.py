@@ -138,7 +138,7 @@ def should_validate_block(code: str) -> bool:
     return True
 
 
-def validate_with_kleis_cli(code: str, line_offset: int, project_root: Path) -> list[str]:
+def validate_with_kleis_cli(code: str, line_offset: int, project_root: Path, verbose: bool = False) -> list[str]:
     """
     Validate code by running it through `kleis --check`.
     Returns list of error messages if parsing fails.
@@ -153,30 +153,47 @@ def validate_with_kleis_cli(code: str, line_offset: int, project_root: Path) -> 
         f.write(code)
         temp_path = f.name
     
+    if verbose:
+        print(f"      📝 Temp file: {temp_path}")
+        # Show first few lines of code
+        preview = code.strip().split('\n')[0][:60]
+        print(f"      📄 Code: {preview}...")
+    
     try:
         # Run kleis --check
         kleis_binary = project_root / "target" / "release" / "kleis"
         if not kleis_binary.exists():
             kleis_binary = project_root / "target" / "debug" / "kleis"
         
+        cmd = None
+        if kleis_binary.exists():
+            cmd = [str(kleis_binary), "--check", temp_path]
+        else:
+            cmd = ["cargo", "run", "--bin", "kleis", "--quiet", "--", "--check", temp_path]
+        
+        if verbose:
+            print(f"      🔧 Running: {' '.join(cmd)}")
+        
         if kleis_binary.exists():
             result = subprocess.run(
-                [str(kleis_binary), "--check", temp_path],
+                cmd,
                 capture_output=True,
                 text=True,
                 cwd=project_root,
                 timeout=10
             )
         else:
-            # Fall back to cargo run
             result = subprocess.run(
-                ["cargo", "run", "--bin", "kleis", "--quiet", "--", "--check", temp_path],
+                cmd,
                 capture_output=True,
                 text=True,
                 cwd=project_root,
                 timeout=30,
                 env={**os.environ, "Z3_SYS_Z3_HEADER": "/opt/homebrew/opt/z3/include/z3.h"}
             )
+        
+        if verbose:
+            print(f"      ✅ Exit code: {result.returncode}")
         
         # Check for parse errors in output
         output = result.stdout + result.stderr
@@ -209,7 +226,7 @@ def validate_with_kleis_cli(code: str, line_offset: int, project_root: Path) -> 
     return issues
 
 
-def validate_file(filepath: Path, project_root: Path, strict: bool = False) -> tuple[list[str], int]:
+def validate_file(filepath: Path, project_root: Path, strict: bool = False, verbose: bool = False) -> tuple[list[str], int]:
     """
     Validate a single markdown file.
     Returns (issues, blocks_checked_with_parser).
@@ -235,7 +252,9 @@ def validate_file(filepath: Path, project_root: Path, strict: bool = False) -> t
         
         # Validate with actual parser (if strict mode)
         if strict and should_validate_block(code):
-            parser_issues = validate_with_kleis_cli(code, line_offset, project_root)
+            if verbose:
+                print(f"    🔍 Validating block at line {line_offset}...")
+            parser_issues = validate_with_kleis_cli(code, line_offset, project_root, verbose=verbose)
             issues.extend(parser_issues)
             parser_checked += 1
     
@@ -275,6 +294,11 @@ def main():
         "--strict", 
         action="store_true",
         help="Run actual syntax check with 'kleis --check' (requires built kleis binary)"
+    )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Show detailed output: temp file paths, commands run, etc."
     )
     args = parser.parse_args()
     
@@ -319,7 +343,7 @@ def main():
         blocks = extract_kleis_blocks(content, str(filepath))
         blocks_validated += len(blocks)
         
-        issues, parser_checked = validate_file(filepath, project_root, strict=args.strict)
+        issues, parser_checked = validate_file(filepath, project_root, strict=args.strict, verbose=args.verbose)
         parser_checked_total += parser_checked
         
         if issues:
