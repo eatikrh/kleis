@@ -138,3 +138,73 @@ log(b, x)        // Logarithm base b
 e                // Euler's number (2.71828...)
 i                // Imaginary unit
 ```
+
+## Reserved Keywords
+
+The following words are reserved and cannot be used as variable or function names:
+
+### Control Flow
+
+| Keyword | Purpose | Example |
+|---------|---------|---------|
+| `if` | Conditional start | `if x > 0 then ...` |
+| `then` | Conditional consequence | `if P then Q else R` |
+| `else` | Conditional alternative | `if P then Q else R` |
+| `match` | Pattern matching | `match x { ... }` |
+| `let` | Local binding | `let x = 5 in ...` |
+| `in` | Binding body | `let x = 5 in x + 1` |
+
+### Functions
+
+| Keyword | Purpose | Example |
+|---------|---------|---------|
+| `lambda` | Anonymous function (ASCII) | `lambda x . x + 1` |
+| `λ` | Anonymous function (Unicode) | `λ x . x + 1` |
+| `define` | Function definition | `define f(x) = x^2` |
+
+### Quantifiers
+
+| Keyword | Purpose | Example |
+|---------|---------|---------|
+| `forall` | Universal quantifier (ASCII) | `forall x . P(x)` |
+| `∀` | Universal quantifier (Unicode) | `∀(x : ℝ). x = x` |
+| `exists` | Existential quantifier (ASCII) | `exists x . P(x)` |
+| `∃` | Existential quantifier (Unicode) | `∃(x : ℝ). x > 0` |
+
+### Logical Operators (keyword form)
+
+| Keyword | Purpose | Example |
+|---------|---------|---------|
+| `and` | Logical conjunction | `P and Q` |
+| `or` | Logical disjunction | `P or Q` |
+| `not` | Logical negation | `not P` |
+
+### Definitions
+
+| Keyword | Purpose | Example |
+|---------|---------|---------|
+| `structure` | Algebraic structure | `structure Group(G) { ... }` |
+| `implements` | Structure implementation | `implements Group(ℤ) { ... }` |
+| `data` | Algebraic data type | `data Option(T) = Some(T) \| None` |
+| `type` | Type alias | `type Point = (ℝ, ℝ)` |
+| `operation` | Operation declaration | `operation add : G × G → G` |
+| `element` | Element declaration | `element zero : G` |
+| `axiom` | Axiom declaration | `axiom identity : ...` |
+
+### Modifiers and Clauses
+
+| Keyword | Purpose | Example |
+|---------|---------|---------|
+| `import` | File import | `import "stdlib/prelude.kleis"` |
+| `over` | Type constraint | `structure V over Field(F) { ... }` |
+| `extends` | Structure extension | `structure Ring extends Group { ... }` |
+| `as` | Pattern alias | `match x { y as Some(_) => ... }` |
+
+### Commands
+
+| Keyword | Purpose | Example |
+|---------|---------|---------|
+| `verify` | Verification directive | `:verify P ∧ Q` |
+
+> **Note:** Using a reserved keyword as a variable name will cause a parse error.
+> For example, `let lambda = 5` fails because `lambda` is reserved for anonymous functions.
