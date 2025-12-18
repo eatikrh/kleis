@@ -619,16 +619,18 @@ impl KleisParser {
     }
 
     /// Parse biconditional: A ↔ B (logical iff, lowest precedence, left associative)
+    /// Supports: ↔ (U+2194), ⟺ (U+27FA), ⇔ (U+21D4)
     fn parse_biconditional(&mut self) -> Result<Expression, KleisParseError> {
         let mut left = self.parse_implication()?;
 
         loop {
             self.skip_whitespace();
-            if self.peek() != Some('↔') {
+            let is_iff = matches!(self.peek(), Some('↔') | Some('⟺') | Some('⇔'));
+            if !is_iff {
                 break;
             }
 
-            self.advance(); // consume ↔
+            self.advance(); // consume ↔, ⟺, or ⇔
             let right = self.parse_implication()?;
             left = Expression::Operation {
                 name: "iff".to_string(),
@@ -1964,7 +1966,7 @@ impl KleisParser {
                 '∧' => Some("logical_and".to_string()),
                 '∨' => Some("logical_or".to_string()),
                 '→' | '⟹' => Some("implies".to_string()),
-                '↔' => Some("iff".to_string()),
+                '↔' | '⟺' | '⇔' => Some("iff".to_string()),
                 _ => None,
             };
 
