@@ -125,6 +125,40 @@ editor that combines:
 | ✅ Now | Equation Editor | Single expression, render to multiple formats |
 | 🔄 Next | Kleis Editor | Load/edit `.kleis` files, palette for axiom authoring |
 | 🔮 Future | Kleis Notebook | Multi-cell, proofs, dependency tracking, exports |
+| 🔮 Future | Kleis LSP | Language Server Protocol for editor integration |
+
+### Kleis LSP (Language Server Protocol)
+
+**Purpose:** Enable Kleis support in any editor (VS Code, Cursor, Neovim, Emacs, etc.)
+
+**Features to implement:**
+
+| LSP Feature | Kleis Implementation |
+|-------------|---------------------|
+| `textDocument/hover` | Show type info: hover over `Γ` → "Tensor(1,2,dim,ℝ)" |
+| `textDocument/completion` | Autocomplete operations, structures, symbols |
+| `textDocument/diagnostic` | Type errors, parse errors, exhaustiveness warnings |
+| `textDocument/definition` | Jump to structure/operation definitions |
+| `textDocument/references` | Find all uses of a symbol |
+| `textDocument/formatting` | Auto-format Kleis code |
+| `textDocument/rename` | Rename symbols across files |
+
+**Implementation approach:**
+```rust
+// src/bin/kleis-lsp.rs
+// Reuses existing infrastructure:
+// - kleis_parser.rs → parsing
+// - type_checker.rs → diagnostics  
+// - structure_registry.rs → definitions
+// Wraps in LSP JSON-RPC protocol
+```
+
+**Dependencies:**
+- `tower-lsp` crate (Rust LSP framework)
+- Existing parser and type checker
+- File watching for multi-file projects
+
+**Priority:** Lower than Notebook (REPL and Equation Editor are primary interfaces)
 
 ### Key Insight (Dec 14, 2025)
 
