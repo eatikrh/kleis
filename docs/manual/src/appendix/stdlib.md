@@ -20,6 +20,12 @@ The Kleis standard library provides foundational types, structures, and operatio
 Bool  // True or False
 ```
 
+### String Type
+
+```kleis
+String  // Text literals: "hello", "world"
+```
+
 ### Unit Type
 
 ```kleis

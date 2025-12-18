@@ -114,17 +114,17 @@ But explicit types make code clearer and catch errors earlier!
 ## The Type Hierarchy
 
 ```
-        Any
-       /   \
-    Scalar  Collection
-    /    \       |
-   ℂ    Bool   List
-   |           /   \
-   ℝ      Vector  Matrix
-   |
-   ℤ
-   |
-   ℕ
+              Any
+         /    |    \
+     Scalar  String  Collection
+     /    \              |
+    ℂ    Bool          List
+    |                 /    \
+    ℝ            Vector   Matrix
+    |
+    ℤ
+    |
+    ℕ
 ```
 
 Note: `ℕ ⊂ ℤ ⊂ ℝ ⊂ ℂ` (natural numbers are integers are reals are complex)
