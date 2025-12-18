@@ -4,7 +4,7 @@
 
 The universal quantifier expresses "for all":
 
-```kleis
+```kleis example
 // Quantified propositions (used inside axioms)
 axiom reflexivity : ∀(x : ℝ). x = x
 axiom additive_identity : ∀(x : ℝ). x + 0 = x
@@ -17,7 +17,7 @@ ASCII alternative: `forall x . ...`
 
 The existential quantifier expresses "there exists":
 
-```kleis
+```kleis example
 // Existential quantifiers
 axiom positive_exists : ∃(x : ℝ). x > 0
 axiom sqrt2_exists : ∃(y : ℝ). y * y = 2
@@ -30,7 +30,7 @@ ASCII alternative: `exists x . ...`
 
 Build complex statements:
 
-```kleis
+```kleis example
 // Every number has a successor
 axiom successor : ∀(n : ℕ). ∃(m : ℕ). m = n + 1
 
@@ -78,7 +78,7 @@ define zero_iff_square_zero(x) = x = 0 ↔ x * x = 0  // x is zero iff x² is ze
 
 Restrict the domain:
 
-```kleis
+```kleis example
 axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
 axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
 ```
@@ -104,7 +104,7 @@ structure Group(G) {
 
 Kleis uses Z3 to check quantified statements:
 
-```kleis
+```kleis example
 // Z3 can verify this is always true:
 axiom add_zero : ∀(x : ℝ). x + 0 = x
 

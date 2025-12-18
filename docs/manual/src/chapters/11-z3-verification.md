@@ -12,7 +12,7 @@
 
 Use `verify` to check a statement:
 
-```kleis
+```kleis example
 axiom commutativity : ∀(x : ℝ)(y : ℝ). x + y = y + x
 // Z3 verifies: ✓ Valid
 
@@ -27,7 +27,7 @@ axiom all_positive : ∀(x : ℝ). x > 0
 
 Z3 handles universal and existential quantifiers:
 
-```kleis
+```kleis example
 axiom additive_identity : ∀(x : ℝ). x + 0 = x
 // Z3 verifies: ✓ Valid
 
@@ -71,7 +71,7 @@ implements Group(ℤ) {
 
 Prove that premises imply conclusions:
 
-```kleis
+```kleis example
 // If x > 0 and y > 0, then x + y > 0
 axiom sum_positive : ∀(x : ℝ)(y : ℝ). (x > 0 ∧ y > 0) → x + y > 0
 // Z3 verifies: ✓ Valid
@@ -86,7 +86,7 @@ axiom triangle_ineq : ∀(x : ℝ)(y : ℝ)(a : ℝ)(b : ℝ).
 
 When verification fails, Z3 provides counterexamples:
 
-```kleis
+```kleis example
 axiom square_equals_self : ∀(x : ℝ). x^2 = x
 // Z3: ✗ Invalid, Counterexample: x = 2 (since 4 ≠ 2)
 

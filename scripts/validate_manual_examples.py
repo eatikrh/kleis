@@ -49,25 +49,31 @@ def find_markdown_files(manual_dir: Path) -> list[Path]:
     return list(manual_dir.glob("**/*.md"))
 
 
-def extract_kleis_blocks(content: str, filepath: str) -> list[tuple[int, str]]:
+def extract_kleis_blocks(content: str, filepath: str) -> list[tuple[int, str, bool]]:
     """
     Extract all ```kleis code blocks from markdown content.
-    Returns list of (line_number, code_block) tuples.
+    Returns list of (line_number, code_block, is_example) tuples.
+    
+    Blocks marked as ```kleis example are flagged as examples and skipped in strict mode.
     """
     blocks = []
     lines = content.split('\n')
     in_block = False
     block_start = 0
     block_lines = []
+    is_example = False
     
     for i, line in enumerate(lines, 1):
-        if line.strip().startswith('```kleis'):
+        stripped = line.strip()
+        if stripped.startswith('```kleis'):
             in_block = True
             block_start = i
             block_lines = []
-        elif in_block and line.strip().startswith('```'):
+            # Check for "```kleis example" or "```kleis fragment" etc.
+            is_example = 'example' in stripped.lower() or 'fragment' in stripped.lower()
+        elif in_block and stripped.startswith('```'):
             in_block = False
-            blocks.append((block_start, '\n'.join(block_lines)))
+            blocks.append((block_start, '\n'.join(block_lines), is_example))
         elif in_block:
             block_lines.append(line)
     
@@ -249,9 +255,15 @@ def validate_file(filepath: Path, project_root: Path, strict: bool = False, verb
     
     blocks = extract_kleis_blocks(content, str(filepath))
     
-    for line_offset, code in blocks:
+    for line_offset, code, is_example in blocks:
         # Skip empty blocks
         if not code.strip():
+            continue
+        
+        # Skip example blocks in strict mode (they're pedagogical, not runnable)
+        if is_example:
+            if verbose:
+                print(f"    ⏭️  Skipping example block at line {line_offset} (marked as ```kleis example)")
             continue
             
         # Check deprecated patterns (always)

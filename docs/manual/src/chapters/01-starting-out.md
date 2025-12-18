@@ -75,7 +75,7 @@ define x = 42  // Inline comment
 
 Kleis embraces mathematical notation with full Unicode support:
 
-```kleis
+```kleis example
 // Greek letters
 define α = 0.5
 define β = 1.0
