@@ -1351,6 +1351,16 @@ But this is NOT in stdlib. You **cannot create complex values** currently.
 
 **Fix needed:** Either implement the aliases or correct the documentation.
 
+### Issue: REPL :help Missing Commands
+
+**Commands not shown in `:help`:**
+- `:define` - Define a value/function in the REPL session
+- `:verify` - Verify an expression with Z3
+
+These commands exist and work but users won't discover them from `:help`.
+
+**Fix needed:** Update REPL `:help` output to include all available commands.
+
 ---
 *Recorded: Dec 17, 2025*
 *Updated: Dec 18, 2025*
