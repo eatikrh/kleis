@@ -1,0 +1,125 @@
+// ============================================================
+// Kleis Static Analysis Example: SQL Injection Detection
+// ============================================================
+// This example demonstrates using Kleis to detect SQL injection
+// vulnerabilities by analyzing source code as strings.
+//
+// Run with: cargo run --bin repl
+// Then: :load examples/security/sql_injection_detection.kleis
+// ============================================================
+
+// ============================================================
+// VULNERABLE CODE SAMPLES
+// ============================================================
+
+// Java - Classic SQL Injection (VULNERABLE)
+// The code concatenates user input directly into SQL query
+//
+// Vulnerability Pattern:
+//   1. User input source: getParameter("id")
+//   2. String concatenation: + userId +
+//   3. SQL execution sink: executeQuery()
+
+// To verify this code is vulnerable, run:
+//   :verify contains("String q = x + userId; db.executeQuery(q)", "+ userId")
+//   :verify contains("String q = x + userId; db.executeQuery(q)", "executeQuery")
+//   Result: ✅ Valid (pattern found = VULNERABLE!)
+
+// JavaScript - Node.js SQL Injection (VULNERABLE)
+// Similar pattern in JavaScript
+
+// To verify:
+//   :verify and(
+//     contains("db.query(sql + req.body.user)", "req.body"),
+//     contains("db.query(sql + req.body.user)", "query")
+//   )
+//   Result: ✅ Valid = VULNERABLE
+
+// ============================================================
+// SAFE CODE PATTERNS
+// ============================================================
+
+// Java - Parameterized Query (SAFE)
+// Uses PreparedStatement with parameter binding
+
+// To verify this is safe:
+//   :verify contains("PreparedStatement ps = c.prepareStatement(q); ps.setString(1, id)", "PreparedStatement")
+//   :verify not(contains("PreparedStatement ps = c.prepareStatement(q); ps.setString(1, id)", "+ id +"))
+//   Result: ✅ Valid = SAFE
+
+// ============================================================
+// DETECTION RULES (run these in REPL)
+// ============================================================
+
+// Rule 1: Detect string concatenation with user input going to SQL
+// :verify and(
+//   contains(CODE, "+ userId"),
+//   contains(CODE, "executeQuery")
+// )
+// If Valid → VULNERABLE
+
+// Rule 2: Detect safe parameterized queries
+// :verify and(
+//   contains(CODE, "PreparedStatement"),
+//   contains(CODE, "setString")
+// )
+// If Valid → Using safe pattern
+
+// Rule 3: Detect Node.js SQL injection
+// :verify and(
+//   contains(CODE, "req.body"),
+//   or(contains(CODE, ".query("), contains(CODE, ".execute("))
+// )
+// If Valid → Potential vulnerability
+
+// ============================================================
+// ADVANCED: Quantified Security Properties
+// ============================================================
+
+// Prove that parameterized queries never have string concatenation:
+//   :verify ∀ code : String .
+//     implies(
+//       contains(code, "PreparedStatement"),
+//       not(contains(code, "\" + userId + \""))
+//     )
+// This would need the code to follow the PreparedStatement pattern
+
+// ============================================================
+// EXAMPLE SESSION
+// ============================================================
+
+// Copy-paste these into the REPL to see static analysis in action:
+
+// 1. Check vulnerable Java code:
+// :v and(contains("String q = \"SELECT * FROM users WHERE id=\" + userId; db.executeQuery(q);", "+ userId"), contains("String q = \"SELECT * FROM users WHERE id=\" + userId; db.executeQuery(q);", "executeQuery"))
+
+// 2. Check safe Java code:
+// :v and(contains("PreparedStatement ps = conn.prepareStatement(sql); ps.setString(1, userId);", "PreparedStatement"), not(contains("PreparedStatement ps = conn.prepareStatement(sql); ps.setString(1, userId);", "+ userId")))
+
+// 3. Check vulnerable JavaScript:
+// :v and(contains("const result = db.query(\"SELECT * FROM users WHERE name=\" + req.body.name);", "req.body"), contains("const result = db.query(\"SELECT * FROM users WHERE name=\" + req.body.name);", ".query("))
+
+// 4. Find position of dangerous pattern:
+// :v geq(indexOf("class Dao { String s = \"SELECT\" + x; execute(s); }", "+ x", 0), 0)
+
+// ============================================================
+// XSS DETECTION PATTERNS
+// ============================================================
+
+// Detect innerHTML with user input (XSS vulnerability):
+// :v and(contains("element.innerHTML = userData;", "innerHTML"), contains("element.innerHTML = userData;", "userData"))
+
+// Detect document.write with user input:
+// :v and(contains("document.write(req.query.msg);", "document.write"), contains("document.write(req.query.msg);", "req.query"))
+
+// ============================================================
+// COMMAND INJECTION PATTERNS  
+// ============================================================
+
+// Detect Runtime.exec with user input:
+// :v and(contains("Runtime.getRuntime().exec(cmd + userInput);", "Runtime"), contains("Runtime.getRuntime().exec(cmd + userInput);", "+ userInput"))
+
+// Detect child_process with user input (Node.js):
+// :v and(contains("exec(command + req.body.cmd);", "exec("), contains("exec(command + req.body.cmd);", "req.body"))
+
+
