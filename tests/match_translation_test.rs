@@ -26,7 +26,7 @@ fn test_match_simple_wildcard() {
     let scrutinee = Expression::Const("5".to_string());
     let match_expr = Expression::Match {
         scrutinee: Box::new(scrutinee),
-        cases: vec![MatchCase {
+        cases: vec![MatchCase { guard: None,
             pattern: Pattern::Wildcard,
             body: Expression::Const("1".to_string()),
         }],
@@ -53,7 +53,7 @@ fn test_match_variable_binding() {
     let scrutinee = Expression::Const("5".to_string());
     let match_expr = Expression::Match {
         scrutinee: Box::new(scrutinee),
-        cases: vec![MatchCase {
+        cases: vec![MatchCase { guard: None,
             pattern: Pattern::Variable("x".to_string()),
             body: Expression::Object("x".to_string()),
         }],
@@ -81,11 +81,11 @@ fn test_match_constant_pattern() {
     let match_expr = Expression::Match {
         scrutinee: Box::new(scrutinee),
         cases: vec![
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constant("3".to_string()),
                 body: Expression::Const("10".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Wildcard,
                 body: Expression::Const("20".to_string()),
             },
@@ -114,15 +114,15 @@ fn test_match_multiple_cases() {
     let match_expr = Expression::Match {
         scrutinee: Box::new(scrutinee),
         cases: vec![
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constant("0".to_string()),
                 body: Expression::Const("100".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constant("1".to_string()),
                 body: Expression::Const("200".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Wildcard,
                 body: Expression::Const("300".to_string()),
             },
@@ -151,15 +151,15 @@ fn test_match_fallthrough_to_wildcard() {
     let match_expr = Expression::Match {
         scrutinee: Box::new(scrutinee),
         cases: vec![
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constant("0".to_string()),
                 body: Expression::Const("100".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constant("1".to_string()),
                 body: Expression::Const("200".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Wildcard,
                 body: Expression::Const("300".to_string()),
             },
@@ -185,7 +185,7 @@ fn test_match_with_arithmetic_in_body() {
     // match 5 { y => y + 1 } = 6
     let match_expr = Expression::Match {
         scrutinee: Box::new(Expression::Const("5".to_string())),
-        cases: vec![MatchCase {
+        cases: vec![MatchCase { guard: None,
             pattern: Pattern::Variable("y".to_string()),
             body: Expression::Operation {
                 name: "plus".to_string(),
@@ -223,14 +223,14 @@ fn test_match_constructor_simple() {
     let match_expr = Expression::Match {
         scrutinee: Box::new(scrutinee),
         cases: vec![
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constructor {
                     name: "Some".to_string(),
                     args: vec![Pattern::Variable("x".to_string())],
                 },
                 body: Expression::Object("x".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constructor {
                     name: "None".to_string(),
                     args: vec![],
@@ -268,7 +268,7 @@ fn test_match_nested_constructor() {
 
     let match_expr = Expression::Match {
         scrutinee: Box::new(scrutinee),
-        cases: vec![MatchCase {
+        cases: vec![MatchCase { guard: None,
             pattern: Pattern::Constructor {
                 name: "Pair".to_string(),
                 args: vec![
@@ -329,28 +329,28 @@ fn test_match_symbolic_adt_nullary_constructor() {
     let match_expr = Expression::Match {
         scrutinee: Box::new(Expression::Object("Owner".to_string())),
         cases: vec![
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constructor {
                     name: "Owner".to_string(),
                     args: vec![],
                 },
                 body: Expression::Const("4".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constructor {
                     name: "Editor".to_string(),
                     args: vec![],
                 },
                 body: Expression::Const("3".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constructor {
                     name: "Viewer".to_string(),
                     args: vec![],
                 },
                 body: Expression::Const("1".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Wildcard,
                 body: Expression::Const("0".to_string()),
             },
@@ -387,28 +387,28 @@ fn test_match_symbolic_adt_different_constructors() {
     let match_expr = Expression::Match {
         scrutinee: Box::new(Expression::Object("Editor".to_string())),
         cases: vec![
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constructor {
                     name: "Owner".to_string(),
                     args: vec![],
                 },
                 body: Expression::Const("4".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constructor {
                     name: "Editor".to_string(),
                     args: vec![],
                 },
                 body: Expression::Const("3".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constructor {
                     name: "Viewer".to_string(),
                     args: vec![],
                 },
                 body: Expression::Const("1".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Wildcard,
                 body: Expression::Const("0".to_string()),
             },

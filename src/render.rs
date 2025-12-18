@@ -856,6 +856,39 @@ fn try_render_xact_tensor(
     Some(result)
 }
 
+/// Render a pattern to string (Grammar v0.8)
+fn render_pattern(pattern: &crate::ast::Pattern, target: &RenderTarget) -> String {
+    use crate::ast::Pattern;
+    match pattern {
+        Pattern::Wildcard => "_".to_string(),
+        Pattern::Variable(name) => name.clone(),
+        Pattern::Constant(c) => c.clone(),
+        Pattern::Constructor { name, args } => {
+            if args.is_empty() {
+                name.clone()
+            } else {
+                let args_str: Vec<String> =
+                    args.iter().map(|p| render_pattern(p, target)).collect();
+                format!("{}({})", name, args_str.join(", "))
+            }
+        }
+        Pattern::As { pattern, binding } => {
+            let inner = render_pattern(pattern, target);
+            match target {
+                RenderTarget::Unicode | RenderTarget::Kleis | RenderTarget::HTML => {
+                    format!("{} as {}", inner, binding)
+                }
+                RenderTarget::LaTeX => {
+                    format!(r"{} \text{{ as }} {}", inner, binding)
+                }
+                RenderTarget::Typst => {
+                    format!(r#"{} "as" {}"#, inner, binding)
+                }
+            }
+        }
+    }
+}
+
 /// Internal rendering with path tracking for semantic markers
 fn render_expression_internal(
     expr: &Expression,
@@ -1813,10 +1846,14 @@ fn render_expression_internal(
         }
 
         Expression::Let {
-            name, value, body, ..
+            pattern,
+            value,
+            body,
+            ..
         } => {
             let value_id = format!("{}.value", node_id);
             let body_id = format!("{}.body", node_id);
+            let pattern_str = render_pattern(pattern, &target);
 
             let value_str =
                 render_expression_internal(value, ctx, target, &value_id, node_id_to_uuid);
@@ -1824,23 +1861,26 @@ fn render_expression_internal(
 
             match target {
                 RenderTarget::Unicode | RenderTarget::Kleis => {
-                    // Kleis grammar: letBinding ::= "let" identifier ... "=" expression "in" expression
-                    format!("let {} = {} in {}", name, value_str, body_str)
+                    // Kleis grammar v0.8: let pattern = value in body
+                    format!("let {} = {} in {}", pattern_str, value_str, body_str)
                 }
                 RenderTarget::LaTeX => {
                     format!(
                         r"\text{{let }} {} = {} \text{{ in }} {}",
-                        name, value_str, body_str
+                        pattern_str, value_str, body_str
                     )
                 }
                 RenderTarget::HTML => {
                     format!(
                         r#"<span class="let-binding">let {} = {} in {}</span>"#,
-                        name, value_str, body_str
+                        pattern_str, value_str, body_str
                     )
                 }
                 RenderTarget::Typst => {
-                    format!(r#""let " {} " = " {} " in " {}"#, name, value_str, body_str)
+                    format!(
+                        r#""let " {} " = " {} " in " {}"#,
+                        pattern_str, value_str, body_str
+                    )
                 }
             }
         }

@@ -253,11 +253,12 @@ impl Evaluator {
                 // Substitute in scrutinee
                 let new_scrutinee = Box::new(self.substitute(scrutinee, subst));
 
-                // Substitute in each case body (patterns bind their own variables)
+                // Substitute in each case body and guard (patterns bind their own variables)
                 let new_cases = cases
                     .iter()
                     .map(|case| crate::ast::MatchCase {
                         pattern: case.pattern.clone(),
+                        guard: case.guard.as_ref().map(|g| self.substitute(g, subst)),
                         body: self.substitute(&case.body, subst),
                     })
                     .collect();
@@ -305,20 +306,21 @@ impl Evaluator {
             },
 
             // Let bindings - substitute in value and body
-            // Note: the let-bound variable shadows any outer binding
+            // Note: the let-bound variable(s) shadow any outer binding
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 value,
                 body,
             } => {
                 let subst_value = self.substitute(value, subst);
-                // Create new substitution map without the shadowed variable
+                // Create new substitution map without the shadowed variables
                 let mut inner_subst = subst.clone();
-                inner_subst.remove(name);
+                // Remove all variables bound by the pattern
+                self.remove_pattern_vars_from_subst(pattern, &mut inner_subst);
                 let subst_body = self.substitute(body, &inner_subst);
                 Expression::Let {
-                    name: name.clone(),
+                    pattern: pattern.clone(),
                     type_annotation: type_annotation.clone(),
                     value: Box::new(subst_value),
                     body: Box::new(subst_body),
@@ -423,15 +425,19 @@ impl Evaluator {
             }
 
             // Let bindings - evaluate value and substitute into body
+            // Grammar v0.8: supports pattern destructuring
             Expression::Let {
-                name, value, body, ..
+                pattern,
+                value,
+                body,
+                ..
             } => {
                 // Evaluate the value
                 let eval_value = self.eval(value)?;
 
-                // Substitute value for name in body, then evaluate
+                // Match pattern against value and collect bindings
                 let mut subst = std::collections::HashMap::new();
-                subst.insert(name.clone(), eval_value);
+                self.match_pattern_to_bindings(pattern, &eval_value, &mut subst)?;
                 let substituted_body = self.substitute(body, &subst);
                 self.eval(&substituted_body)
             }
@@ -612,22 +618,26 @@ impl Evaluator {
             }
 
             // Let bindings - reduce to substitution
+            // Grammar v0.8: supports pattern destructuring
             Expression::Let {
-                name, value, body, ..
+                pattern,
+                value,
+                body,
+                ..
             } => {
                 // Reduce value first
                 if let Some(reduced_value) = self.reduction_step(value)? {
                     return Ok(Some(Expression::Let {
-                        name: name.clone(),
+                        pattern: pattern.clone(),
                         type_annotation: None,
                         value: Box::new(reduced_value),
                         body: body.clone(),
                     }));
                 }
 
-                // Value is in normal form, perform substitution
+                // Value is in normal form, perform pattern match and substitution
                 let mut subst = HashMap::new();
-                subst.insert(name.clone(), (**value).clone());
+                self.match_pattern_to_bindings(pattern, value, &mut subst)?;
                 let result = self.substitute(body, &subst);
                 Ok(Some(result))
             }
@@ -782,11 +792,14 @@ impl Evaluator {
                 self.collect_free_variables(body, &mut new_bound, free);
             }
             Expression::Let {
-                name, value, body, ..
+                pattern,
+                value,
+                body,
+                ..
             } => {
                 self.collect_free_variables(value, bound, free);
                 let mut new_bound = bound.clone();
-                new_bound.insert(name.clone());
+                self.collect_pattern_vars(pattern, &mut new_bound);
                 self.collect_free_variables(body, &mut new_bound, free);
             }
             Expression::Conditional {
@@ -850,7 +863,142 @@ impl Evaluator {
                     self.collect_pattern_vars_from_pattern(arg, bound);
                 }
             }
+            // Grammar v0.8: As-pattern binds the alias AND recurses into the pattern
+            Pattern::As { pattern, binding } => {
+                bound.insert(binding.clone());
+                self.collect_pattern_vars_from_pattern(pattern, bound);
+            }
             Pattern::Wildcard | Pattern::Constant(_) => {}
+        }
+    }
+
+    /// Collect pattern variables into a HashSet (alias for collect_pattern_vars_from_pattern)
+    fn collect_pattern_vars(&self, pattern: &crate::ast::Pattern, vars: &mut HashSet<String>) {
+        self.collect_pattern_vars_from_pattern(pattern, vars);
+    }
+
+    /// Remove all variables bound by a pattern from a substitution map
+    fn remove_pattern_vars_from_subst(
+        &self,
+        pattern: &crate::ast::Pattern,
+        subst: &mut HashMap<String, Expression>,
+    ) {
+        use crate::ast::Pattern;
+        match pattern {
+            Pattern::Variable(name) => {
+                subst.remove(name);
+            }
+            Pattern::Constructor { args, .. } => {
+                for arg in args {
+                    self.remove_pattern_vars_from_subst(arg, subst);
+                }
+            }
+            Pattern::As { pattern, binding } => {
+                subst.remove(binding);
+                self.remove_pattern_vars_from_subst(pattern, subst);
+            }
+            Pattern::Wildcard | Pattern::Constant(_) => {}
+        }
+    }
+
+    /// Match a pattern against a value and collect variable bindings
+    /// Grammar v0.8: Supports pattern destructuring in let bindings
+    fn match_pattern_to_bindings(
+        &self,
+        pattern: &crate::ast::Pattern,
+        value: &Expression,
+        bindings: &mut HashMap<String, Expression>,
+    ) -> Result<(), String> {
+        use crate::ast::Pattern;
+        match pattern {
+            Pattern::Variable(name) => {
+                bindings.insert(name.clone(), value.clone());
+                Ok(())
+            }
+            Pattern::Wildcard => Ok(()),
+            Pattern::Constant(c) => {
+                if let Expression::Const(v) = value {
+                    if c == v {
+                        Ok(())
+                    } else {
+                        Err(format!("Pattern constant {} doesn't match value {}", c, v))
+                    }
+                } else {
+                    Err(format!("Expected constant value for pattern {}", c))
+                }
+            }
+            Pattern::Constructor { name, args } => {
+                // Value should be a data constructor application
+                if let Expression::Operation {
+                    name: op_name,
+                    args: op_args,
+                } = value
+                {
+                    if name == op_name && args.len() == op_args.len() {
+                        for (pat, val) in args.iter().zip(op_args.iter()) {
+                            self.match_pattern_to_bindings(pat, val, bindings)?;
+                        }
+                        Ok(())
+                    } else {
+                        Err(format!(
+                            "Constructor {} with {} args doesn't match {} with {} args",
+                            name,
+                            args.len(),
+                            op_name,
+                            op_args.len()
+                        ))
+                    }
+                } else {
+                    Err(format!(
+                        "Expected constructor {} but got non-operation",
+                        name
+                    ))
+                }
+            }
+            // Grammar v0.8: As-pattern binds the whole value AND destructures it
+            Pattern::As {
+                pattern: inner,
+                binding,
+            } => {
+                // Bind the whole value to the alias
+                bindings.insert(binding.clone(), value.clone());
+                // Also destructure via the inner pattern
+                self.match_pattern_to_bindings(inner, value, bindings)
+            }
+        }
+    }
+
+    /// Alpha-convert a pattern (rename variables)
+    fn alpha_convert_pattern(
+        &self,
+        pattern: &crate::ast::Pattern,
+        old_name: &str,
+        new_name: &str,
+    ) -> crate::ast::Pattern {
+        use crate::ast::Pattern;
+        match pattern {
+            Pattern::Variable(name) if name == old_name => Pattern::Variable(new_name.to_string()),
+            Pattern::Variable(_) => pattern.clone(),
+            Pattern::Constructor { name, args } => Pattern::Constructor {
+                name: name.clone(),
+                args: args
+                    .iter()
+                    .map(|p| self.alpha_convert_pattern(p, old_name, new_name))
+                    .collect(),
+            },
+            Pattern::Constant(_) | Pattern::Wildcard => pattern.clone(),
+            // Grammar v0.8: As-pattern
+            Pattern::As {
+                pattern: inner,
+                binding,
+            } => Pattern::As {
+                pattern: Box::new(self.alpha_convert_pattern(inner, old_name, new_name)),
+                binding: if binding == old_name {
+                    new_name.to_string()
+                } else {
+                    binding.clone()
+                },
+            },
         }
     }
 
@@ -871,9 +1019,12 @@ impl Evaluator {
                 self.collect_bound_variables(body, bound);
             }
             Expression::Let {
-                name, value, body, ..
+                pattern,
+                value,
+                body,
+                ..
             } => {
-                bound.insert(name.clone());
+                self.collect_pattern_vars(pattern, bound);
                 self.collect_bound_variables(value, bound);
                 self.collect_bound_variables(body, bound);
             }
@@ -980,26 +1131,19 @@ impl Evaluator {
                 Expression::Object(new_name.to_string())
             }
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 value,
                 body,
             } => {
                 let new_value = self.alpha_convert(value, old_name, new_name);
-                if name == old_name {
-                    Expression::Let {
-                        name: new_name.to_string(),
-                        type_annotation: type_annotation.clone(),
-                        value: Box::new(new_value),
-                        body: Box::new(self.alpha_convert(body, old_name, new_name)),
-                    }
-                } else {
-                    Expression::Let {
-                        name: name.clone(),
-                        type_annotation: type_annotation.clone(),
-                        value: Box::new(new_value),
-                        body: Box::new(self.alpha_convert(body, old_name, new_name)),
-                    }
+                // Alpha-convert variables in the pattern
+                let new_pattern = self.alpha_convert_pattern(pattern, old_name, new_name);
+                Expression::Let {
+                    pattern: new_pattern,
+                    type_annotation: type_annotation.clone(),
+                    value: Box::new(new_value),
+                    body: Box::new(self.alpha_convert(body, old_name, new_name)),
                 }
             }
             Expression::Operation { name, args } => Expression::Operation {
@@ -1550,7 +1694,7 @@ mod tests {
 
         // Create a simple expression that would take many steps
         let expr = Expression::Let {
-            name: "x".to_string(),
+            pattern: crate::ast::Pattern::Variable("x".to_string()),
             type_annotation: None,
             value: Box::new(Expression::Const("1".to_string())),
             body: Box::new(Expression::Object("x".to_string())),

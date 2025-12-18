@@ -273,6 +273,29 @@ async fn parse_handler(
     }
 }
 
+// Convert Pattern to JSON (Grammar v0.8)
+fn pattern_to_json(pattern: &kleis::ast::Pattern) -> serde_json::Value {
+    use kleis::ast::Pattern;
+    use serde_json::json;
+    match pattern {
+        Pattern::Wildcard => json!("_"),
+        Pattern::Variable(name) => json!({"Variable": name}),
+        Pattern::Constant(c) => json!({"Constant": c}),
+        Pattern::Constructor { name, args } => json!({
+            "Constructor": {
+                "name": name,
+                "args": args.iter().map(pattern_to_json).collect::<Vec<_>>()
+            }
+        }),
+        Pattern::As { pattern, binding } => json!({
+            "As": {
+                "pattern": pattern_to_json(pattern),
+                "binding": binding
+            }
+        }),
+    }
+}
+
 // Convert Expression to JSON (simplified serialization)
 fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
     use kleis::ast::Expression;
@@ -329,14 +352,14 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
             })
         }
         Expression::Let {
-            name,
+            pattern,
             type_annotation,
             value,
             body,
         } => {
             json!({
                 "Let": {
-                    "name": name,
+                    "pattern": pattern_to_json(pattern),
                     "type_annotation": type_annotation,
                     "value": expression_to_json(value),
                     "body": expression_to_json(body)

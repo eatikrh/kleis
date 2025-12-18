@@ -1590,16 +1590,21 @@ impl KleisParser {
     ///
     /// Used within function definitions to introduce local bindings.
     /// Pure semantics: the bound value is substituted into the body.
+    ///
+    /// Grammar v0.8: Supports pattern destructuring
+    ///   let x = 5 in ...              (simple binding)
+    ///   let x : ℝ = 5 in ...          (with type annotation)
+    ///   let Point(x, y) = p in ...    (destructuring)
     fn parse_let_binding(&mut self) -> Result<Expression, KleisParseError> {
         // Consume 'let' keyword
         self.expect_word("let")?;
         self.skip_whitespace();
 
-        // Parse variable name
-        let name = self.parse_identifier()?;
+        // Grammar v0.8: Parse pattern instead of just identifier
+        let pattern = self.parse_pattern()?;
         self.skip_whitespace();
 
-        // Optional type annotation: : Type
+        // Optional type annotation: : Type (only valid for simple Variable patterns)
         let type_annotation = if self.peek() == Some(':') {
             self.advance(); // consume ':'
             self.skip_whitespace();
@@ -1626,7 +1631,7 @@ impl KleisParser {
         let body = self.parse_expression()?;
 
         Ok(Expression::Let {
-            name,
+            pattern,
             type_annotation,
             value: Box::new(value),
             body: Box::new(body),
@@ -1974,8 +1979,12 @@ impl KleisParser {
         Ok(cases)
     }
 
-    /// Parse a single match case
-    /// Grammar: pattern => expression
+    /// Parse a single match case (Grammar v0.8: includes guards)
+    /// Grammar: pattern ["if" guard] => expression
+    ///
+    /// Examples:
+    ///   Some(x) => x + 1
+    ///   x if x < 0 => "negative"
     fn parse_match_case(&mut self) -> Result<MatchCase, KleisParseError> {
         self.skip_whitespace();
 
@@ -1983,10 +1992,22 @@ impl KleisParser {
         let pattern = self.parse_pattern()?;
         self.skip_whitespace();
 
+        // Grammar v0.8: Optional guard expression
+        let guard = if self.peek_word("if") {
+            self.expect_word("if")?;
+            self.skip_whitespace();
+            // Parse guard expression (stops at =>)
+            let guard_expr = self.parse_guard_expression()?;
+            self.skip_whitespace();
+            Some(guard_expr)
+        } else {
+            None
+        };
+
         // Expect =>
         if !self.consume_str("=>") {
             return Err(KleisParseError {
-                message: "Expected '=>' after pattern".to_string(),
+                message: "Expected '=>' after pattern (or guard)".to_string(),
                 position: self.pos,
             });
         }
@@ -1995,11 +2016,44 @@ impl KleisParser {
         // Parse body expression
         let body = self.parse_expression()?;
 
-        Ok(MatchCase::new(pattern, body))
+        // Use the appropriate constructor based on whether we have a guard
+        if let Some(guard) = guard {
+            Ok(MatchCase::with_guard(pattern, guard, body))
+        } else {
+            Ok(MatchCase::new(pattern, body))
+        }
     }
 
-    /// Parse a pattern
+    /// Parse a guard expression (stops at =>)
+    /// This is similar to parse_expression but stops at =>
+    fn parse_guard_expression(&mut self) -> Result<Expression, KleisParseError> {
+        // Use comparison expression parsing since guards are typically comparisons
+        self.parse_comparison()
+    }
+
+    /// Parse a pattern (Grammar v0.8: includes as-patterns)
+    ///
+    /// Grammar:
+    ///   pattern ::= basePattern ["as" identifier]
+    ///   basePattern ::= "_" | identifier | Constructor | Constructor(args) | constant
     fn parse_pattern(&mut self) -> Result<Pattern, KleisParseError> {
+        // First parse the base pattern
+        let base_pattern = self.parse_base_pattern()?;
+        self.skip_whitespace();
+
+        // Grammar v0.8: Check for "as" keyword (as-pattern/alias binding)
+        if self.peek_word("as") {
+            self.expect_word("as")?;
+            self.skip_whitespace();
+            let binding = self.parse_identifier()?;
+            return Ok(Pattern::as_pattern(base_pattern, binding));
+        }
+
+        Ok(base_pattern)
+    }
+
+    /// Parse a base pattern (without as-binding)
+    fn parse_base_pattern(&mut self) -> Result<Pattern, KleisParseError> {
         self.skip_whitespace();
 
         // Wildcard: _
@@ -4591,9 +4645,12 @@ mod tests {
 
         match result {
             Expression::Let {
-                name, value, body, ..
+                pattern,
+                value,
+                body,
+                ..
             } => {
-                assert_eq!(name, "x");
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "x"));
                 assert_eq!(*value, Expression::Const("5".to_string()));
                 assert_eq!(*body, Expression::Object("x".to_string()));
             }
@@ -4609,9 +4666,12 @@ mod tests {
 
         match result {
             Expression::Let {
-                name, value, body, ..
+                pattern,
+                value,
+                body,
+                ..
             } => {
-                assert_eq!(name, "x");
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "x"));
                 assert_eq!(*value, Expression::Const("5".to_string()));
                 match body.as_ref() {
                     Expression::Operation {
@@ -4636,9 +4696,12 @@ mod tests {
 
         match result {
             Expression::Let {
-                name, value, body, ..
+                pattern,
+                value,
+                body,
+                ..
             } => {
-                assert_eq!(name, "squared");
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "squared"));
                 match value.as_ref() {
                     Expression::Operation { name: op_name, .. } => {
                         assert_eq!(op_name, "times");
@@ -4664,23 +4727,25 @@ mod tests {
 
         match result {
             Expression::Let {
-                name: outer_name,
+                pattern: outer_pattern,
                 value: outer_value,
                 body: outer_body,
                 ..
             } => {
-                assert_eq!(outer_name, "a");
+                assert!(matches!(outer_pattern, crate::ast::Pattern::Variable(ref n) if n == "a"));
                 assert_eq!(*outer_value, Expression::Const("1".to_string()));
 
                 // Outer body should be another let
                 match outer_body.as_ref() {
                     Expression::Let {
-                        name: inner_name,
+                        pattern: inner_pattern,
                         value: inner_value,
                         body: inner_body,
                         ..
                     } => {
-                        assert_eq!(inner_name, "b");
+                        assert!(
+                            matches!(inner_pattern, crate::ast::Pattern::Variable(ref n) if n == "b")
+                        );
                         assert_eq!(**inner_value, Expression::Const("2".to_string()));
                         match inner_body.as_ref() {
                             Expression::Operation { name: op_name, .. } => {
@@ -4703,8 +4768,8 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Let { name, body, .. } => {
-                assert_eq!(name, "x");
+            Expression::Let { pattern, body, .. } => {
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "x"));
                 assert!(matches!(body.as_ref(), Expression::Conditional { .. }));
             }
             _ => panic!("Expected Let expression"),
@@ -4749,8 +4814,8 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Let { name, value, .. } => {
-                assert_eq!(name, "result");
+            Expression::Let { pattern, value, .. } => {
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "result"));
                 match value.as_ref() {
                     Expression::Operation {
                         name: op_name,
@@ -4776,12 +4841,12 @@ mod tests {
 
         match result {
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 value,
                 body,
             } => {
-                assert_eq!(name, "x");
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "x"));
                 assert_eq!(type_annotation, Some("ℝ".to_string()));
                 assert_eq!(*value, Expression::Const("5".to_string()));
                 assert_eq!(*body, Expression::Object("x".to_string()));
@@ -4798,11 +4863,11 @@ mod tests {
 
         match result {
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 ..
             } => {
-                assert_eq!(name, "v");
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "v"));
                 assert_eq!(type_annotation, Some("Vector(3)".to_string()));
             }
             _ => panic!("Expected Let expression"),
@@ -4817,11 +4882,11 @@ mod tests {
 
         match result {
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 ..
             } => {
-                assert_eq!(name, "f");
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "f"));
                 assert_eq!(type_annotation, Some("ℝ → ℝ".to_string()));
             }
             _ => panic!("Expected Let expression"),
@@ -4836,11 +4901,11 @@ mod tests {
 
         match result {
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 ..
             } => {
-                assert_eq!(name, "x");
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "x"));
                 assert!(type_annotation.is_none());
             }
             _ => panic!("Expected Let expression"),
@@ -4855,21 +4920,23 @@ mod tests {
 
         match result {
             Expression::Let {
-                name: outer_name,
+                pattern: outer_pattern,
                 type_annotation: outer_type,
                 body: outer_body,
                 ..
             } => {
-                assert_eq!(outer_name, "a");
+                assert!(matches!(outer_pattern, crate::ast::Pattern::Variable(ref n) if n == "a"));
                 assert_eq!(outer_type, Some("ℤ".to_string()));
 
                 match outer_body.as_ref() {
                     Expression::Let {
-                        name: inner_name,
+                        pattern: inner_pattern,
                         type_annotation: inner_type,
                         ..
                     } => {
-                        assert_eq!(inner_name, "b");
+                        assert!(
+                            matches!(inner_pattern, crate::ast::Pattern::Variable(ref n) if n == "b")
+                        );
                         assert_eq!(*inner_type, Some("ℤ".to_string()));
                     }
                     _ => panic!("Expected nested Let"),
@@ -4887,12 +4954,12 @@ mod tests {
 
         match result {
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 value,
                 ..
             } => {
-                assert_eq!(name, "squared");
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "squared"));
                 assert_eq!(type_annotation, Some("ℝ".to_string()));
                 match value.as_ref() {
                     Expression::Operation { name: op_name, .. } => {
@@ -4914,11 +4981,11 @@ mod tests {
         assert_eq!(result.name, "compute");
         match &result.body {
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 ..
             } => {
-                assert_eq!(name, "y");
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "y"));
                 assert_eq!(*type_annotation, Some("ℝ".to_string()));
             }
             _ => panic!("Expected Let in function body"),

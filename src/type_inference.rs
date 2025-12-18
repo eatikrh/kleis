@@ -398,19 +398,23 @@ impl TypeInference {
                 Ok(then_ty)
             }
 
-            // Let binding: infer value type, bind variable, infer body
+            // Let binding: infer value type, bind variable(s), infer body
+            // Grammar v0.8: supports pattern destructuring
             // Note: type_annotation is parsed but not yet used for type checking
             // TODO: When type_annotation is present, verify value_ty matches it
             Expression::Let {
-                name, value, body, ..
+                pattern,
+                value,
+                body,
+                ..
             } => {
                 // Infer type of the value
                 let value_ty = self.infer(value, context_builder)?;
 
-                // Bind the variable in context
-                self.context.bind(name.clone(), value_ty);
+                // Bind all variables from the pattern
+                self.bind_pattern_variables(pattern, &value_ty);
 
-                // Infer body type with the new binding
+                // Infer body type with the new bindings
                 self.infer(body, context_builder)
             }
 
@@ -706,6 +710,51 @@ impl TypeInference {
                     self.add_constraint(expected_ty.clone(), scalar_ty);
                 }
                 Ok(())
+            }
+
+            // Grammar v0.8: As-pattern binds alias AND recurses into inner pattern
+            Pattern::As { pattern, binding } => {
+                // Bind the alias to the expected type
+                self.context.bind(binding.clone(), expected_ty.clone());
+                // Recursively check the inner pattern
+                self.check_pattern(pattern, expected_ty)
+            }
+        }
+    }
+
+    /// Bind all variables in a pattern to a type (Grammar v0.8: for let destructuring)
+    ///
+    /// This is used for `let pattern = value in body` where we need to bind
+    /// all variables in the pattern before inferring the body type.
+    fn bind_pattern_variables(&mut self, pattern: &crate::ast::Pattern, ty: &Type) {
+        use crate::ast::Pattern;
+
+        match pattern {
+            Pattern::Wildcard => {
+                // Nothing to bind
+            }
+            Pattern::Variable(name) => {
+                self.context.bind(name.clone(), ty.clone());
+            }
+            Pattern::Constructor { args, .. } => {
+                // For constructor patterns, we'd need to look up field types
+                // For now, bind each arg to a fresh type variable
+                for arg in args {
+                    let fresh_ty = self.context.fresh_var();
+                    self.bind_pattern_variables(arg, &fresh_ty);
+                }
+            }
+            Pattern::Constant(_) => {
+                // Nothing to bind
+            }
+            Pattern::As {
+                pattern: inner,
+                binding,
+            } => {
+                // Bind the alias
+                self.context.bind(binding.clone(), ty.clone());
+                // Recurse into inner pattern
+                self.bind_pattern_variables(inner, ty);
             }
         }
     }

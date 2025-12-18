@@ -1120,12 +1120,12 @@ fn expand_user_functions(
             else_branch: Box::new(expand_user_functions(else_branch, evaluator)),
         },
         Expression::Let {
-            name,
+            pattern,
             type_annotation,
             value,
             body,
         } => Expression::Let {
-            name: name.clone(),
+            pattern: pattern.clone(),
             type_annotation: type_annotation.clone(),
             value: Box::new(expand_user_functions(value, evaluator)),
             body: Box::new(expand_user_functions(body, evaluator)),
@@ -1138,6 +1138,10 @@ fn expand_user_functions(
                     .iter()
                     .map(|c| MatchCase {
                         pattern: c.pattern.clone(),
+                        guard: c
+                            .guard
+                            .as_ref()
+                            .map(|g| expand_user_functions(g, evaluator)),
                         body: expand_user_functions(&c.body, evaluator),
                     })
                     .collect(),
@@ -1214,22 +1218,23 @@ fn substitute_var(
             else_branch: Box::new(substitute_var(else_branch, var_name, replacement)),
         },
         Expression::Let {
-            name,
+            pattern,
             type_annotation,
             value,
             body,
         } => {
-            // Don't substitute in body if let binds the same variable
-            if name == var_name {
+            // Don't substitute in body if pattern binds the same variable
+            let binds_var = pattern_binds_var(pattern, var_name);
+            if binds_var {
                 Expression::Let {
-                    name: name.clone(),
+                    pattern: pattern.clone(),
                     type_annotation: type_annotation.clone(),
                     value: Box::new(substitute_var(value, var_name, replacement)),
                     body: body.clone(),
                 }
             } else {
                 Expression::Let {
-                    name: name.clone(),
+                    pattern: pattern.clone(),
                     type_annotation: type_annotation.clone(),
                     value: Box::new(substitute_var(value, var_name, replacement)),
                     body: Box::new(substitute_var(body, var_name, replacement)),
@@ -1247,6 +1252,13 @@ fn substitute_var(
                         let binds_var = pattern_binds_var(&c.pattern, var_name);
                         MatchCase {
                             pattern: c.pattern.clone(),
+                            guard: if binds_var {
+                                c.guard.clone()
+                            } else {
+                                c.guard
+                                    .as_ref()
+                                    .map(|g| substitute_var(g, var_name, replacement))
+                            },
                             body: if binds_var {
                                 c.body.clone()
                             } else {
@@ -1287,7 +1299,7 @@ fn substitute_var(
     }
 }
 
-/// Check if a pattern binds a variable name
+/// Check if a pattern binds a variable name (Grammar v0.8: handles As-patterns)
 #[cfg(feature = "axiom-verification")]
 fn pattern_binds_var(pattern: &kleis::ast::Pattern, var_name: &str) -> bool {
     use kleis::ast::Pattern;
@@ -1295,6 +1307,9 @@ fn pattern_binds_var(pattern: &kleis::ast::Pattern, var_name: &str) -> bool {
         Pattern::Variable(name) => name == var_name,
         Pattern::Constructor { args, .. } => args.iter().any(|p| pattern_binds_var(p, var_name)),
         Pattern::Wildcard | Pattern::Constant(_) => false,
+        Pattern::As { pattern, binding } => {
+            binding == var_name || pattern_binds_var(pattern, var_name)
+        }
     }
 }
 

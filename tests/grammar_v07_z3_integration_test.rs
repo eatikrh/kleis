@@ -403,7 +403,7 @@ fn test_let_binding() {
 
     // let x = 5 in x + 3
     let expr = Expression::Let {
-        name: "x".to_string(),
+        pattern: kleis::ast::Pattern::Variable("x".to_string()),
         type_annotation: None,
         value: Box::new(Expression::Const("5".to_string())),
         body: Box::new(Expression::Operation {
@@ -431,11 +431,11 @@ fn test_nested_let_binding() {
 
     // let x = 5 in let y = 3 in x * y
     let expr = Expression::Let {
-        name: "x".to_string(),
+        pattern: kleis::ast::Pattern::Variable("x".to_string()),
         type_annotation: None,
         value: Box::new(Expression::Const("5".to_string())),
         body: Box::new(Expression::Let {
-            name: "y".to_string(),
+            pattern: kleis::ast::Pattern::Variable("y".to_string()),
             type_annotation: None,
             value: Box::new(Expression::Const("3".to_string())),
             body: Box::new(Expression::Operation {
@@ -538,15 +538,15 @@ fn test_match_with_constants() {
     let expr = Expression::Match {
         scrutinee: Box::new(Expression::Const("1".to_string())),
         cases: vec![
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constant("0".to_string()),
                 body: Expression::Const("100".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constant("1".to_string()),
                 body: Expression::Const("200".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Wildcard,
                 body: Expression::Const("300".to_string()),
             },
@@ -574,15 +574,15 @@ fn test_match_wildcard_fallback() {
     let expr = Expression::Match {
         scrutinee: Box::new(Expression::Const("42".to_string())),
         cases: vec![
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constant("0".to_string()),
                 body: Expression::Const("100".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Constant("1".to_string()),
                 body: Expression::Const("200".to_string()),
             },
-            MatchCase {
+            MatchCase { guard: None,
                 pattern: Pattern::Wildcard,
                 body: Expression::Const("300".to_string()),
             },

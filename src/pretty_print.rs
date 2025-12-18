@@ -135,11 +135,11 @@ impl PrettyPrinter {
             } => self.format_conditional_at_depth(condition, then_branch, else_branch, depth),
 
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 value,
                 body,
-            } => self.format_let_at_depth(name, type_annotation.as_deref(), value, body, depth),
+            } => self.format_let_at_depth(pattern, type_annotation.as_deref(), value, body, depth),
 
             Expression::Ascription {
                 expr,
@@ -274,6 +274,7 @@ impl PrettyPrinter {
     }
 
     /// Inner pattern formatting (static to avoid clippy warning about self in recursion)
+    /// Grammar v0.8: Added As-pattern support
     fn format_pattern_inner(pattern: &Pattern) -> String {
         match pattern {
             Pattern::Wildcard => "_".to_string(),
@@ -287,6 +288,10 @@ impl PrettyPrinter {
                         args.iter().map(Self::format_pattern_inner).collect();
                     format!("{}({})", name, formatted_args.join(", "))
                 }
+            }
+            // Grammar v0.8: As-pattern
+            Pattern::As { pattern, binding } => {
+                format!("{} as {}", Self::format_pattern_inner(pattern), binding)
             }
         }
     }
@@ -373,10 +378,10 @@ impl PrettyPrinter {
         }
     }
 
-    /// Format a let binding with depth tracking
+    /// Format a let binding with depth tracking (Grammar v0.8: supports patterns)
     fn format_let_at_depth(
         &self,
-        name: &str,
+        pattern: &crate::ast::Pattern,
         type_annotation: Option<&str>,
         value: &Expression,
         body: &Expression,
@@ -384,11 +389,13 @@ impl PrettyPrinter {
     ) -> String {
         let value_str = self.format_at_depth(value, depth);
         let body_str = self.format_at_depth(body, depth);
+        let pattern_str = self.format_pattern(pattern);
 
         // Build the let binding with optional type annotation
+        // Note: type annotations only make sense for simple Variable patterns
         let binding = match type_annotation {
-            Some(ty) => format!("{} : {}", name, ty),
-            None => name.to_string(),
+            Some(ty) => format!("{} : {}", pattern_str, ty),
+            None => pattern_str,
         };
 
         // For complex bodies, use multi-line format
@@ -853,7 +860,7 @@ mod tests {
     fn test_format_let() {
         let pp = PrettyPrinter::new();
         let expr = Expression::Let {
-            name: "y".to_string(),
+            pattern: Pattern::Variable("y".to_string()),
             type_annotation: None,
             value: Box::new(Expression::Const("5".to_string())),
             body: Box::new(Expression::Operation {
@@ -871,7 +878,7 @@ mod tests {
     fn test_format_let_with_type() {
         let pp = PrettyPrinter::new();
         let expr = Expression::Let {
-            name: "x".to_string(),
+            pattern: Pattern::Variable("x".to_string()),
             type_annotation: Some("ℝ".to_string()),
             value: Box::new(Expression::Const("5".to_string())),
             body: Box::new(Expression::Object("x".to_string())),
@@ -887,10 +894,12 @@ mod tests {
             cases: vec![
                 MatchCase {
                     pattern: Pattern::Constant("0".to_string()),
+                    guard: None,
                     body: Expression::Const("1".to_string()),
                 },
                 MatchCase {
                     pattern: Pattern::Wildcard,
+                    guard: None,
                     body: Expression::Const("0".to_string()),
                 },
             ],

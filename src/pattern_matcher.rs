@@ -155,6 +155,17 @@ impl PatternMatcher {
                     _ => false,
                 }
             }
+
+            // Grammar v0.8: As-pattern binds alias AND matches inner pattern
+            Pattern::As {
+                pattern: inner,
+                binding,
+            } => {
+                // Bind the whole value to the alias
+                bindings.insert(binding.clone(), value.clone());
+                // Also match the inner pattern
+                self.match_pattern_internal(value, inner, bindings)
+            }
         }
     }
 
@@ -231,12 +242,16 @@ impl PatternMatcher {
             }
 
             Expression::Match { scrutinee, cases } => {
-                // Substitute in scrutinee and case bodies
+                // Substitute in scrutinee, guards, and case bodies
                 let subst_scrutinee = Box::new(self.substitute_bindings(scrutinee, bindings));
                 let subst_cases = cases
                     .iter()
                     .map(|case| MatchCase {
                         pattern: case.pattern.clone(), // Patterns don't substitute
+                        guard: case
+                            .guard
+                            .as_ref()
+                            .map(|g| self.substitute_bindings(g, bindings)),
                         body: self.substitute_bindings(&case.body, bindings),
                     })
                     .collect();
@@ -283,18 +298,18 @@ impl PatternMatcher {
             },
 
             Expression::Let {
-                name,
+                pattern,
                 type_annotation,
                 value,
                 body,
             } => {
                 let subst_value = self.substitute_bindings(value, bindings);
-                // Create new bindings without the shadowed variable
+                // Create new bindings without the shadowed variables
                 let mut inner_bindings = bindings.clone();
-                inner_bindings.remove(name);
+                self.remove_pattern_vars(pattern, &mut inner_bindings);
                 let subst_body = self.substitute_bindings(body, &inner_bindings);
                 Expression::Let {
-                    name: name.clone(),
+                    pattern: pattern.clone(),
                     type_annotation: type_annotation.clone(),
                     value: Box::new(subst_value),
                     body: Box::new(subst_body),
@@ -328,6 +343,33 @@ impl PatternMatcher {
                 // Leaves don't contain variables
                 expr.clone()
             }
+        }
+    }
+
+    /// Remove all variables bound by a pattern from a bindings map
+    fn remove_pattern_vars(
+        &self,
+        pattern: &Pattern,
+        bindings: &mut std::collections::HashMap<String, Expression>,
+    ) {
+        match pattern {
+            Pattern::Variable(name) => {
+                bindings.remove(name);
+            }
+            Pattern::Constructor { args, .. } => {
+                for arg in args {
+                    self.remove_pattern_vars(arg, bindings);
+                }
+            }
+            // Grammar v0.8: As-pattern
+            Pattern::As {
+                pattern: inner,
+                binding,
+            } => {
+                bindings.remove(binding);
+                self.remove_pattern_vars(inner, bindings);
+            }
+            Pattern::Wildcard | Pattern::Constant(_) => {}
         }
     }
 }
@@ -406,18 +448,7 @@ impl ExhaustivenessChecker {
                     let mut has_wildcard = false;
 
                     for pattern in patterns {
-                        match pattern {
-                            Pattern::Wildcard | Pattern::Variable(_) => {
-                                // Wildcard/variable catches everything
-                                has_wildcard = true;
-                            }
-                            Pattern::Constructor { name, .. } => {
-                                covered.insert(name);
-                            }
-                            Pattern::Constant(_) => {
-                                // Constants don't contribute to constructor coverage
-                            }
-                        }
+                        self.collect_pattern_coverage(pattern, &mut covered, &mut has_wildcard);
                     }
 
                     // If wildcard exists, automatically exhaustive
@@ -444,6 +475,30 @@ impl ExhaustivenessChecker {
 
             // Other types (Scalar, Var, etc.) - can't enumerate cases
             _ => Ok(()),
+        }
+    }
+
+    /// Helper to collect pattern coverage info (Grammar v0.8: handles As-patterns)
+    fn collect_pattern_coverage<'a>(
+        &self,
+        pattern: &'a Pattern,
+        covered: &mut HashSet<&'a String>,
+        has_wildcard: &mut bool,
+    ) {
+        match pattern {
+            Pattern::Wildcard | Pattern::Variable(_) => {
+                *has_wildcard = true;
+            }
+            Pattern::Constructor { name, .. } => {
+                covered.insert(name);
+            }
+            Pattern::Constant(_) => {
+                // Constants don't contribute to constructor coverage
+            }
+            // Grammar v0.8: As-pattern - recurse into inner pattern
+            Pattern::As { pattern: inner, .. } => {
+                self.collect_pattern_coverage(inner, covered, has_wildcard);
+            }
         }
     }
 

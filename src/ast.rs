@@ -57,14 +57,22 @@ pub enum Expression {
         else_branch: Box<Expression>,
     },
 
-    /// Let binding expression
-    /// Example: let x = 5 in x + x
-    /// With type annotation: let x : ℝ = 5 in x^2
-    /// Introduces a local variable binding within a function definition.
-    /// Pure functional semantics: the bound value is substituted into the body.
+    /// Let binding expression with pattern support (Grammar v0.8)
+    ///
+    /// Simple: `let x = 5 in x + x`
+    /// With type: `let x : ℝ = 5 in x^2`
+    /// Destructuring: `let Point(x, y) = origin in x^2 + y^2` (v0.8)
+    ///
+    /// Introduces local variable binding(s) within an expression.
+    /// Pure functional semantics: bound values are substituted into the body.
+    ///
+    /// Note: Simple `let x = ...` uses Pattern::Variable("x")
     Let {
-        name: String,
+        /// Pattern to match against (v0.8: was `name: String`)
+        /// Simple names use Pattern::Variable
+        pattern: Pattern,
         /// Optional type annotation (e.g., "ℝ", "ℤ", "Vector(3)")
+        /// Only valid when pattern is a simple Variable
         type_annotation: Option<String>,
         value: Box<Expression>,
         body: Box<Expression>,
@@ -143,13 +151,24 @@ impl LambdaParam {
 }
 
 /// A single case in a match expression
+///
+/// Grammar v0.8 adds optional guard:
+///   matchCase ::= pattern ["if" expression] "=>" expression
+///
+/// Example: `x if x < 0 => "negative"`
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct MatchCase {
     pub pattern: Pattern,
+    /// Optional guard expression (Grammar v0.8)
+    /// If present, pattern matches only when guard evaluates to true
+    pub guard: Option<Expression>,
     pub body: Expression,
 }
 
 /// Pattern for matching against data constructors
+///
+/// Grammar v0.8 adds As-patterns for alias binding:
+///   pattern ::= "_" | identifier | constructor | constant | pattern "as" identifier
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Pattern {
     /// Wildcard pattern: _
@@ -163,6 +182,14 @@ pub enum Pattern {
 
     /// Constant pattern: 0, 1, "hello"
     Constant(String),
+
+    /// As-pattern (alias binding): Cons(h, t) as whole (Grammar v0.8)
+    /// Binds both the destructured parts AND the whole value
+    /// Like Haskell's `list@(x:xs)` or Rust's `list @ [head, ..]`
+    As {
+        pattern: Box<Pattern>,
+        binding: String,
+    },
 }
 
 impl Expression {
@@ -234,9 +261,11 @@ impl Expression {
     }
 
     /// Create a let binding expression without type annotation
+    /// Create a let binding expression without type annotation
+    /// Simple name binding: `let x = 5 in x + x`
     pub fn let_binding(name: impl Into<String>, value: Expression, body: Expression) -> Self {
         Expression::Let {
-            name: name.into(),
+            pattern: Pattern::Variable(name.into()),
             type_annotation: None,
             value: Box::new(value),
             body: Box::new(body),
@@ -244,6 +273,7 @@ impl Expression {
     }
 
     /// Create a let binding expression with optional type annotation
+    /// Typed binding: `let x : ℝ = 5 in x^2`
     pub fn let_binding_typed(
         name: impl Into<String>,
         type_annotation: Option<impl Into<String>>,
@@ -251,8 +281,19 @@ impl Expression {
         body: Expression,
     ) -> Self {
         Expression::Let {
-            name: name.into(),
+            pattern: Pattern::Variable(name.into()),
             type_annotation: type_annotation.map(|t| t.into()),
+            value: Box::new(value),
+            body: Box::new(body),
+        }
+    }
+
+    /// Create a let binding with pattern destructuring (Grammar v0.8)
+    /// Destructuring: `let Point(x, y) = origin in x^2 + y^2`
+    pub fn let_pattern(pattern: Pattern, value: Expression, body: Expression) -> Self {
+        Expression::Let {
+            pattern,
+            type_annotation: None,
             value: Box::new(value),
             body: Box::new(body),
         }
@@ -352,9 +393,23 @@ impl Expression {
 }
 
 impl MatchCase {
-    /// Create a match case
+    /// Create a match case without guard
     pub fn new(pattern: Pattern, body: Expression) -> Self {
-        MatchCase { pattern, body }
+        MatchCase {
+            pattern,
+            guard: None,
+            body,
+        }
+    }
+
+    /// Create a match case with guard (Grammar v0.8)
+    /// Example: `x if x < 0 => "negative"`
+    pub fn with_guard(pattern: Pattern, guard: Expression, body: Expression) -> Self {
+        MatchCase {
+            pattern,
+            guard: Some(guard),
+            body,
+        }
     }
 }
 
@@ -380,5 +435,14 @@ impl Pattern {
     /// Create a constant pattern
     pub fn constant(value: impl Into<String>) -> Self {
         Pattern::Constant(value.into())
+    }
+
+    /// Create an as-pattern (alias binding) (Grammar v0.8)
+    /// Example: `Cons(h, t) as whole` binds whole to the entire matched value
+    pub fn as_pattern(pattern: Pattern, binding: impl Into<String>) -> Self {
+        Pattern::As {
+            pattern: Box::new(pattern),
+            binding: binding.into(),
+        }
     }
 }
