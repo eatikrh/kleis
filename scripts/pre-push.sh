@@ -72,17 +72,18 @@ fi
 echo "✅ All tests passed"
 echo ""
 
-# Gate 4: Validate manual examples
-echo "4️⃣  Validating manual documentation examples..."
-if ! python3 scripts/validate_manual_examples.py 2>&1 | tee /tmp/kleis_manual_output.txt | grep -q "All.*files passed"; then
+# Gate 4: Validate manual examples with STRICT mode (actually parse code blocks!)
+echo "4️⃣  Validating manual documentation examples (strict mode)..."
+echo "   Running actual 'kleis --check' on all code blocks"
+if ! python3 scripts/validate_manual_examples.py --strict 2>&1 | tee /tmp/kleis_manual_output.txt | grep -q "All.*files passed"; then
     echo ""
     echo "❌ Manual validation failed!"
-    echo "   Some documentation examples have issues"
-    echo "   Run: python3 scripts/validate_manual_examples.py"
+    echo "   Some documentation examples have parse errors"
+    echo "   Run: python3 scripts/validate_manual_examples.py --strict --verbose"
     echo ""
     exit 1
 fi
-echo "✅ Manual examples validated"
+echo "✅ Manual examples validated (all code blocks parse correctly)"
 echo ""
 
 echo "🎉 All quality gates passed! Proceeding with push..."
