@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0cf6ef68.js";
+            window.path_to_searchindex_js = "../searchindex-a7c49a04.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -303,16 +303,6 @@ structure Group(G) extends Monoid(G) {
 
 structure AbelianGroup(G) extends Group(G) {
     axiom commutative : ∀(x : G)(y : G). mul(x, y) = mul(y, x)
-}
-</code></pre>
-<h2 id="the-where-clause"><a class="header" href="#the-where-clause">The <code>where</code> Clause</a></h2>
-<p>Constrain type parameters:</p>
-<pre><code class="language-kleis">structure VectorSpace(V, F) where F : Field {
-    operation add : V × V → V
-    operation scale : F × V → V
-    
-    axiom distributive : ∀(a : F)(u : V)(v : V).
-        scale(a, add(u, v)) = add(scale(a, u), scale(a, v))
 }
 </code></pre>
 <h2 id="the-over-keyword"><a class="header" href="#the-over-keyword">The <code>over</code> Keyword</a></h2>

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0cf6ef68.js";
+            window.path_to_searchindex_js = "searchindex-a7c49a04.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f10a7c19.js"></script>
@@ -542,23 +542,13 @@ structure Person {
 <h2 id="sum-types-variants"><a class="header" href="#sum-types-variants">Sum Types (Variants)</a></h2>
 <p>A sum type represents alternatives:</p>
 <pre><code class="language-kleis">// A shape is a Circle OR a Rectangle OR a Triangle
-data Shape {
-    Circle(radius : ℝ)
-    Rectangle(width : ℝ, height : ℝ)
-    Triangle(a : ℝ, b : ℝ, c : ℝ)
-}
+data Shape = Circle(radius : ℝ) | Rectangle(width : ℝ, height : ℝ) | Triangle(a : ℝ, b : ℝ, c : ℝ)
 
 // An optional value is Some(value) OR None
-data Option(T) {
-    Some(value : T)
-    None
-}
+data Option(T) = Some(value : T) | None
 
 // A result is Ok(value) OR Err(message)
-data Result(T, E) {
-    Ok(value : T)
-    Err(error : E)
-}
+data Result(T, E) = Ok(value : T) | Err(error : E)
 </code></pre>
 <h2 id="pattern-matching-with-adts"><a class="header" href="#pattern-matching-with-adts">Pattern Matching with ADTs</a></h2>
 <p>ADTs shine with pattern matching:</p>
@@ -599,13 +589,11 @@ data Tree(T) {
 </ul>
 <h2 id="practical-example-expression-trees"><a class="header" href="#practical-example-expression-trees">Practical Example: Expression Trees</a></h2>
 <p>ADTs are perfect for representing mathematical expressions:</p>
-<pre><code class="language-kleis">data Expr {
-    Const(value : ℝ)
-    Var(name : String)
-    Add(left : Expr, right : Expr)
-    Mul(left : Expr, right : Expr)
-    Neg(inner : Expr)
-}
+<pre><code class="language-kleis">data Expr = Const(value : ℝ) 
+          | Var(name : String) 
+          | Add(left : Expr, right : Expr) 
+          | Mul(left : Expr, right : Expr) 
+          | Neg(inner : Expr)
 
 define eval(expr, env) =
     match expr {
@@ -1135,16 +1123,6 @@ structure AbelianGroup(G) extends Group(G) {
     axiom commutative : ∀(x : G)(y : G). mul(x, y) = mul(y, x)
 }
 </code></pre>
-<h2 id="the-where-clause"><a class="header" href="#the-where-clause">The <code>where</code> Clause</a></h2>
-<p>Constrain type parameters:</p>
-<pre><code class="language-kleis">structure VectorSpace(V, F) where F : Field {
-    operation add : V × V → V
-    operation scale : F × V → V
-    
-    axiom distributive : ∀(a : F)(u : V)(v : V).
-        scale(a, add(u, v)) = add(scale(a, u), scale(a, v))
-}
-</code></pre>
 <h2 id="the-over-keyword"><a class="header" href="#the-over-keyword">The <code>over</code> Keyword</a></h2>
 <p>Many mathematical structures are defined “over” a base structure. A vector space is defined over a field, a module over a ring:</p>
 <pre><code class="language-kleis">// Vector space over a field
@@ -1654,17 +1632,15 @@ structure EinsteinEquations {
 }
 </code></pre>
 <h2 id="symbolic-differentiation"><a class="header" href="#symbolic-differentiation">Symbolic Differentiation</a></h2>
-<pre><code class="language-kleis">data Expr {
-    Const(value : ℝ)
-    Var(name : String)
-    Add(left : Expr, right : Expr)
-    Mul(left : Expr, right : Expr)
-    Pow(base : Expr, exp : Expr)
-    Sin(arg : Expr)
-    Cos(arg : Expr)
-    Exp(arg : Expr)
-    Ln(arg : Expr)
-}
+<pre><code class="language-kleis">data Expr = Const(value : ℝ) 
+          | Var(name : String) 
+          | Add(left : Expr, right : Expr) 
+          | Mul(left : Expr, right : Expr) 
+          | Pow(base : Expr, exp : Expr)
+          | Sin(arg : Expr)
+          | Cos(arg : Expr)
+          | Exp(arg : Expr)
+          | Ln(arg : Expr)
 
 define diff(e, x) =
     match e {
@@ -2329,7 +2305,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 }
 </code></pre>
 <h3 id="vector-space"><a class="header" href="#vector-space">Vector Space</a></h3>
-<pre><code class="language-kleis">structure VectorSpace(V, F) where F : Field {
+<pre><code class="language-kleis">structure VectorSpace(V, F) over Field(F) {
     operation add : V × V → V
     operation scale : F × V → V
     zero : V
@@ -2368,10 +2344,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 </code></pre>
 <h2 id="option-and-result-types"><a class="header" href="#option-and-result-types">Option and Result Types</a></h2>
 <h3 id="option"><a class="header" href="#option">Option</a></h3>
-<pre><code class="language-kleis">data Option(T) {
-    Some(value : T)
-    None
-}
+<pre><code class="language-kleis">data Option(T) = Some(value : T) | None
 
 // Operations
 define is_some(opt) =
@@ -2387,10 +2360,7 @@ define unwrap_or(opt, default) =
     }
 </code></pre>
 <h3 id="result"><a class="header" href="#result">Result</a></h3>
-<pre><code class="language-kleis">data Result(T, E) {
-    Ok(value : T)
-    Err(error : E)
-}
+<pre><code class="language-kleis">data Result(T, E) = Ok(value : T) | Err(error : E)
 
 // Operations
 define is_ok(res) =

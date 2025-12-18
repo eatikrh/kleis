@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0cf6ef68.js";
+            window.path_to_searchindex_js = "../searchindex-a7c49a04.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -278,7 +278,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 }
 </code></pre>
 <h3 id="vector-space"><a class="header" href="#vector-space">Vector Space</a></h3>
-<pre><code class="language-kleis">structure VectorSpace(V, F) where F : Field {
+<pre><code class="language-kleis">structure VectorSpace(V, F) over Field(F) {
     operation add : V × V → V
     operation scale : F × V → V
     zero : V
@@ -317,10 +317,7 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 </code></pre>
 <h2 id="option-and-result-types"><a class="header" href="#option-and-result-types">Option and Result Types</a></h2>
 <h3 id="option"><a class="header" href="#option">Option</a></h3>
-<pre><code class="language-kleis">data Option(T) {
-    Some(value : T)
-    None
-}
+<pre><code class="language-kleis">data Option(T) = Some(value : T) | None
 
 // Operations
 define is_some(opt) =
@@ -336,10 +333,7 @@ define unwrap_or(opt, default) =
     }
 </code></pre>
 <h3 id="result"><a class="header" href="#result">Result</a></h3>
-<pre><code class="language-kleis">data Result(T, E) {
-    Ok(value : T)
-    Err(error : E)
-}
+<pre><code class="language-kleis">data Result(T, E) = Ok(value : T) | Err(error : E)
 
 // Operations
 define is_ok(res) =

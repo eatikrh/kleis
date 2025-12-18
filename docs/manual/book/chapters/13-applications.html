@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0cf6ef68.js";
+            window.path_to_searchindex_js = "../searchindex-a7c49a04.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -218,17 +218,15 @@ structure EinsteinEquations {
 }
 </code></pre>
 <h2 id="symbolic-differentiation"><a class="header" href="#symbolic-differentiation">Symbolic Differentiation</a></h2>
-<pre><code class="language-kleis">data Expr {
-    Const(value : ℝ)
-    Var(name : String)
-    Add(left : Expr, right : Expr)
-    Mul(left : Expr, right : Expr)
-    Pow(base : Expr, exp : Expr)
-    Sin(arg : Expr)
-    Cos(arg : Expr)
-    Exp(arg : Expr)
-    Ln(arg : Expr)
-}
+<pre><code class="language-kleis">data Expr = Const(value : ℝ) 
+          | Var(name : String) 
+          | Add(left : Expr, right : Expr) 
+          | Mul(left : Expr, right : Expr) 
+          | Pow(base : Expr, exp : Expr)
+          | Sin(arg : Expr)
+          | Cos(arg : Expr)
+          | Exp(arg : Expr)
+          | Ln(arg : Expr)
 
 define diff(e, x) =
     match e {

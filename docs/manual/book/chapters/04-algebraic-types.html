@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0cf6ef68.js";
+            window.path_to_searchindex_js = "../searchindex-a7c49a04.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f10a7c19.js"></script>
@@ -204,23 +204,13 @@ structure Person {
 <h2 id="sum-types-variants"><a class="header" href="#sum-types-variants">Sum Types (Variants)</a></h2>
 <p>A sum type represents alternatives:</p>
 <pre><code class="language-kleis">// A shape is a Circle OR a Rectangle OR a Triangle
-data Shape {
-    Circle(radius : ℝ)
-    Rectangle(width : ℝ, height : ℝ)
-    Triangle(a : ℝ, b : ℝ, c : ℝ)
-}
+data Shape = Circle(radius : ℝ) | Rectangle(width : ℝ, height : ℝ) | Triangle(a : ℝ, b : ℝ, c : ℝ)
 
 // An optional value is Some(value) OR None
-data Option(T) {
-    Some(value : T)
-    None
-}
+data Option(T) = Some(value : T) | None
 
 // A result is Ok(value) OR Err(message)
-data Result(T, E) {
-    Ok(value : T)
-    Err(error : E)
-}
+data Result(T, E) = Ok(value : T) | Err(error : E)
 </code></pre>
 <h2 id="pattern-matching-with-adts"><a class="header" href="#pattern-matching-with-adts">Pattern Matching with ADTs</a></h2>
 <p>ADTs shine with pattern matching:</p>
@@ -261,13 +251,11 @@ data Tree(T) {
 </ul>
 <h2 id="practical-example-expression-trees"><a class="header" href="#practical-example-expression-trees">Practical Example: Expression Trees</a></h2>
 <p>ADTs are perfect for representing mathematical expressions:</p>
-<pre><code class="language-kleis">data Expr {
-    Const(value : ℝ)
-    Var(name : String)
-    Add(left : Expr, right : Expr)
-    Mul(left : Expr, right : Expr)
-    Neg(inner : Expr)
-}
+<pre><code class="language-kleis">data Expr = Const(value : ℝ) 
+          | Var(name : String) 
+          | Add(left : Expr, right : Expr) 
+          | Mul(left : Expr, right : Expr) 
+          | Neg(inner : Expr)
 
 define eval(expr, env) =
     match expr {
