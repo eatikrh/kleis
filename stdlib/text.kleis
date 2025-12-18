@@ -1,0 +1,139 @@
+// Kleis Standard Library - Text Processing Operations
+// Provides string manipulation operations for symbolic mathematics
+//
+// String literals in Kleis: "hello", "x", "negative"
+// Type: String
+//
+// Use cases:
+// - Labels and annotations in mathematical expressions
+// - String constants in pattern matching: match x { n if n < 0 => "negative" }
+// - File paths in import statements
+// - Symbolic computation with text values
+
+// ============================================
+// STRING OPERATIONS
+// ============================================
+
+structure TextOps {
+    // String concatenation: "hello" ++ " world" = "hello world"
+    operation concat : String → String → String
+    
+    // String length: length("hello") = 5
+    operation strlen : String → Nat
+    
+    // Check if string is empty: isEmpty("") = True
+    operation isEmpty : String → Bool
+    
+    // Check if prefix: hasPrefix("hello", "he") = True
+    operation hasPrefix : String → String → Bool
+    
+    // Check if suffix: hasSuffix("hello", "lo") = True
+    operation hasSuffix : String → String → Bool
+    
+    // Check if contains substring: contains("hello", "ell") = True
+    operation contains : String → String → Bool
+    
+    // ============================================
+    // AXIOMS
+    // ============================================
+    
+    // Concatenation with empty string
+    axiom concat_empty_left : ∀ s : String .
+        equals(concat("", s), s)
+    
+    axiom concat_empty_right : ∀ s : String .
+        equals(concat(s, ""), s)
+    
+    // Associativity of concatenation
+    axiom concat_assoc : ∀ a : String . ∀ b : String . ∀ c : String .
+        equals(concat(concat(a, b), c), concat(a, concat(b, c)))
+    
+    // Length of empty string
+    axiom strlen_empty : equals(strlen(""), 0)
+    
+    // Length of concatenation
+    axiom strlen_concat : ∀ a : String . ∀ b : String .
+        equals(strlen(concat(a, b)), plus(strlen(a), strlen(b)))
+    
+    // isEmpty definition
+    axiom isEmpty_def : ∀ s : String .
+        equals(isEmpty(s), equals(strlen(s), 0))
+    
+    // Prefix of empty string
+    axiom hasPrefix_empty : ∀ s : String .
+        equals(hasPrefix(s, ""), True)
+    
+    // Empty has only empty prefix
+    axiom hasPrefix_empty_string : ∀ p : String .
+        equals(hasPrefix("", p), isEmpty(p))
+    
+    // Suffix of empty string
+    axiom hasSuffix_empty : ∀ s : String .
+        equals(hasSuffix(s, ""), True)
+    
+    // Contains empty string
+    axiom contains_empty : ∀ s : String .
+        equals(contains(s, ""), True)
+    
+    // String is prefix of itself
+    axiom hasPrefix_refl : ∀ s : String .
+        equals(hasPrefix(s, s), True)
+    
+    // String is suffix of itself
+    axiom hasSuffix_refl : ∀ s : String .
+        equals(hasSuffix(s, s), True)
+    
+    // String contains itself
+    axiom contains_refl : ∀ s : String .
+        equals(contains(s, s), True)
+}
+
+// ============================================
+// STRING CONVERSION
+// ============================================
+
+structure TextConversion {
+    // Convert number to string representation
+    // Note: This is declarative - actual conversion handled by evaluator
+    operation toString : ℝ → String
+    
+    // Convert integer to string
+    operation intToString : ℤ → String
+    
+    // Convert boolean to string
+    operation boolToString : Bool → String
+    
+    // Boolean conversion axioms
+    axiom boolToString_true : equals(boolToString(True), "True")
+    axiom boolToString_false : equals(boolToString(False), "False")
+}
+
+// ============================================
+// STRING FORMATTING FOR MATHEMATICS
+// ============================================
+
+structure MathFormatting {
+    // Format a labeled expression: "x = " ++ toString(5) ++ " units"
+    operation label : String → ℝ → String
+    
+    // Format subscript notation: subscript("x", "1") = "x₁"
+    operation subscript : String → String → String
+    
+    // Format superscript notation: superscript("x", "2") = "x²"
+    operation superscript : String → String → String
+}
+
+// ============================================
+// USE CASES
+// ============================================
+
+// Example 1: Pattern matching with string results
+// define sign(x) = match x { n if n < 0 => "negative" | n if n > 0 => "positive" | _ => "zero" }
+
+// Example 2: Labeled results
+// define labeled_result(x) = concat("Result: ", toString(x))
+
+// Example 3: Import statements
+// import "stdlib/prelude.kleis"
+// import "physics.kleis"
+

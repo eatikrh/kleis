@@ -93,6 +93,8 @@ impl PrettyPrinter {
         match expr {
             Expression::Const(s) => s.clone(),
 
+            Expression::String(s) => format!("\"{}\"", s),
+
             Expression::Object(name) => name.clone(),
 
             Expression::Operation { name, args } => {

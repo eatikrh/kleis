@@ -227,8 +227,8 @@ impl<'r> AxiomVerifier<'r> {
                 // Otherwise it's a true variable and introduces no dependencies
             }
 
-            Expression::Const(_) => {
-                // Constants don't introduce dependencies
+            Expression::Const(_) | Expression::String(_) => {
+                // Constants and strings don't introduce dependencies
             }
 
             Expression::Conditional {

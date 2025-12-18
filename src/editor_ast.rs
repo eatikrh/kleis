@@ -231,6 +231,8 @@ fn translate_with_context(expr: &Expression, ctx: &TranslationContext) -> Editor
 
         Expression::Const(s) => EditorNode::constant(s),
 
+        Expression::String(s) => EditorNode::constant(format!("\"{}\"", s)),
+
         Expression::Placeholder { id, hint } => EditorNode::placeholder(*id, Some(hint.clone())),
 
         Expression::Operation { name, args } => {

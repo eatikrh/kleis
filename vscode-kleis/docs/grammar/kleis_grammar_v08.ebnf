@@ -623,9 +623,13 @@ blockComment ::= "/*" { (* any character *) } "*/" ;
     - NEW: Pattern Guards - match x { n if n < 0 => "negative" | _ => "non-negative" }
     - NEW: As-Patterns - Cons(h, t) as whole binds both parts and whole
     - NEW: Let Destructuring - let Point(x, y) = p in x^2 + y^2
+    - NEW: String Literals - "hello" can be used in expressions
+    - NEW: Import Statements - import "path/to/file.kleis"
     - Updated matchCase rule: pattern [ "if" guardExpression ] "=>" expression
     - Updated pattern rule: basePattern [ "as" identifier ]
     - Updated letBinding rule: "let" pattern [ typeAnnotation ] "=" expression "in" expression
+    - String type in Type enum, inferred as Type::String
+    - Z3 String sort support for string literals
     - Full Z3 integration for all new features
     - No breaking changes from v0.7
   

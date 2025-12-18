@@ -98,6 +98,15 @@ impl Default for LayoutContext {
 pub fn layout_expression(expr: &Expression, context: &LayoutContext) -> LayoutBox {
     match expr {
         Expression::Const(s) => layout_constant(s, context),
+        Expression::String(s) => {
+            // String literal - display with quotes
+            LayoutBox::text(
+                &format!("\"{}\"", s),
+                context.base_font_size,
+                FontFamily::Main,
+                false,
+            )
+        }
         Expression::Object(s) => layout_symbol(s, context),
         Expression::Placeholder { id, hint } => layout_placeholder(*id, hint, context),
         Expression::Operation { name, args } => layout_operation(name, args, context),

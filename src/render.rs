@@ -909,6 +909,18 @@ fn render_expression_internal(
                 RenderTarget::Kleis => name.clone(),                // Constants pass through as-is
             }
         }
+        Expression::String(s) => {
+            // String literals - render with quotes
+            match target {
+                RenderTarget::Unicode => format!("\"{}\"", s),
+                RenderTarget::LaTeX => format!("\\text{{\"{}\"}}", escape_latex_text(s)),
+                RenderTarget::HTML => {
+                    format!(r#"<span class="math-string">"{}"</span>"#, escape_html(s))
+                }
+                RenderTarget::Typst => format!("\"{}\"", s),
+                RenderTarget::Kleis => format!("\"{}\"", s),
+            }
+        }
         Expression::Object(name) => {
             match target {
                 RenderTarget::Unicode => latex_to_unicode(name),

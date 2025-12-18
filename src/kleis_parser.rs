@@ -467,6 +467,12 @@ impl KleisParser {
             return Ok(Expression::Const(num));
         }
 
+        // String literal: "hello world"
+        if self.peek() == Some('"') {
+            let s = self.parse_string_literal()?;
+            return Ok(Expression::String(s));
+        }
+
         // Identifier or function call
         if self
             .peek()
@@ -5856,5 +5862,80 @@ mod tests {
         let mut parser = KleisParser::new(r#""""#);
         let result = parser.parse_string_literal().unwrap();
         assert_eq!(result, "");
+    }
+
+    // ============================================
+    // STRING LITERAL EXPRESSION TESTS (Grammar v0.8)
+    // ============================================
+
+    #[test]
+    fn test_string_expression_simple() {
+        let result = parse_kleis(r#""hello""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "hello"));
+    }
+
+    #[test]
+    fn test_string_expression_with_spaces() {
+        let result = parse_kleis(r#""hello world""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "hello world"));
+    }
+
+    #[test]
+    fn test_string_expression_empty() {
+        let result = parse_kleis(r#""""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s.is_empty()));
+    }
+
+    #[test]
+    fn test_string_in_function_call() {
+        let result = parse_kleis(r#"concat("hello", "world")"#).unwrap();
+        match result {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "concat");
+                assert_eq!(args.len(), 2);
+                assert!(matches!(&args[0], Expression::String(s) if s == "hello"));
+                assert!(matches!(&args[1], Expression::String(s) if s == "world"));
+            }
+            _ => panic!("Expected Operation"),
+        }
+    }
+
+    #[test]
+    fn test_string_in_let_binding() {
+        let result = parse_kleis(r#"let x = "test" in x"#).unwrap();
+        match result {
+            Expression::Let { value, .. } => {
+                assert!(matches!(*value, Expression::String(ref s) if s == "test"));
+            }
+            _ => panic!("Expected Let"),
+        }
+    }
+
+    #[test]
+    fn test_string_in_conditional() {
+        let result = parse_kleis(r#"if x then "yes" else "no""#).unwrap();
+        match result {
+            Expression::Conditional {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                assert!(matches!(*then_branch, Expression::String(ref s) if s == "yes"));
+                assert!(matches!(*else_branch, Expression::String(ref s) if s == "no"));
+            }
+            _ => panic!("Expected Conditional"),
+        }
+    }
+
+    #[test]
+    fn test_string_with_numbers() {
+        let result = parse_kleis(r#""test123""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "test123"));
+    }
+
+    #[test]
+    fn test_string_with_unicode() {
+        let result = parse_kleis(r#""α + β = γ""#).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "α + β = γ"));
     }
 }

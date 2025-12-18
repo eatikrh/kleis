@@ -340,6 +340,12 @@ impl<'r> Z3Backend<'r> {
                 }
             }
 
+            Expression::String(s) => {
+                // String literals are converted to Z3 String sort
+                // Note: Z3's String sort requires z3::ast::String which can represent string constants
+                Ok(z3::ast::String::from(s.clone()).into())
+            }
+
             Expression::Operation { name, args } => {
                 // Matrix and tensor operations are handled via axioms from stdlib/*.kleis
                 // Use assert_axioms_from_registry() to load them before verification

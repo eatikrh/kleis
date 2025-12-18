@@ -337,6 +337,9 @@ impl TypeInference {
             // Constants are scalars
             Expression::Const(_) => Ok(Type::scalar()),
 
+            // String literals are String type
+            Expression::String(_) => Ok(Type::String),
+
             // Variables: look up in context or check if data constructor
             Expression::Object(name) => {
                 // First check if it's a nullary data constructor (like None, True, False, Nil)

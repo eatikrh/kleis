@@ -352,8 +352,10 @@ impl Evaluator {
                 }
             }
 
-            // Constants and placeholders don't change
-            Expression::Const(_) | Expression::Placeholder { .. } => expr.clone(),
+            // Constants, strings, and placeholders don't change
+            Expression::Const(_) | Expression::String(_) | Expression::Placeholder { .. } => {
+                expr.clone()
+            }
         }
     }
 
@@ -450,9 +452,10 @@ impl Evaluator {
             Expression::Lambda { .. } => Ok(expr.clone()),
 
             // Atoms - return as-is
-            Expression::Const(_) | Expression::Object(_) | Expression::Placeholder { .. } => {
-                Ok(expr.clone())
-            }
+            Expression::Const(_)
+            | Expression::String(_)
+            | Expression::Object(_)
+            | Expression::Placeholder { .. } => Ok(expr.clone()),
         }
     }
 
@@ -711,6 +714,7 @@ impl Evaluator {
 
             // Atoms and quantifiers are already in normal form
             Expression::Const(_)
+            | Expression::String(_)
             | Expression::Object(_)
             | Expression::Placeholder { .. }
             | Expression::Quantifier { .. }
@@ -778,7 +782,7 @@ impl Evaluator {
                     free.insert(name.clone());
                 }
             }
-            Expression::Const(_) | Expression::Placeholder { .. } => {}
+            Expression::Const(_) | Expression::String(_) | Expression::Placeholder { .. } => {}
             Expression::Operation { args, .. } => {
                 for arg in args {
                     self.collect_free_variables(arg, bound, free);
@@ -1074,7 +1078,10 @@ impl Evaluator {
             Expression::Ascription { expr: inner, .. } => {
                 self.collect_bound_variables(inner, bound);
             }
-            Expression::Const(_) | Expression::Object(_) | Expression::Placeholder { .. } => {}
+            Expression::Const(_)
+            | Expression::String(_)
+            | Expression::Object(_)
+            | Expression::Placeholder { .. } => {}
         }
     }
 
