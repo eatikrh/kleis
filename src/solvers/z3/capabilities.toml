@@ -14,6 +14,8 @@ theories = [
     "arithmetic",      # Int and Real arithmetic
     "boolean",         # Propositional logic
     "equality",        # Equality reasoning
+    "strings",         # String theory (QF_SLIA)
+    "regex",           # Regular expressions
     "uninterpreted_functions"  # Abstract operations
 ]
 
@@ -51,8 +53,51 @@ multiply = { arity = 2, theory = "Int/Real", native = true }
 neg = { arity = 1, theory = "Int/Real", native = true }
 negate = { arity = 1, theory = "Int/Real", native = true }
 
-# Example: Operations not natively supported (will be uninterpreted)
-# These are documented here but handled as uninterpreted functions in Z3
+# String operations (QF_SLIA theory)
+concat = { arity = 2, theory = "String", native = true }
+str_concat = { arity = 2, theory = "String", native = true }
+strlen = { arity = 1, theory = "String", native = true }
+str_len = { arity = 1, theory = "String", native = true }
+length = { arity = 1, theory = "String", native = true }
+contains = { arity = 2, theory = "String", native = true }
+str_contains = { arity = 2, theory = "String", native = true }
+hasPrefix = { arity = 2, theory = "String", native = true }
+str_prefix = { arity = 2, theory = "String", native = true }
+prefix = { arity = 2, theory = "String", native = true }
+hasSuffix = { arity = 2, theory = "String", native = true }
+str_suffix = { arity = 2, theory = "String", native = true }
+suffix = { arity = 2, theory = "String", native = true }
+
+# Substring operations
+substr = { arity = 3, theory = "String", native = true }
+substring = { arity = 3, theory = "String", native = true }
+indexOf = { arity = 3, theory = "String", native = true }
+str_indexof = { arity = 3, theory = "String", native = true }
+indexof = { arity = 3, theory = "String", native = true }
+replace = { arity = 3, theory = "String", native = true }
+str_replace = { arity = 3, theory = "String", native = true }
+charAt = { arity = 2, theory = "String", native = true }
+str_at = { arity = 2, theory = "String", native = true }
+
+# String-Integer conversion
+strToInt = { arity = 1, theory = "String", native = true }
+str_to_int = { arity = 1, theory = "String", native = true }
+toInt = { arity = 1, theory = "String", native = true }
+intToStr = { arity = 1, theory = "String", native = true }
+int_to_str = { arity = 1, theory = "String", native = true }
+fromInt = { arity = 1, theory = "String", native = true }
+intToString = { arity = 1, theory = "String", native = true }
+
+# Regular expression operations
+matchesRegex = { arity = 2, theory = "Regex", native = true }
+matches = { arity = 2, theory = "Regex", native = true }
+str_in_re = { arity = 2, theory = "Regex", native = true }
+isDigits = { arity = 1, theory = "Regex", native = true }
+is_digits = { arity = 1, theory = "Regex", native = true }
+isAlpha = { arity = 1, theory = "Regex", native = true }
+is_alpha = { arity = 1, theory = "Regex", native = true }
+isAlphaNum = { arity = 1, theory = "Regex", native = true }
+is_alphanum = { arity = 1, theory = "Regex", native = true }
 
 # Note: Z3 supports many more operations via its built-in theories,
 # but these are the ones explicitly translated in our current implementation.
@@ -66,6 +111,8 @@ recursive_functions = true
 evaluation = true
 simplification = false  # Z3 has simplify() but not always reliable
 proof_generation = false  # Available in Z3 but not exposed yet
+string_theory = true  # QF_SLIA: Quantifier-Free Strings and Linear Integer Arithmetic
+regex_support = true  # Regular expression constraints via str.in_re
 
 [capabilities.performance]
 max_axioms = 10000  # Z3 can handle thousands of axioms efficiently
