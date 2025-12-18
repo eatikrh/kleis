@@ -815,14 +815,14 @@ The Kleis parser implements **~75% of the v0.8 grammar** for practical use. With
 
 ### Missing Top-Level Declarations
 
-| Feature | Grammar v0.8 | Parser | Priority | Notes |
-|---------|--------------|--------|----------|-------|
-| `import` / `include` | ❌ Not in grammar | ❌ Not implemented | **HIGH** | Need for modular files |
-| Top-level `verify` | ✅ | ❌ | Medium | Useful for notebooks |
-| Top-level `let` | ✅ | ❌ | Low | Let bindings work in expressions |
-| Top-level `axiom` | ✅ | ❌ | **Low** | Structures cover most use cases |
+| Feature | Grammar v0.8 | Parser | REPL | Priority | Notes |
+|---------|--------------|--------|------|----------|-------|
+| `import` / `include` | ❌ Not in grammar | ❌ | ❌ | **HIGH** | Need for modular files |
+| Top-level `verify` | ✅ | ❌ | ✅ `:verify` | Low | REPL already supports this! |
+| Top-level `let` | ✅ | ❌ | ✅ `:define` | Low | REPL has `:define` for functions |
+| Top-level `axiom` | ✅ | ❌ | ❌ | **Low** | Structures cover most use cases |
 
-**Note on top-level axioms:** Most axioms belong inside structures (e.g., Peano axioms → `structure Nat`, Euclid's postulates → `structure EuclideanGeometry`). Top-level axioms are mainly useful for notebook-style "assume X, verify Y" workflows.
+**Note:** The REPL already supports verification via `:verify` command. Top-level `verify` in .kleis files would mainly help notebook/script workflows where you want `verify` statements alongside `define` and `structure` declarations.
 
 ### Comment Syntax
 
@@ -967,9 +967,11 @@ define filter_head(list) =
 
 **Remaining parser work (by priority):**
 1. **Add `import`/`include` support** - Allow loading other .kleis files (HIGH)
-2. **Add top-level `verify`** - For notebooks and example files (Medium)
-3. **Add top-level `let`** - Convenience for notebooks (Low)
-4. ~~**Add top-level `axiom`**~~ - Deprioritized: structures cover most use cases
+2. ~~**Add top-level `verify`**~~ - REPL already has `:verify` command
+3. ~~**Add top-level `let`**~~ - REPL already has `:define` command  
+4. ~~**Add top-level `axiom`**~~ - Structures cover most use cases
+
+**Note:** Most "missing" top-level features are available via REPL commands. The main gap is `import`/`include` for modular file organization.
 
 **std_template_lib updates (COMPLETE! Dec 18, 2025):**
 - ✅ New `control_flow.kleist` - Templates for match, let, conditional, lambda
