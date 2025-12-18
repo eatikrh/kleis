@@ -587,7 +587,7 @@ impl KleisParser {
 
     fn parse_expression(&mut self) -> Result<Expression, KleisParseError> {
         // Parse logical expression, then check for type ascription (lowest precedence)
-        let expr = self.parse_implication()?;
+        let expr = self.parse_biconditional()?;
 
         // Check for type ascription: expr : Type
         self.skip_whitespace();
@@ -618,7 +618,28 @@ impl KleisParser {
         Ok(expr)
     }
 
-    /// Parse implication: A ⟹ B or A → B
+    /// Parse biconditional: A ↔ B (logical iff, lowest precedence, left associative)
+    fn parse_biconditional(&mut self) -> Result<Expression, KleisParseError> {
+        let mut left = self.parse_implication()?;
+
+        loop {
+            self.skip_whitespace();
+            if self.peek() != Some('↔') {
+                break;
+            }
+
+            self.advance(); // consume ↔
+            let right = self.parse_implication()?;
+            left = Expression::Operation {
+                name: "iff".to_string(),
+                args: vec![left, right],
+            };
+        }
+
+        Ok(left)
+    }
+
+    /// Parse implication: A ⟹ B or A → B (right associative)
     fn parse_implication(&mut self) -> Result<Expression, KleisParseError> {
         let mut left = self.parse_disjunction()?;
 
@@ -1943,6 +1964,7 @@ impl KleisParser {
                 '∧' => Some("logical_and".to_string()),
                 '∨' => Some("logical_or".to_string()),
                 '→' | '⟹' => Some("implies".to_string()),
+                '↔' => Some("iff".to_string()),
                 _ => None,
             };
 
