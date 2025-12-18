@@ -1,0 +1,363 @@
+// ============================================================================
+// Greek Letters and Special Symbols
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/greek.kleist
+//
+// These are zero-argument templates for symbols inserted as Objects.
+// When renderer sees Object("α"), it looks up template "α" for target output.
+
+// Lowercase Greek
+@template α {
+    unicode: "α"
+    latex: "\\alpha"
+    typst: "alpha"
+    html: "&alpha;"
+    glyph: "α"
+    category: "greek"
+}
+
+@template β {
+    unicode: "β"
+    latex: "\\beta"
+    typst: "beta"
+    html: "&beta;"
+    glyph: "β"
+    category: "greek"
+}
+
+@template γ {
+    unicode: "γ"
+    latex: "\\gamma"
+    typst: "gamma"
+    html: "&gamma;"
+    glyph: "γ"
+    category: "greek"
+}
+
+@template δ {
+    unicode: "δ"
+    latex: "\\delta"
+    typst: "delta"
+    html: "&delta;"
+    glyph: "δ"
+    category: "greek"
+}
+
+@template ε {
+    unicode: "ε"
+    latex: "\\varepsilon"
+    typst: "epsilon"
+    html: "&epsilon;"
+    glyph: "ε"
+    category: "greek"
+}
+
+@template ζ {
+    unicode: "ζ"
+    latex: "\\zeta"
+    typst: "zeta"
+    html: "&zeta;"
+    glyph: "ζ"
+    category: "greek"
+}
+
+@template η {
+    unicode: "η"
+    latex: "\\eta"
+    typst: "eta"
+    html: "&eta;"
+    glyph: "η"
+    category: "greek"
+}
+
+@template θ {
+    unicode: "θ"
+    latex: "\\theta"
+    typst: "theta"
+    html: "&theta;"
+    glyph: "θ"
+    category: "greek"
+}
+
+@template ι {
+    unicode: "ι"
+    latex: "\\iota"
+    typst: "iota"
+    html: "&iota;"
+    glyph: "ι"
+    category: "greek"
+}
+
+@template κ {
+    unicode: "κ"
+    latex: "\\kappa"
+    typst: "kappa"
+    html: "&kappa;"
+    glyph: "κ"
+    category: "greek"
+}
+
+@template λ {
+    unicode: "λ"
+    latex: "\\lambda"
+    typst: "lambda"
+    html: "&lambda;"
+    glyph: "λ"
+    category: "greek"
+}
+
+@template μ {
+    unicode: "μ"
+    latex: "\\mu"
+    typst: "mu"
+    html: "&mu;"
+    glyph: "μ"
+    category: "greek"
+}
+
+@template ν {
+    unicode: "ν"
+    latex: "\\nu"
+    typst: "nu"
+    html: "&nu;"
+    glyph: "ν"
+    category: "greek"
+}
+
+@template ξ {
+    unicode: "ξ"
+    latex: "\\xi"
+    typst: "xi"
+    html: "&xi;"
+    glyph: "ξ"
+    category: "greek"
+}
+
+@template π {
+    unicode: "π"
+    latex: "\\pi"
+    typst: "pi"
+    html: "&pi;"
+    glyph: "π"
+    category: "greek"
+}
+
+@template ρ {
+    unicode: "ρ"
+    latex: "\\rho"
+    typst: "rho"
+    html: "&rho;"
+    glyph: "ρ"
+    category: "greek"
+}
+
+@template σ {
+    unicode: "σ"
+    latex: "\\sigma"
+    typst: "sigma"
+    html: "&sigma;"
+    glyph: "σ"
+    category: "greek"
+}
+
+@template τ {
+    unicode: "τ"
+    latex: "\\tau"
+    typst: "tau"
+    html: "&tau;"
+    glyph: "τ"
+    category: "greek"
+}
+
+@template υ {
+    unicode: "υ"
+    latex: "\\upsilon"
+    typst: "upsilon"
+    html: "&upsilon;"
+    glyph: "υ"
+    category: "greek"
+}
+
+@template φ {
+    unicode: "φ"
+    latex: "\\varphi"
+    typst: "phi"
+    html: "&phi;"
+    glyph: "φ"
+    category: "greek"
+}
+
+@template χ {
+    unicode: "χ"
+    latex: "\\chi"
+    typst: "chi"
+    html: "&chi;"
+    glyph: "χ"
+    category: "greek"
+}
+
+@template ψ {
+    unicode: "ψ"
+    latex: "\\psi"
+    typst: "psi"
+    html: "&psi;"
+    glyph: "ψ"
+    category: "greek"
+}
+
+@template ω {
+    unicode: "ω"
+    latex: "\\omega"
+    typst: "omega"
+    html: "&omega;"
+    glyph: "ω"
+    category: "greek"
+}
+
+// Uppercase Greek
+@template Γ {
+    unicode: "Γ"
+    latex: "\\Gamma"
+    typst: "Gamma"
+    html: "&Gamma;"
+    glyph: "Γ"
+    category: "greek"
+}
+
+@template Δ {
+    unicode: "Δ"
+    latex: "\\Delta"
+    typst: "Delta"
+    html: "&Delta;"
+    glyph: "Δ"
+    category: "greek"
+}
+
+@template Θ {
+    unicode: "Θ"
+    latex: "\\Theta"
+    typst: "Theta"
+    html: "&Theta;"
+    glyph: "Θ"
+    category: "greek"
+}
+
+@template Λ {
+    unicode: "Λ"
+    latex: "\\Lambda"
+    typst: "Lambda"
+    html: "&Lambda;"
+    glyph: "Λ"
+    category: "greek"
+}
+
+@template Ξ {
+    unicode: "Ξ"
+    latex: "\\Xi"
+    typst: "Xi"
+    html: "&Xi;"
+    glyph: "Ξ"
+    category: "greek"
+}
+
+@template Π {
+    unicode: "Π"
+    latex: "\\Pi"
+    typst: "Pi"
+    html: "&Pi;"
+    glyph: "Π"
+    category: "greek"
+}
+
+@template Σ {
+    unicode: "Σ"
+    latex: "\\Sigma"
+    typst: "Sigma"
+    html: "&Sigma;"
+    glyph: "Σ"
+    category: "greek"
+}
+
+@template Υ {
+    unicode: "Υ"
+    latex: "\\Upsilon"
+    typst: "Upsilon"
+    html: "&Upsilon;"
+    glyph: "Υ"
+    category: "greek"
+}
+
+@template Φ {
+    unicode: "Φ"
+    latex: "\\Phi"
+    typst: "Phi"
+    html: "&Phi;"
+    glyph: "Φ"
+    category: "greek"
+}
+
+@template Ψ {
+    unicode: "Ψ"
+    latex: "\\Psi"
+    typst: "Psi"
+    html: "&Psi;"
+    glyph: "Ψ"
+    category: "greek"
+}
+
+@template Ω {
+    unicode: "Ω"
+    latex: "\\Omega"
+    typst: "Omega"
+    html: "&Omega;"
+    glyph: "Ω"
+    category: "greek"
+}
+
+// Special Symbols
+@template ∞ {
+    unicode: "∞"
+    latex: "\\infty"
+    typst: "infinity"
+    html: "&infin;"
+    glyph: "∞"
+    category: "special"
+}
+
+@template ∂ {
+    unicode: "∂"
+    latex: "\\partial"
+    typst: "diff"
+    html: "&part;"
+    glyph: "∂"
+    category: "special"
+}
+
+@template ∇ {
+    unicode: "∇"
+    latex: "\\nabla"
+    typst: "nabla"
+    html: "&nabla;"
+    glyph: "∇"
+    category: "special"
+}
+
+@template ℏ {
+    unicode: "ℏ"
+    latex: "\\hbar"
+    typst: "planck.reduce"
+    html: "&hbar;"
+    glyph: "ℏ"
+    category: "physics"
+}
+
+@template ℓ {
+    unicode: "ℓ"
+    latex: "\\ell"
+    typst: "ell"
+    html: "&ell;"
+    glyph: "ℓ"
+    category: "special"
+}
+

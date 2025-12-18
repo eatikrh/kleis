@@ -1186,7 +1186,9 @@ fn render_internal(
     node_id_to_uuid: &HashMap<String, String>,
 ) -> String {
     match node {
-        EditorNode::Object { object } => render_object(object, target, node_id, node_id_to_uuid),
+        EditorNode::Object { object } => {
+            render_object(object, ctx, target, node_id, node_id_to_uuid)
+        }
 
         EditorNode::Const { value } => render_const(value, target, node_id, node_id_to_uuid),
 
@@ -1229,11 +1231,13 @@ fn render_internal(
 
 fn render_object(
     s: &str,
+    ctx: &EditorRenderContext,
     target: &RenderTarget,
     node_id: &str,
     node_id_to_uuid: &HashMap<String, String>,
 ) -> String {
-    let rendered = render_object_for_target(s, target);
+    // First, try to look up the symbol in templates (e.g., "α" -> "\alpha" for LaTeX)
+    let rendered = render_object_with_context(s, ctx, target);
 
     // Add UUID label for Typst position tracking
     if matches!(target, RenderTarget::Typst) {
@@ -1242,6 +1246,27 @@ fn render_object(
         }
     }
     rendered
+}
+
+/// Look up Object value in templates, fall back to hardcoded mappings
+fn render_object_with_context(s: &str, ctx: &EditorRenderContext, target: &RenderTarget) -> String {
+    // Try to find a template for this symbol
+    let templates = match target {
+        RenderTarget::Unicode => &ctx.unicode_templates,
+        RenderTarget::LaTeX => &ctx.latex_templates,
+        RenderTarget::HTML => &ctx.html_templates,
+        RenderTarget::Typst => &ctx.typst_templates,
+        RenderTarget::Kleis => &ctx.kleis_templates,
+    };
+
+    // Look up by the Object's value (e.g., "α" -> template for alpha)
+    if let Some(template) = templates.get(s) {
+        // Symbol templates have no placeholders, just return the template
+        return template.clone();
+    }
+
+    // Fall back to hardcoded mappings for backward compatibility
+    render_object_for_target(s, target)
 }
 
 fn render_object_for_target(s: &str, target: &RenderTarget) -> String {
