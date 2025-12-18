@@ -647,6 +647,8 @@ blockComment ::= "/*" { (* any character *) } "*/" ;
     - NEW: Tuple Patterns - (a, b) desugars to Pair(a, b), () to Unit
     - NEW: String Literals - "hello" can be used in expressions
     - NEW: Import Statements - import "path/to/file.kleis"
+    - FIX: → (single arrow) now works as implication operator in expressions
+          (previously only ⟹ was supported; now P → Q and P ⟹ Q both work)
     - NEW: String Operations (stdlib/text.kleis):
         * Basic: concat, strlen, contains, hasPrefix, hasSuffix
         * Substring: substr, indexOf, replace, charAt
