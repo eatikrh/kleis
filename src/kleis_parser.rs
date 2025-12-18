@@ -617,19 +617,19 @@ impl KleisParser {
         Ok(expr)
     }
 
-    /// Parse implication: A ⟹ B
+    /// Parse implication: A ⟹ B or A → B
     fn parse_implication(&mut self) -> Result<Expression, KleisParseError> {
         let mut left = self.parse_disjunction()?;
 
         loop {
             self.skip_whitespace();
-            let is_implies = self.peek() == Some('⟹');
+            let is_implies = self.peek() == Some('⟹') || self.peek() == Some('→');
 
             if !is_implies {
                 break;
             }
 
-            self.advance(); // consume ⟹
+            self.advance(); // consume ⟹ or →
             let right = self.parse_disjunction()?;
             left = Expression::Operation {
                 name: "implies".to_string(),
