@@ -400,7 +400,7 @@ impl<'r> Z3Backend<'r> {
                 // 2. Extend vars with bindings from pattern match
                 // Grammar v0.8: Support pattern destructuring
                 let mut extended_vars = vars.clone();
-                self.bind_pattern_to_z3(pattern, &z3_value, &mut extended_vars)?;
+                self.bind_pattern_to_z3(pattern, &z3_value, value, &mut extended_vars)?;
 
                 // 3. Translate body with the extended context
                 self.kleis_to_z3(body, &extended_vars)
@@ -866,11 +866,15 @@ impl<'r> Z3Backend<'r> {
     }
 
     /// Bind pattern variables from a Z3 value (Grammar v0.8: for let destructuring)
-    #[allow(clippy::only_used_in_recursion)]
+    ///
+    /// This function extracts bindings from patterns for use in let expressions.
+    /// For constructor patterns like `Point(x, y)`, it destructures the expression
+    /// and binds pattern variables to corresponding Z3 values.
     fn bind_pattern_to_z3(
         &mut self,
         pattern: &crate::ast::Pattern,
         z3_value: &Dynamic,
+        original_expr: &Expression,
         vars: &mut HashMap<String, Dynamic>,
     ) -> Result<(), String> {
         use crate::ast::Pattern;
@@ -881,11 +885,47 @@ impl<'r> Z3Backend<'r> {
                 vars.insert(name.clone(), z3_value.clone());
                 Ok(())
             }
-            Pattern::Constructor { name: _, args: _ } => {
-                // For constructor patterns in let bindings, we'd need to extract fields
-                // This is complex for Z3; for now just bind if it's simple
-                // TODO: Implement proper constructor destructuring for Z3
-                Err("Constructor patterns in let bindings not yet supported for Z3".to_string())
+            Pattern::Constructor { name, args } => {
+                // Grammar v0.8: Constructor destructuring for let bindings
+                // Check if the original expression is an Operation with matching constructor
+                match original_expr {
+                    Expression::Operation {
+                        name: op_name,
+                        args: op_args,
+                    } if op_name == name && op_args.len() == args.len() => {
+                        // Recursively bind each pattern argument to the corresponding operation argument
+                        for (pat, arg_expr) in args.iter().zip(op_args.iter()) {
+                            let arg_z3 = self.kleis_to_z3(arg_expr, vars)?;
+                            self.bind_pattern_to_z3(pat, &arg_z3, arg_expr, vars)?;
+                        }
+                        Ok(())
+                    }
+                    Expression::Object(var_name) => {
+                        // The value is a variable - we can't destructure it at Z3 level
+                        // This would require Z3 datatypes with accessors
+                        // For now, create symbolic field accessors as fresh variables
+                        // This allows verification to proceed with symbolic field values
+                        for (i, pat) in args.iter().enumerate() {
+                            let field_var_name = format!("{}_{}_field{}", var_name, name, i);
+                            let field_z3: Dynamic = Int::fresh_const(&field_var_name).into();
+                            // Create a placeholder expression for recursion
+                            let placeholder = Expression::Object(field_var_name.clone());
+                            self.bind_pattern_to_z3(pat, &field_z3, &placeholder, vars)?;
+                        }
+                        Ok(())
+                    }
+                    _ => {
+                        // For other expressions, we can try to evaluate/translate and extract
+                        // For now, return a more helpful error
+                        Err(format!(
+                            "Cannot destructure pattern '{}({})' from expression type {:?}. \
+                             Constructor destructuring requires a matching Operation or Object.",
+                            name,
+                            args.len(),
+                            std::mem::discriminant(original_expr)
+                        ))
+                    }
+                }
             }
             Pattern::Constant(_) => {
                 // Constants don't bind variables
@@ -898,7 +938,7 @@ impl<'r> Z3Backend<'r> {
                 // Bind whole value to alias
                 vars.insert(binding.clone(), z3_value.clone());
                 // Recurse into inner pattern
-                self.bind_pattern_to_z3(inner, z3_value, vars)
+                self.bind_pattern_to_z3(inner, z3_value, original_expr, vars)
             }
         }
     }

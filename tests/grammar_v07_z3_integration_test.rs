@@ -453,6 +453,210 @@ fn test_nested_let_binding() {
     println!("   ✅ let x = 5 in let y = 3 in x * y = 15");
 }
 
+/// Test Grammar v0.8: Let destructuring with constructor pattern
+/// let Point(x, y) = Point(3, 4) in x + y
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_let_constructor_destructuring() {
+    println!("\n🧪 Testing: Let constructor destructuring (Grammar v0.8)");
+
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).unwrap();
+
+    // let Point(x, y) = Point(3, 4) in x + y
+    let expr = Expression::Let {
+        pattern: kleis::ast::Pattern::Constructor {
+            name: "Point".to_string(),
+            args: vec![
+                kleis::ast::Pattern::Variable("x".to_string()),
+                kleis::ast::Pattern::Variable("y".to_string()),
+            ],
+        },
+        type_annotation: None,
+        value: Box::new(Expression::Operation {
+            name: "Point".to_string(),
+            args: vec![
+                Expression::Const("3".to_string()),
+                Expression::Const("4".to_string()),
+            ],
+        }),
+        body: Box::new(Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Object("y".to_string()),
+            ],
+        }),
+    };
+
+    let result = backend.evaluate(&expr).unwrap();
+    assert_eq!(result, Expression::Const("7".to_string()));
+    println!("   ✅ let Point(x, y) = Point(3, 4) in x + y = 7");
+}
+
+/// Test Grammar v0.8: Nested constructor destructuring
+/// let Pair(Point(a, b), Point(c, d)) = Pair(Point(1, 2), Point(3, 4)) in a + b + c + d
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_let_nested_constructor_destructuring() {
+    println!("\n🧪 Testing: Nested constructor destructuring (Grammar v0.8)");
+
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).unwrap();
+
+    // let Pair(Point(a, b), Point(c, d)) = Pair(Point(1, 2), Point(3, 4)) in a + b + c + d
+    let expr = Expression::Let {
+        pattern: kleis::ast::Pattern::Constructor {
+            name: "Pair".to_string(),
+            args: vec![
+                kleis::ast::Pattern::Constructor {
+                    name: "Point".to_string(),
+                    args: vec![
+                        kleis::ast::Pattern::Variable("a".to_string()),
+                        kleis::ast::Pattern::Variable("b".to_string()),
+                    ],
+                },
+                kleis::ast::Pattern::Constructor {
+                    name: "Point".to_string(),
+                    args: vec![
+                        kleis::ast::Pattern::Variable("c".to_string()),
+                        kleis::ast::Pattern::Variable("d".to_string()),
+                    ],
+                },
+            ],
+        },
+        type_annotation: None,
+        value: Box::new(Expression::Operation {
+            name: "Pair".to_string(),
+            args: vec![
+                Expression::Operation {
+                    name: "Point".to_string(),
+                    args: vec![
+                        Expression::Const("1".to_string()),
+                        Expression::Const("2".to_string()),
+                    ],
+                },
+                Expression::Operation {
+                    name: "Point".to_string(),
+                    args: vec![
+                        Expression::Const("3".to_string()),
+                        Expression::Const("4".to_string()),
+                    ],
+                },
+            ],
+        }),
+        body: Box::new(Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Operation {
+                    name: "plus".to_string(),
+                    args: vec![
+                        Expression::Operation {
+                            name: "plus".to_string(),
+                            args: vec![
+                                Expression::Object("a".to_string()),
+                                Expression::Object("b".to_string()),
+                            ],
+                        },
+                        Expression::Object("c".to_string()),
+                    ],
+                },
+                Expression::Object("d".to_string()),
+            ],
+        }),
+    };
+
+    let result = backend.evaluate(&expr).unwrap();
+    assert_eq!(result, Expression::Const("10".to_string()));
+    println!("   ✅ let Pair(Point(a, b), Point(c, d)) = Pair(Point(1, 2), Point(3, 4)) in a + b + c + d = 10");
+}
+
+/// Test Grammar v0.8: Let destructuring with wildcard
+/// let Point(x, _) = Point(5, 10) in x * 2
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_let_destructuring_with_wildcard() {
+    println!("\n🧪 Testing: Let destructuring with wildcard (Grammar v0.8)");
+
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).unwrap();
+
+    // let Point(x, _) = Point(5, 10) in x * 2
+    let expr = Expression::Let {
+        pattern: kleis::ast::Pattern::Constructor {
+            name: "Point".to_string(),
+            args: vec![
+                kleis::ast::Pattern::Variable("x".to_string()),
+                kleis::ast::Pattern::Wildcard,
+            ],
+        },
+        type_annotation: None,
+        value: Box::new(Expression::Operation {
+            name: "Point".to_string(),
+            args: vec![
+                Expression::Const("5".to_string()),
+                Expression::Const("10".to_string()),
+            ],
+        }),
+        body: Box::new(Expression::Operation {
+            name: "times".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Const("2".to_string()),
+            ],
+        }),
+    };
+
+    let result = backend.evaluate(&expr).unwrap();
+    assert_eq!(result, Expression::Const("10".to_string()));
+    println!("   ✅ let Point(x, _) = Point(5, 10) in x * 2 = 10");
+}
+
+/// Test Grammar v0.8: Let destructuring with as-pattern
+/// let Point(x, y) as p = Point(3, 4) in x + y (as-pattern binds both p and x, y)
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_let_destructuring_with_as_pattern() {
+    println!("\n🧪 Testing: Let destructuring with as-pattern (Grammar v0.8)");
+
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).unwrap();
+
+    // let Point(x, y) as p = Point(3, 4) in x + y
+    // (p is bound to the whole Point(3, 4), x=3, y=4)
+    let expr = Expression::Let {
+        pattern: kleis::ast::Pattern::As {
+            pattern: Box::new(kleis::ast::Pattern::Constructor {
+                name: "Point".to_string(),
+                args: vec![
+                    kleis::ast::Pattern::Variable("x".to_string()),
+                    kleis::ast::Pattern::Variable("y".to_string()),
+                ],
+            }),
+            binding: "p".to_string(),
+        },
+        type_annotation: None,
+        value: Box::new(Expression::Operation {
+            name: "Point".to_string(),
+            args: vec![
+                Expression::Const("3".to_string()),
+                Expression::Const("4".to_string()),
+            ],
+        }),
+        body: Box::new(Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Object("y".to_string()),
+            ],
+        }),
+    };
+
+    let result = backend.evaluate(&expr).unwrap();
+    assert_eq!(result, Expression::Const("7".to_string()));
+    println!("   ✅ let Point(x, y) as p = Point(3, 4) in x + y = 7");
+}
+
 // ============================================================================
 // SECTION 7: Expression Equivalence
 // ============================================================================
