@@ -40,6 +40,8 @@
         
         group "Builders" {
             @piecewise_builder
+            @match_builder
+            @let_builder
         }
     }
     

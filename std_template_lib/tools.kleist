@@ -34,3 +34,25 @@
     svg: "<svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><text x=\"12\" y=\"18\" text-anchor=\"middle\" font-size=\"16\" font-family=\"serif\">αβγ</text></svg>"
 }
 
+// ============================================================================
+// Grammar v0.8 Pattern Matching Tools
+// ============================================================================
+
+// Grammar v0.8: Create pattern matching expression with guards
+@tool match_builder {
+    glyph: "⤳"
+    handler: "showMatchBuilder"
+    category: "control_flow"
+    builtin: "true"
+    svg: "<svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 6 L10 6 L10 4 L14 7 L10 10 L10 8 L4 8 Z\" fill=\"currentColor\"/><line x1=\"16\" y1=\"5\" x2=\"22\" y2=\"5\" stroke=\"currentColor\" stroke-width=\"1.5\"/><line x1=\"16\" y1=\"9\" x2=\"22\" y2=\"9\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M4 14 L10 14 L10 12 L14 15 L10 18 L10 16 L4 16 Z\" fill=\"currentColor\"/><line x1=\"16\" y1=\"15\" x2=\"22\" y2=\"15\" stroke=\"currentColor\" stroke-width=\"1.5\"/><line x1=\"16\" y1=\"19\" x2=\"22\" y2=\"19\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg>"
+}
+
+// Grammar v0.8: Create let binding with optional pattern destructuring
+@tool let_builder {
+    glyph: "≡"
+    handler: "showLetBuilder"
+    category: "control_flow"
+    builtin: "true"
+    svg: "<svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><text x=\"3\" y=\"16\" font-size=\"12\" font-family=\"monospace\" fill=\"currentColor\">let</text><line x1=\"20\" y1=\"10\" x2=\"20\" y2=\"18\" stroke=\"currentColor\" stroke-width=\"1.5\"/><line x1=\"16\" y1=\"14\" x2=\"20\" y2=\"14\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg>"
+}
+
