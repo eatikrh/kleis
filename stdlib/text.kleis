@@ -89,7 +89,123 @@ structure TextOps {
 }
 
 // ============================================
-// STRING CONVERSION
+// SUBSTRING OPERATIONS
+// ============================================
+
+structure SubstringOps {
+    // Extract substring: substr("hello", 1, 3) = "ell"
+    // substr(s, start, length) - extracts length characters starting at start
+    operation substr : String → Nat → Nat → String
+    
+    // Find index of substring: indexOf("hello", "ll", 0) = 2
+    // indexOf(haystack, needle, startPos) - returns -1 if not found
+    operation indexOf : String → String → Nat → Int
+    
+    // Replace first occurrence: replace("hello", "l", "L") = "heLlo"
+    operation replace : String → String → String → String
+    
+    // Replace all occurrences: replaceAll("hello", "l", "L") = "heLLo"
+    operation replaceAll : String → String → String → String
+    
+    // Get character at index: charAt("hello", 0) = "h"
+    // Returns empty string if index out of bounds
+    operation charAt : String → Nat → String
+    
+    // ============================================
+    // SUBSTRING AXIOMS
+    // ============================================
+    
+    // Substring of empty string is empty
+    axiom substr_empty : ∀ start : Nat . ∀ len : Nat .
+        equals(substr("", start, len), "")
+    
+    // Substring starting at 0 with full length is identity
+    axiom substr_identity : ∀ s : String .
+        equals(substr(s, 0, strlen(s)), s)
+    
+    // indexOf of empty needle is always 0 (at start position)
+    axiom indexOf_empty : ∀ s : String . ∀ start : Nat .
+        equals(indexOf(s, "", start), start)
+    
+    // charAt of empty string is empty
+    axiom charAt_empty : ∀ i : Nat .
+        equals(charAt("", i), "")
+    
+    // charAt extracts single character
+    axiom charAt_def : ∀ s : String . ∀ i : Nat .
+        equals(charAt(s, i), substr(s, i, 1))
+}
+
+// ============================================
+// STRING-INTEGER CONVERSION
+// ============================================
+
+structure StringIntConversion {
+    // Convert string to integer: strToInt("42") = 42
+    // Returns -1 if string is not a valid non-negative integer
+    operation strToInt : String → Int
+    
+    // Convert integer to string: intToStr(42) = "42"
+    // Returns empty string for negative integers
+    operation intToStr : Int → String
+    
+    // ============================================
+    // CONVERSION AXIOMS
+    // ============================================
+    
+    // Round-trip: intToStr(strToInt(s)) = s for valid numeric strings
+    axiom roundtrip_str_int : ∀ s : String . ∀ n : Int .
+        implies(
+            and(geq(n, 0), equals(strToInt(s), n)),
+            equals(intToStr(n), s)
+        )
+    
+    // strToInt of empty string is -1
+    axiom strToInt_empty : equals(strToInt(""), -1)
+    
+    // intToStr of 0 is "0"
+    axiom intToStr_zero : equals(intToStr(0), "0")
+    
+    // Length relationship
+    axiom strlen_intToStr : ∀ n : Int .
+        implies(geq(n, 0), geq(strlen(intToStr(n)), 1))
+}
+
+// ============================================
+// REGULAR EXPRESSION OPERATIONS
+// ============================================
+
+structure RegexOps {
+    // Check if string matches regex pattern
+    // matchesRegex("hello", "[a-z]+") = True
+    operation matchesRegex : String → String → Bool
+    
+    // Check if string is all digits: isDigits("123") = True
+    operation isDigits : String → Bool
+    
+    // Check if string is all letters: isAlpha("abc") = True
+    operation isAlpha : String → Bool
+    
+    // Check if string is alphanumeric: isAlphaNum("abc123") = True
+    operation isAlphaNum : String → Bool
+    
+    // ============================================
+    // REGEX AXIOMS
+    // ============================================
+    
+    // Empty string matches empty pattern
+    axiom regex_empty : equals(matchesRegex("", ""), True)
+    
+    // isDigits relationship with strToInt
+    axiom isDigits_strToInt : ∀ s : String .
+        implies(
+            and(isDigits(s), not(equals(s, ""))),
+            geq(strToInt(s), 0)
+        )
+}
+
+// ============================================
+// STRING CONVERSION (GENERAL)
 // ============================================
 
 structure TextConversion {
@@ -97,7 +213,7 @@ structure TextConversion {
     // Note: This is declarative - actual conversion handled by evaluator
     operation toString : ℝ → String
     
-    // Convert integer to string
+    // Convert integer to string (alias for intToStr)
     operation intToString : ℤ → String
     
     // Convert boolean to string
