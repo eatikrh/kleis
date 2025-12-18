@@ -213,6 +213,66 @@ enum Keyword {
     Builtin,
 }
 
+/// Check if character can start an identifier (letters, underscore, math symbols)
+fn is_ident_start(c: char) -> bool {
+    c.is_alphabetic() || c == '_' || is_math_symbol(c)
+}
+
+/// Check if character can continue an identifier
+fn is_ident_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || is_math_symbol(c)
+}
+
+/// Check if character is a mathematical symbol used in template names
+fn is_math_symbol(c: char) -> bool {
+    matches!(
+        c,
+        // Greek letters (lowercase and uppercase) are handled by is_alphabetic()
+        // These are math symbols that aren't alphabetic:
+        '∞' | '∂'
+            | '∇'
+            | 'ℏ'
+            | 'ℓ'
+            | '∅'
+            | '∈'
+            | '∉'
+            | '⊂'
+            | '⊃'
+            | '⊆'
+            | '⊇'
+            | '∪'
+            | '∩'
+            | '∧'
+            | '∨'
+            | '¬'
+            | '→'
+            | '↔'
+            | '⇒'
+            | '⇔'
+            | '∀'
+            | '∃'
+            | '±'
+            | '×'
+            | '÷'
+            | '≠'
+            | '≤'
+            | '≥'
+            | '≈'
+            | '≡'
+            | '∝'
+            | '⊗'
+            | '⊕'
+            | '·'
+            | '°'
+            | '′'
+            | '″'
+            | '∑'
+            | '∏'
+            | '∫'
+            | '√'
+    )
+}
+
 struct Tokenizer<'a> {
     input: &'a str,
     chars: std::iter::Peekable<std::str::CharIndices<'a>>,
@@ -322,7 +382,7 @@ impl<'a> Tokenizer<'a> {
                 Ok(Token::Colon)
             }
             '"' => self.read_string(),
-            _ if c.is_alphabetic() || c == '_' => self.read_identifier(),
+            _ if is_ident_start(c) => self.read_identifier(),
             _ => Err(self.error(&format!("Unexpected character: '{}'", c))),
         }
     }
@@ -373,7 +433,7 @@ impl<'a> Tokenizer<'a> {
     fn read_identifier(&mut self) -> Result<Token, ParseError> {
         let mut ident = String::new();
         while let Some(&(_, c)) = self.chars.peek() {
-            if c.is_alphanumeric() || c == '_' {
+            if is_ident_char(c) {
                 ident.push(c);
                 self.chars.next();
                 self.column += 1;
