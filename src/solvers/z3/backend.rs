@@ -510,10 +510,9 @@ impl<'r> Z3Backend<'r> {
                         match ty.as_str() {
                             "Bool" | "Boolean" => Bool::fresh_const(&param.name).into(),
                             "ℝ" | "Real" | "R" => Real::fresh_const(&param.name).into(),
-                            "ℂ" | "Complex" | "C" => {
-                                self.fresh_complex_const(&param.name)
-                                    .unwrap_or_else(|| Int::fresh_const(&param.name).into())
-                            }
+                            "ℂ" | "Complex" | "C" => self
+                                .fresh_complex_const(&param.name)
+                                .unwrap_or_else(|| Int::fresh_const(&param.name).into()),
                             _ => Int::fresh_const(&param.name).into(),
                         }
                     } else {
@@ -1833,8 +1832,7 @@ impl<'r> Z3Backend<'r> {
             let re = Real::fresh_const(&format!("{}_re", name));
             let im = Real::fresh_const(&format!("{}_im", name));
             // Construct the complex number
-            cdt.constructor()
-                .apply(&[&re as &dyn Ast, &im as &dyn Ast])
+            cdt.constructor().apply(&[&re as &dyn Ast, &im as &dyn Ast])
         })
     }
 
