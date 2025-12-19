@@ -193,14 +193,23 @@ data Type =
 
 #### 5. Inductive Proofs
 
-**Required but missing:**
+**Nuanced reality** (verified Dec 19, 2025):
+
+Z3 CAN verify many "inductive-looking" facts automatically:
 ```
-// Z3 cannot do:
-prove ∀(n : ℕ). P(n)
-  by P(0) ∧ (∀k. P(k) → P(k+1))
+✅ ∀(n : ℕ). n + 0 = n              -- Z3 arithmetic theory
+✅ ∀(n : ℕ). n * 1 = n              -- Z3 arithmetic theory
+✅ ∀(a b : ℝ). a + b = b + a        -- Z3 real arithmetic
+✅ ∀(p q : Bool). (p ∧ q) = (q ∧ p) -- Z3 boolean theory
 ```
 
-**Why it matters:** Most interesting theorems require induction. Z3 is an SMT solver, not a proof assistant.
+Z3 struggles with **structural induction** on recursive types:
+```
+⚠️ ∀(xs : List). length(xs ++ ys) = length(xs) + length(ys)
+⚠️ Properties requiring case analysis on ADT constructors
+```
+
+**Key insight:** Most Bourbaki mathematics is about continuous structures (ℝ, ℂ, topology) where Z3's built-in theories work well. Structural induction on lists/trees is less common in Bourbaki.
 
 ---
 

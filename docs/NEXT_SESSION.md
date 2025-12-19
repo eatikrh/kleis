@@ -112,14 +112,23 @@ structure ZFC {
 
 ---
 
-## ⚠️ Fundamental Limitations (Cannot Fix Without New Backend)
+## ⚠️ Z3 Capabilities (Clarified Dec 19, 2025)
 
-| Limitation | Why | Workaround |
-|------------|-----|------------|
-| **Induction** | Z3 is SMT, not proof assistant | None - need Lean/Coq backend |
-| **Limits/Convergence verification** | Undecidable for Z3 | Can state axioms, can't verify |
-| **Type-level arithmetic** | No `Vec(m+n)` from `Vec(m) ++ Vec(n)` | Runtime verification only |
-| **Transfinite induction** | Requires ordinals + induction | Future work |
+**Z3 CAN verify (no Kleis implementation needed):**
+- Arithmetic: `∀(n : ℕ). n + 0 = n` ✅
+- Algebra: `∀(a b : ℝ). (a-b)*(a+b) = a²-b²` ✅
+- Logic: De Morgan, distributivity ✅
+- Most Bourbaki-style axioms about ℝ, ℂ, topology ✅
+
+**Z3 struggles with:**
+
+| Limitation | Example | Status |
+|------------|---------|--------|
+| **Structural induction** | `length(xs ++ ys) = length(xs) + length(ys)` | May timeout |
+| **Limits/Convergence** | ε-δ proofs with nested quantifiers | May timeout |
+| **Type-level arithmetic** | `Vec(m+n)` from `Vec(m) ++ Vec(n)` | Not expressible |
+
+**Key insight:** Bourbaki is mostly continuous math (ℝ, ℂ, topology) where Z3 works well. Structural induction on lists/trees is rare in Bourbaki.
 
 ---
 
