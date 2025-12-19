@@ -1228,22 +1228,37 @@ impl TypeInference {
 
         // OPERATOR OVERLOADING: Comparison operations
         // These return Bool, but we need to type-check operands
-        if matches!(
-            name,
-            "equals"
-                | "not_equals"
-                | "neq"
-                | "less_than"
-                | "greater_than"
-                | "less_equal"
-                | "greater_equal"
-        ) && args.len() == 2
-        {
-            // Type check both sides (this enables lowering of complex operands)
+        if matches!(name, "equals" | "not_equals" | "neq") && args.len() == 2 {
+            // Equality works on any type
             let _t1 = self.infer(&args[0], context_builder)?;
             let _t2 = self.infer(&args[1], context_builder)?;
-            // Comparisons return Bool
             return Ok(Type::Bool);
+        }
+
+        // Ordering operations only work on orderable types (Scalar, Int, Nat, Real)
+        // They do NOT work on Complex, Matrix, Bool, etc.
+        if matches!(
+            name,
+            "less_than" | "greater_than" | "less_equal" | "greater_equal"
+        ) && args.len() == 2
+        {
+            let t1 = self.infer(&args[0], context_builder)?;
+            let t2 = self.infer(&args[1], context_builder)?;
+
+            // Check if operands are orderable (numeric scalar types)
+            let is_orderable = |t: &Type| {
+                matches!(t, Type::Nat | Type::NatValue(_) | Type::Var(_))
+                    || matches!(
+                        t,
+                        Type::Data { constructor, .. }
+                            if constructor == "Int" || constructor == "Real" || constructor == "Scalar"
+                    )
+            };
+
+            if is_orderable(&t1) && is_orderable(&t2) {
+                return Ok(Type::Bool);
+            }
+            // If not orderable, fall through to context_builder for proper error
         }
 
         // Check if this is a defined function (from `define` statements)

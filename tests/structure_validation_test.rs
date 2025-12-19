@@ -46,8 +46,9 @@ fn test_ordering_works_for_scalars() {
 
         match checker.check(&expr) {
             TypeCheckResult::Success(ty) => {
-                // Should infer Bool (now properly represented as Type::Data)
+                // Should infer Bool (Type::Bool variant or Type::Data with type_name "Bool")
                 let is_bool = match &ty {
+                    Type::Bool => true,
                     Type::Data { type_name, .. } => type_name == "Bool",
                     _ => false,
                 };
