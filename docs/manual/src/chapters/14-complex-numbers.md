@@ -2,26 +2,75 @@
 
 Kleis has first-class support for complex numbers (ℂ), enabling symbolic reasoning about complex arithmetic, verification of identities, and theorem proving in complex analysis.
 
+## Natural Arithmetic Syntax ✨ NEW
+
+**Kleis now supports natural arithmetic operators for complex numbers!**
+
+You can write expressions using `+`, `-`, `*`, `/` with complex numbers, just like you would with real numbers:
+
+```kleis
+// Natural syntax (NEW!)
+:verify complex(1, 2) + complex(3, 4) = complex(4, 6)
+// ✅ Valid
+
+:verify complex(1, 2) * complex(3, 4) = complex(-5, 10)
+// ✅ Valid
+
+// The classic: 3 + 4i
+:verify 3 + 4*i = complex(3, 4)
+// ✅ Valid
+
+// Mixed real and complex
+:verify 5 + complex(1, 2) = complex(6, 2)
+// ✅ Valid
+```
+
+Kleis automatically converts these to the appropriate complex operations via **semantic lowering**:
+
+| You Write | Kleis Translates To |
+|-----------|---------------------|
+| `z1 + z2` | `complex_add(z1, z2)` |
+| `z1 - z2` | `complex_sub(z1, z2)` |
+| `z1 * z2` | `complex_mul(z1, z2)` |
+| `z1 / z2` | `complex_div(z1, z2)` |
+| `r + z` (ℝ + ℂ) | `complex_add(complex(r, 0), z)` |
+| `-z` | `neg_complex(z)` |
+
+This works transparently in the REPL and for verification.
+
 ## The Imaginary Unit
 
 The imaginary unit `i` is predefined in Kleis:
 
 ```kleis
 // i is the square root of -1
-define i_squared = complex_mul(i, i)
+define i_squared = i * i
 // Result: complex(-1, 0)  — that's -1!
 ```
 
 In the REPL, you can verify this fundamental property:
 
 ```kleis
+:verify i * i = complex(-1, 0)
+// ✅ Valid
+
+// Or using the explicit function:
 :verify complex_mul(i, i) = complex(-1, 0)
 // ✅ Valid
 ```
 
 ## Creating Complex Numbers
 
-Use the `complex(re, im)` constructor:
+**Method 1: Using arithmetic (recommended)**
+
+```kleis
+define z1 = 3 + 4*i           // 3 + 4i
+define z2 = 1 - 2*i           // 1 - 2i
+define pure_real = 5 + 0*i    // 5 (a real number)
+define pure_imag = 0 + 3*i    // 3i (pure imaginary)
+```
+
+**Method 2: Using the `complex(re, im)` constructor**
 
 ```kleis
 // complex(real_part, imaginary_part)
@@ -63,23 +112,28 @@ Verification examples:
 ### Addition and Subtraction
 
 ```kleis
-define z1 = complex(1, 2)    // 1 + 2i
-define z2 = complex(3, 4)    // 3 + 4i
+define z1 = 1 + 2*i    // 1 + 2i
+define z2 = 3 + 4*i    // 3 + 4i
 
 // Addition: (1 + 2i) + (3 + 4i) = 4 + 6i
-define sum = complex_add(z1, z2)
+define sum = z1 + z2
 
 // Subtraction: (1 + 2i) - (3 + 4i) = -2 - 2i
-define diff = complex_sub(z1, z2)
+define diff = z1 - z2
 ```
 
 Verify concrete arithmetic:
 
 ```kleis
-:verify complex_add(complex(1, 2), complex(3, 4)) = complex(4, 6)
+// Natural syntax
+:verify (1 + 2*i) + (3 + 4*i) = 4 + 6*i
 // ✅ Valid
 
-:verify complex_sub(complex(5, 3), complex(2, 1)) = complex(3, 2)
+:verify (5 + 3*i) - (2 + 1*i) = 3 + 2*i
+// ✅ Valid
+
+// Explicit function syntax (also works)
+:verify complex_add(complex(1, 2), complex(3, 4)) = complex(4, 6)
 // ✅ Valid
 ```
 
@@ -88,37 +142,47 @@ Verify concrete arithmetic:
 Complex multiplication follows the rule: `(a + bi)(c + di) = (ac - bd) + (ad + bc)i`
 
 ```kleis
-define z1 = complex(1, 2)    // 1 + 2i
-define z2 = complex(3, 4)    // 3 + 4i
+define z1 = 1 + 2*i    // 1 + 2i
+define z2 = 3 + 4*i    // 3 + 4i
 
 // (1 + 2i)(3 + 4i) = 3 + 4i + 6i + 8i² = 3 + 10i - 8 = -5 + 10i
-define product = complex_mul(z1, z2)
+define product = z1 * z2
 ```
 
 Verification:
 
 ```kleis
-:verify complex_mul(complex(1, 2), complex(3, 4)) = complex(-5, 10)
+// Natural syntax
+:verify (1 + 2*i) * (3 + 4*i) = complex(-5, 10)
+// ✅ Valid
+
+// The fundamental property: i² = -1
+:verify i * i = complex(-1, 0)
 // ✅ Valid
 
 // Multiplication by i rotates 90°
-:verify ∀(z : ℂ). complex_mul(z, i) = complex(neg(im(z)), re(z))
+:verify ∀(z : ℂ). z * i = complex(neg(im(z)), re(z))
 // ✅ Valid (where neg is negation)
 ```
 
 ### Division
 
 ```kleis
-define z1 = complex(1, 0)    // 1
-define z2 = complex(0, 1)    // i
+define z1 = 1 + 0*i    // 1
+define z2 = 0 + 1*i    // i
 
 // 1 / i = -i
-define quotient = complex_div(z1, z2)
+define quotient = z1 / z2
 ```
 
 Verification:
 
 ```kleis
+// Natural syntax
+:verify (1 + 0*i) / (0 + 1*i) = 0 - 1*i
+// ✅ Valid
+
+// Explicit function syntax
 :verify complex_div(complex(1, 0), complex(0, 1)) = complex(0, -1)
 // ✅ Valid
 ```
@@ -359,25 +423,25 @@ structure ComplexTest {
 
 ## Operation Reference
 
-| Operation | Syntax | Description |
-|-----------|--------|-------------|
-| Create | `complex(a, b)` | Create a + bi |
-| Real part | `re(z)` | Extract real part |
-| Imaginary part | `im(z)` | Extract imaginary part |
-| Add | `complex_add(z1, z2)` | z1 + z2 |
-| Subtract | `complex_sub(z1, z2)` | z1 - z2 |
-| Multiply | `complex_mul(z1, z2)` | z1 × z2 |
-| Divide | `complex_div(z1, z2)` | z1 / z2 |
-| Negate | `neg_complex(z)` | -z |
-| Inverse | `complex_inverse(z)` | 1/z |
-| Conjugate | `conj(z)` | Complex conjugate |
-| Magnitude² | `abs_squared(z)` | \|z\|² |
+| Operation | Natural Syntax | Explicit Syntax | Description |
+|-----------|----------------|-----------------|-------------|
+| Create | `a + b*i` | `complex(a, b)` | Create a + bi |
+| Real part | — | `re(z)` | Extract real part |
+| Imaginary part | — | `im(z)` | Extract imaginary part |
+| Add | `z1 + z2` | `complex_add(z1, z2)` | z1 + z2 |
+| Subtract | `z1 - z2` | `complex_sub(z1, z2)` | z1 - z2 |
+| Multiply | `z1 * z2` | `complex_mul(z1, z2)` | z1 × z2 |
+| Divide | `z1 / z2` | `complex_div(z1, z2)` | z1 / z2 |
+| Negate | `-z` | `neg_complex(z)` | -z |
+| Inverse | — | `complex_inverse(z)` | 1/z |
+| Conjugate | — | `conj(z)` | Complex conjugate |
+| Magnitude² | — | `abs_squared(z)` | \|z\|² |
 
 ## Current Limitations
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Operator overloading | ❌ | Use `complex_add` not `+` |
+| Operator overloading | ✅ | `z1 + z2`, `3 + 4*i` work! |
 | Magnitude `abs(z)` | ❌ | Requires sqrt |
 | Transcendentals | ❌ | `exp`, `log`, `sin`, `cos` |
 | Polar form | ❌ | `(r, θ)` |
