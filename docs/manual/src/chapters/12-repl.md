@@ -69,6 +69,34 @@ Run verifications interactively with `:verify`:
 ❌ Invalid - Counterexample: x!2 -> 0
 ```
 
+## Satisfiability with Z3
+
+Use `:sat` to find solutions (equation solving):
+
+```
+λ> :sat ∃(z : ℂ). z * z = complex(-1, 0)
+✅ Satisfiable
+   Witness: z_re = 0, z_im = -1
+
+λ> :sat ∃(x : ℝ). x * x = 4
+✅ Satisfiable
+   Witness: x = -2
+
+λ> :sat ∃(x : ℝ). x * x = -1
+❌ Unsatisfiable (no solution exists)
+
+λ> :sat ∃(x : ℝ)(y : ℝ). x + y = 10 ∧ x - y = 4
+✅ Satisfiable
+   Witness: x = 7, y = 3
+```
+
+**`:verify` vs `:sat`:**
+
+| Command | Question | Use Case |
+|---------|----------|----------|
+| `:verify` | Is it always true? (∀) | Prove theorems |
+| `:sat` | Does a solution exist? (∃) | Solve equations |
+
 ## Lambda Expressions
 
 Lambda expressions work at the prompt:
@@ -100,7 +128,8 @@ Check types with `:type`:
 | `:help` | Show all commands |
 | `:load <file>` | Load a .kleis file |
 | `:env` | Show defined functions |
-| `:verify <expr>` | Verify with Z3 |
+| `:verify <expr>` | Verify with Z3 (is it always true?) |
+| `:sat <expr>` | Check satisfiability (does a solution exist?) |
 | `:type <expr>` | Show inferred type |
 | `:ast <expr>` | Show parsed AST |
 | `:symbols` | Unicode math symbols palette |
