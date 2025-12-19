@@ -583,6 +583,7 @@ impl TypeContextBuilder {
             Type::String => Some("String".to_string()),
             Type::StringValue(s) => Some(format!("\"{}\"", s)),
             Type::Bool => Some("Bool".to_string()),
+            Type::Unit => Some("Unit".to_string()),
 
             // User-defined data types
             Type::Data {
