@@ -319,6 +319,39 @@ impl TypeInference {
         &mut self.context
     }
 
+    /// Convert a type annotation string to a Type
+    /// Used for binding quantified variables to their annotated types
+    fn type_annotation_to_type(&mut self, annotation: &str) -> Type {
+        match annotation {
+            // Complex types
+            "ℂ" | "Complex" | "C" => Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Complex".to_string(),
+                args: vec![],
+            },
+            // Real/Scalar types
+            "ℝ" | "Real" | "Scalar" | "R" => Type::scalar(),
+            // Natural numbers
+            "ℕ" | "Nat" | "N" => Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Nat".to_string(),
+                args: vec![],
+            },
+            // Integer types
+            "ℤ" | "Int" | "Integer" | "Z" => Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            },
+            // Boolean
+            "Bool" | "𝔹" => Type::Bool,
+            // String
+            "String" => Type::String,
+            // Unknown type annotation - create a fresh variable
+            _ => self.context.fresh_var(),
+        }
+    }
+
     /// Get next type variable ID (for creating fresh vars)
     /// Used when adding function parameters to context
     pub fn next_var_id(&mut self) -> usize {
@@ -348,7 +381,13 @@ impl TypeInference {
                     return self.infer_data_constructor(name, &[], context_builder);
                 }
 
-                // OPERATOR OVERLOADING: The imaginary unit i is Complex
+                // Check if variable is bound in context FIRST
+                // This allows quantified variables like ∀(i : ℝ) to override the imaginary unit
+                if let Some(ty) = self.context.get(name) {
+                    return Ok(ty.clone());
+                }
+
+                // OPERATOR OVERLOADING: The imaginary unit i is Complex (only if not bound)
                 if name == "i" {
                     return Ok(Type::Data {
                         type_name: "Type".to_string(),
@@ -357,15 +396,10 @@ impl TypeInference {
                     });
                 }
 
-                // Not a constructor - look up as variable
-                if let Some(ty) = self.context.get(name) {
-                    Ok(ty.clone())
-                } else {
-                    // Unknown variable: create fresh type variable
-                    let ty = self.context.fresh_var();
-                    self.context.bind(name.clone(), ty.clone());
-                    Ok(ty)
-                }
+                // Unknown variable: create fresh type variable
+                let ty = self.context.fresh_var();
+                self.context.bind(name.clone(), ty.clone());
+                Ok(ty)
             }
 
             // Placeholders: unknown type (fresh variable)
@@ -384,9 +418,17 @@ impl TypeInference {
             // List literal: infer element types and unify
             Expression::List(elements) => self.infer_list(elements, context_builder),
 
-            // Quantifier: used in axioms, not in regular expressions
-            // For now, just return a fresh type variable (axioms are checked separately)
-            Expression::Quantifier { body, .. } => {
+            // Quantifier: bind variables with their type annotations, then infer body
+            Expression::Quantifier {
+                variables, body, ..
+            } => {
+                // Bind quantified variables to their annotated types
+                for var in variables {
+                    if let Some(ref type_annotation) = var.type_annotation {
+                        let ty = self.type_annotation_to_type(type_annotation);
+                        self.context.bind(var.name.clone(), ty);
+                    }
+                }
                 // Infer the body type (the proposition)
                 self.infer(body, context_builder)
             }
@@ -611,10 +653,19 @@ impl TypeInference {
                 Ok(TypedExpr::node(expr.clone(), ty, vec![typed_body]))
             }
 
-            // Quantifier: body
-            Expression::Quantifier { body, .. } => {
+            // Quantifier: bind variables, then process body
+            Expression::Quantifier {
+                variables, body, ..
+            } => {
+                // Bind quantified variables to their annotated types
+                for var in variables {
+                    if let Some(ref type_annotation) = var.type_annotation {
+                        let ty = self.type_annotation_to_type(type_annotation);
+                        self.context.bind(var.name.clone(), ty);
+                    }
+                }
                 let typed_body = self.infer_typed(body, context_builder)?;
-                let ty = self.infer(expr, context_builder)?;
+                let ty = typed_body.ty.clone();
                 Ok(TypedExpr::node(expr.clone(), ty, vec![typed_body]))
             }
         }
