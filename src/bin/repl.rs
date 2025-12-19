@@ -1611,7 +1611,13 @@ fn load_file(
     let mut loaded_files: HashSet<PathBuf> = HashSet::new();
     let base_path = Path::new(path);
 
-    match load_file_recursive(base_path, evaluator, registry, &mut loaded_files, imported_paths) {
+    match load_file_recursive(
+        base_path,
+        evaluator,
+        registry,
+        &mut loaded_files,
+        imported_paths,
+    ) {
         Ok(stats) => {
             println!(
                 "✅ Loaded: {} files, {} functions, {} structures, {} data types, {} type aliases",
@@ -1728,8 +1734,13 @@ fn load_file_recursive(
             }
 
             let resolved_path = resolve_import_path(import_path, base_dir);
-            match load_file_recursive(&resolved_path, evaluator, registry, loaded_files, imported_paths)
-            {
+            match load_file_recursive(
+                &resolved_path,
+                evaluator,
+                registry,
+                loaded_files,
+                imported_paths,
+            ) {
                 Ok(import_stats) => {
                     stats.add(&import_stats);
                 }

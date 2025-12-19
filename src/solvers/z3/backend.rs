@@ -479,6 +479,13 @@ impl<'r> Z3Backend<'r> {
                 Ok(comparison::translate_equals(&args[0], &args[1])?.into())
             }
 
+            "neq" | "not_equals" => {
+                if args.len() != 2 {
+                    return Err("neq requires 2 arguments".to_string());
+                }
+                Ok(comparison::translate_not_equals(&args[0], &args[1])?.into())
+            }
+
             // Comparisons
             "less_than" | "lt" => {
                 if args.len() != 2 {

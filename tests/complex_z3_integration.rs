@@ -22,7 +22,7 @@ fn test_i_squared_equals_minus_one() {
     // Assert that the real part of i² is -1
     let minus_one = Real::from_rational(-1, 1);
     let re_constraint = i_squared.re.eq(&minus_one).not();
-    solver.assert(&re_constraint);
+    solver.assert(re_constraint);
 
     // If UNSAT, then i²'s real part equals -1 (which is what we want)
     let result = solver.check();
@@ -36,7 +36,7 @@ fn test_i_squared_equals_minus_one() {
     let solver2 = z3::Solver::new();
     let zero = Real::from_rational(0, 1);
     let im_constraint = i_squared.im.eq(&zero).not();
-    solver2.assert(&im_constraint);
+    solver2.assert(im_constraint);
 
     let result2 = solver2.check();
     assert_eq!(
@@ -57,7 +57,7 @@ fn test_complex_addition_concrete() {
 
     // Check real part = 4
     let four = Real::from_rational(4, 1);
-    solver.assert(&sum.re.eq(&four).not());
+    solver.assert(sum.re.eq(&four).not());
     assert_eq!(
         solver.check(),
         SatResult::Unsat,
@@ -67,7 +67,7 @@ fn test_complex_addition_concrete() {
     // Check imaginary part = 6
     let solver2 = z3::Solver::new();
     let six = Real::from_rational(6, 1);
-    solver2.assert(&sum.im.eq(&six).not());
+    solver2.assert(sum.im.eq(&six).not());
     assert_eq!(
         solver2.check(),
         SatResult::Unsat,
@@ -88,7 +88,7 @@ fn test_complex_multiplication_concrete() {
 
     // Check real part = -5
     let minus_five = Real::from_rational(-5, 1);
-    solver.assert(&product.re.eq(&minus_five).not());
+    solver.assert(product.re.eq(&minus_five).not());
     assert_eq!(
         solver.check(),
         SatResult::Unsat,
@@ -98,7 +98,7 @@ fn test_complex_multiplication_concrete() {
     // Check imaginary part = 10
     let solver2 = z3::Solver::new();
     let ten = Real::from_rational(10, 1);
-    solver2.assert(&product.im.eq(&ten).not());
+    solver2.assert(product.im.eq(&ten).not());
     assert_eq!(
         solver2.check(),
         SatResult::Unsat,
@@ -116,7 +116,7 @@ fn test_complex_conjugate() {
 
     // Real part unchanged: 3
     let three = Real::from_rational(3, 1);
-    solver.assert(&z_conj.re.eq(&three).not());
+    solver.assert(z_conj.re.eq(&three).not());
     assert_eq!(
         solver.check(),
         SatResult::Unsat,
@@ -126,7 +126,7 @@ fn test_complex_conjugate() {
     // Imaginary part negated: -4
     let solver2 = z3::Solver::new();
     let minus_four = Real::from_rational(-4, 1);
-    solver2.assert(&z_conj.im.eq(&minus_four).not());
+    solver2.assert(z_conj.im.eq(&minus_four).not());
     assert_eq!(
         solver2.check(),
         SatResult::Unsat,
@@ -143,13 +143,9 @@ fn test_magnitude_squared() {
 
     let solver = z3::Solver::new();
     let twentyfive = Real::from_rational(25, 1);
-    solver.assert(&abs_sq.eq(&twentyfive).not());
+    solver.assert(abs_sq.eq(&twentyfive).not());
 
-    assert_eq!(
-        solver.check(),
-        SatResult::Unsat,
-        "|3+4i|² should equal 25"
-    );
+    assert_eq!(solver.check(), SatResult::Unsat, "|3+4i|² should equal 25");
 }
 
 /// Test double conjugate: conj(conj(z)) = z
@@ -161,7 +157,7 @@ fn test_double_conjugate() {
     let solver = z3::Solver::new();
 
     // Check equality via both parts
-    solver.assert(&z.eq_complex(&z_double_conj).not());
+    solver.assert(z.eq_complex(&z_double_conj).not());
 
     assert_eq!(
         solver.check(),
@@ -169,4 +165,3 @@ fn test_double_conjugate() {
         "conj(conj(z)) should equal z"
     );
 }
-

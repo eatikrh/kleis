@@ -4,6 +4,7 @@
 //!
 //! **Supported Operations:**
 //! - `equals`, `eq`: Equality (works with any type)
+//! - `neq`, `not_equals`: Inequality (works with any type)
 //! - `less_than`, `lt`: Less than (Int and Real)
 //! - `greater_than`, `gt`: Greater than (Int and Real)
 //! - `leq`: Less than or equal (Int and Real)
@@ -48,6 +49,15 @@ pub fn translate_equals(left: &Dynamic, right: &Dynamic) -> Result<Bool, String>
 
     // Fall back to Dynamic equality (may fail if sorts differ)
     Ok(left.eq(right))
+}
+
+/// Translate not_equals/neq operation (≠)
+///
+/// Returns the negation of equality. Works with any Z3 type.
+pub fn translate_not_equals(left: &Dynamic, right: &Dynamic) -> Result<Bool, String> {
+    // Simply negate equality
+    let eq = translate_equals(left, right)?;
+    Ok(eq.not())
 }
 
 /// Translate less_than/lt operation
