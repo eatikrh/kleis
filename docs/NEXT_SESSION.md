@@ -10,6 +10,8 @@ Based on capability assessment (Dec 19, 2025), here's what's needed to increase 
 
 ### Priority 1: Parser Fixes (THE Critical Blocker) 🔧
 
+**⚠️ This constitutes Grammar v0.9** - see `docs/grammar/kleis_grammar_v09.md` (to be created).
+
 **This is the ONLY Rust change needed.** Once fixed, Priorities 2-5 are pure Kleis stdlib code.
 
 | Issue | Current | Target | Effort |
