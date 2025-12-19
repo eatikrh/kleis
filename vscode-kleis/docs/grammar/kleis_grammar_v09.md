@@ -79,6 +79,6 @@ No breaking changes. All v0.8 code remains valid in v0.9.
 
 ## Related Documents
 
-- [Main Grammar v0.9 Doc](../../../../docs/grammar/kleis_grammar_v09.md)
-- [Capability Assessment](../../../../docs/CAPABILITY_ASSESSMENT.md)
+- [Main Grammar v0.9 Doc](../../../docs/grammar/kleis_grammar_v09.md)
+- [Capability Assessment](../../../docs/CAPABILITY_ASSESSMENT.md)
 
