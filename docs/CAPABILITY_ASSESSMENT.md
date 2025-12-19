@@ -83,23 +83,35 @@ structure VectorSpace(V, F) over Field(F) {
 
 #### 1. Set Theory (Bourbaki Volume I) - Foundation of Everything
 
-**Required but missing:**
-```
-// Cannot express in Kleis:
-∈ (membership)           // a ∈ S
-⊆ (subset)               // A ⊆ B  
-𝒫(X) (power set)         // Set of all subsets
-∪, ∩ (union, intersection)
-∅ (empty set)
-Axiom of Choice
-Zorn's Lemma
+**Partially available:**
+```kleis
+// Kleis HAS:
+Set(T)                   // Set type constructor (stdlib/types.kleis)
+in_set(a, S)             // ∈ membership (renderer + type ascription)
+
+// Could DEFINE axiomatically:
+structure SetTheory(X) {
+    operation 𝒫 : Set(X) → Set(Set(X))
+    operation (⊆) : Set(X) × Set(X) → Bool
+    operation (∪) : Set(X) × Set(X) → Set(X)
+    operation (∩) : Set(X) × Set(X) → Set(X)
+    element ∅ : Set(X)
+    
+    axiom power_set_def:
+        ∀(S A : Set(X)). in_set(A, 𝒫(S)) ↔ A ⊆ S
+}
 ```
 
-**Why it matters:** Bourbaki builds ALL mathematics on set theory. Without sets, we can't define:
-- Functions as sets of ordered pairs
-- Relations
-- Cardinality
-- Ordinals
+**Key distinction:**
+- Kleis can express set theory **axiomatically** (Z3 reasons symbolically)
+- Kleis cannot **compute** with sets (no set literals, no enumeration)
+- Bourbaki-style proofs about sets: ✅ possible
+- Actual set manipulation code: ❌ not implemented
+
+**Still missing:**
+- Axiom of Choice (can state, Z3 may struggle)
+- Zorn's Lemma (requires ordinals)
+- Transfinite induction
 
 #### 2. Topology (Bourbaki Volume III)
 
@@ -202,9 +214,11 @@ Kleis has types but not a hierarchy. This prevents:
 | **Coq** | 35+ years | 100+ | ~30% (various libraries) |
 | **Isabelle/HOL** | 30+ years | 50+ | ~25% |
 | **Mizar** | 40+ years | 100+ | ~20% |
-| **Kleis** | ~1 year | 1-2 | ~5% |
+| **Kleis** | ~1 year | 1-2 | ~5-10% (axiomatic) |
 
 This is not a fair comparison—those are decades-old projects with large teams. But it shows the scale of the gap.
+
+**Note:** Kleis can express more axiomatically than computationally. The ~5-10% reflects what can be stated and verified via Z3, not what can be computed.
 
 ---
 
@@ -212,9 +226,11 @@ This is not a fair comparison—those are decades-old projects with large teams.
 
 To encode all of Bourbaki, Kleis would need:
 
-### Phase 1: Foundations (6-12 months)
-- [ ] Set theory primitives (`∈`, `⊆`, `𝒫`)
-- [ ] ZFC axioms or alternative foundation
+### Phase 1: Foundations (3-6 months)
+- [x] Set type exists: `Set(T)` in stdlib/types.kleis
+- [x] Membership: `∈` via `in_set` and type ascription
+- [ ] Define `⊆`, `∪`, `∩`, `𝒫` axiomatically in stdlib
+- [ ] ZFC axioms as a structure
 - [ ] Proper function/relation definitions
 
 ### Phase 2: Proof Assistant Backend (12-24 months)
