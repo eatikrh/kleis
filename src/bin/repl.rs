@@ -21,13 +21,15 @@ use std::path::{Path, PathBuf};
 use kleis::evaluator::Evaluator;
 use kleis::kleis_ast::TopLevel;
 use kleis::kleis_parser::{parse_kleis_program, KleisParser};
+use kleis::lowering::SemanticLowering;
 use kleis::pretty_print::PrettyPrinter;
 use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::structure_registry::StructureRegistry;
+use kleis::type_context::TypeContextBuilder;
+use kleis::type_inference::TypeInference;
 
 #[cfg(feature = "axiom-verification")]
 use kleis::axiom_verifier::{AxiomVerifier, VerificationResult};
-#[cfg(feature = "axiom-verification")]
-use kleis::structure_registry::StructureRegistry;
 
 const VERSION: &str = "0.1.0";
 
@@ -182,7 +184,7 @@ fn process_input(
     if input.starts_with(':') {
         handle_command(input, evaluator, ctx, imported_paths, registry);
     } else {
-        eval_expression(input, evaluator, ctx);
+        eval_expression(input, evaluator, ctx, registry);
     }
 }
 
@@ -196,24 +198,47 @@ fn process_input(
     if input.starts_with(':') {
         handle_command_no_z3(input, evaluator, ctx, imported_paths);
     } else {
-        eval_expression(input, evaluator, ctx);
+        // Create empty registry for type context (no Z3 verification)
+        let registry = StructureRegistry::new();
+        eval_expression(input, evaluator, ctx, &registry);
     }
 }
 
-fn eval_expression(input: &str, evaluator: &Evaluator, ctx: &kleis::render::GlyphContext) {
+fn eval_expression(
+    input: &str,
+    evaluator: &Evaluator,
+    ctx: &kleis::render::GlyphContext,
+    _registry: &StructureRegistry,
+) {
     let mut parser = KleisParser::new(input);
 
     match parser.parse() {
         Ok(expr) => {
+            // === OPERATOR OVERLOADING: Type inference + Lowering ===
+            // This allows natural syntax like `z1 + z2` for complex numbers
+            let lowered = {
+                // Create type context for operation type inference
+                let type_context_builder = TypeContextBuilder::new();
+
+                let mut inference = TypeInference::new();
+                match inference.infer_typed(&expr, Some(&type_context_builder)) {
+                    Ok(typed) => {
+                        let lowering = SemanticLowering::new();
+                        lowering.lower(&typed)
+                    }
+                    Err(_) => expr.clone(),
+                }
+            };
+
             // Try to evaluate
-            match evaluator.eval(&expr) {
+            match evaluator.eval(&lowered) {
                 Ok(result) => {
                     let rendered = render_expression(&result, ctx, &RenderTarget::Unicode);
                     println!("{}", rendered);
                 }
                 Err(_) => {
                     // Just show the parsed expression
-                    let rendered = render_expression(&expr, ctx, &RenderTarget::Unicode);
+                    let rendered = render_expression(&lowered, ctx, &RenderTarget::Unicode);
                     println!("{}", rendered);
                 }
             }
@@ -1045,12 +1070,32 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
             // Expand user-defined functions before verification
             let expanded = expand_user_functions(&expr, evaluator);
 
+            // === OPERATOR OVERLOADING: Type inference + Lowering ===
+            // This allows natural syntax like `z1 + z2` for complex numbers
+            let lowered = {
+                // Create type context for operation type inference
+                let type_context_builder = TypeContextBuilder::new();
+
+                let mut inference = TypeInference::new();
+                match inference.infer_typed(&expanded, Some(&type_context_builder)) {
+                    Ok(typed) => {
+                        let lowering = SemanticLowering::new();
+                        lowering.lower(&typed)
+                    }
+                    Err(_) => {
+                        // Type inference failed - use original expression
+                        // This is fine for expressions that don't involve overloading
+                        expanded.clone()
+                    }
+                }
+            };
+
             match AxiomVerifier::new(registry) {
                 Ok(mut verifier) => {
                     // Load ADT constructors as identity elements (e.g., TCP, UDP, ICMP)
                     verifier.load_adt_constructors(evaluator.get_adt_constructors().iter());
 
-                    match verifier.verify_axiom(&expanded) {
+                    match verifier.verify_axiom(&lowered) {
                         Ok(result) => match result {
                             VerificationResult::Valid => {
                                 println!("✅ Valid");

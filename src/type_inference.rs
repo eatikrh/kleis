@@ -319,6 +319,39 @@ impl TypeInference {
         &mut self.context
     }
 
+    /// Convert a type annotation string to a Type
+    /// Used for binding quantified variables to their annotated types
+    fn type_annotation_to_type(&mut self, annotation: &str) -> Type {
+        match annotation {
+            // Complex types
+            "ℂ" | "Complex" | "C" => Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Complex".to_string(),
+                args: vec![],
+            },
+            // Real/Scalar types
+            "ℝ" | "Real" | "Scalar" | "R" => Type::scalar(),
+            // Natural numbers
+            "ℕ" | "Nat" | "N" => Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Nat".to_string(),
+                args: vec![],
+            },
+            // Integer types
+            "ℤ" | "Int" | "Integer" | "Z" => Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            },
+            // Boolean
+            "Bool" | "𝔹" => Type::Bool,
+            // String
+            "String" => Type::String,
+            // Unknown type annotation - create a fresh variable
+            _ => self.context.fresh_var(),
+        }
+    }
+
     /// Get next type variable ID (for creating fresh vars)
     /// Used when adding function parameters to context
     pub fn next_var_id(&mut self) -> usize {
@@ -348,15 +381,25 @@ impl TypeInference {
                     return self.infer_data_constructor(name, &[], context_builder);
                 }
 
-                // Not a constructor - look up as variable
+                // Check if variable is bound in context FIRST
+                // This allows quantified variables like ∀(i : ℝ) to override the imaginary unit
                 if let Some(ty) = self.context.get(name) {
-                    Ok(ty.clone())
-                } else {
-                    // Unknown variable: create fresh type variable
-                    let ty = self.context.fresh_var();
-                    self.context.bind(name.clone(), ty.clone());
-                    Ok(ty)
+                    return Ok(ty.clone());
                 }
+
+                // OPERATOR OVERLOADING: The imaginary unit i is Complex (only if not bound)
+                if name == "i" {
+                    return Ok(Type::Data {
+                        type_name: "Type".to_string(),
+                        constructor: "Complex".to_string(),
+                        args: vec![],
+                    });
+                }
+
+                // Unknown variable: create fresh type variable
+                let ty = self.context.fresh_var();
+                self.context.bind(name.clone(), ty.clone());
+                Ok(ty)
             }
 
             // Placeholders: unknown type (fresh variable)
@@ -375,9 +418,17 @@ impl TypeInference {
             // List literal: infer element types and unify
             Expression::List(elements) => self.infer_list(elements, context_builder),
 
-            // Quantifier: used in axioms, not in regular expressions
-            // For now, just return a fresh type variable (axioms are checked separately)
-            Expression::Quantifier { body, .. } => {
+            // Quantifier: bind variables with their type annotations, then infer body
+            Expression::Quantifier {
+                variables, body, ..
+            } => {
+                // Bind quantified variables to their annotated types
+                for var in variables {
+                    if let Some(ref type_annotation) = var.type_annotation {
+                        let ty = self.type_annotation_to_type(type_annotation);
+                        self.context.bind(var.name.clone(), ty);
+                    }
+                }
                 // Infer the body type (the proposition)
                 self.infer(body, context_builder)
             }
@@ -447,6 +498,175 @@ impl TypeInference {
 
                 // Return body type (full implementation would construct function type)
                 Ok(body_type)
+            }
+        }
+    }
+
+    /// Infer type of an expression and return a typed AST
+    ///
+    /// Unlike `infer()` which only returns the type, this method returns a
+    /// `TypedExpr` that includes both the expression and its type, along with
+    /// typed children. This is needed for semantic lowering (operator overloading).
+    ///
+    /// ## Example
+    ///
+    /// For `3 + 4*i`:
+    /// - Returns TypedExpr with ty=Complex
+    /// - children[0] is TypedExpr for `3` with ty=Real
+    /// - children[1] is TypedExpr for `4*i` with ty=Complex
+    ///
+    /// The lowering pass can then inspect operand types to rewrite:
+    /// `plus(Real, Complex)` → `complex_add(lift(Real), Complex)`
+    pub fn infer_typed(
+        &mut self,
+        expr: &Expression,
+        context_builder: Option<&crate::type_context::TypeContextBuilder>,
+    ) -> Result<crate::typed_ast::TypedExpr, String> {
+        use crate::typed_ast::TypedExpr;
+
+        match expr {
+            // Leaf nodes: no children
+            Expression::Const(_) => {
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::leaf(expr.clone(), ty))
+            }
+
+            Expression::String(_) => {
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::leaf(expr.clone(), ty))
+            }
+
+            Expression::Object(_) => {
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::leaf(expr.clone(), ty))
+            }
+
+            Expression::Placeholder { .. } => {
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::leaf(expr.clone(), ty))
+            }
+
+            // Operations: recurse into arguments
+            Expression::Operation { name: _, args } => {
+                // First infer types of all arguments
+                let typed_args: Result<Vec<TypedExpr>, String> = args
+                    .iter()
+                    .map(|arg| self.infer_typed(arg, context_builder))
+                    .collect();
+                let children = typed_args?;
+
+                // Then infer type of the whole operation
+                let ty = self.infer(expr, context_builder)?;
+
+                Ok(TypedExpr::node(expr.clone(), ty, children))
+            }
+
+            // List: recurse into elements
+            Expression::List(elements) => {
+                let typed_elements: Result<Vec<TypedExpr>, String> = elements
+                    .iter()
+                    .map(|elem| self.infer_typed(elem, context_builder))
+                    .collect();
+                let children = typed_elements?;
+
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(expr.clone(), ty, children))
+            }
+
+            // Match: scrutinee + case bodies
+            Expression::Match { scrutinee, cases } => {
+                let typed_scrutinee = self.infer_typed(scrutinee, context_builder)?;
+
+                // For each case, type the body (patterns are not expressions)
+                let mut children = vec![typed_scrutinee];
+                for case in cases {
+                    // Save context, bind pattern vars, type body, restore
+                    let saved_context = self.context.clone();
+                    let scrutinee_ty = children[0].ty.clone();
+                    let _ = self.check_pattern(&case.pattern, &scrutinee_ty);
+                    let typed_body = self.infer_typed(&case.body, context_builder)?;
+                    children.push(typed_body);
+                    self.context = saved_context;
+                }
+
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(expr.clone(), ty, children))
+            }
+
+            // Conditional: condition + branches
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let typed_cond = self.infer_typed(condition, context_builder)?;
+                let typed_then = self.infer_typed(then_branch, context_builder)?;
+                let typed_else = self.infer_typed(else_branch, context_builder)?;
+
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(
+                    expr.clone(),
+                    ty,
+                    vec![typed_cond, typed_then, typed_else],
+                ))
+            }
+
+            // Let binding: value + body
+            Expression::Let {
+                pattern,
+                value,
+                body,
+                ..
+            } => {
+                let typed_value = self.infer_typed(value, context_builder)?;
+
+                // Bind pattern variables before typing body
+                self.bind_pattern_variables(pattern, &typed_value.ty);
+
+                let typed_body = self.infer_typed(body, context_builder)?;
+
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(
+                    expr.clone(),
+                    ty,
+                    vec![typed_value, typed_body],
+                ))
+            }
+
+            // Ascription: inner expression
+            Expression::Ascription { expr: inner, .. } => {
+                let typed_inner = self.infer_typed(inner, context_builder)?;
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(expr.clone(), ty, vec![typed_inner]))
+            }
+
+            // Lambda: body
+            Expression::Lambda { params, body } => {
+                // Bind parameters
+                for param in params {
+                    let param_type = self.context.fresh_var();
+                    self.context.bind(param.name.clone(), param_type);
+                }
+
+                let typed_body = self.infer_typed(body, context_builder)?;
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(expr.clone(), ty, vec![typed_body]))
+            }
+
+            // Quantifier: bind variables, then process body
+            Expression::Quantifier {
+                variables, body, ..
+            } => {
+                // Bind quantified variables to their annotated types
+                for var in variables {
+                    if let Some(ref type_annotation) = var.type_annotation {
+                        let ty = self.type_annotation_to_type(type_annotation);
+                        self.context.bind(var.name.clone(), ty);
+                    }
+                }
+                let typed_body = self.infer_typed(body, context_builder)?;
+                let ty = typed_body.ty.clone();
+                Ok(TypedExpr::node(expr.clone(), ty, vec![typed_body]))
             }
         }
     }
@@ -925,6 +1145,120 @@ impl TypeInference {
         // ADR-021: Check if this is a (fixed-arity) data constructor
         if self.data_registry.has_variant(name) {
             return self.infer_data_constructor(name, args, context_builder);
+        }
+
+        // OPERATOR OVERLOADING: Complex number constructor
+        // complex(re, im) returns Type::Data { constructor: "Complex", ... }
+        if name == "complex" && args.len() == 2 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Complex".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Complex accessors
+        // re(z), im(z) return Scalar
+        if matches!(name, "re" | "im") && args.len() == 1 {
+            return Ok(Type::scalar());
+        }
+
+        // OPERATOR OVERLOADING: Conjugate and complex functions
+        // conj(z), neg_complex(z), complex_inverse(z) return Complex
+        if matches!(name, "conj" | "neg_complex" | "complex_inverse") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Complex".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Complex binary operations
+        // complex_add, complex_sub, complex_mul, complex_div return Complex
+        if matches!(
+            name,
+            "complex_add" | "complex_sub" | "complex_mul" | "complex_div"
+        ) && args.len() == 2
+        {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Complex".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: abs_squared returns Scalar
+        if name == "abs_squared" && args.len() == 1 {
+            return Ok(Type::scalar());
+        }
+
+        // OPERATOR OVERLOADING: Arithmetic operations with type propagation
+        // If any argument is Complex, the result is Complex
+        // This enables lowering without requiring full stdlib registry
+        if matches!(
+            name,
+            "plus" | "minus" | "times" | "divide" | "scalar_divide"
+        ) && args.len() == 2
+        {
+            let t1 = self.infer(&args[0], context_builder)?;
+            let t2 = self.infer(&args[1], context_builder)?;
+
+            // If either operand is Complex, result is Complex
+            let is_complex_1 =
+                matches!(&t1, Type::Data { constructor, .. } if constructor == "Complex");
+            let is_complex_2 =
+                matches!(&t2, Type::Data { constructor, .. } if constructor == "Complex");
+
+            if is_complex_1 || is_complex_2 {
+                return Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Complex".to_string(),
+                    args: vec![],
+                });
+            }
+            // Both are Scalar/Real - return Scalar
+            return Ok(Type::scalar());
+        }
+
+        // OPERATOR OVERLOADING: Unary negation
+        if name == "negate" && args.len() == 1 {
+            let t = self.infer(&args[0], context_builder)?;
+            return Ok(t);
+        }
+
+        // OPERATOR OVERLOADING: Comparison operations
+        // These return Bool, but we need to type-check operands
+        if matches!(name, "equals" | "not_equals" | "neq") && args.len() == 2 {
+            // Equality works on any type
+            let _t1 = self.infer(&args[0], context_builder)?;
+            let _t2 = self.infer(&args[1], context_builder)?;
+            return Ok(Type::Bool);
+        }
+
+        // Ordering operations only work on orderable types (Scalar, Int, Nat, Real)
+        // They do NOT work on Complex, Matrix, Bool, etc.
+        if matches!(
+            name,
+            "less_than" | "greater_than" | "less_equal" | "greater_equal"
+        ) && args.len() == 2
+        {
+            let t1 = self.infer(&args[0], context_builder)?;
+            let t2 = self.infer(&args[1], context_builder)?;
+
+            // Check if operands are orderable (numeric scalar types)
+            let is_orderable = |t: &Type| {
+                matches!(t, Type::Nat | Type::NatValue(_) | Type::Var(_))
+                    || matches!(
+                        t,
+                        Type::Data { constructor, .. }
+                            if constructor == "Int" || constructor == "Real" || constructor == "Scalar"
+                    )
+            };
+
+            if is_orderable(&t1) && is_orderable(&t2) {
+                return Ok(Type::Bool);
+            }
+            // If not orderable, fall through to context_builder for proper error
         }
 
         // Check if this is a defined function (from `define` statements)
@@ -2385,7 +2719,8 @@ mod tests {
 
         // Should infer successfully
         let ty = infer.infer(&match_expr, None).unwrap();
-        // Result is a type variable (no context_builder to resolve plus)
-        assert!(matches!(ty, Type::Var(_)));
+        // After operator overloading changes, plus(a, b) with non-Complex args returns Scalar
+        // (Previously returned type variable when no context_builder)
+        assert!(matches!(ty, Type::Data { constructor, .. } if constructor == "Scalar"));
     }
 }

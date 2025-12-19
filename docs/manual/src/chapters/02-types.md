@@ -14,19 +14,34 @@ define flag = True                // True is a boolean
 
 ### Numeric Types
 
-| Type | Description | Examples |
-|------|-------------|----------|
-| `ℕ` (or `Nat`) | Natural numbers (0, 1, 2, ...) | `0`, `42`, `100` |
-| `ℤ` (or `Int`) | Integers (..., -1, 0, 1, ...) | `-5`, `0`, `17` |
-| `ℝ` (or `Real`) | Real numbers | `3.14`, `-2.5`, `√2` |
-| `ℂ` (or `Complex`) | Complex numbers | `3 + 4i`, `i` |
+| Type | Unicode | Full Name | ASCII | Examples |
+|------|---------|-----------|-------|----------|
+| Natural | `ℕ` | `Nat` | `N` | `0`, `42`, `100` |
+| Integer | `ℤ` | `Int` | `Z` | `-5`, `0`, `17` |
+| Real | `ℝ` | `Real` or `Scalar` | `R` | `3.14`, `-2.5`, `√2` |
+| Complex | `ℂ` | `Complex` | `C` | `3 + 4i`, `i` |
 
 ### Other Basic Types
 
-| Type | Description | Values |
-|------|-------------|--------|
-| `Bool` | Booleans | `True`, `False` |
-| `Unit` | Unit type (like void) | `()` |
+| Type | Unicode | Full Name | Values |
+|------|---------|-----------|--------|
+| Boolean | `𝔹` | `Bool` | `True`, `False` |
+| Unit | — | `Unit` | `()` |
+
+```kleis
+// Boolean values
+define flag = True
+define not_flag = False
+
+// Unit value
+define empty = ()
+
+// Boolean in quantified expressions (inside structures)
+structure BoolExamples {
+    axiom reflexive_unicode : ∀(p : 𝔹). p = p
+    axiom reflexive_full    : ∀(q : Bool). q = q
+}
+```
 
 ## Type Annotations
 
