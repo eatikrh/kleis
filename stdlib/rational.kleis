@@ -1,0 +1,262 @@
+// ============================================
+// Kleis Standard Library - Rational Numbers
+// ============================================
+// Defines rational number operations and their axioms
+// ℚ = { p/q | p ∈ ℤ, q ∈ ℤ, q ≠ 0 }
+// Z3 uses these axioms for verification
+// ============================================
+
+// ============================================
+// RATIONAL NUMBER CONSTRUCTION
+// ============================================
+
+structure RationalConstruction {
+    // Constructor: rational(p, q) creates p/q where q ≠ 0
+    // Accessors: numer(r) = numerator, denom(r) = denominator
+    
+    axiom numer_of_rational : ∀(p q : ℤ). numer(rational(p, q)) = p
+    axiom denom_of_rational : ∀(p q : ℤ). denom(rational(p, q)) = q
+    
+    // Identity: a rational reconstructs from its parts
+    axiom rational_identity : ∀(r : ℚ). rational(numer(r), denom(r)) = r
+    
+    // Denominator is never zero (implicit in well-formed rationals)
+    axiom denom_nonzero : ∀(r : ℚ). denom(r) ≠ 0
+    
+    // Equivalence: p/q = r/s iff p*s = q*r (cross multiplication)
+    axiom rational_equiv : ∀(p q r s : ℤ). 
+        q ≠ 0 ∧ s ≠ 0 → (rational(p, q) = rational(r, s) ↔ p * s = q * r)
+    
+    // Canonical form: gcd(|numer|, |denom|) = 1 and denom > 0
+    axiom canonical_denom_positive : ∀(r : ℚ). denom(canonical(r)) > 0
+    axiom canonical_reduced : ∀(r : ℚ). gcd(abs(numer(canonical(r))), denom(canonical(r))) = 1
+    axiom canonical_equiv : ∀(r : ℚ). canonical(r) = r
+}
+
+// ============================================
+// EMBEDDING INTEGERS INTO RATIONALS
+// ============================================
+
+structure IntegerEmbedding {
+    // An integer n embeds as n/1
+    axiom int_embed : ∀(n : ℤ). int_to_rational(n) = rational(n, 1)
+    
+    // Extraction: numer and denom of embedded integer
+    axiom embed_numer : ∀(n : ℤ). numer(int_to_rational(n)) = n
+    axiom embed_denom : ∀(n : ℤ). denom(int_to_rational(n)) = 1
+    
+    // Natural numbers also embed
+    axiom nat_embed : ∀(n : ℕ). nat_to_rational(n) = rational(n, 1)
+    
+    // Zero and one
+    axiom rational_zero : rational(0, 1) = int_to_rational(0)
+    axiom rational_one : rational(1, 1) = int_to_rational(1)
+}
+
+// ============================================
+// ARITHMETIC OPERATIONS
+// ============================================
+
+structure RationalArithmetic {
+    // Addition: a/b + c/d = (a*d + b*c) / (b*d)
+    axiom rational_add_numer : ∀(r1 r2 : ℚ). 
+        numer(rational_add(r1, r2)) * (denom(r1) * denom(r2)) = 
+        numer(r1) * denom(r2) + numer(r2) * denom(r1)
+    
+    axiom rational_add_def : ∀(p q r s : ℤ). 
+        q ≠ 0 ∧ s ≠ 0 → 
+        rational_add(rational(p, q), rational(r, s)) = rational(p * s + r * q, q * s)
+    
+    // Subtraction: a/b - c/d = (a*d - b*c) / (b*d)
+    axiom rational_sub_def : ∀(p q r s : ℤ). 
+        q ≠ 0 ∧ s ≠ 0 → 
+        rational_sub(rational(p, q), rational(r, s)) = rational(p * s - r * q, q * s)
+    
+    // Multiplication: (a/b) * (c/d) = (a*c) / (b*d)
+    axiom rational_mul_def : ∀(p q r s : ℤ). 
+        q ≠ 0 ∧ s ≠ 0 → 
+        rational_mul(rational(p, q), rational(r, s)) = rational(p * r, q * s)
+    
+    // Division: (a/b) / (c/d) = (a*d) / (b*c), requires c ≠ 0
+    axiom rational_div_def : ∀(p q r s : ℤ). 
+        q ≠ 0 ∧ s ≠ 0 ∧ r ≠ 0 → 
+        rational_div(rational(p, q), rational(r, s)) = rational(p * s, q * r)
+    
+    // Negation: -(a/b) = (-a)/b
+    axiom rational_neg_def : ∀(p q : ℤ). 
+        q ≠ 0 → neg_rational(rational(p, q)) = rational(0 - p, q)
+    
+    // Inverse (reciprocal): inv(a/b) = b/a, requires a ≠ 0
+    axiom rational_inv_def : ∀(p q : ℤ). 
+        p ≠ 0 ∧ q ≠ 0 → rational_inv(rational(p, q)) = rational(q, p)
+    
+    // Absolute value
+    axiom rational_abs_def : ∀(p q : ℤ). 
+        q ≠ 0 → abs_rational(rational(p, q)) = rational(abs(p), abs(q))
+}
+
+// ============================================
+// FIELD AXIOMS (ℚ is a field)
+// ============================================
+
+structure RationalField {
+    // Addition is commutative
+    axiom add_commutative : ∀(r1 r2 : ℚ). 
+        rational_add(r1, r2) = rational_add(r2, r1)
+    
+    // Addition is associative
+    axiom add_associative : ∀(r1 r2 r3 : ℚ). 
+        rational_add(rational_add(r1, r2), r3) = rational_add(r1, rational_add(r2, r3))
+    
+    // Additive identity: r + 0 = r
+    axiom add_identity : ∀(r : ℚ). rational_add(r, rational(0, 1)) = r
+    
+    // Additive inverse: r + (-r) = 0
+    axiom add_inverse : ∀(r : ℚ). rational_add(r, neg_rational(r)) = rational(0, 1)
+    
+    // Multiplication is commutative
+    axiom mul_commutative : ∀(r1 r2 : ℚ). 
+        rational_mul(r1, r2) = rational_mul(r2, r1)
+    
+    // Multiplication is associative
+    axiom mul_associative : ∀(r1 r2 r3 : ℚ). 
+        rational_mul(rational_mul(r1, r2), r3) = rational_mul(r1, rational_mul(r2, r3))
+    
+    // Multiplicative identity: r * 1 = r
+    axiom mul_identity : ∀(r : ℚ). rational_mul(r, rational(1, 1)) = r
+    
+    // Multiplicative inverse: r * (1/r) = 1, for r ≠ 0
+    axiom mul_inverse : ∀(r : ℚ). r ≠ rational(0, 1) → 
+        rational_mul(r, rational_inv(r)) = rational(1, 1)
+    
+    // Distributive law
+    axiom distributive : ∀(r1 r2 r3 : ℚ). 
+        rational_mul(r1, rational_add(r2, r3)) = 
+        rational_add(rational_mul(r1, r2), rational_mul(r1, r3))
+    
+    // Zero annihilates: r * 0 = 0
+    axiom zero_annihilates : ∀(r : ℚ). rational_mul(r, rational(0, 1)) = rational(0, 1)
+}
+
+// ============================================
+// ORDERING (ℚ is an ordered field)
+// ============================================
+
+structure RationalOrder {
+    // Comparison via cross-multiplication (assuming positive denominators)
+    axiom less_than_def : ∀(p q r s : ℤ). 
+        q > 0 ∧ s > 0 → 
+        (rational_lt(rational(p, q), rational(r, s)) ↔ p * s < r * q)
+    
+    axiom less_eq_def : ∀(r1 r2 : ℚ). 
+        rational_le(r1, r2) ↔ (rational_lt(r1, r2) ∨ r1 = r2)
+    
+    axiom greater_than_def : ∀(r1 r2 : ℚ). 
+        rational_gt(r1, r2) ↔ rational_lt(r2, r1)
+    
+    axiom greater_eq_def : ∀(r1 r2 : ℚ). 
+        rational_ge(r1, r2) ↔ rational_le(r2, r1)
+    
+    // Trichotomy: exactly one of <, =, > holds
+    axiom trichotomy : ∀(r1 r2 : ℚ). 
+        (rational_lt(r1, r2) ∧ ¬(r1 = r2) ∧ ¬rational_gt(r1, r2)) ∨
+        (¬rational_lt(r1, r2) ∧ r1 = r2 ∧ ¬rational_gt(r1, r2)) ∨
+        (¬rational_lt(r1, r2) ∧ ¬(r1 = r2) ∧ rational_gt(r1, r2))
+    
+    // Transitivity
+    axiom lt_transitive : ∀(r1 r2 r3 : ℚ). 
+        rational_lt(r1, r2) ∧ rational_lt(r2, r3) → rational_lt(r1, r3)
+    
+    // Order compatibility with addition
+    axiom add_order_compat : ∀(r1 r2 r3 : ℚ). 
+        rational_lt(r1, r2) → rational_lt(rational_add(r1, r3), rational_add(r2, r3))
+    
+    // Order compatibility with positive multiplication
+    axiom mul_positive_order : ∀(r1 r2 r3 : ℚ). 
+        rational_lt(r1, r2) ∧ rational_gt(r3, rational(0, 1)) → 
+        rational_lt(rational_mul(r1, r3), rational_mul(r2, r3))
+}
+
+// ============================================
+// DENSITY (ℚ is dense in itself)
+// ============================================
+
+structure RationalDensity {
+    // Between any two distinct rationals, there is another
+    axiom density : ∀(r1 r2 : ℚ). 
+        rational_lt(r1, r2) → 
+        (∃(r : ℚ). rational_lt(r1, r) ∧ rational_lt(r, r2))
+    
+    // Midpoint: (r1 + r2) / 2 is between r1 and r2
+    axiom midpoint_between : ∀(r1 r2 : ℚ). 
+        rational_lt(r1, r2) → 
+        rational_lt(r1, rational_div(rational_add(r1, r2), rational(2, 1))) ∧
+        rational_lt(rational_div(rational_add(r1, r2), rational(2, 1)), r2)
+    
+    // Archimedean property: for any r > 0, there exists n : ℕ such that n > r
+    axiom archimedean : ∀(r : ℚ). 
+        rational_gt(r, rational(0, 1)) → 
+        (∃(n : ℕ). rational_gt(nat_to_rational(n), r))
+}
+
+// ============================================
+// CONVERSION TO REAL (embedding ℚ → ℝ)
+// ============================================
+
+structure RationalToReal {
+    // Embedding preserves operations
+    axiom embed_add : ∀(r1 r2 : ℚ). 
+        to_real(rational_add(r1, r2)) = to_real(r1) + to_real(r2)
+    
+    axiom embed_mul : ∀(r1 r2 : ℚ). 
+        to_real(rational_mul(r1, r2)) = to_real(r1) * to_real(r2)
+    
+    axiom embed_order : ∀(r1 r2 : ℚ). 
+        rational_lt(r1, r2) ↔ to_real(r1) < to_real(r2)
+    
+    // Embedding is injective
+    axiom embed_injective : ∀(r1 r2 : ℚ). 
+        to_real(r1) = to_real(r2) → r1 = r2
+    
+    // ℚ is dense in ℝ
+    axiom dense_in_reals : ∀(x y : ℝ). 
+        x < y → (∃(r : ℚ). x < to_real(r) ∧ to_real(r) < y)
+}
+
+// ============================================
+// COMMON FRACTIONS
+// ============================================
+
+structure CommonFractions {
+    // Named fractions for convenience
+    axiom half_def : half = rational(1, 2)
+    axiom third_def : third = rational(1, 3)
+    axiom quarter_def : quarter = rational(1, 4)
+    axiom fifth_def : fifth = rational(1, 5)
+    axiom tenth_def : tenth = rational(1, 10)
+    
+    // Unit fraction property: 1/n * n = 1
+    axiom unit_fraction : ∀(n : ℤ). 
+        n ≠ 0 → rational_mul(rational(1, n), rational(n, 1)) = rational(1, 1)
+}
+
+// ============================================
+// IMPLEMENTATION STATUS (Dec 2024)
+// ============================================
+//
+// ✅ AXIOMS DEFINED
+//    All field, order, and density axioms are expressed
+//    Z3 can reason about rational properties
+//
+// ⚠️ Z3 BACKEND INTEGRATION
+//    TODO: Add Z3 Datatype for Rational = mk_rational(numer: Int, denom: Int)
+//    Currently uses uninterpreted functions
+//
+// ⚠️ OPERATOR OVERLOADING
+//    TODO: Enable r1 + r2 instead of rational_add(r1, r2)
+//    Requires extending the lowering module
+//
+// ============================================
+// END OF RATIONAL NUMBERS
+// ============================================
+

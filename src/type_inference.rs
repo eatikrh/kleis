@@ -343,6 +343,12 @@ impl TypeInference {
                 constructor: "Int".to_string(),
                 args: vec![],
             },
+            // Rational types
+            "ℚ" | "Rational" | "Q" => Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            },
             // Boolean
             "Bool" | "𝔹" => Type::Bool,
             // String
@@ -1190,6 +1196,77 @@ impl TypeInference {
         // OPERATOR OVERLOADING: abs_squared returns Scalar
         if name == "abs_squared" && args.len() == 1 {
             return Ok(Type::scalar());
+        }
+
+        // OPERATOR OVERLOADING: Rational number constructor
+        // rational(numer, denom) returns Rational
+        if name == "rational" && args.len() == 2 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Rational accessors
+        // numer(r), denom(r) return Int
+        if matches!(name, "numer" | "denom") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Rational unary operations
+        // neg_rational(r), abs_rational(r), rational_inv(r), canonical(r) return Rational
+        if matches!(
+            name,
+            "neg_rational" | "abs_rational" | "rational_inv" | "canonical"
+        ) && args.len() == 1
+        {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Rational binary operations
+        // rational_add, rational_sub, rational_mul, rational_div return Rational
+        if matches!(
+            name,
+            "rational_add" | "rational_sub" | "rational_mul" | "rational_div"
+        ) && args.len() == 2
+        {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Rational comparison operations return Bool
+        if matches!(
+            name,
+            "rational_lt" | "rational_le" | "rational_gt" | "rational_ge"
+        ) && args.len() == 2
+        {
+            return Ok(Type::Bool);
+        }
+
+        // OPERATOR OVERLOADING: Rational to Real conversion
+        if name == "to_real" && args.len() == 1 {
+            return Ok(Type::scalar());
+        }
+
+        // OPERATOR OVERLOADING: Integer/Natural to Rational conversion
+        if matches!(name, "int_to_rational" | "nat_to_rational") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            });
         }
 
         // OPERATOR OVERLOADING: Arithmetic operations with type propagation
