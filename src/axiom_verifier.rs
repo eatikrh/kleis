@@ -486,6 +486,33 @@ impl<'r> AxiomVerifier<'r> {
             self.ensure_structure_loaded(structure)?;
         }
 
+        // Step 2b: Load ALL structure axioms from registry
+        // This ensures axioms for uninterpreted functions (like complex operations)
+        // are available even when analyze_dependencies can't find the connection
+        let all_structures: Vec<String> = self
+            .registry
+            .structures_with_axioms()
+            .iter()
+            .map(|s| (*s).clone())
+            .collect();
+
+        eprintln!(
+            "DEBUG: Found {} structures with axioms: {:?}",
+            all_structures.len(),
+            all_structures
+        );
+
+        for structure in &all_structures {
+            if !self.loaded_structures.contains(structure) {
+                eprintln!("DEBUG: Auto-loading structure with axioms: {}", structure);
+                // Continue even if one structure fails to load
+                // This allows complex axioms to work even if Field fails
+                if let Err(e) = self.ensure_structure_loaded(structure) {
+                    eprintln!("   ⚠️ Warning: Failed to load {}: {}", structure, e);
+                }
+            }
+        }
+
         // Step 3: Delegate to backend for verification (uses solver abstraction layer!)
         use crate::solvers::backend::VerificationResult as BackendResult;
 

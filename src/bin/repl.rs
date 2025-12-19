@@ -53,7 +53,7 @@ fn main() -> RlResult<()> {
     let mut imported_paths: Vec<String> = Vec::new(); // Track imports for export
 
     #[cfg(feature = "axiom-verification")]
-    let registry = StructureRegistry::new();
+    let mut registry = StructureRegistry::new();
 
     let mut multiline_buffer = String::new();
     // Two separate modes: block mode (:{ ... :}) vs line continuation (\)
@@ -90,7 +90,7 @@ fn main() -> RlResult<()> {
                             &render_ctx,
                             &mut imported_paths,
                             #[cfg(feature = "axiom-verification")]
-                            &registry,
+                            &mut registry,
                         );
                     }
                     continue;
@@ -139,7 +139,7 @@ fn main() -> RlResult<()> {
                     &render_ctx,
                     &mut imported_paths,
                     #[cfg(feature = "axiom-verification")]
-                    &registry,
+                    &mut registry,
                 );
             }
             Err(ReadlineError::Interrupted) => {
@@ -177,7 +177,7 @@ fn process_input(
     evaluator: &mut Evaluator,
     ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
-    registry: &StructureRegistry,
+    registry: &mut StructureRegistry,
 ) {
     if input.starts_with(':') {
         handle_command(input, evaluator, ctx, imported_paths, registry);
@@ -230,7 +230,7 @@ fn handle_command(
     evaluator: &mut Evaluator,
     _ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
-    registry: &StructureRegistry,
+    registry: &mut StructureRegistry,
 ) {
     let parts: Vec<&str> = line.splitn(2, ' ').collect();
     let cmd = parts[0];
@@ -243,7 +243,7 @@ fn handle_command(
         ":type" | ":t" => show_type(arg),
         ":verify" | ":v" => verify_expression(arg, registry, evaluator),
         ":trace" | ":tr" => trace_match(arg, registry, evaluator),
-        ":load" | ":l" => load_file(arg, evaluator, imported_paths),
+        ":load" | ":l" => load_file(arg, evaluator, registry, imported_paths),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
         ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
@@ -1596,6 +1596,39 @@ fn pattern_binds_var(pattern: &kleis::ast::Pattern, var_name: &str) -> bool {
     }
 }
 
+#[cfg(feature = "axiom-verification")]
+fn load_file(
+    path: &str,
+    evaluator: &mut Evaluator,
+    registry: &mut StructureRegistry,
+    imported_paths: &mut Vec<String>,
+) {
+    if path.is_empty() {
+        println!("Usage: :load <file.kleis>");
+        return;
+    }
+
+    let mut loaded_files: HashSet<PathBuf> = HashSet::new();
+    let base_path = Path::new(path);
+
+    match load_file_recursive(base_path, evaluator, registry, &mut loaded_files, imported_paths) {
+        Ok(stats) => {
+            println!(
+                "✅ Loaded: {} files, {} functions, {} structures, {} data types, {} type aliases",
+                stats.files,
+                stats.functions,
+                stats.structures,
+                stats.data_types,
+                stats.type_aliases
+            );
+        }
+        Err(e) => {
+            println!("❌ {}", e);
+        }
+    }
+}
+
+#[cfg(not(feature = "axiom-verification"))]
 fn load_file(path: &str, evaluator: &mut Evaluator, imported_paths: &mut Vec<String>) {
     if path.is_empty() {
         println!("Usage: :load <file.kleis>");
@@ -1652,6 +1685,97 @@ impl LoadStats {
 }
 
 /// Recursively load a .kleis file and its imports
+#[cfg(feature = "axiom-verification")]
+fn load_file_recursive(
+    path: &Path,
+    evaluator: &mut Evaluator,
+    registry: &mut StructureRegistry,
+    loaded_files: &mut HashSet<PathBuf>,
+    imported_paths: &mut Vec<String>,
+) -> Result<LoadStats, String> {
+    // Resolve to canonical path for circular import detection
+    let canonical = path
+        .canonicalize()
+        .map_err(|e| format!("Cannot resolve path '{}': {}", path.display(), e))?;
+
+    // Check for circular imports
+    if loaded_files.contains(&canonical) {
+        // Already loaded, skip (not an error, just avoid reloading)
+        return Ok(LoadStats::new());
+    }
+    loaded_files.insert(canonical.clone());
+
+    // Read file contents
+    let contents = std::fs::read_to_string(path)
+        .map_err(|e| format!("File error '{}': {}", path.display(), e))?;
+
+    // Parse the program
+    let program = parse_kleis_program(&contents)
+        .map_err(|e| format!("Parse error in '{}': {}", path.display(), e))?;
+
+    let mut stats = LoadStats::new();
+    stats.files = 1;
+
+    // Get the directory containing this file for resolving relative imports
+    let base_dir = path.parent().unwrap_or(Path::new("."));
+
+    // Process imports first (depth-first)
+    for item in &program.items {
+        if let TopLevel::Import(import_path) = item {
+            // Track this import path for later export
+            if !imported_paths.contains(import_path) {
+                imported_paths.push(import_path.clone());
+            }
+
+            let resolved_path = resolve_import_path(import_path, base_dir);
+            match load_file_recursive(&resolved_path, evaluator, registry, loaded_files, imported_paths)
+            {
+                Ok(import_stats) => {
+                    stats.add(&import_stats);
+                }
+                Err(e) => {
+                    return Err(format!(
+                        "Error loading import '{}' from '{}': {}",
+                        import_path,
+                        path.display(),
+                        e
+                    ));
+                }
+            }
+        }
+    }
+
+    // Now load this file's definitions into evaluator
+    if let Err(e) = evaluator.load_program(&program) {
+        return Err(format!(
+            "Error loading definitions from '{}': {}",
+            path.display(),
+            e
+        ));
+    }
+
+    // Register structures in the StructureRegistry for axiom verification
+    for structure in program.structures() {
+        if !registry.has_structure(&structure.name) {
+            if let Err(e) = registry.register(structure.clone()) {
+                eprintln!(
+                    "Warning: Failed to register structure '{}': {}",
+                    structure.name, e
+                );
+            }
+        }
+    }
+
+    stats.functions += program.functions().len();
+    stats.structures += program.structures().len();
+    stats.data_types += program.data_types().len();
+    stats.type_aliases += program.type_aliases().len();
+
+    Ok(stats)
+}
+
+/// Recursively load a .kleis file and its imports (non-axiom version)
+#[cfg(not(feature = "axiom-verification"))]
 fn load_file_recursive(
     path: &Path,
     evaluator: &mut Evaluator,
@@ -1681,7 +1805,7 @@ fn load_file_recursive(
     let mut stats = LoadStats::new();
     stats.files = 1;
 
-    // Get the directory containing this file for resolving relative imports
+    // Get base directory for resolving relative imports
     let base_dir = path.parent().unwrap_or(Path::new("."));
 
     // Process imports first (depth-first)
