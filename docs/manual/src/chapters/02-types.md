@@ -28,6 +28,19 @@ define flag = True                // True is a boolean
 | Boolean | `𝔹` | `Bool` | `True`, `False` |
 | Unit | — | `Unit` | `()` |
 
+```kleis
+// Boolean type annotations - all equivalent
+axiom bool_unicode : ∀(p : 𝔹). p = p
+axiom bool_full    : ∀(q : Bool). q = q
+
+// Boolean values
+define flag = True
+define not_flag = False
+
+// Unit value
+define empty = ()
+```
+
 ## Type Annotations
 
 You can explicitly annotate types with `:`:
