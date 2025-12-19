@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Types and Values - Learn You Some Kleis</title>
+        <title>Strings - Learn You Some Kleis</title>
 
 
         <!-- Custom HTML head -->
@@ -146,7 +146,7 @@
                         <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/02-types.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/17-strings.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -180,148 +180,240 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="types-and-values"><a class="header" href="#types-and-values">Types and Values</a></h1>
-<h2 id="why-types-matter"><a class="header" href="#why-types-matter">Why Types Matter</a></h2>
-<p>Types are the foundation of Kleis. Every expression has a type, and the type system catches errors before they become problems.</p>
-<pre><code class="language-kleis">define answer = 42                // 42 is an integer
-define pi_val = 3.14              // 3.14 is a real number
-define flag = True                // True is a boolean
+                        <h1 id="strings"><a class="header" href="#strings">Strings</a></h1>
+<p>Kleis provides comprehensive support for <strong>string operations</strong> via Z3’s QF_SLIA (Quantifier-Free Strings and Linear Integer Arithmetic) theory. This enables formal verification of string-manipulating programs.</p>
+<h2 id="the-string-type"><a class="header" href="#the-string-type">The String Type</a></h2>
+<pre><code class="language-kleis">define greeting : String = "Hello, World!"
+define empty : String = ""
 </code></pre>
-<h2 id="built-in-types"><a class="header" href="#built-in-types">Built-in Types</a></h2>
-<h3 id="numeric-types"><a class="header" href="#numeric-types">Numeric Types</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Type</th><th>Unicode</th><th>Full Name</th><th>ASCII</th><th>Examples</th></tr>
-</thead>
-<tbody>
-<tr><td>Natural</td><td><code>ℕ</code></td><td><code>Nat</code></td><td><code>N</code></td><td><code>0</code>, <code>42</code>, <code>100</code></td></tr>
-<tr><td>Integer</td><td><code>ℤ</code></td><td><code>Int</code></td><td><code>Z</code></td><td><code>-5</code>, <code>0</code>, <code>17</code></td></tr>
-<tr><td>Real</td><td><code>ℝ</code></td><td><code>Real</code> or <code>Scalar</code></td><td><code>R</code></td><td><code>3.14</code>, <code>-2.5</code>, <code>√2</code></td></tr>
-<tr><td>Complex</td><td><code>ℂ</code></td><td><code>Complex</code></td><td><code>C</code></td><td><code>3 + 4i</code>, <code>i</code></td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="other-basic-types"><a class="header" href="#other-basic-types">Other Basic Types</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Type</th><th>Unicode</th><th>Full Name</th><th>Values</th></tr>
-</thead>
-<tbody>
-<tr><td>Boolean</td><td><code>𝔹</code></td><td><code>Bool</code></td><td><code>True</code>, <code>False</code></td></tr>
-<tr><td>Unit</td><td>—</td><td><code>Unit</code></td><td><code>()</code></td></tr>
-</tbody>
-</table>
-</div>
-<pre><code class="language-kleis">// Boolean values
-define flag = True
-define not_flag = False
-
-// Unit value
-define empty = ()
-
-// Boolean in quantified expressions (inside structures)
-structure BoolExamples {
-    axiom reflexive_unicode : ∀(p : 𝔹). p = p
-    axiom reflexive_full    : ∀(q : Bool). q = q
+<h2 id="basic-operations"><a class="header" href="#basic-operations">Basic Operations</a></h2>
+<h3 id="concatenation"><a class="header" href="#concatenation">Concatenation</a></h3>
+<pre><code class="language-kleis">structure StringConcat {
+    // Concatenation
+    axiom concat_ex : concat("Hello", " World") = "Hello World"
+    
+    // Empty string is identity
+    axiom concat_empty_left : ∀(s : String). concat("", s) = s
+    axiom concat_empty_right : ∀(s : String). concat(s, "") = s
+    
+    // Associativity
+    axiom concat_assoc : ∀(a b c : String). 
+        concat(concat(a, b), c) = concat(a, concat(b, c))
 }
 </code></pre>
-<h2 id="type-annotations"><a class="header" href="#type-annotations">Type Annotations</a></h2>
-<p>You can explicitly annotate types with <code>:</code>:</p>
-<pre><code class="language-kleis">// Variable annotation
-define typed_let = let x : ℝ = 3.14 in x * 2
-
-// Function parameter and return types
-define f(x : ℝ) : ℝ = x * x
-
-// Expression-level annotation (ascription)
-define sum_typed(a, b) = (a + b) : ℝ
+<h3 id="length"><a class="header" href="#length">Length</a></h3>
+<pre><code class="language-kleis">structure StringLength {
+    axiom len_hello : strlen("Hello") = 5
+    axiom len_empty : strlen("") = 0
+    
+    // Length of concatenation
+    axiom len_concat : ∀(a b : String). 
+        strlen(concat(a, b)) = strlen(a) + strlen(b)
+    
+    // Length is non-negative
+    axiom len_nonneg : ∀(s : String). strlen(s) ≥ 0
+}
 </code></pre>
-<h2 id="function-types"><a class="header" href="#function-types">Function Types</a></h2>
-<p>Functions have types too! The notation <code>A → B</code> means “a function from A to B”:</p>
-<pre><code class="language-kleis">// square takes a Real and returns a Real
-define square(x : ℝ) : ℝ = x * x
-// Type: ℝ → ℝ
-
-// add takes two Reals and returns a Real
-define add(x : ℝ, y : ℝ) : ℝ = x + y
-// Type: ℝ × ℝ → ℝ (or equivalently: ℝ → ℝ → ℝ)
+<h2 id="substring-operations"><a class="header" href="#substring-operations">Substring Operations</a></h2>
+<h3 id="contains"><a class="header" href="#contains">Contains</a></h3>
+<p>Check if one string contains another:</p>
+<pre><code class="language-kleis">structure StringContains {
+    axiom contains_ex : contains("Hello World", "World") = true
+    axiom contains_empty : ∀(s : String). contains(s, "") = true
+    axiom contains_self : ∀(s : String). contains(s, s) = true
+}
 </code></pre>
-<h3 id="higher-order-function-types"><a class="header" href="#higher-order-function-types">Higher-Order Function Types</a></h3>
-<p>Functions can take other functions as arguments or return functions. These are called <strong>higher-order functions</strong>:</p>
-<pre><code class="language-kleis">// A function that takes a function as an argument
-define apply_twice(f : ℝ → ℝ, x : ℝ) : ℝ = f(f(x))
-// Type: (ℝ → ℝ) × ℝ → ℝ
-
-// A function that returns a function
-define make_adder(n : ℝ) : ℝ → ℝ = ???
-// Type: ℝ → (ℝ → ℝ)
+<h3 id="prefix-and-suffix"><a class="header" href="#prefix-and-suffix">Prefix and Suffix</a></h3>
+<pre><code class="language-kleis">structure PrefixSuffix {
+    // Prefix check
+    axiom prefix_ex : hasPrefix("Hello World", "Hello") = true
+    axiom prefix_empty : ∀(s : String). hasPrefix(s, "") = true
+    
+    // Suffix check
+    axiom suffix_ex : hasSuffix("Hello World", "World") = true
+    axiom suffix_empty : ∀(s : String). hasSuffix(s, "") = true
+}
 </code></pre>
-<p>The parentheses matter! Compare:</p>
-<ul>
-<li><code>(ℝ → ℝ) → ℝ</code> — takes a function, returns a number</li>
-<li><code>ℝ → (ℝ → ℝ)</code> — takes a number, returns a function</li>
-<li><code>ℝ → ℝ → ℝ</code> — curried function (associates right: <code>ℝ → (ℝ → ℝ)</code>)</li>
-</ul>
-<h3 id="function-type-examples"><a class="header" href="#function-type-examples">Function Type Examples</a></h3>
+<h3 id="substring-extraction"><a class="header" href="#substring-extraction">Substring Extraction</a></h3>
+<pre><code class="language-kleis">structure Substring {
+    // substr(s, start, length) extracts substring
+    axiom substr_ex : substr("Hello World", 0, 5) = "Hello"
+    axiom substr_middle : substr("Hello World", 6, 5) = "World"
+    
+    // Empty substring
+    axiom substr_zero : ∀(s : String)(i : ℕ). substr(s, i, 0) = ""
+}
+</code></pre>
+<h3 id="character-access"><a class="header" href="#character-access">Character Access</a></h3>
+<pre><code class="language-kleis">structure CharAt {
+    // charAt(s, i) returns single character at index i
+    axiom charAt_ex : charAt("Hello", 0) = "H"
+    axiom charAt_last : charAt("Hello", 4) = "o"
+}
+</code></pre>
+<h3 id="index-of"><a class="header" href="#index-of">Index Of</a></h3>
+<pre><code class="language-kleis">structure IndexOf {
+    // indexOf(s, pattern, start) returns first index of pattern
+    axiom indexOf_ex : indexOf("Hello World", "o", 0) = 4
+    axiom indexOf_second : indexOf("Hello World", "o", 5) = 7
+    
+    // Not found returns -1
+    axiom indexOf_notfound : indexOf("Hello", "z", 0) = 0 - 1
+}
+</code></pre>
+<h3 id="replace"><a class="header" href="#replace">Replace</a></h3>
+<pre><code class="language-kleis">structure StringReplace {
+    // replace(s, old, new) replaces first occurrence
+    axiom replace_ex : replace("Hello World", "World", "Kleis") = "Hello Kleis"
+    
+    // No match means no change
+    axiom replace_nomatch : ∀(s : String). 
+        ¬contains(s, "xyz") → replace(s, "xyz", "abc") = s
+}
+</code></pre>
+<h2 id="string-integer-conversion"><a class="header" href="#string-integer-conversion">String-Integer Conversion</a></h2>
+<h3 id="string-to-integer"><a class="header" href="#string-to-integer">String to Integer</a></h3>
+<pre><code class="language-kleis">structure StrToInt {
+    axiom str_to_int_ex : strToInt("42") = 42
+    axiom str_to_int_neg : strToInt("-17") = 0 - 17
+    axiom str_to_int_zero : strToInt("0") = 0
+}
+</code></pre>
+<h3 id="integer-to-string"><a class="header" href="#integer-to-string">Integer to String</a></h3>
+<pre><code class="language-kleis">structure IntToStr {
+    axiom int_to_str_ex : intToStr(42) = "42"
+    axiom int_to_str_neg : intToStr(0 - 17) = "-17"
+    axiom int_to_str_zero : intToStr(0) = "0"
+}
+</code></pre>
+<h3 id="round-trip-property"><a class="header" href="#round-trip-property">Round-trip Property</a></h3>
+<pre><code class="language-kleis">structure Roundtrip {
+    // Converting back and forth preserves value
+    axiom roundtrip_int : ∀(n : ℤ). strToInt(intToStr(n)) = n
+    
+    // For valid numeric strings
+    axiom roundtrip_str : ∀(s : String). 
+        isDigits(s) → intToStr(strToInt(s)) = s
+}
+</code></pre>
+<h2 id="regular-expressions"><a class="header" href="#regular-expressions">Regular Expressions</a></h2>
+<p>Kleis supports regular expression matching via Z3’s regex theory:</p>
+<pre><code class="language-kleis">structure RegexMatch {
+    // Check if string matches pattern
+    axiom digits_match : matchesRegex("12345", "[0-9]+") = true
+    axiom alpha_match : matchesRegex("Hello", "[A-Za-z]+") = true
+    
+    // Built-in character class predicates
+    axiom is_digits : isDigits("12345") = true
+    axiom is_alpha : isAlpha("Hello") = true
+    axiom is_alphanum : isAlphaNum("Test123") = true
+}
+</code></pre>
+<h2 id="z3-verification"><a class="header" href="#z3-verification">Z3 Verification</a></h2>
+<p>String properties are verified using Z3’s native string theory:</p>
+<pre><code class="language-kleis">structure Z3StringProofs {
+    // Concatenation properties
+    axiom concat_length : ∀(a b : String). 
+        strlen(concat(a, b)) = strlen(a) + strlen(b)
+    
+    // Contains implies length relationship
+    axiom contains_length : ∀(s t : String). 
+        contains(s, t) → strlen(s) ≥ strlen(t)
+    
+    // Prefix implies contains
+    axiom prefix_contains : ∀(s t : String). 
+        hasPrefix(s, t) → contains(s, t)
+}
+</code></pre>
+<h2 id="monoid-structure"><a class="header" href="#monoid-structure">Monoid Structure</a></h2>
+<p>Strings form a <strong>monoid</strong> under concatenation:</p>
+<pre><code class="language-kleis">implements Monoid(String) {
+    operation identity = ""
+    operation mul = concat
+}
+
+// Monoid laws hold:
+// 1. concat("", s) = s           (left identity)
+// 2. concat(s, "") = s           (right identity)
+// 3. concat(a, concat(b, c)) 
+//    = concat(concat(a, b), c)   (associativity)
+</code></pre>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="email-validation"><a class="header" href="#email-validation">Email Validation</a></h3>
+<pre><code class="language-kleis">structure EmailValidation {
+    define isValidEmail(email : String) : Bool =
+        contains(email, "@") ∧ 
+        contains(email, ".") ∧
+        indexOf(email, "@", 0) &lt; indexOf(email, ".", 0)
+    
+    axiom valid_ex : isValidEmail("user@example.com") = true
+    axiom invalid_ex : isValidEmail("invalid") = false
+}
+</code></pre>
+<h3 id="url-parsing"><a class="header" href="#url-parsing">URL Parsing</a></h3>
+<pre><code class="language-kleis">structure URLParsing {
+    define getProtocol(url : String) : String =
+        substr(url, 0, indexOf(url, "://", 0))
+    
+    axiom http_ex : getProtocol("https://kleis.io") = "https"
+}
+</code></pre>
+<h3 id="string-builder-pattern"><a class="header" href="#string-builder-pattern">String Builder Pattern</a></h3>
+<pre><code class="language-kleis">structure StringBuilder {
+    define join(sep : String, a : String, b : String) : String =
+        concat(concat(a, sep), b)
+    
+    axiom join_ex : join(", ", "Hello", "World") = "Hello, World"
+}
+</code></pre>
+<h2 id="operation-reference"><a class="header" href="#operation-reference">Operation Reference</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Type</th><th>Meaning</th></tr>
+<tr><th>Operation</th><th>Syntax</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>ℝ → ℝ</code></td><td>Function from real to real</td></tr>
-<tr><td><code>ℝ → ℝ → ℝ</code></td><td>Curried binary function</td></tr>
-<tr><td><code>(ℝ → ℝ) → ℝ</code></td><td>Takes a function, returns a value (e.g., definite integral)</td></tr>
-<tr><td><code>ℝ → (ℝ → ℝ)</code></td><td>Returns a function (function factory)</td></tr>
-<tr><td><code>(ℝ → ℝ) → (ℝ → ℝ)</code></td><td>Function transformer (e.g., derivative operator)</td></tr>
+<tr><td>Concatenate</td><td><code>concat(a, b)</code></td><td>Join two strings</td></tr>
+<tr><td>Length</td><td><code>strlen(s)</code></td><td>Character count</td></tr>
+<tr><td>Contains</td><td><code>contains(s, t)</code></td><td>Check substring</td></tr>
+<tr><td>Prefix</td><td><code>hasPrefix(s, t)</code></td><td>Check prefix</td></tr>
+<tr><td>Suffix</td><td><code>hasSuffix(s, t)</code></td><td>Check suffix</td></tr>
+<tr><td>Substring</td><td><code>substr(s, i, n)</code></td><td>Extract n chars from i</td></tr>
+<tr><td>Character</td><td><code>charAt(s, i)</code></td><td>Get char at index</td></tr>
+<tr><td>Index</td><td><code>indexOf(s, t, i)</code></td><td>Find substring from i</td></tr>
+<tr><td>Replace</td><td><code>replace(s, old, new)</code></td><td>Replace first match</td></tr>
+<tr><td>To Int</td><td><code>strToInt(s)</code></td><td>Parse integer</td></tr>
+<tr><td>From Int</td><td><code>intToStr(n)</code></td><td>Format integer</td></tr>
+<tr><td>Regex</td><td><code>matchesRegex(s, r)</code></td><td>Match pattern</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="parametric-types"><a class="header" href="#parametric-types">Parametric Types</a></h2>
-<p>Types can have parameters:</p>
-<pre><code class="language-kleis">// Parametric type examples:
-List(ℤ)           // List of integers
-Matrix(3, 3, ℝ)   // 3×3 matrix of reals
-Vector(4)         // 4-dimensional vector
-</code></pre>
-<h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
-<p>Kleis often infers types automatically:</p>
-<pre><code class="language-kleis">define double(x) = x + x
-// Kleis infers: double : ℝ → ℝ (or more general)
-
-define square_five = let y = 5 in y * y
-// Kleis infers: y : ℤ
-</code></pre>
-<p>But explicit types make code clearer and catch errors earlier!</p>
-<h2 id="the-type-hierarchy"><a class="header" href="#the-type-hierarchy">The Type Hierarchy</a></h2>
-<pre><code>              Any
-         /    |    \
-     Scalar  String  Collection
-     /    \              |
-    ℂ    Bool          List
-    |                 /    \
-    ℝ            Vector   Matrix
-    |
-    ℤ
-    |
-    ℕ
-</code></pre>
-<p>Note: <code>ℕ ⊂ ℤ ⊂ ℝ ⊂ ℂ</code> (natural numbers are integers are reals are complex)</p>
-<h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
-<p>Types are the foundation. Now let’s see how to define functions!</p>
-<p>→ <a href="./03-functions.html">Next: Functions</a></p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>Basic operations</td><td>✅ Native Z3</td></tr>
+<tr><td>Substring ops</td><td>✅ Native Z3</td></tr>
+<tr><td>Regex matching</td><td>✅ Native Z3</td></tr>
+<tr><td>Int conversion</td><td>✅ Native Z3</td></tr>
+<tr><td>Monoid structure</td><td>✅ Algebraic</td></tr>
+</tbody>
+</table>
+</div>
+<p>See <code>src/solvers/z3/capabilities.toml</code> for the complete list of supported string operations.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../chapters/01-starting-out.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../chapters/16-bit-vectors.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../chapters/03-functions.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../appendix/grammar.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -331,11 +423,11 @@ define square_five = let y = 5 in y * y
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../chapters/01-starting-out.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../chapters/16-bit-vectors.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../chapters/03-functions.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../appendix/grammar.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

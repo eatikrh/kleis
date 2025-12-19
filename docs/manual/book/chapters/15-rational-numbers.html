@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Types and Values - Learn You Some Kleis</title>
+        <title>Rational Numbers - Learn You Some Kleis</title>
 
 
         <!-- Custom HTML head -->
@@ -146,7 +146,7 @@
                         <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/02-types.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/15-rational-numbers.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -180,148 +180,244 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="types-and-values"><a class="header" href="#types-and-values">Types and Values</a></h1>
-<h2 id="why-types-matter"><a class="header" href="#why-types-matter">Why Types Matter</a></h2>
-<p>Types are the foundation of Kleis. Every expression has a type, and the type system catches errors before they become problems.</p>
-<pre><code class="language-kleis">define answer = 42                // 42 is an integer
-define pi_val = 3.14              // 3.14 is a real number
-define flag = True                // True is a boolean
+                        <h1 id="rational-numbers"><a class="header" href="#rational-numbers">Rational Numbers</a></h1>
+<p>Kleis provides complete support for <strong>rational numbers</strong> (ℚ), the field of fractions p/q where p and q are integers and q ≠ 0. Rational arithmetic in Kleis is <strong>exact</strong>—no floating-point approximation errors.</p>
+<h2 id="the-rational-type"><a class="header" href="#the-rational-type">The Rational Type</a></h2>
+<p>Kleis recognizes three equivalent notations for the rational type:</p>
+<pre><code class="language-kleis">define half : ℚ = rational(1, 2)
+define third : Rational = rational(1, 3)
+define quarter : Q = rational(1, 4)
 </code></pre>
-<h2 id="built-in-types"><a class="header" href="#built-in-types">Built-in Types</a></h2>
-<h3 id="numeric-types"><a class="header" href="#numeric-types">Numeric Types</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Type</th><th>Unicode</th><th>Full Name</th><th>ASCII</th><th>Examples</th></tr>
-</thead>
-<tbody>
-<tr><td>Natural</td><td><code>ℕ</code></td><td><code>Nat</code></td><td><code>N</code></td><td><code>0</code>, <code>42</code>, <code>100</code></td></tr>
-<tr><td>Integer</td><td><code>ℤ</code></td><td><code>Int</code></td><td><code>Z</code></td><td><code>-5</code>, <code>0</code>, <code>17</code></td></tr>
-<tr><td>Real</td><td><code>ℝ</code></td><td><code>Real</code> or <code>Scalar</code></td><td><code>R</code></td><td><code>3.14</code>, <code>-2.5</code>, <code>√2</code></td></tr>
-<tr><td>Complex</td><td><code>ℂ</code></td><td><code>Complex</code></td><td><code>C</code></td><td><code>3 + 4i</code>, <code>i</code></td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="other-basic-types"><a class="header" href="#other-basic-types">Other Basic Types</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Type</th><th>Unicode</th><th>Full Name</th><th>Values</th></tr>
-</thead>
-<tbody>
-<tr><td>Boolean</td><td><code>𝔹</code></td><td><code>Bool</code></td><td><code>True</code>, <code>False</code></td></tr>
-<tr><td>Unit</td><td>—</td><td><code>Unit</code></td><td><code>()</code></td></tr>
-</tbody>
-</table>
-</div>
-<pre><code class="language-kleis">// Boolean values
-define flag = True
-define not_flag = False
-
-// Unit value
-define empty = ()
-
-// Boolean in quantified expressions (inside structures)
-structure BoolExamples {
-    axiom reflexive_unicode : ∀(p : 𝔹). p = p
-    axiom reflexive_full    : ∀(q : Bool). q = q
+<h2 id="constructing-rationals"><a class="header" href="#constructing-rationals">Constructing Rationals</a></h2>
+<p>Use the <code>rational(p, q)</code> constructor to create rational numbers:</p>
+<pre><code class="language-kleis">define one_half : ℚ = rational(1, 2)
+define two_thirds : ℚ = rational(2, 3)
+define negative : ℚ = rational(-3, 4)
+</code></pre>
+<h3 id="accessors"><a class="header" href="#accessors">Accessors</a></h3>
+<p>Extract the numerator and denominator:</p>
+<pre><code class="language-kleis">structure RationalAccessors {
+    axiom numer_ex : numer(rational(3, 4)) = 3
+    axiom denom_ex : denom(rational(3, 4)) = 4
 }
 </code></pre>
-<h2 id="type-annotations"><a class="header" href="#type-annotations">Type Annotations</a></h2>
-<p>You can explicitly annotate types with <code>:</code>:</p>
-<pre><code class="language-kleis">// Variable annotation
-define typed_let = let x : ℝ = 3.14 in x * 2
-
-// Function parameter and return types
-define f(x : ℝ) : ℝ = x * x
-
-// Expression-level annotation (ascription)
-define sum_typed(a, b) = (a + b) : ℝ
+<h2 id="arithmetic-operations"><a class="header" href="#arithmetic-operations">Arithmetic Operations</a></h2>
+<h3 id="basic-arithmetic"><a class="header" href="#basic-arithmetic">Basic Arithmetic</a></h3>
+<p>Kleis supports operator overloading for rationals:</p>
+<pre><code class="language-kleis">define sum : ℚ = rational(1, 2) + rational(1, 3)
+define diff : ℚ = rational(3, 4) - rational(1, 4)
+define prod : ℚ = rational(2, 3) * rational(3, 2)
+define quot : ℚ = rational(1, 2) / rational(1, 4)
 </code></pre>
-<h2 id="function-types"><a class="header" href="#function-types">Function Types</a></h2>
-<p>Functions have types too! The notation <code>A → B</code> means “a function from A to B”:</p>
-<pre><code class="language-kleis">// square takes a Real and returns a Real
-define square(x : ℝ) : ℝ = x * x
-// Type: ℝ → ℝ
-
-// add takes two Reals and returns a Real
-define add(x : ℝ, y : ℝ) : ℝ = x + y
-// Type: ℝ × ℝ → ℝ (or equivalently: ℝ → ℝ → ℝ)
-</code></pre>
-<h3 id="higher-order-function-types"><a class="header" href="#higher-order-function-types">Higher-Order Function Types</a></h3>
-<p>Functions can take other functions as arguments or return functions. These are called <strong>higher-order functions</strong>:</p>
-<pre><code class="language-kleis">// A function that takes a function as an argument
-define apply_twice(f : ℝ → ℝ, x : ℝ) : ℝ = f(f(x))
-// Type: (ℝ → ℝ) × ℝ → ℝ
-
-// A function that returns a function
-define make_adder(n : ℝ) : ℝ → ℝ = ???
-// Type: ℝ → (ℝ → ℝ)
-</code></pre>
-<p>The parentheses matter! Compare:</p>
-<ul>
-<li><code>(ℝ → ℝ) → ℝ</code> — takes a function, returns a number</li>
-<li><code>ℝ → (ℝ → ℝ)</code> — takes a number, returns a function</li>
-<li><code>ℝ → ℝ → ℝ</code> — curried function (associates right: <code>ℝ → (ℝ → ℝ)</code>)</li>
-</ul>
-<h3 id="function-type-examples"><a class="header" href="#function-type-examples">Function Type Examples</a></h3>
+<p>These lower to explicit rational operations:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Type</th><th>Meaning</th></tr>
+<tr><th>Operator</th><th>Lowers to</th></tr>
 </thead>
 <tbody>
-<tr><td><code>ℝ → ℝ</code></td><td>Function from real to real</td></tr>
-<tr><td><code>ℝ → ℝ → ℝ</code></td><td>Curried binary function</td></tr>
-<tr><td><code>(ℝ → ℝ) → ℝ</code></td><td>Takes a function, returns a value (e.g., definite integral)</td></tr>
-<tr><td><code>ℝ → (ℝ → ℝ)</code></td><td>Returns a function (function factory)</td></tr>
-<tr><td><code>(ℝ → ℝ) → (ℝ → ℝ)</code></td><td>Function transformer (e.g., derivative operator)</td></tr>
+<tr><td><code>r1 + r2</code></td><td><code>rational_add(r1, r2)</code></td></tr>
+<tr><td><code>r1 - r2</code></td><td><code>rational_sub(r1, r2)</code></td></tr>
+<tr><td><code>r1 * r2</code></td><td><code>rational_mul(r1, r2)</code></td></tr>
+<tr><td><code>r1 / r2</code></td><td><code>rational_div(r1, r2)</code></td></tr>
+<tr><td><code>-r</code></td><td><code>neg_rational(r)</code></td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="parametric-types"><a class="header" href="#parametric-types">Parametric Types</a></h2>
-<p>Types can have parameters:</p>
-<pre><code class="language-kleis">// Parametric type examples:
-List(ℤ)           // List of integers
-Matrix(3, 3, ℝ)   // 3×3 matrix of reals
-Vector(4)         // 4-dimensional vector
+<h3 id="reciprocal-and-inverse"><a class="header" href="#reciprocal-and-inverse">Reciprocal and Inverse</a></h3>
+<pre><code class="language-kleis">structure RationalInverse {
+    axiom inv_half : rational_inv(rational(1, 2)) = rational(2, 1)
+    axiom inv_def : ∀(p q : ℤ). p ≠ 0 ∧ q ≠ 0 → 
+        rational_inv(rational(p, q)) = rational(q, p)
+}
 </code></pre>
-<h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
-<p>Kleis often infers types automatically:</p>
-<pre><code class="language-kleis">define double(x) = x + x
-// Kleis infers: double : ℝ → ℝ (or more general)
-
-define square_five = let y = 5 in y * y
-// Kleis infers: y : ℤ
+<h2 id="derived-operations"><a class="header" href="#derived-operations">Derived Operations</a></h2>
+<p>Kleis defines several derived operations using conditionals:</p>
+<h3 id="sign-absolute-value-min-max"><a class="header" href="#sign-absolute-value-min-max">Sign, Absolute Value, Min, Max</a></h3>
+<pre><code class="language-kleis">structure DerivedOps {
+    define sign_rational(r : ℚ) : ℤ = 
+        if rational_lt(r, rational(0, 1)) then 0 - 1
+        else if r = rational(0, 1) then 0
+        else 1
+    
+    define abs_rational(r : ℚ) : ℚ = 
+        if rational_lt(r, rational(0, 1)) then neg_rational(r) 
+        else r
+    
+    define min_rational(r1 : ℚ, r2 : ℚ) : ℚ = 
+        if rational_le(r1, r2) then r1 else r2
+    
+    define max_rational(r1 : ℚ, r2 : ℚ) : ℚ = 
+        if rational_le(r1, r2) then r2 else r1
+    
+    define midpoint(r1 : ℚ, r2 : ℚ) : ℚ = 
+        rational_div(rational_add(r1, r2), rational(2, 1))
+}
 </code></pre>
-<p>But explicit types make code clearer and catch errors earlier!</p>
-<h2 id="the-type-hierarchy"><a class="header" href="#the-type-hierarchy">The Type Hierarchy</a></h2>
-<pre><code>              Any
-         /    |    \
-     Scalar  String  Collection
-     /    \              |
-    ℂ    Bool          List
-    |                 /    \
-    ℝ            Vector   Matrix
-    |
-    ℤ
-    |
-    ℕ
+<h2 id="comparison-operations"><a class="header" href="#comparison-operations">Comparison Operations</a></h2>
+<p>Rationals are totally ordered:</p>
+<pre><code class="language-kleis">structure RationalOrder {
+    axiom trichotomy : ∀(r1 r2 : ℚ). 
+        rational_lt(r1, r2) ∨ r1 = r2 ∨ rational_gt(r1, r2)
+    
+    axiom transitive : ∀(r1 r2 r3 : ℚ). 
+        rational_lt(r1, r2) ∧ rational_lt(r2, r3) → rational_lt(r1, r3)
+}
 </code></pre>
-<p>Note: <code>ℕ ⊂ ℤ ⊂ ℝ ⊂ ℂ</code> (natural numbers are integers are reals are complex)</p>
-<h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
-<p>Types are the foundation. Now let’s see how to define functions!</p>
-<p>→ <a href="./03-functions.html">Next: Functions</a></p>
+<h3 id="mixed-type-comparisons"><a class="header" href="#mixed-type-comparisons">Mixed-Type Comparisons</a></h3>
+<p>Kleis supports comparing rationals with other numeric types:</p>
+<pre><code class="language-kleis">structure MixedComparisons {
+    // Compare ℚ with ℕ
+    axiom half_less_one : rational(1, 2) &lt; 1
+    
+    // Compare ℚ with ℤ
+    axiom neg_half_less_zero : rational(-1, 2) &lt; 0
+}
+</code></pre>
+<h2 id="type-promotion"><a class="header" href="#type-promotion">Type Promotion</a></h2>
+<p>When mixing rationals with other numeric types, Kleis promotes according to:</p>
+<pre><code>ℕ → ℤ → ℚ → ℝ → ℂ
+</code></pre>
+<p>Examples:</p>
+<pre><code class="language-kleis">structure TypePromotion {
+    // ℚ + ℤ → ℚ (integer lifted to rational)
+    axiom int_plus_rat : rational(1, 2) + 1 = rational(3, 2)
+    
+    // ℚ + ℝ → ℝ (rational becomes real)
+    axiom rat_plus_real : rational(1, 2) + 0.5 = 1.0
+}
+</code></pre>
+<h2 id="field-axioms"><a class="header" href="#field-axioms">Field Axioms</a></h2>
+<p>Rationals form a <strong>field</strong>—all the familiar algebraic laws hold:</p>
+<pre><code class="language-kleis">structure RationalField {
+    // Addition is commutative and associative
+    axiom add_comm : ∀(r1 r2 : ℚ). rational_add(r1, r2) = rational_add(r2, r1)
+    axiom add_assoc : ∀(r1 r2 r3 : ℚ). 
+        rational_add(rational_add(r1, r2), r3) = rational_add(r1, rational_add(r2, r3))
+    
+    // Additive identity and inverse
+    axiom add_identity : ∀(r : ℚ). rational_add(r, rational(0, 1)) = r
+    axiom add_inverse : ∀(r : ℚ). rational_add(r, neg_rational(r)) = rational(0, 1)
+    
+    // Multiplication is commutative and associative
+    axiom mul_comm : ∀(r1 r2 : ℚ). rational_mul(r1, r2) = rational_mul(r2, r1)
+    axiom mul_assoc : ∀(r1 r2 r3 : ℚ). 
+        rational_mul(rational_mul(r1, r2), r3) = rational_mul(r1, rational_mul(r2, r3))
+    
+    // Multiplicative identity and inverse
+    axiom mul_identity : ∀(r : ℚ). rational_mul(r, rational(1, 1)) = r
+    axiom mul_inverse : ∀(r : ℚ). r ≠ rational(0, 1) → 
+        rational_mul(r, rational_inv(r)) = rational(1, 1)
+    
+    // Distributive law
+    axiom distributive : ∀(r1 r2 r3 : ℚ). 
+        rational_mul(r1, rational_add(r2, r3)) = 
+        rational_add(rational_mul(r1, r2), rational_mul(r1, r3))
+}
+</code></pre>
+<h2 id="integer-operations"><a class="header" href="#integer-operations">Integer Operations</a></h2>
+<h3 id="floor-and-ceiling"><a class="header" href="#floor-and-ceiling">Floor and Ceiling</a></h3>
+<p>Convert rationals to integers:</p>
+<pre><code class="language-kleis">structure FloorCeil {
+    // floor: largest integer ≤ r
+    axiom floor_def : ∀(r : ℚ). int_to_rational(floor(r)) ≤ r
+    
+    // ceil: smallest integer ≥ r
+    axiom ceil_def : ∀(r : ℚ). r ≤ int_to_rational(ceil(r))
+    
+    // Examples
+    axiom floor_ex : floor(rational(7, 3)) = 2
+    axiom ceil_ex : ceil(rational(7, 3)) = 3
+}
+</code></pre>
+<h3 id="integer-division-and-modulo"><a class="header" href="#integer-division-and-modulo">Integer Division and Modulo</a></h3>
+<pre><code class="language-kleis">structure IntDivMod {
+    // Division identity: a = (a div b) * b + (a mod b)
+    axiom div_mod_id : ∀(a b : ℤ). b ≠ 0 → 
+        a = int_div(a, b) * b + int_mod(a, b)
+    
+    // Modulo is non-negative for positive divisor
+    axiom mod_nonneg : ∀(a b : ℤ). b &gt; 0 → 
+        int_mod(a, b) ≥ 0 ∧ int_mod(a, b) &lt; b
+}
+</code></pre>
+<h3 id="greatest-common-divisor"><a class="header" href="#greatest-common-divisor">Greatest Common Divisor</a></h3>
+<p>GCD is defined axiomatically:</p>
+<pre><code class="language-kleis">structure GCDAxioms {
+    // GCD divides both arguments
+    axiom gcd_divides_a : ∀(a b : ℤ). int_mod(a, gcd(a, b)) = 0
+    axiom gcd_divides_b : ∀(a b : ℤ). int_mod(b, gcd(a, b)) = 0
+    
+    // GCD is the greatest such divisor
+    axiom gcd_greatest : ∀(a b d : ℤ). 
+        (int_mod(a, d) = 0 ∧ int_mod(b, d) = 0) → d ≤ gcd(a, b)
+    
+    // Euclidean algorithm
+    axiom gcd_euclidean : ∀(a b : ℤ). b ≠ 0 → 
+        gcd(a, b) = gcd(b, int_mod(a, b))
+}
+</code></pre>
+<h2 id="density-property"><a class="header" href="#density-property">Density Property</a></h2>
+<p>Between any two distinct rationals, there’s another:</p>
+<pre><code class="language-kleis">structure Density {
+    axiom density : ∀(r1 r2 : ℚ). 
+        rational_lt(r1, r2) → 
+        (∃(r : ℚ). rational_lt(r1, r) ∧ rational_lt(r, r2))
+    
+    // The midpoint is always between
+    axiom midpoint_between : ∀(r1 r2 : ℚ). 
+        rational_lt(r1, r2) → 
+        rational_lt(r1, midpoint(r1, r2)) ∧ rational_lt(midpoint(r1, r2), r2)
+}
+</code></pre>
+<h2 id="z3-verification"><a class="header" href="#z3-verification">Z3 Verification</a></h2>
+<p>Z3 maps rationals to its <code>Real</code> sort, which provides exact rational arithmetic:</p>
+<pre><code class="language-kleis">structure Z3Example {
+    // This theorem is verified by Z3
+    axiom half_plus_half : rational_add(rational(1, 2), rational(1, 2)) = rational(1, 1)
+    
+    // Field properties are automatically verified
+    axiom comm_verified : ∀(a b : ℚ). rational_add(a, b) = rational_add(b, a)
+}
+</code></pre>
+<h2 id="common-fractions"><a class="header" href="#common-fractions">Common Fractions</a></h2>
+<p>The standard library defines convenient names:</p>
+<pre><code class="language-kleis">structure CommonFractions {
+    axiom half_def : half = rational(1, 2)
+    axiom third_def : third = rational(1, 3)
+    axiom quarter_def : quarter = rational(1, 4)
+    axiom fifth_def : fifth = rational(1, 5)
+    axiom tenth_def : tenth = rational(1, 10)
+}
+</code></pre>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Kleis Support</th></tr>
+</thead>
+<tbody>
+<tr><td>Type notation</td><td><code>ℚ</code>, <code>Rational</code>, <code>Q</code></td></tr>
+<tr><td>Construction</td><td><code>rational(p, q)</code></td></tr>
+<tr><td>Arithmetic</td><td><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>-</code> (negation)</td></tr>
+<tr><td>Comparison</td><td><code>&lt;</code>, <code>≤</code>, <code>&gt;</code>, <code>≥</code>, <code>=</code>, <code>≠</code></td></tr>
+<tr><td>Derived ops</td><td><code>sign</code>, <code>abs</code>, <code>min</code>, <code>max</code>, <code>midpoint</code></td></tr>
+<tr><td>Integer ops</td><td><code>floor</code>, <code>ceil</code>, <code>int_div</code>, <code>int_mod</code>, <code>gcd</code></td></tr>
+<tr><td>Z3 backend</td><td>Native Real sort (exact arithmetic)</td></tr>
+</tbody>
+</table>
+</div>
+<p>See <code>stdlib/rational.kleis</code> for the complete axiom set.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../chapters/01-starting-out.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../chapters/14-complex-numbers.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../chapters/03-functions.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../chapters/16-bit-vectors.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -331,11 +427,11 @@ define square_five = let y = 5 in y * y
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../chapters/01-starting-out.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../chapters/14-complex-numbers.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../chapters/03-functions.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../chapters/16-bit-vectors.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
