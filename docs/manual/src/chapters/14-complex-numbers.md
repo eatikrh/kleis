@@ -76,6 +76,41 @@ The imaginary unit `i` is a global constant. However, it can be shadowed by:
 | `∀(i : ℕ). i + 0` | Nat | Quantifier `i : ℕ` shadows global |
 | `λ i . i + 1` | Scalar | Lambda param shadows global |
 
+**Try these in the REPL:**
+
+```kleis
+// Type inference for global i
+:type i
+// 📐 Type: Complex
+
+:type i + 1
+// 📐 Type: Complex
+
+:type i * i
+// 📐 Type: Complex
+
+// Lambda with global i
+:type λ x . x + i
+// 📐 Type: Complex
+
+// Quantified i shadows global
+:type ∀(i : ℝ). i + 1
+// Body uses Scalar i, not Complex
+
+:verify ∀(i : ℝ). i + 1 = 1 + i
+// ✅ Valid (i is Real, uses regular plus)
+
+:verify ∀(i : ℕ). i + 0 = i
+// ✅ Valid (i is Nat)
+
+// Lambda parameter shadows global
+:type λ i . i + 1
+// 📐 Type: Scalar (parameter shadows global i)
+
+:type λ i . i * i
+// 📐 Type: Scalar (parameter shadows global i)
+```
+
 **Best practice:** Avoid using `i` as a variable name to prevent confusion with the imaginary unit. Use descriptive names like `idx`, `index`, or `iter` for loop-like variables.
 
 ```kleis
@@ -83,7 +118,7 @@ The imaginary unit `i` is a global constant. However, it can be shadowed by:
 :verify ∀(z : ℂ). z * i = complex(neg(im(z)), re(z))
 // ✅ Valid
 
-// Clear: using idx as index variable
+// Clear: using idx as index variable  
 :verify ∀(idx : ℕ). idx + 0 = idx
 // ✅ Valid
 ```
