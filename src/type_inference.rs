@@ -1292,6 +1292,73 @@ impl TypeInference {
             });
         }
 
+        // ============================================
+        // BIT-VECTOR OPERATIONS
+        // ============================================
+
+        // BitVec binary operations: bvand, bvor, bvxor, bvadd, bvsub, bvmul, bvshl, bvlshr, bvashr
+        // These preserve the BitVec type
+        if matches!(
+            name,
+            "bvand"
+                | "bvor"
+                | "bvxor"
+                | "bvadd"
+                | "bvsub"
+                | "bvmul"
+                | "bvudiv"
+                | "bvsdiv"
+                | "bvurem"
+                | "bvshl"
+                | "bvlshr"
+                | "bvashr"
+        ) && args.len() == 2
+        {
+            // Return BitVec type (width preserved from first argument)
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "BitVec".to_string(),
+                args: vec![], // Width would be a type parameter in full dependent type system
+            });
+        }
+
+        // BitVec unary operations: bvnot, bvneg
+        if matches!(name, "bvnot" | "bvneg") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "BitVec".to_string(),
+                args: vec![],
+            });
+        }
+
+        // BitVec comparison operations return Bool
+        if matches!(
+            name,
+            "bvult" | "bvule" | "bvugt" | "bvuge" | "bvslt" | "bvsle" | "bvsgt" | "bvsge"
+        ) && args.len() == 2
+        {
+            return Ok(Type::Bool);
+        }
+
+        // Bit extraction: bit(x, i) returns a single bit (0 or 1)
+        if name == "bit" && args.len() == 2 {
+            return Ok(Type::Nat);
+        }
+
+        // Width accessor
+        if name == "width" && args.len() == 1 {
+            return Ok(Type::Nat);
+        }
+
+        // Zero/ones constructors: bvzero(n), bvones(n), bvone(n) return BitVec(n)
+        if matches!(name, "bvzero" | "bvones" | "bvone") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "BitVec".to_string(),
+                args: vec![],
+            });
+        }
+
         // OPERATOR OVERLOADING: Rational comparison operations return Bool
         if matches!(
             name,

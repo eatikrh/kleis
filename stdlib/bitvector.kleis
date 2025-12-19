@@ -1,0 +1,291 @@
+// ============================================
+// Kleis Standard Library - Bit-Vectors
+// ============================================
+// Bourbaki-style formalization of fixed-width bit-vectors
+//
+// DEFINITION (Bourbaki):
+//   A bit-vector of width n is a mapping x : [0,n-1] → {0,1}
+//   Equivalently, a family (xᵢ)_{i∈[0,n-1]} where each xᵢ ∈ {0,1}
+//
+// MOTHER STRUCTURES:
+//   1. Vector Space: 𝔽₂ⁿ over GF(2) with XOR addition
+//   2. Ordered Set: Lexicographic (unsigned) or signed ordering
+//   3. Boolean Algebra: AND, OR, NOT operations
+//
+// Z3 MAPPING:
+//   BitVec(n) → (_ BitVec n)
+//   All operations map to native Z3 BitVec theory
+// ============================================
+
+// ============================================
+// BIT-VECTOR CONSTRUCTION
+// ============================================
+
+structure BitVectorConstruction {
+    // The base set: 𝟚 = {0, 1}
+    // A bit-vector is a function from indices to bits
+    
+    // Bit extraction: get the i-th bit (returns 0 or 1)
+    axiom bit_is_zero_or_one : ∀(n : ℕ)(x : BitVec(n))(i : ℕ). 
+        i < n → (bit(x, i) = 0 ∨ bit(x, i) = 1)
+    
+    // Two bit-vectors are equal iff all bits are equal (extensionality)
+    axiom bitvec_extensionality : ∀(n : ℕ)(x y : BitVec(n)).
+        (∀(i : ℕ). i < n → bit(x, i) = bit(y, i)) → x = y
+    
+    // Zero vector: all bits are 0
+    axiom zero_bits : ∀(n : ℕ)(i : ℕ). i < n → bit(bvzero(n), i) = 0
+    
+    // One vector: all bits are 1
+    axiom ones_bits : ∀(n : ℕ)(i : ℕ). i < n → bit(bvones(n), i) = 1
+    
+    // Concatenation
+    axiom concat_length : ∀(m n : ℕ)(x : BitVec(m))(y : BitVec(n)).
+        width(bvconcat(x, y)) = m + n
+}
+
+// ============================================
+// VECTOR SPACE OVER 𝔽₂ (XOR as addition)
+// ============================================
+
+structure BitVectorVectorSpace {
+    // Addition is bitwise XOR (⊕)
+    // This makes BitVec(n) a vector space over 𝔽₂ = {0, 1}
+    
+    // XOR is commutative
+    axiom xor_commutative : ∀(n : ℕ)(x y : BitVec(n)).
+        bvxor(x, y) = bvxor(y, x)
+    
+    // XOR is associative
+    axiom xor_associative : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvxor(bvxor(x, y), z) = bvxor(x, bvxor(y, z))
+    
+    // Zero is the identity for XOR
+    axiom xor_identity : ∀(n : ℕ)(x : BitVec(n)).
+        bvxor(x, bvzero(n)) = x
+    
+    // Every element is its own inverse (x ⊕ x = 0)
+    axiom xor_inverse : ∀(n : ℕ)(x : BitVec(n)).
+        bvxor(x, x) = bvzero(n)
+    
+    // Scalar multiplication over 𝔽₂
+    axiom scalar_zero : ∀(n : ℕ)(x : BitVec(n)).
+        bvand(bvzero(n), x) = bvzero(n)
+    
+    axiom scalar_one : ∀(n : ℕ)(x : BitVec(n)).
+        bvand(bvones(n), x) = x
+}
+
+// ============================================
+// BOOLEAN ALGEBRA (AND, OR, NOT)
+// ============================================
+
+structure BitVectorBooleanAlgebra {
+    // Bitwise AND forms a meet-semilattice
+    axiom and_commutative : ∀(n : ℕ)(x y : BitVec(n)).
+        bvand(x, y) = bvand(y, x)
+    
+    axiom and_associative : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvand(bvand(x, y), z) = bvand(x, bvand(y, z))
+    
+    axiom and_idempotent : ∀(n : ℕ)(x : BitVec(n)).
+        bvand(x, x) = x
+    
+    // Bitwise OR forms a join-semilattice
+    axiom or_commutative : ∀(n : ℕ)(x y : BitVec(n)).
+        bvor(x, y) = bvor(y, x)
+    
+    axiom or_associative : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvor(bvor(x, y), z) = bvor(x, bvor(y, z))
+    
+    axiom or_idempotent : ∀(n : ℕ)(x : BitVec(n)).
+        bvor(x, x) = x
+    
+    // Absorption laws
+    axiom absorption_and_or : ∀(n : ℕ)(x y : BitVec(n)).
+        bvand(x, bvor(x, y)) = x
+    
+    axiom absorption_or_and : ∀(n : ℕ)(x y : BitVec(n)).
+        bvor(x, bvand(x, y)) = x
+    
+    // Complement (NOT)
+    axiom not_involution : ∀(n : ℕ)(x : BitVec(n)).
+        bvnot(bvnot(x)) = x
+    
+    // De Morgan's laws
+    axiom demorgan_and : ∀(n : ℕ)(x y : BitVec(n)).
+        bvnot(bvand(x, y)) = bvor(bvnot(x), bvnot(y))
+    
+    axiom demorgan_or : ∀(n : ℕ)(x y : BitVec(n)).
+        bvnot(bvor(x, y)) = bvand(bvnot(x), bvnot(y))
+    
+    // Complement laws
+    axiom and_complement : ∀(n : ℕ)(x : BitVec(n)).
+        bvand(x, bvnot(x)) = bvzero(n)
+    
+    axiom or_complement : ∀(n : ℕ)(x : BitVec(n)).
+        bvor(x, bvnot(x)) = bvones(n)
+    
+    // Distributive laws (making it a Boolean algebra)
+    axiom distribute_and_or : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvand(x, bvor(y, z)) = bvor(bvand(x, y), bvand(x, z))
+    
+    axiom distribute_or_and : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvor(x, bvand(y, z)) = bvand(bvor(x, y), bvor(x, z))
+}
+
+// ============================================
+// ARITHMETIC OPERATIONS (modular)
+// ============================================
+
+structure BitVectorArithmetic {
+    // Addition is modular (mod 2ⁿ)
+    axiom add_commutative : ∀(n : ℕ)(x y : BitVec(n)).
+        bvadd(x, y) = bvadd(y, x)
+    
+    axiom add_associative : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvadd(bvadd(x, y), z) = bvadd(x, bvadd(y, z))
+    
+    axiom add_zero : ∀(n : ℕ)(x : BitVec(n)).
+        bvadd(x, bvzero(n)) = x
+    
+    // Two's complement negation
+    axiom neg_inverse : ∀(n : ℕ)(x : BitVec(n)).
+        bvadd(x, bvneg(x)) = bvzero(n)
+    
+    // Subtraction via negation
+    axiom sub_def : ∀(n : ℕ)(x y : BitVec(n)).
+        bvsub(x, y) = bvadd(x, bvneg(y))
+    
+    // Multiplication is modular
+    axiom mul_commutative : ∀(n : ℕ)(x y : BitVec(n)).
+        bvmul(x, y) = bvmul(y, x)
+    
+    axiom mul_associative : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvmul(bvmul(x, y), z) = bvmul(x, bvmul(y, z))
+    
+    axiom mul_one : ∀(n : ℕ)(x : BitVec(n)).
+        bvmul(x, bvone(n)) = x
+    
+    axiom mul_zero : ∀(n : ℕ)(x : BitVec(n)).
+        bvmul(x, bvzero(n)) = bvzero(n)
+    
+    // Distributive law
+    axiom mul_distribute : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvmul(x, bvadd(y, z)) = bvadd(bvmul(x, y), bvmul(x, z))
+}
+
+// ============================================
+// ORDERED SET (Comparisons)
+// ============================================
+
+structure BitVectorOrder {
+    // Unsigned comparison (lexicographic on bits)
+    axiom ult_irreflexive : ∀(n : ℕ)(x : BitVec(n)).
+        ¬bvult(x, x)
+    
+    axiom ult_transitive : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvult(x, y) ∧ bvult(y, z) → bvult(x, z)
+    
+    axiom ult_trichotomy : ∀(n : ℕ)(x y : BitVec(n)).
+        bvult(x, y) ∨ x = y ∨ bvult(y, x)
+    
+    // Unsigned less-or-equal
+    axiom ule_def : ∀(n : ℕ)(x y : BitVec(n)).
+        bvule(x, y) ↔ (bvult(x, y) ∨ x = y)
+    
+    // Signed comparison (two's complement interpretation)
+    axiom slt_irreflexive : ∀(n : ℕ)(x : BitVec(n)).
+        ¬bvslt(x, x)
+    
+    axiom slt_transitive : ∀(n : ℕ)(x y z : BitVec(n)).
+        bvslt(x, y) ∧ bvslt(y, z) → bvslt(x, z)
+    
+    // Zero relationships
+    axiom zero_minimum_unsigned : ∀(n : ℕ)(x : BitVec(n)).
+        bvule(bvzero(n), x)
+    
+    axiom ones_maximum_unsigned : ∀(n : ℕ)(x : BitVec(n)).
+        bvule(x, bvones(n))
+}
+
+// ============================================
+// SHIFT OPERATIONS
+// ============================================
+
+structure BitVectorShift {
+    // Left shift: multiply by 2ᵏ (with zero fill)
+    axiom shl_zero : ∀(n : ℕ)(x : BitVec(n)).
+        bvshl(x, bvzero(n)) = x
+    
+    // Logical right shift: divide by 2ᵏ (with zero fill)
+    axiom lshr_zero : ∀(n : ℕ)(x : BitVec(n)).
+        bvlshr(x, bvzero(n)) = x
+    
+    // Arithmetic right shift: divide by 2ᵏ (with sign extension)
+    axiom ashr_zero : ∀(n : ℕ)(x : BitVec(n)).
+        bvashr(x, bvzero(n)) = x
+    
+    // Shift by width gives zero (for logical shifts)
+    // (Note: Z3 semantics may differ for shifts >= width)
+}
+
+// ============================================
+// EXTRACTION AND CONCATENATION
+// ============================================
+
+structure BitVectorExtract {
+    // Extract bits [high:low] from a bit-vector
+    axiom extract_width : ∀(n high low : ℕ)(x : BitVec(n)).
+        high ≥ low ∧ high < n → width(extract(high, low, x)) = high - low + 1
+    
+    // Zero extension
+    axiom zext_preserves_value : ∀(n m : ℕ)(x : BitVec(n)).
+        m ≥ n → bvult(x, bvzero(n)) = bvult(zext(m, x), bvzero(m))
+    
+    // Sign extension
+    axiom sext_preserves_sign : ∀(n m : ℕ)(x : BitVec(n)).
+        m ≥ n → bvslt(x, bvzero(n)) = bvslt(sext(m, x), bvzero(m))
+}
+
+// ============================================
+// COMMON BIT-VECTOR WIDTHS
+// ============================================
+
+structure CommonBitWidths {
+    // Standard widths used in computing
+    axiom byte_width : byte_bits = 8
+    axiom word16_width : word16_bits = 16
+    axiom word32_width : word32_bits = 32
+    axiom word64_width : word64_bits = 64
+    
+    // Type aliases (conceptual)
+    // Byte = BitVec(8)
+    // Word16 = BitVec(16)
+    // Word32 = BitVec(32)
+    // Word64 = BitVec(64)
+}
+
+// ============================================
+// IMPLEMENTATION STATUS (Dec 2024)
+// ============================================
+//
+// ✅ AXIOMS DEFINED
+//    - Vector space structure (XOR addition over 𝔽₂)
+//    - Boolean algebra (AND, OR, NOT)
+//    - Modular arithmetic (add, sub, mul)
+//    - Total ordering (unsigned and signed)
+//    - Shift and extract operations
+//
+// ✅ Z3 BACKEND
+//    - Native BitVec theory support
+//    - All operations map directly to Z3
+//
+// ⚠️ TYPE SYSTEM
+//    - BitVec(n) parameterized by width n
+//    - Requires dependent types for full support
+//
+// ============================================
+// END OF BIT-VECTORS
+// ============================================
+

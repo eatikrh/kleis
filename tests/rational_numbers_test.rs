@@ -783,7 +783,7 @@ fn test_z3_prove_rational_equality() {
 
     let solver = z3::Solver::new();
     // Assert that 1/2 ≠ 2/4 - should be UNSAT (proving they ARE equal)
-    solver.assert(&half.value.eq(&two_fourths.value).not());
+    solver.assert(half.value.eq(&two_fourths.value).not());
 
     assert_eq!(
         solver.check(),
@@ -800,7 +800,7 @@ fn test_z3_prove_rational_addition() {
     let sum = half.add(&half);
 
     let solver = z3::Solver::new();
-    solver.assert(&sum.value.eq(&one.value).not());
+    solver.assert(sum.value.eq(&one.value).not());
 
     assert_eq!(
         solver.check(),
@@ -818,7 +818,7 @@ fn test_z3_prove_rational_multiplication() {
     let product = half.mul(&two);
 
     let solver = z3::Solver::new();
-    solver.assert(&product.value.eq(&one.value).not());
+    solver.assert(product.value.eq(&one.value).not());
 
     assert_eq!(
         solver.check(),
@@ -835,7 +835,7 @@ fn test_z3_prove_rational_ordering() {
 
     let solver = z3::Solver::new();
     // Assert that 1/3 < 1/2 is false - should be UNSAT (proving it IS true)
-    solver.assert(&third.lt(&half).not());
+    solver.assert(third.lt(&half).not());
 
     assert_eq!(
         solver.check(),
@@ -852,7 +852,7 @@ fn test_z3_prove_rational_double_negation() {
     let neg_neg_half = neg_half.neg();
 
     let solver = z3::Solver::new();
-    solver.assert(&neg_neg_half.value.eq(&half.value).not());
+    solver.assert(neg_neg_half.value.eq(&half.value).not());
 
     assert_eq!(
         solver.check(),
@@ -870,7 +870,7 @@ fn test_z3_prove_rational_subtraction() {
     let diff = three_fourths.sub(&one_fourth);
 
     let solver = z3::Solver::new();
-    solver.assert(&diff.value.eq(&half.value).not());
+    solver.assert(diff.value.eq(&half.value).not());
 
     assert_eq!(
         solver.check(),
@@ -888,7 +888,7 @@ fn test_z3_prove_rational_division() {
     let quotient = half.div(&quarter);
 
     let solver = z3::Solver::new();
-    solver.assert(&quotient.value.eq(&two.value).not());
+    solver.assert(quotient.value.eq(&two.value).not());
 
     assert_eq!(
         solver.check(),
@@ -905,7 +905,7 @@ fn test_z3_prove_rational_inverse() {
     let inv_half = half.inv();
 
     let solver = z3::Solver::new();
-    solver.assert(&inv_half.value.eq(&two.value).not());
+    solver.assert(inv_half.value.eq(&two.value).not());
 
     assert_eq!(
         solver.check(),
@@ -922,7 +922,7 @@ fn test_z3_prove_rational_zero_identity() {
     let sum = r.add(&zero);
 
     let solver = z3::Solver::new();
-    solver.assert(&sum.value.eq(&r.value).not());
+    solver.assert(sum.value.eq(&r.value).not());
 
     assert_eq!(
         solver.check(),
@@ -939,7 +939,7 @@ fn test_z3_prove_rational_one_identity() {
     let product = r.mul(&one);
 
     let solver = z3::Solver::new();
-    solver.assert(&product.value.eq(&r.value).not());
+    solver.assert(product.value.eq(&r.value).not());
 
     assert_eq!(
         solver.check(),
@@ -957,7 +957,7 @@ fn test_z3_prove_rational_commutativity() {
     let ba = b.add(&a);
 
     let solver = z3::Solver::new();
-    solver.assert(&ab.value.eq(&ba.value).not());
+    solver.assert(ab.value.eq(&ba.value).not());
 
     assert_eq!(
         solver.check(),
@@ -977,7 +977,7 @@ fn test_z3_prove_rational_associativity() {
     let a_bc = a.add(&b.add(&c));
 
     let solver = z3::Solver::new();
-    solver.assert(&ab_c.value.eq(&a_bc.value).not());
+    solver.assert(ab_c.value.eq(&a_bc.value).not());
 
     assert_eq!(
         solver.check(),
@@ -995,7 +995,7 @@ fn test_z3_prove_multiplicative_inverse() {
     let product = r.mul(&inv_r);
 
     let solver = z3::Solver::new();
-    solver.assert(&product.value.eq(&one.value).not());
+    solver.assert(product.value.eq(&one.value).not());
 
     assert_eq!(
         solver.check(),
@@ -1015,7 +1015,7 @@ fn test_z3_prove_distributive_law() {
     let rhs = a.mul(&b).add(&a.mul(&c)); // a*b + a*c
 
     let solver = z3::Solver::new();
-    solver.assert(&lhs.value.eq(&rhs.value).not());
+    solver.assert(lhs.value.eq(&rhs.value).not());
 
     assert_eq!(
         solver.check(),
@@ -1148,7 +1148,7 @@ fn test_z3_prove_min_rational() {
     // min(1/4, 1/2) should be 1/4
     let solver = z3::Solver::new();
     // a < b is true (1/4 < 1/2)
-    solver.assert(&a.lt(&b));
+    solver.assert(a.lt(&b));
     // If a < b, then min(a, b) = a (we verify by checking a is the answer)
     // Z3 verifies the comparison is correct
     assert_eq!(
@@ -1167,7 +1167,7 @@ fn test_z3_prove_max_rational() {
     // max(1/4, 1/2) should be 1/2
     let solver = z3::Solver::new();
     // b > a is true (1/2 > 1/4)
-    solver.assert(&b.gt(&a));
+    solver.assert(b.gt(&a));
     assert_eq!(
         solver.check(),
         SatResult::Sat,
@@ -1188,7 +1188,7 @@ fn test_z3_prove_midpoint() {
     let expected = RationalZ3::from_fraction(1, 2);
 
     let solver = z3::Solver::new();
-    solver.assert(&midpoint.value.eq(&expected.value).not());
+    solver.assert(midpoint.value.eq(&expected.value).not());
 
     assert_eq!(
         solver.check(),
@@ -1207,7 +1207,7 @@ fn test_z3_prove_abs_rational() {
     let abs_neg = neg.neg(); // -(-3/4) = 3/4
 
     let solver = z3::Solver::new();
-    solver.assert(&abs_neg.value.eq(&pos.value).not());
+    solver.assert(abs_neg.value.eq(&pos.value).not());
 
     assert_eq!(
         solver.check(),

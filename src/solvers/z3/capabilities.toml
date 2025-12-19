@@ -44,19 +44,28 @@ description = "Z3 Theorem Prover from Microsoft Research - SMT solver with suppo
 # NATIVE = built into Z3's SMT-LIB core
 # ENCODED = implemented via translation to native theories
 theories = [
-    # NATIVE Z3 theories
+    # NATIVE Z3 theories (legacy names for compatibility)
+    "arithmetic",      # Alias for Int + Real
+    "boolean",         # Alias for Bool
+    "equality",        # Equality reasoning
+    
+    # NATIVE Z3 theories (precise names)
     "Int",             # Integer arithmetic (native)
     "Real",            # Real/Algebraic arithmetic (native) - includes ℚ and algebraic irrationals like √2
     "Bool",            # Propositional logic (native)
     "String",          # String theory QF_SLIA (native)
+    "strings",         # Alias for String
     "Regex",           # Regular expressions (native)
-    "BitVec",          # Bit-vectors (_ BitVec n) (native) - NOT YET USED in Kleis
+    "regex",           # Alias for Regex
+    "BitVec",          # Bit-vectors (_ BitVec n) (native)
     "Array",           # Arrays (Array K V) (native) - NOT YET USED in Kleis
     "Datatype",        # Algebraic datatypes (native) - used for Complex encoding
     
     # ENCODED/Emulated in Kleis
     "Complex",         # ℂ encoded as (Real, Real) pairs
+    "complex",         # Alias
     "Rational",        # ℚ mapped to Real (subset)
+    "rational",        # Alias
     
     # Always available
     "uninterpreted_functions"  # Abstract operations (native)
@@ -209,6 +218,51 @@ pow = { arity = 2, theory = "Real", native = true, description = "Alias for powe
 # Integer check
 is_int = { arity = 1, theory = "Real", native = true, description = "Is this Real an integer? Returns Bool" }
 
+# ============================================
+# BIT-VECTOR OPERATIONS (native Z3 BitVec theory)
+# ============================================
+# Bourbaki formalization: BitVec(n) is a function [0,n-1] → {0,1}
+# Mother structures: Vector space over 𝔽₂, Boolean algebra, ordered set
+
+# Bitwise logical operations (Boolean algebra structure)
+bvand = { arity = 2, theory = "BitVec", native = true, description = "Bitwise AND (meet in Boolean algebra)" }
+bvor = { arity = 2, theory = "BitVec", native = true, description = "Bitwise OR (join in Boolean algebra)" }
+bvxor = { arity = 2, theory = "BitVec", native = true, description = "Bitwise XOR (vector addition over 𝔽₂)" }
+bvnot = { arity = 1, theory = "BitVec", native = true, description = "Bitwise NOT (complement)" }
+
+# Arithmetic operations (modular arithmetic mod 2ⁿ)
+bvadd = { arity = 2, theory = "BitVec", native = true, description = "Addition mod 2ⁿ" }
+bvsub = { arity = 2, theory = "BitVec", native = true, description = "Subtraction mod 2ⁿ" }
+bvmul = { arity = 2, theory = "BitVec", native = true, description = "Multiplication mod 2ⁿ" }
+bvneg = { arity = 1, theory = "BitVec", native = true, description = "Two's complement negation" }
+bvudiv = { arity = 2, theory = "BitVec", native = true, description = "Unsigned division" }
+bvsdiv = { arity = 2, theory = "BitVec", native = true, description = "Signed division" }
+bvurem = { arity = 2, theory = "BitVec", native = true, description = "Unsigned remainder" }
+
+# Shift operations
+bvshl = { arity = 2, theory = "BitVec", native = true, description = "Left shift (multiply by 2ᵏ)" }
+bvlshr = { arity = 2, theory = "BitVec", native = true, description = "Logical right shift (zero fill)" }
+bvashr = { arity = 2, theory = "BitVec", native = true, description = "Arithmetic right shift (sign extend)" }
+
+# Comparison operations (ordered set structure)
+bvult = { arity = 2, theory = "BitVec", native = true, description = "Unsigned less-than" }
+bvule = { arity = 2, theory = "BitVec", native = true, description = "Unsigned less-or-equal" }
+bvugt = { arity = 2, theory = "BitVec", native = true, description = "Unsigned greater-than" }
+bvuge = { arity = 2, theory = "BitVec", native = true, description = "Unsigned greater-or-equal" }
+bvslt = { arity = 2, theory = "BitVec", native = true, description = "Signed less-than" }
+bvsle = { arity = 2, theory = "BitVec", native = true, description = "Signed less-or-equal" }
+bvsgt = { arity = 2, theory = "BitVec", native = true, description = "Signed greater-than" }
+bvsge = { arity = 2, theory = "BitVec", native = true, description = "Signed greater-or-equal" }
+
+# Construction and extraction
+bvzero = { arity = 1, theory = "BitVec", native = false, description = "Zero bit-vector of width n" }
+bvones = { arity = 1, theory = "BitVec", native = false, description = "All-ones bit-vector of width n" }
+bvone = { arity = 1, theory = "BitVec", native = false, description = "Value 1 as bit-vector of width n" }
+extract = { arity = 3, theory = "BitVec", native = true, description = "Extract bits [high:low]" }
+bvconcat = { arity = 2, theory = "BitVec", native = true, description = "Concatenate two bit-vectors" }
+zext = { arity = 2, theory = "BitVec", native = true, description = "Zero-extend to width m" }
+sext = { arity = 2, theory = "BitVec", native = true, description = "Sign-extend to width m" }
+
 # Note: Z3 supports many more operations via its built-in theories,
 # but these are the ones explicitly translated in our current implementation.
 # Other operations (sin, cos, matrix_multiply, etc.) are treated as
@@ -226,7 +280,7 @@ proof_generation = false  # Available in Z3 but not exposed yet
 # Native theory support
 string_theory = true   # QF_SLIA: Quantifier-Free Strings and Linear Integer Arithmetic
 regex_support = true   # Regular expression constraints via str.in_re
-bitvector_theory = false  # BitVec available in Z3 but NOT YET USED in Kleis
+bitvector_theory = true   # BitVec (_ BitVec n) - NOW SUPPORTED in Kleis (Dec 2024)
 array_theory = false   # Array available in Z3 but NOT YET USED in Kleis
 
 # Encoded/Emulated support

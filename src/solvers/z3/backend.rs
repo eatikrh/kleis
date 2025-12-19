@@ -1607,8 +1607,8 @@ impl<'r> Z3Backend<'r> {
             // ABSOLUTE VALUE
             // ============================================
 
-            // Absolute value for rationals
-            "abs_rational" | "abs" => {
+            // Absolute value for rationals (abs is handled above, this catches abs_rational)
+            "abs_rational" => {
                 if args.len() != 1 {
                     return Err("abs requires 1 argument".to_string());
                 }
@@ -1617,6 +1617,262 @@ impl<'r> Z3Backend<'r> {
                 let neg_r = r.unary_minus();
                 // abs(r) = if r >= 0 then r else -r
                 Ok(r.ge(&zero).ite(&r, &neg_r).into())
+            }
+
+            // ============================================
+            // BIT-VECTOR OPERATIONS (native Z3 BitVec theory)
+            // ============================================
+
+            // Bitwise AND
+            "bvand" => {
+                if args.len() != 2 {
+                    return Err("bvand requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvand(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvand", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bitwise OR
+            "bvor" => {
+                if args.len() != 2 {
+                    return Err("bvor requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvor(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvor", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bitwise XOR
+            "bvxor" => {
+                if args.len() != 2 {
+                    return Err("bvxor requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvxor(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvxor", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bitwise NOT
+            "bvnot" => {
+                if args.len() != 1 {
+                    return Err("bvnot requires 1 argument".to_string());
+                }
+                if let Some(a) = args[0].as_bv() {
+                    Ok(a.bvnot().into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvnot", 1);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bit-vector addition (modular)
+            "bvadd" => {
+                if args.len() != 2 {
+                    return Err("bvadd requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvadd(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvadd", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bit-vector subtraction
+            "bvsub" => {
+                if args.len() != 2 {
+                    return Err("bvsub requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvsub(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvsub", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bit-vector multiplication
+            "bvmul" => {
+                if args.len() != 2 {
+                    return Err("bvmul requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvmul(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvmul", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bit-vector negation (two's complement)
+            "bvneg" => {
+                if args.len() != 1 {
+                    return Err("bvneg requires 1 argument".to_string());
+                }
+                if let Some(a) = args[0].as_bv() {
+                    Ok(a.bvneg().into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvneg", 1);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Unsigned division
+            "bvudiv" => {
+                if args.len() != 2 {
+                    return Err("bvudiv requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvudiv(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvudiv", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Signed division
+            "bvsdiv" => {
+                if args.len() != 2 {
+                    return Err("bvsdiv requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvsdiv(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvsdiv", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Unsigned remainder
+            "bvurem" => {
+                if args.len() != 2 {
+                    return Err("bvurem requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvurem(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvurem", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Left shift
+            "bvshl" => {
+                if args.len() != 2 {
+                    return Err("bvshl requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvshl(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvshl", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Logical right shift
+            "bvlshr" => {
+                if args.len() != 2 {
+                    return Err("bvlshr requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvlshr(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvlshr", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Arithmetic right shift
+            "bvashr" => {
+                if args.len() != 2 {
+                    return Err("bvashr requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvashr(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvashr", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Unsigned less-than
+            "bvult" => {
+                if args.len() != 2 {
+                    return Err("bvult requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvult(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvult", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Unsigned less-or-equal
+            "bvule" => {
+                if args.len() != 2 {
+                    return Err("bvule requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvule(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvule", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Signed less-than
+            "bvslt" => {
+                if args.len() != 2 {
+                    return Err("bvslt requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvslt(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvslt", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Signed less-or-equal
+            "bvsle" => {
+                if args.len() != 2 {
+                    return Err("bvsle requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvsle(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvsle", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
             }
 
             // Unknown operation - use uninterpreted function
