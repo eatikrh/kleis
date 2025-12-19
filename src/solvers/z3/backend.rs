@@ -1379,12 +1379,167 @@ impl<'r> Z3Backend<'r> {
                 Ok(func_decl.apply(&ast_args))
             }
 
+            // ============================================
+            // RATIONAL NUMBER OPERATIONS
+            // Z3 Real sort is actually ℚ (rationals), so we use it directly
+            // ============================================
+
+            // Rational constructor: rational(p, q) = p / q
+            "rational" => {
+                if args.len() != 2 {
+                    return Err("rational requires 2 arguments".to_string());
+                }
+                // Convert to Real and divide
+                let numer = self.to_real(&args[0])?;
+                let denom = self.to_real(&args[1])?;
+                Ok(Real::div(&numer, &denom).into())
+            }
+
+            // Rational addition
+            "rational_add" => {
+                if args.len() != 2 {
+                    return Err("rational_add requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(Real::add(&[&r1, &r2]).into())
+            }
+
+            // Rational subtraction
+            "rational_sub" => {
+                if args.len() != 2 {
+                    return Err("rational_sub requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(Real::sub(&[&r1, &r2]).into())
+            }
+
+            // Rational multiplication
+            "rational_mul" => {
+                if args.len() != 2 {
+                    return Err("rational_mul requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(Real::mul(&[&r1, &r2]).into())
+            }
+
+            // Rational division
+            "rational_div" => {
+                if args.len() != 2 {
+                    return Err("rational_div requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(Real::div(&r1, &r2).into())
+            }
+
+            // Rational negation
+            "neg_rational" => {
+                if args.len() != 1 {
+                    return Err("neg_rational requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                Ok(r.unary_minus().into())
+            }
+
+            // Rational inverse (reciprocal)
+            "rational_inv" => {
+                if args.len() != 1 {
+                    return Err("rational_inv requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                let one = Real::from_rational(1, 1);
+                Ok(Real::div(&one, &r).into())
+            }
+
+            // Rational comparisons - return Bool
+            "rational_lt" => {
+                if args.len() != 2 {
+                    return Err("rational_lt requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(r1.lt(&r2).into())
+            }
+
+            "rational_le" => {
+                if args.len() != 2 {
+                    return Err("rational_le requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(r1.le(&r2).into())
+            }
+
+            "rational_gt" => {
+                if args.len() != 2 {
+                    return Err("rational_gt requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(r1.gt(&r2).into())
+            }
+
+            "rational_ge" => {
+                if args.len() != 2 {
+                    return Err("rational_ge requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(r1.ge(&r2).into())
+            }
+
+            // Integer to rational conversion
+            "int_to_rational" | "nat_to_rational" => {
+                if args.len() != 1 {
+                    return Err(format!("{} requires 1 argument", name));
+                }
+                // Convert Int to Real (ℤ → ℚ)
+                Ok(self.to_real(&args[0])?.into())
+            }
+
+            // Rational to real (identity in Z3, since Real = ℚ)
+            "to_real" => {
+                if args.len() != 1 {
+                    return Err("to_real requires 1 argument".to_string());
+                }
+                Ok(self.to_real(&args[0])?.into())
+            }
+
+            // Numerator accessor (uninterpreted - Z3 doesn't expose this)
+            "numer" => {
+                let func_decl = self.declare_uninterpreted("numer", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Denominator accessor (uninterpreted - Z3 doesn't expose this)
+            "denom" => {
+                let func_decl = self.declare_uninterpreted("denom", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
             // Unknown operation - use uninterpreted function
             _ => {
                 let func_decl = self.declare_uninterpreted(name, args.len());
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
+        }
+    }
+
+    /// Convert a Dynamic to a Real (for rational operations)
+    fn to_real(&self, d: &Dynamic) -> Result<Real, String> {
+        if let Some(r) = d.as_real() {
+            Ok(r)
+        } else if let Some(i) = d.as_int() {
+            Ok(Int::to_real(&i))
+        } else {
+            // Try to use it as-is and hope it works
+            Err(format!("Cannot convert {:?} to Real", d))
         }
     }
 
@@ -1426,6 +1581,10 @@ impl<'r> Z3Backend<'r> {
                         // Create fresh Complex constant for quantified complex variables
                         self.fresh_complex_const(&var.name)
                             .unwrap_or_else(|| Int::fresh_const(&var.name).into())
+                    }
+                    "ℚ" | "Rational" | "Q" => {
+                        // Rationals are represented as Z3 Real (which is actually ℚ)
+                        Real::fresh_const(&var.name).into()
                     }
                     _ => Int::fresh_const(&var.name).into(),
                 }

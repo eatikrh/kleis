@@ -3,6 +3,7 @@
 //! Tests parsing, type inference, and axiom verification for ℚ
 
 use kleis::kleis_parser::{parse_kleis_program, KleisParser};
+use kleis::lowering::SemanticLowering;
 use kleis::type_context::TypeContextBuilder;
 use kleis::type_inference::{Type, TypeInference};
 
@@ -395,6 +396,164 @@ fn test_mixed_types_with_rational() {
     assert!(
         parses_ok(input),
         "Failed to parse mixed types: {}",
+        parse_error(input)
+    );
+}
+
+// ============================================
+// SEMANTIC LOWERING TESTS
+// ============================================
+
+/// Helper: parse, infer types, and lower an expression
+fn parse_infer_lower(input: &str) -> kleis::ast::Expression {
+    let mut parser = KleisParser::new(input);
+    let expr = parser.parse().unwrap();
+    let type_context_builder = TypeContextBuilder::new();
+    let mut inference = TypeInference::new();
+    match inference.infer_typed(&expr, Some(&type_context_builder)) {
+        Ok(typed) => {
+            let lowering = SemanticLowering::new();
+            lowering.lower(&typed)
+        }
+        Err(_) => expr,
+    }
+}
+
+#[test]
+fn test_lowering_rational_addition() {
+    let lowered = parse_infer_lower("rational(1, 2) + rational(1, 3)");
+    match lowered {
+        kleis::ast::Expression::Operation { name, args } => {
+            assert_eq!(
+                name, "rational_add",
+                "plus(ℚ, ℚ) should lower to rational_add"
+            );
+            assert_eq!(args.len(), 2);
+        }
+        _ => panic!("Expected Operation, got {:?}", lowered),
+    }
+}
+
+#[test]
+fn test_lowering_rational_multiplication() {
+    let lowered = parse_infer_lower("rational(1, 2) * rational(2, 3)");
+    match lowered {
+        kleis::ast::Expression::Operation { name, args } => {
+            assert_eq!(
+                name, "rational_mul",
+                "times(ℚ, ℚ) should lower to rational_mul"
+            );
+            assert_eq!(args.len(), 2);
+        }
+        _ => panic!("Expected Operation, got {:?}", lowered),
+    }
+}
+
+#[test]
+fn test_lowering_rational_negation() {
+    let lowered = parse_infer_lower("-rational(1, 2)");
+    match lowered {
+        kleis::ast::Expression::Operation { name, args } => {
+            assert_eq!(name, "neg_rational", "neg(ℚ) should lower to neg_rational");
+            assert_eq!(args.len(), 1);
+        }
+        _ => panic!("Expected Operation, got {:?}", lowered),
+    }
+}
+
+// ============================================
+// MIXED TYPE PROMOTION TESTS
+// ============================================
+
+#[test]
+fn test_type_promotion_rational_plus_int() {
+    // rational(1, 2) + 3 should have type Rational
+    let ty = infer_type("rational(1, 2) + 3");
+    assert!(
+        matches!(&ty, Type::Data { constructor, .. } if constructor == "Rational"),
+        "ℚ + ℤ should promote to ℚ, got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_promotion_int_plus_rational() {
+    // 3 + rational(1, 2) should have type Rational
+    let ty = infer_type("3 + rational(1, 2)");
+    assert!(
+        matches!(&ty, Type::Data { constructor, .. } if constructor == "Rational"),
+        "ℤ + ℚ should promote to ℚ, got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_promotion_rational_times_nat() {
+    // rational(1, 2) * 5 should have type Rational
+    let ty = infer_type("rational(1, 2) * 5");
+    assert!(
+        matches!(&ty, Type::Data { constructor, .. } if constructor == "Rational"),
+        "ℚ × ℕ should promote to ℚ, got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_promotion_real_plus_real() {
+    // 3.14 + 2.71 should have type Scalar (Real)
+    let ty = infer_type("3.14 + 2.71");
+    assert!(
+        matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar"),
+        "ℝ + ℝ should be ℝ, got {:?}",
+        ty
+    );
+}
+
+// ============================================
+// Z3 VERIFICATION TESTS
+// ============================================
+
+#[test]
+fn test_z3_rational_field_axiom() {
+    // Test that a field axiom parses and can be verified
+    let input = r#"
+        structure RationalFieldZ3 {
+            axiom add_comm: ∀(r1 r2 : ℚ). rational_add(r1, r2) = rational_add(r2, r1)
+        }
+    "#;
+    assert!(
+        parses_ok(input),
+        "Field axiom should parse: {}",
+        parse_error(input)
+    );
+}
+
+#[test]
+fn test_z3_rational_identity_axiom() {
+    let input = r#"
+        structure RationalIdentityZ3 {
+            axiom add_zero: ∀(r : ℚ). rational_add(r, rational(0, 1)) = r
+            axiom mul_one: ∀(r : ℚ). rational_mul(r, rational(1, 1)) = r
+        }
+    "#;
+    assert!(
+        parses_ok(input),
+        "Identity axioms should parse: {}",
+        parse_error(input)
+    );
+}
+
+#[test]
+fn test_z3_rational_inverse_axiom() {
+    let input = r#"
+        structure RationalInverseZ3 {
+            axiom mul_inv: ∀(r : ℚ). r ≠ rational(0, 1) → 
+                rational_mul(r, rational_inv(r)) = rational(1, 1)
+        }
+    "#;
+    assert!(
+        parses_ok(input),
+        "Inverse axiom should parse: {}",
         parse_error(input)
     );
 }

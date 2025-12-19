@@ -1270,8 +1270,8 @@ impl TypeInference {
         }
 
         // OPERATOR OVERLOADING: Arithmetic operations with type propagation
-        // If any argument is Complex, the result is Complex
-        // This enables lowering without requiring full stdlib registry
+        // Type promotion hierarchy: ℕ → ℤ → ℚ → ℝ → ℂ
+        // The result is the "larger" type
         if matches!(
             name,
             "plus" | "minus" | "times" | "divide" | "scalar_divide"
@@ -1280,7 +1280,7 @@ impl TypeInference {
             let t1 = self.infer(&args[0], context_builder)?;
             let t2 = self.infer(&args[1], context_builder)?;
 
-            // If either operand is Complex, result is Complex
+            // Check type hierarchy (ordered from highest to lowest)
             let is_complex_1 =
                 matches!(&t1, Type::Data { constructor, .. } if constructor == "Complex");
             let is_complex_2 =
@@ -1293,7 +1293,56 @@ impl TypeInference {
                     args: vec![],
                 });
             }
-            // Both are Scalar/Real - return Scalar
+
+            // Rational is next in hierarchy
+            let is_rational_1 =
+                matches!(&t1, Type::Data { constructor, .. } if constructor == "Rational");
+            let is_rational_2 =
+                matches!(&t2, Type::Data { constructor, .. } if constructor == "Rational");
+
+            if is_rational_1 || is_rational_2 {
+                return Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Rational".to_string(),
+                    args: vec![],
+                });
+            }
+
+            // Check for Scalar/Real
+            let is_scalar_1 =
+                matches!(&t1, Type::Data { constructor, .. } if constructor == "Scalar");
+            let is_scalar_2 =
+                matches!(&t2, Type::Data { constructor, .. } if constructor == "Scalar");
+
+            if is_scalar_1 || is_scalar_2 {
+                return Ok(Type::scalar());
+            }
+
+            // Check for Int
+            let is_int_1 = matches!(&t1, Type::Data { constructor, .. } if constructor == "Int");
+            let is_int_2 = matches!(&t2, Type::Data { constructor, .. } if constructor == "Int");
+
+            if is_int_1 || is_int_2 {
+                return Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Int".to_string(),
+                    args: vec![],
+                });
+            }
+
+            // Check for Nat
+            let is_nat_1 = matches!(&t1, Type::Data { constructor, .. } if constructor == "Nat");
+            let is_nat_2 = matches!(&t2, Type::Data { constructor, .. } if constructor == "Nat");
+
+            if is_nat_1 || is_nat_2 {
+                return Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Nat".to_string(),
+                    args: vec![],
+                });
+            }
+
+            // Default: return Scalar
             return Ok(Type::scalar());
         }
 
