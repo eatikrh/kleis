@@ -714,6 +714,63 @@ fn test_type_hierarchy_int_plus_int() {
 }
 
 // ============================================
+// MIXED TYPE COMPARISON TESTS
+// ============================================
+
+#[test]
+fn test_type_rational_less_than_natural() {
+    // rational(1, 2) < 1 should have type Bool
+    let ty = infer_type("rational(1, 2) < 1");
+    assert!(
+        matches!(&ty, Type::Bool),
+        "ℚ < ℕ should return Bool, got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_rational_less_than_real() {
+    // rational(1, 2) < 3.14 should have type Bool
+    let ty = infer_type("rational(1, 2) < 3.14");
+    assert!(
+        matches!(&ty, Type::Bool),
+        "ℚ < ℝ should return Bool, got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_natural_greater_than_rational() {
+    // 5 > rational(3, 2) should have type Bool
+    let ty = infer_type("5 > rational(3, 2)");
+    assert!(
+        matches!(&ty, Type::Bool),
+        "ℕ > ℚ should return Bool, got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_rational_less_equal() {
+    let ty = infer_type("rational(1, 2) <= rational(2, 3)");
+    assert!(
+        matches!(&ty, Type::Bool),
+        "ℚ <= ℚ should return Bool, got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_rational_greater_equal() {
+    let ty = infer_type("rational(3, 4) >= 0");
+    assert!(
+        matches!(&ty, Type::Bool),
+        "ℚ >= ℕ should return Bool, got {:?}",
+        ty
+    );
+}
+
+// ============================================
 // Z3 THEOREM PROVING TESTS
 // These tests actually use Z3 to prove theorems!
 // ============================================

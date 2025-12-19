@@ -1361,11 +1361,11 @@ impl TypeInference {
             return Ok(Type::Bool);
         }
 
-        // Ordering operations only work on orderable types (Scalar, Int, Nat, Real)
+        // Ordering operations only work on orderable types (Scalar, Int, Nat, Real, Rational)
         // They do NOT work on Complex, Matrix, Bool, etc.
         if matches!(
             name,
-            "less_than" | "greater_than" | "less_equal" | "greater_equal"
+            "less_than" | "greater_than" | "less_equal" | "greater_equal" | "leq" | "geq" | "lt" | "gt"
         ) && args.len() == 2
         {
             let t1 = self.infer(&args[0], context_builder)?;
@@ -1377,7 +1377,7 @@ impl TypeInference {
                     || matches!(
                         t,
                         Type::Data { constructor, .. }
-                            if constructor == "Int" || constructor == "Real" || constructor == "Scalar"
+                            if constructor == "Int" || constructor == "Real" || constructor == "Scalar" || constructor == "Rational"
                     )
             };
 
