@@ -27,6 +27,42 @@ This is not embarrassing—it's honest. Understanding limitations is essential f
 
 ---
 
+## 🚨 Critical Blocker: Parser Limitations
+
+**Verified Dec 19, 2025:** The single biggest obstacle to Bourbaki compliance is NOT Z3 capabilities—it's parser syntax gaps.
+
+### What Fails Today
+
+| Syntax | Example | Error |
+|--------|---------|-------|
+| **∀ inside ∧** | `(x > 0) ∧ (∀(y : ℝ). y > 0)` | "Expected expression" at ∀ |
+| **Function types** | `∀(f : ℝ → ℝ). f(0) = 0` | "Expected ')'" at → |
+
+### Why This Matters
+
+Almost every Bourbaki theorem uses nested quantifiers:
+
+```
+// Epsilon-delta limit definition (cannot parse today)
+∀(ε : ℝ). ε > 0 → (∃(δ : ℝ). δ > 0 ∧ ∀(x : ℝ). |x - a| < δ → |f(x) - L| < ε)
+                                        ↑
+                               Parser fails here (∀ inside ∧)
+```
+
+### Required Fix (Rust, not Kleis)
+
+File: `src/kleis_parser.rs`
+
+The expression parser needs to:
+1. Recognize `∀` and `∃` as valid operands inside `∧`, `∨`, `→`
+2. Parse `→` in type annotations (function types)
+
+**Estimated effort:** 2-3 days of parser work.
+
+**Impact:** Would unlock ~80% of Bourbaki expressibility (from current ~20%).
+
+---
+
 ## What Bourbaki Published
 
 The Bourbaki group published *Éléments de mathématique*, a comprehensive treatise covering:
