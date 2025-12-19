@@ -1,0 +1,103 @@
+// ============================================
+// Kleis Standard Library - Complex Numbers
+// ============================================
+// Defines complex number operations and their axioms
+// Z3 uses these axioms for verification
+// ============================================
+
+// Import prelude for i, complex, re, im, conj declarations
+import "stdlib/prelude.kleis"
+
+// ============================================
+// COMPLEX NUMBER AXIOMS
+// ============================================
+
+structure ComplexAxioms {
+    // The fundamental property: i² = -1
+    axiom i_squared : complex_mul(i, i) = complex(0 - 1, 0)
+    
+    // Constructor and accessor relationships
+    axiom re_of_complex : ∀(a : ℝ)(b : ℝ). re(complex(a, b)) = a
+    axiom im_of_complex : ∀(a : ℝ)(b : ℝ). im(complex(a, b)) = b
+    
+    // Complex number identity through accessors
+    axiom complex_identity : ∀(z : ℂ). complex(re(z), im(z)) = z
+    
+    // Conjugate definition: conj(a + bi) = a - bi
+    axiom conj_def : ∀(z : ℂ). conj(z) = complex(re(z), 0 - im(z))
+    
+    // Double conjugate: conj(conj(z)) = z
+    axiom conj_involution : ∀(z : ℂ). conj(conj(z)) = z
+    
+    // Addition: (a + bi) + (c + di) = (a+c) + (b+d)i
+    axiom complex_add_re : ∀(z1 : ℂ)(z2 : ℂ). 
+        re(complex_add(z1, z2)) = re(z1) + re(z2)
+    axiom complex_add_im : ∀(z1 : ℂ)(z2 : ℂ). 
+        im(complex_add(z1, z2)) = im(z1) + im(z2)
+    
+    // Multiplication: (a + bi)(c + di) = (ac - bd) + (ad + bc)i
+    axiom complex_mul_re : ∀(z1 : ℂ)(z2 : ℂ). 
+        re(complex_mul(z1, z2)) = re(z1) * re(z2) - im(z1) * im(z2)
+    axiom complex_mul_im : ∀(z1 : ℂ)(z2 : ℂ). 
+        im(complex_mul(z1, z2)) = re(z1) * im(z2) + im(z1) * re(z2)
+    
+    // Real numbers embed into complex (im = 0)
+    axiom real_embed : ∀(r : ℝ). im(complex(r, 0)) = 0
+    
+    // Zero and one
+    axiom complex_zero : complex(0, 0) = complex_add(i, complex(0, 0 - 1))
+    axiom complex_one : complex(1, 0) = complex_mul(i, complex(0, 0 - 1))
+    
+    // Magnitude squared: |z|² = re(z)² + im(z)²  (result is real)
+    // Note: This is z * conj(z)
+    axiom magnitude_squared : ∀(z : ℂ). 
+        re(complex_mul(z, conj(z))) = re(z) * re(z) + im(z) * im(z)
+    axiom magnitude_squared_im : ∀(z : ℂ). 
+        im(complex_mul(z, conj(z))) = 0
+}
+
+// ============================================
+// ALGEBRAIC PROPERTIES
+// ============================================
+
+structure ComplexField {
+    // Addition is commutative
+    axiom add_commutative : ∀(z1 : ℂ)(z2 : ℂ). 
+        complex_add(z1, z2) = complex_add(z2, z1)
+    
+    // Addition is associative
+    axiom add_associative : ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+        complex_add(complex_add(z1, z2), z3) = complex_add(z1, complex_add(z2, z3))
+    
+    // Multiplication is commutative
+    axiom mul_commutative : ∀(z1 : ℂ)(z2 : ℂ). 
+        complex_mul(z1, z2) = complex_mul(z2, z1)
+    
+    // Multiplication is associative
+    axiom mul_associative : ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+        complex_mul(complex_mul(z1, z2), z3) = complex_mul(z1, complex_mul(z2, z3))
+    
+    // Distributive law
+    axiom distributive : ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+        complex_mul(z1, complex_add(z2, z3)) = 
+            complex_add(complex_mul(z1, z2), complex_mul(z1, z3))
+    
+    // Additive identity: z + 0 = z
+    axiom add_identity : ∀(z : ℂ). complex_add(z, complex(0, 0)) = z
+    
+    // Multiplicative identity: z * 1 = z
+    axiom mul_identity : ∀(z : ℂ). complex_mul(z, complex(1, 0)) = z
+    
+    // Conjugate of product: conj(z1 * z2) = conj(z1) * conj(z2)
+    axiom conj_of_product : ∀(z1 : ℂ)(z2 : ℂ). 
+        conj(complex_mul(z1, z2)) = complex_mul(conj(z1), conj(z2))
+    
+    // Conjugate of sum: conj(z1 + z2) = conj(z1) + conj(z2)
+    axiom conj_of_sum : ∀(z1 : ℂ)(z2 : ℂ). 
+        conj(complex_add(z1, z2)) = complex_add(conj(z1), conj(z2))
+}
+
+// ============================================
+// END OF COMPLEX NUMBERS
+// ============================================
+

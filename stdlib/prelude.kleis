@@ -246,11 +246,13 @@ define e : ℝ = 2.71828182845904523536
 define phi : ℝ = 1.61803398874989484820  // Golden ratio (φ)
 define sqrt2 : ℝ = 1.41421356237309504880  // √2
 
-// Complex number constructor and imaginary unit
+// Complex number constructor
 operation complex : ℝ × ℝ → ℂ    // complex(re, im) creates re + im*i
 
 // Imaginary unit: i² = -1
-define i : ℂ = complex(0, 1)
+// Note: 'i' is a built-in constant recognized by the Z3 backend
+// It cannot be defined via complex(0, 1) because that would create circularity
+// Instead, Z3 uses the axiom: i * i = -1
 
 // Complex accessors
 operation re : ℂ → ℝ    // Extract real part

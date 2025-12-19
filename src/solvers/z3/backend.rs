@@ -73,7 +73,7 @@ impl<'r> Z3Backend<'r> {
         let solver = Solver::new();
         let capabilities = super::load_capabilities()?;
 
-        let backend = Self {
+        let mut backend = Self {
             solver,
             registry,
             capabilities,
@@ -83,6 +83,10 @@ impl<'r> Z3Backend<'r> {
             free_variables: HashMap::new(),
             converter: Z3ResultConverter,
         };
+
+        // Initialize complex number constant 'i' as an uninterpreted constant
+        // The axiom i² = -1 is asserted in stdlib/complex.kleis
+        backend.load_identity_element("i");
 
         Ok(backend)
     }
@@ -928,6 +932,84 @@ impl<'r> Z3Backend<'r> {
                 let alphanum = z3::ast::Regexp::union(&[&lower, &upper, &digit]);
                 let alphanum_re = z3::ast::Regexp::star(&alphanum);
                 Ok(s.regex_matches(&alphanum_re).into())
+            }
+
+            // ============================================
+            // COMPLEX NUMBER OPERATIONS
+            // Complex numbers are encoded as pairs of Reals (re, im)
+            // ============================================
+
+            // Complex constructor: complex(re, im) creates re + im*i
+            // Returns a pair represented as uninterpreted function
+            "complex" => {
+                if args.len() != 2 {
+                    return Err("complex requires 2 arguments (re, im)".to_string());
+                }
+                // Use uninterpreted function with axioms from stdlib
+                // The actual verification uses algebraic properties
+                let func_decl = self.declare_uninterpreted("complex", 2);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Extract real part: re(z)
+            "re" | "real_part" => {
+                if args.len() != 1 {
+                    return Err("re requires 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("re", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Extract imaginary part: im(z)
+            "im" | "imag_part" => {
+                if args.len() != 1 {
+                    return Err("im requires 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("im", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Complex conjugate: conj(z) = re(z) - im(z)*i
+            "conj" | "conjugate" => {
+                if args.len() != 1 {
+                    return Err("conj requires 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("conj", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Complex addition: complex_add(z1, z2)
+            "complex_add" => {
+                if args.len() != 2 {
+                    return Err("complex_add requires 2 arguments".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("complex_add", 2);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Complex multiplication: complex_mul(z1, z2)
+            "complex_mul" => {
+                if args.len() != 2 {
+                    return Err("complex_mul requires 2 arguments".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("complex_mul", 2);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Complex inverse: complex_inverse(z) = 1/z
+            "complex_inverse" => {
+                if args.len() != 1 {
+                    return Err("complex_inverse requires 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("complex_inverse", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
             }
 
             // Unknown operation - use uninterpreted function

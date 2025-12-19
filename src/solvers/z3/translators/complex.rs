@@ -59,6 +59,14 @@ impl ComplexZ3 {
         }
     }
 
+    /// Create a complex number from integer real and imaginary parts
+    pub fn from_integers(re: i64, im: i64) -> Self {
+        Self {
+            re: Real::from_rational(re, 1),
+            im: Real::from_rational(im, 1),
+        }
+    }
+
     /// Create a fresh complex variable (creates two real variables: name_re, name_im)
     pub fn fresh(name: &str) -> Self {
         Self {
@@ -86,21 +94,21 @@ impl ComplexZ3 {
     /// Complex subtraction: z₁ - z₂ = (re₁ - re₂, im₁ - im₂)
     pub fn sub(&self, other: &ComplexZ3) -> ComplexZ3 {
         ComplexZ3 {
-            re: self.re.sub(&[&other.re]),
-            im: self.im.sub(&[&other.im]),
+            re: Real::sub(&[&self.re, &other.re]),
+            im: Real::sub(&[&self.im, &other.im]),
         }
     }
 
     /// Complex multiplication: z₁ × z₂ = (re₁·re₂ - im₁·im₂, re₁·im₂ + im₁·re₂)
     pub fn mul(&self, other: &ComplexZ3) -> ComplexZ3 {
         // Real part: re₁·re₂ - im₁·im₂
-        let re_re = self.re.mul(&[&other.re]);
-        let im_im = self.im.mul(&[&other.im]);
-        let real_part = re_re.sub(&[&im_im]);
+        let re_re = Real::mul(&[&self.re, &other.re]);
+        let im_im = Real::mul(&[&self.im, &other.im]);
+        let real_part = Real::sub(&[&re_re, &im_im]);
 
         // Imaginary part: re₁·im₂ + im₁·re₂
-        let re_im = self.re.mul(&[&other.im]);
-        let im_re = self.im.mul(&[&other.re]);
+        let re_im = Real::mul(&[&self.re, &other.im]);
+        let im_re = Real::mul(&[&self.im, &other.re]);
         let imag_part = Real::add(&[&re_im, &im_re]);
 
         ComplexZ3 {
@@ -116,14 +124,14 @@ impl ComplexZ3 {
         let denom = other.abs_squared();
 
         // Real part numerator: re₁·re₂ + im₁·im₂
-        let re_re = self.re.mul(&[&other.re]);
-        let im_im = self.im.mul(&[&other.im]);
+        let re_re = Real::mul(&[&self.re, &other.re]);
+        let im_im = Real::mul(&[&self.im, &other.im]);
         let real_num = Real::add(&[&re_re, &im_im]);
 
         // Imaginary part numerator: im₁·re₂ - re₁·im₂
-        let im_re = self.im.mul(&[&other.re]);
-        let re_im = self.re.mul(&[&other.im]);
-        let imag_num = im_re.sub(&[&re_im]);
+        let im_re = Real::mul(&[&self.im, &other.re]);
+        let re_im = Real::mul(&[&self.re, &other.im]);
+        let imag_num = Real::sub(&[&im_re, &re_im]);
 
         ComplexZ3 {
             re: real_num.div(&denom),
@@ -141,8 +149,8 @@ impl ComplexZ3 {
 
     /// Squared magnitude: |z|² = re² + im²
     pub fn abs_squared(&self) -> Real {
-        let re_sq = self.re.mul(&[&self.re]);
-        let im_sq = self.im.mul(&[&self.im]);
+        let re_sq = Real::mul(&[&self.re, &self.re]);
+        let im_sq = Real::mul(&[&self.im, &self.im]);
         Real::add(&[&re_sq, &im_sq])
     }
 
@@ -155,9 +163,9 @@ impl ComplexZ3 {
     }
 
     /// Check equality: z₁ = z₂ iff (re₁ = re₂ ∧ im₁ = im₂)
-    pub fn eq(&self, other: &ComplexZ3) -> Bool {
-        let re_eq = self.re._eq(&other.re);
-        let im_eq = self.im._eq(&other.im);
+    pub fn eq_complex(&self, other: &ComplexZ3) -> Bool {
+        let re_eq = self.re.eq(&other.re);
+        let im_eq = self.im.eq(&other.im);
         Bool::and(&[&re_eq, &im_eq])
     }
 
