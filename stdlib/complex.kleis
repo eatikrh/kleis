@@ -98,19 +98,27 @@ structure ComplexField {
 }
 
 // ============================================
-// FUTURE: Operator Overloading for ℂ
+// KNOWN LIMITATIONS
 // ============================================
-// Currently, users must use explicit complex_add, complex_mul, etc.
-// 
-// TODO: Enable standard operators (+, -, *, /) for complex numbers via:
-//   Option 1: Add axioms like plus(z1,z2) = complex_add(z1,z2)
-//   Option 2: Type-aware translation in Z3 backend
-//   Option 3: Parser-level syntactic sugar
 //
-// Example of what we want to support:
-//   define z3 : ℂ = z1 + z2        // Currently must write complex_add(z1, z2)
-//   define z4 : ℂ = z1 * z2        // Currently must write complex_mul(z1, z2)
-//   define z5 : ℂ = 3 + 4*i        // Natural complex literal syntax
+// 1. OPERATOR OVERLOADING NOT YET SUPPORTED
+//    Currently, users must use explicit complex_add, complex_mul, etc.
+//    TODO: Enable z1 + z2 instead of complex_add(z1, z2)
+//    Options: axiom-based, type-aware translation, or parser sugar
+//
+// 2. AXIOMS NOT AUTO-LOADED IN REPL :verify
+//    The REPL's :verify command doesn't auto-load these axioms.
+//    Operations (complex, re, im, conj) are declared in prelude.kleis
+//    but their axioms are here in structures.
+//    The registry's analyze_dependencies doesn't find the connection.
+//    
+//    WORKAROUND: Use integration tests (tests/complex_z3_integration.rs)
+//    which directly use ComplexZ3 with algebraic operations.
+//
+//    TODO: Either:
+//    - Move operation declarations INTO the structures
+//    - Add operation→structure mapping to registry
+//    - Have REPL load all structure axioms before :verify
 //
 // See: feature/complex-numbers branch discussion
 // ============================================
