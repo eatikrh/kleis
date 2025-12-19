@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b37c1687.js";
+            window.path_to_searchindex_js = "../searchindex-6aaf6ecf.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-f10a7c19.js"></script>
+        <script src="../toc-b0b97c7a.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -236,6 +236,54 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     operation eigenvalues : List(ℂ)
 }
 </code></pre>
+<h2 id="complex-numbers"><a class="header" href="#complex-numbers">Complex Numbers</a></h2>
+<p>The complex number type <code>ℂ</code> has full arithmetic support:</p>
+<h3 id="construction-and-extraction"><a class="header" href="#construction-and-extraction">Construction and Extraction</a></h3>
+<pre><code class="language-kleis">// Create complex number: complex(real_part, imaginary_part)
+define z = complex(3, 4)        // 3 + 4i
+
+// The imaginary unit
+define i_unit = i               // = complex(0, 1)
+
+// Extract parts
+define x = re(z)                // 3
+define y = im(z)                // 4
+</code></pre>
+<h3 id="arithmetic-operations"><a class="header" href="#arithmetic-operations">Arithmetic Operations</a></h3>
+<pre><code class="language-kleis">// All operations are explicit (no operator overloading yet)
+complex_add(z1, z2)      // z1 + z2
+complex_sub(z1, z2)      // z1 - z2
+complex_mul(z1, z2)      // z1 × z2
+complex_div(z1, z2)      // z1 / z2
+neg_complex(z)           // -z
+complex_inverse(z)       // 1/z
+</code></pre>
+<h3 id="conjugate-and-magnitude"><a class="header" href="#conjugate-and-magnitude">Conjugate and Magnitude</a></h3>
+<pre><code class="language-kleis">conj(z)                  // Complex conjugate (a - bi)
+abs_squared(z)           // |z|² = a² + b²
+</code></pre>
+<h3 id="operation-reference"><a class="header" href="#operation-reference">Operation Reference</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Syntax</th><th>Example</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td>Create</td><td><code>complex(a, b)</code></td><td><code>complex(3, 4)</code></td><td>3 + 4i</td></tr>
+<tr><td>Real part</td><td><code>re(z)</code></td><td><code>re(complex(3, 4))</code></td><td>3</td></tr>
+<tr><td>Imaginary part</td><td><code>im(z)</code></td><td><code>im(complex(3, 4))</code></td><td>4</td></tr>
+<tr><td>Add</td><td><code>complex_add(z1, z2)</code></td><td><code>complex_add(complex(1,2), complex(3,4))</code></td><td>complex(4, 6)</td></tr>
+<tr><td>Subtract</td><td><code>complex_sub(z1, z2)</code></td><td><code>complex_sub(complex(5,3), complex(2,1))</code></td><td>complex(3, 2)</td></tr>
+<tr><td>Multiply</td><td><code>complex_mul(z1, z2)</code></td><td><code>complex_mul(complex(1,2), complex(3,4))</code></td><td>complex(-5, 10)</td></tr>
+<tr><td>Divide</td><td><code>complex_div(z1, z2)</code></td><td><code>complex_div(complex(1,0), complex(0,1))</code></td><td>complex(0, -1)</td></tr>
+<tr><td>Negate</td><td><code>neg_complex(z)</code></td><td><code>neg_complex(complex(3, 4))</code></td><td>complex(-3, -4)</td></tr>
+<tr><td>Inverse</td><td><code>complex_inverse(z)</code></td><td><code>complex_inverse(i)</code></td><td>complex(0, -1)</td></tr>
+<tr><td>Conjugate</td><td><code>conj(z)</code></td><td><code>conj(complex(3, 4))</code></td><td>complex(3, -4)</td></tr>
+<tr><td>Magnitude²</td><td><code>abs_squared(z)</code></td><td><code>abs_squared(complex(3, 4))</code></td><td>25</td></tr>
+</tbody>
+</table>
+</div>
+<p>See <a href="../chapters/14-complex-numbers.html">Chapter 14: Complex Numbers</a> for detailed examples.</p>
 <h2 id="algebraic-structures"><a class="header" href="#algebraic-structures">Algebraic Structures</a></h2>
 <h3 id="monoid"><a class="header" href="#monoid">Monoid</a></h3>
 <pre><code class="language-kleis">structure Monoid(M) {
@@ -360,8 +408,10 @@ import "stdlib/differential_geometry.kleis"
 </code></pre>
 <h2 id="file-organization"><a class="header" href="#file-organization">File Organization</a></h2>
 <pre><code>stdlib/
-├── prelude.kleis          // Core types and functions
+├── prelude.kleis          // Core types and functions (includes complex)
+├── complex.kleis          // Complex number axioms and properties
 ├── numeric.kleis          // Numeric operations
+├── text.kleis             // String processing operations
 ├── collections.kleis      // List, Vector, Matrix
 ├── algebraic.kleis        // Group, Ring, Field, etc.
 ├── linear_algebra.kleis   // Matrix operations

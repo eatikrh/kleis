@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b37c1687.js";
+            window.path_to_searchindex_js = "searchindex-6aaf6ecf.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-f10a7c19.js"></script>
+        <script src="toc-b0b97c7a.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1754,6 +1754,307 @@ structure Functor(C, D) {
 → <a href="#appendix-b-operators">Appendix B: Operators</a>
 → <a href="#appendix-c-standard-library">Appendix C: Standard Library</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="complex-numbers"><a class="header" href="#complex-numbers">Complex Numbers</a></h1>
+<p>Kleis has first-class support for complex numbers (ℂ), enabling symbolic reasoning about complex arithmetic, verification of identities, and theorem proving in complex analysis.</p>
+<h2 id="the-imaginary-unit"><a class="header" href="#the-imaginary-unit">The Imaginary Unit</a></h2>
+<p>The imaginary unit <code>i</code> is predefined in Kleis:</p>
+<pre><code class="language-kleis">// i is the square root of -1
+define i_squared = complex_mul(i, i)
+// Result: complex(-1, 0)  — that's -1!
+</code></pre>
+<p>In the REPL, you can verify this fundamental property:</p>
+<pre><code class="language-kleis">:verify complex_mul(i, i) = complex(-1, 0)
+// ✅ Valid
+</code></pre>
+<h2 id="creating-complex-numbers"><a class="header" href="#creating-complex-numbers">Creating Complex Numbers</a></h2>
+<p>Use the <code>complex(re, im)</code> constructor:</p>
+<pre><code class="language-kleis">// complex(real_part, imaginary_part)
+define z1 = complex(3, 4)       // 3 + 4i
+define z2 = complex(1, -2)      // 1 - 2i
+define pure_real = complex(5, 0)     // 5 (a real number)
+define pure_imag = complex(0, 3)     // 3i (pure imaginary)
+</code></pre>
+<h2 id="extracting-parts"><a class="header" href="#extracting-parts">Extracting Parts</a></h2>
+<p>Use <code>re</code> and <code>im</code> to extract the real and imaginary parts:</p>
+<pre><code class="language-kleis">define z = complex(3, 4)
+
+// Extract real part
+define real_part = re(z)        // 3
+
+// Extract imaginary part  
+define imag_part = im(z)        // 4
+</code></pre>
+<p>Verification examples:</p>
+<pre><code class="language-kleis">:verify re(complex(7, 8)) = 7
+// ✅ Valid
+
+:verify im(complex(7, 8)) = 8
+// ✅ Valid
+
+:verify ∀(a : ℝ)(b : ℝ). re(complex(a, b)) = a
+// ✅ Valid
+</code></pre>
+<h2 id="arithmetic-operations"><a class="header" href="#arithmetic-operations">Arithmetic Operations</a></h2>
+<h3 id="addition-and-subtraction"><a class="header" href="#addition-and-subtraction">Addition and Subtraction</a></h3>
+<pre><code class="language-kleis">define z1 = complex(1, 2)    // 1 + 2i
+define z2 = complex(3, 4)    // 3 + 4i
+
+// Addition: (1 + 2i) + (3 + 4i) = 4 + 6i
+define sum = complex_add(z1, z2)
+
+// Subtraction: (1 + 2i) - (3 + 4i) = -2 - 2i
+define diff = complex_sub(z1, z2)
+</code></pre>
+<p>Verify concrete arithmetic:</p>
+<pre><code class="language-kleis">:verify complex_add(complex(1, 2), complex(3, 4)) = complex(4, 6)
+// ✅ Valid
+
+:verify complex_sub(complex(5, 3), complex(2, 1)) = complex(3, 2)
+// ✅ Valid
+</code></pre>
+<h3 id="multiplication"><a class="header" href="#multiplication">Multiplication</a></h3>
+<p>Complex multiplication follows the rule: <code>(a + bi)(c + di) = (ac - bd) + (ad + bc)i</code></p>
+<pre><code class="language-kleis">define z1 = complex(1, 2)    // 1 + 2i
+define z2 = complex(3, 4)    // 3 + 4i
+
+// (1 + 2i)(3 + 4i) = 3 + 4i + 6i + 8i² = 3 + 10i - 8 = -5 + 10i
+define product = complex_mul(z1, z2)
+</code></pre>
+<p>Verification:</p>
+<pre><code class="language-kleis">:verify complex_mul(complex(1, 2), complex(3, 4)) = complex(-5, 10)
+// ✅ Valid
+
+// Multiplication by i rotates 90°
+:verify ∀(z : ℂ). complex_mul(z, i) = complex(neg(im(z)), re(z))
+// ✅ Valid (where neg is negation)
+</code></pre>
+<h3 id="division"><a class="header" href="#division">Division</a></h3>
+<pre><code class="language-kleis">define z1 = complex(1, 0)    // 1
+define z2 = complex(0, 1)    // i
+
+// 1 / i = -i
+define quotient = complex_div(z1, z2)
+</code></pre>
+<p>Verification:</p>
+<pre><code class="language-kleis">:verify complex_div(complex(1, 0), complex(0, 1)) = complex(0, -1)
+// ✅ Valid
+</code></pre>
+<h3 id="negation"><a class="header" href="#negation">Negation</a></h3>
+<pre><code class="language-kleis">define z = complex(3, 4)
+define neg_z = neg_complex(z)    // -3 - 4i
+</code></pre>
+<pre><code class="language-kleis">:verify neg_complex(complex(3, 4)) = complex(-3, -4)
+// ✅ Valid
+
+:verify ∀(z : ℂ). complex_add(z, neg_complex(z)) = complex(0, 0)
+// ✅ Valid
+</code></pre>
+<h3 id="inverse"><a class="header" href="#inverse">Inverse</a></h3>
+<pre><code class="language-kleis">define z = complex(0, 1)         // i
+define inv = complex_inverse(z)   // 1/i = -i
+</code></pre>
+<pre><code class="language-kleis">:verify complex_inverse(complex(0, 1)) = complex(0, -1)
+// ✅ Valid
+
+// z * (1/z) = 1 (for non-zero z)
+:verify ∀(z : ℂ). z ≠ complex(0, 0) ⟹ complex_mul(z, complex_inverse(z)) = complex(1, 0)
+// ✅ Valid
+</code></pre>
+<h2 id="complex-conjugate"><a class="header" href="#complex-conjugate">Complex Conjugate</a></h2>
+<p>The conjugate of <code>a + bi</code> is <code>a - bi</code>:</p>
+<pre><code class="language-kleis">define z = complex(3, 4)
+define z_bar = conj(z)    // 3 - 4i
+</code></pre>
+<p>Verification:</p>
+<pre><code class="language-kleis">:verify conj(complex(2, 3)) = complex(2, -3)
+// ✅ Valid
+
+// Double conjugate is identity
+:verify ∀(z : ℂ). conj(conj(z)) = z
+// ✅ Valid
+
+// Conjugate of product
+:verify ∀(z1 : ℂ)(z2 : ℂ). conj(complex_mul(z1, z2)) = complex_mul(conj(z1), conj(z2))
+// ✅ Valid
+
+// Conjugate of sum
+:verify ∀(z1 : ℂ)(z2 : ℂ). conj(complex_add(z1, z2)) = complex_add(conj(z1), conj(z2))
+// ✅ Valid
+</code></pre>
+<h2 id="magnitude-squared"><a class="header" href="#magnitude-squared">Magnitude Squared</a></h2>
+<p>The squared magnitude <code>|z|² = re(z)² + im(z)²</code>:</p>
+<pre><code class="language-kleis">define z = complex(3, 4)
+define mag_sq = abs_squared(z)    // 3² + 4² = 25
+</code></pre>
+<pre><code class="language-kleis">:verify abs_squared(complex(3, 4)) = 25
+// ✅ Valid
+
+:verify ∀(z : ℂ). abs_squared(z) = re(z) * re(z) + im(z) * im(z)
+// ✅ Valid
+</code></pre>
+<p>Note: Full magnitude <code>|z| = √(re² + im²)</code> requires square root, which is not yet supported.</p>
+<h2 id="field-properties"><a class="header" href="#field-properties">Field Properties</a></h2>
+<p>Complex numbers form a field. Kleis can verify all field axioms:</p>
+<h3 id="commutativity"><a class="header" href="#commutativity">Commutativity</a></h3>
+<pre><code class="language-kleis">// Addition is commutative
+:verify ∀(z1 : ℂ)(z2 : ℂ). complex_add(z1, z2) = complex_add(z2, z1)
+// ✅ Valid
+
+// Multiplication is commutative
+:verify ∀(z1 : ℂ)(z2 : ℂ). complex_mul(z1, z2) = complex_mul(z2, z1)
+// ✅ Valid
+</code></pre>
+<h3 id="associativity"><a class="header" href="#associativity">Associativity</a></h3>
+<pre><code class="language-kleis">// Addition is associative
+:verify ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+    complex_add(complex_add(z1, z2), z3) = complex_add(z1, complex_add(z2, z3))
+// ✅ Valid
+
+// Multiplication is associative
+:verify ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+    complex_mul(complex_mul(z1, z2), z3) = complex_mul(z1, complex_mul(z2, z3))
+// ✅ Valid
+</code></pre>
+<h3 id="identity-elements"><a class="header" href="#identity-elements">Identity Elements</a></h3>
+<pre><code class="language-kleis">// Additive identity: z + 0 = z
+:verify ∀(z : ℂ). complex_add(z, complex(0, 0)) = z
+// ✅ Valid
+
+// Multiplicative identity: z * 1 = z
+:verify ∀(z : ℂ). complex_mul(z, complex(1, 0)) = z
+// ✅ Valid
+</code></pre>
+<h3 id="distributive-law"><a class="header" href="#distributive-law">Distributive Law</a></h3>
+<pre><code class="language-kleis">:verify ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+    complex_mul(z1, complex_add(z2, z3)) = 
+        complex_add(complex_mul(z1, z2), complex_mul(z1, z3))
+// ✅ Valid
+</code></pre>
+<h2 id="embedding-real-numbers"><a class="header" href="#embedding-real-numbers">Embedding Real Numbers</a></h2>
+<p>Real numbers embed into complex numbers with imaginary part 0:</p>
+<pre><code class="language-kleis">define r = 5
+define z = complex(r, 0)    // 5 + 0i = 5
+
+// Extracting real from embedded real
+:verify ∀(a : ℝ). re(complex(a, 0)) = a
+// ✅ Valid
+
+:verify ∀(a : ℝ). im(complex(a, 0)) = 0
+// ✅ Valid
+</code></pre>
+<p>Adding real and imaginary parts:</p>
+<pre><code class="language-kleis">:verify ∀(x : ℝ)(y : ℝ). complex_add(complex(x, 0), complex(0, y)) = complex(x, y)
+// ✅ Valid
+</code></pre>
+<h2 id="the-multiplication-formula"><a class="header" href="#the-multiplication-formula">The Multiplication Formula</a></h2>
+<p>The explicit formula for complex multiplication:</p>
+<pre><code class="language-kleis">// (a + bi)(c + di) = (ac - bd) + (ad + bc)i
+:verify ∀(a : ℝ)(b : ℝ)(c : ℝ)(d : ℝ). 
+    complex_mul(complex(a, b), complex(c, d)) = complex(a*c - b*d, a*d + b*c)
+// ✅ Valid
+</code></pre>
+<h2 id="mixing-symbolic-and-concrete"><a class="header" href="#mixing-symbolic-and-concrete">Mixing Symbolic and Concrete</a></h2>
+<p>Kleis can reason about mixed expressions:</p>
+<pre><code class="language-kleis">// Symbolic z plus concrete value
+:verify ∀(z : ℂ). complex_add(z, complex(0, 0)) = z
+// ✅ Valid
+
+// Symbolic z times concrete i
+:verify ∀(z : ℂ). complex_mul(z, i) = complex_add(z, complex(0, 1))
+// This checks if multiplying by i equals adding i (it doesn't!)
+// ❌ Invalid — as expected!
+
+// Correct: multiplying by i rotates
+:verify ∀(a : ℝ)(b : ℝ). complex_mul(complex(a, b), i) = complex(-b, a)
+// ✅ Valid (rotation by 90°)
+</code></pre>
+<h2 id="the-fundamental-theorem"><a class="header" href="#the-fundamental-theorem">The Fundamental Theorem</a></h2>
+<p>The defining property of complex numbers:</p>
+<pre><code class="language-kleis">// i² = -1
+:verify complex_mul(i, i) = complex(-1, 0)
+// ✅ Valid
+
+// More explicitly
+:verify complex_mul(complex(0, 1), complex(0, 1)) = complex(-1, 0)
+// ✅ Valid
+</code></pre>
+<h2 id="convention-loop-indices"><a class="header" href="#convention-loop-indices">Convention: Loop Indices</a></h2>
+<p>When using <code>Sum</code> or <code>Product</code> with complex numbers, <strong>avoid using <code>i</code> as a loop index</strong>:</p>
+<pre><code class="language-kleis">// GOOD: use k, j, n, m as loop indices
+Sum(k, complex_mul(complex(1, 0), pow(z, k)), 0, n)
+
+// BAD: i as loop index clashes with imaginary i
+Sum(i, complex_mul(i, pow(z, i)), 0, n)   // Which 'i' is which?
+</code></pre>
+<p>The convention is:</p>
+<ul>
+<li><code>k</code>, <code>j</code>, <code>n</code>, <code>m</code> — loop indices</li>
+<li><code>i</code> — imaginary unit</li>
+</ul>
+<h2 id="complete-example-verifying-complex-identities"><a class="header" href="#complete-example-verifying-complex-identities">Complete Example: Verifying Complex Identities</a></h2>
+<p>Here’s a complete session verifying multiple complex number properties:</p>
+<pre><code class="language-kleis">// Define some complex numbers
+define z1 : ℂ = complex(1, 2)
+define z2 : ℂ = complex(3, 4)
+
+// Compute operations
+define sum = complex_add(z1, z2)
+define product = complex_mul(z1, z2)
+define i_squared = complex_mul(i, i)
+
+// Structure with axioms
+structure ComplexTest {
+    axiom i_squared_minus_one : complex_mul(i, i) = complex(-1, 0)
+    axiom conj_involution : ∀(z : ℂ). conj(conj(z)) = z
+    axiom add_commutes : ∀(a : ℂ)(b : ℂ). complex_add(a, b) = complex_add(b, a)
+}
+</code></pre>
+<h2 id="operation-reference"><a class="header" href="#operation-reference">Operation Reference</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Syntax</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Create</td><td><code>complex(a, b)</code></td><td>Create a + bi</td></tr>
+<tr><td>Real part</td><td><code>re(z)</code></td><td>Extract real part</td></tr>
+<tr><td>Imaginary part</td><td><code>im(z)</code></td><td>Extract imaginary part</td></tr>
+<tr><td>Add</td><td><code>complex_add(z1, z2)</code></td><td>z1 + z2</td></tr>
+<tr><td>Subtract</td><td><code>complex_sub(z1, z2)</code></td><td>z1 - z2</td></tr>
+<tr><td>Multiply</td><td><code>complex_mul(z1, z2)</code></td><td>z1 × z2</td></tr>
+<tr><td>Divide</td><td><code>complex_div(z1, z2)</code></td><td>z1 / z2</td></tr>
+<tr><td>Negate</td><td><code>neg_complex(z)</code></td><td>-z</td></tr>
+<tr><td>Inverse</td><td><code>complex_inverse(z)</code></td><td>1/z</td></tr>
+<tr><td>Conjugate</td><td><code>conj(z)</code></td><td>Complex conjugate</td></tr>
+<tr><td>Magnitude²</td><td><code>abs_squared(z)</code></td><td>|z|²</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="current-limitations"><a class="header" href="#current-limitations">Current Limitations</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Status</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Operator overloading</td><td>❌</td><td>Use <code>complex_add</code> not <code>+</code></td></tr>
+<tr><td>Magnitude <code>abs(z)</code></td><td>❌</td><td>Requires sqrt</td></tr>
+<tr><td>Transcendentals</td><td>❌</td><td><code>exp</code>, <code>log</code>, <code>sin</code>, <code>cos</code></td></tr>
+<tr><td>Polar form</td><td>❌</td><td><code>(r, θ)</code></td></tr>
+<tr><td>Euler’s formula</td><td>❌</td><td><code>e^{iθ} = cos(θ) + i·sin(θ)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="whats-next-13"><a class="header" href="#whats-next-13">What’s Next?</a></h2>
+<p>Complex numbers enable reasoning about:</p>
+<ul>
+<li>Signal processing (Fourier transforms)</li>
+<li>Quantum mechanics (wave functions)</li>
+<li>Control theory (transfer functions)</li>
+<li>Complex analysis (contour integrals)</li>
+</ul>
+<p>→ <a href="#appendix-a-grammar-reference">Next: Grammar Reference</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
 <p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.8).</p>
 <blockquote>
@@ -2367,6 +2668,54 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
     operation eigenvalues : List(ℂ)
 }
 </code></pre>
+<h2 id="complex-numbers-1"><a class="header" href="#complex-numbers-1">Complex Numbers</a></h2>
+<p>The complex number type <code>ℂ</code> has full arithmetic support:</p>
+<h3 id="construction-and-extraction"><a class="header" href="#construction-and-extraction">Construction and Extraction</a></h3>
+<pre><code class="language-kleis">// Create complex number: complex(real_part, imaginary_part)
+define z = complex(3, 4)        // 3 + 4i
+
+// The imaginary unit
+define i_unit = i               // = complex(0, 1)
+
+// Extract parts
+define x = re(z)                // 3
+define y = im(z)                // 4
+</code></pre>
+<h3 id="arithmetic-operations-1"><a class="header" href="#arithmetic-operations-1">Arithmetic Operations</a></h3>
+<pre><code class="language-kleis">// All operations are explicit (no operator overloading yet)
+complex_add(z1, z2)      // z1 + z2
+complex_sub(z1, z2)      // z1 - z2
+complex_mul(z1, z2)      // z1 × z2
+complex_div(z1, z2)      // z1 / z2
+neg_complex(z)           // -z
+complex_inverse(z)       // 1/z
+</code></pre>
+<h3 id="conjugate-and-magnitude"><a class="header" href="#conjugate-and-magnitude">Conjugate and Magnitude</a></h3>
+<pre><code class="language-kleis">conj(z)                  // Complex conjugate (a - bi)
+abs_squared(z)           // |z|² = a² + b²
+</code></pre>
+<h3 id="operation-reference-1"><a class="header" href="#operation-reference-1">Operation Reference</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Syntax</th><th>Example</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td>Create</td><td><code>complex(a, b)</code></td><td><code>complex(3, 4)</code></td><td>3 + 4i</td></tr>
+<tr><td>Real part</td><td><code>re(z)</code></td><td><code>re(complex(3, 4))</code></td><td>3</td></tr>
+<tr><td>Imaginary part</td><td><code>im(z)</code></td><td><code>im(complex(3, 4))</code></td><td>4</td></tr>
+<tr><td>Add</td><td><code>complex_add(z1, z2)</code></td><td><code>complex_add(complex(1,2), complex(3,4))</code></td><td>complex(4, 6)</td></tr>
+<tr><td>Subtract</td><td><code>complex_sub(z1, z2)</code></td><td><code>complex_sub(complex(5,3), complex(2,1))</code></td><td>complex(3, 2)</td></tr>
+<tr><td>Multiply</td><td><code>complex_mul(z1, z2)</code></td><td><code>complex_mul(complex(1,2), complex(3,4))</code></td><td>complex(-5, 10)</td></tr>
+<tr><td>Divide</td><td><code>complex_div(z1, z2)</code></td><td><code>complex_div(complex(1,0), complex(0,1))</code></td><td>complex(0, -1)</td></tr>
+<tr><td>Negate</td><td><code>neg_complex(z)</code></td><td><code>neg_complex(complex(3, 4))</code></td><td>complex(-3, -4)</td></tr>
+<tr><td>Inverse</td><td><code>complex_inverse(z)</code></td><td><code>complex_inverse(i)</code></td><td>complex(0, -1)</td></tr>
+<tr><td>Conjugate</td><td><code>conj(z)</code></td><td><code>conj(complex(3, 4))</code></td><td>complex(3, -4)</td></tr>
+<tr><td>Magnitude²</td><td><code>abs_squared(z)</code></td><td><code>abs_squared(complex(3, 4))</code></td><td>25</td></tr>
+</tbody>
+</table>
+</div>
+<p>See <a href="#complex-numbers">Chapter 14: Complex Numbers</a> for detailed examples.</p>
 <h2 id="algebraic-structures"><a class="header" href="#algebraic-structures">Algebraic Structures</a></h2>
 <h3 id="monoid"><a class="header" href="#monoid">Monoid</a></h3>
 <pre><code class="language-kleis">structure Monoid(M) {
@@ -2491,8 +2840,10 @@ import "stdlib/differential_geometry.kleis"
 </code></pre>
 <h2 id="file-organization"><a class="header" href="#file-organization">File Organization</a></h2>
 <pre><code>stdlib/
-├── prelude.kleis          // Core types and functions
+├── prelude.kleis          // Core types and functions (includes complex)
+├── complex.kleis          // Complex number axioms and properties
 ├── numeric.kleis          // Numeric operations
+├── text.kleis             // String processing operations
 ├── collections.kleis      // List, Vector, Matrix
 ├── algebraic.kleis        // Group, Ring, Field, etc.
 ├── linear_algebra.kleis   // Matrix operations

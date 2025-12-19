@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Z3 Verification - Learn You Some Kleis</title>
+        <title>Complex Numbers - Learn You Some Kleis</title>
 
 
         <!-- Custom HTML head -->
@@ -146,7 +146,7 @@
                         <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/11-z3-verification.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/14-complex-numbers.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -180,150 +180,316 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="z3-verification"><a class="header" href="#z3-verification">Z3 Verification</a></h1>
-<h2 id="what-is-z3"><a class="header" href="#what-is-z3">What is Z3?</a></h2>
-<p><a href="https://github.com/Z3Prover/z3">Z3</a> is a theorem prover from Microsoft Research. Kleis uses Z3 to:</p>
+                        <h1 id="complex-numbers"><a class="header" href="#complex-numbers">Complex Numbers</a></h1>
+<p>Kleis has first-class support for complex numbers (ℂ), enabling symbolic reasoning about complex arithmetic, verification of identities, and theorem proving in complex analysis.</p>
+<h2 id="the-imaginary-unit"><a class="header" href="#the-imaginary-unit">The Imaginary Unit</a></h2>
+<p>The imaginary unit <code>i</code> is predefined in Kleis:</p>
+<pre><code class="language-kleis">// i is the square root of -1
+define i_squared = complex_mul(i, i)
+// Result: complex(-1, 0)  — that's -1!
+</code></pre>
+<p>In the REPL, you can verify this fundamental property:</p>
+<pre><code class="language-kleis">:verify complex_mul(i, i) = complex(-1, 0)
+// ✅ Valid
+</code></pre>
+<h2 id="creating-complex-numbers"><a class="header" href="#creating-complex-numbers">Creating Complex Numbers</a></h2>
+<p>Use the <code>complex(re, im)</code> constructor:</p>
+<pre><code class="language-kleis">// complex(real_part, imaginary_part)
+define z1 = complex(3, 4)       // 3 + 4i
+define z2 = complex(1, -2)      // 1 - 2i
+define pure_real = complex(5, 0)     // 5 (a real number)
+define pure_imag = complex(0, 3)     // 3i (pure imaginary)
+</code></pre>
+<h2 id="extracting-parts"><a class="header" href="#extracting-parts">Extracting Parts</a></h2>
+<p>Use <code>re</code> and <code>im</code> to extract the real and imaginary parts:</p>
+<pre><code class="language-kleis">define z = complex(3, 4)
+
+// Extract real part
+define real_part = re(z)        // 3
+
+// Extract imaginary part  
+define imag_part = im(z)        // 4
+</code></pre>
+<p>Verification examples:</p>
+<pre><code class="language-kleis">:verify re(complex(7, 8)) = 7
+// ✅ Valid
+
+:verify im(complex(7, 8)) = 8
+// ✅ Valid
+
+:verify ∀(a : ℝ)(b : ℝ). re(complex(a, b)) = a
+// ✅ Valid
+</code></pre>
+<h2 id="arithmetic-operations"><a class="header" href="#arithmetic-operations">Arithmetic Operations</a></h2>
+<h3 id="addition-and-subtraction"><a class="header" href="#addition-and-subtraction">Addition and Subtraction</a></h3>
+<pre><code class="language-kleis">define z1 = complex(1, 2)    // 1 + 2i
+define z2 = complex(3, 4)    // 3 + 4i
+
+// Addition: (1 + 2i) + (3 + 4i) = 4 + 6i
+define sum = complex_add(z1, z2)
+
+// Subtraction: (1 + 2i) - (3 + 4i) = -2 - 2i
+define diff = complex_sub(z1, z2)
+</code></pre>
+<p>Verify concrete arithmetic:</p>
+<pre><code class="language-kleis">:verify complex_add(complex(1, 2), complex(3, 4)) = complex(4, 6)
+// ✅ Valid
+
+:verify complex_sub(complex(5, 3), complex(2, 1)) = complex(3, 2)
+// ✅ Valid
+</code></pre>
+<h3 id="multiplication"><a class="header" href="#multiplication">Multiplication</a></h3>
+<p>Complex multiplication follows the rule: <code>(a + bi)(c + di) = (ac - bd) + (ad + bc)i</code></p>
+<pre><code class="language-kleis">define z1 = complex(1, 2)    // 1 + 2i
+define z2 = complex(3, 4)    // 3 + 4i
+
+// (1 + 2i)(3 + 4i) = 3 + 4i + 6i + 8i² = 3 + 10i - 8 = -5 + 10i
+define product = complex_mul(z1, z2)
+</code></pre>
+<p>Verification:</p>
+<pre><code class="language-kleis">:verify complex_mul(complex(1, 2), complex(3, 4)) = complex(-5, 10)
+// ✅ Valid
+
+// Multiplication by i rotates 90°
+:verify ∀(z : ℂ). complex_mul(z, i) = complex(neg(im(z)), re(z))
+// ✅ Valid (where neg is negation)
+</code></pre>
+<h3 id="division"><a class="header" href="#division">Division</a></h3>
+<pre><code class="language-kleis">define z1 = complex(1, 0)    // 1
+define z2 = complex(0, 1)    // i
+
+// 1 / i = -i
+define quotient = complex_div(z1, z2)
+</code></pre>
+<p>Verification:</p>
+<pre><code class="language-kleis">:verify complex_div(complex(1, 0), complex(0, 1)) = complex(0, -1)
+// ✅ Valid
+</code></pre>
+<h3 id="negation"><a class="header" href="#negation">Negation</a></h3>
+<pre><code class="language-kleis">define z = complex(3, 4)
+define neg_z = neg_complex(z)    // -3 - 4i
+</code></pre>
+<pre><code class="language-kleis">:verify neg_complex(complex(3, 4)) = complex(-3, -4)
+// ✅ Valid
+
+:verify ∀(z : ℂ). complex_add(z, neg_complex(z)) = complex(0, 0)
+// ✅ Valid
+</code></pre>
+<h3 id="inverse"><a class="header" href="#inverse">Inverse</a></h3>
+<pre><code class="language-kleis">define z = complex(0, 1)         // i
+define inv = complex_inverse(z)   // 1/i = -i
+</code></pre>
+<pre><code class="language-kleis">:verify complex_inverse(complex(0, 1)) = complex(0, -1)
+// ✅ Valid
+
+// z * (1/z) = 1 (for non-zero z)
+:verify ∀(z : ℂ). z ≠ complex(0, 0) ⟹ complex_mul(z, complex_inverse(z)) = complex(1, 0)
+// ✅ Valid
+</code></pre>
+<h2 id="complex-conjugate"><a class="header" href="#complex-conjugate">Complex Conjugate</a></h2>
+<p>The conjugate of <code>a + bi</code> is <code>a - bi</code>:</p>
+<pre><code class="language-kleis">define z = complex(3, 4)
+define z_bar = conj(z)    // 3 - 4i
+</code></pre>
+<p>Verification:</p>
+<pre><code class="language-kleis">:verify conj(complex(2, 3)) = complex(2, -3)
+// ✅ Valid
+
+// Double conjugate is identity
+:verify ∀(z : ℂ). conj(conj(z)) = z
+// ✅ Valid
+
+// Conjugate of product
+:verify ∀(z1 : ℂ)(z2 : ℂ). conj(complex_mul(z1, z2)) = complex_mul(conj(z1), conj(z2))
+// ✅ Valid
+
+// Conjugate of sum
+:verify ∀(z1 : ℂ)(z2 : ℂ). conj(complex_add(z1, z2)) = complex_add(conj(z1), conj(z2))
+// ✅ Valid
+</code></pre>
+<h2 id="magnitude-squared"><a class="header" href="#magnitude-squared">Magnitude Squared</a></h2>
+<p>The squared magnitude <code>|z|² = re(z)² + im(z)²</code>:</p>
+<pre><code class="language-kleis">define z = complex(3, 4)
+define mag_sq = abs_squared(z)    // 3² + 4² = 25
+</code></pre>
+<pre><code class="language-kleis">:verify abs_squared(complex(3, 4)) = 25
+// ✅ Valid
+
+:verify ∀(z : ℂ). abs_squared(z) = re(z) * re(z) + im(z) * im(z)
+// ✅ Valid
+</code></pre>
+<p>Note: Full magnitude <code>|z| = √(re² + im²)</code> requires square root, which is not yet supported.</p>
+<h2 id="field-properties"><a class="header" href="#field-properties">Field Properties</a></h2>
+<p>Complex numbers form a field. Kleis can verify all field axioms:</p>
+<h3 id="commutativity"><a class="header" href="#commutativity">Commutativity</a></h3>
+<pre><code class="language-kleis">// Addition is commutative
+:verify ∀(z1 : ℂ)(z2 : ℂ). complex_add(z1, z2) = complex_add(z2, z1)
+// ✅ Valid
+
+// Multiplication is commutative
+:verify ∀(z1 : ℂ)(z2 : ℂ). complex_mul(z1, z2) = complex_mul(z2, z1)
+// ✅ Valid
+</code></pre>
+<h3 id="associativity"><a class="header" href="#associativity">Associativity</a></h3>
+<pre><code class="language-kleis">// Addition is associative
+:verify ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+    complex_add(complex_add(z1, z2), z3) = complex_add(z1, complex_add(z2, z3))
+// ✅ Valid
+
+// Multiplication is associative
+:verify ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+    complex_mul(complex_mul(z1, z2), z3) = complex_mul(z1, complex_mul(z2, z3))
+// ✅ Valid
+</code></pre>
+<h3 id="identity-elements"><a class="header" href="#identity-elements">Identity Elements</a></h3>
+<pre><code class="language-kleis">// Additive identity: z + 0 = z
+:verify ∀(z : ℂ). complex_add(z, complex(0, 0)) = z
+// ✅ Valid
+
+// Multiplicative identity: z * 1 = z
+:verify ∀(z : ℂ). complex_mul(z, complex(1, 0)) = z
+// ✅ Valid
+</code></pre>
+<h3 id="distributive-law"><a class="header" href="#distributive-law">Distributive Law</a></h3>
+<pre><code class="language-kleis">:verify ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+    complex_mul(z1, complex_add(z2, z3)) = 
+        complex_add(complex_mul(z1, z2), complex_mul(z1, z3))
+// ✅ Valid
+</code></pre>
+<h2 id="embedding-real-numbers"><a class="header" href="#embedding-real-numbers">Embedding Real Numbers</a></h2>
+<p>Real numbers embed into complex numbers with imaginary part 0:</p>
+<pre><code class="language-kleis">define r = 5
+define z = complex(r, 0)    // 5 + 0i = 5
+
+// Extracting real from embedded real
+:verify ∀(a : ℝ). re(complex(a, 0)) = a
+// ✅ Valid
+
+:verify ∀(a : ℝ). im(complex(a, 0)) = 0
+// ✅ Valid
+</code></pre>
+<p>Adding real and imaginary parts:</p>
+<pre><code class="language-kleis">:verify ∀(x : ℝ)(y : ℝ). complex_add(complex(x, 0), complex(0, y)) = complex(x, y)
+// ✅ Valid
+</code></pre>
+<h2 id="the-multiplication-formula"><a class="header" href="#the-multiplication-formula">The Multiplication Formula</a></h2>
+<p>The explicit formula for complex multiplication:</p>
+<pre><code class="language-kleis">// (a + bi)(c + di) = (ac - bd) + (ad + bc)i
+:verify ∀(a : ℝ)(b : ℝ)(c : ℝ)(d : ℝ). 
+    complex_mul(complex(a, b), complex(c, d)) = complex(a*c - b*d, a*d + b*c)
+// ✅ Valid
+</code></pre>
+<h2 id="mixing-symbolic-and-concrete"><a class="header" href="#mixing-symbolic-and-concrete">Mixing Symbolic and Concrete</a></h2>
+<p>Kleis can reason about mixed expressions:</p>
+<pre><code class="language-kleis">// Symbolic z plus concrete value
+:verify ∀(z : ℂ). complex_add(z, complex(0, 0)) = z
+// ✅ Valid
+
+// Symbolic z times concrete i
+:verify ∀(z : ℂ). complex_mul(z, i) = complex_add(z, complex(0, 1))
+// This checks if multiplying by i equals adding i (it doesn't!)
+// ❌ Invalid — as expected!
+
+// Correct: multiplying by i rotates
+:verify ∀(a : ℝ)(b : ℝ). complex_mul(complex(a, b), i) = complex(-b, a)
+// ✅ Valid (rotation by 90°)
+</code></pre>
+<h2 id="the-fundamental-theorem"><a class="header" href="#the-fundamental-theorem">The Fundamental Theorem</a></h2>
+<p>The defining property of complex numbers:</p>
+<pre><code class="language-kleis">// i² = -1
+:verify complex_mul(i, i) = complex(-1, 0)
+// ✅ Valid
+
+// More explicitly
+:verify complex_mul(complex(0, 1), complex(0, 1)) = complex(-1, 0)
+// ✅ Valid
+</code></pre>
+<h2 id="convention-loop-indices"><a class="header" href="#convention-loop-indices">Convention: Loop Indices</a></h2>
+<p>When using <code>Sum</code> or <code>Product</code> with complex numbers, <strong>avoid using <code>i</code> as a loop index</strong>:</p>
+<pre><code class="language-kleis">// GOOD: use k, j, n, m as loop indices
+Sum(k, complex_mul(complex(1, 0), pow(z, k)), 0, n)
+
+// BAD: i as loop index clashes with imaginary i
+Sum(i, complex_mul(i, pow(z, i)), 0, n)   // Which 'i' is which?
+</code></pre>
+<p>The convention is:</p>
 <ul>
-<li><strong>Verify</strong> mathematical statements</li>
-<li><strong>Find counterexamples</strong> when statements are false</li>
-<li><strong>Check</strong> that implementations satisfy axioms</li>
+<li><code>k</code>, <code>j</code>, <code>n</code>, <code>m</code> — loop indices</li>
+<li><code>i</code> — imaginary unit</li>
 </ul>
-<h2 id="basic-verification"><a class="header" href="#basic-verification">Basic Verification</a></h2>
-<p>Use <code>verify</code> to check a statement:</p>
-<pre><code class="language-kleis example">axiom commutativity : ∀(x : ℝ)(y : ℝ). x + y = y + x
-// Z3 verifies: ✓ Valid
+<h2 id="complete-example-verifying-complex-identities"><a class="header" href="#complete-example-verifying-complex-identities">Complete Example: Verifying Complex Identities</a></h2>
+<p>Here’s a complete session verifying multiple complex number properties:</p>
+<pre><code class="language-kleis">// Define some complex numbers
+define z1 : ℂ = complex(1, 2)
+define z2 : ℂ = complex(3, 4)
 
-axiom zero_annihilates : ∀(x : ℝ). x * 0 = 0
-// Z3 verifies: ✓ Valid
+// Compute operations
+define sum = complex_add(z1, z2)
+define product = complex_mul(z1, z2)
+define i_squared = complex_mul(i, i)
 
-axiom all_positive : ∀(x : ℝ). x &gt; 0
-// Z3 finds counterexample: x = -1
-</code></pre>
-<h2 id="verifying-quantified-statements"><a class="header" href="#verifying-quantified-statements">Verifying Quantified Statements</a></h2>
-<p>Z3 handles universal and existential quantifiers:</p>
-<pre><code class="language-kleis example">axiom additive_identity : ∀(x : ℝ). x + 0 = x
-// Z3 verifies: ✓ Valid
-
-axiom squares_nonnegative : ∀(x : ℝ). x * x ≥ 0
-// Z3 verifies: ✓ Valid (squares are non-negative)
-
-axiom no_real_sqrt_neg1 : ∃(x : ℝ). x * x = -1
-// Z3: ✗ Invalid (no real square root of -1)
-
-axiom complex_sqrt_neg1 : ∃(x : ℂ). x * x = -1
-// Z3 verifies: ✓ Valid (x = i works)
-</code></pre>
-<h2 id="checking-axioms"><a class="header" href="#checking-axioms">Checking Axioms</a></h2>
-<p>Verify that definitions satisfy axioms:</p>
-<pre><code class="language-kleis">structure Group(G) {
-    e : G
-    operation mul : G × G → G
-    operation inv : G → G
-    
-    axiom identity : ∀(x : G). mul(e, x) = x
-    axiom inverse : ∀(x : G). mul(x, inv(x)) = e
-    axiom associative : ∀(x : G)(y : G)(z : G).
-        mul(mul(x, y), z) = mul(x, mul(y, z))
+// Structure with axioms
+structure ComplexTest {
+    axiom i_squared_minus_one : complex_mul(i, i) = complex(-1, 0)
+    axiom conj_involution : ∀(z : ℂ). conj(conj(z)) = z
+    axiom add_commutes : ∀(a : ℂ)(b : ℂ). complex_add(a, b) = complex_add(b, a)
 }
-
-// Define integers with addition
-implements Group(ℤ) {
-    element e = 0
-    operation mul = builtin_add
-    operation inv = builtin_negate
-}
-
-// Kleis verifies each axiom automatically!
 </code></pre>
-<h2 id="implication-verification"><a class="header" href="#implication-verification">Implication Verification</a></h2>
-<p>Prove that premises imply conclusions:</p>
-<pre><code class="language-kleis example">// If x &gt; 0 and y &gt; 0, then x + y &gt; 0
-axiom sum_positive : ∀(x : ℝ)(y : ℝ). (x &gt; 0 ∧ y &gt; 0) → x + y &gt; 0
-// Z3 verifies: ✓ Valid
-
-// Triangle inequality
-axiom triangle_ineq : ∀(x : ℝ)(y : ℝ)(a : ℝ)(b : ℝ).
-    (abs(x) ≤ a ∧ abs(y) ≤ b) → abs(x + y) ≤ a + b
-// Z3 verifies: ✓ Valid
-</code></pre>
-<h2 id="counterexamples"><a class="header" href="#counterexamples">Counterexamples</a></h2>
-<p>When verification fails, Z3 provides counterexamples:</p>
-<pre><code class="language-kleis example">axiom square_equals_self : ∀(x : ℝ). x^2 = x
-// Z3: ✗ Invalid, Counterexample: x = 2 (since 4 ≠ 2)
-
-axiom positive_greater_than_one : ∀(n : ℕ). n &gt; 0 → n &gt; 1
-// Z3: ✗ Invalid, Counterexample: n = 1
-</code></pre>
-<h2 id="timeout-and-limits"><a class="header" href="#timeout-and-limits">Timeout and Limits</a></h2>
-<p>Complex statements may time out:</p>
-<pre><code class="language-kleis">// Very complex statement
-verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
-// Result: ⏱ Timeout (statement too complex)
-</code></pre>
-<h2 id="what-z3-can-and-cannot-do"><a class="header" href="#what-z3-can-and-cannot-do">What Z3 Can and Cannot Do</a></h2>
-<h3 id="z3-excels-at"><a class="header" href="#z3-excels-at">Z3 Excels At:</a></h3>
-<ul>
-<li>Linear arithmetic</li>
-<li>Boolean logic</li>
-<li>Array reasoning</li>
-<li>Simple quantifiers</li>
-<li>Algebraic identities</li>
-</ul>
-<h3 id="z3-struggles-with"><a class="header" href="#z3-struggles-with">Z3 Struggles With:</a></h3>
-<ul>
-<li>Non-linear real arithmetic (undecidable in general)</li>
-<li>Very deep quantifier nesting</li>
-<li>Transcendental functions (sin, cos, exp)</li>
-<li>Infinite structures</li>
-</ul>
-<h2 id="practical-workflow"><a class="header" href="#practical-workflow">Practical Workflow</a></h2>
-<ol>
-<li><strong>Write structure with axioms</strong></li>
-<li><strong>Implement operations</strong></li>
-<li><strong>Kleis auto-verifies</strong> axioms are satisfied</li>
-<li><strong>Use <code>verify</code></strong> for additional properties</li>
-<li><strong>Examine counterexamples</strong> when verification fails</li>
-</ol>
-<pre><code class="language-kleis">// Step 1: Define structure
-structure Ring(R) {
-    zero : R
-    one : R
-    operation add : R × R → R
-    operation mul : R × R → R
-    operation neg : R → R
-    
-    axiom add_assoc : ∀(a : R)(b : R)(c : R).
-        add(add(a, b), c) = add(a, add(b, c))
-}
-
-// Step 2: Implement for integers
-implements Ring(ℤ) {
-    element zero = 0
-    element one = 1
-    operation add = builtin_add
-    operation mul = builtin_mul
-    operation neg = builtin_negate
-}
-
-// Step 3: Auto-verification happens!
-
-// Step 4: Check additional properties
-axiom mul_zero : ∀(x : ℤ). mul(x, zero) = zero
-// Z3 verifies: ✓ Valid
-</code></pre>
+<h2 id="operation-reference"><a class="header" href="#operation-reference">Operation Reference</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Syntax</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Create</td><td><code>complex(a, b)</code></td><td>Create a + bi</td></tr>
+<tr><td>Real part</td><td><code>re(z)</code></td><td>Extract real part</td></tr>
+<tr><td>Imaginary part</td><td><code>im(z)</code></td><td>Extract imaginary part</td></tr>
+<tr><td>Add</td><td><code>complex_add(z1, z2)</code></td><td>z1 + z2</td></tr>
+<tr><td>Subtract</td><td><code>complex_sub(z1, z2)</code></td><td>z1 - z2</td></tr>
+<tr><td>Multiply</td><td><code>complex_mul(z1, z2)</code></td><td>z1 × z2</td></tr>
+<tr><td>Divide</td><td><code>complex_div(z1, z2)</code></td><td>z1 / z2</td></tr>
+<tr><td>Negate</td><td><code>neg_complex(z)</code></td><td>-z</td></tr>
+<tr><td>Inverse</td><td><code>complex_inverse(z)</code></td><td>1/z</td></tr>
+<tr><td>Conjugate</td><td><code>conj(z)</code></td><td>Complex conjugate</td></tr>
+<tr><td>Magnitude²</td><td><code>abs_squared(z)</code></td><td>|z|²</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="current-limitations"><a class="header" href="#current-limitations">Current Limitations</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Status</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Operator overloading</td><td>❌</td><td>Use <code>complex_add</code> not <code>+</code></td></tr>
+<tr><td>Magnitude <code>abs(z)</code></td><td>❌</td><td>Requires sqrt</td></tr>
+<tr><td>Transcendentals</td><td>❌</td><td><code>exp</code>, <code>log</code>, <code>sin</code>, <code>cos</code></td></tr>
+<tr><td>Polar form</td><td>❌</td><td><code>(r, θ)</code></td></tr>
+<tr><td>Euler’s formula</td><td>❌</td><td><code>e^{iθ} = cos(θ) + i·sin(θ)</code></td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
-<p>Try the interactive REPL!</p>
-<p>→ <a href="./12-repl.html">Next: The REPL</a></p>
+<p>Complex numbers enable reasoning about:</p>
+<ul>
+<li>Signal processing (Fourier transforms)</li>
+<li>Quantum mechanics (wave functions)</li>
+<li>Control theory (transfer functions)</li>
+<li>Complex analysis (contour integrals)</li>
+</ul>
+<p>→ <a href="../appendix/grammar.html">Next: Grammar Reference</a></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../chapters/10-implements.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../chapters/13-applications.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../chapters/12-repl.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../appendix/grammar.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -333,11 +499,11 @@ axiom mul_zero : ∀(x : ℤ). mul(x, zero) = zero
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../chapters/10-implements.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../chapters/13-applications.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../chapters/12-repl.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../appendix/grammar.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
