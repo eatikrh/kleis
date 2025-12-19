@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6aaf6ecf.js";
+            window.path_to_searchindex_js = "searchindex-7956ccc3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b0b97c7a.js"></script>
@@ -321,13 +321,13 @@ define flag = True                // True is a boolean
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Type</th><th>Description</th><th>Examples</th></tr>
+<tr><th>Type</th><th>Unicode</th><th>Full Name</th><th>ASCII</th><th>Examples</th></tr>
 </thead>
 <tbody>
-<tr><td><code>ℕ</code> (or <code>Nat</code>)</td><td>Natural numbers (0, 1, 2, …)</td><td><code>0</code>, <code>42</code>, <code>100</code></td></tr>
-<tr><td><code>ℤ</code> (or <code>Int</code>)</td><td>Integers (…, -1, 0, 1, …)</td><td><code>-5</code>, <code>0</code>, <code>17</code></td></tr>
-<tr><td><code>ℝ</code> (or <code>Real</code>)</td><td>Real numbers</td><td><code>3.14</code>, <code>-2.5</code>, <code>√2</code></td></tr>
-<tr><td><code>ℂ</code> (or <code>Complex</code>)</td><td>Complex numbers</td><td><code>3 + 4i</code>, <code>i</code></td></tr>
+<tr><td>Natural</td><td><code>ℕ</code></td><td><code>Nat</code></td><td><code>N</code></td><td><code>0</code>, <code>42</code>, <code>100</code></td></tr>
+<tr><td>Integer</td><td><code>ℤ</code></td><td><code>Int</code></td><td><code>Z</code></td><td><code>-5</code>, <code>0</code>, <code>17</code></td></tr>
+<tr><td>Real</td><td><code>ℝ</code></td><td><code>Real</code> or <code>Scalar</code></td><td><code>R</code></td><td><code>3.14</code>, <code>-2.5</code>, <code>√2</code></td></tr>
+<tr><td>Complex</td><td><code>ℂ</code></td><td><code>Complex</code></td><td><code>C</code></td><td><code>3 + 4i</code>, <code>i</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -335,14 +335,27 @@ define flag = True                // True is a boolean
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Type</th><th>Description</th><th>Values</th></tr>
+<tr><th>Type</th><th>Unicode</th><th>Full Name</th><th>Values</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Bool</code></td><td>Booleans</td><td><code>True</code>, <code>False</code></td></tr>
-<tr><td><code>Unit</code></td><td>Unit type (like void)</td><td><code>()</code></td></tr>
+<tr><td>Boolean</td><td><code>𝔹</code></td><td><code>Bool</code></td><td><code>True</code>, <code>False</code></td></tr>
+<tr><td>Unit</td><td>—</td><td><code>Unit</code></td><td><code>()</code></td></tr>
 </tbody>
 </table>
 </div>
+<pre><code class="language-kleis">// Boolean values
+define flag = True
+define not_flag = False
+
+// Unit value
+define empty = ()
+
+// Boolean in quantified expressions (inside structures)
+structure BoolExamples {
+    axiom reflexive_unicode : ∀(p : 𝔹). p = p
+    axiom reflexive_full    : ∀(q : Bool). q = q
+}
+</code></pre>
 <h2 id="type-annotations"><a class="header" href="#type-annotations">Type Annotations</a></h2>
 <p>You can explicitly annotate types with <code>:</code>:</p>
 <pre><code class="language-kleis">// Variable annotation
@@ -1756,18 +1769,116 @@ structure Functor(C, D) {
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="complex-numbers"><a class="header" href="#complex-numbers">Complex Numbers</a></h1>
 <p>Kleis has first-class support for complex numbers (ℂ), enabling symbolic reasoning about complex arithmetic, verification of identities, and theorem proving in complex analysis.</p>
+<h2 id="natural-arithmetic-syntax--new"><a class="header" href="#natural-arithmetic-syntax--new">Natural Arithmetic Syntax ✨ NEW</a></h2>
+<p><strong>Kleis now supports natural arithmetic operators for complex numbers!</strong></p>
+<p>You can write expressions using <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code> with complex numbers, just like you would with real numbers:</p>
+<pre><code class="language-kleis">// Natural syntax (NEW!)
+:verify complex(1, 2) + complex(3, 4) = complex(4, 6)
+// ✅ Valid
+
+:verify complex(1, 2) * complex(3, 4) = complex(-5, 10)
+// ✅ Valid
+
+// The classic: 3 + 4i
+:verify 3 + 4*i = complex(3, 4)
+// ✅ Valid
+
+// Mixed real and complex
+:verify 5 + complex(1, 2) = complex(6, 2)
+// ✅ Valid
+</code></pre>
+<p>Kleis automatically converts these to the appropriate complex operations via <strong>semantic lowering</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>You Write</th><th>Kleis Translates To</th></tr>
+</thead>
+<tbody>
+<tr><td><code>z1 + z2</code></td><td><code>complex_add(z1, z2)</code></td></tr>
+<tr><td><code>z1 - z2</code></td><td><code>complex_sub(z1, z2)</code></td></tr>
+<tr><td><code>z1 * z2</code></td><td><code>complex_mul(z1, z2)</code></td></tr>
+<tr><td><code>z1 / z2</code></td><td><code>complex_div(z1, z2)</code></td></tr>
+<tr><td><code>r + z</code> (ℝ + ℂ)</td><td><code>complex_add(complex(r, 0), z)</code></td></tr>
+<tr><td><code>-z</code></td><td><code>neg_complex(z)</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>This works transparently in the REPL and for verification.</p>
 <h2 id="the-imaginary-unit"><a class="header" href="#the-imaginary-unit">The Imaginary Unit</a></h2>
 <p>The imaginary unit <code>i</code> is predefined in Kleis:</p>
 <pre><code class="language-kleis">// i is the square root of -1
-define i_squared = complex_mul(i, i)
+define i_squared = i * i
 // Result: complex(-1, 0)  — that's -1!
 </code></pre>
 <p>In the REPL, you can verify this fundamental property:</p>
-<pre><code class="language-kleis">:verify complex_mul(i, i) = complex(-1, 0)
+<pre><code class="language-kleis">:verify i * i = complex(-1, 0)
+// ✅ Valid
+
+// Or using the explicit function:
+:verify complex_mul(i, i) = complex(-1, 0)
 // ✅ Valid
 </code></pre>
+<h3 id="scoping-rules-for-i"><a class="header" href="#scoping-rules-for-i">Scoping Rules for <code>i</code></a></h3>
+<p>The imaginary unit <code>i</code> is a global constant. However, it can be shadowed by:</p>
+<ol>
+<li><strong>Quantified variables</strong> with explicit type annotations</li>
+<li><strong>Lambda parameters</strong></li>
+</ol>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Expression</th><th>Type</th><th>Explanation</th></tr>
+</thead>
+<tbody>
+<tr><td><code>i</code></td><td>Complex</td><td>Global imaginary unit</td></tr>
+<tr><td><code>i + 1</code></td><td>Complex</td><td>Uses global <code>i</code></td></tr>
+<tr><td><code>i * i</code></td><td>Complex</td><td><code>i² = -1</code></td></tr>
+<tr><td><code>λ x . x + i</code></td><td>Complex</td><td>Uses global <code>i</code> in body</td></tr>
+<tr><td><code>∀(i : ℝ). i + 1</code></td><td>Scalar</td><td>Quantifier <code>i : ℝ</code> shadows global</td></tr>
+<tr><td><code>∀(i : ℕ). i + 0</code></td><td>Nat</td><td>Quantifier <code>i : ℕ</code> shadows global</td></tr>
+<tr><td><code>λ i . i + 1</code></td><td>Scalar</td><td>Lambda param shadows global</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Scoping examples:</strong></p>
+<pre><code class="language-kleis">// Quantified variable i : ℝ shadows the global imaginary unit
+// Here i is a real number, so i + 1 uses regular addition
+verify ∀(i : ℝ). i + 1 = 1 + i
+
+// Quantified variable i : ℕ is a natural number
+verify ∀(i : ℕ). i + 0 = i
+
+// Quantified variable i : ℂ is explicitly complex
+verify ∀(i : ℂ). complex_add(i, complex(0, 0)) = i
+</code></pre>
+<p><strong>In the REPL, you can also check types:</strong></p>
+<pre><code>λ&gt; :type i
+📐 Type: Complex
+
+λ&gt; :type i + 1  
+📐 Type: Complex
+
+λ&gt; :type λ x . x + i
+📐 Type: Complex  (uses global i)
+
+λ&gt; :type λ i . i + 1
+📐 Type: Scalar   (parameter shadows global i)
+</code></pre>
+<p><strong>Best practice:</strong> Avoid using <code>i</code> as a variable name to prevent confusion with the imaginary unit. Use descriptive names like <code>idx</code>, <code>index</code>, or <code>iter</code> for loop-like variables.</p>
+<pre><code class="language-kleis">// Clear: using i as imaginary unit
+verify ∀(z : ℂ). complex_mul(z, i) = complex(neg(im(z)), re(z))
+
+// Clear: using idx as index variable  
+verify ∀(idx : ℕ). idx + 0 = idx
+</code></pre>
 <h2 id="creating-complex-numbers"><a class="header" href="#creating-complex-numbers">Creating Complex Numbers</a></h2>
-<p>Use the <code>complex(re, im)</code> constructor:</p>
+<p><strong>Method 1: Using arithmetic (recommended)</strong></p>
+<pre><code class="language-kleis">define z1 = 3 + 4*i           // 3 + 4i
+define z2 = 1 - 2*i           // 1 - 2i
+define pure_real = 5 + 0*i    // 5 (a real number)
+define pure_imag = 0 + 3*i    // 3i (pure imaginary)
+</code></pre>
+<p><strong>Method 2: Using the <code>complex(re, im)</code> constructor</strong></p>
 <pre><code class="language-kleis">// complex(real_part, imaginary_part)
 define z1 = complex(3, 4)       // 3 + 4i
 define z2 = complex(1, -2)      // 1 - 2i
@@ -1794,49 +1905,126 @@ define imag_part = im(z)        // 4
 :verify ∀(a : ℝ)(b : ℝ). re(complex(a, b)) = a
 // ✅ Valid
 </code></pre>
-<h2 id="arithmetic-operations"><a class="header" href="#arithmetic-operations">Arithmetic Operations</a></h2>
-<h3 id="addition-and-subtraction"><a class="header" href="#addition-and-subtraction">Addition and Subtraction</a></h3>
-<pre><code class="language-kleis">define z1 = complex(1, 2)    // 1 + 2i
-define z2 = complex(3, 4)    // 3 + 4i
-
-// Addition: (1 + 2i) + (3 + 4i) = 4 + 6i
-define sum = complex_add(z1, z2)
-
-// Subtraction: (1 + 2i) - (3 + 4i) = -2 - 2i
-define diff = complex_sub(z1, z2)
-</code></pre>
-<p>Verify concrete arithmetic:</p>
-<pre><code class="language-kleis">:verify complex_add(complex(1, 2), complex(3, 4)) = complex(4, 6)
+<h2 id="type-ascriptions-with-ℂ"><a class="header" href="#type-ascriptions-with-ℂ">Type Ascriptions with ℂ</a></h2>
+<p>Type ascriptions tell Kleis (and Z3) that a variable is a complex number. The syntax is <code>: ℂ</code> (or <code>: Complex</code>).</p>
+<h3 id="quantifier-variables"><a class="header" href="#quantifier-variables">Quantifier Variables</a></h3>
+<p>The most common use is in universal quantifiers:</p>
+<pre><code class="language-kleis">// z is a complex variable
+:verify ∀(z : ℂ). conj(conj(z)) = z
 // ✅ Valid
 
-:verify complex_sub(complex(5, 3), complex(2, 1)) = complex(3, 2)
+// Multiple complex variables
+:verify ∀(z1 : ℂ)(z2 : ℂ). z1 + z2 = z2 + z1
+// ✅ Valid
+
+// Mixed types: real and complex
+:verify ∀(r : ℝ)(z : ℂ). r + z = complex(r + re(z), im(z))
+// ✅ Valid
+</code></pre>
+<p>When you write <code>∀(z : ℂ)</code>, the Z3 backend creates a symbolic complex variable with unknown real and imaginary parts. This lets Z3 reason about <strong>all possible</strong> complex numbers.</p>
+<h3 id="definition-annotations"><a class="header" href="#definition-annotations">Definition Annotations</a></h3>
+<p>You can annotate definitions for clarity:</p>
+<pre><code class="language-kleis">define z1 : ℂ = complex(1, 2)
+define z2 : ℂ = 3 + 4*i
+define origin : ℂ = complex(0, 0)
+</code></pre>
+<h3 id="why-type-ascriptions-matter"><a class="header" href="#why-type-ascriptions-matter">Why Type Ascriptions Matter</a></h3>
+<p>Without type information, Z3 wouldn’t know how to handle operations:</p>
+<pre><code class="language-kleis">// With `: ℂ`, Z3 knows z is complex and creates appropriate constraints
+:verify ∀(z : ℂ). z * complex(1, 0) = z
+// ✅ Valid
+
+// Z3 can reason symbolically about the real and imaginary parts
+:verify ∀(z : ℂ). re(z) * re(z) + im(z) * im(z) = abs_squared(z)
+// ✅ Valid
+</code></pre>
+<h3 id="equivalent-type-names"><a class="header" href="#equivalent-type-names">Equivalent Type Names</a></h3>
+<p>For complex numbers, these are all equivalent:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Syntax</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>: ℂ</code></td><td>Unicode symbol (recommended)</td></tr>
+<tr><td><code>: Complex</code></td><td>Full name</td></tr>
+<tr><td><code>: C</code></td><td>Short ASCII alternative</td></tr>
+</tbody>
+</table>
+</div>
+<p>For comparison, here are the equivalent forms for other numeric types:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Unicode</th><th>Full Name</th><th>ASCII</th></tr>
+</thead>
+<tbody>
+<tr><td>Complex</td><td><code>: ℂ</code></td><td><code>: Complex</code></td><td><code>: C</code></td></tr>
+<tr><td>Real/Scalar</td><td><code>: ℝ</code></td><td><code>: Real</code> or <code>: Scalar</code></td><td><code>: R</code></td></tr>
+<tr><td>Natural</td><td><code>: ℕ</code></td><td><code>: Nat</code></td><td><code>: N</code></td></tr>
+<tr><td>Integer</td><td><code>: ℤ</code></td><td><code>: Int</code> or <code>: Integer</code></td><td><code>: Z</code></td></tr>
+<tr><td>Boolean</td><td><code>: 𝔹</code></td><td><code>: Bool</code></td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="arithmetic-operations"><a class="header" href="#arithmetic-operations">Arithmetic Operations</a></h2>
+<h3 id="addition-and-subtraction"><a class="header" href="#addition-and-subtraction">Addition and Subtraction</a></h3>
+<pre><code class="language-kleis">define z1 = 1 + 2*i    // 1 + 2i
+define z2 = 3 + 4*i    // 3 + 4i
+
+// Addition: (1 + 2i) + (3 + 4i) = 4 + 6i
+define sum = z1 + z2
+
+// Subtraction: (1 + 2i) - (3 + 4i) = -2 - 2i
+define diff = z1 - z2
+</code></pre>
+<p>Verify concrete arithmetic:</p>
+<pre><code class="language-kleis">// Natural syntax
+:verify (1 + 2*i) + (3 + 4*i) = 4 + 6*i
+// ✅ Valid
+
+:verify (5 + 3*i) - (2 + 1*i) = 3 + 2*i
+// ✅ Valid
+
+// Explicit function syntax (also works)
+:verify complex_add(complex(1, 2), complex(3, 4)) = complex(4, 6)
 // ✅ Valid
 </code></pre>
 <h3 id="multiplication"><a class="header" href="#multiplication">Multiplication</a></h3>
 <p>Complex multiplication follows the rule: <code>(a + bi)(c + di) = (ac - bd) + (ad + bc)i</code></p>
-<pre><code class="language-kleis">define z1 = complex(1, 2)    // 1 + 2i
-define z2 = complex(3, 4)    // 3 + 4i
+<pre><code class="language-kleis">define z1 = 1 + 2*i    // 1 + 2i
+define z2 = 3 + 4*i    // 3 + 4i
 
 // (1 + 2i)(3 + 4i) = 3 + 4i + 6i + 8i² = 3 + 10i - 8 = -5 + 10i
-define product = complex_mul(z1, z2)
+define product = z1 * z2
 </code></pre>
 <p>Verification:</p>
-<pre><code class="language-kleis">:verify complex_mul(complex(1, 2), complex(3, 4)) = complex(-5, 10)
+<pre><code class="language-kleis">// Natural syntax
+:verify (1 + 2*i) * (3 + 4*i) = complex(-5, 10)
+// ✅ Valid
+
+// The fundamental property: i² = -1
+:verify i * i = complex(-1, 0)
 // ✅ Valid
 
 // Multiplication by i rotates 90°
-:verify ∀(z : ℂ). complex_mul(z, i) = complex(neg(im(z)), re(z))
+:verify ∀(z : ℂ). z * i = complex(neg(im(z)), re(z))
 // ✅ Valid (where neg is negation)
 </code></pre>
 <h3 id="division"><a class="header" href="#division">Division</a></h3>
-<pre><code class="language-kleis">define z1 = complex(1, 0)    // 1
-define z2 = complex(0, 1)    // i
+<pre><code class="language-kleis">define z1 = 1 + 0*i    // 1
+define z2 = 0 + 1*i    // i
 
 // 1 / i = -i
-define quotient = complex_div(z1, z2)
+define quotient = z1 / z2
 </code></pre>
 <p>Verification:</p>
-<pre><code class="language-kleis">:verify complex_div(complex(1, 0), complex(0, 1)) = complex(0, -1)
+<pre><code class="language-kleis">// Natural syntax
+:verify (1 + 0*i) / (0 + 1*i) = 0 - 1*i
+// ✅ Valid
+
+// Explicit function syntax
+:verify complex_div(complex(1, 0), complex(0, 1)) = complex(0, -1)
 // ✅ Valid
 </code></pre>
 <h3 id="negation"><a class="header" href="#negation">Negation</a></h3>
@@ -2013,20 +2201,20 @@ structure ComplexTest {
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Operation</th><th>Syntax</th><th>Description</th></tr>
+<tr><th>Operation</th><th>Natural Syntax</th><th>Explicit Syntax</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td>Create</td><td><code>complex(a, b)</code></td><td>Create a + bi</td></tr>
-<tr><td>Real part</td><td><code>re(z)</code></td><td>Extract real part</td></tr>
-<tr><td>Imaginary part</td><td><code>im(z)</code></td><td>Extract imaginary part</td></tr>
-<tr><td>Add</td><td><code>complex_add(z1, z2)</code></td><td>z1 + z2</td></tr>
-<tr><td>Subtract</td><td><code>complex_sub(z1, z2)</code></td><td>z1 - z2</td></tr>
-<tr><td>Multiply</td><td><code>complex_mul(z1, z2)</code></td><td>z1 × z2</td></tr>
-<tr><td>Divide</td><td><code>complex_div(z1, z2)</code></td><td>z1 / z2</td></tr>
-<tr><td>Negate</td><td><code>neg_complex(z)</code></td><td>-z</td></tr>
-<tr><td>Inverse</td><td><code>complex_inverse(z)</code></td><td>1/z</td></tr>
-<tr><td>Conjugate</td><td><code>conj(z)</code></td><td>Complex conjugate</td></tr>
-<tr><td>Magnitude²</td><td><code>abs_squared(z)</code></td><td>|z|²</td></tr>
+<tr><td>Create</td><td><code>a + b*i</code></td><td><code>complex(a, b)</code></td><td>Create a + bi</td></tr>
+<tr><td>Real part</td><td>—</td><td><code>re(z)</code></td><td>Extract real part</td></tr>
+<tr><td>Imaginary part</td><td>—</td><td><code>im(z)</code></td><td>Extract imaginary part</td></tr>
+<tr><td>Add</td><td><code>z1 + z2</code></td><td><code>complex_add(z1, z2)</code></td><td>z1 + z2</td></tr>
+<tr><td>Subtract</td><td><code>z1 - z2</code></td><td><code>complex_sub(z1, z2)</code></td><td>z1 - z2</td></tr>
+<tr><td>Multiply</td><td><code>z1 * z2</code></td><td><code>complex_mul(z1, z2)</code></td><td>z1 × z2</td></tr>
+<tr><td>Divide</td><td><code>z1 / z2</code></td><td><code>complex_div(z1, z2)</code></td><td>z1 / z2</td></tr>
+<tr><td>Negate</td><td><code>-z</code></td><td><code>neg_complex(z)</code></td><td>-z</td></tr>
+<tr><td>Inverse</td><td>—</td><td><code>complex_inverse(z)</code></td><td>1/z</td></tr>
+<tr><td>Conjugate</td><td>—</td><td><code>conj(z)</code></td><td>Complex conjugate</td></tr>
+<tr><td>Magnitude²</td><td>—</td><td><code>abs_squared(z)</code></td><td>|z|²</td></tr>
 </tbody>
 </table>
 </div>
@@ -2037,7 +2225,7 @@ structure ComplexTest {
 <tr><th>Feature</th><th>Status</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td>Operator overloading</td><td>❌</td><td>Use <code>complex_add</code> not <code>+</code></td></tr>
+<tr><td>Operator overloading</td><td>✅</td><td><code>z1 + z2</code>, <code>3 + 4*i</code> work!</td></tr>
 <tr><td>Magnitude <code>abs(z)</code></td><td>❌</td><td>Requires sqrt</td></tr>
 <tr><td>Transcendentals</td><td>❌</td><td><code>exp</code>, <code>log</code>, <code>sin</code>, <code>cos</code></td></tr>
 <tr><td>Polar form</td><td>❌</td><td><code>(r, θ)</code></td></tr>

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-6aaf6ecf.js";
+            window.path_to_searchindex_js = "../searchindex-7956ccc3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b0b97c7a.js"></script>
@@ -192,13 +192,13 @@ define flag = True                // True is a boolean
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Type</th><th>Description</th><th>Examples</th></tr>
+<tr><th>Type</th><th>Unicode</th><th>Full Name</th><th>ASCII</th><th>Examples</th></tr>
 </thead>
 <tbody>
-<tr><td><code>ℕ</code> (or <code>Nat</code>)</td><td>Natural numbers (0, 1, 2, …)</td><td><code>0</code>, <code>42</code>, <code>100</code></td></tr>
-<tr><td><code>ℤ</code> (or <code>Int</code>)</td><td>Integers (…, -1, 0, 1, …)</td><td><code>-5</code>, <code>0</code>, <code>17</code></td></tr>
-<tr><td><code>ℝ</code> (or <code>Real</code>)</td><td>Real numbers</td><td><code>3.14</code>, <code>-2.5</code>, <code>√2</code></td></tr>
-<tr><td><code>ℂ</code> (or <code>Complex</code>)</td><td>Complex numbers</td><td><code>3 + 4i</code>, <code>i</code></td></tr>
+<tr><td>Natural</td><td><code>ℕ</code></td><td><code>Nat</code></td><td><code>N</code></td><td><code>0</code>, <code>42</code>, <code>100</code></td></tr>
+<tr><td>Integer</td><td><code>ℤ</code></td><td><code>Int</code></td><td><code>Z</code></td><td><code>-5</code>, <code>0</code>, <code>17</code></td></tr>
+<tr><td>Real</td><td><code>ℝ</code></td><td><code>Real</code> or <code>Scalar</code></td><td><code>R</code></td><td><code>3.14</code>, <code>-2.5</code>, <code>√2</code></td></tr>
+<tr><td>Complex</td><td><code>ℂ</code></td><td><code>Complex</code></td><td><code>C</code></td><td><code>3 + 4i</code>, <code>i</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -206,14 +206,27 @@ define flag = True                // True is a boolean
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Type</th><th>Description</th><th>Values</th></tr>
+<tr><th>Type</th><th>Unicode</th><th>Full Name</th><th>Values</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Bool</code></td><td>Booleans</td><td><code>True</code>, <code>False</code></td></tr>
-<tr><td><code>Unit</code></td><td>Unit type (like void)</td><td><code>()</code></td></tr>
+<tr><td>Boolean</td><td><code>𝔹</code></td><td><code>Bool</code></td><td><code>True</code>, <code>False</code></td></tr>
+<tr><td>Unit</td><td>—</td><td><code>Unit</code></td><td><code>()</code></td></tr>
 </tbody>
 </table>
 </div>
+<pre><code class="language-kleis">// Boolean values
+define flag = True
+define not_flag = False
+
+// Unit value
+define empty = ()
+
+// Boolean in quantified expressions (inside structures)
+structure BoolExamples {
+    axiom reflexive_unicode : ∀(p : 𝔹). p = p
+    axiom reflexive_full    : ∀(q : Bool). q = q
+}
+</code></pre>
 <h2 id="type-annotations"><a class="header" href="#type-annotations">Type Annotations</a></h2>
 <p>You can explicitly annotate types with <code>:</code>:</p>
 <pre><code class="language-kleis">// Variable annotation
