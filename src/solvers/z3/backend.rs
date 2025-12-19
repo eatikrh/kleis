@@ -25,7 +25,7 @@ use crate::solvers::z3::translators::{arithmetic, boolean, comparison};
 use crate::structure_registry::StructureRegistry;
 use std::collections::{HashMap, HashSet};
 use z3::ast::{Ast, Bool, Dynamic, Int, Real};
-use z3::{FuncDecl, SatResult, Solver, Sort};
+use z3::{DatatypeAccessor, DatatypeBuilder, DatatypeSort, FuncDecl, SatResult, Solver, Sort};
 
 /// Z3 SMT Solver Backend
 ///
@@ -58,6 +58,34 @@ pub struct Z3Backend<'r> {
 
     /// Result converter (Z3 Dynamic → Kleis Expression)
     converter: Z3ResultConverter,
+
+    /// Complex number datatype for hybrid translation
+    /// Enables concrete complex arithmetic: complex(1,2) + complex(3,4) = complex(4,6)
+    complex_datatype: Option<ComplexDatatype>,
+}
+
+/// Complex number Z3 datatype
+/// Stores the DatatypeSort which contains constructor and accessors
+struct ComplexDatatype {
+    /// The Complex sort (contains constructor and accessors)
+    sort: DatatypeSort,
+}
+
+impl ComplexDatatype {
+    /// Get the constructor: mk_complex(re: Real, im: Real) -> Complex
+    fn constructor(&self) -> &FuncDecl {
+        &self.sort.variants[0].constructor
+    }
+
+    /// Get the real part accessor
+    fn accessor_re(&self) -> &FuncDecl {
+        &self.sort.variants[0].accessors[0]
+    }
+
+    /// Get the imaginary part accessor
+    fn accessor_im(&self) -> &FuncDecl {
+        &self.sort.variants[0].accessors[1]
+    }
 }
 
 impl<'r> Z3Backend<'r> {
@@ -73,6 +101,19 @@ impl<'r> Z3Backend<'r> {
         let solver = Solver::new();
         let capabilities = super::load_capabilities()?;
 
+        // Create Complex number datatype: Complex = mk_complex(re: Real, im: Real)
+        let complex_dt = DatatypeBuilder::new("Complex")
+            .variant(
+                "mk_complex",
+                vec![
+                    ("re", DatatypeAccessor::sort(Sort::real())),
+                    ("im", DatatypeAccessor::sort(Sort::real())),
+                ],
+            )
+            .finish();
+
+        let complex_datatype = ComplexDatatype { sort: complex_dt };
+
         let mut backend = Self {
             solver,
             registry,
@@ -82,11 +123,12 @@ impl<'r> Z3Backend<'r> {
             identity_elements: HashMap::new(),
             free_variables: HashMap::new(),
             converter: Z3ResultConverter,
+            complex_datatype: Some(complex_datatype),
         };
 
-        // Initialize complex number constant 'i' as an uninterpreted constant
-        // The axiom i² = -1 is asserted in stdlib/complex.kleis
-        backend.load_identity_element("i");
+        // Initialize complex number constant 'i' as complex(0, 1)
+        // This is now a concrete value, not an uninterpreted constant!
+        backend.initialize_complex_i();
 
         Ok(backend)
     }
@@ -312,7 +354,7 @@ impl<'r> Z3Backend<'r> {
     ) -> Result<Dynamic, String> {
         match expr {
             Expression::Object(name) => {
-                // 1. Check quantified variables
+                // 1. Check quantified variables (highest priority)
                 if let Some(var) = vars.get(name) {
                     return Ok(var.clone());
                 }
@@ -322,12 +364,21 @@ impl<'r> Z3Backend<'r> {
                     return Ok(identity.clone());
                 }
 
-                // 3. Check already-created free variables
+                // 3. Special case: 'i' as the complex imaginary unit
+                // Only use complex i if NOT already in free_variables (which means
+                // it was used as a loop variable first)
+                if name == "i" && !self.free_variables.contains_key("i") {
+                    if let Some(i_value) = self.get_complex_i() {
+                        return Ok(i_value);
+                    }
+                }
+
+                // 4. Check already-created free variables
                 if let Some(free_var) = self.free_variables.get(name) {
                     return Ok(free_var.clone());
                 }
 
-                // 4. Create fresh constant for this free variable
+                // 5. Create fresh constant for this free variable
                 // This allows equations like "A = Matrix(...)" to be verified
                 let fresh = Int::fresh_const(name);
                 let dynamic: Dynamic = fresh.into();
@@ -942,21 +993,48 @@ impl<'r> Z3Backend<'r> {
             }
 
             // ============================================
-            // COMPLEX NUMBER OPERATIONS
-            // Complex numbers are encoded as pairs of Reals (re, im)
+            // COMPLEX NUMBER OPERATIONS (Hybrid Translation)
+            // Uses Z3 Datatype for concrete arithmetic!
+            // Complex = mk_complex(re: Real, im: Real)
             // ============================================
 
+            // Imaginary unit: i = complex(0, 1)
+            // This is a nullary operation (0 arguments)
+            "i" => {
+                if !args.is_empty() {
+                    return Err("i takes no arguments".to_string());
+                }
+                if let Some(i_value) = self.get_complex_i() {
+                    return Ok(i_value);
+                }
+                // Fallback to uninterpreted constant
+                let func_decl = self.declare_uninterpreted("i", 0);
+                Ok(func_decl.apply(&[]))
+            }
+
             // Complex constructor: complex(re, im) creates re + im*i
-            // Returns a pair represented as uninterpreted function
             "complex" => {
                 if args.len() != 2 {
                     return Err("complex requires 2 arguments (re, im)".to_string());
                 }
-                // Use uninterpreted function with axioms from stdlib
-                // The actual verification uses algebraic properties
-                let func_decl = self.declare_uninterpreted("complex", 2);
-                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
-                Ok(func_decl.apply(&ast_args))
+                // Use datatype constructor for algebraic operations
+                if let Some(ref cdt) = self.complex_datatype {
+                    // Convert args to Real if they're Int
+                    let re = args[0]
+                        .as_real()
+                        .or_else(|| args[0].as_int().map(|i| i.to_real()))
+                        .ok_or("complex re argument must be numeric")?;
+                    let im = args[1]
+                        .as_real()
+                        .or_else(|| args[1].as_int().map(|i| i.to_real()))
+                        .ok_or("complex im argument must be numeric")?;
+                    Ok(cdt.constructor().apply(&[&re as &dyn Ast, &im as &dyn Ast]))
+                } else {
+                    // Fallback to uninterpreted
+                    let func_decl = self.declare_uninterpreted("complex", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
             }
 
             // Extract real part: re(z)
@@ -964,6 +1042,13 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("re requires 1 argument".to_string());
                 }
+                // Use datatype accessor
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) {
+                        return Ok(cdt.accessor_re().apply(&[&args[0] as &dyn Ast]));
+                    }
+                }
+                // Fallback for symbolic complex
                 let func_decl = self.declare_uninterpreted("re", 1);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
@@ -974,85 +1059,306 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("im requires 1 argument".to_string());
                 }
+                // Use datatype accessor
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) {
+                        return Ok(cdt.accessor_im().apply(&[&args[0] as &dyn Ast]));
+                    }
+                }
+                // Fallback for symbolic complex
                 let func_decl = self.declare_uninterpreted("im", 1);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
 
-            // Complex conjugate: conj(z) = re(z) - im(z)*i
+            // Complex conjugate: conj(z) = complex(re(z), -im(z))
             "conj" | "conjugate" => {
                 if args.len() != 1 {
                     return Err("conj requires 1 argument".to_string());
                 }
+                // Use algebraic translation
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) {
+                        let re = cdt.accessor_re().apply(&[&args[0] as &dyn Ast]);
+                        let im = cdt.accessor_im().apply(&[&args[0] as &dyn Ast]);
+                        let neg_im = im.as_real().map(|r| r.unary_minus()).ok_or("im not Real")?;
+                        let re_real = re.as_real().ok_or("re not Real")?;
+                        return Ok(cdt
+                            .constructor()
+                            .apply(&[&re_real as &dyn Ast, &neg_im as &dyn Ast]));
+                    }
+                }
+                // Fallback
                 let func_decl = self.declare_uninterpreted("conj", 1);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
 
-            // Complex addition: complex_add(z1, z2)
+            // Complex addition: (a+bi) + (c+di) = (a+c) + (b+d)i
             "complex_add" => {
                 if args.len() != 2 {
                     return Err("complex_add requires 2 arguments".to_string());
                 }
+                // Algebraic translation
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) && self.is_complex_sort(&args[1]) {
+                        let re1 = cdt.accessor_re().apply(&[&args[0] as &dyn Ast]);
+                        let im1 = cdt.accessor_im().apply(&[&args[0] as &dyn Ast]);
+                        let re2 = cdt.accessor_re().apply(&[&args[1] as &dyn Ast]);
+                        let im2 = cdt.accessor_im().apply(&[&args[1] as &dyn Ast]);
+
+                        let re_sum = Real::add(&[
+                            &re1.as_real().ok_or("re1 not Real")?,
+                            &re2.as_real().ok_or("re2 not Real")?,
+                        ]);
+                        let im_sum = Real::add(&[
+                            &im1.as_real().ok_or("im1 not Real")?,
+                            &im2.as_real().ok_or("im2 not Real")?,
+                        ]);
+                        return Ok(cdt
+                            .constructor()
+                            .apply(&[&re_sum as &dyn Ast, &im_sum as &dyn Ast]));
+                    }
+                }
+                // Fallback
                 let func_decl = self.declare_uninterpreted("complex_add", 2);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
 
-            // Complex multiplication: complex_mul(z1, z2)
+            // Complex multiplication: (a+bi)(c+di) = (ac-bd) + (ad+bc)i
             "complex_mul" => {
                 if args.len() != 2 {
                     return Err("complex_mul requires 2 arguments".to_string());
                 }
+                // Algebraic translation
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) && self.is_complex_sort(&args[1]) {
+                        let a = cdt
+                            .accessor_re()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("a not Real")?;
+                        let b = cdt
+                            .accessor_im()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("b not Real")?;
+                        let c = cdt
+                            .accessor_re()
+                            .apply(&[&args[1] as &dyn Ast])
+                            .as_real()
+                            .ok_or("c not Real")?;
+                        let d = cdt
+                            .accessor_im()
+                            .apply(&[&args[1] as &dyn Ast])
+                            .as_real()
+                            .ok_or("d not Real")?;
+
+                        // Real part: ac - bd
+                        let ac = Real::mul(&[&a, &c]);
+                        let bd = Real::mul(&[&b, &d]);
+                        let re_result = Real::sub(&[&ac, &bd]);
+
+                        // Imaginary part: ad + bc
+                        let ad = Real::mul(&[&a, &d]);
+                        let bc = Real::mul(&[&b, &c]);
+                        let im_result = Real::add(&[&ad, &bc]);
+
+                        return Ok(cdt
+                            .constructor()
+                            .apply(&[&re_result as &dyn Ast, &im_result as &dyn Ast]));
+                    }
+                }
+                // Fallback
                 let func_decl = self.declare_uninterpreted("complex_mul", 2);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
 
-            // Complex inverse: complex_inverse(z) = 1/z
+            // Complex inverse: 1/z = conj(z) / |z|²
             "complex_inverse" => {
                 if args.len() != 1 {
                     return Err("complex_inverse requires 1 argument".to_string());
+                }
+                // Algebraic: 1/z = (a - bi) / (a² + b²)
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) {
+                        let a = cdt
+                            .accessor_re()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("a not Real")?;
+                        let b = cdt
+                            .accessor_im()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("b not Real")?;
+
+                        // |z|² = a² + b²
+                        let a_sq = Real::mul(&[&a, &a]);
+                        let b_sq = Real::mul(&[&b, &b]);
+                        let abs_sq = Real::add(&[&a_sq, &b_sq]);
+
+                        // 1/z = (a / |z|², -b / |z|²)
+                        let re_result = a.div(&abs_sq);
+                        let neg_b = b.unary_minus();
+                        let im_result = neg_b.div(&abs_sq);
+
+                        return Ok(cdt
+                            .constructor()
+                            .apply(&[&re_result as &dyn Ast, &im_result as &dyn Ast]));
+                    }
                 }
                 let func_decl = self.declare_uninterpreted("complex_inverse", 1);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
 
-            // Complex subtraction: complex_sub(z1, z2)
+            // Complex subtraction: (a+bi) - (c+di) = (a-c) + (b-d)i
             "complex_sub" => {
                 if args.len() != 2 {
                     return Err("complex_sub requires 2 arguments".to_string());
+                }
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) && self.is_complex_sort(&args[1]) {
+                        let re1 = cdt
+                            .accessor_re()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("re1")?;
+                        let im1 = cdt
+                            .accessor_im()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("im1")?;
+                        let re2 = cdt
+                            .accessor_re()
+                            .apply(&[&args[1] as &dyn Ast])
+                            .as_real()
+                            .ok_or("re2")?;
+                        let im2 = cdt
+                            .accessor_im()
+                            .apply(&[&args[1] as &dyn Ast])
+                            .as_real()
+                            .ok_or("im2")?;
+
+                        let re_diff = Real::sub(&[&re1, &re2]);
+                        let im_diff = Real::sub(&[&im1, &im2]);
+                        return Ok(cdt
+                            .constructor()
+                            .apply(&[&re_diff as &dyn Ast, &im_diff as &dyn Ast]));
+                    }
                 }
                 let func_decl = self.declare_uninterpreted("complex_sub", 2);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
 
-            // Complex division: complex_div(z1, z2)
+            // Complex division: z1/z2 = z1 * (1/z2)
             "complex_div" => {
                 if args.len() != 2 {
                     return Err("complex_div requires 2 arguments".to_string());
+                }
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) && self.is_complex_sort(&args[1]) {
+                        let a = cdt
+                            .accessor_re()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("a")?;
+                        let b = cdt
+                            .accessor_im()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("b")?;
+                        let c = cdt
+                            .accessor_re()
+                            .apply(&[&args[1] as &dyn Ast])
+                            .as_real()
+                            .ok_or("c")?;
+                        let d = cdt
+                            .accessor_im()
+                            .apply(&[&args[1] as &dyn Ast])
+                            .as_real()
+                            .ok_or("d")?;
+
+                        // z1/z2 = (ac + bd)/(c² + d²) + i(bc - ad)/(c² + d²)
+                        let c_sq = Real::mul(&[&c, &c]);
+                        let d_sq = Real::mul(&[&d, &d]);
+                        let denom = Real::add(&[&c_sq, &d_sq]);
+
+                        let ac = Real::mul(&[&a, &c]);
+                        let bd = Real::mul(&[&b, &d]);
+                        let bc = Real::mul(&[&b, &c]);
+                        let ad = Real::mul(&[&a, &d]);
+
+                        let re_num = Real::add(&[&ac, &bd]);
+                        let im_num = Real::sub(&[&bc, &ad]);
+
+                        let re_result = re_num.div(&denom);
+                        let im_result = im_num.div(&denom);
+
+                        return Ok(cdt
+                            .constructor()
+                            .apply(&[&re_result as &dyn Ast, &im_result as &dyn Ast]));
+                    }
                 }
                 let func_decl = self.declare_uninterpreted("complex_div", 2);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
 
-            // Complex negation: neg_complex(z) = -z
+            // Complex negation: -z = (-re, -im)
             "neg_complex" => {
                 if args.len() != 1 {
                     return Err("neg_complex requires 1 argument".to_string());
+                }
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) {
+                        let re = cdt
+                            .accessor_re()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("re")?;
+                        let im = cdt
+                            .accessor_im()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("im")?;
+                        let neg_re = re.unary_minus();
+                        let neg_im = im.unary_minus();
+                        return Ok(cdt
+                            .constructor()
+                            .apply(&[&neg_re as &dyn Ast, &neg_im as &dyn Ast]));
+                    }
                 }
                 let func_decl = self.declare_uninterpreted("neg_complex", 1);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
 
-            // Complex magnitude squared: abs_squared(z) = |z|² = re² + im²
+            // Complex magnitude squared: |z|² = re² + im²
             "abs_squared" => {
                 if args.len() != 1 {
                     return Err("abs_squared requires 1 argument".to_string());
+                }
+                if let Some(ref cdt) = self.complex_datatype {
+                    if self.is_complex_sort(&args[0]) {
+                        let re = cdt
+                            .accessor_re()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("re")?;
+                        let im = cdt
+                            .accessor_im()
+                            .apply(&[&args[0] as &dyn Ast])
+                            .as_real()
+                            .ok_or("im")?;
+                        let re_sq = Real::mul(&[&re, &re]);
+                        let im_sq = Real::mul(&[&im, &im]);
+                        return Ok(Real::add(&[&re_sq, &im_sq]).into());
+                    }
                 }
                 let func_decl = self.declare_uninterpreted("abs_squared", 1);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
@@ -1439,6 +1745,63 @@ impl<'r> Z3Backend<'r> {
             loaded_structures: self.loaded_structures.len(),
             declared_operations: self.declared_ops.len(),
             assertion_count: 0, // TODO: Track assertions
+        }
+    }
+
+    // =========================================================================
+    // Complex Number Support (Hybrid Translation)
+    // =========================================================================
+
+    /// Initialize the complex constant 'i' = complex(0, 1)
+    /// NOTE: We don't put 'i' in identity_elements because it conflicts with
+    /// 'i' used as a loop variable in Sum/Product tests. Instead, we handle
+    /// 'i' specially in translate_object_i() below.
+    fn initialize_complex_i(&mut self) {
+        // Just log that complex numbers are initialized - 'i' is handled specially
+        println!("   📌 Loaded complex constant: i = complex(0, 1)");
+    }
+
+    /// Get the complex constant i = complex(0, 1)
+    fn get_complex_i(&self) -> Option<Dynamic> {
+        self.complex_datatype.as_ref().map(|cdt| {
+            let zero = Real::from_rational(0, 1);
+            let one = Real::from_rational(1, 1);
+            cdt.constructor()
+                .apply(&[&zero as &dyn Ast, &one as &dyn Ast])
+        })
+    }
+
+    /// Create a concrete complex number from two Real values
+    #[allow(dead_code)]
+    fn make_complex(&self, re: &Real, im: &Real) -> Option<Dynamic> {
+        self.complex_datatype
+            .as_ref()
+            .map(|cdt| cdt.constructor().apply(&[re as &dyn Ast, im as &dyn Ast]))
+    }
+
+    /// Extract real part from a complex Dynamic
+    #[allow(dead_code)]
+    fn extract_re(&self, z: &Dynamic) -> Option<Dynamic> {
+        self.complex_datatype
+            .as_ref()
+            .map(|cdt| cdt.accessor_re().apply(&[z as &dyn Ast]))
+    }
+
+    /// Extract imaginary part from a complex Dynamic
+    #[allow(dead_code)]
+    fn extract_im(&self, z: &Dynamic) -> Option<Dynamic> {
+        self.complex_datatype
+            .as_ref()
+            .map(|cdt| cdt.accessor_im().apply(&[z as &dyn Ast]))
+    }
+
+    /// Check if a Dynamic is of Complex sort
+    fn is_complex_sort(&self, d: &Dynamic) -> bool {
+        if let Some(ref cdt) = self.complex_datatype {
+            d.sort_kind() == z3::SortKind::Datatype
+                && d.get_sort().to_string() == cdt.sort.sort.to_string()
+        } else {
+            false
         }
     }
 
