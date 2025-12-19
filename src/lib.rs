@@ -8,6 +8,7 @@ pub mod evaluator; // Wire 3: Self-hosting
 pub mod kleis_ast;
 pub mod kleis_parser;
 pub mod kleist_parser; // .kleist template file parser
+pub mod lowering;
 pub mod math_layout;
 pub mod parser;
 pub mod pattern_matcher;
@@ -22,7 +23,7 @@ pub mod templates;
 pub mod type_checker;
 pub mod type_context;
 pub mod type_inference;
-pub mod typed_ast; // Typed AST for operator overloading (semantic lowering)
+pub mod typed_ast; // Typed AST for operator overloading (semantic lowering) // Semantic lowering pass (operator overloading)
 
 /// Convenience function: Parse LaTeX and render to Unicode
 pub fn latex_to_unicode(latex: &str) -> Result<String, parser::ParseError> {
