@@ -16,6 +16,7 @@ theories = [
     "equality",        # Equality reasoning
     "strings",         # String theory (QF_SLIA)
     "regex",           # Regular expressions
+    "rational",        # Rational numbers (ℚ) - Z3 Real is actually ℚ
     "complex",         # Complex numbers (encoded as Real pairs)
     "uninterpreted_functions"  # Abstract operations
 ]
@@ -120,6 +121,26 @@ complex_inverse = { arity = 1, theory = "Complex", native = true, description = 
 neg_complex = { arity = 1, theory = "Complex", native = true, description = "Negation: -z" }
 abs_squared = { arity = 1, theory = "Complex", native = true, description = "Magnitude squared: |z|² = re² + im²" }
 
+# Rational number operations (ℚ)
+# Z3's Real sort is actually ℚ (the rationals), so we use Real directly
+# This makes rational arithmetic exact (no floating-point issues)
+rational = { arity = 2, theory = "Rational", native = true, description = "Constructor: rational(p, q) = p/q" }
+numer = { arity = 1, theory = "Rational", native = false, description = "Numerator accessor (uninterpreted)" }
+denom = { arity = 1, theory = "Rational", native = false, description = "Denominator accessor (uninterpreted)" }
+rational_add = { arity = 2, theory = "Rational", native = true, description = "Rational addition" }
+rational_sub = { arity = 2, theory = "Rational", native = true, description = "Rational subtraction" }
+rational_mul = { arity = 2, theory = "Rational", native = true, description = "Rational multiplication" }
+rational_div = { arity = 2, theory = "Rational", native = true, description = "Rational division" }
+neg_rational = { arity = 1, theory = "Rational", native = true, description = "Negation: -r" }
+rational_inv = { arity = 1, theory = "Rational", native = true, description = "Reciprocal: 1/r" }
+rational_lt = { arity = 2, theory = "Rational", native = true, description = "Less than: r₁ < r₂" }
+rational_le = { arity = 2, theory = "Rational", native = true, description = "Less than or equal: r₁ ≤ r₂" }
+rational_gt = { arity = 2, theory = "Rational", native = true, description = "Greater than: r₁ > r₂" }
+rational_ge = { arity = 2, theory = "Rational", native = true, description = "Greater than or equal: r₁ ≥ r₂" }
+int_to_rational = { arity = 1, theory = "Rational", native = true, description = "Integer to rational: n → n/1" }
+nat_to_rational = { arity = 1, theory = "Rational", native = true, description = "Natural to rational: n → n/1" }
+to_real = { arity = 1, theory = "Rational", native = true, description = "Rational to real (identity in Z3)" }
+
 # Note: Z3 supports many more operations via its built-in theories,
 # but these are the ones explicitly translated in our current implementation.
 # Other operations (sin, cos, matrix_multiply, etc.) are treated as
@@ -134,6 +155,7 @@ simplification = false  # Z3 has simplify() but not always reliable
 proof_generation = false  # Available in Z3 but not exposed yet
 string_theory = true  # QF_SLIA: Quantifier-Free Strings and Linear Integer Arithmetic
 regex_support = true  # Regular expression constraints via str.in_re
+rational_numbers = true  # ℚ - Z3 Real sort is actually ℚ, exact arithmetic
 complex_numbers = true  # ℂ encoded as (Real, Real) pairs with algebraic axioms
 
 [capabilities.performance]
