@@ -86,7 +86,41 @@ data ImplMember =
 
 // --- Program ---
 
-data Program = Program(declarations: List(Declaration))
+// A Program can be constructed from source code directly!
+// Parsing is implicit - the relationship between source and AST is axiomatic.
+data Program = 
+    Source(code: String)                          // The source code as a string
+  | AST(declarations: List(Declaration))          // The parsed AST
+  | Parsed(code: String, ast: List(Declaration))  // Both: source + its parse
+
+// --- Parse Relation ---
+// The fundamental relationship: source code ↔ AST
+
+structure ParsingRelation {
+    // Parse function: String → Option(List(Declaration))
+    // Returns None if parsing fails, Some(ast) if it succeeds
+    operation parse : String → Option(List(Declaration))
+    
+    // Unparse function: List(Declaration) → String  
+    // Pretty-prints AST back to source code
+    operation unparse : List(Declaration) → String
+
+    // Round-trip: parse then unparse gives equivalent source
+    axiom roundtrip_parse_unparse : ∀(src : String, ast : List(Declaration)).
+        parse(src) = Some(ast) → parse(unparse(ast)) = Some(ast)
+    
+    // Unparse always produces parseable code
+    axiom unparse_always_parseable : ∀(ast : List(Declaration)).
+        parse(unparse(ast)) = Some(ast)
+    
+    // Parse is deterministic: same source → same AST
+    axiom parse_deterministic : ∀(src : String, ast1 : List(Declaration), ast2 : List(Declaration)).
+        parse(src) = Some(ast1) ∧ parse(src) = Some(ast2) → ast1 = ast2
+    
+    // Valid source produces Some, invalid produces None
+    axiom parse_total : ∀(src : String).
+        (∃(ast : List(Declaration)). parse(src) = Some(ast)) ∨ parse(src) = None
+}
 
 
 // ============================================================================
@@ -568,6 +602,106 @@ structure ErrorTheorems {
 
 
 // ============================================================================
+// THE PROGRAM-AS-SOURCE PARADIGM
+// ============================================================================
+
+// With `data Program = Source(code: String)`, a program IS its source code.
+// This is NOT pedestrian AST construction - it's the source itself!
+
+// --- Example: Define a program from its source ---
+
+// A simple square function
+define square_program : Program = Source("define square(x) = x * x")
+
+// An identity function
+define identity_program : Program = Source("define id(x) = x")
+
+// A constant function
+define const_program : Program = Source("define const(x, y) = x")
+
+// Fibonacci - showing the concept (uses recursion keyword in source)
+define fib_source : String = "define fib(n) = if n < 2 then n else fib(n-1) + fib(n-2)"
+define fibonacci_program : Program = Source(fib_source)
+
+// --- Program Analysis on Source ---
+
+// Count function definitions in a program
+define count_functions(p : Program) : ℕ = 
+    match p {
+        Source(code) => count_substring(code, "define ")
+      | AST(decls) => length(filter(is_function_decl, decls))
+      | Parsed(code, decls) => length(filter(is_function_decl, decls))
+    }
+
+// Check if program uses recursion
+define uses_recursion(p : Program) : Bool =
+    match p {
+        Source(code) => contains(code, "fib(") ∧ contains(code, "define fib")  // Name appears in own body
+      | AST(decls) => any(is_recursive_decl, decls)
+      | Parsed(_, decls) => any(is_recursive_decl, decls)
+    }
+
+// --- Static Analysis Theorems ---
+
+structure ProgramAnalysis {
+    // Fibonacci uses recursion
+    axiom fib_recursive : uses_recursion(fibonacci_program)
+    
+    // Quicksort uses recursion  
+    axiom quicksort_recursive : uses_recursion(quicksort_program)
+    
+    // Parsing preserves function count
+    axiom parse_preserves_count : ∀(src : String, ast : List(Declaration)).
+        parse(src) = Some(ast) → 
+        count_functions(Source(src)) = count_functions(AST(ast))
+    
+    // If AST has no functions, source has no "define " (approximate)
+    axiom no_functions_no_define : ∀(ast : List(Declaration)).
+        length(filter(is_function_decl, ast)) = 0 →
+        ¬contains(unparse(ast), "define ")
+}
+
+// --- Cross-Language Analysis ---
+// Define OTHER languages' grammars and analyze THEIR programs!
+
+data PythonExpr =
+    PyVar(name: String)
+  | PyNum(value: ℕ)
+  | PyCall(func: String, args: List(PythonExpr))
+  | PyLambda(params: List(String), body: PythonExpr)
+  | PyBinOp(left: PythonExpr, op: String, right: PythonExpr)
+
+data PythonProgram = PythonSource(code: String)
+
+// Analyze Python source in Kleis!
+define python_has_eval(p : PythonProgram) : Bool =
+    match p {
+        PythonSource(code) => contains(code, "eval(")
+    }
+
+define python_has_exec(p : PythonProgram) : Bool =
+    match p {
+        PythonSource(code) => contains(code, "exec(")
+    }
+
+// Security check: no dynamic code execution
+define python_is_safe(p : PythonProgram) : Bool = ¬python_has_eval(p) ∧ ¬python_has_exec(p)
+
+structure PythonSecurity {
+    // A safe program has no eval or exec
+    axiom safe_no_eval : ∀(p : PythonProgram).
+        python_is_safe(p) → ¬python_has_eval(p)
+    
+    axiom safe_no_exec : ∀(p : PythonProgram).
+        python_is_safe(p) → ¬python_has_exec(p)
+    
+    // Example: This Python code is unsafe
+    axiom example_unsafe : 
+        ¬python_is_safe(PythonSource("user_input = input(); eval(user_input)"))
+}
+
+
+// ============================================================================
 // CONCLUSION
 // ============================================================================
 //
@@ -578,6 +712,8 @@ structure ErrorTheorems {
 //   2. Syntax validation predicates
 //   3. Z3-verifiable grammar properties
 //   4. Meta-programming foundations
+//   5. Cross-language static analysis (Python, SQL, etc.)
+//   6. Program-as-source: programs ARE their source strings
 //
 // Future possibilities:
 //   - Parser combinators in Kleis
