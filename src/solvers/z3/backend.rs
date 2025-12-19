@@ -2288,8 +2288,7 @@ impl<'r> Z3Backend<'r> {
     /// 'i' used as a loop variable in Sum/Product tests. Instead, we handle
     /// 'i' specially in translate_object_i() below.
     fn initialize_complex_i(&mut self) {
-        // Just log that complex numbers are initialized - 'i' is handled specially
-        println!("   📌 Loaded complex constant: i = complex(0, 1)");
+        // Complex numbers initialized - 'i' is handled specially in translate_object_i()
     }
 
     /// Get the complex constant i = complex(0, 1)

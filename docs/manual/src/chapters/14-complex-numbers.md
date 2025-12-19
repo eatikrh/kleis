@@ -100,11 +100,13 @@ verify ∀(i : ℂ). complex_add(i, complex(0, 0)) = i
 📐 Type: Complex
 
 λ> :type λ x . x + i
-📐 Type: Complex  (uses global i)
+📐 Type: Complex
 
 λ> :type λ i . i + 1
-📐 Type: Scalar   (parameter shadows global i)
+📐 Type: Scalar
 ```
+
+Note: `λ x . x + i` uses global `i`, while `λ i . i + 1` has parameter `i` shadowing global.
 
 **Best practice:** Avoid using `i` as a variable name to prevent confusion with the imaginary unit. Use descriptive names like `idx`, `index`, or `iter` for loop-like variables.
 

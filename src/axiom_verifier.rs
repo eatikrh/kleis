@@ -478,11 +478,9 @@ impl<'r> AxiomVerifier<'r> {
     fn verify_axiom_impl(&mut self, expr: &Expression) -> Result<VerificationResult, String> {
         // Step 1: Analyze dependencies
         let dependencies = self.analyze_dependencies(expr);
-        eprintln!("DEBUG: Found dependencies: {:?}", dependencies);
 
         // Step 2: Ensure all required axioms are loaded
         for structure in &dependencies {
-            eprintln!("DEBUG: Loading structure: {}", structure);
             self.ensure_structure_loaded(structure)?;
         }
 
@@ -496,15 +494,8 @@ impl<'r> AxiomVerifier<'r> {
             .map(|s| (*s).clone())
             .collect();
 
-        eprintln!(
-            "DEBUG: Found {} structures with axioms: {:?}",
-            all_structures.len(),
-            all_structures
-        );
-
         for structure in &all_structures {
             if !self.loaded_structures.contains(structure) {
-                eprintln!("DEBUG: Auto-loading structure with axioms: {}", structure);
                 // Continue even if one structure fails to load
                 // This allows complex axioms to work even if Field fails
                 if let Err(e) = self.ensure_structure_loaded(structure) {
