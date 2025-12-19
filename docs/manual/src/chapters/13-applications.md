@@ -186,6 +186,66 @@ structure LQGController(n: Nat, m: Nat, p: Nat) {
 }
 ```
 
+## Dimensional Analysis (Physical Units)
+
+Prevent unit mismatch bugs at compile time - like the Mars Climate Orbiter disaster ($327M lost due to imperial/metric confusion):
+
+```kleis
+// Physical dimensions as exponent tuples [Length, Mass, Time]
+structure Dimension(L : ℤ, M : ℤ, T : ℤ) {
+    axiom equal : ∀(d1 d2 : Dimension). 
+        d1 = d2 ↔ (L(d1) = L(d2) ∧ M(d1) = M(d2) ∧ T(d1) = T(d2))
+}
+
+// Named dimensions
+define Length = Dimension(1, 0, 0)
+define Mass = Dimension(0, 1, 0)
+define Time = Dimension(0, 0, 1)
+define Velocity = Dimension(1, 0, -1)      // L·T⁻¹
+define Force = Dimension(1, 1, -2)         // M·L·T⁻²
+define Energy = Dimension(2, 1, -2)        // M·L²·T⁻²
+
+// Physical quantity = value + dimension
+structure Quantity(value : ℝ, dim : Dimension) {
+    // Addition: dimensions must match
+    axiom add_same_dim : ∀(q1 q2 : Quantity)(d : Dimension).
+        dim(q1) = d ∧ dim(q2) = d → dim(q1 + q2) = d
+    
+    // Multiplication: dimensions compose
+    axiom mul_composes : ∀(q1 q2 : Quantity).
+        dim(q1 * q2) = Dimension(
+            L(dim(q1)) + L(dim(q2)), 
+            M(dim(q1)) + M(dim(q2)), 
+            T(dim(q1)) + T(dim(q2)))
+}
+
+// Unit constructors
+define meter(x : ℝ) = Quantity(x, Length)
+define kilogram(x : ℝ) = Quantity(x, Mass)
+define second(x : ℝ) = Quantity(x, Time)
+define newton(x : ℝ) = Quantity(x, Force)
+
+// Physics axioms verify dimensional consistency
+structure Mechanics {
+    // F = ma: [M·L·T⁻²] = [M] × [L·T⁻²] ✓
+    axiom newton_second_law : ∀(m : Quantity)(a : Quantity).
+        dim(m) = Mass ∧ dim(a) = Dimension(1, 0, -2) →
+        dim(m * a) = Force
+    
+    // E = ½mv²: [M·L²·T⁻²] = [M] × [L·T⁻¹]² ✓
+    axiom kinetic_energy : ∀(m : Quantity)(v : Quantity).
+        dim(m) = Mass ∧ dim(v) = Velocity →
+        dim(m * v * v) = Energy
+}
+```
+
+**Type-safe physics:**
+- `meter(100) + meter(50)` → `Quantity(150, Length)` ✓
+- `meter(100) / second(10)` → `Quantity(10, Velocity)` ✓
+- `meter(100) + second(10)` → ❌ Type error: `Length ≠ Time`
+
+See `examples/physics/dimensional_analysis.kleis` for the full example.
+
 ## Differential Geometry
 
 Kleis excels at differential geometry calculations:

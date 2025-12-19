@@ -1,0 +1,203 @@
+// ============================================================================
+// DIMENSIONAL ANALYSIS - Type-Safe Physical Units
+// ============================================================================
+//
+// Kleis can verify dimensional consistency at compile time.
+// This prevents "Mars Climate Orbiter" type bugs where unit
+// mismatches cause catastrophic failures.
+//
+// See: ADR-019 Dimensional Type Checking
+// ============================================================================
+
+// ============================================================================
+// PART 1: SI Base Dimensions
+// ============================================================================
+//
+// Physical dimensions are represented as exponent tuples:
+//   [Length, Mass, Time, Current, Temperature, Amount, Luminosity]
+//
+// Examples:
+//   Length     = [1, 0, 0, 0, 0, 0, 0]
+//   Velocity   = [1, 0, -1, 0, 0, 0, 0]  (Length / Time)
+//   Force      = [1, 1, -2, 0, 0, 0, 0]  (Mass × Length / Time²)
+
+// For simplicity, we use [L, M, T] (mechanical dimensions only)
+structure Dimension(L : ℤ, M : ℤ, T : ℤ) {
+    // Dimensional equality
+    axiom equal : ∀(d1 d2 : Dimension). 
+        d1 = d2 ↔ (L(d1) = L(d2) ∧ M(d1) = M(d2) ∧ T(d1) = T(d2))
+}
+
+// ============================================================================
+// PART 2: Physical Quantity = Value + Dimension
+// ============================================================================
+
+structure Quantity(value : ℝ, dim : Dimension) {
+    // Can only add quantities with SAME dimension
+    axiom add_same_dim : ∀(q1 q2 : Quantity)(d : Dimension).
+        dim(q1) = d ∧ dim(q2) = d → 
+        dim(q1 + q2) = d
+    
+    // Multiplication COMPOSES dimensions
+    axiom mul_composes : ∀(q1 q2 : Quantity).
+        let d1 = dim(q1) in
+        let d2 = dim(q2) in
+        dim(q1 * q2) = Dimension(L(d1) + L(d2), M(d1) + M(d2), T(d1) + T(d2))
+    
+    // Division INVERTS dimensions
+    axiom div_inverts : ∀(q1 q2 : Quantity).
+        let d1 = dim(q1) in
+        let d2 = dim(q2) in
+        dim(q1 / q2) = Dimension(L(d1) - L(d2), M(d1) - M(d2), T(d1) - T(d2))
+}
+
+// ============================================================================
+// PART 3: Named Dimensions (SI Units)
+// ============================================================================
+
+// Base dimensions
+define Dimensionless = Dimension(0, 0, 0)
+define Length = Dimension(1, 0, 0)
+define Mass = Dimension(0, 1, 0)
+define Time = Dimension(0, 0, 1)
+
+// Derived dimensions
+define Area = Dimension(2, 0, 0)           // L²
+define Volume = Dimension(3, 0, 0)         // L³
+define Velocity = Dimension(1, 0, -1)      // L·T⁻¹
+define Acceleration = Dimension(1, 0, -2)  // L·T⁻²
+define Force = Dimension(1, 1, -2)         // M·L·T⁻² (Newton)
+define Energy = Dimension(2, 1, -2)        // M·L²·T⁻² (Joule)
+define Power = Dimension(2, 1, -3)         // M·L²·T⁻³ (Watt)
+define Pressure = Dimension(-1, 1, -2)     // M·L⁻¹·T⁻² (Pascal)
+define Momentum = Dimension(1, 1, -1)      // M·L·T⁻¹
+
+// ============================================================================
+// PART 4: Unit Constructors
+// ============================================================================
+
+// Length units
+define meter(x : ℝ) = Quantity(x, Length)
+define kilometer(x : ℝ) = Quantity(x * 1000, Length)
+define centimeter(x : ℝ) = Quantity(x / 100, Length)
+
+// Mass units
+define kilogram(x : ℝ) = Quantity(x, Mass)
+define gram(x : ℝ) = Quantity(x / 1000, Mass)
+
+// Time units
+define second(x : ℝ) = Quantity(x, Time)
+define minute(x : ℝ) = Quantity(x * 60, Time)
+define hour(x : ℝ) = Quantity(x * 3600, Time)
+
+// Derived unit constructors
+define newton(x : ℝ) = Quantity(x, Force)
+define joule(x : ℝ) = Quantity(x, Energy)
+define watt(x : ℝ) = Quantity(x, Power)
+
+// ============================================================================
+// PART 5: Physical Laws as Axioms
+// ============================================================================
+
+structure Mechanics {
+    // Newton's Second Law: F = ma
+    // Force has dimension [M·L·T⁻²]
+    // Mass × Acceleration = [M] × [L·T⁻²] = [M·L·T⁻²] ✓
+    axiom newton_second_law : ∀(m : Quantity)(a : Quantity).
+        dim(m) = Mass ∧ dim(a) = Acceleration →
+        dim(m * a) = Force
+    
+    // Kinetic Energy: E = ½mv²
+    // Mass × Velocity² = [M] × [L²·T⁻²] = [M·L²·T⁻²] = Energy ✓
+    axiom kinetic_energy : ∀(m : Quantity)(v : Quantity).
+        dim(m) = Mass ∧ dim(v) = Velocity →
+        dim(m * v * v) = Energy
+    
+    // Work: W = F·d
+    // Force × Distance = [M·L·T⁻²] × [L] = [M·L²·T⁻²] = Energy ✓
+    axiom work_energy : ∀(F : Quantity)(d : Quantity).
+        dim(F) = Force ∧ dim(d) = Length →
+        dim(F * d) = Energy
+    
+    // Power: P = W/t
+    // Energy / Time = [M·L²·T⁻²] / [T] = [M·L²·T⁻³] = Power ✓
+    axiom power_definition : ∀(W : Quantity)(t : Quantity).
+        dim(W) = Energy ∧ dim(t) = Time →
+        dim(W / t) = Power
+}
+
+// ============================================================================
+// PART 6: Example Calculations
+// ============================================================================
+
+// Calculate velocity: v = d/t
+define calculate_velocity(d, t) = d / t
+
+// Calculate force: F = ma
+define calculate_force(m, a) = m * a
+
+// Calculate kinetic energy: E = ½mv²
+define calculate_kinetic_energy(m, v) = (1/2) * m * v * v
+
+// Calculate work: W = Fd
+define calculate_work(F, d) = F * d
+
+// ============================================================================
+// PART 7: Dimension Checking Examples
+// ============================================================================
+//
+// VALID operations (dimensions match):
+//   meter(100) + meter(50)           → Quantity(150, Length) ✓
+//   meter(100) / second(10)          → Quantity(10, Velocity) ✓
+//   kilogram(5) * (meter(10) / second(1)^2) → Quantity(50, Force) ✓
+//
+// INVALID operations (dimension mismatch):
+//   meter(100) + second(10)          → ❌ Type error: Length ≠ Time
+//   newton(50) + meter(10)           → ❌ Type error: Force ≠ Length
+//   kilogram(5) + joule(100)         → ❌ Type error: Mass ≠ Energy
+
+// ============================================================================
+// PART 8: Verification Properties
+// ============================================================================
+
+structure DimensionalVerification {
+    // Velocity has correct dimension
+    axiom velocity_dimension : ∀(d : Quantity)(t : Quantity).
+        dim(d) = Length ∧ dim(t) = Time →
+        dim(d / t) = Velocity
+    
+    // Acceleration has correct dimension
+    axiom acceleration_dimension : ∀(v : Quantity)(t : Quantity).
+        dim(v) = Velocity ∧ dim(t) = Time →
+        dim(v / t) = Acceleration
+    
+    // Dimensional consistency of physics equations
+    axiom einstein_e_mc2 : ∀(m : Quantity)(c : Quantity).
+        dim(m) = Mass ∧ dim(c) = Velocity →
+        dim(m * c * c) = Energy
+}
+
+// ============================================================================
+// USAGE EXAMPLES (run in REPL)
+// ============================================================================
+//
+// :load examples/physics/dimensional_analysis.kleis
+//
+// // Create quantities
+// let distance = meter(100)
+// let time = second(10)
+// let velocity = distance / time
+// :type velocity  → Quantity(10, Velocity)
+//
+// // Valid addition
+// let total_distance = meter(100) + meter(50)
+// :type total_distance  → Quantity(150, Length)
+//
+// // Physics calculation
+// let mass = kilogram(2)
+// let speed = meter(10) / second(1)
+// let KE = (1/2) * mass * speed * speed
+// :type KE  → Quantity(100, Energy)
+//
+// ============================================================================
+
