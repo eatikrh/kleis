@@ -1,0 +1,146 @@
+// ============================================
+// Bourbaki Volume I: Theory of Sets
+// Éléments de mathématique
+// ============================================
+//
+// This file formalizes the foundational set theory
+// from Bourbaki's first volume.
+
+// --------------------------------------------
+// Chapter 1: Description of Formal Mathematics
+// --------------------------------------------
+
+// Basic set operations
+structure SetTheory(T) {
+    operation in_set : T × Set(T) → Bool
+    operation subset : Set(T) × Set(T) → Bool
+    operation union : Set(T) × Set(T) → Set(T)
+    operation intersect : Set(T) × Set(T) → Set(T)
+    operation complement : Set(T) → Set(T)
+    operation power_set : Set(T) → Set(Set(T))
+    element empty_set : Set(T)
+    
+    // Extensionality Axiom
+    axiom extensionality: ∀(A B : Set(T)). 
+        (∀(x : T). in_set(x, A) ↔ in_set(x, B)) → A = B
+    
+    // Empty Set
+    axiom empty_set_def: ∀(x : T). ¬in_set(x, empty_set)
+    
+    // Subset Definition
+    axiom subset_def: ∀(A B : Set(T)). 
+        subset(A, B) ↔ (∀(x : T). in_set(x, A) → in_set(x, B))
+    
+    // Union Definition
+    axiom union_def: ∀(A B : Set(T), x : T). 
+        in_set(x, union(A, B)) ↔ (in_set(x, A) ∨ in_set(x, B))
+    
+    // Intersection Definition
+    axiom intersect_def: ∀(A B : Set(T), x : T). 
+        in_set(x, intersect(A, B)) ↔ (in_set(x, A) ∧ in_set(x, B))
+    
+    // Complement Definition
+    axiom complement_def: ∀(A : Set(T), x : T). 
+        in_set(x, complement(A)) ↔ ¬in_set(x, A)
+    
+    // Power Set Definition
+    axiom power_set_def: ∀(S A : Set(T)). 
+        in_set(A, power_set(S)) ↔ subset(A, S)
+}
+
+// --------------------------------------------
+// Chapter 2: Theory of Sets
+// --------------------------------------------
+
+// Ordered Pairs and Cartesian Products
+structure OrderedPairs(A, B) {
+    operation pair : A × B → Pair(A, B)
+    operation fst : Pair(A, B) → A
+    operation snd : Pair(A, B) → B
+    
+    axiom pair_eq: ∀(a1 a2 : A, b1 b2 : B). 
+        pair(a1, b1) = pair(a2, b2) ↔ (a1 = a2 ∧ b1 = b2)
+    
+    axiom fst_pair: ∀(a : A, b : B). fst(pair(a, b)) = a
+    axiom snd_pair: ∀(a : A, b : B). snd(pair(a, b)) = b
+}
+
+// Relations
+structure Relation(A, B) {
+    element R : Set(Pair(A, B))
+    
+    operation domain : Set(A)
+    operation codomain : Set(B)
+    operation image : A → Set(B)
+    operation preimage : B → Set(A)
+    
+    axiom related: ∀(a : A, b : B). 
+        in_set(pair(a, b), R) ↔ relates(a, b)
+}
+
+// Equivalence Relations
+structure Equivalence(A) {
+    operation equiv : A × A → Bool
+    
+    axiom reflexive: ∀(x : A). equiv(x, x)
+    axiom symmetric: ∀(x y : A). equiv(x, y) → equiv(y, x)
+    axiom transitive: ∀(x y z : A). equiv(x, y) ∧ equiv(y, z) → equiv(x, z)
+}
+
+// --------------------------------------------
+// Chapter 3: Ordered Sets, Cardinals, Integers
+// --------------------------------------------
+
+// Partial Orders
+structure PartialOrder(P) {
+    operation le : P × P → Bool
+    
+    axiom reflexive: ∀(x : P). le(x, x)
+    axiom antisymmetric: ∀(x y : P). le(x, y) ∧ le(y, x) → x = y
+    axiom transitive: ∀(x y z : P). le(x, y) ∧ le(y, z) → le(x, z)
+}
+
+// Total Orders
+structure TotalOrder(T) extends PartialOrder(T) {
+    axiom total: ∀(x y : T). le(x, y) ∨ le(y, x)
+}
+
+// Well-Orders
+structure WellOrder(W) extends TotalOrder(W) {
+    axiom well_founded: ∀(S : Set(W)). 
+        ¬(S = empty_set) → (∃(m : W). in_set(m, S) ∧ (∀(x : W). in_set(x, S) → le(m, x)))
+}
+
+// Cardinals
+structure Cardinal {
+    operation card : Set(T) → Cardinal
+    operation le_card : Cardinal × Cardinal → Bool
+    
+    axiom equipotent: ∀(A B : Set(T)). 
+        card(A) = card(B) ↔ (∃(f : A → B). bijective(f))
+}
+
+// Natural Numbers (Peano)
+structure NaturalNumbers {
+    element zero : ℕ
+    operation succ : ℕ → ℕ
+    
+    axiom zero_not_succ: ∀(n : ℕ). succ(n) ≠ zero
+    axiom succ_injective: ∀(m n : ℕ). succ(m) = succ(n) → m = n
+    
+    // Induction (expressed as axiom schema)
+    axiom induction: ∀(P : ℕ → Bool). 
+        P(zero) ∧ (∀(n : ℕ). P(n) → P(succ(n))) → (∀(n : ℕ). P(n))
+}
+
+// Integers
+structure Integers extends NaturalNumbers {
+    operation neg : ℤ → ℤ
+    operation add : ℤ × ℤ → ℤ
+    operation sub : ℤ × ℤ → ℤ
+    operation mul : ℤ × ℤ → ℤ
+    
+    axiom add_inverse: ∀(n : ℤ). add(n, neg(n)) = zero
+    axiom sub_def: ∀(a b : ℤ). sub(a, b) = add(a, neg(b))
+}
+

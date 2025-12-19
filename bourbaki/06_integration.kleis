@@ -1,0 +1,147 @@
+// ============================================
+// Bourbaki Volume VI: Integration
+// Éléments de mathématique
+// ============================================
+//
+// This file formalizes measure theory and integration
+// from Bourbaki's sixth volume.
+
+// --------------------------------------------
+// Chapter 1: Measures on Locally Compact Spaces
+// --------------------------------------------
+
+structure MeasureSpace(X) {
+    element sigma_algebra : Set(Set(X))
+    operation measure : Set(X) → ℝ
+    
+    axiom sigma_empty: in_set(empty_set, sigma_algebra)
+    axiom sigma_complement: ∀(A : Set(X)). in_set(A, sigma_algebra) → in_set(complement(A), sigma_algebra)
+    
+    axiom measure_empty: measure(empty_set) = 0
+    axiom measure_non_negative: ∀(A : Set(X)). measure(A) >= 0
+}
+
+structure PositiveMeasure(X) {
+    operation measure : Set(X) → ℝ
+    
+    axiom positive: ∀(A : Set(X)). measure(A) >= 0
+}
+
+structure FiniteMeasure(X) {
+    operation measure : Set(X) → ℝ
+    element total : ℝ
+    
+    axiom finite: measure(X) = total ∧ total < infinity
+}
+
+structure ProbabilityMeasure(X) {
+    operation measure : Set(X) → ℝ
+    
+    axiom total_mass: measure(X) = 1
+    axiom non_negative: ∀(A : Set(X)). measure(A) >= 0
+}
+
+// --------------------------------------------
+// Chapter 2: Lebesgue Measure
+// --------------------------------------------
+
+structure LebesgueMeasure {
+    operation measure : Set(ℝ) → ℝ
+    
+    axiom translation_invariant: ∀(A : Set(ℝ), t : ℝ). 
+        measure(translate(A, t)) = measure(A)
+    
+    axiom interval_measure: ∀(a b : ℝ). a <= b → 
+        measure(closed_interval(a, b)) = sub(b, a)
+}
+
+// --------------------------------------------
+// Chapter 3: Integration of Measurable Functions
+// --------------------------------------------
+
+structure MeasurableFunction(X, Y) {
+    operation f : X → Y
+    
+    axiom measurable: ∀(B : Set(Y)). 
+        in_set(B, sigma_algebra_Y) → in_set(preimage(f, B), sigma_algebra_X)
+}
+
+structure LebesgueIntegral(X) {
+    operation integral : (X → ℝ) × Set(X) → ℝ
+    
+    // Linearity
+    axiom linearity: ∀(f g : X → ℝ, a b : ℝ, A : Set(X)). 
+        integral(add(scalar(a, f), scalar(b, g)), A) = 
+        add(mul(a, integral(f, A)), mul(b, integral(g, A)))
+    
+    // Monotonicity
+    axiom monotone: ∀(f g : X → ℝ, A : Set(X)). 
+        (∀(x : X). f(x) <= g(x)) → integral(f, A) <= integral(g, A)
+    
+    // Monotone Convergence Theorem
+    axiom monotone_convergence: ∀(seq : Seq, A : Set(X)). 
+        is_increasing_seq(seq) → 
+        integral(pointwise_limit(seq), A) = lim_integral(seq, A)
+}
+
+// --------------------------------------------
+// Chapter 4: Lp Spaces
+// --------------------------------------------
+
+structure LpSpace(X, p) {
+    operation norm_p : (X → ℝ) → ℝ
+    
+    axiom lp_norm: ∀(f : X → ℝ). 
+        norm_p(f) = power(integral(power(abs_fn(f), p), X), div(1, p))
+    
+    // Minkowski inequality
+    axiom minkowski: ∀(f g : X → ℝ). 
+        norm_p(add_fn(f, g)) <= add(norm_p(f), norm_p(g))
+    
+    // Completeness
+    axiom complete: ∀(seq : ℕ → Lp). 
+        is_cauchy_lp(seq) → (∃(f : Lp). converges_lp(seq, f))
+}
+
+// L² is a Hilbert space
+structure L2Space(X) {
+    operation inner : L2 × L2 → ℂ
+    
+    axiom inner_product: ∀(f g : L2). 
+        inner(f, g) = integral(mul_fn(f, conj_fn(g)), X)
+}
+
+// --------------------------------------------
+// Chapter 5: Product Measures
+// --------------------------------------------
+
+structure ProductMeasure(X, Y) {
+    element product_measure : Type
+    
+    axiom product_measure_rectangle: ∀(A : Set(X), B : Set(Y)). 
+        measure_product(cartesian(A, B)) = mul(measure_X(A), measure_Y(B))
+    
+    // Fubini's Theorem
+    axiom fubini: ∀(f : Pair(X, Y) → ℝ). 
+        is_integrable(f, product_measure) → 
+        integral(f, product) = integral(λ x . integral(λ y . f(pair(x, y)), Y), X)
+}
+
+// --------------------------------------------
+// Chapter 6: Radon-Nikodym Theorem
+// --------------------------------------------
+
+structure RadonNikodym {
+    axiom radon_nikodym: ∀(mu nu : Type). 
+        is_sigma_finite(mu) ∧ is_absolutely_continuous(nu, mu) → 
+        (∃(f : X → ℝ). is_non_negative(f) ∧ is_measurable(f) ∧ 
+            (∀(A : Set(X)). nu_measure(A) = integral(f, A)))
+    
+    // Lebesgue decomposition
+    axiom lebesgue_decomposition: ∀(mu nu : Type). 
+        is_sigma_finite(mu) ∧ is_sigma_finite(nu) → 
+        (∃(nu_ac nu_s : Type). 
+            nu = add_measure(nu_ac, nu_s) ∧ 
+            is_absolutely_continuous(nu_ac, mu) ∧ 
+            is_mutually_singular(nu_s, mu))
+}
