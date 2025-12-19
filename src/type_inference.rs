@@ -1175,7 +1175,11 @@ impl TypeInference {
 
         // OPERATOR OVERLOADING: Complex binary operations
         // complex_add, complex_sub, complex_mul, complex_div return Complex
-        if matches!(name, "complex_add" | "complex_sub" | "complex_mul" | "complex_div") && args.len() == 2 {
+        if matches!(
+            name,
+            "complex_add" | "complex_sub" | "complex_mul" | "complex_div"
+        ) && args.len() == 2
+        {
             return Ok(Type::Data {
                 type_name: "Type".to_string(),
                 constructor: "Complex".to_string(),
@@ -1191,13 +1195,19 @@ impl TypeInference {
         // OPERATOR OVERLOADING: Arithmetic operations with type propagation
         // If any argument is Complex, the result is Complex
         // This enables lowering without requiring full stdlib registry
-        if matches!(name, "plus" | "minus" | "times" | "divide" | "scalar_divide") && args.len() == 2 {
+        if matches!(
+            name,
+            "plus" | "minus" | "times" | "divide" | "scalar_divide"
+        ) && args.len() == 2
+        {
             let t1 = self.infer(&args[0], context_builder)?;
             let t2 = self.infer(&args[1], context_builder)?;
 
             // If either operand is Complex, result is Complex
-            let is_complex_1 = matches!(&t1, Type::Data { constructor, .. } if constructor == "Complex");
-            let is_complex_2 = matches!(&t2, Type::Data { constructor, .. } if constructor == "Complex");
+            let is_complex_1 =
+                matches!(&t1, Type::Data { constructor, .. } if constructor == "Complex");
+            let is_complex_2 =
+                matches!(&t2, Type::Data { constructor, .. } if constructor == "Complex");
 
             if is_complex_1 || is_complex_2 {
                 return Ok(Type::Data {
@@ -1218,7 +1228,17 @@ impl TypeInference {
 
         // OPERATOR OVERLOADING: Comparison operations
         // These return Bool, but we need to type-check operands
-        if matches!(name, "equals" | "not_equals" | "neq" | "less_than" | "greater_than" | "less_equal" | "greater_equal") && args.len() == 2 {
+        if matches!(
+            name,
+            "equals"
+                | "not_equals"
+                | "neq"
+                | "less_than"
+                | "greater_than"
+                | "less_equal"
+                | "greater_equal"
+        ) && args.len() == 2
+        {
             // Type check both sides (this enables lowering of complex operands)
             let _t1 = self.infer(&args[0], context_builder)?;
             let _t2 = self.infer(&args[1], context_builder)?;

@@ -40,7 +40,10 @@ fn test_complex_addition_lowered_to_complex_add() {
     let lowered = parse_infer_lower("complex(1, 2) + complex(3, 4)");
     match lowered {
         kleis::ast::Expression::Operation { name, args } => {
-            assert_eq!(name, "complex_add", "plus(ℂ, ℂ) should lower to complex_add");
+            assert_eq!(
+                name, "complex_add",
+                "plus(ℂ, ℂ) should lower to complex_add"
+            );
             assert_eq!(args.len(), 2);
         }
         _ => panic!("Expected Operation, got {:?}", lowered),
@@ -52,7 +55,10 @@ fn test_complex_multiplication_lowered_to_complex_mul() {
     let lowered = parse_infer_lower("complex(1, 2) * complex(3, 4)");
     match lowered {
         kleis::ast::Expression::Operation { name, args } => {
-            assert_eq!(name, "complex_mul", "times(ℂ, ℂ) should lower to complex_mul");
+            assert_eq!(
+                name, "complex_mul",
+                "times(ℂ, ℂ) should lower to complex_mul"
+            );
             assert_eq!(args.len(), 2);
         }
         _ => panic!("Expected Operation, got {:?}", lowered),
@@ -64,10 +70,16 @@ fn test_real_plus_complex_lifts_real() {
     let lowered = parse_infer_lower("5 + complex(1, 2)");
     match lowered {
         kleis::ast::Expression::Operation { name, args } => {
-            assert_eq!(name, "complex_add", "plus(ℝ, ℂ) should lower to complex_add");
+            assert_eq!(
+                name, "complex_add",
+                "plus(ℝ, ℂ) should lower to complex_add"
+            );
             // First arg should be complex(5, 0) - lifted real
             match &args[0] {
-                kleis::ast::Expression::Operation { name: inner_name, args: inner_args } => {
+                kleis::ast::Expression::Operation {
+                    name: inner_name,
+                    args: inner_args,
+                } => {
                     assert_eq!(inner_name, "complex");
                     assert_eq!(inner_args.len(), 2);
                 }
@@ -165,14 +177,16 @@ fn test_quantified_i_real_shadows_imaginary() {
     let input = "∀(i : ℝ). i + 1 = 1 + i";
     let mut parser = KleisParser::new(input);
     let expr = parser.parse_proposition().unwrap();
-    
+
     let type_context_builder = TypeContextBuilder::new();
     let mut inference = TypeInference::new();
-    let typed = inference.infer_typed(&expr, Some(&type_context_builder)).unwrap();
-    
+    let typed = inference
+        .infer_typed(&expr, Some(&type_context_builder))
+        .unwrap();
+
     let lowering = SemanticLowering::new();
     let lowered = lowering.lower(&typed);
-    
+
     // Check that the body uses 'plus', not 'complex_add'
     match lowered {
         kleis::ast::Expression::Quantifier { body, .. } => {
@@ -182,7 +196,10 @@ fn test_quantified_i_real_shadows_imaginary() {
                     // Check the LHS: i + 1
                     match &args[0] {
                         kleis::ast::Expression::Operation { name: op_name, .. } => {
-                            assert_eq!(op_name, "plus", "Should be 'plus' not 'complex_add' when i : ℝ");
+                            assert_eq!(
+                                op_name, "plus",
+                                "Should be 'plus' not 'complex_add' when i : ℝ"
+                            );
                         }
                         _ => panic!("Expected Operation for LHS"),
                     }
@@ -201,14 +218,16 @@ fn test_quantified_i_complex_uses_complex_ops() {
     let input = "∀(i : ℂ). i + complex(0, 0) = i";
     let mut parser = KleisParser::new(input);
     let expr = parser.parse_proposition().unwrap();
-    
+
     let type_context_builder = TypeContextBuilder::new();
     let mut inference = TypeInference::new();
-    let typed = inference.infer_typed(&expr, Some(&type_context_builder)).unwrap();
-    
+    let typed = inference
+        .infer_typed(&expr, Some(&type_context_builder))
+        .unwrap();
+
     let lowering = SemanticLowering::new();
     let lowered = lowering.lower(&typed);
-    
+
     // Check that the body uses 'complex_add'
     match lowered {
         kleis::ast::Expression::Quantifier { body, .. } => {
@@ -218,7 +237,10 @@ fn test_quantified_i_complex_uses_complex_ops() {
                     // Check the LHS: i + complex(0, 0)
                     match &args[0] {
                         kleis::ast::Expression::Operation { name: op_name, .. } => {
-                            assert_eq!(op_name, "complex_add", "Should be 'complex_add' when i : ℂ");
+                            assert_eq!(
+                                op_name, "complex_add",
+                                "Should be 'complex_add' when i : ℂ"
+                            );
                         }
                         _ => panic!("Expected Operation for LHS"),
                     }
@@ -279,7 +301,9 @@ fn test_nested_complex_expression() {
             assert_eq!(name, "complex_mul");
             // First arg should be complex_add
             match &args[0] {
-                kleis::ast::Expression::Operation { name: inner_name, .. } => {
+                kleis::ast::Expression::Operation {
+                    name: inner_name, ..
+                } => {
                     assert_eq!(inner_name, "complex_add");
                 }
                 _ => panic!("Expected inner complex_add"),
@@ -299,4 +323,3 @@ fn test_complex_negation() {
         _ => panic!("Expected Operation, got {:?}", lowered),
     }
 }
-

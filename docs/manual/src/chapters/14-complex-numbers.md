@@ -76,51 +76,44 @@ The imaginary unit `i` is a global constant. However, it can be shadowed by:
 | `∀(i : ℕ). i + 0` | Nat | Quantifier `i : ℕ` shadows global |
 | `λ i . i + 1` | Scalar | Lambda param shadows global |
 
-**Try these in the REPL:**
+**Scoping examples:**
 
 ```kleis
-// Type inference for global i
-:type i
-// 📐 Type: Complex
+// Quantified variable i : ℝ shadows the global imaginary unit
+// Here i is a real number, so i + 1 uses regular addition
+verify ∀(i : ℝ). i + 1 = 1 + i
 
-:type i + 1
-// 📐 Type: Complex
+// Quantified variable i : ℕ is a natural number
+verify ∀(i : ℕ). i + 0 = i
 
-:type i * i
-// 📐 Type: Complex
+// Quantified variable i : ℂ is explicitly complex
+verify ∀(i : ℂ). complex_add(i, complex(0, 0)) = i
+```
 
-// Lambda with global i
-:type λ x . x + i
-// 📐 Type: Complex
+**In the REPL, you can also check types:**
 
-// Quantified i shadows global
-:type ∀(i : ℝ). i + 1
-// Body uses Scalar i, not Complex
+```
+λ> :type i
+📐 Type: Complex
 
-:verify ∀(i : ℝ). i + 1 = 1 + i
-// ✅ Valid (i is Real, uses regular plus)
+λ> :type i + 1  
+📐 Type: Complex
 
-:verify ∀(i : ℕ). i + 0 = i
-// ✅ Valid (i is Nat)
+λ> :type λ x . x + i
+📐 Type: Complex  (uses global i)
 
-// Lambda parameter shadows global
-:type λ i . i + 1
-// 📐 Type: Scalar (parameter shadows global i)
-
-:type λ i . i * i
-// 📐 Type: Scalar (parameter shadows global i)
+λ> :type λ i . i + 1
+📐 Type: Scalar   (parameter shadows global i)
 ```
 
 **Best practice:** Avoid using `i` as a variable name to prevent confusion with the imaginary unit. Use descriptive names like `idx`, `index`, or `iter` for loop-like variables.
 
 ```kleis
 // Clear: using i as imaginary unit
-:verify ∀(z : ℂ). z * i = complex(neg(im(z)), re(z))
-// ✅ Valid
+verify ∀(z : ℂ). complex_mul(z, i) = complex(neg(im(z)), re(z))
 
 // Clear: using idx as index variable  
-:verify ∀(idx : ℕ). idx + 0 = idx
-// ✅ Valid
+verify ∀(idx : ℕ). idx + 0 = idx
 ```
 
 ## Creating Complex Numbers

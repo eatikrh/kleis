@@ -1079,14 +1079,10 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
                 let mut inference = TypeInference::new();
                 match inference.infer_typed(&expanded, Some(&type_context_builder)) {
                     Ok(typed) => {
-                        eprintln!("DEBUG: Typed root: {:?}", typed.ty);
                         let lowering = SemanticLowering::new();
-                        let result = lowering.lower(&typed);
-                        eprintln!("DEBUG: Lowered: {:?}", result);
-                        result
+                        lowering.lower(&typed)
                     }
-                    Err(e) => {
-                        eprintln!("DEBUG: Type inference failed: {}", e);
+                    Err(_) => {
                         // Type inference failed - use original expression
                         // This is fine for expressions that don't involve overloading
                         expanded.clone()
