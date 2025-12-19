@@ -109,6 +109,41 @@ implements Power(ℂ) {
 3. **Consistent with Kleis philosophy** - define, don't hardcode
 4. **Extensible** - users can implement for custom types
 
+## Testing Results (Dec 19, 2024)
+
+Tested axiomatic `power` definition in REPL:
+
+```kleis
+structure RealPower {
+    operation power : ℝ × ℕ → ℝ
+    axiom power_zero : ∀(x : ℝ). power(x, 0) = 1
+    axiom power_one : ∀(x : ℝ). power(x, 1) = x
+    axiom power_succ : ∀(x : ℝ)(n : ℕ). power(x, n + 1) = x * power(x, n)
+}
+```
+
+| Query | Result | Notes |
+|-------|--------|-------|
+| `power(2, 0) = 1` | ✅ Valid | Concrete value |
+| `power(3, 1) = 3` | ✅ Valid | Concrete value |
+| `power(5, 2) = 25` | ✅ Valid | Z3 chains axioms for concrete |
+| `∀(x). power(x, 2) = x*x` | ❌ Invalid | Z3 finds countermodels |
+
+### E-Matching Limitation
+
+Z3 can find models that satisfy the axioms but not the intended property.
+For universally quantified properties over uninterpreted functions, Z3's
+E-matching may construct countermodels where `power` behaves unexpectedly.
+
+**What works:** Concrete expressions (power(5, 2) = 25)
+**What fails:** Universal quantification (∀x. power(x, 2) = x*x)
+
+### Implications
+
+1. **Concrete evaluation:** Works - use for calculation
+2. **Theorem proving:** Limited - needs induction or native support
+3. **For Complex numbers:** `z * z` workaround is reliable
+
 ## Priority
 
 Medium - workaround exists (`z * z`), but syntax should work.
