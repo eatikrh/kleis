@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8eaa79a5.js";
+            window.path_to_searchindex_js = "../searchindex-ffc6013c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-33a2f593.js"></script>
@@ -233,18 +233,21 @@
 equivalent. Use whichever matches your notation conventions.</p>
 </blockquote>
 <h2 id="set-operators"><a class="header" href="#set-operators">Set Operators</a></h2>
+<blockquote>
+<p><strong>Note:</strong> Set operators are parsed as custom operators but don’t have special semantic meaning yet. Use function-call syntax for set operations: <code>member(x, S)</code>, <code>union(A, B)</code>, etc.</p>
+</blockquote>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Example</th></tr>
+<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Status</th></tr>
 </thead>
 <tbody>
-<tr><td><code>in</code></td><td><code>∈</code></td><td>Membership</td><td><code>x ∈ S</code></td></tr>
-<tr><td><code>notin</code></td><td><code>∉</code></td><td>Non-membership</td><td><code>x ∉ S</code></td></tr>
-<tr><td><code>subset</code></td><td><code>⊆</code></td><td>Subset</td><td><code>A ⊆ B</code></td></tr>
-<tr><td><code>superset</code></td><td><code>⊇</code></td><td>Superset</td><td><code>A ⊇ B</code></td></tr>
-<tr><td><code>union</code></td><td><code>∪</code></td><td>Union</td><td><code>A ∪ B</code></td></tr>
-<tr><td><code>intersect</code></td><td><code>∩</code></td><td>Intersection</td><td><code>A ∩ B</code></td></tr>
+<tr><td><code>∪</code></td><td></td><td>Union</td><td>Custom operator (no special semantics)</td></tr>
+<tr><td><code>∩</code></td><td></td><td>Intersection</td><td>Custom operator (no special semantics)</td></tr>
+<tr><td><code>∈</code></td><td></td><td>Membership</td><td>❌ Not implemented - use <code>member(x, S)</code></td></tr>
+<tr><td><code>∉</code></td><td></td><td>Non-membership</td><td>❌ Not implemented</td></tr>
+<tr><td><code>⊆</code></td><td></td><td>Subset</td><td>❌ Not implemented - use <code>subset(A, B)</code></td></tr>
+<tr><td><code>⊇</code></td><td></td><td>Superset</td><td>❌ Not implemented</td></tr>
 </tbody>
 </table>
 </div>
@@ -269,21 +272,24 @@ equivalent. Use whichever matches your notation conventions.</p>
 <tr><th>Level</th><th>Operators</th><th>Associativity</th></tr>
 </thead>
 <tbody>
-<tr><td>1</td><td><code>↔</code></td><td>Left</td></tr>
-<tr><td>2</td><td><code>→</code> (logical)</td><td>Right</td></tr>
-<tr><td>3</td><td><code>∨</code></td><td>Left</td></tr>
-<tr><td>4</td><td><code>∧</code></td><td>Left</td></tr>
-<tr><td>5</td><td><code>¬</code></td><td>Prefix</td></tr>
-<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>None</td></tr>
-<tr><td>7</td><td><code>∪</code> <code>∩</code></td><td>Left</td></tr>
-<tr><td>8</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
-<tr><td>9</td><td><code>*</code> <code>/</code></td><td>Left</td></tr>
-<tr><td>10</td><td><code>^</code></td><td>Right</td></tr>
-<tr><td>11</td><td><code>-</code> (unary)</td><td>Prefix</td></tr>
-<tr><td>12</td><td><code>.</code> (field access)</td><td>Left</td></tr>
+<tr><td>1</td><td><code>↔</code> <code>⇔</code> <code>⟺</code> (biconditional)</td><td>Left</td></tr>
+<tr><td>2</td><td><code>→</code> <code>⇒</code> <code>⟹</code> (implication)</td><td>Right</td></tr>
+<tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
+<tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
+<tr><td>5</td><td><code>¬</code> <code>not</code></td><td>Prefix</td></tr>
+<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-associative</td></tr>
+<tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
+<tr><td>8</td><td><code>*</code> <code>/</code> <code>×</code> <code>·</code></td><td>Left</td></tr>
+<tr><td>9</td><td><code>^</code> (power)</td><td>Right</td></tr>
+<tr><td>10</td><td><code>-</code> (unary negation)</td><td>Prefix</td></tr>
+<tr><td>11</td><td><code>!</code> <code>ᵀ</code> <code>†</code> (postfix)</td><td>Postfix</td></tr>
+<tr><td>12</td><td>Function application</td><td>Left</td></tr>
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Note:</strong> Field access (<code>.</code>) is NOT implemented. Use function-call syntax: <code>field(object)</code> instead of <code>object.field</code>.</p>
+</blockquote>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
 <pre><code class="language-kleis">define ex1 = 2 + 3 * 4        // 14 (not 20)

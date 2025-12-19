@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8eaa79a5.js";
+            window.path_to_searchindex_js = "searchindex-ffc6013c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-33a2f593.js"></script>
@@ -1611,22 +1611,22 @@ sin(divide(π, 2))
 <h2 id="loading-files"><a class="header" href="#loading-files">Loading Files</a></h2>
 <p>The REPL prompt evaluates expressions. For definitions (<code>define</code>, <code>structure</code>, etc.), use <code>:load</code>:</p>
 <pre><code>λ&gt; :load examples/protocols/stop_and_wait.kleis
-✅ Loaded: 5 functions, 0 structures, 0 data types, 0 type aliases
+✅ Loaded: 1 files, 5 functions, 0 structures, 0 data types, 0 type aliases
 
 λ&gt; :env
 📋 Defined functions:
   next_seq (seq) = ...
   valid_ack (sent, ack) = ...
-  receiver_accepts (expected, received) = ...
   sender_next_state (current_seq, ack_received) = ...
+  receiver_accepts (expected, received) = ...
   receiver_next_state (expected, received) = ...
 </code></pre>
 <p>More examples to load:</p>
 <pre><code>λ&gt; :load examples/business/order_to_cash.kleis
-✅ Loaded: 7 functions, 1 structures, 0 data types, 0 type aliases
+✅ Loaded: 1 files, 21 functions, 0 structures, 4 data types, 0 type aliases
 
-λ&gt; :load examples/control/lqg_controller.kleis
-✅ Loaded: 12 functions, 3 structures, 0 data types, 0 type aliases
+λ&gt; :load examples/authorization/zanzibar.kleis
+✅ Loaded: 1 files, 13 functions, 0 structures, 0 data types, 0 type aliases
 </code></pre>
 <h2 id="verification-with-z3-1"><a class="header" href="#verification-with-z3-1">Verification with Z3</a></h2>
 <p>Run verifications interactively with <code>:verify</code>:</p>
@@ -1642,7 +1642,7 @@ sin(divide(π, 2))
 λ x . times(x, 2)
 
 λ&gt; λ x y . x + y
-λ x y . plus(x, y)
+λ x y . x + y
 </code></pre>
 <h2 id="type-inference-1"><a class="header" href="#type-inference-1">Type Inference</a></h2>
 <p>Check types with <code>:type</code>:</p>
@@ -1686,24 +1686,24 @@ sin(divide(π, 2))
 ✅ Valid
 </code></pre>
 <h2 id="example-session"><a class="header" href="#example-session">Example Session</a></h2>
-<pre><code> :load examples/authorization/zanzibar.kleis
-✅ Loaded: 13 functions, 0 structures, 0 data types, 0 type aliases
+<pre><code>λ&gt; :load examples/authorization/zanzibar.kleis
+✅ Loaded: 1 files, 13 functions, 0 structures, 0 data types, 0 type aliases
 
 λ&gt; :env
 📋 Defined functions:
+  can_share (perm) = ...
+  can_edit (perm) = ...
   can_delete (perm) = ...
   effective_permission (direct, group) = ...
   inherited_permission (child_perm, parent_perm) = ...
-  has_at_least (user_perm, required_perm) = ...
-  can_share (perm) = ...
-  doc_access (doc_perm, folder_perm, action) = ...
-  multi_group_permission (perm1, perm2, perm3) = ...
-  can_read (perm) = ...
   can_comment (perm) = ...
-  can_transfer_ownership (perm) = ...
-  can_edit (perm) = ...
   is_allowed (perm, action) = ...
+  doc_access (doc_perm, folder_perm, action) = ...
+  has_at_least (user_perm, required_perm) = ...
+  can_read (perm) = ...
+  multi_group_permission (perm1, perm2, perm3) = ...
   can_grant (granter_perm, grantee_perm) = ...
+  can_transfer_ownership (perm) = ...
 
 λ&gt; :verify ∀(x : ℝ). x * x ≥ 0
 ✅ Valid
@@ -2192,11 +2192,12 @@ verify ∀(i : ℂ). complex_add(i, complex(0, 0)) = i
 📐 Type: Complex
 
 λ&gt; :type λ x . x + i
-📐 Type: Complex  (uses global i)
+📐 Type: Complex
 
 λ&gt; :type λ i . i + 1
-📐 Type: Scalar   (parameter shadows global i)
+📐 Type: Scalar
 </code></pre>
+<p>Note: <code>λ x . x + i</code> uses global <code>i</code>, while <code>λ i . i + 1</code> has parameter <code>i</code> shadowing global.</p>
 <p><strong>Best practice:</strong> Avoid using <code>i</code> as a variable name to prevent confusion with the imaginary unit. Use descriptive names like <code>idx</code>, <code>index</code>, or <code>iter</code> for loop-like variables.</p>
 <pre><code class="language-kleis">// Clear: using i as imaginary unit
 verify ∀(z : ℂ). complex_mul(z, i) = complex(neg(im(z)), re(z))
@@ -3322,14 +3323,15 @@ define empty : String = ""
 <p>See <code>src/solvers/z3/capabilities.toml</code> for the complete list of supported string operations.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
-<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.8).</p>
+<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.9).</p>
 <blockquote>
-<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v08.ebnf</code> for the full EBNF specification.</p>
+<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v09.md</code> for the full specification.</p>
 </blockquote>
 <h2 id="program-structure"><a class="header" href="#program-structure">Program Structure</a></h2>
 <pre><code class="language-ebnf">program ::= { declaration }
 
-declaration ::= libraryAnnotation
+declaration ::= importDecl              // v0.8: Module imports
+              | libraryAnnotation
               | versionAnnotation
               | structureDef
               | implementsDef
@@ -3337,6 +3339,13 @@ declaration ::= libraryAnnotation
               | functionDef
               | operationDecl
               | typeAlias
+</code></pre>
+<h2 id="import-statements-v08"><a class="header" href="#import-statements-v08">Import Statements (v0.8)</a></h2>
+<pre><code class="language-ebnf">importDecl ::= "import" string
+</code></pre>
+<p>Example:</p>
+<pre><code class="language-text">import "stdlib/prelude.kleis"
+import "stdlib/complex.kleis"
 </code></pre>
 <h2 id="annotations"><a class="header" href="#annotations">Annotations</a></h2>
 <pre><code class="language-ebnf">libraryAnnotation ::= "@library" "(" string ")"
@@ -3376,6 +3385,10 @@ basePattern ::= "_"                              // Wildcard
               | identifier                       // Variable
               | identifier [ "(" patternArgs ")" ]  // Constructor
               | number | string | boolean        // Constant
+              | tuplePattern                     // v0.8: Tuple sugar
+
+tuplePattern ::= "()"                            // Unit
+               | "(" pattern "," pattern { "," pattern } ")"  // Pair, Tuple3, etc.
 </code></pre>
 <p>Examples:</p>
 <pre><code class="language-text">match x { True =&gt; 1 | False =&gt; 0 }
@@ -3448,9 +3461,10 @@ define add(x: ℝ, y: ℝ) : ℝ = x + y
 
 primitiveType ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
                 | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
-                | "Bool" | "String"
+                | "Bool" | "String" | "Unit"
 
 parametricType ::= identifier "(" typeArgs ")"
+                 | "BitVec" "(" number ")"      // Fixed-size bit vectors
 
 functionType ::= type "→" type | type "-&gt;" type
 
@@ -3527,6 +3541,28 @@ whereClause ::= "where" expression
 ∃(x : ℤ). x * x = 4
 ∀(a : ℝ)(b : ℝ) where a ≠ 0 . a * (1/a) = 1
 </code></pre>
+<h2 id="v09-enhancements"><a class="header" href="#v09-enhancements">v0.9 Enhancements</a></h2>
+<h3 id="nested-quantifiers-in-expressions"><a class="header" href="#nested-quantifiers-in-expressions">Nested Quantifiers in Expressions</a></h3>
+<p>Quantifiers can now appear as operands in logical expressions:</p>
+<pre><code class="language-text">// v0.9: Quantifier inside conjunction
+axiom nested: (x &gt; 0) ∧ (∀(y : ℝ). y &gt; 0)
+
+// Epsilon-delta limit definition
+axiom epsilon_delta: ∀(ε : ℝ). ε &gt; 0 → 
+    (∃(δ : ℝ). δ &gt; 0 ∧ (∀(x : ℝ). abs(x - a) &lt; δ → abs(f(x) - L) &lt; ε))
+</code></pre>
+<h3 id="function-types-in-type-annotations"><a class="header" href="#function-types-in-type-annotations">Function Types in Type Annotations</a></h3>
+<p>Function types are now allowed in quantifier variable declarations:</p>
+<pre><code class="language-text">// Function from reals to reals
+axiom func: ∀(f : ℝ → ℝ). f(0) = f(0)
+
+// Higher-order function
+axiom compose: ∀(f : ℝ → ℝ, g : ℝ → ℝ). compose(f, g) = λ x . f(g(x))
+
+// Topology: continuity via preimages
+axiom continuity: ∀(f : X → Y, V : Set(Y)). 
+    is_open(V) → is_open(preimage(f, V))
+</code></pre>
 <h2 id="calculus-notation-v07"><a class="header" href="#calculus-notation-v07">Calculus Notation (v0.7)</a></h2>
 <p>Kleis uses Mathematica-style notation for calculus operations:</p>
 <pre><code class="language-ebnf">// Derivatives (function calls)
@@ -3561,21 +3597,24 @@ Limit(f, x, a)            // lim_{x→a} f
 <tr><th>Precedence</th><th>Operators</th><th>Associativity</th></tr>
 </thead>
 <tbody>
-<tr><td>1</td><td><code>↔</code> <code>iff</code></td><td>Left</td></tr>
-<tr><td>2</td><td><code>→</code> <code>implies</code> <code>⟹</code> <code>⇒</code></td><td>Right</td></tr>
+<tr><td>1</td><td><code>↔</code> <code>⇔</code> <code>⟺</code> (biconditional)</td><td>Left</td></tr>
+<tr><td>2</td><td><code>→</code> <code>⇒</code> <code>⟹</code> (implication)</td><td>Right</td></tr>
 <tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
 <tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
 <tr><td>5</td><td><code>¬</code> <code>not</code> (prefix)</td><td>Prefix</td></tr>
-<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code> <code>≈</code> <code>≡</code> <code>∈</code> <code>∉</code></td><td>Non-assoc</td></tr>
+<tr><td>6</td><td><code>=</code> <code>==</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-assoc</td></tr>
 <tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
 <tr><td>8</td><td><code>*</code> <code>×</code> <code>/</code> <code>·</code></td><td>Left</td></tr>
 <tr><td>9</td><td><code>^</code></td><td>Right</td></tr>
 <tr><td>10</td><td><code>-</code> (unary)</td><td>Prefix</td></tr>
-<tr><td>11</td><td>Function application</td><td>Left</td></tr>
-<tr><td>12</td><td>Postfix (<code>!</code>, <code>ᵀ</code>, <code>†</code>)</td><td>Postfix</td></tr>
+<tr><td>11</td><td>Postfix (<code>!</code>, <code>ᵀ</code>, <code>†</code>)</td><td>Postfix</td></tr>
+<tr><td>12</td><td>Function application</td><td>Left</td></tr>
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Note:</strong> Set operators (<code>∈</code>, <code>∉</code>, <code>⊆</code>, <code>≈</code>, <code>≡</code>) are not implemented. Use function-call syntax instead.</p>
+</blockquote>
 <h2 id="comments-1"><a class="header" href="#comments-1">Comments</a></h2>
 <pre><code class="language-ebnf">lineComment ::= "//" { any character except newline } newline
 blockComment ::= "/*" { any character } "*/"
@@ -3600,6 +3639,7 @@ blockComment ::= "/*" { any character } "*/"
 <tr><td><code>≠</code></td><td><code>!=</code>, <code>/=</code></td><td>Not equal</td></tr>
 <tr><td><code>ℕ</code></td><td><code>Nat</code></td><td>Natural numbers</td></tr>
 <tr><td><code>ℤ</code></td><td><code>Int</code></td><td>Integers</td></tr>
+<tr><td><code>ℚ</code></td><td><code>Rational</code></td><td>Rational numbers</td></tr>
 <tr><td><code>ℝ</code></td><td><code>Real</code></td><td>Real numbers</td></tr>
 <tr><td><code>ℂ</code></td><td><code>Complex</code></td><td>Complex numbers</td></tr>
 <tr><td><code>λ</code></td><td><code>lambda</code></td><td>Lambda</td></tr>
@@ -3679,18 +3719,21 @@ greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
 equivalent. Use whichever matches your notation conventions.</p>
 </blockquote>
 <h2 id="set-operators"><a class="header" href="#set-operators">Set Operators</a></h2>
+<blockquote>
+<p><strong>Note:</strong> Set operators are parsed as custom operators but don’t have special semantic meaning yet. Use function-call syntax for set operations: <code>member(x, S)</code>, <code>union(A, B)</code>, etc.</p>
+</blockquote>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Example</th></tr>
+<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Status</th></tr>
 </thead>
 <tbody>
-<tr><td><code>in</code></td><td><code>∈</code></td><td>Membership</td><td><code>x ∈ S</code></td></tr>
-<tr><td><code>notin</code></td><td><code>∉</code></td><td>Non-membership</td><td><code>x ∉ S</code></td></tr>
-<tr><td><code>subset</code></td><td><code>⊆</code></td><td>Subset</td><td><code>A ⊆ B</code></td></tr>
-<tr><td><code>superset</code></td><td><code>⊇</code></td><td>Superset</td><td><code>A ⊇ B</code></td></tr>
-<tr><td><code>union</code></td><td><code>∪</code></td><td>Union</td><td><code>A ∪ B</code></td></tr>
-<tr><td><code>intersect</code></td><td><code>∩</code></td><td>Intersection</td><td><code>A ∩ B</code></td></tr>
+<tr><td><code>∪</code></td><td></td><td>Union</td><td>Custom operator (no special semantics)</td></tr>
+<tr><td><code>∩</code></td><td></td><td>Intersection</td><td>Custom operator (no special semantics)</td></tr>
+<tr><td><code>∈</code></td><td></td><td>Membership</td><td>❌ Not implemented - use <code>member(x, S)</code></td></tr>
+<tr><td><code>∉</code></td><td></td><td>Non-membership</td><td>❌ Not implemented</td></tr>
+<tr><td><code>⊆</code></td><td></td><td>Subset</td><td>❌ Not implemented - use <code>subset(A, B)</code></td></tr>
+<tr><td><code>⊇</code></td><td></td><td>Superset</td><td>❌ Not implemented</td></tr>
 </tbody>
 </table>
 </div>
@@ -3715,21 +3758,24 @@ equivalent. Use whichever matches your notation conventions.</p>
 <tr><th>Level</th><th>Operators</th><th>Associativity</th></tr>
 </thead>
 <tbody>
-<tr><td>1</td><td><code>↔</code></td><td>Left</td></tr>
-<tr><td>2</td><td><code>→</code> (logical)</td><td>Right</td></tr>
-<tr><td>3</td><td><code>∨</code></td><td>Left</td></tr>
-<tr><td>4</td><td><code>∧</code></td><td>Left</td></tr>
-<tr><td>5</td><td><code>¬</code></td><td>Prefix</td></tr>
-<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>None</td></tr>
-<tr><td>7</td><td><code>∪</code> <code>∩</code></td><td>Left</td></tr>
-<tr><td>8</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
-<tr><td>9</td><td><code>*</code> <code>/</code></td><td>Left</td></tr>
-<tr><td>10</td><td><code>^</code></td><td>Right</td></tr>
-<tr><td>11</td><td><code>-</code> (unary)</td><td>Prefix</td></tr>
-<tr><td>12</td><td><code>.</code> (field access)</td><td>Left</td></tr>
+<tr><td>1</td><td><code>↔</code> <code>⇔</code> <code>⟺</code> (biconditional)</td><td>Left</td></tr>
+<tr><td>2</td><td><code>→</code> <code>⇒</code> <code>⟹</code> (implication)</td><td>Right</td></tr>
+<tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
+<tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
+<tr><td>5</td><td><code>¬</code> <code>not</code></td><td>Prefix</td></tr>
+<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-associative</td></tr>
+<tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
+<tr><td>8</td><td><code>*</code> <code>/</code> <code>×</code> <code>·</code></td><td>Left</td></tr>
+<tr><td>9</td><td><code>^</code> (power)</td><td>Right</td></tr>
+<tr><td>10</td><td><code>-</code> (unary negation)</td><td>Prefix</td></tr>
+<tr><td>11</td><td><code>!</code> <code>ᵀ</code> <code>†</code> (postfix)</td><td>Postfix</td></tr>
+<tr><td>12</td><td>Function application</td><td>Left</td></tr>
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Note:</strong> Field access (<code>.</code>) is NOT implemented. Use function-call syntax: <code>field(object)</code> instead of <code>object.field</code>.</p>
+</blockquote>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
 <pre><code class="language-kleis">define ex1 = 2 + 3 * 4        // 14 (not 20)
