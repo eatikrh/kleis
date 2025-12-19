@@ -630,11 +630,14 @@ define fibonacci_program : Program = Source(fib_source)
 //     Z3 can reason about the string contents.
 //     This is homoiconicity: code as data.
 
-// --- More Examples ---
-
-define square_program : Program = Source("define square(x) = x * x")
-define identity_program : Program = Source("define id(x) = x")
-define const_program : Program = Source("define const(x, y) = x")
+// --- More Examples (same pattern) ---
+//
+// define square_program : Program = Source("define square(x) = x * x")
+// define identity_program : Program = Source("define id(x) = x")  
+// define const_program : Program = Source("define const(x, y) = x")
+// define quicksort : Program = Source("define qsort(xs) = ...")
+//
+// Any program. Any language. Just a string. Verified by Z3.
 
 // --- Program Analysis on Source ---
 
@@ -660,8 +663,8 @@ structure ProgramAnalysis {
     // Fibonacci uses recursion
     axiom fib_recursive : uses_recursion(fibonacci_program)
     
-    // Quicksort uses recursion  
-    axiom quicksort_recursive : uses_recursion(quicksort_program)
+    // (Any recursive program would satisfy this)
+    // axiom quicksort_recursive : uses_recursion(quicksort_program)
     
     // Parsing preserves function count
     axiom parse_preserves_count : ∀(src : String, ast : List(Declaration)).
