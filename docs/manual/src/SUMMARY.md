@@ -27,6 +27,10 @@
 - [The REPL](./chapters/12-repl.md)
 - [Applications](./chapters/13-applications.md)
 
+# Mathematics
+
+- [Complex Numbers](./chapters/14-complex-numbers.md)
+
 # Appendices
 
 - [Grammar Reference](./appendix/grammar.md)
