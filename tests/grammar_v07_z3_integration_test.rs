@@ -156,21 +156,22 @@ fn test_limit_uninterpreted() {
 // SECTION 2: Sum and Product Notation Tests
 // ============================================================================
 
-/// Test Sum(expr, i, 1, n) function-call style
+/// Test Sum(expr, k, 1, n) function-call style
+/// NOTE: Using 'k' instead of 'i' because 'i' is reserved for complex imaginary unit
 #[test]
 #[cfg(feature = "axiom-verification")]
 fn test_sum_function_call() {
-    println!("\n🧪 Testing: Sum(i, i, 1, n) in Z3");
+    println!("\n🧪 Testing: Sum(k, k, 1, n) in Z3");
 
     let registry = StructureRegistry::new();
     let mut backend = Z3Backend::new(&registry).unwrap();
 
-    // Sum(i, i, 1, n) - summation of i from 1 to n
+    // Sum(k, k, 1, n) - summation of k from 1 to n
     let expr = Expression::Operation {
         name: "Sum".to_string(),
         args: vec![
-            Expression::Object("i".to_string()), // expression to sum
-            Expression::Object("i".to_string()), // index variable
+            Expression::Object("k".to_string()), // expression to sum
+            Expression::Object("k".to_string()), // index variable
             Expression::Const("1".to_string()),  // lower bound
             Expression::Object("n".to_string()), // upper bound
         ],
@@ -178,24 +179,25 @@ fn test_sum_function_call() {
 
     let result = backend.simplify(&expr);
     assert!(result.is_ok(), "Sum should be translatable to Z3");
-    println!("   ✅ Sum(i, i, 1, n) translated successfully");
+    println!("   ✅ Sum(k, k, 1, n) translated successfully");
 }
 
-/// Test Product(expr, i, 1, n) function-call style
+/// Test Product(expr, k, 1, n) function-call style
+/// NOTE: Using 'k' instead of 'i' because 'i' is reserved for complex imaginary unit
 #[test]
 #[cfg(feature = "axiom-verification")]
 fn test_product_function_call() {
-    println!("\n🧪 Testing: Product(i, i, 1, n) in Z3");
+    println!("\n🧪 Testing: Product(k, k, 1, n) in Z3");
 
     let registry = StructureRegistry::new();
     let mut backend = Z3Backend::new(&registry).unwrap();
 
-    // Product(i, i, 1, n) - product of i from 1 to n (factorial-like)
+    // Product(k, k, 1, n) - product of k from 1 to n (factorial-like)
     let expr = Expression::Operation {
         name: "Product".to_string(),
         args: vec![
-            Expression::Object("i".to_string()),
-            Expression::Object("i".to_string()),
+            Expression::Object("k".to_string()),
+            Expression::Object("k".to_string()),
             Expression::Const("1".to_string()),
             Expression::Object("n".to_string()),
         ],
@@ -203,7 +205,7 @@ fn test_product_function_call() {
 
     let result = backend.simplify(&expr);
     assert!(result.is_ok(), "Product should be translatable to Z3");
-    println!("   ✅ Product(i, i, 1, n) translated successfully");
+    println!("   ✅ Product(k, k, 1, n) translated successfully");
 }
 
 // ============================================================================

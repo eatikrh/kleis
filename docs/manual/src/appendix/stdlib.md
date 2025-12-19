@@ -79,6 +79,61 @@ structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
 }
 ```
 
+## Complex Numbers
+
+The complex number type `ℂ` has full arithmetic support:
+
+### Construction and Extraction
+
+```kleis
+// Create complex number: complex(real_part, imaginary_part)
+define z = complex(3, 4)        // 3 + 4i
+
+// The imaginary unit
+define i_unit = i               // = complex(0, 1)
+
+// Extract parts
+define x = re(z)                // 3
+define y = im(z)                // 4
+```
+
+### Arithmetic Operations
+
+```kleis
+// All operations are explicit (no operator overloading yet)
+complex_add(z1, z2)      // z1 + z2
+complex_sub(z1, z2)      // z1 - z2
+complex_mul(z1, z2)      // z1 × z2
+complex_div(z1, z2)      // z1 / z2
+neg_complex(z)           // -z
+complex_inverse(z)       // 1/z
+```
+
+### Conjugate and Magnitude
+
+```kleis
+conj(z)                  // Complex conjugate (a - bi)
+abs_squared(z)           // |z|² = a² + b²
+```
+
+### Operation Reference
+
+| Operation | Syntax | Example | Result |
+|-----------|--------|---------|--------|
+| Create | `complex(a, b)` | `complex(3, 4)` | 3 + 4i |
+| Real part | `re(z)` | `re(complex(3, 4))` | 3 |
+| Imaginary part | `im(z)` | `im(complex(3, 4))` | 4 |
+| Add | `complex_add(z1, z2)` | `complex_add(complex(1,2), complex(3,4))` | complex(4, 6) |
+| Subtract | `complex_sub(z1, z2)` | `complex_sub(complex(5,3), complex(2,1))` | complex(3, 2) |
+| Multiply | `complex_mul(z1, z2)` | `complex_mul(complex(1,2), complex(3,4))` | complex(-5, 10) |
+| Divide | `complex_div(z1, z2)` | `complex_div(complex(1,0), complex(0,1))` | complex(0, -1) |
+| Negate | `neg_complex(z)` | `neg_complex(complex(3, 4))` | complex(-3, -4) |
+| Inverse | `complex_inverse(z)` | `complex_inverse(i)` | complex(0, -1) |
+| Conjugate | `conj(z)` | `conj(complex(3, 4))` | complex(3, -4) |
+| Magnitude² | `abs_squared(z)` | `abs_squared(complex(3, 4))` | 25 |
+
+See [Chapter 14: Complex Numbers](../chapters/14-complex-numbers.md) for detailed examples.
+
 ## Algebraic Structures
 
 ### Monoid
@@ -245,8 +300,10 @@ import "stdlib/differential_geometry.kleis"
 
 ```
 stdlib/
-├── prelude.kleis          // Core types and functions
+├── prelude.kleis          // Core types and functions (includes complex)
+├── complex.kleis          // Complex number axioms and properties
 ├── numeric.kleis          // Numeric operations
+├── text.kleis             // String processing operations
 ├── collections.kleis      // List, Vector, Matrix
 ├── algebraic.kleis        // Group, Ring, Field, etc.
 ├── linear_algebra.kleis   // Matrix operations

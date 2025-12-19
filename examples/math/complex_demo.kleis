@@ -1,0 +1,68 @@
+// Complex Number Demo
+// Demonstrates Kleis complex number support
+
+import "stdlib/prelude.kleis"
+import "stdlib/complex.kleis"
+
+// ============================================
+// Basic Complex Number Operations
+// ============================================
+
+// Define some complex numbers
+define z1 : ℂ = complex(3, 4)    // 3 + 4i
+define z2 : ℂ = complex(1, 2)    // 1 + 2i
+
+// Euler's identity preparation: e^(iπ) + 1 = 0
+// The imaginary unit
+define imaginary_unit : ℂ = i
+
+// Extract components
+define real_part : ℝ = re(z1)    // Should be 3
+define imag_part : ℝ = im(z1)    // Should be 4
+
+// Conjugate
+define z1_conj : ℂ = conj(z1)    // 3 - 4i
+
+// Complex addition: (3+4i) + (1+2i) = 4+6i
+define sum : ℂ = complex_add(z1, z2)
+
+// Complex multiplication: (3+4i) * (1+2i) = -5+10i
+// Re: 3*1 - 4*2 = 3 - 8 = -5
+// Im: 3*2 + 4*1 = 6 + 4 = 10
+define product : ℂ = complex_mul(z1, z2)
+
+// ============================================
+// Theorems about Complex Numbers
+// ============================================
+
+structure ComplexTheorems {
+    // Fundamental theorem: i² = -1
+    axiom i_squared_is_minus_one :
+        complex_mul(i, i) = complex(0 - 1, 0)
+    
+    // Real numbers have zero imaginary part
+    axiom real_numbers_embed :
+        ∀(r : ℝ). im(complex(r, 0)) = 0
+    
+    // Conjugate of conjugate is identity
+    axiom double_conjugate :
+        ∀(z : ℂ). conj(conj(z)) = z
+    
+    // Product with conjugate gives real magnitude squared
+    axiom norm_squared_real :
+        ∀(z : ℂ). im(complex_mul(z, conj(z))) = 0
+}
+
+// ============================================
+// Applications
+// ============================================
+
+// Magnitude squared: |3+4i|² = 9 + 16 = 25
+// Note: |z|² = z * conj(z)
+// For z1 = 3+4i: z1 * conj(z1) = (3+4i)(3-4i) = 9 + 16 = 25
+define magnitude_squared_z1 : ℝ = re(complex_mul(z1, conj(z1)))
+
+// ============================================
+// END OF DEMO
+// ============================================
+
