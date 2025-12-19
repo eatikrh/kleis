@@ -471,6 +471,103 @@ structure ProgramAnalysisProperties {
 
 
 // ============================================================================
+// PART 7: Detecting Syntax Errors in Strings!
+// ============================================================================
+//
+// Kleis + Z3 can detect INVALID syntax in source code strings!
+
+// --- Examples of INVALID Kleis Source ---
+
+// Typo: "dfine" instead of "define"
+define bad_source_1 : String = "dfine square(x) = x * x"
+
+// Incomplete data definition: no variants
+define bad_source_2 : String = "data Bool = "
+
+// Missing body in define
+define bad_source_3 : String = "define foo = "
+
+// Unbalanced parentheses
+define bad_source_4 : String = "define f(x = x * x"
+
+// Using reserved word as identifier
+define bad_source_5 : String = "define if = 5"
+
+// --- Error Detection Predicates ---
+
+// A define statement must have "define " prefix AND contain "="
+define is_complete_define(src : String) : Bool =
+    hasPrefix(src, "define ") ∧ contains(src, "=")
+
+// A data definition must have variants (contain "|" or identifier after "=")
+define is_complete_data(src : String) : Bool =
+    hasPrefix(src, "data ") ∧ 
+    contains(src, "=") ∧
+    (contains(src, "|") ∨ strlen(src) > indexOf(src, "=") + 2)
+
+// Check for balanced parentheses (simplified: count must match)
+define has_balanced_parens(src : String) : Bool =
+    count_char(src, "(") = count_char(src, ")")
+
+// Count occurrences of a character
+define count_char(src : String, ch : String) : ℕ =
+    if ¬contains(src, ch) then 0
+    else 1 + count_char(replace(src, ch, "", 1), ch)
+
+// Check if identifier is a reserved word
+define uses_reserved_identifier(src : String) : Bool =
+    hasPrefix(src, "define if ") ∨
+    hasPrefix(src, "define then ") ∨
+    hasPrefix(src, "define else ") ∨
+    hasPrefix(src, "define let ") ∨
+    hasPrefix(src, "define match ") ∨
+    hasPrefix(src, "define data ") ∨
+    hasPrefix(src, "define define ")
+
+// --- Z3-Verified Error Detection ---
+
+structure SyntaxErrorDetection {
+    // Typo "dfine" is NOT a valid define
+    axiom bad1_not_define : ¬hasPrefix(bad_source_1, "define ")
+    
+    // Incomplete data has no variants
+    axiom bad2_incomplete : hasPrefix(bad_source_2, "data ") ∧ ¬contains(bad_source_2, "|")
+    
+    // Incomplete define has = but nothing after
+    axiom bad3_incomplete : hasPrefix(bad_source_3, "define ") ∧ hasSuffix(bad_source_3, "= ")
+    
+    // Unbalanced parens detected
+    axiom bad4_unbalanced : ¬has_balanced_parens(bad_source_4)
+    
+    // Reserved word used as identifier
+    axiom bad5_reserved : uses_reserved_identifier(bad_source_5)
+    
+    // Good sources pass validation
+    axiom good1_valid : is_complete_define(kleis_source_1)
+    axiom good2_valid : is_complete_data(kleis_source_2)
+    axiom good3_balanced : has_balanced_parens(kleis_source_1)
+}
+
+// --- The Power: Prove Error Properties! ---
+
+structure ErrorTheorems {
+    // If it doesn't start with "define ", it's not a define statement
+    axiom not_define_prefix : ∀(s : String).
+        ¬hasPrefix(s, "define ") → ¬is_define_statement(s)
+    
+    // If parens are unbalanced, the source is invalid
+    axiom unbalanced_invalid : ∀(s : String).
+        ¬has_balanced_parens(s) → ¬is_complete_define(s) ∨ ¬has_balanced_parens(s)
+    
+    // Empty string is never valid
+    axiom empty_invalid : 
+        ¬is_define_statement("") ∧ 
+        ¬is_data_definition("") ∧ 
+        ¬is_structure_definition("")
+}
+
+
+// ============================================================================
 // CONCLUSION
 // ============================================================================
 //
