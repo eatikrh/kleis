@@ -1,15 +1,16 @@
 # Appendix A: Grammar Reference
 
-This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.8).
+This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.9).
 
-> **Complete Grammar:** See `docs/grammar/kleis_grammar_v08.ebnf` for the full EBNF specification.
+> **Complete Grammar:** See `docs/grammar/kleis_grammar_v09.md` for the full specification.
 
 ## Program Structure
 
 ```ebnf
 program ::= { declaration }
 
-declaration ::= libraryAnnotation
+declaration ::= importDecl              // v0.8: Module imports
+              | libraryAnnotation
               | versionAnnotation
               | structureDef
               | implementsDef
@@ -17,6 +18,18 @@ declaration ::= libraryAnnotation
               | functionDef
               | operationDecl
               | typeAlias
+```
+
+## Import Statements (v0.8)
+
+```ebnf
+importDecl ::= "import" string
+```
+
+Example:
+```text
+import "stdlib/prelude.kleis"
+import "stdlib/complex.kleis"
 ```
 
 ## Annotations
@@ -69,6 +82,10 @@ basePattern ::= "_"                              // Wildcard
               | identifier                       // Variable
               | identifier [ "(" patternArgs ")" ]  // Constructor
               | number | string | boolean        // Constant
+              | tuplePattern                     // v0.8: Tuple sugar
+
+tuplePattern ::= "()"                            // Unit
+               | "(" pattern "," pattern { "," pattern } ")"  // Pair, Tuple3, etc.
 ```
 
 Examples:
@@ -161,9 +178,10 @@ type ::= primitiveType
 
 primitiveType ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
                 | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
-                | "Bool" | "String"
+                | "Bool" | "String" | "Unit"
 
 parametricType ::= identifier "(" typeArgs ")"
+                 | "BitVec" "(" number ")"      // Fixed-size bit vectors
 
 functionType ::= type "→" type | type "->" type
 
@@ -266,6 +284,37 @@ Examples:
 ∀(a : ℝ)(b : ℝ) where a ≠ 0 . a * (1/a) = 1
 ```
 
+## v0.9 Enhancements
+
+### Nested Quantifiers in Expressions
+
+Quantifiers can now appear as operands in logical expressions:
+
+```text
+// v0.9: Quantifier inside conjunction
+axiom nested: (x > 0) ∧ (∀(y : ℝ). y > 0)
+
+// Epsilon-delta limit definition
+axiom epsilon_delta: ∀(ε : ℝ). ε > 0 → 
+    (∃(δ : ℝ). δ > 0 ∧ (∀(x : ℝ). abs(x - a) < δ → abs(f(x) - L) < ε))
+```
+
+### Function Types in Type Annotations
+
+Function types are now allowed in quantifier variable declarations:
+
+```text
+// Function from reals to reals
+axiom func: ∀(f : ℝ → ℝ). f(0) = f(0)
+
+// Higher-order function
+axiom compose: ∀(f : ℝ → ℝ, g : ℝ → ℝ). compose(f, g) = λ x . f(g(x))
+
+// Topology: continuity via preimages
+axiom continuity: ∀(f : X → Y, V : Set(Y)). 
+    is_open(V) → is_open(preimage(f, V))
+```
+
 ## Calculus Notation (v0.7)
 
 Kleis uses Mathematica-style notation for calculus operations:
@@ -309,18 +358,20 @@ postfixOp ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
 
 | Precedence | Operators | Associativity |
 |------------|-----------|---------------|
-| 1 | `↔` `iff` | Left |
-| 2 | `→` `implies` `⟹` `⇒` | Right |
+| 1 | `↔` `⇔` `⟺` (biconditional) | Left |
+| 2 | `→` `⇒` `⟹` (implication) | Right |
 | 3 | `∨` `or` | Left |
 | 4 | `∧` `and` | Left |
 | 5 | `¬` `not` (prefix) | Prefix |
-| 6 | `=` `≠` `<` `>` `≤` `≥` `≈` `≡` `∈` `∉` | Non-assoc |
+| 6 | `=` `==` `≠` `<` `>` `≤` `≥` | Non-assoc |
 | 7 | `+` `-` | Left |
 | 8 | `*` `×` `/` `·` | Left |
 | 9 | `^` | Right |
 | 10 | `-` (unary) | Prefix |
-| 11 | Function application | Left |
-| 12 | Postfix (`!`, `ᵀ`, `†`) | Postfix |
+| 11 | Postfix (`!`, `ᵀ`, `†`) | Postfix |
+| 12 | Function application | Left |
+
+> **Note:** Set operators (`∈`, `∉`, `⊆`, `≈`, `≡`) are not implemented. Use function-call syntax instead.
 
 ## Comments
 
@@ -347,6 +398,7 @@ blockComment ::= "/*" { any character } "*/"
 | `≠` | `!=`, `/=` | Not equal |
 | `ℕ` | `Nat` | Natural numbers |
 | `ℤ` | `Int` | Integers |
+| `ℚ` | `Rational` | Rational numbers |
 | `ℝ` | `Real` | Real numbers |
 | `ℂ` | `Complex` | Complex numbers |
 | `λ` | `lambda` | Lambda |
