@@ -1,5 +1,191 @@
 # Applications
 
+Kleis is designed for mathematical verification, but its power extends far beyond pure mathematics. This chapter showcases applications across multiple domains.
+
+## Business Process Modeling
+
+Model and verify business workflows with formal guarantees:
+
+```kleis
+// Order-to-Cash (O2C) Business Process
+// Models the complete lifecycle from order to payment
+
+// Order lifecycle states
+data OrderStatus = 
+    Draft | Pending | CreditApproved | CreditDenied 
+  | Allocated | Fulfilled | Shipped | Invoiced 
+  | Paid | Complete | Cancelled
+
+// Credit check decision based on utilization
+define credit_check_decision(utilization) =
+    if utilization <= 100 then 1      // Approved
+    else if utilization < 125 then 2  // PendingReview
+    else 0                            // Denied
+
+// Can order be cancelled from current state?
+define can_cancel(status) = match status {
+    Draft => 1
+  | Pending => 1
+  | CreditApproved => 1
+  | Allocated => 1
+  | _ => 0  // Can't cancel after fulfillment
+}
+
+// INVARIANT: No shipment without credit approval
+define shipment_requires_credit(order_status, credit_approved) =
+    if order_status = 6 then credit_approved = 1 else true
+
+// INVARIANT: Order completion requires full payment
+define completion_requires_payment(order_status, payment_status) =
+    if order_status = 9 then payment_status >= 2 else true
+```
+
+## Network Protocol Verification
+
+Verify protocol correctness with formal methods:
+
+```kleis
+// Stop-and-Wait Protocol - Reliable Data Transfer
+
+// Sequence numbers alternate between 0 and 1
+define next_seq(seq) = if seq = 0 then 1 else 0
+
+// ACK is valid if it matches sent sequence
+define valid_ack(sent, ack) = if ack = sent then 1 else 0
+
+// Sender advances state only on valid ACK
+define sender_next_state(current_seq, ack_received) = 
+    if valid_ack(current_seq, ack_received) = 1 
+    then next_seq(current_seq) 
+    else current_seq
+
+// VERIFIED: Double alternation returns to original
+// next_seq(next_seq(0)) = 0  ✓
+// next_seq(next_seq(1)) = 1  ✓
+
+// SAFETY: No duplicate delivery when synchronized
+// LIVENESS: Progress guaranteed when channel delivers
+```
+
+### IPv4 Packet Validation
+
+```kleis
+// IPv4 Header Validation (RFC 791)
+
+// Version must be 4 for IPv4
+define valid_version(v) = if v = 4 then 1 else 0
+
+// IHL (Internet Header Length): 5-15 words
+define valid_ihl(ihl) = ihl >= 5 and ihl <= 15
+
+// Header length in bytes
+define header_length(ihl) = ihl * 4
+
+// Common protocols: 1=ICMP, 6=TCP, 17=UDP
+define is_tcp(proto) = proto = 6
+define is_udp(proto) = proto = 17
+
+// Private address ranges
+define is_private_class_a(o1) = o1 = 10
+define is_private_class_c(o1, o2) = o1 = 192 and o2 = 168
+
+// Full packet validation
+define valid_packet(version, ihl, total, ttl, proto) = 
+    valid_version(version) = 1 and
+    valid_ihl(ihl) = 1 and
+    ttl > 0 and
+    total >= header_length(ihl)
+```
+
+## Authorization & Access Control
+
+Model Zanzibar-style relationship-based access control (like Google Drive):
+
+```kleis
+// Permission Levels: 0=None, 1=Viewer, 2=Commenter, 3=Editor, 4=Owner
+
+define has_at_least(user_perm, required_perm) = user_perm >= required_perm
+
+define can_read(perm) = has_at_least(perm, 1)
+define can_edit(perm) = has_at_least(perm, 3)
+define can_delete(perm) = has_at_least(perm, 4)
+
+// Folder inheritance (like Google Drive)
+define inherited_permission(child_perm, parent_perm) = 
+    if child_perm > 0 
+    then child_perm      // Explicit permission overrides
+    else parent_perm     // Inherit from parent
+
+// Multi-group permission: take highest
+define effective_permission(direct, group) = 
+    if direct >= group then direct else group
+
+// Security invariant: can_edit implies can_read
+// ∀ p . can_edit(p) = 1 → can_read(p) = 1
+```
+
+## Security Analysis
+
+Use Z3 string theory for static security analysis:
+
+```kleis
+// SQL Injection Detection using String Operations
+
+// Vulnerable pattern: string concatenation + SQL execution
+// :verify and(
+//   contains("SELECT * FROM users WHERE id=" + userId, "+ userId"),
+//   contains(code, "executeQuery")
+// )
+// If Valid → VULNERABLE!
+
+// Safe pattern: parameterized queries
+// :verify and(
+//   contains(code, "PreparedStatement"),
+//   not(contains(code, "+ userId +"))
+// )
+// If Valid → SAFE
+
+// XSS Detection: innerHTML with user input
+// :verify and(
+//   contains(code, "innerHTML"),
+//   contains(code, "userData")
+// )
+```
+
+## Control Systems Engineering
+
+Design optimal controllers with verified stability:
+
+```kleis
+// LQG Controller: Linear Quadratic Gaussian
+
+structure LinearSystem(n: Nat, m: Nat, p: Nat) {
+    element A : Matrix(n, n, ℝ)   // State dynamics
+    element B : Matrix(n, m, ℝ)   // Input matrix
+    element C : Matrix(p, n, ℝ)   // Output matrix
+    element W : Matrix(n, n, ℝ)   // Process noise covariance
+    element V : Matrix(p, p, ℝ)   // Measurement noise covariance
+}
+
+// LQR: Optimal state feedback
+operation lqr_gain : LQRProblem(n, m) → Matrix(m, n, ℝ)
+
+axiom lqr_stability:
+    ∀ prob : LQRProblem(n, m) .
+    let K = lqr_gain(prob) in
+    let A_cl = prob.A - prob.B · K in
+    is_stable(A_cl)
+
+// Kalman Filter: Optimal state estimation
+operation kalman_gain : KalmanProblem(n, p) → Matrix(n, p, ℝ)
+
+// LQG combines LQR + Kalman via Separation Principle
+structure LQGController(n: Nat, m: Nat, p: Nat) {
+    element K : Matrix(m, n, ℝ)   // LQR gain
+    element L : Matrix(n, p, ℝ)   // Kalman gain
+}
+```
+
 ## Differential Geometry
 
 Kleis excels at differential geometry calculations:
