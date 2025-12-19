@@ -140,6 +140,23 @@ rational_ge = { arity = 2, theory = "Rational", native = true, description = "Gr
 int_to_rational = { arity = 1, theory = "Rational", native = true, description = "Integer to rational: n → n/1" }
 nat_to_rational = { arity = 1, theory = "Rational", native = true, description = "Natural to rational: n → n/1" }
 to_real = { arity = 1, theory = "Rational", native = true, description = "Rational to real (identity in Z3)" }
+abs_rational = { arity = 1, theory = "Rational", native = true, description = "Absolute value: |r|" }
+sign_rational = { arity = 1, theory = "Rational", native = false, description = "Sign: -1, 0, or 1 (defined in Kleis)" }
+min_rational = { arity = 2, theory = "Rational", native = false, description = "Minimum (defined in Kleis)" }
+max_rational = { arity = 2, theory = "Rational", native = false, description = "Maximum (defined in Kleis)" }
+midpoint = { arity = 2, theory = "Rational", native = false, description = "Midpoint: (r1 + r2) / 2 (defined in Kleis)" }
+
+# Integer division and modulo
+int_div = { arity = 2, theory = "Int", native = true, description = "Integer division: a div b" }
+int_mod = { arity = 2, theory = "Int", native = true, description = "Integer modulo: a mod b (non-negative)" }
+int_rem = { arity = 2, theory = "Int", native = true, description = "Integer remainder: a rem b (sign follows a)" }
+
+# Floor and ceiling (ℚ → ℤ)
+floor = { arity = 1, theory = "Rational", native = true, description = "Floor: largest integer ≤ r" }
+ceil = { arity = 1, theory = "Rational", native = true, description = "Ceiling: smallest integer ≥ r" }
+
+# GCD (defined axiomatically)
+gcd = { arity = 2, theory = "Int", native = false, description = "GCD: greatest common divisor (axiomatized)" }
 
 # Note: Z3 supports many more operations via its built-in theories,
 # but these are the ones explicitly translated in our current implementation.

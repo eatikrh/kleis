@@ -1233,15 +1233,61 @@ impl TypeInference {
         }
 
         // OPERATOR OVERLOADING: Rational binary operations
-        // rational_add, rational_sub, rational_mul, rational_div return Rational
+        // rational_add, rational_sub, rational_mul, rational_div, min_rational, max_rational, midpoint return Rational
         if matches!(
             name,
-            "rational_add" | "rational_sub" | "rational_mul" | "rational_div"
+            "rational_add"
+                | "rational_sub"
+                | "rational_mul"
+                | "rational_div"
+                | "min_rational"
+                | "max_rational"
+                | "midpoint"
         ) && args.len() == 2
         {
             return Ok(Type::Data {
                 type_name: "Type".to_string(),
                 constructor: "Rational".to_string(),
+                args: vec![],
+            });
+        }
+
+        // sign_rational(r : ℚ) : ℤ
+        if name == "sign_rational" && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            });
+        }
+
+        // floor(r : ℚ) : ℤ, ceil(r : ℚ) : ℤ
+        if matches!(name, "floor" | "ceil" | "ceiling") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            });
+        }
+
+        // int_div, int_mod, int_rem : ℤ × ℤ → ℤ
+        if matches!(
+            name,
+            "int_div" | "div" | "int_mod" | "mod" | "int_rem" | "rem"
+        ) && args.len() == 2
+        {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            });
+        }
+
+        // gcd : ℤ × ℤ → ℤ (or ℕ × ℕ → ℕ)
+        if name == "gcd" && args.len() == 2 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
                 args: vec![],
             });
         }
@@ -1365,7 +1411,14 @@ impl TypeInference {
         // They do NOT work on Complex, Matrix, Bool, etc.
         if matches!(
             name,
-            "less_than" | "greater_than" | "less_equal" | "greater_equal" | "leq" | "geq" | "lt" | "gt"
+            "less_than"
+                | "greater_than"
+                | "less_equal"
+                | "greater_equal"
+                | "leq"
+                | "geq"
+                | "lt"
+                | "gt"
         ) && args.len() == 2
         {
             let t1 = self.infer(&args[0], context_builder)?;

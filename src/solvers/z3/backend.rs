@@ -1522,6 +1522,103 @@ impl<'r> Z3Backend<'r> {
                 Ok(func_decl.apply(&ast_args))
             }
 
+            // ============================================
+            // INTEGER DIVISION AND MODULO OPERATIONS
+            // ============================================
+
+            // Integer division: a div b (floor division)
+            "int_div" | "div" => {
+                if args.len() != 2 {
+                    return Err("int_div requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.div(&b).into())
+                } else {
+                    Err("int_div requires integer arguments".to_string())
+                }
+            }
+
+            // Integer modulo: a mod b (always non-negative result)
+            "int_mod" | "mod" => {
+                if args.len() != 2 {
+                    return Err("int_mod requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.modulo(&b).into())
+                } else {
+                    Err("int_mod requires integer arguments".to_string())
+                }
+            }
+
+            // Integer remainder: a rem b (sign follows dividend)
+            "int_rem" | "rem" => {
+                if args.len() != 2 {
+                    return Err("int_rem requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.rem(&b).into())
+                } else {
+                    Err("int_rem requires integer arguments".to_string())
+                }
+            }
+
+            // ============================================
+            // FLOOR AND CEILING (ℚ → ℤ)
+            // ============================================
+
+            // Floor: largest integer ≤ r
+            "floor" => {
+                if args.len() != 1 {
+                    return Err("floor requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                // Z3's Real::to_int() computes floor
+                Ok(r.to_int().into())
+            }
+
+            // Ceiling: smallest integer ≥ r
+            // ceil(r) = -floor(-r)
+            "ceil" | "ceiling" => {
+                if args.len() != 1 {
+                    return Err("ceil requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                let neg_r = r.unary_minus();
+                let floor_neg_r = neg_r.to_int();
+                Ok(Int::unary_minus(&floor_neg_r).into())
+            }
+
+            // ============================================
+            // GCD (Greatest Common Divisor)
+            // Defined axiomatically: gcd(a,b) is the largest d such that d|a and d|b
+            // ============================================
+            "gcd" => {
+                if args.len() != 2 {
+                    return Err("gcd requires 2 arguments".to_string());
+                }
+                // Use uninterpreted function with axioms
+                // The actual GCD computation is done via axioms in stdlib/rational.kleis
+                let func_decl = self.declare_uninterpreted("gcd", 2);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // ============================================
+            // ABSOLUTE VALUE
+            // ============================================
+
+            // Absolute value for rationals
+            "abs_rational" | "abs" => {
+                if args.len() != 1 {
+                    return Err("abs requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                let zero = Real::from_rational(0, 1);
+                let neg_r = r.unary_minus();
+                // abs(r) = if r >= 0 then r else -r
+                Ok(r.ge(&zero).ite(&r, &neg_r).into())
+            }
+
             // Unknown operation - use uninterpreted function
             _ => {
                 let func_decl = self.declare_uninterpreted(name, args.len());
