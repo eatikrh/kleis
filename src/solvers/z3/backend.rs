@@ -86,6 +86,12 @@ impl ComplexDatatype {
     fn accessor_im(&self) -> &FuncDecl {
         &self.sort.variants[0].accessors[1]
     }
+
+    /// Get the Z3 Sort for Complex numbers
+    #[allow(dead_code)]
+    fn sort(&self) -> &Sort {
+        &self.sort.sort
+    }
 }
 
 impl<'r> Z3Backend<'r> {
@@ -277,6 +283,11 @@ impl<'r> Z3Backend<'r> {
                     "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
                     "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
                     "ℤ" | "Int" | "Z" | "Nat" => Int::fresh_const(&var.name).into(),
+                    "ℂ" | "Complex" | "C" => {
+                        // Create fresh Complex constant for quantified complex variables
+                        self.fresh_complex_const(&var.name)
+                            .unwrap_or_else(|| Int::fresh_const(&var.name).into())
+                    }
                     _ => Int::fresh_const(&var.name).into(),
                 }
             } else {
@@ -499,6 +510,10 @@ impl<'r> Z3Backend<'r> {
                         match ty.as_str() {
                             "Bool" | "Boolean" => Bool::fresh_const(&param.name).into(),
                             "ℝ" | "Real" | "R" => Real::fresh_const(&param.name).into(),
+                            "ℂ" | "Complex" | "C" => {
+                                self.fresh_complex_const(&param.name)
+                                    .unwrap_or_else(|| Int::fresh_const(&param.name).into())
+                            }
                             _ => Int::fresh_const(&param.name).into(),
                         }
                     } else {
@@ -1408,6 +1423,11 @@ impl<'r> Z3Backend<'r> {
                     "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
                     "ℤ" | "Int" | "Z" => Int::fresh_const(&var.name).into(),
                     "String" | "Str" => z3::ast::String::fresh_const(&var.name).into(),
+                    "ℂ" | "Complex" | "C" => {
+                        // Create fresh Complex constant for quantified complex variables
+                        self.fresh_complex_const(&var.name)
+                            .unwrap_or_else(|| Int::fresh_const(&var.name).into())
+                    }
                     _ => Int::fresh_const(&var.name).into(),
                 }
             } else {
@@ -1803,6 +1823,19 @@ impl<'r> Z3Backend<'r> {
         } else {
             false
         }
+    }
+
+    /// Create a fresh Complex constant for quantified variables
+    /// Returns complex(re_fresh, im_fresh) where re and im are fresh Real constants
+    fn fresh_complex_const(&self, name: &str) -> Option<Dynamic> {
+        self.complex_datatype.as_ref().map(|cdt| {
+            // Create fresh Real constants for the real and imaginary parts
+            let re = Real::fresh_const(&format!("{}_re", name));
+            let im = Real::fresh_const(&format!("{}_im", name));
+            // Construct the complex number
+            cdt.constructor()
+                .apply(&[&re as &dyn Ast, &im as &dyn Ast])
+        })
     }
 
     // TODO: These methods are temporary to support AxiomVerifier's axiom loading
