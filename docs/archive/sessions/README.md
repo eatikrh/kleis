@@ -6,6 +6,41 @@ Historical session reports moved from docs root to keep recent documentation cle
 
 ---
 
+## Session 2025-12-16: PatternFly Editor Assessment
+
+**Date:** December 16, 2025  
+**Focus:** PatternFly editor evaluation and Kleis construct planning  
+**Status:** ✅ Archived
+
+**Contents:**
+- `KLEIS_EDITOR_CONSTRUCTS_PLAN.md` - Plan for integrating Kleis constructs into editor
+- `PATTERNFLY_ASSESSMENT.md` - Assessment of PatternFly editor architecture
+
+---
+
+## Session 2025-12-13: AST Translation & Calculus ⭐
+
+**Date:** December 13, 2025  
+**Focus:** AST translation, calculus notation, parser gaps  
+**Status:** ✅ Archived
+
+**Contents:**
+- `AST_TRANSLATION_PROBLEM.md` - Editor AST to Kleis AST challenges
+- `CALCULUS_AST_ASSESSMENT.md` - Calculus notation assessment
+- `INTEGRAL_REPRESENTATION_SURVEY.md` - Survey of integral representations
+- `PARSER_GAPS_DISCOVERED.md` - Parser implementation gaps found
+- `PALETTE_KLEIS_COVERAGE.md` - Palette coverage for Kleis
+- `KLEIS_RENDERER_PROPOSAL.md` - Renderer proposal
+- `TESTING_LADDER.md` - Testing strategy
+- `SESSION_SUMMARY.md` - Session summary
+
+**Key Outcomes:**
+- Identified AST translation challenges
+- Documented Mathematica-style calculus notation (became v0.7)
+- Parser gap analysis
+
+---
+
 ## Session 2025-12-07: Type System & Stdlib Integration ⭐
 
 **Date:** December 7, 2025  
@@ -54,7 +89,7 @@ Historical session reports moved from docs root to keep recent documentation cle
 ## Navigation
 
 **Parent:** [docs/README.md](../../README.md)  
-**Current Sessions:** [docs/](../../) (session-2025-12-08, session-2025-12-09)  
+**Current Sessions:** None active (all archived)  
 **Archive Root:** [docs/archive/](../)
 
 ---
@@ -65,11 +100,11 @@ Sessions are archived when:
 - ✅ Content consolidated into permanent docs
 - ✅ Key findings captured in ADRs
 - ✅ No longer actively referenced
-- ✅ Older than 2-3 weeks
+- ✅ Older than ~1 week
 
 Sessions remain accessible but don't clutter active documentation.
 
 ---
 
-**Last Updated:** December 9, 2025
+**Last Updated:** December 19, 2025
 
