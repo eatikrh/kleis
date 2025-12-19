@@ -41,14 +41,48 @@ define flag = True                // True is a boolean
 define flag = True
 define not_flag = False
 
-// Unit value
-define empty = ()
-
 // Boolean in quantified expressions (inside structures)
 structure BoolExamples {
     axiom reflexive_unicode : ∀(p : 𝔹). p = p
     axiom reflexive_full    : ∀(q : Bool). q = q
 }
+```
+
+### The Unit Type
+
+The `Unit` type represents "no meaningful value" — like `void` in C or `()` in Rust/Haskell. It has exactly one value: `()`.
+
+**When to use Unit:**
+
+1. **Result types that can fail but return nothing on success:**
+
+```kleis
+// A validation that succeeds with () or fails with an error message
+data ValidationResult = Ok(Unit) | Err(String)
+
+define validate_positive(x : ℝ) : ValidationResult =
+    if x > 0 then Ok(()) else Err("must be positive")
+```
+
+2. **Optional values where presence matters, not content:**
+
+```kleis
+// Option type - Some(value) or None
+data Option(T) = Some(T) | None
+
+// A flag that's either set or not (no associated value)
+define flag_set : Option(Unit) = Some(())
+define flag_unset : Option(Unit) = None
+```
+
+3. **Proof terms with no computational content:**
+
+```kleis
+// A theorem that x = x (the proof itself carries no data)
+structure Reflexivity {
+    axiom refl : ∀(x : ℝ). x = x
+}
+// The "witness" of this axiom would have type Unit
 ```
 
 ## Type Annotations
