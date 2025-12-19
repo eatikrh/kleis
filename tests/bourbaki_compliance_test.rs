@@ -246,7 +246,10 @@ structure Continuous(X, Y) {
         is_open(V) → is_open(preimage(f, V))
 }
 "#;
-    assert!(parses_ok(source), "Should express continuous function definition");
+    assert!(
+        parses_ok(source),
+        "Should express continuous function definition"
+    );
 }
 
 #[test]
@@ -258,7 +261,10 @@ structure HausdorffSpace(X) {
             in_set(x, U) ∧ in_set(y, V) ∧ intersect(U, V) = empty_set)
 }
 "#;
-    assert!(parses_ok(source), "Should express Hausdorff separation axiom");
+    assert!(
+        parses_ok(source),
+        "Should express Hausdorff separation axiom"
+    );
 }
 
 #[test]
@@ -313,7 +319,10 @@ structure Limits {
             (∀(x : ℝ). abs(x - a) < δ → abs(f(x) - L) < ε)))
 }
 "#;
-    assert!(parses_ok(source), "Should express epsilon-delta limit definition");
+    assert!(
+        parses_ok(source),
+        "Should express epsilon-delta limit definition"
+    );
 }
 
 #[test]
@@ -409,7 +418,10 @@ structure InnerProductSpace(V) {
     axiom zero_inner: ∀(v : V). inner(v, v) = 0 ↔ v = zero
 }
 "#;
-    assert!(parses_ok(source), "Should express inner product space axioms");
+    assert!(
+        parses_ok(source),
+        "Should express inner product space axioms"
+    );
 }
 
 #[test]
@@ -420,7 +432,10 @@ structure BanachSpace(V) {
         is_cauchy_norm(seq) → (∃(L : V). converges_to_norm(seq, L))
 }
 "#;
-    assert!(parses_ok(source), "Should express Banach space (complete normed space)");
+    assert!(
+        parses_ok(source),
+        "Should express Banach space (complete normed space)"
+    );
 }
 
 #[test]
@@ -445,7 +460,10 @@ structure LinearAlgebra {
     axiom vector_add: ∀(u v : Vector(n, ℝ)). u + v = v + u
 }
 "#;
-    assert!(parses_ok(source), "Should express vectors with dimension parameter");
+    assert!(
+        parses_ok(source),
+        "Should express vectors with dimension parameter"
+    );
 }
 
 #[test]
@@ -455,7 +473,10 @@ structure Matrices {
     axiom matrix_add: ∀(A B : Matrix(m, n, ℝ)). A + B = B + A
 }
 "#;
-    assert!(parses_ok(source), "Should express matrices with dimension parameters");
+    assert!(
+        parses_ok(source),
+        "Should express matrices with dimension parameters"
+    );
 }
 
 #[test]
@@ -466,7 +487,10 @@ structure MatrixMul {
         mul(A, B) = mul(A, B)
 }
 "#;
-    assert!(parses_ok(source), "Should express matrix multiplication dimension compatibility");
+    assert!(
+        parses_ok(source),
+        "Should express matrix multiplication dimension compatibility"
+    );
 }
 
 // =============================================================================
@@ -482,7 +506,10 @@ structure ComplexNumbers {
     axiom conjugate: ∀(z : ℂ). z * conj(z) = norm_sq(z)
 }
 "#;
-    assert!(parses_ok(source), "Should express complex number properties");
+    assert!(
+        parses_ok(source),
+        "Should express complex number properties"
+    );
 }
 
 #[test]
@@ -497,6 +524,8 @@ structure Holomorphic {
                     abs((f(z + h) - f(z)) / h - f_prime) < ε))))
 }
 "#;
-    assert!(parses_ok(source), "Should express holomorphic function definition");
+    assert!(
+        parses_ok(source),
+        "Should express holomorphic function definition"
+    );
 }
-

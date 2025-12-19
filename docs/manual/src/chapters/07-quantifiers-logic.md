@@ -100,6 +100,70 @@ structure Group(G) {
 }
 ```
 
+## Nested Quantifiers (Grammar v0.9)
+
+Quantifiers can appear inside logical expressions:
+
+```kleis
+structure Analysis {
+    // Quantifier inside conjunction
+    axiom bounded_positive: (x > 0) ∧ (∀(y : ℝ). abs(y) <= x)
+    
+    // Quantifier inside implication
+    axiom dense_rationals: ∀(a b : ℝ). a < b → (∃(q : ℚ). a < q ∧ q < b)
+    
+    // Deeply nested quantifiers
+    axiom limit_def: ∀(L : ℝ, ε : ℝ). ε > 0 → 
+        (∃(δ : ℝ). δ > 0 ∧ (∀(x : ℝ). abs(x) < δ → abs(f(x) - L) < ε))
+}
+```
+
+### Epsilon-Delta Limit Definition
+
+The classic analysis definition now parses correctly:
+
+```kleis
+structure Limits {
+    axiom epsilon_delta: ∀(f : ℝ → ℝ, L a : ℝ). 
+        has_limit(f, a, L) ↔ 
+        (∀(ε : ℝ). ε > 0 → (∃(δ : ℝ). δ > 0 ∧ 
+            (∀(x : ℝ). abs(x - a) < δ → abs(f(x) - L) < ε)))
+}
+```
+
+## Function Types in Quantifiers (Grammar v0.9)
+
+Quantify over functions using the arrow type:
+
+```kleis
+structure FunctionProperties {
+    // Quantify over a function ℝ → ℝ
+    axiom continuous: ∀(f : ℝ → ℝ, x : ℝ). 
+        is_continuous(f, x)
+    
+    // Quantify over multiple functions
+    axiom composition: ∀(f : ℝ → ℝ, g : ℝ → ℝ). 
+        compose(f, g) = λ x . f(g(x))
+    
+    // Higher-order function types
+    axiom curried: ∀(f : ℝ → ℝ → ℝ, a b : ℝ). 
+        f = f
+}
+```
+
+### Topology with Function Types
+
+```kleis
+structure Topology {
+    axiom continuity: ∀(f : X → Y, V : Set(Y)). 
+        is_open(V) → is_open(preimage(f, V))
+    
+    axiom homeomorphism: ∀(f : X → Y, g : Y → X). 
+        (∀(x : X). g(f(x)) = x) ∧ (∀(y : Y). f(g(y)) = y) → 
+        bijective(f)
+}
+```
+
 ## Verification with Z3
 
 Kleis uses Z3 to check quantified statements:
