@@ -18,6 +18,7 @@ define flag = True                // True is a boolean
 |------|---------|-----------|-------|----------|
 | Natural | `ℕ` | `Nat` | `N` | `0`, `42`, `100` |
 | Integer | `ℤ` | `Int` | `Z` | `-5`, `0`, `17` |
+| Rational | `ℚ` | `Rational` | `Q` | `rational(1, 2)`, `rational(3, 4)` |
 | Real | `ℝ` | `Real` or `Scalar` | `R` | `3.14`, `-2.5`, `√2` |
 | Complex | `ℂ` | `Complex` | `C` | `3 + 4i`, `i` |
 
@@ -26,7 +27,14 @@ define flag = True                // True is a boolean
 | Type | Unicode | Full Name | Values |
 |------|---------|-----------|--------|
 | Boolean | `𝔹` | `Bool` | `True`, `False` |
+| String | — | `String` | `"hello"`, `"world"` |
 | Unit | — | `Unit` | `()` |
+
+### Parameterized Primitive Types
+
+| Type | Syntax | Description |
+|------|--------|-------------|
+| Bit-Vector | `BitVec(n)` | n-bit binary vector (e.g., `BitVec(8)`, `BitVec(32)`) |
 
 ```kleis
 // Boolean values
@@ -137,12 +145,14 @@ But explicit types make code clearer and catch errors earlier!
     |                 /    \
     ℝ            Vector   Matrix
     |
+    ℚ
+    |
     ℤ
     |
     ℕ
 ```
 
-Note: `ℕ ⊂ ℤ ⊂ ℝ ⊂ ℂ` (natural numbers are integers are reals are complex)
+Note: `ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ ⊂ ℂ` (naturals ⊂ integers ⊂ rationals ⊂ reals ⊂ complex)
 
 ## What's Next?
 
