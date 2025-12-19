@@ -1,6 +1,37 @@
 # Z3 Solver Capabilities Declaration
 # MCP-style capability manifest
 # See: docs/session-2024-12-12/SOLVER_MCP_STYLE_CAPABILITIES.md
+#
+# ============================================
+# Z3 REAL (RATIONAL) OPERATORS REFERENCE
+# ============================================
+# 
+# Core Arithmetic (overloaded + methods):
+#   +, -, *, /        Real::add, Real::sub, Real::mul, Real::div
+#   -x                Real::unary_minus()
+#   a^b               Real::power(&b) - NOTE: non-linear, can be slow
+#
+# Comparison (return Bool AST, not Rust bool):
+#   a._eq(&b)         Mathematical equality (NOT == which compares AST)
+#   a.distinct(&b)    Inequality
+#   a.gt/ge/lt/le(&b) Ordering comparisons
+#
+# Conversion:
+#   x.to_int()        Floor: ℚ → ℤ (truncates toward -∞)
+#   Int::to_real(&i)  Embed: ℤ → ℚ
+#   x.is_int()        Returns Bool: is this Real an integer?
+#
+# Special:
+#   cond.ite(&a, &b)  If-then-else for piecewise functions
+#   Real::from_real(ctx, num, den)  Create rational constant
+#
+# IMPORTANT:
+#   - Division by zero is allowed but result-unspecified (guard it!)
+#   - Remainder (mod) is NOT native for Reals, only Int
+#   - Non-linear arithmetic (power, x*y) can make solver return "unknown"
+#   - Keep constraints linear when possible for best performance
+#
+# ============================================
 
 [solver]
 name = "Z3"
@@ -157,6 +188,13 @@ ceil = { arity = 1, theory = "Rational", native = true, description = "Ceiling: 
 
 # GCD (defined axiomatically)
 gcd = { arity = 2, theory = "Int", native = false, description = "GCD: greatest common divisor (axiomatized)" }
+
+# Power (non-linear - may cause "unknown" for complex constraints)
+power = { arity = 2, theory = "Real", native = true, description = "Exponentiation: a^b (WARNING: non-linear)" }
+pow = { arity = 2, theory = "Real", native = true, description = "Alias for power" }
+
+# Integer check
+is_int = { arity = 1, theory = "Real", native = true, description = "Is this Real an integer? Returns Bool" }
 
 # Note: Z3 supports many more operations via its built-in theories,
 # but these are the ones explicitly translated in our current implementation.
