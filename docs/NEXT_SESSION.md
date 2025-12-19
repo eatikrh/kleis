@@ -1,4 +1,115 @@
-# Next Session: PatternFly Equation Editor Migration
+# Next Session: Operator Overloading Implementation
+
+---
+
+## 🚀 IMMEDIATE PRIORITY: Operator Overloading (Dec 18, 2025)
+
+**Goal**: Enable natural arithmetic syntax for complex numbers (and future numeric types).
+
+```kleis
+// Natural syntax (goal):
+define z = 3 + 4*i
+define sum = z1 + z2
+
+// Current syntax (works but verbose):
+define z = complex(3, 4)
+define sum = complex_add(z1, z2)
+```
+
+**Plan**: `docs/plans/operator-overloading.md`
+
+### Implementation Phases
+
+| Phase | Description | Status | Effort |
+|-------|-------------|--------|--------|
+| **Phase 1** | Typed AST - Annotate AST nodes with inferred types | 📋 Next | 1 session |
+| **Phase 2** | Lowering module - `src/lowering.rs` | 📋 Planned | 1-2 sessions |
+| **Phase 3** | Integration - REPL, CLI, AxiomVerifier | 📋 Planned | 1 session |
+| **Phase 4** | Testing - Comprehensive operator tests | 📋 Planned | 1 session |
+
+### Phase 1 Tasks (Start Here)
+
+1. [ ] Create `TypedExpr` struct pairing `Expression` with `Type`
+2. [ ] Add `TypeInference::infer_typed()` method returning typed AST
+3. [ ] Unit tests for typed AST construction
+
+### Architecture
+
+```
+Parser → Type Inference → Lowering (NEW) → Backend
+                              ↓
+              Rewrites: plus(ℂ, ℂ) → complex_add
+                        times(ℝ, ℂ) → complex_mul(lift, _)
+```
+
+---
+
+## 📋 FUTURE WORK COMPILED (Dec 18, 2025)
+
+### Complex Numbers (Post-Operator Overloading)
+
+| Feature | Description | Complexity | Blocked By |
+|---------|-------------|------------|------------|
+| `abs(z)` magnitude | \|z\| = √(re² + im²) | Medium | sqrt transcendental in Z3 |
+| `exp(z)`, `log(z)` | Complex exponential/logarithm | High | Transcendental functions |
+| `sin(z)`, `cos(z)` | Complex trig functions | High | Transcendental functions |
+| `sqrt(z)` | Complex square root | Medium | Multi-valued (branch cuts) |
+| Polar form | `(r, θ)` representation | Medium | atan2 function |
+| Euler's formula | `e^{iθ} = cos(θ) + i·sin(θ)` | Medium | exp, sin, cos |
+
+### Type System Enhancements
+
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **Full type classes** | Haskell-style `Num`, `Eq`, `Ord` | Future |
+| **Matrix arithmetic** | `A + B`, `A * B` via lowering | After operator overloading |
+| **Vector arithmetic** | `v + w`, `λ * v` via lowering | After operator overloading |
+| **Quaternions** | `q1 * q2` quaternion multiplication | Future |
+| **Tensor contraction** | Automatic Einstein summation | Future |
+
+### Parser Gaps
+
+| Feature | Grammar v0.8 | Parser | Priority |
+|---------|--------------|--------|----------|
+| Top-level `verify` | ✅ | ❌ | Low (REPL has `:verify`) |
+| Top-level `let` | ✅ | ❌ | Low (REPL has `:define`) |
+| Top-level `axiom` | ✅ | ❌ | Low (structures cover most cases) |
+| Termination checking | N/A | ❌ | Medium (recursive functions hang) |
+
+### Equation Editor
+
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **PatternFly migration** | React/PatternFly rewrite of static/index.html | High |
+| **Tensor index bug** | Tensors in equations show all upper indices | Medium |
+| **xAct palette** | Update palette to generate xAct-style AST | Low |
+
+---
+
+## ✅ SESSION SUMMARY: Complex Numbers Complete (Dec 18, 2025)
+
+**Branch**: `feature/complex-numbers` (merged to main)
+
+### What Was Accomplished
+
+| Component | Status |
+|-----------|--------|
+| Z3 Datatype `Complex = mk_complex(re, im)` | ✅ |
+| `ComplexZ3` translator (280 lines) | ✅ |
+| Z3 Backend wiring (`i`, `complex`, `re`, `im`, `conj`, ops) | ✅ |
+| `stdlib/complex.kleis` axioms (30+) | ✅ |
+| `implements Field(ℂ)` in prelude | ✅ |
+| 14 unit tests + 6 integration tests | ✅ All passing |
+
+### Verified Working
+
+```
+✅ complex_mul(i, i) = complex(-1, 0)           # i² = -1
+✅ complex_add(complex(1,2), complex(3,4)) = complex(4,6)
+✅ complex_mul(complex(1,2), complex(3,4)) = complex(-5,10)
+✅ ∀(z : ℂ). conj(conj(z)) = z
+✅ |3+4i|² = 25
+```
 
 ---
 

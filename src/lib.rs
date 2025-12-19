@@ -22,6 +22,7 @@ pub mod templates;
 pub mod type_checker;
 pub mod type_context;
 pub mod type_inference;
+pub mod typed_ast; // Typed AST for operator overloading (semantic lowering)
 
 /// Convenience function: Parse LaTeX and render to Unicode
 pub fn latex_to_unicode(latex: &str) -> Result<String, parser::ParseError> {

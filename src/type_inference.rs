@@ -451,6 +451,166 @@ impl TypeInference {
         }
     }
 
+    /// Infer type of an expression and return a typed AST
+    ///
+    /// Unlike `infer()` which only returns the type, this method returns a
+    /// `TypedExpr` that includes both the expression and its type, along with
+    /// typed children. This is needed for semantic lowering (operator overloading).
+    ///
+    /// ## Example
+    ///
+    /// For `3 + 4*i`:
+    /// - Returns TypedExpr with ty=Complex
+    /// - children[0] is TypedExpr for `3` with ty=Real
+    /// - children[1] is TypedExpr for `4*i` with ty=Complex
+    ///
+    /// The lowering pass can then inspect operand types to rewrite:
+    /// `plus(Real, Complex)` → `complex_add(lift(Real), Complex)`
+    pub fn infer_typed(
+        &mut self,
+        expr: &Expression,
+        context_builder: Option<&crate::type_context::TypeContextBuilder>,
+    ) -> Result<crate::typed_ast::TypedExpr, String> {
+        use crate::typed_ast::TypedExpr;
+
+        match expr {
+            // Leaf nodes: no children
+            Expression::Const(_) => {
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::leaf(expr.clone(), ty))
+            }
+
+            Expression::String(_) => {
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::leaf(expr.clone(), ty))
+            }
+
+            Expression::Object(_) => {
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::leaf(expr.clone(), ty))
+            }
+
+            Expression::Placeholder { .. } => {
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::leaf(expr.clone(), ty))
+            }
+
+            // Operations: recurse into arguments
+            Expression::Operation { name: _, args } => {
+                // First infer types of all arguments
+                let typed_args: Result<Vec<TypedExpr>, String> = args
+                    .iter()
+                    .map(|arg| self.infer_typed(arg, context_builder))
+                    .collect();
+                let children = typed_args?;
+
+                // Then infer type of the whole operation
+                let ty = self.infer(expr, context_builder)?;
+
+                Ok(TypedExpr::node(expr.clone(), ty, children))
+            }
+
+            // List: recurse into elements
+            Expression::List(elements) => {
+                let typed_elements: Result<Vec<TypedExpr>, String> = elements
+                    .iter()
+                    .map(|elem| self.infer_typed(elem, context_builder))
+                    .collect();
+                let children = typed_elements?;
+
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(expr.clone(), ty, children))
+            }
+
+            // Match: scrutinee + case bodies
+            Expression::Match { scrutinee, cases } => {
+                let typed_scrutinee = self.infer_typed(scrutinee, context_builder)?;
+
+                // For each case, type the body (patterns are not expressions)
+                let mut children = vec![typed_scrutinee];
+                for case in cases {
+                    // Save context, bind pattern vars, type body, restore
+                    let saved_context = self.context.clone();
+                    let scrutinee_ty = children[0].ty.clone();
+                    let _ = self.check_pattern(&case.pattern, &scrutinee_ty);
+                    let typed_body = self.infer_typed(&case.body, context_builder)?;
+                    children.push(typed_body);
+                    self.context = saved_context;
+                }
+
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(expr.clone(), ty, children))
+            }
+
+            // Conditional: condition + branches
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let typed_cond = self.infer_typed(condition, context_builder)?;
+                let typed_then = self.infer_typed(then_branch, context_builder)?;
+                let typed_else = self.infer_typed(else_branch, context_builder)?;
+
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(
+                    expr.clone(),
+                    ty,
+                    vec![typed_cond, typed_then, typed_else],
+                ))
+            }
+
+            // Let binding: value + body
+            Expression::Let {
+                pattern,
+                value,
+                body,
+                ..
+            } => {
+                let typed_value = self.infer_typed(value, context_builder)?;
+
+                // Bind pattern variables before typing body
+                self.bind_pattern_variables(pattern, &typed_value.ty);
+
+                let typed_body = self.infer_typed(body, context_builder)?;
+
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(
+                    expr.clone(),
+                    ty,
+                    vec![typed_value, typed_body],
+                ))
+            }
+
+            // Ascription: inner expression
+            Expression::Ascription { expr: inner, .. } => {
+                let typed_inner = self.infer_typed(inner, context_builder)?;
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(expr.clone(), ty, vec![typed_inner]))
+            }
+
+            // Lambda: body
+            Expression::Lambda { params, body } => {
+                // Bind parameters
+                for param in params {
+                    let param_type = self.context.fresh_var();
+                    self.context.bind(param.name.clone(), param_type);
+                }
+
+                let typed_body = self.infer_typed(body, context_builder)?;
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(expr.clone(), ty, vec![typed_body]))
+            }
+
+            // Quantifier: body
+            Expression::Quantifier { body, .. } => {
+                let typed_body = self.infer_typed(body, context_builder)?;
+                let ty = self.infer(expr, context_builder)?;
+                Ok(TypedExpr::node(expr.clone(), ty, vec![typed_body]))
+            }
+        }
+    }
+
     /// Infer type of a pattern matching expression
     ///
     /// Pattern matching type inference (ADR-021):
