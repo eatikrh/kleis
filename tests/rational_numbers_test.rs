@@ -4,8 +4,10 @@
 
 use kleis::kleis_parser::{parse_kleis_program, KleisParser};
 use kleis::lowering::SemanticLowering;
+use kleis::solvers::z3::translators::rational::RationalZ3;
 use kleis::type_context::TypeContextBuilder;
 use kleis::type_inference::{Type, TypeInference};
+use z3::SatResult;
 
 /// Helper to check if a program parses successfully
 fn parses_ok(source: &str) -> bool {
@@ -708,5 +710,259 @@ fn test_type_hierarchy_int_plus_int() {
         matches!(&ty, Type::Data { constructor, .. } if constructor == "Int" || constructor == "Scalar"),
         "Expression with negative should be Int or Scalar, got {:?}",
         ty
+    );
+}
+
+// ============================================
+// Z3 THEOREM PROVING TESTS
+// These tests actually use Z3 to prove theorems!
+// ============================================
+
+/// Test that 1/2 = 2/4 (same rational value)
+#[test]
+fn test_z3_prove_rational_equality() {
+    let half = RationalZ3::from_fraction(1, 2);
+    let two_fourths = RationalZ3::from_fraction(2, 4);
+
+    let solver = z3::Solver::new();
+    // Assert that 1/2 ≠ 2/4 - should be UNSAT (proving they ARE equal)
+    solver.assert(&half.value.eq(&two_fourths.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 1/2 = 2/4"
+    );
+}
+
+/// Test that 1/2 + 1/2 = 1
+#[test]
+fn test_z3_prove_rational_addition() {
+    let half = RationalZ3::from_fraction(1, 2);
+    let one = RationalZ3::from_fraction(1, 1);
+    let sum = half.add(&half);
+
+    let solver = z3::Solver::new();
+    solver.assert(&sum.value.eq(&one.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 1/2 + 1/2 = 1"
+    );
+}
+
+/// Test that 1/2 * 2 = 1
+#[test]
+fn test_z3_prove_rational_multiplication() {
+    let half = RationalZ3::from_fraction(1, 2);
+    let two = RationalZ3::from_fraction(2, 1);
+    let one = RationalZ3::from_fraction(1, 1);
+    let product = half.mul(&two);
+
+    let solver = z3::Solver::new();
+    solver.assert(&product.value.eq(&one.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 1/2 * 2 = 1"
+    );
+}
+
+/// Test that 1/3 < 1/2
+#[test]
+fn test_z3_prove_rational_ordering() {
+    let third = RationalZ3::from_fraction(1, 3);
+    let half = RationalZ3::from_fraction(1, 2);
+
+    let solver = z3::Solver::new();
+    // Assert that 1/3 < 1/2 is false - should be UNSAT (proving it IS true)
+    solver.assert(&third.lt(&half).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 1/3 < 1/2"
+    );
+}
+
+/// Test that -(-1/2) = 1/2 (double negation)
+#[test]
+fn test_z3_prove_rational_double_negation() {
+    let half = RationalZ3::from_fraction(1, 2);
+    let neg_half = half.neg();
+    let neg_neg_half = neg_half.neg();
+
+    let solver = z3::Solver::new();
+    solver.assert(&neg_neg_half.value.eq(&half.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove -(-1/2) = 1/2"
+    );
+}
+
+/// Test that 3/4 - 1/4 = 1/2
+#[test]
+fn test_z3_prove_rational_subtraction() {
+    let three_fourths = RationalZ3::from_fraction(3, 4);
+    let one_fourth = RationalZ3::from_fraction(1, 4);
+    let half = RationalZ3::from_fraction(1, 2);
+    let diff = three_fourths.sub(&one_fourth);
+
+    let solver = z3::Solver::new();
+    solver.assert(&diff.value.eq(&half.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 3/4 - 1/4 = 1/2"
+    );
+}
+
+/// Test that (1/2) / (1/4) = 2
+#[test]
+fn test_z3_prove_rational_division() {
+    let half = RationalZ3::from_fraction(1, 2);
+    let quarter = RationalZ3::from_fraction(1, 4);
+    let two = RationalZ3::from_fraction(2, 1);
+    let quotient = half.div(&quarter);
+
+    let solver = z3::Solver::new();
+    solver.assert(&quotient.value.eq(&two.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove (1/2) / (1/4) = 2"
+    );
+}
+
+/// Test that inv(1/2) = 2
+#[test]
+fn test_z3_prove_rational_inverse() {
+    let half = RationalZ3::from_fraction(1, 2);
+    let two = RationalZ3::from_fraction(2, 1);
+    let inv_half = half.inv();
+
+    let solver = z3::Solver::new();
+    solver.assert(&inv_half.value.eq(&two.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove inv(1/2) = 2"
+    );
+}
+
+/// Test that r + 0 = r (additive identity)
+#[test]
+fn test_z3_prove_rational_zero_identity() {
+    let r = RationalZ3::from_fraction(3, 7);
+    let zero = RationalZ3::zero();
+    let sum = r.add(&zero);
+
+    let solver = z3::Solver::new();
+    solver.assert(&sum.value.eq(&r.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 3/7 + 0 = 3/7"
+    );
+}
+
+/// Test that r * 1 = r (multiplicative identity)
+#[test]
+fn test_z3_prove_rational_one_identity() {
+    let r = RationalZ3::from_fraction(5, 11);
+    let one = RationalZ3::one();
+    let product = r.mul(&one);
+
+    let solver = z3::Solver::new();
+    solver.assert(&product.value.eq(&r.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 5/11 * 1 = 5/11"
+    );
+}
+
+/// Test commutativity: a + b = b + a
+#[test]
+fn test_z3_prove_rational_commutativity() {
+    let a = RationalZ3::from_fraction(1, 3);
+    let b = RationalZ3::from_fraction(1, 4);
+    let ab = a.add(&b);
+    let ba = b.add(&a);
+
+    let solver = z3::Solver::new();
+    solver.assert(&ab.value.eq(&ba.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 1/3 + 1/4 = 1/4 + 1/3"
+    );
+}
+
+/// Test associativity: (a + b) + c = a + (b + c)
+#[test]
+fn test_z3_prove_rational_associativity() {
+    let a = RationalZ3::from_fraction(1, 2);
+    let b = RationalZ3::from_fraction(1, 3);
+    let c = RationalZ3::from_fraction(1, 6);
+
+    let ab_c = a.add(&b).add(&c);
+    let a_bc = a.add(&b.add(&c));
+
+    let solver = z3::Solver::new();
+    solver.assert(&ab_c.value.eq(&a_bc.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove (1/2 + 1/3) + 1/6 = 1/2 + (1/3 + 1/6)"
+    );
+}
+
+/// Test multiplicative inverse: r * (1/r) = 1
+#[test]
+fn test_z3_prove_multiplicative_inverse() {
+    let r = RationalZ3::from_fraction(3, 5);
+    let inv_r = r.inv();
+    let one = RationalZ3::one();
+    let product = r.mul(&inv_r);
+
+    let solver = z3::Solver::new();
+    solver.assert(&product.value.eq(&one.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 3/5 * 5/3 = 1"
+    );
+}
+
+/// Test distributive law: a * (b + c) = a*b + a*c
+#[test]
+fn test_z3_prove_distributive_law() {
+    let a = RationalZ3::from_fraction(2, 3);
+    let b = RationalZ3::from_fraction(1, 4);
+    let c = RationalZ3::from_fraction(1, 2);
+
+    let lhs = a.mul(&b.add(&c)); // a * (b + c)
+    let rhs = a.mul(&b).add(&a.mul(&c)); // a*b + a*c
+
+    let solver = z3::Solver::new();
+    solver.assert(&lhs.value.eq(&rhs.value).not());
+
+    assert_eq!(
+        solver.check(),
+        SatResult::Unsat,
+        "Z3 should prove 2/3 * (1/4 + 1/2) = 2/3*1/4 + 2/3*1/2"
     );
 }
