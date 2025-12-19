@@ -162,6 +162,16 @@ impl ComplexZ3 {
         }
     }
 
+    /// Multiplicative inverse: 1/z = conj(z) / |z|²
+    /// = (re, -im) / (re² + im²)
+    pub fn inverse(&self) -> ComplexZ3 {
+        let abs_sq = self.abs_squared();
+        ComplexZ3 {
+            re: self.re.div(&abs_sq),
+            im: self.im.unary_minus().div(&abs_sq),
+        }
+    }
+
     /// Check equality: z₁ = z₂ iff (re₁ = re₂ ∧ im₁ = im₂)
     pub fn eq_complex(&self, other: &ComplexZ3) -> Bool {
         let re_eq = self.re.eq(&other.re);

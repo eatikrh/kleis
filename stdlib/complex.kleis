@@ -54,6 +54,30 @@ structure ComplexAxioms {
         re(complex_mul(z, conj(z))) = re(z) * re(z) + im(z) * im(z)
     axiom magnitude_squared_im : ∀(z : ℂ). 
         im(complex_mul(z, conj(z))) = 0
+    
+    // abs_squared function
+    axiom abs_squared_def : ∀(z : ℂ).
+        abs_squared(z) = re(z) * re(z) + im(z) * im(z)
+    
+    // Subtraction: (a + bi) - (c + di) = (a-c) + (b-d)i
+    axiom complex_sub_re : ∀(z1 : ℂ)(z2 : ℂ). 
+        re(complex_sub(z1, z2)) = re(z1) - re(z2)
+    axiom complex_sub_im : ∀(z1 : ℂ)(z2 : ℂ). 
+        im(complex_sub(z1, z2)) = im(z1) - im(z2)
+    
+    // Negation: -z = (-re, -im)
+    axiom neg_complex_re : ∀(z : ℂ). re(neg_complex(z)) = 0 - re(z)
+    axiom neg_complex_im : ∀(z : ℂ). im(neg_complex(z)) = 0 - im(z)
+    
+    // Division: z1/z2 = z1 * conj(z2) / |z2|²
+    axiom complex_div_def : ∀(z1 : ℂ)(z2 : ℂ).
+        complex_div(z1, z2) = complex_mul(z1, complex_inverse(z2))
+    
+    // Inverse: 1/z = conj(z) / |z|²
+    axiom complex_inverse_re : ∀(z : ℂ).
+        re(complex_inverse(z)) = re(z) / abs_squared(z)
+    axiom complex_inverse_im : ∀(z : ℂ).
+        im(complex_inverse(z)) = (0 - im(z)) / abs_squared(z)
 }
 
 // ============================================
@@ -98,7 +122,7 @@ structure ComplexField {
 }
 
 // ============================================
-// KNOWN LIMITATIONS
+// KNOWN LIMITATIONS AND FUTURE WORK
 // ============================================
 //
 // 1. OPERATOR OVERLOADING NOT YET SUPPORTED
@@ -106,21 +130,39 @@ structure ComplexField {
 //    TODO: Enable z1 + z2 instead of complex_add(z1, z2)
 //    Options: axiom-based, type-aware translation, or parser sugar
 //
-// 2. AXIOMS NOT AUTO-LOADED IN REPL :verify
-//    The REPL's :verify command doesn't auto-load these axioms.
-//    Operations (complex, re, im, conj) are declared in prelude.kleis
-//    but their axioms are here in structures.
-//    The registry's analyze_dependencies doesn't find the connection.
+// 2. CONCRETE VALUE INSTANTIATION
+//    Quantified axioms work for SYMBOLIC reasoning but not concrete computation.
+//    Example: complex_add(complex(1,2), complex(3,4)) = complex(4,6)
+//    fails because Z3 doesn't automatically instantiate quantifiers.
 //    
-//    WORKAROUND: Use integration tests (tests/complex_z3_integration.rs)
-//    which directly use ComplexZ3 with algebraic operations.
+//    The axiom ∀z1,z2. re(complex_add(z1,z2)) = re(z1) + re(z2) requires
+//    Z3 E-matching with proper triggers to instantiate with concrete values.
+//    
+//    WORKS:     :verify complex_mul(i, i) = complex(0 - 1, 0)  (i² = -1)
+//    WORKS:     :verify conj(conj(z)) = z (symbolic identity)
+//    FAILS:     :verify complex_add(complex(1,2), complex(3,4)) = complex(4,6)
+//    
+//    WORKAROUND: Integration tests (tests/complex_z3_integration.rs) use
+//    ComplexZ3 directly with algebraic operations for concrete computation.
 //
-//    TODO: Either:
-//    - Move operation declarations INTO the structures
-//    - Add operation→structure mapping to registry
-//    - Have REPL load all structure axioms before :verify
+// 3. MISSING OPERATIONS (FUTURE WORK)
+//    - abs(z) : magnitude |z| = sqrt(re² + im²) - requires sqrt
+//    - exp(z), log(z) : complex exponential/logarithm - transcendental
+//    - sin(z), cos(z) : complex trig - transcendental
+//    - sqrt(z) : complex square root - multi-valued
+//    - Polar form (r, θ) representation
+//    - Euler's formula: e^{iθ} = cos(θ) + i·sin(θ)
 //
-// See: feature/complex-numbers branch discussion
+// 4. ARCHITECTURE NOTE
+//    Two complementary approaches exist:
+//    a) Algebraic (ComplexZ3 struct) - for concrete computation in Rust tests
+//    b) Axiom-based (this file) - for symbolic theorem proving in Kleis
+//    
+//    The Z3 backend uses uninterpreted functions + axioms for verification,
+//    which is correct for theorem proving. Concrete evaluation should use
+//    the algebraic ComplexZ3 implementation directly.
+//
+// See: feature/complex-numbers branch (Dec 2024)
 // ============================================
 
 // ============================================

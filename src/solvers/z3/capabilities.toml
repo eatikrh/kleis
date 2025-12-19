@@ -23,9 +23,11 @@ theories = [
 # Native operation support (15 operations with Z3 translators)
 [capabilities.operations]
 
-# Equality (works with any type)
+# Equality and Inequality (works with any type)
 equals = { arity = 2, theory = "Any", native = true }
 eq = { arity = 2, theory = "Any", native = true }
+neq = { arity = 2, theory = "Any", native = true, description = "Not equal: a ≠ b" }
+not_equals = { arity = 2, theory = "Any", native = true }
 
 # Comparisons (Int and Real)
 less_than = { arity = 2, theory = "Int/Real", native = true }
@@ -111,8 +113,12 @@ imag_part = { arity = 1, theory = "Complex", native = true }
 conj = { arity = 1, theory = "Complex", native = true, description = "Complex conjugate: conj(a+bi) = a-bi" }
 conjugate = { arity = 1, theory = "Complex", native = true }
 complex_add = { arity = 2, theory = "Complex", native = true, description = "Complex addition" }
+complex_sub = { arity = 2, theory = "Complex", native = true, description = "Complex subtraction" }
 complex_mul = { arity = 2, theory = "Complex", native = true, description = "Complex multiplication" }
+complex_div = { arity = 2, theory = "Complex", native = true, description = "Complex division" }
 complex_inverse = { arity = 1, theory = "Complex", native = true, description = "Multiplicative inverse: 1/z" }
+neg_complex = { arity = 1, theory = "Complex", native = true, description = "Negation: -z" }
+abs_squared = { arity = 1, theory = "Complex", native = true, description = "Magnitude squared: |z|² = re² + im²" }
 
 # Note: Z3 supports many more operations via its built-in theories,
 # but these are the ones explicitly translated in our current implementation.

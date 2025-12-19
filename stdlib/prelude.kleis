@@ -261,6 +261,15 @@ operation im : ℂ → ℝ    // Extract imaginary part
 // Complex conjugate
 operation conj : ℂ → ℂ
 
+// Complex arithmetic (explicit versions - Z3 uses axioms)
+operation complex_add : ℂ × ℂ → ℂ     // z1 + z2
+operation complex_sub : ℂ × ℂ → ℂ     // z1 - z2
+operation complex_mul : ℂ × ℂ → ℂ     // z1 × z2
+operation complex_div : ℂ × ℂ → ℂ     // z1 / z2
+operation complex_inverse : ℂ → ℂ     // 1/z
+operation neg_complex : ℂ → ℂ         // -z
+operation abs_squared : ℂ → ℝ         // |z|² = re² + im²
+
 // ============================================
 // BASIC OPERATIONS (for compatibility)
 // ============================================

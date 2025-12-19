@@ -1019,6 +1019,46 @@ impl<'r> Z3Backend<'r> {
                 Ok(func_decl.apply(&ast_args))
             }
 
+            // Complex subtraction: complex_sub(z1, z2)
+            "complex_sub" => {
+                if args.len() != 2 {
+                    return Err("complex_sub requires 2 arguments".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("complex_sub", 2);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Complex division: complex_div(z1, z2)
+            "complex_div" => {
+                if args.len() != 2 {
+                    return Err("complex_div requires 2 arguments".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("complex_div", 2);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Complex negation: neg_complex(z) = -z
+            "neg_complex" => {
+                if args.len() != 1 {
+                    return Err("neg_complex requires 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("neg_complex", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Complex magnitude squared: abs_squared(z) = |z|² = re² + im²
+            "abs_squared" => {
+                if args.len() != 1 {
+                    return Err("abs_squared requires 1 argument".to_string());
+                }
+                let func_decl = self.declare_uninterpreted("abs_squared", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
             // Unknown operation - use uninterpreted function
             _ => {
                 let func_decl = self.declare_uninterpreted(name, args.len());
