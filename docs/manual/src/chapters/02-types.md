@@ -29,16 +29,18 @@ define flag = True                // True is a boolean
 | Unit | — | `Unit` | `()` |
 
 ```kleis
-// Boolean type annotations - all equivalent
-axiom bool_unicode : ∀(p : 𝔹). p = p
-axiom bool_full    : ∀(q : Bool). q = q
-
 // Boolean values
 define flag = True
 define not_flag = False
 
 // Unit value
 define empty = ()
+
+// Boolean in quantified expressions (inside structures)
+structure BoolExamples {
+    axiom reflexive_unicode : ∀(p : 𝔹). p = p
+    axiom reflexive_full    : ∀(q : Bool). q = q
+}
 ```
 
 ## Type Annotations
