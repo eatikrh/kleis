@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-230c7bc8.js";
+            window.path_to_searchindex_js = "searchindex-a3d75f4b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-33a2f593.js"></script>
@@ -326,6 +326,7 @@ define flag = True                // True is a boolean
 <tbody>
 <tr><td>Natural</td><td><code>ℕ</code></td><td><code>Nat</code></td><td><code>N</code></td><td><code>0</code>, <code>42</code>, <code>100</code></td></tr>
 <tr><td>Integer</td><td><code>ℤ</code></td><td><code>Int</code></td><td><code>Z</code></td><td><code>-5</code>, <code>0</code>, <code>17</code></td></tr>
+<tr><td>Rational</td><td><code>ℚ</code></td><td><code>Rational</code></td><td><code>Q</code></td><td><code>rational(1, 2)</code>, <code>rational(3, 4)</code></td></tr>
 <tr><td>Real</td><td><code>ℝ</code></td><td><code>Real</code> or <code>Scalar</code></td><td><code>R</code></td><td><code>3.14</code>, <code>-2.5</code>, <code>√2</code></td></tr>
 <tr><td>Complex</td><td><code>ℂ</code></td><td><code>Complex</code></td><td><code>C</code></td><td><code>3 + 4i</code>, <code>i</code></td></tr>
 </tbody>
@@ -339,7 +340,19 @@ define flag = True                // True is a boolean
 </thead>
 <tbody>
 <tr><td>Boolean</td><td><code>𝔹</code></td><td><code>Bool</code></td><td><code>True</code>, <code>False</code></td></tr>
+<tr><td>String</td><td>—</td><td><code>String</code></td><td><code>"hello"</code>, <code>"world"</code></td></tr>
 <tr><td>Unit</td><td>—</td><td><code>Unit</code></td><td><code>()</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="parameterized-primitive-types"><a class="header" href="#parameterized-primitive-types">Parameterized Primitive Types</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Syntax</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Bit-Vector</td><td><code>BitVec(n)</code></td><td>n-bit binary vector (e.g., <code>BitVec(8)</code>, <code>BitVec(32)</code>)</td></tr>
 </tbody>
 </table>
 </div>
@@ -433,11 +446,13 @@ define square_five = let y = 5 in y * y
     |                 /    \
     ℝ            Vector   Matrix
     |
+    ℚ
+    |
     ℤ
     |
     ℕ
 </code></pre>
-<p>Note: <code>ℕ ⊂ ℤ ⊂ ℝ ⊂ ℂ</code> (natural numbers are integers are reals are complex)</p>
+<p>Note: <code>ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ ⊂ ℂ</code> (naturals ⊂ integers ⊂ rationals ⊂ reals ⊂ complex)</p>
 <h2 id="whats-next-1"><a class="header" href="#whats-next-1">What’s Next?</a></h2>
 <p>Types are the foundation. Now let’s see how to define functions!</p>
 <p>→ <a href="#functions">Next: Functions</a></p>
