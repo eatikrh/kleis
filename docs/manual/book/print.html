@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ffc6013c.js";
+            window.path_to_searchindex_js = "searchindex-3f2fc08b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-33a2f593.js"></script>
@@ -1636,6 +1636,35 @@ sin(divide(π, 2))
 λ&gt; :verify x &gt; 0
 ❌ Invalid - Counterexample: x!2 -&gt; 0
 </code></pre>
+<h2 id="satisfiability-with-z3"><a class="header" href="#satisfiability-with-z3">Satisfiability with Z3</a></h2>
+<p>Use <code>:sat</code> to find solutions (equation solving):</p>
+<pre><code>λ&gt; :sat ∃(z : ℂ). z * z = complex(-1, 0)
+✅ Satisfiable
+   Witness: z_re = 0, z_im = -1
+
+λ&gt; :sat ∃(x : ℝ). x * x = 4
+✅ Satisfiable
+   Witness: x = -2
+
+λ&gt; :sat ∃(x : ℝ). x * x = -1
+❌ Unsatisfiable (no solution exists)
+
+λ&gt; :sat ∃(x : ℝ)(y : ℝ). x + y = 10 ∧ x - y = 4
+✅ Satisfiable
+   Witness: x = 7, y = 3
+</code></pre>
+<p><strong><code>:verify</code> vs <code>:sat</code>:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Question</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td><code>:verify</code></td><td>Is it always true? (∀)</td><td>Prove theorems</td></tr>
+<tr><td><code>:sat</code></td><td>Does a solution exist? (∃)</td><td>Solve equations</td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="lambda-expressions"><a class="header" href="#lambda-expressions">Lambda Expressions</a></h2>
 <p>Lambda expressions work at the prompt:</p>
 <pre><code>λ&gt; λ x . x * 2
@@ -1662,7 +1691,8 @@ sin(divide(π, 2))
 <tr><td><code>:help</code></td><td>Show all commands</td></tr>
 <tr><td><code>:load &lt;file&gt;</code></td><td>Load a .kleis file</td></tr>
 <tr><td><code>:env</code></td><td>Show defined functions</td></tr>
-<tr><td><code>:verify &lt;expr&gt;</code></td><td>Verify with Z3</td></tr>
+<tr><td><code>:verify &lt;expr&gt;</code></td><td>Verify with Z3 (is it always true?)</td></tr>
+<tr><td><code>:sat &lt;expr&gt;</code></td><td>Check satisfiability (does a solution exist?)</td></tr>
 <tr><td><code>:type &lt;expr&gt;</code></td><td>Show inferred type</td></tr>
 <tr><td><code>:ast &lt;expr&gt;</code></td><td>Show parsed AST</td></tr>
 <tr><td><code>:symbols</code></td><td>Unicode math symbols palette</td></tr>
