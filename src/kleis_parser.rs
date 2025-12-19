@@ -356,6 +356,15 @@ impl KleisParser {
             });
         }
 
+        // Quantifiers as expression operands (Grammar v0.9)
+        // Enables: (x > 0) ∧ (∀(y : ℝ). y > 0)
+        if self.peek() == Some('∀') || self.peek() == Some('∃') {
+            return self.parse_quantifier();
+        }
+        if self.peek_word("forall") || self.peek_word("exists") {
+            return self.parse_quantifier();
+        }
+
         // Gradient: ∇f (nabla prefix operator)
         // ∇f is well-defined: the vector of all partial derivatives
         if self.peek() == Some('∇') {
@@ -1283,6 +1292,46 @@ impl KleisParser {
     /// Returns the type as a string (for now, until we have proper TypeExpr in QuantifiedVar)
     fn parse_type_annotation_for_quantifier(&mut self) -> Result<String, KleisParseError> {
         self.skip_whitespace();
+
+        // Parse the base type (possibly with parentheses for grouping)
+        let left_type = self.parse_simple_type_for_quantifier()?;
+
+        self.skip_whitespace();
+
+        // Check for function type arrow: → or ->
+        // Grammar v0.9: enables ∀(f : ℝ → ℝ). ...
+        if self.peek() == Some('→') {
+            self.advance(); // consume →
+            let right_type = self.parse_type_annotation_for_quantifier()?; // Right-associative
+            Ok(format!("{} → {}", left_type, right_type))
+        } else if self.peek() == Some('-') && self.peek_ahead(1) == Some('>') {
+            self.advance(); // consume -
+            self.advance(); // consume >
+            let right_type = self.parse_type_annotation_for_quantifier()?; // Right-associative
+            Ok(format!("{} → {}", left_type, right_type))
+        } else {
+            Ok(left_type)
+        }
+    }
+
+    /// Parse a simple type (no function arrow at this level)
+    /// Handles: ℝ, Vector(3), (ℝ × ℝ), etc.
+    fn parse_simple_type_for_quantifier(&mut self) -> Result<String, KleisParseError> {
+        self.skip_whitespace();
+
+        // Check for parenthesized type: (T) or (T × U)
+        if self.peek() == Some('(') {
+            self.advance(); // consume '('
+            let inner = self.parse_type_annotation_for_quantifier()?;
+            self.skip_whitespace();
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after parenthesized type".to_string(),
+                    position: self.pos,
+                });
+            }
+            return Ok(format!("({})", inner));
+        }
 
         // Parse the base type name
         let base_name = self.parse_identifier()?;

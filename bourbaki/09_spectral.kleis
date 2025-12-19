@@ -1,0 +1,173 @@
+// ============================================
+// Bourbaki Volume IX: Spectral Theory
+// Éléments de mathématique
+// ============================================
+//
+// This file formalizes spectral theory from
+// Bourbaki's ninth volume.
+
+// --------------------------------------------
+// Chapter 1: Spectrum of an Element
+// --------------------------------------------
+
+structure Spectrum(A) {
+    operation spectrum : A → Set(ℂ)
+    operation resolvent_set : A → Set(ℂ)
+    
+    axiom spectrum_def: ∀(a : A, lam : ℂ). 
+        in_set(lam, spectrum(a)) ↔ ¬is_invertible(sub(a, scalar(lam, one)))
+    
+    axiom resolvent_complement: ∀(a : A). 
+        resolvent_set(a) = complement(spectrum(a))
+    
+    axiom spectrum_nonempty: ∀(a : A). ¬(spectrum(a) = empty_set)
+    
+    axiom spectrum_compact: ∀(a : A). is_compact(spectrum(a))
+    
+    axiom spectral_radius: ∀(a : A). 
+        spectral_radius(a) = sup_abs(spectrum(a))
+}
+
+// Resolvent Function
+structure Resolvent(A) {
+    operation R : A × ℂ → A
+    
+    axiom resolvent_def: ∀(a : A, lam : ℂ). 
+        in_set(lam, resolvent_set(a)) → R(a, lam) = inverse(sub(a, scalar(lam, one)))
+    
+    axiom resolvent_identity: ∀(a : A, lam mu : ℂ). 
+        in_set(lam, resolvent_set(a)) ∧ in_set(mu, resolvent_set(a)) → 
+        sub(R(a, lam), R(a, mu)) = mul(sub(mu, lam), mul(R(a, lam), R(a, mu)))
+    
+    axiom resolvent_analytic: ∀(a : A). 
+        is_analytic(resolvent_of(a), resolvent_set(a))
+}
+
+// --------------------------------------------
+// Chapter 2: Spectral Theory of Bounded Operators
+// --------------------------------------------
+
+structure BoundedOperatorSpectrum(H) {
+    operation point_spectrum : BoundedOp → Set(ℂ)
+    operation continuous_spectrum : BoundedOp → Set(ℂ)
+    operation residual_spectrum : BoundedOp → Set(ℂ)
+    
+    axiom point_spectrum_def: ∀(T : BoundedOp, lam : ℂ). 
+        in_set(lam, point_spectrum(T)) ↔ (∃(v : H). v ≠ zero ∧ T(v) = scalar(lam, v))
+    
+    axiom spectrum_partition: ∀(T : BoundedOp). 
+        spectrum(T) = union(union(point_spectrum(T), continuous_spectrum(T)), residual_spectrum(T))
+}
+
+// Eigenvalues and Eigenvectors
+structure Eigenspace(H) {
+    operation eigenspace : BoundedOp × ℂ → Set(H)
+    
+    axiom eigenspace_def: ∀(T : BoundedOp, lam : ℂ). 
+        eigenspace(T, lam) = ker(sub(T, scalar_op(lam)))
+    
+    axiom eigenvalue_iff: ∀(T : BoundedOp, lam : ℂ). 
+        in_set(lam, point_spectrum(T)) ↔ eigenspace(T, lam) ≠ trivial_subspace
+}
+
+// --------------------------------------------
+// Chapter 3: Self-Adjoint Operators
+// --------------------------------------------
+
+structure SelfAdjointSpectrum(H) {
+    axiom real_spectrum: ∀(T : SelfAdjoint). 
+        subset(spectrum(T), reals)
+    
+    axiom no_residual: ∀(T : SelfAdjoint). 
+        residual_spectrum(T) = empty_set
+    
+    axiom orthogonal_eigenspaces: ∀(T : SelfAdjoint, lam mu : ℝ). 
+        lam ≠ mu → are_orthogonal(eigenspace(T, lam), eigenspace(T, mu))
+}
+
+// --------------------------------------------
+// Chapter 4: Spectral Theorem
+// --------------------------------------------
+
+structure SpectralTheorem(H) {
+    // Spectral theorem for bounded self-adjoint operators
+    axiom spectral_theorem_bounded: ∀(T : BoundedSelfAdjoint). 
+        ∃(E : ℝ → Projection). 
+            is_spectral_measure(E) ∧ 
+            T = spectral_integral(E)
+    
+    // Spectral measure properties
+    axiom spectral_measure_monotone: ∀(E : SpectralMeasure, a b : ℝ). 
+        a <= b → le_projection(E(a), E(b))
+}
+
+structure FunctionalCalculus(H) {
+    operation f_of_T : BorelFn × BoundedSelfAdjoint → BoundedOp
+    
+    axiom functional_calculus: ∀(f : BorelFn, T : BoundedSelfAdjoint). 
+        is_borel_measurable(f) → f_of_T(f, T) = spectral_integral_of(f, T)
+    
+    axiom polynomial: ∀(p : Polynomial, T : BoundedSelfAdjoint). 
+        f_of_T(p, T) = polynomial_of(p, T)
+    
+    axiom homomorphism: ∀(f g : BorelFn, T : BoundedSelfAdjoint). 
+        f_of_T(mul_fn(f, g), T) = compose(f_of_T(f, T), f_of_T(g, T))
+}
+
+// --------------------------------------------
+// Chapter 5: Compact Operators
+// --------------------------------------------
+
+structure CompactOperatorSpectrum(H) {
+    axiom finite_dimensional_eigenspaces: ∀(K : CompactOp, lam : ℂ). 
+        lam ≠ 0 → is_finite_dimensional(eigenspace(K, lam))
+    
+    // Fredholm Alternative
+    axiom fredholm_alternative: ∀(K : CompactOp, lam : ℂ). 
+        lam ≠ 0 → (
+            is_invertible(sub(id, scalar_op(div(1, lam), K))) ∨ 
+            in_set(lam, point_spectrum(K))
+        )
+}
+
+// Spectral theorem for compact self-adjoint operators
+structure CompactSelfAdjointSpectrum(H) {
+    axiom spectral_decomposition: ∀(K : CompactSelfAdjoint). 
+        ∃(seq_lam : ℕ → ℝ, seq_e : ℕ → H). 
+            is_orthonormal(seq_e) ∧ 
+            (∀(n : ℕ). K(seq_e(n)) = scalar(seq_lam(n), seq_e(n))) ∧ 
+            lim_to_zero(seq_lam)
+}
+
+// --------------------------------------------
+// Chapter 6: Unbounded Operators
+// --------------------------------------------
+
+structure UnboundedOperator(H) {
+    element domain : Set(H)
+    operation T : domain → H
+    
+    axiom densely_defined: is_dense(domain, H)
+}
+
+structure ClosedOperator(H) {
+    element domain : Set(H)
+    operation T : domain → H
+    
+    axiom closed_graph: is_closed(graph(T))
+}
+
+structure SelfAdjointUnbounded(H) {
+    element domain : Set(H)
+    operation T : domain → H
+    
+    axiom symmetric: ∀(x y : domain). inner(T(x), y) = inner(x, T(y))
+    axiom adjoint_equals_self: adjoint_domain(T) = domain ∧ adjoint(T) = T
+}
+
+structure SpectralTheoremUnbounded(H) {
+    axiom spectral_theorem_unbounded: ∀(T : SelfAdjointUnbounded). 
+        ∃(E : ℝ → Projection). 
+            is_spectral_measure(E) ∧ 
+            domain(T) = spectral_domain(E)
+}

@@ -104,6 +104,35 @@ verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
 // Result: ⏱ Timeout (statement too complex)
 ```
 
+## Verifying Nested Quantifiers (Grammar v0.9)
+
+Grammar v0.9 enables nested quantifiers in logical expressions:
+
+```kleis
+structure Analysis {
+    // Quantifier inside conjunction - Z3 handles this
+    axiom bounded: (x > 0) ∧ (∀(y : ℝ). y = y)
+    
+    // Epsilon-delta limit definition
+    axiom limit_def: ∀(L a : ℝ, ε : ℝ). ε > 0 → 
+        (∃(δ : ℝ). δ > 0 ∧ (∀(x : ℝ). abs(x - a) < δ → abs(f(x) - L) < ε))
+}
+```
+
+### Function Types in Verification
+
+Quantify over functions and verify their properties:
+
+```kleis
+structure Continuity {
+    // Z3 treats f as an uninterpreted function ℝ → ℝ
+    axiom continuous_at: ∀(f : ℝ → ℝ, a : ℝ, ε : ℝ). ε > 0 →
+        (∃(δ : ℝ). δ > 0 ∧ (∀(x : ℝ). abs(x - a) < δ → abs(f(x) - f(a)) < ε))
+}
+```
+
+**Note:** Z3 treats function-typed variables as uninterpreted functions, allowing reasoning about their properties without knowing their implementation.
+
 ## What Z3 Can and Cannot Do
 
 ### Z3 Excels At:
@@ -112,12 +141,15 @@ verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
 - Array reasoning
 - Simple quantifiers
 - Algebraic identities
+- Nested quantifiers (Grammar v0.9)
+- Function-typed variables
 
 ### Z3 Struggles With:
 - Non-linear real arithmetic (undecidable in general)
-- Very deep quantifier nesting
+- Very deep quantifier nesting (may timeout)
 - Transcendental functions (sin, cos, exp)
 - Infinite structures
+- Inductive proofs over recursive data types
 
 ## Practical Workflow
 

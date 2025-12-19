@@ -1,0 +1,156 @@
+// ============================================
+// Bourbaki Volume III: General Topology
+// Éléments de mathématique
+// ============================================
+//
+// This file formalizes topological structures from
+// Bourbaki's third volume.
+
+// --------------------------------------------
+// Chapter 1: Topological Structures
+// --------------------------------------------
+
+// Topological Space
+structure TopologicalSpace(X) {
+    element tau : Set(Set(X))
+    
+    axiom empty_open: in_set(empty_set, tau)
+    axiom full_open: in_set(X, tau)
+    axiom finite_intersect_open: ∀(U V : Set(X)). 
+        (in_set(U, tau) ∧ in_set(V, tau)) → in_set(intersect(U, V), tau)
+}
+
+// Open and Closed Sets
+structure OpenClosed(X) {
+    operation is_open : Set(X) → Bool
+    operation is_closed : Set(X) → Bool
+    operation closure : Set(X) → Set(X)
+    operation interior : Set(X) → Set(X)
+    
+    axiom closed_def: ∀(C : Set(X)). is_closed(C) ↔ is_open(complement(C))
+}
+
+// Continuous Functions
+structure Continuous(X, Y) {
+    axiom preimage_open: ∀(f : X → Y, V : Set(Y)). 
+        is_open(V) → is_open(preimage(f, V))
+}
+
+// Homeomorphism
+structure Homeomorphism(X, Y) {
+    axiom bijective_continuous: ∀(f : X → Y). 
+        homeomorphism(f) ↔ (bijective(f) ∧ continuous(f) ∧ continuous(inverse(f)))
+}
+
+// --------------------------------------------
+// Chapter 2: Uniform Structures
+// --------------------------------------------
+
+structure UniformSpace(X) {
+    element uniformity : Set(Set(Pair(X, X)))
+    
+    axiom reflexive: ∀(U : Set(Pair(X, X))). in_set(U, uniformity) → subset(diagonal(X), U)
+}
+
+// Uniformly Continuous
+structure UniformlyContinuous(X, Y) {
+    axiom uniform_preimage: ∀(f : X → Y, V : Set(Pair(Y, Y))). 
+        in_set(V, uniformity_Y) → in_set(preimage_rel(f, V), uniformity_X)
+}
+
+// --------------------------------------------
+// Chapter 3: Topological Groups
+// --------------------------------------------
+
+structure TopologicalGroup(G) {
+    operation mul : G × G → G
+    operation inv : G → G
+    element e : G
+    
+    axiom group_assoc: ∀(x y z : G). mul(mul(x, y), z) = mul(x, mul(y, z))
+    axiom group_identity: ∀(x : G). mul(e, x) = x ∧ mul(x, e) = x
+    axiom group_inverse: ∀(x : G). mul(x, inv(x)) = e
+    axiom mul_continuous: continuous(mul)
+    axiom inv_continuous: continuous(inv)
+}
+
+// --------------------------------------------
+// Chapter 4: Real Numbers
+// --------------------------------------------
+
+structure RealNumbers {
+    operation add : ℝ × ℝ → ℝ
+    operation mul : ℝ × ℝ → ℝ
+    operation lt : ℝ × ℝ → Bool
+    element zero : ℝ
+    element one : ℝ
+    
+    axiom order_compatible: ∀(a b c : ℝ). lt(a, b) → lt(add(a, c), add(b, c))
+    axiom order_mul_positive: ∀(a b : ℝ). lt(zero, a) ∧ lt(zero, b) → lt(zero, mul(a, b))
+    axiom completeness: ∀(S : Set(ℝ)). 
+        (∃(b : ℝ). ∀(s : ℝ). in_set(s, S) → le(s, b)) → 
+        (∃(sup : ℝ). is_supremum(sup, S))
+}
+
+// --------------------------------------------
+// Chapter 5: Separation Axioms
+// --------------------------------------------
+
+// T0 (Kolmogorov)
+structure T0Space(X) {
+    axiom t0: ∀(x y : X). x ≠ y → 
+        (∃(U : Set(X)). is_open(U) ∧ ((in_set(x, U) ∧ ¬in_set(y, U)) ∨ (in_set(y, U) ∧ ¬in_set(x, U))))
+}
+
+// T1 (Fréchet)
+structure T1Space(X) {
+    axiom t1: ∀(x y : X). x ≠ y → 
+        (∃(U : Set(X)). is_open(U) ∧ in_set(x, U) ∧ ¬in_set(y, U))
+}
+
+// T2 (Hausdorff)
+structure HausdorffSpace(X) {
+    axiom hausdorff: ∀(x y : X). x ≠ y → 
+        (∃(U V : Set(X)). is_open(U) ∧ is_open(V) ∧ in_set(x, U) ∧ in_set(y, V) ∧ intersect(U, V) = empty_set)
+}
+
+// Regular Space (T3)
+structure RegularSpace(X) {
+    axiom regular: ∀(x : X, C : Set(X)). is_closed(C) ∧ ¬in_set(x, C) → 
+        (∃(U V : Set(X)). is_open(U) ∧ is_open(V) ∧ in_set(x, U) ∧ subset(C, V) ∧ intersect(U, V) = empty_set)
+}
+
+// Normal Space (T4)
+structure NormalSpace(X) {
+    axiom normal: ∀(A B : Set(X)). is_closed(A) ∧ is_closed(B) ∧ intersect(A, B) = empty_set → 
+        (∃(U V : Set(X)). is_open(U) ∧ is_open(V) ∧ subset(A, U) ∧ subset(B, V) ∧ intersect(U, V) = empty_set)
+}
+
+// --------------------------------------------
+// Chapter 6: Compactness
+// --------------------------------------------
+
+structure CompactSpace(X) {
+    axiom finite_subcover: ∀(C : Set(Set(X))). 
+        is_open_cover(C, X) → (∃(F : Set(Set(X))). is_finite(F) ∧ subset(F, C) ∧ is_cover(F, X))
+}
+
+structure LocallyCompact(X) {
+    axiom local_compact: ∀(x : X, U : Set(X)). is_open(U) ∧ in_set(x, U) → 
+        (∃(V : Set(X)). is_open(V) ∧ in_set(x, V) ∧ is_compact(closure(V)) ∧ subset(closure(V), U))
+}
+
+// --------------------------------------------
+// Chapter 7: Connectedness
+// --------------------------------------------
+
+structure ConnectedSpace(X) {
+    axiom connected: ∀(U V : Set(X)). 
+        (is_open(U) ∧ is_open(V) ∧ union(U, V) = X ∧ intersect(U, V) = empty_set) → 
+        (U = empty_set ∨ V = empty_set)
+}
+
+structure PathConnected(X) {
+    axiom path_connected: ∀(x y : X). 
+        ∃(gamma : I → X). continuous(gamma) ∧ gamma(zero) = x ∧ gamma(one) = y
+}
