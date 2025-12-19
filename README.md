@@ -6,7 +6,7 @@
 |---------|-------------|
 | **Type System** | Algebraic hierarchy (Magma → Group → Ring → Field) with Hindley-Milner inference |
 | **Z3 Integration** | Verify mathematical axioms with SMT solving |
-| **Kleis Language** | Self-hosted type definitions, ~65% grammar coverage |
+| **Kleis Language** | Self-hosted type definitions, ~80% grammar coverage |
 | **REPL** | Interactive theorem proving with `:verify`, `:load`, `:export` |
 | **Equation Editor** | WYSIWYG formula building with deterministic positioning |
 | **Doc Generator** | Auto-generate docs from .kleis files (Markdown + HTML + MathJax) |
@@ -73,7 +73,7 @@ cargo run --bin repl
 ### Run Tests
 
 ```bash
-cargo test           # All tests (495 passing)
+cargo test           # All tests (663+ passing)
 cargo test --lib     # Library tests only
 ```
 
@@ -168,7 +168,7 @@ kleis/
 │   ├── control/        # Control theory (LQG, eigenvalues)
 │   └── protocols/      # IP router
 ├── docs/               # Documentation
-│   ├── adr/            # 22 Architecture Decision Records
+│   ├── adr/            # 23 Architecture Decision Records
 │   ├── grammar/        # Formal grammar (v03-v07)
 │   └── type-system/    # Type system docs
 └── tests/              # Test suite
@@ -211,7 +211,7 @@ See `SERVER_README.md` for full API docs.
 | Document | Description |
 |----------|-------------|
 | [docs/README.md](docs/README.md) | Documentation index |
-| [docs/adr/](docs/adr/README.md) | 22 Architecture Decision Records |
+| [docs/adr/](docs/adr/README.md) | 23 Architecture Decision Records |
 | [docs/grammar/](docs/grammar/) | Formal grammar (v03-v07) |
 | [docs/guides/PALETTE_GUIDE.md](docs/guides/PALETTE_GUIDE.md) | Equation editor guide |
 | [SERVER_README.md](SERVER_README.md) | Server API reference |
