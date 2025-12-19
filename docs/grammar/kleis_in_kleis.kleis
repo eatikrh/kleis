@@ -602,26 +602,39 @@ structure ErrorTheorems {
 
 
 // ============================================================================
-// THE PROGRAM-AS-SOURCE PARADIGM
+// THE PROGRAM-AS-SOURCE PARADIGM  
+// ============================================================================
+//
+// THIS IS THE MAIN MESSAGE OF THIS EXPERIMENT:
+//
+//     A PROGRAM IS ITS SOURCE CODE.
+//
+// With `data Program = Source(code: String)`, we don't construct ASTs
+// manually. We write the program as a string - and IT IS the program.
+//
 // ============================================================================
 
-// With `data Program = Source(code: String)`, a program IS its source code.
-// This is NOT pedestrian AST construction - it's the source itself!
+// THE FIBONACCI EXAMPLE - The Core Insight
+// =========================================
+//
+// This is not a string that represents a program.
+// This IS the program.
 
-// --- Example: Define a program from its source ---
-
-// A simple square function
-define square_program : Program = Source("define square(x) = x * x")
-
-// An identity function
-define identity_program : Program = Source("define id(x) = x")
-
-// A constant function
-define const_program : Program = Source("define const(x, y) = x")
-
-// Fibonacci - showing the concept (uses recursion keyword in source)
 define fib_source : String = "define fib(n) = if n < 2 then n else fib(n-1) + fib(n-2)"
+
 define fibonacci_program : Program = Source(fib_source)
+
+// ^^^ fibonacci_program is a first-class Kleis value of type Program.
+//     It contains its own source code.
+//     We can analyze it, transform it, verify it - all in Kleis.
+//     Z3 can reason about the string contents.
+//     This is homoiconicity: code as data.
+
+// --- More Examples ---
+
+define square_program : Program = Source("define square(x) = x * x")
+define identity_program : Program = Source("define id(x) = x")
+define const_program : Program = Source("define const(x, y) = x")
 
 // --- Program Analysis on Source ---
 
