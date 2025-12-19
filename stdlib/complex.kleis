@@ -98,6 +98,24 @@ structure ComplexField {
 }
 
 // ============================================
+// FUTURE: Operator Overloading for ℂ
+// ============================================
+// Currently, users must use explicit complex_add, complex_mul, etc.
+// 
+// TODO: Enable standard operators (+, -, *, /) for complex numbers via:
+//   Option 1: Add axioms like plus(z1,z2) = complex_add(z1,z2)
+//   Option 2: Type-aware translation in Z3 backend
+//   Option 3: Parser-level syntactic sugar
+//
+// Example of what we want to support:
+//   define z3 : ℂ = z1 + z2        // Currently must write complex_add(z1, z2)
+//   define z4 : ℂ = z1 * z2        // Currently must write complex_mul(z1, z2)
+//   define z5 : ℂ = 3 + 4*i        // Natural complex literal syntax
+//
+// See: feature/complex-numbers branch discussion
+// ============================================
+
+// ============================================
 // END OF COMPLEX NUMBERS
 // ============================================
 
