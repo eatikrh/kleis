@@ -2,7 +2,7 @@
   "name": "kleis",
   "displayName": "Kleis Language Support",
   "description": "Syntax highlighting for the Kleis formal verification language",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "eatikrh",
   "author": "Engin Atik <eatik@redhat.com>",
   "license": "MIT",
