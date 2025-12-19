@@ -1,5 +1,5 @@
 // ============================================
-// Kleis Language v0.7 - Complete Syntax Example
+// Kleis Language v0.9 - Complete Syntax Example
 // For syntax highlighting testing
 // ============================================
 
@@ -383,8 +383,59 @@ define indexed(x: ℝ) = x_{1}^{2} + x_{2}^{2}
 // Inline comment after code
 define commented(x: ℝ) = x × x  // squares the input
 
+// ============================================
+// GRAMMAR v0.9 - NESTED QUANTIFIERS & FUNCTION TYPES
+// ============================================
+
+// Quantifier inside conjunction (NEW in v0.9)
+structure Analysis {
+    axiom bounded_positive: (x > 0) ∧ (∀(y : ℝ). abs(y) <= x)
+    
+    // Deeply nested quantifiers
+    axiom epsilon_delta: ∀(L a : ℝ, ε : ℝ). ε > 0 → 
+        (∃(δ : ℝ). δ > 0 ∧ (∀(x : ℝ). abs(x - a) < δ → abs(f(x) - L) < ε))
+}
+
+// Function types in quantifiers (NEW in v0.9)
+structure FunctionSpaces {
+    // Quantify over functions
+    axiom continuous: ∀(f : ℝ → ℝ, x : ℝ). is_continuous(f, x)
+    
+    // Multiple function variables
+    axiom compose: ∀(f : ℝ → ℝ, g : ℝ → ℝ). compose(f, g) = λ x . f(g(x))
+    
+    // Curried function type (right-associative)
+    axiom curried: ∀(f : ℝ → ℝ → ℝ). f = f
+}
+
+// Topology with function types (NEW in v0.9)
+structure Topology {
+    axiom continuity: ∀(f : X → Y, V : Set(Y)). 
+        is_open(V) → is_open(preimage(f, V))
+    
+    axiom homeomorphism: ∀(f : X → Y, g : Y → X). 
+        (∀(x : X). g(f(x)) = x) ∧ (∀(y : Y). f(g(y)) = y) → bijective(f)
+}
+
+// Bourbaki-style analysis (NEW in v0.9)
+structure MetricSpace(X) {
+    operation d : X × X → ℝ
+    
+    axiom non_negative: ∀(x y : X). d(x, y) >= 0
+    axiom identity: ∀(x y : X). d(x, y) = 0 ↔ x = y
+    axiom symmetry: ∀(x y : X). d(x, y) = d(y, x)
+    axiom triangle: ∀(x y z : X). d(x, z) <= d(x, y) + d(y, z)
+}
+
+// Sequence convergence (NEW in v0.9)
+structure Sequences {
+    axiom converges: ∀(a : ℕ → ℝ, L : ℝ). 
+        converges_to(a, L) ↔ 
+        (∀(ε : ℝ). ε > 0 → (∃(N : ℕ). ∀(n : ℕ). n > N → abs(a(n) - L) < ε))
+}
+
 /*
-  End of Kleis v0.7 syntax example.
+  End of Kleis v0.9 syntax example.
   All grammar features demonstrated:
   - Annotations (@library, @version)
   - Type aliases
@@ -400,4 +451,8 @@ define commented(x: ℝ) = x × x  // squares the input
   - Full type system
   - Quantified propositions
   - Comments
+  - Nested quantifiers (v0.9)
+  - Function types in quantifiers (v0.9)
+  - Epsilon-delta definitions (v0.9)
+  - Topology with function types (v0.9)
 */
