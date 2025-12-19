@@ -337,6 +337,140 @@ define example_define = DDefine(
 
 
 // ============================================================================
+// PART 6: Verifying Kleis Source Code in Strings!
+// ============================================================================
+//
+// The ultimate self-reference: Kleis verifying Kleis source as strings!
+// Using Z3's string theory, we can prove properties about source code.
+
+// --- Token Recognition ---
+
+// Check if a string starts with a valid identifier
+define starts_with_identifier(src : String) : Bool =
+    strlen(src) > 0 ∧ is_alpha_or_underscore(charAt(src, 0))
+
+// Check if a string looks like a define statement
+define is_define_statement(src : String) : Bool =
+    hasPrefix(src, "define ")
+
+// Check if a string looks like a data definition
+define is_data_definition(src : String) : Bool =
+    hasPrefix(src, "data ")
+
+// Check if a string looks like a structure
+define is_structure_definition(src : String) : Bool =
+    hasPrefix(src, "structure ")
+
+// Check if a string looks like an import
+define is_import_statement(src : String) : Bool =
+    hasPrefix(src, "import ")
+
+// Check if a string contains a lambda
+define contains_lambda(src : String) : Bool =
+    contains(src, "λ") ∨ contains(src, "lambda ")
+
+// Check if a string contains a quantifier
+define contains_quantifier(src : String) : Bool =
+    contains(src, "∀") ∨ contains(src, "forall") ∨
+    contains(src, "∃") ∨ contains(src, "exists")
+
+// --- Example: Actual Kleis Source as Strings! ---
+
+// A simple define statement
+define kleis_source_1 : String = "define square(x) = x * x"
+
+// A data type definition
+define kleis_source_2 : String = "data Bool = True | False"
+
+// A structure with an axiom
+define kleis_source_3 : String = "structure Group(G) { axiom identity : forall(x : G). x * e = x }"
+
+// A quantified expression
+define kleis_source_4 : String = "forall(x : R). x + 0 = x"
+
+// An import statement
+define kleis_source_5 : String = "import \"stdlib/prelude.kleis\""
+
+// --- Verification Properties ---
+
+structure SourceCodeProperties {
+    // Our define example is recognized as a define statement
+    axiom source1_is_define : is_define_statement(kleis_source_1)
+    
+    // Our data example is recognized as a data definition
+    axiom source2_is_data : is_data_definition(kleis_source_2)
+    
+    // Our structure example is recognized as a structure
+    axiom source3_is_structure : is_structure_definition(kleis_source_3)
+    
+    // Our quantifier example contains a quantifier
+    axiom source4_has_quantifier : contains_quantifier(kleis_source_4)
+    
+    // Our import example is recognized as an import
+    axiom source5_is_import : is_import_statement(kleis_source_5)
+    
+    // A string that doesn't start with "define " is not a define statement
+    axiom not_define : ¬is_define_statement("let x = 5")
+    
+    // Empty string is not a define statement
+    axiom empty_not_define : ¬is_define_statement("")
+    
+    // Strings starting with "define " are define statements
+    axiom define_prefix : ∀(rest : String). 
+        is_define_statement(concat("define ", rest))
+}
+
+// --- More Complex: Token Extraction ---
+
+// Extract the name from a define statement
+// "define foo(x) = ..." → "foo"
+define extract_define_name(src : String) : String =
+    if ¬is_define_statement(src) then ""
+    else
+        let after_define = substr(src, 7, strlen(src) - 7) in
+        let paren_pos = indexOf(after_define, "(") in
+        let space_pos = indexOf(after_define, " ") in
+        if paren_pos > 0 ∧ (space_pos < 0 ∨ paren_pos < space_pos) then
+            substr(after_define, 0, paren_pos)
+        else if space_pos > 0 then
+            substr(after_define, 0, space_pos)
+        else
+            after_define
+
+// Verify name extraction
+structure NameExtractionProperties {
+    // Extract "square" from "define square(x) = x * x"
+    axiom extract_square : extract_define_name(kleis_source_1) = "square"
+    
+    // Extract "" from non-define
+    axiom extract_empty : extract_define_name("let x = 5") = ""
+}
+
+// --- The Ultimate: A Kleis Program That Checks Kleis Programs! ---
+
+// Count the number of define statements in a source string
+// (Simplified: counts occurrences of "define ")
+define count_defines(src : String) : ℕ =
+    if ¬contains(src, "define ") then 0
+    else 1 + count_defines(replace(src, "define ", "COUNTED", 1))
+
+// A multi-line Kleis program as a string
+define kleis_program : String = 
+    "define pi = 3.14159\ndefine e = 2.71828\ndefine square(x) = x * x"
+
+structure ProgramAnalysisProperties {
+    // The program has multiple defines
+    axiom has_defines : contains(kleis_program, "define ")
+    
+    // Contains pi definition
+    axiom has_pi : contains(kleis_program, "define pi")
+    
+    // Contains square definition  
+    axiom has_square : contains(kleis_program, "define square")
+}
+
+
+// ============================================================================
 // CONCLUSION
 // ============================================================================
 //
