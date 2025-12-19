@@ -1,0 +1,217 @@
+// ============================================================================
+// MORE KLEIS CONSTRUCTS - For Cross-Compilation Testing
+// ============================================================================
+
+import "kleis_in_kleis.kleis"
+
+// ============================================================================
+// 1. ALGEBRAIC DATA TYPES
+// ============================================================================
+
+// Simple enum
+data Color = Red | Green | Blue
+
+// Option type
+data Maybe(T) = Nothing | Just(value: T)
+
+// Either type (sum type with two type parameters)
+data Either(A, B) = Left(value: A) | Right(value: B)
+
+// Binary tree
+data BinTree(T) = 
+    Empty 
+  | Node(value: T, left: BinTree(T), right: BinTree(T))
+
+// Expression AST (recursive)
+data Expr = 
+    Num(n: ℤ)
+  | Var(name: String)
+  | Add(left: Expr, right: Expr)
+  | Mul(left: Expr, right: Expr)
+  | Neg(inner: Expr)
+
+
+// ============================================================================
+// 2. PATTERN MATCHING
+// ============================================================================
+
+// Match on simple enum
+define color_to_rgb(c : Color) : ℕ =
+    match c {
+        Red => 16711680
+      | Green => 65280
+      | Blue => 255
+    }
+
+// Match on Maybe
+define unwrap_or(m : Maybe(ℕ), default : ℕ) : ℕ =
+    match m {
+        Nothing => default
+      | Just(v) => v
+    }
+
+// Match on Either
+define either_to_nat(e : Either(ℕ, Bool)) : ℕ =
+    match e {
+        Left(n) => n
+      | Right(true) => 1
+      | Right(false) => 0
+    }
+
+// Match on tree (recursive)
+define tree_size(t : BinTree(ℕ)) : ℕ =
+    match t {
+        Empty => 0
+      | Node(_, left, right) => 1 + tree_size(left) + tree_size(right)
+    }
+
+define tree_sum(t : BinTree(ℕ)) : ℕ =
+    match t {
+        Empty => 0
+      | Node(v, left, right) => v + tree_sum(left) + tree_sum(right)
+    }
+
+// Match on expression (interpreter!)
+define eval_expr(e : Expr) : ℤ =
+    match e {
+        Num(n) => n
+      | Var(_) => 0  // Variables evaluate to 0 (simplified)
+      | Add(l, r) => eval_expr(l) + eval_expr(r)
+      | Mul(l, r) => eval_expr(l) * eval_expr(r)
+      | Neg(inner) => 0 - eval_expr(inner)
+    }
+
+
+// ============================================================================
+// 3. LET BINDINGS
+// ============================================================================
+
+define quadratic(a : ℝ, b : ℝ, c : ℝ, x : ℝ) : ℝ =
+    let x2 = x * x in
+    a * x2 + b * x + c
+
+define distance(x1 : ℝ, y1 : ℝ, x2 : ℝ, y2 : ℝ) : ℝ =
+    let dx = x2 - x1 in
+    let dy = y2 - y1 in
+    sqrt(dx * dx + dy * dy)
+
+define swap_pair(p : ℕ × ℕ) : ℕ × ℕ =
+    let (a, b) = p in
+    (b, a)
+
+
+// ============================================================================
+// 4. HIGHER-ORDER FUNCTIONS
+// ============================================================================
+
+// Map over Maybe
+define map_maybe(f : ℕ → ℕ, m : Maybe(ℕ)) : Maybe(ℕ) =
+    match m {
+        Nothing => Nothing
+      | Just(v) => Just(f(v))
+    }
+
+// Fold over tree
+define fold_tree(f : ℕ → ℕ → ℕ → ℕ, zero : ℕ, t : BinTree(ℕ)) : ℕ =
+    match t {
+        Empty => zero
+      | Node(v, left, right) => f(v, fold_tree(f, zero, left), fold_tree(f, zero, right))
+    }
+
+// Compose two functions
+define compose(f : ℕ → ℕ, g : ℕ → ℕ, x : ℕ) : ℕ = f(g(x))
+
+// Apply function twice
+define twice(f : ℕ → ℕ, x : ℕ) : ℕ = f(f(x))
+
+
+// ============================================================================
+// 5. LAMBDA EXPRESSIONS
+// ============================================================================
+
+define add_n(n : ℕ) : ℕ → ℕ = λ x . x + n
+
+define multiplier(n : ℕ) : ℕ → ℕ = λ x . x * n
+
+define curry_add : ℕ → ℕ → ℕ = λ x . λ y . x + y
+
+
+// ============================================================================
+// 6. IF-THEN-ELSE
+// ============================================================================
+
+define abs(x : ℤ) : ℤ = if x < 0 then 0 - x else x
+
+define max(a : ℕ, b : ℕ) : ℕ = if a > b then a else b
+
+define min(a : ℕ, b : ℕ) : ℕ = if a < b then a else b
+
+define clamp(x : ℕ, lo : ℕ, hi : ℕ) : ℕ =
+    if x < lo then lo
+    else if x > hi then hi
+    else x
+
+define sign(x : ℤ) : ℤ =
+    if x < 0 then 0 - 1
+    else if x > 0 then 1
+    else 0
+
+
+// ============================================================================
+// 7. RECURSIVE FUNCTIONS
+// ============================================================================
+
+define gcd(a : ℕ, b : ℕ) : ℕ =
+    if b = 0 then a else gcd(b, a - (a / b) * b)
+
+define power(base : ℕ, exp : ℕ) : ℕ =
+    if exp = 0 then 1 else base * power(base, exp - 1)
+
+define sum_to(n : ℕ) : ℕ =
+    if n = 0 then 0 else n + sum_to(n - 1)
+
+
+// ============================================================================
+// 8. LIST OPERATIONS (using stdlib List)
+// ============================================================================
+
+define length(xs : List(ℕ)) : ℕ =
+    match xs {
+        Nil => 0
+      | Cons(_, rest) => 1 + length(rest)
+    }
+
+define reverse_acc(xs : List(ℕ), acc : List(ℕ)) : List(ℕ) =
+    match xs {
+        Nil => acc
+      | Cons(h, t) => reverse_acc(t, Cons(h, acc))
+    }
+
+define reverse(xs : List(ℕ)) : List(ℕ) = reverse_acc(xs, Nil)
+
+define append(xs : List(ℕ), ys : List(ℕ)) : List(ℕ) =
+    match xs {
+        Nil => ys
+      | Cons(h, t) => Cons(h, append(t, ys))
+    }
+
+define filter(p : ℕ → Bool, xs : List(ℕ)) : List(ℕ) =
+    match xs {
+        Nil => Nil
+      | Cons(h, t) => if p(h) then Cons(h, filter(p, t)) else filter(p, t)
+    }
+
+define take(n : ℕ, xs : List(ℕ)) : List(ℕ) =
+    if n = 0 then Nil
+    else match xs {
+        Nil => Nil
+      | Cons(h, t) => Cons(h, take(n - 1, t))
+    }
+
+define drop(n : ℕ, xs : List(ℕ)) : List(ℕ) =
+    if n = 0 then xs
+    else match xs {
+        Nil => Nil
+      | Cons(_, t) => drop(n - 1, t)
+    }
+

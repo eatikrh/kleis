@@ -1,0 +1,52 @@
+// ============================================================================
+// FIBONACCI - Example Program for Cross-Compilation
+// ============================================================================
+//
+// This file defines the Fibonacci function both as:
+//   1. Native Kleis source code
+//   2. AST representation for cross-compilation
+//
+// ============================================================================
+
+import "kleis_in_kleis.kleis"  // Same directory
+
+// ============================================================================
+// PART 1: The Fibonacci Function (Native Kleis)
+// ============================================================================
+
+define fib(n : ℕ) : ℕ = 
+    if n < 2 then n else fib(n - 1) + fib(n - 2)
+
+
+// ============================================================================
+// PART 2: The Fibonacci AST (For Cross-Compilation)
+// ============================================================================
+
+// The AST representation of: define fib(n : ℕ) : ℕ = if n < 2 then n else fib(n-1) + fib(n-2)
+
+define fib_param = Param("n", Some(TPrimitive("ℕ")))
+
+define fib_condition = EOperation("less_than", Cons(EVariable("n"), Cons(ENumber(2), Nil)))
+
+define fib_then = EVariable("n")
+
+define fib_n_minus_1 = EOperation("minus", Cons(EVariable("n"), Cons(ENumber(1), Nil)))
+define fib_n_minus_2 = EOperation("minus", Cons(EVariable("n"), Cons(ENumber(2), Nil)))
+
+define fib_call_1 = EOperation("fib", Cons(fib_n_minus_1, Nil))
+define fib_call_2 = EOperation("fib", Cons(fib_n_minus_2, Nil))
+
+define fib_else = EOperation("plus", Cons(fib_call_1, Cons(fib_call_2, Nil)))
+
+define fib_body = EIf(fib_condition, fib_then, fib_else)
+
+define fib_declaration = DDefine(
+    "fib",
+    Cons(fib_param, Nil),
+    Some(TPrimitive("ℕ")),
+    fib_body
+)
+
+// A complete program with just fibonacci
+define fib_program = AST(Cons(fib_declaration, Nil))
+

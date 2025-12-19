@@ -1,0 +1,45 @@
+[package]
+name = "kleis-solver-api"
+version = "0.1.0"
+edition = "2021"
+description = "Generated Kleis Solver API with Z3 backend"
+
+[workspace]
+
+[lib]
+name = "kleis_solver_api"
+path = "src/lib.rs"
+crate-type = ["lib", "cdylib"]  # Also build as shared library
+
+[[bin]]
+name = "fib_symbolic"
+path = "src/bin/fib_symbolic.rs"
+
+[[bin]]
+name = "solver_api"
+path = "solver_api.rs"
+
+[[bin]]
+name = "fib"
+path = "fib.rs"
+
+[[bin]]
+name = "kleis_examples"
+path = "examples.rs"
+
+[[bin]]
+name = "more_examples"
+path = "more_examples.rs"
+
+[[bin]]
+name = "symbolic"
+path = "symbolic.rs"
+
+[[bin]]
+name = "loader_demo"
+path = "src/bin/loader_demo.rs"
+
+[dependencies]
+z3 = "0.12"
+libloading = "0.8"  # For dynamic loading
+

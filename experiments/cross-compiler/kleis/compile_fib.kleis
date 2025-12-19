@@ -1,0 +1,10 @@
+// Compile fibonacci to Rust
+import "kleis_codegen_rust.kleis"
+import "fibonacci.kleis"
+
+// Generate the Rust code for fibonacci
+define fib_rust_code = decl_to_rust(fib_declaration)
+
+// Generate the full program
+define fib_rust_program = program_to_rust(fib_program)
+

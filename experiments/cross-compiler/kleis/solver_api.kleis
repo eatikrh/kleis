@@ -1,0 +1,217 @@
+// ============================================================================
+// KLEIS SOLVER ABSTRACTION LAYER
+// ============================================================================
+//
+// This defines a portable solver API that can be cross-compiled to Rust.
+// The Rust version uses Z3 under the hood.
+//
+// ============================================================================
+
+import "kleis_in_kleis.kleis"
+
+// ============================================================================
+// 1. SOLVER RESULT TYPES
+// ============================================================================
+
+// Result of a satisfiability check
+data SatResult =
+    Sat                           // Satisfiable (solution exists)
+  | Unsat                         // Unsatisfiable (no solution)
+  | Unknown                       // Solver couldn't determine
+
+// Result of a verification (validity check)
+data VerifyResult =
+    Valid                         // Always true (tautology)
+  | Invalid                       // Counterexample exists
+  | Timeout                       // Solver timed out
+
+// A witness (model) from a SAT result
+data Witness(T) =
+    NoWitness
+  | Model(bindings: List(Binding(T)))
+
+data Binding(T) = Bind(name: String, value: T)
+
+
+// ============================================================================
+// 2. SOLVER OPERATIONS (Abstract Interface)
+// ============================================================================
+
+structure Solver(Expr) {
+    // Core operations
+    operation check_sat : Expr → SatResult
+    operation check_valid : Expr → VerifyResult
+    operation get_model : Expr → Witness(ℝ)
+    
+    // Expression builders
+    operation var : String → Expr
+    operation const_real : ℝ → Expr
+    operation const_int : ℤ → Expr
+    operation const_bool : Bool → Expr
+    
+    // Arithmetic
+    operation add : Expr → Expr → Expr
+    operation sub : Expr → Expr → Expr
+    operation mul : Expr → Expr → Expr
+    operation div : Expr → Expr → Expr
+    operation neg : Expr → Expr
+    
+    // Comparison
+    operation eq : Expr → Expr → Expr
+    operation neq : Expr → Expr → Expr
+    operation lt : Expr → Expr → Expr
+    operation le : Expr → Expr → Expr
+    operation gt : Expr → Expr → Expr
+    operation ge : Expr → Expr → Expr
+    
+    // Logic
+    operation and : Expr → Expr → Expr
+    operation or : Expr → Expr → Expr
+    operation not : Expr → Expr
+    operation implies : Expr → Expr → Expr
+    operation iff : Expr → Expr → Expr
+    
+    // Quantifiers
+    operation forall : String → Expr → Expr
+    operation exists : String → Expr → Expr
+    
+    // ========================================================================
+    // HOST SYSTEM UTILITIES
+    // ========================================================================
+    // These are provided by all solver backends as gateway to host environment.
+    // Solvers run in a host process that has access to system resources.
+    
+    // Cryptographic hash (for versioning)
+    operation sha256 : String → String
+    
+    // Current time as Unix timestamp (for compile timestamps)
+    operation current_time : Unit → ℕ
+    
+    // File I/O (for reading source, writing generated code)
+    operation read_file : String → String
+    operation write_file : String → String → Unit
+    
+    // String utilities
+    operation string_length : String → ℕ
+    operation real_to_string : ℝ → String
+    operation nat_to_string : ℕ → String
+    operation int_to_string : ℤ → String
+    
+    // Axioms
+    axiom sat_or_unsat : ∀(e : Expr). 
+        check_sat(e) = Sat ∨ check_sat(e) = Unsat ∨ check_sat(e) = Unknown
+    
+    axiom valid_iff_not_sat_negation : ∀(e : Expr).
+        check_valid(e) = Valid ↔ check_sat(not(e)) = Unsat
+}
+
+
+// ============================================================================
+// 3. CONSTRAINT BUILDING DSL
+// ============================================================================
+
+// A constraint is an expression that should be satisfiable or valid
+data Constraint =
+    CTrue
+  | CFalse
+  | CVar(name: String)
+  | CAnd(left: Constraint, right: Constraint)
+  | COr(left: Constraint, right: Constraint)
+  | CNot(inner: Constraint)
+  | CImplies(premise: Constraint, conclusion: Constraint)
+  | CForAll(var: String, body: Constraint)
+  | CExists(var: String, body: Constraint)
+  | CEq(left: Term, right: Term)
+  | CLt(left: Term, right: Term)
+  | CLe(left: Term, right: Term)
+
+data Term =
+    TVar(name: String)
+  | TNum(value: ℝ)
+  | TAdd(left: Term, right: Term)
+  | TSub(left: Term, right: Term)
+  | TMul(left: Term, right: Term)
+  | TDiv(left: Term, right: Term)
+  | TNeg(inner: Term)
+
+// Smart constructors
+define cand(a : Constraint, b : Constraint) : Constraint = CAnd(a, b)
+define cor(a : Constraint, b : Constraint) : Constraint = COr(a, b)
+define cnot(c : Constraint) : Constraint = CNot(c)
+define cimplies(a : Constraint, b : Constraint) : Constraint = CImplies(a, b)
+define cforall(x : String, c : Constraint) : Constraint = CForAll(x, c)
+define cexists(x : String, c : Constraint) : Constraint = CExists(x, c)
+define ceq(a : Term, b : Term) : Constraint = CEq(a, b)
+define clt(a : Term, b : Term) : Constraint = CLt(a, b)
+define cle(a : Term, b : Term) : Constraint = CLe(a, b)
+
+define tvar(x : String) : Term = TVar(x)
+define tnum(n : ℝ) : Term = TNum(n)
+define tadd(a : Term, b : Term) : Term = TAdd(a, b)
+define tsub(a : Term, b : Term) : Term = TSub(a, b)
+define tmul(a : Term, b : Term) : Term = TMul(a, b)
+define tdiv(a : Term, b : Term) : Term = TDiv(a, b)
+define tneg(t : Term) : Term = TNeg(t)
+
+
+// ============================================================================
+// 4. EXAMPLE CONSTRAINTS
+// ============================================================================
+
+// x + y = 10 ∧ x - y = 2
+// Solution: x = 6, y = 4
+define linear_system : Constraint =
+    CAnd(
+        CEq(TAdd(TVar("x"), TVar("y")), TNum(10)),
+        CEq(TSub(TVar("x"), TVar("y")), TNum(2))
+    )
+
+// x² = 4
+// Solutions: x = 2 or x = -2
+define quadratic_eq : Constraint =
+    CEq(TMul(TVar("x"), TVar("x")), TNum(4))
+
+// ∀x. x + 0 = x (should be valid)
+define additive_identity : Constraint =
+    CForAll("x", CEq(TAdd(TVar("x"), TNum(0)), TVar("x")))
+
+// ∀x. ∀y. x + y = y + x (should be valid)
+define commutativity : Constraint =
+    CForAll("x", CForAll("y", 
+        CEq(TAdd(TVar("x"), TVar("y")), TAdd(TVar("y"), TVar("x")))
+    ))
+
+// ∃x. x * x = -1 (unsatisfiable over reals)
+define no_real_sqrt_neg : Constraint =
+    CExists("x", CEq(TMul(TVar("x"), TVar("x")), TNum(0 - 1)))
+
+
+// ============================================================================
+// 5. VERIFICATION HELPERS
+// ============================================================================
+
+// Check if a constraint is always true
+define is_tautology(c : Constraint) : Bool =
+    match c {
+        CTrue => true
+      | CFalse => false
+      | CAnd(a, b) => is_tautology(a) ∧ is_tautology(b)
+      | COr(a, b) => is_tautology(a) ∨ is_tautology(b)
+      | CImplies(a, b) => is_tautology(b) ∨ ¬is_tautology(a)
+      | _ => false  // Can't decide statically, need solver
+    }
+
+// Negate a constraint (for checking validity)
+define negate_constraint(c : Constraint) : Constraint =
+    match c {
+        CTrue => CFalse
+      | CFalse => CTrue
+      | CNot(inner) => inner
+      | CAnd(a, b) => COr(negate_constraint(a), negate_constraint(b))
+      | COr(a, b) => CAnd(negate_constraint(a), negate_constraint(b))
+      | CForAll(x, body) => CExists(x, negate_constraint(body))
+      | CExists(x, body) => CForAll(x, negate_constraint(body))
+      | CImplies(a, b) => CAnd(a, negate_constraint(b))
+      | _ => CNot(c)
+    }
+

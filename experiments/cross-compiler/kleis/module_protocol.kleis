@@ -1,0 +1,510 @@
+// ============================================================================
+// KLEIS MODULE PROTOCOL
+// ============================================================================
+//
+// A "Kleis Module" is a compiled shared library (.dylib/.so/.dll) that
+// implements the "Kleis ABI" - a binary interface for:
+//
+//   1. Discovery - what functions, types, axioms are available
+//   2. Invocation - call functions by name with dynamic arguments
+//   3. Verification - retrieve axioms for Z3 proof checking
+//
+// Inspired by:
+//   - MCP (Model Context Protocol) for AI tools
+//   - COM/OLE (Component Object Model) for Windows
+//   - FFI (Foreign Function Interface) for native code
+//
+// The REPL loads Kleis Modules via dlopen/LoadLibrary and interacts
+// through the Kleis ABI - no central registry needed.
+//
+// ============================================================================
+//
+// TWO MODES OF OPERATION
+// ============================================================================
+//
+// Mode 1: SYMBOLIC (Container Mode)
+//   - For Kleis code that will be reasoned about symbolically
+//   - Module delivers AST + axioms, then its job is done
+//   - REPL interprets the AST, Z3 verifies axioms
+//   - kleis_call() NOT used - code is interpreted, not executed
+//   - Performance of module is IRRELEVANT
+//   - Example: group_theory.kleis, tensor_calculus.kleis
+//
+// Mode 2: NUMERICAL (Execution Mode)
+//   - For high-performance numerical computation
+//   - Module contains compiled native code
+//   - REPL calls functions directly via kleis_call()
+//   - Performance is CRITICAL
+//   - Example: lapack_bindings.rs, numerical_integration.rs
+//
+// The same ABI works for both because:
+//   - Uniform discovery mechanism
+//   - Same versioning and dependency tracking
+//   - REPL doesn't need to know which mode a module uses
+//   - Numerical modules can still export axioms about their behavior
+//
+// ============================================================================
+//
+// KLEIS ABI - CALLING CONVENTIONS
+// ============================================================================
+//
+// PLATFORM ASSUMPTIONS:
+//
+//   - All modules compiled by the SAME Rust compiler
+//   - All modules run on the SAME machine (not distributed)
+//   - No network serialization, no endianness concerns
+//   - Memory layout is identical across all modules
+//
+// This means we can use direct memory access without serialization.
+// Rust's #[repr(C)] ensures stable, predictable layout.
+//
+// VALUE PASSING:
+//
+//   Kleis Type      Rust Type        Convention
+//   --------------- ---------------- ----------------------------------
+//   ℕ (Nat)         u64              By value (register)
+//   ℤ (Int)         i64              By value (register)
+//   ℝ (Real)        f64              By value (FP register)
+//   Bool            bool             By value (1 byte, 0 or 1)
+//   String          &str / *c_char   By reference (UTF-8, null-term)
+//   List(T)         &[AbiValue]      By reference (ptr + len)
+//   Record          &AbiValue        By reference (field array)
+//   Constructor     AbiValue         By value (tagged union)
+//
+// OWNERSHIP (simplified for same-process):
+//
+//   - Module-owned data (names, axioms): Static lifetime, just borrow
+//   - Caller-owned data (args): Valid for duration of call
+//   - Result data: Copy or clone before next call
+//   - No explicit free() needed - Rust handles cleanup
+//
+// MEMORY LAYOUT:
+//
+// AbiValue (tagged enum, #[repr(C)]):
+//
+//   Tag      Payload
+//   -------- ----------------------------------
+//   Null     (unit)
+//   Nat      u64
+//   Int      i64
+//   Real     f64
+//   Bool     bool
+//   String   { ptr, len }
+//   List     { ptr, len }
+//   Ctor     { tag, args_ptr, args_len }
+//
+// THREAD SAFETY:
+//
+//   - Single-threaded by default (REPL is single-threaded)
+//   - Static data safe for concurrent reads
+//   - No synchronization needed for typical use
+//
+// ============================================================================
+
+import "kleis_in_kleis.kleis"  // For Type, Expression, etc.
+
+// ============================================================================
+// 1. TYPE SIGNATURES (for discovery)
+// ============================================================================
+
+/// Describes a type for external consumption
+data TypeSig =
+    TSNat
+  | TSInt
+  | TSReal
+  | TSRational
+  | TSComplex
+  | TSBool
+  | TSString
+  | TSUnit
+  | TSList(element: TypeSig)
+  | TSOption(inner: TypeSig)
+  | TSFunction(domain: TypeSig, codomain: TypeSig)
+  | TSTuple(elements: List(TypeSig))
+  | TSNamed(name: String)
+  | TSSymbolic(inner: TypeSig)
+  | TSParametric(name: String, args: List(TypeSig))
+
+/// Parameter signature
+data ParamSig = ParamSig(name: String, typ: TypeSig)
+
+/// Name-type pair (for quantifiers, fields, etc.)
+data NameTypePair = NameTypePair(name: String, typ: TypeSig)
+
+/// Name-kind pair (for structure parameters)
+data NameKindPair = NameKindPair(name: String, kind: Option(String))
+
+/// Name-value pair (for bindings)
+data NameValuePair = NameValuePair(name: String, value: Value)
+
+/// Qualified function entry (for registry listing)
+data QualifiedFunction = QualifiedFunction(qualified_name: String, sig: FunctionSig)
+
+/// Qualified axiom entry (for registry listing)
+data QualifiedAxiom = QualifiedAxiom(qualified_name: String, axiom: AxiomDescriptor)
+
+/// Function signature (what external tools see)
+data FunctionSig = FunctionSig(
+    name: String,
+    params: List(ParamSig),
+    return_type: TypeSig,
+    doc: Option(String)
+)
+
+// ============================================================================
+// 2. AXIOM DESCRIPTORS
+// ============================================================================
+
+/// Describes an axiom for external verification
+data AxiomDescriptor = AxiomDescriptor(
+    name: String,
+    structure: Option(String),          // Which structure it belongs to
+    formula: String,                     // The axiom as Kleis text
+    quantifiers: List(NameTypePair),    // Bound variables
+    doc: Option(String)
+)
+
+// ============================================================================
+// 3. TYPE/STRUCTURE DESCRIPTORS
+// ============================================================================
+
+/// Variant of an ADT
+data VariantSig = VariantSig(
+    name: String,
+    fields: List(NameTypePair)
+)
+
+/// Describes a data type
+data TypeDescriptor = TypeDescriptor(
+    name: String,
+    params: List(String),              // Type parameters
+    variants: List(VariantSig),        // For ADTs
+    doc: Option(String)
+)
+
+/// Describes an algebraic structure
+data StructureDescriptor = StructureDescriptor(
+    name: String,
+    params: List(NameKindPair),              // (name, kind)
+    extends: Option(String),
+    operations: List(FunctionSig),
+    axioms: List(AxiomDescriptor),
+    doc: Option(String)
+)
+
+// ============================================================================
+// 4. MODULE MANIFEST
+// ============================================================================
+
+/// Complete manifest of a module's contents
+data ModuleManifest = ModuleManifest(
+    name: String,
+    version: String,
+    
+    // Versioning for development workflow
+    source_hash: String,       // SHA256 of .kleis source file
+    signature_hash: String,    // Hash of exported signatures (for compatibility)
+    compile_time: ℕ,          // Unix timestamp when compiled
+    
+    // Module contents
+    functions: List(FunctionSig),
+    types: List(TypeDescriptor),
+    structures: List(StructureDescriptor),
+    axioms: List(AxiomDescriptor),
+    
+    // Dependencies with version info
+    imports: List(ImportDescriptor)
+)
+
+/// Import with version tracking
+data ImportDescriptor = ImportDescriptor(
+    path: String,              // Path to .kleis source file
+    expected_hash: String,     // Signature hash at compile time
+    required: Bool             // Must load before this module
+)
+
+// ============================================================================
+// 5. DYNAMIC VALUES (for function calls)
+// ============================================================================
+
+/// Dynamic value type for cross-module calls
+data Value =
+    VNat(value: ℕ)
+  | VInt(value: ℤ)
+  | VReal(value: ℝ)
+  | VBool(value: Bool)
+  | VString(value: String)
+  | VUnit
+  | VSymReal(name: String)
+  | VSymBool(name: String)
+  | VList(elements: List(Value))
+  | VTuple(elements: List(Value))
+  | VRecord(fields: List(NameValuePair))
+  | VConstructor(name: String, args: List(Value))
+  | VFunction(func_ref: FunctionRef)
+  | VPartialApp(func_ref: FunctionRef, bound_args: List(Value))
+
+// ============================================================================
+// HIGHER-ORDER FUNCTIONS
+// ============================================================================
+//
+// Functions are first-class values in Kleis. They can be:
+//   - Passed as arguments
+//   - Returned from functions
+//   - Stored in data structures
+//   - Partially applied
+//
+// Across the Kleis ABI, functions are represented as FunctionRef:
+//   - module: Which module contains the function
+//   - name: The function's name
+//   - Resolved at call time via kleis_call()
+//
+// Example:
+//   define apply_twice(f, x) = f(f(x))
+//   apply_twice(square, 3)  // → 81
+//
+// Compiled:
+//   f = FunctionRef { module: "math", name: "square" }
+//   kleis_call(f.module, f.name, [kleis_call(f.module, f.name, [3])])
+//
+// ============================================================================
+
+/// Reference to a function (for HOF support)
+data FunctionRef = FunctionRef(
+    module_name: String,    // Which Kleis Module contains the function
+    function_name: String,  // The function's name
+    arity: ℕ               // Number of arguments (for partial application)
+)
+
+/// Apply a function reference to arguments
+/// This is the core mechanism for HOF across modules
+define apply_func_ref(f : FunctionRef, args : List(Value)) : CallResult =
+    // Resolved by REPL: looks up module, calls kleis_call
+    match f {
+        FunctionRef(mod_name, func_name, _) => call_module(mod_name, func_name, args)
+    }
+
+/// Partial application: bind some arguments now, rest later
+define partial_apply(f : FunctionRef, bound : List(Value)) : Value =
+    VPartialApp(f, bound)
+
+/// Complete a partial application with remaining arguments
+define complete_apply(pa : Value, remaining : List(Value)) : CallResult =
+    match pa {
+        VPartialApp(f, bound) => apply_func_ref(f, append(bound, remaining))
+      | VFunction(f) => apply_func_ref(f, remaining)
+      | _ => CallError("not a function")
+    }
+
+/// Call result
+data CallResult =
+    CallOk(value: Value)
+  | CallError(message: String)
+
+// ============================================================================
+// 6. MODULE PROTOCOL (abstract interface)
+// ============================================================================
+
+/// The KleisModule protocol - what every compiled module exposes
+structure KleisModule {
+    /// Get the module's manifest for discovery
+    operation manifest : Unit → ModuleManifest
+    
+    /// Call a function by name with arguments
+    operation call : String → List(Value) → CallResult
+    
+    /// Get an axiom's formula as a string
+    operation get_axiom : String → Option(String)
+    
+    /// Get all axiom names
+    operation axiom_names : Unit → List(String)
+    
+    /// Get all function names
+    operation function_names : Unit → List(String)
+    
+    /// Get function signature by name
+    operation function_sig : String → Option(FunctionSig)
+}
+
+// ============================================================================
+// 7. MODULE REGISTRY (for REPL)
+// ============================================================================
+
+/// Registry that tracks all loaded modules
+structure KleisRegistry {
+    /// Register a module
+    operation register : KleisModule → Unit
+    
+    /// Get all module names
+    operation module_names : Unit → List(String)
+    
+    /// Get a module by name
+    operation get_module : String → Option(KleisModule)
+    
+    /// List all functions across all modules
+    operation list_functions : Unit → List(QualifiedFunction)
+    
+    /// List all axioms across all modules
+    operation list_axioms : Unit → List(QualifiedAxiom)
+    
+    /// Call function by qualified name (module::function)
+    operation call : String → List(Value) → CallResult
+    
+    /// Get axiom by qualified name
+    operation get_axiom : String → Option(String)
+}
+
+// ============================================================================
+// 8. VERSION CHECKING
+// ============================================================================
+//
+// When loading a module, the REPL must verify that dependencies are compatible.
+// This adds overhead but ensures correctness during active development.
+//
+// WORKFLOW:
+//   1. User edits algebra.kleis
+//   2. :reload algebra
+//   3. REPL computes new signature_hash for algebra
+//   4. For each module that imports algebra:
+//      - Compare stored expected_hash with algebra's new signature_hash
+//      - If mismatch → recompile dependent module
+//   5. Cascade recompilation as needed
+//
+// ============================================================================
+
+/// Check if a dependency is still compatible
+define is_compatible(import_desc : ImportDescriptor, loaded_module : ModuleManifest) : Bool =
+    match import_desc {
+        ImportDescriptor(_, expected, _) =>
+            match loaded_module {
+                ModuleManifest(_, _, _, sig_hash, _, _, _, _, _, _) =>
+                    expected == sig_hash
+            }
+    }
+
+/// Check all dependencies of a module
+define check_all_dependencies(manifest : ModuleManifest, loaded : List(ModuleManifest)) : DependencyResult =
+    match manifest {
+        ModuleManifest(_, _, _, _, _, _, _, _, _, imports) =>
+            check_imports(imports, loaded)
+    }
+
+/// Result of dependency checking
+data DependencyResult =
+    AllCompatible
+  | NeedsRecompile(modules: List(String))
+  | MissingDependency(path: String)
+
+/// Check a list of imports against loaded modules
+define check_imports(imports : List(ImportDescriptor), loaded : List(ModuleManifest)) : DependencyResult =
+    match imports {
+        Nil => AllCompatible
+      | Cons(imp, rest) =>
+            match find_module(imp, loaded) {
+                None => MissingDependency(import_path(imp))
+              | Some(mod_manifest) =>
+                    if is_compatible(imp, mod_manifest)
+                    then check_imports(rest, loaded)
+                    else NeedsRecompile(Cons(import_path(imp), Nil))
+            }
+    }
+
+/// Helper: get path from import descriptor
+define import_path(imp : ImportDescriptor) : String =
+    match imp { ImportDescriptor(path, _, _) => path }
+
+/// Helper: find module by import path
+define find_module(imp : ImportDescriptor, loaded : List(ModuleManifest)) : Option(ModuleManifest) =
+    match imp {
+        ImportDescriptor(path, _, _) => find_by_name(path, loaded)
+    }
+
+/// Find module by name in list
+define find_by_name(name : String, modules : List(ModuleManifest)) : Option(ModuleManifest) =
+    match modules {
+        Nil => None
+      | Cons(m, rest) =>
+            match m {
+                ModuleManifest(mod_name, _, _, _, _, _, _, _, _, _) =>
+                    if mod_name == name then Some(m)
+                    else find_by_name(name, rest)
+            }
+    }
+
+// ============================================================================
+// 9. CODEGEN HELPERS
+// ============================================================================
+
+/// Convert a Kleis Type to TypeSig (for manifest generation)
+define type_to_sig(t : Type) : TypeSig =
+    match t {
+        TPrimitive("ℕ") => TSNat
+      | TPrimitive("ℤ") => TSInt
+      | TPrimitive("ℝ") => TSReal
+      | TPrimitive("ℚ") => TSRational
+      | TPrimitive("ℂ") => TSComplex
+      | TPrimitive("Bool") => TSBool
+      | TPrimitive("String") => TSString
+      | TPrimitive("Unit") => TSUnit
+      | TVariable(name) => TSNamed(name)
+      | TParametric("List", Cons(arg, Nil)) => TSList(type_to_sig(arg))
+      | TParametric("Option", Cons(arg, Nil)) => TSOption(type_to_sig(arg))
+      | TParametric("Sym", Cons(arg, Nil)) => TSSymbolic(type_to_sig(arg))
+      | TParametric(name, args) => TSParametric(name, map(type_to_sig, args))
+      | TFunction(domain, codomain) => TSFunction(type_to_sig(domain), type_to_sig(codomain))
+      | _ => TSNamed("Unknown")
+    }
+
+/// Convert a Param to ParamSig
+define param_to_sig(p : Param) : ParamSig =
+    match p {
+        Param(name, Some(typ)) => ParamSig(name, type_to_sig(typ))
+      | Param(name, None) => ParamSig(name, TSNamed("_"))
+    }
+
+/// Extract function signature from a declaration
+define decl_to_function_sig(d : Declaration) : Option(FunctionSig) =
+    match d {
+        DDefine(name, params, ret_type, _) =>
+            Some(FunctionSig(
+                name,
+                map(param_to_sig, params),
+                match ret_type {
+                    Some(t) => type_to_sig(t)
+                  | None => TSNamed("_")
+                },
+                None
+            ))
+      | _ => None
+    }
+
+/// Build a manifest from a list of declarations
+define build_manifest(name : String, version : String, decls : List(Declaration)) : ModuleManifest =
+    ModuleManifest(
+        name,
+        version,
+        filter_map(decl_to_function_sig, decls),
+        [],   // TODO: extract types
+        [],   // TODO: extract structures
+        [],   // TODO: extract axioms
+        []    // imports
+    )
+
+// ============================================================================
+// EXAMPLES
+// ============================================================================
+
+// Example: Creating a manifest for a simple module
+// 
+// define example_manifest : ModuleManifest =
+//     build_manifest("math", "1.0.0", [
+//         DDefine("add", [Param("a", Some(TPrimitive("ℝ"))), 
+//                        Param("b", Some(TPrimitive("ℝ")))],
+//                Some(TPrimitive("ℝ")),
+//                EOperation("plus", [EVariable("a"), EVariable("b")])),
+//         DDefine("mul", [Param("a", Some(TPrimitive("ℝ"))), 
+//                        Param("b", Some(TPrimitive("ℝ")))],
+//                Some(TPrimitive("ℝ")),
+//                EOperation("times", [EVariable("a"), EVariable("b")]))
+//     ])
+

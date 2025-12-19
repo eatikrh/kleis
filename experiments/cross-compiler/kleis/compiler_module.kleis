@@ -1,0 +1,177 @@
+// ============================================================================
+// KLEIS COMPILER MODULE
+// ============================================================================
+//
+// The Kleis compiler is itself a Kleis module with the standard ABI.
+// The REPL loads it like any other module and calls its functions:
+//
+//   > :load stdlib/compiler.dylib
+//   > compile("my_program.kleis")
+//   → "/tmp/my_program_a1b2c3.dylib"
+//   > :load /tmp/my_program_a1b2c3.dylib
+//   > my_function(42)
+//   → result
+//
+// This enables JIT compilation: the REPL compiles Kleis on-the-fly.
+//
+// ============================================================================
+
+import "kleis_in_kleis.kleis"
+import "kleis_codegen_rust.kleis"
+import "module_protocol.kleis"
+
+// ============================================================================
+// COMPILER FUNCTIONS (exposed via ABI)
+// ============================================================================
+
+/// Parse Kleis source to AST
+define parse(source : String) : Result(Program, String) =
+    // TODO: Implement parser in Kleis
+    // For now, this would call the Rust parser via FFI
+    Error("parse() not yet implemented in Kleis")
+
+/// Type-check a program
+define typecheck(program : Program) : Result(Program, String) =
+    // TODO: Implement type inference in Kleis
+    // Returns the program with inferred types
+    Error("typecheck() not yet implemented in Kleis")
+
+/// Compile AST to Rust source code
+define compile(program : Program) : String =
+    match program {
+        AST(decls) => program_to_rust(program)
+      | Parsed(_, decls) => program_to_rust(AST(decls))
+      | Source(code) => "// Cannot compile from source. Call parse() first.\n"
+    }
+
+/// Compile with module ABI exports
+define compile_module(name : String, program : Program) : String =
+    match program {
+        AST(decls) => module_to_rust(name, decls)
+      | Parsed(_, decls) => module_to_rust(name, decls)
+      | Source(_) => "// Cannot compile from source. Call parse() first.\n"
+    }
+
+/// Full pipeline: source → dylib path
+/// This is the main entry point for JIT compilation
+define compile_to_dylib(source_path : String) : Result(String, String) =
+    // 1. Read source file
+    // 2. Parse to AST
+    // 3. Type check
+    // 4. Generate Rust code with ABI
+    // 5. Write to temp file
+    // 6. Invoke rustc
+    // 7. Return path to dylib
+    Error("compile_to_dylib() requires I/O - implemented in Rust shim")
+
+/// Compile and link multiple modules
+define compile_project(paths : List(String)) : Result(String, String) =
+    // Compile each file, respecting import order
+    Error("compile_project() requires I/O - implemented in Rust shim")
+
+
+// ============================================================================
+// COMPILER MODULE MANIFEST
+// ============================================================================
+
+/// The compiler module's manifest (for self-description)
+define compiler_manifest : ModuleManifest =
+    ModuleManifest(
+        "KleisCompiler",
+        "1.0.0",
+        [
+            FunctionSig("parse", 
+                [ParamSig("source", TSString)], 
+                TSParametric("Result", [TSNamed("Program"), TSString]),
+                Some("Parse Kleis source code to AST")),
+            FunctionSig("typecheck",
+                [ParamSig("program", TSNamed("Program"))],
+                TSParametric("Result", [TSNamed("Program"), TSString]),
+                Some("Type-check a Kleis program")),
+            FunctionSig("compile",
+                [ParamSig("program", TSNamed("Program"))],
+                TSString,
+                Some("Compile AST to Rust source code")),
+            FunctionSig("compile_module",
+                [ParamSig("name", TSString), ParamSig("program", TSNamed("Program"))],
+                TSString,
+                Some("Compile AST to Rust module with ABI")),
+            FunctionSig("compile_to_dylib",
+                [ParamSig("source_path", TSString)],
+                TSParametric("Result", [TSString, TSString]),
+                Some("Full pipeline: source file → compiled dylib path"))
+        ],
+        [],  // No custom types (uses kleis_in_kleis types)
+        [],  // No structures
+        [
+            AxiomDescriptor(
+                "parse_roundtrip",
+                None,
+                "∀ p : Program . parse(unparse(p)) = Ok(p)",
+                [("p", TSNamed("Program"))],
+                Some("Parsing is inverse of unparsing"))
+        ],
+        ["kleis_in_kleis.kleis", "kleis_codegen_rust.kleis"]
+    )
+
+
+// ============================================================================
+// REPL WORKFLOW
+// ============================================================================
+//
+// The REPL uses the compiler module like this:
+//
+// 1. On startup, load the compiler:
+//    compiler = dlopen("libkleis_compiler.dylib")
+//
+// 2. When user enters a definition:
+//    > define square(x) = x * x
+//    
+//    REPL calls:
+//    source = "define square(x) = x * x"
+//    result = compiler.kleis_call("compile_to_dylib", [VString(source)])
+//    dylib_path = result.value  // "/tmp/repl_def_12345.dylib"
+//    
+//    module = dlopen(dylib_path)
+//    register("square", module)
+//
+// 3. When user calls the function:
+//    > square(5)
+//    
+//    REPL looks up "square" → finds module
+//    result = module.kleis_call("square", [VNat(5)])
+//    print(result)  // 25
+//
+// 4. Incremental compilation:
+//    Each new definition → new dylib
+//    Old definitions remain loaded
+//    No need to recompile everything
+//
+// ============================================================================
+
+
+// ============================================================================
+// BOOTSTRAP PATH
+// ============================================================================
+//
+// Stage 0: Compiler in Rust
+//   - src/kleis_parser.rs (parser)
+//   - src/type_inference.rs (type checker)
+//   - kleis_codegen_rust.kleis (codegen, interpreted by Rust)
+//
+// Stage 1: Compiler compiles itself
+//   - compile_module("KleisCompiler", compiler_ast)
+//   - → kleis_compiler.rs
+//   - → rustc → libkleis_compiler.dylib
+//
+// Stage 2: Native compiler
+//   - REPL loads libkleis_compiler.dylib
+//   - Uses it to compile new programs
+//   - No more Rust interpreter needed (except for the dylib)
+//
+// Stage 3: Full bootstrap
+//   - libkleis_compiler.dylib compiles new version of itself
+//   - Self-hosting complete!
+//
+// ============================================================================
+

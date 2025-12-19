@@ -1,0 +1,270 @@
+// ============================================================================
+// KLEIS SYMBOLIC COMPUTATION LAYER
+// ============================================================================
+//
+// This defines a symbolic value type that distinguishes between:
+//   - Concrete values: known at runtime, can be computed
+//   - Symbolic values: unknowns that propagate until solved
+//
+// This is the foundation for symbolic execution and verification.
+//
+// ============================================================================
+
+import "kleis_in_kleis.kleis"
+
+// ============================================================================
+// 1. SYMBOLIC VALUE TYPE
+// ============================================================================
+
+// A value can be concrete (known) or symbolic (unknown/expression)
+data Symbolic(T) =
+    Concrete(value: T)                              // Known value
+  | Variable(name: String)                           // Symbolic variable
+  | SymExpr(op: String, args: List(Symbolic(T)))    // Symbolic expression
+
+// Shorthand for common symbolic types
+type SymReal = Symbolic(ℝ)
+type SymInt = Symbolic(ℤ)
+type SymBool = Symbolic(Bool)
+
+
+// ============================================================================
+// 2. SYMBOLIC CONSTRUCTORS
+// ============================================================================
+
+// Create a concrete value
+define concrete(x : ℝ) : SymReal = Concrete(x)
+
+// Create a symbolic variable
+define symbolic(name : String) : SymReal = Variable(name)
+
+// Create symbolic expressions
+define sym_add(a : SymReal, b : SymReal) : SymReal = 
+    match (a, b) {
+        (Concrete(x), Concrete(y)) => Concrete(x + y)  // Both concrete: compute!
+      | _ => SymExpr("add", Cons(a, Cons(b, Nil)))      // At least one symbolic: defer
+    }
+
+define sym_sub(a : SymReal, b : SymReal) : SymReal = 
+    match (a, b) {
+        (Concrete(x), Concrete(y)) => Concrete(x - y)
+      | _ => SymExpr("sub", Cons(a, Cons(b, Nil)))
+    }
+
+define sym_mul(a : SymReal, b : SymReal) : SymReal = 
+    match (a, b) {
+        (Concrete(x), Concrete(y)) => Concrete(x * y)
+      | (Concrete(0), _) => Concrete(0)        // Optimization: 0 * x = 0
+      | (_, Concrete(0)) => Concrete(0)
+      | (Concrete(1), x) => x                  // Optimization: 1 * x = x
+      | (x, Concrete(1)) => x
+      | _ => SymExpr("mul", Cons(a, Cons(b, Nil)))
+    }
+
+define sym_div(a : SymReal, b : SymReal) : SymReal = 
+    match (a, b) {
+        (Concrete(x), Concrete(y)) => Concrete(x / y)
+      | (x, Concrete(1)) => x                  // Optimization: x / 1 = x
+      | _ => SymExpr("div", Cons(a, Cons(b, Nil)))
+    }
+
+define sym_neg(a : SymReal) : SymReal =
+    match a {
+        Concrete(x) => Concrete(0 - x)
+      | SymExpr("neg", Cons(inner, Nil)) => inner  // Double negation: --x = x
+      | _ => SymExpr("neg", Cons(a, Nil))
+    }
+
+
+// ============================================================================
+// 3. SYMBOLIC COMPARISONS (produce SymBool)
+// ============================================================================
+
+define sym_eq(a : SymReal, b : SymReal) : SymBool =
+    match (a, b) {
+        (Concrete(x), Concrete(y)) => Concrete(x = y)
+      | (Variable(n1), Variable(n2)) => if n1 = n2 then Concrete(true) else SymExpr("eq", Cons(a, Cons(b, Nil)))
+      | _ => SymExpr("eq", Cons(a, Cons(b, Nil)))
+    }
+
+define sym_lt(a : SymReal, b : SymReal) : SymBool =
+    match (a, b) {
+        (Concrete(x), Concrete(y)) => Concrete(x < y)
+      | _ => SymExpr("lt", Cons(a, Cons(b, Nil)))
+    }
+
+define sym_le(a : SymReal, b : SymReal) : SymBool =
+    match (a, b) {
+        (Concrete(x), Concrete(y)) => Concrete(x <= y)
+      | _ => SymExpr("le", Cons(a, Cons(b, Nil)))
+    }
+
+define sym_gt(a : SymReal, b : SymReal) : SymBool =
+    match (a, b) {
+        (Concrete(x), Concrete(y)) => Concrete(x > y)
+      | _ => SymExpr("gt", Cons(a, Cons(b, Nil)))
+    }
+
+define sym_ge(a : SymReal, b : SymReal) : SymBool =
+    match (a, b) {
+        (Concrete(x), Concrete(y)) => Concrete(x >= y)
+      | _ => SymExpr("ge", Cons(a, Cons(b, Nil)))
+    }
+
+
+// ============================================================================
+// 4. SYMBOLIC LOGIC
+// ============================================================================
+
+define sym_and(a : SymBool, b : SymBool) : SymBool =
+    match (a, b) {
+        (Concrete(true), x) => x           // true ∧ x = x
+      | (x, Concrete(true)) => x
+      | (Concrete(false), _) => Concrete(false)  // false ∧ x = false
+      | (_, Concrete(false)) => Concrete(false)
+      | _ => SymExpr("and", Cons(a, Cons(b, Nil)))
+    }
+
+define sym_or(a : SymBool, b : SymBool) : SymBool =
+    match (a, b) {
+        (Concrete(true), _) => Concrete(true)    // true ∨ x = true
+      | (_, Concrete(true)) => Concrete(true)
+      | (Concrete(false), x) => x                // false ∨ x = x
+      | (x, Concrete(false)) => x
+      | _ => SymExpr("or", Cons(a, Cons(b, Nil)))
+    }
+
+define sym_not(a : SymBool) : SymBool =
+    match a {
+        Concrete(b) => Concrete(¬b)
+      | SymExpr("not", Cons(inner, Nil)) => inner  // ¬¬x = x
+      | _ => SymExpr("not", Cons(a, Nil))
+    }
+
+define sym_implies(a : SymBool, b : SymBool) : SymBool =
+    sym_or(sym_not(a), b)  // a → b ≡ ¬a ∨ b
+
+
+// ============================================================================
+// 5. QUERY FUNCTIONS
+// ============================================================================
+
+// Is the value concrete (known)?
+define is_concrete(s : Symbolic(T)) : Bool =
+    match s {
+        Concrete(_) => true
+      | _ => false
+    }
+
+// Is the value symbolic (unknown)?
+define is_symbolic(s : Symbolic(T)) : Bool =
+    match s {
+        Concrete(_) => false
+      | _ => true
+    }
+
+// Get concrete value (if available)
+define get_value(s : SymReal) : Option(ℝ) =
+    match s {
+        Concrete(v) => Some(v)
+      | _ => None
+    }
+
+// Collect all variable names in an expression
+define collect_vars(s : SymReal) : List(String) =
+    match s {
+        Concrete(_) => Nil
+      | Variable(name) => Cons(name, Nil)
+      | SymExpr(_, args) => concat_all(map(collect_vars, args))
+    }
+
+
+// ============================================================================
+// 6. SUBSTITUTION
+// ============================================================================
+
+// Substitute a variable with a value
+define substitute(s : SymReal, var_name : String, value : SymReal) : SymReal =
+    match s {
+        Concrete(v) => Concrete(v)
+      | Variable(name) => if name = var_name then value else Variable(name)
+      | SymExpr(op, args) => SymExpr(op, map(λ arg . substitute(arg, var_name, value), args))
+    }
+
+// Evaluate with a substitution map
+define eval_with(s : SymReal, bindings : List(Binding(ℝ))) : SymReal =
+    match bindings {
+        Nil => s
+      | Cons(Bind(name, value), rest) => 
+            eval_with(substitute(s, name, Concrete(value)), rest)
+    }
+
+
+// ============================================================================
+// 7. SYMBOLIC FUNCTION APPLICATION
+// ============================================================================
+
+// Symbolic if-then-else
+define sym_ite(cond : SymBool, then_val : SymReal, else_val : SymReal) : SymReal =
+    match cond {
+        Concrete(true) => then_val
+      | Concrete(false) => else_val
+      | _ => SymExpr("ite", Cons(cond, Cons(then_val, Cons(else_val, Nil))))
+    }
+
+// Symbolic function (represents f(args) symbolically)
+define sym_apply(func_name : String, args : List(SymReal)) : SymReal =
+    SymExpr(func_name, args)
+
+
+// ============================================================================
+// 8. EXAMPLE: SYMBOLIC FIBONACCI
+// ============================================================================
+
+// Symbolic fibonacci - returns a symbolic expression tree!
+define sym_fib(n : SymInt) : SymInt =
+    match n {
+        Concrete(0) => Concrete(0)
+      | Concrete(1) => Concrete(1)
+      | Concrete(k) => sym_add(sym_fib(Concrete(k - 1)), sym_fib(Concrete(k - 2)))
+      | Variable(name) => sym_apply("fib", Cons(n, Nil))  // Can't compute, keep symbolic
+      | _ => sym_apply("fib", Cons(n, Nil))
+    }
+
+
+// ============================================================================
+// 9. PRETTY PRINTING (for debugging)
+// ============================================================================
+
+define sym_to_string(s : SymReal) : String =
+    match s {
+        Concrete(v) => float_to_string(v)
+      | Variable(name) => name
+      | SymExpr("add", Cons(a, Cons(b, Nil))) => 
+            concat("(", concat(sym_to_string(a), concat(" + ", concat(sym_to_string(b), ")"))))
+      | SymExpr("sub", Cons(a, Cons(b, Nil))) =>
+            concat("(", concat(sym_to_string(a), concat(" - ", concat(sym_to_string(b), ")"))))
+      | SymExpr("mul", Cons(a, Cons(b, Nil))) =>
+            concat("(", concat(sym_to_string(a), concat(" * ", concat(sym_to_string(b), ")"))))
+      | SymExpr("div", Cons(a, Cons(b, Nil))) =>
+            concat("(", concat(sym_to_string(a), concat(" / ", concat(sym_to_string(b), ")"))))
+      | SymExpr("neg", Cons(a, Nil)) =>
+            concat("-", sym_to_string(a))
+      | SymExpr(op, args) =>
+            concat(op, concat("(", concat(join_sym_args(args), ")")))
+    }
+
+define join_sym_args(args : List(SymReal)) : String =
+    match args {
+        Nil => ""
+      | Cons(a, Nil) => sym_to_string(a)
+      | Cons(a, rest) => concat(sym_to_string(a), concat(", ", join_sym_args(rest)))
+    }
+
+
+// ============================================================================
+// 10. BINDING TYPE (from solver_api)
+// ============================================================================
+
+data Binding(T) = Bind(name: String, value: T)
+
