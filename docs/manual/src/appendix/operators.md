@@ -37,14 +37,16 @@
 
 ## Set Operators
 
-| Operator | Unicode | Name | Example |
-|----------|---------|------|---------|
-| `in` | `∈` | Membership | `x ∈ S` |
-| `notin` | `∉` | Non-membership | `x ∉ S` |
-| `subset` | `⊆` | Subset | `A ⊆ B` |
-| `superset` | `⊇` | Superset | `A ⊇ B` |
-| `union` | `∪` | Union | `A ∪ B` |
-| `intersect` | `∩` | Intersection | `A ∩ B` |
+> **Note:** Set operators are parsed as custom operators but don't have special semantic meaning yet. Use function-call syntax for set operations: `member(x, S)`, `union(A, B)`, etc.
+
+| Operator | Unicode | Name | Status |
+|----------|---------|------|--------|
+| `∪` | | Union | Custom operator (no special semantics) |
+| `∩` | | Intersection | Custom operator (no special semantics) |
+| `∈` | | Membership | ❌ Not implemented - use `member(x, S)` |
+| `∉` | | Non-membership | ❌ Not implemented |
+| `⊆` | | Subset | ❌ Not implemented - use `subset(A, B)` |
+| `⊇` | | Superset | ❌ Not implemented |
 
 ## Type Operators
 
@@ -60,18 +62,20 @@ From lowest to highest precedence:
 
 | Level | Operators | Associativity |
 |-------|-----------|---------------|
-| 1 | `↔` | Left |
-| 2 | `→` (logical) | Right |
-| 3 | `∨` | Left |
-| 4 | `∧` | Left |
-| 5 | `¬` | Prefix |
-| 6 | `=` `≠` `<` `>` `≤` `≥` | None |
-| 7 | `∪` `∩` | Left |
-| 8 | `+` `-` | Left |
-| 9 | `*` `/` | Left |
-| 10 | `^` | Right |
-| 11 | `-` (unary) | Prefix |
-| 12 | `.` (field access) | Left |
+| 1 | `↔` `⇔` `⟺` (biconditional) | Left |
+| 2 | `→` `⇒` `⟹` (implication) | Right |
+| 3 | `∨` `or` | Left |
+| 4 | `∧` `and` | Left |
+| 5 | `¬` `not` | Prefix |
+| 6 | `=` `≠` `<` `>` `≤` `≥` | Non-associative |
+| 7 | `+` `-` | Left |
+| 8 | `*` `/` `×` `·` | Left |
+| 9 | `^` (power) | Right |
+| 10 | `-` (unary negation) | Prefix |
+| 11 | `!` `ᵀ` `†` (postfix) | Postfix |
+| 12 | Function application | Left |
+
+> **Note:** Field access (`.`) is NOT implemented. Use function-call syntax: `field(object)` instead of `object.field`.
 
 ## Examples
 
