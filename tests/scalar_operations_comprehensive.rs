@@ -30,6 +30,21 @@ fn op(name: &str, args: Vec<Expression>) -> Expression {
 
 /// Test a scalar operation and expect Scalar type
 fn test_scalar_op(op_name: &str, args: Vec<Expression>) {
+    test_op_returns_type(op_name, args, Type::scalar());
+}
+
+/// Test an operation that returns Int type
+fn test_int_op(op_name: &str, args: Vec<Expression>) {
+    let int_type = Type::Data {
+        type_name: "Type".to_string(),
+        constructor: "Int".to_string(),
+        args: vec![],
+    };
+    test_op_returns_type(op_name, args, int_type);
+}
+
+/// Test an operation and expect a specific type
+fn test_op_returns_type(op_name: &str, args: Vec<Expression>, expected: Type) {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     let expr = op(op_name, args);
@@ -38,11 +53,9 @@ fn test_scalar_op(op_name: &str, args: Vec<Expression>) {
     match result {
         TypeCheckResult::Success(ty) => {
             assert_eq!(
-                ty,
-                Type::scalar(),
-                "Operation '{}' should return Scalar, got {:?}",
-                op_name,
-                ty
+                ty, expected,
+                "Operation '{}' should return {:?}, got {:?}",
+                op_name, expected, ty
             );
         }
         TypeCheckResult::Error {
@@ -109,8 +122,8 @@ fn test_all_numeric_operations() {
     test_scalar_op("abs", vec![c("-5")]);
     println!("✓ abs");
 
-    // Floor
-    test_scalar_op("floor", vec![c("3.7")]);
+    // Floor - returns Int (floor : ℝ → ℤ)
+    test_int_op("floor", vec![c("3.7")]);
     println!("✓ floor");
 
     // Power

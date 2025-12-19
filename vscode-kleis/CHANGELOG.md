@@ -2,6 +2,16 @@
 
 All notable changes to the Kleis VS Code extension will be documented in this file.
 
+## [0.2.1] - 2025-12-19
+
+### Added
+- **Rational numbers (ℚ)**: Full operator overloading and Z3 integration
+- Updated example.kleis with rational number examples:
+  - `rational(p, q)` constructor
+  - Field axioms: commutativity, identity, inverse
+  - Density of rationals
+  - Type promotion: ℚ + ℤ → ℚ
+
 ## [0.2.0] - 2025-12-19
 
 ### Added

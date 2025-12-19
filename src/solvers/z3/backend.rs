@@ -1379,12 +1379,520 @@ impl<'r> Z3Backend<'r> {
                 Ok(func_decl.apply(&ast_args))
             }
 
+            // ============================================
+            // RATIONAL NUMBER OPERATIONS
+            // Z3 Real sort is actually ℚ (rationals), so we use it directly
+            // ============================================
+
+            // Rational constructor: rational(p, q) = p / q
+            "rational" => {
+                if args.len() != 2 {
+                    return Err("rational requires 2 arguments".to_string());
+                }
+                // Convert to Real and divide
+                let numer = self.to_real(&args[0])?;
+                let denom = self.to_real(&args[1])?;
+                Ok(Real::div(&numer, &denom).into())
+            }
+
+            // Rational addition
+            "rational_add" => {
+                if args.len() != 2 {
+                    return Err("rational_add requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(Real::add(&[&r1, &r2]).into())
+            }
+
+            // Rational subtraction
+            "rational_sub" => {
+                if args.len() != 2 {
+                    return Err("rational_sub requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(Real::sub(&[&r1, &r2]).into())
+            }
+
+            // Rational multiplication
+            "rational_mul" => {
+                if args.len() != 2 {
+                    return Err("rational_mul requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(Real::mul(&[&r1, &r2]).into())
+            }
+
+            // Rational division
+            "rational_div" => {
+                if args.len() != 2 {
+                    return Err("rational_div requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(Real::div(&r1, &r2).into())
+            }
+
+            // Rational negation
+            "neg_rational" => {
+                if args.len() != 1 {
+                    return Err("neg_rational requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                Ok(r.unary_minus().into())
+            }
+
+            // Rational inverse (reciprocal)
+            "rational_inv" => {
+                if args.len() != 1 {
+                    return Err("rational_inv requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                let one = Real::from_rational(1, 1);
+                Ok(Real::div(&one, &r).into())
+            }
+
+            // Rational comparisons - return Bool
+            "rational_lt" => {
+                if args.len() != 2 {
+                    return Err("rational_lt requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(r1.lt(&r2).into())
+            }
+
+            "rational_le" => {
+                if args.len() != 2 {
+                    return Err("rational_le requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(r1.le(&r2).into())
+            }
+
+            "rational_gt" => {
+                if args.len() != 2 {
+                    return Err("rational_gt requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(r1.gt(&r2).into())
+            }
+
+            "rational_ge" => {
+                if args.len() != 2 {
+                    return Err("rational_ge requires 2 arguments".to_string());
+                }
+                let r1 = self.to_real(&args[0])?;
+                let r2 = self.to_real(&args[1])?;
+                Ok(r1.ge(&r2).into())
+            }
+
+            // Integer to rational conversion
+            "int_to_rational" | "nat_to_rational" => {
+                if args.len() != 1 {
+                    return Err(format!("{} requires 1 argument", name));
+                }
+                // Convert Int to Real (ℤ → ℚ)
+                Ok(self.to_real(&args[0])?.into())
+            }
+
+            // Rational to real (identity in Z3, since Real = ℚ)
+            "to_real" => {
+                if args.len() != 1 {
+                    return Err("to_real requires 1 argument".to_string());
+                }
+                Ok(self.to_real(&args[0])?.into())
+            }
+
+            // Numerator accessor (uninterpreted - Z3 doesn't expose this)
+            "numer" => {
+                let func_decl = self.declare_uninterpreted("numer", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // Denominator accessor (uninterpreted - Z3 doesn't expose this)
+            "denom" => {
+                let func_decl = self.declare_uninterpreted("denom", 1);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // ============================================
+            // INTEGER DIVISION AND MODULO OPERATIONS
+            // ============================================
+
+            // Integer division: a div b (floor division)
+            "int_div" | "div" => {
+                if args.len() != 2 {
+                    return Err("int_div requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.div(&b).into())
+                } else {
+                    Err("int_div requires integer arguments".to_string())
+                }
+            }
+
+            // Integer modulo: a mod b (always non-negative result)
+            "int_mod" | "mod" => {
+                if args.len() != 2 {
+                    return Err("int_mod requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.modulo(&b).into())
+                } else {
+                    Err("int_mod requires integer arguments".to_string())
+                }
+            }
+
+            // Integer remainder: a rem b (sign follows dividend)
+            "int_rem" | "rem" => {
+                if args.len() != 2 {
+                    return Err("int_rem requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.rem(&b).into())
+                } else {
+                    Err("int_rem requires integer arguments".to_string())
+                }
+            }
+
+            // ============================================
+            // FLOOR AND CEILING (ℚ → ℤ)
+            // ============================================
+
+            // Floor: largest integer ≤ r
+            "floor" => {
+                if args.len() != 1 {
+                    return Err("floor requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                // Z3's Real::to_int() computes floor
+                Ok(r.to_int().into())
+            }
+
+            // Ceiling: smallest integer ≥ r
+            // ceil(r) = -floor(-r)
+            "ceil" | "ceiling" => {
+                if args.len() != 1 {
+                    return Err("ceil requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                let neg_r = r.unary_minus();
+                let floor_neg_r = neg_r.to_int();
+                Ok(Int::unary_minus(&floor_neg_r).into())
+            }
+
+            // ============================================
+            // GCD (Greatest Common Divisor)
+            // Defined axiomatically: gcd(a,b) is the largest d such that d|a and d|b
+            // ============================================
+            "gcd" => {
+                if args.len() != 2 {
+                    return Err("gcd requires 2 arguments".to_string());
+                }
+                // Use uninterpreted function with axioms
+                // The actual GCD computation is done via axioms in stdlib/rational.kleis
+                let func_decl = self.declare_uninterpreted("gcd", 2);
+                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                Ok(func_decl.apply(&ast_args))
+            }
+
+            // ============================================
+            // ABSOLUTE VALUE
+            // ============================================
+
+            // Absolute value for rationals (abs is handled above, this catches abs_rational)
+            "abs_rational" => {
+                if args.len() != 1 {
+                    return Err("abs requires 1 argument".to_string());
+                }
+                let r = self.to_real(&args[0])?;
+                let zero = Real::from_rational(0, 1);
+                let neg_r = r.unary_minus();
+                // abs(r) = if r >= 0 then r else -r
+                Ok(r.ge(&zero).ite(&r, &neg_r).into())
+            }
+
+            // ============================================
+            // BIT-VECTOR OPERATIONS (native Z3 BitVec theory)
+            // ============================================
+
+            // Bitwise AND
+            "bvand" => {
+                if args.len() != 2 {
+                    return Err("bvand requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvand(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvand", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bitwise OR
+            "bvor" => {
+                if args.len() != 2 {
+                    return Err("bvor requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvor(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvor", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bitwise XOR
+            "bvxor" => {
+                if args.len() != 2 {
+                    return Err("bvxor requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvxor(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvxor", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bitwise NOT
+            "bvnot" => {
+                if args.len() != 1 {
+                    return Err("bvnot requires 1 argument".to_string());
+                }
+                if let Some(a) = args[0].as_bv() {
+                    Ok(a.bvnot().into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvnot", 1);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bit-vector addition (modular)
+            "bvadd" => {
+                if args.len() != 2 {
+                    return Err("bvadd requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvadd(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvadd", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bit-vector subtraction
+            "bvsub" => {
+                if args.len() != 2 {
+                    return Err("bvsub requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvsub(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvsub", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bit-vector multiplication
+            "bvmul" => {
+                if args.len() != 2 {
+                    return Err("bvmul requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvmul(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvmul", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Bit-vector negation (two's complement)
+            "bvneg" => {
+                if args.len() != 1 {
+                    return Err("bvneg requires 1 argument".to_string());
+                }
+                if let Some(a) = args[0].as_bv() {
+                    Ok(a.bvneg().into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvneg", 1);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Unsigned division
+            "bvudiv" => {
+                if args.len() != 2 {
+                    return Err("bvudiv requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvudiv(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvudiv", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Signed division
+            "bvsdiv" => {
+                if args.len() != 2 {
+                    return Err("bvsdiv requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvsdiv(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvsdiv", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Unsigned remainder
+            "bvurem" => {
+                if args.len() != 2 {
+                    return Err("bvurem requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvurem(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvurem", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Left shift
+            "bvshl" => {
+                if args.len() != 2 {
+                    return Err("bvshl requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvshl(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvshl", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Logical right shift
+            "bvlshr" => {
+                if args.len() != 2 {
+                    return Err("bvlshr requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvlshr(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvlshr", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Arithmetic right shift
+            "bvashr" => {
+                if args.len() != 2 {
+                    return Err("bvashr requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvashr(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvashr", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Unsigned less-than
+            "bvult" => {
+                if args.len() != 2 {
+                    return Err("bvult requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvult(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvult", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Unsigned less-or-equal
+            "bvule" => {
+                if args.len() != 2 {
+                    return Err("bvule requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvule(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvule", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Signed less-than
+            "bvslt" => {
+                if args.len() != 2 {
+                    return Err("bvslt requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvslt(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvslt", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
+            // Signed less-or-equal
+            "bvsle" => {
+                if args.len() != 2 {
+                    return Err("bvsle requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                    Ok(a.bvsle(&b).into())
+                } else {
+                    let func_decl = self.declare_uninterpreted("bvsle", 2);
+                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                    Ok(func_decl.apply(&ast_args))
+                }
+            }
+
             // Unknown operation - use uninterpreted function
             _ => {
                 let func_decl = self.declare_uninterpreted(name, args.len());
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
+        }
+    }
+
+    /// Convert a Dynamic to a Real (for rational operations)
+    fn to_real(&self, d: &Dynamic) -> Result<Real, String> {
+        if let Some(r) = d.as_real() {
+            Ok(r)
+        } else if let Some(i) = d.as_int() {
+            Ok(Int::to_real(&i))
+        } else {
+            // Try to use it as-is and hope it works
+            Err(format!("Cannot convert {:?} to Real", d))
         }
     }
 
@@ -1426,6 +1934,10 @@ impl<'r> Z3Backend<'r> {
                         // Create fresh Complex constant for quantified complex variables
                         self.fresh_complex_const(&var.name)
                             .unwrap_or_else(|| Int::fresh_const(&var.name).into())
+                    }
+                    "ℚ" | "Rational" | "Q" => {
+                        // Rationals are represented as Z3 Real (which is actually ℚ)
+                        Real::fresh_const(&var.name).into()
                     }
                     _ => Int::fresh_const(&var.name).into(),
                 }

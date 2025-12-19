@@ -1,6 +1,37 @@
 # Z3 Solver Capabilities Declaration
 # MCP-style capability manifest
 # See: docs/session-2024-12-12/SOLVER_MCP_STYLE_CAPABILITIES.md
+#
+# ============================================
+# Z3 REAL (RATIONAL) OPERATORS REFERENCE
+# ============================================
+# 
+# Core Arithmetic (overloaded + methods):
+#   +, -, *, /        Real::add, Real::sub, Real::mul, Real::div
+#   -x                Real::unary_minus()
+#   a^b               Real::power(&b) - NOTE: non-linear, can be slow
+#
+# Comparison (return Bool AST, not Rust bool):
+#   a._eq(&b)         Mathematical equality (NOT == which compares AST)
+#   a.distinct(&b)    Inequality
+#   a.gt/ge/lt/le(&b) Ordering comparisons
+#
+# Conversion:
+#   x.to_int()        Floor: ℚ → ℤ (truncates toward -∞)
+#   Int::to_real(&i)  Embed: ℤ → ℚ
+#   x.is_int()        Returns Bool: is this Real an integer?
+#
+# Special:
+#   cond.ite(&a, &b)  If-then-else for piecewise functions
+#   Real::from_real(ctx, num, den)  Create rational constant
+#
+# IMPORTANT:
+#   - Division by zero is allowed but result-unspecified (guard it!)
+#   - Remainder (mod) is NOT native for Reals, only Int
+#   - Non-linear arithmetic (power, x*y) can make solver return "unknown"
+#   - Keep constraints linear when possible for best performance
+#
+# ============================================
 
 [solver]
 name = "Z3"
@@ -10,14 +41,34 @@ description = "Z3 Theorem Prover from Microsoft Research - SMT solver with suppo
 
 [capabilities]
 # Supported theories
+# NATIVE = built into Z3's SMT-LIB core
+# ENCODED = implemented via translation to native theories
 theories = [
-    "arithmetic",      # Int and Real arithmetic
-    "boolean",         # Propositional logic
+    # NATIVE Z3 theories (legacy names for compatibility)
+    "arithmetic",      # Alias for Int + Real
+    "boolean",         # Alias for Bool
     "equality",        # Equality reasoning
-    "strings",         # String theory (QF_SLIA)
-    "regex",           # Regular expressions
-    "complex",         # Complex numbers (encoded as Real pairs)
-    "uninterpreted_functions"  # Abstract operations
+    
+    # NATIVE Z3 theories (precise names)
+    "Int",             # Integer arithmetic (native)
+    "Real",            # Real/Algebraic arithmetic (native) - includes ℚ and algebraic irrationals like √2
+    "Bool",            # Propositional logic (native)
+    "String",          # String theory QF_SLIA (native)
+    "strings",         # Alias for String
+    "Regex",           # Regular expressions (native)
+    "regex",           # Alias for Regex
+    "BitVec",          # Bit-vectors (_ BitVec n) (native)
+    "Array",           # Arrays (Array K V) (native) - NOT YET USED in Kleis
+    "Datatype",        # Algebraic datatypes (native) - used for Complex encoding
+    
+    # ENCODED/Emulated in Kleis
+    "Complex",         # ℂ encoded as (Real, Real) pairs
+    "complex",         # Alias
+    "Rational",        # ℚ mapped to Real (subset)
+    "rational",        # Alias
+    
+    # Always available
+    "uninterpreted_functions"  # Abstract operations (native)
 ]
 
 # Native operation support (15 operations with Z3 translators)
@@ -102,23 +153,115 @@ is_alpha = { arity = 1, theory = "Regex", native = true }
 isAlphaNum = { arity = 1, theory = "Regex", native = true }
 is_alphanum = { arity = 1, theory = "Regex", native = true }
 
-# Complex number operations (encoded as Real pairs)
-# Z3 doesn't have native complex support, so we encode ℂ as (re: Real, im: Real)
-# with algebraic translation of operations
-complex = { arity = 2, theory = "Complex", native = true, description = "Constructor: complex(re, im) creates re + im*i" }
-re = { arity = 1, theory = "Complex", native = true, description = "Extract real part" }
-real_part = { arity = 1, theory = "Complex", native = true }
-im = { arity = 1, theory = "Complex", native = true, description = "Extract imaginary part" }
-imag_part = { arity = 1, theory = "Complex", native = true }
-conj = { arity = 1, theory = "Complex", native = true, description = "Complex conjugate: conj(a+bi) = a-bi" }
-conjugate = { arity = 1, theory = "Complex", native = true }
-complex_add = { arity = 2, theory = "Complex", native = true, description = "Complex addition" }
-complex_sub = { arity = 2, theory = "Complex", native = true, description = "Complex subtraction" }
-complex_mul = { arity = 2, theory = "Complex", native = true, description = "Complex multiplication" }
-complex_div = { arity = 2, theory = "Complex", native = true, description = "Complex division" }
-complex_inverse = { arity = 1, theory = "Complex", native = true, description = "Multiplicative inverse: 1/z" }
-neg_complex = { arity = 1, theory = "Complex", native = true, description = "Negation: -z" }
-abs_squared = { arity = 1, theory = "Complex", native = true, description = "Magnitude squared: |z|² = re² + im²" }
+# Complex number operations (ENCODED as Real pairs - NOT native Z3)
+# Z3 does NOT have a native Complex sort. We encode ℂ as (re: Real, im: Real)
+# and manually translate operations via algebraic rules.
+complex = { arity = 2, theory = "Complex", native = false, description = "ENCODED: complex(re, im) → Real pair (re, im)" }
+re = { arity = 1, theory = "Complex", native = false, description = "ENCODED: Extract real part from pair" }
+real_part = { arity = 1, theory = "Complex", native = false }
+im = { arity = 1, theory = "Complex", native = false, description = "ENCODED: Extract imaginary part from pair" }
+imag_part = { arity = 1, theory = "Complex", native = false }
+conj = { arity = 1, theory = "Complex", native = false, description = "ENCODED: conj(a+bi) = (a, -b)" }
+conjugate = { arity = 1, theory = "Complex", native = false }
+complex_add = { arity = 2, theory = "Complex", native = false, description = "ENCODED: (a+bi)+(c+di) = (a+c, b+d)" }
+complex_sub = { arity = 2, theory = "Complex", native = false, description = "ENCODED: (a+bi)-(c+di) = (a-c, b-d)" }
+complex_mul = { arity = 2, theory = "Complex", native = false, description = "ENCODED: (a+bi)(c+di) = (ac-bd, ad+bc)" }
+complex_div = { arity = 2, theory = "Complex", native = false, description = "ENCODED: z1/z2 via conjugate multiplication" }
+complex_inverse = { arity = 1, theory = "Complex", native = false, description = "ENCODED: 1/z via conjugate" }
+neg_complex = { arity = 1, theory = "Complex", native = false, description = "ENCODED: -z = (-re, -im)" }
+abs_squared = { arity = 1, theory = "Complex", native = false, description = "ENCODED: |z|² = re² + im² (uses native Real ops)" }
+
+# Rational number operations (ℚ mapped to Z3 Real)
+# IMPORTANT: Z3's Real sort is actually ALGEBRAIC REALS (includes √2, not just ℚ)
+# We use Real for rationals because: (1) exact arithmetic, (2) no floating-point issues
+# For pure ℚ reasoning, add axiom that all values are p/q for some integers p, q
+rational = { arity = 2, theory = "Real", native = true, description = "Maps to Real constant p/q" }
+numer = { arity = 1, theory = "Real", native = false, description = "UNINTERPRETED: only works on concrete numerals, not symbolic" }
+denom = { arity = 1, theory = "Real", native = false, description = "UNINTERPRETED: only works on concrete numerals, not symbolic" }
+# These map directly to Z3 Real arithmetic (native)
+rational_add = { arity = 2, theory = "Real", native = true, description = "Maps to Real::add" }
+rational_sub = { arity = 2, theory = "Real", native = true, description = "Maps to Real::sub" }
+rational_mul = { arity = 2, theory = "Real", native = true, description = "Maps to Real::mul" }
+rational_div = { arity = 2, theory = "Real", native = true, description = "Maps to Real::div" }
+neg_rational = { arity = 1, theory = "Real", native = true, description = "Maps to Real::unary_minus" }
+rational_inv = { arity = 1, theory = "Real", native = true, description = "Maps to 1/r via Real::div" }
+rational_lt = { arity = 2, theory = "Real", native = true, description = "Maps to Real::lt" }
+rational_le = { arity = 2, theory = "Real", native = true, description = "Maps to Real::le" }
+rational_gt = { arity = 2, theory = "Real", native = true, description = "Maps to Real::gt" }
+rational_ge = { arity = 2, theory = "Real", native = true, description = "Maps to Real::ge" }
+int_to_rational = { arity = 1, theory = "Real", native = true, description = "Maps to Int::to_real" }
+nat_to_rational = { arity = 1, theory = "Real", native = true, description = "Maps to Int::to_real" }
+to_real = { arity = 1, theory = "Real", native = true, description = "Identity (Z3 Real = our ℚ)" }
+# Derived operations (use native ite or defined in Kleis)
+abs_rational = { arity = 1, theory = "Real", native = false, description = "ENCODED via ite: if r>=0 then r else -r" }
+sign_rational = { arity = 1, theory = "Real", native = false, description = "KLEIS-DEFINED: if-then-else logic" }
+min_rational = { arity = 2, theory = "Real", native = false, description = "KLEIS-DEFINED: if r1<=r2 then r1 else r2" }
+max_rational = { arity = 2, theory = "Real", native = false, description = "KLEIS-DEFINED: if r1<=r2 then r2 else r1" }
+midpoint = { arity = 2, theory = "Real", native = false, description = "KLEIS-DEFINED: (r1 + r2) / 2" }
+
+# Integer division and modulo
+int_div = { arity = 2, theory = "Int", native = true, description = "Integer division: a div b" }
+int_mod = { arity = 2, theory = "Int", native = true, description = "Integer modulo: a mod b (non-negative)" }
+int_rem = { arity = 2, theory = "Int", native = true, description = "Integer remainder: a rem b (sign follows a)" }
+
+# Floor and ceiling (ℚ → ℤ)
+floor = { arity = 1, theory = "Rational", native = true, description = "Floor: largest integer ≤ r" }
+ceil = { arity = 1, theory = "Rational", native = true, description = "Ceiling: smallest integer ≥ r" }
+
+# GCD (defined axiomatically)
+gcd = { arity = 2, theory = "Int", native = false, description = "GCD: greatest common divisor (axiomatized)" }
+
+# Power (non-linear - may cause "unknown" for complex constraints)
+power = { arity = 2, theory = "Real", native = true, description = "Exponentiation: a^b (WARNING: non-linear)" }
+pow = { arity = 2, theory = "Real", native = true, description = "Alias for power" }
+
+# Integer check
+is_int = { arity = 1, theory = "Real", native = true, description = "Is this Real an integer? Returns Bool" }
+
+# ============================================
+# BIT-VECTOR OPERATIONS (native Z3 BitVec theory)
+# ============================================
+# Bourbaki formalization: BitVec(n) is a function [0,n-1] → {0,1}
+# Mother structures: Vector space over 𝔽₂, Boolean algebra, ordered set
+
+# Bitwise logical operations (Boolean algebra structure)
+bvand = { arity = 2, theory = "BitVec", native = true, description = "Bitwise AND (meet in Boolean algebra)" }
+bvor = { arity = 2, theory = "BitVec", native = true, description = "Bitwise OR (join in Boolean algebra)" }
+bvxor = { arity = 2, theory = "BitVec", native = true, description = "Bitwise XOR (vector addition over 𝔽₂)" }
+bvnot = { arity = 1, theory = "BitVec", native = true, description = "Bitwise NOT (complement)" }
+
+# Arithmetic operations (modular arithmetic mod 2ⁿ)
+bvadd = { arity = 2, theory = "BitVec", native = true, description = "Addition mod 2ⁿ" }
+bvsub = { arity = 2, theory = "BitVec", native = true, description = "Subtraction mod 2ⁿ" }
+bvmul = { arity = 2, theory = "BitVec", native = true, description = "Multiplication mod 2ⁿ" }
+bvneg = { arity = 1, theory = "BitVec", native = true, description = "Two's complement negation" }
+bvudiv = { arity = 2, theory = "BitVec", native = true, description = "Unsigned division" }
+bvsdiv = { arity = 2, theory = "BitVec", native = true, description = "Signed division" }
+bvurem = { arity = 2, theory = "BitVec", native = true, description = "Unsigned remainder" }
+
+# Shift operations
+bvshl = { arity = 2, theory = "BitVec", native = true, description = "Left shift (multiply by 2ᵏ)" }
+bvlshr = { arity = 2, theory = "BitVec", native = true, description = "Logical right shift (zero fill)" }
+bvashr = { arity = 2, theory = "BitVec", native = true, description = "Arithmetic right shift (sign extend)" }
+
+# Comparison operations (ordered set structure)
+bvult = { arity = 2, theory = "BitVec", native = true, description = "Unsigned less-than" }
+bvule = { arity = 2, theory = "BitVec", native = true, description = "Unsigned less-or-equal" }
+bvugt = { arity = 2, theory = "BitVec", native = true, description = "Unsigned greater-than" }
+bvuge = { arity = 2, theory = "BitVec", native = true, description = "Unsigned greater-or-equal" }
+bvslt = { arity = 2, theory = "BitVec", native = true, description = "Signed less-than" }
+bvsle = { arity = 2, theory = "BitVec", native = true, description = "Signed less-or-equal" }
+bvsgt = { arity = 2, theory = "BitVec", native = true, description = "Signed greater-than" }
+bvsge = { arity = 2, theory = "BitVec", native = true, description = "Signed greater-or-equal" }
+
+# Construction and extraction
+bvzero = { arity = 1, theory = "BitVec", native = false, description = "Zero bit-vector of width n" }
+bvones = { arity = 1, theory = "BitVec", native = false, description = "All-ones bit-vector of width n" }
+bvone = { arity = 1, theory = "BitVec", native = false, description = "Value 1 as bit-vector of width n" }
+extract = { arity = 3, theory = "BitVec", native = true, description = "Extract bits [high:low]" }
+bvconcat = { arity = 2, theory = "BitVec", native = true, description = "Concatenate two bit-vectors" }
+zext = { arity = 2, theory = "BitVec", native = true, description = "Zero-extend to width m" }
+sext = { arity = 2, theory = "BitVec", native = true, description = "Sign-extend to width m" }
 
 # Note: Z3 supports many more operations via its built-in theories,
 # but these are the ones explicitly translated in our current implementation.
@@ -126,15 +269,24 @@ abs_squared = { arity = 1, theory = "Complex", native = true, description = "Mag
 # uninterpreted functions, which is correct for theorem proving!
 
 [capabilities.features]
+# Native Z3 features
 quantifiers = true
 uninterpreted_functions = true
 recursive_functions = true
 evaluation = true
 simplification = false  # Z3 has simplify() but not always reliable
 proof_generation = false  # Available in Z3 but not exposed yet
-string_theory = true  # QF_SLIA: Quantifier-Free Strings and Linear Integer Arithmetic
-regex_support = true  # Regular expression constraints via str.in_re
-complex_numbers = true  # ℂ encoded as (Real, Real) pairs with algebraic axioms
+
+# Native theory support
+string_theory = true   # QF_SLIA: Quantifier-Free Strings and Linear Integer Arithmetic
+regex_support = true   # Regular expression constraints via str.in_re
+bitvector_theory = true   # BitVec (_ BitVec n) - NOW SUPPORTED in Kleis (Dec 2024)
+array_theory = false   # Array available in Z3 but NOT YET USED in Kleis
+
+# Encoded/Emulated support
+rational_numbers = true   # ℚ mapped to Z3 Real (which is actually Algebraic Reals ⊃ ℚ)
+complex_numbers = true    # ℂ ENCODED as (Real, Real) pairs - NOT native Z3
+algebraic_reals = true    # Z3 Real can represent √2 etc., not just ℚ
 
 [capabilities.performance]
 max_axioms = 10000  # Z3 can handle thousands of axioms efficiently

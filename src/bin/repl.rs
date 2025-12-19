@@ -461,13 +461,15 @@ fn print_help_types() {
     println!("    R, ℝ      Real numbers");
     println!("    Z, ℤ      Integers");
     println!("    N, ℕ      Natural numbers");
-    println!("    Q, ℚ      Rationals");
+    println!("    Q, ℚ      Rationals (e.g., rational(1, 2) = 1/2)");
     println!("    C, ℂ      Complex numbers");
     println!("    Bool      Booleans");
+    println!("    String    Text strings (e.g., \"hello\")");
     println!();
     println!("  Parameterized types:");
     println!("    Vector(n)           n-dimensional vector");
     println!("    Matrix(m, n)        m×n matrix");
+    println!("    BitVec(n)           n-bit bit-vector");
     println!("    Set(T)              Set of type T");
     println!("    List(T)             List of type T");
     println!();
@@ -475,6 +477,9 @@ fn print_help_types() {
     println!("    x : R               Variable x has type R");
     println!("    f : R → R           Function from R to R");
     println!("    g : R × R → R       Binary function");
+    println!();
+    println!("  String operations: concat, strlen, contains, hasPrefix, hasSuffix");
+    println!("  BitVec operations: bvand, bvor, bvxor, bvnot, bvshl, bvlshr");
     println!();
 }
 

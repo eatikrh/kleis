@@ -32,6 +32,7 @@ pub mod arithmetic;
 pub mod boolean;
 pub mod comparison;
 pub mod complex;
+pub mod rational;
 
 use z3::ast::Dynamic;
 

@@ -343,6 +343,12 @@ impl TypeInference {
                 constructor: "Int".to_string(),
                 args: vec![],
             },
+            // Rational types
+            "ℚ" | "Rational" | "Q" => Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            },
             // Boolean
             "Bool" | "𝔹" => Type::Bool,
             // String
@@ -1192,9 +1198,193 @@ impl TypeInference {
             return Ok(Type::scalar());
         }
 
+        // OPERATOR OVERLOADING: Rational number constructor
+        // rational(numer, denom) returns Rational
+        if name == "rational" && args.len() == 2 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Rational accessors
+        // numer(r), denom(r) return Int
+        if matches!(name, "numer" | "denom") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Rational unary operations
+        // neg_rational(r), abs_rational(r), rational_inv(r), canonical(r) return Rational
+        if matches!(
+            name,
+            "neg_rational" | "abs_rational" | "rational_inv" | "canonical"
+        ) && args.len() == 1
+        {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Rational binary operations
+        // rational_add, rational_sub, rational_mul, rational_div, min_rational, max_rational, midpoint return Rational
+        if matches!(
+            name,
+            "rational_add"
+                | "rational_sub"
+                | "rational_mul"
+                | "rational_div"
+                | "min_rational"
+                | "max_rational"
+                | "midpoint"
+        ) && args.len() == 2
+        {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            });
+        }
+
+        // sign_rational(r : ℚ) : ℤ
+        if name == "sign_rational" && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            });
+        }
+
+        // floor(r : ℚ) : ℤ, ceil(r : ℚ) : ℤ
+        if matches!(name, "floor" | "ceil" | "ceiling") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            });
+        }
+
+        // int_div, int_mod, int_rem : ℤ × ℤ → ℤ
+        if matches!(
+            name,
+            "int_div" | "div" | "int_mod" | "mod" | "int_rem" | "rem"
+        ) && args.len() == 2
+        {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            });
+        }
+
+        // gcd : ℤ × ℤ → ℤ (or ℕ × ℕ → ℕ)
+        if name == "gcd" && args.len() == 2 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Int".to_string(),
+                args: vec![],
+            });
+        }
+
+        // ============================================
+        // BIT-VECTOR OPERATIONS
+        // ============================================
+
+        // BitVec binary operations: bvand, bvor, bvxor, bvadd, bvsub, bvmul, bvshl, bvlshr, bvashr
+        // These preserve the BitVec type
+        if matches!(
+            name,
+            "bvand"
+                | "bvor"
+                | "bvxor"
+                | "bvadd"
+                | "bvsub"
+                | "bvmul"
+                | "bvudiv"
+                | "bvsdiv"
+                | "bvurem"
+                | "bvshl"
+                | "bvlshr"
+                | "bvashr"
+        ) && args.len() == 2
+        {
+            // Return BitVec type (width preserved from first argument)
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "BitVec".to_string(),
+                args: vec![], // Width would be a type parameter in full dependent type system
+            });
+        }
+
+        // BitVec unary operations: bvnot, bvneg
+        if matches!(name, "bvnot" | "bvneg") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "BitVec".to_string(),
+                args: vec![],
+            });
+        }
+
+        // BitVec comparison operations return Bool
+        if matches!(
+            name,
+            "bvult" | "bvule" | "bvugt" | "bvuge" | "bvslt" | "bvsle" | "bvsgt" | "bvsge"
+        ) && args.len() == 2
+        {
+            return Ok(Type::Bool);
+        }
+
+        // Bit extraction: bit(x, i) returns a single bit (0 or 1)
+        if name == "bit" && args.len() == 2 {
+            return Ok(Type::Nat);
+        }
+
+        // Width accessor
+        if name == "width" && args.len() == 1 {
+            return Ok(Type::Nat);
+        }
+
+        // Zero/ones constructors: bvzero(n), bvones(n), bvone(n) return BitVec(n)
+        if matches!(name, "bvzero" | "bvones" | "bvone") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "BitVec".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Rational comparison operations return Bool
+        if matches!(
+            name,
+            "rational_lt" | "rational_le" | "rational_gt" | "rational_ge"
+        ) && args.len() == 2
+        {
+            return Ok(Type::Bool);
+        }
+
+        // OPERATOR OVERLOADING: Rational to Real conversion
+        if name == "to_real" && args.len() == 1 {
+            return Ok(Type::scalar());
+        }
+
+        // OPERATOR OVERLOADING: Integer/Natural to Rational conversion
+        if matches!(name, "int_to_rational" | "nat_to_rational") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Rational".to_string(),
+                args: vec![],
+            });
+        }
+
         // OPERATOR OVERLOADING: Arithmetic operations with type propagation
-        // If any argument is Complex, the result is Complex
-        // This enables lowering without requiring full stdlib registry
+        // Type promotion hierarchy: ℕ → ℤ → ℚ → ℝ → ℂ
+        // The result is the "larger" type
         if matches!(
             name,
             "plus" | "minus" | "times" | "divide" | "scalar_divide"
@@ -1203,7 +1393,7 @@ impl TypeInference {
             let t1 = self.infer(&args[0], context_builder)?;
             let t2 = self.infer(&args[1], context_builder)?;
 
-            // If either operand is Complex, result is Complex
+            // Check type hierarchy (ordered from highest to lowest)
             let is_complex_1 =
                 matches!(&t1, Type::Data { constructor, .. } if constructor == "Complex");
             let is_complex_2 =
@@ -1216,7 +1406,56 @@ impl TypeInference {
                     args: vec![],
                 });
             }
-            // Both are Scalar/Real - return Scalar
+
+            // Rational is next in hierarchy
+            let is_rational_1 =
+                matches!(&t1, Type::Data { constructor, .. } if constructor == "Rational");
+            let is_rational_2 =
+                matches!(&t2, Type::Data { constructor, .. } if constructor == "Rational");
+
+            if is_rational_1 || is_rational_2 {
+                return Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Rational".to_string(),
+                    args: vec![],
+                });
+            }
+
+            // Check for Scalar/Real
+            let is_scalar_1 =
+                matches!(&t1, Type::Data { constructor, .. } if constructor == "Scalar");
+            let is_scalar_2 =
+                matches!(&t2, Type::Data { constructor, .. } if constructor == "Scalar");
+
+            if is_scalar_1 || is_scalar_2 {
+                return Ok(Type::scalar());
+            }
+
+            // Check for Int
+            let is_int_1 = matches!(&t1, Type::Data { constructor, .. } if constructor == "Int");
+            let is_int_2 = matches!(&t2, Type::Data { constructor, .. } if constructor == "Int");
+
+            if is_int_1 || is_int_2 {
+                return Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Int".to_string(),
+                    args: vec![],
+                });
+            }
+
+            // Check for Nat
+            let is_nat_1 = matches!(&t1, Type::Data { constructor, .. } if constructor == "Nat");
+            let is_nat_2 = matches!(&t2, Type::Data { constructor, .. } if constructor == "Nat");
+
+            if is_nat_1 || is_nat_2 {
+                return Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Nat".to_string(),
+                    args: vec![],
+                });
+            }
+
+            // Default: return Scalar
             return Ok(Type::scalar());
         }
 
@@ -1235,11 +1474,18 @@ impl TypeInference {
             return Ok(Type::Bool);
         }
 
-        // Ordering operations only work on orderable types (Scalar, Int, Nat, Real)
+        // Ordering operations only work on orderable types (Scalar, Int, Nat, Real, Rational)
         // They do NOT work on Complex, Matrix, Bool, etc.
         if matches!(
             name,
-            "less_than" | "greater_than" | "less_equal" | "greater_equal"
+            "less_than"
+                | "greater_than"
+                | "less_equal"
+                | "greater_equal"
+                | "leq"
+                | "geq"
+                | "lt"
+                | "gt"
         ) && args.len() == 2
         {
             let t1 = self.infer(&args[0], context_builder)?;
@@ -1251,7 +1497,7 @@ impl TypeInference {
                     || matches!(
                         t,
                         Type::Data { constructor, .. }
-                            if constructor == "Int" || constructor == "Real" || constructor == "Scalar"
+                            if constructor == "Int" || constructor == "Real" || constructor == "Scalar" || constructor == "Rational"
                     )
             };
 

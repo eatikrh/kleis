@@ -189,6 +189,28 @@ impl PrettyPrinter {
             "implies" => Some("⟹"),
             "compose" => Some("∘"),
             "bullet" | "op" => Some("*"),
+            // Rational number operations
+            "rational_add" => Some("+"),
+            "rational_sub" => Some("-"),
+            "rational_mul" => Some("×"),
+            "rational_div" => Some("÷"),
+            "rational_lt" => Some("<"),
+            "rational_le" => Some("≤"),
+            "rational_gt" => Some(">"),
+            "rational_ge" => Some("≥"),
+            // String operations
+            "concat" | "str_concat" | "++" => Some("++"),
+            // BitVec operations
+            "bvand" => Some("&"),
+            "bvor" => Some("|"),
+            "bvxor" => Some("⊕"),
+            "bvshl" => Some("<<"),
+            "bvlshr" => Some(">>"),
+            "bvashr" => Some(">>>"),
+            "bvult" => Some("<ᵤ"),
+            "bvule" => Some("≤ᵤ"),
+            "bvslt" => Some("<ₛ"),
+            "bvsle" => Some("≤ₛ"),
             _ => None,
         };
 
@@ -215,7 +237,26 @@ impl PrettyPrinter {
                 let arg = self.format_at_depth(&args[0], depth);
                 return format!("¬{}", self.maybe_paren(&args[0], &arg));
             }
+            "neg_rational" if args.len() == 1 => {
+                let arg = self.format_at_depth(&args[0], depth);
+                return format!("-{}", self.maybe_paren(&args[0], &arg));
+            }
+            "bvnot" if args.len() == 1 => {
+                let arg = self.format_at_depth(&args[0], depth);
+                return format!("~{}", self.maybe_paren(&args[0], &arg));
+            }
+            "bvneg" if args.len() == 1 => {
+                let arg = self.format_at_depth(&args[0], depth);
+                return format!("-{}", self.maybe_paren(&args[0], &arg));
+            }
             _ => {}
+        }
+
+        // Special formatting for rational(n, d) -> n/d
+        if name == "rational" && args.len() == 2 {
+            let numer = self.format_at_depth(&args[0], depth);
+            let denom = self.format_at_depth(&args[1], depth);
+            return format!("{}/{}", numer, denom);
         }
 
         // Generic function call
@@ -431,7 +472,24 @@ impl PrettyPrinter {
                 // Check if it's an infix operation that might need parens
                 let needs_parens = matches!(
                     name.as_str(),
-                    "plus" | "minus" | "times" | "divide" | "and" | "or"
+                    "plus"
+                        | "minus"
+                        | "times"
+                        | "divide"
+                        | "and"
+                        | "or"
+                        // Rational operations
+                        | "rational_add"
+                        | "rational_sub"
+                        | "rational_mul"
+                        | "rational_div"
+                        // String operations
+                        | "concat"
+                        | "str_concat"
+                        // BitVec operations
+                        | "bvand"
+                        | "bvor"
+                        | "bvxor"
                 );
                 if needs_parens {
                     format!("({})", formatted)
@@ -1173,5 +1231,166 @@ mod tests {
         let result = pp.format_program(&program);
         assert!(result.contains("type Real = ℝ"));
         assert!(result.contains("operation square : Real → Real"));
+    }
+
+    // === Rational number pretty printing tests ===
+
+    #[test]
+    fn test_format_rational_constructor() {
+        let pp = PrettyPrinter::new();
+        // rational(1, 2) should print as "1/2"
+        let expr = Expression::Operation {
+            name: "rational".to_string(),
+            args: vec![
+                Expression::Const("1".to_string()),
+                Expression::Const("2".to_string()),
+            ],
+        };
+        assert_eq!(pp.format_expression(&expr), "1/2");
+    }
+
+    #[test]
+    fn test_format_rational_add() {
+        let pp = PrettyPrinter::new();
+        // rational_add(a, b) should print as "a + b"
+        let expr = Expression::Operation {
+            name: "rational_add".to_string(),
+            args: vec![
+                Expression::Object("a".to_string()),
+                Expression::Object("b".to_string()),
+            ],
+        };
+        assert_eq!(pp.format_expression(&expr), "a + b");
+    }
+
+    #[test]
+    fn test_format_rational_mul() {
+        let pp = PrettyPrinter::new();
+        // rational_mul(a, b) should print as "a × b"
+        let expr = Expression::Operation {
+            name: "rational_mul".to_string(),
+            args: vec![
+                Expression::Object("a".to_string()),
+                Expression::Object("b".to_string()),
+            ],
+        };
+        assert_eq!(pp.format_expression(&expr), "a × b");
+    }
+
+    #[test]
+    fn test_format_neg_rational() {
+        let pp = PrettyPrinter::new();
+        // neg_rational(q) should print as "-q"
+        let expr = Expression::Operation {
+            name: "neg_rational".to_string(),
+            args: vec![Expression::Object("q".to_string())],
+        };
+        assert_eq!(pp.format_expression(&expr), "-q");
+    }
+
+    // === String operation pretty printing tests ===
+
+    #[test]
+    fn test_format_string_literal() {
+        let pp = PrettyPrinter::new();
+        let expr = Expression::String("hello world".to_string());
+        assert_eq!(pp.format_expression(&expr), "\"hello world\"");
+    }
+
+    #[test]
+    fn test_format_string_concat() {
+        let pp = PrettyPrinter::new();
+        // concat(a, b) should print as "a ++ b"
+        let expr = Expression::Operation {
+            name: "concat".to_string(),
+            args: vec![
+                Expression::String("hello".to_string()),
+                Expression::String(" world".to_string()),
+            ],
+        };
+        assert_eq!(pp.format_expression(&expr), "\"hello\" ++ \" world\"");
+    }
+
+    // === BitVec operation pretty printing tests ===
+
+    #[test]
+    fn test_format_bvand() {
+        let pp = PrettyPrinter::new();
+        // bvand(x, y) should print as "x & y"
+        let expr = Expression::Operation {
+            name: "bvand".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Object("y".to_string()),
+            ],
+        };
+        assert_eq!(pp.format_expression(&expr), "x & y");
+    }
+
+    #[test]
+    fn test_format_bvor() {
+        let pp = PrettyPrinter::new();
+        // bvor(x, y) should print as "x | y"
+        let expr = Expression::Operation {
+            name: "bvor".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Object("y".to_string()),
+            ],
+        };
+        assert_eq!(pp.format_expression(&expr), "x | y");
+    }
+
+    #[test]
+    fn test_format_bvxor() {
+        let pp = PrettyPrinter::new();
+        // bvxor(x, y) should print as "x ⊕ y"
+        let expr = Expression::Operation {
+            name: "bvxor".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Object("y".to_string()),
+            ],
+        };
+        assert_eq!(pp.format_expression(&expr), "x ⊕ y");
+    }
+
+    #[test]
+    fn test_format_bvnot() {
+        let pp = PrettyPrinter::new();
+        // bvnot(x) should print as "~x"
+        let expr = Expression::Operation {
+            name: "bvnot".to_string(),
+            args: vec![Expression::Object("x".to_string())],
+        };
+        assert_eq!(pp.format_expression(&expr), "~x");
+    }
+
+    #[test]
+    fn test_format_bvshl() {
+        let pp = PrettyPrinter::new();
+        // bvshl(x, n) should print as "x << n"
+        let expr = Expression::Operation {
+            name: "bvshl".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Const("2".to_string()),
+            ],
+        };
+        assert_eq!(pp.format_expression(&expr), "x << 2");
+    }
+
+    #[test]
+    fn test_format_bvlshr() {
+        let pp = PrettyPrinter::new();
+        // bvlshr(x, n) should print as "x >> n"
+        let expr = Expression::Operation {
+            name: "bvlshr".to_string(),
+            args: vec![
+                Expression::Object("x".to_string()),
+                Expression::Const("1".to_string()),
+            ],
+        };
+        assert_eq!(pp.format_expression(&expr), "x >> 1");
     }
 }

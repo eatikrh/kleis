@@ -30,6 +30,9 @@
 # Mathematics
 
 - [Complex Numbers](./chapters/14-complex-numbers.md)
+- [Rational Numbers](./chapters/15-rational-numbers.md)
+- [Bit-Vectors](./chapters/16-bit-vectors.md)
+- [Strings](./chapters/17-strings.md)
 
 # Appendices
 

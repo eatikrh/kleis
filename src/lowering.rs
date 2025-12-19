@@ -48,6 +48,26 @@
 //!
 //! Where `lift(r : ℝ) = complex(r, 0)`
 //!
+//! ## Rational Number Operations (ℚ)
+//!
+//! | Operator | Arg Types | Lowered To |
+//! |----------|-----------|------------|
+//! | `plus`   | ℚ × ℚ     | `rational_add` |
+//! | `plus`   | ℚ × ℤ     | `rational_add(_, lift)` |
+//! | `plus`   | ℤ × ℚ     | `rational_add(lift, _)` |
+//! | `times`  | ℚ × ℚ     | `rational_mul` |
+//! | `minus`  | ℚ × ℚ     | `rational_sub` |
+//! | `divide` | ℚ × ℚ     | `rational_div` |
+//! | `neg`    | ℚ         | `neg_rational` |
+//!
+//! Where `lift(n : ℤ) = rational(n, 1)`
+//!
+//! ## Type Promotion Hierarchy
+//!
+//! ℕ → ℤ → ℚ → ℝ → ℂ
+//!
+//! When mixing types, the result is promoted to the "larger" type.
+//!
 //! See: docs/plans/operator-overloading.md
 
 use crate::ast::Expression;
@@ -330,6 +350,202 @@ impl SemanticLowering {
             },
 
             // ============================================
+            // RATIONAL NUMBER OPERATIONS
+            // ============================================
+
+            // plus(ℚ, ℚ) → rational_add
+            ("plus", [t1, t2]) if self.is_rational(t1) && self.is_rational(t2) => {
+                Expression::Operation {
+                    name: "rational_add".to_string(),
+                    args: lowered_args.to_vec(),
+                }
+            }
+
+            // plus(ℚ, ℤ) or plus(ℚ, ℕ) → rational_add(_, lift)
+            ("plus", [t1, t2]) if self.is_rational(t1) && (self.is_int(t2) || self.is_nat(t2)) => {
+                Expression::Operation {
+                    name: "rational_add".to_string(),
+                    args: vec![
+                        lowered_args[0].clone(),
+                        self.lift_to_rational(&lowered_args[1]),
+                    ],
+                }
+            }
+
+            // plus(ℤ, ℚ) or plus(ℕ, ℚ) → rational_add(lift, _)
+            ("plus", [t1, t2]) if (self.is_int(t1) || self.is_nat(t1)) && self.is_rational(t2) => {
+                Expression::Operation {
+                    name: "rational_add".to_string(),
+                    args: vec![
+                        self.lift_to_rational(&lowered_args[0]),
+                        lowered_args[1].clone(),
+                    ],
+                }
+            }
+
+            // plus(ℚ, ℝ) → plus as real (Z3 Real = ℚ, so this is compatible)
+            ("plus", [t1, t2]) if self.is_rational(t1) && self.is_real(t2) => {
+                Expression::Operation {
+                    name: "plus".to_string(),
+                    args: lowered_args.to_vec(),
+                }
+            }
+
+            // plus(ℝ, ℚ) → plus as real
+            ("plus", [t1, t2]) if self.is_real(t1) && self.is_rational(t2) => {
+                Expression::Operation {
+                    name: "plus".to_string(),
+                    args: lowered_args.to_vec(),
+                }
+            }
+
+            // plus(ℚ, ℂ) → complex_add(lift_to_complex(lift_to_real), _)
+            ("plus", [t1, t2]) if self.is_rational(t1) && self.is_complex(t2) => {
+                Expression::Operation {
+                    name: "complex_add".to_string(),
+                    args: vec![
+                        self.lift_to_complex(&lowered_args[0]),
+                        lowered_args[1].clone(),
+                    ],
+                }
+            }
+
+            // plus(ℂ, ℚ) → complex_add(_, lift_to_complex)
+            ("plus", [t1, t2]) if self.is_complex(t1) && self.is_rational(t2) => {
+                Expression::Operation {
+                    name: "complex_add".to_string(),
+                    args: vec![
+                        lowered_args[0].clone(),
+                        self.lift_to_complex(&lowered_args[1]),
+                    ],
+                }
+            }
+
+            // minus(ℚ, ℚ) → rational_sub
+            ("minus", [t1, t2]) if self.is_rational(t1) && self.is_rational(t2) => {
+                Expression::Operation {
+                    name: "rational_sub".to_string(),
+                    args: lowered_args.to_vec(),
+                }
+            }
+
+            // minus(ℚ, ℤ/ℕ) → rational_sub(_, lift)
+            ("minus", [t1, t2]) if self.is_rational(t1) && (self.is_int(t2) || self.is_nat(t2)) => {
+                Expression::Operation {
+                    name: "rational_sub".to_string(),
+                    args: vec![
+                        lowered_args[0].clone(),
+                        self.lift_to_rational(&lowered_args[1]),
+                    ],
+                }
+            }
+
+            // minus(ℤ/ℕ, ℚ) → rational_sub(lift, _)
+            ("minus", [t1, t2]) if (self.is_int(t1) || self.is_nat(t1)) && self.is_rational(t2) => {
+                Expression::Operation {
+                    name: "rational_sub".to_string(),
+                    args: vec![
+                        self.lift_to_rational(&lowered_args[0]),
+                        lowered_args[1].clone(),
+                    ],
+                }
+            }
+
+            // times(ℚ, ℚ) → rational_mul
+            ("times", [t1, t2]) if self.is_rational(t1) && self.is_rational(t2) => {
+                Expression::Operation {
+                    name: "rational_mul".to_string(),
+                    args: lowered_args.to_vec(),
+                }
+            }
+
+            // times(ℚ, ℤ/ℕ) → rational_mul(_, lift)
+            ("times", [t1, t2]) if self.is_rational(t1) && (self.is_int(t2) || self.is_nat(t2)) => {
+                Expression::Operation {
+                    name: "rational_mul".to_string(),
+                    args: vec![
+                        lowered_args[0].clone(),
+                        self.lift_to_rational(&lowered_args[1]),
+                    ],
+                }
+            }
+
+            // times(ℤ/ℕ, ℚ) → rational_mul(lift, _)
+            ("times", [t1, t2]) if (self.is_int(t1) || self.is_nat(t1)) && self.is_rational(t2) => {
+                Expression::Operation {
+                    name: "rational_mul".to_string(),
+                    args: vec![
+                        self.lift_to_rational(&lowered_args[0]),
+                        lowered_args[1].clone(),
+                    ],
+                }
+            }
+
+            // times(ℚ, ℂ) → complex_mul(lift, _)
+            ("times", [t1, t2]) if self.is_rational(t1) && self.is_complex(t2) => {
+                Expression::Operation {
+                    name: "complex_mul".to_string(),
+                    args: vec![
+                        self.lift_to_complex(&lowered_args[0]),
+                        lowered_args[1].clone(),
+                    ],
+                }
+            }
+
+            // times(ℂ, ℚ) → complex_mul(_, lift)
+            ("times", [t1, t2]) if self.is_complex(t1) && self.is_rational(t2) => {
+                Expression::Operation {
+                    name: "complex_mul".to_string(),
+                    args: vec![
+                        lowered_args[0].clone(),
+                        self.lift_to_complex(&lowered_args[1]),
+                    ],
+                }
+            }
+
+            // divide(ℚ, ℚ) → rational_div
+            ("divide" | "scalar_divide", [t1, t2])
+                if self.is_rational(t1) && self.is_rational(t2) =>
+            {
+                Expression::Operation {
+                    name: "rational_div".to_string(),
+                    args: lowered_args.to_vec(),
+                }
+            }
+
+            // divide(ℚ, ℤ/ℕ) → rational_div(_, lift)
+            ("divide" | "scalar_divide", [t1, t2])
+                if self.is_rational(t1) && (self.is_int(t2) || self.is_nat(t2)) =>
+            {
+                Expression::Operation {
+                    name: "rational_div".to_string(),
+                    args: vec![
+                        lowered_args[0].clone(),
+                        self.lift_to_rational(&lowered_args[1]),
+                    ],
+                }
+            }
+
+            // divide(ℤ/ℕ, ℚ) → rational_div(lift, _)
+            ("divide" | "scalar_divide", [t1, t2])
+                if (self.is_int(t1) || self.is_nat(t1)) && self.is_rational(t2) =>
+            {
+                Expression::Operation {
+                    name: "rational_div".to_string(),
+                    args: vec![
+                        self.lift_to_rational(&lowered_args[0]),
+                        lowered_args[1].clone(),
+                    ],
+                }
+            }
+
+            // neg(ℚ) → neg_rational
+            ("neg" | "negate", [t1]) if self.is_rational(t1) => Expression::Operation {
+                name: "neg_rational".to_string(),
+                args: lowered_args.to_vec(),
+            },
+
+            // ============================================
             // DEFAULT: Keep operation as-is
             // ============================================
             _ => Expression::Operation {
@@ -360,6 +576,38 @@ impl SemanticLowering {
         match ty {
             Type::Data { constructor, .. } => constructor == "Scalar",
             _ => false,
+        }
+    }
+
+    /// Check if a type is Rational
+    fn is_rational(&self, ty: &Type) -> bool {
+        match ty {
+            Type::Data { constructor, .. } => constructor == "Rational",
+            _ => false,
+        }
+    }
+
+    /// Check if a type is Int
+    fn is_int(&self, ty: &Type) -> bool {
+        match ty {
+            Type::Data { constructor, .. } => constructor == "Int",
+            _ => false,
+        }
+    }
+
+    /// Check if a type is Nat
+    fn is_nat(&self, ty: &Type) -> bool {
+        match ty {
+            Type::Data { constructor, .. } => constructor == "Nat",
+            _ => false,
+        }
+    }
+
+    /// Lift an integer/natural expression to rational: n → rational(n, 1)
+    fn lift_to_rational(&self, expr: &Expression) -> Expression {
+        Expression::Operation {
+            name: "rational".to_string(),
+            args: vec![expr.clone(), Expression::Const("1".to_string())],
         }
     }
 }
