@@ -28,7 +28,6 @@ define flag = True                // True is a boolean
 |------|---------|-----------|--------|
 | Boolean | `𝔹` | `Bool` | `True`, `False` |
 | String | — | `String` | `"hello"`, `"world"` |
-| Unit | — | `Unit` | `()` |
 
 ### Parameterized Primitive Types
 
