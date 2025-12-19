@@ -214,13 +214,23 @@ Without type information, Z3 wouldn't know how to handle operations:
 
 ### Equivalent Type Names
 
-These are all equivalent:
+For complex numbers, these are all equivalent:
 
 | Syntax | Description |
 |--------|-------------|
 | `: ℂ` | Unicode symbol (recommended) |
 | `: Complex` | Full name |
 | `: C` | Short ASCII alternative |
+
+For comparison, here are the equivalent forms for other numeric types:
+
+| Type | Unicode | Full Name | ASCII |
+|------|---------|-----------|-------|
+| Complex | `: ℂ` | `: Complex` | `: C` |
+| Real/Scalar | `: ℝ` | `: Real` or `: Scalar` | `: R` |
+| Natural | `: ℕ` | `: Nat` | `: N` |
+| Integer | `: ℤ` | `: Int` or `: Integer` | `: Z` |
+| Boolean | `: 𝔹` | `: Bool` | — |
 
 ## Arithmetic Operations
 
