@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-31c855b3.js";
+            window.path_to_searchindex_js = "searchindex-22ccf537.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-33a2f593.js"></script>
@@ -341,6 +341,7 @@ define flag = True                // True is a boolean
 <tbody>
 <tr><td>Boolean</td><td><code>𝔹</code></td><td><code>Bool</code></td><td><code>True</code>, <code>False</code></td></tr>
 <tr><td>String</td><td>—</td><td><code>String</code></td><td><code>"hello"</code>, <code>"world"</code></td></tr>
+<tr><td>Unit</td><td>—</td><td><code>Unit</code></td><td><code>()</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -359,14 +360,42 @@ define flag = True                // True is a boolean
 define flag = True
 define not_flag = False
 
-// Unit value
-define empty = ()
-
 // Boolean in quantified expressions (inside structures)
 structure BoolExamples {
     axiom reflexive_unicode : ∀(p : 𝔹). p = p
     axiom reflexive_full    : ∀(q : Bool). q = q
 }
+</code></pre>
+<h3 id="the-unit-type"><a class="header" href="#the-unit-type">The Unit Type</a></h3>
+<p>The <code>Unit</code> type represents “no meaningful value” — like <code>void</code> in C or <code>()</code> in Rust/Haskell. It has exactly one value: <code>()</code>.</p>
+<p><strong>When to use Unit:</strong></p>
+<ol>
+<li><strong>Result types that can fail but return nothing on success:</strong></li>
+</ol>
+<pre><code class="language-kleis">// A validation that succeeds with () or fails with an error message
+data ValidationResult = Ok(Unit) | Err(String)
+
+define validate_positive(x : ℝ) : ValidationResult =
+    if x &gt; 0 then Ok(()) else Err("must be positive")
+</code></pre>
+<ol start="2">
+<li><strong>Optional values where presence matters, not content:</strong></li>
+</ol>
+<pre><code class="language-kleis">// Option type - Some(value) or None
+data Option(T) = Some(T) | None
+
+// A flag that's either set or not (no associated value)
+define flag_set : Option(Unit) = Some(())
+define flag_unset : Option(Unit) = None
+</code></pre>
+<ol start="3">
+<li><strong>Proof terms with no computational content:</strong></li>
+</ol>
+<pre><code class="language-kleis">// A theorem that x = x (the proof itself carries no data)
+structure Reflexivity {
+    axiom refl : ∀(x : ℝ). x = x
+}
+// The "witness" of this axiom would have type Unit
 </code></pre>
 <h2 id="type-annotations"><a class="header" href="#type-annotations">Type Annotations</a></h2>
 <p>You can explicitly annotate types with <code>:</code>:</p>
