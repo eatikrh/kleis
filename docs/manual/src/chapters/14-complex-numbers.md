@@ -107,6 +107,64 @@ Verification examples:
 // ✅ Valid
 ```
 
+## Type Ascriptions with ℂ
+
+Type ascriptions tell Kleis (and Z3) that a variable is a complex number. The syntax is `: ℂ` (or `: Complex`).
+
+### Quantifier Variables
+
+The most common use is in universal quantifiers:
+
+```kleis
+// z is a complex variable
+:verify ∀(z : ℂ). conj(conj(z)) = z
+// ✅ Valid
+
+// Multiple complex variables
+:verify ∀(z1 : ℂ)(z2 : ℂ). z1 + z2 = z2 + z1
+// ✅ Valid
+
+// Mixed types: real and complex
+:verify ∀(r : ℝ)(z : ℂ). r + z = complex(r + re(z), im(z))
+// ✅ Valid
+```
+
+When you write `∀(z : ℂ)`, the Z3 backend creates a symbolic complex variable with unknown real and imaginary parts. This lets Z3 reason about **all possible** complex numbers.
+
+### Definition Annotations
+
+You can annotate definitions for clarity:
+
+```kleis
+define z1 : ℂ = complex(1, 2)
+define z2 : ℂ = 3 + 4*i
+define origin : ℂ = complex(0, 0)
+```
+
+### Why Type Ascriptions Matter
+
+Without type information, Z3 wouldn't know how to handle operations:
+
+```kleis
+// With `: ℂ`, Z3 knows z is complex and creates appropriate constraints
+:verify ∀(z : ℂ). z * complex(1, 0) = z
+// ✅ Valid
+
+// Z3 can reason symbolically about the real and imaginary parts
+:verify ∀(z : ℂ). re(z) * re(z) + im(z) * im(z) = abs_squared(z)
+// ✅ Valid
+```
+
+### Equivalent Type Names
+
+These are all equivalent:
+
+| Syntax | Description |
+|--------|-------------|
+| `: ℂ` | Unicode symbol (recommended) |
+| `: Complex` | Full name |
+| `: C` | Short ASCII alternative |
+
 ## Arithmetic Operations
 
 ### Addition and Subtraction
