@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7956ccc3.js";
+            window.path_to_searchindex_js = "../searchindex-d67922c9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b0b97c7a.js"></script>
@@ -241,6 +241,55 @@ axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
     axiom inverse : ∀(x : G). mul(x, inv(x)) = e
     axiom associative : ∀(x : G)(y : G)(z : G).
         mul(mul(x, y), z) = mul(x, mul(y, z))
+}
+</code></pre>
+<h2 id="nested-quantifiers-grammar-v09"><a class="header" href="#nested-quantifiers-grammar-v09">Nested Quantifiers (Grammar v0.9)</a></h2>
+<p>Quantifiers can appear inside logical expressions:</p>
+<pre><code class="language-kleis">structure Analysis {
+    // Quantifier inside conjunction
+    axiom bounded_positive: (x &gt; 0) ∧ (∀(y : ℝ). abs(y) &lt;= x)
+    
+    // Quantifier inside implication
+    axiom dense_rationals: ∀(a b : ℝ). a &lt; b → (∃(q : ℚ). a &lt; q ∧ q &lt; b)
+    
+    // Deeply nested quantifiers
+    axiom limit_def: ∀(L : ℝ, ε : ℝ). ε &gt; 0 → 
+        (∃(δ : ℝ). δ &gt; 0 ∧ (∀(x : ℝ). abs(x) &lt; δ → abs(f(x) - L) &lt; ε))
+}
+</code></pre>
+<h3 id="epsilon-delta-limit-definition"><a class="header" href="#epsilon-delta-limit-definition">Epsilon-Delta Limit Definition</a></h3>
+<p>The classic analysis definition now parses correctly:</p>
+<pre><code class="language-kleis">structure Limits {
+    axiom epsilon_delta: ∀(f : ℝ → ℝ, L a : ℝ). 
+        has_limit(f, a, L) ↔ 
+        (∀(ε : ℝ). ε &gt; 0 → (∃(δ : ℝ). δ &gt; 0 ∧ 
+            (∀(x : ℝ). abs(x - a) &lt; δ → abs(f(x) - L) &lt; ε)))
+}
+</code></pre>
+<h2 id="function-types-in-quantifiers-grammar-v09"><a class="header" href="#function-types-in-quantifiers-grammar-v09">Function Types in Quantifiers (Grammar v0.9)</a></h2>
+<p>Quantify over functions using the arrow type:</p>
+<pre><code class="language-kleis">structure FunctionProperties {
+    // Quantify over a function ℝ → ℝ
+    axiom continuous: ∀(f : ℝ → ℝ, x : ℝ). 
+        is_continuous(f, x)
+    
+    // Quantify over multiple functions
+    axiom composition: ∀(f : ℝ → ℝ, g : ℝ → ℝ). 
+        compose(f, g) = λ x . f(g(x))
+    
+    // Higher-order function types
+    axiom curried: ∀(f : ℝ → ℝ → ℝ, a b : ℝ). 
+        f = f
+}
+</code></pre>
+<h3 id="topology-with-function-types"><a class="header" href="#topology-with-function-types">Topology with Function Types</a></h3>
+<pre><code class="language-kleis">structure Topology {
+    axiom continuity: ∀(f : X → Y, V : Set(Y)). 
+        is_open(V) → is_open(preimage(f, V))
+    
+    axiom homeomorphism: ∀(f : X → Y, g : Y → X). 
+        (∀(x : X). g(f(x)) = x) ∧ (∀(y : Y). f(g(y)) = y) → 
+        bijective(f)
 }
 </code></pre>
 <h2 id="verification-with-z3"><a class="header" href="#verification-with-z3">Verification with Z3</a></h2>

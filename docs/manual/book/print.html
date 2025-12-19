@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7956ccc3.js";
+            window.path_to_searchindex_js = "searchindex-d67922c9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b0b97c7a.js"></script>
@@ -897,6 +897,55 @@ axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
         mul(mul(x, y), z) = mul(x, mul(y, z))
 }
 </code></pre>
+<h2 id="nested-quantifiers-grammar-v09"><a class="header" href="#nested-quantifiers-grammar-v09">Nested Quantifiers (Grammar v0.9)</a></h2>
+<p>Quantifiers can appear inside logical expressions:</p>
+<pre><code class="language-kleis">structure Analysis {
+    // Quantifier inside conjunction
+    axiom bounded_positive: (x &gt; 0) ∧ (∀(y : ℝ). abs(y) &lt;= x)
+    
+    // Quantifier inside implication
+    axiom dense_rationals: ∀(a b : ℝ). a &lt; b → (∃(q : ℚ). a &lt; q ∧ q &lt; b)
+    
+    // Deeply nested quantifiers
+    axiom limit_def: ∀(L : ℝ, ε : ℝ). ε &gt; 0 → 
+        (∃(δ : ℝ). δ &gt; 0 ∧ (∀(x : ℝ). abs(x) &lt; δ → abs(f(x) - L) &lt; ε))
+}
+</code></pre>
+<h3 id="epsilon-delta-limit-definition"><a class="header" href="#epsilon-delta-limit-definition">Epsilon-Delta Limit Definition</a></h3>
+<p>The classic analysis definition now parses correctly:</p>
+<pre><code class="language-kleis">structure Limits {
+    axiom epsilon_delta: ∀(f : ℝ → ℝ, L a : ℝ). 
+        has_limit(f, a, L) ↔ 
+        (∀(ε : ℝ). ε &gt; 0 → (∃(δ : ℝ). δ &gt; 0 ∧ 
+            (∀(x : ℝ). abs(x - a) &lt; δ → abs(f(x) - L) &lt; ε)))
+}
+</code></pre>
+<h2 id="function-types-in-quantifiers-grammar-v09"><a class="header" href="#function-types-in-quantifiers-grammar-v09">Function Types in Quantifiers (Grammar v0.9)</a></h2>
+<p>Quantify over functions using the arrow type:</p>
+<pre><code class="language-kleis">structure FunctionProperties {
+    // Quantify over a function ℝ → ℝ
+    axiom continuous: ∀(f : ℝ → ℝ, x : ℝ). 
+        is_continuous(f, x)
+    
+    // Quantify over multiple functions
+    axiom composition: ∀(f : ℝ → ℝ, g : ℝ → ℝ). 
+        compose(f, g) = λ x . f(g(x))
+    
+    // Higher-order function types
+    axiom curried: ∀(f : ℝ → ℝ → ℝ, a b : ℝ). 
+        f = f
+}
+</code></pre>
+<h3 id="topology-with-function-types"><a class="header" href="#topology-with-function-types">Topology with Function Types</a></h3>
+<pre><code class="language-kleis">structure Topology {
+    axiom continuity: ∀(f : X → Y, V : Set(Y)). 
+        is_open(V) → is_open(preimage(f, V))
+    
+    axiom homeomorphism: ∀(f : X → Y, g : Y → X). 
+        (∀(x : X). g(f(x)) = x) ∧ (∀(y : Y). f(g(y)) = y) → 
+        bijective(f)
+}
+</code></pre>
 <h2 id="verification-with-z3"><a class="header" href="#verification-with-z3">Verification with Z3</a></h2>
 <p>Kleis uses Z3 to check quantified statements:</p>
 <pre><code class="language-kleis example">// Z3 can verify this is always true:
@@ -1414,6 +1463,26 @@ axiom positive_greater_than_one : ∀(n : ℕ). n &gt; 0 → n &gt; 1
 verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
 // Result: ⏱ Timeout (statement too complex)
 </code></pre>
+<h2 id="verifying-nested-quantifiers-grammar-v09"><a class="header" href="#verifying-nested-quantifiers-grammar-v09">Verifying Nested Quantifiers (Grammar v0.9)</a></h2>
+<p>Grammar v0.9 enables nested quantifiers in logical expressions:</p>
+<pre><code class="language-kleis">structure Analysis {
+    // Quantifier inside conjunction - Z3 handles this
+    axiom bounded: (x &gt; 0) ∧ (∀(y : ℝ). y = y)
+    
+    // Epsilon-delta limit definition
+    axiom limit_def: ∀(L a : ℝ, ε : ℝ). ε &gt; 0 → 
+        (∃(δ : ℝ). δ &gt; 0 ∧ (∀(x : ℝ). abs(x - a) &lt; δ → abs(f(x) - L) &lt; ε))
+}
+</code></pre>
+<h3 id="function-types-in-verification"><a class="header" href="#function-types-in-verification">Function Types in Verification</a></h3>
+<p>Quantify over functions and verify their properties:</p>
+<pre><code class="language-kleis">structure Continuity {
+    // Z3 treats f as an uninterpreted function ℝ → ℝ
+    axiom continuous_at: ∀(f : ℝ → ℝ, a : ℝ, ε : ℝ). ε &gt; 0 →
+        (∃(δ : ℝ). δ &gt; 0 ∧ (∀(x : ℝ). abs(x - a) &lt; δ → abs(f(x) - f(a)) &lt; ε))
+}
+</code></pre>
+<p><strong>Note:</strong> Z3 treats function-typed variables as uninterpreted functions, allowing reasoning about their properties without knowing their implementation.</p>
 <h2 id="what-z3-can-and-cannot-do"><a class="header" href="#what-z3-can-and-cannot-do">What Z3 Can and Cannot Do</a></h2>
 <h3 id="z3-excels-at"><a class="header" href="#z3-excels-at">Z3 Excels At:</a></h3>
 <ul>
@@ -1422,13 +1491,16 @@ verify ∀ M : Matrix(100, 100) . det(M * M') ≥ 0
 <li>Array reasoning</li>
 <li>Simple quantifiers</li>
 <li>Algebraic identities</li>
+<li>Nested quantifiers (Grammar v0.9)</li>
+<li>Function-typed variables</li>
 </ul>
 <h3 id="z3-struggles-with"><a class="header" href="#z3-struggles-with">Z3 Struggles With:</a></h3>
 <ul>
 <li>Non-linear real arithmetic (undecidable in general)</li>
-<li>Very deep quantifier nesting</li>
+<li>Very deep quantifier nesting (may timeout)</li>
 <li>Transcendental functions (sin, cos, exp)</li>
 <li>Infinite structures</li>
+<li>Inductive proofs over recursive data types</li>
 </ul>
 <h2 id="practical-workflow"><a class="header" href="#practical-workflow">Practical Workflow</a></h2>
 <ol>
