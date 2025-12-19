@@ -267,6 +267,7 @@ fn handle_command(
         ":ast" => show_ast(arg),
         ":type" | ":t" => show_type(arg),
         ":verify" | ":v" => verify_expression(arg, registry, evaluator),
+        ":sat" | ":s" => sat_expression(arg, registry, evaluator),
         ":trace" | ":tr" => trace_match(arg, registry, evaluator),
         ":load" | ":l" => load_file(arg, evaluator, registry, imported_paths),
         ":env" | ":e" => show_env(evaluator),
@@ -300,6 +301,11 @@ fn handle_command_no_z3(
         ":type" | ":t" => show_type(arg),
         ":verify" | ":v" => {
             println!("⚠️  Z3 verification not available (compile with axiom-verification feature)")
+        }
+        ":sat" | ":s" => {
+            println!(
+                "⚠️  Z3 satisfiability not available (compile with axiom-verification feature)"
+            )
         }
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
@@ -353,7 +359,8 @@ fn print_help_main() {
     println!();
     println!("  :ast <expr>        Show parsed AST");
     println!("  :type, :t <expr>   Show inferred type");
-    println!("  :verify, :v <expr> Verify expression with Z3");
+    println!("  :verify, :v <expr> Verify expression with Z3 (is it always true?)");
+    println!("  :sat, :s <expr>    Check satisfiability (does a solution exist?)");
     println!("  :trace, :tr <expr> Trace match expression (show which branch matches)");
     println!("  :load, :l <file>   Load a .kleis file");
     println!("  :env, :e           Show defined functions");
@@ -1122,6 +1129,68 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
                 }
                 Err(e) => {
                     println!("❌ Failed to initialize verifier: {}", e);
+                }
+            }
+        }
+        Err(e) => {
+            println!("❌ Parse error: {}", e);
+        }
+    }
+}
+
+#[cfg(feature = "axiom-verification")]
+fn sat_expression(input: &str, registry: &StructureRegistry, evaluator: &Evaluator) {
+    use kleis::solvers::backend::SatisfiabilityResult;
+    use kleis::solvers::backend::SolverBackend;
+
+    if input.is_empty() {
+        println!("Usage: :sat <expression>");
+        println!("  Checks if there exists values that make the expression true.");
+        println!("  Example: :sat ∃(z : ℂ). z * z = complex(-1, 0)");
+        return;
+    }
+
+    // Use parse_proposition to support quantifiers (∀, ∃)
+    let mut parser = KleisParser::new(input);
+    match parser.parse_proposition() {
+        Ok(expr) => {
+            // Expand user-defined functions before checking
+            let expanded = expand_user_functions(&expr, evaluator);
+
+            // === OPERATOR OVERLOADING: Type inference + Lowering ===
+            let lowered = {
+                let type_context_builder = TypeContextBuilder::new();
+                let mut inference = TypeInference::new();
+                match inference.infer_typed(&expanded, Some(&type_context_builder)) {
+                    Ok(typed) => {
+                        let lowering = SemanticLowering::new();
+                        lowering.lower(&typed)
+                    }
+                    Err(_) => expanded.clone(),
+                }
+            };
+
+            // Use Z3 backend directly for satisfiability check
+            match kleis::solvers::z3::backend::Z3Backend::new(registry) {
+                Ok(mut backend) => match backend.check_satisfiability(&lowered) {
+                    Ok(result) => match result {
+                        SatisfiabilityResult::Satisfiable { example } => {
+                            println!("✅ Satisfiable");
+                            println!("   Witness: {}", example);
+                        }
+                        SatisfiabilityResult::Unsatisfiable => {
+                            println!("❌ Unsatisfiable (no solution exists)");
+                        }
+                        SatisfiabilityResult::Unknown => {
+                            println!("❓ Unknown (Z3 couldn't determine)");
+                        }
+                    },
+                    Err(e) => {
+                        println!("❌ Satisfiability check error: {}", e);
+                    }
+                },
+                Err(e) => {
+                    println!("❌ Failed to initialize Z3 backend: {}", e);
                 }
             }
         }
