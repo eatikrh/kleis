@@ -59,6 +59,35 @@ In the REPL, you can verify this fundamental property:
 // ✅ Valid
 ```
 
+### Scoping Rules for `i`
+
+The imaginary unit `i` is a global constant. However, it can be shadowed by:
+
+1. **Quantified variables** with explicit type annotations
+2. **Lambda parameters**
+
+| Expression | Type | Explanation |
+|------------|------|-------------|
+| `i` | Complex | Global imaginary unit |
+| `i + 1` | Complex | Uses global `i` |
+| `i * i` | Complex | `i² = -1` |
+| `λ x . x + i` | Complex | Uses global `i` in body |
+| `∀(i : ℝ). i + 1` | Scalar | Quantifier `i : ℝ` shadows global |
+| `∀(i : ℕ). i + 0` | Nat | Quantifier `i : ℕ` shadows global |
+| `λ i . i + 1` | Scalar | Lambda param shadows global |
+
+**Best practice:** Avoid using `i` as a variable name to prevent confusion with the imaginary unit. Use descriptive names like `idx`, `index`, or `iter` for loop-like variables.
+
+```kleis
+// Clear: using i as imaginary unit
+:verify ∀(z : ℂ). z * i = complex(neg(im(z)), re(z))
+// ✅ Valid
+
+// Clear: using idx as index variable
+:verify ∀(idx : ℕ). idx + 0 = idx
+// ✅ Valid
+```
+
 ## Creating Complex Numbers
 
 **Method 1: Using arithmetic (recommended)**
