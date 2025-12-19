@@ -100,6 +100,11 @@ pub enum Type {
     /// Boolean type (for logical values)
     Bool,
 
+    /// Unit type (for expressions with no meaningful value)
+    /// Represents () - the empty tuple / void / nothing
+    /// Used in: Result(Unit, E), Option(Unit), side-effect functions
+    Unit,
+
     // ===== User-Defined Types =====
     /// User-defined algebraic data type
     ///
@@ -182,9 +187,12 @@ impl Substitution {
             }
             Type::ForAll(v, t) => Type::ForAll(v.clone(), Box::new(self.apply(t))),
             // Bootstrap types have no substructure (leaf types)
-            Type::Nat | Type::NatValue(_) | Type::String | Type::StringValue(_) | Type::Bool => {
-                ty.clone()
-            }
+            Type::Nat
+            | Type::NatValue(_)
+            | Type::String
+            | Type::StringValue(_)
+            | Type::Bool
+            | Type::Unit => ty.clone(),
         }
     }
 
@@ -351,6 +359,8 @@ impl TypeInference {
             },
             // Boolean
             "Bool" | "𝔹" => Type::Bool,
+            // Unit
+            "Unit" | "()" => Type::Unit,
             // String
             "String" => Type::String,
             // Unknown type annotation - create a fresh variable
@@ -1063,6 +1073,7 @@ impl TypeInference {
             TypeExpr::Named(name) if name == "Nat" => Ok(Type::Nat),
             TypeExpr::Named(name) if name == "String" => Ok(Type::String),
             TypeExpr::Named(name) if name == "Bool" => Ok(Type::Bool),
+            TypeExpr::Named(name) if name == "Unit" || name == "()" => Ok(Type::Unit),
             TypeExpr::Named(name) => {
                 // Check if it's a user-defined data type
                 if self.data_registry.has_type(name) {
@@ -1140,6 +1151,11 @@ impl TypeInference {
         args: &[Expression],
         context_builder: Option<&crate::type_context::TypeContextBuilder>,
     ) -> Result<Type, String> {
+        // Unit type: () has type Unit
+        if name == "Unit" && args.is_empty() {
+            return Ok(Type::Unit);
+        }
+
         // Matrix and Vector are now FIXED-ARITY data constructors using List literals!
         //
         // Matrix(2, 2, [a, b, c, d]) - 3 args (fixed!)
@@ -1745,6 +1761,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
             s1, s2
         )),
         (Type::Bool, Type::Bool) => Ok(Substitution::empty()),
+        (Type::Unit, Type::Unit) => Ok(Substitution::empty()),
 
         // Data types: must have same type and constructor, then unify args
         (
@@ -1821,7 +1838,12 @@ fn occurs(v: &TypeVar, t: &Type) -> bool {
         Type::Data { args, .. } => args.iter().any(|arg| occurs(v, arg)),
         Type::ForAll(_, t) => occurs(v, t),
         // Leaf types (no variables can occur in them)
-        Type::Nat | Type::NatValue(_) | Type::String | Type::StringValue(_) | Type::Bool => false,
+        Type::Nat
+        | Type::NatValue(_)
+        | Type::String
+        | Type::StringValue(_)
+        | Type::Bool
+        | Type::Unit => false,
     }
 }
 
@@ -1913,6 +1935,7 @@ impl std::fmt::Display for Type {
             Type::String => write!(f, "String"),
             Type::StringValue(s) => write!(f, "\"{}\"", s),
             Type::Bool => write!(f, "Bool"),
+            Type::Unit => write!(f, "Unit"),
 
             // User-defined data types
             Type::Data {
