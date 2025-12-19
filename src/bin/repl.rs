@@ -21,17 +21,15 @@ use std::path::{Path, PathBuf};
 use kleis::evaluator::Evaluator;
 use kleis::kleis_ast::TopLevel;
 use kleis::kleis_parser::{parse_kleis_program, KleisParser};
+use kleis::lowering::SemanticLowering;
 use kleis::pretty_print::PrettyPrinter;
 use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::structure_registry::StructureRegistry;
+use kleis::type_context::TypeContextBuilder;
+use kleis::type_inference::TypeInference;
 
 #[cfg(feature = "axiom-verification")]
 use kleis::axiom_verifier::{AxiomVerifier, VerificationResult};
-#[cfg(feature = "axiom-verification")]
-use kleis::lowering::SemanticLowering;
-#[cfg(feature = "axiom-verification")]
-use kleis::structure_registry::StructureRegistry;
-#[cfg(feature = "axiom-verification")]
-use kleis::type_inference::TypeInference;
 
 const VERSION: &str = "0.1.0";
 
@@ -186,7 +184,7 @@ fn process_input(
     if input.starts_with(':') {
         handle_command(input, evaluator, ctx, imported_paths, registry);
     } else {
-        eval_expression(input, evaluator, ctx);
+        eval_expression(input, evaluator, ctx, registry);
     }
 }
 
@@ -200,14 +198,18 @@ fn process_input(
     if input.starts_with(':') {
         handle_command_no_z3(input, evaluator, ctx, imported_paths);
     } else {
-        eval_expression(input, evaluator, ctx);
+        // Create empty registry for type context (no Z3 verification)
+        let registry = StructureRegistry::new();
+        eval_expression(input, evaluator, ctx, &registry);
     }
 }
 
-fn eval_expression(input: &str, evaluator: &Evaluator, ctx: &kleis::render::GlyphContext) {
-    use kleis::lowering::SemanticLowering;
-    use kleis::type_inference::TypeInference;
-
+fn eval_expression(
+    input: &str,
+    evaluator: &Evaluator,
+    ctx: &kleis::render::GlyphContext,
+    _registry: &StructureRegistry,
+) {
     let mut parser = KleisParser::new(input);
 
     match parser.parse() {
@@ -215,8 +217,11 @@ fn eval_expression(input: &str, evaluator: &Evaluator, ctx: &kleis::render::Glyp
             // === OPERATOR OVERLOADING: Type inference + Lowering ===
             // This allows natural syntax like `z1 + z2` for complex numbers
             let lowered = {
+                // Create type context for operation type inference
+                let type_context_builder = TypeContextBuilder::new();
+
                 let mut inference = TypeInference::new();
-                match inference.infer_typed(&expr, None) {
+                match inference.infer_typed(&expr, Some(&type_context_builder)) {
                     Ok(typed) => {
                         let lowering = SemanticLowering::new();
                         lowering.lower(&typed)
@@ -1068,8 +1073,11 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
             // === OPERATOR OVERLOADING: Type inference + Lowering ===
             // This allows natural syntax like `z1 + z2` for complex numbers
             let lowered = {
+                // Create type context for operation type inference
+                let type_context_builder = TypeContextBuilder::new();
+
                 let mut inference = TypeInference::new();
-                match inference.infer_typed(&expanded, None) {
+                match inference.infer_typed(&expanded, Some(&type_context_builder)) {
                     Ok(typed) => {
                         let lowering = SemanticLowering::new();
                         lowering.lower(&typed)

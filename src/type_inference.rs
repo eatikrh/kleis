@@ -348,6 +348,15 @@ impl TypeInference {
                     return self.infer_data_constructor(name, &[], context_builder);
                 }
 
+                // OPERATOR OVERLOADING: The imaginary unit i is Complex
+                if name == "i" {
+                    return Ok(Type::Data {
+                        type_name: "Type".to_string(),
+                        constructor: "Complex".to_string(),
+                        args: vec![],
+                    });
+                }
+
                 // Not a constructor - look up as variable
                 if let Some(ty) = self.context.get(name) {
                     Ok(ty.clone())
@@ -1085,6 +1094,85 @@ impl TypeInference {
         // ADR-021: Check if this is a (fixed-arity) data constructor
         if self.data_registry.has_variant(name) {
             return self.infer_data_constructor(name, args, context_builder);
+        }
+
+        // OPERATOR OVERLOADING: Complex number constructor
+        // complex(re, im) returns Type::Data { constructor: "Complex", ... }
+        if name == "complex" && args.len() == 2 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Complex".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Complex accessors
+        // re(z), im(z) return Scalar
+        if matches!(name, "re" | "im") && args.len() == 1 {
+            return Ok(Type::scalar());
+        }
+
+        // OPERATOR OVERLOADING: Conjugate and complex functions
+        // conj(z), neg_complex(z), complex_inverse(z) return Complex
+        if matches!(name, "conj" | "neg_complex" | "complex_inverse") && args.len() == 1 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Complex".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: Complex binary operations
+        // complex_add, complex_sub, complex_mul, complex_div return Complex
+        if matches!(name, "complex_add" | "complex_sub" | "complex_mul" | "complex_div") && args.len() == 2 {
+            return Ok(Type::Data {
+                type_name: "Type".to_string(),
+                constructor: "Complex".to_string(),
+                args: vec![],
+            });
+        }
+
+        // OPERATOR OVERLOADING: abs_squared returns Scalar
+        if name == "abs_squared" && args.len() == 1 {
+            return Ok(Type::scalar());
+        }
+
+        // OPERATOR OVERLOADING: Arithmetic operations with type propagation
+        // If any argument is Complex, the result is Complex
+        // This enables lowering without requiring full stdlib registry
+        if matches!(name, "plus" | "minus" | "times" | "divide" | "scalar_divide") && args.len() == 2 {
+            let t1 = self.infer(&args[0], context_builder)?;
+            let t2 = self.infer(&args[1], context_builder)?;
+
+            // If either operand is Complex, result is Complex
+            let is_complex_1 = matches!(&t1, Type::Data { constructor, .. } if constructor == "Complex");
+            let is_complex_2 = matches!(&t2, Type::Data { constructor, .. } if constructor == "Complex");
+
+            if is_complex_1 || is_complex_2 {
+                return Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Complex".to_string(),
+                    args: vec![],
+                });
+            }
+            // Both are Scalar/Real - return Scalar
+            return Ok(Type::scalar());
+        }
+
+        // OPERATOR OVERLOADING: Unary negation
+        if name == "negate" && args.len() == 1 {
+            let t = self.infer(&args[0], context_builder)?;
+            return Ok(t);
+        }
+
+        // OPERATOR OVERLOADING: Comparison operations
+        // These return Bool, but we need to type-check operands
+        if matches!(name, "equals" | "not_equals" | "neq" | "less_than" | "greater_than" | "less_equal" | "greater_equal") && args.len() == 2 {
+            // Type check both sides (this enables lowering of complex operands)
+            let _t1 = self.infer(&args[0], context_builder)?;
+            let _t2 = self.infer(&args[1], context_builder)?;
+            // Comparisons return Bool
+            return Ok(Type::Bool);
         }
 
         // Check if this is a defined function (from `define` statements)
@@ -2545,7 +2633,8 @@ mod tests {
 
         // Should infer successfully
         let ty = infer.infer(&match_expr, None).unwrap();
-        // Result is a type variable (no context_builder to resolve plus)
-        assert!(matches!(ty, Type::Var(_)));
+        // After operator overloading changes, plus(a, b) with non-Complex args returns Scalar
+        // (Previously returned type variable when no context_builder)
+        assert!(matches!(ty, Type::Data { constructor, .. } if constructor == "Scalar"));
     }
 }
