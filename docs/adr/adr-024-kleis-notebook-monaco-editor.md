@@ -283,6 +283,108 @@ Z3 is a native binary (~50MB). Running it in a web context requires thought.
 | Memory exhaustion | Per-query memory limits |
 | Connection overhead | Z3 context pooling |
 
+## SaaS Scaling Architecture
+
+For multi-user Kleis Notebooks, a symmetric horizontally-scalable design:
+
+### Symmetric Pod Architecture
+
+```
+                         ┌───────────────┐
+                         │ Load Balancer │
+                         └───────┬───────┘
+                                 │
+          ┌──────────────────────┼──────────────────────┐
+          ▼                      ▼                      ▼
+   ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+   │     POD 1       │   │     POD 2       │   │     POD 3       │
+   │  ═══════════    │   │  ═══════════    │   │  ═══════════    │
+   │ ┌─────────────┐ │   │ ┌─────────────┐ │   │ ┌─────────────┐ │
+   │ │Kleis API    │ │   │ │Kleis API    │ │   │ │Kleis API    │ │
+   │ │Monaco/Editor│ │   │ │Monaco/Editor│ │   │ │Monaco/Editor│ │
+   │ └─────────────┘ │   │ └─────────────┘ │   │ └─────────────┘ │
+   │ ┌─────────────┐ │   │ ┌─────────────┐ │   │ ┌─────────────┐ │
+   │ │Z3 Thread    │ │   │ │Z3 Thread    │ │   │ │Z3 Thread    │ │
+   │ │Pool (8)     │ │   │ │Pool (8)     │ │   │ │Pool (8)     │ │
+   │ └─────────────┘ │   │ └─────────────┘ │   │ └─────────────┘ │
+   │  IDENTICAL      │   │  IDENTICAL      │   │  IDENTICAL      │
+   └────────┬────────┘   └────────┬────────┘   └────────┬────────┘
+            └─────────────────────┼─────────────────────┘
+                         ┌────────▼────────┐
+                         │  SESSION STORE  │
+                         │  (Redis/Valkey) │
+                         └─────────────────┘
+```
+
+### Key Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Z3 thread pool per pod** | Z3 is single-threaded; pool enables concurrency |
+| **Stateless pods** | Any pod serves any user; simple load balancing |
+| **External session store** | Redis holds Z3 context blobs per user session |
+| **Push/pop in logical session** | Session tracks stack levels; pop = just pointer change |
+
+### Z3 Context Management
+
+The clever push/pop optimization is preserved:
+
+```
+SESSION STORE (Redis):
+──────────────────────
+session_abc: {
+  stack: [
+    { level: 0, blob: "...stdlib..." },       ← Cached, reused
+    { level: 1, blob: "...+user theory..." }, ← After push()
+    { level: 2, blob: "...+current work..." } ← Current level
+  ],
+  current_level: 2
+}
+```
+
+**Operations:**
+
+| Operation | Where | Z3 needed? |
+|-----------|-------|------------|
+| `push()` | Session store | No (save blob) |
+| `pop()` | Session store | No (change level) |
+| `verify` | Z3 worker | Yes |
+| `add axiom` | Z3 worker | Yes (load, add, save) |
+
+### Request Flow
+
+1. User request arrives with session_id
+2. Load balancer → any pod (no sticky sessions)
+3. Pod grabs free thread from Z3 pool
+4. Thread: load context blob → verify → save blob → release
+5. Thread returns to pool, ready for any user
+
+### REST API (Not WebSocket)
+
+Verification is infrequent (user clicks "Verify"), so simple REST:
+
+```
+POST /api/v1/verify
+{ 
+  "session_id": "abc123",
+  "query": "∀(a b : ℝ). a + b = b + a"
+}
+→ { "result": "valid", "time_ms": 127 }
+```
+
+- Big payload in (context if cache miss): ~50-100KB
+- Small response out: ~50 bytes
+- Not chatty: seconds between requests
+
+### Scaling
+
+```
+Low traffic:    [POD 1]                          
+Peak hours:     [POD 1] [POD 2] [POD 3] [POD 4] ...
+
+Just add identical pods. No special configuration.
+```
+
 ## Consequences
 
 ### Positive
