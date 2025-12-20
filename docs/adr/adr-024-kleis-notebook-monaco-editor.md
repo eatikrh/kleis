@@ -385,6 +385,48 @@ Peak hours:     [POD 1] [POD 2] [POD 3] [POD 4] ...
 Just add identical pods. No special configuration.
 ```
 
+## Product Segmentation: Notebooks vs CLI
+
+### Two-Tier Strategy
+
+| Kleis Notebooks (SaaS) | Kleis (Local CLI/VSCode) |
+|------------------------|--------------------------|
+| Cloud-based | Your machine only |
+| GitHub OAuth required | No auth, no cloud |
+| Public/shareable | Completely private |
+| Collaboration | Solo work |
+| Learning, teaching | Security research |
+
+### Storage & Persistence
+
+**Kleis Notebooks:**
+- GitHub as storage backend (user's repos)
+- OAuth for authentication
+- Version history via git
+- Sharing via GitHub links/forks
+
+**Kleis CLI/VSCode:**
+- Local filesystem only
+- No cloud dependencies
+- User controls all data
+- Air-gapped environments supported
+
+### Privacy Consideration
+
+Users doing sensitive work (security proofs, proprietary theories) should use
+local Kleis, not Kleis Notebooks. The cloud version requires GitHub auth and
+stores work in GitHub repos.
+
+> "I'm proving security theorems, I don't want cloud exposure"  
+> → Use `kleis` CLI or `vscode-kleis`. No cloud, no auth, no phone-home.
+
+### Keep Core Kleis Pure
+
+- No cloud dependencies in kleis core
+- No authentication in core
+- Notebooks is a **deployment** of Kleis, not a modification
+- If GitHub disappears, Kleis CLI still works
+
 ## Consequences
 
 ### Positive
