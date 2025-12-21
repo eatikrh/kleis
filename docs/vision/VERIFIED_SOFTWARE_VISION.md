@@ -278,6 +278,66 @@ The combination is more powerful than either alone:
 - Z3's mathematical rigor
 - Human in the loop for specifications
 
+### The Ultimate Architecture: LLM as Constraint Translator
+
+The deepest insight: **LLMs understand natural language. Z3 synthesizes correct programs. Combine them.**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Human: "I need a function that sorts a list"                   │
+│  (Natural language, ambiguous, informal)                        │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ LLM translates
+┌─────────────────────────────────────────────────────────────────┐
+│  Kleis Constraint:                                              │
+│  ∃ f . ∀ xs . is_sorted(f(xs)) ∧ is_permutation(f(xs), xs)     │
+│  (Formal, precise, verifiable)                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ Z3 synthesizes
+┌─────────────────────────────────────────────────────────────────┐
+│  Program: (mathematically guaranteed correct)                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**The Division of Labor:**
+
+| Step | Who Does It | Risk | Size |
+|------|-------------|------|------|
+| Natural language → Constraint | **LLM** | Hallucination possible | 2-5 lines |
+| Constraint → Correct Program | **Z3** | Mathematically guaranteed | 50+ lines |
+
+**Why this shrinks the hallucination problem:**
+
+Instead of asking: *"LLM, write me a correct sort function"* (50 lines, high risk)
+
+Ask: *"LLM, what does 'sort' mean formally?"* (2 lines, easy to verify)
+
+```kleis
+// Human reviews the constraint (small, readable):
+∀ xs . is_sorted(result) ∧ is_permutation(result, xs)
+// "Yes, that's exactly what I meant by 'sort'."
+
+// Z3 synthesizes the code — mathematically guaranteed
+:sat ∃ f . ∀ xs . is_sorted(f(xs)) ∧ is_permutation(f(xs), xs)
+// Result: f = merge_sort (correct by construction)
+```
+
+**The genius of this approach:**
+
+1. **Constraints are small** — easy for humans to verify
+2. **Constraints are formal** — Z3 can work with them precisely
+3. **LLM failure is catchable** — wrong constraint is obvious to human
+4. **The program is guaranteed** — Z3 doesn't hallucinate
+
+**The roles crystallize:**
+
+- **LLM:** Good at understanding intent, bad at guarantees
+- **Z3:** Bad at understanding intent, perfect at guarantees
+- **Human:** Reviews the small constraint, not the large program
+- **Together:** Natural language in → Verified program out
+
+This is the future of programming: **intent-driven, constraint-mediated, mathematically guaranteed**.
+
 ---
 
 ## Practical Applications
