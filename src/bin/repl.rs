@@ -8,6 +8,7 @@
 //!   :ast <expr>    Show parsed AST
 //!   :type <expr>   Show inferred type  
 //!   :verify <expr> Verify with Z3
+//!   :eval <expr>   Evaluate expression concretely
 //!   :load <file>   Load .kleis file
 //!   :env           Show defined functions
 //!   :export [file] Export definitions to .kleis file
@@ -268,6 +269,7 @@ fn handle_command(
         ":type" | ":t" => show_type(arg),
         ":verify" | ":v" => verify_expression(arg, registry, evaluator),
         ":sat" | ":s" => sat_expression(arg, registry, evaluator),
+        ":eval" | ":ev" => eval_concrete_expression(arg, evaluator),
         ":trace" | ":tr" => trace_match(arg, registry, evaluator),
         ":load" | ":l" => load_file(arg, evaluator, registry, imported_paths),
         ":env" | ":e" => show_env(evaluator),
@@ -307,6 +309,7 @@ fn handle_command_no_z3(
                 "⚠️  Z3 satisfiability not available (compile with axiom-verification feature)"
             )
         }
+        ":eval" | ":ev" => eval_concrete_expression(arg, evaluator),
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
@@ -361,6 +364,7 @@ fn print_help_main() {
     println!("  :type, :t <expr>   Show inferred type");
     println!("  :verify, :v <expr> Verify expression with Z3 (is it always true?)");
     println!("  :sat, :s <expr>    Check satisfiability (does a solution exist?)");
+    println!("  :eval, :ev <expr>  Evaluate expression concretely (compute result)");
     println!("  :trace, :tr <expr> Trace match expression (show which branch matches)");
     println!("  :load, :l <file>   Load a .kleis file");
     println!("  :env, :e           Show defined functions");
@@ -1194,6 +1198,43 @@ fn sat_expression(input: &str, registry: &StructureRegistry, evaluator: &Evaluat
                 }
             }
         }
+        Err(e) => {
+            println!("❌ Parse error: {}", e);
+        }
+    }
+}
+
+/// Concrete evaluation - actually compute values
+///
+/// Unlike :sat which uses Z3, this evaluates expressions directly in Kleis.
+/// Supports:
+/// - Arithmetic: 2 + 3 → 5
+/// - String operations: concat("a", "b") → "ab"
+/// - Conditionals: if true then x else y → x
+/// - Recursion: fib(5) → 5
+/// - Pattern matching: match Some(5) { Some(x) => x | None => 0 } → 5
+fn eval_concrete_expression(input: &str, evaluator: &Evaluator) {
+    use kleis::pretty_print::PrettyPrinter;
+
+    if input.is_empty() {
+        println!("Usage: :eval <expression>");
+        println!("Example: :eval 2 + 3");
+        println!("Example: :eval concat(\"hello\", \" world\")");
+        println!("Example: :eval hasPrefix(\"(define fib)\", \"(define\")");
+        return;
+    }
+
+    let mut parser = KleisParser::new(input);
+    match parser.parse() {
+        Ok(expr) => match evaluator.eval_concrete(&expr) {
+            Ok(result) => {
+                let pp = PrettyPrinter::new();
+                println!("✅ {}", pp.format_expression(&result));
+            }
+            Err(e) => {
+                println!("❌ Evaluation error: {}", e);
+            }
+        },
         Err(e) => {
             println!("❌ Parse error: {}", e);
         }
