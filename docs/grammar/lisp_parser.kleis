@@ -1,0 +1,92 @@
+// ============================================================================
+// LISP PARSER IN KLEIS - Executable S-Expression Parser
+// ============================================================================
+//
+// Usage:
+//   :load docs/grammar/lisp_parser.kleis
+//   :eval parse("hello")
+//   :eval parse("(+ 2 3)")
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ============================================================================
+// S-Expression Data Type
+// ============================================================================
+
+data SExpr =
+    SAtom(value: String)
+  | SList(elements: List(SExpr))
+
+data ParseResult =
+    ParseOK(expr: SExpr, rest: String)
+  | ParseErr(message: String)
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+// Check if character is whitespace
+define is_ws(c: String) : Bool =
+    or(eq(c, " "), or(eq(c, "\n"), eq(c, "\t")))
+
+// Check if character is a delimiter
+define is_delim(c: String) : Bool =
+    or(is_ws(c), or(eq(c, "("), eq(c, ")")))
+
+// Skip leading whitespace
+define skip_ws(s: String) : String =
+    if le(strlen(s), 0) then s
+    else if is_ws(charAt(s, 0)) then skip_ws(substr(s, 1, strlen(s) - 1))
+    else s
+
+// Read atom characters until delimiter
+define read_atom(s: String, acc: String) : ParseResult =
+    if le(strlen(s), 0) then ParseOK(SAtom(acc), "")
+    else if is_delim(charAt(s, 0)) then ParseOK(SAtom(acc), s)
+    else read_atom(substr(s, 1, strlen(s) - 1), concat(acc, charAt(s, 0)))
+
+// ============================================================================
+// Parser Functions
+// ============================================================================
+
+// Parse a single S-expression
+define parse_sexpr(s: String) : ParseResult =
+    let trimmed = skip_ws(s) in
+    if le(strlen(trimmed), 0) then ParseErr("Unexpected end of input")
+    else if eq(charAt(trimmed, 0), "(") then 
+        parse_list(substr(trimmed, 1, strlen(trimmed) - 1), Nil)
+    else read_atom(trimmed, "")
+
+// Parse list elements until ")"
+define parse_list(s: String, acc: List(SExpr)) : ParseResult =
+    let trimmed = skip_ws(s) in
+    if le(strlen(trimmed), 0) then ParseErr("Expected ')'")
+    else if eq(charAt(trimmed, 0), ")") then 
+        ParseOK(SList(rev(acc)), substr(trimmed, 1, strlen(trimmed) - 1))
+    else 
+        match parse_sexpr(trimmed) {
+            ParseOK(expr, rest) => parse_list(rest, Cons(expr, acc))
+          | ParseErr(msg) => ParseErr(msg)
+        }
+
+// Reverse a list
+define rev(xs: List(SExpr)) : List(SExpr) =
+    rev_acc(xs, Nil)
+
+define rev_acc(xs: List(SExpr), acc: List(SExpr)) : List(SExpr) =
+    match xs {
+        Nil => acc
+      | Cons(h, t) => rev_acc(t, Cons(h, acc))
+    }
+
+// ============================================================================
+// User-Facing Parse Function
+// ============================================================================
+
+define parse(s: String) : SExpr =
+    match parse_sexpr(s) {
+        ParseOK(expr, rest) => expr
+      | ParseErr(msg) => SAtom(concat("Error: ", msg))
+    }

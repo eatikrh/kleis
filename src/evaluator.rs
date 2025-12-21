@@ -63,6 +63,10 @@ pub struct Evaluator {
     /// These are values that should be recognized as constants, not variables
     adt_constructors: std::collections::HashSet<String>,
 
+    /// All ADT constructor names (including those with fields like Some, Cons, Atom)
+    /// Used by eval_concrete to recognize constructor calls as values
+    all_constructors: std::collections::HashSet<String>,
+
     /// Loaded data type definitions (for export)
     data_types: Vec<crate::kleis_ast::DataDef>,
 
@@ -78,6 +82,7 @@ impl Evaluator {
             bindings: HashMap::new(),
             matcher: PatternMatcher,
             adt_constructors: std::collections::HashSet::new(),
+            all_constructors: std::collections::HashSet::new(),
             data_types: Vec::new(),
             structures: Vec::new(),
         }
@@ -107,6 +112,9 @@ impl Evaluator {
             self.data_types.push(data_type.clone());
 
             for variant in &data_type.variants {
+                // Track ALL constructors for eval_concrete
+                self.all_constructors.insert(variant.name.clone());
+
                 // Nullary constructors (no fields) are values/constants
                 if variant.fields.is_empty() {
                     self.adt_constructors.insert(variant.name.clone());
@@ -1229,9 +1237,19 @@ impl Evaluator {
             // Operations: evaluate args then apply built-in or user-defined function
             Expression::Operation { name, args } => {
                 // First, evaluate all arguments
+                // First, evaluate all arguments
                 let eval_args: Result<Vec<_>, _> =
                     args.iter().map(|a| self.eval_concrete(a)).collect();
                 let eval_args = eval_args?;
+
+                // Check if this is a data constructor (e.g., Atom, List, Cons, Some)
+                // Constructors are values - return them with evaluated args
+                if self.all_constructors.contains(name) || self.is_constructor_name(name) {
+                    return Ok(Expression::Operation {
+                        name: name.clone(),
+                        args: eval_args,
+                    });
+                }
 
                 // Try built-in operations first
                 if let Some(result) = self.apply_builtin(name, &eval_args)? {
@@ -1569,9 +1587,134 @@ impl Evaluator {
                 }
             }
 
+            // === List operations ===
+            "Cons" | "cons" => {
+                // Cons(head, tail) - construct a list
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                Ok(Some(Expression::Operation {
+                    name: "Cons".to_string(),
+                    args: args.to_vec(),
+                }))
+            }
+            "Nil" | "nil" => {
+                // Nil - empty list
+                Ok(Some(Expression::Object("Nil".to_string())))
+            }
+            "head" | "car" => {
+                // head(Cons(h, t)) → h
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                match &args[0] {
+                    Expression::Operation { name, args: inner }
+                        if name == "Cons" && inner.len() == 2 =>
+                    {
+                        Ok(Some(inner[0].clone()))
+                    }
+                    Expression::List(elements) if !elements.is_empty() => {
+                        Ok(Some(elements[0].clone()))
+                    }
+                    _ => Err("head: expected non-empty list".to_string()),
+                }
+            }
+            "tail" | "cdr" => {
+                // tail(Cons(h, t)) → t
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                match &args[0] {
+                    Expression::Operation { name, args: inner }
+                        if name == "Cons" && inner.len() == 2 =>
+                    {
+                        Ok(Some(inner[1].clone()))
+                    }
+                    Expression::List(elements) if !elements.is_empty() => {
+                        Ok(Some(Expression::List(elements[1..].to_vec())))
+                    }
+                    _ => Err("tail: expected non-empty list".to_string()),
+                }
+            }
+            "null?" | "isEmpty" | "isNil" => {
+                // null?(list) → true if empty
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let is_empty = match &args[0] {
+                    Expression::Object(s) if s == "Nil" => true,
+                    Expression::Operation { name, .. } if name == "Nil" => true,
+                    Expression::List(elements) => elements.is_empty(),
+                    Expression::Operation { name, .. } if name == "Cons" => false,
+                    _ => return Ok(None),
+                };
+                Ok(Some(Expression::Object(
+                    if is_empty { "true" } else { "false" }.to_string(),
+                )))
+            }
+            "length" => {
+                // length(list) → number of elements
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                match &args[0] {
+                    Expression::List(elements) => {
+                        Ok(Some(Expression::Const(format!("{}", elements.len()))))
+                    }
+                    Expression::Object(s) if s == "Nil" => {
+                        Ok(Some(Expression::Const("0".to_string())))
+                    }
+                    Expression::Operation { name, args: inner } if name == "Cons" => {
+                        // Count recursively: 1 + length(tail)
+                        let tail_len = self.apply_builtin("length", &[inner[1].clone()])?;
+                        if let Some(Expression::Const(n)) = tail_len {
+                            let len: i64 = n.parse().unwrap_or(0);
+                            Ok(Some(Expression::Const(format!("{}", len + 1))))
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                    _ => Ok(None),
+                }
+            }
+            "nth" => {
+                // nth(list, index) → element at index
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let idx = self.as_integer(&args[1]);
+                match (&args[0], idx) {
+                    (Expression::List(elements), Some(i))
+                        if i >= 0 && (i as usize) < elements.len() =>
+                    {
+                        Ok(Some(elements[i as usize].clone()))
+                    }
+                    (Expression::Operation { name, args: inner }, Some(0)) if name == "Cons" => {
+                        Ok(Some(inner[0].clone()))
+                    }
+                    (Expression::Operation { name, args: inner }, Some(i))
+                        if name == "Cons" && i > 0 =>
+                    {
+                        self.apply_builtin(
+                            "nth",
+                            &[inner[1].clone(), Expression::Const(format!("{}", i - 1))],
+                        )
+                    }
+                    _ => Ok(None),
+                }
+            }
+
             // Not a built-in
             _ => Ok(None),
         }
+    }
+
+    /// Check if a name looks like a constructor (starts with uppercase)
+    fn is_constructor_name(&self, name: &str) -> bool {
+        name.chars()
+            .next()
+            .map(|c| c.is_uppercase())
+            .unwrap_or(false)
     }
 
     // === Helper methods for built-in operations ===
