@@ -1,0 +1,63 @@
+// Program Synthesis Experiment 1: Double a Number
+// Goal: Synthesize a LISP expression that computes x + x
+//
+// The idea:
+// - We define what LISP expressions look like (grammar)
+// - We define what "eval" means (semantics)
+// - We ask Z3 to find an expression that doubles its input
+
+// =============================================================================
+// Step 1: Define LISP Expression Grammar as ADT
+// =============================================================================
+
+// A simple arithmetic expression grammar
+data Expr =
+    Num(n: ℤ)                           // Literal number
+  | Var(name: String)                   // Variable reference  
+  | Add(left: Expr, right: Expr)        // Addition
+  | Mul(left: Expr, right: Expr)        // Multiplication
+
+// =============================================================================
+// Step 2: Define Evaluation Semantics
+// =============================================================================
+
+// Environment maps variable names to values
+// For simplicity, we'll use a single variable "x" with a known value
+
+// Evaluation function (as a relation for Z3)
+// eval(expr, x_val) = result
+//
+// We encode this as axioms:
+
+structure ExprEval {
+    // Evaluation rules
+    axiom eval_num : ∀(n : ℤ, x : ℤ). eval(Num(n), x) = n
+    axiom eval_var : ∀(x : ℤ). eval(Var("x"), x) = x
+    axiom eval_add : ∀(e1 e2 : Expr, x : ℤ). 
+        eval(Add(e1, e2), x) = eval(e1, x) + eval(e2, x)
+    axiom eval_mul : ∀(e1 e2 : Expr, x : ℤ). 
+        eval(Mul(e1, e2), x) = eval(e1, x) * eval(e2, x)
+}
+
+// =============================================================================
+// Step 3: Synthesis Query
+// =============================================================================
+
+// Find an expression that doubles x
+// Using concrete examples first (easier for Z3):
+
+// Query: Find expr such that eval(expr, 3) = 6 AND eval(expr, 5) = 10
+// :sat ∃(expr : Expr). eval(expr, 3) = 6 ∧ eval(expr, 5) = 10
+
+// Expected solutions:
+// - Add(Var("x"), Var("x"))       → x + x
+// - Mul(Num(2), Var("x"))         → 2 * x
+// - Mul(Var("x"), Num(2))         → x * 2
+
+// =============================================================================
+// Step 4: Universal Specification (harder)
+// =============================================================================
+
+// Find expr such that for ALL x, eval(expr, x) = 2*x
+// :sat ∃(expr : Expr). ∀(x : ℤ). eval(expr, x) = 2 * x
+

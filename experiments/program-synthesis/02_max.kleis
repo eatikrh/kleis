@@ -1,0 +1,58 @@
+// Program Synthesis Experiment 2: Maximum of Two Numbers
+// Goal: Synthesize a program that computes max(a, b)
+//
+// Grammar: if-then-else with comparisons
+//   expr ::= a | b | if cond then expr else expr
+//   cond ::= a < b | a > b | a <= b | a >= b | a = b
+
+// =============================================================================
+// Encoding
+// =============================================================================
+
+// Result branch choices:
+//   0 = return a
+//   1 = return b
+
+// Condition choices:
+//   0 = a < b
+//   1 = a > b  
+//   2 = a <= b
+//   3 = a >= b
+//   4 = a = b
+
+// A conditional program: if cond then then_branch else else_branch
+// We search for (cond, then_branch, else_branch)
+
+define eval_cond(cond: ℤ, a: ℤ, b: ℤ) : Bool =
+    if cond = 0 then a < b
+    else if cond = 1 then a > b
+    else if cond = 2 then a <= b
+    else if cond = 3 then a >= b
+    else a = b
+
+define eval_branch(branch: ℤ, a: ℤ, b: ℤ) : ℤ =
+    if branch = 0 then a else b
+
+define eval_prog(cond: ℤ, then_b: ℤ, else_b: ℤ, a: ℤ, b: ℤ) : ℤ =
+    if eval_cond(cond, a, b) 
+    then eval_branch(then_b, a, b)
+    else eval_branch(else_b, a, b)
+
+// =============================================================================
+// Specification: max(a, b) = a if a >= b, else b
+// =============================================================================
+
+// Test cases:
+//   max(3, 5) = 5
+//   max(7, 2) = 7
+//   max(4, 4) = 4
+
+// Query:
+// :sat ∃(cond then_b else_b : ℤ).
+//     cond >= 0 ∧ cond <= 4 ∧
+//     then_b >= 0 ∧ then_b <= 1 ∧
+//     else_b >= 0 ∧ else_b <= 1 ∧
+//     eval_prog(cond, then_b, else_b, 3, 5) = 5 ∧
+//     eval_prog(cond, then_b, else_b, 7, 2) = 7 ∧
+//     eval_prog(cond, then_b, else_b, 4, 4) = 4
+

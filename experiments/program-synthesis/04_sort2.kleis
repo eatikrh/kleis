@@ -1,0 +1,72 @@
+// Program Synthesis Experiment 4: Sort Two Elements
+// Goal: Synthesize a program that sorts a list of 2 elements
+//
+// Input: (a, b)
+// Output: (min, max) such that the output is sorted and is a permutation
+
+// =============================================================================
+// Specification
+// =============================================================================
+
+// sorted(x, y) means x <= y
+// permutation(out1, out2, in1, in2) means {out1, out2} = {in1, in2}
+
+// For two elements, permutation means:
+//   (out1 = in1 ∧ out2 = in2) ∨ (out1 = in2 ∧ out2 = in1)
+
+// =============================================================================
+// Program Template
+// =============================================================================
+
+// The program returns two values: (first, second)
+// Each value is either:
+//   - the first input (choice = 0)
+//   - the second input (choice = 1)
+//   - a conditional (if a <= b then X else Y)
+
+// For sort, we expect:
+//   first = if a <= b then a else b   (min)
+//   second = if a <= b then b else a  (max)
+
+// Encode as: (cond1, then1, else1) for first output
+//            (cond2, then2, else2) for second output
+// Where cond = 0 means "a <= b"
+
+// Simplified: both use same condition (a <= b)
+//   first = if a <= b then then1 else else1
+//   second = if a <= b then then2 else else2
+//   then1, else1, then2, else2 ∈ {0=a, 1=b}
+
+define get_val(choice: ℤ, a: ℤ, b: ℤ) : ℤ =
+    if choice = 0 then a else b
+
+define sort2_first(t1: ℤ, e1: ℤ, a: ℤ, b: ℤ) : ℤ =
+    if a <= b then get_val(t1, a, b) else get_val(e1, a, b)
+
+define sort2_second(t2: ℤ, e2: ℤ, a: ℤ, b: ℤ) : ℤ =
+    if a <= b then get_val(t2, a, b) else get_val(e2, a, b)
+
+// =============================================================================
+// Synthesis Query
+// =============================================================================
+
+// Find t1, e1, t2, e2 such that:
+// 1. Output is sorted: first <= second
+// 2. Output is permutation of input
+
+// Test cases:
+//   sort(3, 5) = (3, 5)  -- already sorted
+//   sort(7, 2) = (2, 7)  -- needs swap
+//   sort(4, 4) = (4, 4)  -- equal elements
+
+// Query:
+// :sat ∃(t1 e1 t2 e2 : ℤ).
+//     t1 >= 0 ∧ t1 <= 1 ∧ e1 >= 0 ∧ e1 <= 1 ∧
+//     t2 >= 0 ∧ t2 <= 1 ∧ e2 >= 0 ∧ e2 <= 1 ∧
+//     // Case 1: sort(3, 5) = (3, 5)
+//     sort2_first(t1, e1, 3, 5) = 3 ∧ sort2_second(t2, e2, 3, 5) = 5 ∧
+//     // Case 2: sort(7, 2) = (2, 7)
+//     sort2_first(t1, e1, 7, 2) = 2 ∧ sort2_second(t2, e2, 7, 2) = 7 ∧
+//     // Case 3: sort(4, 4) = (4, 4)
+//     sort2_first(t1, e1, 4, 4) = 4 ∧ sort2_second(t2, e2, 4, 4) = 4
+

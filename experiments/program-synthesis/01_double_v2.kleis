@@ -1,0 +1,83 @@
+// Program Synthesis Experiment 1b: Double a Number (Direct Encoding)
+// 
+// Instead of relying on axioms, we encode the problem directly.
+// We'll use a simple grammar: expr is one of:
+//   - the variable x
+//   - x + x  
+//   - 2 * x
+//   - x * 2
+//
+// We encode each possible program as a choice.
+
+// =============================================================================
+// Approach: Enumerate small programs and constrain
+// =============================================================================
+
+// For a simple grammar with just +, *, x, and small constants,
+// we can encode the search as choosing between options.
+
+// Let's say our program has structure: op(arg1, arg2)
+// where:
+//   - op ∈ {add, mul}
+//   - arg1, arg2 ∈ {x, 0, 1, 2}
+
+// We represent choices as integers:
+//   op: 0 = add, 1 = mul
+//   arg: 0 = x, 1 = const 0, 2 = const 1, 3 = const 2
+
+// The "meaning" of an arg given x:
+//   arg_val(0, x) = x
+//   arg_val(1, x) = 0
+//   arg_val(2, x) = 1
+//   arg_val(3, x) = 2
+
+// The result:
+//   result(op, a1, a2, x) = 
+//     if op = 0 then arg_val(a1, x) + arg_val(a2, x)
+//     else arg_val(a1, x) * arg_val(a2, x)
+
+// We want: result(op, a1, a2, 3) = 6 AND result(op, a1, a2, 5) = 10
+
+// =============================================================================
+// Query
+// =============================================================================
+
+// Define helper inline (Z3-friendly encoding)
+// :sat ∃(op a1 a2 : ℤ). 
+//     op >= 0 ∧ op <= 1 ∧
+//     a1 >= 0 ∧ a1 <= 3 ∧ 
+//     a2 >= 0 ∧ a2 <= 3 ∧
+//     // For x = 3:
+//     (if op = 0 
+//        then (if a1 = 0 then 3 else if a1 = 1 then 0 else if a1 = 2 then 1 else 2) +
+//             (if a2 = 0 then 3 else if a2 = 1 then 0 else if a2 = 2 then 1 else 2)
+//        else (if a1 = 0 then 3 else if a1 = 1 then 0 else if a1 = 2 then 1 else 2) *
+//             (if a2 = 0 then 3 else if a2 = 1 then 0 else if a2 = 2 then 1 else 2)) = 6 ∧
+//     // For x = 5:
+//     (if op = 0 
+//        then (if a1 = 0 then 5 else if a1 = 1 then 0 else if a1 = 2 then 1 else 2) +
+//             (if a2 = 0 then 5 else if a2 = 1 then 0 else if a2 = 2 then 1 else 2)
+//        else (if a1 = 0 then 5 else if a1 = 1 then 0 else if a1 = 2 then 1 else 2) *
+//             (if a2 = 0 then 5 else if a2 = 1 then 0 else if a2 = 2 then 1 else 2)) = 10
+
+// This is complex. Let's use define to make it cleaner.
+
+define arg_val(arg: ℤ, x: ℤ) : ℤ =
+    if arg = 0 then x 
+    else if arg = 1 then 0 
+    else if arg = 2 then 1 
+    else 2
+
+define prog_result(op: ℤ, a1: ℤ, a2: ℤ, x: ℤ) : ℤ =
+    if op = 0 
+    then arg_val(a1, x) + arg_val(a2, x)
+    else arg_val(a1, x) * arg_val(a2, x)
+
+// Now the query is cleaner:
+// :sat ∃(op a1 a2 : ℤ). 
+//     op >= 0 ∧ op <= 1 ∧
+//     a1 >= 0 ∧ a1 <= 3 ∧ 
+//     a2 >= 0 ∧ a2 <= 3 ∧
+//     prog_result(op, a1, a2, 3) = 6 ∧
+//     prog_result(op, a1, a2, 5) = 10
+
