@@ -421,6 +421,24 @@ structure LagrangianMechanics(n : ℕ) {
 }
 ```
 
+## Language Implementation
+
+Kleis can serve as a **meta-language** — a language for implementing other languages. See the complete LISP interpreter in Kleis:
+
+```
+λ> :load docs/grammar/lisp_parser.kleis
+
+λ> :eval run("(letrec ((fib (lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))) (fib 10))")
+✅ VNum(55)
+
+λ> :eval run("(letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5))")
+✅ VNum(120)
+```
+
+The complete implementation (parser + evaluator) is ~560 lines of pure Kleis code.
+
+→ [Appendix: LISP Interpreter](../appendix/lisp-interpreter.md) — Full source code with explanation
+
 ## What's Next?
 
 Check out the reference appendices!
@@ -428,3 +446,4 @@ Check out the reference appendices!
 → [Appendix A: Grammar Reference](../appendix/grammar.md)
 → [Appendix B: Operators](../appendix/operators.md)
 → [Appendix C: Standard Library](../appendix/stdlib.md)
+→ [Appendix D: LISP Interpreter](../appendix/lisp-interpreter.md)
