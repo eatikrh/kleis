@@ -183,6 +183,95 @@ Z3 SMT Solver
 
 ---
 
+## The Irony: LLMs Building Their Own Replacement
+
+### The Evolution of Code Creation
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ERA 1: Human writes code                                       │
+│  └─→ Experience + intuition → bugs happen                       │
+├─────────────────────────────────────────────────────────────────┤
+│  ERA 2: LLM writes code (2022-present)                          │
+│  └─→ Statistical patterns → "looks right" (can hallucinate)    │
+├─────────────────────────────────────────────────────────────────┤
+│  ERA 3: SMT solver synthesizes code (emerging)                  │
+│  └─→ Mathematical proof → correct by construction              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### The Hierarchy of Trust
+
+| Approach | Mechanism | Guarantee |
+|----------|-----------|-----------|
+| **Human** | Training + experience | *"I think this works"* |
+| **LLM** | Pattern matching on training data | *"This looks like code that worked before"* |
+| **Z3/Kleis** | Mathematical proof | **"This MUST work — proven"** |
+
+### The Fundamental Difference
+
+**LLMs guess.** They predict what code *probably* works based on statistical patterns in training data.
+
+**Z3 proves.** It determines what code *must* work based on mathematical logic.
+
+```kleis
+// LLM approach:
+// "Here's a sort function that looks like the ones I was trained on"
+// → Might have edge case bugs, needs testing
+
+// Z3 synthesis approach:
+:sat ∃ f : SExpr . ∀ xs : List . 
+    is_sorted(eval(f, xs)) ∧ is_permutation(eval(f, xs), xs)
+
+// Z3: "f = (merge-sort xs)" — mathematically guaranteed correct
+```
+
+### The Weird Part
+
+We used an LLM to build Kleis.
+
+Kleis + Z3 can synthesize correct programs from specifications.
+
+**The LLM helped build the tool that makes LLMs unnecessary for critical code.**
+
+### Where Each Excels
+
+| Task | Best Tool | Why |
+|------|-----------|-----|
+| Boilerplate code | LLM | Speed, pattern matching |
+| Exploratory coding | LLM | Flexibility, natural language |
+| Safety-critical logic | Z3/Kleis | Mathematical guarantee |
+| Bug-finding | Z3/Kleis | Counterexamples are proofs |
+| Verifying LLM output | Z3/Kleis | LLM proposes, Kleis verifies |
+
+### The Future Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Developer: "I need a function that reverses a list"            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  LLM: "Here's reverse(xs) = ..."                                │
+│  (Fast, but might have bugs)                                    │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Kleis/Z3: ":verify ∀ xs . reverse(reverse(xs)) = xs"          │
+│  ✅ Valid — LLM's code is correct                               │
+│  ❌ Invalid — Counterexample: xs = [1,2,3] fails               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**LLM as proposer, Kleis as verifier.**
+
+The combination is more powerful than either alone:
+- LLM's speed and flexibility
+- Z3's mathematical rigor
+- Human in the loop for specifications
+
+---
+
 ## Practical Applications
 
 ### 1. Safety-Critical Systems
