@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3f2fc08b.js";
+            window.path_to_searchindex_js = "../searchindex-bb6a65d2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-33a2f593.js"></script>
+        <script src="../toc-1ed044a1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -552,11 +552,24 @@ structure Functor(C, D) {
         Dt(D(lagrangian, q_dot(i)), t) = D(lagrangian, q(i))
 }
 </code></pre>
+<h2 id="language-implementation"><a class="header" href="#language-implementation">Language Implementation</a></h2>
+<p>Kleis can serve as a <strong>meta-language</strong> — a language for implementing other languages. See the complete LISP interpreter in Kleis:</p>
+<pre><code>λ&gt; :load docs/grammar/lisp_parser.kleis
+
+λ&gt; :eval run("(letrec ((fib (lambda (n) (if (&lt; n 2) n (+ (fib (- n 1)) (fib (- n 2))))))) (fib 10))")
+✅ VNum(55)
+
+λ&gt; :eval run("(letrec ((fact (lambda (n) (if (&lt;= n 1) 1 (* n (fact (- n 1))))))) (fact 5))")
+✅ VNum(120)
+</code></pre>
+<p>The complete implementation (parser + evaluator) is ~560 lines of pure Kleis code.</p>
+<p>→ <a href="../appendix/lisp-interpreter.html">Appendix: LISP Interpreter</a> — Full source code with explanation</p>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
 <p>Check out the reference appendices!</p>
 <p>→ <a href="../appendix/grammar.html">Appendix A: Grammar Reference</a>
 → <a href="../appendix/operators.html">Appendix B: Operators</a>
-→ <a href="../appendix/stdlib.html">Appendix C: Standard Library</a></p>
+→ <a href="../appendix/stdlib.html">Appendix C: Standard Library</a>
+→ <a href="../appendix/lisp-interpreter.html">Appendix D: LISP Interpreter</a></p>
 
                     </main>
 

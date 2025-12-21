@@ -1,0 +1,819 @@
+<!DOCTYPE HTML>
+<html lang="en" class="navy sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>LISP Interpreter - Learn You Some Kleis</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A fun, illustrated guide to the Kleis mathematical language">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "navy";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-bb6a65d2.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-1ed044a1.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Learn You Some Kleis</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/appendix/lisp-interpreter.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="appendix-lisp-interpreter-in-kleis"><a class="header" href="#appendix-lisp-interpreter-in-kleis">Appendix: LISP Interpreter in Kleis</a></h1>
+<p>This appendix presents a complete LISP interpreter written entirely in Kleis. This demonstrates Kleis’s power as a <strong>meta-language</strong> — you can define and execute other programming languages within Kleis itself.</p>
+<p>The interpreter includes:</p>
+<ul>
+<li><strong>Recursive descent S-expression parser</strong></li>
+<li><strong>Full evaluator</strong> with special forms, arithmetic, comparisons, and list operations</li>
+<li><strong>Lexical closures</strong> with <code>lambda</code></li>
+<li><strong>Recursive functions</strong> with <code>letrec</code></li>
+</ul>
+<h2 id="running-in-the-repl"><a class="header" href="#running-in-the-repl">Running in the REPL</a></h2>
+<pre><code>$ cargo run --bin repl
+🧮 Kleis REPL v0.1.0
+
+λ&gt; :load docs/grammar/lisp_parser.kleis
+✅ Loaded: 2 files, 60 functions, 15 structures, 5 data types
+
+λ&gt; :eval run("(+ 2 3)")
+✅ VNum(5)
+
+λ&gt; :eval run("(* 4 5)")  
+✅ VNum(20)
+
+λ&gt; :eval run("(if (&lt; 3 5) 100 200)")
+✅ VNum(100)
+
+λ&gt; :eval run("((lambda (x) (* x x)) 7)")
+✅ VNum(49)
+
+λ&gt; :eval run("(let ((x 10)) (+ x 5))")
+✅ VNum(15)
+</code></pre>
+<h3 id="factorial"><a class="header" href="#factorial">Factorial</a></h3>
+<pre><code>λ&gt; :eval run("(letrec ((fact (lambda (n) (if (&lt;= n 1) 1 (* n (fact (- n 1))))))) (fact 5))")
+✅ VNum(120)
+</code></pre>
+<h3 id="fibonacci"><a class="header" href="#fibonacci">Fibonacci</a></h3>
+<pre><code>λ&gt; :eval run("(letrec ((fib (lambda (n) (if (&lt; n 2) n (+ (fib (- n 1)) (fib (- n 2))))))) (fib 10))")
+✅ VNum(55)
+</code></pre>
+<hr>
+<h2 id="complete-source-code"><a class="header" href="#complete-source-code">Complete Source Code</a></h2>
+<p>The complete LISP interpreter is in <code>docs/grammar/lisp_parser.kleis</code>. Below is the full implementation.</p>
+<h3 id="part-1-s-expression-data-types"><a class="header" href="#part-1-s-expression-data-types">Part 1: S-Expression Data Types</a></h3>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+
+// S-Expression: atoms and lists
+data SExpr =
+    SAtom(value: String)
+  | SList(elements: List(SExpr))
+
+// Parser result: success with remaining input, or error
+data ParseResult =
+    ParseOK(expr: SExpr, rest: String)
+  | ParseErr(message: String)
+</code></pre>
+<h3 id="part-2-parser-helper-functions"><a class="header" href="#part-2-parser-helper-functions">Part 2: Parser Helper Functions</a></h3>
+<pre><code class="language-kleis">// Check if character is whitespace
+define is_ws(c: String) : Bool =
+    or(eq(c, " "), or(eq(c, "\n"), eq(c, "\t")))
+
+// Check if character is a delimiter
+define is_delim(c: String) : Bool =
+    or(is_ws(c), or(eq(c, "("), eq(c, ")")))
+
+// Skip leading whitespace
+define skip_ws(s: String) : String =
+    if le(strlen(s), 0) then s
+    else if is_ws(charAt(s, 0)) then skip_ws(substr(s, 1, strlen(s) - 1))
+    else s
+
+// Read atom characters until delimiter
+define read_atom(s: String, acc: String) : ParseResult =
+    if le(strlen(s), 0) then ParseOK(SAtom(acc), "")
+    else if is_delim(charAt(s, 0)) then ParseOK(SAtom(acc), s)
+    else read_atom(substr(s, 1, strlen(s) - 1), concat(acc, charAt(s, 0)))
+</code></pre>
+<h3 id="part-3-recursive-descent-parser"><a class="header" href="#part-3-recursive-descent-parser">Part 3: Recursive Descent Parser</a></h3>
+<pre><code class="language-kleis">// Parse a single S-expression
+define parse_sexpr(s: String) : ParseResult =
+    let trimmed = skip_ws(s) in
+    if le(strlen(trimmed), 0) then ParseErr("Unexpected end of input")
+    else if eq(charAt(trimmed, 0), "(") then 
+        parse_list(substr(trimmed, 1, strlen(trimmed) - 1), Nil)
+    else read_atom(trimmed, "")
+
+// Parse list elements until ")"
+define parse_list(s: String, acc: List(SExpr)) : ParseResult =
+    let trimmed = skip_ws(s) in
+    if le(strlen(trimmed), 0) then ParseErr("Expected ')'")
+    else if eq(charAt(trimmed, 0), ")") then 
+        ParseOK(SList(rev(acc)), substr(trimmed, 1, strlen(trimmed) - 1))
+    else 
+        match parse_sexpr(trimmed) {
+            ParseOK(expr, rest) =&gt; parse_list(rest, Cons(expr, acc))
+          | ParseErr(msg) =&gt; ParseErr(msg)
+        }
+
+// Reverse a list
+define rev(xs: List(SExpr)) : List(SExpr) =
+    rev_acc(xs, Nil)
+
+define rev_acc(xs: List(SExpr), acc: List(SExpr)) : List(SExpr) =
+    match xs {
+        Nil =&gt; acc
+      | Cons(h, t) =&gt; rev_acc(t, Cons(h, acc))
+    }
+
+// User-facing parse function
+define parse(s: String) : SExpr =
+    match parse_sexpr(s) {
+        ParseOK(expr, rest) =&gt; expr
+      | ParseErr(msg) =&gt; SAtom(concat("Error: ", msg))
+    }
+</code></pre>
+<h3 id="part-4-lisp-value-types-and-environment"><a class="header" href="#part-4-lisp-value-types-and-environment">Part 4: LISP Value Types and Environment</a></h3>
+<pre><code class="language-kleis">// Values in our LISP
+data LispVal =
+    VNum(n: ℤ)                              // Integer
+  | VSym(s: String)                         // Symbol (for errors/unbound)
+  | VList(xs: List(LispVal))                // List value
+  | VBool(b: Bool)                          // Boolean
+  | VLambda(params: List(String), body: SExpr, env: Env)  // Closure
+
+// Environment: list of (name, value) bindings
+data Binding = Bind(name: String, val: LispVal)
+data Env = Env(bindings: List(Binding))
+
+// Empty environment
+define empty_env : Env = Env(Nil)
+
+// Look up a variable in the environment
+define lookup(name: String, env: Env) : LispVal =
+    match env {
+        Env(bindings) =&gt; lookup_list(name, bindings)
+    }
+
+define lookup_list(name: String, bs: List(Binding)) : LispVal =
+    match bs {
+        Nil =&gt; VSym(concat("Unbound: ", name))
+      | Cons(Bind(n, v), rest) =&gt; 
+            if eq(n, name) then v else lookup_list(name, rest)
+    }
+
+// Extend environment with a new binding
+define extend(name: String, val: LispVal, env: Env) : Env =
+    match env {
+        Env(bindings) =&gt; Env(Cons(Bind(name, val), bindings))
+    }
+
+// Extend with multiple bindings (for function application)
+define extend_all(names: List(String), vals: List(LispVal), env: Env) : Env =
+    match names {
+        Nil =&gt; env
+      | Cons(n, ns) =&gt; 
+            match vals {
+                Nil =&gt; env
+              | Cons(v, vs) =&gt; extend_all(ns, vs, extend(n, v, env))
+            }
+    }
+</code></pre>
+<h3 id="part-5-integer-parsing"><a class="header" href="#part-5-integer-parsing">Part 5: Integer Parsing</a></h3>
+<pre><code class="language-kleis">define is_digit_char(c: String) : Bool =
+    or(eq(c, "0"), or(eq(c, "1"), or(eq(c, "2"), or(eq(c, "3"), or(eq(c, "4"),
+    or(eq(c, "5"), or(eq(c, "6"), or(eq(c, "7"), or(eq(c, "8"), eq(c, "9"))))))))))
+
+define is_number_str(s: String) : Bool =
+    if le(strlen(s), 0) then false
+    else if eq(charAt(s, 0), "-") then 
+        if le(strlen(s), 1) then false 
+        else all_digits(substr(s, 1, strlen(s) - 1))
+    else all_digits(s)
+
+define all_digits(s: String) : Bool =
+    if le(strlen(s), 0) then true
+    else if is_digit_char(charAt(s, 0)) then all_digits(substr(s, 1, strlen(s) - 1))
+    else false
+
+define parse_int(s: String) : ℤ =
+    if eq(charAt(s, 0), "-") then 0 - parse_int_pos(substr(s, 1, strlen(s) - 1))
+    else parse_int_pos(s)
+
+define parse_int_pos(s: String) : ℤ =
+    parse_int_acc(s, 0)
+
+define parse_int_acc(s: String, acc: ℤ) : ℤ =
+    if le(strlen(s), 0) then acc
+    else 
+        let d = digit_val(charAt(s, 0)) in
+        parse_int_acc(substr(s, 1, strlen(s) - 1), acc * 10 + d)
+
+define digit_val(c: String) : ℤ =
+    if eq(c, "0") then 0 else if eq(c, "1") then 1 else if eq(c, "2") then 2
+    else if eq(c, "3") then 3 else if eq(c, "4") then 4 else if eq(c, "5") then 5
+    else if eq(c, "6") then 6 else if eq(c, "7") then 7 else if eq(c, "8") then 8
+    else 9
+</code></pre>
+<h3 id="part-6-main-evaluator"><a class="header" href="#part-6-main-evaluator">Part 6: Main Evaluator</a></h3>
+<pre><code class="language-kleis">define eval_lisp(expr: SExpr, env: Env) : LispVal =
+    match expr {
+        SAtom(s) =&gt; 
+            if is_number_str(s) then VNum(parse_int(s))
+            else if eq(s, "true") then VBool(true)
+            else if eq(s, "false") then VBool(false)
+            else lookup(s, env)
+      | SList(elements) =&gt; eval_list(elements, env)
+    }
+
+define eval_list(elements: List(SExpr), env: Env) : LispVal =
+    match elements {
+        Nil =&gt; VList(Nil)  // Empty list is a value
+      | Cons(head, rest) =&gt; eval_form(head, rest, env)
+    }
+
+// Evaluate a special form or function call
+define eval_form(head: SExpr, args: List(SExpr), env: Env) : LispVal =
+    match head {
+        SAtom(op) =&gt; 
+            // Special forms
+            if eq(op, "if") then eval_if(args, env)
+            else if eq(op, "quote") then eval_quote(args)
+            else if eq(op, "lambda") then eval_lambda(args, env)
+            else if eq(op, "let") then eval_let(args, env)
+            else if eq(op, "letrec") then eval_letrec(args, env)
+            // Arithmetic
+            else if eq(op, "+") then eval_add(args, env)
+            else if eq(op, "-") then eval_sub(args, env)
+            else if eq(op, "*") then eval_mul(args, env)
+            else if eq(op, "/") then eval_div(args, env)
+            // Comparison
+            else if eq(op, "&lt;") then eval_lt(args, env)
+            else if eq(op, "&gt;") then eval_gt(args, env)
+            else if eq(op, "=") then eval_eq(args, env)
+            else if eq(op, "&lt;=") then eval_le(args, env)
+            else if eq(op, "&gt;=") then eval_ge(args, env)
+            // List operations
+            else if eq(op, "list") then eval_list_op(args, env)
+            else if eq(op, "car") then eval_car(args, env)
+            else if eq(op, "cdr") then eval_cdr(args, env)
+            else if eq(op, "cons") then eval_cons(args, env)
+            else if eq(op, "null?") then eval_null(args, env)
+            // Function call
+            else eval_call(op, args, env)
+      | SList(_) =&gt; 
+            // First element is an expression (e.g., lambda)
+            let fn_val = eval_lisp(head, env) in
+            eval_apply(fn_val, args, env)
+    }
+</code></pre>
+<h3 id="part-7-special-forms"><a class="header" href="#part-7-special-forms">Part 7: Special Forms</a></h3>
+<pre><code class="language-kleis">define eval_if(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(cond, Cons(then_br, Cons(else_br, Nil))) =&gt;
+            let cv = eval_lisp(cond, env) in
+            if is_truthy(cv) then eval_lisp(then_br, env) else eval_lisp(else_br, env)
+      | _ =&gt; VSym("Error: if requires 3 arguments")
+    }
+
+define is_truthy(v: LispVal) : Bool =
+    match v {
+        VBool(b) =&gt; b
+      | VNum(n) =&gt; not(eq(n, 0))
+      | VList(Nil) =&gt; false
+      | VList(_) =&gt; true
+      | VSym(_) =&gt; false
+      | VLambda(_, _, _) =&gt; true
+    }
+
+define eval_quote(args: List(SExpr)) : LispVal =
+    match args {
+        Cons(expr, Nil) =&gt; sexpr_to_val(expr)
+      | _ =&gt; VSym("Error: quote requires 1 argument")
+    }
+
+define sexpr_to_val(expr: SExpr) : LispVal =
+    match expr {
+        SAtom(s) =&gt; if is_number_str(s) then VNum(parse_int(s)) else VSym(s)
+      | SList(elements) =&gt; VList(map_sexpr_to_val(elements))
+    }
+
+define map_sexpr_to_val(xs: List(SExpr)) : List(LispVal) =
+    match xs {
+        Nil =&gt; Nil
+      | Cons(h, t) =&gt; Cons(sexpr_to_val(h), map_sexpr_to_val(t))
+    }
+
+define eval_lambda(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(SList(params), Cons(body, Nil)) =&gt;
+            VLambda(extract_param_names(params), body, env)
+      | _ =&gt; VSym("Error: lambda requires (params) body")
+    }
+
+define extract_param_names(params: List(SExpr)) : List(String) =
+    match params {
+        Nil =&gt; Nil
+      | Cons(SAtom(name), rest) =&gt; Cons(name, extract_param_names(rest))
+      | _ =&gt; Nil
+    }
+
+define eval_let(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(SList(bindings), Cons(body, Nil)) =&gt;
+            let new_env = eval_let_bindings(bindings, env) in
+            eval_lisp(body, new_env)
+      | _ =&gt; VSym("Error: let requires ((bindings)) body")
+    }
+
+define eval_let_bindings(bindings: List(SExpr), env: Env) : Env =
+    match bindings {
+        Nil =&gt; env
+      | Cons(SList(Cons(SAtom(name), Cons(val_expr, Nil))), rest) =&gt;
+            let val = eval_lisp(val_expr, env) in
+            eval_let_bindings(rest, extend(name, val, env))
+      | _ =&gt; env
+    }
+
+// letrec: evaluate lambda in an environment that already contains the binding
+// This enables recursion: (letrec ((fact (lambda (n) ...))) (fact 5))
+define eval_letrec(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(SList(bindings), Cons(body, Nil)) =&gt;
+            let rec_env = eval_letrec_bindings(bindings, env) in
+            eval_lisp(body, rec_env)
+      | _ =&gt; VSym("Error: letrec requires ((bindings)) body")
+    }
+
+define eval_letrec_bindings(bindings: List(SExpr), env: Env) : Env =
+    match bindings {
+        Nil =&gt; env
+      | Cons(SList(Cons(SAtom(name), Cons(SList(Cons(SAtom(lambda_kw), 
+            Cons(SList(params), Cons(body, Nil)))), Nil))), rest) =&gt;
+            let dummy_env = extend(name, VSym("placeholder"), env) in
+            let lambda_val = VLambda(extract_param_names(params), body, dummy_env) in
+            let new_env = extend(name, lambda_val, env) in
+            let fixed_lambda = VLambda(extract_param_names(params), body, new_env) in
+            eval_letrec_bindings(rest, extend(name, fixed_lambda, env))
+      | _ =&gt; env
+    }
+</code></pre>
+<h3 id="part-8-arithmetic-operations"><a class="header" href="#part-8-arithmetic-operations">Part 8: Arithmetic Operations</a></h3>
+<pre><code class="language-kleis">define eval_add(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(a, Cons(b, Nil)) =&gt;
+            match eval_lisp(a, env) {
+                VNum(x) =&gt; match eval_lisp(b, env) {
+                    VNum(y) =&gt; VNum(x + y)
+                  | _ =&gt; VSym("Error: + requires numbers")
+                }
+              | _ =&gt; VSym("Error: + requires numbers")
+            }
+      | _ =&gt; VSym("Error: + requires 2 arguments")
+    }
+
+define eval_sub(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(a, Cons(b, Nil)) =&gt;
+            match eval_lisp(a, env) {
+                VNum(x) =&gt; match eval_lisp(b, env) {
+                    VNum(y) =&gt; VNum(x - y)
+                  | _ =&gt; VSym("Error: - requires numbers")
+                }
+              | _ =&gt; VSym("Error: - requires numbers")
+            }
+      | _ =&gt; VSym("Error: - requires 2 arguments")
+    }
+
+define eval_mul(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(a, Cons(b, Nil)) =&gt;
+            match eval_lisp(a, env) {
+                VNum(x) =&gt; match eval_lisp(b, env) {
+                    VNum(y) =&gt; VNum(x * y)
+                  | _ =&gt; VSym("Error: * requires numbers")
+                }
+              | _ =&gt; VSym("Error: * requires numbers")
+            }
+      | _ =&gt; VSym("Error: * requires 2 arguments")
+    }
+
+define eval_div(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(a, Cons(b, Nil)) =&gt;
+            match eval_lisp(a, env) {
+                VNum(x) =&gt; match eval_lisp(b, env) {
+                    VNum(y) =&gt; if eq(y, 0) then VSym("Error: division by zero") 
+                               else VNum(x / y)
+                  | _ =&gt; VSym("Error: / requires numbers")
+                }
+              | _ =&gt; VSym("Error: / requires numbers")
+            }
+      | _ =&gt; VSym("Error: / requires 2 arguments")
+    }
+</code></pre>
+<h3 id="part-9-comparison-operations"><a class="header" href="#part-9-comparison-operations">Part 9: Comparison Operations</a></h3>
+<pre><code class="language-kleis">define eval_lt(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(a, Cons(b, Nil)) =&gt;
+            match eval_lisp(a, env) {
+                VNum(x) =&gt; match eval_lisp(b, env) {
+                    VNum(y) =&gt; VBool(lt(x, y))
+                  | _ =&gt; VSym("Error: &lt; requires numbers")
+                }
+              | _ =&gt; VSym("Error: &lt; requires numbers")
+            }
+      | _ =&gt; VSym("Error: &lt; requires 2 arguments")
+    }
+
+define eval_gt(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(a, Cons(b, Nil)) =&gt;
+            match eval_lisp(a, env) {
+                VNum(x) =&gt; match eval_lisp(b, env) {
+                    VNum(y) =&gt; VBool(gt(x, y))
+                  | _ =&gt; VSym("Error: &gt; requires numbers")
+                }
+              | _ =&gt; VSym("Error: &gt; requires numbers")
+            }
+      | _ =&gt; VSym("Error: &gt; requires 2 arguments")
+    }
+
+define eval_eq(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(a, Cons(b, Nil)) =&gt;
+            match eval_lisp(a, env) {
+                VNum(x) =&gt; match eval_lisp(b, env) {
+                    VNum(y) =&gt; VBool(eq(x, y))
+                  | _ =&gt; VSym("Error: = requires numbers")
+                }
+              | _ =&gt; VSym("Error: = requires numbers")
+            }
+      | _ =&gt; VSym("Error: = requires 2 arguments")
+    }
+
+define eval_le(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(a, Cons(b, Nil)) =&gt;
+            match eval_lisp(a, env) {
+                VNum(x) =&gt; match eval_lisp(b, env) {
+                    VNum(y) =&gt; VBool(le(x, y))
+                  | _ =&gt; VSym("Error: &lt;= requires numbers")
+                }
+              | _ =&gt; VSym("Error: &lt;= requires numbers")
+            }
+      | _ =&gt; VSym("Error: &lt;= requires 2 arguments")
+    }
+
+define eval_ge(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(a, Cons(b, Nil)) =&gt;
+            match eval_lisp(a, env) {
+                VNum(x) =&gt; match eval_lisp(b, env) {
+                    VNum(y) =&gt; VBool(ge(x, y))
+                  | _ =&gt; VSym("Error: &gt;= requires numbers")
+                }
+              | _ =&gt; VSym("Error: &gt;= requires numbers")
+            }
+      | _ =&gt; VSym("Error: &gt;= requires 2 arguments")
+    }
+</code></pre>
+<h3 id="part-10-list-operations"><a class="header" href="#part-10-list-operations">Part 10: List Operations</a></h3>
+<pre><code class="language-kleis">define eval_list_op(args: List(SExpr), env: Env) : LispVal =
+    VList(eval_all(args, env))
+
+define eval_all(args: List(SExpr), env: Env) : List(LispVal) =
+    match args {
+        Nil =&gt; Nil
+      | Cons(h, t) =&gt; Cons(eval_lisp(h, env), eval_all(t, env))
+    }
+
+define eval_car(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(lst, Nil) =&gt;
+            match eval_lisp(lst, env) {
+                VList(Cons(h, _)) =&gt; h
+              | _ =&gt; VSym("Error: car requires non-empty list")
+            }
+      | _ =&gt; VSym("Error: car requires 1 argument")
+    }
+
+define eval_cdr(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(lst, Nil) =&gt;
+            match eval_lisp(lst, env) {
+                VList(Cons(_, t)) =&gt; VList(t)
+              | _ =&gt; VSym("Error: cdr requires non-empty list")
+            }
+      | _ =&gt; VSym("Error: cdr requires 1 argument")
+    }
+
+define eval_cons(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(h, Cons(t, Nil)) =&gt;
+            let hv = eval_lisp(h, env) in
+            match eval_lisp(t, env) {
+                VList(lst) =&gt; VList(Cons(hv, lst))
+              | _ =&gt; VSym("Error: cons requires list as second arg")
+            }
+      | _ =&gt; VSym("Error: cons requires 2 arguments")
+    }
+
+define eval_null(args: List(SExpr), env: Env) : LispVal =
+    match args {
+        Cons(lst, Nil) =&gt;
+            match eval_lisp(lst, env) {
+                VList(Nil) =&gt; VBool(true)
+              | VList(_) =&gt; VBool(false)
+              | _ =&gt; VSym("Error: null? requires list")
+            }
+      | _ =&gt; VSym("Error: null? requires 1 argument")
+    }
+</code></pre>
+<h3 id="part-11-function-application"><a class="header" href="#part-11-function-application">Part 11: Function Application</a></h3>
+<pre><code class="language-kleis">define eval_call(name: String, args: List(SExpr), env: Env) : LispVal =
+    let fn_val = lookup(name, env) in
+    eval_apply(fn_val, args, env)
+
+define eval_apply(fn_val: LispVal, args: List(SExpr), env: Env) : LispVal =
+    match fn_val {
+        VLambda(params, body, closure_env) =&gt;
+            let arg_vals = eval_all(args, env) in
+            // Merge current env into closure env for recursive calls
+            let merged_env = merge_envs(env, closure_env) in
+            let new_env = extend_all(params, arg_vals, merged_env) in
+            eval_lisp(body, new_env)
+      | VSym(msg) =&gt; VSym(msg)  // Error propagation
+      | _ =&gt; VSym("Error: not a function")
+    }
+
+// Merge two environments: first takes precedence
+// This allows letrec functions to see their own definitions
+define merge_envs(e1: Env, e2: Env) : Env =
+    match e1 {
+        Env(b1) =&gt; match e2 {
+            Env(b2) =&gt; Env(append_bindings(b1, b2))
+        }
+    }
+
+define append_bindings(b1: List(Binding), b2: List(Binding)) : List(Binding) =
+    match b1 {
+        Nil =&gt; b2
+      | Cons(h, t) =&gt; Cons(h, append_bindings(t, b2))
+    }
+</code></pre>
+<h3 id="part-12-user-facing-run-function"><a class="header" href="#part-12-user-facing-run-function">Part 12: User-Facing Run Function</a></h3>
+<pre><code class="language-kleis">// Run a LISP program from string
+define run(code: String) : LispVal =
+    eval_lisp(parse(code), empty_env)
+
+// Run with an environment (for multiple expressions)
+define run_with_env(code: String, env: Env) : LispVal =
+    eval_lisp(parse(code), env)
+</code></pre>
+<hr>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>This LISP interpreter demonstrates that <strong>Kleis is Turing-complete</strong> and can serve as a host language for other programming languages. The implementation uses:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Kleis Construct</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Data types</strong></td><td><code>data SExpr</code>, <code>data LispVal</code>, <code>data Env</code></td></tr>
+<tr><td><strong>Pattern matching</strong></td><td><code>match expr { ... }</code></td></tr>
+<tr><td><strong>Recursion</strong></td><td>Recursive function definitions</td></tr>
+<tr><td><strong>Higher-order functions</strong></td><td><code>lambda</code>, closures with captured environments</td></tr>
+<tr><td><strong>String operations</strong></td><td><code>charAt</code>, <code>substr</code>, <code>concat</code>, <code>strlen</code></td></tr>
+<tr><td><strong>List operations</strong></td><td><code>Cons</code>, <code>Nil</code>, pattern matching on lists</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="key-insights"><a class="header" href="#key-insights">Key Insights</a></h3>
+<ol>
+<li>
+<p><strong><code>:eval</code> enables execution</strong> — The <code>:eval</code> REPL command executes Kleis functions directly, without going through Z3’s symbolic unrolling.</p>
+</li>
+<li>
+<p><strong>Environment merging for recursion</strong> — <code>letrec</code> works by merging the current environment (which contains the function binding) into the closure’s environment.</p>
+</li>
+<li>
+<p><strong>60 pure functions</strong> — The entire interpreter is implemented in ~560 lines of pure functional Kleis code.</p>
+</li>
+<li>
+<p><strong>Meta-circular potential</strong> — With minor extensions, this could interpret a subset of Kleis itself, demonstrating meta-circularity.</p>
+</li>
+</ol>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../appendix/stdlib.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../appendix/stdlib.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
