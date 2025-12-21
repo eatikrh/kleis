@@ -1,6 +1,42 @@
 # Next Session Notes
 
-**Last Updated:** December 19, 2025
+**Last Updated:** December 21, 2024
+
+---
+
+## 🎯 NEXT: Implement `(verify ...)` in LISP Interpreter
+
+**Context:** We implemented a complete LISP interpreter in Kleis (`docs/grammar/lisp_parser.kleis`). The next step is adding a `(verify ...)` form that calls into Z3 for formal verification.
+
+### What We Have
+- ✅ LISP parser (recursive descent, S-expressions)
+- ✅ LISP evaluator (arithmetic, comparisons, lambda, let, letrec)
+- ✅ Recursion working: `fib(10) = 55`, `fact(5) = 120`
+- ✅ Documented in manual appendix
+
+### What We Need to Design
+1. **How does `(verify expr)` call Z3?**
+   - Option A: Translate LISP → Kleis expression → Z3
+   - Option B: Direct LISP → Z3 (bypass Kleis translation)
+   - Option C: Add Z3 access to Rust evaluator as a built-in
+
+2. **What syntax for quantifiers?**
+   - `(forall (x) (= (+ x 0) x))` - LISP-style
+   - How to specify types for quantified variables?
+
+3. **Return value on failure?**
+   - `VBool(false)` vs `VSym("Counterexample: x = 42")`
+
+### Why This Matters
+See `docs/vision/VERIFIED_SOFTWARE_VISION.md` — this enables:
+- Programs with embedded proofs
+- Design-by-contract with verification
+- The path to "correct by construction" software
+
+### Files to Modify
+- `docs/grammar/lisp_parser.kleis` - Add verify form
+- `src/evaluator.rs` - May need Z3 integration
+- `docs/manual/src/appendix/lisp-interpreter.md` - Update with new code
 
 ---
 
