@@ -1,6 +1,9 @@
-# Verified Software: The Kleis Vision
+# Verified Software: The Kleis Dream
 
 *Date: December 21, 2024*
+
+> **Note:** This document describes an *aspiration*, not a validated architecture.
+> Section "The Hard Truth" documents what we actually achieved vs. what remains a dream.
 
 ## The Breakthrough
 
@@ -374,39 +377,259 @@ This is the future of programming: **intent-driven, constraint-mediated, mathema
 
 ---
 
+## The Hard Truth: What We Actually Achieved (December 2024)
+
+The vision above is beautiful. Here's the reality.
+
+### The Failed Experiment
+
+We tried to have Z3 synthesize a LISP sorting program from specification:
+
+```kleis
+// THE DREAM (does not work):
+:sat ∃(P : SExpr). 
+    eval_lisp(P, [3,1,2]) = [1,2,3] ∧
+    eval_lisp(P, [5,1]) = [1,5]
+
+// Expected: P = SList([SAtom("letrec"), ...])
+// Reality:  Stack overflow / timeout
+```
+
+**Why it failed:**
+
+| Component | Works? | Problem |
+|-----------|--------|---------|
+| LISP Parser (Kleis) | ✅ | - |
+| LISP Evaluator (Kleis) | ✅ | - |
+| `eval_lisp` in Z3 | ❌ | Recursive function over unbounded ADTs |
+| Z3 searching SExpr space | ❌ | Infinite search space |
+
+**The fundamental barrier:**
+
+Z3 cannot symbolically execute recursive functions over algebraic data types. When we write:
+
+```kleis
+define eval_lisp(expr: SExpr, env: Env) : LispVal =
+    match expr { ... eval_lisp(sub_expr, env) ... }
+```
+
+And then ask:
+
+```kleis
+:sat ∃(P : SExpr). eval_lisp(P, env) = some_value
+```
+
+Z3 would need to instantiate the universal quantifier in `eval_lisp` for **every possible SExpr**. That's infinite. Z3 tries E-matching, runs out of stack, dies.
+
+### What We Actually Did
+
+We **gave up on true synthesis** and did sketch-based synthesis instead:
+
+```
+TRUE SYNTHESIS (failed):
+  Z3 input:  Spec + entire LISP grammar
+  Z3 output: LISP program
+  
+SKETCH-BASED (what we did):
+  LLM input:  Spec
+  LLM output: insert(x, ys) template with 3 parameter holes
+  
+  Z3 input:   16 parameter combinations
+  Z3 output:  (cc=0, tc=0, ec=1)
+  
+  LLM input:  Z3's parameters
+  LLM output: LISP program text
+```
+
+**The LLM did the creative work.** Z3 did parameter search over 16 options.
+
+### The Gap
+
+| Vision Document Claims | Reality |
+|------------------------|---------|
+| "Z3 synthesizes: `(* x x)`" | Doesn't work — Z3 can't evaluate LISP |
+| "Z3 generates program from spec" | Z3 finds parameters; human writes template |
+| "Constraint → Correct Program" | Constraint → Parameters for human's template |
+
+### Why This Matters
+
+The vision of **natural language → specification → synthesized program** has a hole in it:
+
+```
+Human → LLM → Kleis Constraint → ??? → Program
+                                  ↑
+                    Z3 CAN'T DO THIS STEP
+                    (for recursive programs over ADTs)
+```
+
+Z3 can:
+- ✅ Verify bounded instances (sort 2 elements, sort 3 elements)
+- ✅ Find parameters in a finite search space
+- ✅ Prove local properties (insert preserves sortedness)
+
+Z3 cannot:
+- ❌ Synthesize recursive programs from scratch
+- ❌ Evaluate LISP programs symbolically
+- ❌ Handle `∀ xs : List` without bounding
+
+### Possible Paths Forward
+
+**1. Bounded Synthesis**
+Limit list lengths. Works for small programs.
+```kleis
+// Bound lists to length ≤ 3
+:sat ∃(P : SExpr). 
+    length(P) ≤ 10 ∧
+    eval_bounded(P, [1,2], 5) = [1,2] ∧
+    eval_bounded(P, [2,1], 5) = [1,2]
+```
+
+**2. Syntax-Guided Synthesis (SyGuS)**
+Use specialized synthesis tools (CVC5 SyGuS, etc.) instead of raw Z3.
+
+**3. Enumerate-and-Verify**
+Generate candidate programs, verify each:
+```kleis
+for each P in grammar_enumeration(size ≤ 10):
+    if :check is_sorted(eval(P, test1)) ∧ is_permutation(...):
+        return P
+```
+
+**4. Sketch-Based (What We Did)**
+Human provides template, Z3 fills holes. Works but loses the magic.
+
+**5. Hybrid: LLM Proposes, Z3 Verifies**
+Let LLM generate LISP programs, use Z3 to verify properties.
+This actually works! But it's verification, not synthesis.
+
+### Honest Assessment
+
+The **verification** story is solid:
+- We can parse programs
+- We can evaluate them concretely
+- We can verify bounded properties
+- Counterexamples are useful
+
+The **synthesis** story needs work:
+- True synthesis from grammar: **NOT ACHIEVED**
+- Sketch-based synthesis: Works, but human does the creative part
+- LLM-propose-Z3-verify: Promising but not true synthesis
+
+### The Open Research Problem
+
+**How do you synthesize recursive programs from specifications?**
+
+This is not solved. Approaches being researched:
+
+1. **SyGuS (Syntax-Guided Synthesis)**: CVC5, other tools
+2. **CEGIS (Counterexample-Guided Inductive Synthesis)**: Iterate refinement
+3. **Neural-guided search**: Use ML to prune grammar exploration
+4. **Bounded model checking**: Limit recursion depth
+5. **Deductive synthesis**: Derive program from proof
+
+We tried (1) implicitly by encoding grammar as choices.
+It works for non-recursive programs.
+It fails for recursive programs over unbounded data.
+
+**The difficulty we encountered is fundamental, not implementation.**
+
+Z3 (and SMT solvers generally) cannot:
+- Symbolically execute recursive functions
+- Search infinite spaces (unbounded ADTs)
+- Handle `∀(xs : List). property(xs)` without bounding
+
+This is why true program synthesis remains an active research area.
+We didn't fail because of bad engineering.
+We failed because **the problem is hard**.
+
+### Dream vs. Reality
+
+| Aspect | The Dream | The Reality (Dec 2024) |
+|--------|-----------|------------------------|
+| **Synthesis** | `spec → Z3 → program` | `spec → human template → Z3 fills holes` |
+| **Creativity** | Z3 explores grammar | Human designs structure, Z3 picks params |
+| **Recursion** | Z3 synthesizes recursive code | Z3 times out on recursive evaluation |
+| **Guarantee** | Correct for all inputs | Verified for bounded test cases |
+| **Workflow** | Specification-first | LLM-proposes, Z3-verifies |
+
+### What's Actually Achievable Now
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Developer: "Sort a list"                                   │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│  LLM: Generates LISP sort function (might have bugs)        │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Kleis/Z3: Verifies properties hold                         │
+│  - is_sorted(sort(xs))? ✅                                  │
+│  - is_permutation(sort(xs), xs)? ✅                         │
+│  - Or: counterexample at xs = [3,1,2]                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**LLM synthesizes, Z3 verifies.** Not the other way around.
+
+This is still valuable! But it's verification, not synthesis.
+
+---
+
 ## The Path Forward
 
 ### Immediate (This Branch)
 - [x] LISP parser in Kleis
 - [x] LISP evaluator in Kleis
-- [ ] Add `(verify ...)` form to LISP
-- [ ] Document in the manual
+- [x] `:eval` command for concrete execution
+- [x] Sketch-based synthesis experiments
+- [ ] Document synthesis limitations in manual
 
 ### Near-Term
-- [ ] Verify properties of the LISP interpreter itself
-- [ ] Add more LISP features (`define`, `set!`, macros)
-- [ ] Create examples of verified LISP programs
+- [ ] LLM-propose, Z3-verify workflow
+- [ ] Bounded synthesis for small programs
+- [ ] SyGuS integration research
 
 ### Long-Term Vision
+- [ ] True grammar-based synthesis (requires advances in SMT)
 - [ ] Kleis-in-Kleis (self-hosting)
-- [ ] Verified Kleis compiler
 - [ ] Industrial verification workflows
 
 ---
 
 ## Conclusion
 
-The implementation of a LISP interpreter in Kleis is not just a technical achievement. It demonstrates that:
+The implementation of a LISP interpreter in Kleis is a technical achievement. It demonstrates that:
 
-1. **Programs can be data** — fully introspectable, analyzable
-2. **Specifications can be axioms** — mathematical statements about behavior
-3. **Verification can be automatic** — Z3 proves or finds counterexamples
-4. **Software can be correct by construction** — not just tested, but proven
+1. **Programs can be data** — fully introspectable, analyzable ✅ Achieved
+2. **Specifications can be axioms** — mathematical statements about behavior ✅ Achieved
+3. **Verification can be automatic** — Z3 proves or finds counterexamples ✅ Achieved (bounded)
+4. **Software can be correct by construction** — not just tested, but proven ⚠️ Partial
 
-This is the path to software we can truly trust.
+What remains a dream:
+
+5. **Programs can be synthesized from specs** — ❌ Not achieved for recursive programs
+6. **Full automation** — ❌ Human still writes templates, Z3 fills holes
+
+We built the foundation. The dream of `spec → program` requires advances we don't have yet.
+
+**The honest summary:**
+
+| What | Status |
+|------|--------|
+| LISP interpreter in Kleis | ✅ Works |
+| `:eval` for concrete execution | ✅ Works |
+| Bounded verification | ✅ Works |
+| Sketch-based parameter search | ✅ Works |
+| True recursive program synthesis | ❌ Failed |
+| `spec → Z3 → LISP program` | ❌ Dream |
 
 ---
 
 *"Beware of bugs in the above code; I have only proved it correct, not tried it."*
 — Donald Knuth
+
+*"And beware of dreams in the above vision; I have only described it, not achieved it."*
+— This experiment, December 2024
 

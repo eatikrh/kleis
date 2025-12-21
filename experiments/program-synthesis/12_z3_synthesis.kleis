@@ -1,0 +1,147 @@
+// ============================================================================
+// Z3 SYNTHESIS: Direct encoding for Z3
+// ============================================================================
+//
+// Avoid Kleis functions - encode directly as Z3-friendly constraints
+//
+// ============================================================================
+
+// For 2-element sort, the program is:
+//   result = if COND(a, b) then [THEN_FST, THEN_SND] else [ELSE_FST, ELSE_SND]
+//
+// We parameterize:
+//   cc: which comparison (0=a<=b, 1=a<b, 2=a>=b, 3=a>b)
+//   tc: then choice (0=put a first, 1=put b first)
+//   ec: else choice (0=put a first, 1=put b first)
+
+// The constraint for one test case (a=3, b=5):
+// Let x, y be the output. They must satisfy:
+//   (cc=0 → (3<=5 → x=THEN_FST ∧ y=THEN_SND) ∧ (¬(3<=5) → x=ELSE_FST ∧ y=ELSE_SND))
+//   ∧ similar for other cc values
+//   ∧ x <= y  (sorted)
+//   ∧ (x=a ∧ y=b) ∨ (x=b ∧ y=a)  (permutation)
+
+// This is getting complex. Let me just encode the final formula directly.
+
+// For test (a, b) with parameters (cc, tc, ec):
+// First element of output:
+//   fst = if cond(cc,a,b) then (if tc=0 then a else b) else (if ec=0 then a else b)
+// Second element:
+//   snd = if cond(cc,a,b) then (if tc=0 then b else a) else (if ec=0 then b else a)
+
+// For Z3, we express cond(cc, a, b) as:
+//   (cc=0 ∧ a<=b) ∨ (cc=1 ∧ a<b) ∨ (cc=2 ∧ a>=b) ∨ (cc=3 ∧ a>b)
+
+// ============================================================================
+// Direct Z3 query (paste into REPL)
+// ============================================================================
+
+// :sat ∃(cc tc ec : ℤ). 
+//   cc >= 0 ∧ cc <= 3 ∧ tc >= 0 ∧ tc <= 1 ∧ ec >= 0 ∧ ec <= 1 ∧
+//   // Test case 1: sort(3, 5) should give (3, 5)
+//   ∃(x1 y1 : ℤ). 
+//     ((cc = 0 ∧ 3 <= 5) ∨ (cc = 1 ∧ 3 < 5) ∨ (cc = 2 ∧ 3 >= 5) ∨ (cc = 3 ∧ 3 > 5) →
+//       (tc = 0 → x1 = 3 ∧ y1 = 5) ∧ (tc = 1 → x1 = 5 ∧ y1 = 3)) ∧
+//     (¬((cc = 0 ∧ 3 <= 5) ∨ ...) →
+//       (ec = 0 → x1 = 3 ∧ y1 = 5) ∧ (ec = 1 → x1 = 5 ∧ y1 = 3)) ∧
+//     x1 <= y1 ∧ ((x1 = 3 ∧ y1 = 5) ∨ (x1 = 5 ∧ y1 = 3))
+
+// This is too complex. Let me simplify by just encoding the truth table.
+
+// ============================================================================
+// SIMPLEST APPROACH: Truth table encoding
+// ============================================================================
+
+// For each test case (a, b), define what the output should be:
+// If a <= b: output should be (a, b)
+// If a > b:  output should be (b, a)
+
+// The program is correct if, for each (a, b), 
+// its output matches the expected sorted output.
+
+// For (3, 5): 3 <= 5, so output = (3, 5)
+// For (7, 2): 7 > 2, so output = (2, 7)
+// For (4, 4): 4 <= 4, so output = (4, 4)
+
+// The parameterized program produces:
+//   output_fst(cc, tc, ec, a, b)
+//   output_snd(cc, tc, ec, a, b)
+
+// We need:
+//   output_fst(cc, tc, ec, 3, 5) = 3 ∧ output_snd(cc, tc, ec, 3, 5) = 5
+//   output_fst(cc, tc, ec, 7, 2) = 2 ∧ output_snd(cc, tc, ec, 7, 2) = 7
+//   output_fst(cc, tc, ec, 4, 4) = 4 ∧ output_snd(cc, tc, ec, 4, 4) = 4
+
+// Now, output_fst/snd depend on cc, tc, ec and the comparison.
+
+// For (3, 5): comparison results for each cc:
+//   cc=0: 3<=5 = true  → use tc
+//   cc=1: 3<5  = true  → use tc
+//   cc=2: 3>=5 = false → use ec
+//   cc=3: 3>5  = false → use ec
+
+// If tc=0: output_fst = a = 3
+// If tc=1: output_fst = b = 5
+// If ec=0: output_fst = a = 3
+// If ec=1: output_fst = b = 5
+
+// We want output = (3, 5), so fst=3, snd=5.
+// For cc=0 or cc=1: condition is true, so we use tc.
+//   tc=0 gives fst=3 ✓
+// For cc=2 or cc=3: condition is false, so we use ec.
+//   ec=0 gives fst=3 ✓
+
+// Similarly for (7, 2): we want (2, 7)
+// For cc=0: 7<=2 = false → use ec
+// For cc=1: 7<2  = false → use ec  
+// For cc=2: 7>=2 = true  → use tc
+// For cc=3: 7>2  = true  → use tc
+
+// We want fst=2=b. 
+// If using tc: tc=1 gives fst=b=2 ✓
+// If using ec: ec=1 gives fst=b=2 ✓
+
+// Combining constraints:
+// From (3,5): need tc=0 (when cond true, fst=a)
+// From (7,2): when cond true (cc=2,3), need tc=1 (fst=b)
+//             when cond false (cc=0,1), need ec=1 (fst=b)
+
+// These conflict! tc can't be both 0 and 1.
+// Unless... cc=0 or 1 for (3,5) uses tc=0, and cc=0 or 1 for (7,2) uses ec=1.
+
+// With cc=0:
+//   (3,5): 3<=5=true → tc=0 → fst=3 ✓
+//   (7,2): 7<=2=false → ec=1 → fst=2 ✓
+
+// This works! cc=0, tc=0, ec=1.
+
+// ============================================================================
+// Z3 QUERY: Encode as arithmetic constraints
+// ============================================================================
+
+// Let's encode it using indicator variables
+
+// For test (a=3, b=5), expected output (3, 5)
+// For test (a=7, b=2), expected output (2, 7)
+
+// cond(cc, a, b) = (cc=0 ∧ a<=b) ∨ (cc=1 ∧ a<b) ∨ (cc=2 ∧ a>=b) ∨ (cc=3 ∧ a>b)
+// fst(tc, ec, a, b, cond) = if cond then (if tc=0 then a else b) else (if ec=0 then a else b)
+
+// Let c35 = cond(cc, 3, 5)  (boolean)
+// Let c72 = cond(cc, 7, 2)  (boolean)
+
+// Constraints:
+//   (c35 → tc=0) ∧ (¬c35 → ec=0)   -- for (3,5) to produce fst=3
+//   (c72 → tc=1) ∧ (¬c72 → ec=1)   -- for (7,2) to produce fst=2
+
+// From first: if c35 then tc=0
+// From second: if c72 then tc=1
+// So we need: ¬(c35 ∧ c72)  -- can't have both conditions true with conflicting tc
+
+// With cc=0: c35 = (3<=5) = true, c72 = (7<=2) = false
+// So tc=0 (from c35), ec=1 (from ¬c72)
+// Check: ¬c35 → ec=0? ¬true = false, so vacuously true.
+//        ¬c72 → ec=1? true → ec=1, need ec=1 ✓
+
+// This is consistent! cc=0, tc=0, ec=1 is the solution.
+

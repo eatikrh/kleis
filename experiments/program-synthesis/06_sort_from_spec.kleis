@@ -1,0 +1,178 @@
+// ============================================================================
+// PROGRAM SYNTHESIS: Sorting from Formal Specification
+// ============================================================================
+//
+// Goal: Define what "sorting" MEANS, then have Z3 synthesize a program.
+//
+// NOT: Write an algorithm and run it
+// BUT: Specify the requirement, let Z3 find the algorithm
+//
+// ============================================================================
+
+// ============================================================================
+// PART 1: Formal Specification of Sorting (for 3 elements)
+// ============================================================================
+
+// For tractability, we work with fixed-size lists (3 elements).
+// The concepts generalize, but Z3 handles bounded problems better.
+
+// A "list of 3" is just a tuple (a, b, c)
+// The output (x, y, z) must satisfy:
+//   1. SORTED: x <= y <= z
+//   2. PERMUTATION: {x, y, z} = {a, b, c} (same multiset)
+
+// Sorted predicate
+define is_sorted_3(x: ℤ, y: ℤ, z: ℤ) : Bool =
+    x <= y ∧ y <= z
+
+// Permutation predicate: output is a rearrangement of input
+// For 3 elements, this means: for each value v, count(v, output) = count(v, input)
+// Simplified: the multisets are equal
+
+// Count occurrences of v in (a, b, c)
+define count_3(v: ℤ, a: ℤ, b: ℤ, c: ℤ) : ℤ =
+    (if v = a then 1 else 0) + (if v = b then 1 else 0) + (if v = c then 1 else 0)
+
+// Permutation: same counts for all elements
+define is_perm_3(x: ℤ, y: ℤ, z: ℤ, a: ℤ, b: ℤ, c: ℤ) : Bool =
+    count_3(x, x, y, z) = count_3(x, a, b, c) ∧
+    count_3(y, x, y, z) = count_3(y, a, b, c) ∧
+    count_3(z, x, y, z) = count_3(z, a, b, c) ∧
+    count_3(a, x, y, z) = count_3(a, a, b, c) ∧
+    count_3(b, x, y, z) = count_3(b, a, b, c) ∧
+    count_3(c, x, y, z) = count_3(c, a, b, c)
+
+// THE SPECIFICATION: what it means to sort (a, b, c) into (x, y, z)
+define is_sort_3(x: ℤ, y: ℤ, z: ℤ, a: ℤ, b: ℤ, c: ℤ) : Bool =
+    is_sorted_3(x, y, z) ∧ is_perm_3(x, y, z, a, b, c)
+
+// ============================================================================
+// PART 2: Program Space (Grammar) 
+// ============================================================================
+
+// A sorting program for 3 elements can be represented as:
+// - For each output position, which input element to select based on comparisons
+//
+// We use a "sorting network" representation:
+// - Each output is a function of comparisons between inputs
+//
+// For 3 elements, the minimum element is:
+//   min3(a,b,c) = min(a, min(b,c)) = (a if a<=b∧a<=c) else (b if b<=c) else c
+//
+// We'll synthesize the LOGIC for selecting elements.
+
+// A program is: for each output position, a selection rule
+// Selection rule = which input to pick based on comparison results
+
+// The comparison results we can use:
+//   cmp_ab = (a <= b), cmp_ac = (a <= c), cmp_bc = (b <= c)
+//
+// For each output, we choose from {a, b, c} based on these booleans
+
+// Encode selection as a lookup table (truth table)
+// For 3 boolean inputs (cmp_ab, cmp_ac, cmp_bc), there are 8 cases
+// For each case, output is 0=a, 1=b, 2=c
+
+// A program is 3 lookup tables (one per output position)
+// Each lookup table has 8 entries (one per comparison combination)
+
+// Evaluate a lookup table: given 8 entries and 3 comparison results, return selection
+define lookup8(e0: ℤ, e1: ℤ, e2: ℤ, e3: ℤ, e4: ℤ, e5: ℤ, e6: ℤ, e7: ℤ,
+               c_ab: Bool, c_ac: Bool, c_bc: Bool) : ℤ =
+    let idx = (if c_ab then 4 else 0) + (if c_ac then 2 else 0) + (if c_bc then 1 else 0) in
+    if idx = 0 then e0 else if idx = 1 then e1 else if idx = 2 then e2 else if idx = 3 then e3
+    else if idx = 4 then e4 else if idx = 5 then e5 else if idx = 6 then e6 else e7
+
+// Get input value by selection
+define select(sel: ℤ, a: ℤ, b: ℤ, c: ℤ) : ℤ =
+    if sel = 0 then a else if sel = 1 then b else c
+
+// A complete sorting program: 3 lookup tables × 8 entries = 24 parameters
+// But that's too many. Let's constrain: each entry is 0, 1, or 2
+
+// Program evaluation:
+define eval_sort_prog(
+    // First output lookup table
+    p0_0: ℤ, p0_1: ℤ, p0_2: ℤ, p0_3: ℤ, p0_4: ℤ, p0_5: ℤ, p0_6: ℤ, p0_7: ℤ,
+    // Second output lookup table  
+    p1_0: ℤ, p1_1: ℤ, p1_2: ℤ, p1_3: ℤ, p1_4: ℤ, p1_5: ℤ, p1_6: ℤ, p1_7: ℤ,
+    // Third output lookup table
+    p2_0: ℤ, p2_1: ℤ, p2_2: ℤ, p2_3: ℤ, p2_4: ℤ, p2_5: ℤ, p2_6: ℤ, p2_7: ℤ,
+    // Inputs
+    a: ℤ, b: ℤ, c: ℤ,
+    // Which output position (0, 1, or 2)
+    pos: ℤ
+) : ℤ =
+    let c_ab = a <= b in
+    let c_ac = a <= c in
+    let c_bc = b <= c in
+    if pos = 0 then select(lookup8(p0_0, p0_1, p0_2, p0_3, p0_4, p0_5, p0_6, p0_7, c_ab, c_ac, c_bc), a, b, c)
+    else if pos = 1 then select(lookup8(p1_0, p1_1, p1_2, p1_3, p1_4, p1_5, p1_6, p1_7, c_ab, c_ac, c_bc), a, b, c)
+    else select(lookup8(p2_0, p2_1, p2_2, p2_3, p2_4, p2_5, p2_6, p2_7, c_ab, c_ac, c_bc), a, b, c)
+
+// ============================================================================
+// PART 3: Synthesis Query
+// ============================================================================
+
+// Find program parameters such that FOR ALL inputs, the output is sorted and is a permutation
+//
+// :sat ∃(p0_0 ... p2_7 : ℤ).
+//     // All parameters in range [0,2]
+//     p0_0 >= 0 ∧ p0_0 <= 2 ∧ ... ∧
+//     // For all inputs, output satisfies spec
+//     ∀(a b c : ℤ).
+//         let x = eval_sort_prog(..., a, b, c, 0) in
+//         let y = eval_sort_prog(..., a, b, c, 1) in
+//         let z = eval_sort_prog(..., a, b, c, 2) in
+//         is_sort_3(x, y, z, a, b, c)
+//
+// This is hard for Z3 because of the universal quantifier.
+// Let's try with specific test cases first, then verify universally.
+
+// ============================================================================
+// PART 4: Simpler Approach - Direct min/mid/max synthesis
+// ============================================================================
+
+// For 3 elements, sorting is just: (min, mid, max)
+// Let's synthesize the selection logic for each.
+
+// The output at position 0 should be min(a,b,c)
+// The output at position 2 should be max(a,b,c)
+// The output at position 1 should be the middle
+
+// We encode: given comparisons (a<=b, a<=c, b<=c), which input to select?
+
+// For minimum: select a if a<=b ∧ a<=c, select b if b<=a ∧ b<=c, else c
+// This is a truth table over (a<=b, a<=c, b<=c)
+
+// Truth table for min (what we want to find):
+//   (a<=b, a<=c, b<=c) → selection
+//   (F, F, F) → ? (a>b, a>c, b>c means c<b<a, so min=c=2)
+//   (F, F, T) → ? (a>b, a>c, b<=c means b<a and c<a, need b vs c: b<=c so min=b=1)
+//   (F, T, F) → ? (a>b, a<=c, b>c means b>c and a>b, so c<b<a?? wait a<=c: c<a≤c contradiction? or a=c)
+//   etc.
+
+// Let Z3 figure it out!
+
+// Simpler: one lookup table per output
+define eval_simple(t0: ℤ, t1: ℤ, t2: ℤ, t3: ℤ, t4: ℤ, t5: ℤ, t6: ℤ, t7: ℤ,
+                   a: ℤ, b: ℤ, c: ℤ) : ℤ =
+    let c_ab = a <= b in
+    let c_ac = a <= c in  
+    let c_bc = b <= c in
+    select(lookup8(t0, t1, t2, t3, t4, t5, t6, t7, c_ab, c_ac, c_bc), a, b, c)
+
+// SYNTHESIS: Find 3 truth tables (24 values) such that output is always sorted permutation
+// But let's do it incrementally: find table for min, then for mid, then for max
+
+// Query for finding the "minimum" selector:
+// :sat ∃(t0 t1 t2 t3 t4 t5 t6 t7 : ℤ).
+//     t0 >= 0 ∧ t0 <= 2 ∧ t1 >= 0 ∧ t1 <= 2 ∧ ... ∧
+//     // For several test inputs, output is minimum
+//     eval_simple(t0..t7, 1, 2, 3) = 1 ∧  // min(1,2,3) = 1
+//     eval_simple(t0..t7, 3, 1, 2) = 1 ∧  // min(3,1,2) = 1
+//     eval_simple(t0..t7, 2, 3, 1) = 1 ∧  // min(2,3,1) = 1
+//     eval_simple(t0..t7, 3, 2, 1) = 1 ∧  // min(3,2,1) = 1
+//     eval_simple(t0..t7, 1, 1, 2) = 1 ∧  // min(1,1,2) = 1
+//     eval_simple(t0..t7, 5, 5, 5) = 5    // min(5,5,5) = 5
+

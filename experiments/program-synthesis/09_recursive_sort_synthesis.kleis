@@ -1,0 +1,139 @@
+// ============================================================================
+// RECURSIVE SORTING SYNTHESIS FROM SPECIFICATION
+// ============================================================================
+//
+// Key Insight: The specification CONSTRAINS the search space.
+//
+// Spec: ∀(xs : List(ℤ)). is_sorted(sort(xs)) ∧ is_permutation(sort(xs), xs)
+//
+// This tells us:
+//   - sort operates on recursive data (List)
+//   - sort must return a list (same type)
+//   - sort must preserve elements (permutation)
+//   - sort must establish order (sorted)
+//
+// Therefore sort MUST be recursive:
+//   - Base case: sort([]) = []  (only permutation of [] is [])
+//   - Recursive case: sort(x:xs) = INSERT x INTO (sort xs)
+//
+// The synthesis problem reduces to: find INSERT.
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ============================================================================
+// SPECIFICATION (defines correctness)
+// ============================================================================
+
+define is_sorted(xs: List(ℤ)) : Bool =
+    match xs {
+        Nil => true
+      | Cons(x, Nil) => true  
+      | Cons(x, Cons(y, rest)) => and(le(x, y), is_sorted(Cons(y, rest)))
+    }
+
+define count(v: ℤ, xs: List(ℤ)) : ℤ =
+    match xs {
+        Nil => 0
+      | Cons(x, rest) => plus(if eq(x, v) then 1 else 0, count(v, rest))
+    }
+
+// Permutation check (simplified: same counts for elements that appear)
+define is_perm(xs: List(ℤ), ys: List(ℤ)) : Bool =
+    and(eq(length(xs), length(ys)), all_counts_match(xs, ys, xs))
+
+define length(xs: List(ℤ)) : ℤ =
+    match xs { Nil => 0 | Cons(_, t) => plus(1, length(t)) }
+
+define all_counts_match(xs: List(ℤ), ys: List(ℤ), check: List(ℤ)) : Bool =
+    match check {
+        Nil => true
+      | Cons(v, rest) => and(eq(count(v, xs), count(v, ys)), all_counts_match(xs, ys, rest))
+    }
+
+// ============================================================================
+// PROGRAM STRUCTURE (derived from spec)
+// ============================================================================
+
+// The spec tells us sort has this structure:
+//   sort([]) = []
+//   sort(x:xs) = insert(x, sort(xs))
+//
+// We need to find: insert(x, sorted_list) that maintains sortedness
+
+// Insert structure (also recursive over lists):
+//   insert(x, []) = [x]
+//   insert(x, y:ys) = if CONDITION then THEN_BRANCH else ELSE_BRANCH
+//
+// What we need to synthesize:
+//   - CONDITION: a comparison between x and y
+//   - THEN_BRANCH: either [x, y, ...ys] or insert recursively
+//   - ELSE_BRANCH: either [x, y, ...ys] or insert recursively
+
+// ============================================================================
+// SYNTHESIS: Find the insert function
+// ============================================================================
+
+// The choices for insert(x, y:ys):
+//
+// CONDITION options:
+//   0: x <= y
+//   1: x < y
+//   2: x >= y
+//   3: x > y
+//
+// THEN_BRANCH options:
+//   0: cons(x, cons(y, ys))     -- put x first
+//   1: cons(y, insert(x, ys))   -- recurse
+//
+// ELSE_BRANCH options:
+//   0: cons(x, cons(y, ys))     -- put x first
+//   1: cons(y, insert(x, ys))   -- recurse
+
+// Parameterized insert:
+define insert_param(cond_choice: ℤ, then_choice: ℤ, else_choice: ℤ,
+                    x: ℤ, ys: List(ℤ)) : List(ℤ) =
+    match ys {
+        Nil => Cons(x, Nil)
+      | Cons(y, rest) =>
+            let cond = eval_cond(cond_choice, x, y) in
+            if cond 
+            then eval_branch(then_choice, x, y, rest, cond_choice, then_choice, else_choice)
+            else eval_branch(else_choice, x, y, rest, cond_choice, then_choice, else_choice)
+    }
+
+define eval_cond(choice: ℤ, x: ℤ, y: ℤ) : Bool =
+    if eq(choice, 0) then le(x, y)
+    else if eq(choice, 1) then lt(x, y)
+    else if eq(choice, 2) then ge(x, y)
+    else gt(x, y)
+
+define eval_branch(choice: ℤ, x: ℤ, y: ℤ, rest: List(ℤ),
+                   cc: ℤ, tc: ℤ, ec: ℤ) : List(ℤ) =
+    if eq(choice, 0) then Cons(x, Cons(y, rest))
+    else Cons(y, insert_param(cc, tc, ec, x, rest))
+
+// Parameterized sort using parameterized insert:
+define sort_param(cc: ℤ, tc: ℤ, ec: ℤ, xs: List(ℤ)) : List(ℤ) =
+    match xs {
+        Nil => Nil
+      | Cons(x, rest) => insert_param(cc, tc, ec, x, sort_param(cc, tc, ec, rest))
+    }
+
+// ============================================================================
+// SYNTHESIS QUERY
+// ============================================================================
+
+// Find (cc, tc, ec) such that sort_param produces correct output:
+//
+// :eval sort_param(0, 0, 1, Cons(3, Cons(1, Cons(2, Nil))))
+// Should produce: Cons(1, Cons(2, Cons(3, Nil)))
+//
+// If we find parameters that work on multiple test cases,
+// we have synthesized the insert algorithm!
+
+// Expected answer: cc=0 (x <= y), tc=0 (cons x first), ec=1 (recurse)
+// This gives: insert(x, y:ys) = if x <= y then x:y:ys else y:insert(x,ys)
+// Which is exactly insertion sort!
+

@@ -1,0 +1,136 @@
+// ============================================================================
+// PURE PROGRAM SYNTHESIS: LISP Sorting from Formal Specification
+// ============================================================================
+//
+// The Problem:
+//   GIVEN:  Formal specification of "sorting" 
+//   FIND:   A LISP program P that satisfies the specification
+//
+// The Formulation:
+//   ∃(P : SExpr). ∀(input : List(ℤ)). 
+//       let output = eval(P, input) in
+//       is_sorted(output) ∧ is_permutation(output, input)
+//
+// Components:
+//   1. LISP Grammar   - defines valid programs (SExpr)
+//   2. LISP Semantics - what eval(P, input) produces
+//   3. Sorting Spec   - what is_sorted and is_permutation mean
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ============================================================================
+// COMPONENT 1: LISP Grammar (what programs look like)
+// ============================================================================
+
+// A LISP program is an S-expression
+data SExpr =
+    SAtom(value: String)
+  | SList(elements: List(SExpr))
+
+// This defines ALL valid LISP programs.
+// Any program we synthesize must be a valid SExpr.
+
+// ============================================================================
+// COMPONENT 2: Sorting Specification (what we require)
+// ============================================================================
+
+// Output must be sorted: every element <= next
+define is_sorted(xs: List(ℤ)) : Bool =
+    match xs {
+        Nil => true
+      | Cons(x, Nil) => true  
+      | Cons(x, Cons(y, rest)) => x <= y ∧ is_sorted(Cons(y, rest))
+    }
+
+// Output must be permutation of input: same elements, same counts
+define count(v: ℤ, xs: List(ℤ)) : ℤ =
+    match xs {
+        Nil => 0
+      | Cons(x, rest) => (if x = v then 1 else 0) + count(v, rest)
+    }
+
+define is_permutation(xs: List(ℤ), ys: List(ℤ)) : Bool =
+    same_length(xs, ys) ∧ same_counts_for_all(xs, ys, xs)
+
+define same_length(xs: List(ℤ), ys: List(ℤ)) : Bool =
+    match xs {
+        Nil => match ys { Nil => true | Cons(_, _) => false }
+      | Cons(_, xs_rest) => match ys { Nil => false | Cons(_, ys_rest) => same_length(xs_rest, ys_rest) }
+    }
+
+define same_counts_for_all(xs: List(ℤ), ys: List(ℤ), elements: List(ℤ)) : Bool =
+    match elements {
+        Nil => true
+      | Cons(v, rest) => count(v, xs) = count(v, ys) ∧ same_counts_for_all(xs, ys, rest)
+    }
+
+// THE SPECIFICATION: what a correct sorting function must satisfy
+define satisfies_sort_spec(output: List(ℤ), input: List(ℤ)) : Bool =
+    is_sorted(output) ∧ is_permutation(output, input)
+
+// ============================================================================
+// COMPONENT 3: LISP Semantics (what programs do)
+// ============================================================================
+
+// The eval function maps (program, input) → output
+// This is defined in lisp_parser.kleis
+// For synthesis, we need Z3 to reason about this relation.
+
+// ============================================================================
+// THE SYNTHESIS QUERY
+// ============================================================================
+
+// Find a LISP program P (an SExpr) such that:
+//
+// For test input [3, 1, 2]:
+//   eval(P, [3,1,2]) = some output where
+//   is_sorted(output) ∧ is_permutation(output, [3,1,2])
+//
+// For test input [5, 1]:
+//   eval(P, [5,1]) = some output where
+//   is_sorted(output) ∧ is_permutation(output, [5,1])
+//
+// etc.
+
+// The challenge: encoding eval so Z3 can search over P.
+//
+// Approach: 
+// - Bound the program size (max AST depth)
+// - Encode program as integer choices (like we did for sort3)
+// - Define eval axiomatically for bounded programs
+
+// ============================================================================
+// BOUNDED PROGRAM ENCODING
+// ============================================================================
+
+// A program of depth 1 is just an atom or a list of atoms
+// A program of depth 2 has one level of nesting
+// etc.
+
+// For synthesis, we bound the search:
+// - Max depth D
+// - Max list length L at each node
+
+// This gives a finite (but large) search space.
+
+// Example: depth 2, length 3
+// A program could be:
+//   SAtom("x")
+//   SList([SAtom("+"), SAtom("1"), SAtom("2")])
+//   SList([SAtom("if"), SAtom("cond"), SAtom("then"), SAtom("else")])
+//   etc.
+
+// The program is encoded as choices at each AST position.
+
+// ============================================================================
+// NEXT STEP: Connect to LISP evaluator and run synthesis
+// ============================================================================
+
+// To complete this, we need:
+// 1. Load lisp_parser.kleis for eval_lisp
+// 2. Encode bounded program space
+// 3. For each test case, assert eval(P, input) satisfies spec
+// 4. Ask Z3 to find P
+

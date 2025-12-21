@@ -1,0 +1,93 @@
+// ============================================================================
+// BOUNDED SYNTHESIS: Unroll recursion for Z3
+// ============================================================================
+//
+// Key insight: For lists of bounded size, recursion becomes finite conditionals.
+// We can encode the ENTIRE program behavior as Z3 constraints.
+//
+// ============================================================================
+
+// The program we're synthesizing has 3 parameters:
+//   cc: comparison choice (0=le, 1=lt, 2=ge, 3=gt)
+//   tc: then-branch choice (0=cons_first, 1=recurse)
+//   ec: else-branch choice (0=cons_first, 1=recurse)
+
+// For a 2-element list [a, b], the synthesized program does:
+//   sort([a,b]) = insert(a, sort([b])) = insert(a, [b])
+//   insert(a, [b]) = if COND(a,b) then THEN([a,b]) else ELSE(a, [b])
+//
+// With tc/ec choices, this expands to a finite formula.
+
+// ============================================================================
+// Unrolled insert for 1-element list
+// ============================================================================
+
+// insert(x, [y]) with parameters (cc, tc, ec):
+//   if eval_cond(cc, x, y) then eval_then(tc, x, y) else eval_else(ec, x, y)
+
+// eval_cond(cc, x, y): 0=le, 1=lt, 2=ge, 3=gt
+// eval_then(tc, x, y, []): 0=[x,y], 1=[y,x] (recurse into empty = just [x])
+// eval_else(ec, x, y, []): 0=[x,y], 1=[y,x]
+
+// For insert into [y], recursing means insert(x, []) = [x]
+// So: tc=1 means [y, insert(x, [])] = [y, x]
+//     tc=0 means [x, y]
+
+// Define the result of insert(x, [y]) as function of parameters:
+define insert1_fst(cc: ℤ, tc: ℤ, ec: ℤ, x: ℤ, y: ℤ) : ℤ =
+    if eval_cc(cc, x, y) 
+    then (if eq(tc, 0) then x else y)
+    else (if eq(ec, 0) then x else y)
+
+define insert1_snd(cc: ℤ, tc: ℤ, ec: ℤ, x: ℤ, y: ℤ) : ℤ =
+    if eval_cc(cc, x, y) 
+    then (if eq(tc, 0) then y else x)
+    else (if eq(ec, 0) then y else x)
+
+define eval_cc(cc: ℤ, x: ℤ, y: ℤ) : Bool =
+    if eq(cc, 0) then le(x, y)
+    else if eq(cc, 1) then lt(x, y)
+    else if eq(cc, 2) then ge(x, y)
+    else gt(x, y)
+
+// ============================================================================
+// Unrolled sort for 2-element list
+// ============================================================================
+
+// sort([a, b]) = insert(a, sort([b])) = insert(a, [b])
+// Result: [insert1_fst(cc,tc,ec,a,b), insert1_snd(cc,tc,ec,a,b)]
+
+define sort2_fst(cc: ℤ, tc: ℤ, ec: ℤ, a: ℤ, b: ℤ) : ℤ =
+    insert1_fst(cc, tc, ec, a, b)
+
+define sort2_snd(cc: ℤ, tc: ℤ, ec: ℤ, a: ℤ, b: ℤ) : ℤ =
+    insert1_snd(cc, tc, ec, a, b)
+
+// ============================================================================
+// Specification
+// ============================================================================
+
+// For [a, b], sorted output [x, y] must satisfy:
+//   x <= y  (sorted)
+//   {x, y} = {a, b}  (permutation)
+
+define spec2(cc: ℤ, tc: ℤ, ec: ℤ, a: ℤ, b: ℤ) : Bool =
+    let x = sort2_fst(cc, tc, ec, a, b) in
+    let y = sort2_snd(cc, tc, ec, a, b) in
+    and(le(x, y), is_perm2(x, y, a, b))
+
+define is_perm2(x: ℤ, y: ℤ, a: ℤ, b: ℤ) : Bool =
+    or(and(eq(x, a), eq(y, b)), and(eq(x, b), eq(y, a)))
+
+// ============================================================================
+// SYNTHESIS QUERY (this should work with Z3!)
+// ============================================================================
+
+// Find cc, tc, ec such that spec holds for multiple test inputs:
+//
+// :sat ∃(cc tc ec : ℤ). 
+//     cc >= 0 ∧ cc <= 3 ∧ tc >= 0 ∧ tc <= 1 ∧ ec >= 0 ∧ ec <= 1 ∧
+//     spec2(cc, tc, ec, 3, 5) ∧ 
+//     spec2(cc, tc, ec, 7, 2) ∧
+//     spec2(cc, tc, ec, 4, 4)
+
