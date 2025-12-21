@@ -59,11 +59,10 @@ fn main() -> RlResult<()> {
     let mut registry = StructureRegistry::new();
 
     // Persistent TypeChecker for :type command (knows about loaded data types)
-    let mut type_checker = kleis::type_checker::TypeChecker::with_stdlib()
-        .unwrap_or_else(|e| {
-            eprintln!("⚠️  TypeChecker init failed: {}", e);
-            kleis::type_checker::TypeChecker::new()
-        });
+    let mut type_checker = kleis::type_checker::TypeChecker::with_stdlib().unwrap_or_else(|e| {
+        eprintln!("⚠️  TypeChecker init failed: {}", e);
+        kleis::type_checker::TypeChecker::new()
+    });
 
     let mut multiline_buffer = String::new();
     // Two separate modes: block mode (:{ ... :}) vs line continuation (\)
@@ -193,7 +192,14 @@ fn process_input(
     type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     if input.starts_with(':') {
-        handle_command(input, evaluator, ctx, imported_paths, registry, type_checker);
+        handle_command(
+            input,
+            evaluator,
+            ctx,
+            imported_paths,
+            registry,
+            type_checker,
+        );
     } else {
         eval_expression(input, evaluator, ctx, registry);
     }
