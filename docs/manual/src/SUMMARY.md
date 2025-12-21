@@ -39,4 +39,5 @@
 - [Grammar Reference](./appendix/grammar.md)
 - [Operators](./appendix/operators.md)
 - [Standard Library](./appendix/stdlib.md)
+- [LISP Interpreter](./appendix/lisp-interpreter.md)
 

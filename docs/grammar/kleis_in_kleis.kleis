@@ -614,6 +614,11 @@ structure ErrorTheorems {
 //
 // ============================================================================
 
+data Program =
+    Source(code: String)                          // The source code as a string
+  | AST(declarations
+
+
 // THE FIBONACCI EXAMPLE - The Core Insight
 // =========================================
 //

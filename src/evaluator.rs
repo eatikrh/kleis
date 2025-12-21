@@ -63,6 +63,10 @@ pub struct Evaluator {
     /// These are values that should be recognized as constants, not variables
     adt_constructors: std::collections::HashSet<String>,
 
+    /// All ADT constructor names (including those with fields like Some, Cons, Atom)
+    /// Used by eval_concrete to recognize constructor calls as values
+    all_constructors: std::collections::HashSet<String>,
+
     /// Loaded data type definitions (for export)
     data_types: Vec<crate::kleis_ast::DataDef>,
 
@@ -78,6 +82,7 @@ impl Evaluator {
             bindings: HashMap::new(),
             matcher: PatternMatcher,
             adt_constructors: std::collections::HashSet::new(),
+            all_constructors: std::collections::HashSet::new(),
             data_types: Vec::new(),
             structures: Vec::new(),
         }
@@ -107,6 +112,9 @@ impl Evaluator {
             self.data_types.push(data_type.clone());
 
             for variant in &data_type.variants {
+                // Track ALL constructors for eval_concrete
+                self.all_constructors.insert(variant.name.clone());
+
                 // Nullary constructors (no fields) are values/constants
                 if variant.fields.is_empty() {
                     self.adt_constructors.insert(variant.name.clone());
@@ -1189,6 +1197,620 @@ impl Evaluator {
             _ => expr.clone(),
         }
     }
+
+    // =========================================================================
+    // Concrete Evaluation (for :eval command)
+    // =========================================================================
+
+    /// Evaluate an expression to a concrete value
+    ///
+    /// Unlike `eval` which is symbolic, this actually computes:
+    /// - Arithmetic: 2 + 3 → 5
+    /// - String operations: concat("a", "b") → "ab"
+    /// - Conditionals: if true then x else y → x
+    /// - Recursion: fib(5) → 5
+    pub fn eval_concrete(&self, expr: &Expression) -> Result<Expression, String> {
+        match expr {
+            // Constants and strings are already values
+            Expression::Const(s) => Ok(Expression::Const(s.clone())),
+            Expression::String(s) => Ok(Expression::String(s.clone())),
+
+            // Variables: check if they're defined functions (constants)
+            Expression::Object(name) => {
+                if let Some(closure) = self.functions.get(name) {
+                    if closure.params.is_empty() {
+                        // It's a constant (define pi = 3.14)
+                        self.eval_concrete(&closure.body)
+                    } else {
+                        // It's a function, return as-is
+                        Ok(expr.clone())
+                    }
+                } else if self.adt_constructors.contains(name) {
+                    // It's a nullary constructor (True, False, None, etc.)
+                    Ok(expr.clone())
+                } else {
+                    // Unbound variable
+                    Ok(expr.clone())
+                }
+            }
+
+            // Operations: evaluate args then apply built-in or user-defined function
+            Expression::Operation { name, args } => {
+                // First, evaluate all arguments
+                // First, evaluate all arguments
+                let eval_args: Result<Vec<_>, _> =
+                    args.iter().map(|a| self.eval_concrete(a)).collect();
+                let eval_args = eval_args?;
+
+                // Check if this is a data constructor (e.g., Atom, List, Cons, Some)
+                // Constructors are values - return them with evaluated args
+                if self.all_constructors.contains(name) || self.is_constructor_name(name) {
+                    return Ok(Expression::Operation {
+                        name: name.clone(),
+                        args: eval_args,
+                    });
+                }
+
+                // Try built-in operations first
+                if let Some(result) = self.apply_builtin(name, &eval_args)? {
+                    return Ok(result);
+                }
+
+                // Try user-defined functions
+                if self.functions.contains_key(name) {
+                    let applied = self.apply_function(name, eval_args)?;
+                    return self.eval_concrete(&applied);
+                }
+
+                // Unknown operation - return as-is with evaluated args
+                Ok(Expression::Operation {
+                    name: name.clone(),
+                    args: eval_args,
+                })
+            }
+
+            // Conditionals: evaluate condition and branch
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let eval_cond = self.eval_concrete(condition)?;
+                match &eval_cond {
+                    Expression::Object(s) if s == "true" || s == "True" => {
+                        self.eval_concrete(then_branch)
+                    }
+                    Expression::Object(s) if s == "false" || s == "False" => {
+                        self.eval_concrete(else_branch)
+                    }
+                    Expression::Const(s) if s == "true" || s == "True" => {
+                        self.eval_concrete(then_branch)
+                    }
+                    Expression::Const(s) if s == "false" || s == "False" => {
+                        self.eval_concrete(else_branch)
+                    }
+                    _ => {
+                        // Condition didn't evaluate to a boolean - return symbolic
+                        Ok(Expression::Conditional {
+                            condition: Box::new(eval_cond),
+                            then_branch: Box::new(self.eval_concrete(then_branch)?),
+                            else_branch: Box::new(self.eval_concrete(else_branch)?),
+                        })
+                    }
+                }
+            }
+
+            // Let bindings: evaluate value, bind, evaluate body
+            Expression::Let {
+                pattern,
+                value,
+                body,
+                ..
+            } => {
+                let eval_value = self.eval_concrete(value)?;
+                let mut subst = HashMap::new();
+                self.match_pattern_to_bindings(pattern, &eval_value, &mut subst)?;
+                let substituted_body = self.substitute(body, &subst);
+                self.eval_concrete(&substituted_body)
+            }
+
+            // Match expressions
+            Expression::Match { scrutinee, cases } => {
+                let eval_scrutinee = self.eval_concrete(scrutinee)?;
+                let result = self.matcher.eval_match(&eval_scrutinee, cases)?;
+                self.eval_concrete(&result)
+            }
+
+            // Lambda - return as value
+            Expression::Lambda { .. } => Ok(expr.clone()),
+
+            // Lists - evaluate elements
+            Expression::List(elements) => {
+                let eval_elements: Result<Vec<_>, _> =
+                    elements.iter().map(|e| self.eval_concrete(e)).collect();
+                Ok(Expression::List(eval_elements?))
+            }
+
+            // Ascription - evaluate inner, discard type
+            Expression::Ascription { expr: inner, .. } => self.eval_concrete(inner),
+
+            // Quantifiers - not for concrete evaluation
+            Expression::Quantifier { .. } => Ok(expr.clone()),
+
+            // Placeholder - return as-is
+            Expression::Placeholder { .. } => Ok(expr.clone()),
+        }
+    }
+
+    /// Apply a built-in operation
+    ///
+    /// Returns Some(result) if the operation is built-in and all args are concrete,
+    /// None if it should be handled by user-defined functions.
+    fn apply_builtin(&self, name: &str, args: &[Expression]) -> Result<Option<Expression>, String> {
+        match name {
+            // === Arithmetic ===
+            "plus" | "+" => self.builtin_arithmetic(args, |a, b| a + b),
+            "minus" | "-" => self.builtin_arithmetic(args, |a, b| a - b),
+            "times" | "*" | "mul" => self.builtin_arithmetic(args, |a, b| a * b),
+            "divide" | "/" | "div" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(a), Some(b)) = (self.as_number(&args[0]), self.as_number(&args[1])) {
+                    if b == 0.0 {
+                        return Err("Division by zero".to_string());
+                    }
+                    Ok(Some(Expression::Const(format!("{}", a / b))))
+                } else {
+                    Ok(None)
+                }
+            }
+            "mod" | "%" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(a), Some(b)) = (self.as_integer(&args[0]), self.as_integer(&args[1])) {
+                    if b == 0 {
+                        return Err("Modulo by zero".to_string());
+                    }
+                    Ok(Some(Expression::Const(format!("{}", a % b))))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // === Comparison ===
+            "eq" | "=" | "==" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let result = self.values_equal(&args[0], &args[1]);
+                Ok(Some(Expression::Object(
+                    if result { "true" } else { "false" }.to_string(),
+                )))
+            }
+            "neq" | "!=" | "≠" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let result = !self.values_equal(&args[0], &args[1]);
+                Ok(Some(Expression::Object(
+                    if result { "true" } else { "false" }.to_string(),
+                )))
+            }
+            "lt" | "<" => self.builtin_comparison(args, |a, b| a < b),
+            "le" | "<=" | "≤" => self.builtin_comparison(args, |a, b| a <= b),
+            "gt" | ">" => self.builtin_comparison(args, |a, b| a > b),
+            "ge" | ">=" | "≥" => self.builtin_comparison(args, |a, b| a >= b),
+
+            // === Boolean ===
+            "and" | "∧" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let a = self.as_bool(&args[0]);
+                let b = self.as_bool(&args[1]);
+                match (a, b) {
+                    (Some(a), Some(b)) => Ok(Some(Expression::Object(
+                        if a && b { "true" } else { "false" }.to_string(),
+                    ))),
+                    _ => Ok(None),
+                }
+            }
+            "or" | "∨" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let a = self.as_bool(&args[0]);
+                let b = self.as_bool(&args[1]);
+                match (a, b) {
+                    (Some(a), Some(b)) => Ok(Some(Expression::Object(
+                        if a || b { "true" } else { "false" }.to_string(),
+                    ))),
+                    _ => Ok(None),
+                }
+            }
+            "not" | "¬" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(a) = self.as_bool(&args[0]) {
+                    Ok(Some(Expression::Object(
+                        if !a { "true" } else { "false" }.to_string(),
+                    )))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // === String operations ===
+            "concat" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(a), Some(b)) = (self.as_string(&args[0]), self.as_string(&args[1])) {
+                    Ok(Some(Expression::String(format!("{}{}", a, b))))
+                } else {
+                    Ok(None)
+                }
+            }
+            "strlen" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    Ok(Some(Expression::Const(format!("{}", s.len()))))
+                } else {
+                    Ok(None)
+                }
+            }
+            "hasPrefix" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(s), Some(prefix)) =
+                    (self.as_string(&args[0]), self.as_string(&args[1]))
+                {
+                    Ok(Some(Expression::Object(
+                        if s.starts_with(&prefix) {
+                            "true"
+                        } else {
+                            "false"
+                        }
+                        .to_string(),
+                    )))
+                } else {
+                    Ok(None)
+                }
+            }
+            "hasSuffix" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(s), Some(suffix)) =
+                    (self.as_string(&args[0]), self.as_string(&args[1]))
+                {
+                    Ok(Some(Expression::Object(
+                        if s.ends_with(&suffix) {
+                            "true"
+                        } else {
+                            "false"
+                        }
+                        .to_string(),
+                    )))
+                } else {
+                    Ok(None)
+                }
+            }
+            "contains" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(s), Some(sub)) = (self.as_string(&args[0]), self.as_string(&args[1])) {
+                    Ok(Some(Expression::Object(
+                        if s.contains(&sub) { "true" } else { "false" }.to_string(),
+                    )))
+                } else {
+                    Ok(None)
+                }
+            }
+            "indexOf" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(s), Some(sub)) = (self.as_string(&args[0]), self.as_string(&args[1])) {
+                    let idx = s.find(&sub).map(|i| i as i64).unwrap_or(-1);
+                    Ok(Some(Expression::Const(format!("{}", idx))))
+                } else {
+                    Ok(None)
+                }
+            }
+            "substr" | "substring" => {
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                if let (Some(s), Some(start), Some(len)) = (
+                    self.as_string(&args[0]),
+                    self.as_integer(&args[1]),
+                    self.as_integer(&args[2]),
+                ) {
+                    let start = start.max(0) as usize;
+                    let len = len.max(0) as usize;
+                    let result: String = s.chars().skip(start).take(len).collect();
+                    Ok(Some(Expression::String(result)))
+                } else {
+                    Ok(None)
+                }
+            }
+            "charAt" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(s), Some(idx)) = (self.as_string(&args[0]), self.as_integer(&args[1]))
+                {
+                    if idx >= 0 && (idx as usize) < s.len() {
+                        let ch = s.chars().nth(idx as usize).unwrap();
+                        Ok(Some(Expression::String(ch.to_string())))
+                    } else {
+                        Ok(Some(Expression::String(String::new())))
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+            "replace" => {
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                if let (Some(s), Some(from), Some(to)) = (
+                    self.as_string(&args[0]),
+                    self.as_string(&args[1]),
+                    self.as_string(&args[2]),
+                ) {
+                    Ok(Some(Expression::String(s.replacen(&from, &to, 1))))
+                } else {
+                    Ok(None)
+                }
+            }
+            "replaceAll" => {
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                if let (Some(s), Some(from), Some(to)) = (
+                    self.as_string(&args[0]),
+                    self.as_string(&args[1]),
+                    self.as_string(&args[2]),
+                ) {
+                    Ok(Some(Expression::String(s.replace(&from, &to))))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // === List operations ===
+            "Cons" | "cons" => {
+                // Cons(head, tail) - construct a list
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                Ok(Some(Expression::Operation {
+                    name: "Cons".to_string(),
+                    args: args.to_vec(),
+                }))
+            }
+            "Nil" | "nil" => {
+                // Nil - empty list
+                Ok(Some(Expression::Object("Nil".to_string())))
+            }
+            "head" | "car" => {
+                // head(Cons(h, t)) → h
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                match &args[0] {
+                    Expression::Operation { name, args: inner }
+                        if name == "Cons" && inner.len() == 2 =>
+                    {
+                        Ok(Some(inner[0].clone()))
+                    }
+                    Expression::List(elements) if !elements.is_empty() => {
+                        Ok(Some(elements[0].clone()))
+                    }
+                    _ => Err("head: expected non-empty list".to_string()),
+                }
+            }
+            "tail" | "cdr" => {
+                // tail(Cons(h, t)) → t
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                match &args[0] {
+                    Expression::Operation { name, args: inner }
+                        if name == "Cons" && inner.len() == 2 =>
+                    {
+                        Ok(Some(inner[1].clone()))
+                    }
+                    Expression::List(elements) if !elements.is_empty() => {
+                        Ok(Some(Expression::List(elements[1..].to_vec())))
+                    }
+                    _ => Err("tail: expected non-empty list".to_string()),
+                }
+            }
+            "null?" | "isEmpty" | "isNil" => {
+                // null?(list) → true if empty
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let is_empty = match &args[0] {
+                    Expression::Object(s) if s == "Nil" => true,
+                    Expression::Operation { name, .. } if name == "Nil" => true,
+                    Expression::List(elements) => elements.is_empty(),
+                    Expression::Operation { name, .. } if name == "Cons" => false,
+                    _ => return Ok(None),
+                };
+                Ok(Some(Expression::Object(
+                    if is_empty { "true" } else { "false" }.to_string(),
+                )))
+            }
+            "length" => {
+                // length(list) → number of elements
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                match &args[0] {
+                    Expression::List(elements) => {
+                        Ok(Some(Expression::Const(format!("{}", elements.len()))))
+                    }
+                    Expression::Object(s) if s == "Nil" => {
+                        Ok(Some(Expression::Const("0".to_string())))
+                    }
+                    Expression::Operation { name, args: inner } if name == "Cons" => {
+                        // Count recursively: 1 + length(tail)
+                        let tail_len = self.apply_builtin("length", &[inner[1].clone()])?;
+                        if let Some(Expression::Const(n)) = tail_len {
+                            let len: i64 = n.parse().unwrap_or(0);
+                            Ok(Some(Expression::Const(format!("{}", len + 1))))
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                    _ => Ok(None),
+                }
+            }
+            "nth" => {
+                // nth(list, index) → element at index
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let idx = self.as_integer(&args[1]);
+                match (&args[0], idx) {
+                    (Expression::List(elements), Some(i))
+                        if i >= 0 && (i as usize) < elements.len() =>
+                    {
+                        Ok(Some(elements[i as usize].clone()))
+                    }
+                    (Expression::Operation { name, args: inner }, Some(0)) if name == "Cons" => {
+                        Ok(Some(inner[0].clone()))
+                    }
+                    (Expression::Operation { name, args: inner }, Some(i))
+                        if name == "Cons" && i > 0 =>
+                    {
+                        self.apply_builtin(
+                            "nth",
+                            &[inner[1].clone(), Expression::Const(format!("{}", i - 1))],
+                        )
+                    }
+                    _ => Ok(None),
+                }
+            }
+
+            // Not a built-in
+            _ => Ok(None),
+        }
+    }
+
+    /// Check if a name looks like a constructor (starts with uppercase)
+    fn is_constructor_name(&self, name: &str) -> bool {
+        name.chars()
+            .next()
+            .map(|c| c.is_uppercase())
+            .unwrap_or(false)
+    }
+
+    // === Helper methods for built-in operations ===
+
+    fn builtin_arithmetic<F>(
+        &self,
+        args: &[Expression],
+        op: F,
+    ) -> Result<Option<Expression>, String>
+    where
+        F: Fn(f64, f64) -> f64,
+    {
+        if args.len() != 2 {
+            return Ok(None);
+        }
+        if let (Some(a), Some(b)) = (self.as_number(&args[0]), self.as_number(&args[1])) {
+            let result = op(a, b);
+            // Format nicely: integers without decimal point
+            if result.fract() == 0.0 && result.abs() < 1e15 {
+                Ok(Some(Expression::Const(format!("{}", result as i64))))
+            } else {
+                Ok(Some(Expression::Const(format!("{}", result))))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn builtin_comparison<F>(
+        &self,
+        args: &[Expression],
+        op: F,
+    ) -> Result<Option<Expression>, String>
+    where
+        F: Fn(f64, f64) -> bool,
+    {
+        if args.len() != 2 {
+            return Ok(None);
+        }
+        if let (Some(a), Some(b)) = (self.as_number(&args[0]), self.as_number(&args[1])) {
+            Ok(Some(Expression::Object(
+                if op(a, b) { "true" } else { "false" }.to_string(),
+            )))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn as_number(&self, expr: &Expression) -> Option<f64> {
+        match expr {
+            Expression::Const(s) => s.parse().ok(),
+            _ => None,
+        }
+    }
+
+    fn as_integer(&self, expr: &Expression) -> Option<i64> {
+        match expr {
+            Expression::Const(s) => s.parse().ok(),
+            _ => None,
+        }
+    }
+
+    fn as_string(&self, expr: &Expression) -> Option<String> {
+        match expr {
+            Expression::String(s) => Some(s.clone()),
+            Expression::Const(s) => Some(s.clone()), // Also accept const as string
+            _ => None,
+        }
+    }
+
+    fn as_bool(&self, expr: &Expression) -> Option<bool> {
+        match expr {
+            Expression::Object(s) => match s.as_str() {
+                "true" | "True" => Some(true),
+                "false" | "False" => Some(false),
+                _ => None,
+            },
+            Expression::Const(s) => match s.as_str() {
+                "true" | "True" => Some(true),
+                "false" | "False" => Some(false),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    fn values_equal(&self, a: &Expression, b: &Expression) -> bool {
+        match (a, b) {
+            (Expression::Const(x), Expression::Const(y)) => x == y,
+            (Expression::String(x), Expression::String(y)) => x == y,
+            (Expression::Object(x), Expression::Object(y)) => x == y,
+            (Expression::Const(x), Expression::String(y)) => x == y,
+            (Expression::String(x), Expression::Const(y)) => x == y,
+            _ => false,
+        }
+    }
 }
 
 impl Default for Evaluator {
@@ -1713,5 +2335,264 @@ mod tests {
         // Should complete within fuel limit
         let result = eval.reduce_with_fuel(&expr, 10);
         assert!(result.is_ok());
+    }
+
+    // =========================================================================
+    // Concrete Evaluation Tests (for :eval command)
+    // =========================================================================
+
+    #[test]
+    fn test_eval_concrete_arithmetic() {
+        let eval = Evaluator::new();
+
+        // 2 + 3 → 5
+        let expr = Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Const("2".to_string()),
+                Expression::Const("3".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "5"));
+
+        // 10 * 5 → 50
+        let expr = Expression::Operation {
+            name: "times".to_string(),
+            args: vec![
+                Expression::Const("10".to_string()),
+                Expression::Const("5".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "50"));
+
+        // 7 - 3 → 4
+        let expr = Expression::Operation {
+            name: "minus".to_string(),
+            args: vec![
+                Expression::Const("7".to_string()),
+                Expression::Const("3".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "4"));
+    }
+
+    #[test]
+    fn test_eval_concrete_string_ops() {
+        let eval = Evaluator::new();
+
+        // concat("hello", " world") → "hello world"
+        let expr = Expression::Operation {
+            name: "concat".to_string(),
+            args: vec![
+                Expression::String("hello".to_string()),
+                Expression::String(" world".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "hello world"));
+
+        // strlen("kleis") → 5
+        let expr = Expression::Operation {
+            name: "strlen".to_string(),
+            args: vec![Expression::String("kleis".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "5"));
+
+        // hasPrefix("(define fib)", "(define") → true
+        let expr = Expression::Operation {
+            name: "hasPrefix".to_string(),
+            args: vec![
+                Expression::String("(define fib)".to_string()),
+                Expression::String("(define".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+
+        // contains("hello world", "wor") → true
+        let expr = Expression::Operation {
+            name: "contains".to_string(),
+            args: vec![
+                Expression::String("hello world".to_string()),
+                Expression::String("wor".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+    }
+
+    #[test]
+    fn test_eval_concrete_comparison() {
+        let eval = Evaluator::new();
+
+        // gt(5, 3) → true
+        let expr = Expression::Operation {
+            name: "gt".to_string(),
+            args: vec![
+                Expression::Const("5".to_string()),
+                Expression::Const("3".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+
+        // lt(2, 10) → true
+        let expr = Expression::Operation {
+            name: "lt".to_string(),
+            args: vec![
+                Expression::Const("2".to_string()),
+                Expression::Const("10".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+
+        // eq(5, 5) → true
+        let expr = Expression::Operation {
+            name: "eq".to_string(),
+            args: vec![
+                Expression::Const("5".to_string()),
+                Expression::Const("5".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+    }
+
+    #[test]
+    fn test_eval_concrete_conditional() {
+        let eval = Evaluator::new();
+
+        // if gt(5, 3) then "yes" else "no" → "yes"
+        let expr = Expression::Conditional {
+            condition: Box::new(Expression::Operation {
+                name: "gt".to_string(),
+                args: vec![
+                    Expression::Const("5".to_string()),
+                    Expression::Const("3".to_string()),
+                ],
+            }),
+            then_branch: Box::new(Expression::String("yes".to_string())),
+            else_branch: Box::new(Expression::String("no".to_string())),
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "yes"));
+
+        // if lt(5, 3) then "yes" else "no" → "no"
+        let expr = Expression::Conditional {
+            condition: Box::new(Expression::Operation {
+                name: "lt".to_string(),
+                args: vec![
+                    Expression::Const("5".to_string()),
+                    Expression::Const("3".to_string()),
+                ],
+            }),
+            then_branch: Box::new(Expression::String("yes".to_string())),
+            else_branch: Box::new(Expression::String("no".to_string())),
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "no"));
+    }
+
+    #[test]
+    fn test_eval_concrete_user_function() {
+        let mut eval = Evaluator::new();
+
+        // define double(x) = x + x
+        let code = "define double(x) = x + x";
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // double(5) → 10
+        let expr = Expression::Operation {
+            name: "double".to_string(),
+            args: vec![Expression::Const("5".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "10"));
+    }
+
+    #[test]
+    fn test_eval_concrete_recursion() {
+        let mut eval = Evaluator::new();
+
+        // define fib(n) = if le(n, 1) then n else fib(n - 1) + fib(n - 2)
+        let code = "define fib(n) = if le(n, 1) then n else fib(n - 1) + fib(n - 2)";
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // fib(0) → 0
+        let expr = Expression::Operation {
+            name: "fib".to_string(),
+            args: vec![Expression::Const("0".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "0"));
+
+        // fib(1) → 1
+        let expr = Expression::Operation {
+            name: "fib".to_string(),
+            args: vec![Expression::Const("1".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "1"));
+
+        // fib(5) → 5
+        let expr = Expression::Operation {
+            name: "fib".to_string(),
+            args: vec![Expression::Const("5".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "5"));
+
+        // fib(10) → 55
+        let expr = Expression::Operation {
+            name: "fib".to_string(),
+            args: vec![Expression::Const("10".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "55"));
+    }
+
+    #[test]
+    fn test_eval_concrete_lisp_parsing() {
+        let mut eval = Evaluator::new();
+
+        // Define LISP parsing helpers
+        let code = r#"
+            define is_list_expr(s) = hasPrefix(s, "(")
+            define strip_parens(s) = substr(s, 1, strlen(s) - 2)
+            define get_op(s) = charAt(strip_parens(s), 0)
+        "#;
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // is_list_expr("(+ 2 3)") → true
+        let expr = Expression::Operation {
+            name: "is_list_expr".to_string(),
+            args: vec![Expression::String("(+ 2 3)".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+
+        // strip_parens("(+ 2 3)") → "+ 2 3"
+        let expr = Expression::Operation {
+            name: "strip_parens".to_string(),
+            args: vec![Expression::String("(+ 2 3)".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "+ 2 3"));
+
+        // get_op("(+ 2 3)") → "+"
+        let expr = Expression::Operation {
+            name: "get_op".to_string(),
+            args: vec![Expression::String("(+ 2 3)".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "+"));
     }
 }
