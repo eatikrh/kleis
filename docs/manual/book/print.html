@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-bb6a65d2.js";
+            window.path_to_searchindex_js = "searchindex-2a352dad.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1ed044a1.js"></script>
@@ -190,7 +190,11 @@
 <li>✅ <strong>Formal verification</strong> — prove properties with Z3 theorem prover</li>
 <li>🏗️ <strong>Extensible structures</strong> — define your own mathematical objects</li>
 <li>🔬 <strong>Scientific computing</strong> — differential geometry, tensor calculus, and more</li>
+<li>🔄 <strong>Turing complete</strong> — a full programming language, not just notation</li>
 </ul>
+<blockquote>
+<p><strong>Computational Universality:</strong> Kleis is Turing complete. This was demonstrated by implementing a complete LISP interpreter in Kleis (see <a href="#appendix-lisp-interpreter-in-kleis">Appendix: LISP Interpreter</a>). The combination of algebraic data types, pattern matching, and recursion enables arbitrary computation.</p>
+</blockquote>
 <h2 id="who-is-this-for"><a class="header" href="#who-is-this-for">Who is This For?</a></h2>
 <p>This guide is for anyone who:</p>
 <ul>
@@ -1681,6 +1685,34 @@ sin(divide(π, 2))
 λ&gt; :type sin
 📐 Type: α0
 </code></pre>
+<h2 id="concrete-evaluation-with-eval"><a class="header" href="#concrete-evaluation-with-eval">Concrete Evaluation with <code>:eval</code></a></h2>
+<p>The <code>:eval</code> command performs <strong>concrete evaluation</strong> — it actually computes results, including recursive functions:</p>
+<pre><code>λ&gt; :load docs/grammar/lisp_parser.kleis
+✅ Loaded: 60 functions
+
+λ&gt; :eval run("(+ 2 3)")
+VNum(5)
+
+λ&gt; :eval run("(letrec ((fact (lambda (n) (if (&lt;= n 1) 1 (* n (fact (- n 1))))))) (fact 5))")
+VNum(120)
+</code></pre>
+<p><strong><code>:eval</code> vs <code>:sat</code> vs <code>:verify</code>:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Execution</th><th>Handles Recursion</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td><code>:eval</code></td><td><strong>Concrete</strong> (Rust)</td><td>✅ Yes</td><td>Compute actual values</td></tr>
+<tr><td><code>:sat</code></td><td>Symbolic (Z3)</td><td>❌ No (may timeout)</td><td>Find solutions</td></tr>
+<tr><td><code>:verify</code></td><td>Symbolic (Z3)</td><td>❌ No (may timeout)</td><td>Prove theorems</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p><strong>Key insight:</strong> Z3 cannot symbolically unroll recursive functions over unbounded data types. Use <code>:eval</code> for concrete computation, <code>:sat</code>/<code>:verify</code> for symbolic reasoning.</p>
+</blockquote>
+<p>This is what makes Kleis <strong>Turing complete</strong> — the combination of ADTs, pattern matching, recursion, and concrete evaluation enables arbitrary computation. See <a href="#appendix-lisp-interpreter-in-kleis">Appendix: LISP Interpreter</a> for a complete example.</p>
 <h2 id="repl-commands"><a class="header" href="#repl-commands">REPL Commands</a></h2>
 <div class="table-wrapper">
 <table>
@@ -1691,6 +1723,7 @@ sin(divide(π, 2))
 <tr><td><code>:help</code></td><td>Show all commands</td></tr>
 <tr><td><code>:load &lt;file&gt;</code></td><td>Load a .kleis file</td></tr>
 <tr><td><code>:env</code></td><td>Show defined functions</td></tr>
+<tr><td><code>:eval &lt;expr&gt;</code></td><td><strong>Concrete evaluation</strong> (computes actual values)</td></tr>
 <tr><td><code>:verify &lt;expr&gt;</code></td><td>Verify with Z3 (is it always true?)</td></tr>
 <tr><td><code>:sat &lt;expr&gt;</code></td><td>Check satisfiability (does a solution exist?)</td></tr>
 <tr><td><code>:type &lt;expr&gt;</code></td><td>Show inferred type</td></tr>

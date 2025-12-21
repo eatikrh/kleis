@@ -121,6 +121,33 @@ Check types with `:type`:
 📐 Type: α0
 ```
 
+## Concrete Evaluation with `:eval`
+
+The `:eval` command performs **concrete evaluation** — it actually computes results, including recursive functions:
+
+```
+λ> :load docs/grammar/lisp_parser.kleis
+✅ Loaded: 60 functions
+
+λ> :eval run("(+ 2 3)")
+VNum(5)
+
+λ> :eval run("(letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5))")
+VNum(120)
+```
+
+**`:eval` vs `:sat` vs `:verify`:**
+
+| Command | Execution | Handles Recursion | Use Case |
+|---------|-----------|-------------------|----------|
+| `:eval` | **Concrete** (Rust) | ✅ Yes | Compute actual values |
+| `:sat` | Symbolic (Z3) | ❌ No (may timeout) | Find solutions |
+| `:verify` | Symbolic (Z3) | ❌ No (may timeout) | Prove theorems |
+
+> **Key insight:** Z3 cannot symbolically unroll recursive functions over unbounded data types. Use `:eval` for concrete computation, `:sat`/`:verify` for symbolic reasoning.
+
+This is what makes Kleis **Turing complete** — the combination of ADTs, pattern matching, recursion, and concrete evaluation enables arbitrary computation. See [Appendix: LISP Interpreter](../appendix/lisp-interpreter.md) for a complete example.
+
 ## REPL Commands
 
 | Command | Description |
@@ -128,6 +155,7 @@ Check types with `:type`:
 | `:help` | Show all commands |
 | `:load <file>` | Load a .kleis file |
 | `:env` | Show defined functions |
+| `:eval <expr>` | **Concrete evaluation** (computes actual values) |
 | `:verify <expr>` | Verify with Z3 (is it always true?) |
 | `:sat <expr>` | Check satisfiability (does a solution exist?) |
 | `:type <expr>` | Show inferred type |

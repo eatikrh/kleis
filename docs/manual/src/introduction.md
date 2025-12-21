@@ -12,6 +12,9 @@ Kleis is a **mathematical expression language** designed for:
 - ✅ **Formal verification** — prove properties with Z3 theorem prover
 - 🏗️ **Extensible structures** — define your own mathematical objects
 - 🔬 **Scientific computing** — differential geometry, tensor calculus, and more
+- 🔄 **Turing complete** — a full programming language, not just notation
+
+> **Computational Universality:** Kleis is Turing complete. This was demonstrated by implementing a complete LISP interpreter in Kleis (see [Appendix: LISP Interpreter](./appendix/lisp-interpreter.md)). The combination of algebraic data types, pattern matching, and recursion enables arbitrary computation.
 
 ## Who is This For?
 
