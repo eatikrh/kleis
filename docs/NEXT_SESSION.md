@@ -4,9 +4,76 @@
 
 ---
 
-## 🎯 NEXT: Implement `(verify ...)` in LISP Interpreter
+## 🎯 Equation Editor: Add `let x =` Template
 
-**Context:** We implemented a complete LISP interpreter in Kleis (`docs/grammar/lisp_parser.kleis`). The next step is adding a `(verify ...)` form that calls into Z3 for formal verification.
+The equation editor needs a template for let bindings:
+
+```
+let x = [value] in [body]
+```
+
+This allows users to define local variables in the visual editor.
+
+**Files to modify:**
+- `static/index.html` - Add button/template
+- Template structure: `Let { pattern: "x", value: Placeholder, body: Placeholder }`
+
+---
+
+## ⚠️ Program Synthesis: Documented Limitation
+
+**The Dream:** `spec → Z3 → program`
+
+**The Reality:** Z3 cannot synthesize recursive programs from grammar. We tried and documented the failure in `feature/program-synthesis` branch.
+
+**What works:**
+- Sketch-based synthesis (human provides template, Z3 fills parameters)
+- Bounded verification (sort 2-3 elements)
+- LLM proposes, Z3 verifies
+
+**Architecture going forward:**
+```
+LLM → proposes program → Z3 → verifies properties
+                              ✓ or counterexample
+```
+
+See `docs/vision/VERIFIED_SOFTWARE_DREAM.md` (in abandoned branch) for full analysis.
+
+---
+
+## ✅ DONE: LISP Interpreter in Kleis
+
+- ✅ Parser (recursive descent, S-expressions)
+- ✅ Evaluator (arithmetic, lambda, let, letrec)  
+- ✅ Recursion: `fib(10) = 55`, `fact(5) = 120`
+- ✅ Documented in manual appendix
+- ✅ `:eval` command for concrete execution
+- ❌ `(verify ...)` form — **CANCELLED** (program synthesis doesn't work as envisioned)
+
+---
+
+## ✅ DONE: Type Inference for User-Defined Types
+
+Fixed Dec 21, 2024:
+- `:load` now registers data types with TypeChecker
+- `:type VNum(42)` → `VNum(Scalar)` ✅
+- `:type SAtom("hello")` → `SAtom("hello")` ✅
+
+---
+
+## 📝 Key Learnings (Dec 21, 2024)
+
+1. **Kleis is Turing complete** — proved by implementing LISP interpreter
+2. **Data constructors create concrete objects** — not just symbols
+3. **Z3 cannot unroll recursion over unbounded ADTs** — fundamental limitation
+4. **`:eval` enables execution** — concrete evaluation in Rust
+5. **Verification ≠ Synthesis** — Z3 verifies, LLMs synthesize
+
+---
+
+## 🚫 CANCELLED: Implement `(verify ...)` in LISP Interpreter
+
+**Reason:** The program synthesis vision didn't work. Z3 can't evaluate LISP programs symbolically, so `(verify ...)` can't use Z3 the way we hoped.
 
 ### What We Have
 - ✅ LISP parser (recursive descent, S-expressions)
