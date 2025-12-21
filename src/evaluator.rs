@@ -2193,4 +2193,263 @@ mod tests {
         let result = eval.reduce_with_fuel(&expr, 10);
         assert!(result.is_ok());
     }
+
+    // =========================================================================
+    // Concrete Evaluation Tests (for :eval command)
+    // =========================================================================
+
+    #[test]
+    fn test_eval_concrete_arithmetic() {
+        let eval = Evaluator::new();
+
+        // 2 + 3 → 5
+        let expr = Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Const("2".to_string()),
+                Expression::Const("3".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "5"));
+
+        // 10 * 5 → 50
+        let expr = Expression::Operation {
+            name: "times".to_string(),
+            args: vec![
+                Expression::Const("10".to_string()),
+                Expression::Const("5".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "50"));
+
+        // 7 - 3 → 4
+        let expr = Expression::Operation {
+            name: "minus".to_string(),
+            args: vec![
+                Expression::Const("7".to_string()),
+                Expression::Const("3".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "4"));
+    }
+
+    #[test]
+    fn test_eval_concrete_string_ops() {
+        let eval = Evaluator::new();
+
+        // concat("hello", " world") → "hello world"
+        let expr = Expression::Operation {
+            name: "concat".to_string(),
+            args: vec![
+                Expression::String("hello".to_string()),
+                Expression::String(" world".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "hello world"));
+
+        // strlen("kleis") → 5
+        let expr = Expression::Operation {
+            name: "strlen".to_string(),
+            args: vec![Expression::String("kleis".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "5"));
+
+        // hasPrefix("(define fib)", "(define") → true
+        let expr = Expression::Operation {
+            name: "hasPrefix".to_string(),
+            args: vec![
+                Expression::String("(define fib)".to_string()),
+                Expression::String("(define".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+
+        // contains("hello world", "wor") → true
+        let expr = Expression::Operation {
+            name: "contains".to_string(),
+            args: vec![
+                Expression::String("hello world".to_string()),
+                Expression::String("wor".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+    }
+
+    #[test]
+    fn test_eval_concrete_comparison() {
+        let eval = Evaluator::new();
+
+        // gt(5, 3) → true
+        let expr = Expression::Operation {
+            name: "gt".to_string(),
+            args: vec![
+                Expression::Const("5".to_string()),
+                Expression::Const("3".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+
+        // lt(2, 10) → true
+        let expr = Expression::Operation {
+            name: "lt".to_string(),
+            args: vec![
+                Expression::Const("2".to_string()),
+                Expression::Const("10".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+
+        // eq(5, 5) → true
+        let expr = Expression::Operation {
+            name: "eq".to_string(),
+            args: vec![
+                Expression::Const("5".to_string()),
+                Expression::Const("5".to_string()),
+            ],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+    }
+
+    #[test]
+    fn test_eval_concrete_conditional() {
+        let eval = Evaluator::new();
+
+        // if gt(5, 3) then "yes" else "no" → "yes"
+        let expr = Expression::Conditional {
+            condition: Box::new(Expression::Operation {
+                name: "gt".to_string(),
+                args: vec![
+                    Expression::Const("5".to_string()),
+                    Expression::Const("3".to_string()),
+                ],
+            }),
+            then_branch: Box::new(Expression::String("yes".to_string())),
+            else_branch: Box::new(Expression::String("no".to_string())),
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "yes"));
+
+        // if lt(5, 3) then "yes" else "no" → "no"
+        let expr = Expression::Conditional {
+            condition: Box::new(Expression::Operation {
+                name: "lt".to_string(),
+                args: vec![
+                    Expression::Const("5".to_string()),
+                    Expression::Const("3".to_string()),
+                ],
+            }),
+            then_branch: Box::new(Expression::String("yes".to_string())),
+            else_branch: Box::new(Expression::String("no".to_string())),
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "no"));
+    }
+
+    #[test]
+    fn test_eval_concrete_user_function() {
+        let mut eval = Evaluator::new();
+
+        // define double(x) = x + x
+        let code = "define double(x) = x + x";
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // double(5) → 10
+        let expr = Expression::Operation {
+            name: "double".to_string(),
+            args: vec![Expression::Const("5".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "10"));
+    }
+
+    #[test]
+    fn test_eval_concrete_recursion() {
+        let mut eval = Evaluator::new();
+
+        // define fib(n) = if le(n, 1) then n else fib(n - 1) + fib(n - 2)
+        let code = "define fib(n) = if le(n, 1) then n else fib(n - 1) + fib(n - 2)";
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // fib(0) → 0
+        let expr = Expression::Operation {
+            name: "fib".to_string(),
+            args: vec![Expression::Const("0".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "0"));
+
+        // fib(1) → 1
+        let expr = Expression::Operation {
+            name: "fib".to_string(),
+            args: vec![Expression::Const("1".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "1"));
+
+        // fib(5) → 5
+        let expr = Expression::Operation {
+            name: "fib".to_string(),
+            args: vec![Expression::Const("5".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "5"));
+
+        // fib(10) → 55
+        let expr = Expression::Operation {
+            name: "fib".to_string(),
+            args: vec![Expression::Const("10".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "55"));
+    }
+
+    #[test]
+    fn test_eval_concrete_lisp_parsing() {
+        let mut eval = Evaluator::new();
+
+        // Define LISP parsing helpers
+        let code = r#"
+            define is_list_expr(s) = hasPrefix(s, "(")
+            define strip_parens(s) = substr(s, 1, strlen(s) - 2)
+            define get_op(s) = charAt(strip_parens(s), 0)
+        "#;
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // is_list_expr("(+ 2 3)") → true
+        let expr = Expression::Operation {
+            name: "is_list_expr".to_string(),
+            args: vec![Expression::String("(+ 2 3)".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::Object(ref s) if s == "true"));
+
+        // strip_parens("(+ 2 3)") → "+ 2 3"
+        let expr = Expression::Operation {
+            name: "strip_parens".to_string(),
+            args: vec![Expression::String("(+ 2 3)".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "+ 2 3"));
+
+        // get_op("(+ 2 3)") → "+"
+        let expr = Expression::Operation {
+            name: "get_op".to_string(),
+            args: vec![Expression::String("(+ 2 3)".to_string())],
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        assert!(matches!(result, Expression::String(ref s) if s == "+"));
+    }
 }
