@@ -265,6 +265,14 @@ Kleis + Z3 can synthesize correct programs from specifications.
 
 **LLM as proposer, Kleis as verifier.**
 
+### The Key Insight
+
+**Kleis doesn't replace programmers OR LLMs. It sits *above* both as the verifier:**
+
+1. Human/LLM writes code
+2. Kleis verifies it's correct
+3. **Or:** Kleis synthesizes the correct code directly from specs
+
 The combination is more powerful than either alone:
 - LLM's speed and flexibility
 - Z3's mathematical rigor
