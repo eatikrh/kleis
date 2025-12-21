@@ -58,6 +58,12 @@ fn main() -> RlResult<()> {
     #[cfg(feature = "axiom-verification")]
     let mut registry = StructureRegistry::new();
 
+    // Persistent TypeChecker for :type command (knows about loaded data types)
+    let mut type_checker = kleis::type_checker::TypeChecker::with_stdlib().unwrap_or_else(|e| {
+        eprintln!("⚠️  TypeChecker init failed: {}", e);
+        kleis::type_checker::TypeChecker::new()
+    });
+
     let mut multiline_buffer = String::new();
     // Two separate modes: block mode (:{ ... :}) vs line continuation (\)
     let mut in_block_mode = false;
@@ -94,6 +100,7 @@ fn main() -> RlResult<()> {
                             &mut imported_paths,
                             #[cfg(feature = "axiom-verification")]
                             &mut registry,
+                            &mut type_checker,
                         );
                     }
                     continue;
@@ -143,6 +150,7 @@ fn main() -> RlResult<()> {
                     &mut imported_paths,
                     #[cfg(feature = "axiom-verification")]
                     &mut registry,
+                    &mut type_checker,
                 );
             }
             Err(ReadlineError::Interrupted) => {
@@ -181,9 +189,17 @@ fn process_input(
     ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
     registry: &mut StructureRegistry,
+    type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     if input.starts_with(':') {
-        handle_command(input, evaluator, ctx, imported_paths, registry);
+        handle_command(
+            input,
+            evaluator,
+            ctx,
+            imported_paths,
+            registry,
+            type_checker,
+        );
     } else {
         eval_expression(input, evaluator, ctx, registry);
     }
@@ -195,9 +211,10 @@ fn process_input(
     evaluator: &mut Evaluator,
     ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
+    type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     if input.starts_with(':') {
-        handle_command_no_z3(input, evaluator, ctx, imported_paths);
+        handle_command_no_z3(input, evaluator, ctx, imported_paths, type_checker);
     } else {
         // Create empty registry for type context (no Z3 verification)
         let registry = StructureRegistry::new();
@@ -257,6 +274,7 @@ fn handle_command(
     _ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
     registry: &mut StructureRegistry,
+    type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     let parts: Vec<&str> = line.splitn(2, ' ').collect();
     let cmd = parts[0];
@@ -266,12 +284,12 @@ fn handle_command(
         ":help" | ":h" => show_help(arg),
         ":quit" | ":q" => println!("Goodbye! 👋"),
         ":ast" => show_ast(arg),
-        ":type" | ":t" => show_type(arg),
+        ":type" | ":t" => show_type(arg, type_checker),
         ":verify" | ":v" => verify_expression(arg, registry, evaluator),
         ":sat" | ":s" => sat_expression(arg, registry, evaluator),
         ":eval" | ":ev" => eval_concrete_expression(arg, evaluator),
         ":trace" | ":tr" => trace_match(arg, registry, evaluator),
-        ":load" | ":l" => load_file(arg, evaluator, registry, imported_paths),
+        ":load" | ":l" => load_file(arg, evaluator, registry, imported_paths, type_checker),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
         ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
@@ -291,6 +309,7 @@ fn handle_command_no_z3(
     evaluator: &mut Evaluator,
     _ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
+    type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     let parts: Vec<&str> = line.splitn(2, ' ').collect();
     let cmd = parts[0];
@@ -300,7 +319,7 @@ fn handle_command_no_z3(
         ":help" | ":h" => show_help(arg),
         ":quit" | ":q" => println!("Goodbye! 👋"),
         ":ast" => show_ast(arg),
-        ":type" | ":t" => show_type(arg),
+        ":type" | ":t" => show_type(arg, type_checker),
         ":verify" | ":v" => {
             println!("⚠️  Z3 verification not available (compile with axiom-verification feature)")
         }
@@ -313,7 +332,7 @@ fn handle_command_no_z3(
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
-        ":load" | ":l" => load_file(arg, evaluator, imported_paths),
+        ":load" | ":l" => load_file(arg, evaluator, imported_paths, type_checker),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
         ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
@@ -1020,7 +1039,7 @@ fn show_ast(input: &str) {
     }
 }
 
-fn show_type(input: &str) {
+fn show_type(input: &str, type_checker: &mut kleis::type_checker::TypeChecker) {
     if input.is_empty() {
         println!("Usage: :type <expression>");
         return;
@@ -1029,19 +1048,10 @@ fn show_type(input: &str) {
     let mut parser = KleisParser::new(input);
     match parser.parse() {
         Ok(expr) => {
-            // Use the TypeChecker to infer the type
-            use kleis::type_checker::{TypeCheckResult, TypeChecker};
+            // Use the persistent TypeChecker (knows about loaded data types)
+            use kleis::type_checker::TypeCheckResult;
 
-            let mut checker = match TypeChecker::with_stdlib() {
-                Ok(tc) => tc,
-                Err(e) => {
-                    println!("⚠️  Type checker init failed: {}", e);
-                    println!("Expression: {:?}", expr);
-                    return;
-                }
-            };
-
-            match checker.check(&expr) {
+            match type_checker.check(&expr) {
                 TypeCheckResult::Success(ty) => {
                     println!("📐 Type: {}", ty);
                 }
@@ -1762,6 +1772,7 @@ fn load_file(
     evaluator: &mut Evaluator,
     registry: &mut StructureRegistry,
     imported_paths: &mut Vec<String>,
+    type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     if path.is_empty() {
         println!("Usage: :load <file.kleis>");
@@ -1770,6 +1781,19 @@ fn load_file(
 
     let mut loaded_files: HashSet<PathBuf> = HashSet::new();
     let base_path = Path::new(path);
+
+    // Also load into type checker for :type command
+    match std::fs::read_to_string(base_path) {
+        Ok(source) => {
+            if let Err(e) = type_checker.load_kleis(&source) {
+                // Non-fatal: type inference might not work but loading continues
+                eprintln!("⚠️  Type checker warning: {}", e);
+            }
+        }
+        Err(_) => {
+            // File read will fail again in load_file_recursive with better error
+        }
+    }
 
     match load_file_recursive(
         base_path,
@@ -1795,7 +1819,12 @@ fn load_file(
 }
 
 #[cfg(not(feature = "axiom-verification"))]
-fn load_file(path: &str, evaluator: &mut Evaluator, imported_paths: &mut Vec<String>) {
+fn load_file(
+    path: &str,
+    evaluator: &mut Evaluator,
+    imported_paths: &mut Vec<String>,
+    type_checker: &mut kleis::type_checker::TypeChecker,
+) {
     if path.is_empty() {
         println!("Usage: :load <file.kleis>");
         return;
@@ -1803,6 +1832,19 @@ fn load_file(path: &str, evaluator: &mut Evaluator, imported_paths: &mut Vec<Str
 
     let mut loaded_files: HashSet<PathBuf> = HashSet::new();
     let base_path = Path::new(path);
+
+    // Also load into type checker for :type command
+    match std::fs::read_to_string(base_path) {
+        Ok(source) => {
+            if let Err(e) = type_checker.load_kleis(&source) {
+                // Non-fatal: type inference might not work but loading continues
+                eprintln!("⚠️  Type checker warning: {}", e);
+            }
+        }
+        Err(_) => {
+            // File read will fail again in load_file_recursive with better error
+        }
+    }
 
     match load_file_recursive(base_path, evaluator, &mut loaded_files, imported_paths) {
         Ok(stats) => {

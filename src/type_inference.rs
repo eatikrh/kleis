@@ -1633,15 +1633,19 @@ impl TypeInference {
                         }
                     }
                     crate::kleis_ast::TypeExpr::Named(name) if name == "String" => {
-                        // String parameter - must be constant
+                        // String parameter - can be String literal or Const
                         match arg_expr {
+                            Expression::String(s) => {
+                                // Store actual string value (from "..." literal)
+                                constructor_args.push(Type::StringValue(s.clone()));
+                            }
                             Expression::Const(s) => {
-                                // Store actual string value
+                                // Also allow Const for backwards compatibility
                                 constructor_args.push(Type::StringValue(s.clone()));
                             }
                             _ => {
                                 return Err(format!(
-                                    "Constructor parameter {} must be constant (String expected)",
+                                    "Constructor parameter {} must be a string literal (String expected)",
                                     i
                                 ));
                             }
