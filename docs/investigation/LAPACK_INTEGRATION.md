@@ -235,6 +235,115 @@ All operations should support complex matrices (ℂ):
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+---
+
+## Vision: Control Toolkit in Kleis
+
+### The Clean Separation
+
+| Layer | Responsibility | Examples |
+|-------|---------------|----------|
+| **Kleis** | Semantics, equations, correctness, meaning | `x' = Ax + Bu`, stability proofs |
+| **Rust** | Numerics, execution, performance | BLAS gemm, LAPACK getrf, expm |
+
+This mirrors proven architectures:
+- **MATLAB**: Language vs LAPACK backend
+- **Modelica**: Equations vs solvers  
+- **Simulink**: Diagrams vs numerical kernels
+
+### What Kleis Should Do (where it shines)
+
+**1️⃣ Declaring control objects**
+```kleis
+system ContinuousLTI {
+  x' = A x + B u
+  y  = C x + D u
+}
+```
+
+**2️⃣ Declaring transformations**
+```kleis
+discretize sys using ZOH Ts = 0.01
+```
+
+**3️⃣ Declaring guarantees**
+```kleis
+assume A is stable
+ensure spectral_radius(Ad) < 1
+```
+
+**4️⃣ Declaring equivalence**
+```kleis
+expm(block(A,B)) ≡ (Ad, Bd)
+```
+
+### What Kleis Should NOT Do
+
+Kleis should not:
+- Implement LU, QR, Schur, Padé, or Krylov
+- Worry about cache, SIMD, or FFI
+- Care whether backend is Accelerate, OpenBLAS, or MKL
+
+Those are **numerical plumbing**, not **semantic concerns**.
+
+### Rust's Role: Execution Engine
+
+Rust becomes:
+- The Kleis evaluator
+- The numerical runtime
+- The FFI boundary
+
+```rust
+match instr {
+    Instr::C2dZoh { sys, ts } => {
+        let (ad, bd) = c2d_zoh(sys.a, sys.b, ts)?;
+        Value::DiscreteSystem { ad, bd, ... }
+    }
+}
+```
+
+The runtime:
+- Chooses BLAS/LAPACK backend
+- Logs conditioning warnings
+- Returns numerical results
+
+Kleis:
+- Reasons about structure
+- Proves equivalences
+- Remains backend-agnostic
+
+### Capability Interface Design
+
+Define an explicit numeric capability set exposed to Kleis:
+
+```kleis
+capability LinearAlgebra {
+  matmul
+  solve_linear
+  schur
+  expm
+  eig
+  svd
+  qr
+  lu
+}
+```
+
+Internally backed by BLAS/LAPACK today — but **replaceable later**.
+
+This makes Kleis future-proof and keeps the semantic/numeric boundary clean.
+
+### Why This Matters
+
+> "This is the same reason theorem provers call out to decision procedures."
+
+- Kleis is about **meaning**, not speed
+- BLAS/LAPACK give you **trusted numerics**
+- You avoid re-encoding numerical algorithms into Kleis
+- You keep the semantic/numeric boundary **clean**
+
+---
+
 ## Next Steps
 
 1. [ ] Add `faer` to Cargo.toml (feature-gated)
