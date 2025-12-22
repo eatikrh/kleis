@@ -1704,6 +1704,248 @@ impl Evaluator {
                 }
             }
 
+            // ============================================
+            // MATRIX OPERATIONS (Concrete Evaluation)
+            // ============================================
+            "matrix_add" | "builtin_matrix_add" => {
+                // Matrix addition: element-wise addition of two matrices
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m1, n1, elems1)), Some((m2, n2, elems2))) =
+                    (self.extract_matrix(&args[0]), self.extract_matrix(&args[1]))
+                {
+                    if m1 != m2 || n1 != n2 {
+                        return Err(format!(
+                            "matrix_add: dimension mismatch: {}x{} vs {}x{}",
+                            m1, n1, m2, n2
+                        ));
+                    }
+                    let result: Result<Vec<Expression>, String> = elems1
+                        .iter()
+                        .zip(elems2.iter())
+                        .map(|(a, b)| match (self.as_number(a), self.as_number(b)) {
+                            (Some(x), Some(y)) => {
+                                let sum = x + y;
+                                if sum.fract() == 0.0 && sum.abs() < 1e15 {
+                                    Ok(Expression::Const(format!("{}", sum as i64)))
+                                } else {
+                                    Ok(Expression::Const(format!("{}", sum)))
+                                }
+                            }
+                            _ => Err("matrix_add: non-numeric element".to_string()),
+                        })
+                        .collect();
+                    Ok(Some(self.make_matrix(m1, n1, result?)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "matrix_sub" | "builtin_matrix_sub" => {
+                // Matrix subtraction: element-wise subtraction
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m1, n1, elems1)), Some((m2, n2, elems2))) =
+                    (self.extract_matrix(&args[0]), self.extract_matrix(&args[1]))
+                {
+                    if m1 != m2 || n1 != n2 {
+                        return Err(format!(
+                            "matrix_sub: dimension mismatch: {}x{} vs {}x{}",
+                            m1, n1, m2, n2
+                        ));
+                    }
+                    let result: Result<Vec<Expression>, String> = elems1
+                        .iter()
+                        .zip(elems2.iter())
+                        .map(|(a, b)| match (self.as_number(a), self.as_number(b)) {
+                            (Some(x), Some(y)) => {
+                                let diff = x - y;
+                                if diff.fract() == 0.0 && diff.abs() < 1e15 {
+                                    Ok(Expression::Const(format!("{}", diff as i64)))
+                                } else {
+                                    Ok(Expression::Const(format!("{}", diff)))
+                                }
+                            }
+                            _ => Err("matrix_sub: non-numeric element".to_string()),
+                        })
+                        .collect();
+                    Ok(Some(self.make_matrix(m1, n1, result?)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "multiply" | "builtin_matrix_mul" | "matmul" => {
+                // Matrix multiplication: (m×n) · (n×p) → (m×p)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m1, n1, elems1)), Some((m2, n2, elems2))) =
+                    (self.extract_matrix(&args[0]), self.extract_matrix(&args[1]))
+                {
+                    if n1 != m2 {
+                        return Err(format!(
+                            "matrix multiply: inner dimensions don't match: {}x{} vs {}x{}",
+                            m1, n1, m2, n2
+                        ));
+                    }
+                    // Compute C[i,j] = sum(A[i,k] * B[k,j] for k in 0..n1)
+                    let mut result = Vec::with_capacity(m1 * n2);
+                    for i in 0..m1 {
+                        for j in 0..n2 {
+                            let mut sum = 0.0;
+                            for k in 0..n1 {
+                                let a_val = self.as_number(&elems1[i * n1 + k]).unwrap_or(0.0);
+                                let b_val = self.as_number(&elems2[k * n2 + j]).unwrap_or(0.0);
+                                sum += a_val * b_val;
+                            }
+                            if sum.fract() == 0.0 && sum.abs() < 1e15 {
+                                result.push(Expression::Const(format!("{}", sum as i64)));
+                            } else {
+                                result.push(Expression::Const(format!("{}", sum)));
+                            }
+                        }
+                    }
+                    Ok(Some(self.make_matrix(m1, n2, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "transpose" | "builtin_transpose" => {
+                // Matrix transpose: (m×n) → (n×m)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    // Transpose: result[j,i] = original[i,j]
+                    let mut result = Vec::with_capacity(m * n);
+                    for j in 0..n {
+                        for i in 0..m {
+                            result.push(elems[i * n + j].clone());
+                        }
+                    }
+                    Ok(Some(self.make_matrix(n, m, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "trace" | "builtin_trace" => {
+                // Matrix trace: sum of diagonal elements (square matrices only)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if m != n {
+                        return Err(format!("trace: matrix must be square, got {}x{}", m, n));
+                    }
+                    let mut sum = 0.0;
+                    for i in 0..m {
+                        if let Some(val) = self.as_number(&elems[i * n + i]) {
+                            sum += val;
+                        } else {
+                            return Err("trace: non-numeric diagonal element".to_string());
+                        }
+                    }
+                    if sum.fract() == 0.0 && sum.abs() < 1e15 {
+                        Ok(Some(Expression::Const(format!("{}", sum as i64))))
+                    } else {
+                        Ok(Some(Expression::Const(format!("{}", sum))))
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "det" | "builtin_determinant" => {
+                // Matrix determinant (only 2x2 and 3x3 for now)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if m != n {
+                        return Err(format!("det: matrix must be square, got {}x{}", m, n));
+                    }
+                    let det = match m {
+                        1 => self.as_number(&elems[0]).unwrap_or(0.0),
+                        2 => {
+                            // det([[a,b],[c,d]]) = ad - bc
+                            let a = self.as_number(&elems[0]).unwrap_or(0.0);
+                            let b = self.as_number(&elems[1]).unwrap_or(0.0);
+                            let c = self.as_number(&elems[2]).unwrap_or(0.0);
+                            let d = self.as_number(&elems[3]).unwrap_or(0.0);
+                            a * d - b * c
+                        }
+                        3 => {
+                            // Sarrus rule for 3x3
+                            let a = |i: usize, j: usize| {
+                                self.as_number(&elems[i * 3 + j]).unwrap_or(0.0)
+                            };
+                            a(0, 0) * (a(1, 1) * a(2, 2) - a(1, 2) * a(2, 1))
+                                - a(0, 1) * (a(1, 0) * a(2, 2) - a(1, 2) * a(2, 0))
+                                + a(0, 2) * (a(1, 0) * a(2, 1) - a(1, 1) * a(2, 0))
+                        }
+                        _ => {
+                            return Err(format!(
+                                "det: only 1x1, 2x2, 3x3 supported, got {}x{}",
+                                m, n
+                            ))
+                        }
+                    };
+                    if det.fract() == 0.0 && det.abs() < 1e15 {
+                        Ok(Some(Expression::Const(format!("{}", det as i64))))
+                    } else {
+                        Ok(Some(Expression::Const(format!("{}", det))))
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "scalar_matrix_mul" | "builtin_matrix_scalar_mul" => {
+                // Scalar * Matrix: multiply all elements by scalar
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                // Try both orders: scalar * matrix or matrix * scalar
+                let (scalar, matrix) = if let Some(s) = self.as_number(&args[0]) {
+                    if let Some(mat) = self.extract_matrix(&args[1]) {
+                        (s, mat)
+                    } else {
+                        return Ok(None);
+                    }
+                } else if let Some(s) = self.as_number(&args[1]) {
+                    if let Some(mat) = self.extract_matrix(&args[0]) {
+                        (s, mat)
+                    } else {
+                        return Ok(None);
+                    }
+                } else {
+                    return Ok(None);
+                };
+
+                let (m, n, elems) = matrix;
+                let result: Result<Vec<Expression>, String> = elems
+                    .iter()
+                    .map(|e| {
+                        if let Some(val) = self.as_number(e) {
+                            let product = scalar * val;
+                            if product.fract() == 0.0 && product.abs() < 1e15 {
+                                Ok(Expression::Const(format!("{}", product as i64)))
+                            } else {
+                                Ok(Expression::Const(format!("{}", product)))
+                            }
+                        } else {
+                            Err("scalar_matrix_mul: non-numeric element".to_string())
+                        }
+                    })
+                    .collect();
+                Ok(Some(self.make_matrix(m, n, result?)))
+            }
+
             // Not a built-in
             _ => Ok(None),
         }
@@ -1809,6 +2051,52 @@ impl Evaluator {
             (Expression::Const(x), Expression::String(y)) => x == y,
             (Expression::String(x), Expression::Const(y)) => x == y,
             _ => false,
+        }
+    }
+
+    // === Matrix helper methods ===
+
+    /// Extract (rows, cols, elements) from a Matrix expression
+    /// Handles: Matrix(m, n, [elements]) or Matrix(m, n, List([elements]))
+    fn extract_matrix(&self, expr: &Expression) -> Option<(usize, usize, Vec<Expression>)> {
+        match expr {
+            Expression::Operation { name, args } if name == "Matrix" && args.len() >= 3 => {
+                // Matrix(m, n, elements)
+                let m = self.as_integer(&args[0])? as usize;
+                let n = self.as_integer(&args[1])? as usize;
+
+                // Elements can be a List or inline elements
+                let elements = match &args[2] {
+                    Expression::List(elems) => elems.clone(),
+                    Expression::Operation {
+                        name: list_name,
+                        args: list_args,
+                    } if list_name == "List" => list_args.clone(),
+                    // If more than 3 args, elements are inline (old format)
+                    _ if args.len() > 3 => args[2..].to_vec(),
+                    // Single element matrix
+                    other => vec![other.clone()],
+                };
+
+                if elements.len() == m * n {
+                    Some((m, n, elements))
+                } else {
+                    None // Element count doesn't match dimensions
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Create a Matrix expression from dimensions and elements
+    fn make_matrix(&self, m: usize, n: usize, elements: Vec<Expression>) -> Expression {
+        Expression::Operation {
+            name: "Matrix".to_string(),
+            args: vec![
+                Expression::Const(format!("{}", m)),
+                Expression::Const(format!("{}", n)),
+                Expression::List(elements),
+            ],
         }
     }
 }
