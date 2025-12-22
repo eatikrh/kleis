@@ -2046,6 +2046,118 @@ impl Evaluator {
                 }
             }
 
+            // ============================================
+            // COMPLEX NUMBER OPERATIONS (Concrete Evaluation)
+            // ============================================
+
+            "complex_add" | "cadd" => {
+                // Complex addition: (a+bi) + (c+di) = (a+c) + (b+d)i
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((re1, im1)), Some((re2, im2))) =
+                    (self.extract_complex(&args[0]), self.extract_complex(&args[1]))
+                {
+                    let re_sum = self.add_expressions(&re1, &re2);
+                    let im_sum = self.add_expressions(&im1, &im2);
+                    Ok(Some(self.make_complex(re_sum, im_sum)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "complex_sub" | "csub" => {
+                // Complex subtraction: (a+bi) - (c+di) = (a-c) + (b-d)i
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((re1, im1)), Some((re2, im2))) =
+                    (self.extract_complex(&args[0]), self.extract_complex(&args[1]))
+                {
+                    let re_diff = self.sub_expressions(&re1, &re2);
+                    let im_diff = self.sub_expressions(&im1, &im2);
+                    Ok(Some(self.make_complex(re_diff, im_diff)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "complex_mul" | "cmul" => {
+                // Complex multiplication: (a+bi)(c+di) = (ac-bd) + (ad+bc)i
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((re1, im1)), Some((re2, im2))) =
+                    (self.extract_complex(&args[0]), self.extract_complex(&args[1]))
+                {
+                    // Real part: ac - bd
+                    let ac = self.mul_expressions(&re1, &re2);
+                    let bd = self.mul_expressions(&im1, &im2);
+                    let re_result = self.sub_expressions(&ac, &bd);
+
+                    // Imaginary part: ad + bc
+                    let ad = self.mul_expressions(&re1, &im2);
+                    let bc = self.mul_expressions(&im1, &re2);
+                    let im_result = self.add_expressions(&ad, &bc);
+
+                    Ok(Some(self.make_complex(re_result, im_result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "complex_conj" | "conj" | "conjugate" => {
+                // Complex conjugate: conj(a+bi) = a-bi
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((re, im)) = self.extract_complex(&args[0]) {
+                    // Negate imaginary part
+                    let neg_im = self.negate_expression(&im);
+                    Ok(Some(self.make_complex(re, neg_im)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "complex_abs_squared" | "abs_sq" => {
+                // |z|² = a² + b² (returns real)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((re, im)) = self.extract_complex(&args[0]) {
+                    let re_sq = self.mul_expressions(&re, &re);
+                    let im_sq = self.mul_expressions(&im, &im);
+                    Ok(Some(self.add_expressions(&re_sq, &im_sq)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "Re" | "re" | "real_part" | "real" => {
+                // Real part of complex number
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((re, _im)) = self.extract_complex(&args[0]) {
+                    Ok(Some(re))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "Im" | "im" | "imag_part" | "imag" => {
+                // Imaginary part of complex number
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((_re, im)) = self.extract_complex(&args[0]) {
+                    Ok(Some(im))
+                } else {
+                    Ok(None)
+                }
+            }
+
             // Not a built-in
             _ => Ok(None),
         }
@@ -2248,7 +2360,6 @@ impl Evaluator {
     }
 
     /// Multiply two expressions, computing concrete results when possible
-    #[allow(dead_code)] // Will be used for symbolic matrix multiplication
     fn mul_expressions(&self, a: &Expression, b: &Expression) -> Expression {
         match (self.as_number(a), self.as_number(b)) {
             (Some(x), Some(y)) => {
@@ -2272,6 +2383,52 @@ impl Evaluator {
                 name: "times".to_string(),
                 args: vec![a.clone(), b.clone()],
             },
+        }
+    }
+
+    /// Negate an expression
+    fn negate_expression(&self, a: &Expression) -> Expression {
+        match self.as_number(a) {
+            Some(x) => {
+                let neg = -x;
+                if neg.fract() == 0.0 && neg.abs() < 1e15 {
+                    Expression::Const(format!("{}", neg as i64))
+                } else {
+                    Expression::Const(format!("{}", neg))
+                }
+            }
+            // 0 negated is still 0
+            None if matches!(a, Expression::Const(s) if s == "0") => {
+                Expression::Const("0".to_string())
+            }
+            // Symbolic: create negate operation
+            None => Expression::Operation {
+                name: "negate".to_string(),
+                args: vec![a.clone()],
+            },
+        }
+    }
+
+    // === Complex number helpers ===
+
+    /// Extract (real, imag) from a complex expression
+    /// Handles: complex(re, im) or Complex(re, im)
+    fn extract_complex(&self, expr: &Expression) -> Option<(Expression, Expression)> {
+        match expr {
+            Expression::Operation { name, args }
+                if (name == "complex" || name == "Complex") && args.len() == 2 =>
+            {
+                Some((args[0].clone(), args[1].clone()))
+            }
+            _ => None,
+        }
+    }
+
+    /// Create a complex expression from real and imaginary parts
+    fn make_complex(&self, re: Expression, im: Expression) -> Expression {
+        Expression::Operation {
+            name: "complex".to_string(),
+            args: vec![re, im],
         }
     }
 }
