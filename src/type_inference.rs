@@ -1398,9 +1398,9 @@ impl TypeInference {
             });
         }
 
-        // OPERATOR OVERLOADING: Arithmetic operations with type propagation
-        // Type promotion hierarchy: ℕ → ℤ → ℚ → ℝ → ℂ
-        // The result is the "larger" type
+        // ADR-016: Arithmetic operations with type promotion
+        // Uses registry-based inference with Promotes(From, To) for mixed types
+        // Type hierarchy: ℕ → ℤ → ℚ → ℝ → ℂ
         if matches!(
             name,
             "plus" | "minus" | "times" | "divide" | "scalar_divide"
@@ -1409,92 +1409,62 @@ impl TypeInference {
             let t1 = self.infer(&args[0], context_builder)?;
             let t2 = self.infer(&args[1], context_builder)?;
 
-            // Check type hierarchy (ordered from highest to lowest)
-            let is_complex_1 =
-                matches!(&t1, Type::Data { constructor, .. } if constructor == "Complex");
-            let is_complex_2 =
-                matches!(&t2, Type::Data { constructor, .. } if constructor == "Complex");
+            // Helper to extract constructor name from type
+            let get_constructor = |t: &Type| -> Option<String> {
+                match t {
+                    Type::Data { constructor, .. } => Some(constructor.clone()),
+                    Type::Var(_) => None, // Type variable - unknown
+                    _ => None,
+                }
+            };
 
-            if is_complex_1 || is_complex_2 {
-                return Ok(Type::Data {
-                    type_name: "Type".to_string(),
-                    constructor: "Complex".to_string(),
-                    args: vec![],
-                });
-            }
+            let c1 = get_constructor(&t1);
+            let c2 = get_constructor(&t2);
 
-            // Rational is next in hierarchy
-            let is_rational_1 =
-                matches!(&t1, Type::Data { constructor, .. } if constructor == "Rational");
-            let is_rational_2 =
-                matches!(&t2, Type::Data { constructor, .. } if constructor == "Rational");
-
-            if is_rational_1 || is_rational_2 {
-                return Ok(Type::Data {
-                    type_name: "Type".to_string(),
-                    constructor: "Rational".to_string(),
-                    args: vec![],
-                });
-            }
-
-            // Check for Scalar/Real
-            let is_scalar_1 =
-                matches!(&t1, Type::Data { constructor, .. } if constructor == "Scalar");
-            let is_scalar_2 =
-                matches!(&t2, Type::Data { constructor, .. } if constructor == "Scalar");
-
-            if is_scalar_1 || is_scalar_2 {
-                return Ok(Type::scalar());
-            }
-
-            // Check for Int
-            let is_int_1 = matches!(&t1, Type::Data { constructor, .. } if constructor == "Int");
-            let is_int_2 = matches!(&t2, Type::Data { constructor, .. } if constructor == "Int");
-
-            if is_int_1 || is_int_2 {
-                return Ok(Type::Data {
-                    type_name: "Type".to_string(),
-                    constructor: "Int".to_string(),
-                    args: vec![],
-                });
-            }
-
-            // Check for Nat
-            let is_nat_1 = matches!(&t1, Type::Data { constructor, .. } if constructor == "Nat");
-            let is_nat_2 = matches!(&t2, Type::Data { constructor, .. } if constructor == "Nat");
-
-            if is_nat_1 || is_nat_2 {
-                return Ok(Type::Data {
-                    type_name: "Type".to_string(),
-                    constructor: "Nat".to_string(),
-                    args: vec![],
-                });
-            }
-
-            // Check for Matrix - if either arg is Matrix, return that Matrix type
-            // Matrix arithmetic preserves dimensions
-            if let Type::Data {
-                constructor,
-                args: _,
-                ..
-            } = &t1
-            {
-                if constructor == "Matrix" {
+            // Case 1: Both types are concrete and same → use that type
+            if let (Some(ref con1), Some(ref con2)) = (&c1, &c2) {
+                if con1 == con2 {
+                    // Same type - return it (Matrix + Matrix → Matrix, etc.)
                     return Ok(t1.clone());
                 }
-            }
-            if let Type::Data {
-                constructor,
-                args: _,
-                ..
-            } = &t2
-            {
-                if constructor == "Matrix" {
+
+                // Case 2: Matrix or Vector - no promotion, must match exactly
+                if con1 == "Matrix" || con1 == "Vector" || con2 == "Matrix" || con2 == "Vector" {
+                    // For now, if either is Matrix/Vector, return that type
+                    // (This handles Matrix + Placeholder scenarios)
+                    if con1 == "Matrix" || con1 == "Vector" {
+                        return Ok(t1.clone());
+                    }
                     return Ok(t2.clone());
                 }
+
+                // Case 3: Scalar types - use type promotion hierarchy
+                // Query registry for common supertype
+                if let Some(builder) = context_builder {
+                    if let Some(common_type) = builder.find_common_supertype(con1, con2) {
+                        return Ok(Type::Data {
+                            type_name: "Type".to_string(),
+                            constructor: common_type,
+                            args: vec![],
+                        });
+                    }
+                }
+
+                // Fallback: return t1's type (arbitrary choice for unknown cases)
+                return Ok(t1.clone());
             }
 
-            // Default: return Scalar
+            // Case 4: One or both are type variables (placeholders)
+            // If one is concrete, return that; otherwise return Scalar as default
+            if let Some(con) = c1.or(c2) {
+                return Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: con,
+                    args: vec![],
+                });
+            }
+
+            // Both are type variables - default to Scalar
             return Ok(Type::scalar());
         }
 

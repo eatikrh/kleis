@@ -290,6 +290,62 @@ structure Arithmetic(T) {
   operation angle_brackets : T → T
 }
 
+// ============================================
+// TYPE PROMOTION (ADR-016)
+// ============================================
+// Type hierarchy: ℕ → ℤ → ℚ → ℝ → ℂ
+// When mixing types in arithmetic, the "larger" type wins.
+// This structure defines how to lift a value from one type to another.
+
+structure Promotes(From, To) {
+  operation lift : From → To
+}
+
+// Natural → Integer
+implements Promotes(ℕ, ℤ) {
+  operation lift = nat_to_int
+}
+
+// Integer → Rational
+implements Promotes(ℤ, ℚ) {
+  operation lift = int_to_rational
+}
+
+// Rational → Real (Scalar)
+implements Promotes(ℚ, ℝ) {
+  operation lift = rational_to_real
+}
+
+// Real → Complex
+implements Promotes(ℝ, ℂ) {
+  operation lift = real_to_complex
+}
+
+// Direct promotions (transitive closure for convenience)
+implements Promotes(ℕ, ℚ) {
+  operation lift = nat_to_rational
+}
+
+implements Promotes(ℕ, ℝ) {
+  operation lift = nat_to_real
+}
+
+implements Promotes(ℕ, ℂ) {
+  operation lift = nat_to_complex
+}
+
+implements Promotes(ℤ, ℝ) {
+  operation lift = int_to_real
+}
+
+implements Promotes(ℤ, ℂ) {
+  operation lift = int_to_complex
+}
+
+implements Promotes(ℚ, ℂ) {
+  operation lift = rational_to_complex
+}
+
 // Piecewise functions: f(x) = { expr1 if cond1, expr2 if cond2, ... }
 structure Piecewise(n: Nat, T) {
   operation Piecewise : Nat → List(T) → List(Bool) → T
@@ -365,7 +421,7 @@ structure Integrable(F) {
   operation int_bounds : F → ℝ → ℝ → F → ℝ
 }
 
-// Arithmetic for scalars
+// Arithmetic for scalars (ℝ / Real)
 implements Arithmetic(ℝ) {
   operation plus = builtin_add
   operation minus = builtin_sub
@@ -374,6 +430,66 @@ implements Arithmetic(ℝ) {
   operation scalar_divide = builtin_div
   operation scalar_multiply = builtin_mul
   operation frac = builtin_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for naturals (ℕ)
+implements Arithmetic(ℕ) {
+  operation plus = builtin_nat_add
+  operation minus = builtin_nat_sub
+  operation times = builtin_nat_mul
+  operation divide = builtin_nat_div
+  operation scalar_divide = builtin_nat_div
+  operation scalar_multiply = builtin_nat_mul
+  operation frac = builtin_nat_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for integers (ℤ)
+implements Arithmetic(ℤ) {
+  operation plus = builtin_int_add
+  operation minus = builtin_int_sub
+  operation times = builtin_int_mul
+  operation divide = builtin_int_div
+  operation scalar_divide = builtin_int_div
+  operation scalar_multiply = builtin_int_mul
+  operation frac = builtin_int_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for rationals (ℚ)
+implements Arithmetic(ℚ) {
+  operation plus = builtin_rational_add
+  operation minus = builtin_rational_sub
+  operation times = builtin_rational_mul
+  operation divide = builtin_rational_div
+  operation scalar_divide = builtin_rational_div
+  operation scalar_multiply = builtin_rational_mul
+  operation frac = builtin_rational_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for complex (ℂ)
+implements Arithmetic(ℂ) {
+  operation plus = builtin_complex_add
+  operation minus = builtin_complex_sub
+  operation times = builtin_complex_mul
+  operation divide = builtin_complex_div
+  operation scalar_divide = builtin_complex_div
+  operation scalar_multiply = builtin_complex_mul
+  operation frac = builtin_complex_div
   operation parens = builtin_identity
   operation brackets = builtin_identity
   operation braces = builtin_identity

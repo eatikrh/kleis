@@ -809,6 +809,65 @@ impl TypeContextBuilder {
             .unwrap_or_else(Vec::new)
     }
 
+    /// Check if type From can be promoted to type To
+    /// This queries the Promotes(From, To) structure implementations
+    #[allow(dead_code)]
+    pub fn can_promote(&self, from_type: &str, to_type: &str) -> bool {
+        // The structure name would be "Promotes" with type arguments
+        // Check if Promotes(from_type, to_type) is implemented
+        let structure_key = format!("Promotes({}, {})", from_type, to_type);
+        self.registry.type_to_structures.contains_key(&structure_key)
+            || self.registry.type_to_structures.iter().any(|(_k, structs)| {
+                // Check if any type has Promotes structure with matching args
+                structs.iter().any(|s| {
+                    s.starts_with("Promotes(")
+                        && s.contains(from_type)
+                        && s.contains(to_type)
+                })
+            })
+    }
+
+    /// Find the common supertype for two types using the Promotes hierarchy
+    /// Returns the smallest type both can be promoted to
+    /// Type hierarchy: ℕ → ℤ → ℚ → ℝ → ℂ
+    pub fn find_common_supertype(&self, t1: &str, t2: &str) -> Option<String> {
+        // If same type, that's the common type
+        if t1 == t2 {
+            return Some(t1.to_string());
+        }
+
+        // Normalize type names to canonical form
+        fn normalize(t: &str) -> &'static str {
+            match t {
+                "ℕ" | "Nat" => "Nat",
+                "ℤ" | "Int" => "Int",
+                "ℚ" | "Rational" => "Rational",
+                "ℝ" | "Scalar" | "Real" => "Scalar",
+                "ℂ" | "Complex" => "Complex",
+                _ => "Unknown",
+            }
+        }
+
+        // Define the type hierarchy (order from smallest to largest)
+        const HIERARCHY: [&str; 5] = ["Nat", "Int", "Rational", "Scalar", "Complex"];
+
+        let t1_norm = normalize(t1);
+        let t2_norm = normalize(t2);
+
+        // Find positions in hierarchy
+        let pos1 = HIERARCHY.iter().position(|&h| h == t1_norm);
+        let pos2 = HIERARCHY.iter().position(|&h| h == t2_norm);
+
+        match (pos1, pos2) {
+            (Some(p1), Some(p2)) => {
+                // Return the larger type (higher in hierarchy)
+                let max_pos = p1.max(p2);
+                Some(HIERARCHY[max_pos].to_string())
+            }
+            _ => None, // One or both types not in hierarchy
+        }
+    }
+
     /// Generate helpful error message when operation not supported
     pub fn suggest_operation(&self, type_name: &str, attempted_operation: &str) -> Option<String> {
         // Get structures this type implements
