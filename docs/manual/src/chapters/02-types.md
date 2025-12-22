@@ -35,6 +35,7 @@ define flag = True                // True is a boolean
 | Type | Syntax | Description |
 |------|--------|-------------|
 | Bit-Vector | `BitVec(n)` | n-bit binary vector (e.g., `BitVec(8)`, `BitVec(32)`) |
+| Set | `Set(T)` | Set of elements of type T (e.g., `Set(ℤ)`, `Set(ℝ)`) |
 
 ```kleis
 // Boolean values
@@ -143,6 +144,68 @@ The parentheses matter! Compare:
 | `ℝ → (ℝ → ℝ)` | Returns a function (function factory) |
 | `(ℝ → ℝ) → (ℝ → ℝ)` | Function transformer (e.g., derivative operator) |
 
+## Set Types
+
+Kleis provides a built-in `Set(T)` type backed by Z3's native set theory. Sets are unordered collections of unique elements:
+
+```kleis
+// Declare a set type
+define S : Set(ℤ)
+
+// Set operations (see stdlib/sets.kleis for full structure)
+in_set(x, S)              // Membership: x ∈ S → Bool
+union(A, B)               // Union: A ∪ B → Set(T)
+intersect(A, B)           // Intersection: A ∩ B → Set(T)
+difference(A, B)          // Difference: A \ B → Set(T)
+complement(A)             // Complement: ᶜA → Set(T)
+subset(A, B)              // Subset test: A ⊆ B → Bool
+insert(x, S)              // Add element: S ∪ {x} → Set(T)
+remove(x, S)              // Remove element: S \ {x} → Set(T)
+singleton(x)              // Singleton set: {x} → Set(T)
+empty_set                 // Empty set: ∅
+```
+
+### Set Theory Axioms
+
+Sets come with a complete axiomatization (see `stdlib/sets.kleis`):
+
+```kleis
+structure SetTheory(T) {
+    // Core operations
+    operation in_set : T → Set(T) → Bool
+    operation union : Set(T) → Set(T) → Set(T)
+    operation intersect : Set(T) → Set(T) → Set(T)
+    element empty_set : Set(T)
+    
+    // Extensionality: sets are equal iff they have the same elements
+    axiom extensionality: ∀(A B : Set(T)). 
+        (∀(x : T). in_set(x, A) ↔ in_set(x, B)) → A = B
+    
+    // Union definition
+    axiom union_def: ∀(A B : Set(T), x : T). 
+        in_set(x, union(A, B)) ↔ (in_set(x, A) ∨ in_set(x, B))
+    
+    // De Morgan's laws
+    axiom de_morgan_union: ∀(A B : Set(T)). 
+        complement(union(A, B)) = intersect(complement(A), complement(B))
+}
+```
+
+### Using Sets in Verification
+
+Sets are particularly useful for specifying properties involving collections:
+
+```kleis
+structure MetricSpace(X) {
+    operation d : X → X → ℝ
+    operation ball : X → ℝ → Set(X)
+    
+    // Open ball definition
+    axiom ball_def: ∀(center : X, radius : ℝ, x : X).
+        in_set(x, ball(center, radius)) ↔ d(x, center) < radius
+}
+```
+
 ## Parametric Types
 
 Types can have parameters:
@@ -152,6 +215,7 @@ Types can have parameters:
 List(ℤ)           // List of integers
 Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 Vector(4)         // 4-dimensional vector
+Set(ℝ)            // Set of real numbers
 ```
 
 ## Type Inference
@@ -171,9 +235,9 @@ But explicit types make code clearer and catch errors earlier!
 ## The Type Hierarchy
 
 ```
-              Any
-         /    |    \
-     Scalar  String  Collection
+                    Any
+         /     |      \       \
+     Scalar  String  Collection  Set(T)
      /    \              |
     ℂ    Bool          List
     |                 /    \
@@ -187,6 +251,8 @@ But explicit types make code clearer and catch errors earlier!
 ```
 
 Note: `ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ ⊂ ℂ` (naturals ⊂ integers ⊂ rationals ⊂ reals ⊂ complex)
+
+**Set(T)** is parameterized by its element type. `Set(ℤ)` is a set of integers, `Set(ℝ)` is a set of reals, etc.
 
 ## Type Promotion (Embedding)
 
