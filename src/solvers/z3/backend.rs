@@ -1007,6 +1007,136 @@ impl<'r> Z3Backend<'r> {
             }
 
             // ============================================
+            // SET OPERATIONS
+            // Uses Z3's native set theory
+            // ============================================
+
+            // Empty set: empty_set or builtin_set_empty
+            "empty_set" | "builtin_set_empty" | "set_empty" => {
+                // For empty set, we need to know the element type
+                // Default to Int sort for now
+                let int_sort = z3::Sort::int();
+                Ok(z3::ast::Set::empty(&int_sort).into())
+            }
+
+            // Set membership: in_set(x, S) or builtin_set_member
+            "in_set" | "builtin_set_member" | "set_member" | "member" => {
+                if args.len() != 2 {
+                    return Err("in_set requires 2 arguments (element, set)".to_string());
+                }
+                let set = args[1]
+                    .as_set()
+                    .ok_or_else(|| "in_set second argument must be a set".to_string())?;
+                Ok(set.member(&args[0]).into())
+            }
+
+            // Set union: union(A, B) or builtin_set_union
+            "union" | "builtin_set_union" | "set_union" => {
+                if args.len() < 2 {
+                    return Err("union requires at least 2 arguments".to_string());
+                }
+                let sets: Result<Vec<z3::ast::Set>, String> = args
+                    .iter()
+                    .map(|a| {
+                        a.as_set()
+                            .ok_or_else(|| "union arguments must be sets".to_string())
+                    })
+                    .collect();
+                let sets = sets?;
+                let refs: Vec<&z3::ast::Set> = sets.iter().collect();
+                Ok(z3::ast::Set::set_union(&refs).into())
+            }
+
+            // Set intersection: intersect(A, B) or builtin_set_intersect
+            "intersect" | "builtin_set_intersect" | "set_intersect" | "intersection" => {
+                if args.len() < 2 {
+                    return Err("intersect requires at least 2 arguments".to_string());
+                }
+                let sets: Result<Vec<z3::ast::Set>, String> = args
+                    .iter()
+                    .map(|a| {
+                        a.as_set()
+                            .ok_or_else(|| "intersect arguments must be sets".to_string())
+                    })
+                    .collect();
+                let sets = sets?;
+                let refs: Vec<&z3::ast::Set> = sets.iter().collect();
+                Ok(z3::ast::Set::intersect(&refs).into())
+            }
+
+            // Set difference: difference(A, B) or builtin_set_difference
+            "difference" | "builtin_set_difference" | "set_difference" | "set_diff" => {
+                if args.len() != 2 {
+                    return Err("difference requires 2 arguments".to_string());
+                }
+                let set_a = args[0]
+                    .as_set()
+                    .ok_or_else(|| "difference first argument must be a set".to_string())?;
+                let set_b = args[1]
+                    .as_set()
+                    .ok_or_else(|| "difference second argument must be a set".to_string())?;
+                Ok(set_a.difference(&set_b).into())
+            }
+
+            // Set complement: complement(A) or builtin_set_complement
+            "complement" | "builtin_set_complement" | "set_complement" => {
+                if args.len() != 1 {
+                    return Err("complement requires 1 argument".to_string());
+                }
+                let set = args[0]
+                    .as_set()
+                    .ok_or_else(|| "complement argument must be a set".to_string())?;
+                Ok(set.complement().into())
+            }
+
+            // Subset check: subset(A, B) or builtin_set_subset
+            "subset" | "builtin_set_subset" | "set_subset" => {
+                if args.len() != 2 {
+                    return Err("subset requires 2 arguments".to_string());
+                }
+                let set_a = args[0]
+                    .as_set()
+                    .ok_or_else(|| "subset first argument must be a set".to_string())?;
+                let set_b = args[1]
+                    .as_set()
+                    .ok_or_else(|| "subset second argument must be a set".to_string())?;
+                Ok(set_a.set_subset(&set_b).into())
+            }
+
+            // Singleton set: singleton(x) or builtin_set_singleton
+            "singleton" | "builtin_set_singleton" | "set_singleton" => {
+                if args.len() != 1 {
+                    return Err("singleton requires 1 argument".to_string());
+                }
+                // Create empty set and add the element
+                let int_sort = z3::Sort::int();
+                let empty = z3::ast::Set::empty(&int_sort);
+                Ok(empty.add(&args[0]).into())
+            }
+
+            // Add element to set: insert(x, S) or builtin_set_add
+            "insert" | "builtin_set_add" | "set_add" => {
+                if args.len() != 2 {
+                    return Err("insert requires 2 arguments (element, set)".to_string());
+                }
+                let set = args[1]
+                    .as_set()
+                    .ok_or_else(|| "insert second argument must be a set".to_string())?;
+                Ok(set.add(&args[0]).into())
+            }
+
+            // Remove element from set: remove(x, S) or builtin_set_del
+            "remove" | "builtin_set_del" | "set_del" => {
+                if args.len() != 2 {
+                    return Err("remove requires 2 arguments (element, set)".to_string());
+                }
+                let set = args[1]
+                    .as_set()
+                    .ok_or_else(|| "remove second argument must be a set".to_string())?;
+                Ok(set.del(&args[0]).into())
+            }
+
+            // ============================================
             // COMPLEX NUMBER OPERATIONS (Hybrid Translation)
             // Uses Z3 Datatype for concrete arithmetic!
             // Complex = mk_complex(re: Real, im: Real)
