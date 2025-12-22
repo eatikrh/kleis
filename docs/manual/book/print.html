@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b2e0e40.js";
+            window.path_to_searchindex_js = "searchindex-02cce4ba.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-adba3566.js"></script>
@@ -1897,6 +1897,54 @@ VNum(120)
 <p><strong>Key insight:</strong> Z3 cannot symbolically unroll recursive functions over unbounded data types. Use <code>:eval</code> for concrete computation, <code>:sat</code>/<code>:verify</code> for symbolic reasoning.</p>
 </blockquote>
 <p>This is what makes Kleis <strong>Turing complete</strong> — the combination of ADTs, pattern matching, recursion, and concrete evaluation enables arbitrary computation. See <a href="#appendix-lisp-interpreter-in-kleis">Appendix: LISP Interpreter</a> for a complete example.</p>
+<h2 id="value-bindings-with-let"><a class="header" href="#value-bindings-with-let">Value Bindings with <code>:let</code></a></h2>
+<p>Use <code>:let</code> to bind values to names that persist across REPL commands:</p>
+<pre><code>λ&gt; :let x = 2 + 3
+x = 5
+
+λ&gt; :eval x * 2
+✅ 10
+
+λ&gt; :let matrix = Matrix(2, 2, [1, 2, 3, 4])
+matrix = Matrix(2, 2, [1, 2, 3, 4])
+
+λ&gt; :eval det(matrix)
+✅ -2
+</code></pre>
+<p><strong><code>:let</code> vs <code>:define</code>:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Creates</th><th>Persistence</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td><code>:let x = expr</code></td><td><strong>Value binding</strong></td><td>REPL session</td><td>Store computed values</td></tr>
+<tr><td><code>:define f(x) = expr</code></td><td><strong>Function</strong></td><td>REPL session</td><td>Define reusable functions</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="the-it-magic-variable"><a class="header" href="#the-it-magic-variable">The <code>it</code> Magic Variable</a></h2>
+<p>After each <code>:eval</code>, the result is stored in <code>it</code> for quick chaining:</p>
+<pre><code>λ&gt; :eval 2 + 3
+✅ 5
+
+λ&gt; :eval it * 2
+✅ 10
+
+λ&gt; :eval it + 1
+✅ 11
+</code></pre>
+<p>This is inspired by GHCi and OCaml REPLs. Use <code>:env</code> to see all bindings including <code>it</code>:</p>
+<pre><code>λ&gt; :env
+📌 Value bindings:
+  x = 5
+
+📍 Last result (it):
+  it = 11
+
+📋 Defined functions:
+  double (x) = ...
+</code></pre>
 <h2 id="repl-commands"><a class="header" href="#repl-commands">REPL Commands</a></h2>
 <div class="table-wrapper">
 <table>
@@ -1906,8 +1954,10 @@ VNum(120)
 <tbody>
 <tr><td><code>:help</code></td><td>Show all commands</td></tr>
 <tr><td><code>:load &lt;file&gt;</code></td><td>Load a .kleis file</td></tr>
-<tr><td><code>:env</code></td><td>Show defined functions</td></tr>
+<tr><td><code>:env</code></td><td>Show defined functions and bindings</td></tr>
 <tr><td><code>:eval &lt;expr&gt;</code></td><td><strong>Concrete evaluation</strong> (computes actual values)</td></tr>
+<tr><td><code>:let x = &lt;expr&gt;</code></td><td>Bind value to variable (persists in session)</td></tr>
+<tr><td><code>:define f(x) = &lt;expr&gt;</code></td><td>Define a function</td></tr>
 <tr><td><code>:verify &lt;expr&gt;</code></td><td>Verify with Z3 (is it always true?)</td></tr>
 <tr><td><code>:sat &lt;expr&gt;</code></td><td>Check satisfiability (does a solution exist?)</td></tr>
 <tr><td><code>:type &lt;expr&gt;</code></td><td>Show inferred type</td></tr>
@@ -1919,6 +1969,9 @@ VNum(120)
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Tip:</strong> Use <code>it</code> in any expression to refer to the last <code>:eval</code> result.</p>
+</blockquote>
 <h2 id="multi-line-input"><a class="header" href="#multi-line-input">Multi-line Input</a></h2>
 <p>For complex expressions, end lines with <code>\</code> or use block mode:</p>
 <pre><code>λ&gt; :verify ∀(a : R, b : R). \
@@ -3872,6 +3925,113 @@ Matrix(2, 3, [1, 2, 3, 4, 5, 6])
 <pre><code class="language-kleis">:eval matrix_diag(Matrix(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]))
 // → [1, 5, 9]
 </code></pre>
+<h2 id="row-and-column-manipulation"><a class="header" href="#row-and-column-manipulation">Row and Column Manipulation</a></h2>
+<h3 id="stacking-matrices"><a class="header" href="#stacking-matrices">Stacking Matrices</a></h3>
+<p>Combine matrices vertically or horizontally:</p>
+<pre><code>λ&gt; :let A = matrix([[1, 2], [3, 4]])
+λ&gt; :let B = matrix([[5, 6], [7, 8]])
+
+λ&gt; :eval vstack(A, B)
+✅ Matrix(4, 2, [1, 2, 3, 4, 5, 6, 7, 8])  // A on top, B below
+
+λ&gt; :eval hstack(A, B)
+✅ Matrix(2, 4, [1, 2, 5, 6, 3, 4, 7, 8])  // A left, B right
+</code></pre>
+<h3 id="appending-rows-and-columns"><a class="header" href="#appending-rows-and-columns">Appending Rows and Columns</a></h3>
+<p>Add a single row or column:</p>
+<pre><code>λ&gt; :let A = matrix([[1, 2], [3, 4]])
+
+λ&gt; :eval append_row(A, [5, 6])
+✅ Matrix(3, 2, [1, 2, 3, 4, 5, 6])  // Row added at bottom
+
+λ&gt; :eval prepend_row([0, 0], A)
+✅ Matrix(3, 2, [0, 0, 1, 2, 3, 4])  // Row added at top
+
+λ&gt; :eval append_col(A, [10, 20])
+✅ Matrix(2, 3, [1, 2, 10, 3, 4, 20])  // Column added at right
+
+λ&gt; :eval prepend_col([10, 20], A)
+✅ Matrix(2, 3, [10, 1, 2, 20, 3, 4])  // Column added at left
+</code></pre>
+<h3 id="building-augmented-matrices"><a class="header" href="#building-augmented-matrices">Building Augmented Matrices</a></h3>
+<p>Useful for linear algebra (solving <code>Ax = b</code>):</p>
+<pre><code>λ&gt; :let A = matrix([[1, 2], [3, 4]])
+λ&gt; :let b = matrix([[5], [6]])
+λ&gt; :eval hstack(A, b)
+✅ Matrix(2, 3, [1, 2, 5, 3, 4, 6])  // [A | b]
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Signature</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>vstack(A, B)</code></td><td>m×n, k×n → (m+k)×n</td><td>Stack rows</td></tr>
+<tr><td><code>hstack(A, B)</code></td><td>m×n, m×k → m×(n+k)</td><td>Stack columns</td></tr>
+<tr><td><code>append_row(M, r)</code></td><td>m×n, [n] → (m+1)×n</td><td>Add row at bottom</td></tr>
+<tr><td><code>prepend_row(r, M)</code></td><td>[n], m×n → (m+1)×n</td><td>Add row at top</td></tr>
+<tr><td><code>append_col(M, c)</code></td><td>m×n, [m] → m×(n+1)</td><td>Add column at right</td></tr>
+<tr><td><code>prepend_col(c, M)</code></td><td>[m], m×n → m×(n+1)</td><td>Add column at left</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="setting-values"><a class="header" href="#setting-values">Setting Values</a></h2>
+<p>Kleis matrices are immutable, but you can create new matrices with modified values:</p>
+<h3 id="set-individual-element"><a class="header" href="#set-individual-element">Set Individual Element</a></h3>
+<pre><code>λ&gt; :let A = zeros(3, 3)
+λ&gt; :eval A
+✅ matrix([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+
+λ&gt; :eval set_element(A, 1, 1, 99)
+✅ matrix([[0, 0, 0], [0, 99, 0], [0, 0, 0]])
+</code></pre>
+<h3 id="set-row-or-column"><a class="header" href="#set-row-or-column">Set Row or Column</a></h3>
+<pre><code>λ&gt; :eval set_row(zeros(3, 3), 0, [1, 2, 3])
+✅ matrix([[1, 2, 3], [0, 0, 0], [0, 0, 0]])
+
+λ&gt; :eval set_col(zeros(3, 3), 2, [7, 8, 9])
+✅ matrix([[0, 0, 7], [0, 0, 8], [0, 0, 9]])
+</code></pre>
+<h3 id="set-diagonal"><a class="header" href="#set-diagonal">Set Diagonal</a></h3>
+<pre><code>λ&gt; :eval set_diag(zeros(3, 3), [1, 2, 3])
+✅ matrix([[1, 0, 0], [0, 2, 0], [0, 0, 3]])
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Signature</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>set_element(M, i, j, v)</code></td><td>m×n → m×n</td><td>Set element at (i,j)</td></tr>
+<tr><td><code>set_row(M, i, [v...])</code></td><td>m×n → m×n</td><td>Set row i</td></tr>
+<tr><td><code>set_col(M, j, [v...])</code></td><td>m×n → m×n</td><td>Set column j</td></tr>
+<tr><td><code>set_diag(M, [v...])</code></td><td>n×n → n×n</td><td>Set diagonal</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="matrix-size"><a class="header" href="#matrix-size">Matrix Size</a></h2>
+<pre><code>λ&gt; :let A = matrix([[1, 2, 3], [4, 5, 6]])
+λ&gt; :eval size(A)
+✅ [2, 3]
+
+λ&gt; :eval nrows(A)
+✅ 2
+
+λ&gt; :eval ncols(A)
+✅ 3
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Result</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>size(M)</code></td><td><code>[m, n]</code></td><td>Get dimensions as list</td></tr>
+<tr><td><code>nrows(M)</code></td><td><code>m</code></td><td>Number of rows</td></tr>
+<tr><td><code>ncols(M)</code></td><td><code>n</code></td><td>Number of columns</td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="symbolic-matrix-operations"><a class="header" href="#symbolic-matrix-operations">Symbolic Matrix Operations</a></h2>
 <p>Matrix operations support partial symbolic evaluation. When mixing concrete and symbolic values, Kleis evaluates what it can and leaves the rest symbolic:</p>
 <pre><code class="language-kleis">:eval matrix_add(Matrix(2, 2, [1, 0, 0, 1]), Matrix(2, 2, [a, 0, 0, b]))
@@ -3907,6 +4067,43 @@ multiply(Matrix(2, 2, [...]), Matrix(3, 2, [...]))
 // Error: inner dimensions don't match
 </code></pre>
 <h2 id="complete-operations-reference"><a class="header" href="#complete-operations-reference">Complete Operations Reference</a></h2>
+<h3 id="matrix-constructors"><a class="header" href="#matrix-constructors">Matrix Constructors</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Constructor</th><th>Example</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>matrix([[...], [...]])</code></td><td><code>matrix([[1,2],[3,4]])</code></td><td><strong>Nested list syntax</strong> (recommended)</td></tr>
+<tr><td><code>Matrix(m, n, [...])</code></td><td><code>Matrix(2, 2, [1,2,3,4])</code></td><td>Explicit dimensions + flat list</td></tr>
+<tr><td><code>eye(n)</code></td><td><code>eye(3)</code> → 3×3 identity</td><td>n×n identity matrix</td></tr>
+<tr><td><code>identity(n)</code></td><td><code>identity(2)</code> → 2×2 identity</td><td>Alias for <code>eye</code></td></tr>
+<tr><td><code>zeros(n)</code></td><td><code>zeros(3)</code> → 3×3 zeros</td><td>n×n zero matrix</td></tr>
+<tr><td><code>zeros(m, n)</code></td><td><code>zeros(2, 3)</code> → 2×3 zeros</td><td>m×n zero matrix</td></tr>
+<tr><td><code>ones(n)</code></td><td><code>ones(3)</code> → 3×3 ones</td><td>n×n matrix of ones</td></tr>
+<tr><td><code>ones(m, n)</code></td><td><code>ones(2, 4)</code> → 2×4 ones</td><td>m×n matrix of ones</td></tr>
+<tr><td><code>diag_matrix([...])</code></td><td><code>diag_matrix([1,2,3])</code></td><td>Diagonal matrix from list</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Nested list syntax</strong> is recommended for readability:</p>
+<pre><code>λ&gt; :eval matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+✅ Matrix(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+λ&gt; :eval matrix([[0, -1], [1, 0]])
+✅ Matrix(2, 2, [0, -1, 1, 0])
+
+λ&gt; :eval eigenvalues(matrix([[0, -1], [1, 0]]))
+✅ [complex(0, 1), complex(0, -1)]
+</code></pre>
+<p>Other constructors:</p>
+<pre><code>λ&gt; :eval eye(3)
+✅ Matrix(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1])
+
+λ&gt; :eval diag_matrix([5, 10, 15])
+✅ Matrix(3, 3, [5, 0, 0, 0, 10, 0, 0, 0, 15])
+</code></pre>
+<h3 id="core-matrix-operations"><a class="header" href="#core-matrix-operations">Core Matrix Operations</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -3927,6 +4124,172 @@ multiply(Matrix(2, 2, [...]), Matrix(3, 2, [...]))
 </tbody>
 </table>
 </div>
+<h3 id="lapack-numerical-operations"><a class="header" href="#lapack-numerical-operations">LAPACK Numerical Operations</a></h3>
+<p>When compiled with the <code>numerical</code> feature, Kleis provides high-performance
+numerical linear algebra via LAPACK:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Signature</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>lapack_eigenvalues(A)</code></td><td><code>(n×n) → List(ℂ)</code></td><td>Eigenvalues</td></tr>
+<tr><td><code>lapack_eig(A)</code></td><td><code>(n×n) → [eigenvalues, eigenvectors]</code></td><td>Full eigendecomposition</td></tr>
+<tr><td><code>lapack_svd(A)</code></td><td><code>(m×n) → [U, S, Vᵀ]</code></td><td>Singular value decomposition</td></tr>
+<tr><td><code>lapack_singular_values(A)</code></td><td><code>(m×n) → List(ℝ)</code></td><td>Singular values only</td></tr>
+<tr><td><code>lapack_solve(A, b)</code></td><td><code>(n×n) × (n) → (n)</code></td><td>Solve Ax = b</td></tr>
+<tr><td><code>lapack_inv(A)</code></td><td><code>(n×n) → (n×n)</code></td><td>Matrix inverse</td></tr>
+<tr><td><code>lapack_qr(A)</code></td><td><code>(m×n) → [Q, R]</code></td><td>QR decomposition</td></tr>
+<tr><td><code>lapack_cholesky(A)</code></td><td><code>(n×n) → (n×n)</code></td><td>Cholesky factorization L</td></tr>
+<tr><td><code>lapack_rank(A)</code></td><td><code>(m×n) → ℕ</code></td><td>Matrix rank</td></tr>
+<tr><td><code>lapack_cond(A)</code></td><td><code>(m×n) → ℝ</code></td><td>Condition number</td></tr>
+<tr><td><code>lapack_norm(A)</code></td><td><code>(m×n) → ℝ</code></td><td>Frobenius norm</td></tr>
+<tr><td><code>lapack_det(A)</code></td><td><code>(n×n) → ℝ</code></td><td>Determinant (any size)</td></tr>
+<tr><td><code>schur(A)</code></td><td><code>(n×n) → [U, T, eigenvalues]</code></td><td>Schur decomposition (LAPACK dgees)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="schur-decomposition-for-control-theory"><a class="header" href="#schur-decomposition-for-control-theory">Schur Decomposition for Control Theory</a></h3>
+<p>The Schur decomposition A = UTUᵀ is critical for control theory applications:</p>
+<pre><code class="language-kleis">// Compute Schur decomposition
+let A = Matrix(3, 3, [-2, 0, 1, 0, -1, 0, 1, 0, -3])
+:eval schur(A)
+// Returns [U, T, eigenvalues] where:
+// - U is orthogonal (Schur vectors)
+// - T is quasi-upper-triangular (Schur form)
+// - eigenvalues are (real, imag) pairs
+</code></pre>
+<p><strong>Use cases:</strong></p>
+<ul>
+<li>Stability analysis (check if eigenvalues have Re(λ) &lt; 0)</li>
+<li>Lyapunov equation solvers</li>
+<li>CARE/DARE (algebraic Riccati equations)</li>
+<li>Pole placement algorithms</li>
+</ul>
+<h2 id="example-lqg-controller-design"><a class="header" href="#example-lqg-controller-design">Example: LQG Controller Design</a></h2>
+<p>This complete example demonstrates designing an LQG (Linear-Quadratic-Gaussian) controller for a mass-spring-damper system using Kleis’s numerical matrix operations.</p>
+<h3 id="system-definition"><a class="header" href="#system-definition">System Definition</a></h3>
+<pre><code>λ&gt; :let A = matrix([[0, 1], [-2, -3]])
+λ&gt; :let B = matrix([[0], [1]])
+λ&gt; :let C = matrix([[1, 0]])
+</code></pre>
+<p>The system <code>ẋ = Ax + Bu</code>, <code>y = Cx</code> represents a 2nd-order mechanical system.</p>
+<h3 id="open-loop-stability-analysis"><a class="header" href="#open-loop-stability-analysis">Open-Loop Stability Analysis</a></h3>
+<pre><code>λ&gt; :eval eigenvalues(A)
+✅ [-1, -2]
+</code></pre>
+<p>Both eigenvalues have negative real parts → system is stable, but response is slow.</p>
+<h3 id="lqr-controller-design-pole-placement"><a class="header" href="#lqr-controller-design-pole-placement">LQR Controller Design (Pole Placement)</a></h3>
+<p><strong>Goal:</strong> Place closed-loop poles at -5, -5 for faster response.</p>
+<p><strong>Step 1:</strong> Check controllability (det ≠ 0 means we can place poles anywhere):</p>
+<pre><code>λ&gt; :let Wc = hstack(B, multiply(A, B))
+λ&gt; :eval Wc
+✅ matrix([[0, 1], [1, -3]])
+
+λ&gt; :eval det(Wc)
+✅ -1
+</code></pre>
+<p><strong>Step 2:</strong> Extract open-loop characteristic polynomial coefficients.</p>
+<p>The open-loop characteristic polynomial is det(sI - A) = s² + a₁s + a₀.
+From A = [[0, 1], [-2, -3]], we get: s² + 3s + 2, so a₁ = 3, a₀ = 2.</p>
+<pre><code>λ&gt; :let a1 = 3
+λ&gt; :let a0 = 2
+</code></pre>
+<p><strong>Step 3:</strong> Set desired closed-loop characteristic polynomial.</p>
+<p>For poles at -5, -5: (s+5)² = s² + 10s + 25, so α₁ = 10, α₀ = 25.</p>
+<pre><code>λ&gt; :let alpha1 = 10
+λ&gt; :let alpha0 = 25
+</code></pre>
+<p><strong>Step 4:</strong> Compute feedback gain K using coefficient matching.</p>
+<p>For a controllable canonical form with B = [[0], [1]], the gain is K = [α₀-a₀, α₁-a₁]:</p>
+<pre><code>λ&gt; :let k1 = alpha0 - a0
+λ&gt; :let k2 = alpha1 - a1
+λ&gt; :eval k1
+✅ 23
+λ&gt; :eval k2
+✅ 7
+
+λ&gt; :let K = matrix([[k1, k2]])
+λ&gt; :eval K
+✅ matrix([[23, 7]])
+</code></pre>
+<p><strong>Step 5:</strong> Verify closed-loop eigenvalues:</p>
+<pre><code>λ&gt; :let A_cl = matrix_sub(A, multiply(B, K))
+λ&gt; :eval A_cl
+✅ matrix([[0, 1], [-25, -10]])
+
+λ&gt; :eval eigenvalues(A_cl)
+✅ [-5.000000042200552, -4.999999957799446]
+</code></pre>
+<p>Closed-loop poles are at -5 (2.5× faster than open-loop).</p>
+<h3 id="kalman-observer-design"><a class="header" href="#kalman-observer-design">Kalman Observer Design</a></h3>
+<p><strong>Goal:</strong> Design observer with poles at -10, -10 (faster than controller for separation principle).</p>
+<p><strong>Step 1:</strong> Check observability:</p>
+<pre><code>λ&gt; :let Wo = vstack(C, multiply(C, A))
+λ&gt; :eval Wo
+✅ matrix([[1, 0], [0, 1]])
+
+λ&gt; :eval det(Wo)
+✅ 1
+</code></pre>
+<p><strong>Step 2:</strong> Apply duality - observer design uses Aᵀ and Cᵀ.</p>
+<p>For observer error dynamics (A - LC), the characteristic polynomial is:
+det(sI - A + LC) = s² + (3 + l₁)s + (2 + l₂)</p>
+<p>Desired: (s+10)² = s² + 20s + 100</p>
+<p><strong>Step 3:</strong> Compute observer gain L:</p>
+<pre><code>λ&gt; :let l1 = 20 - 3
+λ&gt; :let l2 = 100 - 2
+λ&gt; :eval l1
+✅ 17
+λ&gt; :eval l2
+✅ 98
+
+λ&gt; :let L = matrix([[l1], [l2]])
+λ&gt; :eval L
+✅ matrix([[17], [98]])
+</code></pre>
+<p><strong>Step 4:</strong> Verify observer eigenvalues:</p>
+<pre><code>λ&gt; :let A_obs = matrix_sub(A, multiply(L, C))
+λ&gt; :eval A_obs
+✅ matrix([[-17, 1], [-100, -3]])
+
+λ&gt; :eval eigenvalues(A_obs)
+✅ [complex(-10, 7.14), complex(-10, -7.14)]
+</code></pre>
+<p>Observer eigenvalues have Re(λ) = -10 → faster error convergence than the controller.</p>
+<h3 id="controllability-and-observability"><a class="header" href="#controllability-and-observability">Controllability and Observability</a></h3>
+<pre><code>λ&gt; :let Wc = hstack(B, multiply(A, B))
+λ&gt; :eval Wc
+✅ matrix([[0, 1], [1, -3]])
+
+λ&gt; :eval det(Wc)
+✅ -1
+</code></pre>
+<p>det(Wc) ≠ 0 → System is <strong>controllable</strong>.</p>
+<pre><code>λ&gt; :let Wo = vstack(C, multiply(C, A))
+λ&gt; :eval Wo
+✅ matrix([[1, 0], [0, 1]])
+
+λ&gt; :eval det(Wo)
+✅ 1
+</code></pre>
+<p>det(Wo) ≠ 0 → System is <strong>observable</strong>.</p>
+<h3 id="summary-3"><a class="header" href="#summary-3">Summary</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>Open-loop poles</td><td>-1, -2</td><td>Stable but slow</td></tr>
+<tr><td>Closed-loop poles (LQR)</td><td>-5, -5</td><td>✅ 2.5× faster</td></tr>
+<tr><td>Observer poles (Kalman)</td><td>-10 ± 7.14i</td><td>✅ 2× faster than controller</td></tr>
+<tr><td>Controllable</td><td>det(Wc) ≠ 0</td><td>✅ Yes</td></tr>
+<tr><td>Observable</td><td>det(Wo) ≠ 0</td><td>✅ Yes</td></tr>
+</tbody>
+</table>
+</div>
+<p>The <strong>Separation Principle</strong> is satisfied: LQR and Kalman can be designed independently, and the combined LQG controller is guaranteed stable.</p>
 <h2 id="see-also-1"><a class="header" href="#see-also-1">See Also</a></h2>
 <ul>
 <li><a href="#types-and-values">Types and Values</a> - Matrix as a parametric type</li>
@@ -5358,7 +5721,7 @@ define run_with_env(code: String, env: Env) : LispVal =
 </ol>
 <p>For production LISP, use Racket, SBCL, or Clojure.</p>
 <hr>
-<h2 id="summary-3"><a class="header" href="#summary-3">Summary</a></h2>
+<h2 id="summary-4"><a class="header" href="#summary-4">Summary</a></h2>
 <p>This LISP interpreter demonstrates that <strong>Kleis is Turing-complete</strong> and can serve as a host language for other programming languages. The implementation uses:</p>
 <div class="table-wrapper">
 <table>

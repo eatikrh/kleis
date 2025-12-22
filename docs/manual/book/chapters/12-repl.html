@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4b2e0e40.js";
+            window.path_to_searchindex_js = "../searchindex-02cce4ba.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-adba3566.js"></script>
@@ -311,6 +311,54 @@ VNum(120)
 <p><strong>Key insight:</strong> Z3 cannot symbolically unroll recursive functions over unbounded data types. Use <code>:eval</code> for concrete computation, <code>:sat</code>/<code>:verify</code> for symbolic reasoning.</p>
 </blockquote>
 <p>This is what makes Kleis <strong>Turing complete</strong> — the combination of ADTs, pattern matching, recursion, and concrete evaluation enables arbitrary computation. See <a href="../appendix/lisp-interpreter.html">Appendix: LISP Interpreter</a> for a complete example.</p>
+<h2 id="value-bindings-with-let"><a class="header" href="#value-bindings-with-let">Value Bindings with <code>:let</code></a></h2>
+<p>Use <code>:let</code> to bind values to names that persist across REPL commands:</p>
+<pre><code>λ&gt; :let x = 2 + 3
+x = 5
+
+λ&gt; :eval x * 2
+✅ 10
+
+λ&gt; :let matrix = Matrix(2, 2, [1, 2, 3, 4])
+matrix = Matrix(2, 2, [1, 2, 3, 4])
+
+λ&gt; :eval det(matrix)
+✅ -2
+</code></pre>
+<p><strong><code>:let</code> vs <code>:define</code>:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Creates</th><th>Persistence</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td><code>:let x = expr</code></td><td><strong>Value binding</strong></td><td>REPL session</td><td>Store computed values</td></tr>
+<tr><td><code>:define f(x) = expr</code></td><td><strong>Function</strong></td><td>REPL session</td><td>Define reusable functions</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="the-it-magic-variable"><a class="header" href="#the-it-magic-variable">The <code>it</code> Magic Variable</a></h2>
+<p>After each <code>:eval</code>, the result is stored in <code>it</code> for quick chaining:</p>
+<pre><code>λ&gt; :eval 2 + 3
+✅ 5
+
+λ&gt; :eval it * 2
+✅ 10
+
+λ&gt; :eval it + 1
+✅ 11
+</code></pre>
+<p>This is inspired by GHCi and OCaml REPLs. Use <code>:env</code> to see all bindings including <code>it</code>:</p>
+<pre><code>λ&gt; :env
+📌 Value bindings:
+  x = 5
+
+📍 Last result (it):
+  it = 11
+
+📋 Defined functions:
+  double (x) = ...
+</code></pre>
 <h2 id="repl-commands"><a class="header" href="#repl-commands">REPL Commands</a></h2>
 <div class="table-wrapper">
 <table>
@@ -320,8 +368,10 @@ VNum(120)
 <tbody>
 <tr><td><code>:help</code></td><td>Show all commands</td></tr>
 <tr><td><code>:load &lt;file&gt;</code></td><td>Load a .kleis file</td></tr>
-<tr><td><code>:env</code></td><td>Show defined functions</td></tr>
+<tr><td><code>:env</code></td><td>Show defined functions and bindings</td></tr>
 <tr><td><code>:eval &lt;expr&gt;</code></td><td><strong>Concrete evaluation</strong> (computes actual values)</td></tr>
+<tr><td><code>:let x = &lt;expr&gt;</code></td><td>Bind value to variable (persists in session)</td></tr>
+<tr><td><code>:define f(x) = &lt;expr&gt;</code></td><td>Define a function</td></tr>
 <tr><td><code>:verify &lt;expr&gt;</code></td><td>Verify with Z3 (is it always true?)</td></tr>
 <tr><td><code>:sat &lt;expr&gt;</code></td><td>Check satisfiability (does a solution exist?)</td></tr>
 <tr><td><code>:type &lt;expr&gt;</code></td><td>Show inferred type</td></tr>
@@ -333,6 +383,9 @@ VNum(120)
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Tip:</strong> Use <code>it</code> in any expression to refer to the last <code>:eval</code> result.</p>
+</blockquote>
 <h2 id="multi-line-input"><a class="header" href="#multi-line-input">Multi-line Input</a></h2>
 <p>For complex expressions, end lines with <code>\</code> or use block mode:</p>
 <pre><code>λ&gt; :verify ∀(a : R, b : R). \
