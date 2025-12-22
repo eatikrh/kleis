@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-2a352dad.js";
+            window.path_to_searchindex_js = "../searchindex-8c59b3c7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1ed044a1.js"></script>
@@ -272,11 +272,17 @@ sin(divide(π, 2))
 <h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
 <p>Check types with <code>:type</code>:</p>
 <pre><code>λ&gt; :type 42
+📐 Type: Int
+
+λ&gt; :type 3.14
 📐 Type: Scalar
 
 λ&gt; :type sin
 📐 Type: α0
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> Integer literals (<code>42</code>) type as <code>Int</code>, real literals (<code>3.14</code>) type as <code>Scalar</code>. This enables proper type promotion (e.g., <code>Int + Rational → Rational</code>).</p>
+</blockquote>
 <h2 id="concrete-evaluation-with-eval"><a class="header" href="#concrete-evaluation-with-eval">Concrete Evaluation with <code>:eval</code></a></h2>
 <p>The <code>:eval</code> command performs <strong>concrete evaluation</strong> — it actually computes results, including recursive functions:</p>
 <pre><code>λ&gt; :load docs/grammar/lisp_parser.kleis

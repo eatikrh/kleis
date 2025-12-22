@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2a352dad.js";
+            window.path_to_searchindex_js = "searchindex-8c59b3c7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1ed044a1.js"></script>
@@ -485,6 +485,131 @@ define square_five = let y = 5 in y * y
     ℕ
 </code></pre>
 <p>Note: <code>ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ ⊂ ℂ</code> (naturals ⊂ integers ⊂ rationals ⊂ reals ⊂ complex)</p>
+<h2 id="type-promotion-embedding"><a class="header" href="#type-promotion-embedding">Type Promotion (Embedding)</a></h2>
+<p>When you mix numeric types in an expression, Kleis automatically <strong>promotes</strong> the smaller type to the larger one. This is called <strong>type embedding</strong>, not subtyping.</p>
+<h3 id="embedding-vs-subtyping"><a class="header" href="#embedding-vs-subtyping">Embedding vs Subtyping</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concept</th><th>Meaning</th><th>Kleis Approach</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Subtyping</strong></td><td><code>S</code> can be used anywhere <code>T</code> is expected, with identical behavior</td><td>Not used</td></tr>
+<tr><td><strong>Embedding</strong></td><td><code>S</code> can be converted to <code>T</code> via an explicit <code>lift</code> function</td><td>✓ Used</td></tr>
+</tbody>
+</table>
+</div>
+<p>The difference is subtle but important:</p>
+<pre><code class="language-kleis">// Embedding: Integer 3 is lifted to Rational before the operation
+rational(1, 2) + 3
+// Becomes: rational_add(rational(1, 2), lift(3))
+// Result: rational(7, 2) — exact!
+</code></pre>
+<h3 id="how-promotion-works"><a class="header" href="#how-promotion-works">How Promotion Works</a></h3>
+<ol>
+<li><strong>Type inference</strong> determines the result type (the “common supertype”)</li>
+<li><strong>Lifting</strong> converts arguments to the target type</li>
+<li><strong>Operation</strong> executes at the target type</li>
+</ol>
+<pre><code>Int + Rational
+    ↓ find common supertype
+  Rational
+    ↓ lift Int to Rational
+  lift(Int) + Rational
+    ↓ execute operation
+  rational_add(Rational, Rational)
+    ↓
+  Rational result
+</code></pre>
+<h3 id="the-promotes-structure"><a class="header" href="#the-promotes-structure">The <code>Promotes</code> Structure</a></h3>
+<p>Type promotion is defined by the <code>Promotes(From, To)</code> structure:</p>
+<pre><code class="language-kleis">structure Promotes(From, To) {
+  operation lift : From → To
+}
+
+// Built-in promotions
+implements Promotes(ℕ, ℤ) { operation lift = builtin_nat_to_int }
+implements Promotes(ℤ, ℚ) { operation lift = builtin_int_to_rational }
+implements Promotes(ℚ, ℝ) { operation lift = builtin_rational_to_real }
+implements Promotes(ℝ, ℂ) { operation lift = builtin_real_to_complex }
+</code></pre>
+<h3 id="defining-your-own-promotions"><a class="header" href="#defining-your-own-promotions">Defining Your Own Promotions</a></h3>
+<p>You can define promotions for your own types. Unlike built-in types (which use <code>builtin_*</code> functions), <strong>you must write the conversion function yourself</strong>:</p>
+<pre><code class="language-kleis">data Percentage = Pct(value: ℝ)
+
+// Step 1: Define the conversion function
+define pct_to_real(p: Percentage) : ℝ =
+  match p { Pct(v) =&gt; divide(v, 100) }
+
+// Step 2: Register the promotion, referencing YOUR function
+implements Promotes(Percentage, ℝ) {
+  operation lift = pct_to_real   // References the function above
+}
+</code></pre>
+<p>Now this works in the REPL:</p>
+<pre><code>λ&gt; :eval 0.5 + pct_to_real(Pct(25))
+✅ 0.75
+</code></pre>
+<p><strong>Key difference from built-in types:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Lift Implementation</th></tr>
+</thead>
+<tbody>
+<tr><td>Built-in (<code>ℤ → ℚ</code>)</td><td><code>operation lift = builtin_int_to_rational</code> (provided by Kleis)</td></tr>
+<tr><td>User-defined</td><td><code>operation lift = your_function</code> (you must define it)</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p><strong>Important</strong>: For concrete execution (<code>:eval</code>), you must provide an actual <code>define</code> for the lift function. Without it:</p>
+<ul>
+<li><code>:verify</code> (symbolic) — Works (Z3 treats <code>lift</code> as uninterpreted)</li>
+<li><code>:eval</code> (concrete) — <strong>Fails</strong> (“function not found”)</li>
+</ul>
+</blockquote>
+<h3 id="precision-considerations"><a class="header" href="#precision-considerations">Precision Considerations</a></h3>
+<p><strong>Warning</strong>: Promotion can lose precision!</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Promotion</th><th>Precision</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ℕ → ℤ</code></td><td>✓ Exact (integers contain all naturals)</td></tr>
+<tr><td><code>ℤ → ℚ</code></td><td>✓ Exact (rationals contain all integers)</td></tr>
+<tr><td><code>ℚ → ℝ</code></td><td>⚠️ <strong>May lose precision</strong> (floating-point approximation)</td></tr>
+<tr><td><code>ℝ → ℂ</code></td><td>✓ Exact (complex with zero imaginary part)</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-kleis">// Exact in Rational
+define third : ℚ = rational(1, 3)  // Exactly 1/3
+
+// Approximate in Real (floating-point)
+define approx : ℝ = 1.0 / 3.0      // 0.333333...
+
+// If you promote:
+define promoted = third + 0.5      // third lifted to ℝ, loses exactness!
+</code></pre>
+<p><strong>Recommendation</strong>: When precision matters, be explicit about types:</p>
+<pre><code class="language-kleis">// Keep it in Rational for exact arithmetic
+define exact_sum : ℚ = rational(1, 3) + rational(1, 6)  // Exactly 1/2
+
+// Or use type annotations to prevent accidental promotion
+define result(x : ℚ, y : ℚ) : ℚ = x + y
+</code></pre>
+<h3 id="no-lsp-violations"><a class="header" href="#no-lsp-violations">No LSP Violations</a></h3>
+<p>Because Kleis uses embedding (not subtyping), operations are always resolved at the <strong>target type</strong> after lifting. This means:</p>
+<ul>
+<li><code>Int + Int</code> uses integer addition</li>
+<li><code>Int + Rational</code> lifts the Int first, then uses rational addition</li>
+<li>You never accidentally get integer truncation when you expected rational division</li>
+</ul>
+<pre><code class="language-kleis">5 / 3           // Integer division → 1 (if both are Int)
+rational(5, 1) / rational(3, 1)   // Rational division → 5/3 (exact)
+</code></pre>
 <h2 id="whats-next-1"><a class="header" href="#whats-next-1">What’s Next?</a></h2>
 <p>Types are the foundation. Now let’s see how to define functions!</p>
 <p>→ <a href="#functions">Next: Functions</a></p>
@@ -1680,11 +1805,17 @@ sin(divide(π, 2))
 <h2 id="type-inference-1"><a class="header" href="#type-inference-1">Type Inference</a></h2>
 <p>Check types with <code>:type</code>:</p>
 <pre><code>λ&gt; :type 42
+📐 Type: Int
+
+λ&gt; :type 3.14
 📐 Type: Scalar
 
 λ&gt; :type sin
 📐 Type: α0
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> Integer literals (<code>42</code>) type as <code>Int</code>, real literals (<code>3.14</code>) type as <code>Scalar</code>. This enables proper type promotion (e.g., <code>Int + Rational → Rational</code>).</p>
+</blockquote>
 <h2 id="concrete-evaluation-with-eval"><a class="header" href="#concrete-evaluation-with-eval">Concrete Evaluation with <code>:eval</code></a></h2>
 <p>The <code>:eval</code> command performs <strong>concrete evaluation</strong> — it actually computes results, including recursive functions:</p>
 <pre><code>λ&gt; :load docs/grammar/lisp_parser.kleis
