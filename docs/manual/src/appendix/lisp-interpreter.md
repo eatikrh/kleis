@@ -1,6 +1,8 @@
 # Appendix: LISP Interpreter in Kleis
 
-This appendix presents a complete LISP interpreter written entirely in Kleis. This demonstrates Kleis's power as a **meta-language** — you can define and execute other programming languages within Kleis itself.
+This appendix presents a LISP interpreter written entirely in Kleis. This is a **demonstration** of Kleis's power as a meta-language — proving that Kleis can parse and execute programs written in other languages.
+
+> **Note:** This is a proof-of-concept, not a production LISP implementation. See [Known Limitations](#known-limitations) for details.
 
 The interpreter includes:
 - **Recursive descent S-expression parser**
@@ -598,6 +600,32 @@ define run(code: String) : LispVal =
 define run_with_env(code: String, env: Env) : LispVal =
     eval_lisp(parse(code), env)
 ```
+
+---
+
+## Known Limitations
+
+This LISP interpreter is a **demonstration**, not a production-level implementation. It proves that Kleis can parse and execute programs, but has known limitations:
+
+| Issue | Description | Status |
+|-------|-------------|--------|
+| **Trailing junk ignored** | `parse("(+ 1 2) garbage")` parses successfully, ignoring "garbage" | Known |
+| **Errors as atoms** | Parse errors return `SAtom("Error: ...")` instead of a proper error type | Known |
+| **No quote syntax** | Standard LISP `'(1 2 3)` is not supported; use `(list 1 2 3)` instead | Known |
+| **Limited special forms** | Only `if`, `lambda`, `let`, `letrec`, `define` are implemented | By design |
+| **No macros** | LISP macros are not supported | By design |
+| **Integer-only arithmetic** | No floating-point numbers | By design |
+
+### Why These Limitations Exist
+
+This interpreter demonstrates **Kleis's meta-language capabilities**, not LISP completeness. The goal is to show:
+
+1. Kleis can parse arbitrary grammars using recursive descent
+2. Kleis can build and traverse ASTs (S-expressions as Kleis data types)
+3. Kleis can execute recursive programs via `:eval`
+4. Kleis is Turing-complete
+
+For production LISP, use Racket, SBCL, or Clojure.
 
 ---
 

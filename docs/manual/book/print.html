@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f2c8b5ea.js";
+            window.path_to_searchindex_js = "searchindex-5cecd11d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-903d2734.js"></script>
@@ -4593,7 +4593,10 @@ import "stdlib/differential_geometry.kleis"
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-lisp-interpreter-in-kleis"><a class="header" href="#appendix-lisp-interpreter-in-kleis">Appendix: LISP Interpreter in Kleis</a></h1>
-<p>This appendix presents a complete LISP interpreter written entirely in Kleis. This demonstrates Kleis’s power as a <strong>meta-language</strong> — you can define and execute other programming languages within Kleis itself.</p>
+<p>This appendix presents a LISP interpreter written entirely in Kleis. This is a <strong>demonstration</strong> of Kleis’s power as a meta-language — proving that Kleis can parse and execute programs written in other languages.</p>
+<blockquote>
+<p><strong>Note:</strong> This is a proof-of-concept, not a production LISP implementation. See <a href="#known-limitations">Known Limitations</a> for details.</p>
+</blockquote>
 <p>The interpreter includes:</p>
 <ul>
 <li><strong>Recursive descent S-expression parser</strong></li>
@@ -5144,6 +5147,33 @@ define run(code: String) : LispVal =
 define run_with_env(code: String, env: Env) : LispVal =
     eval_lisp(parse(code), env)
 </code></pre>
+<hr>
+<h2 id="known-limitations"><a class="header" href="#known-limitations">Known Limitations</a></h2>
+<p>This LISP interpreter is a <strong>demonstration</strong>, not a production-level implementation. It proves that Kleis can parse and execute programs, but has known limitations:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Issue</th><th>Description</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Trailing junk ignored</strong></td><td><code>parse("(+ 1 2) garbage")</code> parses successfully, ignoring “garbage”</td><td>Known</td></tr>
+<tr><td><strong>Errors as atoms</strong></td><td>Parse errors return <code>SAtom("Error: ...")</code> instead of a proper error type</td><td>Known</td></tr>
+<tr><td><strong>No quote syntax</strong></td><td>Standard LISP <code>'(1 2 3)</code> is not supported; use <code>(list 1 2 3)</code> instead</td><td>Known</td></tr>
+<tr><td><strong>Limited special forms</strong></td><td>Only <code>if</code>, <code>lambda</code>, <code>let</code>, <code>letrec</code>, <code>define</code> are implemented</td><td>By design</td></tr>
+<tr><td><strong>No macros</strong></td><td>LISP macros are not supported</td><td>By design</td></tr>
+<tr><td><strong>Integer-only arithmetic</strong></td><td>No floating-point numbers</td><td>By design</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="why-these-limitations-exist"><a class="header" href="#why-these-limitations-exist">Why These Limitations Exist</a></h3>
+<p>This interpreter demonstrates <strong>Kleis’s meta-language capabilities</strong>, not LISP completeness. The goal is to show:</p>
+<ol>
+<li>Kleis can parse arbitrary grammars using recursive descent</li>
+<li>Kleis can build and traverse ASTs (S-expressions as Kleis data types)</li>
+<li>Kleis can execute recursive programs via <code>:eval</code></li>
+<li>Kleis is Turing-complete</li>
+</ol>
+<p>For production LISP, use Racket, SBCL, or Clojure.</p>
 <hr>
 <h2 id="summary-3"><a class="header" href="#summary-3">Summary</a></h2>
 <p>This LISP interpreter demonstrates that <strong>Kleis is Turing-complete</strong> and can serve as a host language for other programming languages. The implementation uses:</p>
