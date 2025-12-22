@@ -141,69 +141,20 @@ See `docs/vision/VERIFIED_SOFTWARE_VISION.md` — this enables:
 
 Based on capability assessment (Dec 19, 2025), here's what's needed to increase Bourbaki coverage from ~15-20% to higher levels.
 
-### Priority 1: Parser Fixes (THE Critical Blocker) 🔧
+### Priority 1: Parser Fixes ✅ COMPLETE (Grammar v0.9)
 
-**⚠️ This constitutes Grammar v0.9** - see `docs/grammar/kleis_grammar_v09.md` (to be created).
+**Status: DONE** (Dec 22, 2025) - All parser issues resolved!
 
-**This is the ONLY Rust change needed.** Once fixed, Priorities 2-5 are pure Kleis stdlib code.
+| Issue | Status | Verified By |
+|-------|--------|-------------|
+| **∀ inside ∧** | ✅ Works | `tests/grammar_v09_test.rs::test_quantifier_in_conjunction` |
+| **Function types in quantifiers** | ✅ Works | `tests/grammar_v09_test.rs::test_function_type_with_nested_quantifier` |
+| **→ as implication** | ✅ Works | Used throughout axiom definitions |
+| **ε-δ limit definition** | ✅ Works | `tests/grammar_v09_test.rs::test_epsilon_delta_limit` |
 
-| Issue | Current | Target | Effort |
-|-------|---------|--------|--------|
-| **∀ inside ∧** | `(y > 0) ∧ (∀(x). ...)` fails | Should parse | 1-2 days |
-| **Function types in quantifiers** | `∀(f : ℝ → ℝ). ...` fails | Should parse | 1-2 days |
-| **→ as implication** | Only `where` works for preconditions | Support `P → Q` | 1 day |
+**Impact:** Full ε-δ analysis definitions, nested quantifiers, and function types in quantifiers all work.
 
-**Impact:** Enables full ε-δ analysis definitions, nested quantifiers.
-
-#### Exact Parser Changes Required
-
-**File:** `src/kleis_parser.rs`
-
-**Change 1: Allow quantifiers as expression operands**
-
-Current behavior: The expression parser treats `∀` and `∃` as statement-level constructs only.
-
-```rust
-// In parse_primary() or parse_expression():
-// Currently fails when ∀ appears after ∧
-
-// NEEDED: When parsing RHS of ∧/∨/→, allow:
-//   - ∀(var : Type). body
-//   - ∃(var : Type). body
-// as valid primary expressions
-```
-
-**Change 2: Parse function types in type annotations**
-
-Current behavior: Type annotations only accept simple types like `ℝ`, `ℕ`, `Set(T)`.
-
-```rust
-// In parse_type_annotation():
-// Currently: ℝ, ℕ, Set(T), Vector(n, T)
-// NEEDED: ℝ → ℝ, (ℝ × ℝ) → ℝ, etc.
-
-// Grammar addition:
-// type_annotation ::= simple_type | simple_type '→' type_annotation
-```
-
-**Test cases to pass after fix:**
-```kleis
-// Test 1: Quantifier inside conjunction
-structure Test1 {
-    axiom nested: (x > 0) ∧ (∀(y : ℝ). y > 0)
-}
-
-// Test 2: Function type in quantifier
-structure Test2 {
-    axiom func: ∀(f : ℝ → ℝ). f(0) = f(0)
-}
-
-// Test 3: Epsilon-delta (the real goal)
-structure Limits {
-    axiom epsilon_delta: ∀(L a : ℝ, ε : ℝ). ε > 0 → 
-        (∃(δ : ℝ). δ > 0 ∧ (∀(x : ℝ). abs(x - a) < δ → abs(f(x) - L) < ε))
-}
-```
+**Next Steps:** Priorities 2-5 are pure Kleis stdlib code (no more Rust changes needed).
 
 ### Priority 2: Set Theory in stdlib (Foundation) 📚
 
