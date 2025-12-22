@@ -1437,21 +1437,50 @@ impl TypeInference {
             let c1 = get_constructor(&t1);
             let c2 = get_constructor(&t2);
 
-            // Case 1: Both types are concrete and same → use that type
+            // Case 1: Both types are concrete and same constructor
             if let (Some(ref con1), Some(ref con2)) = (&c1, &c2) {
                 if con1 == con2 {
-                    // Same type - return it (Matrix + Matrix → Matrix, etc.)
+                    // Same constructor - for parametric types, verify Nat parameters match
+                    // This is GENERIC: works for Matrix(m,n,T), Vector(n,T), Tensor(i,j,k,T),
+                    // or any user-defined type with Nat parameters
+                    if let (Type::Data { args: args1, .. }, Type::Data { args: args2, .. }) =
+                        (&t1, &t2)
+                    {
+                        // Check that dimension parameters (NatValues) match
+                        if !args1.is_empty() && !args2.is_empty() {
+                            for (a1, a2) in args1.iter().zip(args2.iter()) {
+                                match (a1, a2) {
+                                    (Type::NatValue(n1), Type::NatValue(n2)) if n1 != n2 => {
+                                        return Err(format!(
+                                            "Dimension mismatch in {} operation: {} has parameter {} but {} has parameter {}",
+                                            name, con1, n1, con2, n2
+                                        ));
+                                    }
+                                    _ => {} // Type params, element types, etc. - OK
+                                }
+                            }
+                        }
+                    }
+                    // All parameters match (or no parameters) - return t1
                     return Ok(t1.clone());
                 }
 
-                // Case 2: Matrix or Vector - no promotion, must match exactly
-                if con1 == "Matrix" || con1 == "Vector" || con2 == "Matrix" || con2 == "Vector" {
-                    // For now, if either is Matrix/Vector, return that type
-                    // (This handles Matrix + Placeholder scenarios)
-                    if con1 == "Matrix" || con1 == "Vector" {
-                        return Ok(t1.clone());
+                // Case 2: Different constructors for non-scalar types
+                // Check if either type has Nat parameters (indicating a sized type)
+                let has_nat_params = |t: &Type| -> bool {
+                    if let Type::Data { args, .. } = t {
+                        args.iter().any(|a| matches!(a, Type::NatValue(_)))
+                    } else {
+                        false
                     }
-                    return Ok(t2.clone());
+                };
+
+                if has_nat_params(&t1) || has_nat_params(&t2) {
+                    // Sized types (parametric with Nat) can't be combined with different types
+                    return Err(format!(
+                        "Type mismatch in {} operation: cannot combine {} and {}",
+                        name, con1, con2
+                    ));
                 }
 
                 // Case 3: Scalar types - use type promotion hierarchy
