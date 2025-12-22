@@ -169,3 +169,57 @@ fn test_symbolic_matrix_trace_returns_unevaluated() {
     assert!(result.contains("trace") || result.contains("Matrix"));
 }
 
+// ============================================
+// MATRIX EXTRACTION OPERATIONS
+// ============================================
+
+#[test]
+fn test_matrix_get_element() {
+    // Get element at (0, 2) from 2×3 matrix
+    let result = eval("matrix_get(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 0, 2)");
+    assert!(result.contains("3"));
+}
+
+#[test]
+fn test_matrix_get_element_second_row() {
+    // Get element at (1, 1) from 2×3 matrix
+    let result = eval("matrix_get(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 1, 1)");
+    assert!(result.contains("5"));
+}
+
+#[test]
+fn test_matrix_row() {
+    // Get row 0 from 2×3 matrix
+    let result = eval("matrix_row(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 0)");
+    assert!(result.contains("List"));
+    assert!(result.contains("1"));
+    assert!(result.contains("2"));
+    assert!(result.contains("3"));
+}
+
+#[test]
+fn test_matrix_col() {
+    // Get column 0 from 2×3 matrix
+    let result = eval("matrix_col(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 0)");
+    assert!(result.contains("List"));
+    assert!(result.contains("1"));
+    assert!(result.contains("4"));
+}
+
+#[test]
+fn test_matrix_diag() {
+    // Get diagonal from 3×3 matrix
+    let result = eval("matrix_diag(Matrix(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]))");
+    assert!(result.contains("List"));
+    assert!(result.contains("1"));
+    assert!(result.contains("5"));
+    assert!(result.contains("9"));
+}
+
+#[test]
+fn test_matrix_get_out_of_bounds() {
+    // Out of bounds should error
+    let result = eval("matrix_get(Matrix(2, 2, [1, 2, 3, 4]), 5, 0)");
+    assert!(result.contains("out of bounds") || result.contains("Error"));
+}
+

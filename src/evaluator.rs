@@ -1961,6 +1961,109 @@ impl Evaluator {
                 Ok(Some(self.make_matrix(m, n, result?)))
             }
 
+            "matrix_get" | "element" => {
+                // Get element at (i, j) from matrix
+                // matrix_get(M, i, j) → element
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    let i = self.as_integer(&args[1]);
+                    let j = self.as_integer(&args[2]);
+                    if let (Some(i), Some(j)) = (i, j) {
+                        let i = i as usize;
+                        let j = j as usize;
+                        if i < m && j < n {
+                            let idx = i * n + j;
+                            Ok(Some(elems[idx].clone()))
+                        } else {
+                            Err(format!(
+                                "matrix_get: index ({}, {}) out of bounds for {}x{} matrix",
+                                i, j, m, n
+                            ))
+                        }
+                    } else {
+                        Ok(None) // Symbolic indices - return unevaluated
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "matrix_row" | "row" => {
+                // Get row i from matrix as a list
+                // matrix_row(M, i) → [elements]
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if let Some(i) = self.as_integer(&args[1]) {
+                        let i = i as usize;
+                        if i < m {
+                            let start = i * n;
+                            let row: Vec<Expression> = elems[start..start + n].to_vec();
+                            Ok(Some(Expression::List(row)))
+                        } else {
+                            Err(format!(
+                                "matrix_row: row {} out of bounds for {}x{} matrix",
+                                i, m, n
+                            ))
+                        }
+                    } else {
+                        Ok(None) // Symbolic index - return unevaluated
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "matrix_col" | "col" => {
+                // Get column j from matrix as a list
+                // matrix_col(M, j) → [elements]
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if let Some(j) = self.as_integer(&args[1]) {
+                        let j = j as usize;
+                        if j < n {
+                            let col: Vec<Expression> =
+                                (0..m).map(|i| elems[i * n + j].clone()).collect();
+                            Ok(Some(Expression::List(col)))
+                        } else {
+                            Err(format!(
+                                "matrix_col: column {} out of bounds for {}x{} matrix",
+                                j, m, n
+                            ))
+                        }
+                    } else {
+                        Ok(None) // Symbolic index - return unevaluated
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "matrix_diag" | "diag" => {
+                // Get diagonal elements from square matrix as a list
+                // matrix_diag(M) → [diagonal elements]
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if m != n {
+                        return Err(format!(
+                            "matrix_diag: matrix must be square, got {}x{}",
+                            m, n
+                        ));
+                    }
+                    let diag: Vec<Expression> = (0..m).map(|i| elems[i * n + i].clone()).collect();
+                    Ok(Some(Expression::List(diag)))
+                } else {
+                    Ok(None)
+                }
+            }
+
             // Not a built-in
             _ => Ok(None),
         }
