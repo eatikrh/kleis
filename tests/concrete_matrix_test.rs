@@ -143,3 +143,29 @@ fn test_identity_matrix_multiply() {
     assert!(result.contains("\"4\""));
 }
 
+#[test]
+fn test_symbolic_matrix_det_returns_unevaluated() {
+    // det of symbolic matrix should return unevaluated, not just "0"
+    let result = eval("det(Matrix(2, 2, [a, 0, 0, 1]))");
+    // Should contain "det" (unevaluated expression) - not just a single constant
+    assert!(result.contains("det") || result.contains("Matrix"));
+    // The result should be the full expression, not reduced to just "0"
+    assert!(result.contains("a"));
+}
+
+#[test]
+fn test_symbolic_matrix_multiply_returns_unevaluated() {
+    // multiply with symbolic elements should return unevaluated
+    let result = eval("multiply(Matrix(2, 2, [a, 0, 0, 1]), Matrix(2, 2, [1, 0, 0, b]))");
+    // Should contain the original expression, not computed zeros
+    assert!(result.contains("Matrix") || result.contains("multiply"));
+}
+
+#[test]
+fn test_symbolic_matrix_trace_returns_unevaluated() {
+    // trace with symbolic diagonal should return unevaluated
+    let result = eval("trace(Matrix(2, 2, [a, 0, 0, 1]))");
+    // Should contain "trace" (unevaluated) and NOT be a simple number
+    assert!(result.contains("trace") || result.contains("Matrix"));
+}
+

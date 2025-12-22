@@ -1791,6 +1791,12 @@ impl Evaluator {
                             m1, n1, m2, n2
                         ));
                     }
+                    // Check all elements are numeric (no symbolic variables)
+                    let all_numeric = elems1.iter().chain(elems2.iter()).all(|e| self.as_number(e).is_some());
+                    if !all_numeric {
+                        // Contains symbolic elements - return unevaluated
+                        return Ok(None);
+                    }
                     // Compute C[i,j] = sum(A[i,k] * B[k,j] for k in 0..n1)
                     let mut result = Vec::with_capacity(m1 * n2);
                     for i in 0..m1 {
@@ -1842,12 +1848,16 @@ impl Evaluator {
                     if m != n {
                         return Err(format!("trace: matrix must be square, got {}x{}", m, n));
                     }
+                    // Check diagonal elements are numeric
+                    let diag_numeric = (0..m).all(|i| self.as_number(&elems[i * n + i]).is_some());
+                    if !diag_numeric {
+                        // Contains symbolic diagonal elements - return unevaluated
+                        return Ok(None);
+                    }
                     let mut sum = 0.0;
                     for i in 0..m {
                         if let Some(val) = self.as_number(&elems[i * n + i]) {
                             sum += val;
-                        } else {
-                            return Err("trace: non-numeric diagonal element".to_string());
                         }
                     }
                     if sum.fract() == 0.0 && sum.abs() < 1e15 {
@@ -1868,6 +1878,11 @@ impl Evaluator {
                 if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
                     if m != n {
                         return Err(format!("det: matrix must be square, got {}x{}", m, n));
+                    }
+                    // Check all elements are numeric (no symbolic variables)
+                    if !elems.iter().all(|e| self.as_number(e).is_some()) {
+                        // Contains symbolic elements - return unevaluated
+                        return Ok(None);
                     }
                     let det = match m {
                         1 => self.as_number(&elems[0]).unwrap_or(0.0),
