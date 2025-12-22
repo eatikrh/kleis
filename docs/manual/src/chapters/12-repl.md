@@ -153,14 +153,70 @@ VNum(120)
 
 This is what makes Kleis **Turing complete** — the combination of ADTs, pattern matching, recursion, and concrete evaluation enables arbitrary computation. See [Appendix: LISP Interpreter](../appendix/lisp-interpreter.md) for a complete example.
 
+## Value Bindings with `:let`
+
+Use `:let` to bind values to names that persist across REPL commands:
+
+```
+λ> :let x = 2 + 3
+x = 5
+
+λ> :eval x * 2
+✅ 10
+
+λ> :let matrix = Matrix(2, 2, [1, 2, 3, 4])
+matrix = Matrix(2, 2, [1, 2, 3, 4])
+
+λ> :eval det(matrix)
+✅ -2
+```
+
+**`:let` vs `:define`:**
+
+| Command | Creates | Persistence | Use Case |
+|---------|---------|-------------|----------|
+| `:let x = expr` | **Value binding** | REPL session | Store computed values |
+| `:define f(x) = expr` | **Function** | REPL session | Define reusable functions |
+
+## The `it` Magic Variable
+
+After each `:eval`, the result is stored in `it` for quick chaining:
+
+```
+λ> :eval 2 + 3
+✅ 5
+
+λ> :eval it * 2
+✅ 10
+
+λ> :eval it + 1
+✅ 11
+```
+
+This is inspired by GHCi and OCaml REPLs. Use `:env` to see all bindings including `it`:
+
+```
+λ> :env
+📌 Value bindings:
+  x = 5
+
+📍 Last result (it):
+  it = 11
+
+📋 Defined functions:
+  double (x) = ...
+```
+
 ## REPL Commands
 
 | Command | Description |
 |---------|-------------|
 | `:help` | Show all commands |
 | `:load <file>` | Load a .kleis file |
-| `:env` | Show defined functions |
+| `:env` | Show defined functions and bindings |
 | `:eval <expr>` | **Concrete evaluation** (computes actual values) |
+| `:let x = <expr>` | Bind value to variable (persists in session) |
+| `:define f(x) = <expr>` | Define a function |
 | `:verify <expr>` | Verify with Z3 (is it always true?) |
 | `:sat <expr>` | Check satisfiability (does a solution exist?) |
 | `:type <expr>` | Show inferred type |
@@ -169,6 +225,8 @@ This is what makes Kleis **Turing complete** — the combination of ADTs, patter
 | `:syntax` | Complete syntax reference |
 | `:examples` | Show example expressions |
 | `:quit` | Exit REPL |
+
+> **Tip:** Use `it` in any expression to refer to the last `:eval` result.
 
 ## Multi-line Input
 

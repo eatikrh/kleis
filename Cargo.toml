@@ -33,6 +33,12 @@ z3 = { path = "vendor/z3", optional = true }
 # REPL (interactive shell)
 rustyline = "14.0"
 
+# Numerical linear algebra (BLAS/LAPACK)
+ndarray = { version = "0.16", optional = true }
+ndarray-linalg = { version = "0.17", optional = true }
+nalgebra = { version = "0.33", optional = true }  # For pure-Rust Schur (dev/testing)
+lapack = { version = "0.19", optional = true }    # For LAPACK dgees (production Schur)
+
 [features]
 # Default features (enabled by default)
 default = ["axiom-verification"]
@@ -40,6 +46,10 @@ default = ["axiom-verification"]
 # Axiom verification using Z3 theorem prover
 # Can be disabled with: cargo build --no-default-features
 axiom-verification = ["z3"]
+
+# Numerical linear algebra (BLAS/LAPACK backend)
+# Enables eigenvalues, SVD, solve, Schur, etc.
+numerical = ["ndarray", "ndarray-linalg", "nalgebra", "lapack", "blas-src", "lapack-src"]
 
 [[bin]]
 name = "gallery"
@@ -79,3 +89,19 @@ path = "examples/typst_demo.rs"
 
 [dev-dependencies]
 kleis-test-macros = { path = "kleis-test-macros" }
+
+# Platform-specific BLAS/LAPACK backends for numerical feature
+# macOS: Uses Apple Accelerate (pre-installed, M1/M2/M3 optimized)
+[target.'cfg(target_os = "macos")'.dependencies]
+blas-src = { version = "0.10", features = ["accelerate"], optional = true }
+lapack-src = { version = "0.10", features = ["accelerate"], optional = true }
+
+# Linux: Uses OpenBLAS
+[target.'cfg(target_os = "linux")'.dependencies]
+blas-src = { version = "0.10", features = ["openblas"], optional = true }
+lapack-src = { version = "0.10", features = ["openblas"], optional = true }
+
+# Windows: Uses OpenBLAS
+[target.'cfg(target_os = "windows")'.dependencies]
+blas-src = { version = "0.10", features = ["openblas"], optional = true }
+lapack-src = { version = "0.10", features = ["openblas"], optional = true }
