@@ -100,6 +100,7 @@ export const astTemplates: Record<string, EditorNode> = {
   logical_and: operation('logical_and', [placeholder(0, 'left'), placeholder(1, 'right')]),
   logical_or: operation('logical_or', [placeholder(0, 'left'), placeholder(1, 'right')]),
   logical_not: operation('logical_not', [placeholder(0, 'arg')]),
+  let_simple: operation('let_simple', [placeholder(0, 'name'), placeholder(1, 'value')]),
   
   // ─────────────────────────────────────────────────────────────
   // Calculus

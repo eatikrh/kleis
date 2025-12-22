@@ -195,6 +195,7 @@ export const paletteTabs: TabConfig[] = [
     id: 'logic',
     title: 'Logic & Sets',
     buttons: [
+      { template: 'let_simple', label: 'let', tooltip: 'Let Binding', latex: '\\(\\text{let } x = v\\)' },
       { template: 'equals', label: '=', tooltip: 'Equals', latex: '\\(a = b\\)' },
       { template: 'neq', label: '≠', tooltip: 'Not Equal', latex: '\\(a \\neq b\\)' },
       { template: 'less_than', label: '<', tooltip: 'Less Than', latex: '\\(a < b\\)' },

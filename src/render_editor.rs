@@ -1087,6 +1087,17 @@ impl EditorRenderContext {
             "lr(\\{ {arg}, {right} \\})",
             "anticommutator({arg}, {right})",
         );
+
+        // let_simple: args = [name, value] - let name = value (2-argument form)
+        // {left} = first arg (name), {right} = second arg (value)
+        self.add_template(
+            "let_simple",
+            "let {left} = {right}",
+            "\\text{{let }} {left} = {right}",
+            "<span class=\"let-binding\">let {left} = {right}</span>",
+            "\"let \" {left} = {right}",
+            "let {left} = {right}",
+        );
     }
 
     fn add_template(

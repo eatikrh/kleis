@@ -4,6 +4,36 @@
 
 ---
 
+## ✅ DONE: Matrix Arithmetic Type Inference Fix
+
+**Problem:** `minus(Matrix, Matrix)` was incorrectly returning `Scalar` type.
+
+**Root Cause:** The hardcoded type hierarchy in `type_inference.rs` (lines 1401-1489) checked for Complex, Rational, Scalar, Int, Nat but **never checked for Matrix**. If nothing matched, it defaulted to Scalar.
+
+**Fix:** Added Matrix handling before the default fallback (lines 1474-1485):
+```rust
+// Check for Matrix - if either arg is Matrix, return that Matrix type
+if let Type::Data { constructor, .. } = &t1 {
+    if constructor == "Matrix" {
+        return Ok(t1.clone());
+    }
+}
+// ... similar for t2
+```
+
+**Future Work (TODO #10):** Per ADR-016, all ~400 lines of hardcoded type logic should move to `stdlib/prelude.kleis` structures and be queried from the registry. Current approach works but isn't self-hosting.
+
+---
+
+## ✅ DONE: Equation Editor `let x =` Template
+
+Added `let_simple` template for 2-argument let bindings:
+- Button in "Logic & Set Theory" palette
+- Template in `std_template_lib/logic.kleist`
+- Implemented for ℝ, Matrix, and Bool types in `stdlib/prelude.kleis`
+
+---
+
 ## 🎯 Equation Editor: Add `let x =` Template
 
 The equation editor needs a template for let bindings:

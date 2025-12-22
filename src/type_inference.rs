@@ -1471,6 +1471,29 @@ impl TypeInference {
                 });
             }
 
+            // Check for Matrix - if either arg is Matrix, return that Matrix type
+            // Matrix arithmetic preserves dimensions
+            if let Type::Data {
+                constructor,
+                args: _,
+                ..
+            } = &t1
+            {
+                if constructor == "Matrix" {
+                    return Ok(t1.clone());
+                }
+            }
+            if let Type::Data {
+                constructor,
+                args: _,
+                ..
+            } = &t2
+            {
+                if constructor == "Matrix" {
+                    return Ok(t2.clone());
+                }
+            }
+
             // Default: return Scalar
             return Ok(Type::scalar());
         }

@@ -320,6 +320,29 @@ structure LogicalOps(T) {
   operation logical_not : T → T
 }
 
+// Let bindings (for equation editor definitions)
+// Note: let_simple binds a name to a value and returns the value
+// N = name type (usually ℝ for variables), T = value type
+// Result type is T (the value's type)
+structure LetBindings(N, T) {
+  operation let_simple : N → T → T  // let name = value (rendered as "let x = v")
+}
+
+// Variable name (typed as ℝ) binding to scalar
+implements LetBindings(ℝ, ℝ) {
+  operation let_simple = builtin_let
+}
+
+// Variable name binding to matrix
+implements LetBindings(ℝ, Matrix(m, n, ℝ)) {
+  operation let_simple = builtin_let
+}
+
+// Variable name binding to boolean
+implements LetBindings(ℝ, Bool) {
+  operation let_simple = builtin_let
+}
+
 // Numeric operations (beyond basic arithmetic)
 structure Numeric(N) {
   operation abs : N → N
@@ -351,6 +374,21 @@ implements Arithmetic(ℝ) {
   operation scalar_divide = builtin_div
   operation scalar_multiply = builtin_mul
   operation frac = builtin_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for matrices (component-wise)
+implements Arithmetic(Matrix(m, n, ℝ)) {
+  operation plus = builtin_matrix_add
+  operation minus = builtin_matrix_sub
+  operation times = builtin_matrix_mul
+  operation divide = builtin_matrix_div
+  operation scalar_divide = builtin_matrix_div
+  operation scalar_multiply = builtin_matrix_scalar_mul
+  operation frac = builtin_matrix_div
   operation parens = builtin_identity
   operation brackets = builtin_identity
   operation braces = builtin_identity

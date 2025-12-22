@@ -1145,6 +1145,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="math-btn" onclick="insertSymbol('\\text{True}')" data-tooltip="Boolean True">\(\text{True}\)</button>
                         <button class="math-btn" onclick="insertSymbol('\\text{False}')" data-tooltip="Boolean False">\(\text{False}\)</button>
                         
+                        <button class="math-btn" onclick="insertTemplate('let_binding')" data-tooltip="Let Binding">\(\text{let } x = □\)</button>
                         <button class="math-btn" onclick="insertTemplate('equals')" data-tooltip="Equals">\(a = b\)</button>
                         <button class="math-btn" onclick="insertTemplate('neq')" data-tooltip="Not Equal">\(a \neq b\)</button>
                         <button class="math-btn" onclick="insertTemplate('less_than')" data-tooltip="Less Than">\(a < b\)</button>
@@ -2030,6 +2031,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             logical_and: 'logical_and',
             logical_or: 'logical_or',
             logical_not: 'logical_not',
+            let_binding: 'let_simple',
             
             // Calculus
             '\\int_{□}^{□} □ \\, dx': 'integral',
@@ -2218,6 +2220,9 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             hat: { Operation: { name: 'hat', args: [{Placeholder:{id:0,hint:'variable'}}] } },
             bar: { Operation: { name: 'bar', args: [{Placeholder:{id:0,hint:'variable'}}] } },
             tilde: { Operation: { name: 'tilde', args: [{Placeholder:{id:0,hint:'variable'}}] } },
+            
+            // Let binding (simple, 2-argument: let name = value)
+            let_simple: { Operation: { name: 'let_simple', args: [{Placeholder:{id:0,hint:'name'}}, {Placeholder:{id:1,hint:'value'}}] } },
             
             // Tensors
             subsup: { Operation: { name: 'subsup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}, {Placeholder:{id:2,hint:'superscript'}}] } },
@@ -3391,8 +3396,8 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             console.log(`✅ Kleis Editor v2.1 loaded with ${templateCount} AST templates`);
             
             if (templateCount < 50) {
-                console.error(`⚠️ WARNING: Only ${templateCount} templates loaded! Expected 54. Browser cache issue!`);
-                alert(`⚠️ OLD VERSION LOADED!\n\nOnly ${templateCount} templates found.\nExpected: 54 templates\n\nPlease:\n1. Close this tab\n2. Open in incognito mode (Cmd+Shift+N)\n3. Or clear browser cache completely`);
+                console.error(`⚠️ WARNING: Only ${templateCount} templates loaded! Expected 55. Browser cache issue!`);
+                alert(`⚠️ OLD VERSION LOADED!\n\nOnly ${templateCount} templates found.\nExpected: 55 templates\n\nPlease:\n1. Close this tab\n2. Open in incognito mode (Cmd+Shift+N)\n3. Or clear browser cache completely`);
             } else {
                 console.log('✅ All templates loaded correctly');
                 console.log('sqrt template:', astTemplates.sqrt);

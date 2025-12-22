@@ -86,6 +86,16 @@
     category: "logic"
 }
 
+@template let_simple {
+    pattern: "let_simple(left, right)"
+    unicode: "let {left} = {right}"
+    latex: "\\text{let } {left} = {right}"
+    html: "<span class=\"let-binding\">let {left} = {right}</span>"
+    typst: "\"let \" {left} = {right}"
+    kleis: "let {left} = {right}"
+    category: "logic"
+}
+
 // ============ SETS ============
 
 @template in {
