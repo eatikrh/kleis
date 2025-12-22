@@ -1,0 +1,209 @@
+# LAPACK Integration Investigation
+
+## Overview
+
+This document investigates options for integrating LAPACK-level linear algebra 
+capabilities into Kleis for high-performance numerical computation.
+
+## Current State
+
+Kleis currently has:
+- **Z3 Backend**: Symbolic verification, SAT/SMT solving
+- **Rust Evaluator**: Concrete matrix operations (add, sub, mul, det 1-3×3, etc.)
+
+Missing high-performance operations:
+- Eigenvalue decomposition
+- SVD (Singular Value Decomposition)
+- LU/QR/Cholesky factorization
+- System solving Ax = b (large matrices)
+- Matrix inverse (beyond 3×3)
+- Determinant (beyond 3×3)
+
+## Options
+
+### Option 1: Pure Rust - nalgebra
+
+**Pros:**
+- No external dependencies
+- Clean cargo build
+- Cross-platform
+- Good for small-medium matrices
+
+**Cons:**
+- Not as fast as LAPACK for large matrices
+- Not as battle-tested (decades vs years)
+
+```toml
+[dependencies]
+nalgebra = "0.32"
+```
+
+```rust
+use nalgebra::{DMatrix, SymmetricEigen};
+
+fn eigenvalues(m: &DMatrix<f64>) -> Vec<f64> {
+    SymmetricEigen::new(m.clone()).eigenvalues.as_slice().to_vec()
+}
+```
+
+### Option 2: Pure Rust - faer
+
+**Pros:**
+- Modern Rust implementation
+- Claims competitive performance with LAPACK
+- SIMD optimized
+- No external dependencies
+
+**Cons:**
+- Newer library (less battle-tested)
+- API still evolving
+
+```toml
+[dependencies]
+faer = "0.19"
+```
+
+### Option 3: nalgebra with LAPACK backend
+
+**Pros:**
+- Best of both worlds
+- Rust API + LAPACK speed
+- Battle-tested algorithms
+
+**Cons:**
+- Requires system LAPACK installation
+- Environment variables needed
+- Platform-specific setup
+
+```toml
+[dependencies]
+nalgebra = { version = "0.32", features = ["lapack"] }
+```
+
+Environment setup:
+```bash
+# macOS
+brew install lapack openblas
+export LAPACK_DIR=/opt/homebrew/opt/lapack
+
+# Linux
+apt install liblapack-dev libblas-dev
+```
+
+### Option 4: ndarray-linalg (direct LAPACK)
+
+**Pros:**
+- Direct LAPACK bindings
+- Full LAPACK functionality
+- Very fast
+
+**Cons:**
+- Complex build setup
+- Multiple backend options (OpenBLAS, Intel MKL, Netlib)
+
+```toml
+[dependencies]
+ndarray = "0.15"
+ndarray-linalg = { version = "0.16", features = ["openblas-system"] }
+```
+
+### Option 5: Intel MKL
+
+**Pros:**
+- Fastest on Intel CPUs
+- Highly optimized
+- Industry standard
+
+**Cons:**
+- Intel-specific optimizations
+- Large dependency
+- License considerations
+
+## Recommendation
+
+### For Kleis: Tiered Approach
+
+1. **Default**: Use `faer` (pure Rust, no dependencies, good performance)
+2. **Optional**: Feature flag for LAPACK backend when users need maximum performance
+
+```toml
+# Cargo.toml
+[features]
+default = []
+lapack = ["nalgebra/lapack"]
+
+[dependencies]
+faer = "0.19"
+nalgebra = { version = "0.32", optional = true }
+```
+
+### Proposed Operations
+
+| Operation | Kleis Syntax | Description |
+|-----------|--------------|-------------|
+| `eigenvalues(A)` | `eigenvalues(Matrix(n, n, [...]))` | Compute eigenvalues |
+| `eigenvectors(A)` | Returns `(eigenvalues, eigenvectors)` | Full eigen decomposition |
+| `svd(A)` | `svd(Matrix(m, n, [...]))` | Singular value decomposition |
+| `solve(A, b)` | `solve(A, b)` | Solve Ax = b |
+| `inv(A)` | `inv(Matrix(n, n, [...]))` | Matrix inverse |
+| `lu(A)` | LU factorization | Returns (L, U, P) |
+| `qr(A)` | QR factorization | Returns (Q, R) |
+| `cholesky(A)` | Cholesky factorization | For positive definite A |
+| `rank(A)` | Matrix rank | Via SVD |
+| `norm(A)` | Matrix norm | Various norms |
+| `cond(A)` | Condition number | Via SVD |
+
+### Complex Matrix Support
+
+All operations should support complex matrices (ℂ):
+
+```kleis
+:eval eigenvalues(Matrix(2, 2, [complex(1, 2), complex(3, 0), complex(0, 1), complex(4, 5)]))
+// → [complex(λ1_re, λ1_im), complex(λ2_re, λ2_im)]
+```
+
+## Integration Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Kleis Expression: eigenvalues(Matrix(3, 3, [...]))              │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ evaluator.rs: apply_builtin("eigenvalues", args)                │
+│   1. Extract matrix from Expression                             │
+│   2. Convert to faer/nalgebra matrix                            │
+│   3. Call numerical backend                                     │
+│   4. Convert result back to Kleis Expression                    │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ NumericalBackend trait                                          │
+│   - FaerBackend (default, pure Rust)                            │
+│   - LapackBackend (optional, feature-gated)                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Next Steps
+
+1. [ ] Add `faer` to Cargo.toml (feature-gated)
+2. [ ] Implement `NumericalBackend` trait
+3. [ ] Add `eigenvalues` operation to evaluator
+4. [ ] Add tests for numerical operations
+5. [ ] Document in manual
+6. [ ] Optional: Add LAPACK backend feature
+
+## Benchmarks Needed
+
+- Compare faer vs nalgebra vs LAPACK for:
+  - Eigenvalues 100×100, 1000×1000
+  - SVD 100×100, 1000×1000
+  - Solve Ax=b 100×100, 1000×1000
+
+## References
+
+- [LAPACK](https://www.netlib.org/lapack/)
+- [faer](https://github.com/sarah-ek/faer-rs)
+- [nalgebra](https://nalgebra.org/)
+- [ndarray-linalg](https://github.com/rust-ndarray/ndarray-linalg)
+
