@@ -145,6 +145,234 @@ implements HermitianAdjoint(m, n, ℝ) {
  */
 
 /* ============================================
+ * COMPLEX MATRICES AS PRODUCT TYPE (ℂ ≅ ℝ×ℝ)
+ * ============================================
+ * 
+ * A complex matrix M = A + B·i is represented as the pair (A, B)
+ * where A, B : Matrix(m, n, ℝ).
+ * 
+ * This representation:
+ *   - Avoids native complex arithmetic
+ *   - Works with real LAPACK routines
+ *   - Keeps Z3/SMT solvers in real arithmetic
+ *   - Matches control theory practice (H∞, μ-analysis)
+ */
+
+/* Type Definition (specification - parser support pending)
+ *
+ * type ComplexMatrix(m: Nat, n: Nat) = (Matrix(m, n, ℝ), Matrix(m, n, ℝ))
+ *
+ * Structures for complex matrix operations:
+ *
+ * structure ComplexMatrixOps(m: Nat, n: Nat) {
+ *     operation complex_zero : ComplexMatrix(m, n)
+ *     operation as_complex : Matrix(m, n, ℝ) → ComplexMatrix(m, n)
+ *     operation as_imaginary : Matrix(m, n, ℝ) → ComplexMatrix(m, n)
+ *     operation real_part : ComplexMatrix(m, n) → Matrix(m, n, ℝ)
+ *     operation imag_part : ComplexMatrix(m, n) → Matrix(m, n, ℝ)
+ *     operation cmat_conj : ComplexMatrix(m, n) → ComplexMatrix(m, n)
+ *     operation cmat_transpose : ComplexMatrix(m, n) → ComplexMatrix(n, m)
+ *     operation cmat_dagger : ComplexMatrix(m, n) → ComplexMatrix(n, m)
+ * }
+ *
+ * structure ComplexSquareMatrixOps(n: Nat) {
+ *     operation complex_eye : ComplexMatrix(n, n)
+ *     operation cmat_trace : ComplexMatrix(n, n) → (ℝ, ℝ)
+ * }
+ *
+ * structure ComplexMatrixArithmetic(m: Nat, n: Nat) {
+ *     operation cmat_add : ComplexMatrix(m, n) → ComplexMatrix(m, n) → ComplexMatrix(m, n)
+ *     operation cmat_sub : ComplexMatrix(m, n) → ComplexMatrix(m, n) → ComplexMatrix(m, n)
+ *     operation cmat_scalar_real : ℝ → ComplexMatrix(m, n) → ComplexMatrix(m, n)
+ *     operation cmat_scalar_complex : (ℝ, ℝ) → ComplexMatrix(m, n) → ComplexMatrix(m, n)
+ * }
+ *
+ * structure ComplexMatrixMultiply(m: Nat, n: Nat, p: Nat) {
+ *     operation cmat_mul : ComplexMatrix(m, n) → ComplexMatrix(n, p) → ComplexMatrix(m, p)
+ * }
+ *
+ * structure ComplexMatrixGram(m: Nat, n: Nat) {
+ *     operation cmat_gram : ComplexMatrix(m, n) → ComplexMatrix(n, n)
+ * }
+ *
+ * structure Realification(n: Nat) {
+ *     operation realify : ComplexMatrix(n, n) → Matrix(2*n, 2*n, ℝ)
+ *     operation complexify : Matrix(2*n, 2*n, ℝ) → ComplexMatrix(n, n)
+ * }
+ */
+
+/* Complex Matrix Axioms
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * CONSTRUCTORS
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * complex_zero(m, n) = (zeros(m, n), zeros(m, n))
+ * complex_eye(n) = (eye(n), zeros(n, n))
+ * as_complex(A) = (A, zeros(m, n))
+ * as_imaginary(B) = (zeros(m, n), B)
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * EXTRACTORS
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * real_part((A, B)) = A
+ * imag_part((A, B)) = B
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * ARITHMETIC AXIOMS
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * cmat_add:
+ *   ∀(A₁ B₁ A₂ B₂ : Matrix(m, n, ℝ)).
+ *     (A₁, B₁) + (A₂, B₂) = (A₁ + A₂, B₁ + B₂)
+ * 
+ * cmat_sub:
+ *   ∀(A₁ B₁ A₂ B₂ : Matrix(m, n, ℝ)).
+ *     (A₁, B₁) - (A₂, B₂) = (A₁ - A₂, B₁ - B₂)
+ * 
+ * cmat_mul (the key axiom):
+ *   ∀(A₁ B₁ : Matrix(m, n, ℝ)) (A₂ B₂ : Matrix(n, p, ℝ)).
+ *     (A₁, B₁) · (A₂, B₂) = (A₁·A₂ - B₁·B₂, A₁·B₂ + B₁·A₂)
+ * 
+ * cmat_scalar_real:
+ *   ∀(r : ℝ) (A B : Matrix(m, n, ℝ)).
+ *     r · (A, B) = (r·A, r·B)
+ * 
+ * cmat_scalar_complex:
+ *   ∀(x y : ℝ) (A B : Matrix(m, n, ℝ)).
+ *     (x, y) · (A, B) = (x·A - y·B, x·B + y·A)
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * CONJUGATION AND TRANSPOSE AXIOMS
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * cmat_conj (element-wise conjugate):
+ *   ∀(A B : Matrix(m, n, ℝ)).
+ *     conj((A, B)) = (A, -B)
+ * 
+ * cmat_transpose:
+ *   ∀(A B : Matrix(m, n, ℝ)).
+ *     transpose((A, B)) = (transpose(A), transpose(B))
+ * 
+ * cmat_dagger (conjugate transpose):
+ *   ∀(A B : Matrix(m, n, ℝ)).
+ *     dagger((A, B)) = (transpose(A), -transpose(B))
+ * 
+ * dagger_involution:
+ *   ∀(M : ComplexMatrix(m, n)).
+ *     dagger(dagger(M)) = M
+ * 
+ * dagger_product:
+ *   ∀(M : ComplexMatrix(m, n)) (N : ComplexMatrix(n, p)).
+ *     dagger(M · N) = dagger(N) · dagger(M)
+ * 
+ * dagger_sum:
+ *   ∀(M N : ComplexMatrix(m, n)).
+ *     dagger(M + N) = dagger(M) + dagger(N)
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * TRACE AXIOM
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * cmat_trace:
+ *   ∀(A B : Matrix(n, n, ℝ)).
+ *     trace((A, B)) = (trace(A), trace(B))
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * HERMITIAN CONJUGATE PRODUCT (M† · M) - THE GRAM MATRIX
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * This is fundamental for singular values, norms, and unitarity.
+ * 
+ * cmat_gram:
+ *   ∀(A B : Matrix(m, n, ℝ)).
+ *     dagger((A, B)) · (A, B) = (Aᵀ·A + Bᵀ·B, Aᵀ·B - Bᵀ·A)
+ * 
+ * Properties:
+ *   - Real part (Aᵀ·A + Bᵀ·B) is symmetric positive semi-definite
+ *   - Imaginary part (Aᵀ·B - Bᵀ·A) is skew-symmetric
+ *   - Singular values: σ(M) = sqrt(eigenvalues of Aᵀ·A + Bᵀ·B)
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * REALIFICATION FUNCTOR
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * Embed complex n×n into real 2n×2n:
+ * 
+ * realify_def:
+ *   ∀(A B : Matrix(n, n, ℝ)).
+ *     realify((A, B)) = block([[A, -B], [B, A]])
+ * 
+ * realify_mul (multiplication preserved):
+ *   ∀(M N : ComplexMatrix(n, n)).
+ *     realify(M · N) = realify(M) · realify(N)
+ * 
+ * realify_add (addition preserved):
+ *   ∀(M N : ComplexMatrix(n, n)).
+ *     realify(M + N) = realify(M) + realify(N)
+ * 
+ * cmat_det_realify (determinant via realification):
+ *   ∀(M : ComplexMatrix(n, n)).
+ *     |det(M)|² = det(realify(M))
+ * 
+ * complexify extracts (A, B) from block structure [[A, -B], [B, A]]
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * SPECIAL MATRICES
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * Hermitian (M = M†):
+ *   ∀(A B : Matrix(n, n, ℝ)).
+ *     hermitian((A, B)) ⟺ (A = Aᵀ) ∧ (B = -Bᵀ)
+ *   i.e., A is symmetric, B is skew-symmetric
+ * 
+ * Unitary (U† · U = I):
+ *   ∀(A B : Matrix(n, n, ℝ)).
+ *     unitary((A, B)) ⟺ (Aᵀ·A + Bᵀ·B = I) ∧ (Aᵀ·B = Bᵀ·A)
+ * 
+ * Skew-Hermitian (M = -M†):
+ *   ∀(A B : Matrix(n, n, ℝ)).
+ *     skew_hermitian((A, B)) ⟺ (A = -Aᵀ) ∧ (B = Bᵀ)
+ *   i.e., A is skew-symmetric, B is symmetric
+ * 
+ * Normal (M · M† = M† · M):
+ *   ∀(M : ComplexMatrix(n, n)).
+ *     normal(M) ⟺ M · dagger(M) = dagger(M) · M
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * SCHUR DECOMPOSITION VIA REALIFICATION
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * Complex Schur from real Schur (no new algorithm needed!):
+ * 
+ * schur_complex(M) =
+ *   let Ã = realify(M)               // Embed in ℝ^{2n×2n}
+ *   let (Q̃, R̃) = schur_real(Ã)      // Use existing real Schur
+ *   (complexify(Q̃), complexify(R̃))  // Extract complex matrices
+ * 
+ * Properties:
+ *   - Q̃ has structure [[Ur, -Ui], [Ui, Ur]], so complexify gives unitary U
+ *   - 2×2 blocks in R̃ of form [[a, b], [-b, a]] → eigenvalue a + bi
+ *   - Real Schur already separates complex conjugate pairs
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * SINGULAR VALUES VIA REAL ARITHMETIC
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * For M = (A, B):
+ *   σ(M)² = eigenvalues of (Aᵀ·A + Bᵀ·B)
+ * 
+ * This is a real symmetric matrix - no complex eigenvalue solver needed!
+ * 
+ * Frobenius norm:
+ *   ‖M‖²_F = trace(Aᵀ·A + Bᵀ·B) = ‖A‖²_F + ‖B‖²_F
+ * 
+ * Spectral norm (operator norm):
+ *   ‖M‖₂ = σ_max(M) = sqrt(λ_max(Aᵀ·A + Bᵀ·B))
+ */
+
+/* ============================================
  * LEGACY MATRIX CONSTRUCTORS - REMOVED
  * ============================================
  * 
