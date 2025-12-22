@@ -2163,6 +2163,46 @@ impl Evaluator {
                 }
             }
 
+            // === LAPACK Operations (feature-gated) ===
+            #[cfg(feature = "numerical")]
+            "eigenvalues" | "eigvals" => self.lapack_eigenvalues(args),
+
+            #[cfg(feature = "numerical")]
+            "eig" => self.lapack_eig(args),
+
+            #[cfg(feature = "numerical")]
+            "svd" => self.lapack_svd(args),
+
+            #[cfg(feature = "numerical")]
+            "singular_values" | "svdvals" => self.lapack_singular_values(args),
+
+            #[cfg(feature = "numerical")]
+            "solve" | "linsolve" => self.lapack_solve(args),
+
+            #[cfg(feature = "numerical")]
+            "inv" | "inverse" => self.lapack_inv(args),
+
+            #[cfg(feature = "numerical")]
+            "qr" => self.lapack_qr(args),
+
+            #[cfg(feature = "numerical")]
+            "cholesky" | "chol" => self.lapack_cholesky(args),
+
+            #[cfg(feature = "numerical")]
+            "rank" | "matrix_rank" => self.lapack_rank(args),
+
+            #[cfg(feature = "numerical")]
+            "cond" | "condition_number" => self.lapack_cond(args),
+
+            #[cfg(feature = "numerical")]
+            "norm" | "matrix_norm" => self.lapack_norm(args),
+
+            #[cfg(feature = "numerical")]
+            "det_lapack" => {
+                // Use LAPACK determinant for large matrices (>3x3)
+                self.lapack_det(args)
+            }
+
             // Not a built-in
             _ => Ok(None),
         }
@@ -2435,6 +2475,537 @@ impl Evaluator {
             name: "complex".to_string(),
             args: vec![re, im],
         }
+    }
+
+    // === LAPACK Operations ===
+    // These require the "numerical" feature flag
+
+    #[cfg(feature = "numerical")]
+    fn lapack_eigenvalues(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        if m != n {
+            return Err(format!(
+                "eigenvalues requires a square matrix, got {}×{}",
+                m, n
+            ));
+        }
+
+        // Convert to f64 vec
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported for LAPACK".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let eigvals = numerical::eigenvalues(&data, n).map_err(|e| e.to_string())?;
+
+        // Return as list of complex numbers
+        let result: Vec<Expression> = eigvals
+            .iter()
+            .map(|(re, im)| {
+                if im.abs() < 1e-14 {
+                    Expression::Const(format!("{}", re))
+                } else {
+                    self.make_complex(
+                        Expression::Const(format!("{}", re)),
+                        Expression::Const(format!("{}", im)),
+                    )
+                }
+            })
+            .collect();
+
+        Ok(Some(Expression::List(result)))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_eig(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        if m != n {
+            return Err(format!("eig requires a square matrix, got {}×{}", m, n));
+        }
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let (eigvals, eigvecs) = numerical::eig(&data, n).map_err(|e| e.to_string())?;
+
+        // Return as tuple (eigenvalues, eigenvectors)
+        let vals: Vec<Expression> = eigvals
+            .iter()
+            .map(|(re, im)| {
+                if im.abs() < 1e-14 {
+                    Expression::Const(format!("{}", re))
+                } else {
+                    self.make_complex(
+                        Expression::Const(format!("{}", re)),
+                        Expression::Const(format!("{}", im)),
+                    )
+                }
+            })
+            .collect();
+
+        // Each eigenvector is a column
+        let vecs: Vec<Expression> = eigvecs
+            .iter()
+            .map(|v| {
+                Expression::List(
+                    v.iter()
+                        .map(|(re, im)| {
+                            if im.abs() < 1e-14 {
+                                Expression::Const(format!("{}", re))
+                            } else {
+                                self.make_complex(
+                                    Expression::Const(format!("{}", re)),
+                                    Expression::Const(format!("{}", im)),
+                                )
+                            }
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
+
+        // Return as a list of two elements: [eigenvalues, eigenvectors]
+        Ok(Some(Expression::List(vec![
+            Expression::List(vals),
+            Expression::List(vecs),
+        ])))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_svd(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let (u, s, vt) = numerical::svd(&data, m, n).map_err(|e| e.to_string())?;
+
+        // Return (U, S, Vt) as matrices/vector
+        let u_expr = self.make_matrix(
+            m,
+            m,
+            u.iter()
+                .map(|&v| Expression::Const(format!("{}", v)))
+                .collect(),
+        );
+        let s_expr = Expression::List(
+            s.iter()
+                .map(|&v| Expression::Const(format!("{}", v)))
+                .collect(),
+        );
+        let vt_expr = self.make_matrix(
+            n,
+            n,
+            vt.iter()
+                .map(|&v| Expression::Const(format!("{}", v)))
+                .collect(),
+        );
+
+        // Return as a list of three elements: [U, S, Vt]
+        Ok(Some(Expression::List(vec![u_expr, s_expr, vt_expr])))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_singular_values(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let s = numerical::singular_values(&data, m, n).map_err(|e| e.to_string())?;
+
+        Ok(Some(Expression::List(
+            s.iter()
+                .map(|&v| Expression::Const(format!("{}", v)))
+                .collect(),
+        )))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_solve(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 2 {
+            return Ok(None);
+        }
+
+        let (m, n, a_elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        if m != n {
+            return Err(format!("solve requires a square matrix A, got {}×{}", m, n));
+        }
+
+        // b can be a list or vector
+        let b_elements = match &args[1] {
+            Expression::List(items) => items.clone(),
+            Expression::Operation {
+                name,
+                args: op_args,
+            } if name == "Vector" => {
+                // Vector(n, [elements])
+                if op_args.len() >= 2 {
+                    if let Expression::List(items) = &op_args[1] {
+                        items.clone()
+                    } else {
+                        return Ok(None);
+                    }
+                } else {
+                    return Ok(None);
+                }
+            }
+            _ => return Ok(None),
+        };
+
+        if b_elements.len() != n {
+            return Err(format!(
+                "solve: b has {} elements but A is {}×{}",
+                b_elements.len(),
+                m,
+                n
+            ));
+        }
+
+        let a_data: Result<Vec<f64>, _> = a_elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let a_data = a_data?;
+
+        let b_data: Result<Vec<f64>, _> = b_elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let b_data = b_data?;
+
+        let x = numerical::solve(&a_data, &b_data, n).map_err(|e| e.to_string())?;
+
+        Ok(Some(Expression::List(
+            x.iter()
+                .map(|&v| Expression::Const(format!("{}", v)))
+                .collect(),
+        )))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_inv(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        if m != n {
+            return Err(format!("inv requires a square matrix, got {}×{}", m, n));
+        }
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let inv_data = numerical::inv(&data, n).map_err(|e| e.to_string())?;
+
+        Ok(Some(
+            self.make_matrix(
+                n,
+                n,
+                inv_data
+                    .iter()
+                    .map(|&v| Expression::Const(format!("{}", v)))
+                    .collect(),
+            ),
+        ))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_qr(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let (q, r) = numerical::qr(&data, m, n).map_err(|e| e.to_string())?;
+
+        let k = m.min(n);
+        let q_expr = self.make_matrix(
+            m,
+            k,
+            q.iter()
+                .map(|&v| Expression::Const(format!("{}", v)))
+                .collect(),
+        );
+        let r_expr = self.make_matrix(
+            k,
+            n,
+            r.iter()
+                .map(|&v| Expression::Const(format!("{}", v)))
+                .collect(),
+        );
+
+        // Return as a list of two elements: [Q, R]
+        Ok(Some(Expression::List(vec![q_expr, r_expr])))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_cholesky(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        if m != n {
+            return Err(format!(
+                "cholesky requires a square matrix, got {}×{}",
+                m, n
+            ));
+        }
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let l = numerical::cholesky(&data, n).map_err(|e| e.to_string())?;
+
+        Ok(Some(
+            self.make_matrix(
+                n,
+                n,
+                l.iter()
+                    .map(|&v| Expression::Const(format!("{}", v)))
+                    .collect(),
+            ),
+        ))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_rank(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let r = numerical::rank(&data, m, n, None).map_err(|e| e.to_string())?;
+
+        Ok(Some(Expression::Const(format!("{}", r))))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_cond(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let c = numerical::cond(&data, m, n).map_err(|e| e.to_string())?;
+
+        if c.is_infinite() {
+            Ok(Some(Expression::Object("Inf".to_string())))
+        } else {
+            Ok(Some(Expression::Const(format!("{}", c))))
+        }
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_norm(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        // norm(A) or norm(A, "fro")
+        if args.is_empty() || args.len() > 2 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        let norm_type = if args.len() == 2 {
+            match &args[1] {
+                Expression::String(s) => s.as_str(),
+                Expression::Object(s) => s.as_str(),
+                _ => "fro",
+            }
+        } else {
+            "fro"
+        };
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let nval = numerical::norm(&data, m, n, norm_type).map_err(|e| e.to_string())?;
+
+        Ok(Some(Expression::Const(format!("{}", nval))))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_det(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        if m != n {
+            return Err(format!("det requires a square matrix, got {}×{}", m, n));
+        }
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        let d = numerical::det(&data, n).map_err(|e| e.to_string())?;
+
+        Ok(Some(Expression::Const(format!("{}", d))))
     }
 }
 
