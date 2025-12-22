@@ -52,10 +52,11 @@ fn test_stdlib_has_matrix_operations() {
         "Expected 'transpose' operation to be defined in stdlib"
     );
 
-    let add_types = checker.types_supporting("add");
+    // matrix_add is the dimension-checking version (ADR-016 compliant)
+    let add_types = checker.types_supporting("matrix_add");
     assert!(
         !add_types.is_empty(),
-        "Expected 'add' operation to be defined in stdlib"
+        "Expected 'matrix_add' operation to be defined in stdlib"
     );
 
     let multiply_types = checker.types_supporting("multiply");

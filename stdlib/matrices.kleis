@@ -37,13 +37,29 @@ implements MatrixConstructor(m, n, ℝ) {
     operation matrix = builtin_matrix_constructor
 }
 
-/* Matrix Addition - Only when dimensions match */
+/* Matrix Addition/Subtraction - Only when dimensions match
+ *
+ * CRITICAL: Both arguments must have the SAME dimensions (m, n).
+ * This constraint is enforced by the type signature - the SignatureInterpreter
+ * will fail to unify if dimensions don't match.
+ *
+ * Example:
+ *   matrix_add(Matrix(3,3), Matrix(3,3)) → OK, returns Matrix(3,3)
+ *   matrix_add(Matrix(3,3), Matrix(2,2)) → TYPE ERROR: dimensions don't unify
+ *
+ * Note: Generic 'plus' and 'minus' from Arithmetic are also available,
+ * but type inference delegates to these specialized operations for matrices
+ * to enforce dimension matching.
+ */
 structure MatrixAddable(m: Nat, n: Nat, T) {
-    operation add : Matrix(m, n, T) → Matrix(m, n, T) → Matrix(m, n, T)
+    // Specialized operations with dimension constraints
+    operation matrix_add : Matrix(m, n, T) → Matrix(m, n, T) → Matrix(m, n, T)
+    operation matrix_sub : Matrix(m, n, T) → Matrix(m, n, T) → Matrix(m, n, T)
 }
 
 implements MatrixAddable(m, n, ℝ) {
-    operation add = builtin_matrix_add
+    operation matrix_add = builtin_matrix_add
+    operation matrix_sub = builtin_matrix_sub
 }
 
 /* Matrix Multiplication - (m×n) · (n×p) → (m×p) */
