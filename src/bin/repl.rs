@@ -288,6 +288,7 @@ fn handle_command(
         ":verify" | ":v" => verify_expression(arg, registry, evaluator),
         ":sat" | ":s" => sat_expression(arg, registry, evaluator),
         ":eval" | ":ev" => eval_concrete_expression(arg, evaluator),
+        ":let" => let_binding(arg, evaluator),
         ":trace" | ":tr" => trace_match(arg, registry, evaluator),
         ":load" | ":l" => load_file(arg, evaluator, registry, imported_paths, type_checker),
         ":env" | ":e" => show_env(evaluator),
@@ -329,6 +330,7 @@ fn handle_command_no_z3(
             )
         }
         ":eval" | ":ev" => eval_concrete_expression(arg, evaluator),
+        ":let" => let_binding(arg, evaluator),
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
@@ -384,7 +386,10 @@ fn print_help_main() {
     println!("  :verify, :v <expr> Verify expression with Z3 (is it always true?)");
     println!("  :sat, :s <expr>    Check satisfiability (does a solution exist?)");
     println!("  :eval, :ev <expr>  Evaluate expression concretely (compute result)");
+    println!("  :let x = <expr>    Bind value to variable (persists in REPL)");
     println!("  :trace, :tr <expr> Trace match expression (show which branch matches)");
+    println!();
+    println!("  Tip: Use `it` in expressions to refer to the last :eval result");
     println!("  :load, :l <file>   Load a .kleis file");
     println!("  :env, :e           Show defined functions");
     println!("  :define <def>      Define a function");
@@ -1223,7 +1228,8 @@ fn sat_expression(input: &str, registry: &StructureRegistry, evaluator: &Evaluat
 /// - Conditionals: if true then x else y → x
 /// - Recursion: fib(5) → 5
 /// - Pattern matching: match Some(5) { Some(x) => x | None => 0 } → 5
-fn eval_concrete_expression(input: &str, evaluator: &Evaluator) {
+/// - Result is stored in `it` for chaining: :eval 2+3, then :eval it*2
+fn eval_concrete_expression(input: &str, evaluator: &mut Evaluator) {
     use kleis::pretty_print::PrettyPrinter;
 
     if input.is_empty() {
@@ -1231,6 +1237,10 @@ fn eval_concrete_expression(input: &str, evaluator: &Evaluator) {
         println!("Example: :eval 2 + 3");
         println!("Example: :eval concat(\"hello\", \" world\")");
         println!("Example: :eval hasPrefix(\"(define fib)\", \"(define\")");
+        println!();
+        println!("Tip: Use `it` to refer to the last result:");
+        println!("  :eval 2 + 3      → 5");
+        println!("  :eval it * 2     → 10");
         return;
     }
 
@@ -1240,6 +1250,66 @@ fn eval_concrete_expression(input: &str, evaluator: &Evaluator) {
             Ok(result) => {
                 let pp = PrettyPrinter::new();
                 println!("✅ {}", pp.format_expression(&result));
+                // Store result for `it` magic variable
+                evaluator.set_last_result(result);
+            }
+            Err(e) => {
+                println!("❌ Evaluation error: {}", e);
+            }
+        },
+        Err(e) => {
+            println!("❌ Parse error: {}", e);
+        }
+    }
+}
+
+/// Let binding - bind a value to a name in the REPL environment
+///
+/// Usage: :let x = 2 + 3
+///        :eval x * 2     → 10
+fn let_binding(input: &str, evaluator: &mut Evaluator) {
+    use kleis::pretty_print::PrettyPrinter;
+
+    if input.is_empty() {
+        println!("Usage: :let <name> = <expression>");
+        println!("Example: :let x = 2 + 3");
+        println!("         :eval x * 2     → 10");
+        return;
+    }
+
+    // Parse "name = expr"
+    let parts: Vec<&str> = input.splitn(2, '=').collect();
+    if parts.len() != 2 {
+        println!("❌ Invalid :let syntax. Use: :let <name> = <expression>");
+        return;
+    }
+
+    let name = parts[0].trim();
+    let expr_str = parts[1].trim();
+
+    if name.is_empty() || expr_str.is_empty() {
+        println!("❌ Invalid :let syntax. Use: :let <name> = <expression>");
+        return;
+    }
+
+    // Validate name is a valid identifier
+    if !name
+        .chars()
+        .next()
+        .map(|c| c.is_alphabetic() || c == '_')
+        .unwrap_or(false)
+    {
+        println!("❌ Invalid variable name: {}", name);
+        return;
+    }
+
+    let mut parser = KleisParser::new(expr_str);
+    match parser.parse() {
+        Ok(expr) => match evaluator.eval_concrete(&expr) {
+            Ok(result) => {
+                let pp = PrettyPrinter::new();
+                println!("{} = {}", name, pp.format_expression(&result));
+                evaluator.set_binding(name.to_string(), result);
             }
             Err(e) => {
                 println!("❌ Evaluation error: {}", e);
@@ -2082,10 +2152,31 @@ fn resolve_import_path(import_path: &str, base_dir: &Path) -> PathBuf {
 }
 
 fn show_env(evaluator: &Evaluator) {
+    use kleis::pretty_print::PrettyPrinter;
+    let pp = PrettyPrinter::new();
+
+    // Show bindings
+    let bindings = evaluator.list_bindings();
+    if !bindings.is_empty() {
+        println!("📌 Value bindings:");
+        for (name, value) in &bindings {
+            println!("  {} = {}", name, pp.format_expression(value));
+        }
+        println!();
+    }
+
+    // Show `it` if set
+    if let Some(last) = evaluator.get_last_result() {
+        println!("📍 Last result (it):");
+        println!("  it = {}", pp.format_expression(last));
+        println!();
+    }
+
+    // Show functions
     let functions = evaluator.list_functions();
-    if functions.is_empty() {
-        println!("No functions defined.");
-    } else {
+    if functions.is_empty() && bindings.is_empty() {
+        println!("No functions or bindings defined.");
+    } else if !functions.is_empty() {
         println!("📋 Defined functions:");
         for name in functions {
             if let Some(closure) = evaluator.get_function(&name) {

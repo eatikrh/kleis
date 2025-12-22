@@ -36,6 +36,8 @@ rustyline = "14.0"
 # Numerical linear algebra (BLAS/LAPACK)
 ndarray = { version = "0.16", optional = true }
 ndarray-linalg = { version = "0.17", optional = true }
+nalgebra = { version = "0.33", optional = true }  # For pure-Rust Schur (dev/testing)
+lapack = { version = "0.19", optional = true }    # For LAPACK dgees (production Schur)
 
 [features]
 # Default features (enabled by default)
@@ -46,8 +48,8 @@ default = ["axiom-verification"]
 axiom-verification = ["z3"]
 
 # Numerical linear algebra (BLAS/LAPACK backend)
-# Enables eigenvalues, SVD, solve, etc.
-numerical = ["ndarray", "ndarray-linalg", "blas-src", "lapack-src"]
+# Enables eigenvalues, SVD, solve, Schur, etc.
+numerical = ["ndarray", "ndarray-linalg", "nalgebra", "lapack", "blas-src", "lapack-src"]
 
 [[bin]]
 name = "gallery"

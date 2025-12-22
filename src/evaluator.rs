@@ -51,10 +51,13 @@ pub struct Evaluator {
     /// Loaded function definitions
     functions: HashMap<String, Closure>,
 
-    /// Variable bindings (for evaluation context)
-    /// Reserved for future use in evaluation context
-    #[allow(dead_code)]
+    /// Variable bindings from :let command
+    /// Maps variable names to their evaluated values
     bindings: HashMap<String, Expression>,
+
+    /// Last evaluation result (for `it` magic variable)
+    /// Stores the result of the most recent :eval command
+    last_result: Option<Expression>,
 
     /// Pattern matcher for match expressions
     matcher: PatternMatcher,
@@ -80,12 +83,40 @@ impl Evaluator {
         Evaluator {
             functions: HashMap::new(),
             bindings: HashMap::new(),
+            last_result: None,
             matcher: PatternMatcher,
             adt_constructors: std::collections::HashSet::new(),
             all_constructors: std::collections::HashSet::new(),
             data_types: Vec::new(),
             structures: Vec::new(),
         }
+    }
+
+    // === REPL Value Bindings ===
+
+    /// Set a variable binding (used by :let command)
+    pub fn set_binding(&mut self, name: String, value: Expression) {
+        self.bindings.insert(name, value);
+    }
+
+    /// Get a variable binding
+    pub fn get_binding(&self, name: &str) -> Option<&Expression> {
+        self.bindings.get(name)
+    }
+
+    /// Set the last evaluation result (for `it` magic variable)
+    pub fn set_last_result(&mut self, value: Expression) {
+        self.last_result = Some(value);
+    }
+
+    /// Get the last evaluation result
+    pub fn get_last_result(&self) -> Option<&Expression> {
+        self.last_result.as_ref()
+    }
+
+    /// List all bindings (for :env command)
+    pub fn list_bindings(&self) -> Vec<(&String, &Expression)> {
+        self.bindings.iter().collect()
     }
 
     /// Load function definitions from a parsed program (Wire 3: Self-hosting)
@@ -1215,8 +1246,23 @@ impl Evaluator {
             Expression::Const(s) => Ok(Expression::Const(s.clone())),
             Expression::String(s) => Ok(Expression::String(s.clone())),
 
-            // Variables: check if they're defined functions (constants)
+            // Variables: check bindings, `it`, functions, ADT constructors
             Expression::Object(name) => {
+                // 1. Check REPL bindings (from :let command)
+                if let Some(value) = self.bindings.get(name) {
+                    return Ok(value.clone());
+                }
+
+                // 2. Check `it` magic variable (last eval result)
+                if name == "it" {
+                    if let Some(value) = &self.last_result {
+                        return Ok(value.clone());
+                    }
+                    // `it` not set yet - return as unbound
+                    return Ok(expr.clone());
+                }
+
+                // 3. Check defined functions
                 if let Some(closure) = self.functions.get(name) {
                     if closure.params.is_empty() {
                         // It's a constant (define pi = 3.14)
@@ -1946,6 +1992,48 @@ impl Evaluator {
                 Ok(Some(self.make_matrix(m, n, result?)))
             }
 
+            "size" | "shape" | "dims" => {
+                // Get matrix dimensions as a tuple/list
+                // size(M) → [m, n]
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, _)) = self.extract_matrix(&args[0]) {
+                    Ok(Some(Expression::List(vec![
+                        Expression::Const(m.to_string()),
+                        Expression::Const(n.to_string()),
+                    ])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "nrows" | "num_rows" => {
+                // Get number of rows
+                // nrows(M) → m
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, _, _)) = self.extract_matrix(&args[0]) {
+                    Ok(Some(Expression::Const(m.to_string())))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "ncols" | "num_cols" => {
+                // Get number of columns
+                // ncols(M) → n
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((_, n, _)) = self.extract_matrix(&args[0]) {
+                    Ok(Some(Expression::Const(n.to_string())))
+                } else {
+                    Ok(None)
+                }
+            }
+
             "matrix_get" | "element" => {
                 // Get element at (i, j) from matrix
                 // matrix_get(M, i, j) → element
@@ -2044,6 +2132,477 @@ impl Evaluator {
                     }
                     let diag: Vec<Expression> = (0..m).map(|i| elems[i * n + i].clone()).collect();
                     Ok(Some(Expression::List(diag)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // === Matrix Mutation (returns new matrix) ===
+            "set_element" | "set" => {
+                // Set element at (i, j) to a new value, return new matrix
+                // set_element(M, i, j, value) → new Matrix
+                if args.len() != 4 {
+                    return Ok(None);
+                }
+                if let Some((m, n, mut elems)) = self.extract_matrix(&args[0]) {
+                    let i = self.as_integer(&args[1]);
+                    let j = self.as_integer(&args[2]);
+                    if let (Some(i), Some(j)) = (i, j) {
+                        let i = i as usize;
+                        let j = j as usize;
+                        if i < m && j < n {
+                            let idx = i * n + j;
+                            // Evaluate the new value
+                            let new_val = match self.eval_concrete(&args[3]) {
+                                Ok(v) => v,
+                                Err(_) => args[3].clone(),
+                            };
+                            elems[idx] = new_val;
+                            Ok(Some(self.make_matrix(m, n, elems)))
+                        } else {
+                            Err(format!(
+                                "set_element: index ({}, {}) out of bounds for {}x{} matrix",
+                                i, j, m, n
+                            ))
+                        }
+                    } else {
+                        Ok(None) // Symbolic indices - return unevaluated
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "set_row" => {
+                // Set row i to new values, return new matrix
+                // set_row(M, i, [values]) → new Matrix
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                if let Some((m, n, mut elems)) = self.extract_matrix(&args[0]) {
+                    if let Some(i) = self.as_integer(&args[1]) {
+                        let i = i as usize;
+                        if i >= m {
+                            return Err(format!(
+                                "set_row: row {} out of bounds for {}x{} matrix",
+                                i, m, n
+                            ));
+                        }
+                        // Get the new row values
+                        match &args[2] {
+                            Expression::List(new_row) => {
+                                if new_row.len() != n {
+                                    return Err(format!(
+                                        "set_row: row has {} elements but matrix has {} columns",
+                                        new_row.len(),
+                                        n
+                                    ));
+                                }
+                                for (j, val) in new_row.iter().enumerate() {
+                                    let new_val = match self.eval_concrete(val) {
+                                        Ok(v) => v,
+                                        Err(_) => val.clone(),
+                                    };
+                                    elems[i * n + j] = new_val;
+                                }
+                                Ok(Some(self.make_matrix(m, n, elems)))
+                            }
+                            _ => Ok(None),
+                        }
+                    } else {
+                        Ok(None) // Symbolic index - return unevaluated
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "set_col" => {
+                // Set column j to new values, return new matrix
+                // set_col(M, j, [values]) → new Matrix
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                if let Some((m, n, mut elems)) = self.extract_matrix(&args[0]) {
+                    if let Some(j) = self.as_integer(&args[1]) {
+                        let j = j as usize;
+                        if j >= n {
+                            return Err(format!(
+                                "set_col: column {} out of bounds for {}x{} matrix",
+                                j, m, n
+                            ));
+                        }
+                        // Get the new column values
+                        match &args[2] {
+                            Expression::List(new_col) => {
+                                if new_col.len() != m {
+                                    return Err(format!(
+                                        "set_col: column has {} elements but matrix has {} rows",
+                                        new_col.len(),
+                                        m
+                                    ));
+                                }
+                                for (i, val) in new_col.iter().enumerate() {
+                                    let new_val = match self.eval_concrete(val) {
+                                        Ok(v) => v,
+                                        Err(_) => val.clone(),
+                                    };
+                                    elems[i * n + j] = new_val;
+                                }
+                                Ok(Some(self.make_matrix(m, n, elems)))
+                            }
+                            _ => Ok(None),
+                        }
+                    } else {
+                        Ok(None) // Symbolic index - return unevaluated
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "set_diag" => {
+                // Set diagonal elements to new values, return new matrix
+                // set_diag(M, [values]) → new Matrix (square matrix only)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let Some((m, n, mut elems)) = self.extract_matrix(&args[0]) {
+                    if m != n {
+                        return Err(format!("set_diag: matrix must be square, got {}x{}", m, n));
+                    }
+                    match &args[1] {
+                        Expression::List(new_diag) => {
+                            if new_diag.len() != m {
+                                return Err(format!(
+                                    "set_diag: diagonal has {} elements but matrix is {}x{}",
+                                    new_diag.len(),
+                                    m,
+                                    n
+                                ));
+                            }
+                            for (i, val) in new_diag.iter().enumerate() {
+                                let new_val = match self.eval_concrete(val) {
+                                    Ok(v) => v,
+                                    Err(_) => val.clone(),
+                                };
+                                elems[i * n + i] = new_val;
+                            }
+                            Ok(Some(self.make_matrix(m, n, elems)))
+                        }
+                        _ => Ok(None),
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // === Matrix Constructors ===
+            "eye" | "identity" => {
+                // Create n×n identity matrix
+                // eye(n) → Matrix(n, n, [1,0,0,...,0,1,0,...,0,0,1])
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(n) = self.as_integer(&args[0]) {
+                    if n <= 0 {
+                        return Err(format!("eye: size must be positive, got {}", n));
+                    }
+                    let n = n as usize;
+                    let mut elems = Vec::with_capacity(n * n);
+                    for i in 0..n {
+                        for j in 0..n {
+                            if i == j {
+                                elems.push(Expression::Const("1".to_string()));
+                            } else {
+                                elems.push(Expression::Const("0".to_string()));
+                            }
+                        }
+                    }
+                    Ok(Some(self.make_matrix(n, n, elems)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "zeros" => {
+                // Create m×n zero matrix
+                // zeros(m, n) → Matrix(m, n, [0,0,...,0])
+                // zeros(n) → Matrix(n, n, [0,0,...,0])
+                if args.is_empty() || args.len() > 2 {
+                    return Ok(None);
+                }
+                let (m, n) = if args.len() == 1 {
+                    let size = self.as_integer(&args[0]).unwrap_or(0) as usize;
+                    (size, size)
+                } else {
+                    let m = self.as_integer(&args[0]).unwrap_or(0) as usize;
+                    let n = self.as_integer(&args[1]).unwrap_or(0) as usize;
+                    (m, n)
+                };
+                if m == 0 || n == 0 {
+                    return Ok(None);
+                }
+                let elems: Vec<Expression> = vec![Expression::Const("0".to_string()); m * n];
+                Ok(Some(self.make_matrix(m, n, elems)))
+            }
+
+            "ones" => {
+                // Create m×n matrix of ones
+                // ones(m, n) → Matrix(m, n, [1,1,...,1])
+                // ones(n) → Matrix(n, n, [1,1,...,1])
+                if args.is_empty() || args.len() > 2 {
+                    return Ok(None);
+                }
+                let (m, n) = if args.len() == 1 {
+                    let size = self.as_integer(&args[0]).unwrap_or(0) as usize;
+                    (size, size)
+                } else {
+                    let m = self.as_integer(&args[0]).unwrap_or(0) as usize;
+                    let n = self.as_integer(&args[1]).unwrap_or(0) as usize;
+                    (m, n)
+                };
+                if m == 0 || n == 0 {
+                    return Ok(None);
+                }
+                let elems: Vec<Expression> = vec![Expression::Const("1".to_string()); m * n];
+                Ok(Some(self.make_matrix(m, n, elems)))
+            }
+
+            "diag_matrix" | "diagonal" => {
+                // Create diagonal matrix from list
+                // diag_matrix([a, b, c]) → Matrix(3, 3, [a,0,0, 0,b,0, 0,0,c])
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Expression::List(values) = &args[0] {
+                    let n = values.len();
+                    if n == 0 {
+                        return Ok(None);
+                    }
+                    let mut elems = Vec::with_capacity(n * n);
+                    for (i, val) in values.iter().enumerate() {
+                        for j in 0..n {
+                            if i == j {
+                                elems.push(val.clone());
+                            } else {
+                                elems.push(Expression::Const("0".to_string()));
+                            }
+                        }
+                    }
+                    Ok(Some(self.make_matrix(n, n, elems)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "matrix" => {
+                // Create matrix from nested list (row-major)
+                // matrix([[1, 2, 3], [4, 5, 6]]) → Matrix(2, 3, [1, 2, 3, 4, 5, 6])
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Expression::List(rows) = &args[0] {
+                    if rows.is_empty() {
+                        return Err("matrix: empty matrix".to_string());
+                    }
+
+                    // Extract first row to get number of columns
+                    let first_row = match &rows[0] {
+                        Expression::List(r) => r,
+                        _ => return Err("matrix: expected list of rows".to_string()),
+                    };
+                    let n_cols = first_row.len();
+                    if n_cols == 0 {
+                        return Err("matrix: rows cannot be empty".to_string());
+                    }
+                    let n_rows = rows.len();
+
+                    // Flatten all rows into elements
+                    let mut elems = Vec::with_capacity(n_rows * n_cols);
+                    for (i, row) in rows.iter().enumerate() {
+                        match row {
+                            Expression::List(r) => {
+                                if r.len() != n_cols {
+                                    return Err(format!(
+                                        "matrix: row {} has {} elements, expected {}",
+                                        i,
+                                        r.len(),
+                                        n_cols
+                                    ));
+                                }
+                                for elem in r {
+                                    // Evaluate each element to handle expressions like -1
+                                    match self.eval_concrete(elem) {
+                                        Ok(e) => elems.push(e),
+                                        Err(_) => elems.push(elem.clone()),
+                                    }
+                                }
+                            }
+                            _ => {
+                                return Err(format!("matrix: row {} is not a list", i));
+                            }
+                        }
+                    }
+
+                    Ok(Some(self.make_matrix(n_rows, n_cols, elems)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // === Matrix Row/Column Manipulation ===
+            "vstack" | "append_rows" => {
+                // Vertical stack: append rows from B to bottom of A
+                // vstack(A, B) where A is m×n and B is k×n → (m+k)×n
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m1, n1, elems1)), Some((m2, n2, elems2))) =
+                    (self.extract_matrix(&args[0]), self.extract_matrix(&args[1]))
+                {
+                    if n1 != n2 {
+                        return Err(format!("vstack: column count mismatch: {} vs {}", n1, n2));
+                    }
+                    let mut result = elems1;
+                    result.extend(elems2);
+                    Ok(Some(self.make_matrix(m1 + m2, n1, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "hstack" | "append_cols" => {
+                // Horizontal stack: append columns from B to right of A
+                // hstack(A, B) where A is m×n and B is m×k → m×(n+k)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m1, n1, elems1)), Some((m2, n2, elems2))) =
+                    (self.extract_matrix(&args[0]), self.extract_matrix(&args[1]))
+                {
+                    if m1 != m2 {
+                        return Err(format!("hstack: row count mismatch: {} vs {}", m1, m2));
+                    }
+                    // Interleave columns: for each row, append B's columns after A's
+                    let mut result = Vec::with_capacity(m1 * (n1 + n2));
+                    for i in 0..m1 {
+                        // Add row i from A
+                        for j in 0..n1 {
+                            result.push(elems1[i * n1 + j].clone());
+                        }
+                        // Add row i from B
+                        for j in 0..n2 {
+                            result.push(elems2[i * n2 + j].clone());
+                        }
+                    }
+                    Ok(Some(self.make_matrix(m1, n1 + n2, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "prepend_row" => {
+                // Add a row at the top of the matrix
+                // prepend_row([a,b,c], M) where M is m×3 → (m+1)×3
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Expression::List(row), Some((m, n, elems))) =
+                    (&args[0], self.extract_matrix(&args[1]))
+                {
+                    if row.len() != n {
+                        return Err(format!(
+                            "prepend_row: row has {} elements but matrix has {} columns",
+                            row.len(),
+                            n
+                        ));
+                    }
+                    let mut result = row.clone();
+                    result.extend(elems);
+                    Ok(Some(self.make_matrix(m + 1, n, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "append_row" => {
+                // Add a row at the bottom of the matrix
+                // append_row(M, [a,b,c]) where M is m×3 → (m+1)×3
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m, n, elems)), Expression::List(row)) =
+                    (self.extract_matrix(&args[0]), &args[1])
+                {
+                    if row.len() != n {
+                        return Err(format!(
+                            "append_row: row has {} elements but matrix has {} columns",
+                            row.len(),
+                            n
+                        ));
+                    }
+                    let mut result = elems;
+                    result.extend(row.clone());
+                    Ok(Some(self.make_matrix(m + 1, n, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "prepend_col" => {
+                // Add a column at the left of the matrix
+                // prepend_col([a,b], M) where M is 2×n → 2×(n+1)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Expression::List(col), Some((m, n, elems))) =
+                    (&args[0], self.extract_matrix(&args[1]))
+                {
+                    if col.len() != m {
+                        return Err(format!(
+                            "prepend_col: column has {} elements but matrix has {} rows",
+                            col.len(),
+                            m
+                        ));
+                    }
+                    let mut result = Vec::with_capacity(m * (n + 1));
+                    for i in 0..m {
+                        result.push(col[i].clone());
+                        for j in 0..n {
+                            result.push(elems[i * n + j].clone());
+                        }
+                    }
+                    Ok(Some(self.make_matrix(m, n + 1, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "append_col" => {
+                // Add a column at the right of the matrix
+                // append_col(M, [a,b]) where M is 2×n → 2×(n+1)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m, n, elems)), Expression::List(col)) =
+                    (self.extract_matrix(&args[0]), &args[1])
+                {
+                    if col.len() != m {
+                        return Err(format!(
+                            "append_col: column has {} elements but matrix has {} rows",
+                            col.len(),
+                            m
+                        ));
+                    }
+                    let mut result = Vec::with_capacity(m * (n + 1));
+                    for i in 0..m {
+                        for j in 0..n {
+                            result.push(elems[i * n + j].clone());
+                        }
+                        result.push(col[i].clone());
+                    }
+                    Ok(Some(self.make_matrix(m, n + 1, result)))
                 } else {
                     Ok(None)
                 }
@@ -2203,6 +2762,9 @@ impl Evaluator {
                 self.lapack_det(args)
             }
 
+            #[cfg(feature = "numerical")]
+            "schur" | "schur_decomp" => self.lapack_schur(args),
+
             // Not a built-in
             _ => Ok(None),
         }
@@ -2265,6 +2827,38 @@ impl Evaluator {
     fn as_number(&self, expr: &Expression) -> Option<f64> {
         match expr {
             Expression::Const(s) => s.parse().ok(),
+            // Handle negate(x) -> -x
+            Expression::Operation { name, args } if name == "negate" && args.len() == 1 => {
+                self.as_number(&args[0]).map(|n| -n)
+            }
+            // Handle minus(a, b) -> a - b
+            Expression::Operation { name, args } if name == "minus" && args.len() == 2 => {
+                let a = self.as_number(&args[0])?;
+                let b = self.as_number(&args[1])?;
+                Some(a - b)
+            }
+            // Handle plus(a, b) -> a + b
+            Expression::Operation { name, args } if name == "plus" && args.len() == 2 => {
+                let a = self.as_number(&args[0])?;
+                let b = self.as_number(&args[1])?;
+                Some(a + b)
+            }
+            // Handle times(a, b) -> a * b
+            Expression::Operation { name, args } if name == "times" && args.len() == 2 => {
+                let a = self.as_number(&args[0])?;
+                let b = self.as_number(&args[1])?;
+                Some(a * b)
+            }
+            // Handle divide(a, b) -> a / b
+            Expression::Operation { name, args } if name == "divide" && args.len() == 2 => {
+                let a = self.as_number(&args[0])?;
+                let b = self.as_number(&args[1])?;
+                if b != 0.0 {
+                    Some(a / b)
+                } else {
+                    None
+                }
+            }
             _ => None,
         }
     }
@@ -3006,6 +3600,80 @@ impl Evaluator {
         let d = numerical::det(&data, n).map_err(|e| e.to_string())?;
 
         Ok(Some(Expression::Const(format!("{}", d))))
+    }
+
+    #[cfg(feature = "numerical")]
+    fn lapack_schur(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 1 {
+            return Ok(None);
+        }
+
+        let (m, n, elements) = match self.extract_matrix(&args[0]) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        if m != n {
+            return Err(format!("schur requires a square matrix, got {}×{}", m, n));
+        }
+
+        let data: Result<Vec<f64>, _> = elements
+            .iter()
+            .map(|e| {
+                self.as_number(e)
+                    .ok_or_else(|| "Symbolic elements not supported for LAPACK".to_string())
+            })
+            .collect();
+        let data = data?;
+
+        // Use LAPACK Schur decomposition
+        let result = numerical::schur_lapack(&data, n).map_err(|e| e.to_string())?;
+
+        // Return [U, T, eigenvalues] as a list
+        let u_matrix = self.make_matrix(
+            n,
+            n,
+            result
+                .u
+                .iter()
+                .map(|&x| Expression::Const(format!("{}", x)))
+                .collect(),
+        );
+
+        let t_matrix = self.make_matrix(
+            n,
+            n,
+            result
+                .t
+                .iter()
+                .map(|&x| Expression::Const(format!("{}", x)))
+                .collect(),
+        );
+
+        // Eigenvalues as complex pairs (or real if imaginary part is ~0)
+        let eigenvalues: Vec<Expression> = result
+            .wr
+            .iter()
+            .zip(result.wi.iter())
+            .map(|(&re, &im)| {
+                if im.abs() < 1e-14 {
+                    Expression::Const(format!("{}", re))
+                } else {
+                    self.make_complex(
+                        Expression::Const(format!("{}", re)),
+                        Expression::Const(format!("{}", im)),
+                    )
+                }
+            })
+            .collect();
+
+        Ok(Some(Expression::List(vec![
+            u_matrix,
+            t_matrix,
+            Expression::List(eigenvalues),
+        ])))
     }
 }
 

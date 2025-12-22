@@ -259,6 +259,45 @@ impl PrettyPrinter {
             return format!("{}/{}", numer, denom);
         }
 
+        // Special formatting for Matrix(m, n, [elements]) -> matrix([[row1], [row2], ...])
+        // This provides a more readable nested-list representation
+        if name == "Matrix" && args.len() >= 3 {
+            // Extract dimensions
+            if let (Expression::Const(m_str), Expression::Const(n_str)) = (&args[0], &args[1]) {
+                if let (Ok(m), Ok(n)) = (m_str.parse::<usize>(), n_str.parse::<usize>()) {
+                    // Get elements from the 3rd argument (should be a List)
+                    let elements: Vec<String> = match &args[2] {
+                        Expression::List(elems) => elems
+                            .iter()
+                            .map(|e| self.format_at_depth(e, depth))
+                            .collect(),
+                        _ => {
+                            // Fallback: collect remaining args
+                            args[2..]
+                                .iter()
+                                .map(|e| self.format_at_depth(e, depth))
+                                .collect()
+                        }
+                    };
+
+                    // Verify we have the right number of elements
+                    if elements.len() == m * n {
+                        // Build nested row representation
+                        let rows: Vec<String> = (0..m)
+                            .map(|i| {
+                                let row_elements: Vec<&str> = elements[i * n..(i + 1) * n]
+                                    .iter()
+                                    .map(|s| s.as_str())
+                                    .collect();
+                                format!("[{}]", row_elements.join(", "))
+                            })
+                            .collect();
+                        return format!("matrix([{}])", rows.join(", "));
+                    }
+                }
+            }
+        }
+
         // Generic function call
         if args.is_empty() {
             name.to_string()

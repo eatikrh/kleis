@@ -364,14 +364,38 @@ This makes Kleis future-proof and keeps the semantic/numeric boundary clean.
 
 ---
 
-## Direct LAPACK Access for Schur/QZ
+## Schur Decomposition: Two Tiers
+
+### Tier 1: nalgebra (Current - Pure Rust)
+
+| Aspect | Status |
+|--------|--------|
+| Implementation | Pure Rust (QR + Hessenberg + Schur) |
+| LAPACK | ❌ Does NOT call LAPACK |
+| BLAS | ❌ Does NOT use BLAS |
+| Eigenvalue reordering | ❌ Not available |
+| Generalized Schur (QZ) | ❌ Not available |
+
+**Good for:**
+- Small matrices
+- Testing and development
+- Avoiding native dependencies
+
+**Not suitable for:**
+- CARE / DARE / Lyapunov at scale
+- Production control systems
+- Robustness requirements (SLICOT/MATLAB level)
+
+### Tier 2: LAPACK dgees (Future - Production)
+
+For serious control toolkit work, need direct LAPACK access.
 
 ### The Problem
 
-No high-level Rust crate exposes `xGEES` (Schur decomposition) directly:
+No high-level Rust crate exposes `xGEES` (LAPACK Schur) directly:
 - `ndarray-linalg` doesn't expose it
-- `nalgebra` doesn't expose it
-- `faer` has its own implementation but different API
+- `nalgebra` has its own pure-Rust version (not LAPACK)
+- `faer` has its own implementation (not LAPACK)
 
 ### LAPACK Routines We Need
 
@@ -416,10 +440,21 @@ use lapack::dgees;
 
 ### Current Status
 
-Schur/QZ operations are **stubbed out** in `src/numerical/backend.rs`:
-- Return `NotImplemented` error
-- Document what LAPACK routines are needed
-- Will implement when Control Toolkit is built
+**Schur decomposition is now implemented** in `src/numerical/backend.rs`:
+
+| Operation | Status | LAPACK Routine |
+|-----------|--------|----------------|
+| `schur_lapack()` | ✅ Done | `dgees` |
+| `schur_reorder()` | ✅ Done | `dtrsen` |
+| `schur_reorder_stable_continuous()` | ✅ Done | `dtrsen` |
+| `schur_reorder_stable_discrete()` | ✅ Done | `dtrsen` |
+| `qz_lapack()` | ⏳ Stubbed | `dgges` |
+
+**Implementation Details:**
+- Uses `lapack` crate v0.19 for direct LAPACK FFI
+- Column-major <-> row-major conversion handled internally
+- Returns `SchurResult` with U, T, eigenvalues (wr, wi)
+- Comprehensive tests for reconstruction (‖A - UTUᵀ‖) and orthogonality (‖I - UᵀU‖)
 
 ---
 
@@ -427,15 +462,11 @@ Schur/QZ operations are **stubbed out** in `src/numerical/backend.rs`:
 
 1. [x] Add `ndarray-linalg` with Accelerate (done)
 2. [x] Implement core operations: eig, svd, solve, inv, qr, cholesky (done)
-3. [ ] Add `lax` for direct LAPACK calls (Schur, QZ)
-4. [ ] Implement Schur decomposition via dgees
-5. [ ] Implement QZ decomposition via dgges
-6. [ ] Build Control Toolkit structures in Kleis
-2. [ ] Implement `NumericalBackend` trait
-3. [ ] Add `eigenvalues` operation to evaluator
-4. [ ] Add tests for numerical operations
-5. [ ] Document in manual
-6. [ ] Optional: Add LAPACK backend feature
+3. [x] Add `lapack` crate for direct LAPACK calls (done)
+4. [x] Implement Schur decomposition via dgees (done)
+5. [x] Implement Schur reordering via dtrsen (done)
+6. [ ] Implement QZ decomposition via dgges
+7. [ ] Build Control Toolkit structures in Kleis
 
 ## Benchmarks Needed
 
