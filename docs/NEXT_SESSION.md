@@ -110,29 +110,13 @@ See `docs/vision/VERIFIED_SOFTWARE_DREAM.md` (in abandoned branch) for full anal
 
 ---
 
-## 📝 TODO: LISP Interpreter - Use stdlib Ordering Operations
+## ✅ DONE: LISP Interpreter Uses stdlib Ordering Operations
 
-The LISP interpreter (`docs/grammar/lisp_in_kleis.kleis`) uses short aliases 
-(`le`, `lt`, `ge`, `gt`, `eq`) which are now defined in `stdlib/prelude.kleis`:
+The LISP interpreter (`docs/grammar/lisp_parser.kleis`) already:
+1. ✅ Imports `stdlib/prelude.kleis`
+2. ✅ Uses `le`, `lt`, `gt`, `ge`, `eq` from stdlib `Ordered(T)` structure
 
-```kleis
-structure Ordered(T) {
-  // Long names
-  operation less_than : T → T → Bool
-  operation greater_than : T → T → Bool
-  operation less_equal : T → T → Bool
-  operation greater_equal : T → T → Bool
-  // Short aliases (already added for LISP interpreter)
-  operation lt : T → T → Bool
-  operation gt : T → T → Bool
-  operation le : T → T → Bool
-  operation ge : T → T → Bool
-  operation eq : T → T → Bool
-}
-```
-
-The LISP interpreter should import and use these operations rather than defining its own.
-This ensures consistency and proper type checking.
+No changes needed - this was already working correctly.
 
 ---
 
