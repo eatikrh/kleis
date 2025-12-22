@@ -156,6 +156,49 @@ implements HermitianAdjoint(m, n, ℝ) {
  *   - Works with real LAPACK routines
  *   - Keeps Z3/SMT solvers in real arithmetic
  *   - Matches control theory practice (H∞, μ-analysis)
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * PROMOTION (Type Lifting)
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * Promotion lifts values from a "smaller" type to a "larger" type:
+ * 
+ *     ℕ ↪ ℤ ↪ ℚ ↪ ℝ ↪ ℂ
+ * 
+ * For matrices, promotion lifts element types:
+ * 
+ *     Matrix(m, n, ℝ) ↪ ComplexMatrix(m, n)
+ * 
+ * promote : Matrix(m, n, ℝ) → ComplexMatrix(m, n)
+ * promote(A) = (A, zeros(m, n))
+ * 
+ * This embeds a real matrix as a complex matrix with zero imaginary part.
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * REALIFICATION / COMPLEXIFICATION (Adjunction)
+ * ═══════════════════════════════════════════════════════════════════
+ * 
+ * Realification embeds complex n×n into real 2n×2n:
+ * 
+ *     realify : ComplexMatrix(n, n) → Matrix(2n, 2n, ℝ)
+ *     realify((A, B)) = [[A, -B], [B, A]]
+ * 
+ * Complexification is the partial inverse (only valid on structured matrices):
+ * 
+ *     complexify : Matrix(2n, 2n, ℝ) → ComplexMatrix(n, n)
+ *     complexify([[A, -B], [B, A]]) = (A, B)
+ *     Precondition: M has the [[A,-B],[B,A]] block structure
+ * 
+ * Round-trip identity:
+ *     complexify(realify(M)) = M
+ * 
+ * This pair forms an equivalence between:
+ *   - ComplexMatrix(n, n)
+ *   - {M ∈ Matrix(2n, 2n, ℝ) | M has block structure [[A,-B],[B,A]]}
+ * 
+ * Key insight: complexify is NOT a general operation — it only works on
+ * matrices in the image of realify. This is why real Schur gives complex
+ * Schur: the orthogonal factor Q̃ preserves the block structure.
  */
 
 /* Type Definition (specification - parser support pending)
