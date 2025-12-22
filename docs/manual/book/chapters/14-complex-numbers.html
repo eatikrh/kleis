@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5cecd11d.js";
+            window.path_to_searchindex_js = "../searchindex-4b2e0e40.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-903d2734.js"></script>
+        <script src="../toc-adba3566.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -217,6 +217,38 @@
 </table>
 </div>
 <p>This works transparently in the REPL and for verification.</p>
+<h2 id="concrete-evaluation-with-eval"><a class="header" href="#concrete-evaluation-with-eval">Concrete Evaluation with <code>:eval</code></a></h2>
+<p>For direct computation with complex numbers, use the <code>:eval</code> command:</p>
+<pre><code class="language-kleis">:eval complex_add(complex(1, 2), complex(3, 4))
+// → complex(4, 6)
+
+:eval complex_sub(complex(10, 20), complex(3, 4))
+// → complex(7, 16)
+
+:eval complex_mul(complex(1, 2), complex(3, 4))
+// → complex(-5, 10)
+
+:eval complex_conj(complex(3, 4))
+// → complex(3, -4)
+
+:eval complex_abs_squared(complex(3, 4))
+// → 25  (|3+4i|² = 9 + 16 = 25)
+</code></pre>
+<h3 id="extracting-parts"><a class="header" href="#extracting-parts">Extracting Parts</a></h3>
+<pre><code class="language-kleis">:eval real(complex(5, 7))
+// → 5
+
+:eval imag(complex(5, 7))
+// → 7
+</code></pre>
+<h3 id="mixed-symbolicconcrete"><a class="header" href="#mixed-symbolicconcrete">Mixed Symbolic/Concrete</a></h3>
+<p><code>:eval</code> supports partial symbolic evaluation:</p>
+<pre><code class="language-kleis">:eval complex_add(complex(a, 2), complex(3, 4))
+// → complex(a + 3, 6)
+
+:eval complex_mul(complex(a, 0), complex(0, b))
+// → complex(0, a * b)
+</code></pre>
 <h2 id="the-imaginary-unit"><a class="header" href="#the-imaginary-unit">The Imaginary Unit</a></h2>
 <p>The imaginary unit <code>i</code> is predefined in Kleis:</p>
 <pre><code class="language-kleis">// i is the square root of -1
@@ -299,7 +331,7 @@ define z2 = complex(1, -2)      // 1 - 2i
 define pure_real = complex(5, 0)     // 5 (a real number)
 define pure_imag = complex(0, 3)     // 3i (pure imaginary)
 </code></pre>
-<h2 id="extracting-parts"><a class="header" href="#extracting-parts">Extracting Parts</a></h2>
+<h2 id="extracting-parts-1"><a class="header" href="#extracting-parts-1">Extracting Parts</a></h2>
 <p>Use <code>re</code> and <code>im</code> to extract the real and imaginary parts:</p>
 <pre><code class="language-kleis">define z = complex(3, 4)
 

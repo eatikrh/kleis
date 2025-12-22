@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5cecd11d.js";
+            window.path_to_searchindex_js = "searchindex-4b2e0e40.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-903d2734.js"></script>
+        <script src="toc-adba3566.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -2397,6 +2397,38 @@ structure Functor(C, D) {
 </table>
 </div>
 <p>This works transparently in the REPL and for verification.</p>
+<h2 id="concrete-evaluation-with-eval-1"><a class="header" href="#concrete-evaluation-with-eval-1">Concrete Evaluation with <code>:eval</code></a></h2>
+<p>For direct computation with complex numbers, use the <code>:eval</code> command:</p>
+<pre><code class="language-kleis">:eval complex_add(complex(1, 2), complex(3, 4))
+// → complex(4, 6)
+
+:eval complex_sub(complex(10, 20), complex(3, 4))
+// → complex(7, 16)
+
+:eval complex_mul(complex(1, 2), complex(3, 4))
+// → complex(-5, 10)
+
+:eval complex_conj(complex(3, 4))
+// → complex(3, -4)
+
+:eval complex_abs_squared(complex(3, 4))
+// → 25  (|3+4i|² = 9 + 16 = 25)
+</code></pre>
+<h3 id="extracting-parts"><a class="header" href="#extracting-parts">Extracting Parts</a></h3>
+<pre><code class="language-kleis">:eval real(complex(5, 7))
+// → 5
+
+:eval imag(complex(5, 7))
+// → 7
+</code></pre>
+<h3 id="mixed-symbolicconcrete"><a class="header" href="#mixed-symbolicconcrete">Mixed Symbolic/Concrete</a></h3>
+<p><code>:eval</code> supports partial symbolic evaluation:</p>
+<pre><code class="language-kleis">:eval complex_add(complex(a, 2), complex(3, 4))
+// → complex(a + 3, 6)
+
+:eval complex_mul(complex(a, 0), complex(0, b))
+// → complex(0, a * b)
+</code></pre>
 <h2 id="the-imaginary-unit"><a class="header" href="#the-imaginary-unit">The Imaginary Unit</a></h2>
 <p>The imaginary unit <code>i</code> is predefined in Kleis:</p>
 <pre><code class="language-kleis">// i is the square root of -1
@@ -2479,7 +2511,7 @@ define z2 = complex(1, -2)      // 1 - 2i
 define pure_real = complex(5, 0)     // 5 (a real number)
 define pure_imag = complex(0, 3)     // 3i (pure imaginary)
 </code></pre>
-<h2 id="extracting-parts"><a class="header" href="#extracting-parts">Extracting Parts</a></h2>
+<h2 id="extracting-parts-1"><a class="header" href="#extracting-parts-1">Extracting Parts</a></h2>
 <p>Use <code>re</code> and <code>im</code> to extract the real and imaginary parts:</p>
 <pre><code class="language-kleis">define z = complex(3, 4)
 
@@ -3751,6 +3783,157 @@ structure MeasureSpace(X) {
 <li><a href="#structures">Structures</a> — Defining mathematical structures</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="matrices"><a class="header" href="#matrices">Matrices</a></h1>
+<p>Kleis provides comprehensive matrix support with both symbolic verification (via Z3) and concrete evaluation (via <code>:eval</code>).</p>
+<h2 id="matrix-type"><a class="header" href="#matrix-type">Matrix Type</a></h2>
+<p>Matrices are parametric types with dimensions:</p>
+<pre><code class="language-kleis">Matrix(m, n, T)   // m rows × n columns of type T
+</code></pre>
+<p>Examples:</p>
+<ul>
+<li><code>Matrix(2, 2, ℝ)</code> - 2×2 matrix of reals</li>
+<li><code>Matrix(3, 4, ℂ)</code> - 3×4 matrix of complex numbers</li>
+</ul>
+<h2 id="creating-matrices"><a class="header" href="#creating-matrices">Creating Matrices</a></h2>
+<p>Use the <code>Matrix</code> constructor with dimensions and a list of elements (row-major order):</p>
+<pre><code class="language-kleis">// 2×2 matrix: [[1, 2], [3, 4]]
+Matrix(2, 2, [1, 2, 3, 4])
+
+// 2×3 matrix: [[1, 2, 3], [4, 5, 6]]
+Matrix(2, 3, [1, 2, 3, 4, 5, 6])
+</code></pre>
+<h2 id="arithmetic-operations-3"><a class="header" href="#arithmetic-operations-3">Arithmetic Operations</a></h2>
+<h3 id="addition-and-subtraction-1"><a class="header" href="#addition-and-subtraction-1">Addition and Subtraction</a></h3>
+<p>Element-wise operations for matrices of the same dimensions:</p>
+<pre><code class="language-kleis">:eval matrix_add(Matrix(2, 2, [1, 2, 3, 4]), Matrix(2, 2, [5, 6, 7, 8]))
+// → Matrix(2, 2, [6, 8, 10, 12])
+
+:eval matrix_sub(Matrix(2, 2, [10, 20, 30, 40]), Matrix(2, 2, [1, 2, 3, 4]))
+// → Matrix(2, 2, [9, 18, 27, 36])
+</code></pre>
+<h3 id="matrix-multiplication"><a class="header" href="#matrix-multiplication">Matrix Multiplication</a></h3>
+<p>True matrix multiplication <code>(m×n) · (n×p) → (m×p)</code>:</p>
+<pre><code class="language-kleis">:eval multiply(Matrix(2, 2, [1, 2, 3, 4]), Matrix(2, 2, [5, 6, 7, 8]))
+// → Matrix(2, 2, [19, 22, 43, 50])
+
+// Non-square: (2×3) · (3×2) → (2×2)
+:eval multiply(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), Matrix(3, 2, [1, 2, 3, 4, 5, 6]))
+// → Matrix(2, 2, [22, 28, 49, 64])
+</code></pre>
+<h3 id="scalar-multiplication"><a class="header" href="#scalar-multiplication">Scalar Multiplication</a></h3>
+<p>Multiply all elements by a scalar:</p>
+<pre><code class="language-kleis">:eval scalar_matrix_mul(3, Matrix(2, 2, [1, 2, 3, 4]))
+// → Matrix(2, 2, [3, 6, 9, 12])
+</code></pre>
+<h2 id="matrix-properties"><a class="header" href="#matrix-properties">Matrix Properties</a></h2>
+<h3 id="transpose"><a class="header" href="#transpose">Transpose</a></h3>
+<p>Swap rows and columns <code>(m×n) → (n×m)</code>:</p>
+<pre><code class="language-kleis">:eval transpose(Matrix(2, 3, [1, 2, 3, 4, 5, 6]))
+// → Matrix(3, 2, [1, 4, 2, 5, 3, 6])
+</code></pre>
+<h3 id="trace"><a class="header" href="#trace">Trace</a></h3>
+<p>Sum of diagonal elements (square matrices only):</p>
+<pre><code class="language-kleis">:eval trace(Matrix(3, 3, [1, 0, 0, 0, 2, 0, 0, 0, 3]))
+// → 6
+</code></pre>
+<h3 id="determinant"><a class="header" href="#determinant">Determinant</a></h3>
+<p>Determinant for 1×1, 2×2, and 3×3 matrices:</p>
+<pre><code class="language-kleis">:eval det(Matrix(2, 2, [4, 3, 6, 8]))
+// → 14  (4*8 - 3*6)
+
+:eval det(Matrix(3, 3, [1, 2, 3, 0, 1, 4, 5, 6, 0]))
+// → 1
+</code></pre>
+<h2 id="element-extraction"><a class="header" href="#element-extraction">Element Extraction</a></h2>
+<h3 id="get-single-element"><a class="header" href="#get-single-element">Get Single Element</a></h3>
+<p>Access element at row <code>i</code>, column <code>j</code> (0-indexed):</p>
+<pre><code class="language-kleis">:eval matrix_get(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 0, 2)
+// → 3  (row 0, column 2)
+
+:eval matrix_get(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 1, 1)
+// → 5  (row 1, column 1)
+</code></pre>
+<h3 id="get-row-or-column"><a class="header" href="#get-row-or-column">Get Row or Column</a></h3>
+<p>Extract entire row or column as a list:</p>
+<pre><code class="language-kleis">:eval matrix_row(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 0)
+// → [1, 2, 3]
+
+:eval matrix_row(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 1)
+// → [4, 5, 6]
+
+:eval matrix_col(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 0)
+// → [1, 4]
+
+:eval matrix_col(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), 2)
+// → [3, 6]
+</code></pre>
+<h3 id="get-diagonal"><a class="header" href="#get-diagonal">Get Diagonal</a></h3>
+<p>Extract diagonal elements as a list:</p>
+<pre><code class="language-kleis">:eval matrix_diag(Matrix(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]))
+// → [1, 5, 9]
+</code></pre>
+<h2 id="symbolic-matrix-operations"><a class="header" href="#symbolic-matrix-operations">Symbolic Matrix Operations</a></h2>
+<p>Matrix operations support partial symbolic evaluation. When mixing concrete and symbolic values, Kleis evaluates what it can and leaves the rest symbolic:</p>
+<pre><code class="language-kleis">:eval matrix_add(Matrix(2, 2, [1, 0, 0, 1]), Matrix(2, 2, [a, 0, 0, b]))
+// → Matrix(2, 2, [1+a, 0, 0, 1+b])
+
+:eval matrix_add(Matrix(2, 2, [0, 0, 0, 0]), Matrix(2, 2, [x, y, z, w]))
+// → Matrix(2, 2, [x, y, z, w])  (0+x = x optimization)
+</code></pre>
+<h3 id="smart-optimizations"><a class="header" href="#smart-optimizations">Smart Optimizations</a></h3>
+<p>The evaluator applies algebraic simplifications:</p>
+<ul>
+<li><code>0 + x = x</code></li>
+<li><code>x + 0 = x</code></li>
+<li><code>x - 0 = x</code></li>
+<li><code>0 * x = 0</code></li>
+<li><code>1 * x = x</code></li>
+</ul>
+<h2 id="dimension-checking"><a class="header" href="#dimension-checking">Dimension Checking</a></h2>
+<p>Kleis enforces dimension constraints at the type level:</p>
+<pre><code class="language-kleis">// This type-checks: same dimensions
+matrix_add(Matrix(2, 2, [1, 2, 3, 4]), Matrix(2, 2, [5, 6, 7, 8]))
+
+// This fails: dimension mismatch
+matrix_add(Matrix(2, 2, [1, 2, 3, 4]), Matrix(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]))
+// Error: dimension mismatch: 2x2 vs 3x3
+</code></pre>
+<p>For matrix multiplication, inner dimensions must match:</p>
+<pre><code class="language-kleis">// OK: (2×3) · (3×2) → (2×2)
+multiply(Matrix(2, 3, [...]), Matrix(3, 2, [...]))
+
+// Error: (2×2) · (3×2) - inner dimensions 2 ≠ 3
+multiply(Matrix(2, 2, [...]), Matrix(3, 2, [...]))
+// Error: inner dimensions don't match
+</code></pre>
+<h2 id="complete-operations-reference"><a class="header" href="#complete-operations-reference">Complete Operations Reference</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Signature</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>matrix_add(A, B)</code></td><td><code>(m×n) + (m×n) → (m×n)</code></td><td>Element-wise addition</td></tr>
+<tr><td><code>matrix_sub(A, B)</code></td><td><code>(m×n) - (m×n) → (m×n)</code></td><td>Element-wise subtraction</td></tr>
+<tr><td><code>multiply(A, B)</code></td><td><code>(m×n) · (n×p) → (m×p)</code></td><td>Matrix multiplication</td></tr>
+<tr><td><code>scalar_matrix_mul(s, A)</code></td><td><code>ℝ × (m×n) → (m×n)</code></td><td>Scalar multiplication</td></tr>
+<tr><td><code>transpose(A)</code></td><td><code>(m×n) → (n×m)</code></td><td>Transpose</td></tr>
+<tr><td><code>trace(A)</code></td><td><code>(n×n) → ℝ</code></td><td>Sum of diagonal</td></tr>
+<tr><td><code>det(A)</code></td><td><code>(n×n) → ℝ</code></td><td>Determinant (n ≤ 3)</td></tr>
+<tr><td><code>matrix_get(A, i, j)</code></td><td><code>(m×n) × ℕ × ℕ → T</code></td><td>Element at (i, j)</td></tr>
+<tr><td><code>matrix_row(A, i)</code></td><td><code>(m×n) × ℕ → List(T)</code></td><td>Row i</td></tr>
+<tr><td><code>matrix_col(A, j)</code></td><td><code>(m×n) × ℕ → List(T)</code></td><td>Column j</td></tr>
+<tr><td><code>matrix_diag(A)</code></td><td><code>(n×n) → List(T)</code></td><td>Diagonal elements</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="see-also-1"><a class="header" href="#see-also-1">See Also</a></h2>
+<ul>
+<li><a href="#types-and-values">Types and Values</a> - Matrix as a parametric type</li>
+<li><a href="#complex-numbers">Complex Numbers</a> - Matrices over ℂ</li>
+<li><a href="#the-repl-1">The REPL</a> - Using <code>:eval</code> for concrete computation</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
 <p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.9).</p>
 <blockquote>
@@ -4422,7 +4605,7 @@ define i_unit = i               // = complex(0, 1)
 define x = re(z)                // 3
 define y = im(z)                // 4
 </code></pre>
-<h3 id="arithmetic-operations-3"><a class="header" href="#arithmetic-operations-3">Arithmetic Operations</a></h3>
+<h3 id="arithmetic-operations-4"><a class="header" href="#arithmetic-operations-4">Arithmetic Operations</a></h3>
 <pre><code class="language-kleis">// All operations are explicit (no operator overloading yet)
 complex_add(z1, z2)      // z1 + z2
 complex_sub(z1, z2)      // z1 - z2
