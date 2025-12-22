@@ -4,6 +4,7 @@
 //! with Z3's native set theory support.
 
 use kleis::kleis_parser::KleisParser;
+use kleis::type_checker::TypeChecker;
 
 /// Helper: Parse and verify a structure definition is valid
 fn parses_ok(source: &str) -> bool {
@@ -194,4 +195,174 @@ structure CartesianProduct(A, B) {
 }
 "#;
     assert!(parses_ok(source), "Cartesian product should parse");
+}
+
+// ============================================
+// TYPE INFERENCE TESTS
+// ============================================
+
+#[test]
+fn test_set_operations_registered() {
+    // Load stdlib/sets.kleis and verify operations are registered
+    let source =
+        std::fs::read_to_string("stdlib/sets.kleis").expect("Failed to read stdlib/sets.kleis");
+
+    let mut checker = TypeChecker::new();
+    checker
+        .load_kleis(&source)
+        .expect("Failed to load sets.kleis");
+
+    // Check that set operations are registered
+    let context = checker.context_builder();
+
+    // in_set should be registered under SetTheory
+    let in_set_structure = context.registry().structure_for_operation("in_set");
+    assert!(in_set_structure.is_some(), "in_set should be registered");
+    assert_eq!(
+        in_set_structure.unwrap(),
+        "SetTheory",
+        "in_set should be in SetTheory"
+    );
+
+    // union should be registered under SetTheory
+    let union_structure = context.registry().structure_for_operation("union");
+    assert!(union_structure.is_some(), "union should be registered");
+    assert_eq!(
+        union_structure.unwrap(),
+        "SetTheory",
+        "union should be in SetTheory"
+    );
+
+    // intersect should be registered under SetTheory
+    let intersect_structure = context.registry().structure_for_operation("intersect");
+    assert!(
+        intersect_structure.is_some(),
+        "intersect should be registered"
+    );
+    assert_eq!(
+        intersect_structure.unwrap(),
+        "SetTheory",
+        "intersect should be in SetTheory"
+    );
+
+    // subset should be registered under SetTheory
+    let subset_structure = context.registry().structure_for_operation("subset");
+    assert!(subset_structure.is_some(), "subset should be registered");
+    assert_eq!(
+        subset_structure.unwrap(),
+        "SetTheory",
+        "subset should be in SetTheory"
+    );
+
+    // complement should be registered under SetTheory
+    let complement_structure = context.registry().structure_for_operation("complement");
+    assert!(
+        complement_structure.is_some(),
+        "complement should be registered"
+    );
+    assert_eq!(
+        complement_structure.unwrap(),
+        "SetTheory",
+        "complement should be in SetTheory"
+    );
+}
+
+#[test]
+fn test_set_type_inference() {
+    use kleis::ast::Expression;
+    use kleis::type_inference::Type;
+
+    // Load stdlib/sets.kleis
+    let source =
+        std::fs::read_to_string("stdlib/sets.kleis").expect("Failed to read stdlib/sets.kleis");
+
+    let mut checker = TypeChecker::new();
+    checker
+        .load_kleis(&source)
+        .expect("Failed to load sets.kleis");
+
+    // Test in_set returns Bool
+    let in_set_expr = Expression::Operation {
+        name: "in_set".to_string(),
+        args: vec![
+            Expression::Const("3".to_string()),
+            Expression::Object("empty_set".to_string()),
+        ],
+    };
+    let result = checker.check(&in_set_expr);
+    match result {
+        kleis::type_checker::TypeCheckResult::Success(ty) => {
+            assert_eq!(ty, Type::Bool, "in_set should return Bool");
+        }
+        _ => panic!("in_set type inference failed"),
+    }
+
+    // Test subset returns Bool
+    let subset_expr = Expression::Operation {
+        name: "subset".to_string(),
+        args: vec![
+            Expression::Object("A".to_string()),
+            Expression::Object("B".to_string()),
+        ],
+    };
+    let result = checker.check(&subset_expr);
+    match result {
+        kleis::type_checker::TypeCheckResult::Success(ty) => {
+            assert_eq!(ty, Type::Bool, "subset should return Bool");
+        }
+        _ => panic!("subset type inference failed"),
+    }
+
+    // Test union returns Set(T)
+    let union_expr = Expression::Operation {
+        name: "union".to_string(),
+        args: vec![
+            Expression::Object("empty_set".to_string()),
+            Expression::Object("empty_set".to_string()),
+        ],
+    };
+    let result = checker.check(&union_expr);
+    match result {
+        kleis::type_checker::TypeCheckResult::Success(ty) => {
+            if let Type::Data { constructor, .. } = ty {
+                assert_eq!(constructor, "Set", "union should return Set");
+            } else {
+                panic!("union should return Data type");
+            }
+        }
+        _ => panic!("union type inference failed"),
+    }
+
+    // Test insert returns Set(T)
+    let insert_expr = Expression::Operation {
+        name: "insert".to_string(),
+        args: vec![
+            Expression::Const("5".to_string()),
+            Expression::Object("empty_set".to_string()),
+        ],
+    };
+    let result = checker.check(&insert_expr);
+    match result {
+        kleis::type_checker::TypeCheckResult::Success(ty) => {
+            if let Type::Data {
+                constructor, args, ..
+            } = ty
+            {
+                assert_eq!(constructor, "Set", "insert should return Set");
+                // Element type should be inferred from the argument (5 is Int)
+                if !args.is_empty() {
+                    if let Type::Data {
+                        constructor: elem_con,
+                        ..
+                    } = &args[0]
+                    {
+                        assert_eq!(elem_con, "Int", "insert(5, S) should return Set(Int)");
+                    }
+                }
+            } else {
+                panic!("insert should return Data type");
+            }
+        }
+        _ => panic!("insert type inference failed"),
+    }
 }
