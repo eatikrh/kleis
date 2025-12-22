@@ -10,6 +10,40 @@ import "stdlib/sets.kleis"
 
 This imports the `SetTheory(T)` structure with all operations and axioms.
 
+## Constructing Sets
+
+Sets are built using `empty_set()` and `insert()`:
+
+```kleis
+// Empty set (note the parentheses!)
+empty_set()
+
+// Singleton set {5}
+insert(5, empty_set())
+
+// Set {1, 2, 3}
+insert(3, insert(2, insert(1, empty_set())))
+
+// Shorthand: singleton(x) creates {x}
+singleton(5)
+```
+
+**Important:** Use `empty_set()` with parentheses (it's a nullary function).
+
+### Verification Example
+
+```
+λ> :load stdlib/sets.kleis
+λ> :sat in_set(2, insert(3, insert(2, insert(1, empty_set()))))
+✅ Satisfiable (2 IS in {1,2,3})
+
+λ> :sat in_set(5, insert(3, insert(2, insert(1, empty_set()))))
+❌ Unsatisfiable (5 is NOT in {1,2,3})
+
+λ> :sat subset(insert(1, empty_set()), insert(2, insert(1, empty_set())))
+✅ Satisfiable ({1} ⊆ {1,2})
+```
+
 ## Basic Operations
 
 ### Set Membership
