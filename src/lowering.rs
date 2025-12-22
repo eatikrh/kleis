@@ -71,18 +71,119 @@
 //! See: docs/plans/operator-overloading.md
 
 use crate::ast::Expression;
+use crate::type_context::TypeContextBuilder;
 use crate::type_inference::Type;
 use crate::typed_ast::TypedExpr;
 
 /// Semantic Lowering transformer
 ///
 /// Rewrites generic operators to type-specific operations based on operand types.
-pub struct SemanticLowering;
+///
+/// ADR-016 Refactoring: Now supports registry-based lowering via `lower_with_context`.
+/// The `lower` method uses hardcoded patterns for backward compatibility.
+pub struct SemanticLowering {
+    /// Optional context for registry-based lowering
+    context: Option<TypeContextBuilder>,
+}
 
 impl SemanticLowering {
-    /// Create a new semantic lowering transformer
+    /// Create a new semantic lowering transformer (backward compatible, uses hardcoded patterns)
     pub fn new() -> Self {
-        SemanticLowering
+        SemanticLowering { context: None }
+    }
+
+    /// Create a semantic lowering transformer with registry context (ADR-016 compliant)
+    pub fn with_context(context: TypeContextBuilder) -> Self {
+        SemanticLowering {
+            context: Some(context),
+        }
+    }
+
+    /// Generic arithmetic lowering using registry (ADR-016)
+    ///
+    /// Instead of 60+ hardcoded patterns, uses:
+    /// 1. find_common_supertype(t1, t2) → target type
+    /// 2. get_lift_function(from, to) → lift function name (or composed lifts)
+    /// 3. get_lowered_op_name(op, type) → type-specific operation
+    fn lower_arithmetic_generic(
+        &self,
+        name: &str,
+        t1: &Type,
+        t2: &Type,
+        arg1: &Expression,
+        arg2: &Expression,
+    ) -> Option<Expression> {
+        let ctx = self.context.as_ref()?;
+
+        // Get type constructors
+        let c1 = self.get_type_constructor(t1)?;
+        let c2 = self.get_type_constructor(t2)?;
+
+        // Find common supertype
+        let target = ctx.find_common_supertype(&c1, &c2)?;
+
+        // Lift arguments if needed
+        let lifted_arg1 = if c1 != target {
+            self.apply_lift(ctx.get_lift_function(&c1, &target), arg1)
+        } else {
+            arg1.clone()
+        };
+
+        let lifted_arg2 = if c2 != target {
+            self.apply_lift(ctx.get_lift_function(&c2, &target), arg2)
+        } else {
+            arg2.clone()
+        };
+
+        // Get type-specific operation name
+        let lowered_op = ctx.get_lowered_op_name(name, &target);
+
+        Some(Expression::Operation {
+            name: lowered_op,
+            args: vec![lifted_arg1, lifted_arg2],
+        })
+    }
+
+    /// Apply a lift function (or composed lifts) to an expression
+    ///
+    /// Handles both single lifts and multi-step composed lifts.
+    /// Format for composed: "compose_lifts:fn1,fn2,fn3"
+    /// This produces: fn3(fn2(fn1(expr)))
+    fn apply_lift(&self, lift_fn: Option<String>, expr: &Expression) -> Expression {
+        match lift_fn {
+            None => expr.clone(),
+            Some(lift) if lift.starts_with("compose_lifts:") => {
+                // Parse composed lifts: "compose_lifts:fn1,fn2,fn3"
+                let fns_str = lift.strip_prefix("compose_lifts:").unwrap();
+                let fns: Vec<&str> = fns_str.split(',').collect();
+
+                // Apply lifts in order: fn1 first, then fn2, then fn3
+                // fn3(fn2(fn1(expr)))
+                let mut result = expr.clone();
+                for fn_name in fns {
+                    result = Expression::Operation {
+                        name: fn_name.to_string(),
+                        args: vec![result],
+                    };
+                }
+                result
+            }
+            Some(single_lift) => {
+                // Single lift function
+                Expression::Operation {
+                    name: single_lift,
+                    args: vec![expr.clone()],
+                }
+            }
+        }
+    }
+
+    /// Extract type constructor name from Type
+    fn get_type_constructor(&self, ty: &Type) -> Option<String> {
+        match ty {
+            Type::Data { constructor, .. } => Some(constructor.clone()),
+            _ => None,
+        }
     }
 
     /// Lower a typed expression to an untyped expression with explicit operations
@@ -216,9 +317,27 @@ impl SemanticLowering {
         // Get operand types
         let arg_types: Vec<&Type> = typed_args.iter().map(|a| &a.ty).collect();
 
+        // ADR-016: Try generic registry-based lowering first for binary arithmetic
+        if matches!(
+            name,
+            "plus" | "minus" | "times" | "divide" | "scalar_divide"
+        ) && arg_types.len() == 2
+        {
+            if let Some(lowered) = self.lower_arithmetic_generic(
+                name,
+                arg_types[0],
+                arg_types[1],
+                &lowered_args[0],
+                &lowered_args[1],
+            ) {
+                return lowered;
+            }
+            // Fall through to hardcoded patterns if generic fails
+        }
+
         match (name, arg_types.as_slice()) {
             // ============================================
-            // COMPLEX NUMBER OPERATIONS
+            // COMPLEX NUMBER OPERATIONS (fallback for no context)
             // ============================================
 
             // plus(ℂ, ℂ) → complex_add
@@ -571,10 +690,14 @@ impl SemanticLowering {
         }
     }
 
-    /// Check if a type is Real/Scalar
+    /// Check if a type is Real/Scalar (or promotable to Real: Nat, Int, Rational)
+    /// Used for lowering mixed Real+Complex operations
     fn is_real(&self, ty: &Type) -> bool {
         match ty {
-            Type::Data { constructor, .. } => constructor == "Scalar",
+            Type::Data { constructor, .. } => {
+                // All numeric types below Complex in the hierarchy
+                matches!(constructor.as_str(), "Scalar" | "Int" | "Nat" | "Rational")
+            }
             _ => false,
         }
     }

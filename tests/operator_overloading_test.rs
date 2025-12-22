@@ -255,11 +255,12 @@ fn test_quantified_i_complex_uses_complex_ops() {
 #[test]
 fn test_lambda_parameter_i_shadows_imaginary() {
     // λ i . i + 1
-    // The lambda parameter i should be Scalar (generic), not Complex
+    // The lambda parameter i should be numeric (generic), not Complex
+    // Integer literal 1 is now typed as Int for proper type promotion
     let ty = infer_type("λ i . i + 1");
     assert!(
-        matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar"),
-        "λ i . i + 1 should have Scalar type (param shadows global i), got {:?}",
+        matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int"),
+        "λ i . i + 1 should have numeric type (param shadows global i), got {:?}",
         ty
     );
 }

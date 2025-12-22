@@ -188,6 +188,140 @@ But explicit types make code clearer and catch errors earlier!
 
 Note: `ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ ⊂ ℂ` (naturals ⊂ integers ⊂ rationals ⊂ reals ⊂ complex)
 
+## Type Promotion (Embedding)
+
+When you mix numeric types in an expression, Kleis automatically **promotes** the smaller type to the larger one. This is called **type embedding**, not subtyping.
+
+### Embedding vs Subtyping
+
+| Concept | Meaning | Kleis Approach |
+|---------|---------|----------------|
+| **Subtyping** | `S` can be used anywhere `T` is expected, with identical behavior | Not used |
+| **Embedding** | `S` can be converted to `T` via an explicit `lift` function | ✓ Used |
+
+The difference is subtle but important:
+
+```kleis
+// Embedding: Integer 3 is lifted to Rational before the operation
+rational(1, 2) + 3
+// Becomes: rational_add(rational(1, 2), lift(3))
+// Result: rational(7, 2) — exact!
+```
+
+### How Promotion Works
+
+1. **Type inference** determines the result type (the "common supertype")
+2. **Lifting** converts arguments to the target type
+3. **Operation** executes at the target type
+
+```
+Int + Rational
+    ↓ find common supertype
+  Rational
+    ↓ lift Int to Rational
+  lift(Int) + Rational
+    ↓ execute operation
+  rational_add(Rational, Rational)
+    ↓
+  Rational result
+```
+
+### The `Promotes` Structure
+
+Type promotion is defined by the `Promotes(From, To)` structure:
+
+```kleis
+structure Promotes(From, To) {
+  operation lift : From → To
+}
+
+// Built-in promotions
+implements Promotes(ℕ, ℤ) { operation lift = builtin_nat_to_int }
+implements Promotes(ℤ, ℚ) { operation lift = builtin_int_to_rational }
+implements Promotes(ℚ, ℝ) { operation lift = builtin_rational_to_real }
+implements Promotes(ℝ, ℂ) { operation lift = builtin_real_to_complex }
+```
+
+### Defining Your Own Promotions
+
+You can define promotions for your own types. Unlike built-in types (which use `builtin_*` functions), **you must write the conversion function yourself**:
+
+```kleis
+data Percentage = Pct(value: ℝ)
+
+// Step 1: Define the conversion function
+define pct_to_real(p: Percentage) : ℝ =
+  match p { Pct(v) => divide(v, 100) }
+
+// Step 2: Register the promotion, referencing YOUR function
+implements Promotes(Percentage, ℝ) {
+  operation lift = pct_to_real   // References the function above
+}
+```
+
+Now this works in the REPL:
+
+```
+λ> :eval 0.5 + pct_to_real(Pct(25))
+✅ 0.75
+```
+
+**Key difference from built-in types:**
+
+| Type | Lift Implementation |
+|------|---------------------|
+| Built-in (`ℤ → ℚ`) | `operation lift = builtin_int_to_rational` (provided by Kleis) |
+| User-defined | `operation lift = your_function` (you must define it) |
+
+> **Important**: For concrete execution (`:eval`), you must provide an actual `define` for the lift function. Without it:
+> - `:verify` (symbolic) — Works (Z3 treats `lift` as uninterpreted)
+> - `:eval` (concrete) — **Fails** ("function not found")
+
+### Precision Considerations
+
+**Warning**: Promotion can lose precision!
+
+| Promotion | Precision |
+|-----------|-----------|
+| `ℕ → ℤ` | ✓ Exact (integers contain all naturals) |
+| `ℤ → ℚ` | ✓ Exact (rationals contain all integers) |
+| `ℚ → ℝ` | ⚠️ **May lose precision** (floating-point approximation) |
+| `ℝ → ℂ` | ✓ Exact (complex with zero imaginary part) |
+
+```kleis
+// Exact in Rational
+define third : ℚ = rational(1, 3)  // Exactly 1/3
+
+// Approximate in Real (floating-point)
+define approx : ℝ = 1.0 / 3.0      // 0.333333...
+
+// If you promote:
+define promoted = third + 0.5      // third lifted to ℝ, loses exactness!
+```
+
+**Recommendation**: When precision matters, be explicit about types:
+
+```kleis
+// Keep it in Rational for exact arithmetic
+define exact_sum : ℚ = rational(1, 3) + rational(1, 6)  // Exactly 1/2
+
+// Or use type annotations to prevent accidental promotion
+define result(x : ℚ, y : ℚ) : ℚ = x + y
+```
+
+### No LSP Violations
+
+Because Kleis uses embedding (not subtyping), operations are always resolved at the **target type** after lifting. This means:
+
+- `Int + Int` uses integer addition
+- `Int + Rational` lifts the Int first, then uses rational addition
+- You never accidentally get integer truncation when you expected rational division
+
+```kleis
+5 / 3           // Integer division → 1 (if both are Int)
+rational(5, 1) / rational(3, 1)   // Rational division → 5/3 (exact)
+```
+
 ## What's Next?
 
 Types are the foundation. Now let's see how to define functions!

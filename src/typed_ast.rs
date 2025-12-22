@@ -104,6 +104,22 @@ impl TypedExpr {
         )
     }
 
+    /// Check if this expression has Int type
+    pub fn is_int(&self) -> bool {
+        matches!(
+            &self.ty,
+            Type::Data { constructor, .. } if constructor == "Int"
+        )
+    }
+
+    /// Check if this expression has a numeric type (Int, Rational, Scalar, Complex)
+    pub fn is_numeric(&self) -> bool {
+        matches!(
+            &self.ty,
+            Type::Data { constructor, .. } if matches!(constructor.as_str(), "Nat" | "Int" | "Rational" | "Scalar" | "Complex")
+        )
+    }
+
     /// Check if this is an operation node
     pub fn is_operation(&self) -> bool {
         matches!(&self.expr, Expression::Operation { .. })
@@ -190,14 +206,14 @@ mod tests {
         // Should have 2 children (the operands)
         assert_eq!(typed.children.len(), 2);
 
-        // Both children should be scalars (constants infer to Scalar)
+        // Both children should be numeric (integer literals now type as Int)
         assert!(
-            typed.children[0].is_real(),
-            "First operand should be Scalar"
+            typed.children[0].is_numeric(),
+            "First operand should be numeric"
         );
         assert!(
-            typed.children[1].is_real(),
-            "Second operand should be Scalar"
+            typed.children[1].is_numeric(),
+            "Second operand should be numeric"
         );
 
         // Note: For operations, type may be a fresh type variable initially,

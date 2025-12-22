@@ -1,0 +1,34 @@
+// User-Defined Type Promotion Example
+// 
+// This file demonstrates how to define custom type promotions.
+// A Percentage type that can be promoted to Real for arithmetic.
+
+import "stdlib/prelude.kleis"
+
+// Define a custom type
+data Percentage = Pct(value: ℝ)
+
+// Define the conversion function (the actual implementation)
+define pct_to_real(p: Percentage) : ℝ =
+    match p { Pct(v) => divide(v, 100) }
+
+// Register the promotion (connects Percentage → ℝ with pct_to_real)
+implements Promotes(Percentage, ℝ) {
+    operation lift = pct_to_real
+}
+
+// Test functions
+define fifty_pct : Percentage = Pct(50)
+
+define quarter : ℝ = 0.25
+
+// This should work: Percentage is lifted to ℝ, then added
+// pct_to_real(Pct(50)) + 0.25 = 0.5 + 0.25 = 0.75
+define combined : ℝ = pct_to_real(fifty_pct) + quarter
+
+// Helper to create percentage
+define make_pct(v: ℝ) : Percentage = Pct(v)
+
+// Convert percentage to decimal
+define to_decimal(p: Percentage) : ℝ = pct_to_real(p)
+
