@@ -103,7 +103,7 @@ impl SemanticLowering {
     ///
     /// Instead of 60+ hardcoded patterns, uses:
     /// 1. find_common_supertype(t1, t2) → target type
-    /// 2. get_lift_function(from, to) → lift function name
+    /// 2. get_lift_function(from, to) → lift function name (or composed lifts)
     /// 3. get_lowered_op_name(op, type) → type-specific operation
     fn lower_arithmetic_generic(
         &self,
@@ -124,27 +124,13 @@ impl SemanticLowering {
 
         // Lift arguments if needed
         let lifted_arg1 = if c1 != target {
-            if let Some(lift_fn) = ctx.get_lift_function(&c1, &target) {
-                Expression::Operation {
-                    name: lift_fn,
-                    args: vec![arg1.clone()],
-                }
-            } else {
-                arg1.clone()
-            }
+            self.apply_lift(ctx.get_lift_function(&c1, &target), arg1)
         } else {
             arg1.clone()
         };
 
         let lifted_arg2 = if c2 != target {
-            if let Some(lift_fn) = ctx.get_lift_function(&c2, &target) {
-                Expression::Operation {
-                    name: lift_fn,
-                    args: vec![arg2.clone()],
-                }
-            } else {
-                arg2.clone()
-            }
+            self.apply_lift(ctx.get_lift_function(&c2, &target), arg2)
         } else {
             arg2.clone()
         };
@@ -156,6 +142,40 @@ impl SemanticLowering {
             name: lowered_op,
             args: vec![lifted_arg1, lifted_arg2],
         })
+    }
+
+    /// Apply a lift function (or composed lifts) to an expression
+    ///
+    /// Handles both single lifts and multi-step composed lifts.
+    /// Format for composed: "compose_lifts:fn1,fn2,fn3"
+    /// This produces: fn3(fn2(fn1(expr)))
+    fn apply_lift(&self, lift_fn: Option<String>, expr: &Expression) -> Expression {
+        match lift_fn {
+            None => expr.clone(),
+            Some(lift) if lift.starts_with("compose_lifts:") => {
+                // Parse composed lifts: "compose_lifts:fn1,fn2,fn3"
+                let fns_str = lift.strip_prefix("compose_lifts:").unwrap();
+                let fns: Vec<&str> = fns_str.split(',').collect();
+
+                // Apply lifts in order: fn1 first, then fn2, then fn3
+                // fn3(fn2(fn1(expr)))
+                let mut result = expr.clone();
+                for fn_name in fns {
+                    result = Expression::Operation {
+                        name: fn_name.to_string(),
+                        args: vec![result],
+                    };
+                }
+                result
+            }
+            Some(single_lift) => {
+                // Single lift function
+                Expression::Operation {
+                    name: single_lift,
+                    args: vec![expr.clone()],
+                }
+            }
+        }
     }
 
     /// Extract type constructor name from Type

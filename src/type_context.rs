@@ -1049,7 +1049,8 @@ impl TypeContextBuilder {
     ///
     /// Strategy:
     /// 1. First try registry-based lookup (user-defined promotions)
-    /// 2. Fall back to built-in lift functions
+    /// 2. Try multi-step composition via registry
+    /// 3. Fall back to built-in lift functions
     pub fn get_lift_function(&self, from_type: &str, to_type: &str) -> Option<String> {
         let from = Self::normalize_type_name(from_type);
         let to = Self::normalize_type_name(to_type);
@@ -1059,24 +1060,85 @@ impl TypeContextBuilder {
             return None;
         }
 
-        // Try registry first
+        // Try registry first (direct promotion)
         if let Some(lift_fn) = self.registry.get_promotion(from, to) {
             return Some(lift_fn.clone());
         }
 
         // Try to find multi-step promotion path and compose lifts
-        if let Some(path) = self.find_promotion_path(from, to) {
-            if path.len() == 1 {
-                // Direct promotion found in path search
-                if let Some(lift_fn) = self.registry.get_promotion(from, &path[0]) {
-                    return Some(lift_fn.clone());
-                }
+        let chain = self.get_lift_chain(from, to);
+        if !chain.is_empty() {
+            // For single-step, return the function directly
+            if chain.len() == 1 {
+                return Some(chain[0].clone());
             }
-            // For multi-step paths, we'd need to compose lifts
-            // For now, fall through to hardcoded
+            // For multi-step, return a composed lift marker
+            // Format: "compose_lifts:fn1,fn2,fn3" which lowering will parse
+            return Some(format!("compose_lifts:{}", chain.join(",")));
         }
 
         // Fall back to built-in lift functions for numeric types
+        match (from, to) {
+            ("Nat", "Int") => Some("nat_to_int".to_string()),
+            ("Int", "Rational") => Some("int_to_rational".to_string()),
+            ("Rational", "Scalar") => Some("rational_to_real".to_string()),
+            ("Scalar", "Complex") => Some("real_to_complex".to_string()),
+            ("Nat", "Rational") => Some("nat_to_rational".to_string()),
+            ("Nat", "Scalar") => Some("nat_to_real".to_string()),
+            ("Nat", "Complex") => Some("nat_to_complex".to_string()),
+            ("Int", "Scalar") => Some("int_to_real".to_string()),
+            ("Int", "Complex") => Some("int_to_complex".to_string()),
+            ("Rational", "Complex") => Some("rational_to_complex".to_string()),
+            _ => None,
+        }
+    }
+
+    /// Get the chain of lift functions needed to promote from one type to another
+    ///
+    /// Returns a vector of lift function names in order of application.
+    /// E.g., Int → Complex might return ["int_to_real", "real_to_complex"]
+    /// meaning: real_to_complex(int_to_real(x))
+    pub fn get_lift_chain(&self, from_type: &str, to_type: &str) -> Vec<String> {
+        let from = Self::normalize_type_name(from_type);
+        let to = Self::normalize_type_name(to_type);
+
+        if from == to {
+            return vec![];
+        }
+
+        // Try to find promotion path in registry
+        if let Some(path) = self.find_promotion_path(from, to) {
+            let mut chain = Vec::new();
+            let mut current = from.to_string();
+
+            for next in &path {
+                if let Some(lift_fn) = self.registry.get_promotion(&current, next) {
+                    chain.push(lift_fn.clone());
+                } else {
+                    // Gap in registry - try fallback for this step
+                    if let Some(fallback) = self.get_builtin_lift(&current, next) {
+                        chain.push(fallback);
+                    } else {
+                        // Can't complete the chain
+                        return vec![];
+                    }
+                }
+                current = next.clone();
+            }
+
+            return chain;
+        }
+
+        // No path found in registry, try direct built-in
+        if let Some(direct) = self.get_builtin_lift(from, to) {
+            return vec![direct];
+        }
+
+        vec![]
+    }
+
+    /// Get built-in lift function for a single step
+    fn get_builtin_lift(&self, from: &str, to: &str) -> Option<String> {
         match (from, to) {
             ("Nat", "Int") => Some("nat_to_int".to_string()),
             ("Int", "Rational") => Some("int_to_rational".to_string()),

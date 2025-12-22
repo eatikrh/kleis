@@ -350,6 +350,48 @@ fn test_user_defined_promotes_registered() {
 }
 
 // ============================================
+// MULTI-STEP PROMOTION TESTS
+// ============================================
+
+#[test]
+fn test_get_lift_chain_single_step() {
+    let ctx = TypeContextBuilder::new();
+    let chain = ctx.get_lift_chain("Int", "Rational");
+    // Should find direct path (even if via fallback)
+    assert!(!chain.is_empty(), "Should find Int → Rational chain");
+}
+
+#[test]
+fn test_get_lift_chain_multi_step() {
+    let ctx = TypeContextBuilder::new();
+    // Int → Complex requires Int → Scalar → Complex (or similar path)
+    let chain = ctx.get_lift_chain("Int", "Complex");
+    // Should find a chain (might be direct if registered, or multi-step)
+    assert!(
+        !chain.is_empty(),
+        "Should find Int → Complex chain: {:?}",
+        chain
+    );
+}
+
+#[test]
+fn test_composed_lifts_format() {
+    let ctx = TypeContextBuilder::new();
+    let lift_fn = ctx.get_lift_function("Int", "Complex");
+    assert!(lift_fn.is_some(), "Should find lift for Int → Complex");
+
+    // Either a direct function or composed format
+    let lift = lift_fn.unwrap();
+    if lift.contains(',') {
+        assert!(
+            lift.starts_with("compose_lifts:"),
+            "Multi-step should use compose_lifts format: {}",
+            lift
+        );
+    }
+}
+
+// ============================================
 // NOTES FOR FUTURE: USER-DEFINED TYPE PROMOTION
 // ============================================
 //
