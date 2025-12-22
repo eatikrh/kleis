@@ -36,7 +36,12 @@ pub struct OperationRegistry {
 
     /// Maps type → structures it implements
     /// Example: ℝ → ["Numeric", "Ordered", "Field"]
-    type_to_structures: HashMap<String, Vec<String>>,
+    pub type_to_structures: HashMap<String, Vec<String>>,
+
+    /// Maps structure → parent structure (from extends clause)
+    /// Example: "Group" → "Monoid", "Ring" → "Group"
+    /// This enables automatic type promotion based on structure hierarchy
+    structure_extends: HashMap<String, String>,
 }
 
 impl Default for OperationRegistry {
@@ -52,7 +57,35 @@ impl OperationRegistry {
             structure_to_operations: HashMap::new(),
             concrete_implementations: HashMap::new(),
             type_to_structures: HashMap::new(),
+            structure_extends: HashMap::new(),
         }
+    }
+
+    /// Register that a structure extends another structure
+    /// Example: register_extension("Group", "Monoid") means Group extends Monoid
+    pub fn register_extension(&mut self, child: &str, parent: &str) {
+        self.structure_extends
+            .insert(child.to_string(), parent.to_string());
+    }
+
+    /// Check if child_structure extends ancestor_structure (transitively)
+    pub fn extends(&self, child: &str, ancestor: &str) -> bool {
+        if child == ancestor {
+            return true;
+        }
+        let mut current = child;
+        while let Some(parent) = self.structure_extends.get(current) {
+            if parent == ancestor {
+                return true;
+            }
+            current = parent;
+        }
+        false
+    }
+
+    /// Get the parent structure of a given structure (if any)
+    pub fn get_parent(&self, structure: &str) -> Option<&String> {
+        self.structure_extends.get(structure)
     }
 
     /// Register that a structure defines an operation
@@ -262,6 +295,18 @@ impl TypeContextBuilder {
     fn register_structure(&mut self, structure: &StructureDef) -> Result<(), String> {
         // Register operations from this structure (including nested)
         self.register_operations_recursive(&structure.name, &structure.members);
+
+        // Register extends clause (structure hierarchy for type promotion)
+        if let Some(ref extends_type) = structure.extends_clause {
+            // Extract parent structure name from type expression
+            let parent_name = match extends_type {
+                TypeExpr::Named(name) => name.clone(),
+                TypeExpr::Parametric(name, _) => name.clone(),
+                _ => format!("{:?}", extends_type), // Fallback for complex types
+            };
+            self.registry
+                .register_extension(&structure.name, &parent_name);
+        }
 
         let normalized = self.normalize_structure(structure)?;
         self.structures.insert(structure.name.clone(), normalized);
