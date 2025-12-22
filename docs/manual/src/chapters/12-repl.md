@@ -115,11 +115,16 @@ Check types with `:type`:
 
 ```
 λ> :type 42
+📐 Type: Int
+
+λ> :type 3.14
 📐 Type: Scalar
 
 λ> :type sin
 📐 Type: α0
 ```
+
+> **Note:** Integer literals (`42`) type as `Int`, real literals (`3.14`) type as `Scalar`. This enables proper type promotion (e.g., `Int + Rational → Rational`).
 
 ## Concrete Evaluation with `:eval`
 

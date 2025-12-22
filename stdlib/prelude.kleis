@@ -359,6 +359,7 @@ structure Equatable(T) {
 
 // Ordering operations (only for types with order)
 structure Ordered(T) {
+  // Long names
   operation less_than : T → T → Bool
   operation greater_than : T → T → Bool
   operation less_equal : T → T → Bool
@@ -367,6 +368,12 @@ structure Ordered(T) {
   operation geq : T → T → Bool
   operation neq : T → T → Bool
   operation approx : T → T → Bool
+  // Short aliases (for LISP interpreter and convenience)
+  operation lt : T → T → Bool
+  operation gt : T → T → Bool
+  operation le : T → T → Bool
+  operation ge : T → T → Bool
+  operation eq : T → T → Bool
 }
 
 // Logical operations
@@ -538,6 +545,29 @@ implements Ordered(ℝ) {
   operation geq = builtin_ge
   operation neq = builtin_neq
   operation approx = builtin_approx
+  // Short aliases
+  operation lt = builtin_lt
+  operation gt = builtin_gt
+  operation le = builtin_le
+  operation ge = builtin_ge
+  operation eq = builtin_eq
+}
+
+// Ordering for integers
+implements Ordered(ℤ) {
+  operation less_than = builtin_lt
+  operation greater_than = builtin_gt
+  operation less_equal = builtin_le
+  operation greater_equal = builtin_ge
+  operation leq = builtin_le
+  operation geq = builtin_ge
+  operation neq = builtin_neq
+  operation approx = builtin_eq
+  operation lt = builtin_lt
+  operation gt = builtin_gt
+  operation le = builtin_le
+  operation ge = builtin_ge
+  operation eq = builtin_eq
 }
 
 // Logical operations for booleans
@@ -577,6 +607,65 @@ operation (^) : ℝ × ℝ → ℝ
 // Absolute value
 operation abs : ℝ → ℝ
 operation abs : ℂ → ℝ  // Overloaded for complex
+
+// ============================================
+// STRING OPERATIONS
+// ============================================
+// These correspond to Z3's string theory operations
+// Note: StringOps(S) uses S as a dummy parameter since structures require params
+
+structure StringOps(S) {
+  // Length of a string
+  operation strlen : String → ℤ
+  
+  // Concatenate two strings
+  operation concat : String → String → String
+  
+  // Get character at index (0-based)
+  operation charAt : String → ℤ → String
+  
+  // Substring from start index with length
+  operation substr : String → ℤ → ℤ → String
+  
+  // Index of first occurrence (-1 if not found)
+  operation indexOf : String → String → ℤ
+  
+  // Check if string contains substring
+  operation contains : String → String → Bool
+  
+  // Check if string starts with prefix
+  operation hasPrefix : String → String → Bool
+  
+  // Check if string ends with suffix
+  operation hasSuffix : String → String → Bool
+  
+  // Replace first occurrence
+  operation replace : String → String → String → String
+  
+  // Replace all occurrences
+  operation replaceAll : String → String → String → String
+  
+  // Convert integer to string
+  operation intToStr : ℤ → String
+  
+  // Convert string to integer (if valid)
+  operation strToInt : String → ℤ
+}
+
+implements StringOps(String) {
+  operation strlen = builtin_strlen
+  operation concat = builtin_concat
+  operation charAt = builtin_charAt
+  operation substr = builtin_substr
+  operation indexOf = builtin_indexOf
+  operation contains = builtin_contains
+  operation hasPrefix = builtin_hasPrefix
+  operation hasSuffix = builtin_hasSuffix
+  operation replace = builtin_replace
+  operation replaceAll = builtin_replaceAll
+  operation intToStr = builtin_intToStr
+  operation strToInt = builtin_strToInt
+}
 
 // ============================================
 // END OF PRELUDE

@@ -42,6 +42,11 @@ pub struct OperationRegistry {
     /// Example: "Group" → "Monoid", "Ring" → "Group"
     /// This enables automatic type promotion based on structure hierarchy
     structure_extends: HashMap<String, String>,
+
+    /// Type promotion graph: Maps (FromType, ToType) → lift function name
+    /// Populated from `implements Promotes(From, To) { operation lift = ... }`
+    /// Example: ("Int", "Rational") → "int_to_rational"
+    type_promotions: HashMap<(String, String), String>,
 }
 
 impl Default for OperationRegistry {
@@ -58,7 +63,36 @@ impl OperationRegistry {
             concrete_implementations: HashMap::new(),
             type_to_structures: HashMap::new(),
             structure_extends: HashMap::new(),
+            type_promotions: HashMap::new(),
         }
+    }
+
+    /// Register a type promotion path
+    /// Example: register_promotion("Int", "Rational", "int_to_rational")
+    pub fn register_promotion(&mut self, from: &str, to: &str, lift_fn: &str) {
+        self.type_promotions
+            .insert((from.to_string(), to.to_string()), lift_fn.to_string());
+    }
+
+    /// Get lift function for a direct promotion (if registered)
+    pub fn get_promotion(&self, from: &str, to: &str) -> Option<&String> {
+        self.type_promotions
+            .get(&(from.to_string(), to.to_string()))
+    }
+
+    /// Check if a direct promotion exists
+    pub fn has_promotion(&self, from: &str, to: &str) -> bool {
+        self.type_promotions
+            .contains_key(&(from.to_string(), to.to_string()))
+    }
+
+    /// Get all types that `from_type` can be directly promoted to
+    pub fn get_promotion_targets(&self, from_type: &str) -> Vec<String> {
+        self.type_promotions
+            .keys()
+            .filter(|(from, _)| from == from_type)
+            .map(|(_, to)| to.clone())
+            .collect()
     }
 
     /// Register that a structure extends another structure
@@ -339,6 +373,41 @@ impl TypeContextBuilder {
     }
 
     fn register_implements(&mut self, impl_def: &ImplementsDef) -> Result<(), String> {
+        // Special handling for Promotes(From, To) - register type promotion
+        if impl_def.structure_name == "Promotes" && impl_def.type_args.len() == 2 {
+            let from_type =
+                self.type_expr_to_string(&self.normalize_type_expr(&impl_def.type_args[0])?);
+            let to_type =
+                self.type_expr_to_string(&self.normalize_type_expr(&impl_def.type_args[1])?);
+
+            // Find the lift operation implementation
+            for member in &impl_def.members {
+                if let ImplMember::Operation {
+                    name,
+                    implementation,
+                } = member
+                {
+                    if name == "lift" {
+                        let lift_fn = match implementation {
+                            crate::kleis_ast::Implementation::Builtin(s) => s.clone(),
+                            crate::kleis_ast::Implementation::Inline { .. } => {
+                                format!(
+                                    "{}_to_{}",
+                                    from_type.to_lowercase(),
+                                    to_type.to_lowercase()
+                                )
+                            }
+                        };
+                        self.registry
+                            .register_promotion(&from_type, &to_type, &lift_fn);
+                    }
+                }
+            }
+
+            self.implements.push(impl_def.clone());
+            return Ok(());
+        }
+
         // Find the structure this implements (validation check)
         let _structure = self
             .structures
@@ -861,55 +930,240 @@ impl TypeContextBuilder {
         // The structure name would be "Promotes" with type arguments
         // Check if Promotes(from_type, to_type) is implemented
         let structure_key = format!("Promotes({}, {})", from_type, to_type);
-        self.registry.type_to_structures.contains_key(&structure_key)
-            || self.registry.type_to_structures.iter().any(|(_k, structs)| {
-                // Check if any type has Promotes structure with matching args
-                structs.iter().any(|s| {
-                    s.starts_with("Promotes(")
-                        && s.contains(from_type)
-                        && s.contains(to_type)
+        self.registry
+            .type_to_structures
+            .contains_key(&structure_key)
+            || self
+                .registry
+                .type_to_structures
+                .iter()
+                .any(|(_k, structs)| {
+                    // Check if any type has Promotes structure with matching args
+                    structs.iter().any(|s| {
+                        s.starts_with("Promotes(") && s.contains(from_type) && s.contains(to_type)
+                    })
                 })
-            })
+    }
+
+    /// Normalize type name to canonical form
+    fn normalize_type_name(t: &str) -> &str {
+        match t {
+            "ℕ" | "Nat" => "Nat",
+            "ℤ" | "Int" => "Int",
+            "ℚ" | "Rational" => "Rational",
+            "ℝ" | "Scalar" | "Real" => "Scalar",
+            "ℂ" | "Complex" => "Complex",
+            _ => t,
+        }
     }
 
     /// Find the common supertype for two types using the Promotes hierarchy
     /// Returns the smallest type both can be promoted to
-    /// Type hierarchy: ℕ → ℤ → ℚ → ℝ → ℂ
+    ///
+    /// Strategy:
+    /// 1. First try registry-based lookup (user-defined promotions)
+    /// 2. Fall back to built-in numeric hierarchy
     pub fn find_common_supertype(&self, t1: &str, t2: &str) -> Option<String> {
+        let t1_norm = Self::normalize_type_name(t1);
+        let t2_norm = Self::normalize_type_name(t2);
+
         // If same type, that's the common type
-        if t1 == t2 {
-            return Some(t1.to_string());
+        if t1_norm == t2_norm {
+            return Some(t1_norm.to_string());
         }
 
-        // Normalize type names to canonical form
-        fn normalize(t: &str) -> &'static str {
+        // Try registry first: check if t1 → t2 or t2 → t1 is registered
+        if self.registry.has_promotion(t1_norm, t2_norm) {
+            return Some(t2_norm.to_string());
+        }
+        if self.registry.has_promotion(t2_norm, t1_norm) {
+            return Some(t1_norm.to_string());
+        }
+
+        // Try to find common ancestor via BFS on promotion graph
+        if let Some(common) = self.find_common_ancestor_bfs(t1_norm, t2_norm) {
+            return Some(common);
+        }
+
+        // Fall back to built-in numeric hierarchy
+        const HIERARCHY: [&str; 5] = ["Nat", "Int", "Rational", "Scalar", "Complex"];
+
+        let pos1 = HIERARCHY.iter().position(|&h| h == t1_norm);
+        let pos2 = HIERARCHY.iter().position(|&h| h == t2_norm);
+
+        match (pos1, pos2) {
+            (Some(p1), Some(p2)) => {
+                let max_pos = p1.max(p2);
+                Some(HIERARCHY[max_pos].to_string())
+            }
+            _ => None,
+        }
+    }
+
+    /// Find common ancestor using BFS on the promotion graph
+    fn find_common_ancestor_bfs(&self, t1: &str, t2: &str) -> Option<String> {
+        use std::collections::{HashSet, VecDeque};
+
+        // Get all types reachable from t1
+        let mut reachable_from_t1: HashSet<String> = HashSet::new();
+        let mut queue: VecDeque<String> = VecDeque::new();
+        queue.push_back(t1.to_string());
+        reachable_from_t1.insert(t1.to_string());
+
+        while let Some(current) = queue.pop_front() {
+            for target in self.registry.get_promotion_targets(&current) {
+                if !reachable_from_t1.contains(&target) {
+                    reachable_from_t1.insert(target.clone());
+                    queue.push_back(target);
+                }
+            }
+        }
+
+        // BFS from t2, find first type also reachable from t1
+        queue.clear();
+        let mut visited: HashSet<String> = HashSet::new();
+        queue.push_back(t2.to_string());
+        visited.insert(t2.to_string());
+
+        // Check t2 itself
+        if reachable_from_t1.contains(t2) {
+            return Some(t2.to_string());
+        }
+
+        while let Some(current) = queue.pop_front() {
+            for target in self.registry.get_promotion_targets(&current) {
+                if reachable_from_t1.contains(&target) {
+                    return Some(target);
+                }
+                if !visited.contains(&target) {
+                    visited.insert(target.clone());
+                    queue.push_back(target);
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Get the lift function name for promoting from one type to another
+    ///
+    /// Strategy:
+    /// 1. First try registry-based lookup (user-defined promotions)
+    /// 2. Fall back to built-in lift functions
+    pub fn get_lift_function(&self, from_type: &str, to_type: &str) -> Option<String> {
+        let from = Self::normalize_type_name(from_type);
+        let to = Self::normalize_type_name(to_type);
+
+        // If same type, no lift needed
+        if from == to {
+            return None;
+        }
+
+        // Try registry first
+        if let Some(lift_fn) = self.registry.get_promotion(from, to) {
+            return Some(lift_fn.clone());
+        }
+
+        // Try to find multi-step promotion path and compose lifts
+        if let Some(path) = self.find_promotion_path(from, to) {
+            if path.len() == 1 {
+                // Direct promotion found in path search
+                if let Some(lift_fn) = self.registry.get_promotion(from, &path[0]) {
+                    return Some(lift_fn.clone());
+                }
+            }
+            // For multi-step paths, we'd need to compose lifts
+            // For now, fall through to hardcoded
+        }
+
+        // Fall back to built-in lift functions for numeric types
+        match (from, to) {
+            ("Nat", "Int") => Some("nat_to_int".to_string()),
+            ("Int", "Rational") => Some("int_to_rational".to_string()),
+            ("Rational", "Scalar") => Some("rational_to_real".to_string()),
+            ("Scalar", "Complex") => Some("real_to_complex".to_string()),
+            ("Nat", "Rational") => Some("nat_to_rational".to_string()),
+            ("Nat", "Scalar") => Some("nat_to_real".to_string()),
+            ("Nat", "Complex") => Some("nat_to_complex".to_string()),
+            ("Int", "Scalar") => Some("int_to_real".to_string()),
+            ("Int", "Complex") => Some("int_to_complex".to_string()),
+            ("Rational", "Complex") => Some("rational_to_complex".to_string()),
+            _ => None,
+        }
+    }
+
+    /// Find a promotion path from one type to another using BFS
+    fn find_promotion_path(&self, from: &str, to: &str) -> Option<Vec<String>> {
+        use std::collections::{HashMap, VecDeque};
+
+        if from == to {
+            return Some(vec![]);
+        }
+
+        let mut queue: VecDeque<String> = VecDeque::new();
+        let mut came_from: HashMap<String, String> = HashMap::new();
+
+        queue.push_back(from.to_string());
+        came_from.insert(from.to_string(), String::new());
+
+        while let Some(current) = queue.pop_front() {
+            for target in self.registry.get_promotion_targets(&current) {
+                if !came_from.contains_key(&target) {
+                    came_from.insert(target.clone(), current.clone());
+
+                    if target == to {
+                        // Reconstruct path
+                        let mut path = vec![];
+                        let mut node = to.to_string();
+                        while node != from {
+                            path.push(node.clone());
+                            node = came_from.get(&node).unwrap().clone();
+                        }
+                        path.reverse();
+                        return Some(path);
+                    }
+
+                    queue.push_back(target);
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Get the type-specific operation name for a given generic operation and target type
+    /// e.g., ("plus", "Complex") → "complex_add"
+    pub fn get_lowered_op_name(&self, generic_op: &str, target_type: &str) -> String {
+        fn normalize(t: &str) -> &str {
             match t {
                 "ℕ" | "Nat" => "Nat",
                 "ℤ" | "Int" => "Int",
                 "ℚ" | "Rational" => "Rational",
                 "ℝ" | "Scalar" | "Real" => "Scalar",
                 "ℂ" | "Complex" => "Complex",
-                _ => "Unknown",
+                _ => t,
             }
         }
 
-        // Define the type hierarchy (order from smallest to largest)
-        const HIERARCHY: [&str; 5] = ["Nat", "Int", "Rational", "Scalar", "Complex"];
+        let ty = normalize(target_type);
 
-        let t1_norm = normalize(t1);
-        let t2_norm = normalize(t2);
+        match (generic_op, ty) {
+            // Complex operations
+            ("plus", "Complex") => "complex_add".to_string(),
+            ("minus", "Complex") => "complex_sub".to_string(),
+            ("times", "Complex") => "complex_mul".to_string(),
+            ("divide" | "scalar_divide", "Complex") => "complex_div".to_string(),
+            ("negate" | "neg", "Complex") => "neg_complex".to_string(),
 
-        // Find positions in hierarchy
-        let pos1 = HIERARCHY.iter().position(|&h| h == t1_norm);
-        let pos2 = HIERARCHY.iter().position(|&h| h == t2_norm);
+            // Rational operations
+            ("plus", "Rational") => "rational_add".to_string(),
+            ("minus", "Rational") => "rational_sub".to_string(),
+            ("times", "Rational") => "rational_mul".to_string(),
+            ("divide" | "scalar_divide", "Rational") => "rational_div".to_string(),
+            ("negate" | "neg", "Rational") => "neg_rational".to_string(),
 
-        match (pos1, pos2) {
-            (Some(p1), Some(p2)) => {
-                // Return the larger type (higher in hierarchy)
-                let max_pos = p1.max(p2);
-                Some(HIERARCHY[max_pos].to_string())
-            }
-            _ => None, // One or both types not in hierarchy
+            // Default: keep original operation name for Scalar, Int, Nat
+            _ => generic_op.to_string(),
         }
     }
 

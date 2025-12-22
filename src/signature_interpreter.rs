@@ -546,8 +546,30 @@ impl SignatureInterpreter {
 
                 // 3. Check built-in types
                 match name.as_str() {
-                    "ℝ" | "Real" => Ok(Type::scalar()),
-                    "Nat" => Ok(Type::Nat),
+                    // Numeric types
+                    "ℕ" | "Nat" => Ok(Type::Nat),
+                    "ℤ" | "Int" | "Integer" => Ok(Type::Data {
+                        type_name: "Type".to_string(),
+                        constructor: "Int".to_string(),
+                        args: vec![],
+                    }),
+                    "ℚ" | "Rational" => Ok(Type::Data {
+                        type_name: "Type".to_string(),
+                        constructor: "Rational".to_string(),
+                        args: vec![],
+                    }),
+                    "ℝ" | "Real" | "Scalar" => Ok(Type::scalar()),
+                    "ℂ" | "Complex" => Ok(Type::Data {
+                        type_name: "Type".to_string(),
+                        constructor: "Complex".to_string(),
+                        args: vec![],
+                    }),
+                    // Boolean
+                    "Bool" | "𝔹" => Ok(Type::Bool),
+                    // String
+                    "String" => Ok(Type::String),
+                    // Unit
+                    "Unit" | "()" => Ok(Type::Unit),
                     // 4. Unbound type parameters (T, N, S, etc.)
                     // If we reach here, the parameter wasn't bound during unification.
                     // This happens with signatures without arrows (e.g., "transpose : Matrix(n, m)")

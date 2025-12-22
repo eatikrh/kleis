@@ -383,8 +383,24 @@ impl TypeInference {
         context_builder: Option<&crate::type_context::TypeContextBuilder>,
     ) -> Result<Type, String> {
         match expr {
-            // Constants are scalars
-            Expression::Const(_) => Ok(Type::scalar()),
+            // Numeric constants: infer Int for integers, Scalar for reals
+            // This enables proper type promotion (Int + Rational → Rational)
+            Expression::Const(s) => {
+                // Check if it's an integer (no decimal point, no exponent)
+                if s.parse::<i64>().is_ok()
+                    && !s.contains('.')
+                    && !s.contains('e')
+                    && !s.contains('E')
+                {
+                    Ok(Type::Data {
+                        type_name: "Type".to_string(),
+                        constructor: "Int".to_string(),
+                        args: vec![],
+                    })
+                } else {
+                    Ok(Type::scalar())
+                }
+            }
 
             // String literals are String type
             Expression::String(_) => Ok(Type::String),
@@ -1981,9 +1997,20 @@ mod tests {
     #[test]
     fn test_const_type() {
         let mut infer = TypeInference::new();
+        // Integer literals are now typed as Int (not Scalar)
+        // This enables proper type promotion: Int + Rational → Rational
         let expr = Expression::Const("42".to_string());
         let ty = infer.infer_and_solve(&expr, None).unwrap();
-        assert_eq!(ty, Type::scalar());
+        assert!(
+            matches!(&ty, Type::Data { constructor, .. } if constructor == "Int"),
+            "Integer literal should be Int, got {:?}",
+            ty
+        );
+
+        // Real literals remain Scalar
+        let expr_real = Expression::Const("3.14".to_string());
+        let ty_real = infer.infer_and_solve(&expr_real, None).unwrap();
+        assert_eq!(ty_real, Type::scalar());
     }
 
     #[test]
@@ -1991,7 +2018,7 @@ mod tests {
         let mut infer = TypeInference::new();
         let context = create_test_context();
 
-        // 1 + 2
+        // 1 + 2 (integer literals) → Int
         let expr = Expression::operation(
             "plus",
             vec![
@@ -2001,7 +2028,12 @@ mod tests {
         );
 
         let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
-        assert_eq!(ty, Type::scalar());
+        // Int + Int → Int (same type, no promotion needed)
+        assert!(
+            matches!(&ty, Type::Data { constructor, .. } if constructor == "Int" || constructor == "Scalar"),
+            "Int + Int should be Int or Scalar, got {:?}",
+            ty
+        );
     }
 
     #[test]
@@ -2021,11 +2053,11 @@ mod tests {
         let ty = infer.infer_and_solve(&expr, Some(&context)).unwrap();
         // With proper polymorphism, x is unbound so remains a type variable
         // The operation plus : T → T → T preserves polymorphism
-        // Accept either Scalar (backward compat) or Var (correct polymorphism)
+        // Accept Scalar, Int (integer literals now type as Int), or Var
         assert!(
-            matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar")
+            matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int")
                 || matches!(&ty, Type::Var(_)),
-            "Expected Scalar or Var, got {:?}",
+            "Expected Scalar, Int, or Var, got {:?}",
             ty
         );
     }
@@ -2048,11 +2080,11 @@ mod tests {
         // With proper polymorphism, x is unbound so remains a type variable
         // The operation divide : T → T → T preserves polymorphism
         println!("Inferred type: {}", ty);
-        // Accept either Scalar (backward compat) or Var (correct polymorphism)
+        // Accept Scalar, Int (integer literals now type as Int), or Var
         assert!(
-            matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar")
+            matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int")
                 || matches!(&ty, Type::Var(_)),
-            "Expected Scalar or Var, got {:?}",
+            "Expected Scalar, Int, or Var, got {:?}",
             ty
         );
     }
@@ -2334,10 +2366,10 @@ mod tests {
         };
 
         let ty = infer.infer(&match_expr, None).unwrap();
-        // Both branches return Scalar, so result should be Scalar
+        // Both branches return integer literals (now typed as Int)
         assert!(matches!(
             ty,
-            Type::Data { constructor, .. } if constructor == "Scalar"
+            Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int"
         ));
     }
 
@@ -2403,10 +2435,11 @@ mod tests {
         };
 
         let ty = infer.infer(&match_expr, None).unwrap();
-        // Both branches return Scalar
+        // First branch returns Int (integer literal), second returns Scalar (from Option field)
+        // Common supertype is Scalar (Int → Scalar promotion)
         assert!(matches!(
             ty,
-            Type::Data { constructor, .. } if constructor == "Scalar"
+            Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int"
         ));
     }
 
@@ -2462,9 +2495,10 @@ mod tests {
         };
 
         let ty = infer.infer(&match_expr, None).unwrap();
+        // Both branches return integer literals (now typed as Int)
         assert!(matches!(
             ty,
-            Type::Data { constructor, .. } if constructor == "Scalar"
+            Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int"
         ));
     }
 

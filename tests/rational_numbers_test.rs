@@ -694,10 +694,11 @@ fn test_lowering_rational_division() {
 #[test]
 fn test_type_hierarchy_nat_plus_nat() {
     let ty = infer_type("5 + 3");
-    // Two naturals should result in Nat or Scalar
+    // Integer literals are now typed as Int for proper type promotion
+    // So 5 + 3 results in Int
     assert!(
-        matches!(&ty, Type::Data { constructor, .. } if constructor == "Nat" || constructor == "Scalar"),
-        "ℕ + ℕ should be ℕ or Scalar, got {:?}",
+        matches!(&ty, Type::Data { constructor, .. } if constructor == "Nat" || constructor == "Int" || constructor == "Scalar"),
+        "5 + 3 should be Nat, Int, or Scalar, got {:?}",
         ty
     );
 }

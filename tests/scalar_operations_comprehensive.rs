@@ -52,8 +52,15 @@ fn test_op_returns_type(op_name: &str, args: Vec<Expression>, expected: Type) {
 
     match result {
         TypeCheckResult::Success(ty) => {
-            assert_eq!(
-                ty, expected,
+            // If expecting Scalar, also accept Int (integer literals now type as Int)
+            let is_match = if matches!(&expected, Type::Data { constructor, .. } if constructor == "Scalar")
+            {
+                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int")
+            } else {
+                ty == expected
+            };
+            assert!(
+                is_match,
                 "Operation '{}' should return {:?}, got {:?}",
                 op_name, expected, ty
             );
@@ -148,10 +155,11 @@ fn test_nested_scalar_expressions() {
     );
     match checker.check(&expr1) {
         TypeCheckResult::Success(ty) => {
+            // Accept Int (integer literals now type as Int) or Scalar or Var
             assert!(
-                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar")
+                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int")
                     || matches!(&ty, Type::Var(_)),
-                "Expected Scalar or Var, got {:?}",
+                "Expected Scalar, Int, or Var, got {:?}",
                 ty
             );
             println!("✓ (1 + 2) * 3 : {:?}", ty);
@@ -169,10 +177,11 @@ fn test_nested_scalar_expressions() {
     );
     match checker.check(&expr2) {
         TypeCheckResult::Success(ty) => {
+            // Accept Int (integer literals now type as Int) or Scalar or Var
             assert!(
-                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar")
+                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int")
                     || matches!(&ty, Type::Var(_)),
-                "Expected Scalar or Var, got {:?}",
+                "Expected Scalar, Int, or Var, got {:?}",
                 ty
             );
             println!("✓ √(x / (x + 1)) : {:?}", ty);
@@ -215,11 +224,11 @@ fn test_variable_inference_with_scalars() {
     let expr = op("plus", vec![var("x"), c("1")]);
     match checker.check(&expr) {
         TypeCheckResult::Success(ty) => {
-            // Accept either Scalar (correct HM) or Var (if substitution incomplete)
+            // Accept Int (integer literals now type as Int) or Scalar or Var
             assert!(
-                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar")
+                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int")
                     || matches!(&ty, Type::Var(_)),
-                "Expected Scalar or Var, got {:?}",
+                "Expected Scalar, Int, or Var, got {:?}",
                 ty
             );
             println!("✓ x + 1 infers: {:?}", ty);
@@ -232,11 +241,11 @@ fn test_variable_inference_with_scalars() {
     let expr2 = op("scalar_multiply", vec![var("y"), c("2")]);
     match checker.check(&expr2) {
         TypeCheckResult::Success(ty) => {
-            // Accept either Scalar (correct HM) or Var (if substitution incomplete)
+            // Accept Int (integer literals now type as Int) or Scalar or Var
             assert!(
-                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar")
+                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int")
                     || matches!(&ty, Type::Var(_)),
-                "Expected Scalar or Var, got {:?}",
+                "Expected Scalar, Int, or Var, got {:?}",
                 ty
             );
             println!("✓ y * 2 infers: {:?}", ty);

@@ -19,8 +19,16 @@ fn assert_type_checks(latex: &str, expected_type: Type) {
 
     match checker.check(&expr) {
         TypeCheckResult::Success(ty) => {
-            // Accept either the expected type or a type variable (polymorphism)
-            let matches = ty == expected_type || matches!(ty, Type::Var(_));
+            // Accept the expected type, Int (for integer literals), or a type variable (polymorphism)
+            // Integer literals now type as Int for proper type promotion (Int + Rational → Rational)
+            let is_numeric_match = if matches!(expected_type, Type::Data { ref constructor, .. } if constructor == "Scalar")
+            {
+                // If expecting Scalar, also accept Int (integer literals)
+                matches!(&ty, Type::Data { constructor, .. } if constructor == "Scalar" || constructor == "Int")
+            } else {
+                ty == expected_type
+            };
+            let matches = is_numeric_match || matches!(ty, Type::Var(_));
             assert!(
                 matches,
                 "Type mismatch for: {}\n  Expected: {:?}\n  Got: {:?}",
