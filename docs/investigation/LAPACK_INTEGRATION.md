@@ -172,21 +172,39 @@ This means on your Mac ARM, we can use the **native Accelerate framework** with 
 
 ## Recommendation
 
-### For Kleis: Tiered Approach
+### For Kleis: BLAS/LAPACK via ndarray-linalg
 
-1. **Default**: Use `faer` (pure Rust, no dependencies, good performance)
-2. **Optional**: Feature flag for LAPACK backend when users need maximum performance
+**Primary choice**: `ndarray-linalg` with platform-specific backends.
+
+**Why BLAS/LAPACK over pure Rust:**
+- Battle-tested (decades of production use)
+- Trusted numerics (control systems, scientific computing)
+- Apple Accelerate = zero friction on macOS
+- Industry standard (MATLAB, NumPy, Julia all use LAPACK)
 
 ```toml
 # Cargo.toml
-[features]
-default = []
-lapack = ["nalgebra/lapack"]
-
 [dependencies]
-faer = "0.19"
-nalgebra = { version = "0.32", optional = true }
+ndarray = "0.15"
+ndarray-linalg = "0.16"
+
+# macOS: Uses Apple Accelerate (pre-installed, M1/M2/M3 optimized)
+[target.'cfg(target_os = "macos")'.dependencies]
+blas-src = { version = "0.10", features = ["accelerate"] }
+lapack-src = { version = "0.10", features = ["accelerate"] }
+
+# Linux: Uses OpenBLAS
+[target.'cfg(target_os = "linux")'.dependencies]
+blas-src = { version = "0.10", features = ["openblas"] }
+lapack-src = { version = "0.10", features = ["openblas"] }
+
+# Windows: Uses OpenBLAS
+[target.'cfg(target_os = "windows")'.dependencies]
+blas-src = { version = "0.10", features = ["openblas"] }
+lapack-src = { version = "0.10", features = ["openblas"] }
 ```
+
+**On your Mac ARM**: Zero external dependencies needed - Accelerate is a system framework.
 
 ### Proposed Operations
 
