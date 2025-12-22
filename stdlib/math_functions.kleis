@@ -60,6 +60,24 @@ implements Combinatorics(ℕ) {
     operation permutation = builtin_permutation
 }
 
+/* Factorial Axioms (for symbolic reasoning)
+ * 
+ * These axioms define factorial semantics for Z3 verification:
+ * 
+ *   factorial_zero     : factorial(0) = 1
+ *   factorial_succ     : ∀(n : ℕ). factorial(n + 1) = (n + 1) · factorial(n)
+ *   factorial_positive : ∀(n : ℕ). factorial(n) > 0
+ * 
+ * Binomial coefficient axioms:
+ * 
+ *   binomial_zero      : ∀(n : ℕ). binomial(n, 0) = 1
+ *   binomial_self      : ∀(n : ℕ). binomial(n, n) = 1
+ *   binomial_pascal    : ∀(n k : ℕ). binomial(n + 1, k + 1) = binomial(n, k) + binomial(n, k + 1)
+ *   binomial_factorial : ∀(n k : ℕ). binomial(n, k) = factorial(n) / (factorial(k) · factorial(n - k))
+ * 
+ * Note: These are loaded into Z3 via capabilities.toml, not parsed as stdlib.
+ */
+
 structure SpecialFunctions(T) {
     operation gamma_func : T → T
     operation digamma : T → T

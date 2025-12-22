@@ -108,6 +108,42 @@ implements SquareMatrix(n, ℝ) {
  * No special block operations needed - parametric polymorphism handles infinite nesting!
  */
 
+/* Conjugate Transpose (Dagger / Hermitian Adjoint)
+ * 
+ * For complex matrices: A† = transpose(conj(A))
+ * For real matrices: A† = transpose(A)
+ * 
+ * Postfix syntax: A†
+ * Function syntax: dagger(A)
+ */
+structure HermitianAdjoint(m: Nat, n: Nat, T) {
+    operation dagger : Matrix(m, n, T) → Matrix(n, m, T)
+}
+
+// For real matrices, dagger = transpose
+implements HermitianAdjoint(m, n, ℝ) {
+    operation dagger = builtin_transpose
+}
+
+/* Dagger Axioms (for symbolic reasoning)
+ * 
+ * These axioms define conjugate transpose semantics for Z3 verification:
+ * 
+ *   dagger_real       : ∀(A : Matrix(m, n, ℝ)). dagger(A) = transpose(A)
+ *   dagger_involution : ∀(A : Matrix(m, n, T)). dagger(dagger(A)) = A
+ *   dagger_sum        : ∀(A B : Matrix(m, n, T)). dagger(A + B) = dagger(A) + dagger(B)
+ *   dagger_product    : ∀(A : Matrix(m, n, T)) (B : Matrix(n, p, T)). dagger(A · B) = dagger(B) · dagger(A)
+ *   dagger_scalar     : ∀(c : T) (A : Matrix(m, n, T)). dagger(c · A) = conj(c) · dagger(A)
+ * 
+ * Hermitian matrix: A = A†
+ *   hermitian_def     : ∀(A : Matrix(n, n, T)). hermitian(A) ⟺ A = dagger(A)
+ * 
+ * Unitary matrix: U† · U = I
+ *   unitary_def       : ∀(U : Matrix(n, n, T)). unitary(U) ⟺ dagger(U) · U = identity(n)
+ * 
+ * Note: These are loaded into Z3 via capabilities.toml, not parsed as stdlib.
+ */
+
 /* ============================================
  * LEGACY MATRIX CONSTRUCTORS - REMOVED
  * ============================================
