@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c59b3c7.js";
+            window.path_to_searchindex_js = "searchindex-f2c8b5ea.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1ed044a1.js"></script>
+        <script src="toc-903d2734.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -357,6 +357,7 @@ define flag = True                // True is a boolean
 </thead>
 <tbody>
 <tr><td>Bit-Vector</td><td><code>BitVec(n)</code></td><td>n-bit binary vector (e.g., <code>BitVec(8)</code>, <code>BitVec(32)</code>)</td></tr>
+<tr><td>Set</td><td><code>Set(T)</code></td><td>Set of elements of type T (e.g., <code>Set(ℤ)</code>, <code>Set(ℝ)</code>)</td></tr>
 </tbody>
 </table>
 </div>
@@ -453,12 +454,63 @@ define make_adder(n : ℝ) : ℝ → ℝ = ???
 </tbody>
 </table>
 </div>
+<h2 id="set-types"><a class="header" href="#set-types">Set Types</a></h2>
+<p>Kleis provides a built-in <code>Set(T)</code> type backed by Z3’s native set theory. Sets are unordered collections of unique elements:</p>
+<pre><code class="language-kleis">// Declare a set type
+define S : Set(ℤ)
+
+// Set operations (see stdlib/sets.kleis for full structure)
+in_set(x, S)              // Membership: x ∈ S → Bool
+union(A, B)               // Union: A ∪ B → Set(T)
+intersect(A, B)           // Intersection: A ∩ B → Set(T)
+difference(A, B)          // Difference: A \ B → Set(T)
+complement(A)             // Complement: ᶜA → Set(T)
+subset(A, B)              // Subset test: A ⊆ B → Bool
+insert(x, S)              // Add element: S ∪ {x} → Set(T)
+remove(x, S)              // Remove element: S \ {x} → Set(T)
+singleton(x)              // Singleton set: {x} → Set(T)
+empty_set                 // Empty set: ∅
+</code></pre>
+<h3 id="set-theory-axioms"><a class="header" href="#set-theory-axioms">Set Theory Axioms</a></h3>
+<p>Sets come with a complete axiomatization (see <code>stdlib/sets.kleis</code>):</p>
+<pre><code class="language-kleis">structure SetTheory(T) {
+    // Core operations
+    operation in_set : T → Set(T) → Bool
+    operation union : Set(T) → Set(T) → Set(T)
+    operation intersect : Set(T) → Set(T) → Set(T)
+    element empty_set : Set(T)
+    
+    // Extensionality: sets are equal iff they have the same elements
+    axiom extensionality: ∀(A B : Set(T)). 
+        (∀(x : T). in_set(x, A) ↔ in_set(x, B)) → A = B
+    
+    // Union definition
+    axiom union_def: ∀(A B : Set(T), x : T). 
+        in_set(x, union(A, B)) ↔ (in_set(x, A) ∨ in_set(x, B))
+    
+    // De Morgan's laws
+    axiom de_morgan_union: ∀(A B : Set(T)). 
+        complement(union(A, B)) = intersect(complement(A), complement(B))
+}
+</code></pre>
+<h3 id="using-sets-in-verification"><a class="header" href="#using-sets-in-verification">Using Sets in Verification</a></h3>
+<p>Sets are particularly useful for specifying properties involving collections:</p>
+<pre><code class="language-kleis">structure MetricSpace(X) {
+    operation d : X → X → ℝ
+    operation ball : X → ℝ → Set(X)
+    
+    // Open ball definition
+    axiom ball_def: ∀(center : X, radius : ℝ, x : X).
+        in_set(x, ball(center, radius)) ↔ d(x, center) &lt; radius
+}
+</code></pre>
 <h2 id="parametric-types"><a class="header" href="#parametric-types">Parametric Types</a></h2>
 <p>Types can have parameters:</p>
 <pre><code class="language-kleis">// Parametric type examples:
 List(ℤ)           // List of integers
 Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 Vector(4)         // 4-dimensional vector
+Set(ℝ)            // Set of real numbers
 </code></pre>
 <h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
 <p>Kleis often infers types automatically:</p>
@@ -470,9 +522,9 @@ define square_five = let y = 5 in y * y
 </code></pre>
 <p>But explicit types make code clearer and catch errors earlier!</p>
 <h2 id="the-type-hierarchy"><a class="header" href="#the-type-hierarchy">The Type Hierarchy</a></h2>
-<pre><code>              Any
-         /    |    \
-     Scalar  String  Collection
+<pre><code>                    Any
+         /     |      \       \
+     Scalar  String  Collection  Set(T)
      /    \              |
     ℂ    Bool          List
     |                 /    \
@@ -485,6 +537,7 @@ define square_five = let y = 5 in y * y
     ℕ
 </code></pre>
 <p>Note: <code>ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ ⊂ ℂ</code> (naturals ⊂ integers ⊂ rationals ⊂ reals ⊂ complex)</p>
+<p><strong>Set(T)</strong> is parameterized by its element type. <code>Set(ℤ)</code> is a set of integers, <code>Set(ℝ)</code> is a set of reals, etc.</p>
 <h2 id="type-promotion-embedding"><a class="header" href="#type-promotion-embedding">Type Promotion (Embedding)</a></h2>
 <p>When you mix numeric types in an expression, Kleis automatically <strong>promotes</strong> the smaller type to the larger one. This is called <strong>type embedding</strong>, not subtyping.</p>
 <h3 id="embedding-vs-subtyping"><a class="header" href="#embedding-vs-subtyping">Embedding vs Subtyping</a></h3>
@@ -3528,6 +3581,175 @@ define empty : String = ""
 </table>
 </div>
 <p>See <code>src/solvers/z3/capabilities.toml</code> for the complete list of supported string operations.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="set-theory"><a class="header" href="#set-theory">Set Theory</a></h1>
+<p>Kleis provides native set theory support backed by Z3’s set theory solver. This enables rigorous mathematical reasoning about collections, membership, and set operations.</p>
+<h2 id="importing-set-theory"><a class="header" href="#importing-set-theory">Importing Set Theory</a></h2>
+<pre><code class="language-kleis">import "stdlib/sets.kleis"
+</code></pre>
+<p>This imports the <code>SetTheory(T)</code> structure with all operations and axioms.</p>
+<h2 id="constructing-sets"><a class="header" href="#constructing-sets">Constructing Sets</a></h2>
+<p>Sets are built using <code>empty_set()</code> and <code>insert()</code>:</p>
+<pre><code class="language-kleis">// Empty set (note the parentheses!)
+empty_set()
+
+// Singleton set {5}
+insert(5, empty_set())
+
+// Set {1, 2, 3}
+insert(3, insert(2, insert(1, empty_set())))
+
+// Shorthand: singleton(x) creates {x}
+singleton(5)
+</code></pre>
+<p><strong>Important:</strong> Use <code>empty_set()</code> with parentheses (it’s a nullary function).</p>
+<h3 id="verification-example"><a class="header" href="#verification-example">Verification Example</a></h3>
+<pre><code>λ&gt; :load stdlib/sets.kleis
+λ&gt; :sat in_set(2, insert(3, insert(2, insert(1, empty_set()))))
+✅ Satisfiable (2 IS in {1,2,3})
+
+λ&gt; :sat in_set(5, insert(3, insert(2, insert(1, empty_set()))))
+❌ Unsatisfiable (5 is NOT in {1,2,3})
+
+λ&gt; :sat subset(insert(1, empty_set()), insert(2, insert(1, empty_set())))
+✅ Satisfiable ({1} ⊆ {1,2})
+</code></pre>
+<h2 id="basic-operations-1"><a class="header" href="#basic-operations-1">Basic Operations</a></h2>
+<h3 id="set-membership"><a class="header" href="#set-membership">Set Membership</a></h3>
+<pre><code class="language-kleis">// Check if element x is in set S
+in_set(x, S)  // Returns Bool
+
+// Example: Define a membership property
+structure ClosedUnderAddition {
+    axiom closed: ∀(S : Set(ℤ), x y : ℤ). 
+        in_set(x, S) ∧ in_set(y, S) → in_set(x + y, S)
+}
+</code></pre>
+<h3 id="set-construction"><a class="header" href="#set-construction">Set Construction</a></h3>
+<pre><code class="language-kleis">empty_set        // The empty set ∅
+singleton(x)     // Set containing just x: {x}
+insert(x, S)     // Add x to S: S ∪ {x}
+remove(x, S)     // Remove x from S: S \ {x}
+</code></pre>
+<h3 id="set-operations"><a class="header" href="#set-operations">Set Operations</a></h3>
+<pre><code class="language-kleis">union(A, B)       // Union: A ∪ B
+intersect(A, B)   // Intersection: A ∩ B
+difference(A, B)  // Difference: A \ B
+complement(A)     // Complement: ᶜA
+</code></pre>
+<h3 id="set-relations"><a class="header" href="#set-relations">Set Relations</a></h3>
+<pre><code class="language-kleis">subset(A, B)         // Subset: A ⊆ B
+proper_subset(A, B)  // Proper subset: A ⊂ B (A ⊆ B and A ≠ B)
+</code></pre>
+<h2 id="verification-example-1"><a class="header" href="#verification-example-1">Verification Example</a></h2>
+<p>Here’s a complete example proving De Morgan’s laws:</p>
+<pre><code class="language-kleis">import "stdlib/sets.kleis"
+
+// Verify De Morgan's law: complement(A ∪ B) = complement(A) ∩ complement(B)
+structure DeMorganProof(T) {
+    axiom de_morgan_union: ∀(A B : Set(T)).
+        complement(union(A, B)) = intersect(complement(A), complement(B))
+}
+</code></pre>
+<p>In the REPL:</p>
+<pre><code>λ&gt; :load stdlib/sets.kleis
+✅ Loaded stdlib/sets.kleis
+
+λ&gt; :verify ∀(A B : Set(ℤ), x : ℤ). in_set(x, complement(union(A, B))) ↔ (¬in_set(x, A) ∧ ¬in_set(x, B))
+✅ Valid (follows from axioms)
+</code></pre>
+<h2 id="mathematical-structures-with-sets"><a class="header" href="#mathematical-structures-with-sets">Mathematical Structures with Sets</a></h2>
+<h3 id="open-balls-in-metric-spaces"><a class="header" href="#open-balls-in-metric-spaces">Open Balls in Metric Spaces</a></h3>
+<pre><code class="language-kleis">import "stdlib/sets.kleis"
+
+structure MetricSpace(X) {
+    operation d : X → X → ℝ
+    
+    // Metric axioms
+    axiom positive: ∀(x y : X). d(x, y) &gt;= 0
+    axiom zero_iff_equal: ∀(x y : X). d(x, y) = 0 ↔ x = y
+    axiom symmetric: ∀(x y : X). d(x, y) = d(y, x)
+    axiom triangle: ∀(x y z : X). d(x, z) &lt;= d(x, y) + d(y, z)
+}
+
+structure OpenBalls(X) {
+    operation d : X → X → ℝ
+    operation ball : X → ℝ → Set(X)
+    
+    // x is in ball(center, r) iff d(x, center) &lt; r
+    axiom ball_def: ∀(center : X, r : ℝ, x : X).
+        in_set(x, ball(center, r)) ↔ d(x, center) &lt; r
+    
+    // Open balls are non-empty when radius is positive
+    axiom ball_nonempty: ∀(center : X, r : ℝ).
+        r &gt; 0 → in_set(center, ball(center, r))
+}
+</code></pre>
+<h3 id="measure-spaces"><a class="header" href="#measure-spaces">Measure Spaces</a></h3>
+<pre><code class="language-kleis">import "stdlib/sets.kleis"
+
+structure MeasureSpace(X) {
+    element sigma_algebra : Set(Set(X))
+    operation measure : Set(X) → ℝ
+    
+    // σ-algebra contains empty set
+    axiom contains_empty: in_set(empty_set, sigma_algebra)
+    
+    // Closed under complement
+    axiom closed_complement: ∀(A : Set(X)).
+        in_set(A, sigma_algebra) → in_set(complement(A), sigma_algebra)
+    
+    // Measure is non-negative
+    axiom measure_positive: ∀(A : Set(X)). measure(A) &gt;= 0
+    
+    // Measure of empty set is zero
+    axiom measure_empty: measure(empty_set) = 0
+}
+</code></pre>
+<h2 id="full-axiom-reference"><a class="header" href="#full-axiom-reference">Full Axiom Reference</a></h2>
+<p>The <code>SetTheory(T)</code> structure includes these axioms:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Axiom</th><th>Statement</th></tr>
+</thead>
+<tbody>
+<tr><td>Extensionality</td><td><code>∀(A B). (∀x. x ∈ A ↔ x ∈ B) → A = B</code></td></tr>
+<tr><td>Empty Set</td><td><code>∀x. ¬(x ∈ ∅)</code></td></tr>
+<tr><td>Singleton</td><td><code>∀x y. y ∈ {x} ↔ y = x</code></td></tr>
+<tr><td>Union</td><td><code>∀(A B) x. x ∈ A∪B ↔ (x ∈ A ∨ x ∈ B)</code></td></tr>
+<tr><td>Intersection</td><td><code>∀(A B) x. x ∈ A∩B ↔ (x ∈ A ∧ x ∈ B)</code></td></tr>
+<tr><td>Difference</td><td><code>∀(A B) x. x ∈ A\B ↔ (x ∈ A ∧ ¬(x ∈ B))</code></td></tr>
+<tr><td>Complement</td><td><code>∀A x. x ∈ Aᶜ ↔ ¬(x ∈ A)</code></td></tr>
+<tr><td>Subset</td><td><code>∀(A B). A ⊆ B ↔ (∀x. x ∈ A → x ∈ B)</code></td></tr>
+<tr><td>De Morgan (Union)</td><td><code>∀(A B). (A∪B)ᶜ = Aᶜ ∩ Bᶜ</code></td></tr>
+<tr><td>De Morgan (Intersection)</td><td><code>∀(A B). (A∩B)ᶜ = Aᶜ ∪ Bᶜ</code></td></tr>
+<tr><td>Double Complement</td><td><code>∀A. (Aᶜ)ᶜ = A</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="unicode-operators-future"><a class="header" href="#unicode-operators-future">Unicode Operators (Future)</a></h2>
+<p>Currently, you must use function-style syntax. Future versions will support:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Unicode</th><th>Function Style</th></tr>
+</thead>
+<tbody>
+<tr><td><code>x ∈ S</code></td><td><code>in_set(x, S)</code></td></tr>
+<tr><td><code>A ⊆ B</code></td><td><code>subset(A, B)</code></td></tr>
+<tr><td><code>A ∪ B</code></td><td><code>union(A, B)</code></td></tr>
+<tr><td><code>A ∩ B</code></td><td><code>intersect(A, B)</code></td></tr>
+<tr><td><code>A \ B</code></td><td><code>difference(A, B)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="see-also"><a class="header" href="#see-also">See Also</a></h2>
+<ul>
+<li><a href="#types-and-values">Types and Values</a> — <code>Set(T)</code> type documentation</li>
+<li><a href="#z3-verification">Z3 Verification</a> — Using Z3 for proofs</li>
+<li><a href="#structures">Structures</a> — Defining mathematical structures</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
 <p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.9).</p>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Operators - Learn You Some Kleis</title>
+        <title>Set Theory - Learn You Some Kleis</title>
 
 
         <!-- Custom HTML head -->
@@ -146,7 +146,7 @@
                         <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/appendix/operators.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/18-sets.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -180,273 +180,184 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="appendix-b-operators"><a class="header" href="#appendix-b-operators">Appendix B: Operators</a></h1>
-<h2 id="arithmetic-operators"><a class="header" href="#arithmetic-operators">Arithmetic Operators</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Operator</th><th>Name</th><th>Example</th><th>Result</th></tr>
-</thead>
-<tbody>
-<tr><td><code>+</code></td><td>Addition</td><td><code>3 + 4</code></td><td><code>7</code></td></tr>
-<tr><td><code>-</code></td><td>Subtraction</td><td><code>10 - 3</code></td><td><code>7</code></td></tr>
-<tr><td><code>*</code></td><td>Multiplication</td><td><code>6 * 7</code></td><td><code>42</code></td></tr>
-<tr><td><code>/</code></td><td>Division</td><td><code>15 / 3</code></td><td><code>5</code></td></tr>
-<tr><td><code>^</code></td><td>Exponentiation</td><td><code>2 ^ 10</code></td><td><code>1024</code></td></tr>
-<tr><td><code>-</code> (unary)</td><td>Negation</td><td><code>-5</code></td><td><code>-5</code></td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="comparison-operators"><a class="header" href="#comparison-operators">Comparison Operators</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Example</th></tr>
-</thead>
-<tbody>
-<tr><td><code>=</code></td><td></td><td>Equality</td><td><code>x = y</code></td></tr>
-<tr><td><code>!=</code></td><td><code>≠</code></td><td>Inequality</td><td><code>x ≠ y</code></td></tr>
-<tr><td><code>&lt;</code></td><td></td><td>Less than</td><td><code>x &lt; y</code></td></tr>
-<tr><td><code>&gt;</code></td><td></td><td>Greater than</td><td><code>x &gt; y</code></td></tr>
-<tr><td><code>&lt;=</code></td><td><code>≤</code></td><td>Less or equal</td><td><code>x ≤ y</code></td></tr>
-<tr><td><code>&gt;=</code></td><td><code>≥</code></td><td>Greater or equal</td><td><code>x ≥ y</code></td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="logical-operators"><a class="header" href="#logical-operators">Logical Operators</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Example</th></tr>
-</thead>
-<tbody>
-<tr><td><code>and</code></td><td><code>∧</code></td><td>Conjunction</td><td><code>P ∧ Q</code></td></tr>
-<tr><td><code>or</code></td><td><code>∨</code></td><td>Disjunction</td><td><code>P ∨ Q</code></td></tr>
-<tr><td><code>not</code></td><td><code>¬</code></td><td>Negation</td><td><code>¬P</code></td></tr>
-<tr><td><code>implies</code></td><td><code>→</code> <code>⇒</code> <code>⟹</code></td><td>Implication</td><td><code>P → Q</code></td></tr>
-<tr><td><code>iff</code></td><td><code>↔</code> <code>⇔</code> <code>⟺</code></td><td>Biconditional</td><td><code>P ↔ Q</code></td></tr>
-</tbody>
-</table>
-</div>
-<blockquote>
-<p><strong>Note:</strong> All three Unicode variants for implication and biconditional are
-equivalent. Use whichever matches your notation conventions.</p>
-</blockquote>
-<h2 id="set-operators"><a class="header" href="#set-operators">Set Operators</a></h2>
-<blockquote>
-<p><strong>Note:</strong> Set operators are parsed as custom operators but don’t have special semantic meaning yet. Use function-call syntax for set operations: <code>member(x, S)</code>, <code>union(A, B)</code>, etc.</p>
-</blockquote>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Status</th></tr>
-</thead>
-<tbody>
-<tr><td><code>∪</code></td><td></td><td>Union</td><td>Custom operator (no special semantics)</td></tr>
-<tr><td><code>∩</code></td><td></td><td>Intersection</td><td>Custom operator (no special semantics)</td></tr>
-<tr><td><code>∈</code></td><td></td><td>Membership</td><td>❌ Not implemented - use <code>member(x, S)</code></td></tr>
-<tr><td><code>∉</code></td><td></td><td>Non-membership</td><td>❌ Not implemented</td></tr>
-<tr><td><code>⊆</code></td><td></td><td>Subset</td><td>❌ Not implemented - use <code>subset(A, B)</code></td></tr>
-<tr><td><code>⊇</code></td><td></td><td>Superset</td><td>❌ Not implemented</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="type-operators"><a class="header" href="#type-operators">Type Operators</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Operator</th><th>Name</th><th>Example</th></tr>
-</thead>
-<tbody>
-<tr><td><code>→</code></td><td>Function type</td><td><code>ℝ → ℝ</code></td></tr>
-<tr><td><code>×</code></td><td>Product type</td><td><code>ℝ × ℝ</code></td></tr>
-<tr><td><code>:</code></td><td>Type annotation</td><td><code>x : ℝ</code></td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="precedence-table"><a class="header" href="#precedence-table">Precedence Table</a></h2>
-<p>From lowest to highest precedence:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Level</th><th>Operators</th><th>Associativity</th></tr>
-</thead>
-<tbody>
-<tr><td>1</td><td><code>↔</code> <code>⇔</code> <code>⟺</code> (biconditional)</td><td>Left</td></tr>
-<tr><td>2</td><td><code>→</code> <code>⇒</code> <code>⟹</code> (implication)</td><td>Right</td></tr>
-<tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
-<tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
-<tr><td>5</td><td><code>¬</code> <code>not</code></td><td>Prefix</td></tr>
-<tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-associative</td></tr>
-<tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
-<tr><td>8</td><td><code>*</code> <code>/</code> <code>×</code> <code>·</code></td><td>Left</td></tr>
-<tr><td>9</td><td><code>^</code> (power)</td><td>Right</td></tr>
-<tr><td>10</td><td><code>-</code> (unary negation)</td><td>Prefix</td></tr>
-<tr><td>11</td><td><code>!</code> <code>ᵀ</code> <code>†</code> (postfix)</td><td>Postfix</td></tr>
-<tr><td>12</td><td>Function application</td><td>Left</td></tr>
-</tbody>
-</table>
-</div>
-<blockquote>
-<p><strong>Note:</strong> Field access (<code>.</code>) is NOT implemented. Use function-call syntax: <code>field(object)</code> instead of <code>object.field</code>.</p>
-</blockquote>
-<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
-<pre><code class="language-kleis">define ex1 = 2 + 3 * 4        // 14 (not 20)
-define ex2 = (2 + 3) * 4      // 20
-define ex3 = 2 ^ 3 ^ 2        // 512 (= 2^9, right associative)
-define neg_sq(x) = -x^2       // -(x^2), not (-x)^2
+                        <h1 id="set-theory"><a class="header" href="#set-theory">Set Theory</a></h1>
+<p>Kleis provides native set theory support backed by Z3’s set theory solver. This enables rigorous mathematical reasoning about collections, membership, and set operations.</p>
+<h2 id="importing-set-theory"><a class="header" href="#importing-set-theory">Importing Set Theory</a></h2>
+<pre><code class="language-kleis">import "stdlib/sets.kleis"
 </code></pre>
-<h3 id="logical"><a class="header" href="#logical">Logical</a></h3>
-<pre><code class="language-kleis">define logic1(P, Q, R) = P ∧ Q ∨ R        // (P ∧ Q) ∨ R
-define logic2(P, Q, R) = P → Q → R        // P → (Q → R) (right associative)
-define logic3(P, Q) = ¬P ∧ Q              // (¬P) ∧ Q
+<p>This imports the <code>SetTheory(T)</code> structure with all operations and axioms.</p>
+<h2 id="constructing-sets"><a class="header" href="#constructing-sets">Constructing Sets</a></h2>
+<p>Sets are built using <code>empty_set()</code> and <code>insert()</code>:</p>
+<pre><code class="language-kleis">// Empty set (note the parentheses!)
+empty_set()
+
+// Singleton set {5}
+insert(5, empty_set())
+
+// Set {1, 2, 3}
+insert(3, insert(2, insert(1, empty_set())))
+
+// Shorthand: singleton(x) creates {x}
+singleton(5)
 </code></pre>
-<h3 id="type-expressions"><a class="header" href="#type-expressions">Type Expressions</a></h3>
-<pre><code class="language-kleis">ℝ → ℝ → ℝ        // ℝ → (ℝ → ℝ) (curried binary function)
-(ℝ → ℝ) → ℝ      // Higher-order: takes function, returns value
-ℝ × ℝ → ℝ        // Takes pair, returns value
+<p><strong>Important:</strong> Use <code>empty_set()</code> with parentheses (it’s a nullary function).</p>
+<h3 id="verification-example"><a class="header" href="#verification-example">Verification Example</a></h3>
+<pre><code>λ&gt; :load stdlib/sets.kleis
+λ&gt; :sat in_set(2, insert(3, insert(2, insert(1, empty_set()))))
+✅ Satisfiable (2 IS in {1,2,3})
+
+λ&gt; :sat in_set(5, insert(3, insert(2, insert(1, empty_set()))))
+❌ Unsatisfiable (5 is NOT in {1,2,3})
+
+λ&gt; :sat subset(insert(1, empty_set()), insert(2, insert(1, empty_set())))
+✅ Satisfiable ({1} ⊆ {1,2})
 </code></pre>
-<h2 id="built-in-functions"><a class="header" href="#built-in-functions">Built-in Functions</a></h2>
-<h3 id="mathematical-functions"><a class="header" href="#mathematical-functions">Mathematical Functions</a></h3>
-<pre><code class="language-kleis">sqrt(x)          // Square root
-abs(x)           // Absolute value
-floor(x)         // Round down
-ceil(x)          // Round up
-round(x)         // Round to nearest
-min(x, y)        // Minimum
-max(x, y)        // Maximum
+<h2 id="basic-operations"><a class="header" href="#basic-operations">Basic Operations</a></h2>
+<h3 id="set-membership"><a class="header" href="#set-membership">Set Membership</a></h3>
+<pre><code class="language-kleis">// Check if element x is in set S
+in_set(x, S)  // Returns Bool
+
+// Example: Define a membership property
+structure ClosedUnderAddition {
+    axiom closed: ∀(S : Set(ℤ), x y : ℤ). 
+        in_set(x, S) ∧ in_set(y, S) → in_set(x + y, S)
+}
 </code></pre>
-<h3 id="trigonometric-functions"><a class="header" href="#trigonometric-functions">Trigonometric Functions</a></h3>
-<pre><code class="language-kleis">sin(x)   cos(x)   tan(x)
-asin(x)  acos(x)  atan(x)
-sinh(x)  cosh(x)  tanh(x)
+<h3 id="set-construction"><a class="header" href="#set-construction">Set Construction</a></h3>
+<pre><code class="language-kleis">empty_set        // The empty set ∅
+singleton(x)     // Set containing just x: {x}
+insert(x, S)     // Add x to S: S ∪ {x}
+remove(x, S)     // Remove x from S: S \ {x}
 </code></pre>
-<h3 id="exponential-and-logarithmic"><a class="header" href="#exponential-and-logarithmic">Exponential and Logarithmic</a></h3>
-<pre><code class="language-kleis">exp(x)           // e^x
-ln(x)            // Natural logarithm
-log(x)           // Base-10 logarithm
-log(b, x)        // Logarithm base b
+<h3 id="set-operations"><a class="header" href="#set-operations">Set Operations</a></h3>
+<pre><code class="language-kleis">union(A, B)       // Union: A ∪ B
+intersect(A, B)   // Intersection: A ∩ B
+difference(A, B)  // Difference: A \ B
+complement(A)     // Complement: ᶜA
 </code></pre>
-<h3 id="constants"><a class="header" href="#constants">Constants</a></h3>
-<pre><code class="language-kleis">π                // Pi (3.14159...)
-e                // Euler's number (2.71828...)
-i                // Imaginary unit
+<h3 id="set-relations"><a class="header" href="#set-relations">Set Relations</a></h3>
+<pre><code class="language-kleis">subset(A, B)         // Subset: A ⊆ B
+proper_subset(A, B)  // Proper subset: A ⊂ B (A ⊆ B and A ≠ B)
 </code></pre>
-<h2 id="reserved-keywords"><a class="header" href="#reserved-keywords">Reserved Keywords</a></h2>
-<p>The following words are reserved and cannot be used as variable or function names:</p>
-<h3 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h3>
+<h2 id="verification-example-1"><a class="header" href="#verification-example-1">Verification Example</a></h2>
+<p>Here’s a complete example proving De Morgan’s laws:</p>
+<pre><code class="language-kleis">import "stdlib/sets.kleis"
+
+// Verify De Morgan's law: complement(A ∪ B) = complement(A) ∩ complement(B)
+structure DeMorganProof(T) {
+    axiom de_morgan_union: ∀(A B : Set(T)).
+        complement(union(A, B)) = intersect(complement(A), complement(B))
+}
+</code></pre>
+<p>In the REPL:</p>
+<pre><code>λ&gt; :load stdlib/sets.kleis
+✅ Loaded stdlib/sets.kleis
+
+λ&gt; :verify ∀(A B : Set(ℤ), x : ℤ). in_set(x, complement(union(A, B))) ↔ (¬in_set(x, A) ∧ ¬in_set(x, B))
+✅ Valid (follows from axioms)
+</code></pre>
+<h2 id="mathematical-structures-with-sets"><a class="header" href="#mathematical-structures-with-sets">Mathematical Structures with Sets</a></h2>
+<h3 id="open-balls-in-metric-spaces"><a class="header" href="#open-balls-in-metric-spaces">Open Balls in Metric Spaces</a></h3>
+<pre><code class="language-kleis">import "stdlib/sets.kleis"
+
+structure MetricSpace(X) {
+    operation d : X → X → ℝ
+    
+    // Metric axioms
+    axiom positive: ∀(x y : X). d(x, y) &gt;= 0
+    axiom zero_iff_equal: ∀(x y : X). d(x, y) = 0 ↔ x = y
+    axiom symmetric: ∀(x y : X). d(x, y) = d(y, x)
+    axiom triangle: ∀(x y z : X). d(x, z) &lt;= d(x, y) + d(y, z)
+}
+
+structure OpenBalls(X) {
+    operation d : X → X → ℝ
+    operation ball : X → ℝ → Set(X)
+    
+    // x is in ball(center, r) iff d(x, center) &lt; r
+    axiom ball_def: ∀(center : X, r : ℝ, x : X).
+        in_set(x, ball(center, r)) ↔ d(x, center) &lt; r
+    
+    // Open balls are non-empty when radius is positive
+    axiom ball_nonempty: ∀(center : X, r : ℝ).
+        r &gt; 0 → in_set(center, ball(center, r))
+}
+</code></pre>
+<h3 id="measure-spaces"><a class="header" href="#measure-spaces">Measure Spaces</a></h3>
+<pre><code class="language-kleis">import "stdlib/sets.kleis"
+
+structure MeasureSpace(X) {
+    element sigma_algebra : Set(Set(X))
+    operation measure : Set(X) → ℝ
+    
+    // σ-algebra contains empty set
+    axiom contains_empty: in_set(empty_set, sigma_algebra)
+    
+    // Closed under complement
+    axiom closed_complement: ∀(A : Set(X)).
+        in_set(A, sigma_algebra) → in_set(complement(A), sigma_algebra)
+    
+    // Measure is non-negative
+    axiom measure_positive: ∀(A : Set(X)). measure(A) &gt;= 0
+    
+    // Measure of empty set is zero
+    axiom measure_empty: measure(empty_set) = 0
+}
+</code></pre>
+<h2 id="full-axiom-reference"><a class="header" href="#full-axiom-reference">Full Axiom Reference</a></h2>
+<p>The <code>SetTheory(T)</code> structure includes these axioms:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+<tr><th>Axiom</th><th>Statement</th></tr>
 </thead>
 <tbody>
-<tr><td><code>if</code></td><td>Conditional start</td><td><code>if x &gt; 0 then ...</code></td></tr>
-<tr><td><code>then</code></td><td>Conditional consequence</td><td><code>if P then Q else R</code></td></tr>
-<tr><td><code>else</code></td><td>Conditional alternative</td><td><code>if P then Q else R</code></td></tr>
-<tr><td><code>match</code></td><td>Pattern matching</td><td><code>match x { ... }</code></td></tr>
-<tr><td><code>let</code></td><td>Local binding</td><td><code>let x = 5 in ...</code></td></tr>
-<tr><td><code>in</code></td><td>Binding body</td><td><code>let x = 5 in x + 1</code></td></tr>
+<tr><td>Extensionality</td><td><code>∀(A B). (∀x. x ∈ A ↔ x ∈ B) → A = B</code></td></tr>
+<tr><td>Empty Set</td><td><code>∀x. ¬(x ∈ ∅)</code></td></tr>
+<tr><td>Singleton</td><td><code>∀x y. y ∈ {x} ↔ y = x</code></td></tr>
+<tr><td>Union</td><td><code>∀(A B) x. x ∈ A∪B ↔ (x ∈ A ∨ x ∈ B)</code></td></tr>
+<tr><td>Intersection</td><td><code>∀(A B) x. x ∈ A∩B ↔ (x ∈ A ∧ x ∈ B)</code></td></tr>
+<tr><td>Difference</td><td><code>∀(A B) x. x ∈ A\B ↔ (x ∈ A ∧ ¬(x ∈ B))</code></td></tr>
+<tr><td>Complement</td><td><code>∀A x. x ∈ Aᶜ ↔ ¬(x ∈ A)</code></td></tr>
+<tr><td>Subset</td><td><code>∀(A B). A ⊆ B ↔ (∀x. x ∈ A → x ∈ B)</code></td></tr>
+<tr><td>De Morgan (Union)</td><td><code>∀(A B). (A∪B)ᶜ = Aᶜ ∩ Bᶜ</code></td></tr>
+<tr><td>De Morgan (Intersection)</td><td><code>∀(A B). (A∩B)ᶜ = Aᶜ ∪ Bᶜ</code></td></tr>
+<tr><td>Double Complement</td><td><code>∀A. (Aᶜ)ᶜ = A</code></td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="functions"><a class="header" href="#functions">Functions</a></h3>
+<h2 id="unicode-operators-future"><a class="header" href="#unicode-operators-future">Unicode Operators (Future)</a></h2>
+<p>Currently, you must use function-style syntax. Future versions will support:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+<tr><th>Unicode</th><th>Function Style</th></tr>
 </thead>
 <tbody>
-<tr><td><code>lambda</code></td><td>Anonymous function (ASCII)</td><td><code>lambda x . x + 1</code></td></tr>
-<tr><td><code>λ</code></td><td>Anonymous function (Unicode)</td><td><code>λ x . x + 1</code></td></tr>
-<tr><td><code>define</code></td><td>Function definition</td><td><code>define f(x) = x^2</code></td></tr>
+<tr><td><code>x ∈ S</code></td><td><code>in_set(x, S)</code></td></tr>
+<tr><td><code>A ⊆ B</code></td><td><code>subset(A, B)</code></td></tr>
+<tr><td><code>A ∪ B</code></td><td><code>union(A, B)</code></td></tr>
+<tr><td><code>A ∩ B</code></td><td><code>intersect(A, B)</code></td></tr>
+<tr><td><code>A \ B</code></td><td><code>difference(A, B)</code></td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
-</thead>
-<tbody>
-<tr><td><code>forall</code></td><td>Universal quantifier (ASCII)</td><td><code>forall x . P(x)</code></td></tr>
-<tr><td><code>∀</code></td><td>Universal quantifier (Unicode)</td><td><code>∀(x : ℝ). x = x</code></td></tr>
-<tr><td><code>exists</code></td><td>Existential quantifier (ASCII)</td><td><code>exists x . P(x)</code></td></tr>
-<tr><td><code>∃</code></td><td>Existential quantifier (Unicode)</td><td><code>∃(x : ℝ). x &gt; 0</code></td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="logical-operators-keyword-form"><a class="header" href="#logical-operators-keyword-form">Logical Operators (keyword form)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
-</thead>
-<tbody>
-<tr><td><code>and</code></td><td>Logical conjunction</td><td><code>P and Q</code></td></tr>
-<tr><td><code>or</code></td><td>Logical disjunction</td><td><code>P or Q</code></td></tr>
-<tr><td><code>not</code></td><td>Logical negation</td><td><code>not P</code></td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="definitions"><a class="header" href="#definitions">Definitions</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
-</thead>
-<tbody>
-<tr><td><code>structure</code></td><td>Algebraic structure</td><td><code>structure Group(G) { ... }</code></td></tr>
-<tr><td><code>implements</code></td><td>Structure implementation</td><td><code>implements Group(ℤ) { ... }</code></td></tr>
-<tr><td><code>data</code></td><td>Algebraic data type</td><td><code>data Option(T) = Some(T) | None</code></td></tr>
-<tr><td><code>type</code></td><td>Type alias</td><td><code>type Point = (ℝ, ℝ)</code></td></tr>
-<tr><td><code>operation</code></td><td>Operation declaration</td><td><code>operation add : G × G → G</code></td></tr>
-<tr><td><code>element</code></td><td>Element declaration</td><td><code>element zero : G</code></td></tr>
-<tr><td><code>axiom</code></td><td>Axiom declaration</td><td><code>axiom identity : ...</code></td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="modifiers-and-clauses"><a class="header" href="#modifiers-and-clauses">Modifiers and Clauses</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
-</thead>
-<tbody>
-<tr><td><code>import</code></td><td>File import</td><td><code>import "stdlib/prelude.kleis"</code></td></tr>
-<tr><td><code>over</code></td><td>Type constraint</td><td><code>structure V over Field(F) { ... }</code></td></tr>
-<tr><td><code>extends</code></td><td>Structure extension</td><td><code>structure Ring extends Group { ... }</code></td></tr>
-<tr><td><code>as</code></td><td>Pattern alias</td><td><code>match x { y as Some(_) =&gt; ... }</code></td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="commands"><a class="header" href="#commands">Commands</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
-</thead>
-<tbody>
-<tr><td><code>verify</code></td><td>Verification directive</td><td><code>:verify P ∧ Q</code></td></tr>
-</tbody>
-</table>
-</div>
-<blockquote>
-<p><strong>Note:</strong> Using a reserved keyword as a variable name will cause a parse error.
-For example, <code>let lambda = 5</code> fails because <code>lambda</code> is reserved for anonymous functions.</p>
-</blockquote>
+<h2 id="see-also"><a class="header" href="#see-also">See Also</a></h2>
+<ul>
+<li><a href="./02-types.html">Types and Values</a> — <code>Set(T)</code> type documentation</li>
+<li><a href="./11-z3-verification.html">Z3 Verification</a> — Using Z3 for proofs</li>
+<li><a href="./09-structures.html">Structures</a> — Defining mathematical structures</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../appendix/grammar.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../chapters/17-strings.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../appendix/stdlib.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../appendix/grammar.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -456,11 +367,11 @@ For example, <code>let lambda = 5</code> fails because <code>lambda</code> is re
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../appendix/grammar.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../chapters/17-strings.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../appendix/stdlib.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../appendix/grammar.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

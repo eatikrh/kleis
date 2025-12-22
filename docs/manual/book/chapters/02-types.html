@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8c59b3c7.js";
+            window.path_to_searchindex_js = "../searchindex-f2c8b5ea.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1ed044a1.js"></script>
+        <script src="../toc-903d2734.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -224,6 +224,7 @@ define flag = True                // True is a boolean
 </thead>
 <tbody>
 <tr><td>Bit-Vector</td><td><code>BitVec(n)</code></td><td>n-bit binary vector (e.g., <code>BitVec(8)</code>, <code>BitVec(32)</code>)</td></tr>
+<tr><td>Set</td><td><code>Set(T)</code></td><td>Set of elements of type T (e.g., <code>Set(ℤ)</code>, <code>Set(ℝ)</code>)</td></tr>
 </tbody>
 </table>
 </div>
@@ -320,12 +321,63 @@ define make_adder(n : ℝ) : ℝ → ℝ = ???
 </tbody>
 </table>
 </div>
+<h2 id="set-types"><a class="header" href="#set-types">Set Types</a></h2>
+<p>Kleis provides a built-in <code>Set(T)</code> type backed by Z3’s native set theory. Sets are unordered collections of unique elements:</p>
+<pre><code class="language-kleis">// Declare a set type
+define S : Set(ℤ)
+
+// Set operations (see stdlib/sets.kleis for full structure)
+in_set(x, S)              // Membership: x ∈ S → Bool
+union(A, B)               // Union: A ∪ B → Set(T)
+intersect(A, B)           // Intersection: A ∩ B → Set(T)
+difference(A, B)          // Difference: A \ B → Set(T)
+complement(A)             // Complement: ᶜA → Set(T)
+subset(A, B)              // Subset test: A ⊆ B → Bool
+insert(x, S)              // Add element: S ∪ {x} → Set(T)
+remove(x, S)              // Remove element: S \ {x} → Set(T)
+singleton(x)              // Singleton set: {x} → Set(T)
+empty_set                 // Empty set: ∅
+</code></pre>
+<h3 id="set-theory-axioms"><a class="header" href="#set-theory-axioms">Set Theory Axioms</a></h3>
+<p>Sets come with a complete axiomatization (see <code>stdlib/sets.kleis</code>):</p>
+<pre><code class="language-kleis">structure SetTheory(T) {
+    // Core operations
+    operation in_set : T → Set(T) → Bool
+    operation union : Set(T) → Set(T) → Set(T)
+    operation intersect : Set(T) → Set(T) → Set(T)
+    element empty_set : Set(T)
+    
+    // Extensionality: sets are equal iff they have the same elements
+    axiom extensionality: ∀(A B : Set(T)). 
+        (∀(x : T). in_set(x, A) ↔ in_set(x, B)) → A = B
+    
+    // Union definition
+    axiom union_def: ∀(A B : Set(T), x : T). 
+        in_set(x, union(A, B)) ↔ (in_set(x, A) ∨ in_set(x, B))
+    
+    // De Morgan's laws
+    axiom de_morgan_union: ∀(A B : Set(T)). 
+        complement(union(A, B)) = intersect(complement(A), complement(B))
+}
+</code></pre>
+<h3 id="using-sets-in-verification"><a class="header" href="#using-sets-in-verification">Using Sets in Verification</a></h3>
+<p>Sets are particularly useful for specifying properties involving collections:</p>
+<pre><code class="language-kleis">structure MetricSpace(X) {
+    operation d : X → X → ℝ
+    operation ball : X → ℝ → Set(X)
+    
+    // Open ball definition
+    axiom ball_def: ∀(center : X, radius : ℝ, x : X).
+        in_set(x, ball(center, radius)) ↔ d(x, center) &lt; radius
+}
+</code></pre>
 <h2 id="parametric-types"><a class="header" href="#parametric-types">Parametric Types</a></h2>
 <p>Types can have parameters:</p>
 <pre><code class="language-kleis">// Parametric type examples:
 List(ℤ)           // List of integers
 Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 Vector(4)         // 4-dimensional vector
+Set(ℝ)            // Set of real numbers
 </code></pre>
 <h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
 <p>Kleis often infers types automatically:</p>
@@ -337,9 +389,9 @@ define square_five = let y = 5 in y * y
 </code></pre>
 <p>But explicit types make code clearer and catch errors earlier!</p>
 <h2 id="the-type-hierarchy"><a class="header" href="#the-type-hierarchy">The Type Hierarchy</a></h2>
-<pre><code>              Any
-         /    |    \
-     Scalar  String  Collection
+<pre><code>                    Any
+         /     |      \       \
+     Scalar  String  Collection  Set(T)
      /    \              |
     ℂ    Bool          List
     |                 /    \
@@ -352,6 +404,7 @@ define square_five = let y = 5 in y * y
     ℕ
 </code></pre>
 <p>Note: <code>ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ ⊂ ℂ</code> (naturals ⊂ integers ⊂ rationals ⊂ reals ⊂ complex)</p>
+<p><strong>Set(T)</strong> is parameterized by its element type. <code>Set(ℤ)</code> is a set of integers, <code>Set(ℝ)</code> is a set of reals, etc.</p>
 <h2 id="type-promotion-embedding"><a class="header" href="#type-promotion-embedding">Type Promotion (Embedding)</a></h2>
 <p>When you mix numeric types in an expression, Kleis automatically <strong>promotes</strong> the smaller type to the larger one. This is called <strong>type embedding</strong>, not subtyping.</p>
 <h3 id="embedding-vs-subtyping"><a class="header" href="#embedding-vs-subtyping">Embedding vs Subtyping</a></h3>
