@@ -257,9 +257,13 @@ define pct_to_real(p: Percentage) : ℝ =
 implements Promotes(Percentage, ℝ) {
   operation lift = pct_to_real   // References the function above
 }
+```
 
-// Now this works:
-:eval 0.5 + Pct(25)  // 0.5 + 0.25 = 0.75
+Now this works in the REPL:
+
+```
+λ> :eval 0.5 + pct_to_real(Pct(25))
+✅ 0.75
 ```
 
 **Key difference from built-in types:**
