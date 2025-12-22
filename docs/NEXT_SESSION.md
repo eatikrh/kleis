@@ -50,6 +50,34 @@ This allows users to define local variables in the visual editor.
 
 ---
 
+## 🎯 Equation Editor: Set Type Templates
+
+The Equation Editor should support Set operations with proper type inference.
+
+**Current Status:**
+- ✅ REPL can infer Set types: `insert(5, empty_set)` → `Set(Int)`
+- ❌ Equation Editor doesn't have Set operation templates
+
+**Needed templates:**
+- `in_set(x, S)` - membership test (x ∈ S)
+- `union(A, B)` - set union (A ∪ B)
+- `intersect(A, B)` - intersection (A ∩ B)
+- `difference(A, B)` - difference (A \ B)
+- `subset(A, B)` - subset test (A ⊆ B)
+- `empty_set` - empty set (∅)
+- `singleton(x)` - singleton set ({x})
+- `insert(x, S)` - add element
+
+**Files to modify:**
+- `static/index.html` - Add buttons to palette
+- `std_template_lib/sets.kleist` - Template definitions
+- `src/render_editor.rs` - Rendering templates
+- `patternfly-editor/` - PatternFly integration
+
+**Leave for future branch:** `feature/equation-editor-sets`
+
+---
+
 ## ⚠️ Program Synthesis: Documented Limitation
 
 **The Dream:** `spec → Z3 → program`

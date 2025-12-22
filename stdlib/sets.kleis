@@ -1,0 +1,202 @@
+// ============================================
+// Kleis Standard Library - Set Theory
+// ============================================
+//
+// This file provides set theory operations backed by Z3's set theory.
+//
+// Z3 provides native support for sets including:
+// - Empty set construction
+// - Element insertion and deletion
+// - Membership testing
+// - Union, intersection, difference
+// - Subset checking
+// - Complement
+//
+// All operations are connected to Z3 builtins for verification.
+// ============================================
+
+// --------------------------------------------
+// SetTheory Structure
+// --------------------------------------------
+// Defines the core set operations and their axioms.
+// Based on Bourbaki Volume I: Theory of Sets.
+
+structure SetTheory(T) {
+    // Membership: is element x in set S?
+    operation in_set : T → Set(T) → Bool
+    
+    // Subset: is A a subset of B?
+    operation subset : Set(T) → Set(T) → Bool
+    
+    // Proper subset: A ⊂ B means A ⊆ B and A ≠ B
+    operation proper_subset : Set(T) → Set(T) → Bool
+    
+    // Union: elements in A or B (or both)
+    operation union : Set(T) → Set(T) → Set(T)
+    
+    // Intersection: elements in both A and B
+    operation intersect : Set(T) → Set(T) → Set(T)
+    
+    // Difference: elements in A but not in B
+    operation difference : Set(T) → Set(T) → Set(T)
+    
+    // Complement: elements not in S (relative to universe)
+    operation complement : Set(T) → Set(T)
+    
+    // Empty set
+    element empty_set : Set(T)
+    
+    // Singleton: set containing just one element
+    operation singleton : T → Set(T)
+    
+    // Insert: add element to set
+    operation insert : T → Set(T) → Set(T)
+    
+    // Remove: delete element from set
+    operation remove : T → Set(T) → Set(T)
+    
+    // --------------------------------------------
+    // Axioms (from Bourbaki)
+    // --------------------------------------------
+    
+    // Extensionality: sets are equal iff they have the same elements
+    axiom extensionality: ∀(A B : Set(T)). 
+        (∀(x : T). in_set(x, A) ↔ in_set(x, B)) → A = B
+    
+    // Empty Set: no element belongs to the empty set
+    axiom empty_set_def: ∀(x : T). ¬in_set(x, empty_set)
+    
+    // Singleton: singleton(x) contains exactly x
+    axiom singleton_def: ∀(x y : T). 
+        in_set(y, singleton(x)) ↔ y = x
+    
+    // Insert: insert adds an element
+    axiom insert_def: ∀(x y : T, S : Set(T)). 
+        in_set(y, insert(x, S)) ↔ (y = x ∨ in_set(y, S))
+    
+    // Remove: remove deletes an element
+    axiom remove_def: ∀(x y : T, S : Set(T)). 
+        in_set(y, remove(x, S)) ↔ (y ≠ x ∧ in_set(y, S))
+    
+    // Subset: A ⊆ B means every element of A is in B
+    axiom subset_def: ∀(A B : Set(T)). 
+        subset(A, B) ↔ (∀(x : T). in_set(x, A) → in_set(x, B))
+    
+    // Proper Subset: A ⊂ B means A ⊆ B and A ≠ B
+    axiom proper_subset_def: ∀(A B : Set(T)). 
+        proper_subset(A, B) ↔ (subset(A, B) ∧ A ≠ B)
+    
+    // Union: x ∈ A ∪ B iff x ∈ A or x ∈ B
+    axiom union_def: ∀(A B : Set(T), x : T). 
+        in_set(x, union(A, B)) ↔ (in_set(x, A) ∨ in_set(x, B))
+    
+    // Intersection: x ∈ A ∩ B iff x ∈ A and x ∈ B
+    axiom intersect_def: ∀(A B : Set(T), x : T). 
+        in_set(x, intersect(A, B)) ↔ (in_set(x, A) ∧ in_set(x, B))
+    
+    // Difference: x ∈ A \ B iff x ∈ A and x ∉ B
+    axiom difference_def: ∀(A B : Set(T), x : T). 
+        in_set(x, difference(A, B)) ↔ (in_set(x, A) ∧ ¬in_set(x, B))
+    
+    // Complement: x ∈ complement(A) iff x ∉ A
+    axiom complement_def: ∀(A : Set(T), x : T). 
+        in_set(x, complement(A)) ↔ ¬in_set(x, A)
+    
+    // --------------------------------------------
+    // Derived Properties (theorems)
+    // --------------------------------------------
+    
+    // Union is commutative
+    axiom union_commutative: ∀(A B : Set(T)). union(A, B) = union(B, A)
+    
+    // Intersection is commutative
+    axiom intersect_commutative: ∀(A B : Set(T)). intersect(A, B) = intersect(B, A)
+    
+    // Union is associative
+    axiom union_associative: ∀(A B C : Set(T)). 
+        union(union(A, B), C) = union(A, union(B, C))
+    
+    // Intersection is associative
+    axiom intersect_associative: ∀(A B C : Set(T)). 
+        intersect(intersect(A, B), C) = intersect(A, intersect(B, C))
+    
+    // Empty set is identity for union
+    axiom union_empty: ∀(A : Set(T)). union(A, empty_set) = A
+    
+    // Empty set is absorbing for intersection
+    axiom intersect_empty: ∀(A : Set(T)). intersect(A, empty_set) = empty_set
+    
+    // Subset is reflexive
+    axiom subset_reflexive: ∀(A : Set(T)). subset(A, A)
+    
+    // Subset is transitive
+    axiom subset_transitive: ∀(A B C : Set(T)). 
+        subset(A, B) ∧ subset(B, C) → subset(A, C)
+    
+    // Subset is antisymmetric
+    axiom subset_antisymmetric: ∀(A B : Set(T)). 
+        subset(A, B) ∧ subset(B, A) → A = B
+    
+    // De Morgan's laws
+    axiom de_morgan_union: ∀(A B : Set(T)). 
+        complement(union(A, B)) = intersect(complement(A), complement(B))
+    
+    axiom de_morgan_intersect: ∀(A B : Set(T)). 
+        complement(intersect(A, B)) = union(complement(A), complement(B))
+    
+    // Double complement
+    axiom double_complement: ∀(A : Set(T)). complement(complement(A)) = A
+}
+
+// --------------------------------------------
+// Implementation for Integer Sets
+// --------------------------------------------
+// Connected to Z3's native set theory
+
+implements SetTheory(ℤ) {
+    operation in_set = builtin_set_member
+    operation subset = builtin_set_subset
+    operation proper_subset = builtin_set_proper_subset
+    operation union = builtin_set_union
+    operation intersect = builtin_set_intersect
+    operation difference = builtin_set_difference
+    operation complement = builtin_set_complement
+    element empty_set = builtin_set_empty
+    operation singleton = builtin_set_singleton
+    operation insert = builtin_set_add
+    operation remove = builtin_set_del
+}
+
+// --------------------------------------------
+// Implementation for Real Sets
+// --------------------------------------------
+
+implements SetTheory(ℝ) {
+    operation in_set = builtin_set_member
+    operation subset = builtin_set_subset
+    operation proper_subset = builtin_set_proper_subset
+    operation union = builtin_set_union
+    operation intersect = builtin_set_intersect
+    operation difference = builtin_set_difference
+    operation complement = builtin_set_complement
+    element empty_set = builtin_set_empty
+    operation singleton = builtin_set_singleton
+    operation insert = builtin_set_add
+    operation remove = builtin_set_del
+}
+
+// --------------------------------------------
+// Unicode Operator Aliases (Future)
+// --------------------------------------------
+// TODO: Add parser support for Unicode set operators:
+//   x ∈ S  →  in_set(x, S)
+//   x ∉ S  →  ¬in_set(x, S)
+//   A ⊆ B  →  subset(A, B)
+//   A ⊇ B  →  subset(B, A)
+//   A ⊂ B  →  proper_subset(A, B)
+//   A ∪ B  →  union(A, B)
+//   A ∩ B  →  intersect(A, B)
+//   A \ B  →  difference(A, B)
+//
+// For now, use function-style: in_set(x, S), union(A, B), etc.
+

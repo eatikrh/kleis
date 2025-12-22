@@ -584,6 +584,41 @@ impl SignatureInterpreter {
             }
 
             TypeExpr::Parametric(name, param_exprs) => {
+                // 0. Handle built-in parametric types first
+                match name.as_str() {
+                    // Set(T) - built-in set type backed by Z3
+                    "Set" => {
+                        if param_exprs.len() != 1 {
+                            return Err(format!(
+                                "Set expects 1 type parameter, got {}",
+                                param_exprs.len()
+                            ));
+                        }
+                        let element_type = self.interpret_type_expr(&param_exprs[0])?;
+                        return Ok(Type::Data {
+                            type_name: "Set".to_string(),
+                            constructor: "Set".to_string(),
+                            args: vec![element_type],
+                        });
+                    }
+                    // BitVec(n) - bit-vector type
+                    "BitVec" => {
+                        if param_exprs.len() != 1 {
+                            return Err(format!(
+                                "BitVec expects 1 size parameter, got {}",
+                                param_exprs.len()
+                            ));
+                        }
+                        let n = self.eval_param(&param_exprs[0])?;
+                        return Ok(Type::Data {
+                            type_name: "BitVec".to_string(),
+                            constructor: "BitVec".to_string(),
+                            args: vec![Type::NatValue(n)],
+                        });
+                    }
+                    _ => {}
+                }
+
                 // 1. Check if this is a user-defined parametric type
                 if let Some(data_def) = self.data_registry.get_type(name) {
                     // GENERIC handling for ANY arity!

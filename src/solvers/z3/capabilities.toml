@@ -67,6 +67,10 @@ theories = [
     "Rational",        # ℚ mapped to Real (subset)
     "rational",        # Alias
     
+    # Set Theory (native Z3)
+    "Set",             # Set theory (Set T) (native)
+    "sets",            # Alias for Set
+    
     # Always available
     "uninterpreted_functions"  # Abstract operations (native)
 ]
@@ -263,6 +267,45 @@ bvconcat = { arity = 2, theory = "BitVec", native = true, description = "Concate
 zext = { arity = 2, theory = "BitVec", native = true, description = "Zero-extend to width m" }
 sext = { arity = 2, theory = "BitVec", native = true, description = "Sign-extend to width m" }
 
+# ============================================
+# SET OPERATIONS (native Z3 Set theory)
+# ============================================
+# Z3 provides native set operations with complete axiomatization.
+# Set(T) is the sort of sets with element type T.
+
+# Set construction
+empty_set = { arity = 0, theory = "Set", native = true, description = "Empty set ∅" }
+set_empty = { arity = 0, theory = "Set", native = true, description = "Alias for empty_set" }
+singleton = { arity = 1, theory = "Set", native = true, description = "Singleton set {x}" }
+set_singleton = { arity = 1, theory = "Set", native = true, description = "Alias for singleton" }
+
+# Set modification
+insert = { arity = 2, theory = "Set", native = true, description = "Add element: S ∪ {x}" }
+set_add = { arity = 2, theory = "Set", native = true, description = "Alias for insert" }
+remove = { arity = 2, theory = "Set", native = true, description = "Remove element: S \\ {x}" }
+set_del = { arity = 2, theory = "Set", native = true, description = "Alias for remove" }
+
+# Set membership
+in_set = { arity = 2, theory = "Set", native = true, description = "Membership test: x ∈ S" }
+member = { arity = 2, theory = "Set", native = true, description = "Alias for in_set" }
+set_member = { arity = 2, theory = "Set", native = true, description = "Alias for in_set" }
+
+# Set operations
+union = { arity = 2, theory = "Set", native = true, description = "Set union: A ∪ B" }
+set_union = { arity = 2, theory = "Set", native = true, description = "Alias for union" }
+intersect = { arity = 2, theory = "Set", native = true, description = "Set intersection: A ∩ B" }
+set_intersect = { arity = 2, theory = "Set", native = true, description = "Alias for intersect" }
+intersection = { arity = 2, theory = "Set", native = true, description = "Alias for intersect" }
+difference = { arity = 2, theory = "Set", native = true, description = "Set difference: A \\ B" }
+set_difference = { arity = 2, theory = "Set", native = true, description = "Alias for difference" }
+set_diff = { arity = 2, theory = "Set", native = true, description = "Alias for difference" }
+complement = { arity = 1, theory = "Set", native = true, description = "Set complement: ᶜA" }
+set_complement = { arity = 1, theory = "Set", native = true, description = "Alias for complement" }
+
+# Set relations
+subset = { arity = 2, theory = "Set", native = true, description = "Subset test: A ⊆ B" }
+set_subset = { arity = 2, theory = "Set", native = true, description = "Alias for subset" }
+
 # Note: Z3 supports many more operations via its built-in theories,
 # but these are the ones explicitly translated in our current implementation.
 # Other operations (sin, cos, matrix_multiply, etc.) are treated as
@@ -281,6 +324,7 @@ proof_generation = false  # Available in Z3 but not exposed yet
 string_theory = true   # QF_SLIA: Quantifier-Free Strings and Linear Integer Arithmetic
 regex_support = true   # Regular expression constraints via str.in_re
 bitvector_theory = true   # BitVec (_ BitVec n) - NOW SUPPORTED in Kleis (Dec 2024)
+set_theory = true      # Set(T) with membership, union, intersection, etc.
 array_theory = false   # Array available in Z3 but NOT YET USED in Kleis
 
 # Encoded/Emulated support

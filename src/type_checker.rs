@@ -274,6 +274,11 @@ impl TypeChecker {
         })
     }
 
+    /// Get access to the type context builder (for testing)
+    pub fn context_builder(&self) -> &TypeContextBuilder {
+        &self.context_builder
+    }
+
     /// Bind a variable to a type
     pub fn bind(&mut self, name: &str, type_expr: &TypeExpr) {
         // Convert TypeExpr to Type

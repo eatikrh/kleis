@@ -1,0 +1,113 @@
+// ============================================
+// Basic Set Theory Examples
+// ============================================
+// Demonstrates Kleis set operations backed by Z3
+
+import "stdlib/sets.kleis"
+
+// ============================================
+// 1. Group Closure Under an Operation
+// ============================================
+// A set is closed under an operation if applying the
+// operation to elements in the set stays in the set.
+
+structure ClosedUnderAddition(T) {
+    operation add : T → T → T
+    
+    axiom closure: ∀(S : Set(T), x y : T).
+        in_set(x, S) ∧ in_set(y, S) → in_set(add(x, y), S)
+}
+
+// ============================================
+// 2. Equivalence Classes
+// ============================================
+// Elements in the same equivalence class are related
+
+structure EquivalenceClass(T) {
+    operation eq_class : T → Set(T)
+    operation related : T → T → Bool
+    
+    // x is in its own equivalence class
+    axiom reflexive: ∀(x : T). in_set(x, eq_class(x))
+    
+    // y in [x] means x ~ y
+    axiom member_related: ∀(x y : T).
+        in_set(y, eq_class(x)) ↔ related(x, y)
+    
+    // Equivalence classes are equal or disjoint
+    axiom partition: ∀(x y : T).
+        related(x, y) → eq_class(x) = eq_class(y)
+}
+
+// ============================================
+// 3. Topology: Open Sets
+// ============================================
+// Open sets in a topological space
+
+structure Topology(X) {
+    element open_sets : Set(Set(X))
+    
+    // Empty set is open
+    axiom empty_open: in_set(empty_set, open_sets)
+    
+    // Finite intersection is open
+    axiom intersection_open: ∀(A B : Set(X)).
+        in_set(A, open_sets) ∧ in_set(B, open_sets) →
+        in_set(intersect(A, B), open_sets)
+    
+    // Arbitrary union is open
+    axiom union_open: ∀(A B : Set(X)).
+        in_set(A, open_sets) ∧ in_set(B, open_sets) →
+        in_set(union(A, B), open_sets)
+}
+
+// ============================================
+// 4. Function Images and Preimages
+// ============================================
+// f(A) = { f(x) : x ∈ A }
+// f⁻¹(B) = { x : f(x) ∈ B }
+
+structure FunctionSets(X, Y) {
+    operation f : X → Y
+    operation image : Set(X) → Set(Y)
+    operation preimage : Set(Y) → Set(X)
+    
+    // Image definition
+    axiom image_def: ∀(A : Set(X), y : Y).
+        in_set(y, image(A)) ↔ (∃(x : X). in_set(x, A) ∧ f(x) = y)
+    
+    // Preimage definition  
+    axiom preimage_def: ∀(B : Set(Y), x : X).
+        in_set(x, preimage(B)) ↔ in_set(f(x), B)
+    
+    // Preimage of union
+    axiom preimage_union: ∀(B1 B2 : Set(Y)).
+        preimage(union(B1, B2)) = union(preimage(B1), preimage(B2))
+    
+    // Preimage of intersection
+    axiom preimage_intersect: ∀(B1 B2 : Set(Y)).
+        preimage(intersect(B1, B2)) = intersect(preimage(B1), preimage(B2))
+}
+
+// ============================================
+// 5. Cardinality Bounds (for finite sets)
+// ============================================
+// Note: Cardinality is not fully decidable for infinite sets
+
+structure FiniteSets(T) {
+    operation card : Set(T) → ℤ
+    
+    axiom card_empty: card(empty_set) = 0
+    
+    axiom card_singleton: ∀(x : T). card(singleton(x)) = 1
+    
+    axiom card_insert: ∀(x : T, S : Set(T)).
+        ¬in_set(x, S) → card(insert(x, S)) = card(S) + 1
+    
+    axiom card_union_bound: ∀(A B : Set(T)).
+        card(union(A, B)) <= card(A) + card(B)
+    
+    axiom inclusion_exclusion: ∀(A B : Set(T)).
+        card(union(A, B)) = card(A) + card(B) - card(intersect(A, B))
+}
+
