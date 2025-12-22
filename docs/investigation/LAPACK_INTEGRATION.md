@@ -362,9 +362,75 @@ This makes Kleis future-proof and keeps the semantic/numeric boundary clean.
 
 ---
 
+---
+
+## Direct LAPACK Access for Schur/QZ
+
+### The Problem
+
+No high-level Rust crate exposes `xGEES` (Schur decomposition) directly:
+- `ndarray-linalg` doesn't expose it
+- `nalgebra` doesn't expose it
+- `faer` has its own implementation but different API
+
+### LAPACK Routines We Need
+
+| Routine | Purpose | Kleis Operation |
+|---------|---------|-----------------|
+| `dgees` | Real Schur decomposition | `schur(A) → (U, T)` |
+| `dgges` | Generalized Schur (QZ) | `qz(A, B) → (Q, Z, S, T)` |
+| `dtrsen` | Reorder Schur form | `schur_reorder(...)` |
+| `dtgsen` | Reorder QZ form | `qz_reorder(...)` |
+
+### Rust Crates for Direct LAPACK
+
+| Crate | Level | Notes |
+|-------|-------|-------|
+| `lapack` | Mid-level | Safe wrappers, no ndarray integration |
+| `lax` | Low-level | Used by ndarray-linalg internally |
+| `lapack-sys` | FFI | Raw C bindings |
+
+### Implementation Path
+
+**Option 1: Use `lax` directly (recommended)**
+```rust
+use lax::DGEES;
+
+// lax provides the LAPACK routines ndarray-linalg uses
+```
+
+**Option 2: Use `lapack` crate**
+```toml
+[dependencies]
+lapack = "0.19"
+```
+
+```rust
+use lapack::dgees;
+// Requires manual memory layout handling
+```
+
+**Option 3: Wait for faer integration**
+- `faer` has native Schur implementation
+- Different API than ndarray
+
+### Current Status
+
+Schur/QZ operations are **stubbed out** in `src/numerical/backend.rs`:
+- Return `NotImplemented` error
+- Document what LAPACK routines are needed
+- Will implement when Control Toolkit is built
+
+---
+
 ## Next Steps
 
-1. [ ] Add `faer` to Cargo.toml (feature-gated)
+1. [x] Add `ndarray-linalg` with Accelerate (done)
+2. [x] Implement core operations: eig, svd, solve, inv, qr, cholesky (done)
+3. [ ] Add `lax` for direct LAPACK calls (Schur, QZ)
+4. [ ] Implement Schur decomposition via dgees
+5. [ ] Implement QZ decomposition via dgges
+6. [ ] Build Control Toolkit structures in Kleis
 2. [ ] Implement `NumericalBackend` trait
 3. [ ] Add `eigenvalues` operation to evaluator
 4. [ ] Add tests for numerical operations
