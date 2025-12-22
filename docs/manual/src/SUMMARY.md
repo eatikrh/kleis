@@ -34,6 +34,7 @@
 - [Bit-Vectors](./chapters/16-bit-vectors.md)
 - [Strings](./chapters/17-strings.md)
 - [Set Theory](./chapters/18-sets.md)
+- [Matrices](./chapters/19-matrices.md)
 
 # Appendices
 

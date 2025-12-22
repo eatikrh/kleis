@@ -1704,6 +1704,465 @@ impl Evaluator {
                 }
             }
 
+            // ============================================
+            // MATRIX OPERATIONS (Concrete Evaluation)
+            // ============================================
+            "matrix_add" | "builtin_matrix_add" => {
+                // Matrix addition: element-wise addition of two matrices
+                // Supports partial symbolic evaluation
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m1, n1, elems1)), Some((m2, n2, elems2))) =
+                    (self.extract_matrix(&args[0]), self.extract_matrix(&args[1]))
+                {
+                    if m1 != m2 || n1 != n2 {
+                        return Err(format!(
+                            "matrix_add: dimension mismatch: {}x{} vs {}x{}",
+                            m1, n1, m2, n2
+                        ));
+                    }
+                    let result: Vec<Expression> = elems1
+                        .iter()
+                        .zip(elems2.iter())
+                        .map(|(a, b)| self.add_expressions(a, b))
+                        .collect();
+                    Ok(Some(self.make_matrix(m1, n1, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "matrix_sub" | "builtin_matrix_sub" => {
+                // Matrix subtraction: element-wise subtraction
+                // Supports partial symbolic evaluation
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m1, n1, elems1)), Some((m2, n2, elems2))) =
+                    (self.extract_matrix(&args[0]), self.extract_matrix(&args[1]))
+                {
+                    if m1 != m2 || n1 != n2 {
+                        return Err(format!(
+                            "matrix_sub: dimension mismatch: {}x{} vs {}x{}",
+                            m1, n1, m2, n2
+                        ));
+                    }
+                    let result: Vec<Expression> = elems1
+                        .iter()
+                        .zip(elems2.iter())
+                        .map(|(a, b)| self.sub_expressions(a, b))
+                        .collect();
+                    Ok(Some(self.make_matrix(m1, n1, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "multiply" | "builtin_matrix_mul" | "matmul" => {
+                // Matrix multiplication: (m×n) · (n×p) → (m×p)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m1, n1, elems1)), Some((m2, n2, elems2))) =
+                    (self.extract_matrix(&args[0]), self.extract_matrix(&args[1]))
+                {
+                    if n1 != m2 {
+                        return Err(format!(
+                            "matrix multiply: inner dimensions don't match: {}x{} vs {}x{}",
+                            m1, n1, m2, n2
+                        ));
+                    }
+                    // Check all elements are numeric (no symbolic variables)
+                    let all_numeric = elems1
+                        .iter()
+                        .chain(elems2.iter())
+                        .all(|e| self.as_number(e).is_some());
+                    if !all_numeric {
+                        // Contains symbolic elements - return unevaluated
+                        return Ok(None);
+                    }
+                    // Compute C[i,j] = sum(A[i,k] * B[k,j] for k in 0..n1)
+                    let mut result = Vec::with_capacity(m1 * n2);
+                    for i in 0..m1 {
+                        for j in 0..n2 {
+                            let mut sum = 0.0;
+                            for k in 0..n1 {
+                                let a_val = self.as_number(&elems1[i * n1 + k]).unwrap_or(0.0);
+                                let b_val = self.as_number(&elems2[k * n2 + j]).unwrap_or(0.0);
+                                sum += a_val * b_val;
+                            }
+                            if sum.fract() == 0.0 && sum.abs() < 1e15 {
+                                result.push(Expression::Const(format!("{}", sum as i64)));
+                            } else {
+                                result.push(Expression::Const(format!("{}", sum)));
+                            }
+                        }
+                    }
+                    Ok(Some(self.make_matrix(m1, n2, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "transpose" | "builtin_transpose" => {
+                // Matrix transpose: (m×n) → (n×m)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    // Transpose: result[j,i] = original[i,j]
+                    let mut result = Vec::with_capacity(m * n);
+                    for j in 0..n {
+                        for i in 0..m {
+                            result.push(elems[i * n + j].clone());
+                        }
+                    }
+                    Ok(Some(self.make_matrix(n, m, result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "trace" | "builtin_trace" => {
+                // Matrix trace: sum of diagonal elements (square matrices only)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if m != n {
+                        return Err(format!("trace: matrix must be square, got {}x{}", m, n));
+                    }
+                    // Check diagonal elements are numeric
+                    let diag_numeric = (0..m).all(|i| self.as_number(&elems[i * n + i]).is_some());
+                    if !diag_numeric {
+                        // Contains symbolic diagonal elements - return unevaluated
+                        return Ok(None);
+                    }
+                    let mut sum = 0.0;
+                    for i in 0..m {
+                        if let Some(val) = self.as_number(&elems[i * n + i]) {
+                            sum += val;
+                        }
+                    }
+                    if sum.fract() == 0.0 && sum.abs() < 1e15 {
+                        Ok(Some(Expression::Const(format!("{}", sum as i64))))
+                    } else {
+                        Ok(Some(Expression::Const(format!("{}", sum))))
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "det" | "builtin_determinant" => {
+                // Matrix determinant (only 2x2 and 3x3 for now)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if m != n {
+                        return Err(format!("det: matrix must be square, got {}x{}", m, n));
+                    }
+                    // Check all elements are numeric (no symbolic variables)
+                    if !elems.iter().all(|e| self.as_number(e).is_some()) {
+                        // Contains symbolic elements - return unevaluated
+                        return Ok(None);
+                    }
+                    let det = match m {
+                        1 => self.as_number(&elems[0]).unwrap_or(0.0),
+                        2 => {
+                            // det([[a,b],[c,d]]) = ad - bc
+                            let a = self.as_number(&elems[0]).unwrap_or(0.0);
+                            let b = self.as_number(&elems[1]).unwrap_or(0.0);
+                            let c = self.as_number(&elems[2]).unwrap_or(0.0);
+                            let d = self.as_number(&elems[3]).unwrap_or(0.0);
+                            a * d - b * c
+                        }
+                        3 => {
+                            // Sarrus rule for 3x3
+                            let a = |i: usize, j: usize| {
+                                self.as_number(&elems[i * 3 + j]).unwrap_or(0.0)
+                            };
+                            a(0, 0) * (a(1, 1) * a(2, 2) - a(1, 2) * a(2, 1))
+                                - a(0, 1) * (a(1, 0) * a(2, 2) - a(1, 2) * a(2, 0))
+                                + a(0, 2) * (a(1, 0) * a(2, 1) - a(1, 1) * a(2, 0))
+                        }
+                        _ => {
+                            return Err(format!(
+                                "det: only 1x1, 2x2, 3x3 supported, got {}x{}",
+                                m, n
+                            ))
+                        }
+                    };
+                    if det.fract() == 0.0 && det.abs() < 1e15 {
+                        Ok(Some(Expression::Const(format!("{}", det as i64))))
+                    } else {
+                        Ok(Some(Expression::Const(format!("{}", det))))
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "scalar_matrix_mul" | "builtin_matrix_scalar_mul" => {
+                // Scalar * Matrix: multiply all elements by scalar
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                // Try both orders: scalar * matrix or matrix * scalar
+                let (scalar, matrix) = if let Some(s) = self.as_number(&args[0]) {
+                    if let Some(mat) = self.extract_matrix(&args[1]) {
+                        (s, mat)
+                    } else {
+                        return Ok(None);
+                    }
+                } else if let Some(s) = self.as_number(&args[1]) {
+                    if let Some(mat) = self.extract_matrix(&args[0]) {
+                        (s, mat)
+                    } else {
+                        return Ok(None);
+                    }
+                } else {
+                    return Ok(None);
+                };
+
+                let (m, n, elems) = matrix;
+                let result: Result<Vec<Expression>, String> = elems
+                    .iter()
+                    .map(|e| {
+                        if let Some(val) = self.as_number(e) {
+                            let product = scalar * val;
+                            if product.fract() == 0.0 && product.abs() < 1e15 {
+                                Ok(Expression::Const(format!("{}", product as i64)))
+                            } else {
+                                Ok(Expression::Const(format!("{}", product)))
+                            }
+                        } else {
+                            Err("scalar_matrix_mul: non-numeric element".to_string())
+                        }
+                    })
+                    .collect();
+                Ok(Some(self.make_matrix(m, n, result?)))
+            }
+
+            "matrix_get" | "element" => {
+                // Get element at (i, j) from matrix
+                // matrix_get(M, i, j) → element
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    let i = self.as_integer(&args[1]);
+                    let j = self.as_integer(&args[2]);
+                    if let (Some(i), Some(j)) = (i, j) {
+                        let i = i as usize;
+                        let j = j as usize;
+                        if i < m && j < n {
+                            let idx = i * n + j;
+                            Ok(Some(elems[idx].clone()))
+                        } else {
+                            Err(format!(
+                                "matrix_get: index ({}, {}) out of bounds for {}x{} matrix",
+                                i, j, m, n
+                            ))
+                        }
+                    } else {
+                        Ok(None) // Symbolic indices - return unevaluated
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "matrix_row" | "row" => {
+                // Get row i from matrix as a list
+                // matrix_row(M, i) → [elements]
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if let Some(i) = self.as_integer(&args[1]) {
+                        let i = i as usize;
+                        if i < m {
+                            let start = i * n;
+                            let row: Vec<Expression> = elems[start..start + n].to_vec();
+                            Ok(Some(Expression::List(row)))
+                        } else {
+                            Err(format!(
+                                "matrix_row: row {} out of bounds for {}x{} matrix",
+                                i, m, n
+                            ))
+                        }
+                    } else {
+                        Ok(None) // Symbolic index - return unevaluated
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "matrix_col" | "col" => {
+                // Get column j from matrix as a list
+                // matrix_col(M, j) → [elements]
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if let Some(j) = self.as_integer(&args[1]) {
+                        let j = j as usize;
+                        if j < n {
+                            let col: Vec<Expression> =
+                                (0..m).map(|i| elems[i * n + j].clone()).collect();
+                            Ok(Some(Expression::List(col)))
+                        } else {
+                            Err(format!(
+                                "matrix_col: column {} out of bounds for {}x{} matrix",
+                                j, m, n
+                            ))
+                        }
+                    } else {
+                        Ok(None) // Symbolic index - return unevaluated
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "matrix_diag" | "diag" => {
+                // Get diagonal elements from square matrix as a list
+                // matrix_diag(M) → [diagonal elements]
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    if m != n {
+                        return Err(format!(
+                            "matrix_diag: matrix must be square, got {}x{}",
+                            m, n
+                        ));
+                    }
+                    let diag: Vec<Expression> = (0..m).map(|i| elems[i * n + i].clone()).collect();
+                    Ok(Some(Expression::List(diag)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // ============================================
+            // COMPLEX NUMBER OPERATIONS (Concrete Evaluation)
+            // ============================================
+            "complex_add" | "cadd" => {
+                // Complex addition: (a+bi) + (c+di) = (a+c) + (b+d)i
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((re1, im1)), Some((re2, im2))) = (
+                    self.extract_complex(&args[0]),
+                    self.extract_complex(&args[1]),
+                ) {
+                    let re_sum = self.add_expressions(&re1, &re2);
+                    let im_sum = self.add_expressions(&im1, &im2);
+                    Ok(Some(self.make_complex(re_sum, im_sum)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "complex_sub" | "csub" => {
+                // Complex subtraction: (a+bi) - (c+di) = (a-c) + (b-d)i
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((re1, im1)), Some((re2, im2))) = (
+                    self.extract_complex(&args[0]),
+                    self.extract_complex(&args[1]),
+                ) {
+                    let re_diff = self.sub_expressions(&re1, &re2);
+                    let im_diff = self.sub_expressions(&im1, &im2);
+                    Ok(Some(self.make_complex(re_diff, im_diff)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "complex_mul" | "cmul" => {
+                // Complex multiplication: (a+bi)(c+di) = (ac-bd) + (ad+bc)i
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((re1, im1)), Some((re2, im2))) = (
+                    self.extract_complex(&args[0]),
+                    self.extract_complex(&args[1]),
+                ) {
+                    // Real part: ac - bd
+                    let ac = self.mul_expressions(&re1, &re2);
+                    let bd = self.mul_expressions(&im1, &im2);
+                    let re_result = self.sub_expressions(&ac, &bd);
+
+                    // Imaginary part: ad + bc
+                    let ad = self.mul_expressions(&re1, &im2);
+                    let bc = self.mul_expressions(&im1, &re2);
+                    let im_result = self.add_expressions(&ad, &bc);
+
+                    Ok(Some(self.make_complex(re_result, im_result)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "complex_conj" | "conj" | "conjugate" => {
+                // Complex conjugate: conj(a+bi) = a-bi
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((re, im)) = self.extract_complex(&args[0]) {
+                    // Negate imaginary part
+                    let neg_im = self.negate_expression(&im);
+                    Ok(Some(self.make_complex(re, neg_im)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "complex_abs_squared" | "abs_sq" => {
+                // |z|² = a² + b² (returns real)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((re, im)) = self.extract_complex(&args[0]) {
+                    let re_sq = self.mul_expressions(&re, &re);
+                    let im_sq = self.mul_expressions(&im, &im);
+                    Ok(Some(self.add_expressions(&re_sq, &im_sq)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "Re" | "re" | "real_part" | "real" => {
+                // Real part of complex number
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((re, _im)) = self.extract_complex(&args[0]) {
+                    Ok(Some(re))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "Im" | "im" | "imag_part" | "imag" => {
+                // Imaginary part of complex number
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((_re, im)) = self.extract_complex(&args[0]) {
+                    Ok(Some(im))
+                } else {
+                    Ok(None)
+                }
+            }
+
             // Not a built-in
             _ => Ok(None),
         }
@@ -1809,6 +2268,172 @@ impl Evaluator {
             (Expression::Const(x), Expression::String(y)) => x == y,
             (Expression::String(x), Expression::Const(y)) => x == y,
             _ => false,
+        }
+    }
+
+    // === Matrix helper methods ===
+
+    /// Extract (rows, cols, elements) from a Matrix expression
+    /// Handles: Matrix(m, n, [elements]) or Matrix(m, n, List([elements]))
+    fn extract_matrix(&self, expr: &Expression) -> Option<(usize, usize, Vec<Expression>)> {
+        match expr {
+            Expression::Operation { name, args } if name == "Matrix" && args.len() >= 3 => {
+                // Matrix(m, n, elements)
+                let m = self.as_integer(&args[0])? as usize;
+                let n = self.as_integer(&args[1])? as usize;
+
+                // Elements can be a List or inline elements
+                let elements = match &args[2] {
+                    Expression::List(elems) => elems.clone(),
+                    Expression::Operation {
+                        name: list_name,
+                        args: list_args,
+                    } if list_name == "List" => list_args.clone(),
+                    // If more than 3 args, elements are inline (old format)
+                    _ if args.len() > 3 => args[2..].to_vec(),
+                    // Single element matrix
+                    other => vec![other.clone()],
+                };
+
+                if elements.len() == m * n {
+                    Some((m, n, elements))
+                } else {
+                    None // Element count doesn't match dimensions
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Create a Matrix expression from dimensions and elements
+    fn make_matrix(&self, m: usize, n: usize, elements: Vec<Expression>) -> Expression {
+        Expression::Operation {
+            name: "Matrix".to_string(),
+            args: vec![
+                Expression::Const(format!("{}", m)),
+                Expression::Const(format!("{}", n)),
+                Expression::List(elements),
+            ],
+        }
+    }
+
+    // === Symbolic arithmetic helpers ===
+    // These handle mixed concrete/symbolic expressions
+
+    /// Add two expressions, computing concrete results when possible
+    fn add_expressions(&self, a: &Expression, b: &Expression) -> Expression {
+        match (self.as_number(a), self.as_number(b)) {
+            (Some(x), Some(y)) => {
+                let sum = x + y;
+                if sum.fract() == 0.0 && sum.abs() < 1e15 {
+                    Expression::Const(format!("{}", sum as i64))
+                } else {
+                    Expression::Const(format!("{}", sum))
+                }
+            }
+            // 0 + x = x
+            (Some(0.0), None) => b.clone(),
+            // x + 0 = x
+            (None, Some(0.0)) => a.clone(),
+            // Symbolic: create plus operation
+            _ => Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![a.clone(), b.clone()],
+            },
+        }
+    }
+
+    /// Subtract two expressions, computing concrete results when possible
+    fn sub_expressions(&self, a: &Expression, b: &Expression) -> Expression {
+        match (self.as_number(a), self.as_number(b)) {
+            (Some(x), Some(y)) => {
+                let diff = x - y;
+                if diff.fract() == 0.0 && diff.abs() < 1e15 {
+                    Expression::Const(format!("{}", diff as i64))
+                } else {
+                    Expression::Const(format!("{}", diff))
+                }
+            }
+            // x - 0 = x
+            (None, Some(0.0)) => a.clone(),
+            // Symbolic: create minus operation
+            _ => Expression::Operation {
+                name: "minus".to_string(),
+                args: vec![a.clone(), b.clone()],
+            },
+        }
+    }
+
+    /// Multiply two expressions, computing concrete results when possible
+    fn mul_expressions(&self, a: &Expression, b: &Expression) -> Expression {
+        match (self.as_number(a), self.as_number(b)) {
+            (Some(x), Some(y)) => {
+                let prod = x * y;
+                if prod.fract() == 0.0 && prod.abs() < 1e15 {
+                    Expression::Const(format!("{}", prod as i64))
+                } else {
+                    Expression::Const(format!("{}", prod))
+                }
+            }
+            // 0 * x = 0
+            (Some(0.0), _) => Expression::Const("0".to_string()),
+            // x * 0 = 0
+            (_, Some(0.0)) => Expression::Const("0".to_string()),
+            // 1 * x = x
+            (Some(1.0), None) => b.clone(),
+            // x * 1 = x
+            (None, Some(1.0)) => a.clone(),
+            // Symbolic: create times operation
+            _ => Expression::Operation {
+                name: "times".to_string(),
+                args: vec![a.clone(), b.clone()],
+            },
+        }
+    }
+
+    /// Negate an expression
+    fn negate_expression(&self, a: &Expression) -> Expression {
+        match self.as_number(a) {
+            Some(x) => {
+                let neg = -x;
+                if neg.fract() == 0.0 && neg.abs() < 1e15 {
+                    Expression::Const(format!("{}", neg as i64))
+                } else {
+                    Expression::Const(format!("{}", neg))
+                }
+            }
+            // 0 negated is still 0
+            None if matches!(a, Expression::Const(s) if s == "0") => {
+                Expression::Const("0".to_string())
+            }
+            // Symbolic: create negate operation
+            None => Expression::Operation {
+                name: "negate".to_string(),
+                args: vec![a.clone()],
+            },
+        }
+    }
+
+    // === Complex number helpers ===
+
+    /// Extract (real, imag) from a complex expression
+    /// Handles: complex(re, im) or Complex(re, im)
+    fn extract_complex(&self, expr: &Expression) -> Option<(Expression, Expression)> {
+        match expr {
+            Expression::Operation { name, args }
+                if (name == "complex" || name == "Complex") && args.len() == 2 =>
+            {
+                Some((args[0].clone(), args[1].clone()))
+            }
+            _ => None,
+        }
+    }
+
+    /// Create a complex expression from real and imaginary parts
+    fn make_complex(&self, re: Expression, im: Expression) -> Expression {
+        Expression::Operation {
+            name: "complex".to_string(),
+            args: vec![re, im],
         }
     }
 }
