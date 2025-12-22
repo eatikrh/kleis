@@ -38,6 +38,49 @@ Kleis automatically converts these to the appropriate complex operations via **s
 
 This works transparently in the REPL and for verification.
 
+## Concrete Evaluation with `:eval`
+
+For direct computation with complex numbers, use the `:eval` command:
+
+```kleis
+:eval complex_add(complex(1, 2), complex(3, 4))
+// → complex(4, 6)
+
+:eval complex_sub(complex(10, 20), complex(3, 4))
+// → complex(7, 16)
+
+:eval complex_mul(complex(1, 2), complex(3, 4))
+// → complex(-5, 10)
+
+:eval complex_conj(complex(3, 4))
+// → complex(3, -4)
+
+:eval complex_abs_squared(complex(3, 4))
+// → 25  (|3+4i|² = 9 + 16 = 25)
+```
+
+### Extracting Parts
+
+```kleis
+:eval real(complex(5, 7))
+// → 5
+
+:eval imag(complex(5, 7))
+// → 7
+```
+
+### Mixed Symbolic/Concrete
+
+`:eval` supports partial symbolic evaluation:
+
+```kleis
+:eval complex_add(complex(a, 2), complex(3, 4))
+// → complex(a + 3, 6)
+
+:eval complex_mul(complex(a, 0), complex(0, b))
+// → complex(0, a * b)
+```
+
 ## The Imaginary Unit
 
 The imaginary unit `i` is predefined in Kleis:

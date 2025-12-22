@@ -95,7 +95,8 @@ fn test_scalar_matrix_mul() {
 #[test]
 fn test_matrix_add_dimension_mismatch() {
     // Should error on dimension mismatch
-    let result = eval("matrix_add(Matrix(2, 2, [1, 2, 3, 4]), Matrix(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]))");
+    let result =
+        eval("matrix_add(Matrix(2, 2, [1, 2, 3, 4]), Matrix(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]))");
     assert!(result.contains("dimension mismatch") || result.contains("Error"));
 }
 
@@ -254,4 +255,3 @@ fn test_matrix_sub_mixed_symbolic() {
     // Should contain symbolic expressions
     assert!(result.contains("minus") || result.contains("-"));
 }
-

@@ -1774,7 +1774,10 @@ impl Evaluator {
                         ));
                     }
                     // Check all elements are numeric (no symbolic variables)
-                    let all_numeric = elems1.iter().chain(elems2.iter()).all(|e| self.as_number(e).is_some());
+                    let all_numeric = elems1
+                        .iter()
+                        .chain(elems2.iter())
+                        .all(|e| self.as_number(e).is_some());
                     if !all_numeric {
                         // Contains symbolic elements - return unevaluated
                         return Ok(None);
@@ -2049,15 +2052,15 @@ impl Evaluator {
             // ============================================
             // COMPLEX NUMBER OPERATIONS (Concrete Evaluation)
             // ============================================
-
             "complex_add" | "cadd" => {
                 // Complex addition: (a+bi) + (c+di) = (a+c) + (b+d)i
                 if args.len() != 2 {
                     return Ok(None);
                 }
-                if let (Some((re1, im1)), Some((re2, im2))) =
-                    (self.extract_complex(&args[0]), self.extract_complex(&args[1]))
-                {
+                if let (Some((re1, im1)), Some((re2, im2))) = (
+                    self.extract_complex(&args[0]),
+                    self.extract_complex(&args[1]),
+                ) {
                     let re_sum = self.add_expressions(&re1, &re2);
                     let im_sum = self.add_expressions(&im1, &im2);
                     Ok(Some(self.make_complex(re_sum, im_sum)))
@@ -2071,9 +2074,10 @@ impl Evaluator {
                 if args.len() != 2 {
                     return Ok(None);
                 }
-                if let (Some((re1, im1)), Some((re2, im2))) =
-                    (self.extract_complex(&args[0]), self.extract_complex(&args[1]))
-                {
+                if let (Some((re1, im1)), Some((re2, im2))) = (
+                    self.extract_complex(&args[0]),
+                    self.extract_complex(&args[1]),
+                ) {
                     let re_diff = self.sub_expressions(&re1, &re2);
                     let im_diff = self.sub_expressions(&im1, &im2);
                     Ok(Some(self.make_complex(re_diff, im_diff)))
@@ -2087,9 +2091,10 @@ impl Evaluator {
                 if args.len() != 2 {
                     return Ok(None);
                 }
-                if let (Some((re1, im1)), Some((re2, im2))) =
-                    (self.extract_complex(&args[0]), self.extract_complex(&args[1]))
-                {
+                if let (Some((re1, im1)), Some((re2, im2))) = (
+                    self.extract_complex(&args[0]),
+                    self.extract_complex(&args[1]),
+                ) {
                     // Real part: ac - bd
                     let ac = self.mul_expressions(&re1, &re2);
                     let bd = self.mul_expressions(&im1, &im2);
