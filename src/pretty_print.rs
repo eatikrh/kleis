@@ -739,11 +739,33 @@ impl PrettyPrinter {
     /// Format a type alias
     /// Example: type Real = ℝ
     pub fn format_type_alias(&self, alias: &TypeAlias) -> String {
-        format!(
-            "type {} = {}",
-            alias.name,
-            Self::format_type_expr(&alias.type_expr)
-        )
+        if alias.params.is_empty() {
+            format!(
+                "type {} = {}",
+                alias.name,
+                Self::format_type_expr(&alias.type_expr)
+            )
+        } else {
+            // v0.91: Parameterized type alias
+            let params_str = alias
+                .params
+                .iter()
+                .map(|p| {
+                    if let Some(ref kind) = p.kind {
+                        format!("{}: {}", p.name, kind)
+                    } else {
+                        p.name.clone()
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(
+                "type {}({}) = {}",
+                alias.name,
+                params_str,
+                Self::format_type_expr(&alias.type_expr)
+            )
+        }
     }
 
     /// Format an operation declaration
@@ -1121,6 +1143,7 @@ mod tests {
         let pp = PrettyPrinter::new();
         let alias = TypeAlias {
             name: "Real".to_string(),
+            params: vec![],
             type_expr: TypeExpr::Named("ℝ".to_string()),
         };
         assert_eq!(pp.format_type_alias(&alias), "type Real = ℝ");
@@ -1132,6 +1155,7 @@ mod tests {
         let pp = PrettyPrinter::new();
         let alias = TypeAlias {
             name: "Point".to_string(),
+            params: vec![],
             type_expr: TypeExpr::Parametric(
                 "Vector".to_string(),
                 vec![
@@ -1256,6 +1280,7 @@ mod tests {
             items: vec![
                 TopLevel::TypeAlias(TypeAlias {
                     name: "Real".to_string(),
+                    params: vec![],
                     type_expr: TypeExpr::Named("ℝ".to_string()),
                 }),
                 TopLevel::OperationDecl(OperationDecl {

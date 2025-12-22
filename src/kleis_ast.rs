@@ -106,9 +106,27 @@ pub struct FunctionDef {
 
 /// Type alias
 #[derive(Debug, Clone, PartialEq)]
+/// Type alias: type Name = Type or type Name(params) = Type
+///
+/// Grammar v0.91: Parameterized type aliases enable user-defined generic types.
+/// Examples:
+///   type RealVector = Vector(ℝ)                              -- simple
+///   type ComplexMatrix(m, n) = (Matrix(m,n,ℝ), Matrix(m,n,ℝ)) -- parameterized
 pub struct TypeAlias {
     pub name: String,
+    /// Optional type parameters (v0.91)
+    /// Empty for simple aliases like `type RealVector = Vector(ℝ)`
+    /// Non-empty for parameterized aliases like `type ComplexMatrix(m, n) = ...`
+    pub params: Vec<TypeAliasParam>,
     pub type_expr: TypeExpr,
+}
+
+/// Type alias parameter: identifier with optional kind annotation
+/// Examples: m, n, T, m: Nat, T: Type
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeAliasParam {
+    pub name: String,
+    pub kind: Option<String>, // "Nat", "Type", etc.
 }
 
 /// Data type definition: data Name(T, U) = Variant1 | Variant2(T) | ...

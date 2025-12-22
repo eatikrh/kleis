@@ -44,7 +44,8 @@
 use crate::ast::{Expression, MatchCase, Pattern};
 use crate::kleis_ast::{
     DataDef, DataField, DataVariant, FunctionDef, ImplMember, Implementation, ImplementsDef,
-    OperationDecl, Program, StructureDef, StructureMember, TopLevel, TypeAlias, TypeExpr,
+    OperationDecl, Program, StructureDef, StructureMember, TopLevel, TypeAlias, TypeAliasParam,
+    TypeExpr,
 };
 use std::fmt;
 
@@ -1435,19 +1436,53 @@ impl KleisParser {
             return self.parse_forall_type();
         }
 
-        // Check for parenthesized type: (T) or (T → U)
-        // This is required by Kleis v0.7 grammar: type ::= ... | "(" type ")"
+        // Check for parenthesized type: (T), (T → U), or tuple type (A, B, ...)
+        // v0.91: (A, B) is a tuple type (desugars to Pair(A, B))
+        // v0.91: (A, B, C) is a tuple type (desugars to Tuple3(A, B, C))
+        // (T) alone is just grouping, not a tuple
         let mut ty = if self.peek() == Some('(') {
             self.advance(); // consume '('
-            let inner = self.parse_type()?;
             self.skip_whitespace();
-            if self.advance() != Some(')') {
-                return Err(KleisParseError {
-                    message: "Expected ')' after parenthesized type".to_string(),
-                    position: self.pos,
-                });
+
+            // Check for empty parens (Unit type)
+            if self.peek() == Some(')') {
+                self.advance();
+                TypeExpr::Named("Unit".to_string())
+            } else {
+                // Parse first type
+                let first = self.parse_type()?;
+                self.skip_whitespace();
+
+                if self.peek() == Some(',') {
+                    // v0.91: Tuple type (A, B, ...)
+                    let mut types = vec![first];
+                    while self.peek() == Some(',') {
+                        self.advance(); // consume ','
+                        self.skip_whitespace();
+                        types.push(self.parse_type()?);
+                        self.skip_whitespace();
+                    }
+
+                    if self.advance() != Some(')') {
+                        return Err(KleisParseError {
+                            message: "Expected ')' after tuple type".to_string(),
+                            position: self.pos,
+                        });
+                    }
+
+                    // Desugar to Product type
+                    TypeExpr::Product(types)
+                } else if self.peek() == Some(')') {
+                    // Just grouping: (T) -> T
+                    self.advance();
+                    first
+                } else {
+                    return Err(KleisParseError {
+                        message: "Expected ',' or ')' in parenthesized type".to_string(),
+                        position: self.pos,
+                    });
+                }
             }
-            inner
         } else {
             // Parse base type - could be identifier or number (for dimension literals)
             let base_name = if self.peek().is_some_and(|ch| ch.is_numeric()) {
@@ -2822,6 +2857,13 @@ impl KleisParser {
 
     /// Parse a type alias
     /// Grammar v0.7: typeAlias ::= "type" identifier "=" type
+    /// Parse type alias (v0.91: with optional parameters)
+    /// Grammar: typeAlias ::= "type" identifier [ "(" typeAliasParams ")" ] "=" type
+    ///
+    /// Examples:
+    ///   type RealVector = Vector(ℝ)
+    ///   type ComplexMatrix(m, n) = (Matrix(m, n, ℝ), Matrix(m, n, ℝ))
+    ///   type StateSpace(n: Nat, m: Nat, p: Nat) = { ... }
     pub fn parse_type_alias(&mut self) -> Result<TypeAlias, KleisParseError> {
         self.skip_whitespace();
 
@@ -2838,6 +2880,16 @@ impl KleisParser {
         let name = self.parse_identifier()?;
         self.skip_whitespace();
 
+        // v0.91: Optional type parameters
+        let params = if self.peek() == Some('(') {
+            self.advance(); // consume '('
+            self.parse_type_alias_params()?
+        } else {
+            Vec::new()
+        };
+
+        self.skip_whitespace();
+
         // Expect '='
         if self.advance() != Some('=') {
             return Err(KleisParseError {
@@ -2849,7 +2901,61 @@ impl KleisParser {
         self.skip_whitespace();
         let type_expr = self.parse_type()?;
 
-        Ok(TypeAlias { name, type_expr })
+        Ok(TypeAlias {
+            name,
+            params,
+            type_expr,
+        })
+    }
+
+    /// Parse type alias parameters: m, n or m: Nat, n: Nat
+    fn parse_type_alias_params(&mut self) -> Result<Vec<TypeAliasParam>, KleisParseError> {
+        let mut params = Vec::new();
+
+        loop {
+            self.skip_whitespace();
+
+            // Check for empty params or end
+            if self.peek() == Some(')') {
+                self.advance();
+                break;
+            }
+
+            // Parse parameter name
+            let param_name = self.parse_identifier()?;
+            self.skip_whitespace();
+
+            // Check for optional kind annotation
+            let kind = if self.peek() == Some(':') {
+                self.advance(); // consume ':'
+                self.skip_whitespace();
+                Some(self.parse_identifier()?)
+            } else {
+                None
+            };
+
+            params.push(TypeAliasParam {
+                name: param_name,
+                kind,
+            });
+
+            self.skip_whitespace();
+
+            // Check for comma or end
+            if self.peek() == Some(',') {
+                self.advance();
+            } else if self.peek() == Some(')') {
+                self.advance();
+                break;
+            } else {
+                return Err(KleisParseError {
+                    message: "Expected ',' or ')' in type alias parameters".to_string(),
+                    position: self.pos,
+                });
+            }
+        }
+
+        Ok(params)
     }
 
     /// Parse function definition (top-level)
@@ -3720,6 +3826,7 @@ mod tests {
         let result = parser.parse_type_alias().unwrap();
 
         assert_eq!(result.name, "RealVector");
+        assert!(result.params.is_empty()); // No parameters
         match result.type_expr {
             TypeExpr::Parametric(ref name, ref params) => {
                 assert_eq!(name, "Vector");
@@ -3728,6 +3835,121 @@ mod tests {
             }
             _ => panic!("Expected Parametric type"),
         }
+    }
+
+    // ============================================
+    // v0.91 Grammar Tests: Parameterized Type Aliases
+    // ============================================
+
+    #[test]
+    fn test_parse_type_alias_with_params() {
+        let code = "type ComplexMatrix(m, n) = (Matrix(m, n, ℝ), Matrix(m, n, ℝ))";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_type_alias().unwrap();
+
+        assert_eq!(result.name, "ComplexMatrix");
+        assert_eq!(result.params.len(), 2);
+        assert_eq!(result.params[0].name, "m");
+        assert!(result.params[0].kind.is_none());
+        assert_eq!(result.params[1].name, "n");
+        assert!(result.params[1].kind.is_none());
+
+        // RHS should be a Product type (tuple)
+        match result.type_expr {
+            TypeExpr::Product(ref types) => {
+                assert_eq!(types.len(), 2);
+            }
+            _ => panic!("Expected Product type, got {:?}", result.type_expr),
+        }
+    }
+
+    #[test]
+    fn test_parse_type_alias_with_kind_annotations() {
+        let code = "type StateSpace(n: Nat, m: Nat) = Matrix(n, m, ℝ)";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_type_alias().unwrap();
+
+        assert_eq!(result.name, "StateSpace");
+        assert_eq!(result.params.len(), 2);
+        assert_eq!(result.params[0].name, "n");
+        assert_eq!(result.params[0].kind, Some("Nat".to_string()));
+        assert_eq!(result.params[1].name, "m");
+        assert_eq!(result.params[1].kind, Some("Nat".to_string()));
+    }
+
+    // ============================================
+    // v0.91 Grammar Tests: Tuple Types
+    // ============================================
+
+    #[test]
+    fn test_parse_tuple_type_pair() {
+        let code = "(ℝ, ℝ)";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Product(ref types) => {
+                assert_eq!(types.len(), 2);
+                assert_eq!(types[0], TypeExpr::Named("ℝ".to_string()));
+                assert_eq!(types[1], TypeExpr::Named("ℝ".to_string()));
+            }
+            _ => panic!("Expected Product type, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_tuple_type_triple() {
+        let code = "(ℝ, ℤ, Bool)";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Product(ref types) => {
+                assert_eq!(types.len(), 3);
+                assert_eq!(types[0], TypeExpr::Named("ℝ".to_string()));
+                assert_eq!(types[1], TypeExpr::Named("ℤ".to_string()));
+                assert_eq!(types[2], TypeExpr::Named("Bool".to_string()));
+            }
+            _ => panic!("Expected Product type, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_tuple_type_nested() {
+        let code = "(Matrix(n, n, ℝ), Matrix(n, n, ℝ))";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Product(ref types) => {
+                assert_eq!(types.len(), 2);
+                // Both should be parametric Matrix types
+                for t in types {
+                    match t {
+                        TypeExpr::Parametric(name, params) => {
+                            assert_eq!(name, "Matrix");
+                            assert_eq!(params.len(), 3);
+                        }
+                        _ => panic!("Expected Parametric type"),
+                    }
+                }
+            }
+            _ => panic!("Expected Product type"),
+        }
+    }
+
+    #[test]
+    fn test_parse_grouping_not_tuple() {
+        // Single element in parens should be grouping, not a tuple
+        let code = "(ℝ)";
+        let result = parse_type_expr(code).unwrap();
+
+        assert_eq!(result, TypeExpr::Named("ℝ".to_string()));
+    }
+
+    #[test]
+    fn test_parse_unit_type() {
+        let code = "()";
+        let result = parse_type_expr(code).unwrap();
+
+        assert_eq!(result, TypeExpr::Named("Unit".to_string()));
     }
 
     #[test]
