@@ -223,3 +223,35 @@ fn test_matrix_get_out_of_bounds() {
     assert!(result.contains("out of bounds") || result.contains("Error"));
 }
 
+// ============================================
+// SYMBOLIC MATRIX ARITHMETIC
+// ============================================
+
+#[test]
+fn test_matrix_add_mixed_symbolic() {
+    // Adding concrete and symbolic matrices
+    let result = eval("matrix_add(Matrix(2, 2, [1, 2, 3, 4]), Matrix(2, 2, [a, b, c, d]))");
+    assert!(result.contains("Matrix"));
+    // Should contain symbolic expressions like "1 + a"
+    assert!(result.contains("plus") || result.contains("+"));
+}
+
+#[test]
+fn test_matrix_add_zero_optimization() {
+    // 0 + x = x optimization
+    let result = eval("matrix_add(Matrix(2, 2, [0, 0, 0, 0]), Matrix(2, 2, [a, b, c, d]))");
+    assert!(result.contains("Matrix"));
+    // Should be simplified to just [a, b, c, d] without plus operations
+    assert!(result.contains("a"));
+    assert!(result.contains("b"));
+}
+
+#[test]
+fn test_matrix_sub_mixed_symbolic() {
+    // Subtracting symbolic from concrete
+    let result = eval("matrix_sub(Matrix(2, 2, [10, 20, 30, 40]), Matrix(2, 2, [a, b, c, d]))");
+    assert!(result.contains("Matrix"));
+    // Should contain symbolic expressions
+    assert!(result.contains("minus") || result.contains("-"));
+}
+

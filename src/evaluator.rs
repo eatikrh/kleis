@@ -1709,6 +1709,7 @@ impl Evaluator {
             // ============================================
             "matrix_add" | "builtin_matrix_add" => {
                 // Matrix addition: element-wise addition of two matrices
+                // Supports partial symbolic evaluation
                 if args.len() != 2 {
                     return Ok(None);
                 }
@@ -1721,22 +1722,12 @@ impl Evaluator {
                             m1, n1, m2, n2
                         ));
                     }
-                    let result: Result<Vec<Expression>, String> = elems1
+                    let result: Vec<Expression> = elems1
                         .iter()
                         .zip(elems2.iter())
-                        .map(|(a, b)| match (self.as_number(a), self.as_number(b)) {
-                            (Some(x), Some(y)) => {
-                                let sum = x + y;
-                                if sum.fract() == 0.0 && sum.abs() < 1e15 {
-                                    Ok(Expression::Const(format!("{}", sum as i64)))
-                                } else {
-                                    Ok(Expression::Const(format!("{}", sum)))
-                                }
-                            }
-                            _ => Err("matrix_add: non-numeric element".to_string()),
-                        })
+                        .map(|(a, b)| self.add_expressions(a, b))
                         .collect();
-                    Ok(Some(self.make_matrix(m1, n1, result?)))
+                    Ok(Some(self.make_matrix(m1, n1, result)))
                 } else {
                     Ok(None)
                 }
@@ -1744,6 +1735,7 @@ impl Evaluator {
 
             "matrix_sub" | "builtin_matrix_sub" => {
                 // Matrix subtraction: element-wise subtraction
+                // Supports partial symbolic evaluation
                 if args.len() != 2 {
                     return Ok(None);
                 }
@@ -1756,22 +1748,12 @@ impl Evaluator {
                             m1, n1, m2, n2
                         ));
                     }
-                    let result: Result<Vec<Expression>, String> = elems1
+                    let result: Vec<Expression> = elems1
                         .iter()
                         .zip(elems2.iter())
-                        .map(|(a, b)| match (self.as_number(a), self.as_number(b)) {
-                            (Some(x), Some(y)) => {
-                                let diff = x - y;
-                                if diff.fract() == 0.0 && diff.abs() < 1e15 {
-                                    Ok(Expression::Const(format!("{}", diff as i64)))
-                                } else {
-                                    Ok(Expression::Const(format!("{}", diff)))
-                                }
-                            }
-                            _ => Err("matrix_sub: non-numeric element".to_string()),
-                        })
+                        .map(|(a, b)| self.sub_expressions(a, b))
                         .collect();
-                    Ok(Some(self.make_matrix(m1, n1, result?)))
+                    Ok(Some(self.make_matrix(m1, n1, result)))
                 } else {
                     Ok(None)
                 }
@@ -2215,6 +2197,81 @@ impl Evaluator {
                 Expression::Const(format!("{}", n)),
                 Expression::List(elements),
             ],
+        }
+    }
+
+    // === Symbolic arithmetic helpers ===
+    // These handle mixed concrete/symbolic expressions
+
+    /// Add two expressions, computing concrete results when possible
+    fn add_expressions(&self, a: &Expression, b: &Expression) -> Expression {
+        match (self.as_number(a), self.as_number(b)) {
+            (Some(x), Some(y)) => {
+                let sum = x + y;
+                if sum.fract() == 0.0 && sum.abs() < 1e15 {
+                    Expression::Const(format!("{}", sum as i64))
+                } else {
+                    Expression::Const(format!("{}", sum))
+                }
+            }
+            // 0 + x = x
+            (Some(0.0), None) => b.clone(),
+            // x + 0 = x
+            (None, Some(0.0)) => a.clone(),
+            // Symbolic: create plus operation
+            _ => Expression::Operation {
+                name: "plus".to_string(),
+                args: vec![a.clone(), b.clone()],
+            },
+        }
+    }
+
+    /// Subtract two expressions, computing concrete results when possible
+    fn sub_expressions(&self, a: &Expression, b: &Expression) -> Expression {
+        match (self.as_number(a), self.as_number(b)) {
+            (Some(x), Some(y)) => {
+                let diff = x - y;
+                if diff.fract() == 0.0 && diff.abs() < 1e15 {
+                    Expression::Const(format!("{}", diff as i64))
+                } else {
+                    Expression::Const(format!("{}", diff))
+                }
+            }
+            // x - 0 = x
+            (None, Some(0.0)) => a.clone(),
+            // Symbolic: create minus operation
+            _ => Expression::Operation {
+                name: "minus".to_string(),
+                args: vec![a.clone(), b.clone()],
+            },
+        }
+    }
+
+    /// Multiply two expressions, computing concrete results when possible
+    #[allow(dead_code)] // Will be used for symbolic matrix multiplication
+    fn mul_expressions(&self, a: &Expression, b: &Expression) -> Expression {
+        match (self.as_number(a), self.as_number(b)) {
+            (Some(x), Some(y)) => {
+                let prod = x * y;
+                if prod.fract() == 0.0 && prod.abs() < 1e15 {
+                    Expression::Const(format!("{}", prod as i64))
+                } else {
+                    Expression::Const(format!("{}", prod))
+                }
+            }
+            // 0 * x = 0
+            (Some(0.0), _) => Expression::Const("0".to_string()),
+            // x * 0 = 0
+            (_, Some(0.0)) => Expression::Const("0".to_string()),
+            // 1 * x = x
+            (Some(1.0), None) => b.clone(),
+            // x * 1 = x
+            (None, Some(1.0)) => a.clone(),
+            // Symbolic: create times operation
+            _ => Expression::Operation {
+                name: "times".to_string(),
+                args: vec![a.clone(), b.clone()],
+            },
         }
     }
 }
