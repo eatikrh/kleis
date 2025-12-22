@@ -119,6 +119,57 @@ ndarray-linalg = { version = "0.16", features = ["openblas-system"] }
 - Large dependency
 - License considerations
 
+## Cross-Platform Backend Selection
+
+The Rust BLAS/LAPACK ecosystem supports **swappable providers** via `blas-src` and `lapack-src`:
+
+### Available Backends
+
+| Backend | Platform | Notes |
+|---------|----------|-------|
+| **Apple Accelerate** | macOS | Native, fast, no install needed |
+| **OpenBLAS** | Linux/Windows/macOS | Open source, widely used |
+| **Intel MKL** | All | Fastest on Intel CPUs |
+| **Netlib** | All | Reference implementation |
+
+### Cargo.toml Configuration
+
+```toml
+[dependencies]
+ndarray = "0.15"
+ndarray-linalg = "0.16"
+
+# Platform-specific backends
+[target.'cfg(target_os = "macos")'.dependencies]
+blas-src = { version = "0.10", features = ["accelerate"] }
+lapack-src = { version = "0.10", features = ["accelerate"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+blas-src = { version = "0.10", features = ["openblas"] }
+lapack-src = { version = "0.10", features = ["openblas"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+blas-src = { version = "0.10", features = ["openblas"] }
+lapack-src = { version = "0.10", features = ["openblas"] }
+```
+
+### Platform Summary
+
+| Platform | Default Backend | Env Vars Needed? |
+|----------|-----------------|------------------|
+| **macOS (ARM/Intel)** | Accelerate | ❌ No (system framework) |
+| **Linux** | OpenBLAS | Maybe (`OPENBLAS_DIR`) |
+| **Windows** | OpenBLAS | Yes (DLL paths) |
+
+### Advantages of Accelerate on macOS
+
+- Pre-installed on all Macs
+- Optimized for Apple Silicon (M1/M2/M3)
+- No additional dependencies
+- Uses Apple's vecLib and BNNS
+
+This means on your Mac ARM, we can use the **native Accelerate framework** with zero external dependencies - similar convenience to pure Rust, with LAPACK-level performance!
+
 ## Recommendation
 
 ### For Kleis: Tiered Approach
