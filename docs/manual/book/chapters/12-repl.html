@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9fb429a5.js";
+            window.path_to_searchindex_js = "../searchindex-1b677653.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-adba3566.js"></script>
@@ -311,6 +311,62 @@ VNum(120)
 <p><strong>Key insight:</strong> Z3 cannot symbolically unroll recursive functions over unbounded data types. Use <code>:eval</code> for concrete computation, <code>:sat</code>/<code>:verify</code> for symbolic reasoning.</p>
 </blockquote>
 <p>This is what makes Kleis <strong>Turing complete</strong> — the combination of ADTs, pattern matching, recursion, and concrete evaluation enables arbitrary computation. See <a href="../appendix/lisp-interpreter.html">Appendix: LISP Interpreter</a> for a complete example.</p>
+<h2 id="the-verification-gap-important"><a class="header" href="#the-verification-gap-important">The Verification Gap (Important!)</a></h2>
+<p><strong>Users must understand this fundamental limitation.</strong></p>
+<p>The three REPL modes operate on <strong>different systems</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Executes On</th><th>Axiom Checking</th></tr>
+</thead>
+<tbody>
+<tr><td><code>:eval</code></td><td>Rust builtins / pattern matching</td><td>❌ None</td></tr>
+<tr><td><code>:verify</code></td><td>Z3’s mathematical model</td><td>✅ Symbolic</td></tr>
+<tr><td><code>:sat</code></td><td>Z3’s mathematical model</td><td>✅ Symbolic</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The gap:</strong></p>
+<p>When you run <code>:verify ∀(a b : ℕ). a + b = b + a</code>, Z3 proves this using its built-in integer arithmetic theory.</p>
+<p>When you run <code>:eval 2 + 3</code>, Rust’s <code>+</code> operator computes <code>5</code>.</p>
+<p><strong>We never verify that Rust’s <code>+</code> matches Z3’s <code>+</code>.</strong></p>
+<p><strong>The Trusted Computing Base:</strong></p>
+<p>These components are assumed correct, never verified:</p>
+<ul>
+<li>Rust compiler</li>
+<li>Builtin implementations (<code>builtin_add</code>, <code>builtin_mul</code>, etc.)</li>
+<li>LAPACK (for matrix operations)</li>
+<li>IEEE 754 floating point</li>
+</ul>
+<p><strong>What Kleis provides:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Capability</th><th>Provided?</th></tr>
+</thead>
+<tbody>
+<tr><td>Verify mathematical properties symbolically</td><td>✅ Yes</td></tr>
+<tr><td>Compute concrete results efficiently</td><td>✅ Yes</td></tr>
+<tr><td>Prove computation matches specification</td><td>❌ No</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Example:</strong></p>
+<pre><code class="language-kleis">structure AdditiveMonoid(M) {
+    operation add : M → M → M
+    axiom add_comm: ∀(a b : M). add(a, b) = add(b, a)
+}
+
+implements AdditiveMonoid(ℕ) {
+    operation add = builtin_add  // Rust's + operator
+}
+</code></pre>
+<ul>
+<li><code>:verify add_comm</code> → Z3 checks its integer model ✅</li>
+<li><code>:eval 2 + 3</code> → Rust’s <code>builtin_add</code> runs ✅</li>
+<li>Connection between them → <strong>Trusted, not verified</strong> ⚠️</li>
+</ul>
+<p>This is the pragmatic trade-off Kleis makes: trust the implementation, verify the mathematics.</p>
 <h2 id="value-bindings-with-let"><a class="header" href="#value-bindings-with-let">Value Bindings with <code>:let</code></a></h2>
 <p>Use <code>:let</code> to bind values to names that persist across REPL commands:</p>
 <pre><code>λ&gt; :let x = 2 + 3
