@@ -519,6 +519,77 @@ impl<'r> AxiomVerifier<'r> {
         })
     }
 
+    /// Check if an expression is satisfiable with axioms loaded
+    ///
+    /// Unlike the raw `Z3Backend::check_satisfiability`, this method:
+    /// 1. Analyzes dependencies to find relevant structures
+    /// 2. Loads all structure axioms to constrain uninterpreted functions
+    /// 3. Then checks satisfiability
+    ///
+    /// This is essential for "computation via satisfiability" - finding values
+    /// that satisfy constraints defined by axioms.
+    ///
+    /// # Example
+    /// ```ignore
+    /// // With fib axioms loaded:
+    /// // axiom fib_zero: fib(0) = 0
+    /// // axiom fib_one: fib(1) = 1  
+    /// // axiom fib_rec: ∀n. fib(n+2) = fib(n+1) + fib(n)
+    ///
+    /// let result = verifier.check_satisfiability(&parse("fib(5) = x"))?;
+    /// // result: Satisfiable { example: "x = 5" }
+    /// ```
+    pub fn check_satisfiability(
+        &mut self,
+        expr: &Expression,
+    ) -> Result<crate::solvers::backend::SatisfiabilityResult, String> {
+        #[cfg(feature = "axiom-verification")]
+        {
+            self.check_satisfiability_impl(expr)
+        }
+
+        #[cfg(not(feature = "axiom-verification"))]
+        {
+            let _ = expr; // Suppress unused variable warning
+            Err("Axiom verification feature not enabled".to_string())
+        }
+    }
+
+    #[cfg(feature = "axiom-verification")]
+    fn check_satisfiability_impl(
+        &mut self,
+        expr: &Expression,
+    ) -> Result<crate::solvers::backend::SatisfiabilityResult, String> {
+        use crate::solvers::backend::SolverBackend;
+
+        // Step 1: Analyze dependencies
+        let dependencies = self.analyze_dependencies(expr);
+
+        // Step 2: Ensure all required axioms are loaded
+        for structure in &dependencies {
+            self.ensure_structure_loaded(structure)?;
+        }
+
+        // Step 3: Load ALL structure axioms from registry (same as verify_axiom_impl)
+        let all_structures: Vec<String> = self
+            .registry
+            .structures_with_axioms()
+            .iter()
+            .map(|s| (*s).clone())
+            .collect();
+
+        for structure in &all_structures {
+            if !self.loaded_structures.contains(structure) {
+                if let Err(e) = self.ensure_structure_loaded(structure) {
+                    eprintln!("   ⚠️ Warning: Failed to load {}: {}", structure, e);
+                }
+            }
+        }
+
+        // Step 4: Delegate to backend for satisfiability check
+        self.backend.check_satisfiability(expr)
+    }
+
     /// Check if two expressions are equivalent
     ///
     /// Uses Z3 to determine if expr1 ≡ expr2 for all variable assignments.

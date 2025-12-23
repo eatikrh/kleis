@@ -153,6 +153,61 @@ VNum(120)
 
 This is what makes Kleis **Turing complete** — the combination of ADTs, pattern matching, recursion, and concrete evaluation enables arbitrary computation. See [Appendix: LISP Interpreter](../appendix/lisp-interpreter.md) for a complete example.
 
+## The Verification Gap (Important!)
+
+**Users must understand this fundamental limitation.**
+
+The three REPL modes operate on **different systems**:
+
+| Command | Executes On | Axiom Checking |
+|---------|-------------|----------------|
+| `:eval` | Rust builtins / pattern matching | ❌ None |
+| `:verify` | Z3's mathematical model | ✅ Symbolic |
+| `:sat` | Z3's mathematical model | ✅ Symbolic |
+
+**The gap:**
+
+When you run `:verify ∀(a b : ℕ). a + b = b + a`, Z3 proves this using its built-in integer arithmetic theory.
+
+When you run `:eval 2 + 3`, Rust's `+` operator computes `5`.
+
+**We never verify that Rust's `+` matches Z3's `+`.**
+
+**The Trusted Computing Base:**
+
+These components are assumed correct, never verified:
+- Rust compiler
+- Builtin implementations (`builtin_add`, `builtin_mul`, etc.)
+- LAPACK (for matrix operations)
+- IEEE 754 floating point
+
+**What Kleis provides:**
+
+| Capability | Provided? |
+|------------|-----------|
+| Verify mathematical properties symbolically | ✅ Yes |
+| Compute concrete results efficiently | ✅ Yes |
+| Prove computation matches specification | ❌ No |
+
+**Example:**
+
+```kleis
+structure AdditiveMonoid(M) {
+    operation add : M → M → M
+    axiom add_comm: ∀(a b : M). add(a, b) = add(b, a)
+}
+
+implements AdditiveMonoid(ℕ) {
+    operation add = builtin_add  // Rust's + operator
+}
+```
+
+- `:verify add_comm` → Z3 checks its integer model ✅
+- `:eval 2 + 3` → Rust's `builtin_add` runs ✅
+- Connection between them → **Trusted, not verified** ⚠️
+
+This is the pragmatic trade-off Kleis makes: trust the implementation, verify the mathematics.
+
 ## Value Bindings with `:let`
 
 Use `:let` to bind values to names that persist across REPL commands:

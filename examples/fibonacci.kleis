@@ -1,0 +1,6 @@
+// Fibonacci in Kleis - demonstrates that Kleis is a programming language
+
+define fib(n) = if le(n, 1) then n else fib(n - 1) + fib(n - 2)
+
+define fact(n) = if le(n, 1) then 1 else n * fact(n - 1)
+
