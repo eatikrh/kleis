@@ -1397,6 +1397,16 @@ impl Evaluator {
             // === Arithmetic ===
             "plus" | "+" => self.builtin_arithmetic(args, |a, b| a + b),
             "minus" | "-" => self.builtin_arithmetic(args, |a, b| a - b),
+            "negate" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(n) = self.as_number(&args[0]) {
+                    Ok(Some(Self::const_from_f64(-n)))
+                } else {
+                    Ok(None)
+                }
+            }
             "times" | "*" | "mul" => self.builtin_arithmetic(args, |a, b| a * b),
             "divide" | "/" | "div" => {
                 if args.len() != 2 {
@@ -2722,6 +2732,377 @@ impl Evaluator {
                 }
             }
 
+            // ============================================
+            // COMPLEX MATRIX OPERATIONS (v0.91)
+            // ============================================
+            // ComplexMatrix(m, n) = (Matrix(m, n, ℝ), Matrix(m, n, ℝ))
+            // Represented as a pair: (real_part, imag_part)
+            "cmat_zero" | "builtin_cmat_zero" => {
+                // Create zero complex matrix: (zeros(m,n), zeros(m,n))
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(m), Some(n)) = (self.as_nat(&args[0]), self.as_nat(&args[1])) {
+                    let zeros =
+                        self.make_matrix(m, n, vec![Expression::Const("0".to_string()); m * n]);
+                    Ok(Some(Expression::List(vec![zeros.clone(), zeros])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_eye" | "builtin_cmat_eye" => {
+                // Create complex identity matrix: (eye(n), zeros(n,n))
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(n) = self.as_nat(&args[0]) {
+                    let mut eye_elems = vec![Expression::Const("0".to_string()); n * n];
+                    for i in 0..n {
+                        eye_elems[i * n + i] = Expression::Const("1".to_string());
+                    }
+                    let eye = self.make_matrix(n, n, eye_elems);
+                    let zeros =
+                        self.make_matrix(n, n, vec![Expression::Const("0".to_string()); n * n]);
+                    Ok(Some(Expression::List(vec![eye, zeros])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_from_real" | "builtin_cmat_from_real" | "as_complex" => {
+                // Promote real matrix to complex: A → (A, zeros)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    let real_part = self.make_matrix(m, n, elems);
+                    let zeros =
+                        self.make_matrix(m, n, vec![Expression::Const("0".to_string()); m * n]);
+                    Ok(Some(Expression::List(vec![real_part, zeros])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_from_imag" | "builtin_cmat_from_imag" | "as_imaginary" => {
+                // Create pure imaginary matrix: B → (zeros, B)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elems)) = self.extract_matrix(&args[0]) {
+                    let imag_part = self.make_matrix(m, n, elems);
+                    let zeros =
+                        self.make_matrix(m, n, vec![Expression::Const("0".to_string()); m * n]);
+                    Ok(Some(Expression::List(vec![zeros, imag_part])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_real" | "builtin_cmat_real" | "real_part_matrix" => {
+                // Extract real part: (A, B) → A
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((real, _imag)) = self.extract_complex_matrix(&args[0]) {
+                    Ok(Some(real))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_imag" | "builtin_cmat_imag" | "imag_part_matrix" => {
+                // Extract imaginary part: (A, B) → B
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((_real, imag)) = self.extract_complex_matrix(&args[0]) {
+                    Ok(Some(imag))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_add" | "builtin_cmat_add" => {
+                // Complex matrix addition: (A₁,B₁) + (A₂,B₂) = (A₁+A₂, B₁+B₂)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((real1, imag1)), Some((real2, imag2))) = (
+                    self.extract_complex_matrix(&args[0]),
+                    self.extract_complex_matrix(&args[1]),
+                ) {
+                    let sum_real = self
+                        .eval_concrete(&Expression::operation("matrix_add", vec![real1, real2]))?;
+                    let sum_imag = self
+                        .eval_concrete(&Expression::operation("matrix_add", vec![imag1, imag2]))?;
+                    Ok(Some(Expression::List(vec![sum_real, sum_imag])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_sub" | "builtin_cmat_sub" => {
+                // Complex matrix subtraction: (A₁,B₁) - (A₂,B₂) = (A₁-A₂, B₁-B₂)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((real1, imag1)), Some((real2, imag2))) = (
+                    self.extract_complex_matrix(&args[0]),
+                    self.extract_complex_matrix(&args[1]),
+                ) {
+                    let diff_real = self
+                        .eval_concrete(&Expression::operation("matrix_sub", vec![real1, real2]))?;
+                    let diff_imag = self
+                        .eval_concrete(&Expression::operation("matrix_sub", vec![imag1, imag2]))?;
+                    Ok(Some(Expression::List(vec![diff_real, diff_imag])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_mul" | "builtin_cmat_mul" => {
+                // Complex matrix multiplication:
+                // (A₁,B₁) · (A₂,B₂) = (A₁·A₂ - B₁·B₂, A₁·B₂ + B₁·A₂)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((a1, b1)), Some((a2, b2))) = (
+                    self.extract_complex_matrix(&args[0]),
+                    self.extract_complex_matrix(&args[1]),
+                ) {
+                    // Real part: A₁·A₂ - B₁·B₂
+                    let a1a2 = self.eval_concrete(&Expression::operation(
+                        "multiply",
+                        vec![a1.clone(), a2.clone()],
+                    ))?;
+                    let b1b2 = self.eval_concrete(&Expression::operation(
+                        "multiply",
+                        vec![b1.clone(), b2.clone()],
+                    ))?;
+                    let real_part =
+                        self.eval_concrete(&Expression::operation("matrix_sub", vec![a1a2, b1b2]))?;
+
+                    // Imag part: A₁·B₂ + B₁·A₂
+                    let a1b2 =
+                        self.eval_concrete(&Expression::operation("multiply", vec![a1, b2]))?;
+                    let b1a2 =
+                        self.eval_concrete(&Expression::operation("multiply", vec![b1, a2]))?;
+                    let imag_part =
+                        self.eval_concrete(&Expression::operation("matrix_add", vec![a1b2, b1a2]))?;
+
+                    Ok(Some(Expression::List(vec![real_part, imag_part])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_conj" | "builtin_cmat_conj" => {
+                // Complex conjugate: conj((A,B)) = (A, -B)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((real, imag)) = self.extract_complex_matrix(&args[0]) {
+                    // Negate imaginary part
+                    let neg_imag = self.eval_concrete(&Expression::operation(
+                        "scalar_matrix_mul",
+                        vec![Expression::Const("-1".to_string()), imag],
+                    ))?;
+                    Ok(Some(Expression::List(vec![real, neg_imag])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_transpose" | "builtin_cmat_transpose" => {
+                // Transpose: transpose((A,B)) = (transpose(A), transpose(B))
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((real, imag)) = self.extract_complex_matrix(&args[0]) {
+                    let real_t =
+                        self.eval_concrete(&Expression::operation("transpose", vec![real]))?;
+                    let imag_t =
+                        self.eval_concrete(&Expression::operation("transpose", vec![imag]))?;
+                    Ok(Some(Expression::List(vec![real_t, imag_t])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_dagger" | "builtin_cmat_dagger" | "cmat_adjoint" => {
+                // Conjugate transpose (Hermitian adjoint):
+                // dagger((A,B)) = (transpose(A), -transpose(B))
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((real, imag)) = self.extract_complex_matrix(&args[0]) {
+                    let real_t =
+                        self.eval_concrete(&Expression::operation("transpose", vec![real]))?;
+                    let imag_t =
+                        self.eval_concrete(&Expression::operation("transpose", vec![imag]))?;
+                    let neg_imag_t = self.eval_concrete(&Expression::operation(
+                        "scalar_matrix_mul",
+                        vec![Expression::Const("-1".to_string()), imag_t],
+                    ))?;
+                    Ok(Some(Expression::List(vec![real_t, neg_imag_t])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_trace" | "builtin_cmat_trace" => {
+                // Trace: trace((A,B)) = (trace(A), trace(B))
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((real, imag)) = self.extract_complex_matrix(&args[0]) {
+                    let trace_real =
+                        self.eval_concrete(&Expression::operation("trace", vec![real]))?;
+                    let trace_imag =
+                        self.eval_concrete(&Expression::operation("trace", vec![imag]))?;
+                    Ok(Some(Expression::List(vec![trace_real, trace_imag])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "cmat_scale_real" | "builtin_cmat_scale_real" => {
+                // Scale by real scalar: r · (A,B) = (r·A, r·B)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let scalar = args[0].clone();
+                if let Some((real, imag)) = self.extract_complex_matrix(&args[1]) {
+                    let scaled_real = self.eval_concrete(&Expression::operation(
+                        "scalar_matrix_mul",
+                        vec![scalar.clone(), real],
+                    ))?;
+                    let scaled_imag = self.eval_concrete(&Expression::operation(
+                        "scalar_matrix_mul",
+                        vec![scalar, imag],
+                    ))?;
+                    Ok(Some(Expression::List(vec![scaled_real, scaled_imag])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "realify" | "builtin_realify" => {
+                // Embed complex n×n matrix into real 2n×2n matrix:
+                // realify((A, B)) = [[A, -B], [B, A]]
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((a_expr, b_expr)) = self.extract_complex_matrix(&args[0]) {
+                    if let (Some((n, m, a_elems)), Some((n2, m2, b_elems))) =
+                        (self.extract_matrix(&a_expr), self.extract_matrix(&b_expr))
+                    {
+                        if n != m || n2 != m2 || n != n2 {
+                            return Err("realify: complex matrix must be square".to_string());
+                        }
+                        // Build 2n×2n block matrix [[A, -B], [B, A]]
+                        let n2_size = 2 * n;
+                        let mut result =
+                            vec![Expression::Const("0".to_string()); n2_size * n2_size];
+
+                        for i in 0..n {
+                            for j in 0..n {
+                                // Top-left: A
+                                result[i * n2_size + j] = a_elems[i * n + j].clone();
+                                // Top-right: -B
+                                let b_val = &b_elems[i * n + j];
+                                result[i * n2_size + (j + n)] =
+                                    Expression::operation("negate", vec![b_val.clone()]);
+                                // Bottom-left: B
+                                result[(i + n) * n2_size + j] = b_elems[i * n + j].clone();
+                                // Bottom-right: A
+                                result[(i + n) * n2_size + (j + n)] = a_elems[i * n + j].clone();
+                            }
+                        }
+                        // Evaluate to simplify negations
+                        let mut simplified = Vec::with_capacity(result.len());
+                        for elem in result {
+                            simplified.push(self.eval_concrete(&elem)?);
+                        }
+                        Ok(Some(self.make_matrix(n2_size, n2_size, simplified)))
+                    } else {
+                        Ok(None)
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "complexify" | "builtin_complexify" => {
+                // Extract complex n×n from real 2n×2n with block structure [[A, -B], [B, A]]
+                // complexify(M) → (A, B)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m2, n2, elems)) = self.extract_matrix(&args[0]) {
+                    if m2 != n2 || m2 % 2 != 0 {
+                        return Err(
+                            "complexify: matrix must be square with even dimension".to_string()
+                        );
+                    }
+                    let n = m2 / 2;
+                    // Extract A from top-left block and B from bottom-left block
+                    let mut a_elems = Vec::with_capacity(n * n);
+                    let mut b_elems = Vec::with_capacity(n * n);
+                    for i in 0..n {
+                        for j in 0..n {
+                            a_elems.push(elems[i * m2 + j].clone());
+                            b_elems.push(elems[(i + n) * m2 + j].clone());
+                        }
+                    }
+                    let a = self.make_matrix(n, n, a_elems);
+                    let b = self.make_matrix(n, n, b_elems);
+                    Ok(Some(Expression::List(vec![a, b])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_eigenvalues" | "cmat_eigvals" => {
+                // Complex matrix eigenvalues via realification
+                // eigenvalues of (A,B) come from eigenvalues of [[A,-B],[B,A]]
+                // Real eigenvalues appear doubled; complex pairs appear as a ± bi
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                // First realify the complex matrix
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                // Get eigenvalues of the realified matrix
+                let eigs =
+                    self.eval_concrete(&Expression::operation("eigenvalues", vec![realified]))?;
+                // The eigenvalues of realified matrix are: for each complex eigenvalue a+bi of M,
+                // the realified matrix has eigenvalues a+bi and a-bi
+                // Return the raw eigenvalues - user can interpret them
+                Ok(Some(eigs))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_schur" | "schur_complex" => {
+                // Complex Schur decomposition via realification
+                // schur_complex((A,B)) computes Schur of [[A,-B],[B,A]] then complexifies
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                // First realify
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                // Compute real Schur
+                let schur_result =
+                    self.eval_concrete(&Expression::operation("schur", vec![realified]))?;
+                // Return the Schur result (Q, T, eigenvalues)
+                // User can apply complexify to Q and T if needed
+                Ok(Some(schur_result))
+            }
+
             // === LAPACK Operations (feature-gated) ===
             #[cfg(feature = "numerical")]
             "eigenvalues" | "eigvals" => self.lapack_eigenvalues(args),
@@ -2764,6 +3145,392 @@ impl Evaluator {
 
             #[cfg(feature = "numerical")]
             "schur" | "schur_decomp" => self.lapack_schur(args),
+
+            #[cfg(feature = "numerical")]
+            "expm" | "matrix_exp" => {
+                // Matrix exponential exp(A)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((m, n, elements)) = self.extract_matrix(&args[0]) {
+                    if m != n {
+                        return Err(format!("expm requires a square matrix, got {}×{}", m, n));
+                    }
+                    let data: Result<Vec<f64>, _> = elements
+                        .iter()
+                        .map(|e| {
+                            self.as_number(e)
+                                .ok_or_else(|| "Symbolic elements not supported".to_string())
+                        })
+                        .collect();
+                    let data = data?;
+
+                    let result = crate::numerical::expm(&data, n).map_err(|e| e.to_string())?;
+
+                    let result_exprs: Vec<Expression> =
+                        result.iter().map(|&v| Self::const_from_f64(v)).collect();
+                    Ok(Some(self.make_matrix(n, n, result_exprs)))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            "mpow" | "matrix_pow" => {
+                // Matrix power A^k for integer k
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some((m, n, _elements)), Some(k)) =
+                    (self.extract_matrix(&args[0]), self.as_integer(&args[1]))
+                {
+                    if m != n {
+                        return Err(format!("mpow requires a square matrix, got {}×{}", m, n));
+                    }
+                    #[cfg(feature = "numerical")]
+                    if k < 0 {
+                        // For negative powers, compute inv(A)^|k|
+                        let inv_result = self
+                            .eval_concrete(&Expression::operation("inv", vec![args[0].clone()]))?;
+                        return self
+                            .eval_concrete(&Expression::operation(
+                                "mpow",
+                                vec![inv_result, Expression::Const(format!("{}", -k))],
+                            ))
+                            .map(Some);
+                    }
+                    #[cfg(not(feature = "numerical"))]
+                    if k < 0 {
+                        return Err(
+                            "mpow with negative exponent requires 'numerical' feature".to_string()
+                        );
+                    }
+                    if k == 0 {
+                        // A^0 = I
+                        return self
+                            .eval_concrete(&Expression::operation(
+                                "eye",
+                                vec![Expression::Const(format!("{}", n))],
+                            ))
+                            .map(Some);
+                    }
+                    if k == 1 {
+                        return Ok(Some(args[0].clone()));
+                    }
+
+                    // Binary exponentiation
+                    let mut result = self.eval_concrete(&Expression::operation(
+                        "eye",
+                        vec![Expression::Const(format!("{}", n))],
+                    ))?;
+                    let mut base = args[0].clone();
+                    let mut exp = k as u64;
+
+                    while exp > 0 {
+                        if exp & 1 == 1 {
+                            result = self
+                                .apply_builtin("multiply", &[result.clone(), base.clone()])?
+                                .unwrap_or(result);
+                        }
+                        base = self
+                            .apply_builtin("multiply", &[base.clone(), base.clone()])?
+                            .unwrap_or(base);
+                        exp >>= 1;
+                    }
+                    Ok(Some(result))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // ============================================
+            // COMPLEX MATRIX LAPACK OPERATIONS
+            // ============================================
+            // All use realification: compute on 2n×2n real matrix, interpret results
+            #[cfg(feature = "numerical")]
+            "cmat_svd" => {
+                // Complex SVD via realification
+                // For M = (A,B), compute SVD of realify(M)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                let svd_result =
+                    self.eval_concrete(&Expression::operation("svd", vec![realified]))?;
+                Ok(Some(svd_result))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_singular_values" | "cmat_svdvals" => {
+                // Complex singular values via realification
+                // Singular values of complex matrix = singular values of realified / sqrt(2)
+                // (Actually each singular value appears twice in realified)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                let svs =
+                    self.eval_concrete(&Expression::operation("singular_values", vec![realified]))?;
+                // Return the singular values (doubled due to realification)
+                Ok(Some(svs))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_solve" | "cmat_linsolve" => {
+                // Solve complex linear system (A+Bi)x = (c+di)
+                // Using realification: [[A,-B],[B,A]][xr,xi]^T = [c,d]^T
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                // Get complex matrix and RHS
+                if let (Some((_a, _b)), Some((c, d))) = (
+                    self.extract_complex_matrix(&args[0]),
+                    self.extract_complex_matrix(&args[1]),
+                ) {
+                    // Realify the matrix
+                    let realified_mat = self
+                        .eval_concrete(&Expression::operation("realify", vec![args[0].clone()]))?;
+                    // Stack RHS: [c; d]
+                    let rhs_stacked =
+                        self.eval_concrete(&Expression::operation("vstack", vec![c, d]))?;
+                    // Solve the real system
+                    let sol = self.eval_concrete(&Expression::operation(
+                        "solve",
+                        vec![realified_mat, rhs_stacked],
+                    ))?;
+                    // Split solution into real and imaginary parts
+                    // solve returns a List, not a Matrix
+                    let sol_elems: Vec<Expression> = if let Expression::List(items) = &sol {
+                        items.clone()
+                    } else if let Some((_n2, _, elems)) = self.extract_matrix(&sol) {
+                        elems
+                    } else {
+                        return Ok(Some(sol));
+                    };
+                    let n2 = sol_elems.len();
+                    let n = n2 / 2;
+                    let xr: Vec<_> = sol_elems[..n].to_vec();
+                    let xi: Vec<_> = sol_elems[n..].to_vec();
+                    let real_part = self.make_matrix(n, 1, xr);
+                    let imag_part = self.make_matrix(n, 1, xi);
+                    Ok(Some(Expression::List(vec![real_part, imag_part])))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_inv" | "cmat_inverse" => {
+                // Complex matrix inverse via realification
+                // inv((A,B)) = complexify(inv(realify((A,B))))
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                let inv_real =
+                    self.eval_concrete(&Expression::operation("inv", vec![realified]))?;
+                let result =
+                    self.eval_concrete(&Expression::operation("complexify", vec![inv_real]))?;
+                Ok(Some(result))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_qr" => {
+                // Complex QR via realification
+                // The Q and R of realified matrix can be complexified
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                let qr_result =
+                    self.eval_concrete(&Expression::operation("qr", vec![realified]))?;
+                // Return QR of realified (user can complexify if needed)
+                Ok(Some(qr_result))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_rank" | "cmat_matrix_rank" => {
+                // Complex matrix rank via realification
+                // rank((A,B)) = rank(realify((A,B))) / 2
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                let rank_real =
+                    self.eval_concrete(&Expression::operation("rank", vec![realified]))?;
+                // Divide by 2 since realification doubles the dimension
+                if let Expression::Const(s) = &rank_real {
+                    if let Ok(r) = s.parse::<i64>() {
+                        return Ok(Some(Expression::Const(format!("{}", r / 2))));
+                    }
+                }
+                Ok(Some(rank_real))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_cond" | "cmat_condition_number" => {
+                // Complex condition number via realification
+                // cond((A,B)) = cond(realify((A,B)))
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                let cond = self.eval_concrete(&Expression::operation("cond", vec![realified]))?;
+                Ok(Some(cond))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_norm" | "cmat_matrix_norm" => {
+                // Complex Frobenius norm: ||M||_F = sqrt(||A||_F^2 + ||B||_F^2)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some((a, b)) = self.extract_complex_matrix(&args[0]) {
+                    let norm_a = self.eval_concrete(&Expression::operation("norm", vec![a]))?;
+                    let norm_b = self.eval_concrete(&Expression::operation("norm", vec![b]))?;
+                    // ||M||_F = sqrt(||A||^2 + ||B||^2)
+                    if let (Some(na), Some(nb)) = (self.as_number(&norm_a), self.as_number(&norm_b))
+                    {
+                        let norm = (na * na + nb * nb).sqrt();
+                        return Ok(Some(Expression::Const(format!("{}", norm))));
+                    }
+                }
+                Ok(None)
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_det" | "cmat_determinant" => {
+                // Complex determinant via realification
+                // |det(M)|^2 = det(realify(M))
+                // So det(M) = sqrt(det(realify(M))) * phase
+                // For now, return the magnitude squared
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                let det_real =
+                    self.eval_concrete(&Expression::operation("det_lapack", vec![realified]))?;
+                // det_real = |det(M)|^2, return as (det_real, 0) to indicate it's real
+                if let Some(d) = self.as_number(&det_real) {
+                    // Take square root for magnitude (sign handling is complex)
+                    let mag = d.abs().sqrt();
+                    return Ok(Some(Expression::List(vec![
+                        Expression::Const(format!("{}", mag)),
+                        Expression::Const("0".to_string()),
+                    ])));
+                }
+                Ok(Some(det_real))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_eig" => {
+                // Full complex eigendecomposition via realification
+                // Returns eigenvalues and eigenvectors
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                let eig_result =
+                    self.eval_concrete(&Expression::operation("eig", vec![realified]))?;
+                Ok(Some(eig_result))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_expm" | "cmat_matrix_exp" => {
+                // Complex matrix exponential via realification
+                // exp((A,B)) = complexify(exp(realify((A,B))))
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let realified =
+                    self.eval_concrete(&Expression::operation("realify", args.to_vec()))?;
+                let exp_real =
+                    self.eval_concrete(&Expression::operation("expm", vec![realified]))?;
+                let result =
+                    self.eval_concrete(&Expression::operation("complexify", vec![exp_real]))?;
+                Ok(Some(result))
+            }
+
+            #[cfg(feature = "numerical")]
+            "cmat_mpow" | "cmat_matrix_pow" => {
+                // Complex matrix power (A+Bi)^k for integer k
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(_), Some(k)) = (
+                    self.extract_complex_matrix(&args[0]),
+                    self.as_integer(&args[1]),
+                ) {
+                    if k < 0 {
+                        // For negative powers, compute inv(M)^|k|
+                        let inv_result = self.eval_concrete(&Expression::operation(
+                            "cmat_inv",
+                            vec![args[0].clone()],
+                        ))?;
+                        return self
+                            .eval_concrete(&Expression::operation(
+                                "cmat_mpow",
+                                vec![inv_result, Expression::Const(format!("{}", -k))],
+                            ))
+                            .map(Some);
+                    }
+                    if k == 0 {
+                        // M^0 = I (complex identity)
+                        // Need to get the dimension first
+                        if let Some((a, _b)) = self.extract_complex_matrix(&args[0]) {
+                            if let Some((n, _, _)) = self.extract_matrix(&a) {
+                                return self.apply_builtin(
+                                    "cmat_eye",
+                                    &[Expression::Const(format!("{}", n))],
+                                );
+                            }
+                        }
+                        return Ok(None);
+                    }
+                    if k == 1 {
+                        return Ok(Some(args[0].clone()));
+                    }
+
+                    // Binary exponentiation
+                    let dim = if let Some((a, _)) = self.extract_complex_matrix(&args[0]) {
+                        if let Some((n, _, _)) = self.extract_matrix(&a) {
+                            n
+                        } else {
+                            return Ok(None);
+                        }
+                    } else {
+                        return Ok(None);
+                    };
+
+                    let mut result = self
+                        .apply_builtin("cmat_eye", &[Expression::Const(format!("{}", dim))])?
+                        .unwrap_or(Expression::Const("error".to_string()));
+                    let mut base = args[0].clone();
+                    let mut exp = k as u64;
+
+                    while exp > 0 {
+                        if exp & 1 == 1 {
+                            result = self
+                                .apply_builtin("cmat_mul", &[result.clone(), base.clone()])?
+                                .unwrap_or(result);
+                        }
+                        base = self
+                            .apply_builtin("cmat_mul", &[base.clone(), base.clone()])?
+                            .unwrap_or(base);
+                        exp >>= 1;
+                    }
+                    Ok(Some(result))
+                } else {
+                    Ok(None)
+                }
+            }
 
             // Not a built-in
             _ => Ok(None),
@@ -2868,6 +3635,23 @@ impl Evaluator {
             Expression::Const(s) => s.parse().ok(),
             _ => None,
         }
+    }
+
+    /// Tolerance for treating a floating-point number as zero
+    const ZERO_TOLERANCE: f64 = 1e-15;
+
+    /// Format a floating-point number, handling near-zero values as "0"
+    fn format_number(v: f64) -> String {
+        if v.abs() < Self::ZERO_TOLERANCE {
+            "0".to_string()
+        } else {
+            format!("{}", v)
+        }
+    }
+
+    /// Create a Const expression from a float, handling near-zero values
+    fn const_from_f64(v: f64) -> Expression {
+        Expression::Const(Self::format_number(v))
     }
 
     fn as_string(&self, expr: &Expression) -> Option<String> {
@@ -3071,6 +3855,54 @@ impl Evaluator {
         }
     }
 
+    /// Extract (real_matrix, imag_matrix) from a complex matrix expression
+    /// Complex matrices are represented as pairs: (A, B) or List([A, B])
+    /// where A is the real part and B is the imaginary part
+    fn extract_complex_matrix(&self, expr: &Expression) -> Option<(Expression, Expression)> {
+        match expr {
+            // List format: [A, B]
+            Expression::List(parts) if parts.len() == 2 => {
+                // Verify both parts are matrices
+                if self.extract_matrix(&parts[0]).is_some()
+                    && self.extract_matrix(&parts[1]).is_some()
+                {
+                    Some((parts[0].clone(), parts[1].clone()))
+                } else {
+                    None
+                }
+            }
+            // Operation format: pair(A, B) or tuple(A, B)
+            Expression::Operation { name, args }
+                if (name == "pair" || name == "tuple" || name == "Pair" || name == "Tuple")
+                    && args.len() == 2 =>
+            {
+                if self.extract_matrix(&args[0]).is_some()
+                    && self.extract_matrix(&args[1]).is_some()
+                {
+                    Some((args[0].clone(), args[1].clone()))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Extract a natural number from an expression
+    fn as_nat(&self, expr: &Expression) -> Option<usize> {
+        match expr {
+            Expression::Const(s) => s.parse::<usize>().ok(),
+            _ => {
+                // Try evaluating first
+                if let Ok(Expression::Const(s)) = self.eval_concrete(expr) {
+                    s.parse::<usize>().ok()
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
     // === LAPACK Operations ===
     // These require the "numerical" feature flag
 
@@ -3220,25 +4052,9 @@ impl Evaluator {
         let (u, s, vt) = numerical::svd(&data, m, n).map_err(|e| e.to_string())?;
 
         // Return (U, S, Vt) as matrices/vector
-        let u_expr = self.make_matrix(
-            m,
-            m,
-            u.iter()
-                .map(|&v| Expression::Const(format!("{}", v)))
-                .collect(),
-        );
-        let s_expr = Expression::List(
-            s.iter()
-                .map(|&v| Expression::Const(format!("{}", v)))
-                .collect(),
-        );
-        let vt_expr = self.make_matrix(
-            n,
-            n,
-            vt.iter()
-                .map(|&v| Expression::Const(format!("{}", v)))
-                .collect(),
-        );
+        let u_expr = self.make_matrix(m, m, u.iter().map(|&v| Self::const_from_f64(v)).collect());
+        let s_expr = Expression::List(s.iter().map(|&v| Self::const_from_f64(v)).collect());
+        let vt_expr = self.make_matrix(n, n, vt.iter().map(|&v| Self::const_from_f64(v)).collect());
 
         // Return as a list of three elements: [U, S, Vt]
         Ok(Some(Expression::List(vec![u_expr, s_expr, vt_expr])))
@@ -3269,9 +4085,7 @@ impl Evaluator {
         let s = numerical::singular_values(&data, m, n).map_err(|e| e.to_string())?;
 
         Ok(Some(Expression::List(
-            s.iter()
-                .map(|&v| Expression::Const(format!("{}", v)))
-                .collect(),
+            s.iter().map(|&v| Self::const_from_f64(v)).collect(),
         )))
     }
 
@@ -3292,7 +4106,7 @@ impl Evaluator {
             return Err(format!("solve requires a square matrix A, got {}×{}", m, n));
         }
 
-        // b can be a list or vector
+        // b can be a list, vector, or column matrix
         let b_elements = match &args[1] {
             Expression::List(items) => items.clone(),
             Expression::Operation {
@@ -3302,6 +4116,21 @@ impl Evaluator {
                 // Vector(n, [elements])
                 if op_args.len() >= 2 {
                     if let Expression::List(items) = &op_args[1] {
+                        items.clone()
+                    } else {
+                        return Ok(None);
+                    }
+                } else {
+                    return Ok(None);
+                }
+            }
+            Expression::Operation {
+                name,
+                args: op_args,
+            } if name == "Matrix" || name == "matrix" => {
+                // Matrix(rows, cols, [elements]) - extract elements from column matrix
+                if op_args.len() >= 3 {
+                    if let Expression::List(items) = &op_args[2] {
                         items.clone()
                     } else {
                         return Ok(None);
@@ -3343,9 +4172,7 @@ impl Evaluator {
         let x = numerical::solve(&a_data, &b_data, n).map_err(|e| e.to_string())?;
 
         Ok(Some(Expression::List(
-            x.iter()
-                .map(|&v| Expression::Const(format!("{}", v)))
-                .collect(),
+            x.iter().map(|&v| Self::const_from_f64(v)).collect(),
         )))
     }
 
@@ -3377,16 +4204,11 @@ impl Evaluator {
 
         let inv_data = numerical::inv(&data, n).map_err(|e| e.to_string())?;
 
-        Ok(Some(
-            self.make_matrix(
-                n,
-                n,
-                inv_data
-                    .iter()
-                    .map(|&v| Expression::Const(format!("{}", v)))
-                    .collect(),
-            ),
-        ))
+        Ok(Some(self.make_matrix(
+            n,
+            n,
+            inv_data.iter().map(|&v| Self::const_from_f64(v)).collect(),
+        )))
     }
 
     #[cfg(feature = "numerical")]
@@ -3414,20 +4236,8 @@ impl Evaluator {
         let (q, r) = numerical::qr(&data, m, n).map_err(|e| e.to_string())?;
 
         let k = m.min(n);
-        let q_expr = self.make_matrix(
-            m,
-            k,
-            q.iter()
-                .map(|&v| Expression::Const(format!("{}", v)))
-                .collect(),
-        );
-        let r_expr = self.make_matrix(
-            k,
-            n,
-            r.iter()
-                .map(|&v| Expression::Const(format!("{}", v)))
-                .collect(),
-        );
+        let q_expr = self.make_matrix(m, k, q.iter().map(|&v| Self::const_from_f64(v)).collect());
+        let r_expr = self.make_matrix(k, n, r.iter().map(|&v| Self::const_from_f64(v)).collect());
 
         // Return as a list of two elements: [Q, R]
         Ok(Some(Expression::List(vec![q_expr, r_expr])))
@@ -3464,15 +4274,11 @@ impl Evaluator {
 
         let l = numerical::cholesky(&data, n).map_err(|e| e.to_string())?;
 
-        Ok(Some(
-            self.make_matrix(
-                n,
-                n,
-                l.iter()
-                    .map(|&v| Expression::Const(format!("{}", v)))
-                    .collect(),
-            ),
-        ))
+        Ok(Some(self.make_matrix(
+            n,
+            n,
+            l.iter().map(|&v| Self::const_from_f64(v)).collect(),
+        )))
     }
 
     #[cfg(feature = "numerical")]

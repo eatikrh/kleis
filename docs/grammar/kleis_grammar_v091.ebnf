@@ -1,0 +1,142 @@
+(* ============================================ *)
+(* Kleis Grammar v0.91 - EBNF Specification    *)
+(* Date: 2025-12-22                             *)
+(* NEW: Parameterized Type Aliases              *)
+(*   - type Name(params) = Type                 *)
+(*   - Enables user-defined generic types       *)
+(* NEW: Tuple Types                             *)
+(*   - (A, B) as type expression                *)
+(*   - Consistent with tuple patterns (v0.8)    *)
+(* Based on: v0.8 (pattern matching, imports)   *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* CHANGES FROM v0.8                            *)
+(*                                              *)
+(* 1. PARAMETERIZED TYPE ALIASES                *)
+(*    Before: type Name = Type                  *)
+(*    After:  type Name(params) = Type          *)
+(*                                              *)
+(*    Examples:                                 *)
+(*      type RealVector = Vector(ℝ)             *)
+(*      type ComplexMatrix(m, n) =              *)
+(*          (Matrix(m, n, ℝ), Matrix(m, n, ℝ))  *)
+(*      type Pair(A, B) = (A, B)                *)
+(*                                              *)
+(* 2. TUPLE TYPES                               *)
+(*    Before: Only × syntax (A × B)             *)
+(*    After:  (A, B) also valid                 *)
+(*                                              *)
+(*    Examples:                                 *)
+(*      (ℝ, ℝ) - pair of reals                  *)
+(*      (Matrix(n,n,ℝ), Matrix(n,n,ℝ)) - pair   *)
+(*      (A, B, C) - triple                      *)
+(*                                              *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* TYPE SYSTEM (updated rules)                  *)
+(* ============================================ *)
+
+type
+    ::= primitiveType
+      | parametricType
+      | functionType
+      | tupleType           (* v0.91: NEW *)
+      | productType         (* A × B syntax *)
+      | typeVariable
+      | "(" type ")"        (* grouping *)
+      ;
+
+primitiveType
+    ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
+      | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
+      | "Bool" | "String"
+      ;
+
+parametricType ::= identifier "(" typeArgs ")" ;
+typeArgs ::= type { "," type } ;
+
+functionType
+    ::= type "→" type
+      | type "->" type
+      ;
+
+(* v0.91: Tuple types - (A, B) syntax
+ * 
+ * Desugaring:
+ *   (A, B)       → Pair(A, B)
+ *   (A, B, C)    → Tuple3(A, B, C)
+ *   (A, B, C, D) → Tuple4(A, B, C, D)
+ *   (A)          → A (just grouping, not a tuple)
+ * 
+ * This matches the tuple pattern syntax from v0.8.
+ *)
+tupleType
+    ::= "(" type "," type { "," type } ")"
+      ;
+
+(* Product type with × operator (existing) *)
+productType
+    ::= type "×" type
+      ;
+
+typeVariable
+    ::= greekLower      (* α, β, γ *)
+      | identifier       (* a, b, T, M *)
+      ;
+
+typeAnnotation ::= ":" type ;
+
+(* v0.91: Parameterized type aliases
+ * 
+ * Enables defining generic type constructors:
+ *   type Name = Type                    -- simple alias (v0.8)
+ *   type Name(params) = Type            -- parameterized (v0.91)
+ * 
+ * The parameters become type variables in scope on RHS.
+ * 
+ * Examples:
+ *   type RealVector = Vector(ℝ)
+ *   type ComplexMatrix(m, n) = (Matrix(m, n, ℝ), Matrix(m, n, ℝ))
+ *   type StateSpace(n, m, p) = {
+ *       A : Matrix(n, n, ℝ),
+ *       B : Matrix(n, m, ℝ),
+ *       C : Matrix(p, n, ℝ),
+ *       D : Matrix(p, m, ℝ)
+ *   }
+ *)
+typeAlias
+    ::= "type" identifier [ "(" typeAliasParams ")" ] "=" type
+      ;
+
+typeAliasParams
+    ::= typeAliasParam { "," typeAliasParam }
+      ;
+
+typeAliasParam
+    ::= identifier [ ":" kind ]
+      ;
+
+kind
+    ::= "Type"
+      | "Nat"
+      | kind "→" kind
+      ;
+
+(* ============================================ *)
+(* REST OF GRAMMAR (unchanged from v0.8)        *)
+(* ============================================ *)
+
+(* See kleis_grammar_v08.ebnf for complete grammar.
+ * Only the type-related rules above are changed.
+ * 
+ * Notable unchanged features:
+ *   - Pattern matching with guards, as-patterns
+ *   - Tuple patterns (a, b) in expressions
+ *   - Import statements
+ *   - Structures with axioms
+ *   - Data types (ADTs)
+ *   - Function definitions
+ *)
+

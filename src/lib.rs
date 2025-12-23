@@ -3,6 +3,7 @@
 pub mod ast;
 pub mod axiom_verifier; // Z3 integration for axiom verification
 pub mod data_registry;
+pub mod dimension_solver; // Built-in solver for type-level dimension constraints
 pub mod editor_ast; // Visual Editor AST (separate from Kleis Core AST)
 pub mod evaluator; // Wire 3: Self-hosting
 pub mod kleis_ast;

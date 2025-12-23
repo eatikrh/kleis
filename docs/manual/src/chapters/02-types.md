@@ -218,6 +218,106 @@ Vector(4)         // 4-dimensional vector
 Set(ℝ)            // Set of real numbers
 ```
 
+## Dimension Expressions
+
+When working with parameterized types like `Matrix(m, n, ℝ)`, the dimension parameters are not just simple numbers — they can be **dimension expressions**. This enables type-safe operations where dimensions depend on each other.
+
+### Supported Dimension Expressions
+
+| Category | Operators | Examples |
+|----------|-----------|----------|
+| Arithmetic | `+`, `-`, `*`, `/` | `n+1`, `2*n`, `n/2` |
+| Power | `^` | `n^2`, `2^k` |
+| Grouping | `( )` | `(n+1)*2` |
+| Functions | `min`, `max` | `min(m, n)` |
+
+### Why Dimension Expressions Matter
+
+Consider the **realification functor** from control theory, which embeds a complex n×n matrix into a real 2n×2n matrix:
+
+```kleis
+// Complex matrix represented as (real_part, imag_part)
+type ComplexMatrix(m: Nat, n: Nat) = (Matrix(m, n, ℝ), Matrix(m, n, ℝ))
+
+// Realification: embed C^(n×n) into R^(2n×2n)
+structure Realification(n: Nat) {
+    operation realify : ComplexMatrix(n, n) → Matrix(2*n, 2*n, ℝ)
+    operation complexify : Matrix(2*n, 2*n, ℝ) → ComplexMatrix(n, n)
+}
+```
+
+The `2*n` dimension expression captures the **invariant** that the output dimension is always twice the input dimension.
+
+### How Dimension Unification Works
+
+When Kleis type-checks your code, it must verify that dimension expressions match. This uses a built-in **dimension solver** that can handle common arithmetic constraints.
+
+#### What the Solver Can Unify
+
+| Expression 1 | Expression 2 | Result |
+|--------------|--------------|--------|
+| `2*n` | `2*n` | ✅ Structurally equal |
+| `2*n` | `6` | ✅ Solved: `n = 3` |
+| `n + 1` | `5` | ✅ Solved: `n = 4` |
+| `n^2` | `9` | ✅ Solved: `n = 3` |
+| `2^k` | `8` | ✅ Solved: `k = 3` |
+
+#### What the Solver Rejects
+
+| Expression 1 | Expression 2 | Result |
+|--------------|--------------|--------|
+| `2*n` | `n` | ❌ Different structure (unless `n = 0`) |
+| `n + 1` | `n` | ❌ Different structure |
+| `n*m` | `6` | ⚠️ Underdetermined |
+
+### Examples in Practice
+
+**Matrix multiplication** requires matching inner dimensions:
+
+```kleis
+// Matrix(m, n) × Matrix(n, p) → Matrix(m, p)
+structure MatrixMultiply(m: Nat, n: Nat, p: Nat) {
+    operation matmul : Matrix(m, n, ℝ) → Matrix(n, p, ℝ) → Matrix(m, p, ℝ)
+}
+```
+
+The `n` dimension must match on both sides — the solver verifies this.
+
+**SVD decomposition** produces matrices with `min(m, n)` dimensions:
+
+```kleis example
+// Illustrative — tuple return types in structures are aspirational
+structure SVD(m: Nat, n: Nat) {
+    // A = U * Σ * Vᵀ where Σ is min(m,n) × min(m,n)
+    operation svd : Matrix(m, n, ℝ) → 
+        (Matrix(m, min(m,n), ℝ), Matrix(min(m,n), min(m,n), ℝ), Matrix(min(m,n), n, ℝ))
+}
+```
+
+### Simplification
+
+The dimension solver simplifies expressions before comparing them:
+
+| Expression | Simplified |
+|------------|------------|
+| `0 + n` | `n` |
+| `1 * n` | `n` |
+| `n^1` | `n` |
+| `n^0` | `1` |
+| `2 * 3` | `6` |
+
+This means `Matrix(1*n, n+0, ℝ)` correctly unifies with `Matrix(n, n, ℝ)`.
+
+### Design Philosophy
+
+The dimension solver is **deliberately bounded**:
+
+- It handles practical cases (linear arithmetic, powers, min/max)
+- It fails clearly on complex constraints it cannot solve
+- It doesn't require external dependencies (no SMT solver needed for type checking)
+
+If you need more advanced constraint solving, use the `:verify` command with Z3 at the value level.
+
 ## Type Inference
 
 Kleis often infers types automatically:

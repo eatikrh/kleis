@@ -89,6 +89,12 @@ pub enum Type {
     /// Example: Matrix(2, 3) → Data { args: [NatValue(2), NatValue(3)] }
     NatValue(usize),
 
+    /// Symbolic dimension expression (v0.92)
+    /// Preserves type-level arithmetic: 2*n, n+1, n^2
+    /// Used for proper dimension unification
+    /// Example: Matrix(2*n, 2*n) → Data { args: [NatExpr(Mul(2, n)), NatExpr(Mul(2, n))] }
+    NatExpr(crate::kleis_ast::DimExpr),
+
     /// String type (for text values)
     /// Used in: Currency(code: String)
     String,
@@ -187,8 +193,10 @@ impl Substitution {
             }
             Type::ForAll(v, t) => Type::ForAll(v.clone(), Box::new(self.apply(t))),
             // Bootstrap types have no substructure (leaf types)
+            // NatExpr is also a leaf - dimension variables are separate from type variables
             Type::Nat
             | Type::NatValue(_)
+            | Type::NatExpr(_)
             | Type::String
             | Type::StringValue(_)
             | Type::Bool
@@ -1147,6 +1155,11 @@ impl TypeInference {
                 // type variables and generalization, so we don't need the explicit quantifiers
                 self.type_expr_to_type(body)
             }
+            TypeExpr::DimExpr(dim) => {
+                // v0.92: Dimension expressions preserve symbolic structure
+                // for proper dimension unification
+                Ok(Type::NatExpr(dim.clone()))
+            }
         }
     }
 
@@ -1796,6 +1809,32 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
             "Cannot unify different dimensions: {} vs {}",
             n1, n2
         )),
+
+        // Symbolic dimension expressions: delegate to dimension solver
+        (Type::NatExpr(e1), Type::NatExpr(e2)) => {
+            use crate::dimension_solver::{unify_dims, DimUnifyResult};
+            match unify_dims(e1, e2) {
+                DimUnifyResult::Equal(_) => Ok(Substitution::empty()),
+                DimUnifyResult::Unequal(msg) => Err(msg),
+            }
+        }
+
+        // NatExpr vs NatValue: check if expression evaluates to value
+        (Type::NatExpr(e), Type::NatValue(n)) | (Type::NatValue(n), Type::NatExpr(e)) => {
+            use crate::dimension_solver::{unify_dims, DimUnifyResult};
+            use crate::kleis_ast::DimExpr;
+            match unify_dims(e, &DimExpr::Lit(*n)) {
+                DimUnifyResult::Equal(_) => Ok(Substitution::empty()),
+                DimUnifyResult::Unequal(msg) => Err(msg),
+            }
+        }
+
+        // Nat (kind) unifies with any dimension
+        (Type::Nat, Type::NatValue(_))
+        | (Type::NatValue(_), Type::Nat)
+        | (Type::Nat, Type::NatExpr(_))
+        | (Type::NatExpr(_), Type::Nat) => Ok(Substitution::empty()),
+
         (Type::String, Type::String) => Ok(Substitution::empty()),
         (Type::StringValue(s1), Type::StringValue(s2)) if s1 == s2 => Ok(Substitution::empty()),
         (Type::StringValue(s1), Type::StringValue(s2)) => Err(format!(
@@ -1879,9 +1918,11 @@ fn occurs(v: &TypeVar, t: &Type) -> bool {
         Type::Var(v2) => v == v2,
         Type::Data { args, .. } => args.iter().any(|arg| occurs(v, arg)),
         Type::ForAll(_, t) => occurs(v, t),
-        // Leaf types (no variables can occur in them)
+        // Leaf types (no type variables can occur in them)
+        // NatExpr has dimension variables, not type variables
         Type::Nat
         | Type::NatValue(_)
+        | Type::NatExpr(_)
         | Type::String
         | Type::StringValue(_)
         | Type::Bool
@@ -1999,9 +2040,30 @@ impl std::fmt::Display for Type {
                 }
             }
 
+            // Symbolic dimension expression (v0.92)
+            Type::NatExpr(dim) => write!(f, "{}", format_dim_expr(dim)),
+
             // Meta-level types
             Type::Var(TypeVar(n)) => write!(f, "α{}", n),
             Type::ForAll(TypeVar(n), t) => write!(f, "∀α{}. {}", n, t),
+        }
+    }
+}
+
+/// Format a dimension expression for display
+fn format_dim_expr(dim: &crate::kleis_ast::DimExpr) -> String {
+    use crate::kleis_ast::DimExpr;
+    match dim {
+        DimExpr::Lit(n) => n.to_string(),
+        DimExpr::Var(name) => name.clone(),
+        DimExpr::Add(l, r) => format!("({}+{})", format_dim_expr(l), format_dim_expr(r)),
+        DimExpr::Sub(l, r) => format!("({}-{})", format_dim_expr(l), format_dim_expr(r)),
+        DimExpr::Mul(l, r) => format!("({}*{})", format_dim_expr(l), format_dim_expr(r)),
+        DimExpr::Div(l, r) => format!("({}/{})", format_dim_expr(l), format_dim_expr(r)),
+        DimExpr::Pow(l, r) => format!("({}^{})", format_dim_expr(l), format_dim_expr(r)),
+        DimExpr::Call(name, args) => {
+            let arg_strs: Vec<_> = args.iter().map(format_dim_expr).collect();
+            format!("{}({})", name, arg_strs.join(", "))
         }
     }
 }

@@ -13,7 +13,8 @@
 //! ctx.supports_operation("abs", &Type::Real); // true
 //! ```
 use crate::kleis_ast::{
-    ImplMember, ImplementsDef, Program, StructureDef, StructureMember, TopLevel, TypeExpr,
+    ImplMember, ImplementsDef, Program, StructureDef, StructureMember, TopLevel, TypeAliasParam,
+    TypeExpr,
 };
 use crate::signature_interpreter::SignatureInterpreter;
 use crate::type_inference::{Type, TypeContext};
@@ -243,8 +244,9 @@ pub struct TypeContextBuilder {
     /// Type context (for inference)
     context: TypeContext,
 
-    /// Type aliases: name -> underlying type expression
-    type_aliases: HashMap<String, TypeExpr>,
+    /// Type aliases: name -> (parameters, underlying type expression)
+    /// v0.91: Supports parameterized type aliases like ComplexMatrix(m, n)
+    type_aliases: HashMap<String, (Vec<TypeAliasParam>, TypeExpr)>,
 }
 
 impl TypeContextBuilder {
@@ -279,9 +281,9 @@ impl TypeContextBuilder {
         // Merge operation registry
         self.registry.merge(other.registry)?;
 
-        // Merge aliases
-        for (name, aliased) in other.type_aliases {
-            self.type_aliases.entry(name).or_insert(aliased);
+        // Merge aliases (v0.91: with parameters)
+        for (name, alias_def) in other.type_aliases {
+            self.type_aliases.entry(name).or_insert(alias_def);
         }
 
         // Context merging is not needed (it's ephemeral)
@@ -293,12 +295,13 @@ impl TypeContextBuilder {
     pub fn from_program(program: Program) -> Result<Self, String> {
         let mut builder = Self::new();
 
-        // Phase 0: Register type aliases
+        // Phase 0: Register type aliases (v0.91: with parameters)
         for item in &program.items {
             if let TopLevel::TypeAlias(alias) = item {
-                builder
-                    .type_aliases
-                    .insert(alias.name.clone(), alias.type_expr.clone());
+                builder.type_aliases.insert(
+                    alias.name.clone(),
+                    (alias.params.clone(), alias.type_expr.clone()),
+                );
             }
         }
 
@@ -531,36 +534,199 @@ impl TypeContextBuilder {
                     self.type_expr_to_string(body)
                 )
             }
+            TypeExpr::DimExpr(dim) => dim.to_string(),
         }
     }
 
     /// Normalize a TypeExpr by expanding type aliases (with cycle guard)
+    /// Normalize a type expression by expanding type aliases
+    ///
+    /// v0.91: Supports parameterized type aliases
+    /// - Simple alias: `type Real = ℝ` → `Real` expands to `ℝ`
+    /// - Parameterized: `type ComplexMatrix(m, n) = (Matrix(m,n,ℝ), Matrix(m,n,ℝ))`
+    ///   → `ComplexMatrix(2, 3)` expands to `(Matrix(2,3,ℝ), Matrix(2,3,ℝ))`
     fn normalize_type_expr(&self, ty: &TypeExpr) -> Result<TypeExpr, String> {
+        fn substitute(
+            ty: &TypeExpr,
+            param_names: &[String],
+            param_values: &[TypeExpr],
+        ) -> TypeExpr {
+            match ty {
+                TypeExpr::Named(n) => {
+                    // Check if this name is a parameter to substitute
+                    for (i, param_name) in param_names.iter().enumerate() {
+                        if n == param_name {
+                            return param_values[i].clone();
+                        }
+                    }
+                    TypeExpr::Named(n.clone())
+                }
+                TypeExpr::Var(v) => {
+                    // Variable might also be a parameter
+                    for (i, param_name) in param_names.iter().enumerate() {
+                        if v == param_name {
+                            return param_values[i].clone();
+                        }
+                    }
+                    TypeExpr::Var(v.clone())
+                }
+                TypeExpr::Parametric(name, params) => {
+                    let params_subst: Vec<TypeExpr> = params
+                        .iter()
+                        .map(|p| substitute(p, param_names, param_values))
+                        .collect();
+                    TypeExpr::Parametric(name.clone(), params_subst)
+                }
+                TypeExpr::Function(from, to) => TypeExpr::Function(
+                    Box::new(substitute(from, param_names, param_values)),
+                    Box::new(substitute(to, param_names, param_values)),
+                ),
+                TypeExpr::Product(types) => {
+                    let types_subst: Vec<TypeExpr> = types
+                        .iter()
+                        .map(|t| substitute(t, param_names, param_values))
+                        .collect();
+                    TypeExpr::Product(types_subst)
+                }
+                TypeExpr::ForAll { vars, body } => {
+                    let vars_subst: Vec<(String, TypeExpr)> = vars
+                        .iter()
+                        .map(|(n, t)| (n.clone(), substitute(t, param_names, param_values)))
+                        .collect();
+                    TypeExpr::ForAll {
+                        vars: vars_subst,
+                        body: Box::new(substitute(body, param_names, param_values)),
+                    }
+                }
+                // v0.92: DimExpr is a dimension expression, handle variable substitution
+                TypeExpr::DimExpr(dim) => {
+                    TypeExpr::DimExpr(substitute_dim_expr(dim, param_names, param_values))
+                }
+            }
+        }
+
+        fn substitute_dim_expr(
+            dim: &crate::kleis_ast::DimExpr,
+            param_names: &[String],
+            param_values: &[TypeExpr],
+        ) -> crate::kleis_ast::DimExpr {
+            use crate::kleis_ast::DimExpr;
+            match dim {
+                DimExpr::Lit(n) => DimExpr::Lit(*n),
+                DimExpr::Var(v) => {
+                    // Check if this variable is a parameter to substitute
+                    for (i, param_name) in param_names.iter().enumerate() {
+                        if v == param_name {
+                            // Convert TypeExpr to DimExpr if possible
+                            if let TypeExpr::Named(name) = &param_values[i] {
+                                if let Ok(n) = name.parse::<usize>() {
+                                    return DimExpr::Lit(n);
+                                } else {
+                                    return DimExpr::Var(name.clone());
+                                }
+                            } else if let TypeExpr::DimExpr(d) = &param_values[i] {
+                                return d.clone();
+                            }
+                        }
+                    }
+                    DimExpr::Var(v.clone())
+                }
+                DimExpr::Add(left, right) => DimExpr::Add(
+                    Box::new(substitute_dim_expr(left, param_names, param_values)),
+                    Box::new(substitute_dim_expr(right, param_names, param_values)),
+                ),
+                DimExpr::Sub(left, right) => DimExpr::Sub(
+                    Box::new(substitute_dim_expr(left, param_names, param_values)),
+                    Box::new(substitute_dim_expr(right, param_names, param_values)),
+                ),
+                DimExpr::Mul(left, right) => DimExpr::Mul(
+                    Box::new(substitute_dim_expr(left, param_names, param_values)),
+                    Box::new(substitute_dim_expr(right, param_names, param_values)),
+                ),
+                DimExpr::Div(left, right) => DimExpr::Div(
+                    Box::new(substitute_dim_expr(left, param_names, param_values)),
+                    Box::new(substitute_dim_expr(right, param_names, param_values)),
+                ),
+                DimExpr::Pow(left, right) => DimExpr::Pow(
+                    Box::new(substitute_dim_expr(left, param_names, param_values)),
+                    Box::new(substitute_dim_expr(right, param_names, param_values)),
+                ),
+                DimExpr::Call(name, args) => {
+                    let args_subst: Vec<DimExpr> = args
+                        .iter()
+                        .map(|a| substitute_dim_expr(a, param_names, param_values))
+                        .collect();
+                    DimExpr::Call(name.clone(), args_subst)
+                }
+            }
+        }
+
         fn helper(
             ty: &TypeExpr,
-            aliases: &HashMap<String, TypeExpr>,
+            aliases: &HashMap<String, (Vec<TypeAliasParam>, TypeExpr)>,
             stack: &mut Vec<String>,
         ) -> Result<TypeExpr, String> {
             match ty {
                 TypeExpr::Named(n) => {
-                    if let Some(alias) = aliases.get(n) {
-                        if stack.contains(n) {
-                            return Err(format!("Cyclic type alias detected: {}", n));
+                    if let Some((params, body)) = aliases.get(n) {
+                        // Only expand if it's a non-parameterized alias
+                        if params.is_empty() {
+                            if stack.contains(n) {
+                                return Err(format!("Cyclic type alias detected: {}", n));
+                            }
+                            stack.push(n.clone());
+                            let expanded = helper(body, aliases, stack)?;
+                            stack.pop();
+                            Ok(expanded)
+                        } else {
+                            // Parameterized alias used without args - error or keep as-is
+                            // For now, keep as-is (user might be referencing the type constructor)
+                            Ok(TypeExpr::Named(n.clone()))
                         }
-                        stack.push(n.clone());
-                        let expanded = helper(alias, aliases, stack)?;
-                        stack.pop();
-                        Ok(expanded)
                     } else {
                         Ok(TypeExpr::Named(n.clone()))
                     }
                 }
-                TypeExpr::Parametric(name, params) => {
-                    let params_norm = params
+                TypeExpr::Parametric(name, args) => {
+                    // First normalize the arguments
+                    let args_norm: Vec<TypeExpr> = args
                         .iter()
                         .map(|p| helper(p, aliases, stack))
                         .collect::<Result<Vec<_>, _>>()?;
-                    Ok(TypeExpr::Parametric(name.clone(), params_norm))
+
+                    // Check if this is a parameterized type alias
+                    if let Some((params, body)) = aliases.get(name) {
+                        if !params.is_empty() {
+                            // This is a parameterized alias - substitute!
+                            if args_norm.len() != params.len() {
+                                return Err(format!(
+                                    "Type alias {} expects {} arguments, got {}",
+                                    name,
+                                    params.len(),
+                                    args_norm.len()
+                                ));
+                            }
+                            if stack.contains(name) {
+                                return Err(format!("Cyclic type alias detected: {}", name));
+                            }
+                            stack.push(name.clone());
+
+                            // Extract parameter names
+                            let param_names: Vec<String> =
+                                params.iter().map(|p| p.name.clone()).collect();
+
+                            // Substitute parameters in the body
+                            let substituted = substitute(body, &param_names, &args_norm);
+
+                            // Recursively normalize the result
+                            let expanded = helper(&substituted, aliases, stack)?;
+                            stack.pop();
+                            return Ok(expanded);
+                        }
+                    }
+
+                    // Not a parameterized alias - keep as parametric type
+                    Ok(TypeExpr::Parametric(name.clone(), args_norm))
                 }
                 TypeExpr::Function(from, to) => {
                     let from_n = helper(from, aliases, stack)?;
@@ -589,6 +755,8 @@ impl TypeContextBuilder {
                         body: Box::new(body_norm),
                     })
                 }
+                // v0.92: DimExpr doesn't need normalization - just pass through
+                TypeExpr::DimExpr(dim) => Ok(TypeExpr::DimExpr(dim.clone())),
             }
         }
 
@@ -723,6 +891,9 @@ impl TypeContextBuilder {
                     Some(format!("{}({})", constructor, arg_names.join(", ")))
                 }
             }
+
+            // Symbolic dimension expression
+            Type::NatExpr(dim) => Some(format!("{}", dim)),
 
             // Meta-level types
             Type::Var(_) => None, // Type variables can't be validated (polymorphic)
@@ -1305,10 +1476,12 @@ mod tests {
     use crate::kleis_ast::Implementation;
     use crate::kleis_parser::parse_kleis_program;
 
+    /// Helper to create a builder with simple (non-parameterized) type aliases
     fn builder_with_aliases(map: &[(&str, TypeExpr)]) -> TypeContextBuilder {
         let mut b = TypeContextBuilder::new();
         for (k, v) in map {
-            b.type_aliases.insert((*k).to_string(), v.clone());
+            // Simple aliases have empty params
+            b.type_aliases.insert((*k).to_string(), (vec![], v.clone()));
         }
         b
     }
@@ -1468,9 +1641,9 @@ mod tests {
     fn normalize_detects_cycle() {
         let mut b = TypeContextBuilder::new();
         b.type_aliases
-            .insert("A".to_string(), TypeExpr::Named("B".to_string()));
+            .insert("A".to_string(), (vec![], TypeExpr::Named("B".to_string())));
         b.type_aliases
-            .insert("B".to_string(), TypeExpr::Named("A".to_string()));
+            .insert("B".to_string(), (vec![], TypeExpr::Named("A".to_string())));
         let err = b.normalize_type_expr(&TypeExpr::Named("A".to_string()));
         assert!(err.is_err());
     }
