@@ -3,10 +3,10 @@
 //!
 //! This provides IDE support for Kleis via the Language Server Protocol:
 //! - Real-time diagnostics (parse errors, type errors)
-//! - Hover information (type signatures)
+//! - Hover information (type signatures from imports)
 //! - Go to definition
 //! - Document symbols
-//! - Semantic token highlighting
+//! - Context-aware completions (based on imports)
 //!
 //! ## Usage
 //!
@@ -19,19 +19,26 @@
 
 use dashmap::DashMap;
 use ropey::Rope;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
+use kleis::kleis_ast::{Program, TopLevel};
 use kleis::kleis_parser::{parse_kleis_program, KleisParseError};
+use kleis::type_context::TypeContextBuilder;
 
 /// Document state stored by the language server
 struct Document {
     /// The document content as a rope (efficient for edits)
     content: Rope,
     /// The parsed AST (if parsing succeeded)
-    #[allow(dead_code)]
-    ast: Option<kleis::kleis_ast::Program>,
+    ast: Option<Program>,
+    /// Type context built from this document and its imports
+    type_context: Option<TypeContextBuilder>,
+    /// List of import paths found in this document
+    imports: Vec<String>,
 }
 
 /// The Kleis Language Server
@@ -50,19 +57,183 @@ impl KleisLanguageServer {
         }
     }
 
-    /// Parse a document and return diagnostics
-    fn parse_document(
-        &self,
-        _uri: &Url,
-        text: &str,
-    ) -> (Option<kleis::kleis_ast::Program>, Vec<Diagnostic>) {
-        match parse_kleis_program(text) {
-            Ok(program) => (Some(program), vec![]),
+    /// Resolve an import path relative to the document's directory
+    fn resolve_import_path(import_path: &str, base_dir: &Path) -> PathBuf {
+        let import = Path::new(import_path);
+
+        if import.is_absolute() {
+            // Absolute path: use as-is
+            import.to_path_buf()
+        } else if import_path.starts_with("stdlib/") {
+            // Standard library: look in common locations
+            // 1. Current working directory
+            // 2. Relative to workspace root
+            let cwd_path = PathBuf::from(import_path);
+            if cwd_path.exists() {
+                return cwd_path;
+            }
+
+            // Try parent directories
+            let mut search_dir = base_dir.to_path_buf();
+            for _ in 0..5 {
+                let candidate = search_dir.join(import_path);
+                if candidate.exists() {
+                    return candidate;
+                }
+                if !search_dir.pop() {
+                    break;
+                }
+            }
+
+            // Fallback: return as relative to cwd
+            PathBuf::from(import_path)
+        } else {
+            // Relative import: resolve from the importing file's directory
+            base_dir.join(import)
+        }
+    }
+
+    /// Load and parse an import file, building type context
+    fn load_import(
+        path: &Path,
+        loaded: &mut HashSet<PathBuf>,
+        builder: &mut TypeContextBuilder,
+    ) -> Vec<Diagnostic> {
+        let mut diagnostics = Vec::new();
+
+        // Avoid cycles
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        if loaded.contains(&canonical) {
+            return diagnostics;
+        }
+        loaded.insert(canonical.clone());
+
+        // Read and parse the file
+        let content = match std::fs::read_to_string(path) {
+            Ok(c) => c,
             Err(e) => {
-                let diagnostic = self.error_to_diagnostic(&e, text);
-                (None, vec![diagnostic])
+                diagnostics.push(Diagnostic {
+                    range: Range::default(),
+                    severity: Some(DiagnosticSeverity::WARNING),
+                    source: Some("kleis".to_string()),
+                    message: format!("Could not load import '{}': {}", path.display(), e),
+                    ..Default::default()
+                });
+                return diagnostics;
+            }
+        };
+
+        let program = match parse_kleis_program(&content) {
+            Ok(p) => p,
+            Err(e) => {
+                diagnostics.push(Diagnostic {
+                    range: Range::default(),
+                    severity: Some(DiagnosticSeverity::WARNING),
+                    source: Some("kleis".to_string()),
+                    message: format!("Parse error in '{}': {}", path.display(), e.message),
+                    ..Default::default()
+                });
+                return diagnostics;
+            }
+        };
+
+        // Process nested imports first
+        let base_dir = path.parent().unwrap_or(Path::new("."));
+        for item in &program.items {
+            if let TopLevel::Import(import_path) = item {
+                let resolved = Self::resolve_import_path(import_path, base_dir);
+                let import_diags = Self::load_import(&resolved, loaded, builder);
+                diagnostics.extend(import_diags);
             }
         }
+
+        // Build type context from this file
+        if let Ok(file_builder) = TypeContextBuilder::from_program(program) {
+            if let Err(e) = builder.merge(file_builder) {
+                diagnostics.push(Diagnostic {
+                    range: Range::default(),
+                    severity: Some(DiagnosticSeverity::WARNING),
+                    source: Some("kleis".to_string()),
+                    message: format!("Error merging types from '{}': {}", path.display(), e),
+                    ..Default::default()
+                });
+            }
+        }
+
+        diagnostics
+    }
+
+    /// Extract import paths from a program
+    fn extract_imports(program: &Program) -> Vec<String> {
+        program
+            .items
+            .iter()
+            .filter_map(|item| {
+                if let TopLevel::Import(path) = item {
+                    Some(path.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Parse a document, resolve imports, and build type context
+    fn parse_document(
+        &self,
+        uri: &Url,
+        text: &str,
+    ) -> (
+        Option<Program>,
+        Option<TypeContextBuilder>,
+        Vec<String>,
+        Vec<Diagnostic>,
+    ) {
+        let mut all_diagnostics = Vec::new();
+
+        // Parse the main document
+        let program = match parse_kleis_program(text) {
+            Ok(p) => p,
+            Err(e) => {
+                let diagnostic = self.error_to_diagnostic(&e, text);
+                return (None, None, vec![], vec![diagnostic]);
+            }
+        };
+
+        // Extract imports
+        let imports = Self::extract_imports(&program);
+
+        // Determine base directory
+        let base_dir = uri
+            .to_file_path()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+
+        // Build type context from imports
+        let mut loaded = HashSet::new();
+        let mut builder = TypeContextBuilder::new();
+
+        for import_path in &imports {
+            let resolved = Self::resolve_import_path(import_path, &base_dir);
+            let import_diags = Self::load_import(&resolved, &mut loaded, &mut builder);
+            all_diagnostics.extend(import_diags);
+        }
+
+        // Build type context from the main document
+        if let Ok(main_builder) = TypeContextBuilder::from_program(program.clone()) {
+            if let Err(e) = builder.merge(main_builder) {
+                all_diagnostics.push(Diagnostic {
+                    range: Range::default(),
+                    severity: Some(DiagnosticSeverity::WARNING),
+                    source: Some("kleis".to_string()),
+                    message: format!("Error building type context: {}", e),
+                    ..Default::default()
+                });
+            }
+        }
+
+        (Some(program), Some(builder), imports, all_diagnostics)
     }
 
     /// Convert a parse error to an LSP diagnostic
@@ -94,14 +265,16 @@ impl KleisLanguageServer {
 
     /// Publish diagnostics for a document
     async fn publish_diagnostics(&self, uri: Url, text: &str) {
-        let (ast, diagnostics) = self.parse_document(&uri, text);
+        let (ast, type_context, imports, diagnostics) = self.parse_document(&uri, text);
 
-        // Store the document
+        // Store the document with type context
         self.documents.insert(
             uri.clone(),
             Document {
                 content: Rope::from_str(text),
                 ast,
+                type_context,
+                imports,
             },
         );
 
@@ -109,6 +282,96 @@ impl KleisLanguageServer {
         self.client
             .publish_diagnostics(uri, diagnostics, None)
             .await;
+    }
+
+    /// Build hover content for a word using type context
+    fn build_hover_content(
+        &self,
+        word: &str,
+        doc: &dashmap::mapref::one::Ref<Url, Document>,
+    ) -> String {
+        let mut content = format!("**{}**\n\n", word);
+
+        // Check if we have type context
+        if let Some(ref ctx) = doc.type_context {
+            // Check if it's a structure
+            if let Some(structure) = ctx.get_structure(word) {
+                content.push_str(&format!("```kleis\nstructure {}", word));
+                if !structure.type_params.is_empty() {
+                    let params: Vec<String> = structure
+                        .type_params
+                        .iter()
+                        .map(|p| p.name.clone())
+                        .collect();
+                    content.push_str(&format!("({})", params.join(", ")));
+                }
+                content.push_str("\n```\n\n");
+
+                // List operations
+                let ops = ctx.operations_for_structure(word);
+                if !ops.is_empty() {
+                    content.push_str("**Operations:**\n");
+                    for op in ops.iter().take(10) {
+                        content.push_str(&format!("- `{}`\n", op));
+                    }
+                    if ops.len() > 10 {
+                        content.push_str(&format!("- ... and {} more\n", ops.len() - 10));
+                    }
+                }
+                return content;
+            }
+
+            // Check if it's an operation
+            if let Some(sig) = ctx.operation_signature(word) {
+                content.push_str("**Operation**\n\n");
+                content.push_str(&format!("```kleis\n{}\n```\n\n", sig));
+
+                // Show which types support this operation
+                let types = ctx.types_supporting(word);
+                if !types.is_empty() {
+                    content.push_str("**Implemented by:**\n");
+                    for ty in types.iter().take(5) {
+                        content.push_str(&format!("- `{}`\n", ty));
+                    }
+                    if types.len() > 5 {
+                        content.push_str(&format!("- ... and {} more\n", types.len() - 5));
+                    }
+                }
+                return content;
+            }
+
+            // Check if it's a type that supports operations
+            if ctx.supports_any_operation(word) {
+                content.push_str(&format!("**Type:** `{}`\n\n", word));
+                let ops = ctx.operations_for_type(word);
+                if !ops.is_empty() {
+                    content.push_str("**Supports:**\n");
+                    for op in ops.iter().take(10) {
+                        content.push_str(&format!("- `{}`\n", op));
+                    }
+                    if ops.len() > 10 {
+                        content.push_str(&format!("- ... and {} more\n", ops.len() - 10));
+                    }
+                }
+                return content;
+            }
+        }
+
+        // Check if it's a known keyword or builtin
+        if let Some(desc) = get_builtin_description(word) {
+            content.push_str(desc);
+            return content;
+        }
+
+        // Fallback: show imports if available
+        if !doc.imports.is_empty() {
+            content.push_str("\n_Imported:_\n");
+            for import in &doc.imports {
+                content.push_str(&format!("- `{}`\n", import));
+            }
+        }
+
+        content
     }
 }
 
@@ -198,9 +461,8 @@ impl LanguageServer for KleisLanguageServer {
             return Ok(None);
         }
 
-        // TODO: Look up type information from the AST
-        // For now, just show the word as a placeholder
-        let hover_content = format!("**{}**\n\n_Type information coming soon_", word);
+        // Build hover content from type context
+        let hover_content = self.build_hover_content(&word, &doc);
 
         Ok(Some(Hover {
             contents: HoverContents::Markup(MarkupContent {
@@ -304,8 +566,50 @@ impl LanguageServer for KleisLanguageServer {
         Ok(None)
     }
 
-    async fn completion(&self, _params: CompletionParams) -> Result<Option<CompletionResponse>> {
-        let completions = get_kleis_completions();
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let mut completions = get_kleis_completions();
+
+        // Add context-aware completions from imports
+        let uri = &params.text_document_position.text_document.uri;
+        if let Some(doc) = self.documents.get(uri) {
+            if let Some(ref ctx) = doc.type_context {
+                // Add structures as type completions
+                for structure_name in ctx.all_structure_names() {
+                    completions.push(CompletionItem {
+                        label: structure_name.clone(),
+                        kind: Some(CompletionItemKind::CLASS),
+                        detail: Some("(structure from import)".to_string()),
+                        documentation: Some(Documentation::String(format!(
+                            "Structure `{}` from imported files",
+                            structure_name
+                        ))),
+                        ..Default::default()
+                    });
+                }
+
+                // Add operations
+                for op_name in ctx.all_operation_names() {
+                    // Skip if already in static completions
+                    if completions.iter().any(|c| c.label == op_name) {
+                        continue;
+                    }
+
+                    let detail = if let Some(sig) = ctx.operation_signature(&op_name) {
+                        sig
+                    } else {
+                        "(operation from import)".to_string()
+                    };
+
+                    completions.push(CompletionItem {
+                        label: op_name.clone(),
+                        kind: Some(CompletionItemKind::FUNCTION),
+                        detail: Some(detail),
+                        ..Default::default()
+                    });
+                }
+            }
+        }
+
         Ok(Some(CompletionResponse::Array(completions)))
     }
 
@@ -445,6 +749,46 @@ fn extract_word_at(line: &str, col: usize) -> String {
     }
 
     chars[start..end].iter().collect()
+}
+
+/// Get description for builtin keywords and types
+fn get_builtin_description(word: &str) -> Option<&'static str> {
+    match word {
+        // Types
+        "ℝ" | "Real" => Some("**ℝ** (Real numbers)\n\nThe field of real numbers. Supports:\n- Arithmetic: `+`, `-`, `*`, `/`\n- Comparisons: `<`, `>`, `≤`, `≥`\n- Functions: `abs`, `sqrt`, `exp`, `ln`, `sin`, `cos`"),
+        "ℂ" | "Complex" => Some("**ℂ** (Complex numbers)\n\nThe field of complex numbers. Supports:\n- Arithmetic: `+`, `-`, `*`, `/`\n- Operations: `re`, `im`, `conj`, `abs`\n- Constructor: `complex(re, im)`"),
+        "ℤ" | "Int" | "Integer" => Some("**ℤ** (Integers)\n\nThe ring of integers. Supports:\n- Arithmetic: `+`, `-`, `*`\n- Division: `div`, `mod`\n- Comparisons: `<`, `>`, `≤`, `≥`"),
+        "ℕ" | "Nat" | "Natural" => Some("**ℕ** (Natural numbers)\n\nNon-negative integers 0, 1, 2, ...\n- Closed under `+` and `*`\n- Not closed under `-`"),
+        "ℚ" | "Rational" => Some("**ℚ** (Rational numbers)\n\nFractions p/q where p, q ∈ ℤ, q ≠ 0"),
+        "𝔹" | "Bool" | "Boolean" => Some("**𝔹** (Boolean)\n\nLogical values: `true`, `false`\n- Operations: `∧`, `∨`, `¬`"),
+        "Matrix" => Some("**Matrix(m, n, T)**\n\nParametric matrix type with dimensions m×n and element type T.\n\nOperations:\n- `transpose : Matrix(n, m, T)`\n- `det : T` (square matrices)\n- `trace : T` (square matrices)\n- `eigenvalues` (numerical)"),
+        "Vector" => Some("**Vector(n, T)**\n\nColumn vector of dimension n with element type T.\n\nEquivalent to `Matrix(n, 1, T)`"),
+        "Tensor" => Some("**Tensor(dims, T)**\n\nMulti-dimensional array with given dimensions and element type."),
+
+        // Keywords
+        "structure" => Some("**structure**\n\nDefines an algebraic structure with parameters, operations, and axioms.\n\n```kleis\nstructure Group(G) {\n    operation mul : G × G → G\n    element identity : G\n    axiom assoc: ∀(a b c : G). mul(mul(a,b),c) = mul(a,mul(b,c))\n}\n```"),
+        "implements" => Some("**implements**\n\nProvides concrete implementations for a structure.\n\n```kleis\nimplements Group(ℤ) {\n    operation mul = builtin_add\n    element identity = 0\n}\n```"),
+        "data" => Some("**data**\n\nDefines an algebraic data type (ADT).\n\n```kleis\ndata Option(T) {\n    constructor None\n    constructor Some(T)\n}\n```"),
+        "define" => Some("**define**\n\nDefines a named expression or function.\n\n```kleis\ndefine square(x : ℝ) : ℝ = x * x\n```"),
+        "axiom" => Some("**axiom**\n\nDeclares a mathematical axiom (assumed true).\n\n```kleis\naxiom commutativity: ∀(x y : G). mul(x, y) = mul(y, x)\n```"),
+        "operation" => Some("**operation**\n\nDeclares an operation within a structure.\n\n```kleis\noperation add : T × T → T\n```"),
+        "import" => Some("**import**\n\nImports definitions from another Kleis file.\n\n```kleis\nimport \"stdlib/matrices.kleis\"\n```"),
+
+        // Quantifiers
+        "∀" | "forall" => Some("**∀** (Universal quantifier)\n\nFor all values of a variable.\n\n```kleis\n∀(x : ℝ). x + 0 = x\n```"),
+        "∃" | "exists" => Some("**∃** (Existential quantifier)\n\nThere exists a value.\n\n```kleis\n∃(x : ℝ). x * x = 2\n```"),
+        "λ" | "lambda" => Some("**λ** (Lambda)\n\nAnonymous function.\n\n```kleis\nλ(x : ℝ). x * x\n```"),
+
+        // Common operations
+        "transpose" => Some("**transpose**\n\nMatrix transpose operation.\n\n`transpose : Matrix(m, n, T) → Matrix(n, m, T)`"),
+        "det" => Some("**det**\n\nMatrix determinant (for square matrices).\n\n`det : Matrix(n, n, T) → T`"),
+        "trace" => Some("**trace**\n\nMatrix trace (sum of diagonal elements).\n\n`trace : Matrix(n, n, T) → T`"),
+        "inv" => Some("**inv**\n\nMatrix inverse (for invertible square matrices).\n\n`inv : Matrix(n, n, T) → Matrix(n, n, T)`"),
+        "eigenvalues" => Some("**eigenvalues**\n\nCompute eigenvalues of a square matrix.\n\nReturns a list of eigenvalues (may be complex)."),
+        "svd" => Some("**svd**\n\nSingular Value Decomposition.\n\nDecomposes A = U Σ Vᵀ"),
+
+        _ => None,
+    }
 }
 
 /// Generate all Kleis completions - keywords, types, operators, snippets

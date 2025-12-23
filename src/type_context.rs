@@ -1085,6 +1085,71 @@ impl TypeContextBuilder {
         self.registry.types_supporting(operation_name)
     }
 
+    /// Get all operations defined by a structure
+    pub fn operations_for_structure(&self, structure_name: &str) -> Vec<String> {
+        self.registry
+            .structure_to_operations
+            .get(structure_name)
+            .cloned()
+            .unwrap_or_else(Vec::new)
+    }
+
+    /// Get all operations available for a type (via its implemented structures)
+    pub fn operations_for_type(&self, type_name: &str) -> Vec<String> {
+        let mut ops = Vec::new();
+        if let Some(structures) = self.registry.type_to_structures.get(type_name) {
+            for structure in structures {
+                if let Some(structure_ops) = self.registry.structure_to_operations.get(structure) {
+                    for op in structure_ops {
+                        if !ops.contains(op) {
+                            ops.push(op.clone());
+                        }
+                    }
+                }
+            }
+        }
+        ops
+    }
+
+    /// Check if a type supports any operation (i.e., implements at least one structure)
+    pub fn supports_any_operation(&self, type_name: &str) -> bool {
+        self.registry
+            .type_to_structures
+            .get(type_name)
+            .map(|s| !s.is_empty())
+            .unwrap_or(false)
+    }
+
+    /// Get the signature of an operation as a string (for display)
+    pub fn operation_signature(&self, operation_name: &str) -> Option<String> {
+        if let Some(type_expr) = self.get_operation_signature(operation_name) {
+            Some(format!(
+                "operation {} : {}",
+                operation_name,
+                self.type_expr_to_string(type_expr)
+            ))
+        } else {
+            // Check if it's known in the registry
+            self.registry
+                .structure_for_operation(operation_name)
+                .map(|structure| format!("operation {} (from {})", operation_name, structure))
+        }
+    }
+
+    /// Get all structure names (for LSP completions)
+    pub fn all_structure_names(&self) -> Vec<String> {
+        self.structures.keys().cloned().collect()
+    }
+
+    /// Get all operation names (for LSP completions)
+    pub fn all_operation_names(&self) -> Vec<String> {
+        self.registry
+            .operation_to_structure
+            .keys()
+            .cloned()
+            .collect()
+    }
+
     /// Get structures that a type implements
     pub fn structures_for_type(&self, type_name: &str) -> Vec<String> {
         self.registry
