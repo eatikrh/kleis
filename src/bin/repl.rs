@@ -1159,13 +1159,16 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
 
 #[cfg(feature = "axiom-verification")]
 fn sat_expression(input: &str, registry: &StructureRegistry, evaluator: &Evaluator) {
+    use kleis::axiom_verifier::AxiomVerifier;
     use kleis::solvers::backend::SatisfiabilityResult;
-    use kleis::solvers::backend::SolverBackend;
 
     if input.is_empty() {
         println!("Usage: :sat <expression>");
         println!("  Checks if there exists values that make the expression true.");
         println!("  Example: :sat ∃(z : ℂ). z * z = complex(-1, 0)");
+        println!();
+        println!("  Note: Structure axioms are loaded to constrain uninterpreted functions.");
+        println!("  Load a .kleis file with axioms first for accurate results.");
         return;
     }
 
@@ -1189,27 +1192,33 @@ fn sat_expression(input: &str, registry: &StructureRegistry, evaluator: &Evaluat
                 }
             };
 
-            // Use Z3 backend directly for satisfiability check
-            match kleis::solvers::z3::backend::Z3Backend::new(registry) {
-                Ok(mut backend) => match backend.check_satisfiability(&lowered) {
-                    Ok(result) => match result {
-                        SatisfiabilityResult::Satisfiable { example } => {
-                            println!("✅ Satisfiable");
-                            println!("   Witness: {}", example);
+            // Use AxiomVerifier to load structure axioms before satisfiability check
+            // This ensures uninterpreted functions (like fib, add) are constrained by axioms
+            match AxiomVerifier::new(registry) {
+                Ok(mut verifier) => {
+                    // Load ADT constructors as identity elements
+                    verifier.load_adt_constructors(evaluator.get_adt_constructors().iter());
+
+                    match verifier.check_satisfiability(&lowered) {
+                        Ok(result) => match result {
+                            SatisfiabilityResult::Satisfiable { example } => {
+                                println!("✅ Satisfiable");
+                                println!("   Witness: {}", example);
+                            }
+                            SatisfiabilityResult::Unsatisfiable => {
+                                println!("❌ Unsatisfiable (no solution exists)");
+                            }
+                            SatisfiabilityResult::Unknown => {
+                                println!("❓ Unknown (Z3 couldn't determine)");
+                            }
+                        },
+                        Err(e) => {
+                            println!("❌ Satisfiability check error: {}", e);
                         }
-                        SatisfiabilityResult::Unsatisfiable => {
-                            println!("❌ Unsatisfiable (no solution exists)");
-                        }
-                        SatisfiabilityResult::Unknown => {
-                            println!("❓ Unknown (Z3 couldn't determine)");
-                        }
-                    },
-                    Err(e) => {
-                        println!("❌ Satisfiability check error: {}", e);
                     }
-                },
+                }
                 Err(e) => {
-                    println!("❌ Failed to initialize Z3 backend: {}", e);
+                    println!("❌ Failed to initialize verifier: {}", e);
                 }
             }
         }

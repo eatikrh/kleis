@@ -1206,5 +1206,75 @@ Not because the machine needs them — because WE need them.
 
 ---
 
-*This document captures insights from a session on Dec 22, 2024, discussing the philosophical foundations of Kleis and how to teach them.*
+## The Verification Gap: An Honest Limitation
+
+**CRITICAL: Users must understand this.**
+
+Kleis has three modes of operation:
+
+| Command | What It Does | Uses Z3? |
+|---------|--------------|----------|
+| `:eval` | Computes via builtins/pattern matching | ❌ No |
+| `:verify` | Proves universal statements | ✅ Yes |
+| `:sat` | Finds witnesses satisfying constraints | ✅ Yes |
+
+**The gap:**
+
+`:verify` checks that axioms hold **symbolically** (in Z3's model).
+`:eval` runs code **concretely** (via Rust builtins).
+
+**These are not connected.**
+
+Example:
+```kleis
+structure AdditiveMonoid(M) {
+    operation add : M × M → M
+    axiom add_comm: ∀(a b : M). add(a, b) = add(b, a)
+}
+
+implements AdditiveMonoid(ℕ) {
+    operation add = builtin_add  -- Rust's + operator
+}
+```
+
+When you run `:verify ∀(a b : ℕ). a + b = b + a`, Z3 proves this using its built-in integer theory.
+
+When you run `:eval 2 + 3`, Rust computes `5` using `builtin_add`.
+
+**We never verify that `builtin_add` matches Z3's `+`.**
+
+### What This Means
+
+1. **Axiom verification** proves properties of an **idealized model**
+2. **Computation** uses **concrete implementations**
+3. **The implementation is trusted**, not verified
+
+### The Trusted Computing Base
+
+These are assumed correct, never verified:
+- Rust compiler
+- Builtin implementations (`builtin_add`, `builtin_mul`, etc.)
+- LAPACK (for matrix operations)
+- IEEE 754 floating point
+
+### What We Can Honestly Claim
+
+> ✅ Kleis verifies mathematical properties symbolically.
+> ✅ Kleis computes concrete results efficiently.
+> ❌ Kleis does NOT verify that computation matches specification.
+
+### Closing the Gap (Future Work)
+
+To achieve true end-to-end verification:
+
+1. **Verified builtins** — Prove correctness in Coq/Lean, extract to Rust
+2. **Symbolic execution** — Run computation through Z3 (very slow)
+3. **Runtime monitoring** — Check axioms during execution (overhead)
+4. **Property-based testing** — QuickCheck-style random testing
+
+Currently, Kleis takes the pragmatic path: trust the implementation, verify the mathematics.
+
+---
+
+*This document captures insights from sessions on Dec 22-23, 2024, discussing the philosophical foundations of Kleis and how to teach them.*
 
