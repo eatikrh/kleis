@@ -1,8 +1,8 @@
 {
   "name": "kleis",
   "displayName": "Kleis Language Support",
-  "description": "Syntax highlighting for the Kleis formal verification language",
-  "version": "0.2.1",
+  "description": "Language support for Kleis: syntax highlighting, diagnostics, hover, and go-to-definition",
+  "version": "0.3.0",
   "publisher": "eatikrh",
   "author": "Engin Atik <eatik@redhat.com>",
   "license": "MIT",
@@ -12,17 +12,23 @@
   },
   "homepage": "https://kleis.io",
   "engines": {
-    "vscode": "^1.70.0"
+    "vscode": "^1.75.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Linters"
   ],
   "keywords": [
     "kleis",
     "formal verification",
     "type system",
     "mathematics",
-    "theorem proving"
+    "theorem proving",
+    "lsp"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:kleis"
   ],
   "contributes": {
     "languages": [
@@ -39,16 +45,41 @@
         "scopeName": "source.kleis",
         "path": "./syntaxes/kleis.tmLanguage.json"
       }
-    ]
-  }
-,
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Kleis",
+      "properties": {
+        "kleis.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to kleis-lsp executable. Leave empty to use bundled server or find in PATH."
+        },
+        "kleis.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the Kleis language server."
+        }
+      }
+    }
+  },
   "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
     "lint-grammar": "node ./tools/lintGrammar.js",
     "inspect-scopes": "npm run lint-grammar && node ./tools/inspectScopes.js",
     "prepublishOnly": "npm run lint-grammar",
     "test-syntax": "node ./tools/tests/tokenScopeTest.js"
   },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
   "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.0.0",
     "vscode-textmate": "^5.3.0",
     "vscode-oniguruma": "^1.6.2"
   }

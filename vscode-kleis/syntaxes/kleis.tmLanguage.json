@@ -89,7 +89,11 @@
       "patterns": [
         {
           "name": "storage.type.primitive.kleis",
-          "match": "ℝ|ℂ|ℤ|ℕ|ℚ|\\b(Real|Complex|Integer|Nat|Rational|Bool|String|Field|Type)\\b"
+          "match": "ℝ|ℂ|ℤ|ℕ|ℚ|𝔹|\\b(Real|Complex|Integer|Nat|Rational|Bool|String|Unit|Scalar)\\b"
+        },
+        {
+          "name": "storage.type.parametric.kleis",
+          "match": "\\b(Matrix|Vector|Tensor|List|Set|Option|Result|Field|Type|BitVec)\\b"
         }
       ]
     },
@@ -107,7 +111,19 @@
       "patterns": [
         {
           "name": "keyword.control.kleis",
-          "match": "\\b(data|structure|implements|operation|element|axiom|supports|notation|define|let|in|if|then|else|match|type|object|const|narrow|over|extends|verify|where|Sum|Product|Integrate|Limit|D|Dt)\\b"
+          "match": "\\b(data|structure|implements|operation|element|axiom|supports|notation|define|let|in|if|then|else|match|type|object|const|narrow|over|extends|verify|where|import)\\b"
+        },
+        {
+          "name": "keyword.other.math.kleis",
+          "match": "\\b(Sum|Product|Integrate|Limit|D|Dt)\\b"
+        },
+        {
+          "name": "support.function.dimension.kleis",
+          "match": "\\b(min|max|gcd|lcm)\\b"
+        },
+        {
+          "name": "support.function.builtin.kleis",
+          "match": "\\b(builtin_[a-z_]+)\\b"
         }
       ]
     },
