@@ -489,6 +489,113 @@ Example: "All primes are odd" — counterexample: 2.
 
 ---
 
+## Kleis Is Not a Theorem Prover
+
+**This is fundamental. Don't skip it.**
+
+Kleis validates claims by **exhibiting or refuting instances**, not by constructing proofs.
+
+### What Kleis Does
+
+```
+You define:     structure PurchaseOrder { ... }
+You claim:      x : PurchaseOrder
+Kleis asks:     Is there a model where x satisfies the constraints?
+
+Two outcomes:
+  Witness exists      → the claim is consistent
+  Counterexample exists → the claim is refuted
+```
+
+**This is model existence checking, not theorem proving.**
+
+### The Difference Matters
+
+| Theorem Proving | Instance Verification |
+|-----------------|----------------------|
+| "Prove ∀x. P(x)" | "Check: P(this_x)?" |
+| Unbounded, may not terminate | Bounded, decidable |
+| Produces proof term | Produces witness or counterexample |
+| Philosophical certainty | Engineering-grade assurance |
+
+Kleis answers:
+- "Yes, here is a valuation where it works"
+- "No, here is why it cannot work"
+
+**That is decidable, constructive, and practical.**
+
+### What Kind of Truth You Get
+
+The truth Kleis provides is:
+
+```
+Relative truth under stated constraints.
+
+  - Local (to the definitions you gave)
+  - Bounded (by the constraints you stated)  
+  - Model-relative (true in this model, maybe not others)
+  - Revisable (add constraints, answer may change)
+```
+
+This is the kind of truth used in:
+- Compilers (type checking)
+- Schema validators
+- Hardware verification
+- Protocol compliance
+
+**Not metaphysical truth — operational truth.**
+
+### Why Witness/Counterexample Is the Right UX
+
+Instead of:
+- "Proven" (no one reads the proof)
+- "Failed" (why? who knows)
+
+Kleis says:
+- "Here is a concrete configuration that works"
+- "Here is a concrete configuration that breaks it, and why"
+
+**That answers a design question, not a philosophical one.**
+
+### The Canonical Example
+
+```kleis
+structure PurchaseOrder {
+    field amount : ℝ
+    field approved : 𝔹
+    axiom valid_amount: amount > 0
+    axiom approval_required: amount > 1000 ⟹ approved = true
+}
+
+// Claim: this is a valid PurchaseOrder
+let order = { amount = 5000, approved = false }
+
+// Kleis response:
+// Counterexample: amount = 5000 > 1000, but approved = false
+// Violates: approval_required
+```
+
+**Kleis doesn't say "wrong." It says "here's what's wrong and why."**
+
+### A Principle (Very Kleis)
+
+> If you can't show me an object, you don't get to claim it exists.
+
+### Bringing Back Lost Literacy
+
+These ideas — witness, counterexample, instance checking — were once common:
+- Euclid (constructions)
+- Aristotle (syllogisms with examples)
+- Scholastic disputation
+
+Modern education hides method, discourages refutation.
+
+**Kleis forces clarity about what is claimed and visibility of why it fails.**
+
+This is not discovering confusion. It's rediscovering lost literacy.
+
+---
+
 **The Timeline:**
 
 ```
