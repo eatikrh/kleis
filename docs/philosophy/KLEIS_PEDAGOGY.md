@@ -415,6 +415,80 @@ Kleis operates within the boundaries.
 We don't claim Kleis solves philosophy.
 We claim Kleis is a practical tool in this tradition.
 
+---
+
+### Mathematical Vocabulary (Plain Definitions)
+
+These terms will appear in Kleis. Here's what they mean — no mystification.
+
+**Hypothesis / Conjecture**
+```
+A statement we suspect is true but haven't proven yet.
+"I think ∀x. P(x) holds, but I haven't shown it."
+```
+
+**Theorem**
+```
+A statement we HAVE proven from axioms using inference rules.
+"Starting from the axioms, I derived this statement."
+A theorem is just: axioms + rules → this string.
+```
+
+**Proof**
+```
+A sequence of rule applications that produces the theorem.
+Start: axioms
+Apply: inference rules (the 17 we listed)
+End: the theorem
+
+A proof is a TRACE — "here's how I got from start to finish."
+It's checkable: anyone can verify each step follows a rule.
+```
+
+**Lemma**
+```
+A "helper theorem" — proven on the way to a bigger result.
+Not fundamentally different from a theorem.
+Just: "this is useful for the main proof, so I'll prove it first."
+```
+
+**Corollary**
+```
+A theorem that follows easily from another theorem.
+"Given Theorem X, this follows almost immediately."
+Still a theorem. Just easy once you have the parent.
+```
+
+**Witness**
+```
+A concrete example that proves an existential statement.
+To prove ∃x. P(x), you must SHOW an x where P(x) holds.
+That x is the witness.
+
+Example: "There exists an even prime."
+Witness: 2. (Check: 2 is even. 2 is prime. Done.)
+```
+
+**Counterexample**
+```
+A concrete example that DISPROVES a universal statement.
+To disprove ∀x. P(x), you show ONE x where P(x) fails.
+That x is the counterexample.
+
+Example: "All primes are odd" — counterexample: 2.
+```
+
+**The pattern:**
+
+| To prove... | You need... |
+|-------------|-------------|
+| ∀x. P(x) | Show P(x) for arbitrary x (no specific choice) |
+| ∃x. P(x) | Exhibit a specific witness x where P(x) holds |
+| ¬(∀x. P(x)) | Exhibit a counterexample x where P(x) fails |
+| ¬(∃x. P(x)) | Show P(x) fails for all x (hard!) |
+
+---
+
 **The Timeline:**
 
 ```
