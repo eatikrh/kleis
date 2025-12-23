@@ -993,7 +993,256 @@ fn get_kleis_completions() -> Vec<CompletionItem> {
         ..Default::default()
     });
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // STDLIB: ALGEBRAIC STRUCTURES (from prelude.kleis)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    items.push(stdlib_completion(
+        "Semigroup",
+        "Semigroup(S) - Associative binary operation",
+        "A set S with an associative binary operation (•).",
+    ));
+
+    items.push(stdlib_completion(
+        "AbelianGroup",
+        "AbelianGroup(A) - Commutative group",
+        "A group where the operation is commutative: ∀(x y). x • y = y • x",
+    ));
+
+    items.push(stdlib_completion(
+        "Ring",
+        "Ring(R) - Two operations with distributivity",
+        "Addition (abelian group) + multiplication (monoid) with distributivity.\nExamples: ℤ, polynomials, matrices",
+    ));
+
+    items.push(stdlib_completion(
+        "Field",
+        "Field(F) - Ring with multiplicative inverses",
+        "Every non-zero element has a multiplicative inverse.\nExamples: ℝ, ℂ, ℚ",
+    ));
+
+    items.push(stdlib_completion(
+        "VectorSpace",
+        "VectorSpace(V) over Field(F)",
+        "Module over a field with scalar multiplication.",
+    ));
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STDLIB: TYPE PROMOTION (from prelude.kleis)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    items.push(stdlib_completion(
+        "Promotes",
+        "Promotes(From, To) - Type promotion/lifting",
+        "Lifting values from smaller to larger types.\n\nHierarchy: ℕ → ℤ → ℚ → ℝ → ℂ\n\nUse `lift` operation to promote values.",
+    ));
+
+    items.push(CompletionItem {
+        label: "lift".to_string(),
+        kind: Some(CompletionItemKind::FUNCTION),
+        detail: Some("Promote value to larger type".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**lift** - From `Promotes(From, To)` structure.\n\nPromotes a value to a larger type in the hierarchy ℕ → ℤ → ℚ → ℝ → ℂ".to_string(),
+        })),
+        ..Default::default()
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STDLIB: COMPLEX MATRICES (from matrices.kleis)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    items.push(stdlib_completion(
+        "ComplexMatrix",
+        "ComplexMatrix(m, n) - Complex matrix as (Re, Im)",
+        "type ComplexMatrix(m, n) = (Matrix(m, n, ℝ), Matrix(m, n, ℝ))\n\nA complex matrix M = A + B·i stored as (A, B).\nEnables real LAPACK routines for complex computations.",
+    ));
+
+    let cmat_ops = [
+        ("cmat_add", "Add complex matrices"),
+        ("cmat_sub", "Subtract complex matrices"),
+        ("cmat_mul", "Multiply complex matrices"),
+        ("cmat_conj", "Element-wise conjugate"),
+        ("cmat_transpose", "Transpose complex matrix"),
+        ("cmat_dagger", "Conjugate transpose (A†)"),
+        ("cmat_trace", "Trace of square complex matrix"),
+        ("cmat_eye", "Complex identity matrix"),
+        ("cmat_zero", "Complex zero matrix"),
+        ("cmat_eigenvalues", "Eigenvalues of complex matrix"),
+        ("cmat_schur", "Schur decomposition"),
+        ("cmat_expm", "Complex matrix exponential"),
+    ];
+
+    for (name, desc) in cmat_ops {
+        items.push(CompletionItem {
+            label: name.to_string(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some(desc.to_string()),
+            ..Default::default()
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STDLIB: REALIFICATION / COMPLEXIFICATION
+    // ═══════════════════════════════════════════════════════════════════════
+
+    items.push(CompletionItem {
+        label: "realify".to_string(),
+        kind: Some(CompletionItemKind::FUNCTION),
+        detail: Some("Embed complex n×n into real 2n×2n".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Realification**: `realify((A,B)) = [[A,-B],[B,A]]`\n\nEmbed complex matrix into real block matrix for LAPACK.".to_string(),
+        })),
+        ..Default::default()
+    });
+
+    items.push(CompletionItem {
+        label: "complexify".to_string(),
+        kind: Some(CompletionItemKind::FUNCTION),
+        detail: Some("Extract complex n×n from real 2n×2n".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Complexification**: `complexify([[A,-B],[B,A]]) = (A,B)`\n\nExtract complex matrix from structured real block matrix.\n\n**Precondition**: Must have [[A,-B],[B,A]] structure.".to_string(),
+        })),
+        ..Default::default()
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STDLIB: COMPLEX NUMBERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    items.push(CompletionItem {
+        label: "complex".to_string(),
+        kind: Some(CompletionItemKind::FUNCTION),
+        detail: Some("Create complex: complex(re, im)".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Complex Constructor**: `complex(3, 4)` creates 3 + 4i".to_string(),
+        })),
+        insert_text: Some("complex(${1:re}, ${2:im})".to_string()),
+        insert_text_format: Some(InsertTextFormat::SNIPPET),
+        ..Default::default()
+    });
+
+    let complex_ops = [
+        ("re", "Extract real part"),
+        ("im", "Extract imaginary part"),
+        ("conj", "Complex conjugate"),
+        ("complex_add", "Add complex numbers"),
+        ("complex_mul", "Multiply complex numbers"),
+        ("abs_squared", "Magnitude squared |z|²"),
+    ];
+
+    for (name, desc) in complex_ops {
+        items.push(CompletionItem {
+            label: name.to_string(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some(desc.to_string()),
+            ..Default::default()
+        });
+    }
+
+    items.push(CompletionItem {
+        label: "i".to_string(),
+        kind: Some(CompletionItemKind::CONSTANT),
+        detail: Some("Imaginary unit: i² = -1".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Imaginary unit** where i² = -1.\n\n⚠️ Avoid `i` as loop variable - use `k`, `j`, `n`, `m` instead.".to_string(),
+        })),
+        ..Default::default()
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STDLIB: CALCULUS OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    items.push(CompletionItem {
+        label: "gradient".to_string(),
+        kind: Some(CompletionItemKind::FUNCTION),
+        detail: Some("∇f - Gradient of scalar field".to_string()),
+        ..Default::default()
+    });
+
+    items.push(CompletionItem {
+        label: "divergence".to_string(),
+        kind: Some(CompletionItemKind::FUNCTION),
+        detail: Some("∇·F - Divergence of vector field".to_string()),
+        ..Default::default()
+    });
+
+    items.push(CompletionItem {
+        label: "curl".to_string(),
+        kind: Some(CompletionItemKind::FUNCTION),
+        detail: Some("∇×F - Curl (3D only)".to_string()),
+        ..Default::default()
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STDLIB: TRIGONOMETRIC & TRANSCENDENTAL
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let math_funcs = [
+        ("sin", "Sine"),
+        ("cos", "Cosine"),
+        ("tan", "Tangent"),
+        ("exp", "Exponential e^x"),
+        ("ln", "Natural log"),
+        ("sqrt", "Square root"),
+        ("abs", "Absolute value"),
+        ("floor", "Floor function"),
+    ];
+
+    for (name, desc) in math_funcs {
+        items.push(CompletionItem {
+            label: name.to_string(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some(desc.to_string()),
+            ..Default::default()
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STDLIB: CONSTANTS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    items.push(CompletionItem {
+        label: "pi".to_string(),
+        kind: Some(CompletionItemKind::CONSTANT),
+        detail: Some("π ≈ 3.14159...".to_string()),
+        ..Default::default()
+    });
+
+    items.push(CompletionItem {
+        label: "e".to_string(),
+        kind: Some(CompletionItemKind::CONSTANT),
+        detail: Some("Euler's number ≈ 2.71828...".to_string()),
+        ..Default::default()
+    });
+
+    items.push(CompletionItem {
+        label: "phi".to_string(),
+        kind: Some(CompletionItemKind::CONSTANT),
+        detail: Some("Golden ratio φ ≈ 1.61803...".to_string()),
+        ..Default::default()
+    });
+
     items
+}
+
+/// Helper for stdlib completions
+fn stdlib_completion(name: &str, detail: &str, doc: &str) -> CompletionItem {
+    CompletionItem {
+        label: name.to_string(),
+        kind: Some(CompletionItemKind::STRUCT),
+        detail: Some(detail.to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: format!("**stdlib**\n\n{}", doc),
+        })),
+        ..Default::default()
+    }
 }
 
 /// Helper to create a keyword completion item
