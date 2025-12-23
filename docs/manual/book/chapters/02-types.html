@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-02cce4ba.js";
+            window.path_to_searchindex_js = "../searchindex-9fb429a5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-adba3566.js"></script>
@@ -379,6 +379,105 @@ Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 Vector(4)         // 4-dimensional vector
 Set(ℝ)            // Set of real numbers
 </code></pre>
+<h2 id="dimension-expressions"><a class="header" href="#dimension-expressions">Dimension Expressions</a></h2>
+<p>When working with parameterized types like <code>Matrix(m, n, ℝ)</code>, the dimension parameters are not just simple numbers — they can be <strong>dimension expressions</strong>. This enables type-safe operations where dimensions depend on each other.</p>
+<h3 id="supported-dimension-expressions"><a class="header" href="#supported-dimension-expressions">Supported Dimension Expressions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Operators</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td>Arithmetic</td><td><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code></td><td><code>n+1</code>, <code>2*n</code>, <code>n/2</code></td></tr>
+<tr><td>Power</td><td><code>^</code></td><td><code>n^2</code>, <code>2^k</code></td></tr>
+<tr><td>Grouping</td><td><code>( )</code></td><td><code>(n+1)*2</code></td></tr>
+<tr><td>Functions</td><td><code>min</code>, <code>max</code></td><td><code>min(m, n)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="why-dimension-expressions-matter"><a class="header" href="#why-dimension-expressions-matter">Why Dimension Expressions Matter</a></h3>
+<p>Consider the <strong>realification functor</strong> from control theory, which embeds a complex n×n matrix into a real 2n×2n matrix:</p>
+<pre><code class="language-kleis">// Complex matrix represented as (real_part, imag_part)
+type ComplexMatrix(m: Nat, n: Nat) = (Matrix(m, n, ℝ), Matrix(m, n, ℝ))
+
+// Realification: embed C^(n×n) into R^(2n×2n)
+structure Realification(n: Nat) {
+    operation realify : ComplexMatrix(n, n) → Matrix(2*n, 2*n, ℝ)
+    operation complexify : Matrix(2*n, 2*n, ℝ) → ComplexMatrix(n, n)
+}
+</code></pre>
+<p>The <code>2*n</code> dimension expression captures the <strong>invariant</strong> that the output dimension is always twice the input dimension.</p>
+<h3 id="how-dimension-unification-works"><a class="header" href="#how-dimension-unification-works">How Dimension Unification Works</a></h3>
+<p>When Kleis type-checks your code, it must verify that dimension expressions match. This uses a built-in <strong>dimension solver</strong> that can handle common arithmetic constraints.</p>
+<h4 id="what-the-solver-can-unify"><a class="header" href="#what-the-solver-can-unify">What the Solver Can Unify</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Expression 1</th><th>Expression 2</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td><code>2*n</code></td><td><code>2*n</code></td><td>✅ Structurally equal</td></tr>
+<tr><td><code>2*n</code></td><td><code>6</code></td><td>✅ Solved: <code>n = 3</code></td></tr>
+<tr><td><code>n + 1</code></td><td><code>5</code></td><td>✅ Solved: <code>n = 4</code></td></tr>
+<tr><td><code>n^2</code></td><td><code>9</code></td><td>✅ Solved: <code>n = 3</code></td></tr>
+<tr><td><code>2^k</code></td><td><code>8</code></td><td>✅ Solved: <code>k = 3</code></td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="what-the-solver-rejects"><a class="header" href="#what-the-solver-rejects">What the Solver Rejects</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Expression 1</th><th>Expression 2</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td><code>2*n</code></td><td><code>n</code></td><td>❌ Different structure (unless <code>n = 0</code>)</td></tr>
+<tr><td><code>n + 1</code></td><td><code>n</code></td><td>❌ Different structure</td></tr>
+<tr><td><code>n*m</code></td><td><code>6</code></td><td>⚠️ Underdetermined</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="examples-in-practice"><a class="header" href="#examples-in-practice">Examples in Practice</a></h3>
+<p><strong>Matrix multiplication</strong> requires matching inner dimensions:</p>
+<pre><code class="language-kleis">// Matrix(m, n) × Matrix(n, p) → Matrix(m, p)
+structure MatrixMultiply(m: Nat, n: Nat, p: Nat) {
+    operation matmul : Matrix(m, n, ℝ) → Matrix(n, p, ℝ) → Matrix(m, p, ℝ)
+}
+</code></pre>
+<p>The <code>n</code> dimension must match on both sides — the solver verifies this.</p>
+<p><strong>SVD decomposition</strong> produces matrices with <code>min(m, n)</code> dimensions:</p>
+<pre><code class="language-kleis example">// Illustrative — tuple return types in structures are aspirational
+structure SVD(m: Nat, n: Nat) {
+    // A = U * Σ * Vᵀ where Σ is min(m,n) × min(m,n)
+    operation svd : Matrix(m, n, ℝ) → 
+        (Matrix(m, min(m,n), ℝ), Matrix(min(m,n), min(m,n), ℝ), Matrix(min(m,n), n, ℝ))
+}
+</code></pre>
+<h3 id="simplification"><a class="header" href="#simplification">Simplification</a></h3>
+<p>The dimension solver simplifies expressions before comparing them:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Expression</th><th>Simplified</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0 + n</code></td><td><code>n</code></td></tr>
+<tr><td><code>1 * n</code></td><td><code>n</code></td></tr>
+<tr><td><code>n^1</code></td><td><code>n</code></td></tr>
+<tr><td><code>n^0</code></td><td><code>1</code></td></tr>
+<tr><td><code>2 * 3</code></td><td><code>6</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>This means <code>Matrix(1*n, n+0, ℝ)</code> correctly unifies with <code>Matrix(n, n, ℝ)</code>.</p>
+<h3 id="design-philosophy"><a class="header" href="#design-philosophy">Design Philosophy</a></h3>
+<p>The dimension solver is <strong>deliberately bounded</strong>:</p>
+<ul>
+<li>It handles practical cases (linear arithmetic, powers, min/max)</li>
+<li>It fails clearly on complex constraints it cannot solve</li>
+<li>It doesn’t require external dependencies (no SMT solver needed for type checking)</li>
+</ul>
+<p>If you need more advanced constraint solving, use the <code>:verify</code> command with Z3 at the value level.</p>
 <h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
 <p>Kleis often infers types automatically:</p>
 <pre><code class="language-kleis">define double(x) = x + x
