@@ -1,0 +1,8 @@
+structure Name(T) extends ParentStructure(T) {
+    define name(a : T) = expr
+        axiom extensionality: ∀(A B : Set(T)).
+            (∀(x : T). in_set(x, A) ↔ in_set(x, B)) → A = B
+
+
+
+}

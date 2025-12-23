@@ -33,6 +33,12 @@ z3 = { path = "vendor/z3", optional = true }
 # REPL (interactive shell)
 rustyline = "14.0"
 
+# Language Server Protocol (LSP)
+tower-lsp = "0.20"
+lsp-types = "0.97"
+ropey = "1.6"           # Efficient text rope for document handling
+dashmap = "6.0"         # Concurrent hashmap for document storage
+
 # Numerical linear algebra (BLAS/LAPACK)
 ndarray = { version = "0.16", optional = true }
 ndarray-linalg = { version = "0.17", optional = true }
@@ -82,6 +88,10 @@ path = "src/bin/test_top5.rs"
 [[bin]]
 name = "repl"
 path = "src/bin/repl.rs"
+
+[[bin]]
+name = "kleis-lsp"
+path = "src/bin/lsp.rs"
 
 [[example]]
 name = "typst_demo"

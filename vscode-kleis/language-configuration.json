@@ -21,11 +21,31 @@
     ["(", ")"],
     ["\"", "\""]
   ],
+  "indentationRules": {
+    "increaseIndentPattern": "^.*\\{[^}]*$|^.*\\([^)]*$|^.*\\[[^\\]]*$|^\\s*(structure|implements|data|define|match)\\b.*$",
+    "decreaseIndentPattern": "^\\s*[}\\])]|^\\s*\\}"
+  },
+  "onEnterRules": [
+    {
+      "beforeText": "^.*\\{[^}]*$",
+      "afterText": "^\\s*\\}",
+      "action": { "indent": "indentOutdent" }
+    },
+    {
+      "beforeText": "^.*\\{[^}]*$",
+      "action": { "indent": "indent" }
+    },
+    {
+      "beforeText": "^\\s*(structure|implements|data)\\b.*\\{\\s*$",
+      "action": { "indent": "indent" }
+    }
+  ],
   "folding": {
     "markers": {
       "start": "^\\s*//\\s*#?region\\b",
       "end": "^\\s*//\\s*#?endregion\\b"
     }
-  }
+  },
+  "wordPattern": "[a-zA-Z_][a-zA-Z0-9_']*|[α-ωΑ-Ωℝℂℤℕℚ𝔹∀∃λ→⇒×⊗∇∂∫∑∏√∞≠≤≥≈≡∈∉⊂⊆∧∨¬†ᵀπ]+"
 }
 
