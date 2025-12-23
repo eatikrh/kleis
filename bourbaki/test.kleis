@@ -1,0 +1,4 @@
+structure Multiplicable extends AbelianGroup {
+define multiply(a: ℚ) = a * AbelianGroup
+axiom thisAxiom: ∀(x : T). condition
+}
