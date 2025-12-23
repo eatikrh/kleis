@@ -335,6 +335,108 @@ Just: **you may substitute one for the other.**
 
 This is the only definition that doesn't smuggle in assumptions.
 
+### What Is a Formal System?
+
+Before we get to the rules, we need to say what we're working with.
+
+**A formal system is:**
+
+```
+1. Symbols       — an alphabet of marks (a, b, →, ∀, =, ...)
+2. Syntax        — rules for which strings of symbols are "well-formed"
+3. Axioms        — starting strings we accept without derivation
+4. Inference     — rules for producing new strings from old
+```
+
+**That's it.** No meaning. No interpretation. No "what does it represent."
+
+Just:
+- Marks on paper
+- Rules for which arrangements are allowed
+- Rules for transforming arrangements
+
+**Example:**
+
+```
+Symbols:    { a, b, → }
+Syntax:     Any string of symbols is allowed
+Axiom:      "a → a"
+Inference:  If you have "X" you may write "X → X"
+
+Derivation:
+  Start:    a → a           (axiom)
+  Apply:    (a → a) → (a → a)   (inference)
+  Apply:    ((a → a) → (a → a)) → ((a → a) → (a → a))   (inference)
+  ...
+```
+
+**This is meaningless.** And that's the point.
+
+A formal system doesn't "mean" anything.
+It's a game of symbol manipulation.
+Meaning, if any, comes from outside — from interpretation.
+
+**Kleis is a formal system.**
+The symbols are keywords, operators, names.
+The syntax is the grammar.
+The axioms are what you write in `axiom:` blocks.
+The inference is type checking, unification, evaluation.
+
+Everything else — structures, types, proofs — 
+is just the game being played.
+
+---
+
+### Historical Lineage (In Passing)
+
+These ideas are not new. Kleis stands on shoulders:
+
+| Name | Contribution |
+|------|--------------|
+| **Frege** (1879) | Formal logic as symbol manipulation |
+| **Russell & Whitehead** (1910) | *Principia Mathematica* — reduce all math to logic |
+| **Hilbert** (1920s) | Formalism — math is a game of meaningless symbols |
+| **Gödel** (1931) | Incompleteness — limits of formal systems |
+| **Church** (1936) | Lambda calculus — computation as substitution |
+| **Turing** (1936) | Computability — what can be mechanically derived |
+| **Bourbaki** (1939-) | Rewrite all mathematics structurally, from scratch |
+| **Curry-Howard** (1960s-80s) | Proofs = programs, types = propositions |
+| **Mac Lane** (1971) | Category theory — morphisms primary, objects secondary |
+
+**Bourbaki** is particularly relevant: a collective that said
+"let's start from nothing and build all of mathematics using only structures."
+That's the Kleis philosophy.
+
+**Russell's paradox** showed naive set theory breaks.
+**Gödel's theorems** showed formal systems can't prove everything.
+These are not obstacles — they're boundary markers.
+Kleis operates within the boundaries.
+
+We don't claim Kleis solves philosophy.
+We claim Kleis is a practical tool in this tradition.
+
+**The Timeline:**
+
+```
+1879  Frege         Formal logic as symbol manipulation
+1910  Russell       Principia Mathematica (reduce math to logic)
+1920  Hilbert       Formalism (math = meaningless symbol game)
+1931  Gödel         Incompleteness (limits of formal systems)
+1936  Church        Lambda calculus (computation = substitution)
+1936  Turing        Computability (mechanical derivation)
+1939  Bourbaki      Rebuild all math from structures
+1969  Curry-Howard  Proofs = programs, types = propositions
+1971  Mac Lane      Category theory (morphisms primary)
+2024  Kleis         Continues the project
+```
+
+**Kleis is not a new idea. It's a new tool in an old tradition.**
+
+The reader should know: this has been tried. It works.
+We are standing on shoulders.
+
+---
+
 ### Logic as String Rewrite Rules
 
 Not "Logic 101" (philosophy, truth, validity...)
