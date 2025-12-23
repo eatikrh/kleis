@@ -442,7 +442,7 @@ pub fn format_dim(expr: &DimExpr) -> String {
         DimExpr::Div(l, r) => format!("({}/{})", format_dim(l), format_dim(r)),
         DimExpr::Pow(l, r) => format!("({}^{})", format_dim(l), format_dim(r)),
         DimExpr::Call(name, args) => {
-            let arg_strs: Vec<_> = args.iter().map(|a| format_dim(a)).collect();
+            let arg_strs: Vec<_> = args.iter().map(format_dim).collect();
             format!("{}({})", name, arg_strs.join(", "))
         }
     }

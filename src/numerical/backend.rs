@@ -433,6 +433,7 @@ pub fn expm(matrix: &[f64], n: usize) -> Result<Vec<f64>, NumericalError> {
     }
 
     // Convert to row-major Vec
+    #[allow(deprecated)]
     Ok(result.into_raw_vec())
 }
 

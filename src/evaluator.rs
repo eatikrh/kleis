@@ -3284,7 +3284,7 @@ impl Evaluator {
                     return Ok(None);
                 }
                 // Get complex matrix and RHS
-                if let (Some((a, b)), Some((c, d))) = (
+                if let (Some((_a, _b)), Some((c, d))) = (
                     self.extract_complex_matrix(&args[0]),
                     self.extract_complex_matrix(&args[1]),
                 ) {
@@ -3303,7 +3303,7 @@ impl Evaluator {
                     // solve returns a List, not a Matrix
                     let sol_elems: Vec<Expression> = if let Expression::List(items) = &sol {
                         items.clone()
-                    } else if let Some((n2, _, elems)) = self.extract_matrix(&sol) {
+                    } else if let Some((_n2, _, elems)) = self.extract_matrix(&sol) {
                         elems
                     } else {
                         return Ok(Some(sol));
@@ -3894,12 +3894,8 @@ impl Evaluator {
             Expression::Const(s) => s.parse::<usize>().ok(),
             _ => {
                 // Try evaluating first
-                if let Ok(evaled) = self.eval_concrete(expr) {
-                    if let Expression::Const(s) = evaled {
-                        s.parse::<usize>().ok()
-                    } else {
-                        None
-                    }
+                if let Ok(Expression::Const(s)) = self.eval_concrete(expr) {
+                    s.parse::<usize>().ok()
                 } else {
                     None
                 }
