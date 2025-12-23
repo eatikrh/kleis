@@ -43,9 +43,9 @@
 //! **Purpose:** Validate ADR-015 design decisions, not production-ready!
 use crate::ast::{Expression, MatchCase, Pattern};
 use crate::kleis_ast::{
-    DataDef, DataField, DataVariant, FunctionDef, ImplMember, Implementation, ImplementsDef,
-    OperationDecl, Program, StructureDef, StructureMember, TopLevel, TypeAlias, TypeAliasParam,
-    TypeExpr,
+    DataDef, DataField, DataVariant, DimExpr, FunctionDef, ImplMember, Implementation,
+    ImplementsDef, OperationDecl, Program, StructureDef, StructureMember, TopLevel, TypeAlias,
+    TypeAliasParam, TypeExpr,
 };
 use std::fmt;
 
@@ -1494,7 +1494,7 @@ impl KleisParser {
             self.skip_whitespace();
 
             if self.peek() == Some('(') {
-                // Parametric type: Vector(3), Set(ℤ)
+                // Parametric type: Vector(3), Set(ℤ), Matrix(2*n, 2*n, ℝ)
                 self.advance(); // consume '('
                 let mut params = Vec::new();
 
@@ -1504,7 +1504,9 @@ impl KleisParser {
                         break;
                     }
 
-                    params.push(self.parse_type()?);
+                    // v0.92: Try to parse as dimension expression first if it looks like one
+                    // (starts with number or identifier followed by arithmetic operator)
+                    params.push(self.parse_type_or_dim_expr()?);
                     self.skip_whitespace();
 
                     if self.peek() == Some(',') {
@@ -1561,6 +1563,322 @@ impl KleisParser {
         }
 
         Ok(ty)
+    }
+
+    /// v0.92: Parse a type argument that could be a type OR a dimension expression
+    ///
+    /// The distinction between types and dimensions is determined by:
+    /// 1. If it contains arithmetic operators (+, -, *, /), it's a dimension expression
+    /// 2. If it's just an identifier or literal, it could be either - semantic phase decides
+    ///
+    /// Examples:
+    ///   ℝ        -> TypeExpr::Named("ℝ")
+    ///   n        -> TypeExpr::Named("n")  (could be type var or dim var)
+    ///   2        -> TypeExpr::Named("2")  (literal dimension)
+    ///   2*n      -> TypeExpr::DimExpr(Mul(Lit(2), Var("n")))
+    ///   n+1      -> TypeExpr::DimExpr(Add(Var("n"), Lit(1)))
+    fn parse_type_or_dim_expr(&mut self) -> Result<TypeExpr, KleisParseError> {
+        self.skip_whitespace();
+
+        // First, check if this looks like a dimension expression
+        // (starts with a number, or an identifier followed by an arithmetic op)
+        let start_pos = self.pos;
+
+        // Try to parse a primary (number or identifier)
+        let first = if self.peek().is_some_and(|ch| ch.is_ascii_digit()) {
+            let num_str = self.parse_number()?;
+            let num: usize = num_str.parse().unwrap_or(0);
+            Some(DimExpr::Lit(num))
+        } else if self
+            .peek()
+            .is_some_and(|ch| ch.is_alphabetic() || ch == '_')
+        {
+            // Save position to backtrack if needed
+            let id = self.parse_identifier()?;
+            Some(DimExpr::Var(id))
+        } else if self.peek() == Some('(') {
+            // Could be grouped dim expr or a type - try dim expr first
+            self.advance(); // consume '('
+            self.skip_whitespace();
+
+            // Try parsing as dim expr
+            if let Ok(inner) = self.parse_dim_expr_additive() {
+                self.skip_whitespace();
+                if self.peek() == Some(')') {
+                    self.advance();
+                    Some(inner)
+                } else {
+                    // Reset and try as type
+                    self.pos = start_pos;
+                    None
+                }
+            } else {
+                self.pos = start_pos;
+                None
+            }
+        } else {
+            None
+        };
+
+        // If we got a primary, check for arithmetic operators
+        if let Some(left) = first {
+            self.skip_whitespace();
+
+            // Check if followed by arithmetic operator
+            if matches!(self.peek(), Some('+') | Some('-') | Some('*') | Some('/')) {
+                // This is definitely a dimension expression - continue parsing
+                let dim_expr = self.continue_dim_expr(left)?;
+                return Ok(TypeExpr::DimExpr(dim_expr));
+            }
+
+            // Not followed by operator - could be type or dimension
+            // If it's a literal number, treat as Named (dimension literal)
+            // If it's an identifier, treat as Named (semantic phase will resolve)
+            match left {
+                DimExpr::Lit(n) => return Ok(TypeExpr::Named(n.to_string())),
+                DimExpr::Var(name) => {
+                    self.skip_whitespace();
+                    // Check if this identifier is followed by type args
+                    if self.peek() == Some('(') {
+                        // It's a parametric type
+                        self.advance();
+                        let mut params = Vec::new();
+                        loop {
+                            self.skip_whitespace();
+                            if self.peek() == Some(')') {
+                                break;
+                            }
+                            params.push(self.parse_type_or_dim_expr()?);
+                            self.skip_whitespace();
+                            if self.peek() == Some(',') {
+                                self.advance();
+                            } else if self.peek() == Some(')') {
+                                break;
+                            } else {
+                                return Err(KleisParseError {
+                                    message: "Expected ',' or ')' in type parameters".to_string(),
+                                    position: self.pos,
+                                });
+                            }
+                        }
+                        if self.advance() != Some(')') {
+                            return Err(KleisParseError {
+                                message: "Expected ')'".to_string(),
+                                position: self.pos,
+                            });
+                        }
+                        return Ok(TypeExpr::Parametric(name, params));
+                    }
+                    return Ok(TypeExpr::Named(name));
+                }
+                _ => {
+                    // Grouped expression without continuation
+                    return Ok(TypeExpr::DimExpr(left));
+                }
+            }
+        }
+
+        // Fallback: parse as regular type
+        self.parse_type()
+    }
+
+    /// Continue parsing a dimension expression after the left operand
+    fn continue_dim_expr(&mut self, left: DimExpr) -> Result<DimExpr, KleisParseError> {
+        self.skip_whitespace();
+
+        // Handle additive operators (lowest precedence)
+        let mut result = left;
+
+        loop {
+            self.skip_whitespace();
+
+            match self.peek() {
+                Some('+') => {
+                    self.advance();
+                    self.skip_whitespace();
+                    let right = self.parse_dim_expr_multiplicative()?;
+                    result = DimExpr::Add(Box::new(result), Box::new(right));
+                }
+                Some('-') => {
+                    // Make sure it's not an arrow ->
+                    if self.peek_ahead(1) == Some('>') {
+                        break;
+                    }
+                    self.advance();
+                    self.skip_whitespace();
+                    let right = self.parse_dim_expr_multiplicative()?;
+                    result = DimExpr::Sub(Box::new(result), Box::new(right));
+                }
+                Some('*') => {
+                    self.advance();
+                    self.skip_whitespace();
+                    let right = self.parse_dim_expr_primary()?;
+                    result = DimExpr::Mul(Box::new(result), Box::new(right));
+                }
+                Some('/') => {
+                    self.advance();
+                    self.skip_whitespace();
+                    let right = self.parse_dim_expr_primary()?;
+                    result = DimExpr::Div(Box::new(result), Box::new(right));
+                }
+                _ => break,
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Parse additive dimension expression (handles + and -)
+    fn parse_dim_expr_additive(&mut self) -> Result<DimExpr, KleisParseError> {
+        let mut left = self.parse_dim_expr_multiplicative()?;
+
+        loop {
+            self.skip_whitespace();
+            match self.peek() {
+                Some('+') => {
+                    self.advance();
+                    self.skip_whitespace();
+                    let right = self.parse_dim_expr_multiplicative()?;
+                    left = DimExpr::Add(Box::new(left), Box::new(right));
+                }
+                Some('-') => {
+                    // Make sure it's not an arrow ->
+                    if self.peek_ahead(1) == Some('>') {
+                        break;
+                    }
+                    self.advance();
+                    self.skip_whitespace();
+                    let right = self.parse_dim_expr_multiplicative()?;
+                    left = DimExpr::Sub(Box::new(left), Box::new(right));
+                }
+                _ => break,
+            }
+        }
+
+        Ok(left)
+    }
+
+    /// Parse multiplicative dimension expression (handles * and /)
+    fn parse_dim_expr_multiplicative(&mut self) -> Result<DimExpr, KleisParseError> {
+        let mut left = self.parse_dim_expr_power()?;
+
+        loop {
+            self.skip_whitespace();
+            match self.peek() {
+                Some('*') => {
+                    self.advance();
+                    self.skip_whitespace();
+                    let right = self.parse_dim_expr_power()?;
+                    left = DimExpr::Mul(Box::new(left), Box::new(right));
+                }
+                Some('/') => {
+                    self.advance();
+                    self.skip_whitespace();
+                    let right = self.parse_dim_expr_power()?;
+                    left = DimExpr::Div(Box::new(left), Box::new(right));
+                }
+                _ => break,
+            }
+        }
+
+        Ok(left)
+    }
+
+    /// Parse power dimension expression (handles ^, right-associative)
+    /// n^m^k parses as n^(m^k)
+    fn parse_dim_expr_power(&mut self) -> Result<DimExpr, KleisParseError> {
+        let base = self.parse_dim_expr_primary()?;
+        self.skip_whitespace();
+
+        if self.peek() == Some('^') {
+            self.advance();
+            self.skip_whitespace();
+            // Right-recursion for right-associativity
+            let exponent = self.parse_dim_expr_power()?;
+            Ok(DimExpr::Pow(Box::new(base), Box::new(exponent)))
+        } else {
+            Ok(base)
+        }
+    }
+
+    /// Parse primary dimension expression (literals, variables, grouped, function calls)
+    fn parse_dim_expr_primary(&mut self) -> Result<DimExpr, KleisParseError> {
+        self.skip_whitespace();
+
+        if self.peek().is_some_and(|ch| ch.is_ascii_digit()) {
+            // Numeric literal
+            let num_str = self.parse_number()?;
+            let num: usize = num_str.parse().map_err(|_| KleisParseError {
+                message: format!("Invalid dimension literal: {}", num_str),
+                position: self.pos,
+            })?;
+            Ok(DimExpr::Lit(num))
+        } else if self
+            .peek()
+            .is_some_and(|ch| ch.is_alphabetic() || ch == '_')
+        {
+            // Identifier - could be variable or function call
+            let name = self.parse_identifier()?;
+            self.skip_whitespace();
+
+            // Check for function call: min(a, b), max(a, b)
+            if self.peek() == Some('(') && matches!(name.as_str(), "min" | "max" | "gcd" | "lcm") {
+                self.advance(); // consume '('
+                let mut args = Vec::new();
+
+                loop {
+                    self.skip_whitespace();
+                    if self.peek() == Some(')') {
+                        break;
+                    }
+                    args.push(self.parse_dim_expr_additive()?);
+                    self.skip_whitespace();
+                    if self.peek() == Some(',') {
+                        self.advance();
+                    } else if self.peek() == Some(')') {
+                        break;
+                    } else {
+                        return Err(KleisParseError {
+                            message: "Expected ',' or ')' in dimension function call".to_string(),
+                            position: self.pos,
+                        });
+                    }
+                }
+
+                if self.advance() != Some(')') {
+                    return Err(KleisParseError {
+                        message: "Expected ')' after dimension function arguments".to_string(),
+                        position: self.pos,
+                    });
+                }
+
+                Ok(DimExpr::Call(name, args))
+            } else {
+                Ok(DimExpr::Var(name))
+            }
+        } else if self.peek() == Some('(') {
+            // Grouped expression
+            self.advance(); // consume '('
+            self.skip_whitespace();
+            let inner = self.parse_dim_expr_additive()?;
+            self.skip_whitespace();
+
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after grouped dimension expression".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            Ok(inner)
+        } else {
+            Err(KleisParseError {
+                message:
+                    "Expected dimension expression (number, variable, or parenthesized expression)"
+                        .to_string(),
+                position: self.pos,
+            })
+        }
     }
 
     /// Parse a quantified (forall) type

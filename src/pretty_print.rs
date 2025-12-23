@@ -629,6 +629,55 @@ impl PrettyPrinter {
                     Self::format_type_expr(body)
                 )
             }
+            TypeExpr::DimExpr(dim) => Self::format_dim_expr(dim),
+        }
+    }
+
+    /// Format a dimension expression
+    fn format_dim_expr(dim: &crate::kleis_ast::DimExpr) -> String {
+        use crate::kleis_ast::DimExpr;
+        match dim {
+            DimExpr::Lit(n) => n.to_string(),
+            DimExpr::Var(name) => name.clone(),
+            DimExpr::Add(left, right) => {
+                format!(
+                    "{}+{}",
+                    Self::format_dim_expr(left),
+                    Self::format_dim_expr(right)
+                )
+            }
+            DimExpr::Sub(left, right) => {
+                format!(
+                    "{}-{}",
+                    Self::format_dim_expr(left),
+                    Self::format_dim_expr(right)
+                )
+            }
+            DimExpr::Mul(left, right) => {
+                format!(
+                    "{}*{}",
+                    Self::format_dim_expr(left),
+                    Self::format_dim_expr(right)
+                )
+            }
+            DimExpr::Div(left, right) => {
+                format!(
+                    "{}/{}",
+                    Self::format_dim_expr(left),
+                    Self::format_dim_expr(right)
+                )
+            }
+            DimExpr::Pow(left, right) => {
+                format!(
+                    "{}^{}",
+                    Self::format_dim_expr(left),
+                    Self::format_dim_expr(right)
+                )
+            }
+            DimExpr::Call(name, args) => {
+                let args_str: Vec<String> = args.iter().map(Self::format_dim_expr).collect();
+                format!("{}({})", name, args_str.join(", "))
+            }
         }
     }
 

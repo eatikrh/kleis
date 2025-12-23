@@ -254,6 +254,32 @@ pub enum TypeExpr {
         /// The body type
         body: Box<TypeExpr>,
     },
+
+    /// v0.92: Dimension expression for type-level arithmetic
+    /// Examples: 2*n, n+1, n-1, (n+1)*2
+    DimExpr(DimExpr),
+}
+
+/// v0.92: Type-level dimension expressions
+/// Used in parametric types: Matrix(2*n, 2*n, ℝ)
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DimExpr {
+    /// Literal natural number: 0, 1, 2, ...
+    Lit(usize),
+    /// Variable: n, m, k
+    Var(String),
+    /// Addition: n + 1, m + k
+    Add(Box<DimExpr>, Box<DimExpr>),
+    /// Subtraction: n - 1, m - k
+    Sub(Box<DimExpr>, Box<DimExpr>),
+    /// Multiplication: 2 * n, m * k
+    Mul(Box<DimExpr>, Box<DimExpr>),
+    /// Division (integer): n / 2
+    Div(Box<DimExpr>, Box<DimExpr>),
+    /// Power: n^2, 2^k, n^m (right-associative: n^m^k = n^(m^k))
+    Pow(Box<DimExpr>, Box<DimExpr>),
+    /// Function call: min(m, n), max(m, n)
+    Call(String, Vec<DimExpr>),
 }
 
 impl TypeExpr {
@@ -298,6 +324,25 @@ impl std::fmt::Display for TypeExpr {
                     .map(|(name, ty)| format!("{} : {}", name, ty))
                     .collect();
                 write!(f, "∀({}). {}", vars_str.join(", "), body)
+            }
+            TypeExpr::DimExpr(dim) => write!(f, "{}", dim),
+        }
+    }
+}
+
+impl std::fmt::Display for DimExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DimExpr::Lit(n) => write!(f, "{}", n),
+            DimExpr::Var(name) => write!(f, "{}", name),
+            DimExpr::Add(left, right) => write!(f, "{}+{}", left, right),
+            DimExpr::Sub(left, right) => write!(f, "{}-{}", left, right),
+            DimExpr::Mul(left, right) => write!(f, "{}*{}", left, right),
+            DimExpr::Div(left, right) => write!(f, "{}/{}", left, right),
+            DimExpr::Pow(left, right) => write!(f, "{}^{}", left, right),
+            DimExpr::Call(name, args) => {
+                let args_str: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+                write!(f, "{}({})", name, args_str.join(", "))
             }
         }
     }

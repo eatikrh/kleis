@@ -342,6 +342,100 @@ pub fn det(matrix: &[f64], n: usize) -> Result<f64, NumericalError> {
     Ok(det.re)
 }
 
+/// Matrix exponential exp(A) using scaling and squaring with Padé approximation.
+///
+/// This is the standard algorithm for computing matrix exponentials:
+/// 1. Scale the matrix so the norm is small: A_s = A / 2^s
+/// 2. Apply Padé approximation to exp(A_s)
+/// 3. Square the result s times: exp(A) = (exp(A_s))^(2^s)
+///
+/// Uses [6,6] Padé approximant for high accuracy.
+///
+/// ## Example
+/// ```ignore
+/// use kleis::numerical::expm;
+/// let a = vec![0.0, 1.0, -1.0, 0.0]; // rotation matrix generator
+/// let exp_a = expm(&a, 2).unwrap();
+/// // exp_a ≈ [[cos(1), sin(1)], [-sin(1), cos(1)]]
+/// ```
+pub fn expm(matrix: &[f64], n: usize) -> Result<Vec<f64>, NumericalError> {
+    if matrix.len() != n * n {
+        return Err(NumericalError::DimensionMismatch {
+            expected: (n, n),
+            got: (matrix.len() / n, matrix.len() % n),
+        });
+    }
+
+    let a = Array2::from_shape_vec((n, n), matrix.to_vec())
+        .map_err(|e| NumericalError::ComputationFailed(e.to_string()))?;
+
+    // Compute the infinity-norm of the matrix (max row sum)
+    let mut norm: f64 = 0.0;
+    for i in 0..n {
+        let mut row_sum: f64 = 0.0;
+        for j in 0..n {
+            row_sum += a[(i, j)].abs();
+        }
+        norm = norm.max(row_sum);
+    }
+
+    // Determine scaling factor s such that ||A/2^s|| < 0.5
+    // This ensures good convergence of the Padé approximant
+    let s = if norm > 0.5 {
+        ((2.0 * norm).ln() / std::f64::consts::LN_2).ceil().max(0.0) as u32
+    } else {
+        0
+    };
+    let scale = 2.0_f64.powi(s as i32);
+
+    // Scale the matrix
+    let a_scaled = &a / scale;
+
+    // Compute powers of A
+    let a2 = a_scaled.dot(&a_scaled);
+    let a4 = a2.dot(&a2);
+    let a6 = a2.dot(&a4);
+
+    // Identity matrix
+    let eye = Array2::eye(n);
+
+    // Padé [6,6] coefficients (from Higham's book)
+    // These are b_k = (2p-k)! * p! / ((2p)! * k! * (p-k)!) for p=6
+    let b = [
+        1.0,
+        1.0 / 2.0,
+        1.0 / 9.0,
+        1.0 / 72.0,
+        1.0 / 1008.0,
+        1.0 / 30240.0,
+        1.0 / 665280.0,
+    ];
+
+    // U = A * (b[1]*I + b[3]*A^2 + b[5]*A^4)
+    // V = b[0]*I + b[2]*A^2 + b[4]*A^4 + b[6]*A^6
+    // exp(A) ≈ (V - U)^(-1) * (V + U)
+
+    let u = a_scaled.dot(&(&eye * b[1] + &(&a2 * b[3]) + &(&a4 * b[5])));
+    let v = &eye * b[0] + &(&a2 * b[2]) + &(&a4 * b[4]) + &(&a6 * b[6]);
+
+    let v_minus_u = &v - &u;
+    let v_plus_u = &v + &u;
+
+    // Solve (V - U) * result = (V + U)  =>  result = (V - U)^(-1) * (V + U)
+    let v_minus_u_inv = v_minus_u
+        .inv()
+        .map_err(|e| NumericalError::ComputationFailed(format!("Matrix inverse failed: {}", e)))?;
+    let mut result = v_minus_u_inv.dot(&v_plus_u);
+
+    // Squaring: result = result^(2^s)
+    for _ in 0..s {
+        result = result.dot(&result);
+    }
+
+    // Convert to row-major Vec
+    Ok(result.into_raw_vec())
+}
+
 /// Schur decomposition via nalgebra (fallback/testing).
 /// Returns (U, T) where A = U * T * U^H, T is upper quasi-triangular.
 ///
