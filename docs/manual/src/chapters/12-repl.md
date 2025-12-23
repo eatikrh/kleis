@@ -193,12 +193,12 @@ These components are assumed correct, never verified:
 
 ```kleis
 structure AdditiveMonoid(M) {
-    operation add : M × M → M
+    operation add : M → M → M
     axiom add_comm: ∀(a b : M). add(a, b) = add(b, a)
 }
 
 implements AdditiveMonoid(ℕ) {
-    operation add = builtin_add  -- Rust's + operator
+    operation add = builtin_add  // Rust's + operator
 }
 ```
 
