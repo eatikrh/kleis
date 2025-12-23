@@ -285,7 +285,8 @@ The `n` dimension must match on both sides — the solver verifies this.
 
 **SVD decomposition** produces matrices with `min(m, n)` dimensions:
 
-```kleis
+```
+// Illustrative — tuple return types in structures are aspirational
 structure SVD(m: Nat, n: Nat) {
     // A = U * Σ * Vᵀ where Σ is min(m,n) × min(m,n)
     operation svd : Matrix(m, n, ℝ) → 
