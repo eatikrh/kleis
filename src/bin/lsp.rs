@@ -1228,6 +1228,246 @@ fn get_kleis_completions() -> Vec<CompletionItem> {
         ..Default::default()
     });
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // MATRIX MANIPULATION (from manual chapter 19)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let matrix_manip = [
+        ("matrix_get", "Get element at (i, j)"),
+        ("matrix_row", "Extract row as list"),
+        ("matrix_col", "Extract column as list"),
+        ("matrix_diag", "Extract diagonal"),
+        ("vstack", "Stack matrices vertically"),
+        ("hstack", "Stack matrices horizontally"),
+        ("append_row", "Append row to matrix"),
+        ("prepend_row", "Prepend row to matrix"),
+        ("append_col", "Append column"),
+        ("prepend_col", "Prepend column"),
+        ("set_element", "Set element at (i,j)"),
+        ("set_row", "Replace row"),
+        ("set_col", "Replace column"),
+        ("set_diag", "Replace diagonal"),
+        ("size", "Get (rows, cols) tuple"),
+        ("nrows", "Get number of rows"),
+        ("ncols", "Get number of columns"),
+        ("diag_matrix", "Create diagonal matrix"),
+        ("scalar_matrix_mul", "Scalar × matrix"),
+    ];
+
+    for (name, desc) in matrix_manip {
+        items.push(CompletionItem {
+            label: name.to_string(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some(desc.to_string()),
+            ..Default::default()
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // BIT-VECTOR OPERATIONS (from manual chapter 16)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let bitvec_ops = [
+        // Bitwise
+        ("bvand", "Bitwise AND"),
+        ("bvor", "Bitwise OR"),
+        ("bvxor", "Bitwise XOR"),
+        ("bvnot", "Bitwise complement"),
+        // Arithmetic
+        ("bvadd", "Addition mod 2ⁿ"),
+        ("bvsub", "Subtraction mod 2ⁿ"),
+        ("bvmul", "Multiplication mod 2ⁿ"),
+        ("bvneg", "Two's complement negation"),
+        ("bvudiv", "Unsigned division"),
+        ("bvsdiv", "Signed division"),
+        ("bvurem", "Unsigned remainder"),
+        // Shift
+        ("bvshl", "Shift left"),
+        ("bvlshr", "Logical shift right"),
+        ("bvashr", "Arithmetic shift right"),
+        // Comparison
+        ("bvult", "Unsigned less than"),
+        ("bvule", "Unsigned less or equal"),
+        ("bvslt", "Signed less than"),
+        ("bvsle", "Signed less or equal"),
+        // Construction
+        ("bvzero", "All zeros"),
+        ("bvones", "All ones"),
+        ("bvone", "Single 1 in LSB"),
+        ("extract", "Extract bits [high:low]"),
+        ("zext", "Zero extend"),
+        ("sext", "Sign extend"),
+    ];
+
+    for (name, desc) in bitvec_ops {
+        items.push(CompletionItem {
+            label: name.to_string(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some(format!("BitVec: {}", desc)),
+            ..Default::default()
+        });
+    }
+
+    items.push(CompletionItem {
+        label: "BitVec".to_string(),
+        kind: Some(CompletionItemKind::CLASS),
+        detail: Some("BitVec(n) - Fixed-width bit-vector".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Bit-Vector** of width n.\n\nUsed for hardware verification, cryptography.\n\n```kleis\ndefine byte : BitVec(8) = bvzero(8)\ndefine word : BitVec(32) = bvzero(32)\n```".to_string(),
+        })),
+        insert_text: Some("BitVec(${1:n})".to_string()),
+        insert_text_format: Some(InsertTextFormat::SNIPPET),
+        ..Default::default()
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SET OPERATIONS (from manual chapter 18)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let set_ops = [
+        ("empty_set", "Empty set ∅"),
+        ("singleton", "Set with one element {x}"),
+        ("insert", "Add element to set"),
+        ("remove", "Remove element from set"),
+        ("union", "Set union A ∪ B"),
+        ("intersect", "Set intersection A ∩ B"),
+        ("difference", "Set difference A \\ B"),
+        ("complement", "Set complement"),
+        ("in_set", "Membership test x ∈ S"),
+        ("subset", "Subset test A ⊆ B"),
+        ("proper_subset", "Proper subset A ⊂ B"),
+    ];
+
+    for (name, desc) in set_ops {
+        items.push(CompletionItem {
+            label: name.to_string(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            detail: Some(format!("Set: {}", desc)),
+            ..Default::default()
+        });
+    }
+
+    items.push(CompletionItem {
+        label: "Set".to_string(),
+        kind: Some(CompletionItemKind::CLASS),
+        detail: Some("Set(T) - Mathematical set".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Set type** backed by Z3 set theory.\n\n```kleis\nimport \"stdlib/sets.kleis\"\n\n// Build {1, 2, 3}\ninsert(3, insert(2, insert(1, empty_set())))\n```".to_string(),
+        })),
+        insert_text: Some("Set(${1:T})".to_string()),
+        insert_text_format: Some(InsertTextFormat::SNIPPET),
+        ..Default::default()
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // COMMON ADT PATTERNS (from manual chapter 4)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    items.push(CompletionItem {
+        label: "Option".to_string(),
+        kind: Some(CompletionItemKind::SNIPPET),
+        detail: Some("data Option(T) = Some(T) | None".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Optional value** - represents presence or absence.\n\n```kleis\ndata Option(T) = Some(value : T) | None\n```".to_string(),
+        })),
+        insert_text: Some("data Option(T) = Some(value : T) | None".to_string()),
+        ..Default::default()
+    });
+
+    items.push(CompletionItem {
+        label: "Result".to_string(),
+        kind: Some(CompletionItemKind::SNIPPET),
+        detail: Some("data Result(T, E) = Ok(T) | Err(E)".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Result type** - success or error.\n\n```kleis\ndata Result(T, E) = Ok(value : T) | Err(error : E)\n```".to_string(),
+        })),
+        insert_text: Some("data Result(T, E) = Ok(value : T) | Err(error : E)".to_string()),
+        ..Default::default()
+    });
+
+    items.push(CompletionItem {
+        label: "List".to_string(),
+        kind: Some(CompletionItemKind::SNIPPET),
+        detail: Some("data List(T) = Nil | Cons(T, List(T))".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Linked list** - recursive ADT.\n\n```kleis\ndata List(T) = Nil | Cons(head : T, tail : List(T))\n```".to_string(),
+        })),
+        insert_text: Some("data List(T) = Nil | Cons(head : T, tail : List(T))".to_string()),
+        ..Default::default()
+    });
+
+    items.push(CompletionItem {
+        label: "Tree".to_string(),
+        kind: Some(CompletionItemKind::SNIPPET),
+        detail: Some("data Tree(T) = Leaf(T) | Node(Tree, T, Tree)".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Binary tree** - recursive ADT.\n\n```kleis\ndata Tree(T) = Leaf(value : T) | Node(left : Tree(T), value : T, right : Tree(T))\n```".to_string(),
+        })),
+        insert_text: Some("data Tree(T) = Leaf(value : T) | Node(left : Tree(T), value : T, right : Tree(T))".to_string()),
+        ..Default::default()
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // REPL COMMANDS (from manual chapter 12)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let repl_commands = [
+        (
+            ":eval",
+            "Concrete evaluation (computes values)",
+            ":eval 2 + 3",
+        ),
+        (
+            ":verify",
+            "Verify theorem (always true?)",
+            ":verify x + y = y + x",
+        ),
+        (
+            ":sat",
+            "Find solution (exists?)",
+            ":sat ∃(x : ℝ). x * x = 4",
+        ),
+        (":let", "Bind value to variable", ":let x = 5"),
+        (":load", "Load a .kleis file", ":load examples/foo.kleis"),
+        (":env", "Show defined functions/bindings", ":env"),
+        (":type", "Show inferred type", ":type 42"),
+        (":ast", "Show parsed AST", ":ast sin(x)"),
+        (":symbols", "Unicode math symbols", ":symbols"),
+        (":syntax", "Syntax reference", ":syntax"),
+        (":help", "Show help", ":help"),
+        (":quit", "Exit REPL", ":quit"),
+    ];
+
+    for (cmd, desc, example) in repl_commands {
+        items.push(CompletionItem {
+            label: cmd.to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            detail: Some(desc.to_string()),
+            documentation: Some(Documentation::MarkupContent(MarkupContent {
+                kind: MarkupKind::Markdown,
+                value: format!("**REPL Command**\n\n{}\n\nExample: `{}`", desc, example),
+            })),
+            ..Default::default()
+        });
+    }
+
+    items.push(CompletionItem {
+        label: "it".to_string(),
+        kind: Some(CompletionItemKind::VARIABLE),
+        detail: Some("Last :eval result".to_string()),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "**Magic variable** - holds the result of the last `:eval` command.\n\n```\nλ> :eval 2 + 3\n✅ 5\nλ> :eval it * 2\n✅ 10\n```".to_string(),
+        })),
+        ..Default::default()
+    });
+
     items
 }
 
