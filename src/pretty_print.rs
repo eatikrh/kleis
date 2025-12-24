@@ -1506,4 +1506,142 @@ mod tests {
         };
         assert_eq!(pp.format_expression(&expr), "x >> 1");
     }
+
+    // =========================================================================
+    // Round-trip tests (format → parse → compare)
+    // These verify that exported expressions can be re-loaded
+    // =========================================================================
+
+    #[test]
+    fn test_roundtrip_list_literal() {
+        use crate::kleis_parser::KleisParser;
+
+        let pp = PrettyPrinter::new();
+
+        // Simple list
+        let expr = Expression::List(vec![
+            Expression::Const("1".to_string()),
+            Expression::Const("2".to_string()),
+            Expression::Const("3".to_string()),
+        ]);
+
+        let formatted = pp.format_expression(&expr);
+        assert_eq!(formatted, "[1, 2, 3]");
+
+        // Parse it back
+        let mut parser = KleisParser::new(&formatted);
+        let parsed = parser.parse().expect("Should parse list literal");
+
+        // Verify structure matches
+        match parsed {
+            Expression::List(items) => {
+                assert_eq!(items.len(), 3);
+            }
+            _ => panic!("Expected List, got {:?}", parsed),
+        }
+    }
+
+    #[test]
+    fn test_roundtrip_nested_list_matrix() {
+        use crate::kleis_parser::KleisParser;
+
+        let pp = PrettyPrinter::new();
+
+        // 2x2 matrix as nested list: [[1, 2], [3, 4]]
+        let expr = Expression::List(vec![
+            Expression::List(vec![
+                Expression::Const("1".to_string()),
+                Expression::Const("2".to_string()),
+            ]),
+            Expression::List(vec![
+                Expression::Const("3".to_string()),
+                Expression::Const("4".to_string()),
+            ]),
+        ]);
+
+        let formatted = pp.format_expression(&expr);
+        assert_eq!(formatted, "[[1, 2], [3, 4]]");
+
+        // Parse it back
+        let mut parser = KleisParser::new(&formatted);
+        let parsed = parser.parse().expect("Should parse nested list (matrix)");
+
+        // Verify structure matches
+        match parsed {
+            Expression::List(rows) => {
+                assert_eq!(rows.len(), 2);
+                match &rows[0] {
+                    Expression::List(cols) => assert_eq!(cols.len(), 2),
+                    _ => panic!("Expected inner List"),
+                }
+            }
+            _ => panic!("Expected List, got {:?}", parsed),
+        }
+    }
+
+    #[test]
+    fn test_roundtrip_matrix_as_operation() {
+        use crate::kleis_parser::KleisParser;
+
+        let pp = PrettyPrinter::new();
+
+        // Generic operation: SomeOp(a, b, [1, 2, 3])
+        let expr = Expression::Operation {
+            name: "SomeOp".to_string(),
+            args: vec![
+                Expression::Object("a".to_string()),
+                Expression::Object("b".to_string()),
+                Expression::List(vec![
+                    Expression::Const("1".to_string()),
+                    Expression::Const("2".to_string()),
+                    Expression::Const("3".to_string()),
+                ]),
+            ],
+        };
+
+        let formatted = pp.format_expression(&expr);
+        assert_eq!(formatted, "SomeOp(a, b, [1, 2, 3])");
+
+        // Parse it back
+        let mut parser = KleisParser::new(&formatted);
+        let parsed = parser.parse().expect("Should parse operation with list");
+
+        // Verify structure matches
+        match parsed {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "SomeOp");
+                assert_eq!(args.len(), 3);
+                match &args[2] {
+                    Expression::List(elems) => assert_eq!(elems.len(), 3),
+                    _ => panic!("Expected List as 3rd arg"),
+                }
+            }
+            _ => panic!("Expected Operation, got {:?}", parsed),
+        }
+    }
+
+    #[test]
+    fn test_roundtrip_binding_as_define() {
+        use crate::kleis_parser::parse_kleis_program;
+
+        let pp = PrettyPrinter::new();
+
+        // Simulate what export does: define x = [1, 2, 3]
+        // (We use 'define' because 'let' is not a top-level statement)
+        let expr = Expression::List(vec![
+            Expression::Const("1".to_string()),
+            Expression::Const("2".to_string()),
+            Expression::Const("3".to_string()),
+        ]);
+
+        let formatted = pp.format_expression(&expr);
+        let define_stmt = format!("define x = {}", formatted);
+
+        // Parse as a program
+        let program = parse_kleis_program(&define_stmt).expect("Should parse define statement");
+
+        // Verify we got a function definition
+        assert_eq!(program.functions().len(), 1);
+        assert_eq!(program.functions()[0].name, "x");
+    }
 }

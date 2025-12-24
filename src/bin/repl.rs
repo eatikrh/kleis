@@ -11,7 +11,7 @@
 //!   :eval <expr>   Evaluate expression concretely
 //!   :load <file>   Load .kleis file
 //!   :env           Show defined functions
-//!   :export [file] Export definitions to .kleis file
+//!   :export [file] Export definitions + bindings to .kleis file
 //!   :quit          Exit
 
 use rustyline::error::ReadlineError;
@@ -437,7 +437,7 @@ fn print_help_main() {
     println!("  :env, :e           Show defined functions");
     println!("  :sources, :src     Show which files are loaded and what they defined");
     println!("  :define <def>      Define a function");
-    println!("  :export, :x [file] Export definitions to .kleis (or stdout)");
+    println!("  :export, :x [file] Export definitions + bindings to .kleis (or stdout)");
     println!();
     println!("📝 Multi-line Input:");
     println!("  Method 1: End line with \\ (backslash)");
@@ -2656,17 +2656,19 @@ fn define_function(input: &str, evaluator: &mut Evaluator) {
     }
 }
 
-/// Export all defined functions to a .kleis file or stdout
+/// Export all definitions (including bindings) to a .kleis file or stdout
 fn export_functions(path: &str, evaluator: &Evaluator, imported_paths: &[String]) {
     let pp = PrettyPrinter::new();
     let functions = evaluator.list_functions();
     let data_types = evaluator.get_data_types();
     let structures = evaluator.get_structures();
+    let bindings = evaluator.list_bindings();
 
     if functions.is_empty()
         && data_types.is_empty()
         && structures.is_empty()
         && imported_paths.is_empty()
+        && bindings.is_empty()
     {
         println!("No definitions to export.");
         return;
@@ -2675,6 +2677,10 @@ fn export_functions(path: &str, evaluator: &Evaluator, imported_paths: &[String]
     // Sort functions alphabetically for consistent output
     let mut sorted_functions = functions;
     sorted_functions.sort();
+
+    // Sort bindings alphabetically
+    let mut sorted_bindings: Vec<_> = bindings.into_iter().collect();
+    sorted_bindings.sort_by(|a, b| a.0.cmp(b.0));
 
     // Generate the output
     let mut output = String::new();
@@ -2693,6 +2699,9 @@ fn export_functions(path: &str, evaluator: &Evaluator, imported_paths: &[String]
     }
     if !sorted_functions.is_empty() {
         counts.push(format!("{} function(s)", sorted_functions.len()));
+    }
+    if !sorted_bindings.is_empty() {
+        counts.push(format!("{} binding(s)", sorted_bindings.len()));
     }
     output.push_str(&format!("// {}\n\n", counts.join(", ")));
 
@@ -2724,6 +2733,19 @@ fn export_functions(path: &str, evaluator: &Evaluator, imported_paths: &[String]
         }
     }
 
+    // Export bindings (from :let commands) as nullary function definitions
+    // We use 'define x = expr' because 'let' is not a top-level statement in Kleis
+    if !sorted_bindings.is_empty() {
+        output.push_str("// === REPL Bindings ===\n");
+        output.push_str("// These are values from :let commands in the REPL session.\n");
+        output.push_str("// Exported as 'define' so they can be reloaded.\n\n");
+
+        for (name, expr) in &sorted_bindings {
+            let formatted_expr = pp.format_expression(expr);
+            output.push_str(&format!("define {} = {}\n\n", name, formatted_expr));
+        }
+    }
+
     if path.is_empty() {
         // Print to stdout
         println!();
@@ -2746,7 +2768,8 @@ fn export_functions(path: &str, evaluator: &Evaluator, imported_paths: &[String]
                 let total = imported_paths.len()
                     + structures.len()
                     + data_types.len()
-                    + sorted_functions.len();
+                    + sorted_functions.len()
+                    + sorted_bindings.len();
                 println!("✅ Exported {} definition(s) to {}", total, file_path);
             }
             Err(e) => {
