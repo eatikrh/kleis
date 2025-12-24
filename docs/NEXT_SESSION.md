@@ -1,6 +1,76 @@
 # Next Session Notes
 
-**Last Updated:** December 21, 2024
+**Last Updated:** December 24, 2024
+
+---
+
+## 🎯 CURRENT WORK: Debugger & IDE Integration
+
+### Key Documents to Review
+
+1. **`docs/plans/REPL_ENHANCEMENTS.md`** — Master plan for REPL → IDE journey
+2. **`docs/plans/EXPRESSION_SPANS.md`** — Technical spec for adding spans to AST
+
+### Unified Server Architecture (Implemented)
+
+The unified `kleis` binary combines LSP and DAP in a single process with shared state:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         VS Code                              │
+└─────────────────────────────────────────────────────────────┘
+           │ LSP (stdio)             │ DAP (TCP)
+           ▼                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     kleis server                             │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐       │
+│  │   LSP       │◄─►│  Shared     │◄─►│   DAP       │       │
+│  │  Handler    │   │  Context    │   │  Handler    │       │
+│  └─────────────┘   │ (Evaluator) │   └─────────────┘       │
+│                    └─────────────┘                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**CLI Commands:**
+```bash
+kleis server          # LSP + DAP (for VS Code)
+kleis eval "1 + 2"    # Command-line evaluation
+kleis check file.kleis # Type check
+kleis repl            # Interactive REPL
+```
+
+### Debugger Status (9/10 Features Working)
+
+| Feature | Status |
+|---------|--------|
+| Launch/attach | ✅ |
+| Breakpoints (set) | ✅ |
+| Breakpoints (hit) | ⚠️ Function entry only (needs expression spans) |
+| Step in/over/out | ✅ |
+| Continue | ✅ |
+| Stack trace | ✅ Real function names |
+| Variables (local) | ✅ From substitution |
+| Variables (global) | ✅ From REPL bindings |
+| Scopes | ✅ Matches evaluator model |
+| Evaluate expression | ✅ |
+
+### Remaining Work
+
+1. **Test end-to-end debugging** — Build, launch, verify breakpoints work
+2. **Expression-Level Spans** — Add `span: Option<SourceSpan>` to all Expression variants
+   - Enables line-level breakpoints (not just function entry)
+   - Enables precise LSP error locations
+   - ~2,112 code changes across 42 files
+   - See `docs/plans/EXPRESSION_SPANS.md` for full analysis
+
+### Files to Review
+
+- `src/bin/kleis.rs` — Unified binary
+- `src/debug.rs` — DebugHook trait
+- `src/evaluator.rs` — Instrumented with debug hooks
+- `vscode-kleis/src/extension.ts` — VS Code integration
+- `scripts/build-kleis.sh` — Build script with Z3/numerical flags
+- `scripts/kleis` — Wrapper script
 
 ---
 
