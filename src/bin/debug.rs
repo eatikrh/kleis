@@ -133,9 +133,9 @@ struct DebugAdapter {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct DapBreakpoint {
     line: i64,
-    #[allow(dead_code)]
     verified: bool,
 }
 

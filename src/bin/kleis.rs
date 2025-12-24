@@ -229,6 +229,7 @@ use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 
 /// Shared context between LSP, DAP, and REPL
+#[allow(dead_code)]
 struct SharedContext {
     /// The evaluator (holds functions, bindings)
     evaluator: Arc<Mutex<Evaluator>>,
@@ -249,6 +250,7 @@ impl SharedContext {
 }
 
 /// Document state
+#[allow(dead_code)]
 struct Document {
     content: Rope,
     ast: Option<Program>,
@@ -312,7 +314,7 @@ impl KleisUnifiedServer {
     }
 
     /// Parse and validate a document
-    fn parse_document(&self, uri: &Url, content: &str) -> (Option<Program>, Vec<Diagnostic>) {
+    fn parse_document(&self, _uri: &Url, content: &str) -> (Option<Program>, Vec<Diagnostic>) {
         let mut diagnostics = Vec::new();
 
         match parse_kleis_program(content) {
