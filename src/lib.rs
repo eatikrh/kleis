@@ -16,6 +16,7 @@ pub mod numerical; // BLAS/LAPACK backend for numerical linear algebra
 pub mod parser;
 pub mod pattern_matcher;
 pub mod pretty_print; // Pretty-printer for exporting Kleis source
+pub mod provenance; // Track which file each definition came from
 pub mod render;
 pub mod render_editor; // EditorNode-only renderer (no Expression conversion)
 pub mod signature_interpreter;
