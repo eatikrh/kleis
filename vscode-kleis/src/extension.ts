@@ -8,11 +8,13 @@
  * - Go to definition
  * - Document symbols (outline view)
  * - Interactive REPL panel
+ * - Step-through debugging (DAP)
  */
 
 import * as path from 'path';
 import * as fs from 'fs';
-import { workspace, ExtensionContext, window, commands } from 'vscode';
+import * as vscode from 'vscode';
+import { workspace, ExtensionContext, window, commands, debug } from 'vscode';
 
 import {
     LanguageClient,
@@ -73,6 +75,19 @@ export function activate(context: ExtensionContext) {
             }
         })
     );
+
+    // Register debug adapter
+    const debugAdapterPath = findDebugAdapter(context);
+    if (debugAdapterPath) {
+        context.subscriptions.push(
+            debug.registerDebugAdapterDescriptorFactory('kleis', 
+                new KleisDebugAdapterFactory(debugAdapterPath)
+            )
+        );
+        console.log('Kleis debug adapter registered:', debugAdapterPath);
+    } else {
+        console.log('Kleis debug adapter not found. Debug with: cargo build --release --bin debug');
+    }
 
     // Find the kleis-lsp server
     const serverPath = findServer(context);
@@ -178,5 +193,72 @@ function findServer(context: ExtensionContext): string | undefined {
     }
 
     return undefined;
+}
+
+/**
+ * Find the kleis debug adapter executable
+ */
+function findDebugAdapter(context: ExtensionContext): string | undefined {
+    const config = workspace.getConfiguration('kleis');
+    
+    // 1. Check user-configured path
+    const configuredPath = config.get<string>('debugAdapterPath');
+    if (configuredPath && fs.existsSync(configuredPath)) {
+        return configuredPath;
+    }
+
+    // 2. Check for bundled adapter in extension
+    const bundledPath = path.join(context.extensionPath, 'server', 'kleis-debug');
+    if (fs.existsSync(bundledPath)) {
+        return bundledPath;
+    }
+
+    // 3. Check common build locations relative to workspace
+    const workspaceFolders = workspace.workspaceFolders;
+    if (workspaceFolders) {
+        for (const folder of workspaceFolders) {
+            // Check release build (binary is named 'debug')
+            const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'debug');
+            if (fs.existsSync(releasePath)) {
+                return releasePath;
+            }
+            // Check debug build
+            const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'debug');
+            if (fs.existsSync(debugPath)) {
+                return debugPath;
+            }
+        }
+    }
+
+    // 4. Check if kleis-debug is in PATH
+    const pathEnv = process.env.PATH || '';
+    const pathDirs = pathEnv.split(path.delimiter);
+    for (const dir of pathDirs) {
+        const adapterPath = path.join(dir, 'kleis-debug');
+        if (fs.existsSync(adapterPath)) {
+            return adapterPath;
+        }
+    }
+
+    return undefined;
+}
+
+/**
+ * Debug adapter factory for Kleis
+ */
+class KleisDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
+    private adapterPath: string;
+
+    constructor(adapterPath: string) {
+        this.adapterPath = adapterPath;
+    }
+
+    createDebugAdapterDescriptor(
+        _session: vscode.DebugSession,
+        _executable: vscode.DebugAdapterExecutable | undefined
+    ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+        // Run the debug adapter as an executable
+        return new vscode.DebugAdapterExecutable(this.adapterPath, []);
+    }
 }
 
