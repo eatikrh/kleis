@@ -2733,17 +2733,17 @@ fn export_functions(path: &str, evaluator: &Evaluator, imported_paths: &[String]
         }
     }
 
-    // Export bindings (from :let commands)
+    // Export bindings (from :let commands) as nullary function definitions
+    // We use 'define x = expr' because 'let' is not a top-level statement in Kleis
     if !sorted_bindings.is_empty() {
         output.push_str("// === REPL Bindings ===\n");
         output.push_str("// These are values from :let commands in the REPL session.\n");
-        output.push_str("// They will be re-evaluated when this file is loaded.\n\n");
+        output.push_str("// Exported as 'define' so they can be reloaded.\n\n");
 
         for (name, expr) in &sorted_bindings {
             let formatted_expr = pp.format_expression(expr);
-            output.push_str(&format!("let {} = {}\n", name, formatted_expr));
+            output.push_str(&format!("define {} = {}\n\n", name, formatted_expr));
         }
-        output.push('\n');
     }
 
     if path.is_empty() {
