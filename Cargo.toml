@@ -33,6 +33,9 @@ z3 = { path = "vendor/z3", optional = true }
 # REPL (interactive shell)
 rustyline = "14.0"
 
+# CLI argument parsing
+clap = { version = "4.4", features = ["derive"] }
+
 # Language Server Protocol (LSP)
 tower-lsp = "0.20"
 lsp-types = "0.97"
@@ -92,6 +95,10 @@ path = "src/bin/repl.rs"
 [[bin]]
 name = "kleis-lsp"
 path = "src/bin/lsp.rs"
+
+[[bin]]
+name = "kleis"
+path = "src/bin/kleis.rs"
 
 [[example]]
 name = "typst_demo"
