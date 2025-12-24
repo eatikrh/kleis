@@ -70,6 +70,35 @@ cargo run --bin repl
 
 **Key commands:** `:help`, `:syntax`, `:examples`, `:symbols`, `:verify`, `:load`, `:export`
 
+### Unified CLI
+
+The `kleis` binary provides a unified interface for all operations:
+
+```bash
+# Build the unified binary
+cargo build --release --bin kleis
+
+# IDE integration (LSP + DAP for VS Code)
+kleis server
+
+# Command-line evaluation
+kleis eval "1 + 2"
+kleis eval -f script.kleis
+
+# Check files for errors
+kleis check myfile.kleis
+
+# Interactive REPL
+kleis repl
+```
+
+| Subcommand | Description |
+|------------|-------------|
+| `kleis server` | Unified LSP + DAP server for IDE integration |
+| `kleis eval` | Evaluate expressions from command line |
+| `kleis check` | Check files for parse/type errors |
+| `kleis repl` | Interactive REPL (same as `cargo run --bin repl`) |
+
 ### Run Tests
 
 ```bash
