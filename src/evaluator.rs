@@ -5337,4 +5337,115 @@ mod tests {
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::String(ref s) if s == "+"));
     }
+
+    // =========================================================================
+    // Tests for remove/reset methods (REPL unload/reload support)
+    // =========================================================================
+
+    #[test]
+    fn test_remove_function() {
+        let mut eval = Evaluator::new();
+
+        let code = "define foo(x) = x + 1\ndefine bar(x) = x * 2";
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        assert!(eval.has_function("foo"));
+        assert!(eval.has_function("bar"));
+
+        // Remove foo
+        assert!(eval.remove_function("foo"));
+        assert!(!eval.has_function("foo"));
+        assert!(eval.has_function("bar"));
+
+        // Removing again returns false
+        assert!(!eval.remove_function("foo"));
+    }
+
+    #[test]
+    fn test_remove_data_type() {
+        let mut eval = Evaluator::new();
+
+        let code = r#"
+            data Color = Red | Green | Blue
+            data Option(T) = None | Some(value: T)
+        "#;
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // Constructors should be registered
+        assert!(eval.get_adt_constructors().contains("Red"));
+        assert!(eval.get_adt_constructors().contains("Green"));
+        assert!(eval.get_adt_constructors().contains("Blue"));
+
+        // Remove Color data type
+        assert!(eval.remove_data_type("Color"));
+
+        // Constructors should be gone
+        assert!(!eval.get_adt_constructors().contains("Red"));
+        assert!(!eval.get_adt_constructors().contains("Green"));
+        assert!(!eval.get_adt_constructors().contains("Blue"));
+
+        // Option should still exist - verify by checking data type count
+        let (_, data_count, _, _) = eval.definition_counts();
+        assert_eq!(data_count, 1); // Only Option remains
+    }
+
+    #[test]
+    fn test_reset() {
+        let mut eval = Evaluator::new();
+
+        let code = r#"
+            define foo(x) = x + 1
+            data Color = Red | Green | Blue
+        "#;
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // Set some bindings
+        eval.set_binding("x".to_string(), Expression::Const("42".to_string()));
+        eval.set_last_result(Expression::Const("100".to_string()));
+
+        assert!(eval.has_function("foo"));
+        assert!(eval.get_adt_constructors().contains("Red"));
+        assert!(eval.get_binding("x").is_some());
+        assert!(eval.get_last_result().is_some());
+
+        // Reset
+        eval.reset();
+
+        // Everything should be gone
+        assert!(!eval.has_function("foo"));
+        assert!(!eval.get_adt_constructors().contains("Red"));
+        assert!(eval.get_binding("x").is_none());
+        assert!(eval.get_last_result().is_none());
+
+        let (funcs, data, structs, bindings) = eval.definition_counts();
+        assert_eq!(funcs, 0);
+        assert_eq!(data, 0);
+        assert_eq!(structs, 0);
+        assert_eq!(bindings, 0);
+    }
+
+    #[test]
+    fn test_definition_counts() {
+        let mut eval = Evaluator::new();
+
+        let code = r#"
+            define foo(x) = x + 1
+            define bar(x) = x * 2
+            data Color = Red | Green | Blue
+        "#;
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        eval.set_binding("x".to_string(), Expression::Const("1".to_string()));
+        eval.set_binding("y".to_string(), Expression::Const("2".to_string()));
+
+        let (funcs, data, structs, bindings) = eval.definition_counts();
+        assert_eq!(funcs, 2);
+        assert_eq!(data, 1);
+        assert_eq!(structs, 0);
+        assert_eq!(bindings, 2);
+    }
 }

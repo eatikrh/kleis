@@ -537,4 +537,75 @@ mod tests {
         let axioms = registry.get_axioms("Nonexistent");
         assert_eq!(axioms.len(), 0);
     }
+
+    // =========================================================================
+    // Tests for remove/reset methods (REPL unload/reload support)
+    // =========================================================================
+
+    #[test]
+    fn test_remove_structure() {
+        let mut registry = StructureRegistry::new();
+        let matrix = make_matrix_structure();
+        let ring = make_ring_structure_with_axioms();
+
+        registry.register(matrix).unwrap();
+        registry.register(ring).unwrap();
+
+        assert_eq!(registry.structure_count(), 2);
+        assert!(registry.has_structure("Matrix"));
+        assert!(registry.has_structure("Ring"));
+
+        // Remove Matrix
+        assert!(registry.remove_structure("Matrix"));
+        assert_eq!(registry.structure_count(), 1);
+        assert!(!registry.has_structure("Matrix"));
+        assert!(registry.has_structure("Ring"));
+
+        // Removing again returns false
+        assert!(!registry.remove_structure("Matrix"));
+    }
+
+    #[test]
+    fn test_reset() {
+        let mut registry = StructureRegistry::new();
+        let matrix = make_matrix_structure();
+        let ring = make_ring_structure_with_axioms();
+
+        registry.register(matrix).unwrap();
+        registry.register(ring).unwrap();
+
+        assert_eq!(registry.structure_count(), 2);
+
+        registry.reset();
+
+        assert_eq!(registry.structure_count(), 0);
+        assert!(!registry.has_structure("Matrix"));
+        assert!(!registry.has_structure("Ring"));
+    }
+
+    #[test]
+    fn test_remove_implements_for_structure() {
+        let mut registry = StructureRegistry::new();
+        let ring = make_ring_structure_with_axioms();
+
+        registry.register(ring).unwrap();
+
+        // Create a mock implements block
+        let impl_def = crate::kleis_ast::ImplementsDef {
+            structure_name: "Ring".to_string(),
+            type_args: vec![TypeExpr::Named("ℤ".to_string())],
+            over_clause: None,
+            where_clause: None,
+            members: vec![],
+        };
+        registry.register_implements(impl_def);
+
+        // Remove implements - should return 1 (one block removed)
+        let removed = registry.remove_implements_for_structure("Ring");
+        assert_eq!(removed, 1);
+
+        // Removing again should return 0 (nothing left)
+        let removed_again = registry.remove_implements_for_structure("Ring");
+        assert_eq!(removed_again, 0);
+    }
 }
