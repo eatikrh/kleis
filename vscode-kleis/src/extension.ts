@@ -8,7 +8,14 @@
  * - Go to definition
  * - Document symbols (outline view)
  * - Interactive REPL panel
- * - Step-through debugging (DAP)
+ * - Step-through debugging (DAP via unified server)
+ * 
+ * Architecture:
+ * - The unified `kleis server` binary handles LSP over stdio
+ * - When debugging starts, we call `kleis.startDebugSession` command
+ * - The server spawns DAP on a dynamic TCP port and returns the port
+ * - VS Code connects to DAP via TCP
+ * - This allows shared state between LSP, DAP, and REPL
  */
 
 import * as path from 'path';
@@ -76,36 +83,33 @@ export function activate(context: ExtensionContext) {
         })
     );
 
-    // Register debug adapter
-    const debugAdapterPath = findDebugAdapter(context);
-    if (debugAdapterPath) {
-        context.subscriptions.push(
-            debug.registerDebugAdapterDescriptorFactory('kleis', 
-                new KleisDebugAdapterFactory(debugAdapterPath)
-            )
-        );
-        console.log('Kleis debug adapter registered:', debugAdapterPath);
-    } else {
-        console.log('Kleis debug adapter not found. Debug with: cargo build --release --bin debug');
-    }
+    // Register debug adapter factory
+    // The factory will request a debug port from the unified server via LSP
+    context.subscriptions.push(
+        debug.registerDebugAdapterDescriptorFactory('kleis', 
+            new KleisDebugAdapterFactory()
+        )
+    );
+    console.log('Kleis debug adapter factory registered (uses unified server)');
 
-    // Find the kleis-lsp server
+    // Find the unified kleis server
     const serverPath = findServer(context);
     
     if (!serverPath) {
         window.showWarningMessage(
-            'Kleis language server (kleis-lsp) not found. ' +
-            'Diagnostics and other advanced features will be disabled. ' +
-            'Build it with: cargo build --release --bin kleis-lsp'
+            'Kleis unified server not found. ' +
+            'Diagnostics, debugging, and other advanced features will be disabled. ' +
+            'Build it with: cargo build --release --bin kleis'
         );
         // Still activate - REPL can work without LSP
         console.log('Kleis language extension activated (REPL only, no LSP)');
         return;
     }
 
-    // Server options - run the kleis-lsp binary
+    // Server options - run the unified kleis binary with 'server' subcommand
     const serverExecutable: Executable = {
         command: serverPath,
+        args: ['server'],
         options: {
             env: process.env,
         },
@@ -113,7 +117,7 @@ export function activate(context: ExtensionContext) {
 
     const serverOptions: ServerOptions = {
         run: serverExecutable,
-        debug: serverExecutable,
+        debug: { ...serverExecutable, args: ['server', '--verbose'] },
     };
 
     // Client options
@@ -148,7 +152,7 @@ export function deactivate(): Thenable<void> | undefined {
 }
 
 /**
- * Find the kleis-lsp server executable
+ * Find the unified kleis server executable
  */
 function findServer(context: ExtensionContext): string | undefined {
     const config = workspace.getConfiguration('kleis');
@@ -160,7 +164,7 @@ function findServer(context: ExtensionContext): string | undefined {
     }
 
     // 2. Check for bundled server in extension
-    const bundledPath = path.join(context.extensionPath, 'server', 'kleis-lsp');
+    const bundledPath = path.join(context.extensionPath, 'server', 'kleis');
     if (fs.existsSync(bundledPath)) {
         return bundledPath;
     }
@@ -170,73 +174,36 @@ function findServer(context: ExtensionContext): string | undefined {
     if (workspaceFolders) {
         for (const folder of workspaceFolders) {
             // Check release build
-            const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'kleis-lsp');
+            const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'kleis');
             if (fs.existsSync(releasePath)) {
                 return releasePath;
             }
             // Check debug build
-            const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'kleis-lsp');
+            const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'kleis');
             if (fs.existsSync(debugPath)) {
                 return debugPath;
             }
         }
     }
 
-    // 4. Check if kleis-lsp is in PATH
+    // 4. Check if kleis is in PATH
     const pathEnv = process.env.PATH || '';
     const pathDirs = pathEnv.split(path.delimiter);
     for (const dir of pathDirs) {
-        const serverPath = path.join(dir, 'kleis-lsp');
+        const serverPath = path.join(dir, 'kleis');
         if (fs.existsSync(serverPath)) {
             return serverPath;
         }
     }
 
-    return undefined;
-}
-
-/**
- * Find the kleis debug adapter executable
- */
-function findDebugAdapter(context: ExtensionContext): string | undefined {
-    const config = workspace.getConfiguration('kleis');
-    
-    // 1. Check user-configured path
-    const configuredPath = config.get<string>('debugAdapterPath');
-    if (configuredPath && fs.existsSync(configuredPath)) {
-        return configuredPath;
-    }
-
-    // 2. Check for bundled adapter in extension
-    const bundledPath = path.join(context.extensionPath, 'server', 'kleis-debug');
-    if (fs.existsSync(bundledPath)) {
-        return bundledPath;
-    }
-
-    // 3. Check common build locations relative to workspace
-    const workspaceFolders = workspace.workspaceFolders;
+    // 5. Fallback: check for old kleis-lsp binary for backwards compat
     if (workspaceFolders) {
         for (const folder of workspaceFolders) {
-            // Check release build (binary is named 'debug')
-            const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'debug');
+            const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'kleis-lsp');
             if (fs.existsSync(releasePath)) {
+                console.log('Using legacy kleis-lsp binary (consider switching to unified kleis server)');
                 return releasePath;
             }
-            // Check debug build
-            const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'debug');
-            if (fs.existsSync(debugPath)) {
-                return debugPath;
-            }
-        }
-    }
-
-    // 4. Check if kleis-debug is in PATH
-    const pathEnv = process.env.PATH || '';
-    const pathDirs = pathEnv.split(path.delimiter);
-    for (const dir of pathDirs) {
-        const adapterPath = path.join(dir, 'kleis-debug');
-        if (fs.existsSync(adapterPath)) {
-            return adapterPath;
         }
     }
 
@@ -245,20 +212,74 @@ function findDebugAdapter(context: ExtensionContext): string | undefined {
 
 /**
  * Debug adapter factory for Kleis
+ * 
+ * This factory requests a debug port from the unified server via LSP command,
+ * then connects to the DAP server via TCP on that port.
  */
 class KleisDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
-    private adapterPath: string;
-
-    constructor(adapterPath: string) {
-        this.adapterPath = adapterPath;
-    }
-
-    createDebugAdapterDescriptor(
-        _session: vscode.DebugSession,
+    async createDebugAdapterDescriptor(
+        session: vscode.DebugSession,
         _executable: vscode.DebugAdapterExecutable | undefined
-    ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-        // Run the debug adapter as an executable
-        return new vscode.DebugAdapterExecutable(this.adapterPath, []);
+    ): Promise<vscode.DebugAdapterDescriptor> {
+        // Get the program path from the debug configuration
+        const program = session.configuration.program;
+        
+        // If we have an LSP client, ask it to start DAP server
+        if (client) {
+            try {
+                // Send command to LSP server to start DAP
+                const result = await client.sendRequest('workspace/executeCommand', {
+                    command: 'kleis.startDebugSession',
+                    arguments: [program]
+                }) as { port?: number; error?: string };
+
+                if (result && result.port) {
+                    console.log(`Kleis DAP server running on port ${result.port}`);
+                    // Connect to DAP via TCP
+                    return new vscode.DebugAdapterServer(result.port, '127.0.0.1');
+                } else if (result && result.error) {
+                    throw new Error(result.error);
+                } else {
+                    throw new Error('No port returned from kleis.startDebugSession');
+                }
+            } catch (e) {
+                console.error('Failed to start debug session via LSP:', e);
+                window.showErrorMessage(`Failed to start Kleis debugger: ${e}`);
+                throw e;
+            }
+        } else {
+            // No LSP client available - fall back to standalone debug adapter
+            const standalonePath = findStandaloneDebugAdapter();
+            if (standalonePath) {
+                console.log('Using standalone debug adapter (no shared state with LSP)');
+                return new vscode.DebugAdapterExecutable(standalonePath, []);
+            } else {
+                throw new Error(
+                    'Kleis debugger not available. Start LSP server or build debug adapter.'
+                );
+            }
+        }
     }
+}
+
+/**
+ * Find standalone debug adapter for fallback when LSP is not running
+ */
+function findStandaloneDebugAdapter(): string | undefined {
+    const workspaceFolders = workspace.workspaceFolders;
+    if (workspaceFolders) {
+        for (const folder of workspaceFolders) {
+            // Check for kleis-debug binary
+            const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'debug');
+            if (fs.existsSync(releasePath)) {
+                return releasePath;
+            }
+            const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'debug');
+            if (fs.existsSync(debugPath)) {
+                return debugPath;
+            }
+        }
+    }
+    return undefined;
 }
 

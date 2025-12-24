@@ -371,6 +371,10 @@ impl LanguageServer for KleisUnifiedServer {
                     trigger_characters: Some(vec![".".to_string(), ":".to_string()]),
                     ..Default::default()
                 }),
+                execute_command_provider: Some(ExecuteCommandOptions {
+                    commands: vec!["kleis.startDebugSession".to_string()],
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             ..Default::default()
@@ -463,6 +467,45 @@ impl LanguageServer for KleisUnifiedServer {
         ];
 
         Ok(Some(CompletionResponse::Array(items)))
+    }
+
+    async fn execute_command(
+        &self,
+        params: ExecuteCommandParams,
+    ) -> Result<Option<serde_json::Value>> {
+        match params.command.as_str() {
+            "kleis.startDebugSession" => {
+                self.log("Received kleis.startDebugSession command");
+
+                // Extract program path from arguments
+                let program_path = params
+                    .arguments
+                    .first()
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
+                // Start DAP server on dynamic port
+                match self.start_dap_server() {
+                    Ok(port) => {
+                        self.log(&format!("DAP server started on port {}", port));
+                        Ok(Some(serde_json::json!({
+                            "port": port,
+                            "program": program_path
+                        })))
+                    }
+                    Err(e) => {
+                        self.log(&format!("Failed to start DAP: {}", e));
+                        Ok(Some(serde_json::json!({
+                            "error": e
+                        })))
+                    }
+                }
+            }
+            other => {
+                self.log(&format!("Unknown command: {}", other));
+                Ok(None)
+            }
+        }
     }
 }
 
