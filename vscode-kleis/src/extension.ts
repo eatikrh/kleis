@@ -212,10 +212,16 @@ export function activate(context: ExtensionContext) {
         return;
     }
 
+    // Respect user trace setting and propagate it to server/LanguageClient
+    const traceSetting = workspace.getConfiguration('kleis').get<string>('trace.server') || 'off';
+
     // Server options - run the unified kleis binary with 'server' subcommand
+    const runArgs = ['server'];
+    if (traceSetting === 'verbose') runArgs.push('--verbose');
+
     const serverExecutable: Executable = {
         command: serverPath,
-        args: ['server'],
+        args: runArgs,
         options: {
             env: process.env,
         },
@@ -223,6 +229,7 @@ export function activate(context: ExtensionContext) {
 
     const serverOptions: ServerOptions = {
         run: serverExecutable,
+        // debug always enables verbose for extra diagnostics
         debug: { ...serverExecutable, args: ['server', '--verbose'] },
     };
 
@@ -243,6 +250,20 @@ export function activate(context: ExtensionContext) {
         serverOptions,
         clientOptions
     );
+
+    // Set language client trace level so LSP messages appear in the "Language Server" output
+    try {
+        // Lazy import of Trace enum
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { Trace } = require('vscode-languageclient');
+        if (traceSetting === 'messages') {
+            (client as any).trace = Trace.Messages;
+        } else if (traceSetting === 'verbose') {
+            (client as any).trace = Trace.Verbose;
+        }
+    } catch (e) {
+        console.warn('Could not set language client trace:', e);
+    }
 
     // Start the client (this also starts the server)
     client.start();

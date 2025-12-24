@@ -2,5 +2,5 @@
   // Workspace settings for Kleis extension
   "kleis.serverPath": "/Users/eatik_1/Documents/git/cee/kleis/target/release/kleis",
   "kleis.replPath": "/Users/eatik_1/Documents/git/cee/kleis/target/release/repl",
-  "kleis.trace.server": "verbose"
+  "kleis.trace.server": "messages"
 }
