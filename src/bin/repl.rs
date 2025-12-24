@@ -24,6 +24,7 @@ use kleis::kleis_ast::TopLevel;
 use kleis::kleis_parser::{parse_kleis_program, KleisParser};
 use kleis::lowering::SemanticLowering;
 use kleis::pretty_print::PrettyPrinter;
+use kleis::provenance::ProvenanceTracker;
 use kleis::render::{build_default_context, render_expression, RenderTarget};
 use kleis::structure_registry::StructureRegistry;
 use kleis::type_context::TypeContextBuilder;
@@ -54,6 +55,7 @@ fn main() -> RlResult<()> {
     let mut evaluator = Evaluator::new();
     let render_ctx = build_default_context();
     let mut imported_paths: Vec<String> = Vec::new(); // Track imports for export
+    let mut provenance = ProvenanceTracker::new(); // Track which file each definition came from
 
     #[cfg(feature = "axiom-verification")]
     let mut registry = StructureRegistry::new();
@@ -98,6 +100,7 @@ fn main() -> RlResult<()> {
                             &mut evaluator,
                             &render_ctx,
                             &mut imported_paths,
+                            &mut provenance,
                             #[cfg(feature = "axiom-verification")]
                             &mut registry,
                             &mut type_checker,
@@ -148,6 +151,7 @@ fn main() -> RlResult<()> {
                     &mut evaluator,
                     &render_ctx,
                     &mut imported_paths,
+                    &mut provenance,
                     #[cfg(feature = "axiom-verification")]
                     &mut registry,
                     &mut type_checker,
@@ -188,6 +192,7 @@ fn process_input(
     evaluator: &mut Evaluator,
     ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
     registry: &mut StructureRegistry,
     type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
@@ -197,6 +202,7 @@ fn process_input(
             evaluator,
             ctx,
             imported_paths,
+            provenance,
             registry,
             type_checker,
         );
@@ -211,10 +217,18 @@ fn process_input(
     evaluator: &mut Evaluator,
     ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
     type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     if input.starts_with(':') {
-        handle_command_no_z3(input, evaluator, ctx, imported_paths, type_checker);
+        handle_command_no_z3(
+            input,
+            evaluator,
+            ctx,
+            imported_paths,
+            provenance,
+            type_checker,
+        );
     } else {
         // Create empty registry for type context (no Z3 verification)
         let registry = StructureRegistry::new();
@@ -273,6 +287,7 @@ fn handle_command(
     evaluator: &mut Evaluator,
     _ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
     registry: &mut StructureRegistry,
     type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
@@ -290,13 +305,21 @@ fn handle_command(
         ":eval" | ":ev" => eval_concrete_expression(arg, evaluator),
         ":let" => let_binding(arg, evaluator),
         ":trace" | ":tr" => trace_match(arg, registry, evaluator),
-        ":load" | ":l" => load_file(arg, evaluator, registry, imported_paths, type_checker),
+        ":load" | ":l" => load_file(
+            arg,
+            evaluator,
+            registry,
+            imported_paths,
+            provenance,
+            type_checker,
+        ),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
         ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
+        ":sources" | ":src" => show_sources(provenance),
         _ => println!(
             "Unknown command: {}. Type :help for available commands.",
             cmd
@@ -310,6 +333,7 @@ fn handle_command_no_z3(
     evaluator: &mut Evaluator,
     _ctx: &kleis::render::GlyphContext,
     imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
     type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     let parts: Vec<&str> = line.splitn(2, ' ').collect();
@@ -334,10 +358,11 @@ fn handle_command_no_z3(
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
-        ":load" | ":l" => load_file(arg, evaluator, imported_paths, type_checker),
+        ":load" | ":l" => load_file(arg, evaluator, imported_paths, provenance, type_checker),
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
         ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
+        ":sources" | ":src" => show_sources(provenance),
         _ => println!(
             "Unknown command: {}. Type :help for available commands.",
             cmd
@@ -392,6 +417,7 @@ fn print_help_main() {
     println!("  Tip: Use `it` in expressions to refer to the last :eval result");
     println!("  :load, :l <file>   Load a .kleis file");
     println!("  :env, :e           Show defined functions");
+    println!("  :sources, :src     Show which files are loaded and what they defined");
     println!("  :define <def>      Define a function");
     println!("  :export, :x [file] Export definitions to .kleis (or stdout)");
     println!();
@@ -1851,6 +1877,7 @@ fn load_file(
     evaluator: &mut Evaluator,
     registry: &mut StructureRegistry,
     imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
     type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     if path.is_empty() {
@@ -1880,6 +1907,7 @@ fn load_file(
         registry,
         &mut loaded_files,
         imported_paths,
+        provenance,
     ) {
         Ok(stats) => {
             println!(
@@ -1902,6 +1930,7 @@ fn load_file(
     path: &str,
     evaluator: &mut Evaluator,
     imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
     type_checker: &mut kleis::type_checker::TypeChecker,
 ) {
     if path.is_empty() {
@@ -1925,7 +1954,13 @@ fn load_file(
         }
     }
 
-    match load_file_recursive(base_path, evaluator, &mut loaded_files, imported_paths) {
+    match load_file_recursive(
+        base_path,
+        evaluator,
+        &mut loaded_files,
+        imported_paths,
+        provenance,
+    ) {
         Ok(stats) => {
             println!(
                 "✅ Loaded: {} files, {} functions, {} structures, {} data types, {} type aliases",
@@ -1979,6 +2014,7 @@ fn load_file_recursive(
     registry: &mut StructureRegistry,
     loaded_files: &mut HashSet<PathBuf>,
     imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
 ) -> Result<LoadStats, String> {
     // Resolve to canonical path for circular import detection
     let canonical = path
@@ -2021,6 +2057,7 @@ fn load_file_recursive(
                 registry,
                 loaded_files,
                 imported_paths,
+                provenance,
             ) {
                 Ok(import_stats) => {
                     stats.add(&import_stats);
@@ -2056,6 +2093,19 @@ fn load_file_recursive(
                 );
             }
         }
+        // Track structure provenance
+        provenance.record_structure(&canonical, &structure.name);
+    }
+
+    // Track provenance for all definitions
+    for func in program.functions() {
+        provenance.record_function(&canonical, &func.name);
+    }
+    for data in program.data_types() {
+        provenance.record_data_type(&canonical, &data.name);
+    }
+    for type_alias in program.type_aliases() {
+        provenance.record_type_alias(&canonical, &type_alias.name);
     }
 
     stats.functions += program.functions().len();
@@ -2073,6 +2123,7 @@ fn load_file_recursive(
     evaluator: &mut Evaluator,
     loaded_files: &mut HashSet<PathBuf>,
     imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
 ) -> Result<LoadStats, String> {
     // Resolve to canonical path for circular import detection
     let canonical = path
@@ -2109,7 +2160,13 @@ fn load_file_recursive(
             }
 
             let resolved_path = resolve_import_path(import_path, base_dir);
-            match load_file_recursive(&resolved_path, evaluator, loaded_files, imported_paths) {
+            match load_file_recursive(
+                &resolved_path,
+                evaluator,
+                loaded_files,
+                imported_paths,
+                provenance,
+            ) {
                 Ok(import_stats) => {
                     stats.add(&import_stats);
                 }
@@ -2132,6 +2189,20 @@ fn load_file_recursive(
             path.display(),
             e
         ));
+    }
+
+    // Track provenance for all definitions
+    for func in program.functions() {
+        provenance.record_function(&canonical, &func.name);
+    }
+    for structure in program.structures() {
+        provenance.record_structure(&canonical, &structure.name);
+    }
+    for data in program.data_types() {
+        provenance.record_data_type(&canonical, &data.name);
+    }
+    for type_alias in program.type_aliases() {
+        provenance.record_type_alias(&canonical, &type_alias.name);
     }
 
     stats.functions += program.functions().len();
@@ -2194,6 +2265,68 @@ fn show_env(evaluator: &Evaluator) {
             }
         }
     }
+}
+
+/// Show provenance information - which files are loaded and what they defined
+fn show_sources(provenance: &ProvenanceTracker) {
+    let files = provenance.loaded_files();
+
+    if files.is_empty() {
+        println!("No files loaded.");
+        return;
+    }
+
+    println!(
+        "📁 Loaded files ({} total, {} definitions):",
+        provenance.file_count(),
+        provenance.total_definition_count()
+    );
+    println!();
+
+    for file_path in files {
+        // Show just the filename for readability
+        let display_name = file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
+
+        if let Some(defs) = provenance.get_definitions(file_path) {
+            let count = defs.total_count();
+            println!("  📄 {} ({} definitions)", display_name, count);
+
+            // Show details if not too many
+            if !defs.functions.is_empty() && defs.functions.len() <= 5 {
+                let funcs: Vec<&str> = defs.functions.iter().map(|s| s.as_str()).collect();
+                println!("     functions: {}", funcs.join(", "));
+            } else if !defs.functions.is_empty() {
+                println!("     functions: {} defined", defs.functions.len());
+            }
+
+            if !defs.structures.is_empty() && defs.structures.len() <= 5 {
+                let structs: Vec<&str> = defs.structures.iter().map(|s| s.as_str()).collect();
+                println!("     structures: {}", structs.join(", "));
+            } else if !defs.structures.is_empty() {
+                println!("     structures: {} defined", defs.structures.len());
+            }
+
+            if !defs.data_types.is_empty() && defs.data_types.len() <= 5 {
+                let types: Vec<&str> = defs.data_types.iter().map(|s| s.as_str()).collect();
+                println!("     data types: {}", types.join(", "));
+            } else if !defs.data_types.is_empty() {
+                println!("     data types: {} defined", defs.data_types.len());
+            }
+
+            if !defs.type_aliases.is_empty() && defs.type_aliases.len() <= 5 {
+                let aliases: Vec<&str> = defs.type_aliases.iter().map(|s| s.as_str()).collect();
+                println!("     type aliases: {}", aliases.join(", "));
+            } else if !defs.type_aliases.is_empty() {
+                println!("     type aliases: {} defined", defs.type_aliases.len());
+            }
+        }
+    }
+
+    println!();
+    println!("Use :env to see function details, :unload <file> to remove (coming soon)");
 }
 
 fn define_function(input: &str, evaluator: &mut Evaluator) {
