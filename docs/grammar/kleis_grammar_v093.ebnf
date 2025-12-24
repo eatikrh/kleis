@@ -84,16 +84,28 @@ exampleStatement
       | expression ";"      (* expression with side-effect *)
       ;
 
-(* Assert statements verify conditions.
+(* Assert statements verify symbolic conditions.
+ * 
+ * Unlike traditional unit tests that check concrete values,
+ * Kleis assert verifies SYMBOLIC expressions using:
+ *   - Z3 theorem prover for logical validity
+ *   - Axioms in scope for algebraic identities
+ *   - Type system for type-level assertions
  * 
  * Forms:
- *   assert(condition)              -- must be true
- *   assert(a = b)                  -- equality check
- *   assert(a ≈ b)                  -- approximate equality
- *   assert(condition, "message")   -- with custom message
+ *   assert(a + b = b + a)          -- symbolic equivalence (Z3)
+ *   assert(∀(x : ℝ). x + 0 = x)    -- universal property (Z3)
+ *   assert(det(A × B) = det(A) × det(B))  -- algebraic identity
+ *   assert(2 + 2 = 4)              -- concrete evaluation
+ * 
+ * Semantics:
+ *   - Concrete expressions: evaluate and check
+ *   - Symbolic expressions: ask Z3 to prove from axioms
+ *   - If Z3 times out: report "unknown" (not failure)
+ *   - The expression itself is the error message
  *)
 assertStatement
-    ::= "assert" "(" expression [ "," string ] ")"
+    ::= "assert" "(" expression ")"
       ;
 
 (* ============================================ *)
@@ -483,46 +495,85 @@ character ::= ? any Unicode character except '"' and newline ? ;
 (* EXAMPLES OF v0.93 FEATURES                   *)
 (* ============================================ *)
 
-(* Example: Testing complex number operations
+(* ============================================ *)
+(* EXAMPLES: SYMBOLIC ASSERTIONS               *)
+(* ============================================ *)
+
+(* Example: Verifying algebraic properties
  * 
  * structure Complex(re: ℝ, im: ℝ) {
  *     operation add : Complex → Complex
- *     operation multiply : Complex → Complex
+ *     axiom add_comm: ∀(z1 z2 : Complex). add(z1, z2) = add(z2, z1)
  * }
  * 
- * example "complex arithmetic" {
- *     let z1 = Complex(1, 2)
- *     let z2 = Complex(3, 4)
- *     let sum = add(z1, z2)
+ * example "complex addition is commutative" {
+ *     let z1 : Complex
+ *     let z2 : Complex
  *     
+ *     // Z3 proves this from the add_comm axiom
+ *     assert(add(z1, z2) = add(z2, z1))
+ * }
+ *)
+
+(* Example: Concrete evaluation 
+ * 
+ * example "concrete arithmetic" {
+ *     // These evaluate to concrete values
+ *     assert(2 + 2 = 4)
+ *     assert(3 * 4 = 12)
+ *     
+ *     let z = Complex(1, 2)
+ *     let w = Complex(3, 4)
+ *     let sum = add(z, w)
+ *     
+ *     // Concrete check after evaluation
  *     assert(sum.re = 4)
  *     assert(sum.im = 6)
- *     
- *     let product = multiply(z1, z2)
- *     assert(product.re = -5)   // 1*3 - 2*4
- *     assert(product.im = 10)   // 1*4 + 2*3
  * }
  *)
 
-(* Example: Matrix operations with approximate equality
+(* Example: Matrix identity from axioms
  * 
- * example "matrix inverse" {
- *     let A = Matrix(2, 2, [[1, 2], [3, 4]])
- *     let A_inv = inverse(A)
- *     let I = multiply(A, A_inv)
+ * structure Matrix(m: ℕ, n: ℕ) {
+ *     operation multiply : Matrix(n, p) → Matrix(m, p)
+ *     operation inverse : Matrix(n, n) → Matrix(n, n)
+ *     element identity : Matrix(n, n)
  *     
- *     assert(I ≈ identity(2), "A * A^-1 should be identity")
+ *     axiom inverse_right: ∀(A : Matrix(n, n)).
+ *         multiply(A, inverse(A)) = identity
+ * }
+ * 
+ * example "inverse property" {
+ *     let A : Matrix(3, 3)
+ *     
+ *     // Z3 proves from inverse_right axiom
+ *     assert(multiply(A, inverse(A)) = identity)
  * }
  *)
 
-(* Example: Physics calculation
+(* Example: Universal quantifier verification
  * 
- * example "simple pendulum period" {
- *     let length = 1.0  // 1 meter
- *     let g = 9.81      // gravity
- *     let T = 2 * π * sqrt(length / g)
+ * example "addition identity" {
+ *     // Z3 checks this holds for all x
+ *     assert(∀(x : ℝ). x + 0 = x)
+ * }
+ *)
+
+(* Example: Determinant multiplicativity (symbolic)
+ * 
+ * structure Determinant {
+ *     operation det : Matrix(n, n) → ℝ
  *     
- *     assert(T ≈ 2.006, "period should be ~2 seconds")
+ *     axiom multiplicative: ∀(A B : Matrix(n, n)).
+ *         det(multiply(A, B)) = det(A) * det(B)
+ * }
+ * 
+ * example "determinant of product" {
+ *     let A : Matrix(3, 3)
+ *     let B : Matrix(3, 3)
+ *     
+ *     // Follows from multiplicative axiom
+ *     assert(det(multiply(A, B)) = det(A) * det(B))
  * }
  *)
 

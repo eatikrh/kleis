@@ -50,7 +50,9 @@ example "euler identity" {
 **Semantics:**
 - `example` blocks are **executable** - they evaluate sequentially
 - Each `let` binding is a step (debugger can pause)
-- `assert` statements are verified
+- `assert` statements are verified:
+  - **Concrete**: Evaluate and check directly
+  - **Symbolic**: Use Z3 to prove from axioms in scope
 - Examples can be run as tests: `kleis test file.kleis`
 - Examples can be debugged: debugger steps through the block
 
@@ -99,7 +101,7 @@ Result: Complex(-5, 10)
 | `v` / `vars` | Show current bindings |
 | `q` / `quit` | Abort debug session |
 
-## Grammar Changes
+## Grammar Changes (v0.93)
 
 ### New `example` Production
 
@@ -111,10 +113,16 @@ example_body ::= (let_binding | assert_stmt | expression)*
 let_binding ::= 'let' IDENT '=' expression
 
 assert_stmt ::= 'assert' '(' expression ')'
-              | 'assert' '(' expression '≈' expression ')'  // approximate equality
 
 top_level ::= structure | implements | define | let_binding | example_block
 ```
+
+**Assert Design:**
+- Single form: `assert(expression)` 
+- The expression itself serves as the error message on failure
+- Symbolic expressions → Z3 proves from axioms
+- Concrete expressions → evaluator checks directly
+- No separate message parameter needed
 
 ### Parser Updates
 
@@ -133,8 +141,11 @@ Add to `kleis_parser.rs`:
 
 ### Phase 2: Evaluator Support
 - [ ] Evaluate example blocks sequentially
-- [ ] Implement `assert` with error reporting
-- [ ] Track which examples passed/failed
+- [ ] Implement `assert`:
+  - Concrete: evaluate expression, check if true
+  - Symbolic: ask Z3 to prove from axioms in scope
+  - Report assertion expression on failure
+- [ ] Track which examples passed/failed/unknown
 
 ### Phase 3: CLI Integration
 - [ ] `kleis test <file>` - run all examples
@@ -153,42 +164,71 @@ Add to `kleis_parser.rs`:
 
 ## Examples in the Wild
 
-### From Physics
-
-```kleis
-structure Pendulum(length: ℝ, mass: ℝ) {
-  operation period : ℝ
-  
-  axiom period_formula: ∀(p : Pendulum).
-    period(p) = 2 * π * sqrt(p.length / g)
-}
-
-example "simple pendulum period" {
-  let p = Pendulum(length: 1.0, mass: 0.5)  // 1 meter pendulum
-  let T = period(p)
-  
-  // With g ≈ 9.81, period should be ≈ 2.006 seconds
-  assert(T ≈ 2.006)
-}
-```
-
-### From Linear Algebra
+### Symbolic Proof (Z3 Verifies from Axioms)
 
 ```kleis
 structure Matrix(m: ℕ, n: ℕ) {
+  operation det : Matrix(n, n) → ℝ
   operation multiply : Matrix(n, p) → Matrix(m, p)
-  operation transpose : Matrix(n, m)
+  
+  axiom det_multiplicative: ∀(A B : Matrix(n, n)).
+    det(multiply(A, B)) = det(A) × det(B)
 }
 
-example "matrix multiplication" {
-  let A = Matrix(2, 3, [[1,2,3], [4,5,6]])
-  let B = Matrix(3, 2, [[7,8], [9,10], [11,12]])
-  let C = multiply(A, B)
+example "determinant of product" {
+  let A : Matrix(3, 3)  // symbolic - no concrete values
+  let B : Matrix(3, 3)
   
-  assert(C.rows = 2)
-  assert(C.cols = 2)
-  assert(C[0,0] = 58)   // 1*7 + 2*9 + 3*11
-  assert(C[0,1] = 64)   // 1*8 + 2*10 + 3*12
+  // Z3 proves this from det_multiplicative axiom
+  assert(det(multiply(A, B)) = det(A) × det(B))
+}
+```
+
+### Universal Properties
+
+```kleis
+structure VectorSpace(V, F) {
+  operation zero : V
+  operation add : V → V → V
+  
+  axiom add_identity: ∀(v : V). add(v, zero) = v
+  axiom add_assoc: ∀(u v w : V). add(add(u, v), w) = add(u, add(v, w))
+}
+
+example "vector space axioms" {
+  // Z3 verifies these hold for all vectors
+  assert(∀(v : V). add(v, zero) = v)
+  assert(∀(u v w : V). add(add(u, v), w) = add(u, add(v, w)))
+}
+```
+
+### Concrete Arithmetic
+
+```kleis
+example "complex multiplication" {
+  let z1 = Complex(1, 2)
+  let z2 = Complex(3, 4)
+  let product = multiply(z1, z2)
+  
+  // Evaluator computes directly
+  assert(product.re = -5)   // 1*3 - 2*4
+  assert(product.im = 10)   // 1*4 + 2*3
+}
+```
+
+### Mixed Symbolic and Concrete
+
+```kleis
+example "matrix inverse" {
+  // Symbolic part: Z3 proves from axioms
+  let M : Matrix(n, n)
+  assert(multiply(M, inverse(M)) = identity)
+  
+  // Concrete part: evaluator computes
+  let A = Matrix(2, 2, [[4, 7], [2, 6]])
+  let result = multiply(A, inverse(A))
+  assert(result[0,0] = 1)
+  assert(result[0,1] = 0)
 }
 ```
 

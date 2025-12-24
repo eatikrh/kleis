@@ -32,14 +32,24 @@ example "complex arithmetic" {
 
 ### 2. Assert Statement
 
-Assert statements verify conditions within example blocks:
+Assert statements verify **symbolic** conditions using Z3 and axioms in scope:
 
 ```kleis
-assert(x = 4)                           // equality
-assert(x ≈ 4.0)                         // approximate equality
-assert(valid(p))                        // predicate
-assert(x = 4, "x should equal 4")       // with message
+// Symbolic assertions (Z3 proves from axioms)
+assert(a + b = b + a)                   // commutativity 
+assert(det(A × B) = det(A) × det(B))   // determinant multiplicativity
+assert(∀(x : ℝ). x + 0 = x)            // universal property
+
+// Concrete assertions (evaluator checks)
+assert(2 + 2 = 4)                       // arithmetic
+assert(sum.re = 4)                      // after evaluation
 ```
+
+**Semantics:**
+- **Concrete expressions**: Evaluated and checked directly
+- **Symbolic expressions**: Z3 attempts to prove from axioms in scope
+- **If Z3 times out**: Reports "unknown", not failure
+- **The expression itself is the error message** (no separate message needed)
 
 ### 3. REPL `:debug` Command (Runtime)
 
@@ -74,7 +84,7 @@ exampleStatement
       ;
 
 assertStatement
-    ::= "assert" "(" expression [ "," string ] ")"
+    ::= "assert" "(" expression ")"
       ;
 ```
 
@@ -150,52 +160,72 @@ Or in VS Code:
 
 ## Examples
 
-### Physics Example
+### Symbolic Assertion (Z3 Proves from Axioms)
 
 ```kleis
-structure Pendulum(length: ℝ, mass: ℝ) {
-    operation period : ℝ
+structure Matrix(m: ℕ, n: ℕ) {
+    operation det : Matrix(n, n) → ℝ
+    operation multiply : Matrix(n, p) → Matrix(m, p)
     
-    axiom period_formula: ∀(p : Pendulum).
-        period(p) = 2 * π * sqrt(p.length / g)
+    axiom det_multiplicative: ∀(A B : Matrix(n, n)).
+        det(multiply(A, B)) = det(A) × det(B)
 }
 
-example "pendulum period calculation" {
-    let p = Pendulum(length: 1.0, mass: 0.5)
-    let T = period(p)
+example "determinant of product" {
+    let A : Matrix(3, 3)
+    let B : Matrix(3, 3)
     
-    // With g ≈ 9.81, period ≈ 2.006 seconds
-    assert(T ≈ 2.006)
-}
-```
-
-### Linear Algebra Example
-
-```kleis
-example "matrix multiplication dimensions" {
-    let A = Matrix(2, 3, [[1,2,3], [4,5,6]])
-    let B = Matrix(3, 2, [[7,8], [9,10], [11,12]])
-    let C = multiply(A, B)
-    
-    // Result is 2×2
-    assert(C.rows = 2)
-    assert(C.cols = 2)
-    
-    // Verify specific values
-    assert(C[0,0] = 58)   // 1*7 + 2*9 + 3*11
-    assert(C[0,1] = 64)   // 1*8 + 2*10 + 3*12
+    // Z3 proves this from det_multiplicative axiom
+    assert(det(multiply(A, B)) = det(A) × det(B))
 }
 ```
 
-### Approximate Equality
+### Universal Quantifier Verification
 
 ```kleis
-example "euler identity" {
-    let i = Complex(0, 1)
-    let result = exp(i * π)
+structure VectorSpace(V, F) {
+    operation zero : V
+    operation add : V → V → V
     
-    // e^(iπ) ≈ -1 (within floating-point tolerance)
-    assert(result ≈ Complex(-1, 0))
+    axiom add_identity: ∀(v : V). add(v, zero) = v
+    axiom add_comm: ∀(u v : V). add(u, v) = add(v, u)
+}
+
+example "vector space properties" {
+    // Z3 verifies these hold for all vectors
+    assert(∀(v : V). add(v, zero) = v)
+    assert(∀(u v : V). add(u, v) = add(v, u))
+}
+```
+
+### Concrete Evaluation
+
+```kleis
+example "complex arithmetic" {
+    let z1 = Complex(1, 2)
+    let z2 = Complex(3, 4)
+    let sum = add(z1, z2)
+    
+    // Concrete evaluation - evaluator computes directly
+    assert(sum.re = 4)
+    assert(sum.im = 6)
+}
+```
+
+### Mixed Symbolic and Concrete
+
+```kleis
+example "matrix inverse property" {
+    // Symbolic: Z3 proves from axioms
+    let A : Matrix(n, n)
+    assert(multiply(A, inverse(A)) = identity)
+    
+    // Concrete: evaluator computes
+    let B = Matrix(2, 2, [[4, 7], [2, 6]])
+    let B_inv = inverse(B)
+    let I = multiply(B, B_inv)
+    assert(I[0,0] = 1)
+    assert(I[0,1] = 0)
 }
 ```
 
@@ -212,7 +242,10 @@ Add to `kleis_parser.rs`:
 
 Add to `evaluator.rs`:
 - `eval_example_block()` - evaluate statements sequentially
-- `eval_assert()` - check condition, report failures
+- `eval_assert()` - check condition:
+  - **Concrete**: Evaluate expression, check if true
+  - **Symbolic**: Ask Z3 to prove from axioms in scope
+  - **Timeout**: Report "unknown" (not failure)
 
 ### CLI Changes
 
