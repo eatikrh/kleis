@@ -395,6 +395,86 @@ impl LanguageServer for KleisLanguageServer {
                     trigger_characters: Some(vec![".".to_string(), ":".to_string()]),
                     ..Default::default()
                 }),
+                // Signature Help - show function parameters as you type
+                signature_help_provider: Some(SignatureHelpOptions {
+                    trigger_characters: Some(vec!["(".to_string(), ",".to_string()]),
+                    retrigger_characters: Some(vec![",".to_string()]),
+                    ..Default::default()
+                }),
+                // Inlay Hints - show inferred types inline
+                inlay_hint_provider: Some(OneOf::Left(true)),
+                // Document Formatting
+                document_formatting_provider: Some(OneOf::Left(true)),
+                // Find References
+                references_provider: Some(OneOf::Left(true)),
+                // Rename
+                rename_provider: Some(OneOf::Right(RenameOptions {
+                    prepare_provider: Some(true),
+                    work_done_progress_options: Default::default(),
+                })),
+                // Workspace Symbols
+                workspace_symbol_provider: Some(OneOf::Left(true)),
+                // Code Actions - quick fixes
+                code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
+                // Folding Ranges - code folding
+                folding_range_provider: Some(FoldingRangeProviderCapability::Simple(true)),
+                // Document Links - clickable imports
+                document_link_provider: Some(DocumentLinkOptions {
+                    resolve_provider: Some(false),
+                    work_done_progress_options: Default::default(),
+                }),
+                // Document Highlights - highlight matching symbols
+                document_highlight_provider: Some(OneOf::Left(true)),
+                // Selection Ranges - smart expand selection
+                selection_range_provider: Some(SelectionRangeProviderCapability::Simple(true)),
+                // Code Lens - inline actions
+                code_lens_provider: Some(CodeLensOptions {
+                    resolve_provider: Some(false),
+                }),
+                // Implementation - find all implements
+                implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
+                // On-type formatting - auto-indent
+                document_on_type_formatting_provider: Some(DocumentOnTypeFormattingOptions {
+                    first_trigger_character: "{".to_string(),
+                    more_trigger_character: Some(vec!["}".to_string(), "\n".to_string()]),
+                }),
+                // Semantic Tokens - rich syntax highlighting
+                semantic_tokens_provider: Some(
+                    SemanticTokensServerCapabilities::SemanticTokensOptions(
+                        SemanticTokensOptions {
+                            legend: SemanticTokensLegend {
+                                token_types: vec![
+                                    SemanticTokenType::KEYWORD,
+                                    SemanticTokenType::TYPE,
+                                    SemanticTokenType::FUNCTION,
+                                    SemanticTokenType::VARIABLE,
+                                    SemanticTokenType::PARAMETER,
+                                    SemanticTokenType::PROPERTY,
+                                    SemanticTokenType::OPERATOR,
+                                    SemanticTokenType::COMMENT,
+                                    SemanticTokenType::STRING,
+                                    SemanticTokenType::NUMBER,
+                                    SemanticTokenType::NAMESPACE,
+                                    SemanticTokenType::CLASS,
+                                    SemanticTokenType::STRUCT,
+                                    SemanticTokenType::ENUM,
+                                    SemanticTokenType::ENUM_MEMBER,
+                                    SemanticTokenType::MACRO,
+                                ],
+                                token_modifiers: vec![
+                                    SemanticTokenModifier::DECLARATION,
+                                    SemanticTokenModifier::DEFINITION,
+                                    SemanticTokenModifier::READONLY,
+                                    SemanticTokenModifier::STATIC,
+                                    SemanticTokenModifier::ABSTRACT,
+                                ],
+                            },
+                            full: Some(SemanticTokensFullOptions::Bool(true)),
+                            range: None,
+                            ..Default::default()
+                        },
+                    ),
+                ),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -500,65 +580,36 @@ impl LanguageServer for KleisLanguageServer {
             return Ok(None);
         }
 
-        // Search for definition in the AST
-        if let Some(ref ast) = doc.ast {
-            for item in &ast.items {
-                use kleis::kleis_ast::TopLevel;
-                match item {
-                    TopLevel::FunctionDef(def) => {
-                        if def.name == word {
-                            // Found the definition - return its location
-                            // TODO: Store source positions in AST for accurate locations
-                            return Ok(Some(GotoDefinitionResponse::Scalar(Location {
-                                uri: uri.clone(),
-                                range: Range {
-                                    start: Position {
-                                        line: 0,
-                                        character: 0,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        character: 0,
-                                    },
-                                },
-                            })));
+        // Search all open documents for the definition
+        for entry in self.documents.iter() {
+            let doc_uri = entry.key().clone();
+            let search_doc = entry.value();
+            let text = search_doc.content.to_string();
+
+            // Search for definition patterns in the text
+            if let Some(location) = find_definition_in_text(&text, &word, &doc_uri) {
+                return Ok(Some(GotoDefinitionResponse::Scalar(location)));
+            }
+        }
+
+        // Also check imported files that might not be open
+        if let Some(imports) = Some(&doc.imports) {
+            if let Ok(doc_path) = uri.to_file_path() {
+                if let Some(parent) = doc_path.parent() {
+                    for import_path in imports.iter() {
+                        let resolved = parent.join(import_path);
+                        if resolved.exists() {
+                            if let Ok(content) = std::fs::read_to_string(&resolved) {
+                                if let Ok(import_uri) = Url::from_file_path(&resolved) {
+                                    if let Some(location) =
+                                        find_definition_in_text(&content, &word, &import_uri)
+                                    {
+                                        return Ok(Some(GotoDefinitionResponse::Scalar(location)));
+                                    }
+                                }
+                            }
                         }
                     }
-                    TopLevel::StructureDef(s) => {
-                        if s.name == word {
-                            return Ok(Some(GotoDefinitionResponse::Scalar(Location {
-                                uri: uri.clone(),
-                                range: Range {
-                                    start: Position {
-                                        line: 0,
-                                        character: 0,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        character: 0,
-                                    },
-                                },
-                            })));
-                        }
-                    }
-                    TopLevel::DataDef(d) => {
-                        if d.name == word {
-                            return Ok(Some(GotoDefinitionResponse::Scalar(Location {
-                                uri: uri.clone(),
-                                range: Range {
-                                    start: Position {
-                                        line: 0,
-                                        character: 0,
-                                    },
-                                    end: Position {
-                                        line: 0,
-                                        character: 0,
-                                    },
-                                },
-                            })));
-                        }
-                    }
-                    _ => {}
                 }
             }
         }
@@ -704,6 +755,1575 @@ impl LanguageServer for KleisLanguageServer {
         #[allow(deprecated)]
         Ok(Some(DocumentSymbolResponse::Flat(symbols)))
     }
+
+    // =========================================================================
+    // NEW LSP Features
+    // =========================================================================
+
+    /// Signature Help - shows function parameters as you type
+    async fn signature_help(&self, params: SignatureHelpParams) -> Result<Option<SignatureHelp>> {
+        let uri = &params.text_document_position_params.text_document.uri;
+        let position = params.text_document_position_params.position;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let line_idx = position.line as usize;
+        let col_idx = position.character as usize;
+
+        let line = match doc.content.get_line(line_idx) {
+            Some(line) => line.to_string(),
+            None => return Ok(None),
+        };
+
+        // Find the function name before the opening parenthesis
+        let before_cursor: String = line.chars().take(col_idx).collect();
+
+        // Find the last '(' and extract function name before it
+        if let Some(paren_pos) = before_cursor.rfind('(') {
+            let before_paren: String = before_cursor.chars().take(paren_pos).collect();
+            let func_name = extract_word_at(&before_paren, before_paren.len().saturating_sub(1));
+
+            if !func_name.is_empty() {
+                // Count commas to determine active parameter
+                let after_paren: String = before_cursor.chars().skip(paren_pos + 1).collect();
+                let active_param = after_paren.chars().filter(|c| *c == ',').count() as u32;
+
+                // Look up function signature
+                if let Some(ref ctx) = doc.type_context {
+                    if let Some(sig) = ctx.operation_signature(&func_name) {
+                        // Parse the signature to get parameters
+                        let params = parse_signature_params(&sig);
+
+                        let signature = SignatureInformation {
+                            label: sig.clone(),
+                            documentation: Some(Documentation::MarkupContent(MarkupContent {
+                                kind: MarkupKind::Markdown,
+                                value: format!(
+                                    "**{}**\n\nOperation from imported structure.",
+                                    func_name
+                                ),
+                            })),
+                            parameters: Some(
+                                params
+                                    .iter()
+                                    .map(|p| ParameterInformation {
+                                        label: ParameterLabel::Simple(p.clone()),
+                                        documentation: None,
+                                    })
+                                    .collect(),
+                            ),
+                            active_parameter: Some(active_param),
+                        };
+
+                        return Ok(Some(SignatureHelp {
+                            signatures: vec![signature],
+                            active_signature: Some(0),
+                            active_parameter: Some(active_param),
+                        }));
+                    }
+                }
+
+                // Try builtin functions
+                if let Some((sig, params)) = get_builtin_signature(&func_name) {
+                    let signature = SignatureInformation {
+                        label: sig.to_string(),
+                        documentation: Some(Documentation::MarkupContent(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value: format!("**{}** (builtin)", func_name),
+                        })),
+                        parameters: Some(
+                            params
+                                .iter()
+                                .map(|p| ParameterInformation {
+                                    label: ParameterLabel::Simple(p.to_string()),
+                                    documentation: None,
+                                })
+                                .collect(),
+                        ),
+                        active_parameter: Some(active_param),
+                    };
+
+                    return Ok(Some(SignatureHelp {
+                        signatures: vec![signature],
+                        active_signature: Some(0),
+                        active_parameter: Some(active_param),
+                    }));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Inlay Hints - show inferred types inline
+    async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
+        let uri = &params.text_document.uri;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let hints = Vec::new();
+
+        // Find let bindings and function definitions without type annotations
+        if let Some(ref ast) = doc.ast {
+            for item in &ast.items {
+                if let TopLevel::FunctionDef(def) = item {
+                    // Add hints for function parameters that could have types
+                    // For now, show a simple hint for the function
+                    // TODO: Use actual type inference
+
+                    // We'll add more sophisticated hints when we have position info
+                    let _ = def; // Placeholder - need AST positions
+                }
+            }
+        }
+
+        // For now, return empty hints (positions not available in AST)
+        // Full implementation requires AST source spans
+        Ok(Some(hints))
+    }
+
+    /// Document Formatting - format Kleis code
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        let uri = &params.text_document.uri;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let content = doc.content.to_string();
+        let formatted = format_kleis_code(&content);
+
+        if formatted == content {
+            return Ok(None);
+        }
+
+        // Replace entire document
+        let lines = doc.content.len_lines();
+        let last_line_len = doc.content.line(lines.saturating_sub(1)).len_chars();
+
+        Ok(Some(vec![TextEdit {
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: lines.saturating_sub(1) as u32,
+                    character: last_line_len as u32,
+                },
+            },
+            new_text: formatted,
+        }]))
+    }
+
+    /// Find References - find all usages of a symbol
+    async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        let uri = &params.text_document_position.text_document.uri;
+        let position = params.text_document_position.position;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        // Get the word at cursor
+        let line_idx = position.line as usize;
+        let col_idx = position.character as usize;
+
+        let line = match doc.content.get_line(line_idx) {
+            Some(line) => line.to_string(),
+            None => return Ok(None),
+        };
+
+        let word = extract_word_at(&line, col_idx);
+        if word.is_empty() {
+            return Ok(None);
+        }
+
+        // Find all occurrences in all open documents
+        let mut locations = Vec::new();
+
+        for entry in self.documents.iter() {
+            let doc_uri = entry.key().clone();
+            let doc = entry.value();
+
+            let text = doc.content.to_string();
+            for (line_num, line_content) in text.lines().enumerate() {
+                // Find all occurrences of the word in this line
+                let mut start = 0;
+                while let Some(pos) = line_content[start..].find(&word) {
+                    let actual_pos = start + pos;
+
+                    // Check it's a whole word match
+                    let before_ok = actual_pos == 0
+                        || !line_content
+                            .chars()
+                            .nth(actual_pos - 1)
+                            .is_some_and(|c| c.is_alphanumeric() || c == '_');
+                    let after_ok = actual_pos + word.len() >= line_content.len()
+                        || !line_content
+                            .chars()
+                            .nth(actual_pos + word.len())
+                            .is_some_and(|c| c.is_alphanumeric() || c == '_');
+
+                    if before_ok && after_ok {
+                        locations.push(Location {
+                            uri: doc_uri.clone(),
+                            range: Range {
+                                start: Position {
+                                    line: line_num as u32,
+                                    character: actual_pos as u32,
+                                },
+                                end: Position {
+                                    line: line_num as u32,
+                                    character: (actual_pos + word.len()) as u32,
+                                },
+                            },
+                        });
+                    }
+
+                    start = actual_pos + word.len();
+                }
+            }
+        }
+
+        if locations.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(locations))
+        }
+    }
+
+    /// Prepare Rename - check if rename is valid
+    async fn prepare_rename(
+        &self,
+        params: TextDocumentPositionParams,
+    ) -> Result<Option<PrepareRenameResponse>> {
+        let uri = &params.text_document.uri;
+        let position = params.position;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let line_idx = position.line as usize;
+        let col_idx = position.character as usize;
+
+        let line = match doc.content.get_line(line_idx) {
+            Some(line) => line.to_string(),
+            None => return Ok(None),
+        };
+
+        let word = extract_word_at(&line, col_idx);
+        if word.is_empty() {
+            return Ok(None);
+        }
+
+        // Find the range of the word
+        let chars: Vec<char> = line.chars().collect();
+        let is_word_char = |c: char| c.is_alphanumeric() || c == '_' || c == '\'';
+
+        let mut start = col_idx;
+        while start > 0 && is_word_char(chars[start - 1]) {
+            start -= 1;
+        }
+
+        let mut end = col_idx;
+        while end < chars.len() && is_word_char(chars[end]) {
+            end += 1;
+        }
+
+        Ok(Some(PrepareRenameResponse::Range(Range {
+            start: Position {
+                line: position.line,
+                character: start as u32,
+            },
+            end: Position {
+                line: position.line,
+                character: end as u32,
+            },
+        })))
+    }
+
+    /// Rename - rename symbol across all files
+    async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+        let uri = &params.text_document_position.text_document.uri;
+        let position = params.text_document_position.position;
+        let new_name = &params.new_name;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let line_idx = position.line as usize;
+        let col_idx = position.character as usize;
+
+        let line = match doc.content.get_line(line_idx) {
+            Some(line) => line.to_string(),
+            None => return Ok(None),
+        };
+
+        let old_name = extract_word_at(&line, col_idx);
+        if old_name.is_empty() {
+            return Ok(None);
+        }
+
+        // Find all references and create edits
+        let mut changes: std::collections::HashMap<Url, Vec<TextEdit>> =
+            std::collections::HashMap::new();
+
+        for entry in self.documents.iter() {
+            let doc_uri = entry.key().clone();
+            let doc = entry.value();
+
+            let text = doc.content.to_string();
+            let mut edits = Vec::new();
+
+            for (line_num, line_content) in text.lines().enumerate() {
+                let mut start = 0;
+                while let Some(pos) = line_content[start..].find(&old_name) {
+                    let actual_pos = start + pos;
+
+                    // Check whole word match
+                    let before_ok = actual_pos == 0
+                        || !line_content
+                            .chars()
+                            .nth(actual_pos - 1)
+                            .is_some_and(|c| c.is_alphanumeric() || c == '_');
+                    let after_ok = actual_pos + old_name.len() >= line_content.len()
+                        || !line_content
+                            .chars()
+                            .nth(actual_pos + old_name.len())
+                            .is_some_and(|c| c.is_alphanumeric() || c == '_');
+
+                    if before_ok && after_ok {
+                        edits.push(TextEdit {
+                            range: Range {
+                                start: Position {
+                                    line: line_num as u32,
+                                    character: actual_pos as u32,
+                                },
+                                end: Position {
+                                    line: line_num as u32,
+                                    character: (actual_pos + old_name.len()) as u32,
+                                },
+                            },
+                            new_text: new_name.clone(),
+                        });
+                    }
+
+                    start = actual_pos + old_name.len();
+                }
+            }
+
+            if !edits.is_empty() {
+                changes.insert(doc_uri, edits);
+            }
+        }
+
+        if changes.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(WorkspaceEdit {
+                changes: Some(changes),
+                ..Default::default()
+            }))
+        }
+    }
+
+    /// Workspace Symbols - search symbols across all files
+    async fn symbol(
+        &self,
+        params: WorkspaceSymbolParams,
+    ) -> Result<Option<Vec<SymbolInformation>>> {
+        let query = params.query.to_lowercase();
+        let mut symbols = Vec::new();
+
+        for entry in self.documents.iter() {
+            let uri = entry.key().clone();
+            let doc = entry.value();
+
+            if let Some(ref ast) = doc.ast {
+                for item in &ast.items {
+                    let (name, kind) = match item {
+                        TopLevel::FunctionDef(def) => (def.name.clone(), SymbolKind::FUNCTION),
+                        TopLevel::StructureDef(s) => (s.name.clone(), SymbolKind::STRUCT),
+                        TopLevel::ImplementsDef(i) => {
+                            (format!("impl {}", i.structure_name), SymbolKind::CLASS)
+                        }
+                        TopLevel::DataDef(d) => (d.name.clone(), SymbolKind::ENUM),
+                        TopLevel::TypeAlias(t) => (t.name.clone(), SymbolKind::TYPE_PARAMETER),
+                        _ => continue,
+                    };
+
+                    // Filter by query
+                    if query.is_empty() || name.to_lowercase().contains(&query) {
+                        symbols.push(SymbolInformation {
+                            name,
+                            kind,
+                            tags: None,
+                            deprecated: None,
+                            location: Location {
+                                uri: uri.clone(),
+                                range: Range::default(),
+                            },
+                            container_name: None,
+                        });
+                    }
+                }
+            }
+        }
+
+        if symbols.is_empty() {
+            Ok(None)
+        } else {
+            #[allow(deprecated)]
+            Ok(Some(symbols))
+        }
+    }
+
+    async fn code_lens(&self, params: CodeLensParams) -> Result<Option<Vec<CodeLens>>> {
+        let uri = &params.text_document.uri;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let mut lenses = Vec::new();
+        let text = doc.content.to_string();
+
+        for (line_num, line) in text.lines().enumerate() {
+            let trimmed = line.trim();
+            let line_num = line_num as u32;
+
+            // Add lens for axioms
+            if trimmed.starts_with("axiom ") {
+                // Extract axiom name
+                if let Some(name_end) = trimmed.find(':') {
+                    let name = trimmed[6..name_end].trim();
+                    lenses.push(CodeLens {
+                        range: Range {
+                            start: Position {
+                                line: line_num,
+                                character: 0,
+                            },
+                            end: Position {
+                                line: line_num,
+                                character: line.len() as u32,
+                            },
+                        },
+                        command: Some(Command {
+                            title: format!("▶ Verify axiom '{}'", name),
+                            command: "kleis.verifyAxiom".to_string(),
+                            arguments: Some(vec![
+                                serde_json::Value::String(uri.to_string()),
+                                serde_json::Value::String(name.to_string()),
+                            ]),
+                        }),
+                        data: None,
+                    });
+                }
+            }
+
+            // Add lens for structure definitions
+            if trimmed.starts_with("structure ") {
+                if let Some(paren_pos) = trimmed.find('(') {
+                    let name = trimmed[10..paren_pos].trim();
+                    lenses.push(CodeLens {
+                        range: Range {
+                            start: Position {
+                                line: line_num,
+                                character: 0,
+                            },
+                            end: Position {
+                                line: line_num,
+                                character: line.len() as u32,
+                            },
+                        },
+                        command: Some(Command {
+                            title: "⚡ Find implementations".to_string(),
+                            command: "kleis.findImplementations".to_string(),
+                            arguments: Some(vec![serde_json::Value::String(name.to_string())]),
+                        }),
+                        data: None,
+                    });
+                }
+            }
+
+            // Add lens for define statements
+            if let Some(rest) = trimmed.strip_prefix("define ") {
+                // Extract function name
+                let name_end = rest
+                    .find('(')
+                    .or_else(|| rest.find(' '))
+                    .unwrap_or(rest.len());
+                let name = rest[..name_end].trim();
+
+                if !name.is_empty() {
+                    lenses.push(CodeLens {
+                        range: Range {
+                            start: Position {
+                                line: line_num,
+                                character: 0,
+                            },
+                            end: Position {
+                                line: line_num,
+                                character: line.len() as u32,
+                            },
+                        },
+                        command: Some(Command {
+                            title: "📍 Find references".to_string(),
+                            command: "editor.action.findReferences".to_string(),
+                            arguments: Some(vec![
+                                serde_json::Value::String(uri.to_string()),
+                                serde_json::json!({
+                                    "line": line_num,
+                                    "character": 7  // Position after "define "
+                                }),
+                            ]),
+                        }),
+                        data: None,
+                    });
+                }
+            }
+        }
+
+        if lenses.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(lenses))
+        }
+    }
+
+    async fn goto_implementation(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let uri = &params.text_document_position_params.text_document.uri;
+        let position = params.text_document_position_params.position;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        // Get the word at cursor
+        let line_idx = position.line as usize;
+        let col_idx = position.character as usize;
+
+        let line = match doc.content.get_line(line_idx) {
+            Some(line) => line.to_string(),
+            None => return Ok(None),
+        };
+
+        let word = extract_word_at(&line, col_idx);
+        if word.is_empty() {
+            return Ok(None);
+        }
+
+        // Find all "implements Word(" patterns
+        let mut locations = Vec::new();
+        let pattern = format!("implements {}(", word);
+
+        for entry in self.documents.iter() {
+            let doc_uri = entry.key().clone();
+            let search_doc = entry.value();
+            let text = search_doc.content.to_string();
+
+            for (line_num, line_text) in text.lines().enumerate() {
+                if let Some(col) = line_text.find(&pattern) {
+                    locations.push(Location {
+                        uri: doc_uri.clone(),
+                        range: Range {
+                            start: Position {
+                                line: line_num as u32,
+                                character: col as u32,
+                            },
+                            end: Position {
+                                line: line_num as u32,
+                                character: (col + pattern.len()) as u32,
+                            },
+                        },
+                    });
+                }
+            }
+        }
+
+        if locations.is_empty() {
+            Ok(None)
+        } else if locations.len() == 1 {
+            Ok(Some(GotoDefinitionResponse::Scalar(
+                locations.into_iter().next().unwrap(),
+            )))
+        } else {
+            Ok(Some(GotoDefinitionResponse::Array(locations)))
+        }
+    }
+
+    async fn on_type_formatting(
+        &self,
+        params: DocumentOnTypeFormattingParams,
+    ) -> Result<Option<Vec<TextEdit>>> {
+        let position = params.text_document_position.position;
+        let ch = &params.ch;
+
+        // Auto-indent after opening brace
+        if ch == "{" {
+            // Add newline with increased indent
+            return Ok(Some(vec![TextEdit {
+                range: Range {
+                    start: Position {
+                        line: position.line,
+                        character: position.character + 1,
+                    },
+                    end: Position {
+                        line: position.line,
+                        character: position.character + 1,
+                    },
+                },
+                new_text: "\n    ".to_string(),
+            }]));
+        }
+
+        // Auto-dedent after closing brace
+        if ch == "}" {
+            // This is tricky - we'd need to look at current indentation
+            // For now, just let the formatter handle it
+            return Ok(None);
+        }
+
+        Ok(None)
+    }
+
+    async fn folding_range(&self, params: FoldingRangeParams) -> Result<Option<Vec<FoldingRange>>> {
+        let uri = &params.text_document.uri;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let mut ranges = Vec::new();
+        let text = doc.content.to_string();
+
+        // Track brace/bracket nesting for folding
+        let mut brace_stack: Vec<u32> = Vec::new();
+
+        for (line_num, line) in text.lines().enumerate() {
+            let line_num = line_num as u32;
+            let trimmed = line.trim();
+
+            // Structure, implements, data blocks
+            if (trimmed.starts_with("structure ")
+                || trimmed.starts_with("implements ")
+                || trimmed.starts_with("data "))
+                && trimmed.contains('{')
+                && !trimmed.contains('}')
+            {
+                brace_stack.push(line_num);
+            }
+
+            // Opening braces
+            for ch in trimmed.chars() {
+                if ch == '{' {
+                    brace_stack.push(line_num);
+                } else if ch == '}' {
+                    if let Some(start_line) = brace_stack.pop() {
+                        if line_num > start_line {
+                            ranges.push(FoldingRange {
+                                start_line,
+                                start_character: None,
+                                end_line: line_num,
+                                end_character: None,
+                                kind: Some(FoldingRangeKind::Region),
+                                collapsed_text: None,
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Multi-line comments (if we add them)
+            // For now, fold consecutive comment lines
+            if trimmed.starts_with("//") {
+                // Check if this starts a block of comments
+                let mut end_line = line_num;
+                for (i, next_line) in text.lines().enumerate().skip(line_num as usize + 1) {
+                    if next_line.trim().starts_with("//") {
+                        end_line = i as u32;
+                    } else {
+                        break;
+                    }
+                }
+                if end_line > line_num {
+                    ranges.push(FoldingRange {
+                        start_line: line_num,
+                        start_character: None,
+                        end_line,
+                        end_character: None,
+                        kind: Some(FoldingRangeKind::Comment),
+                        collapsed_text: Some("// ...".to_string()),
+                    });
+                }
+            }
+
+            // Imports section
+            if trimmed.starts_with("import ") {
+                let mut end_line = line_num;
+                for (i, next_line) in text.lines().enumerate().skip(line_num as usize + 1) {
+                    if next_line.trim().starts_with("import ") {
+                        end_line = i as u32;
+                    } else {
+                        break;
+                    }
+                }
+                if end_line > line_num {
+                    ranges.push(FoldingRange {
+                        start_line: line_num,
+                        start_character: None,
+                        end_line,
+                        end_character: None,
+                        kind: Some(FoldingRangeKind::Imports),
+                        collapsed_text: Some("imports ...".to_string()),
+                    });
+                }
+            }
+        }
+
+        if ranges.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(ranges))
+        }
+    }
+
+    async fn document_link(&self, params: DocumentLinkParams) -> Result<Option<Vec<DocumentLink>>> {
+        let uri = &params.text_document.uri;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let mut links = Vec::new();
+        let text = doc.content.to_string();
+
+        for (line_num, line) in text.lines().enumerate() {
+            let line_num = line_num as u32;
+
+            // Find import statements: import "path/to/file.kleis"
+            if let Some(import_start) = line.find("import ") {
+                if let Some(quote_start) = line[import_start..].find('"') {
+                    let path_start = import_start + quote_start + 1;
+                    if let Some(quote_end) = line[path_start..].find('"') {
+                        let import_path = &line[path_start..path_start + quote_end];
+
+                        // Resolve relative to current document
+                        if let Ok(doc_path) = uri.to_file_path() {
+                            if let Some(parent) = doc_path.parent() {
+                                let resolved = parent.join(import_path);
+                                if resolved.exists() {
+                                    if let Ok(target_uri) = Url::from_file_path(&resolved) {
+                                        links.push(DocumentLink {
+                                            range: Range {
+                                                start: Position {
+                                                    line: line_num,
+                                                    character: path_start as u32 - 1,
+                                                },
+                                                end: Position {
+                                                    line: line_num,
+                                                    character: (path_start + quote_end + 1) as u32,
+                                                },
+                                            },
+                                            target: Some(target_uri),
+                                            tooltip: Some(format!("Open {}", resolved.display())),
+                                            data: None,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if links.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(links))
+        }
+    }
+
+    async fn document_highlight(
+        &self,
+        params: DocumentHighlightParams,
+    ) -> Result<Option<Vec<DocumentHighlight>>> {
+        let uri = &params.text_document_position_params.text_document.uri;
+        let position = params.text_document_position_params.position;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        // Get word at cursor
+        let line_idx = position.line as usize;
+        let col_idx = position.character as usize;
+
+        let line = match doc.content.get_line(line_idx) {
+            Some(line) => line.to_string(),
+            None => return Ok(None),
+        };
+
+        let word = extract_word_at(&line, col_idx);
+        if word.is_empty() {
+            return Ok(None);
+        }
+
+        let mut highlights = Vec::new();
+        let text = doc.content.to_string();
+
+        // Find all occurrences of this word
+        for (line_num, line_text) in text.lines().enumerate() {
+            let line_num = line_num as u32;
+            let mut search_start = 0;
+
+            while let Some(col) = line_text[search_start..].find(&word) {
+                let actual_col = search_start + col;
+
+                // Verify it's a whole word match
+                let before_ok = actual_col == 0
+                    || !line_text
+                        .chars()
+                        .nth(actual_col - 1)
+                        .map(|c| c.is_alphanumeric() || c == '_')
+                        .unwrap_or(false);
+                let after_ok = actual_col + word.len() >= line_text.len()
+                    || !line_text
+                        .chars()
+                        .nth(actual_col + word.len())
+                        .map(|c| c.is_alphanumeric() || c == '_')
+                        .unwrap_or(false);
+
+                if before_ok && after_ok {
+                    highlights.push(DocumentHighlight {
+                        range: Range {
+                            start: Position {
+                                line: line_num,
+                                character: actual_col as u32,
+                            },
+                            end: Position {
+                                line: line_num,
+                                character: (actual_col + word.len()) as u32,
+                            },
+                        },
+                        kind: Some(DocumentHighlightKind::TEXT),
+                    });
+                }
+
+                search_start = actual_col + word.len();
+            }
+        }
+
+        if highlights.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(highlights))
+        }
+    }
+
+    async fn selection_range(
+        &self,
+        params: SelectionRangeParams,
+    ) -> Result<Option<Vec<SelectionRange>>> {
+        let uri = &params.text_document.uri;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let text = doc.content.to_string();
+        let lines: Vec<&str> = text.lines().collect();
+
+        let mut selection_ranges = Vec::new();
+
+        for position in &params.positions {
+            let line_idx = position.line as usize;
+            let col_idx = position.character as usize;
+
+            if line_idx >= lines.len() {
+                continue;
+            }
+
+            let line = lines[line_idx];
+
+            // Level 1: Word at cursor
+            let word_range = if col_idx < line.len() {
+                let mut start = col_idx;
+                let mut end = col_idx;
+
+                // Expand to word boundaries
+                while start > 0
+                    && line
+                        .chars()
+                        .nth(start - 1)
+                        .map(|c| c.is_alphanumeric() || c == '_')
+                        .unwrap_or(false)
+                {
+                    start -= 1;
+                }
+                while end < line.len()
+                    && line
+                        .chars()
+                        .nth(end)
+                        .map(|c| c.is_alphanumeric() || c == '_')
+                        .unwrap_or(false)
+                {
+                    end += 1;
+                }
+
+                Range {
+                    start: Position {
+                        line: position.line,
+                        character: start as u32,
+                    },
+                    end: Position {
+                        line: position.line,
+                        character: end as u32,
+                    },
+                }
+            } else {
+                Range {
+                    start: *position,
+                    end: *position,
+                }
+            };
+
+            // Level 2: Current line
+            let line_range = Range {
+                start: Position {
+                    line: position.line,
+                    character: 0,
+                },
+                end: Position {
+                    line: position.line,
+                    character: line.len() as u32,
+                },
+            };
+
+            // Level 3: Find enclosing block (braces)
+            let block_range = find_enclosing_block(&text, line_idx, col_idx);
+
+            // Level 4: Entire document
+            let doc_range = Range {
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: lines.len().saturating_sub(1) as u32,
+                    character: lines.last().map(|l| l.len()).unwrap_or(0) as u32,
+                },
+            };
+
+            // Build nested selection ranges (innermost to outermost)
+            let doc_selection = SelectionRange {
+                range: doc_range,
+                parent: None,
+            };
+
+            let block_selection = if let Some(br) = block_range {
+                SelectionRange {
+                    range: br,
+                    parent: Some(Box::new(doc_selection)),
+                }
+            } else {
+                doc_selection
+            };
+
+            let line_selection = SelectionRange {
+                range: line_range,
+                parent: Some(Box::new(block_selection)),
+            };
+
+            let word_selection = SelectionRange {
+                range: word_range,
+                parent: Some(Box::new(line_selection)),
+            };
+
+            selection_ranges.push(word_selection);
+        }
+
+        if selection_ranges.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(selection_ranges))
+        }
+    }
+
+    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+        let uri = &params.text_document.uri;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let mut actions: Vec<CodeActionOrCommand> = Vec::new();
+
+        // Get selected text range
+        let range = params.range;
+        let start_line = range.start.line as usize;
+        let end_line = range.end.line as usize;
+
+        // Extract text in range
+        let mut text_in_range = String::new();
+        for line_idx in start_line..=end_line {
+            if let Some(line) = doc.content.get_line(line_idx) {
+                let line_str = line.to_string();
+                if line_idx == start_line && line_idx == end_line {
+                    let start_col = range.start.character as usize;
+                    let end_col = range.end.character as usize;
+                    if end_col <= line_str.len() {
+                        text_in_range.push_str(&line_str[start_col..end_col]);
+                    }
+                } else {
+                    text_in_range.push_str(&line_str);
+                }
+            }
+        }
+
+        // ASCII to Unicode conversions
+        let ascii_to_unicode_replacements = [
+            ("forall", "∀", "Convert 'forall' to ∀"),
+            ("exists", "∃", "Convert 'exists' to ∃"),
+            ("lambda", "λ", "Convert 'lambda' to λ"),
+            ("->", "→", "Convert '->' to →"),
+            ("<-", "←", "Convert '<-' to ←"),
+            ("=>", "⇒", "Convert '=>' to ⇒"),
+            ("<=", "≤", "Convert '<=' to ≤"),
+            (">=", "≥", "Convert '>=' to ≥"),
+            ("!=", "≠", "Convert '!=' to ≠"),
+            ("/\\", "∧", "Convert '/\\' to ∧"),
+            ("\\/", "∨", "Convert '\\/' to ∨"),
+            ("Real", "ℝ", "Use Unicode ℝ for Real"),
+            ("Complex", "ℂ", "Use Unicode ℂ for Complex"),
+            ("Integer", "ℤ", "Use Unicode ℤ for Integer"),
+            ("Nat", "ℕ", "Use Unicode ℕ for Nat"),
+            ("Rational", "ℚ", "Use Unicode ℚ for Rational"),
+            ("Bool", "𝔹", "Use Unicode 𝔹 for Bool"),
+        ];
+
+        for (ascii, unicode, title) in ascii_to_unicode_replacements {
+            if text_in_range.contains(ascii) {
+                let new_text = text_in_range.replace(ascii, unicode);
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: title.to_string(),
+                    kind: Some(CodeActionKind::QUICKFIX),
+                    edit: Some(WorkspaceEdit {
+                        changes: Some(
+                            [(
+                                uri.clone(),
+                                vec![TextEdit {
+                                    range,
+                                    new_text: new_text.clone(),
+                                }],
+                            )]
+                            .into_iter()
+                            .collect(),
+                        ),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }));
+            }
+        }
+
+        // Structure snippet actions
+        if text_in_range.trim() == "structure" || text_in_range.trim().starts_with("structure ") {
+            actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                title: "Complete structure template".to_string(),
+                kind: Some(CodeActionKind::QUICKFIX),
+                edit: Some(WorkspaceEdit {
+                    changes: Some(
+                        [(
+                            uri.clone(),
+                            vec![TextEdit {
+                                range,
+                                new_text:
+                                    "structure Name(T) {\n    element identity : T\n    operation op : T → T → T\n    axiom law: ∀(a : T). op(identity, a) = a\n}"
+                                        .to_string(),
+                            }],
+                        )]
+                        .into_iter()
+                        .collect(),
+                    ),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }));
+        }
+
+        // Convert all ASCII to Unicode in selection
+        if !text_in_range.is_empty() && range.start != range.end {
+            let mut converted = text_in_range.clone();
+            converted = converted.replace("forall", "∀");
+            converted = converted.replace("exists", "∃");
+            converted = converted.replace("lambda", "λ");
+            converted = converted.replace("->", "→");
+            converted = converted.replace("=>", "⇒");
+            converted = converted.replace("<=", "≤");
+            converted = converted.replace(">=", "≥");
+            converted = converted.replace("!=", "≠");
+
+            if converted != text_in_range {
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: "Convert all ASCII operators to Unicode".to_string(),
+                    kind: Some(CodeActionKind::REFACTOR),
+                    edit: Some(WorkspaceEdit {
+                        changes: Some(
+                            [(
+                                uri.clone(),
+                                vec![TextEdit {
+                                    range,
+                                    new_text: converted,
+                                }],
+                            )]
+                            .into_iter()
+                            .collect(),
+                        ),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }));
+            }
+        }
+
+        if actions.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(actions))
+        }
+    }
+
+    async fn semantic_tokens_full(
+        &self,
+        params: SemanticTokensParams,
+    ) -> Result<Option<SemanticTokensResult>> {
+        let uri = &params.text_document.uri;
+
+        let doc = match self.documents.get(uri) {
+            Some(doc) => doc,
+            None => return Ok(None),
+        };
+
+        let text = doc.content.to_string();
+        let tokens = tokenize_for_semantics(&text);
+
+        Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
+            result_id: None,
+            data: tokens,
+        })))
+    }
+}
+
+/// Tokenize Kleis source for semantic highlighting
+fn tokenize_for_semantics(source: &str) -> Vec<SemanticToken> {
+    let mut tokens = Vec::new();
+
+    // Token type indices (must match the order in SemanticTokensLegend)
+    const KEYWORD: u32 = 0;
+    const TYPE: u32 = 1;
+    const FUNCTION: u32 = 2;
+    const VARIABLE: u32 = 3;
+    const PARAMETER: u32 = 4;
+    const PROPERTY: u32 = 5;
+    const OPERATOR: u32 = 6;
+    const COMMENT: u32 = 7;
+    const STRING: u32 = 8;
+    const NUMBER: u32 = 9;
+    const NAMESPACE: u32 = 10;
+    const CLASS: u32 = 11;
+    const STRUCT: u32 = 12;
+    const ENUM: u32 = 13;
+    const ENUM_MEMBER: u32 = 14;
+    const MACRO: u32 = 15;
+
+    // Modifier indices
+    const MOD_DECLARATION: u32 = 1 << 0;
+    const MOD_DEFINITION: u32 = 1 << 1;
+    const MOD_READONLY: u32 = 1 << 2;
+
+    // Kleis keywords
+    let keywords: HashSet<&str> = [
+        "structure",
+        "implements",
+        "extends",
+        "over",
+        "operation",
+        "axiom",
+        "element",
+        "data",
+        "define",
+        "type",
+        "import",
+        "where",
+        "let",
+        "in",
+        "if",
+        "then",
+        "else",
+        "match",
+        "with",
+        "forall",
+        "exists",
+        "as",
+        "True",
+        "False",
+    ]
+    .into_iter()
+    .collect();
+
+    // Type names (both Unicode and ASCII)
+    let type_names: HashSet<&str> = [
+        "ℝ", "ℂ", "ℤ", "ℕ", "ℚ", "𝔹", "Real", "Complex", "Integer", "Nat", "Rational", "Bool",
+        "Matrix", "Vector", "List", "Option", "Set", "Map", "String", "Tensor",
+    ]
+    .into_iter()
+    .collect();
+
+    // Mathematical operators
+    let operators: HashSet<&str> = [
+        "∀", "∃", "λ", "→", "←", "↔", "⇒", "⇔", "∧", "∨", "¬", "×", "⊗", "∘", "∇", "∂", "∫", "∑",
+        "∏", "√", "≠", "≤", "≥", "≈", "≡", "∈", "∉", "⊂", "⊆", "†", "ᵀ", "⊤", "⊥", "∪", "∩", "∅",
+        "∞",
+    ]
+    .into_iter()
+    .collect();
+
+    let mut prev_line = 0u32;
+    let mut prev_col = 0u32;
+
+    for (line_num, line) in source.lines().enumerate() {
+        let line_num = line_num as u32;
+
+        // Reset column for new line
+        if line_num != prev_line {
+            prev_col = 0;
+        }
+
+        // Skip empty lines
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        // Check for comments
+        if let Some(comment_start) = line.find("//") {
+            let col = comment_start as u32;
+            let length = (line.len() - comment_start) as u32;
+
+            let delta_line = line_num - prev_line;
+            let delta_col = if delta_line == 0 { col - prev_col } else { col };
+
+            tokens.push(SemanticToken {
+                delta_line,
+                delta_start: delta_col,
+                length,
+                token_type: COMMENT,
+                token_modifiers_bitset: 0,
+            });
+
+            prev_line = line_num;
+            prev_col = col;
+        }
+
+        // Check for strings
+        let mut in_string = false;
+        let mut string_start = 0;
+        for (i, ch) in line.char_indices() {
+            if ch == '"' {
+                if in_string {
+                    // End of string
+                    let col = string_start as u32;
+                    let length = (i - string_start + 1) as u32;
+
+                    let delta_line = line_num - prev_line;
+                    let delta_col = if delta_line == 0 { col - prev_col } else { col };
+
+                    tokens.push(SemanticToken {
+                        delta_line,
+                        delta_start: delta_col,
+                        length,
+                        token_type: STRING,
+                        token_modifiers_bitset: 0,
+                    });
+
+                    prev_line = line_num;
+                    prev_col = col;
+                    in_string = false;
+                } else {
+                    // Start of string
+                    string_start = i;
+                    in_string = true;
+                }
+            }
+        }
+
+        // Tokenize words
+        let mut word_start = 0;
+        let mut in_word = false;
+
+        for (i, ch) in line.char_indices() {
+            let is_word_char = ch.is_alphanumeric() || ch == '_' || ch == '\'';
+
+            if is_word_char && !in_word {
+                word_start = i;
+                in_word = true;
+            } else if !is_word_char && in_word {
+                // End of word
+                let word = &line[word_start..i];
+                let col = word_start as u32;
+                let length = word.chars().count() as u32;
+
+                let token_type = if keywords.contains(word) {
+                    Some((KEYWORD, 0))
+                } else if type_names.contains(word) {
+                    Some((TYPE, MOD_READONLY))
+                } else if word
+                    .chars()
+                    .next()
+                    .map(|c| c.is_uppercase())
+                    .unwrap_or(false)
+                {
+                    // Capitalized names are likely types or constructors
+                    Some((CLASS, 0))
+                } else if word.parse::<f64>().is_ok() || word.parse::<i64>().is_ok() {
+                    Some((NUMBER, 0))
+                } else if word.starts_with("builtin_") {
+                    Some((MACRO, 0))
+                } else {
+                    None // Regular identifier - don't highlight
+                };
+
+                if let Some((tt, mods)) = token_type {
+                    let delta_line = line_num - prev_line;
+                    let delta_col = if delta_line == 0 { col - prev_col } else { col };
+
+                    tokens.push(SemanticToken {
+                        delta_line,
+                        delta_start: delta_col,
+                        length,
+                        token_type: tt,
+                        token_modifiers_bitset: mods,
+                    });
+
+                    prev_line = line_num;
+                    prev_col = col;
+                }
+
+                in_word = false;
+            }
+        }
+
+        // Handle word at end of line
+        if in_word {
+            let word = &line[word_start..];
+            let col = word_start as u32;
+            let length = word.chars().count() as u32;
+
+            let token_type = if keywords.contains(word) {
+                Some((KEYWORD, 0))
+            } else if type_names.contains(word) {
+                Some((TYPE, MOD_READONLY))
+            } else if word
+                .chars()
+                .next()
+                .map(|c| c.is_uppercase())
+                .unwrap_or(false)
+            {
+                Some((CLASS, 0))
+            } else if word.parse::<f64>().is_ok() || word.parse::<i64>().is_ok() {
+                Some((NUMBER, 0))
+            } else if word.starts_with("builtin_") {
+                Some((MACRO, 0))
+            } else {
+                None
+            };
+
+            if let Some((tt, mods)) = token_type {
+                let delta_line = line_num - prev_line;
+                let delta_col = if delta_line == 0 { col - prev_col } else { col };
+
+                tokens.push(SemanticToken {
+                    delta_line,
+                    delta_start: delta_col,
+                    length,
+                    token_type: tt,
+                    token_modifiers_bitset: mods,
+                });
+
+                prev_line = line_num;
+                prev_col = col;
+            }
+        }
+
+        // Check for Unicode operators
+        for op in &operators {
+            for (i, _) in line.match_indices(op) {
+                let col = i as u32;
+                let length = op.chars().count() as u32;
+
+                let delta_line = line_num - prev_line;
+                let delta_col = if delta_line == 0 {
+                    col.saturating_sub(prev_col)
+                } else {
+                    col
+                };
+
+                tokens.push(SemanticToken {
+                    delta_line,
+                    delta_start: delta_col,
+                    length,
+                    token_type: OPERATOR,
+                    token_modifiers_bitset: 0,
+                });
+
+                prev_line = line_num;
+                prev_col = col;
+            }
+        }
+    }
+
+    // Suppress unused warnings - these are for future use
+    let _ = (
+        FUNCTION,
+        VARIABLE,
+        PARAMETER,
+        PROPERTY,
+        NAMESPACE,
+        STRUCT,
+        ENUM,
+        ENUM_MEMBER,
+        MOD_DECLARATION,
+        MOD_DEFINITION,
+    );
+
+    tokens
+}
+
+/// Parse signature to extract parameter names
+fn parse_signature_params(sig: &str) -> Vec<String> {
+    // Simple parser for signatures like "operation add : M → M → M"
+    let mut params = Vec::new();
+
+    if let Some(colon_pos) = sig.find(':') {
+        let type_part = &sig[colon_pos + 1..];
+        // Split by → and take all but the last (which is return type)
+        let parts: Vec<&str> = type_part.split('→').collect();
+        for (i, part) in parts.iter().take(parts.len().saturating_sub(1)).enumerate() {
+            params.push(format!("arg{}: {}", i + 1, part.trim()));
+        }
+    }
+
+    params
+}
+
+/// Get builtin function signatures
+fn get_builtin_signature(name: &str) -> Option<(&'static str, Vec<&'static str>)> {
+    match name {
+        "sin" | "cos" | "tan" | "exp" | "ln" | "sqrt" | "abs" => {
+            Some((format!("{}(x: ℝ) → ℝ", name).leak(), vec!["x: ℝ"]))
+        }
+        "atan2" => Some(("atan2(y: ℝ, x: ℝ) → ℝ", vec!["y: ℝ", "x: ℝ"])),
+        "complex" => Some(("complex(re: ℝ, im: ℝ) → ℂ", vec!["re: ℝ", "im: ℝ"])),
+        "re" | "im" => Some((format!("{}(z: ℂ) → ℝ", name).leak(), vec!["z: ℂ"])),
+        "conj" => Some(("conj(z: ℂ) → ℂ", vec!["z: ℂ"])),
+        "Matrix" => Some((
+            "Matrix(m: ℕ, n: ℕ, T) → Type",
+            vec!["m: ℕ", "n: ℕ", "T: Type"],
+        )),
+        "transpose" => Some((
+            "transpose(A: Matrix(m,n,T)) → Matrix(n,m,T)",
+            vec!["A: Matrix"],
+        )),
+        "det" => Some(("det(A: Matrix(n,n,T)) → T", vec!["A: Matrix(n,n)"])),
+        "trace" => Some(("trace(A: Matrix(n,n,T)) → T", vec!["A: Matrix(n,n)"])),
+        "head" => Some(("head(xs: List(T)) → Option(T)", vec!["xs: List(T)"])),
+        "tail" => Some(("tail(xs: List(T)) → List(T)", vec!["xs: List(T)"])),
+        "length" => Some(("length(xs: List(T)) → ℕ", vec!["xs: List(T)"])),
+        "map" => Some((
+            "map(f: A → B, xs: List(A)) → List(B)",
+            vec!["f: A → B", "xs: List(A)"],
+        )),
+        "filter" => Some((
+            "filter(p: A → Bool, xs: List(A)) → List(A)",
+            vec!["p: A → Bool", "xs: List(A)"],
+        )),
+        "fold" => Some((
+            "fold(f: (B,A) → B, init: B, xs: List(A)) → B",
+            vec!["f: (B,A) → B", "init: B", "xs: List(A)"],
+        )),
+        "concat" => Some((
+            "concat(s1: String, s2: String) → String",
+            vec!["s1: String", "s2: String"],
+        )),
+        "strlen" => Some(("strlen(s: String) → ℕ", vec!["s: String"])),
+        "substr" => Some((
+            "substr(s: String, start: ℕ, len: ℕ) → String",
+            vec!["s: String", "start: ℕ", "len: ℕ"],
+        )),
+        _ => None,
+    }
+}
+
+/// Format Kleis code (basic implementation)
+fn format_kleis_code(code: &str) -> String {
+    let mut result = String::new();
+    let mut indent: usize = 0;
+    let indent_str = "    ";
+
+    for line in code.lines() {
+        let trimmed = line.trim();
+
+        // Decrease indent for closing braces
+        if trimmed.starts_with('}') || trimmed.starts_with(')') || trimmed.starts_with(']') {
+            indent = indent.saturating_sub(1);
+        }
+
+        // Skip empty lines at the start
+        if result.is_empty() && trimmed.is_empty() {
+            continue;
+        }
+
+        // Add indented line
+        if !trimmed.is_empty() {
+            for _ in 0..indent {
+                result.push_str(indent_str);
+            }
+            result.push_str(trimmed);
+        }
+        result.push('\n');
+
+        // Increase indent after opening braces
+        if trimmed.ends_with('{') || trimmed.ends_with('(') && !trimmed.ends_with("()") {
+            indent += 1;
+        }
+    }
+
+    // Remove trailing whitespace
+    result.trim_end().to_string() + "\n"
 }
 
 /// Convert a byte offset to (line, column)
@@ -749,6 +2369,119 @@ fn extract_word_at(line: &str, col: usize) -> String {
     }
 
     chars[start..end].iter().collect()
+}
+
+/// Find where a symbol is defined in the text
+fn find_definition_in_text(text: &str, word: &str, uri: &Url) -> Option<Location> {
+    // Definition patterns to search for
+    let patterns = [
+        format!("define {}(", word),     // define name(
+        format!("define {} =", word),    // define name =
+        format!("define {} :", word),    // define name :
+        format!("structure {}(", word),  // structure Name(
+        format!("structure {} ", word),  // structure Name
+        format!("data {} =", word),      // data Name =
+        format!("data {}(", word),       // data Name(
+        format!("type {} =", word),      // type Name =
+        format!("operation {} :", word), // operation name :
+        format!("element {} :", word),   // element name :
+        format!("axiom {}:", word),      // axiom name:
+        format!("axiom {} :", word),     // axiom name :
+        format!("implements {}(", word), // implements Name(
+        format!("| {}(", word),          // | Constructor(  (data variant)
+        format!("| {}", word),           // | Constructor   (data variant)
+    ];
+
+    for (line_num, line) in text.lines().enumerate() {
+        for pattern in &patterns {
+            if let Some(col) = line.find(pattern.as_str()) {
+                // Find where the actual name starts in the pattern
+                let name_offset = pattern.find(word).unwrap_or(0);
+                let name_col = col + name_offset;
+
+                return Some(Location {
+                    uri: uri.clone(),
+                    range: Range {
+                        start: Position {
+                            line: line_num as u32,
+                            character: name_col as u32,
+                        },
+                        end: Position {
+                            line: line_num as u32,
+                            character: (name_col + word.len()) as u32,
+                        },
+                    },
+                });
+            }
+        }
+    }
+
+    None
+}
+
+/// Find the enclosing brace block for a given position
+fn find_enclosing_block(text: &str, line_idx: usize, _col_idx: usize) -> Option<Range> {
+    let lines: Vec<&str> = text.lines().collect();
+
+    // Search backwards for opening brace
+    let mut brace_count = 0;
+    let mut block_start_line = None;
+
+    for i in (0..=line_idx).rev() {
+        let line = lines.get(i)?;
+        for ch in line.chars().rev() {
+            if ch == '}' {
+                brace_count += 1;
+            } else if ch == '{' {
+                if brace_count == 0 {
+                    block_start_line = Some(i);
+                    break;
+                } else {
+                    brace_count -= 1;
+                }
+            }
+        }
+        if block_start_line.is_some() {
+            break;
+        }
+    }
+
+    let start_line = block_start_line?;
+
+    // Search forwards for closing brace
+    brace_count = 1; // We're inside the block
+    let mut block_end_line = None;
+
+    for i in (start_line + 1)..lines.len() {
+        let line = lines.get(i)?;
+        for ch in line.chars() {
+            if ch == '{' {
+                brace_count += 1;
+            } else if ch == '}' {
+                brace_count -= 1;
+                if brace_count == 0 {
+                    block_end_line = Some(i);
+                    break;
+                }
+            }
+        }
+        if block_end_line.is_some() {
+            break;
+        }
+    }
+
+    let end_line = block_end_line?;
+
+    Some(Range {
+        start: Position {
+            line: start_line as u32,
+            character: 0,
+        },
+        end: Position {
+            line: end_line as u32,
+            character: lines[end_line].len() as u32,
+        },
+    })
 }
 
 /// Get description for builtin keywords and types
@@ -1131,6 +2864,121 @@ fn get_kleis_completions() -> Vec<CompletionItem> {
             detail: Some(description.to_string()),
             insert_text: Some(symbol.to_string()),
             filter_text: Some(format!("{} {}", symbol, name)),
+            ..Default::default()
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ASCII TO UNICODE INPUT HELPERS
+    // Type the ASCII, insert the Unicode symbol!
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let ascii_to_unicode = [
+        // Quantifiers & Logic
+        ("forall", "∀", "Universal quantifier (for all)"),
+        ("exists", "∃", "Existential quantifier (there exists)"),
+        ("lambda", "λ", "Lambda abstraction"),
+        ("->", "→", "Function arrow / implies"),
+        ("<-", "←", "Left arrow"),
+        ("<->", "↔", "Biconditional (iff)"),
+        ("=>", "⇒", "Logical implication"),
+        ("<=>", "⇔", "Logical equivalence"),
+        ("and", "∧", "Logical AND"),
+        ("or", "∨", "Logical OR"),
+        ("not", "¬", "Logical NOT"),
+        ("true", "⊤", "Top / True"),
+        ("false", "⊥", "Bottom / False"),
+        // Comparison
+        ("!=", "≠", "Not equal"),
+        ("/=", "≠", "Not equal (alt)"),
+        ("<=", "≤", "Less than or equal"),
+        (">=", "≥", "Greater than or equal"),
+        ("~=", "≈", "Approximately equal"),
+        ("===", "≡", "Identical / Equivalent"),
+        // Set Theory
+        ("elem", "∈", "Element of"),
+        ("notelem", "∉", "Not element of"),
+        ("subset", "⊂", "Proper subset"),
+        ("subseteq", "⊆", "Subset or equal"),
+        ("supset", "⊃", "Proper superset"),
+        ("supseteq", "⊇", "Superset or equal"),
+        ("union", "∪", "Set union"),
+        ("intersect", "∩", "Set intersection"),
+        ("emptyset", "∅", "Empty set"),
+        // Calculus & Analysis
+        ("nabla", "∇", "Gradient / Del operator"),
+        ("partial", "∂", "Partial derivative"),
+        ("integral", "∫", "Integral"),
+        ("infinity", "∞", "Infinity"),
+        ("inf", "∞", "Infinity (short)"),
+        ("sqrt", "√", "Square root"),
+        // Products & Sums
+        ("times", "×", "Cross product / multiplication"),
+        ("cdot", "·", "Dot product"),
+        ("tensor", "⊗", "Tensor product"),
+        ("oplus", "⊕", "Direct sum"),
+        ("compose", "∘", "Function composition"),
+        ("sum", "∑", "Summation"),
+        ("prod", "∏", "Product"),
+        // Number Sets
+        ("Nat", "ℕ", "Natural numbers"),
+        ("Int", "ℤ", "Integers"),
+        ("Rat", "ℚ", "Rational numbers"),
+        ("Real", "ℝ", "Real numbers"),
+        ("Complex", "ℂ", "Complex numbers"),
+        ("Bool", "𝔹", "Boolean"),
+        // Matrix/Linear Algebra
+        ("transpose", "ᵀ", "Matrix transpose"),
+        ("dagger", "†", "Hermitian adjoint"),
+        ("det", "det", "Determinant"),
+        // Greek (also available via their names)
+        ("Alpha", "Α", "Greek capital Alpha"),
+        ("Beta", "Β", "Greek capital Beta"),
+        ("Gamma", "Γ", "Greek capital Gamma"),
+        ("Delta", "Δ", "Greek capital Delta"),
+        ("Epsilon", "Ε", "Greek capital Epsilon"),
+        ("Zeta", "Ζ", "Greek capital Zeta"),
+        ("Eta", "Η", "Greek capital Eta"),
+        ("Theta", "Θ", "Greek capital Theta"),
+        ("Iota", "Ι", "Greek capital Iota"),
+        ("Kappa", "Κ", "Greek capital Kappa"),
+        ("Lambda", "Λ", "Greek capital Lambda"),
+        ("Mu", "Μ", "Greek capital Mu"),
+        ("Nu", "Ν", "Greek capital Nu"),
+        ("Xi", "Ξ", "Greek capital Xi"),
+        ("Omicron", "Ο", "Greek capital Omicron"),
+        ("Pi", "Π", "Greek capital Pi"),
+        ("Rho", "Ρ", "Greek capital Rho"),
+        ("Sigma", "Σ", "Greek capital Sigma"),
+        ("Tau", "Τ", "Greek capital Tau"),
+        ("Upsilon", "Υ", "Greek capital Upsilon"),
+        ("Phi", "Φ", "Greek capital Phi"),
+        ("Chi", "Χ", "Greek capital Chi"),
+        ("Psi", "Ψ", "Greek capital Psi"),
+        ("Omega", "Ω", "Greek capital Omega"),
+    ];
+
+    for (ascii, unicode, description) in ascii_to_unicode {
+        items.push(CompletionItem {
+            label: ascii.to_string(),
+            label_details: Some(CompletionItemLabelDetails {
+                detail: Some(format!(" → {}", unicode)),
+                description: None,
+            }),
+            kind: Some(CompletionItemKind::TEXT),
+            detail: Some(format!("{} (inserts {})", description, unicode)),
+            documentation: Some(Documentation::MarkupContent(MarkupContent {
+                kind: MarkupKind::Markdown,
+                value: format!(
+                    "**Unicode Input Helper**\n\n\
+                     Type `{}` to insert `{}`\n\n\
+                     {}",
+                    ascii, unicode, description
+                ),
+            })),
+            insert_text: Some(unicode.to_string()),
+            filter_text: Some(ascii.to_string()),
+            sort_text: Some(format!("1_{}", ascii)), // Sort before other items
             ..Default::default()
         });
     }
