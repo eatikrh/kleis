@@ -29,14 +29,22 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [
-    "onLanguage:kleis"
+    "onLanguage:kleis",
+    "onCommand:kleis.openRepl",
+    "onCommand:kleis.runSelection",
+    "onCommand:kleis.loadFileInRepl"
   ],
   "contributes": {
     "languages": [
       {
         "id": "kleis",
-        "aliases": ["Kleis", "kleis"],
-        "extensions": [".kleis"],
+        "aliases": [
+          "Kleis",
+          "kleis"
+        ],
+        "extensions": [
+          ".kleis"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -118,7 +126,11 @@
         },
         "kleis.trace.server": {
           "type": "string",
-          "enum": ["off", "messages", "verbose"],
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
           "default": "off",
           "description": "Traces the communication between VS Code and the Kleis language server."
         }
@@ -133,10 +145,14 @@
       {
         "type": "kleis",
         "label": "Kleis Debug",
-        "languages": ["kleis"],
+        "languages": [
+          "kleis"
+        ],
         "configurationAttributes": {
           "launch": {
-            "required": ["program"],
+            "required": [
+              "program"
+            ],
             "properties": {
               "program": {
                 "type": "string",
@@ -180,6 +196,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "package": "vsce package --allow-missing-repository",
     "lint-grammar": "node ./tools/lintGrammar.js",
     "inspect-scopes": "npm run lint-grammar && node ./tools/inspectScopes.js",
     "prepublishOnly": "npm run lint-grammar",
@@ -191,10 +208,9 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.75.0",
+    "@vscode/vsce": "^3.7.1",
     "typescript": "^5.0.0",
-    "vscode-textmate": "^5.3.0",
-    "vscode-oniguruma": "^1.6.2"
+    "vscode-oniguruma": "^1.6.2",
+    "vscode-textmate": "^5.3.0"
   }
 }
-
-
