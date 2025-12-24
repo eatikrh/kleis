@@ -2,7 +2,7 @@
   "name": "kleis",
   "displayName": "Kleis Language Support",
   "description": "Language support for Kleis: syntax highlighting, diagnostics, hover, go-to-definition, and debugging",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "publisher": "eatikrh",
   "author": "Engin Atik <eatik@redhat.com>",
   "license": "MIT",
