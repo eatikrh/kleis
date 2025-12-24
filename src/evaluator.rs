@@ -116,6 +116,11 @@ impl Evaluator {
         self.bindings.get(name)
     }
 
+    /// Get all variable bindings (for debugger variable inspection)
+    pub fn get_all_bindings(&self) -> impl Iterator<Item = (&String, &Expression)> {
+        self.bindings.iter()
+    }
+
     /// Set the last evaluation result (for `it` magic variable)
     pub fn set_last_result(&mut self, value: Expression) {
         self.last_result = Some(value);

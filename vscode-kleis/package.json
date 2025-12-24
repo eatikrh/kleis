@@ -32,7 +32,8 @@
     "onLanguage:kleis",
     "onCommand:kleis.openRepl",
     "onCommand:kleis.runSelection",
-    "onCommand:kleis.loadFileInRepl"
+    "onCommand:kleis.loadFileInRepl",
+    "onCommand:kleis.showStatus"
   ],
   "contributes": {
     "languages": [
@@ -200,7 +201,8 @@
     "lint-grammar": "node ./tools/lintGrammar.js",
     "inspect-scopes": "npm run lint-grammar && node ./tools/inspectScopes.js",
     "prepublishOnly": "npm run lint-grammar",
-    "test-syntax": "node ./tools/tests/tokenScopeTest.js"
+    "test-syntax": "node ./tools/tests/tokenScopeTest.js",
+    "test-activation": "node ./tools/tests/activationTest.js"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"

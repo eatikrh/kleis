@@ -8,12 +8,12 @@
     { "include": "#numbers" },
     { "include": "#booleans" },
     { "include": "#symbolic-constants" },
+    { "include": "#constructors" },
     { "include": "#types" },
     { "include": "#quantifiers" },
     { "include": "#keywords" },
     { "include": "#annotations" },
     { "include": "#operators" },
-    { "include": "#constructors" },
     { "include": "#greek-types" },
     { "include": "#variables" },
     { "include": "#identifiers" }
@@ -92,7 +92,7 @@
           "match": "ℝ|ℂ|ℤ|ℕ|ℚ|𝔹|\\b(Real|Complex|Integer|Nat|Rational|Bool|String|Unit|Scalar)\\b"
         },
         {
-          "name": "storage.type.parametric.kleis",
+          "name": "entity.name.type.constructor.kleis",
           "match": "\\b(Matrix|Vector|Tensor|List|Set|Option|Result|Field|Type|BitVec)\\b"
         }
       ]

@@ -362,6 +362,7 @@ define quadratic(a: ℝ, b: ℝ, c: ℝ) =
 
 // Subscript and superscript
 define indexed(x: ℝ) = x_{1}^{2} + x_{2}^{2}
+define placeholder_example = □
 
 // ============================================
 // BLOCK AND LINE COMMENTS

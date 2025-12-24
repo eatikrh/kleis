@@ -593,10 +593,10 @@ fn run_dap_on_listener(
     Ok(())
 }
 
-/// Handle a DAP request (simplified)
+/// Handle a DAP request with actual evaluator integration
 fn handle_dap_request(
     request: &serde_json::Value,
-    _evaluator: &Arc<Mutex<Evaluator>>,
+    evaluator: &Arc<Mutex<Evaluator>>,
 ) -> serde_json::Value {
     let seq = request.get("seq").and_then(|s| s.as_i64()).unwrap_or(0);
     let command = request
@@ -614,11 +614,185 @@ fn handle_dap_request(
                 "command": "initialize",
                 "body": {
                     "supportsConfigurationDoneRequest": true,
-                    "supportsEvaluateForHovers": true
+                    "supportsEvaluateForHovers": true,
+                    "supportsConditionalBreakpoints": true
                 }
             })
         }
-        "launch" | "attach" => {
+        "launch" => {
+            // Load program from file
+            if let Some(program_path) = request
+                .get("arguments")
+                .and_then(|a| a.get("program"))
+                .and_then(|p| p.as_str())
+            {
+                match std::fs::read_to_string(program_path) {
+                    Ok(source) => match parse_kleis_program(&source) {
+                        Ok(program) => {
+                            if let Ok(mut eval) = evaluator.lock() {
+                                if let Err(e) = eval.load_program(&program) {
+                                    return serde_json::json!({
+                                        "seq": 1,
+                                        "type": "response",
+                                        "request_seq": seq,
+                                        "success": false,
+                                        "command": "launch",
+                                        "message": format!("Load error: {}", e)
+                                    });
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            return serde_json::json!({
+                                "seq": 1,
+                                "type": "response",
+                                "request_seq": seq,
+                                "success": false,
+                                "command": "launch",
+                                "message": format!("Parse error: {}", e)
+                            });
+                        }
+                    },
+                    Err(e) => {
+                        return serde_json::json!({
+                            "seq": 1,
+                            "type": "response",
+                            "request_seq": seq,
+                            "success": false,
+                            "command": "launch",
+                            "message": format!("Cannot read file: {}", e)
+                        });
+                    }
+                }
+            }
+            serde_json::json!({
+                "seq": 1,
+                "type": "response",
+                "request_seq": seq,
+                "success": true,
+                "command": "launch"
+            })
+        }
+        "attach" => {
+            serde_json::json!({
+                "seq": 1,
+                "type": "response",
+                "request_seq": seq,
+                "success": true,
+                "command": "attach"
+            })
+        }
+        "threads" => {
+            serde_json::json!({
+                "seq": 1,
+                "type": "response",
+                "request_seq": seq,
+                "success": true,
+                "command": "threads",
+                "body": {
+                    "threads": [{
+                        "id": 1,
+                        "name": "main"
+                    }]
+                }
+            })
+        }
+        "stackTrace" => {
+            serde_json::json!({
+                "seq": 1,
+                "type": "response",
+                "request_seq": seq,
+                "success": true,
+                "command": "stackTrace",
+                "body": {
+                    "stackFrames": [],
+                    "totalFrames": 0
+                }
+            })
+        }
+        "scopes" => {
+            serde_json::json!({
+                "seq": 1,
+                "type": "response",
+                "request_seq": seq,
+                "success": true,
+                "command": "scopes",
+                "body": {
+                    "scopes": [{
+                        "name": "Globals",
+                        "variablesReference": 1,
+                        "expensive": false
+                    }]
+                }
+            })
+        }
+        "variables" => {
+            // Return actual variables from the evaluator
+            let mut variables = Vec::new();
+            if let Ok(eval) = evaluator.lock() {
+                // Get all bindings
+                for (name, value) in eval.get_all_bindings() {
+                    variables.push(serde_json::json!({
+                        "name": name,
+                        "value": format!("{:?}", value),
+                        "variablesReference": 0
+                    }));
+                }
+                // Show function count
+                let func_count = eval.list_functions().len();
+                variables.push(serde_json::json!({
+                    "name": "<functions>",
+                    "value": format!("{} defined", func_count),
+                    "variablesReference": 0
+                }));
+            }
+            serde_json::json!({
+                "seq": 1,
+                "type": "response",
+                "request_seq": seq,
+                "success": true,
+                "command": "variables",
+                "body": {
+                    "variables": variables
+                }
+            })
+        }
+        "evaluate" => {
+            // Evaluate an expression
+            let result = if let Some(expr_str) = request
+                .get("arguments")
+                .and_then(|a| a.get("expression"))
+                .and_then(|e| e.as_str())
+            {
+                match kleis::kleis_parser::parse_kleis(expr_str) {
+                    Ok(expr) => {
+                        if let Ok(eval) = evaluator.lock() {
+                            match eval.eval(&expr) {
+                                Ok(result) => format!("{:?}", result),
+                                Err(e) => format!("Error: {}", e),
+                            }
+                        } else {
+                            "Evaluator locked".to_string()
+                        }
+                    }
+                    Err(e) => format!("Parse error: {}", e),
+                }
+            } else {
+                "No expression".to_string()
+            };
+            serde_json::json!({
+                "seq": 1,
+                "type": "response",
+                "request_seq": seq,
+                "success": true,
+                "command": "evaluate",
+                "body": {
+                    "result": result,
+                    "variablesReference": 0
+                }
+            })
+        }
+        "setBreakpoints" | "configurationDone" | "continue" | "next" | "stepIn" | "stepOut" => {
             serde_json::json!({
                 "seq": 1,
                 "type": "response",

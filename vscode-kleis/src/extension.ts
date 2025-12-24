@@ -35,15 +35,89 @@ import { ReplPanel } from './replPanel';
 let client: LanguageClient | undefined;
 
 export function activate(context: ExtensionContext) {
-    // Register REPL commands
+    // Utility: check whether a REPL executable is available
+    function replAvailable(): boolean {
+        const config = workspace.getConfiguration('kleis');
+        const configuredPath = config.get<string>('replPath');
+        if (configuredPath && fs.existsSync(configuredPath)) {
+            return true;
+        }
+
+        const workspaceFolders = workspace.workspaceFolders;
+        if (workspaceFolders) {
+            for (const folder of workspaceFolders) {
+                const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'repl');
+                if (fs.existsSync(releasePath)) return true;
+                const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'repl');
+                if (fs.existsSync(debugPath)) return true;
+            }
+        }
+
+        const pathEnv = process.env.PATH || '';
+        const pathDirs = pathEnv.split(path.delimiter);
+        for (const dir of pathDirs) {
+            const replPath = path.join(dir, 'repl');
+            if (fs.existsSync(replPath)) return true;
+        }
+
+        return false;
+    }
+
+    // Utility: check whether Kleis server executable is available
+    function serverAvailable(): boolean {
+        const config = workspace.getConfiguration('kleis');
+        const configuredPath = config.get<string>('serverPath');
+        if (configuredPath && fs.existsSync(configuredPath)) {
+            return true;
+        }
+
+        const workspaceFolders = workspace.workspaceFolders;
+        if (workspaceFolders) {
+            for (const folder of workspaceFolders) {
+                const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'kleis');
+                if (fs.existsSync(releasePath)) return true;
+                const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'kleis');
+                if (fs.existsSync(debugPath)) return true;
+                // Legacy binary name
+                const legacyPath = path.join(folder.uri.fsPath, 'target', 'release', 'kleis-lsp');
+                if (fs.existsSync(legacyPath)) return true;
+            }
+        }
+
+        const pathEnv = process.env.PATH || '';
+        const pathDirs = pathEnv.split(path.delimiter);
+        for (const dir of pathDirs) {
+            const serverPath = path.join(dir, 'kleis');
+            if (fs.existsSync(serverPath)) return true;
+            const legacyServer = path.join(dir, 'kleis-lsp');
+            if (fs.existsSync(legacyServer)) return true;
+        }
+
+        return false;
+    }
+
+    // Register REPL commands with a quick availability check and user-friendly errors
     context.subscriptions.push(
         commands.registerCommand('kleis.openRepl', () => {
+            if (!replAvailable()) {
+                window.showErrorMessage(
+                    'Kleis REPL not found. Build it with `cargo build --release --bin repl` or set "kleis.replPath" in settings.'
+                );
+                return;
+            }
             ReplPanel.createOrShow(context.extensionUri);
         })
     );
 
     context.subscriptions.push(
         commands.registerCommand('kleis.runSelection', () => {
+            if (!replAvailable()) {
+                window.showErrorMessage(
+                    'Kleis REPL not found. Build it with `cargo build --release --bin repl` or set "kleis.replPath" in settings.'
+                );
+                return;
+            }
+
             const editor = window.activeTextEditor;
             if (editor && ReplPanel.currentPanel) {
                 const selection = editor.document.getText(editor.selection);
@@ -68,6 +142,13 @@ export function activate(context: ExtensionContext) {
 
     context.subscriptions.push(
         commands.registerCommand('kleis.loadFileInRepl', () => {
+            if (!replAvailable()) {
+                window.showErrorMessage(
+                    'Kleis REPL not found. Build it with `cargo build --release --bin repl` or set "kleis.replPath" in settings.'
+                );
+                return;
+            }
+
             const editor = window.activeTextEditor;
             if (editor) {
                 const filePath = editor.document.uri.fsPath;
@@ -91,6 +172,31 @@ export function activate(context: ExtensionContext) {
         )
     );
     console.log('Kleis debug adapter factory registered (uses unified server)');
+
+    // Status command to show LSP/REPL availability in an output channel
+    context.subscriptions.push(
+        commands.registerCommand('kleis.showStatus', () => {
+            const config = workspace.getConfiguration('kleis');
+            const serverConfigured = config.get<string>('serverPath') || '(not set)';
+            const replConfigured = config.get<string>('replPath') || '(not set)';
+            const serverFound = serverAvailable();
+            const replFound = replAvailable();
+
+            const out = window.createOutputChannel('Kleis');
+            out.clear();
+            out.appendLine('Kleis status:');
+            out.appendLine(`  Server: ${serverFound ? 'FOUND' : 'MISSING'} (${serverConfigured})`);
+            out.appendLine(`  REPL:   ${replFound ? 'FOUND' : 'MISSING'} (${replConfigured})`);
+            out.show(true);
+
+            window.showInformationMessage(
+                `Kleis status — server: ${serverFound ? 'FOUND' : 'MISSING'}, repl: ${replFound ? 'FOUND' : 'MISSING'}`,
+                'Open Output'
+            ).then(sel => {
+                if (sel === 'Open Output') out.show(true);
+            });
+        })
+    );
 
     // Find the unified kleis server
     const serverPath = findServer(context);
@@ -248,15 +354,15 @@ class KleisDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
                 throw e;
             }
         } else {
-            // No LSP client available - fall back to standalone debug adapter
+            // No LSP client available - check for server or standalone adapter and show helpful errors
             const standalonePath = findStandaloneDebugAdapter();
             if (standalonePath) {
                 console.log('Using standalone debug adapter (no shared state with LSP)');
+                window.showWarningMessage('Kleis LSP server not found; using standalone debug adapter (no shared state with LSP).');
                 return new vscode.DebugAdapterExecutable(standalonePath, []);
             } else {
-                throw new Error(
-                    'Kleis debugger not available. Start LSP server or build debug adapter.'
-                );
+                window.showErrorMessage('Kleis LSP not found. Debugging requires the Kleis server. Build it with `cargo build --release --bin kleis` or set "kleis.serverPath" in settings.');
+                throw new Error('Kleis LSP not found');
             }
         }
     }

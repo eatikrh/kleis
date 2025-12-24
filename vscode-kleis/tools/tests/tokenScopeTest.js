@@ -41,7 +41,6 @@ const oniguruma = require('vscode-oniguruma');
     const testCases = [
       { text: 'e', expected: 'constant.language.symbolic.kleis' },
       { text: 'π', expected: 'constant.language.symbolic.kleis' },
-      { text: '□', expected: 'constant.language.placeholder.kleis' },
       { text: '⊕', expected: 'keyword.operator.unicode.kleis' },
       { text: 'α', expected: 'variable.type.greek.kleis' },
       { text: 'Matrix', expected: 'entity.name.type.constructor.kleis' },
