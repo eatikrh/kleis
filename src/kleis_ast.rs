@@ -8,6 +8,7 @@
 //!
 //! Used for parsing complete Kleis programs with user-defined types.
 use crate::ast::Expression;
+use crate::kleis_parser::SourceSpan;
 
 /// Top-level program items
 #[derive(Debug, Clone, PartialEq)]
@@ -102,6 +103,8 @@ pub struct FunctionDef {
     pub params: Vec<String>,
     pub type_annotation: Option<TypeExpr>,
     pub body: Expression,
+    /// Source location where this function is defined
+    pub span: Option<SourceSpan>,
 }
 
 /// Type alias

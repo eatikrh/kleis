@@ -67,9 +67,28 @@ impl fmt::Display for KleisParseError {
 
 impl std::error::Error for KleisParseError {}
 
+/// Source location (line and column, 1-based)
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct SourceSpan {
+    /// Line number (1-based)
+    pub line: u32,
+    /// Column number (1-based)
+    pub column: u32,
+}
+
+impl SourceSpan {
+    pub fn new(line: u32, column: u32) -> Self {
+        Self { line, column }
+    }
+}
+
 pub struct KleisParser {
     input: Vec<char>,
     pos: usize,
+    /// Current line number (1-based)
+    line: u32,
+    /// Current column number (1-based)
+    column: u32,
 }
 
 impl KleisParser {
@@ -77,7 +96,14 @@ impl KleisParser {
         KleisParser {
             input: input.chars().collect(),
             pos: 0,
+            line: 1,
+            column: 1,
         }
+    }
+
+    /// Get the current source location
+    pub fn current_span(&self) -> SourceSpan {
+        SourceSpan::new(self.line, self.column)
     }
 
     fn peek(&self) -> Option<char> {
@@ -92,6 +118,15 @@ impl KleisParser {
         if self.pos < self.input.len() {
             let ch = self.input[self.pos];
             self.pos += 1;
+
+            // Track line and column
+            if ch == '\n' {
+                self.line += 1;
+                self.column = 1;
+            } else {
+                self.column += 1;
+            }
+
             Some(ch)
         } else {
             None
@@ -3284,6 +3319,9 @@ impl KleisParser {
     pub fn parse_function_def(&mut self) -> Result<FunctionDef, KleisParseError> {
         self.skip_whitespace();
 
+        // Capture source location at start of definition
+        let span = self.current_span();
+
         // Expect 'define' keyword
         let keyword = self.parse_identifier()?;
         if keyword != "define" {
@@ -3360,6 +3398,7 @@ impl KleisParser {
             params,
             type_annotation,
             body,
+            span: Some(span),
         })
     }
 

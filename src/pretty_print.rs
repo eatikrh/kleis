@@ -1179,6 +1179,7 @@ mod tests {
                 ],
             },
             env: std::collections::HashMap::new(),
+            span: None,
         };
         assert_eq!(
             pp.format_function("double", &closure),
@@ -1244,6 +1245,7 @@ mod tests {
                     Expression::Const("2".to_string()),
                 ],
             },
+            span: None,
         };
         assert_eq!(pp.format_function_def(&func), "define double(x) = x * 2");
     }
@@ -1263,6 +1265,7 @@ mod tests {
                     Expression::Object("x".to_string()),
                 ],
             },
+            span: None,
         };
         assert_eq!(pp.format_function_def(&func), "define square(x): ℝ = x * x");
     }

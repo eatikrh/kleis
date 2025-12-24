@@ -31,6 +31,7 @@
 use crate::ast::{Expression, LambdaParam};
 use crate::debug::{DebugHook, SourceLocation, StackFrame};
 use crate::kleis_ast::{FunctionDef, Program, TopLevel};
+use crate::kleis_parser::SourceSpan;
 use crate::pattern_matcher::PatternMatcher;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -46,6 +47,9 @@ pub struct Closure {
 
     /// Captured environment (for closures - not used yet in Wire 3)
     pub env: HashMap<String, Expression>,
+
+    /// Source location where this function is defined
+    pub span: Option<SourceSpan>,
 }
 
 /// Symbolic evaluator for Kleis expressions
@@ -235,10 +239,16 @@ impl Evaluator {
             params: func_def.params.clone(),
             body: func_def.body.clone(),
             env: HashMap::new(), // Empty environment for now
+            span: func_def.span,
         };
 
         self.functions.insert(func_def.name.clone(), closure);
         Ok(())
+    }
+
+    /// Get the source location of a function
+    pub fn get_function_span(&self, name: &str) -> Option<SourceSpan> {
+        self.functions.get(name).and_then(|c| c.span)
     }
 
     /// Apply a user-defined function to arguments (symbolic substitution)
@@ -439,7 +449,7 @@ impl Evaluator {
 
     /// Internal evaluation with depth tracking for debugging
     fn eval_internal(&self, expr: &Expression, depth: usize) -> Result<Expression, String> {
-        // Create source location (TODO: get real location from AST)
+        // Create default source location (will be overridden for functions)
         let location = SourceLocation::new(1, 1);
 
         // Call debug hook if present (before evaluation)
@@ -456,12 +466,18 @@ impl Evaluator {
             // Check if this is a function application
             Expression::Operation { name, args } => {
                 if self.functions.contains_key(name) {
+                    // Get the function's source location if available
+                    let func_location = self
+                        .get_function_span(name)
+                        .map(|span| SourceLocation::new(span.line, span.column))
+                        .unwrap_or_else(|| location.clone());
+
                     // Call debug hook for function entry
                     {
                         let mut hook_ref = self.debug_hook.borrow_mut();
                         if let Some(ref mut hook) = *hook_ref {
                             hook.on_function_enter(name, args, depth);
-                            hook.push_frame(StackFrame::new(name, location.clone()));
+                            hook.push_frame(StackFrame::new(name, func_location));
                         }
                     }
 

@@ -127,12 +127,7 @@ pub trait DebugHook {
     ) -> DebugAction;
 
     /// Called after evaluating an expression
-    fn on_eval_end(
-        &mut self,
-        expr: &Expression,
-        result: &Result<Expression, String>,
-        depth: usize,
-    );
+    fn on_eval_end(&mut self, expr: &Expression, result: &Result<Expression, String>, depth: usize);
 
     /// Called when entering a function
     fn on_function_enter(&mut self, name: &str, args: &[Expression], depth: usize);
@@ -189,7 +184,13 @@ impl DebugHook for NoOpDebugHook {
 
     fn on_function_enter(&mut self, _name: &str, _args: &[Expression], _depth: usize) {}
 
-    fn on_function_exit(&mut self, _name: &str, _result: &Result<Expression, String>, _depth: usize) {}
+    fn on_function_exit(
+        &mut self,
+        _name: &str,
+        _result: &Result<Expression, String>,
+        _depth: usize,
+    ) {
+    }
 
     fn on_bind(&mut self, _name: &str, _value: &Expression, _depth: usize) {}
 
@@ -263,9 +264,9 @@ impl InteractiveDebugHook {
     /// Check if a location matches a breakpoint
     fn matches_breakpoint(&self, location: &SourceLocation) -> bool {
         if let Some(ref file) = location.file {
-            self.breakpoints.iter().any(|bp| {
-                bp.enabled && &bp.file == file && bp.line == location.line
-            })
+            self.breakpoints
+                .iter()
+                .any(|bp| bp.enabled && &bp.file == file && bp.line == location.line)
         } else {
             false
         }
@@ -332,14 +333,21 @@ impl DebugHook for InteractiveDebugHook {
         self.current_depth = depth;
     }
 
-    fn on_function_exit(&mut self, _name: &str, _result: &Result<Expression, String>, depth: usize) {
+    fn on_function_exit(
+        &mut self,
+        _name: &str,
+        _result: &Result<Expression, String>,
+        depth: usize,
+    ) {
         self.pop_frame();
         self.current_depth = depth;
     }
 
     fn on_bind(&mut self, name: &str, value: &Expression, _depth: usize) {
         if let Some(frame) = self.stack.last_mut() {
-            frame.bindings.insert(name.to_string(), format!("{:?}", value));
+            frame
+                .bindings
+                .insert(name.to_string(), format!("{:?}", value));
         }
     }
 
@@ -395,7 +403,7 @@ mod tests {
         let mut hook = NoOpDebugHook;
         let expr = Expression::Const("42".to_string());
         let loc = SourceLocation::new(1, 1);
-        
+
         assert_eq!(hook.on_eval_start(&expr, &loc, 0), DebugAction::Continue);
         assert!(!hook.should_stop(&loc, 0));
     }
@@ -403,14 +411,14 @@ mod tests {
     #[test]
     fn test_interactive_hook_breakpoint() {
         let mut hook = InteractiveDebugHook::new();
-        
+
         // Add a breakpoint
         hook.add_breakpoint(Breakpoint::new(PathBuf::from("test.kleis"), 5));
-        
+
         // Check breakpoint matching
         let loc_no_match = SourceLocation::new(3, 1).with_file(PathBuf::from("test.kleis"));
         let loc_match = SourceLocation::new(5, 1).with_file(PathBuf::from("test.kleis"));
-        
+
         hook.state = DebugState::Running;
         assert!(!hook.should_stop(&loc_no_match, 0));
         assert!(hook.should_stop(&loc_match, 0));
@@ -419,18 +427,17 @@ mod tests {
     #[test]
     fn test_stack_frames() {
         let mut hook = InteractiveDebugHook::new();
-        
+
         assert_eq!(hook.get_stack().len(), 1); // Top-level frame
-        
+
         hook.push_frame(StackFrame::new("fib", SourceLocation::new(10, 1)));
         assert_eq!(hook.get_stack().len(), 2);
-        
+
         hook.pop_frame();
         assert_eq!(hook.get_stack().len(), 1);
-        
+
         // Can't pop the top-level frame
         hook.pop_frame();
         assert_eq!(hook.get_stack().len(), 1);
     }
 }
-
