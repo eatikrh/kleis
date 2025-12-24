@@ -29,6 +29,7 @@
 //! // result = plus(5, 5) (symbolic, not computed to 10)
 //! ```
 use crate::ast::{Expression, LambdaParam};
+use crate::debug::{DebugAction, DebugHook, SourceLocation, StackFrame};
 use crate::kleis_ast::{FunctionDef, Program, TopLevel};
 use crate::pattern_matcher::PatternMatcher;
 use std::collections::{HashMap, HashSet};
@@ -496,6 +497,170 @@ impl Evaluator {
             | Expression::Object(_)
             | Expression::Placeholder { .. } => Ok(expr.clone()),
         }
+    }
+
+    /// Evaluate an expression with debug hooks
+    ///
+    /// This is the same as `eval()` but calls the debug hook at key points,
+    /// enabling step-through debugging.
+    pub fn eval_with_debug(
+        &self,
+        expr: &Expression,
+        hook: &mut dyn DebugHook,
+        depth: usize,
+    ) -> Result<Expression, String> {
+        // Create a source location (TODO: get real location from AST)
+        let location = SourceLocation::new(1, 1);
+
+        // Call the hook before evaluating
+        let action = hook.on_eval_start(expr, &location, depth);
+
+        // If we should pause, wait for command
+        if action != DebugAction::Continue {
+            // The hook handles pausing internally via wait_for_command
+        }
+
+        // Now evaluate based on expression type
+        let result = match expr {
+            Expression::Operation { name, args } => {
+                if self.functions.contains_key(name) {
+                    // Notify hook about function entry
+                    hook.on_function_enter(name, args, depth);
+                    hook.push_frame(StackFrame::new(name, location.clone()));
+
+                    // Evaluate arguments with debug
+                    let eval_args: Result<Vec<_>, _> = args
+                        .iter()
+                        .map(|arg| self.eval_with_debug(arg, hook, depth + 1))
+                        .collect();
+                    let eval_args = eval_args?;
+
+                    // Apply the function
+                    let func_result = self.apply_function_with_debug(name, eval_args, hook, depth + 1);
+
+                    // Notify hook about function exit
+                    hook.on_function_exit(name, &func_result, depth);
+                    hook.pop_frame();
+
+                    func_result
+                } else {
+                    // Built-in operation - just evaluate arguments
+                    let eval_args: Result<Vec<_>, _> = args
+                        .iter()
+                        .map(|arg| self.eval_with_debug(arg, hook, depth + 1))
+                        .collect();
+                    let eval_args = eval_args?;
+
+                    Ok(Expression::Operation {
+                        name: name.clone(),
+                        args: eval_args,
+                    })
+                }
+            }
+
+            Expression::Match { scrutinee, cases } => {
+                let eval_scrutinee = self.eval_with_debug(scrutinee, hook, depth + 1)?;
+                let result = self.matcher.eval_match(&eval_scrutinee, cases)?;
+                self.eval_with_debug(&result, hook, depth + 1)
+            }
+
+            Expression::List(elements) => {
+                let eval_elements: Result<Vec<_>, _> = elements
+                    .iter()
+                    .map(|elem| self.eval_with_debug(elem, hook, depth + 1))
+                    .collect();
+                Ok(Expression::List(eval_elements?))
+            }
+
+            Expression::Quantifier { .. } => Ok(expr.clone()),
+
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let eval_cond = self.eval_with_debug(condition, hook, depth + 1)?;
+                let eval_then = self.eval_with_debug(then_branch, hook, depth + 1)?;
+                let eval_else = self.eval_with_debug(else_branch, hook, depth + 1)?;
+
+                Ok(Expression::Conditional {
+                    condition: Box::new(eval_cond),
+                    then_branch: Box::new(eval_then),
+                    else_branch: Box::new(eval_else),
+                })
+            }
+
+            Expression::Let {
+                pattern,
+                value,
+                body,
+                ..
+            } => {
+                let eval_value = self.eval_with_debug(value, hook, depth + 1)?;
+
+                // Collect bindings and notify hook
+                let mut subst = std::collections::HashMap::new();
+                self.match_pattern_to_bindings(pattern, &eval_value, &mut subst)?;
+
+                // Notify hook about each binding
+                for (name, value) in &subst {
+                    hook.on_bind(name, value, depth);
+                }
+
+                let substituted_body = self.substitute(body, &subst);
+                self.eval_with_debug(&substituted_body, hook, depth + 1)
+            }
+
+            Expression::Ascription { expr: inner, .. } => {
+                self.eval_with_debug(inner, hook, depth + 1)
+            }
+
+            Expression::Lambda { .. } => Ok(expr.clone()),
+
+            Expression::Const(_)
+            | Expression::String(_)
+            | Expression::Object(_)
+            | Expression::Placeholder { .. } => Ok(expr.clone()),
+        };
+
+        // Notify hook about evaluation result
+        hook.on_eval_end(expr, &result, depth);
+
+        result
+    }
+
+    /// Apply a user-defined function with debug hooks
+    fn apply_function_with_debug(
+        &self,
+        name: &str,
+        args: Vec<Expression>,
+        hook: &mut dyn DebugHook,
+        depth: usize,
+    ) -> Result<Expression, String> {
+        let closure = self
+            .functions
+            .get(name)
+            .ok_or_else(|| format!("Function '{}' not defined", name))?;
+
+        if args.len() != closure.params.len() {
+            return Err(format!(
+                "Function '{}' expects {} arguments, got {}",
+                name,
+                closure.params.len(),
+                args.len()
+            ));
+        }
+
+        // Build substitution map and notify hook about bindings
+        let mut subst = HashMap::new();
+        for (param, arg) in closure.params.iter().zip(args.iter()) {
+            subst.insert(param.clone(), arg.clone());
+            hook.on_bind(param, arg, depth);
+        }
+
+        // Substitute and evaluate with debug
+        let substituted = self.substitute(&closure.body, &subst);
+        self.eval_with_debug(&substituted, hook, depth)
     }
 
     /// Get a function definition (for inspection/testing)
@@ -5447,5 +5612,104 @@ mod tests {
         assert_eq!(data, 1);
         assert_eq!(structs, 0);
         assert_eq!(bindings, 2);
+    }
+
+    #[test]
+    fn test_eval_with_debug_noop_hook() {
+        use crate::debug::NoOpDebugHook;
+
+        let eval = Evaluator::new();
+        let mut hook = NoOpDebugHook;
+
+        // Simple constant - should return as-is
+        let expr = Expression::Const("42".to_string());
+        let result = eval.eval_with_debug(&expr, &mut hook, 0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Expression::Const("42".to_string()));
+    }
+
+    #[test]
+    fn test_eval_with_debug_function_call() {
+        use crate::debug::NoOpDebugHook;
+
+        let mut eval = Evaluator::new();
+        let mut hook = NoOpDebugHook;
+
+        // Load a function
+        let code = "define double(x) = x + x";
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // Call with debug hook
+        let expr = Expression::Operation {
+            name: "double".to_string(),
+            args: vec![Expression::Const("5".to_string())],
+        };
+        let result = eval.eval_with_debug(&expr, &mut hook, 0);
+        assert!(result.is_ok());
+
+        // Result should be 5 + 5 (symbolic)
+        match result.unwrap() {
+            Expression::Operation { name, args } => {
+                assert_eq!(name, "plus"); // Parser converts + to "plus"
+                assert_eq!(args.len(), 2);
+            }
+            other => panic!("Expected Operation, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_eval_with_debug_tracks_bindings() {
+        use crate::debug::{DebugAction, DebugHook, DebugState, SourceLocation, StackFrame};
+        use std::sync::{Arc, Mutex};
+
+        // A hook that tracks bindings
+        struct BindingTracker {
+            bindings: Arc<Mutex<Vec<(String, String)>>>,
+        }
+
+        impl DebugHook for BindingTracker {
+            fn on_eval_start(&mut self, _: &Expression, _: &SourceLocation, _: usize) -> DebugAction {
+                DebugAction::Continue
+            }
+            fn on_eval_end(&mut self, _: &Expression, _: &Result<Expression, String>, _: usize) {}
+            fn on_function_enter(&mut self, _: &str, _: &[Expression], _: usize) {}
+            fn on_function_exit(&mut self, _: &str, _: &Result<Expression, String>, _: usize) {}
+            fn on_bind(&mut self, name: &str, value: &Expression, _: usize) {
+                self.bindings.lock().unwrap().push((name.to_string(), format!("{:?}", value)));
+            }
+            fn state(&self) -> &DebugState { &DebugState::Running }
+            fn should_stop(&self, _: &SourceLocation, _: usize) -> bool { false }
+            fn wait_for_command(&mut self) -> DebugAction { DebugAction::Continue }
+            fn get_stack(&self) -> &[StackFrame] { &[] }
+            fn push_frame(&mut self, _: StackFrame) {}
+            fn pop_frame(&mut self) -> Option<StackFrame> { None }
+        }
+
+        let mut eval = Evaluator::new();
+        let bindings = Arc::new(Mutex::new(Vec::new()));
+        let mut hook = BindingTracker { bindings: bindings.clone() };
+
+        // Load a function with parameters
+        let code = "define add(a, b) = a + b";
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        // Call the function
+        let expr = Expression::Operation {
+            name: "add".to_string(),
+            args: vec![
+                Expression::Const("1".to_string()),
+                Expression::Const("2".to_string()),
+            ],
+        };
+        let result = eval.eval_with_debug(&expr, &mut hook, 0);
+        assert!(result.is_ok());
+
+        // Check that bindings were tracked
+        let tracked = bindings.lock().unwrap();
+        assert!(tracked.len() >= 2, "Expected at least 2 bindings, got {}", tracked.len());
+        assert!(tracked.iter().any(|(name, _)| name == "a"));
+        assert!(tracked.iter().any(|(name, _)| name == "b"));
     }
 }
