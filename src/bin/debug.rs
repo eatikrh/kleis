@@ -645,18 +645,27 @@ impl DebugAdapter {
     }
 
     fn handle_scopes(&mut self, request: &DapRequest) -> io::Result<()> {
-        // TODO: Implement real scopes from evaluator
+        // Scopes mirror the evaluator's actual scope model:
+        // 1. Current Substitution - the subst map from current function/let evaluation
+        // 2. REPL Bindings - from :let commands (evaluator.bindings)
+        // 3. Functions - defined functions (evaluator.functions)
         self.respond(
             request,
             true,
             Some(json!({
                 "scopes": [{
-                    "name": "Local",
+                    "name": "Current Substitution",
+                    "presentationHint": "locals",
                     "variablesReference": 1,
                     "expensive": false
                 }, {
-                    "name": "Global",
+                    "name": "REPL Bindings",
+                    "presentationHint": "globals",
                     "variablesReference": 2,
+                    "expensive": false
+                }, {
+                    "name": "Functions",
+                    "variablesReference": 3,
                     "expensive": false
                 }]
             })),
@@ -672,7 +681,8 @@ impl DebugAdapter {
             .unwrap_or(0);
 
         let variables: Vec<Value> = if reference == 1 {
-            // Local scope - get bindings from current stack frame
+            // Current Substitution - the subst map from current function/let
+            // This mirrors what the evaluator passes to substitute()
             let stack = self.hook_stack.lock().unwrap();
             if let Some(frame) = stack.last() {
                 frame
@@ -682,6 +692,7 @@ impl DebugAdapter {
                         json!({
                             "name": name,
                             "value": value,
+                            "type": "substitution",
                             "variablesReference": 0
                         })
                     })
@@ -690,38 +701,41 @@ impl DebugAdapter {
                 Vec::new()
             }
         } else if reference == 2 {
-            // Global scope - get all bindings + evaluator bindings
-            let bindings = self.hook_bindings.lock().unwrap();
-            let mut vars: Vec<Value> = bindings
+            // REPL Bindings - from evaluator.bindings (:let commands)
+            // This is the evaluator's self.bindings HashMap
+            self.evaluator
+                .list_bindings()
                 .iter()
-                .map(|(name, value)| {
+                .map(|(name, expr)| {
                     json!({
                         "name": name,
-                        "value": value,
+                        "value": format!("{:?}", expr),
+                        "type": "binding",
                         "variablesReference": 0
                     })
                 })
-                .collect();
-
-            // Add evaluator's global bindings
-            for (name, expr) in self.evaluator.list_bindings() {
-                vars.push(json!({
-                    "name": name,
-                    "value": format!("{:?}", expr),
-                    "variablesReference": 0
-                }));
-            }
-
-            // Add defined functions
-            for name in self.evaluator.list_functions() {
-                vars.push(json!({
-                    "name": name,
-                    "value": "<function>",
-                    "variablesReference": 0
-                }));
-            }
-
-            vars
+                .collect()
+        } else if reference == 3 {
+            // Functions - from evaluator.functions (define commands)
+            // This is the evaluator's self.functions HashMap
+            self.evaluator
+                .list_functions()
+                .iter()
+                .map(|name| {
+                    // Get function info if available
+                    let info = self
+                        .evaluator
+                        .get_function(name)
+                        .map(|c| format!("({}) -> ...", c.params.join(", ")))
+                        .unwrap_or_else(|| "<function>".to_string());
+                    json!({
+                        "name": name,
+                        "value": info,
+                        "type": "function",
+                        "variablesReference": 0
+                    })
+                })
+                .collect()
         } else {
             Vec::new()
         };
