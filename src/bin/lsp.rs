@@ -27,6 +27,7 @@ use tower_lsp::{Client, LanguageServer, LspService, Server};
 
 use kleis::kleis_ast::{Program, TopLevel};
 use kleis::kleis_parser::{parse_kleis_program, KleisParseError};
+use kleis::type_checker::TypeChecker;
 use kleis::type_context::TypeContextBuilder;
 
 /// Document state stored by the language server
@@ -233,7 +234,63 @@ impl KleisLanguageServer {
             }
         }
 
+        // =======================================================================
+        // TYPE CHECKING - Run type inference on function definitions
+        // =======================================================================
+        let type_diagnostics = self.run_type_checking(&program, text);
+        all_diagnostics.extend(type_diagnostics);
+
         (Some(program), Some(builder), imports, all_diagnostics)
+    }
+
+    /// Run type checking on function definitions and collect diagnostics
+    fn run_type_checking(&self, program: &Program, text: &str) -> Vec<Diagnostic> {
+        let mut diagnostics = Vec::new();
+
+        // Create a type checker with stdlib loaded
+        let mut checker = match TypeChecker::with_stdlib() {
+            Ok(c) => c,
+            Err(e) => {
+                // If we can't load stdlib, just log and continue
+                // This shouldn't block the user from editing
+                eprintln!("Warning: Could not load stdlib for type checking: {}", e);
+                return diagnostics;
+            }
+        };
+
+        // Type check each function definition
+        for item in &program.items {
+            if let TopLevel::FunctionDef(func_def) = item {
+                match checker.check_function_def(func_def) {
+                    Ok(_inferred_type) => {
+                        // Success! The function type-checks.
+                        // We could add an info diagnostic or store the type for inlay hints
+                    }
+                    Err(e) => {
+                        // Type error - create diagnostic
+                        let line_num = find_definition_line(text, &func_def.name);
+                        diagnostics.push(Diagnostic {
+                            range: Range {
+                                start: Position {
+                                    line: line_num,
+                                    character: 0,
+                                },
+                                end: Position {
+                                    line: line_num,
+                                    character: 80,
+                                },
+                            },
+                            severity: Some(DiagnosticSeverity::ERROR),
+                            source: Some("kleis-types".to_string()),
+                            message: e,
+                            ..Default::default()
+                        });
+                    }
+                }
+            }
+        }
+
+        diagnostics
     }
 
     /// Convert a parse error to an LSP diagnostic
@@ -2346,6 +2403,29 @@ fn byte_offset_to_position(text: &str, offset: usize) -> (usize, usize) {
     }
 
     (line, col)
+}
+
+/// Find the line number where a definition (function, data, etc.) is declared
+fn find_definition_line(text: &str, name: &str) -> u32 {
+    let patterns = [
+        format!("define {}(", name),
+        format!("define {} =", name),
+        format!("define {} :", name),
+        format!("data {} =", name),
+        format!("data {}(", name),
+        format!("structure {}(", name),
+        format!("structure {} ", name),
+    ];
+
+    for (line_num, line) in text.lines().enumerate() {
+        for pattern in &patterns {
+            if line.contains(pattern.as_str()) {
+                return line_num as u32;
+            }
+        }
+    }
+
+    0 // Default to first line if not found
 }
 
 /// Extract the word at a given column position in a line

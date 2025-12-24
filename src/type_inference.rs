@@ -494,19 +494,26 @@ impl TypeInference {
 
             // Let binding: infer value type, bind variable(s), infer body
             // Grammar v0.8: supports pattern destructuring
-            // Note: type_annotation is parsed but not yet used for type checking
-            // TODO: When type_annotation is present, verify value_ty matches it
+            // When type_annotation is present, USE IT for the binding type
             Expression::Let {
                 pattern,
+                type_annotation,
                 value,
                 body,
-                ..
             } => {
-                // Infer type of the value
-                let value_ty = self.infer(value, context_builder)?;
+                // Determine the type to bind:
+                // 1. If type annotation is present, parse and use it
+                // 2. Otherwise, infer from the value
+                let binding_ty = if let Some(ref ann) = type_annotation {
+                    // Parse the type annotation string into a Type
+                    self.parse_type_annotation(ann)
+                } else {
+                    // No annotation - infer from value
+                    self.infer(value, context_builder)?
+                };
 
                 // Bind all variables from the pattern
-                self.bind_pattern_variables(pattern, &value_ty);
+                self.bind_pattern_variables(pattern, &binding_ty);
 
                 // Infer body type with the new bindings
                 self.infer(body, context_builder)
@@ -985,6 +992,86 @@ impl TypeInference {
         }
     }
 
+    /// Parse a type annotation string into a Type
+    ///
+    /// This handles annotations like "Matrix(3, 3, ℝ)" and converts them to Type.
+    /// For parametric types with concrete dimensions, this creates a Data type
+    /// with the dimensions captured.
+    fn parse_type_annotation(&self, annotation: &str) -> Type {
+        // Handle common base types
+        match annotation.trim() {
+            "ℝ" | "Real" => return Type::scalar(),
+            "ℂ" | "Complex" => {
+                return Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Complex".to_string(),
+                    args: vec![],
+                }
+            }
+            "ℤ" | "Int" | "Integer" => {
+                return Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: "Integer".to_string(),
+                    args: vec![],
+                }
+            }
+            "ℕ" | "Nat" => return Type::Nat,
+            "𝔹" | "Bool" => return Type::Bool,
+            "String" => return Type::String,
+            _ => {}
+        }
+
+        // Handle parametric types like Matrix(3, 3, ℝ)
+        if let Some(paren_start) = annotation.find('(') {
+            let type_name = annotation[..paren_start].trim();
+            if let Some(paren_end) = annotation.rfind(')') {
+                let params_str = &annotation[paren_start + 1..paren_end];
+
+                match type_name {
+                    "Matrix" => {
+                        // Parse Matrix(m, n, T)
+                        let parts: Vec<&str> = params_str.split(',').collect();
+                        if parts.len() >= 2 {
+                            if let (Ok(m), Ok(n)) = (
+                                parts[0].trim().parse::<usize>(),
+                                parts[1].trim().parse::<usize>(),
+                            ) {
+                                // Parse element type if present, default to ℝ
+                                let elem_type = if parts.len() >= 3 {
+                                    self.parse_type_annotation(parts[2].trim())
+                                } else {
+                                    Type::scalar()
+                                };
+                                return Type::matrix(m, n, elem_type);
+                            }
+                        }
+                    }
+                    "Vector" => {
+                        // Parse Vector(n, T)
+                        let parts: Vec<&str> = params_str.split(',').collect();
+                        if let Ok(n) = parts[0].trim().parse::<usize>() {
+                            // Parse element type if present, default to ℝ
+                            let elem_type = if parts.len() >= 2 {
+                                self.parse_type_annotation(parts[1].trim())
+                            } else {
+                                Type::scalar()
+                            };
+                            return Type::vector(n, elem_type);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // For anything else, return a Data type with the name
+        Type::Data {
+            type_name: annotation.trim().to_string(),
+            constructor: annotation.trim().to_string(),
+            args: vec![],
+        }
+    }
+
     /// Bind all variables in a pattern to a type (Grammar v0.8: for let destructuring)
     ///
     /// This is used for `let pattern = value in body` where we need to bind
@@ -999,12 +1086,18 @@ impl TypeInference {
             Pattern::Variable(name) => {
                 self.context.bind(name.clone(), ty.clone());
             }
-            Pattern::Constructor { args, .. } => {
-                // For constructor patterns, we'd need to look up field types
-                // For now, bind each arg to a fresh type variable
-                for arg in args {
-                    let fresh_ty = self.context.fresh_var();
-                    self.bind_pattern_variables(arg, &fresh_ty);
+            Pattern::Constructor { name, args } => {
+                if args.is_empty() {
+                    // Nullary constructor like `A` or `B` - treat as variable binding
+                    // This handles `let A : Matrix(3,3,ℝ) = ...` where A is a variable name
+                    self.context.bind(name.clone(), ty.clone());
+                } else {
+                    // For constructor patterns with args, we'd need to look up field types
+                    // For now, bind each arg to a fresh type variable
+                    for arg in args {
+                        let fresh_ty = self.context.fresh_var();
+                        self.bind_pattern_variables(arg, &fresh_ty);
+                    }
                 }
             }
             Pattern::Constant(_) => {
