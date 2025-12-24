@@ -1,8 +1,8 @@
 # Appendix A: Grammar Reference
 
-This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.9).
+This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.93).
 
-> **Complete Grammar:** See `docs/grammar/kleis_grammar_v09.md` for the full specification.
+> **Complete Grammar:** See `docs/grammar/kleis_grammar_v093.md` for the full specification.
 
 ## Program Structure
 
@@ -18,6 +18,7 @@ declaration ::= importDecl              // v0.8: Module imports
               | functionDef
               | operationDecl
               | typeAlias
+              | exampleBlock            // v0.93: Executable documentation
 ```
 
 ## Import Statements (v0.8)
