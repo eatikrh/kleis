@@ -7,7 +7,7 @@ and validates them by actually running them through the Kleis parser.
 
 Usage:
     python3 scripts/validate_manual_examples.py          # Pattern checks only
-    python3 scripts/validate_manual_examples.py --strict # Actually run kleis --check
+    python3 scripts/validate_manual_examples.py --strict # Actually run kleis check
     
 Requirements:
     - For --strict mode: cargo build --bin kleis
@@ -146,7 +146,7 @@ def should_validate_block(code: str) -> bool:
 
 def validate_with_kleis_cli(code: str, line_offset: int, project_root: Path, verbose: bool = False) -> list[str]:
     """
-    Validate code by running it through `kleis --check`.
+    Validate code by running it through `kleis check`.
     Returns list of error messages if parsing fails.
     """
     issues = []
@@ -173,9 +173,9 @@ def validate_with_kleis_cli(code: str, line_offset: int, project_root: Path, ver
         
         cmd = None
         if kleis_binary.exists():
-            cmd = [str(kleis_binary), "--check", temp_path]
+            cmd = [str(kleis_binary), "check", temp_path]
         else:
-            cmd = ["cargo", "run", "--bin", "kleis", "--quiet", "--", "--check", temp_path]
+            cmd = ["cargo", "run", "--bin", "kleis", "--quiet", "--", "check", temp_path]
         
         if verbose:
             print(f"      🔧 Running: {' '.join(cmd)}")
@@ -313,7 +313,7 @@ def main():
     parser.add_argument(
         "--strict", 
         action="store_true",
-        help="Run actual syntax check with 'kleis --check' (requires built kleis binary)"
+        help="Run actual syntax check with 'kleis check' (requires built kleis binary)"
     )
     parser.add_argument(
         "--verbose", "-v",
@@ -340,7 +340,7 @@ def main():
     
     # Check if strict mode
     if args.strict:
-        print("🔧 Strict mode: will run 'kleis --check' on code blocks\n")
+        print("🔧 Strict mode: will run 'kleis check' on code blocks\n")
         print("📦 Checking Kleis CLI availability...")
         if check_kleis_available(project_root):
             print("   ✅ Kleis CLI found - will validate syntax\n")
@@ -407,13 +407,13 @@ def main():
         print(f"✅ All {len(md_files)} files passed validation!")
         print(f"   Validated {blocks_validated} code blocks")
         if args.strict:
-            print(f"   ✅ {parser_checked_total} blocks parsed with 'kleis --check'")
+            print(f"   ✅ {parser_checked_total} blocks parsed with 'kleis check'")
         sys.exit(0)
     else:
         print(f"⚠️  Found {total_issues} issue(s) in {files_with_issues} file(s)")
         print(f"   Validated {blocks_validated} code blocks total")
         if args.strict:
-            print(f"   Parsed {parser_checked_total} blocks with 'kleis --check'")
+            print(f"   Parsed {parser_checked_total} blocks with 'kleis check'")
         print("\n   Note: Some issues are in educational examples (fragments, concepts).")
         print("   These examples use `kleis` tags for future Linguist syntax highlighting.")
         print("   Fix critical issues, but fragments showing syntax patterns are OK.")
