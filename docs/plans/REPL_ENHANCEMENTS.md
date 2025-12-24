@@ -114,14 +114,15 @@ definitions_by_file: HashMap<PathBuf, DefinitionSet>
 - [x] Update `load_file_recursive` to record provenance
 - [x] Add `:sources` command to show loaded files
 
-### Phase 2: Unload/Reload
-- [ ] Add `remove_function()` method to Evaluator
-- [ ] Add `remove_structure()` method to StructureRegistry  
-- [ ] Add `remove_data_type()` method to Evaluator
-- [ ] Implement `:unload` command (with warning)
-- [ ] Implement `:reload` command (unload + load, with confirmation)
-- [ ] Implement `:reset` command (clear all state)
-- [ ] Handle TypeChecker cache invalidation
+### Phase 2: Unload/Reload ✅ DONE
+- [x] Add `remove_function()` method to Evaluator
+- [x] Add `remove_structure()` method to StructureRegistry  
+- [x] Add `remove_data_type()` method to Evaluator
+- [x] Add `reset()` method to Evaluator and StructureRegistry
+- [x] Implement `:unload` command (with warning about bindings)
+- [x] Implement `:reload` command (unload + load)
+- [x] Implement `:reset` command (clear all state)
+- [ ] Handle TypeChecker cache invalidation (future enhancement)
 
 ### Phase 3: Dependency Tracking (Optional Enhancement)
 - [ ] Track which functions were called during `:let` evaluation

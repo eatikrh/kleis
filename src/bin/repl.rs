@@ -320,6 +320,16 @@ fn handle_command(
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
         ":sources" | ":src" => show_sources(provenance),
+        ":unload" | ":ul" => unload_file(arg, evaluator, registry, provenance),
+        ":reload" | ":rl" => reload_file(
+            arg,
+            evaluator,
+            registry,
+            imported_paths,
+            provenance,
+            type_checker,
+        ),
+        ":reset" => reset_all(evaluator, registry, provenance, imported_paths),
         _ => println!(
             "Unknown command: {}. Type :help for available commands.",
             cmd
@@ -363,6 +373,11 @@ fn handle_command_no_z3(
         ":define" | ":def" => define_function(arg, evaluator),
         ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
         ":sources" | ":src" => show_sources(provenance),
+        ":unload" | ":ul" => unload_file_no_z3(arg, evaluator, provenance),
+        ":reload" | ":rl" => {
+            reload_file_no_z3(arg, evaluator, imported_paths, provenance, type_checker)
+        }
+        ":reset" => reset_all_no_z3(evaluator, provenance, imported_paths),
         _ => println!(
             "Unknown command: {}. Type :help for available commands.",
             cmd
@@ -416,6 +431,9 @@ fn print_help_main() {
     println!();
     println!("  Tip: Use `it` in expressions to refer to the last :eval result");
     println!("  :load, :l <file>   Load a .kleis file");
+    println!("  :unload, :ul <file> Unload a file (remove its definitions)");
+    println!("  :reload, :rl <file> Reload a file (unload + load)");
+    println!("  :reset             Clear all definitions and bindings");
     println!("  :env, :e           Show defined functions");
     println!("  :sources, :src     Show which files are loaded and what they defined");
     println!("  :define <def>      Define a function");
@@ -2326,7 +2344,287 @@ fn show_sources(provenance: &ProvenanceTracker) {
     }
 
     println!();
-    println!("Use :env to see function details, :unload <file> to remove (coming soon)");
+    println!("Use :env to see function details, :unload <file> to remove definitions");
+}
+
+// =========================================================================
+// Unload / Reload / Reset Commands
+// =========================================================================
+
+/// Unload a file - remove all definitions that came from it
+#[cfg(feature = "axiom-verification")]
+fn unload_file(
+    path: &str,
+    evaluator: &mut Evaluator,
+    registry: &mut StructureRegistry,
+    provenance: &mut ProvenanceTracker,
+) {
+    if path.is_empty() {
+        println!("Usage: :unload <file.kleis>");
+        return;
+    }
+
+    let file_path = Path::new(path);
+
+    // Check if file is loaded
+    if !provenance.is_file_loaded(file_path) {
+        println!("❌ File '{}' is not loaded.", path);
+        return;
+    }
+
+    // Get definitions to remove
+    let defs = match provenance.prepare_unload(file_path) {
+        Some(d) => d,
+        None => {
+            println!("❌ No definitions found for '{}'.", path);
+            return;
+        }
+    };
+
+    // Track what we removed
+    let mut removed_funcs = 0;
+    let mut removed_structs = 0;
+    let mut removed_data = 0;
+
+    // Remove functions
+    for func_name in &defs.functions {
+        if evaluator.remove_function(func_name) {
+            removed_funcs += 1;
+        }
+    }
+
+    // Remove structures from both evaluator and registry
+    for struct_name in &defs.structures {
+        evaluator.remove_structure(struct_name);
+        if registry.remove_structure(struct_name) {
+            removed_structs += 1;
+        }
+    }
+
+    // Remove data types
+    for data_name in &defs.data_types {
+        if evaluator.remove_data_type(data_name) {
+            removed_data += 1;
+        }
+    }
+
+    // Remove from provenance tracker
+    provenance.remove_file(file_path);
+
+    println!(
+        "✅ Unloaded '{}': {} functions, {} structures, {} data types",
+        path, removed_funcs, removed_structs, removed_data
+    );
+
+    // Check if there are bindings that might be affected
+    let (_, _, _, binding_count) = evaluator.definition_counts();
+    if binding_count > 0 {
+        println!(
+            "⚠️  Note: {} bindings exist that may reference removed definitions. Use :env to check.",
+            binding_count
+        );
+    }
+}
+
+/// Unload a file (non-Z3 version - no registry)
+#[cfg(not(feature = "axiom-verification"))]
+fn unload_file_no_z3(path: &str, evaluator: &mut Evaluator, provenance: &mut ProvenanceTracker) {
+    if path.is_empty() {
+        println!("Usage: :unload <file.kleis>");
+        return;
+    }
+
+    let file_path = Path::new(path);
+
+    if !provenance.is_file_loaded(file_path) {
+        println!("❌ File '{}' is not loaded.", path);
+        return;
+    }
+
+    let defs = match provenance.prepare_unload(file_path) {
+        Some(d) => d,
+        None => {
+            println!("❌ No definitions found for '{}'.", path);
+            return;
+        }
+    };
+
+    let mut removed_funcs = 0;
+    let mut removed_data = 0;
+
+    for func_name in &defs.functions {
+        if evaluator.remove_function(func_name) {
+            removed_funcs += 1;
+        }
+    }
+
+    for data_name in &defs.data_types {
+        if evaluator.remove_data_type(data_name) {
+            removed_data += 1;
+        }
+    }
+
+    // Also remove structures from evaluator
+    for struct_name in &defs.structures {
+        evaluator.remove_structure(struct_name);
+    }
+
+    provenance.remove_file(file_path);
+
+    println!(
+        "✅ Unloaded '{}': {} functions, {} structures, {} data types",
+        path,
+        removed_funcs,
+        defs.structures.len(),
+        removed_data
+    );
+
+    let (_, _, _, binding_count) = evaluator.definition_counts();
+    if binding_count > 0 {
+        println!(
+            "⚠️  Note: {} bindings exist that may reference removed definitions.",
+            binding_count
+        );
+    }
+}
+
+/// Reload a file - unload then load again
+#[cfg(feature = "axiom-verification")]
+fn reload_file(
+    path: &str,
+    evaluator: &mut Evaluator,
+    registry: &mut StructureRegistry,
+    imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
+    type_checker: &mut kleis::type_checker::TypeChecker,
+) {
+    if path.is_empty() {
+        println!("Usage: :reload <file.kleis>");
+        return;
+    }
+
+    let file_path = Path::new(path);
+
+    // Check if file exists
+    if !file_path.exists() {
+        println!("❌ File '{}' not found.", path);
+        return;
+    }
+
+    // Unload first (if loaded)
+    if provenance.is_file_loaded(file_path) {
+        // Silently unload
+        if let Some(defs) = provenance.prepare_unload(file_path) {
+            for func_name in &defs.functions {
+                evaluator.remove_function(func_name);
+            }
+            for struct_name in &defs.structures {
+                evaluator.remove_structure(struct_name);
+                registry.remove_structure(struct_name);
+            }
+            for data_name in &defs.data_types {
+                evaluator.remove_data_type(data_name);
+            }
+            provenance.remove_file(file_path);
+        }
+        println!("♻️  Reloading '{}'...", path);
+    } else {
+        println!("📂 Loading '{}'...", path);
+    }
+
+    // Now load
+    load_file(
+        path,
+        evaluator,
+        registry,
+        imported_paths,
+        provenance,
+        type_checker,
+    );
+}
+
+/// Reload a file (non-Z3 version)
+#[cfg(not(feature = "axiom-verification"))]
+fn reload_file_no_z3(
+    path: &str,
+    evaluator: &mut Evaluator,
+    imported_paths: &mut Vec<String>,
+    provenance: &mut ProvenanceTracker,
+    type_checker: &mut kleis::type_checker::TypeChecker,
+) {
+    if path.is_empty() {
+        println!("Usage: :reload <file.kleis>");
+        return;
+    }
+
+    let file_path = Path::new(path);
+
+    if !file_path.exists() {
+        println!("❌ File '{}' not found.", path);
+        return;
+    }
+
+    if provenance.is_file_loaded(file_path) {
+        if let Some(defs) = provenance.prepare_unload(file_path) {
+            for func_name in &defs.functions {
+                evaluator.remove_function(func_name);
+            }
+            for struct_name in &defs.structures {
+                evaluator.remove_structure(struct_name);
+            }
+            for data_name in &defs.data_types {
+                evaluator.remove_data_type(data_name);
+            }
+            provenance.remove_file(file_path);
+        }
+        println!("♻️  Reloading '{}'...", path);
+    } else {
+        println!("📂 Loading '{}'...", path);
+    }
+
+    load_file(path, evaluator, imported_paths, provenance, type_checker);
+}
+
+/// Reset all state - clear everything
+#[cfg(feature = "axiom-verification")]
+fn reset_all(
+    evaluator: &mut Evaluator,
+    registry: &mut StructureRegistry,
+    provenance: &mut ProvenanceTracker,
+    imported_paths: &mut Vec<String>,
+) {
+    let (funcs, data, structs, bindings) = evaluator.definition_counts();
+
+    evaluator.reset();
+    registry.reset();
+    provenance.reset();
+    imported_paths.clear();
+
+    println!(
+        "🗑️  Reset complete: cleared {} functions, {} data types, {} structures, {} bindings",
+        funcs, data, structs, bindings
+    );
+    println!("   REPL is now empty. Use :load to load files.");
+}
+
+/// Reset all state (non-Z3 version)
+#[cfg(not(feature = "axiom-verification"))]
+fn reset_all_no_z3(
+    evaluator: &mut Evaluator,
+    provenance: &mut ProvenanceTracker,
+    imported_paths: &mut Vec<String>,
+) {
+    let (funcs, data, structs, bindings) = evaluator.definition_counts();
+
+    evaluator.reset();
+    provenance.reset();
+    imported_paths.clear();
+
+    println!(
+        "🗑️  Reset complete: cleared {} functions, {} data types, {} structures, {} bindings",
+        funcs, data, structs, bindings
+    );
+    println!("   REPL is now empty. Use :load to load files.");
 }
 
 fn define_function(input: &str, evaluator: &mut Evaluator) {

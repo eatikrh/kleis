@@ -172,6 +172,34 @@ impl StructureRegistry {
         self.structures.len()
     }
 
+    // =========================================================================
+    // Definition Removal (for :unload/:reload/:reset)
+    // =========================================================================
+
+    /// Remove a structure by name
+    /// Returns true if the structure was found and removed
+    pub fn remove_structure(&mut self, name: &str) -> bool {
+        // Also remove any implements blocks for this structure
+        self.implements.remove(name);
+        self.structures.remove(name).is_some()
+    }
+
+    /// Remove all implements blocks for a structure
+    /// Returns the number of implements blocks removed
+    pub fn remove_implements_for_structure(&mut self, structure_name: &str) -> usize {
+        if let Some(impls) = self.implements.remove(structure_name) {
+            impls.len()
+        } else {
+            0
+        }
+    }
+
+    /// Clear all structures and implements (for :reset)
+    pub fn reset(&mut self) {
+        self.structures.clear();
+        self.implements.clear();
+    }
+
     /// Get all axioms from a structure
     ///
     /// Returns a vector of (axiom_name, axiom_expression) pairs.

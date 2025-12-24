@@ -514,6 +514,78 @@ impl Evaluator {
     }
 
     // =========================================================================
+    // Definition Removal (for :unload/:reload/:reset)
+    // =========================================================================
+
+    /// Remove a function by name
+    /// Returns true if the function was found and removed
+    pub fn remove_function(&mut self, name: &str) -> bool {
+        self.functions.remove(name).is_some()
+    }
+
+    /// Remove a data type by name, including all its constructors
+    /// Returns true if the data type was found and removed
+    pub fn remove_data_type(&mut self, name: &str) -> bool {
+        // Find the data type and get its constructors
+        let mut found_idx = None;
+        let mut constructors_to_remove = Vec::new();
+
+        for (idx, data_type) in self.data_types.iter().enumerate() {
+            if data_type.name == name {
+                found_idx = Some(idx);
+                for variant in &data_type.variants {
+                    constructors_to_remove.push(variant.name.clone());
+                }
+                break;
+            }
+        }
+
+        if let Some(idx) = found_idx {
+            // Remove the data type
+            self.data_types.remove(idx);
+
+            // Remove its constructors from both sets
+            for ctor in constructors_to_remove {
+                self.adt_constructors.remove(&ctor);
+                self.all_constructors.remove(&ctor);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Remove a structure by name
+    /// Returns true if the structure was found and removed
+    pub fn remove_structure(&mut self, name: &str) -> bool {
+        let initial_len = self.structures.len();
+        self.structures.retain(|s| s.name != name);
+        self.structures.len() < initial_len
+    }
+
+    /// Clear all definitions (for :reset command)
+    /// Removes all functions, data types, structures, and bindings
+    pub fn reset(&mut self) {
+        self.functions.clear();
+        self.bindings.clear();
+        self.last_result = None;
+        self.adt_constructors.clear();
+        self.all_constructors.clear();
+        self.data_types.clear();
+        self.structures.clear();
+    }
+
+    /// Get counts for status display
+    pub fn definition_counts(&self) -> (usize, usize, usize, usize) {
+        (
+            self.functions.len(),
+            self.data_types.len(),
+            self.structures.len(),
+            self.bindings.len(),
+        )
+    }
+
+    // =========================================================================
     // Beta Reduction for Lambda Expressions
     // =========================================================================
 
