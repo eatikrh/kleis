@@ -1,14 +1,23 @@
-name: CI
+name: VS Code Extension CI
 
 on:
   push:
     branches: [ '**' ]
+    paths:
+      - 'vscode-kleis/**'
+      - '.github/workflows/vscode-extension-ci.yml'
   pull_request:
     branches: [ '**' ]
+    paths:
+      - 'vscode-kleis/**'
+      - '.github/workflows/vscode-extension-ci.yml'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode-kleis
     strategy:
       matrix:
         node-version: [20.x]
@@ -21,6 +30,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+          cache-dependency-path: vscode-kleis/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -37,5 +47,5 @@ jobs:
       - name: Run activation tests
         run: npm run test-activation
 
-      - name: Run full test script (if present)
-        run: npm test || true
+      - name: Package extension
+        run: npm run package
