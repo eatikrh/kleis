@@ -124,18 +124,36 @@ definitions_by_file: HashMap<PathBuf, DefinitionSet>
 - [x] Implement `:reset` command (clear all state)
 - [ ] Handle TypeChecker cache invalidation (future enhancement)
 
-### Phase 3: Dependency Tracking (Optional Enhancement)
+### Phase 3: Export Bindings ✅ DONE
+- [x] Export `:let` bindings as `define` statements  
+- [x] Handle matrix formatting for round-trip parsing
+- [x] Verify List literals round-trip correctly
+
+### Phase 3.5: Type-Preserving Exports (Future Enhancement)
+- [ ] Store types alongside bindings: `bindings: HashMap<String, (Expression, Option<Type>)>`
+- [ ] Export with type ascription: `define m : Matrix(2, 2, ℝ) = matrix([[...]])`
+- [ ] Handle complex types: parametric types, type aliases
+- [ ] Consider: What if the type uses a type alias from an unloaded file?
+- [ ] Consider: Inferred types vs explicit annotations — which to preserve?
+
+**Why this is tricky:**
+- Type checker currently runs at parse time, not stored with bindings
+- Types may reference structures/aliases that could be unloaded
+- Inferred types can be more general than what user intended
+- Round-trip: `Matrix(2, 2, ℝ)` → export → reload → must type-check again
+
+### Phase 4: Dependency Tracking (Optional Enhancement)
 - [ ] Track which functions were called during `:let` evaluation
 - [ ] On reload, identify which bindings may be stale
 - [ ] Show specific warnings: "bindings X, Y reference 'multiply'"
 
-### Phase 4: IDE Integration
+### Phase 5: IDE Integration
 - [ ] Create VS Code extension skeleton
 - [ ] Add REPL panel (webview)
 - [ ] Connect to kleis-lsp
 - [ ] Add file change notifications
 
-### Phase 5: Debugging
+### Phase 6: Debugging
 - [ ] Create `kleis-debug` binary
 - [ ] Implement DAP protocol
 - [ ] Add tracing to evaluator
