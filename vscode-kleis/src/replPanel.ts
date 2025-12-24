@@ -110,27 +110,28 @@ export class ReplPanel {
         }
 
         // 2. Check common build locations relative to workspace
+        // The REPL binary is named 'repl' (not 'kleis-repl')
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (workspaceFolders) {
             for (const folder of workspaceFolders) {
                 // Check release build
-                const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'kleis-repl');
+                const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'repl');
                 if (fs.existsSync(releasePath)) {
                     return releasePath;
                 }
                 // Check debug build
-                const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'kleis-repl');
+                const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'repl');
                 if (fs.existsSync(debugPath)) {
                     return debugPath;
                 }
             }
         }
 
-        // 3. Check if kleis-repl is in PATH
+        // 3. Check if repl is in PATH
         const pathEnv = process.env.PATH || '';
         const pathDirs = pathEnv.split(path.delimiter);
         for (const dir of pathDirs) {
-            const replPath = path.join(dir, 'kleis-repl');
+            const replPath = path.join(dir, 'repl');
             if (fs.existsSync(replPath)) {
                 return replPath;
             }
@@ -148,8 +149,8 @@ export class ReplPanel {
         if (!replPath) {
             this.sendToWebview({
                 type: 'error',
-                text: 'Kleis REPL (kleis-repl) not found.\n' +
-                      'Build it with: cargo build --release --bin kleis-repl\n' +
+                text: 'Kleis REPL not found.\n' +
+                      'Build it with: cargo build --release --bin repl\n' +
                       'Or set kleis.replPath in settings.'
             });
             return;
