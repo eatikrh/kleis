@@ -75,21 +75,30 @@ cargo run --bin repl
 The `kleis` binary provides a unified interface for all operations:
 
 ```bash
-# Build the unified binary
-cargo build --release --bin kleis
+# Build with auto-detected Z3
+./scripts/build-kleis.sh
 
-# IDE integration (LSP + DAP for VS Code)
+# Build with numerical features (BLAS/LAPACK for eigenvalues, SVD)
+./scripts/build-kleis.sh --numerical
+
+# Build without Z3 (no axiom verification, faster compile)
+./scripts/build-kleis.sh --minimal
+```
+
+**Run using the wrapper script** (auto-detects Z3 and binary location):
+
+```bash
+./scripts/kleis server          # LSP + DAP for VS Code
+./scripts/kleis eval "1 + 2"    # Evaluate expression
+./scripts/kleis eval -f script.kleis  # Evaluate file
+./scripts/kleis check myfile.kleis    # Check for errors
+./scripts/kleis repl            # Interactive REPL
+```
+
+Or add `scripts/` to your PATH:
+```bash
+export PATH="$PATH:/path/to/kleis/scripts"
 kleis server
-
-# Command-line evaluation
-kleis eval "1 + 2"
-kleis eval -f script.kleis
-
-# Check files for errors
-kleis check myfile.kleis
-
-# Interactive REPL
-kleis repl
 ```
 
 | Subcommand | Description |
@@ -98,6 +107,12 @@ kleis repl
 | `kleis eval` | Evaluate expressions from command line |
 | `kleis check` | Check files for parse/type errors |
 | `kleis repl` | Interactive REPL (same as `cargo run --bin repl`) |
+
+| Build Option | Description |
+|--------------|-------------|
+| `--numerical` | Enable BLAS/LAPACK (eigenvalues, SVD, Schur decomposition) |
+| `--minimal` | Disable Z3 (no `:verify` command, faster compile) |
+| `--debug` | Debug build (faster compile, slower runtime) |
 
 ### Run Tests
 
