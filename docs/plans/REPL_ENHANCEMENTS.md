@@ -157,12 +157,36 @@ definitions_by_file: HashMap<PathBuf, DefinitionSet>
 - [x] Create `kleis-debug` binary (standalone)
 - [x] Implement DAP protocol basics
 - [x] Add tracing to evaluator (DebugHook trait)
-- [x] Source location tracking (SourceSpan in AST)
+- [x] Source location tracking (SourceSpan in FunctionDef/Closure)
 - [x] Align debugger scopes with evaluator model
 - [x] Create unified `kleis` binary (LSP + DAP)
 - [x] DAP via dynamic TCP port
 - [x] VS Code integration with unified server
 - [ ] Test end-to-end debugging session
+
+### Phase 6.5: Expression-Level Spans (Planned — see `EXPRESSION_SPANS.md`)
+
+**Current Limitation:** Breakpoints only work at function entry, not arbitrary lines.
+
+| Feature | Current State | With Expression Spans |
+|---------|---------------|----------------------|
+| Breakpoints (set) | ✅ Stored | ✅ Stored |
+| Breakpoints (hit) | ⚠️ Function entry only | ✅ Any expression line |
+| Stack trace | ✅ Real names | ✅ Real names |
+| Variables | ✅ Substitution model | ✅ Substitution model |
+| Scopes | ✅ Matches evaluator | ✅ Matches evaluator |
+
+**Why This Matters Beyond Debugging:**
+
+| System | Benefit from Expression Spans |
+|--------|-------------------------------|
+| **LSP Diagnostics** | Point to exact sub-expression with error |
+| **LSP Hover** | Show type of specific sub-expression under cursor |
+| **Go to Definition** | Know exactly which identifier was clicked |
+| **DAP Breakpoints** | Stop at specific expressions, not just function entry |
+| **Error Messages** | "Type mismatch at 5:12-5:17" vs "Error on line 5" |
+
+**Effort Estimate:** 3-5 days (see `docs/plans/EXPRESSION_SPANS.md` for full analysis)
 
 ### Unified Server Architecture
 
