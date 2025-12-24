@@ -46,6 +46,56 @@
         "path": "./syntaxes/kleis.tmLanguage.json"
       }
     ],
+    "commands": [
+      {
+        "command": "kleis.openRepl",
+        "title": "Kleis: Open REPL",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "kleis.runSelection",
+        "title": "Kleis: Run Selection in REPL"
+      },
+      {
+        "command": "kleis.loadFileInRepl",
+        "title": "Kleis: Load File in REPL"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "kleis.runSelection",
+          "when": "editorLangId == kleis && editorHasSelection",
+          "group": "kleis"
+        },
+        {
+          "command": "kleis.loadFileInRepl",
+          "when": "editorLangId == kleis",
+          "group": "kleis"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "kleis.openRepl",
+          "when": "editorLangId == kleis",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "kleis.openRepl",
+        "key": "ctrl+shift+k",
+        "mac": "cmd+shift+k",
+        "when": "editorLangId == kleis"
+      },
+      {
+        "command": "kleis.runSelection",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "editorLangId == kleis && editorHasSelection"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Kleis",
@@ -54,6 +104,11 @@
           "type": "string",
           "default": "",
           "description": "Path to kleis-lsp executable. Leave empty to use bundled server or find in PATH."
+        },
+        "kleis.replPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to kleis-repl executable. Leave empty to find in PATH or build location."
         },
         "kleis.trace.server": {
           "type": "string",

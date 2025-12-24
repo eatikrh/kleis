@@ -7,11 +7,12 @@
  * - Hover information (type signatures)
  * - Go to definition
  * - Document symbols (outline view)
+ * - Interactive REPL panel
  */
 
 import * as path from 'path';
 import * as fs from 'fs';
-import { workspace, ExtensionContext, window } from 'vscode';
+import { workspace, ExtensionContext, window, commands } from 'vscode';
 
 import {
     LanguageClient,
@@ -20,9 +21,59 @@ import {
     Executable,
 } from 'vscode-languageclient/node';
 
+import { ReplPanel } from './replPanel';
+
 let client: LanguageClient | undefined;
 
 export function activate(context: ExtensionContext) {
+    // Register REPL commands
+    context.subscriptions.push(
+        commands.registerCommand('kleis.openRepl', () => {
+            ReplPanel.createOrShow(context.extensionUri);
+        })
+    );
+
+    context.subscriptions.push(
+        commands.registerCommand('kleis.runSelection', () => {
+            const editor = window.activeTextEditor;
+            if (editor && ReplPanel.currentPanel) {
+                const selection = editor.document.getText(editor.selection);
+                if (selection) {
+                    ReplPanel.currentPanel.sendCommand(selection);
+                }
+            } else if (!ReplPanel.currentPanel) {
+                // Open REPL first, then run selection
+                ReplPanel.createOrShow(context.extensionUri);
+                setTimeout(() => {
+                    const editor = window.activeTextEditor;
+                    if (editor && ReplPanel.currentPanel) {
+                        const selection = editor.document.getText(editor.selection);
+                        if (selection) {
+                            ReplPanel.currentPanel.sendCommand(selection);
+                        }
+                    }
+                }, 1000); // Wait for REPL to start
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        commands.registerCommand('kleis.loadFileInRepl', () => {
+            const editor = window.activeTextEditor;
+            if (editor) {
+                const filePath = editor.document.uri.fsPath;
+                if (!ReplPanel.currentPanel) {
+                    ReplPanel.createOrShow(context.extensionUri);
+                    setTimeout(() => {
+                        ReplPanel.currentPanel?.loadFile(filePath);
+                    }, 1000); // Wait for REPL to start
+                } else {
+                    ReplPanel.currentPanel.loadFile(filePath);
+                }
+            }
+        })
+    );
+
     // Find the kleis-lsp server
     const serverPath = findServer(context);
     
@@ -32,6 +83,8 @@ export function activate(context: ExtensionContext) {
             'Diagnostics and other advanced features will be disabled. ' +
             'Build it with: cargo build --release --bin kleis-lsp'
         );
+        // Still activate - REPL can work without LSP
+        console.log('Kleis language extension activated (REPL only, no LSP)');
         return;
     }
 
@@ -69,7 +122,7 @@ export function activate(context: ExtensionContext) {
     // Start the client (this also starts the server)
     client.start();
 
-    console.log('Kleis language extension activated with LSP support');
+    console.log('Kleis language extension activated with LSP and REPL support');
 }
 
 export function deactivate(): Thenable<void> | undefined {
