@@ -146,6 +146,56 @@ couldn't be reused. Our unified server approach ensures:
 
 This is why we use `Arc<RwLock<...>>` (thread-safe) rather than `Rc<RefCell<...>>` (single-threaded).
 
+## DAP-Evaluator Communication via Channels
+
+The DAP server and evaluator run on different threads. They communicate via channels:
+
+```
+┌──────────────────┐                    ┌─────────────────────┐
+│   DAP Server     │                    │  Evaluator Thread   │
+│   (DapState)     │                    │                     │
+│                  │                    │                     │
+│  controller ─────┼─── command_tx ───► │  DapDebugHook       │
+│                  │    DebugAction     │  (blocks in         │
+│                  │    {Continue,      │   wait_for_command) │
+│                  │     StepInto,      │                     │
+│                  │     StepOver,      │                     │
+│                  │     StepOut}       │                     │
+│                  │                    │                     │
+│                  │◄── event_rx ─────  │  DapDebugHook       │
+│                  │    StopEvent       │  (sends when        │
+│                  │    {location,      │   should_stop=true) │
+│                  │     stack,         │                     │
+│                  │     reason}        │                     │
+└──────────────────┘                    └─────────────────────┘
+```
+
+**Key types:**
+
+```rust
+pub struct DapDebugHook {
+    stack: Vec<StackFrame>,           // Stack frames for IDE
+    breakpoints: Vec<Breakpoint>,     // Breakpoints
+    command_rx: Receiver<DebugAction>, // Receives from DAP
+    event_tx: Sender<StopEvent>,       // Sends to DAP
+}
+
+pub struct DapDebugController {
+    pub command_tx: Sender<DebugAction>,  // DAP sends commands
+    pub event_rx: Receiver<StopEvent>,    // DAP receives events
+}
+```
+
+**Flow:**
+1. `launch`: DAP creates `DapDebugHook` + `DapDebugController`
+2. `configurationDone`: DAP sets hook on evaluator, spawns eval thread
+3. Evaluator calls `hook.on_eval_start()` at each expression
+4. If `should_stop()` is true, hook sends `StopEvent` and blocks on `command_rx`
+5. DAP receives `StopEvent`, updates UI, waits for user action
+6. User clicks "Step Over" → DAP sends `DebugAction::StepOver` via `command_tx`
+7. Hook unblocks, returns `StepOver` to evaluator
+8. Evaluator continues until next stop condition
+
 ## Implementation
 
 - `src/context.rs` - `Document` struct with `imports: HashSet<PathBuf>` and `dirty: bool`
