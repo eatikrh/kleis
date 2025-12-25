@@ -29,12 +29,13 @@
 //! // result = plus(5, 5) (symbolic, not computed to 10)
 //! ```
 use crate::ast::{Expression, LambdaParam};
-use crate::debug::{DebugHook, SourceLocation, StackFrame};
+use crate::debug::{DebugHook, SourceLocation};
 use crate::kleis_ast::{ExampleBlock, ExampleStatement, FunctionDef, Program, TopLevel};
 use crate::kleis_parser::SourceSpan;
 use crate::pattern_matcher::PatternMatcher;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
 /// Result of evaluating an example block
 #[derive(Debug, Clone)]
@@ -79,6 +80,9 @@ pub struct Closure {
 
     /// Source location where this function is defined
     pub span: Option<SourceSpan>,
+
+    /// File path where this function is defined (for cross-file debugging)
+    pub file: Option<PathBuf>,
 }
 
 /// Symbolic evaluator for Kleis expressions
@@ -177,9 +181,21 @@ impl Evaluator {
     /// // Now 'double' is available for application
     /// ```
     pub fn load_program(&mut self, program: &Program) -> Result<(), String> {
+        self.load_program_with_file(program, None)
+    }
+
+    /// Load a program with file path for cross-file debugging
+    ///
+    /// This is the preferred method when loading files, as it enables
+    /// the debugger to track source locations across file boundaries.
+    pub fn load_program_with_file(
+        &mut self,
+        program: &Program,
+        file: Option<PathBuf>,
+    ) -> Result<(), String> {
         for item in &program.items {
             if let TopLevel::FunctionDef(func_def) = item {
-                self.load_function_def(func_def)?;
+                self.load_function_def_with_file(func_def, file.clone())?;
             }
         }
 
@@ -269,15 +285,38 @@ impl Evaluator {
 
     /// Load a single function definition
     pub fn load_function_def(&mut self, func_def: &FunctionDef) -> Result<(), String> {
+        self.load_function_def_with_file(func_def, None)
+    }
+
+    /// Load a single function definition with file path for cross-file debugging
+    pub fn load_function_def_with_file(
+        &mut self,
+        func_def: &FunctionDef,
+        file: Option<PathBuf>,
+    ) -> Result<(), String> {
         let closure = Closure {
             params: func_def.params.clone(),
             body: func_def.body.clone(),
             env: HashMap::new(), // Empty environment for now
             span: func_def.span,
+            file,
         };
 
         self.functions.insert(func_def.name.clone(), closure);
         Ok(())
+    }
+
+    /// Get the full source location of a function (line, column, file)
+    pub fn get_function_location(&self, name: &str) -> Option<SourceLocation> {
+        self.functions.get(name).and_then(|c| {
+            c.span.map(|span| {
+                let mut loc = SourceLocation::new(span.line, span.column);
+                if let Some(ref file) = c.file {
+                    loc = loc.with_file(file.clone());
+                }
+                loc
+            })
+        })
     }
 
     /// Get the source location of a function
@@ -500,18 +539,16 @@ impl Evaluator {
             // Check if this is a function application
             Expression::Operation { name, args } => {
                 if self.functions.contains_key(name) {
-                    // Get the function's source location if available
+                    // Get the function's full source location (span + file) for debugging
                     let func_location = self
-                        .get_function_span(name)
-                        .map(|span| SourceLocation::new(span.line, span.column))
+                        .get_function_location(name)
                         .unwrap_or_else(|| location.clone());
 
-                    // Call debug hook for function entry
+                    // Call debug hook for function entry with correct location
                     {
                         let mut hook_ref = self.debug_hook.borrow_mut();
                         if let Some(ref mut hook) = *hook_ref {
-                            hook.on_function_enter(name, args, depth);
-                            hook.push_frame(StackFrame::new(name, func_location));
+                            hook.on_function_enter(name, args, &func_location, depth);
                         }
                     }
 

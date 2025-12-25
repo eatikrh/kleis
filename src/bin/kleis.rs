@@ -925,8 +925,8 @@ impl DapState {
         // Store program for later use (finding example blocks)
         self.program = Some(program.clone());
 
-        // Load program into DAP's evaluator
-        self.evaluator.load_program(&program)?;
+        // Load program into DAP's evaluator with file path for cross-file debugging
+        self.evaluator.load_program_with_file(&program, self.current_file.clone())?;
 
         Ok(())
     }
@@ -1445,13 +1445,14 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             if let Some(hook) = state.pending_hook.take() {
                 // Get the program to evaluate
                 let program = state.program.clone();
+                let current_file = state.current_file.clone();
 
                 if let Some(program) = program {
                     // Create a fresh evaluator for the eval thread
                     let mut eval_evaluator = Evaluator::new();
 
-                    // Load the program into the evaluator
-                    if let Err(e) = eval_evaluator.load_program(&program) {
+                    // Load the program with file path for cross-file debugging
+                    if let Err(e) = eval_evaluator.load_program_with_file(&program, current_file) {
                         eprintln!("[kleis-dap] Failed to load program: {}", e);
                     }
 

@@ -241,9 +241,9 @@ impl DebugHook for DapDebugHook {
     ) {
     }
 
-    fn on_function_enter(&mut self, name: &str, _args: &[kleis::ast::Expression], depth: usize) {
+    fn on_function_enter(&mut self, name: &str, _args: &[kleis::ast::Expression], location: &SourceLocation, depth: usize) {
         let mut stack = self.stack.lock().unwrap();
-        stack.push(DebugStackFrame::new(name, SourceLocation::default()));
+        stack.push(DebugStackFrame::new(name, location.clone()));
         self.current_depth = depth;
     }
 

@@ -150,7 +150,7 @@ pub trait DebugHook {
     fn on_eval_end(&mut self, expr: &Expression, result: &Result<Expression, String>, depth: usize);
 
     /// Called when entering a function
-    fn on_function_enter(&mut self, name: &str, args: &[Expression], depth: usize);
+    fn on_function_enter(&mut self, name: &str, args: &[Expression], location: &SourceLocation, depth: usize);
 
     /// Called when exiting a function
     fn on_function_exit(&mut self, name: &str, result: &Result<Expression, String>, depth: usize);
@@ -202,7 +202,7 @@ impl DebugHook for NoOpDebugHook {
     ) {
     }
 
-    fn on_function_enter(&mut self, _name: &str, _args: &[Expression], _depth: usize) {}
+    fn on_function_enter(&mut self, _name: &str, _args: &[Expression], _location: &SourceLocation, _depth: usize) {}
 
     fn on_function_exit(
         &mut self,
@@ -348,8 +348,8 @@ impl DebugHook for InteractiveDebugHook {
         // Could be used for step over logic
     }
 
-    fn on_function_enter(&mut self, name: &str, _args: &[Expression], depth: usize) {
-        self.push_frame(StackFrame::new(name, SourceLocation::default()));
+    fn on_function_enter(&mut self, name: &str, _args: &[Expression], location: &SourceLocation, depth: usize) {
+        self.push_frame(StackFrame::new(name, location.clone()));
         self.current_depth = depth;
     }
 
@@ -615,12 +615,14 @@ impl DebugHook for DapDebugHook {
     ) {
     }
 
-    fn on_function_enter(&mut self, name: &str, _args: &[Expression], depth: usize) {
-        let mut frame = StackFrame::new(name, SourceLocation::default());
-        if let Some(ref file) = self.current_file {
-            frame.location.file = Some(file.clone());
-        }
+    fn on_function_enter(&mut self, name: &str, _args: &[Expression], location: &SourceLocation, depth: usize) {
+        // Use the provided location (includes file from function definition)
+        let frame = StackFrame::new(name, location.clone());
         self.push_frame(frame);
+        // Update current file context for subsequent evaluations
+        if let Some(ref file) = location.file {
+            self.current_file = Some(file.clone());
+        }
         self.current_depth = depth;
     }
 

@@ -1445,14 +1445,14 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
             // Could show result here if verbose
         }
 
-        fn on_function_enter(&mut self, name: &str, args: &[Expression], depth: usize) {
+        fn on_function_enter(&mut self, name: &str, args: &[Expression], location: &SourceLocation, depth: usize) {
             let pp = PrettyPrinter::new();
             let args_str: Vec<String> = args.iter().map(|a| pp.format_expression(a)).collect();
             let indent = "  ".repeat(depth);
             println!("{}→ entering {}({})", indent, name, args_str.join(", "));
             self.stack.push(StackFrame {
                 name: name.to_string(),
-                location: SourceLocation::new(0, 0),
+                location: location.clone(),
                 bindings: std::collections::HashMap::new(),
             });
         }
@@ -2317,8 +2317,8 @@ fn load_file_recursive(
         }
     }
 
-    // Now load this file's definitions into evaluator
-    if let Err(e) = evaluator.load_program(&program) {
+    // Now load this file's definitions into evaluator with file path for debugging
+    if let Err(e) = evaluator.load_program_with_file(&program, Some(path.to_path_buf())) {
         return Err(format!(
             "Error loading definitions from '{}': {}",
             path.display(),
@@ -2407,8 +2407,8 @@ fn load_file_recursive(
         }
     }
 
-    // Now load this file's definitions into evaluator
-    if let Err(e) = evaluator.load_program(&program) {
+    // Now load this file's definitions into evaluator with file path for debugging
+    if let Err(e) = evaluator.load_program_with_file(&program, Some(path.to_path_buf())) {
         return Err(format!(
             "Error loading definitions from '{}': {}",
             path.display(),

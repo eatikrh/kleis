@@ -125,6 +125,8 @@ impl SourceLocation {
 pub struct Spanned<T> {
     pub node: T,
     pub span: Option<SourceSpan>,
+    /// File path for cross-file debugging
+    pub file: Option<PathBuf>,
 }
 
 impl<T> Spanned<T> {
@@ -132,11 +134,33 @@ impl<T> Spanned<T> {
         Self {
             node,
             span: Some(span),
+            file: None,
+        }
+    }
+
+    pub fn with_file(mut self, file: PathBuf) -> Self {
+        self.file = Some(file);
+        self
+    }
+
+    pub fn new_with_file(node: T, span: SourceSpan, file: PathBuf) -> Self {
+        Self {
+            node,
+            span: Some(span),
+            file: Some(file),
         }
     }
 
     pub fn unspanned(node: T) -> Self {
-        Self { node, span: None }
+        Self { node, span: None, file: None }
+    }
+
+    /// Get full source location (span + file) for debugging
+    pub fn location(&self) -> Option<SourceLocation> {
+        self.span.map(|s| SourceLocation {
+            span: s,
+            file: self.file.clone(),
+        })
     }
 }
 
