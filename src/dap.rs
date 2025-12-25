@@ -394,7 +394,7 @@ impl DapDebugger {
                 "supportsSetVariable": false,
                 "supportsRestartFrame": false,
                 "supportsGotoTargetsRequest": false,
-                "supportsStepInTargetsRequest": false,
+                "supportsStepInTargetsRequest": true,
                 "supportsCompletionsRequest": false,
                 "supportsModulesRequest": false,
                 "supportsExceptionOptions": false,
@@ -403,6 +403,8 @@ impl DapDebugger {
                 "supportTerminateDebuggee": true,
                 "supportsDelayedStackTraceLoading": false,
                 "supportsLoadedSourcesRequest": false,
+                // Enable stepping
+                "supportsSingleThreadExecutionRequests": true
             }
         });
         Some(response.to_string())
@@ -615,7 +617,10 @@ impl DapDebugger {
     }
 
     fn handle_stack_trace(&mut self, request_seq: i32) -> Option<String> {
-        // TODO: Return actual stack trace
+        // Return a stack frame at the current position
+        let current_file = self.current_file.clone().unwrap_or_default();
+        let current_line = 1; // TODO: Track actual current line
+
         let response = serde_json::json!({
             "seq": self.next_seq(),
             "type": "response",
@@ -623,8 +628,17 @@ impl DapDebugger {
             "success": true,
             "command": "stackTrace",
             "body": {
-                "stackFrames": [],
-                "totalFrames": 0
+                "stackFrames": [{
+                    "id": 1,
+                    "name": "<top-level>",
+                    "source": {
+                        "name": current_file.split('/').last().unwrap_or("unknown"),
+                        "path": current_file
+                    },
+                    "line": current_line,
+                    "column": 1
+                }],
+                "totalFrames": 1
             }
         });
         Some(response.to_string())
