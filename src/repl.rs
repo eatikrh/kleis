@@ -312,6 +312,7 @@ fn handle_command(
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
         ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
+        ":debug" | ":d" => debug_expression(arg, evaluator),
         ":syntax" | ":syn" => show_syntax(),
         ":examples" | ":ex" => show_examples(),
         ":symbols" | ":sym" => show_symbols(),
@@ -356,6 +357,7 @@ fn handle_command_no_z3(
         ":env" | ":e" => show_env(evaluator),
         ":define" | ":def" => define_function(arg, evaluator),
         ":export" | ":x" => export_functions(arg, evaluator, imported_paths),
+        ":debug" | ":d" => debug_expression(arg, evaluator),
         _ => println!(
             "Unknown command: {}. Type :help for available commands.",
             cmd
@@ -406,6 +408,7 @@ fn print_help_main() {
     println!("  :eval, :ev <expr>  Evaluate expression concretely (compute result)");
     println!("  :let x = <expr>    Bind value to variable (persists in REPL)");
     println!("  :trace, :tr <expr> Trace match expression (show which branch matches)");
+    println!("  :debug, :d <expr>  Step-through debug an expression (v0.93)");
     println!();
     println!("  Tip: Use `it` in expressions to refer to the last :eval result");
     println!("  :load, :l <file>   Load a .kleis file");
@@ -1346,6 +1349,266 @@ fn let_binding(input: &str, evaluator: &mut Evaluator) {
             println!("❌ Parse error: {}", e);
         }
     }
+}
+
+/// Debug an expression interactively (v0.93)
+///
+/// Usage: :debug <expression>
+///
+/// This enables step-through debugging of the expression evaluation.
+/// Debug commands:
+///   n, next     - Step over (evaluate one step)
+///   s, step     - Step into (enter function calls)
+///   c, continue - Run to completion
+///   v, vars     - Show current variable bindings
+///   q, quit     - Abort debug session
+///
+/// Example: :debug multiply(Complex(1,2), Complex(3,4))
+fn debug_expression(input: &str, evaluator: &mut Evaluator) {
+    use crate::ast::Expression;
+    use crate::debug::{DebugAction, DebugHook, DebugState, SourceLocation, StackFrame};
+    use crate::pretty_print::PrettyPrinter;
+    use std::io::{self, BufRead, Write};
+    use std::sync::{Arc, Mutex};
+
+    if input.is_empty() {
+        println!("Usage: :debug <expression>");
+        println!();
+        println!("Example: :debug multiply(Complex(1,2), Complex(3,4))");
+        println!();
+        println!("Debug Commands:");
+        println!("  n, next     - Step over (evaluate one step)");
+        println!("  s, step     - Step into (enter function calls)");
+        println!("  c, continue - Run to completion");
+        println!("  v, vars     - Show current variable bindings");
+        println!("  q, quit     - Abort debug session");
+        return;
+    }
+
+    let mut parser = KleisParser::new(input);
+    let expr = match parser.parse() {
+        Ok(e) => e,
+        Err(e) => {
+            println!("❌ Parse error: {}", e);
+            return;
+        }
+    };
+
+    // Create an interactive debug hook
+    struct InteractiveDebugger {
+        state: DebugState,
+        step_count: usize,
+        stack: Vec<StackFrame>,
+        bindings: Vec<(String, String)>,
+        should_stop: Arc<Mutex<bool>>,
+        action: Arc<Mutex<DebugAction>>,
+    }
+
+    impl DebugHook for InteractiveDebugger {
+        fn on_eval_start(
+            &mut self,
+            expr: &Expression,
+            _location: &SourceLocation,
+            depth: usize,
+        ) -> DebugAction {
+            let pp = PrettyPrinter::new();
+            let formatted = pp.format_expression(expr);
+            let indent = "  ".repeat(depth);
+
+            self.step_count += 1;
+            println!(
+                "[step {}] {}{}",
+                self.step_count,
+                indent,
+                if formatted.len() > 60 {
+                    format!("{}...", &formatted[..60])
+                } else {
+                    formatted
+                }
+            );
+
+            // Check if we should stop
+            if *self.should_stop.lock().unwrap() {
+                return DebugAction::Stop;
+            }
+
+            // Return the current action
+            *self.action.lock().unwrap()
+        }
+
+        fn on_eval_end(
+            &mut self,
+            _expr: &Expression,
+            _result: &Result<Expression, String>,
+            _depth: usize,
+        ) {
+            // Could show result here if verbose
+        }
+
+        fn on_function_enter(&mut self, name: &str, args: &[Expression], depth: usize) {
+            let pp = PrettyPrinter::new();
+            let args_str: Vec<String> = args.iter().map(|a| pp.format_expression(a)).collect();
+            let indent = "  ".repeat(depth);
+            println!(
+                "{}→ entering {}({})",
+                indent,
+                name,
+                args_str.join(", ")
+            );
+            self.stack.push(StackFrame {
+                function_name: name.to_string(),
+                location: SourceLocation::new(0, 0),
+                bindings: vec![],
+            });
+        }
+
+        fn on_function_exit(
+            &mut self,
+            name: &str,
+            result: &Result<Expression, String>,
+            depth: usize,
+        ) {
+            let indent = "  ".repeat(depth);
+            match result {
+                Ok(r) => {
+                    let pp = PrettyPrinter::new();
+                    println!("{}← {} returned {}", indent, name, pp.format_expression(r));
+                }
+                Err(e) => {
+                    println!("{}← {} failed: {}", indent, name, e);
+                }
+            }
+            self.stack.pop();
+        }
+
+        fn on_bind(&mut self, name: &str, value: &Expression, depth: usize) {
+            let pp = PrettyPrinter::new();
+            let indent = "  ".repeat(depth);
+            println!(
+                "{}  {} = {}",
+                indent,
+                name,
+                pp.format_expression(value)
+            );
+            self.bindings
+                .push((name.to_string(), pp.format_expression(value)));
+        }
+
+        fn state(&self) -> &DebugState {
+            &self.state
+        }
+
+        fn should_stop(&self, _location: &SourceLocation, _depth: usize) -> bool {
+            *self.should_stop.lock().unwrap()
+        }
+
+        fn wait_for_command(&mut self) -> DebugAction {
+            // This is called when the debugger needs user input
+            print!("[debug] (n)ext (s)tep (c)ontinue (v)ars (q)uit: ");
+            io::stdout().flush().unwrap();
+
+            let stdin = io::stdin();
+            let mut line = String::new();
+            if stdin.lock().read_line(&mut line).is_err() {
+                return DebugAction::Stop;
+            }
+
+            match line.trim() {
+                "n" | "next" => {
+                    *self.action.lock().unwrap() = DebugAction::StepOver;
+                    DebugAction::StepOver
+                }
+                "s" | "step" => {
+                    *self.action.lock().unwrap() = DebugAction::StepIn;
+                    DebugAction::StepIn
+                }
+                "c" | "continue" => {
+                    *self.action.lock().unwrap() = DebugAction::Continue;
+                    DebugAction::Continue
+                }
+                "v" | "vars" => {
+                    println!("📦 Variables:");
+                    if self.bindings.is_empty() {
+                        println!("   (no variables bound yet)");
+                    } else {
+                        for (name, value) in &self.bindings {
+                            println!("   {} = {}", name, value);
+                        }
+                    }
+                    // Recursive call to get next command
+                    self.wait_for_command()
+                }
+                "q" | "quit" => {
+                    *self.should_stop.lock().unwrap() = true;
+                    DebugAction::Stop
+                }
+                "" => {
+                    // Default to step
+                    *self.action.lock().unwrap() = DebugAction::StepOver;
+                    DebugAction::StepOver
+                }
+                _ => {
+                    println!("Unknown command. Use: n/next, s/step, c/continue, v/vars, q/quit");
+                    self.wait_for_command()
+                }
+            }
+        }
+
+        fn get_stack(&self) -> &[StackFrame] {
+            &self.stack
+        }
+
+        fn push_frame(&mut self, frame: StackFrame) {
+            self.stack.push(frame);
+        }
+
+        fn pop_frame(&mut self) -> Option<StackFrame> {
+            self.stack.pop()
+        }
+    }
+
+    // Create the debugger
+    let debugger = InteractiveDebugger {
+        state: DebugState::Running,
+        step_count: 0,
+        stack: Vec::new(),
+        bindings: Vec::new(),
+        should_stop: Arc::new(Mutex::new(false)),
+        action: Arc::new(Mutex::new(DebugAction::StepOver)),
+    };
+
+    println!();
+    println!("🔍 Debug Session");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Evaluating: {}", input);
+    println!();
+
+    // Set the debug hook
+    evaluator.set_debug_hook(Box::new(debugger));
+
+    // Evaluate with the debug hook active
+    let result = evaluator.eval(&expr);
+
+    // Clear the debug hook
+    evaluator.clear_debug_hook();
+
+    // Show final result
+    println!();
+    match result {
+        Ok(value) => {
+            let pp = PrettyPrinter::new();
+            println!("✅ Result: {}", pp.format_expression(&value));
+            evaluator.set_last_result(value);
+        }
+        Err(e) => {
+            if e.contains("stopped") || e.contains("abort") {
+                println!("⏹️  Debug session aborted");
+            } else {
+                println!("❌ Error: {}", e);
+            }
+        }
+    }
+    println!();
 }
 
 /// Trace match expression - show which branch matches and why
