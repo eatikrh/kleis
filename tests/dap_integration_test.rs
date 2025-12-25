@@ -3,10 +3,11 @@
 //! These tests verify the Debug Adapter Protocol implementation by simulating
 //! a DAP client (like VS Code) and checking the server's responses.
 
-use std::io::{BufRead, BufReader, Read, Write};
+// These utility functions are for future TCP-based testing
+#![allow(dead_code)]
+
+use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
-use std::process::{Child, Command, Stdio};
-use std::thread;
 use std::time::Duration;
 
 /// Helper to send a DAP message over a stream
@@ -48,27 +49,12 @@ fn recv_dap_message<R: BufRead>(reader: &mut R) -> std::io::Result<Option<serde_
 
     // Read body
     let mut body = vec![0u8; content_length];
-    reader.read_exact(&mut body)?;
+    std::io::Read::read_exact(reader, &mut body)?;
 
     let msg: serde_json::Value = serde_json::from_slice(&body)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
     Ok(Some(msg))
-}
-
-/// Receive all pending messages (with timeout)
-fn recv_all_messages<R: BufRead>(reader: &mut R, timeout_ms: u64) -> Vec<serde_json::Value> {
-    let mut messages = Vec::new();
-    let start = std::time::Instant::now();
-
-    while start.elapsed().as_millis() < timeout_ms as u128 {
-        match recv_dap_message(reader) {
-            Ok(Some(msg)) => messages.push(msg),
-            _ => break,
-        }
-    }
-
-    messages
 }
 
 /// A DAP test client that connects to a server
@@ -157,24 +143,8 @@ impl DapTestClient {
     }
 }
 
-/// Start the DAP server on a random port and return (child process, port)
-fn start_dap_server() -> std::io::Result<(Child, u16)> {
-    // Find an available port
-    let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
-    let port = listener.local_addr()?.port();
-    drop(listener); // Release the port
-
-    // Start the kleis dap server
-    // We need to spawn it to listen on the port we just found
-    // For now, let's use the library directly in a thread
-
-    // Actually, let's use a different approach - run the test inline
-    Ok((Command::new("true").spawn()?, port))
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
     use kleis::dap::DapDebugger;
 
     /// Test the DAP message parsing and handling without network
@@ -278,7 +248,7 @@ mod tests {
         assert!(resp.is_some());
         let resp_json: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
         assert_eq!(resp_json["success"], true);
-        assert!(resp_json["body"]["threads"].as_array().unwrap().len() > 0);
+        assert!(!resp_json["body"]["threads"].as_array().unwrap().is_empty());
 
         // 5. StackTrace
         let resp = debugger.handle_message(
@@ -288,7 +258,7 @@ mod tests {
         let resp_json: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
         assert_eq!(resp_json["success"], true);
         let frames = resp_json["body"]["stackFrames"].as_array().unwrap();
-        assert!(frames.len() > 0, "Should have at least one stack frame");
+        assert!(!frames.is_empty(), "Should have at least one stack frame");
         assert!(
             frames[0]["line"].as_u64().unwrap() > 0,
             "Stack frame should have a line number"

@@ -1069,7 +1069,11 @@ fn handle_dap_request(
         "stackTrace" => {
             // Return a stack frame with proper source info
             let file_path = state.current_file.clone().unwrap_or_default();
-            let file_name = file_path.split('/').last().unwrap_or("unknown").to_string();
+            let file_name = file_path
+                .split('/')
+                .next_back()
+                .unwrap_or("unknown")
+                .to_string();
 
             vec![serde_json::json!({
                 "seq": 1,
