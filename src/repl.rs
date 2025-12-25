@@ -1577,8 +1577,8 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
     // Set the debug hook
     evaluator.set_debug_hook(Box::new(debugger));
 
-    // Evaluate with the debug hook active
-    let result = evaluator.eval(&expr);
+    // Evaluate with the debug hook active (use eval_concrete for actual computation)
+    let result = evaluator.eval_concrete(&expr);
 
     // Clear the debug hook
     evaluator.clear_debug_hook();
