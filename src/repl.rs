@@ -1577,11 +1577,17 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
     // Set the debug hook
     evaluator.set_debug_hook(Box::new(debugger));
 
-    // Evaluate with the debug hook active (use eval_concrete for actual computation)
-    let result = evaluator.eval_concrete(&expr);
+    // Step 1: Use eval() for stepping (has debug hooks)
+    let symbolic_result = evaluator.eval(&expr);
 
-    // Clear the debug hook
+    // Clear the debug hook before concrete evaluation
     evaluator.clear_debug_hook();
+
+    // Step 2: Compute concrete result from the symbolic result
+    let result = match symbolic_result {
+        Ok(symbolic) => evaluator.eval_concrete(&symbolic),
+        Err(e) => Err(e),
+    };
 
     // Show final result
     println!();
