@@ -666,6 +666,163 @@ impl LanguageServer for KleisUnifiedServer {
 }
 
 /// Run the DAP server on an existing listener
+/// DAP session state with smart stepping using AST spans
+struct DapState {
+    current_file: Option<String>,
+    current_line: u32,
+    /// Statement line numbers from parsed AST (real source locations)
+    statement_lines: Vec<u32>,
+    /// Index into statement_lines for current position
+    stmt_index: usize,
+    /// Fallback: lines that contain executable code (text-based analysis)
+    executable_lines: Vec<u32>,
+    /// Total lines in file
+    total_lines: u32,
+    /// Validated breakpoints (only on statement lines)
+    breakpoints: Vec<u32>,
+}
+
+impl Default for DapState {
+    fn default() -> Self {
+        Self {
+            current_file: None,
+            current_line: 1,
+            statement_lines: Vec::new(),
+            stmt_index: 0,
+            executable_lines: Vec::new(),
+            total_lines: 0,
+            breakpoints: Vec::new(),
+        }
+    }
+}
+
+impl DapState {
+    /// Parse file and extract statement line numbers from AST
+    fn load_file(&mut self, path: &str) -> std::result::Result<(), String> {
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("Cannot read file: {}", e))?;
+        
+        // Canonicalize path for VS Code (needs absolute paths in stack traces)
+        let path_buf = std::path::PathBuf::from(path);
+        let canonical = path_buf.canonicalize().unwrap_or(path_buf);
+        let canonical_str = canonical.to_string_lossy().to_string();
+        
+        self.current_file = Some(canonical_str.clone());
+        self.statement_lines.clear();
+        self.executable_lines.clear();
+        self.stmt_index = 0;
+        
+        let lines: Vec<&str> = content.lines().collect();
+        self.total_lines = lines.len() as u32;
+        
+        // Parse with canonicalized file path for VS Code debugging support
+        if let Ok(program) = kleis::kleis_parser::parse_kleis_program_with_file(&content, &canonical_str) {
+            for item in &program.items {
+                self.extract_item_lines(item);
+            }
+        }
+        
+        // Fallback: also do text-based analysis for non-example code
+        if self.statement_lines.is_empty() {
+            for (i, line) in lines.iter().enumerate() {
+                let line_num = (i + 1) as u32;
+                if Self::is_executable_line(line) {
+                    self.executable_lines.push(line_num);
+                }
+            }
+        }
+        
+        // Combine and deduplicate
+        let mut all_lines: Vec<u32> = self.statement_lines.clone();
+        all_lines.extend(&self.executable_lines);
+        all_lines.sort();
+        all_lines.dedup();
+        self.statement_lines = all_lines;
+        
+        // Start at first statement line
+        if let Some(&first) = self.statement_lines.first() {
+            self.current_line = first;
+            self.stmt_index = 0;
+        } else {
+            self.current_line = 1;
+        }
+        
+        Ok(())
+    }
+    
+    /// Extract line numbers from a top-level item
+    fn extract_item_lines(&mut self, item: &kleis::kleis_ast::TopLevel) {
+        use kleis::kleis_ast::{TopLevel, ExampleStatement};
+        
+        match item {
+            TopLevel::ExampleBlock(example) => {
+                // Extract line numbers from each statement
+                for stmt in &example.statements {
+                    match stmt {
+                        ExampleStatement::Let { location, .. } => {
+                            if let Some(loc) = location {
+                                self.statement_lines.push(loc.line);
+                            }
+                        }
+                        ExampleStatement::Assert { location, .. } => {
+                            if let Some(loc) = location {
+                                self.statement_lines.push(loc.line);
+                            }
+                        }
+                        ExampleStatement::Expr { location, .. } => {
+                            if let Some(loc) = location {
+                                self.statement_lines.push(loc.line);
+                            }
+                        }
+                    }
+                }
+            }
+            TopLevel::FunctionDef(func) => {
+                // Function definitions also have spans
+                if let Some(sp) = &func.span {
+                    self.statement_lines.push(sp.line);
+                }
+            }
+            _ => {
+                // Other top-level items don't have spans yet
+            }
+        }
+    }
+    
+    /// Check if a line contains executable code (text-based fallback)
+    fn is_executable_line(line: &str) -> bool {
+        let trimmed = line.trim();
+        
+        if trimmed.is_empty() { return false; }
+        if trimmed.starts_with("//") || trimmed.starts_with('#') { return false; }
+        if trimmed == "{" || trimmed == "}" || trimmed == "(" || trimmed == ")" { return false; }
+        if trimmed.starts_with("/*") || trimmed.ends_with("*/") || trimmed == "*/" { return false; }
+        
+        true
+    }
+    
+    /// Step to next statement, returns true if stepped
+    fn step_next(&mut self) -> bool {
+        if self.stmt_index + 1 < self.statement_lines.len() {
+            self.stmt_index += 1;
+            self.current_line = self.statement_lines[self.stmt_index];
+            true
+        } else {
+            false // No more statements
+        }
+    }
+    
+    /// Validate a breakpoint - returns true if it's on a statement line
+    fn validate_breakpoint(&self, line: u32) -> bool {
+        self.statement_lines.contains(&line)
+    }
+    
+    /// Check if current line hits a breakpoint
+    fn is_at_breakpoint(&self) -> bool {
+        self.breakpoints.contains(&self.current_line)
+    }
+}
+
 fn run_dap_on_listener(
     listener: TcpListener,
     evaluator: Arc<Mutex<Evaluator>>,
@@ -688,6 +845,7 @@ fn run_dap_on_listener(
 
     let mut reader = BufReader::new(stream.try_clone().unwrap());
     let mut writer = stream;
+    let mut state = DapState::default();
 
     // Simple DAP message loop
     loop {
@@ -724,7 +882,7 @@ fn run_dap_on_listener(
             }
 
             // Handle the request - may return multiple messages (response + events)
-            let messages = handle_dap_request(&request, &evaluator);
+            let messages = handle_dap_request(&request, &evaluator, &mut state);
 
             // Send all messages
             for msg in messages {
@@ -754,6 +912,7 @@ fn run_dap_on_listener(
 fn handle_dap_request(
     request: &serde_json::Value,
     evaluator: &Arc<Mutex<Evaluator>>,
+    state: &mut DapState,
 ) -> Vec<serde_json::Value> {
     let seq = request.get("seq").and_then(|s| s.as_i64()).unwrap_or(0);
     let command = request
@@ -763,19 +922,29 @@ fn handle_dap_request(
 
     match command {
         "initialize" => {
-            vec![serde_json::json!({
-                "seq": 1,
-                "type": "response",
-                "request_seq": seq,
-                "success": true,
-                "command": "initialize",
-                "body": {
-                    "supportsConfigurationDoneRequest": true,
-                    "supportsEvaluateForHovers": true,
-                    "supportsConditionalBreakpoints": true,
-                    "supportsStepInTargetsRequest": true
-                }
-            })]
+            // Return both the response AND the initialized event
+            // The initialized event tells VS Code we're ready for configuration
+            vec![
+                serde_json::json!({
+                    "seq": 1,
+                    "type": "response",
+                    "request_seq": seq,
+                    "success": true,
+                    "command": "initialize",
+                    "body": {
+                        "supportsConfigurationDoneRequest": true,
+                        "supportsEvaluateForHovers": true,
+                        "supportsConditionalBreakpoints": true,
+                        "supportsStepInTargetsRequest": true
+                    }
+                }),
+                // CRITICAL: The initialized EVENT - without this, VS Code won't proceed!
+                serde_json::json!({
+                    "seq": 2,
+                    "type": "event",
+                    "event": "initialized"
+                })
+            ]
         }
         "launch" => {
             // Load program from file
@@ -787,7 +956,25 @@ fn handle_dap_request(
             eprintln!("[kleis-dap] Launch request, program: {:?}", program_path);
 
             if let Some(program_path) = program_path {
-                eprintln!("[kleis-dap] Loading file: {}", program_path);
+                // Load file into state - this parses executable lines
+                if let Err(e) = state.load_file(program_path) {
+                    return vec![serde_json::json!({
+                        "seq": 1,
+                        "type": "response",
+                        "request_seq": seq,
+                        "success": false,
+                        "command": "launch",
+                        "message": e
+                    })];
+                }
+                
+                eprintln!(
+                    "[kleis-dap] Loaded file with {} executable lines, starting at line {}",
+                    state.executable_lines.len(),
+                    state.current_line
+                );
+                
+                // Parse and load into evaluator
                 match std::fs::read_to_string(program_path) {
                     Ok(source) => match parse_kleis_program(&source) {
                         Ok(program) => {
@@ -870,7 +1057,10 @@ fn handle_dap_request(
             })]
         }
         "stackTrace" => {
-            // Return a stack frame so stepping works
+            // Return a stack frame with proper source info
+            let file_path = state.current_file.clone().unwrap_or_default();
+            let file_name = file_path.split('/').last().unwrap_or("unknown").to_string();
+            
             vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
@@ -881,7 +1071,11 @@ fn handle_dap_request(
                     "stackFrames": [{
                         "id": 1,
                         "name": "<top-level>",
-                        "line": 1,
+                        "source": {
+                            "name": file_name,
+                            "path": file_path
+                        },
+                        "line": state.current_line,
                         "column": 1
                     }],
                     "totalFrames": 1
@@ -971,13 +1165,43 @@ fn handle_dap_request(
             })]
         }
         "setBreakpoints" => {
+            // Extract requested breakpoint lines and validate them
+            let mut breakpoints_response = Vec::new();
+            state.breakpoints.clear();
+            
+            if let Some(args) = request.get("arguments") {
+                if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
+                    for bp in bps {
+                        if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
+                            let line = line as u32;
+                            let is_valid = state.validate_breakpoint(line);
+                            
+                            if is_valid {
+                                state.breakpoints.push(line);
+                            }
+                            
+                            let mut bp = serde_json::json!({
+                                "verified": is_valid,
+                                "line": line
+                            });
+                            if !is_valid {
+                                bp["message"] = serde_json::Value::String(
+                                    "Cannot set breakpoint on this line (comment or empty)".to_string()
+                                );
+                            }
+                            breakpoints_response.push(bp);
+                        }
+                    }
+                }
+            }
+            
             vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
                 "success": true,
-                "command": command,
-                "body": { "breakpoints": [] }
+                "command": "setBreakpoints",
+                "body": { "breakpoints": breakpoints_response }
             })]
         }
         "configurationDone" => {
@@ -1015,14 +1239,116 @@ fn handle_dap_request(
                 }),
             ]
         }
-        "continue" | "next" | "stepIn" | "stepOut" => {
-            vec![serde_json::json!({
-                "seq": 1,
-                "type": "response",
-                "request_seq": seq,
-                "success": true,
-                "command": command
-            })]
+        "continue" => {
+            // Run until breakpoint or end
+            let mut hit_breakpoint = false;
+            while state.step_next() {
+                if state.is_at_breakpoint() {
+                    hit_breakpoint = true;
+                    break;
+                }
+            }
+            
+            if hit_breakpoint {
+                // Stopped at breakpoint
+                vec![
+                    serde_json::json!({
+                        "seq": 1,
+                        "type": "response",
+                        "request_seq": seq,
+                        "success": true,
+                        "command": "continue"
+                    }),
+                    serde_json::json!({
+                        "seq": 2,
+                        "type": "event",
+                        "event": "stopped",
+                        "body": {
+                            "reason": "breakpoint",
+                            "threadId": 1,
+                            "allThreadsStopped": true
+                        }
+                    })
+                ]
+            } else {
+                // End of file - terminate
+                vec![
+                    serde_json::json!({
+                        "seq": 1,
+                        "type": "response",
+                        "request_seq": seq,
+                        "success": true,
+                        "command": "continue"
+                    }),
+                    serde_json::json!({
+                        "seq": 2,
+                        "type": "event",
+                        "event": "output",
+                        "body": {
+                            "category": "console",
+                            "output": "\n✅ Execution completed\n"
+                        }
+                    }),
+                    serde_json::json!({
+                        "seq": 3,
+                        "type": "event",
+                        "event": "terminated"
+                    })
+                ]
+            }
+        }
+        "next" | "stepIn" | "stepOut" => {
+            // Step to next executable line
+            if state.step_next() {
+                // Check if we hit a breakpoint
+                let reason = if state.is_at_breakpoint() { "breakpoint" } else { "step" };
+                
+                // Return response + stopped event
+                vec![
+                    serde_json::json!({
+                        "seq": 1,
+                        "type": "response",
+                        "request_seq": seq,
+                        "success": true,
+                        "command": command
+                    }),
+                    serde_json::json!({
+                        "seq": 2,
+                        "type": "event",
+                        "event": "stopped",
+                        "body": {
+                            "reason": reason,
+                            "threadId": 1,
+                            "allThreadsStopped": true
+                        }
+                    })
+                ]
+            } else {
+                // End of file - terminate
+                vec![
+                    serde_json::json!({
+                        "seq": 1,
+                        "type": "response",
+                        "request_seq": seq,
+                        "success": true,
+                        "command": command
+                    }),
+                    serde_json::json!({
+                        "seq": 2,
+                        "type": "event",
+                        "event": "output",
+                        "body": {
+                            "category": "console",
+                            "output": "\n✅ End of file reached\n"
+                        }
+                    }),
+                    serde_json::json!({
+                        "seq": 3,
+                        "type": "event",
+                        "event": "terminated"
+                    })
+                ]
+            }
         }
         "disconnect" | "terminate" => {
             vec![serde_json::json!({

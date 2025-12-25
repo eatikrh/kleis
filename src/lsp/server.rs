@@ -11,7 +11,7 @@ use tower_lsp::{Client, LanguageServer, LspService, Server};
 
 use crate::context::SharedContext;
 use crate::kleis_ast::{Program, TopLevel};
-use crate::kleis_parser::{parse_kleis_program, KleisParseError};
+use crate::kleis_parser::{parse_kleis_program, parse_kleis_program_with_file, KleisParseError};
 use crate::type_checker::TypeChecker;
 use crate::type_context::TypeContextBuilder;
 
@@ -121,7 +121,11 @@ impl KleisLanguageServer {
             }
         };
 
-        let program = match parse_kleis_program(&content) {
+        // Parse with canonicalized file path for VS Code debugging support
+        // VS Code needs absolute paths in stack traces
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let file_path_str = canonical.to_string_lossy().to_string();
+        let program = match parse_kleis_program_with_file(&content, &file_path_str) {
             Ok(p) => p,
             Err(e) => {
                 diagnostics.push(Diagnostic {

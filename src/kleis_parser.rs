@@ -67,20 +67,9 @@ impl fmt::Display for KleisParseError {
 
 impl std::error::Error for KleisParseError {}
 
-/// Source location (line and column, 1-based)
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct SourceSpan {
-    /// Line number (1-based)
-    pub line: u32,
-    /// Column number (1-based)
-    pub column: u32,
-}
-
-impl SourceSpan {
-    pub fn new(line: u32, column: u32) -> Self {
-        Self { line, column }
-    }
-}
+// Re-export SourceSpan from ast.rs for backward compatibility
+pub use crate::ast::SourceSpan;
+pub use crate::ast::FullSourceLocation;
 
 pub struct KleisParser {
     input: Vec<char>,
@@ -89,6 +78,8 @@ pub struct KleisParser {
     line: u32,
     /// Current column number (1-based)
     column: u32,
+    /// Current file path (for cross-file debugging)
+    current_file: Option<String>,
 }
 
 impl KleisParser {
@@ -98,12 +89,38 @@ impl KleisParser {
             pos: 0,
             line: 1,
             column: 1,
+            current_file: None,
         }
     }
+    
+    /// Create a parser with a known file path
+    pub fn new_with_file(input: &str, file: impl Into<String>) -> Self {
+        KleisParser {
+            input: input.chars().collect(),
+            pos: 0,
+            line: 1,
+            column: 1,
+            current_file: Some(file.into()),
+        }
+    }
+    
+    /// Set the current file path
+    pub fn set_file(&mut self, file: impl Into<String>) {
+        self.current_file = Some(file.into());
+    }
 
-    /// Get the current source location
+    /// Get the current source location (without file)
     pub fn current_span(&self) -> SourceSpan {
         SourceSpan::new(self.line, self.column)
+    }
+    
+    /// Get the current full source location (with file)
+    pub fn current_location(&self) -> FullSourceLocation {
+        let mut loc = FullSourceLocation::new(self.line, self.column);
+        if let Some(ref file) = self.current_file {
+            loc.file = Some(file.clone());
+        }
+        loc
     }
 
     fn peek(&self) -> Option<char> {
@@ -3989,15 +4006,18 @@ impl KleisParser {
     /// Parse a single statement within an example block
     fn parse_example_statement(&mut self) -> Result<ExampleStatement, KleisParseError> {
         self.skip_whitespace();
+        
+        // Capture full location (line, column, file) at start of statement
+        let start_location = self.current_location();
 
         // Check for 'let' binding
         if self.peek_word("let") {
-            return self.parse_example_let();
+            return self.parse_example_let_with_location(start_location);
         }
 
         // Check for 'assert' statement
         if self.peek_word("assert") {
-            return self.parse_assert_statement();
+            return self.parse_assert_statement_with_location(start_location);
         }
 
         // Otherwise, parse as expression statement
@@ -4010,11 +4030,14 @@ impl KleisParser {
             self.advance();
         }
 
-        Ok(ExampleStatement::Expr(expr))
+        Ok(ExampleStatement::Expr { 
+            expr, 
+            location: Some(start_location),
+        })
     }
 
     /// Parse a let binding in an example block: let name = expr or let name : T = expr
-    fn parse_example_let(&mut self) -> Result<ExampleStatement, KleisParseError> {
+    fn parse_example_let_with_location(&mut self, location: FullSourceLocation) -> Result<ExampleStatement, KleisParseError> {
         self.skip_whitespace();
         self.expect_word("let")?;
         self.skip_whitespace();
@@ -4054,11 +4077,12 @@ impl KleisParser {
             name,
             type_annotation,
             value,
+            location: Some(location),
         })
     }
 
     /// Parse an assert statement: assert(expression)
-    fn parse_assert_statement(&mut self) -> Result<ExampleStatement, KleisParseError> {
+    fn parse_assert_statement_with_location(&mut self, location: FullSourceLocation) -> Result<ExampleStatement, KleisParseError> {
         self.skip_whitespace();
         self.expect_word("assert")?;
         self.skip_whitespace();
@@ -4084,7 +4108,7 @@ impl KleisParser {
             });
         }
 
-        Ok(ExampleStatement::Assert(condition))
+        Ok(ExampleStatement::Assert { condition, location: Some(location) })
     }
 
     /// Parse a complete program (multiple top-level items)
@@ -4195,6 +4219,15 @@ pub fn parse_kleis(input: &str) -> Result<Expression, KleisParseError> {
 /// Parse a complete Kleis program (with structures, operations, etc.)
 pub fn parse_kleis_program(input: &str) -> Result<Program, KleisParseError> {
     let mut parser = KleisParser::new(input);
+    parser.parse_program()
+}
+
+/// Parse a complete Kleis program with file path information
+/// 
+/// This function attaches the file path to all source locations,
+/// enabling cross-file debugging.
+pub fn parse_kleis_program_with_file(input: &str, file: impl Into<String>) -> Result<Program, KleisParseError> {
+    let mut parser = KleisParser::new_with_file(input, file);
     parser.parse_program()
 }
 
@@ -7058,7 +7091,7 @@ mod tests {
             TopLevel::ExampleBlock(example) => {
                 assert_eq!(example.statements.len(), 2);
                 // Second statement is an expression
-                assert!(matches!(&example.statements[1], ExampleStatement::Expr(_)));
+                assert!(matches!(&example.statements[1], ExampleStatement::Expr { .. }));
             }
             _ => panic!("Expected ExampleBlock"),
         }
@@ -7084,3 +7117,4 @@ mod tests {
         assert!(matches!(&result.items[1], TopLevel::ExampleBlock(_)));
     }
 }
+

@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 use crate::context::SharedContext;
 use crate::evaluator::Evaluator;
 use crate::kleis_ast::TopLevel;
-use crate::kleis_parser::{parse_kleis_program, KleisParser};
+use crate::kleis_parser::{parse_kleis_program, parse_kleis_program_with_file, KleisParser};
 use crate::lowering::SemanticLowering;
 use crate::pretty_print::PrettyPrinter;
 use crate::render::{build_default_context, render_expression, RenderTarget};
@@ -2274,15 +2274,17 @@ fn load_file_recursive(
     let contents = std::fs::read_to_string(path)
         .map_err(|e| format!("File error '{}': {}", path.display(), e))?;
 
-    // Parse the program
-    let program = parse_kleis_program(&contents)
+    // Parse with canonicalized file path for VS Code debugging support
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let file_path_str = canonical.to_string_lossy().to_string();
+    let program = parse_kleis_program_with_file(&contents, &file_path_str)
         .map_err(|e| format!("Parse error in '{}': {}", path.display(), e))?;
 
     let mut stats = LoadStats::new();
     stats.files = 1;
 
     // Get the directory containing this file for resolving relative imports
-    let base_dir = path.parent().unwrap_or(Path::new("."));
+    let base_dir = canonical.parent().unwrap_or(Path::new("."));
 
     // Process imports first (depth-first)
     for item in &program.items {
@@ -2368,15 +2370,17 @@ fn load_file_recursive(
     let contents = std::fs::read_to_string(path)
         .map_err(|e| format!("File error '{}': {}", path.display(), e))?;
 
-    // Parse the program
-    let program = parse_kleis_program(&contents)
+    // Parse with canonicalized file path for VS Code debugging support
+    // The `canonical` variable is already computed above for cycle detection
+    let file_path_str = canonical.to_string_lossy().to_string();
+    let program = parse_kleis_program_with_file(&contents, &file_path_str)
         .map_err(|e| format!("Parse error in '{}': {}", path.display(), e))?;
 
     let mut stats = LoadStats::new();
     stats.files = 1;
 
-    // Get base directory for resolving relative imports
-    let base_dir = path.parent().unwrap_or(Path::new("."));
+    // Get base directory for resolving relative imports (use canonical path)
+    let base_dir = canonical.parent().unwrap_or(Path::new("."));
 
     // Process imports first (depth-first)
     for item in &program.items {

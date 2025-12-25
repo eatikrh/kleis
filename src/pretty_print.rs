@@ -1000,6 +1000,7 @@ impl PrettyPrinter {
                 name,
                 type_annotation,
                 value,
+                location: _,
             } => {
                 let type_part = match type_annotation {
                     Some(te) => format!(" : {}", Self::format_type_expr(te)),
@@ -1021,10 +1022,10 @@ impl PrettyPrinter {
                     )
                 }
             }
-            ExampleStatement::Assert(condition) => {
+            ExampleStatement::Assert { condition, location: _ } => {
                 format!("assert({})", self.format_expression(condition))
             }
-            ExampleStatement::Expr(expr) => self.format_expression(expr),
+            ExampleStatement::Expr { expr, location: _ } => self.format_expression(expr),
         }
     }
 }

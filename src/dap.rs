@@ -1,28 +1,13 @@
 //! Debug Adapter Protocol (DAP) Implementation for Kleis
 //!
-//! This module implements the Debug Adapter Protocol, enabling IDE debugging
-//! support for Kleis programs in VS Code and other DAP-compatible editors.
+//! **DEPRECATED**: This module is not used by `kleis server`. The actual DAP
+//! implementation is in `src/bin/kleis.rs` (function `handle_dap_request`).
 //!
-//! ## Architecture
+//! This module is kept for:
+//! - Integration tests that test DAP message handling
+//! - Future refactoring to consolidate DAP implementations
 //!
-//! The DAP server communicates with the IDE over either:
-//! - **stdio**: Standard input/output (default for VS Code)
-//! - **TCP**: Network socket (useful for development/testing)
-//!
-//! ## Important: No stdout/stderr in stdio mode!
-//!
-//! When running in stdio mode, the DAP protocol uses stdin/stdout for
-//! communication. Any `println!` or `eprintln!` would corrupt the protocol.
-//! Use the `dap_log!` macro which only outputs in TCP mode or to a log file.
-//!
-//! ## Supported Features
-//!
-//! - [ ] Launch/Attach
-//! - [ ] Breakpoints (line, conditional)
-//! - [ ] Step In/Out/Over
-//! - [ ] Variable inspection
-//! - [ ] Expression evaluation
-//! - [ ] Stack traces
+//! TODO: Consolidate with `src/bin/kleis.rs` DAP implementation
 //!
 //! ## References
 //!
@@ -184,11 +169,19 @@ fn run_server_loop<R: BufRead, W: Write>(
     writer: &mut W,
     debugger: &mut DapDebugger,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    dap_log!("=== DAP server loop started ===");
     loop {
         // Read DAP message (Content-Length header + JSON body)
+        dap_log!("Waiting for DAP message...");
         let message = match read_dap_message(reader) {
-            Ok(Some(msg)) => msg,
-            Ok(None) => break, // EOF
+            Ok(Some(msg)) => {
+                dap_log!("Received message: {}", &msg[..std::cmp::min(200, msg.len())]);
+                msg
+            }
+            Ok(None) => {
+                dap_log!("EOF received, ending loop");
+                break;
+            }
             Err(e) => {
                 dap_log!("Read error: {}", e);
                 break;
@@ -197,6 +190,7 @@ fn run_server_loop<R: BufRead, W: Write>(
 
         // Handle the message and get response
         let response = debugger.handle_message(&message);
+        dap_log!("Response: {:?}", response.as_ref().map(|r| &r[..std::cmp::min(200, r.len())]));
 
         // Send response
         if let Some(resp) = response {
@@ -280,7 +274,7 @@ fn write_dap_message<W: Write>(writer: &mut W, message: &str) -> io::Result<()> 
 
 /// The Kleis DAP debugger state
 #[allow(dead_code)] // Fields prepared for full DAP implementation
-struct DapDebugger {
+pub struct DapDebugger {
     /// Sequence number for responses
     seq: i32,
     /// Whether the session should terminate
@@ -298,7 +292,7 @@ struct DapDebugger {
     /// Current execution state
     execution_state: ExecutionState,
     /// Pending events to send (e.g., stopped event after launch)
-    pending_events: Vec<String>,
+    pub pending_events: Vec<String>,
     /// Current line number (for stack trace)
     current_line: u32,
 }
@@ -333,7 +327,7 @@ struct Breakpoint {
 }
 
 impl DapDebugger {
-    fn new(context: Option<SharedContext>) -> Self {
+    pub fn new(context: Option<SharedContext>) -> Self {
         Self {
             seq: 0,
             should_terminate: false,
@@ -367,7 +361,7 @@ impl DapDebugger {
         self.pending_events.push(event.to_string());
     }
 
-    fn handle_message(&mut self, message: &str) -> Option<String> {
+    pub fn handle_message(&mut self, message: &str) -> Option<String> {
         // Parse the JSON message
         let request: serde_json::Value = match serde_json::from_str(message) {
             Ok(v) => v,
@@ -404,6 +398,8 @@ impl DapDebugger {
     }
 
     fn handle_initialize(&mut self, request_seq: i32) -> Option<String> {
+        dap_log!("=== handle_initialize ===");
+        
         let response = serde_json::json!({
             "seq": self.next_seq(),
             "type": "response",
@@ -432,6 +428,17 @@ impl DapDebugger {
                 "supportsSingleThreadExecutionRequests": true
             }
         });
+
+        // CRITICAL: Queue the "initialized" EVENT - this tells VS Code we're ready for configuration
+        // Without this event, VS Code won't send breakpoints or configurationDone!
+        let initialized_event = serde_json::json!({
+            "seq": self.next_seq(),
+            "type": "event",
+            "event": "initialized"
+        });
+        dap_log!("Queueing initialized event");
+        self.pending_events.push(initialized_event.to_string());
+
         Some(response.to_string())
     }
 

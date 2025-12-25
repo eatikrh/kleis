@@ -767,6 +767,25 @@ impl Evaluator {
     ///
     /// # Returns
     /// * `ExampleResult` - Summary of the example execution
+    
+    /// Helper: Get the source location of a statement (if available)
+    fn get_statement_location(stmt: &ExampleStatement) -> Option<crate::ast::FullSourceLocation> {
+        match stmt {
+            ExampleStatement::Let { location, .. } => location.clone(),
+            ExampleStatement::Assert { location, .. } => location.clone(),
+            ExampleStatement::Expr { location, .. } => location.clone(),
+        }
+    }
+    
+    /// Helper: Convert a statement to an expression for debug hook
+    fn statement_to_expr(stmt: &ExampleStatement) -> Expression {
+        match stmt {
+            ExampleStatement::Let { value, .. } => value.clone(),
+            ExampleStatement::Assert { condition, .. } => condition.clone(),
+            ExampleStatement::Expr { expr, .. } => expr.clone(),
+        }
+    }
+    
     pub fn eval_example_block(&mut self, example: &ExampleBlock) -> ExampleResult {
         let mut assertions_passed = 0;
         let mut assertions_total = 0;
@@ -775,11 +794,40 @@ impl Evaluator {
         let saved_bindings = self.bindings.clone();
 
         for stmt in &example.statements {
+            // Call debug hook with statement location (includes file path)
+            if let Some(full_loc) = Self::get_statement_location(stmt) {
+                // Convert FullSourceLocation to debug::SourceLocation
+                let loc = SourceLocation::new(full_loc.line, full_loc.column);
+                let loc = if let Some(ref file) = full_loc.file {
+                    loc.with_file(std::path::PathBuf::from(file))
+                } else {
+                    loc
+                };
+                
+                if let Some(ref mut hook) = *self.debug_hook.borrow_mut() {
+                    let action = hook.on_eval_start(
+                        &Self::statement_to_expr(stmt),
+                        &loc,
+                        0, // top-level depth
+                    );
+                    // Handle step/continue actions
+                    match action {
+                        crate::debug::DebugAction::Continue => {}
+                        crate::debug::DebugAction::StepInto 
+                        | crate::debug::DebugAction::StepOver
+                        | crate::debug::DebugAction::StepOut => {
+                            // These will be handled by the hook's wait_for_command
+                        }
+                    }
+                }
+            }
+            
             match stmt {
                 ExampleStatement::Let {
                     name,
                     type_annotation: _,
                     value,
+                    location: _,
                 } => {
                     // Evaluate the value and bind it
                     match self.eval(value) {
@@ -799,7 +847,7 @@ impl Evaluator {
                         }
                     }
                 }
-                ExampleStatement::Assert(condition) => {
+                ExampleStatement::Assert { condition, location: _ } => {
                     assertions_total += 1;
                     match self.eval_assert(condition) {
                         AssertResult::Passed => {
@@ -829,7 +877,7 @@ impl Evaluator {
                         }
                     }
                 }
-                ExampleStatement::Expr(expr) => {
+                ExampleStatement::Expr { expr, location: _ } => {
                     // Evaluate expression for side effects (or final result)
                     if let Err(e) = self.eval(expr) {
                         // Restore bindings and return error
@@ -6017,19 +6065,24 @@ mod tests {
                     name: "x".to_string(),
                     type_annotation: None,
                     value: Expression::Const("5".to_string()),
+                    location: None,
                 },
                 ExampleStatement::Let {
                     name: "y".to_string(),
                     type_annotation: None,
                     value: Expression::Const("5".to_string()),
+                    location: None,
                 },
-                ExampleStatement::Assert(Expression::Operation {
-                    name: "eq".to_string(),
-                    args: vec![
-                        Expression::Object("x".to_string()),
-                        Expression::Object("y".to_string()),
-                    ],
-                }),
+                ExampleStatement::Assert {
+                    condition: Expression::Operation {
+                        name: "eq".to_string(),
+                        args: vec![
+                            Expression::Object("x".to_string()),
+                            Expression::Object("y".to_string()),
+                        ],
+                    },
+                    location: None,
+                },
             ],
         };
 
@@ -6057,19 +6110,24 @@ mod tests {
                     name: "x".to_string(),
                     type_annotation: None,
                     value: Expression::Const("5".to_string()),
+                    location: None,
                 },
                 ExampleStatement::Let {
                     name: "y".to_string(),
                     type_annotation: None,
                     value: Expression::Const("10".to_string()),
+                    location: None,
                 },
-                ExampleStatement::Assert(Expression::Operation {
-                    name: "eq".to_string(),
-                    args: vec![
-                        Expression::Object("x".to_string()),
-                        Expression::Object("y".to_string()),
-                    ],
-                }),
+                ExampleStatement::Assert {
+                    condition: Expression::Operation {
+                        name: "eq".to_string(),
+                        args: vec![
+                            Expression::Object("x".to_string()),
+                            Expression::Object("y".to_string()),
+                        ],
+                    },
+                    location: None,
+                },
             ],
         };
 
@@ -6095,6 +6153,7 @@ mod tests {
                 name: "inner".to_string(),
                 type_annotation: None,
                 value: Expression::Const("2".to_string()),
+                location: None,
             }],
         };
 

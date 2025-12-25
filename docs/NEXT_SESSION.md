@@ -1,76 +1,179 @@
 # Next Session Notes
 
-**Last Updated:** December 24, 2024
+**Last Updated:** December 25, 2024
 
 ---
 
-## 🎯 CURRENT WORK: Debugger & IDE Integration
+## 🎯 CRITICAL: Wire DAP to Real Evaluator with DebugHook
 
-### Key Documents to Review
+### Problem Statement
 
-1. **`docs/plans/REPL_ENHANCEMENTS.md`** — Master plan for REPL → IDE journey
-2. **`docs/plans/EXPRESSION_SPANS.md`** — Technical spec for adding spans to AST
+The DAP server currently **simulates stepping** by incrementing line numbers. It does NOT:
+- Set the `DapDebugHook` on the evaluator
+- Run actual evaluation
+- Support cross-file debugging (stepping into imported files)
 
-### Unified Server Architecture (Implemented)
+### Current State (What Works)
 
-The unified `kleis` binary combines LSP and DAP in a single process with shared state:
+| Component | Status |
+|-----------|--------|
+| Parser populates `FullSourceLocation` (file + line + column) | ✅ |
+| `ExampleStatement` carries location | ✅ |
+| Evaluator calls `on_eval_start()` for every expression | ✅ |
+| `DapDebugHook` exists with channel-based communication | ✅ |
+| DAP returns stack traces with file paths | ✅ |
+| VS Code shows debugger UI | ✅ |
+| **DAP wires hook to evaluator** | ❌ NOT DONE |
+| **Cross-file debugging** | ❌ NOT DONE |
+
+### Architecture (from `REPL_ENHANCEMENTS.md`)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         VS Code                              │
-└─────────────────────────────────────────────────────────────┘
-           │ LSP (stdio)             │ DAP (TCP)
-           ▼                         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     kleis server                             │
 │  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐       │
 │  │   LSP       │◄─►│  Shared     │◄─►│   DAP       │       │
 │  │  Handler    │   │  Context    │   │  Handler    │       │
-│  └─────────────┘   │ (Evaluator) │   └─────────────┘       │
+│  └─────────────┘   │ - Evaluator │   └─────────────┘       │
+│                    │ - Types     │                          │
+│                    │ - Structs   │                          │
 │                    └─────────────┘                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**CLI Commands:**
-```bash
-kleis server          # LSP + DAP (for VS Code)
-kleis eval "1 + 2"    # Command-line evaluation
-kleis check file.kleis # Type check
-kleis repl            # Interactive REPL
+**Key Design Points:**
+- **RefCell** ensures zero overhead when not debugging (hook is `None`)
+- **DapDebugHook** blocks in evaluator thread, communicates via channels
+- **DapDebugController** held by DAP server, sends commands, receives events
+- **DO NOT change RefCell** - it's there for a purpose!
+
+### Implementation Plan
+
+#### Step 1: Update `DapState` to Hold Controller
+
+```rust
+struct DapState {
+    // ... existing fields ...
+    
+    /// Controller for channel-based communication with DebugHook
+    controller: Option<DapDebugController>,
+    
+    /// Handle to evaluation thread
+    eval_thread: Option<std::thread::JoinHandle<()>>,
+    
+    /// Parsed program (for finding example blocks)
+    program: Option<Program>,
+}
 ```
 
-### Debugger Status (9/10 Features Working)
+#### Step 2: Wire `launch` Handler
+
+1. Parse file with `parse_kleis_program_with_file(source, canonical_path)`
+2. Find first `ExampleBlock` to debug
+3. Create `DapDebugHook` + `DapDebugController` via `DapDebugHook::new()`
+4. Store controller in `DapState`
+5. **Don't start evaluation yet** (wait for `configurationDone`)
+
+#### Step 3: Wire `setBreakpoints` Handler
+
+1. Create `Breakpoint { file, line, enabled: true }` for each
+2. Store in `DapState.breakpoints`
+3. Will be added to hook before evaluation starts
+
+#### Step 4: Wire `configurationDone` Handler
+
+1. Lock evaluator, set hook: `evaluator.set_debug_hook(hook)`
+2. Spawn evaluation thread:
+   ```rust
+   thread::spawn(move || {
+       evaluator.eval_example_block(&example);
+       // Send terminated when done
+   });
+   ```
+3. Wait for first `StopEvent` from `controller.event_rx`
+4. Send `stopped` event to VS Code
+
+#### Step 5: Wire Step Commands
+
+| DAP Command | DebugAction |
+|-------------|-------------|
+| `next` | `StepOver` |
+| `stepIn` | `StepInto` |
+| `stepOut` | `StepOut` |
+| `continue` | `Continue` |
+
+1. Send via `controller.command_tx.send(action)`
+2. Wait for `StopEvent` from `controller.event_rx`
+3. Update `current_file` and `current_line` from event
+4. Send `stopped` event to VS Code
+
+#### Step 6: Wire `stackTrace` Handler
+
+- Get stack from `StopEvent.stack`
+- Store latest stack in `DapState`
+- Return frames with `source.path` (absolute paths)
+
+#### Step 7: Wire `variables` Handler
+
+- Get bindings from top stack frame
+- Return as DAP variables
+
+#### Step 8: Handle Evaluation Complete
+
+- Add `Terminated` variant to `StopEvent` (or use channel close)
+- Send `terminated` event to VS Code
+
+### Why This Works for Cross-File Debugging
+
+The evaluator calls `on_eval_start` with whatever `SourceLocation` the AST has.
+When stepping into a function from an imported file, the AST node has that file's path.
+The hook receives it, checks breakpoints, sends stop event with the correct file.
+**No per-construct hardcoding needed.**
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/bin/kleis.rs` | Update `DapState`, wire handlers |
+| `src/debug.rs` | Add `Terminated` event (if needed) |
+
+### Test Plan
+
+1. Set breakpoint in `examples/debug_main.kleis` on line 8
+2. Set breakpoint in `examples/debug_helper.kleis` on line 6
+3. Start debugging `debug_main.kleis`
+4. Should stop at line 8
+5. Step over to line 11 (`let doubled = double(x)`)
+6. Step into → should jump to `debug_helper.kleis` line 6
+7. Step out → should return to `debug_main.kleis`
+
+### Key Documents
+
+1. **`docs/plans/REPL_ENHANCEMENTS.md`** — Master plan, Phase 6 (Debugging)
+2. **`docs/plans/EXPRESSION_SPANS.md`** — Future: spans on all Expressions
+3. **`src/debug.rs`** — DebugHook trait and DapDebugHook implementation
+
+---
+
+## 📋 Previous: Debugger Status Before Wiring
 
 | Feature | Status |
 |---------|--------|
 | Launch/attach | ✅ |
 | Breakpoints (set) | ✅ |
-| Breakpoints (hit) | ⚠️ Function entry only (needs expression spans) |
-| Step in/over/out | ✅ |
-| Continue | ✅ |
-| Stack trace | ✅ Real function names |
-| Variables (local) | ✅ From substitution |
-| Variables (global) | ✅ From REPL bindings |
-| Scopes | ✅ Matches evaluator model |
-| Evaluate expression | ✅ |
-
-### Remaining Work
-
-1. **Test end-to-end debugging** — Build, launch, verify breakpoints work
-2. **Expression-Level Spans** — Add `span: Option<SourceSpan>` to all Expression variants
-   - Enables line-level breakpoints (not just function entry)
-   - Enables precise LSP error locations
-   - ~2,112 code changes across 42 files
-   - See `docs/plans/EXPRESSION_SPANS.md` for full analysis
+| Breakpoints (hit) | ⚠️ Simulated, not real |
+| Step in/over/out | ⚠️ Simulated line increment |
+| Continue | ⚠️ Simulated |
+| Stack trace | ✅ Correct file paths |
+| Variables | ✅ From evaluator |
+| Cross-file | ❌ Not working |
 
 ### Files to Review
 
-- `src/bin/kleis.rs` — Unified binary
-- `src/debug.rs` — DebugHook trait
-- `src/evaluator.rs` — Instrumented with debug hooks
+- `src/bin/kleis.rs` — Unified binary (DAP implementation here)
+- `src/debug.rs` — DebugHook trait and DapDebugHook
+- `src/evaluator.rs` — Calls debug hooks at key points
 - `vscode-kleis/src/extension.ts` — VS Code integration
-- `scripts/build-kleis.sh` — Build script with Z3/numerical flags
-- `scripts/kleis` — Wrapper script
 
 ---
 

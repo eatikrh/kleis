@@ -35,6 +35,10 @@ import { ReplPanel } from './replPanel';
 let client: LanguageClient | undefined;
 
 export function activate(context: ExtensionContext) {
+    console.log('=== KLEIS EXTENSION ACTIVATING ===');
+    console.log('Extension path:', context.extensionPath);
+    console.log('Workspace folders:', workspace.workspaceFolders?.map(f => f.uri.fsPath));
+    
     // Utility: check whether a REPL executable is available
     function replAvailable(): boolean {
         const config = workspace.getConfiguration('kleis');
@@ -200,6 +204,7 @@ export function activate(context: ExtensionContext) {
 
     // Find the unified kleis server
     const serverPath = findServer(context);
+    console.log('=== Kleis server path found:', serverPath);
     
     if (!serverPath) {
         window.showWarningMessage(
@@ -266,7 +271,13 @@ export function activate(context: ExtensionContext) {
     }
 
     // Start the client (this also starts the server)
-    client.start();
+    console.log('=== Starting LanguageClient ===');
+    console.log('Server command:', serverPath, runArgs);
+    client.start().then(() => {
+        console.log('=== LanguageClient started successfully ===');
+    }).catch((err) => {
+        console.error('=== LanguageClient failed to start ===', err);
+    });
 
     console.log('Kleis language extension activated with LSP and REPL support');
 }
@@ -286,7 +297,9 @@ function findServer(context: ExtensionContext): string | undefined {
     
     // 1. Check user-configured path
     const configuredPath = config.get<string>('serverPath');
+    console.log('findServer: checking configured path:', configuredPath);
     if (configuredPath && fs.existsSync(configuredPath)) {
+        console.log('findServer: using configured path:', configuredPath);
         return configuredPath;
     }
 
@@ -348,8 +361,14 @@ class KleisDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
         session: vscode.DebugSession,
         _executable: vscode.DebugAdapterExecutable | undefined
     ): Promise<vscode.DebugAdapterDescriptor> {
+        console.log('=== KleisDebugAdapterFactory.createDebugAdapterDescriptor called ===');
+        console.log('Session:', session.name, session.type);
+        console.log('Configuration:', JSON.stringify(session.configuration));
+        
         // Get the program path from the debug configuration
         const program = session.configuration.program;
+        console.log('Program path:', program);
+        console.log('LSP client available:', !!client);
         
         // If we have an LSP client, ask it to start DAP server
         if (client) {

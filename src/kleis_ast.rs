@@ -63,11 +63,21 @@ pub enum ExampleStatement {
         name: String,
         type_annotation: Option<TypeExpr>,
         value: Expression,
+        /// Full source location (line, column, file) for debugging
+        location: Option<crate::ast::FullSourceLocation>,
     },
     /// Assert statement: assert(condition)
-    Assert(Expression),
+    Assert {
+        condition: Expression,
+        /// Full source location (line, column, file) for debugging
+        location: Option<crate::ast::FullSourceLocation>,
+    },
     /// Expression statement (for side effects or final result)
-    Expr(Expression),
+    Expr {
+        expr: Expression,
+        /// Full source location (line, column, file) for debugging
+        location: Option<crate::ast::FullSourceLocation>,
+    },
 }
 
 /// Structure definition

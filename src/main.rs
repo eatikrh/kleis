@@ -10,7 +10,7 @@
 
 use kleis::evaluator::Evaluator;
 use kleis::kleis_ast::{Program, TopLevel};
-use kleis::kleis_parser::parse_kleis_program;
+use kleis::kleis_parser::{parse_kleis_program, parse_kleis_program_with_file};
 use std::collections::HashSet;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -230,8 +230,10 @@ fn check_file_recursive(
     let contents = std::fs::read_to_string(path)
         .map_err(|e| format!("File error '{}': {}", path.display(), e))?;
 
-    // Parse the program
-    let program = parse_kleis_program(&contents).map_err(|e| {
+    // Parse with canonicalized file path for VS Code debugging support
+    // The `canonical` variable is already computed above for cycle detection
+    let file_path_str = canonical.to_string_lossy().to_string();
+    let program = parse_kleis_program_with_file(&contents, &file_path_str).map_err(|e| {
         format!(
             "Parse error in '{}':\n   {}",
             path.display(),
@@ -241,8 +243,8 @@ fn check_file_recursive(
 
     let mut stats = LoadStats::from_program(&program);
 
-    // Get the directory containing this file for resolving relative imports
-    let base_dir = path.parent().unwrap_or(Path::new("."));
+    // Get the directory containing this file for resolving relative imports (use canonical path)
+    let base_dir = canonical.parent().unwrap_or(Path::new("."));
 
     // Process imports (depth-first)
     for item in &program.items {
@@ -289,8 +291,9 @@ fn load_file_recursive(
     let contents = std::fs::read_to_string(path)
         .map_err(|e| format!("File error '{}': {}", path.display(), e))?;
 
-    // Parse the program
-    let program = parse_kleis_program(&contents).map_err(|e| {
+    // Parse with canonicalized file path for VS Code debugging support
+    let file_path_str = canonical.to_string_lossy().to_string();
+    let program = parse_kleis_program_with_file(&contents, &file_path_str).map_err(|e| {
         format!(
             "Parse error in '{}':\n   {}",
             path.display(),
@@ -300,8 +303,8 @@ fn load_file_recursive(
 
     let mut stats = LoadStats::from_program(&program);
 
-    // Get the directory containing this file for resolving relative imports
-    let base_dir = path.parent().unwrap_or(Path::new("."));
+    // Get the directory containing this file for resolving relative imports (use canonical path)
+    let base_dir = canonical.parent().unwrap_or(Path::new("."));
 
     // Process imports first (depth-first)
     for item in &program.items {

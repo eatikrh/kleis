@@ -194,13 +194,16 @@ impl KleisContext {
 
     /// Set document content (for LSP didOpen/didChange)
     pub fn set_document_content(&mut self, path: PathBuf, source: String) {
-        use crate::kleis_parser::parse_kleis_program;
+        use crate::kleis_parser::parse_kleis_program_with_file;
 
         let mut diagnostics = Vec::new();
         let mut program = None;
 
-        // Parse the document
-        match parse_kleis_program(&source) {
+        // Parse with canonicalized file path for VS Code debugging support
+        // VS Code needs absolute paths in stack traces
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+        let file_path_str = canonical.to_string_lossy().to_string();
+        match parse_kleis_program_with_file(&source, &file_path_str) {
             Ok(p) => {
                 program = Some(p);
             }

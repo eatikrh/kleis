@@ -3,6 +3,139 @@
 //! This module defines the core Expression type used throughout the system.
 //! Both the parser and renderer use this shared representation.
 
+use std::path::PathBuf;
+
+// ============================================================================
+// Source Location Types (for debugging and error reporting)
+// ============================================================================
+
+/// Source span: location in source code (line and column, 1-based)
+/// 
+/// Note: SourceSpan is Copy for efficiency. For file paths, use SourceLocation
+/// which wraps SourceSpan with an optional PathBuf.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SourceSpan {
+    /// Line number (1-based)
+    pub line: u32,
+    /// Column number (1-based)  
+    pub column: u32,
+    /// End line (for multi-line expressions)
+    pub end_line: u32,
+    /// End column
+    pub end_column: u32,
+}
+
+impl SourceSpan {
+    pub fn new(line: u32, column: u32) -> Self {
+        Self {
+            line,
+            column,
+            end_line: line,
+            end_column: column,
+        }
+    }
+    
+    pub fn with_end(mut self, end_line: u32, end_column: u32) -> Self {
+        self.end_line = end_line;
+        self.end_column = end_column;
+        self
+    }
+}
+
+/// Full source location: span + file path (for cross-file debugging)
+/// 
+/// This is the complete location information needed for debugging,
+/// especially when stepping through imported files.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct FullSourceLocation {
+    /// Line number (1-based)
+    pub line: u32,
+    /// Column number (1-based)
+    pub column: u32,
+    /// File path (if known)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
+}
+
+impl FullSourceLocation {
+    pub fn new(line: u32, column: u32) -> Self {
+        Self { line, column, file: None }
+    }
+    
+    pub fn with_file(mut self, file: impl Into<String>) -> Self {
+        self.file = Some(file.into());
+        self
+    }
+    
+    pub fn from_span(span: &SourceSpan) -> Self {
+        Self {
+            line: span.line,
+            column: span.column,
+            file: None,
+        }
+    }
+    
+    pub fn from_span_with_file(span: &SourceSpan, file: impl Into<String>) -> Self {
+        Self {
+            line: span.line,
+            column: span.column,
+            file: Some(file.into()),
+        }
+    }
+}
+
+/// Source location with optional file path (for cross-file debugging)
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceLocation {
+    pub span: SourceSpan,
+    pub file: Option<PathBuf>,
+}
+
+impl SourceLocation {
+    pub fn new(line: u32, column: u32) -> Self {
+        Self {
+            span: SourceSpan::new(line, column),
+            file: None,
+        }
+    }
+    
+    pub fn with_file(mut self, file: PathBuf) -> Self {
+        self.file = Some(file);
+        self
+    }
+    
+    pub fn line(&self) -> u32 {
+        self.span.line
+    }
+    
+    pub fn column(&self) -> u32 {
+        self.span.column
+    }
+}
+
+/// Expression with source location attached
+/// 
+/// This wrapper allows tracking source locations without modifying the
+/// core Expression enum. Use this in the parser for new code paths.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Spanned<T> {
+    pub node: T,
+    pub span: Option<SourceSpan>,
+}
+
+impl<T> Spanned<T> {
+    pub fn new(node: T, span: SourceSpan) -> Self {
+        Self { node, span: Some(span) }
+    }
+    
+    pub fn unspanned(node: T) -> Self {
+        Self { node, span: None }
+    }
+}
+
+/// Spanned expression - an expression with its source location
+pub type SpannedExpr = Spanned<Expression>;
+
 /// Core expression type representing mathematical structures
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Expression {
