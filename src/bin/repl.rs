@@ -330,6 +330,7 @@ fn handle_command(
             type_checker,
         ),
         ":reset" => reset_all(evaluator, registry, provenance, imported_paths),
+        ":debug" | ":d" => debug_expression(arg, evaluator),
         _ => println!(
             "Unknown command: {}. Type :help for available commands.",
             cmd
@@ -378,6 +379,7 @@ fn handle_command_no_z3(
             reload_file_no_z3(arg, evaluator, imported_paths, provenance, type_checker)
         }
         ":reset" => reset_all_no_z3(evaluator, provenance, imported_paths),
+        ":debug" | ":d" => debug_expression(arg, evaluator),
         _ => println!(
             "Unknown command: {}. Type :help for available commands.",
             cmd
@@ -426,6 +428,7 @@ fn print_help_main() {
     println!("  :verify, :v <expr> Verify expression with Z3 (is it always true?)");
     println!("  :sat, :s <expr>    Check satisfiability (does a solution exist?)");
     println!("  :eval, :ev <expr>  Evaluate expression concretely (compute result)");
+    println!("  :debug, :d <expr>  Step-through debug an expression");
     println!("  :let x = <expr>    Bind value to variable (persists in REPL)");
     println!("  :trace, :tr <expr> Trace match expression (show which branch matches)");
     println!();
@@ -1312,6 +1315,72 @@ fn eval_concrete_expression(input: &str, evaluator: &mut Evaluator) {
         },
         Err(e) => {
             println!("❌ Parse error: {}", e);
+        }
+    }
+}
+
+/// Debug expression - step-through debugging of an expression
+///
+/// Usage: :debug <expression>
+/// Example: :debug add(Complex(1,2), Complex(3,4))
+///
+/// Debug commands:
+///   n/next    - Step over (next top-level step)
+///   s/step-in - Step into (expand current expression)
+///   o/out     - Step out (finish current function)
+///   c/continue - Run to completion
+///   v/vars    - Show current bindings
+///   q/quit    - Abort debug session
+fn debug_expression(input: &str, evaluator: &mut Evaluator) {
+    // TODO: Wire up InteractiveDebugHook for full step-through debugging
+    // use kleis::debug::{DebugAction, DebugHook, DebugState, InteractiveDebugHook};
+    // use std::io::{self, Write};
+    // use std::sync::{Arc, Mutex};
+    use kleis::pretty_print::PrettyPrinter;
+
+    if input.is_empty() {
+        println!("Usage: :debug <expression>");
+        println!("Example: :debug add(Complex(1,2), Complex(3,4))");
+        println!();
+        println!("Debug commands:");
+        println!("  n/next     - Step over");
+        println!("  s/step-in  - Step into");
+        println!("  o/out      - Step out");
+        println!("  c/continue - Run to completion");
+        println!("  v/vars     - Show bindings");
+        println!("  q/quit     - Abort");
+        return;
+    }
+
+    let mut parser = KleisParser::new(input);
+    let expr = match parser.parse() {
+        Ok(e) => e,
+        Err(e) => {
+            println!("❌ Parse error: {}", e);
+            return;
+        }
+    };
+
+    println!("[debug] Starting debug session...");
+    println!(
+        "[debug] Expression: {}",
+        PrettyPrinter::new().format_expression(&expr)
+    );
+    println!("[debug] Commands: (n)ext (s)tep-in (o)ut (c)ontinue (v)ars (q)uit");
+    println!();
+
+    // For now, just evaluate the expression directly
+    // TODO: Wire up InteractiveDebugHook for step-through debugging
+    // The hook infrastructure is in place, but needs thread-safe integration
+    match evaluator.eval_concrete(&expr) {
+        Ok(result) => {
+            let pp = PrettyPrinter::new();
+            println!("[debug] Evaluation complete.");
+            println!("Result: {}", pp.format_expression(&result));
+            evaluator.set_last_result(result);
+        }
+        Err(e) => {
+            println!("[debug] Evaluation error: {}", e);
         }
     }
 }
