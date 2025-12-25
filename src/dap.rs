@@ -495,19 +495,26 @@ impl DapDebugger {
         let source = args.get("source")?;
         let path = source.get("path").and_then(|p| p.as_str()).unwrap_or("");
 
+        // Read the file to validate breakpoint lines
+        let file_lines: Vec<String> = std::fs::read_to_string(path)
+            .map(|content| content.lines().map(String::from).collect())
+            .unwrap_or_default();
+
         let breakpoints: Vec<Breakpoint> = args
             .get("breakpoints")
             .and_then(|b| b.as_array())
             .map(|arr| {
                 arr.iter()
                     .filter_map(|bp| {
+                        let line = bp.get("line")?.as_u64()? as u32;
+                        let verified = is_valid_breakpoint_line(&file_lines, line);
                         Some(Breakpoint {
-                            line: bp.get("line")?.as_u64()? as u32,
+                            line,
                             condition: bp
                                 .get("condition")
                                 .and_then(|c| c.as_str())
                                 .map(String::from),
-                            verified: true, // TODO: Validate breakpoint location
+                            verified,
                         })
                     })
                     .collect()
@@ -726,9 +733,70 @@ impl DapDebugger {
     }
 }
 
+/// Check if a line is valid for a breakpoint
+/// Returns false for:
+/// - Empty/whitespace-only lines
+/// - Comment lines (// or /*)
+/// - Lines that are just closing braces
+/// - Lines outside the file
+fn is_valid_breakpoint_line(lines: &[String], line_num: u32) -> bool {
+    // Line numbers are 1-based
+    let idx = line_num.saturating_sub(1) as usize;
+
+    if idx >= lines.len() {
+        return false;
+    }
+
+    let line = lines[idx].trim();
+
+    // Empty line
+    if line.is_empty() {
+        return false;
+    }
+
+    // Comment line
+    if line.starts_with("//") || line.starts_with("/*") || line.starts_with('*') {
+        return false;
+    }
+
+    // Just a closing brace
+    if line == "}" || line == "})" {
+        return false;
+    }
+
+    // Just an opening brace
+    if line == "{" {
+        return false;
+    }
+
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_is_valid_breakpoint_line() {
+        let lines = vec![
+            "// comment".to_string(),
+            "".to_string(),
+            "let x = 5".to_string(),
+            "  ".to_string(),
+            "}".to_string(),
+            "example \"test\" {".to_string(),
+            "  assert(x = 5)".to_string(),
+        ];
+
+        assert!(!is_valid_breakpoint_line(&lines, 1)); // comment
+        assert!(!is_valid_breakpoint_line(&lines, 2)); // empty
+        assert!(is_valid_breakpoint_line(&lines, 3)); // valid: let x = 5
+        assert!(!is_valid_breakpoint_line(&lines, 4)); // whitespace
+        assert!(!is_valid_breakpoint_line(&lines, 5)); // just }
+        assert!(is_valid_breakpoint_line(&lines, 6)); // valid: example block
+        assert!(is_valid_breakpoint_line(&lines, 7)); // valid: assert
+        assert!(!is_valid_breakpoint_line(&lines, 100)); // out of bounds
+    }
 
     #[test]
     fn test_debugger_initialize() {
