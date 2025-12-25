@@ -4,6 +4,33 @@
 
 ---
 
+## 🔴 PRIORITY: Expression Spans for Debugger Line Numbers
+
+### Status: Cross-File Debugging Works!
+- ✅ File switching works - debugger opens imported files when stepping
+- ⚠️ Line numbers always show as `1` (expressions don't carry location)
+
+### Solution (see docs/a_possible_debugger_proper_solution.txt)
+Add `span: Option<SourceSpan>` ONLY to executable variants:
+- `Operation { name, args, span }`
+- `Match { scrutinee, cases, span }`
+- `Conditional { condition, then, else, span }`
+- `Let { pattern, type, value, body, span }`
+- `Lambda { params, body, span }`
+
+### Implementation Steps
+1. **AST changes** (`src/ast.rs`): Add span field to 5 variants
+2. **Pattern matches**: Add `..` to ~50 matches (ignore span when not needed)
+3. **Expression creation**: Add `span: None` to ~134 places
+4. **Parser**: Capture spans when building executable nodes
+5. **Evaluator**: Preserve spans through substitute() and AST rebuilding
+6. **Debug hook**: Use expression spans for line numbers
+
+### Safe checkpoint
+Tag: `checkpoint-crossfile-working` - can return here if refactor fails
+
+---
+
 ## ✅ DONE: Thread-Safe AST Cache (ADR-025)
 
 **See:** `docs/adr/adr-025-debugger-shared-context.md`
