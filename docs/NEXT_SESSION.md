@@ -137,6 +137,31 @@ The hook receives it, checks breakpoints, sends stop event with the correct file
 | `src/bin/kleis.rs` | Update `DapState`, wire handlers |
 | `src/debug.rs` | Add `Terminated` event (if needed) |
 
+### Technical Debt to Address
+
+**1. Consolidate DAP Implementations**
+- `src/dap.rs` — Library version (marked `#[deprecated]`)
+- `src/bin/kleis.rs` — Used by `kleis server` (the active one)
+- **Action:** Remove `src/dap.rs` after confirming `kleis server` works end-to-end
+
+**2. Review DebugHook Implementations**
+We have 3 implementations in `src/debug.rs`:
+- `NoOpDebugHook` — Zero overhead when not debugging (KEEP)
+- `InteractiveDebugHook` — For REPL `:debug` command (KEEP for REPL)
+- `DapDebugHook` — For VS Code DAP integration (KEEP for DAP)
+
+**Action:** After wiring is complete, review if `InteractiveDebugHook` and `DapDebugHook` can share more code or if the separation is justified.
+
+**3. Squash Commits Before Merging**
+The `feature/debugger-dap` branch has 63+ incremental commits. Before merging to `main`, squash into logical commits:
+- "Add example blocks and assert to grammar (v0.93)"
+- "Implement REPL :debug command"  
+- "Add DAP infrastructure for VS Code debugging"
+- "Add source location tracking to parser"
+- "Wire DAP to evaluator with DapDebugHook"
+
+**Command:** `git rebase -i origin/main` then squash/fixup related commits.
+
 ### Test Plan
 
 1. Set breakpoint in `examples/debug_main.kleis` on line 8
