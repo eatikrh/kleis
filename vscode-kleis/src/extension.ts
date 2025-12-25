@@ -354,11 +354,15 @@ class KleisDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
         // If we have an LSP client, ask it to start DAP server
         if (client) {
             try {
+                console.log('Sending startDebugSession command for program:', program);
+                
                 // Send command to LSP server to start DAP
                 const result = await client.sendRequest('workspace/executeCommand', {
                     command: 'kleis.startDebugSession',
                     arguments: [program]
                 }) as { port?: number; error?: string };
+                
+                console.log('startDebugSession result:', JSON.stringify(result));
 
                 if (result && result.port) {
                     console.log(`Kleis DAP server running on port ${result.port}`);
