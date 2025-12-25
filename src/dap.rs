@@ -204,7 +204,15 @@ fn run_server_loop<R: BufRead, W: Write>(
         }
 
         // Send any pending events (e.g., stopped event after launch)
+        let event_count = debugger.pending_events.len();
+        if event_count > 0 {
+            dap_log!("Sending {} pending events", event_count);
+        }
         while let Some(event) = debugger.pending_events.pop() {
+            dap_log!(
+                "Sending event: {}",
+                &event[..std::cmp::min(200, event.len())]
+            );
             write_dap_message(writer, &event)?;
         }
 
@@ -291,6 +299,8 @@ struct DapDebugger {
     execution_state: ExecutionState,
     /// Pending events to send (e.g., stopped event after launch)
     pending_events: Vec<String>,
+    /// Current line number (for stack trace)
+    current_line: u32,
 }
 
 /// Info about an example block for debugging
@@ -334,12 +344,27 @@ impl DapDebugger {
             example_blocks: Vec::new(),
             execution_state: ExecutionState::default(),
             pending_events: Vec::new(),
+            current_line: 1,
         }
     }
 
     fn next_seq(&mut self) -> i32 {
         self.seq += 1;
         self.seq
+    }
+
+    /// Queue an output event to be sent to the Debug Console
+    fn queue_output(&mut self, message: &str, category: &str) {
+        let event = serde_json::json!({
+            "seq": self.next_seq(),
+            "type": "event",
+            "event": "output",
+            "body": {
+                "category": category,
+                "output": format!("{}\n", message)
+            }
+        });
+        self.pending_events.push(event.to_string());
     }
 
     fn handle_message(&mut self, message: &str) -> Option<String> {
@@ -418,6 +443,9 @@ impl DapDebugger {
             .and_then(|p| p.as_str())
             .unwrap_or("");
 
+        // Always set current_file even before validation for stack trace
+        self.current_file = Some(program_path.to_string());
+
         dap_log!("Launching: {}", program_path);
 
         // Load the program into the shared evaluator
@@ -486,22 +514,27 @@ impl DapDebugger {
             return Some(self.error_response(request_seq, "launch", &msg));
         }
 
-        // Mark as stopped at entry point
-        self.is_stopped = true;
-
-        // Queue a "stopped" event so VS Code knows we're paused
-        let stopped_event = serde_json::json!({
-            "seq": self.next_seq(),
-            "type": "event",
-            "event": "stopped",
-            "body": {
-                "reason": "entry",
-                "description": "Paused on entry",
-                "threadId": 1,
-                "allThreadsStopped": true
+        // Set initial line to first example block's content, or first code line
+        if !self.example_blocks.is_empty() {
+            // Start at first statement inside first example block (usually line after "example ... {")
+            self.current_line = self.example_blocks[0].start_line + 1;
+        } else {
+            // Find first non-comment, non-empty line
+            if let Ok(content) = std::fs::read_to_string(program_path) {
+                self.current_line = content
+                    .lines()
+                    .enumerate()
+                    .find(|(_, line)| {
+                        let trimmed = line.trim();
+                        !trimmed.is_empty() && !trimmed.starts_with("//")
+                    })
+                    .map(|(i, _)| (i + 1) as u32)
+                    .unwrap_or(1);
             }
-        });
-        self.pending_events.push(stopped_event.to_string());
+        }
+
+        // We'll send stopped event after configurationDone (when VS Code is ready)
+        self.is_stopped = false;
 
         // Build launch response
         let response = serde_json::json!({
@@ -592,8 +625,33 @@ impl DapDebugger {
             "command": "configurationDone"
         });
 
-        // Send initialized event
-        // TODO: Start execution and stop at first breakpoint
+        // Send welcome message to Debug Console
+        if let Some(file) = &self.current_file {
+            self.queue_output(&format!("🐛 Kleis Debugger - {}", file), "console");
+        } else {
+            self.queue_output("🐛 Kleis Debugger", "console");
+        }
+        self.queue_output(
+            "Paused at entry point. Use Step Over (F10) to step through code.",
+            "console",
+        );
+
+        // Now that configuration is done, pause at entry point
+        self.is_stopped = true;
+
+        // Queue stopped event - VS Code is now ready to receive it
+        let stopped_event = serde_json::json!({
+            "seq": self.next_seq(),
+            "type": "event",
+            "event": "stopped",
+            "body": {
+                "reason": "entry",
+                "description": "Paused on entry",
+                "threadId": 1,
+                "allThreadsStopped": true
+            }
+        });
+        self.pending_events.push(stopped_event.to_string());
 
         Some(response.to_string())
     }
@@ -619,7 +677,7 @@ impl DapDebugger {
     fn handle_stack_trace(&mut self, request_seq: i32) -> Option<String> {
         // Return a stack frame at the current position
         let current_file = self.current_file.clone().unwrap_or_default();
-        let current_line = 1; // TODO: Track actual current line
+        let current_line = self.current_line;
 
         let response = serde_json::json!({
             "seq": self.next_seq(),
@@ -722,7 +780,27 @@ impl DapDebugger {
     }
 
     fn handle_next(&mut self, request_seq: i32) -> Option<String> {
-        // TODO: Step over
+        // Step over: advance to next line
+        self.current_line += 1;
+
+        // Skip empty lines and comments
+        if let Some(ref file) = self.current_file {
+            if let Ok(content) = std::fs::read_to_string(file) {
+                let lines: Vec<&str> = content.lines().collect();
+                while (self.current_line as usize) <= lines.len() {
+                    let line = lines.get((self.current_line - 1) as usize).unwrap_or(&"");
+                    let trimmed = line.trim();
+                    if !trimmed.is_empty() && !trimmed.starts_with("//") {
+                        break;
+                    }
+                    self.current_line += 1;
+                }
+            }
+        }
+
+        self.queue_output(&format!("→ Line {}", self.current_line), "console");
+
+        // Send response
         let response = serde_json::json!({
             "seq": self.next_seq(),
             "type": "response",
@@ -730,11 +808,29 @@ impl DapDebugger {
             "success": true,
             "command": "next"
         });
+
+        // Queue stopped event so VS Code updates
+        let stopped_event = serde_json::json!({
+            "seq": self.next_seq(),
+            "type": "event",
+            "event": "stopped",
+            "body": {
+                "reason": "step",
+                "threadId": 1,
+                "allThreadsStopped": true
+            }
+        });
+        self.pending_events.push(stopped_event.to_string());
+
         Some(response.to_string())
     }
 
     fn handle_step_in(&mut self, request_seq: i32) -> Option<String> {
-        // TODO: Step into
+        // Step in: same as step over for now (no function call depth tracking yet)
+        self.current_line += 1;
+
+        self.queue_output(&format!("↓ Line {}", self.current_line), "console");
+
         let response = serde_json::json!({
             "seq": self.next_seq(),
             "type": "response",
@@ -742,11 +838,28 @@ impl DapDebugger {
             "success": true,
             "command": "stepIn"
         });
+
+        // Queue stopped event
+        let stopped_event = serde_json::json!({
+            "seq": self.next_seq(),
+            "type": "event",
+            "event": "stopped",
+            "body": {
+                "reason": "step",
+                "threadId": 1,
+                "allThreadsStopped": true
+            }
+        });
+        self.pending_events.push(stopped_event.to_string());
         Some(response.to_string())
     }
 
     fn handle_step_out(&mut self, request_seq: i32) -> Option<String> {
-        // TODO: Step out
+        // Step out: advance to end of current block (simplified - just go to next line)
+        self.current_line += 1;
+
+        self.queue_output(&format!("↑ Line {}", self.current_line), "console");
+
         let response = serde_json::json!({
             "seq": self.next_seq(),
             "type": "response",
@@ -754,6 +867,20 @@ impl DapDebugger {
             "success": true,
             "command": "stepOut"
         });
+
+        // Queue stopped event
+        let stopped_event = serde_json::json!({
+            "seq": self.next_seq(),
+            "type": "event",
+            "event": "stopped",
+            "body": {
+                "reason": "step",
+                "threadId": 1,
+                "allThreadsStopped": true
+            }
+        });
+        self.pending_events.push(stopped_event.to_string());
+
         Some(response.to_string())
     }
 
