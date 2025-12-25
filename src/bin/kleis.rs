@@ -93,6 +93,9 @@ enum Commands {
 
 #[tokio::main]
 async fn main() {
+    // Initialize file-based logging (avoids stdio interference with DAP/LSP)
+    kleis::logging::init_default_logging();
+
     let cli = Cli::parse();
 
     match cli.command {
@@ -831,6 +834,10 @@ struct DapState {
     last_stop_event: Option<kleis::debug::StopEvent>,
     /// Debug hook (created in launch, moved to eval thread in configurationDone)
     pending_hook: Option<kleis::debug::DapDebugHook>,
+    /// Files already loaded (to prevent import cycles)
+    loaded_files: std::collections::HashSet<PathBuf>,
+    /// Loaded imports (program + file path) - needed for eval thread
+    loaded_imports: Vec<(kleis::kleis_ast::Program, PathBuf)>,
 }
 
 impl DapState {
@@ -845,6 +852,8 @@ impl DapState {
             program: None,
             last_stop_event: None,
             pending_hook: None,
+            loaded_files: std::collections::HashSet::new(),
+            loaded_imports: Vec::new(),
         }
     }
 }
@@ -927,6 +936,51 @@ impl DapState {
 
         // Load program into DAP's evaluator with file path for cross-file debugging
         self.evaluator.load_program_with_file(&program, self.current_file.clone())?;
+
+        // Recursively load imported files
+        for item in &program.items {
+            if let kleis::kleis_ast::TopLevel::Import(import_path) = item {
+                if let Some(resolved) = resolve_import_path(import_path, &canonical) {
+                    eprintln!("[kleis-dap] Loading import: {}", resolved.display());
+                    self.load_import(&resolved)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Load an imported file into the evaluator
+    fn load_import(&mut self, path: &PathBuf) -> std::result::Result<(), String> {
+        use kleis::kleis_parser::parse_kleis_program_with_file;
+
+        // Check if already loaded (avoid cycles)
+        if self.loaded_files.contains(path) {
+            return Ok(());
+        }
+        self.loaded_files.insert(path.clone());
+
+        // Parse the imported file
+        let source = std::fs::read_to_string(path)
+            .map_err(|e| format!("Cannot read import '{}': {}", path.display(), e))?;
+        let file_path_str = path.to_string_lossy().to_string();
+        let program = parse_kleis_program_with_file(&source, &file_path_str)
+            .map_err(|e| format!("Parse error in '{}': {}", path.display(), e.message))?;
+
+        // Load functions from the imported file with that file's path
+        self.evaluator.load_program_with_file(&program, Some(path.clone()))?;
+
+        // Store for later use in eval thread
+        self.loaded_imports.push((program.clone(), path.clone()));
+
+        // Recursively load this file's imports
+        for item in &program.items {
+            if let kleis::kleis_ast::TopLevel::Import(import_path) = item {
+                if let Some(resolved) = resolve_import_path(import_path, path) {
+                    self.load_import(&resolved)?;
+                }
+            }
+        }
 
         Ok(())
     }
@@ -1454,6 +1508,13 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                     // Load the program with file path for cross-file debugging
                     if let Err(e) = eval_evaluator.load_program_with_file(&program, current_file) {
                         eprintln!("[kleis-dap] Failed to load program: {}", e);
+                    }
+
+                    // Load all imported files into the eval evaluator
+                    for (import_program, import_path) in &state.loaded_imports {
+                        if let Err(e) = eval_evaluator.load_program_with_file(import_program, Some(import_path.clone())) {
+                            eprintln!("[kleis-dap] Failed to load import '{}': {}", import_path.display(), e);
+                        }
                     }
 
                     // Set the debug hook on the evaluator

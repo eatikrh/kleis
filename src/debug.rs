@@ -535,15 +535,34 @@ impl DapDebugHook {
 
     /// Send stop event to DAP and wait for command
     fn stop_and_wait(&mut self, reason: StopReason, location: &SourceLocation) -> DebugAction {
+        // Use current_file if location doesn't have one (for cross-file debugging)
+        let actual_location = if location.file.is_none() && self.current_file.is_some() {
+            crate::logging::log("DEBUG", "hook", &format!(
+                "stop_and_wait: using current_file {:?} for line {}", 
+                self.current_file, location.line
+            ));
+            SourceLocation {
+                file: self.current_file.clone(),
+                ..location.clone()
+            }
+        } else {
+            location.clone()
+        };
+
         // Update current location in top frame
         if let Some(frame) = self.stack.first_mut() {
-            frame.location = location.clone();
+            frame.location = actual_location.clone();
         }
+
+        crate::logging::log("DEBUG", "hook", &format!(
+            "stop_and_wait: sending StopEvent line={}, file={:?}, stack_depth={}", 
+            actual_location.line, actual_location.file, self.stack.len()
+        ));
 
         // Send stop event
         let event = StopEvent {
             reason,
-            location: location.clone(),
+            location: actual_location,
             stack: self.stack.clone(),
         };
         let _ = self.event_tx.send(event);
@@ -621,7 +640,14 @@ impl DebugHook for DapDebugHook {
         self.push_frame(frame);
         // Update current file context for subsequent evaluations
         if let Some(ref file) = location.file {
+            crate::logging::log("DEBUG", "hook", &format!(
+                "on_function_enter '{}': switching to file {:?}", name, file
+            ));
             self.current_file = Some(file.clone());
+        } else {
+            crate::logging::log("DEBUG", "hook", &format!(
+                "on_function_enter '{}': no file in location (line {})", name, location.line
+            ));
         }
         self.current_depth = depth;
     }

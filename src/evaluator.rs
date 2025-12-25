@@ -544,6 +544,11 @@ impl Evaluator {
                         .get_function_location(name)
                         .unwrap_or_else(|| location.clone());
 
+                    crate::logging::log("DEBUG", "eval", &format!(
+                        "Entering function '{}' with location: line={}, file={:?}",
+                        name, func_location.line, func_location.file
+                    ));
+
                     // Call debug hook for function entry with correct location
                     {
                         let mut hook_ref = self.debug_hook.borrow_mut();
