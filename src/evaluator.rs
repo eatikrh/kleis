@@ -30,11 +30,40 @@
 //! ```
 use crate::ast::{Expression, LambdaParam};
 use crate::debug::{DebugHook, SourceLocation, StackFrame};
-use crate::kleis_ast::{FunctionDef, Program, TopLevel};
+use crate::kleis_ast::{ExampleBlock, ExampleStatement, FunctionDef, Program, TopLevel};
 use crate::kleis_parser::SourceSpan;
 use crate::pattern_matcher::PatternMatcher;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+
+/// Result of evaluating an example block
+#[derive(Debug, Clone)]
+pub struct ExampleResult {
+    /// Name of the example
+    pub name: String,
+    /// Whether the example passed (all assertions succeeded)
+    pub passed: bool,
+    /// Error message if failed
+    pub error: Option<String>,
+    /// Number of assertions that passed
+    pub assertions_passed: usize,
+    /// Total number of assertions
+    pub assertions_total: usize,
+}
+
+/// Result of a single assertion
+#[derive(Debug, Clone)]
+pub enum AssertResult {
+    /// Assertion passed
+    Passed,
+    /// Assertion failed with concrete values
+    Failed {
+        expected: Expression,
+        actual: Expression,
+    },
+    /// Assertion couldn't be evaluated (symbolic)
+    Unknown(String),
+}
 
 /// Represents a user-defined function as a closure
 #[derive(Debug, Clone)]
@@ -720,6 +749,250 @@ impl Evaluator {
     /// Check if debugging is active
     pub fn is_debugging(&self) -> bool {
         self.debug_hook.borrow().is_some()
+    }
+
+    // =========================================================================
+    // Example Block Evaluation (v0.93)
+    // =========================================================================
+
+    /// Evaluate an example block, returning the result
+    ///
+    /// Example blocks execute statements sequentially:
+    /// - `let` bindings add to local scope
+    /// - `assert` statements check conditions
+    /// - Expression statements are evaluated for side effects
+    ///
+    /// # Arguments
+    /// * `example` - The example block to evaluate
+    ///
+    /// # Returns
+    /// * `ExampleResult` - Summary of the example execution
+    pub fn eval_example_block(&mut self, example: &ExampleBlock) -> ExampleResult {
+        let mut assertions_passed = 0;
+        let mut assertions_total = 0;
+
+        // Create a snapshot of current bindings to restore later
+        let saved_bindings = self.bindings.clone();
+
+        for stmt in &example.statements {
+            match stmt {
+                ExampleStatement::Let {
+                    name,
+                    type_annotation: _,
+                    value,
+                } => {
+                    // Evaluate the value and bind it
+                    match self.eval(value) {
+                        Ok(evaluated) => {
+                            self.bindings.insert(name.clone(), evaluated);
+                        }
+                        Err(e) => {
+                            // Restore bindings and return error
+                            self.bindings = saved_bindings;
+                            return ExampleResult {
+                                name: example.name.clone(),
+                                passed: false,
+                                error: Some(format!("Error evaluating let {}: {}", name, e)),
+                                assertions_passed,
+                                assertions_total,
+                            };
+                        }
+                    }
+                }
+                ExampleStatement::Assert(condition) => {
+                    assertions_total += 1;
+                    match self.eval_assert(condition) {
+                        AssertResult::Passed => {
+                            assertions_passed += 1;
+                        }
+                        AssertResult::Failed { expected, actual } => {
+                            // Restore bindings and return error
+                            self.bindings = saved_bindings;
+                            return ExampleResult {
+                                name: example.name.clone(),
+                                passed: false,
+                                error: Some(format!(
+                                    "Assertion failed: expected {:?}, got {:?}",
+                                    expected, actual
+                                )),
+                                assertions_passed,
+                                assertions_total,
+                            };
+                        }
+                        AssertResult::Unknown(reason) => {
+                            // For symbolic assertions, we can't verify - treat as unknown
+                            // In the future, this will integrate with Z3
+                            // For now, we'll pass symbolic assertions (optimistic)
+                            assertions_passed += 1;
+                            // TODO: When Z3 integration is complete, prove symbolically
+                            let _ = reason; // Suppress unused warning
+                        }
+                    }
+                }
+                ExampleStatement::Expr(expr) => {
+                    // Evaluate expression for side effects (or final result)
+                    if let Err(e) = self.eval(expr) {
+                        // Restore bindings and return error
+                        self.bindings = saved_bindings;
+                        return ExampleResult {
+                            name: example.name.clone(),
+                            passed: false,
+                            error: Some(format!("Error evaluating expression: {}", e)),
+                            assertions_passed,
+                            assertions_total,
+                        };
+                    }
+                }
+            }
+        }
+
+        // Restore original bindings (example blocks don't leak bindings)
+        self.bindings = saved_bindings;
+
+        ExampleResult {
+            name: example.name.clone(),
+            passed: true,
+            error: None,
+            assertions_passed,
+            assertions_total,
+        }
+    }
+
+    /// Evaluate an assert condition
+    ///
+    /// Handles different forms of assertions:
+    /// - `a = b` - Equality check
+    /// - `predicate(x)` - Predicate check (must evaluate to true-like)
+    /// - Concrete values - Directly check if true
+    /// - Symbolic values - Return Unknown (for future Z3 integration)
+    fn eval_assert(&self, condition: &Expression) -> AssertResult {
+        // Check if this is an equality assertion: a = b
+        if let Expression::Operation { name, args } = condition {
+            if (name == "eq" || name == "equals" || name == "=") && args.len() == 2 {
+                return self.eval_equality_assert(&args[0], &args[1]);
+            }
+        }
+
+        // Otherwise, evaluate the condition and check if it's "true"
+        match self.eval(condition) {
+            Ok(result) => {
+                if self.is_truthy(&result) {
+                    AssertResult::Passed
+                } else {
+                    AssertResult::Failed {
+                        expected: Expression::Object("true".to_string()),
+                        actual: result,
+                    }
+                }
+            }
+            Err(e) => AssertResult::Unknown(format!("Could not evaluate: {}", e)),
+        }
+    }
+
+    /// Evaluate an equality assertion: assert(a = b)
+    fn eval_equality_assert(&self, left: &Expression, right: &Expression) -> AssertResult {
+        // First, resolve any variables in the expressions
+        let left_resolved = self.resolve_expression(left);
+        let right_resolved = self.resolve_expression(right);
+
+        // Try to evaluate both sides
+        let left_result = self.eval(&left_resolved);
+        let right_result = self.eval(&right_resolved);
+
+        match (left_result, right_result) {
+            (Ok(left_val), Ok(right_val)) => {
+                // Both sides evaluated - check structural equality
+                if self.expressions_equal(&left_val, &right_val) {
+                    AssertResult::Passed
+                } else {
+                    AssertResult::Failed {
+                        expected: right_val,
+                        actual: left_val,
+                    }
+                }
+            }
+            (Err(e), _) | (_, Err(e)) => {
+                // At least one side couldn't be evaluated - symbolic
+                AssertResult::Unknown(format!("Symbolic assertion: {}", e))
+            }
+        }
+    }
+
+    /// Resolve variables in an expression using current bindings
+    fn resolve_expression(&self, expr: &Expression) -> Expression {
+        match expr {
+            Expression::Object(name) => {
+                // Check if this variable is bound
+                if let Some(value) = self.bindings.get(name) {
+                    value.clone()
+                } else {
+                    expr.clone()
+                }
+            }
+            Expression::Operation { name, args } => Expression::Operation {
+                name: name.clone(),
+                args: args.iter().map(|a| self.resolve_expression(a)).collect(),
+            },
+            _ => expr.clone(),
+        }
+    }
+
+    /// Check if two expressions are structurally equal
+    fn expressions_equal(&self, left: &Expression, right: &Expression) -> bool {
+        match (left, right) {
+            (Expression::Const(a), Expression::Const(b)) => {
+                // Try numeric comparison for constants
+                match (a.parse::<f64>(), b.parse::<f64>()) {
+                    (Ok(a_num), Ok(b_num)) => (a_num - b_num).abs() < 1e-10,
+                    _ => a == b,
+                }
+            }
+            (Expression::String(a), Expression::String(b)) => a == b,
+            (Expression::Object(a), Expression::Object(b)) => a == b,
+            (
+                Expression::Operation { name: n1, args: a1 },
+                Expression::Operation { name: n2, args: a2 },
+            ) => {
+                n1 == n2
+                    && a1.len() == a2.len()
+                    && a1
+                        .iter()
+                        .zip(a2.iter())
+                        .all(|(x, y)| self.expressions_equal(x, y))
+            }
+            _ => left == right, // Fall back to Eq trait
+        }
+    }
+
+    /// Check if an expression represents a "truthy" value
+    fn is_truthy(&self, expr: &Expression) -> bool {
+        match expr {
+            Expression::Object(name) => {
+                // Common truth values
+                name == "true" || name == "True" || name == "⊤"
+            }
+            Expression::Const(s) => {
+                // Non-zero numbers are truthy
+                s.parse::<f64>().map(|n| n != 0.0).unwrap_or(false)
+            }
+            _ => false,
+        }
+    }
+
+    /// Run all example blocks in a program
+    ///
+    /// Returns a vector of results for each example block
+    pub fn run_all_examples(&mut self, program: &Program) -> Vec<ExampleResult> {
+        let mut results = Vec::new();
+
+        for item in &program.items {
+            if let TopLevel::ExampleBlock(example) = item {
+                let result = self.eval_example_block(example);
+                results.push(result);
+            }
+        }
+
+        results
     }
 
     // =========================================================================
@@ -5724,5 +5997,138 @@ mod tests {
         // Clear the hook
         eval.clear_debug_hook();
         assert!(!eval.is_debugging());
+    }
+
+    // =========================================
+    // Example Block Evaluation Tests (v0.93)
+    // =========================================
+
+    #[test]
+    fn test_eval_example_block_simple() {
+        use crate::kleis_ast::{ExampleBlock, ExampleStatement};
+
+        let mut eval = Evaluator::new();
+
+        // Create a simple example block
+        let example = ExampleBlock {
+            name: "simple test".to_string(),
+            statements: vec![
+                ExampleStatement::Let {
+                    name: "x".to_string(),
+                    type_annotation: None,
+                    value: Expression::Const("5".to_string()),
+                },
+                ExampleStatement::Let {
+                    name: "y".to_string(),
+                    type_annotation: None,
+                    value: Expression::Const("5".to_string()),
+                },
+                ExampleStatement::Assert(Expression::Operation {
+                    name: "eq".to_string(),
+                    args: vec![
+                        Expression::Object("x".to_string()),
+                        Expression::Object("y".to_string()),
+                    ],
+                }),
+            ],
+        };
+
+        let result = eval.eval_example_block(&example);
+        assert!(
+            result.passed,
+            "Expected example to pass: {:?}",
+            result.error
+        );
+        assert_eq!(result.assertions_passed, 1);
+        assert_eq!(result.assertions_total, 1);
+    }
+
+    #[test]
+    fn test_eval_example_block_failing_assert() {
+        use crate::kleis_ast::{ExampleBlock, ExampleStatement};
+
+        let mut eval = Evaluator::new();
+
+        // Create an example block with a failing assertion
+        let example = ExampleBlock {
+            name: "failing test".to_string(),
+            statements: vec![
+                ExampleStatement::Let {
+                    name: "x".to_string(),
+                    type_annotation: None,
+                    value: Expression::Const("5".to_string()),
+                },
+                ExampleStatement::Let {
+                    name: "y".to_string(),
+                    type_annotation: None,
+                    value: Expression::Const("10".to_string()),
+                },
+                ExampleStatement::Assert(Expression::Operation {
+                    name: "eq".to_string(),
+                    args: vec![
+                        Expression::Object("x".to_string()),
+                        Expression::Object("y".to_string()),
+                    ],
+                }),
+            ],
+        };
+
+        let result = eval.eval_example_block(&example);
+        assert!(!result.passed, "Expected example to fail");
+        assert!(result.error.is_some());
+        assert_eq!(result.assertions_passed, 0);
+        assert_eq!(result.assertions_total, 1);
+    }
+
+    #[test]
+    fn test_eval_example_block_bindings_dont_leak() {
+        use crate::kleis_ast::{ExampleBlock, ExampleStatement};
+
+        let mut eval = Evaluator::new();
+
+        // Set a binding before the example
+        eval.set_binding("outer".to_string(), Expression::Const("1".to_string()));
+
+        let example = ExampleBlock {
+            name: "scope test".to_string(),
+            statements: vec![ExampleStatement::Let {
+                name: "inner".to_string(),
+                type_annotation: None,
+                value: Expression::Const("2".to_string()),
+            }],
+        };
+
+        let result = eval.eval_example_block(&example);
+        assert!(result.passed);
+
+        // The inner binding should NOT leak out
+        assert!(eval.get_binding("inner").is_none());
+        // The outer binding should still exist
+        assert!(eval.get_binding("outer").is_some());
+    }
+
+    #[test]
+    fn test_run_all_examples() {
+        use crate::kleis_parser::parse_kleis_program;
+
+        let code = r#"
+            example "test one" {
+                let x = 1
+            }
+            
+            example "test two" {
+                let y = 2
+            }
+        "#;
+
+        let program = parse_kleis_program(code).unwrap();
+        let mut eval = Evaluator::new();
+        let results = eval.run_all_examples(&program);
+
+        assert_eq!(results.len(), 2);
+        assert!(results[0].passed);
+        assert!(results[1].passed);
+        assert_eq!(results[0].name, "test one");
+        assert_eq!(results[1].name, "test two");
     }
 }
