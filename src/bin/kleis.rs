@@ -826,6 +826,24 @@ struct DapState {
     total_lines: u32,
     /// Validated breakpoints (only on statement lines)
     breakpoints: Vec<u32>,
+
+    // === Channel-based debugging (real evaluator integration) ===
+
+    /// Controller for channel-based communication with DebugHook
+    /// Created in `launch`, used in step commands
+    controller: Option<kleis::debug::DapDebugController>,
+
+    /// Handle to evaluation thread (spawned in configurationDone)
+    eval_thread: Option<std::thread::JoinHandle<()>>,
+
+    /// Parsed program (for finding example blocks to debug)
+    program: Option<kleis::kleis_ast::Program>,
+
+    /// Last stop event received from the evaluator
+    last_stop_event: Option<kleis::debug::StopEvent>,
+
+    /// Debug hook (created in launch, moved to eval thread in configurationDone)
+    pending_hook: Option<kleis::debug::DapDebugHook>,
 }
 
 impl DapState {
@@ -840,6 +858,12 @@ impl DapState {
             executable_lines: Vec::new(),
             total_lines: 0,
             breakpoints: Vec::new(),
+            // New fields for real evaluator integration
+            controller: None,
+            eval_thread: None,
+            program: None,
+            last_stop_event: None,
+            pending_hook: None,
         }
     }
 }
@@ -1166,6 +1190,8 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             ]
         }
         "launch" => {
+            use kleis::debug::{Breakpoint as DebugBreakpoint, DapDebugHook};
+
             // Load program from file
             let program_path = request
                 .get("arguments")
@@ -1175,7 +1201,7 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             eprintln!("[kleis-dap] Launch request, program: {:?}", program_path);
 
             if let Some(program_path) = program_path {
-                // Load file into state - this parses executable lines
+                // Load file into state - this parses executable lines and loads into evaluator
                 if let Err(e) = state.load_file(program_path) {
                     return vec![serde_json::json!({
                         "seq": 1,
@@ -1189,11 +1215,42 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
 
                 eprintln!(
                     "[kleis-dap] Loaded file with {} executable lines, starting at line {}",
-                    state.executable_lines.len(),
+                    state.statement_lines.len(),
                     state.current_line
                 );
 
-                // Note: load_file already loaded the program into state.evaluator
+                // Store the program for later (to find example blocks)
+                if let Ok(cache) = state.ast_cache.read() {
+                    if let Some(file_path) = &state.current_file {
+                        if let Some(doc) = cache.get(file_path) {
+                            state.program = doc.program.clone();
+                        }
+                    }
+                }
+
+                // Create the debug hook and controller for channel-based communication
+                let (mut hook, controller) = DapDebugHook::new();
+
+                // Set the current file on the hook
+                if let Some(ref file_path) = state.current_file {
+                    hook.set_file(file_path.clone());
+                }
+
+                // Add breakpoints to the hook (validated breakpoints from setBreakpoints)
+                if let Some(ref file_path) = state.current_file {
+                    for &line in &state.breakpoints {
+                        hook.add_breakpoint(DebugBreakpoint::new(file_path.clone(), line));
+                    }
+                }
+
+                // Store controller and hook for later
+                state.controller = Some(controller);
+                state.pending_hook = Some(hook);
+
+                // Note: We'll set the hook on the evaluator and spawn the eval thread
+                // in configurationDone (VS Code sends breakpoints between launch and configurationDone)
+
+                eprintln!("[kleis-dap] Hook and controller created, waiting for configurationDone");
             } else {
                 eprintln!("[kleis-dap] No program path provided!");
                 return vec![serde_json::json!({
@@ -1238,27 +1295,55 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             })]
         }
         "stackTrace" => {
-            // Return a stack frame with proper source info
-            let file_path = state
-                .current_file
-                .as_ref()
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_default();
-            let file_name = state
-                .current_file
-                .as_ref()
-                .and_then(|p| p.file_name())
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| "unknown".to_string());
+            // Try to use real stack frames from the last stop event
+            let stack_frames: Vec<serde_json::Value> =
+                if let Some(ref stop_event) = state.last_stop_event {
+                    stop_event
+                        .stack
+                        .iter()
+                        .enumerate()
+                        .map(|(i, frame)| {
+                            let file_path = frame
+                                .location
+                                .file
+                                .as_ref()
+                                .map(|p| p.to_string_lossy().to_string())
+                                .unwrap_or_default();
+                            let file_name = frame
+                                .location
+                                .file
+                                .as_ref()
+                                .and_then(|p| p.file_name())
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "unknown".to_string());
 
-            vec![serde_json::json!({
-                "seq": 1,
-                "type": "response",
-                "request_seq": seq,
-                "success": true,
-                "command": "stackTrace",
-                "body": {
-                    "stackFrames": [{
+                            serde_json::json!({
+                                "id": i + 1,
+                                "name": frame.name,
+                                "source": {
+                                    "name": file_name,
+                                    "path": file_path
+                                },
+                                "line": frame.location.line,
+                                "column": frame.location.column.max(1)
+                            })
+                        })
+                        .collect()
+                } else {
+                    // Fallback to simulated single frame
+                    let file_path = state
+                        .current_file
+                        .as_ref()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    let file_name = state
+                        .current_file
+                        .as_ref()
+                        .and_then(|p| p.file_name())
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "unknown".to_string());
+
+                    vec![serde_json::json!({
                         "id": 1,
                         "name": "<top-level>",
                         "source": {
@@ -1267,8 +1352,20 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                         },
                         "line": state.current_line,
                         "column": 1
-                    }],
-                    "totalFrames": 1
+                    })]
+                };
+
+            let total_frames = stack_frames.len();
+
+            vec![serde_json::json!({
+                "seq": 1,
+                "type": "response",
+                "request_seq": seq,
+                "success": true,
+                "command": "stackTrace",
+                "body": {
+                    "stackFrames": stack_frames,
+                    "totalFrames": total_frames
                 }
             })]
         }
@@ -1289,16 +1386,36 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             })]
         }
         "variables" => {
-            // Return actual variables from the evaluator
             let mut variables = Vec::new();
-            // Get all bindings from DAP's evaluator
-            for (name, value) in state.evaluator.get_all_bindings() {
-                variables.push(serde_json::json!({
-                    "name": name,
-                    "value": format!("{:?}", value),
-                    "variablesReference": 0
-                }));
+
+            // Try to get bindings from the current stack frame in the stop event
+            if let Some(ref stop_event) = state.last_stop_event {
+                if let Some(frame) = stop_event.stack.first() {
+                    for (name, value) in &frame.bindings {
+                        variables.push(serde_json::json!({
+                            "name": name,
+                            "value": value,
+                            "variablesReference": 0
+                        }));
+                    }
+                }
             }
+
+            // Also include evaluator's global bindings (as fallback or supplement)
+            for (name, value) in state.evaluator.get_all_bindings() {
+                // Avoid duplicates
+                let already_exists = variables.iter().any(|v| {
+                    v.get("name").and_then(|n| n.as_str()) == Some(&name)
+                });
+                if !already_exists {
+                    variables.push(serde_json::json!({
+                        "name": name,
+                        "value": format!("{:?}", value),
+                        "variablesReference": 0
+                    }));
+                }
+            }
+
             // Show function count
             let func_count = state.evaluator.list_functions().len();
             variables.push(serde_json::json!({
@@ -1306,6 +1423,7 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                 "value": format!("{} defined", func_count),
                 "variablesReference": 0
             }));
+
             vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
@@ -1388,6 +1506,80 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             })]
         }
         "configurationDone" => {
+            // Take the pending hook and spawn the evaluation thread
+            if let Some(hook) = state.pending_hook.take() {
+                // Get the program to evaluate
+                let program = state.program.clone();
+
+                if let Some(program) = program {
+                    // Create a fresh evaluator for the eval thread
+                    let mut eval_evaluator = Evaluator::new();
+
+                    // Load the program into the evaluator
+                    if let Err(e) = eval_evaluator.load_program(&program) {
+                        eprintln!("[kleis-dap] Failed to load program: {}", e);
+                    }
+
+                    // Set the debug hook on the evaluator
+                    eval_evaluator.set_debug_hook(Box::new(hook));
+
+                    // Spawn the evaluation thread
+                    let handle = std::thread::spawn(move || {
+                        eprintln!("[kleis-dap] Eval thread started");
+
+                        // Find and evaluate example blocks
+                        for item in &program.items {
+                            if let kleis::kleis_ast::TopLevel::ExampleBlock(example) = item {
+                                eprintln!(
+                                    "[kleis-dap] Evaluating example block: {}",
+                                    if example.name.is_empty() { "(anonymous)" } else { &example.name }
+                                );
+                                let result = eval_evaluator.eval_example_block(example);
+                                if result.passed {
+                                    eprintln!("[kleis-dap] Example passed");
+                                } else {
+                                    eprintln!(
+                                        "[kleis-dap] Example failed: {:?}",
+                                        result.error
+                                    );
+                                }
+                                break; // Only evaluate first example for now
+                            }
+                        }
+
+                        eprintln!("[kleis-dap] Eval thread finished");
+                    });
+
+                    state.eval_thread = Some(handle);
+                    eprintln!("[kleis-dap] Eval thread spawned");
+
+                    // Wait for the first stop event from the hook
+                    if let Some(ref controller) = state.controller {
+                        // Try to receive with a short timeout
+                        match controller.event_rx.recv_timeout(std::time::Duration::from_millis(500)) {
+                            Ok(stop_event) => {
+                                eprintln!(
+                                    "[kleis-dap] Received stop event: {:?} at line {}",
+                                    stop_event.reason, stop_event.location.line
+                                );
+                                state.current_line = stop_event.location.line;
+                                if let Some(ref file) = stop_event.location.file {
+                                    state.current_file = Some(file.clone());
+                                }
+                                state.last_stop_event = Some(stop_event);
+                            }
+                            Err(e) => {
+                                eprintln!("[kleis-dap] No stop event received (may have completed quickly): {:?}", e);
+                            }
+                        }
+                    }
+                } else {
+                    eprintln!("[kleis-dap] No program to evaluate");
+                }
+            } else {
+                eprintln!("[kleis-dap] No pending hook (launch not called?)");
+            }
+
             // Response + stopped event + output events
             vec![
                 // Response
@@ -1423,7 +1615,89 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             ]
         }
         "continue" => {
-            // Run until breakpoint or end
+            use kleis::debug::DebugAction;
+
+            // Try to use the real evaluator via channels
+            if let Some(ref controller) = state.controller {
+                eprintln!("[kleis-dap] Sending Continue action");
+
+                if let Err(e) = controller.command_tx.send(DebugAction::Continue) {
+                    eprintln!("[kleis-dap] Failed to send Continue: {:?}", e);
+                } else {
+                    // Wait for the next stop event (breakpoint or end)
+                    match controller.event_rx.recv_timeout(std::time::Duration::from_secs(30)) {
+                        Ok(stop_event) => {
+                            eprintln!(
+                                "[kleis-dap] Received stop event: {:?} at line {}",
+                                stop_event.reason, stop_event.location.line
+                            );
+                            state.current_line = stop_event.location.line;
+                            if let Some(ref file) = stop_event.location.file {
+                                state.current_file = Some(file.clone());
+                            }
+                            state.last_stop_event = Some(stop_event.clone());
+
+                            let reason = match stop_event.reason {
+                                kleis::debug::StopReason::Breakpoint => "breakpoint",
+                                kleis::debug::StopReason::Step => "step",
+                                kleis::debug::StopReason::Entry => "entry",
+                                kleis::debug::StopReason::Pause => "pause",
+                            };
+
+                            return vec![
+                                serde_json::json!({
+                                    "seq": 1,
+                                    "type": "response",
+                                    "request_seq": seq,
+                                    "success": true,
+                                    "command": "continue"
+                                }),
+                                serde_json::json!({
+                                    "seq": 2,
+                                    "type": "event",
+                                    "event": "stopped",
+                                    "body": {
+                                        "reason": reason,
+                                        "threadId": 1,
+                                        "allThreadsStopped": true
+                                    }
+                                }),
+                            ];
+                        }
+                        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                            eprintln!("[kleis-dap] Evaluator finished");
+                            return vec![
+                                serde_json::json!({
+                                    "seq": 1,
+                                    "type": "response",
+                                    "request_seq": seq,
+                                    "success": true,
+                                    "command": "continue"
+                                }),
+                                serde_json::json!({
+                                    "seq": 2,
+                                    "type": "event",
+                                    "event": "output",
+                                    "body": {
+                                        "category": "console",
+                                        "output": "\n✅ Execution completed\n"
+                                    }
+                                }),
+                                serde_json::json!({
+                                    "seq": 3,
+                                    "type": "event",
+                                    "event": "terminated"
+                                }),
+                            ];
+                        }
+                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                            eprintln!("[kleis-dap] Timeout waiting for stop");
+                        }
+                    }
+                }
+            }
+
+            // Fallback: simulated continue
             let mut hit_breakpoint = false;
             while state.step_next() {
                 if state.is_at_breakpoint() {
@@ -1433,7 +1707,6 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             }
 
             if hit_breakpoint {
-                // Stopped at breakpoint
                 vec![
                     serde_json::json!({
                         "seq": 1,
@@ -1454,7 +1727,6 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                     }),
                 ]
             } else {
-                // End of file - terminate
                 vec![
                     serde_json::json!({
                         "seq": 1,
@@ -1481,16 +1753,107 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             }
         }
         "next" | "stepIn" | "stepOut" => {
-            // Step to next executable line
+            use kleis::debug::DebugAction;
+
+            // Determine which action to send
+            let action = match command {
+                "next" => DebugAction::StepOver,
+                "stepIn" => DebugAction::StepInto,
+                "stepOut" => DebugAction::StepOut,
+                _ => DebugAction::Continue,
+            };
+
+            // Try to use the real evaluator via channels
+            if let Some(ref controller) = state.controller {
+                eprintln!("[kleis-dap] Sending {:?} action", action);
+
+                // Send the action to the evaluator thread
+                if let Err(e) = controller.command_tx.send(action) {
+                    eprintln!("[kleis-dap] Failed to send action: {:?}", e);
+                    // Fall back to simulated stepping
+                } else {
+                    // Wait for the stop event
+                    match controller.event_rx.recv_timeout(std::time::Duration::from_secs(5)) {
+                        Ok(stop_event) => {
+                            eprintln!(
+                                "[kleis-dap] Received stop event: {:?} at line {}",
+                                stop_event.reason, stop_event.location.line
+                            );
+                            state.current_line = stop_event.location.line;
+                            if let Some(ref file) = stop_event.location.file {
+                                state.current_file = Some(file.clone());
+                            }
+                            state.last_stop_event = Some(stop_event.clone());
+
+                            let reason = match stop_event.reason {
+                                kleis::debug::StopReason::Breakpoint => "breakpoint",
+                                kleis::debug::StopReason::Step => "step",
+                                kleis::debug::StopReason::Entry => "entry",
+                                kleis::debug::StopReason::Pause => "pause",
+                            };
+
+                            return vec![
+                                serde_json::json!({
+                                    "seq": 1,
+                                    "type": "response",
+                                    "request_seq": seq,
+                                    "success": true,
+                                    "command": command
+                                }),
+                                serde_json::json!({
+                                    "seq": 2,
+                                    "type": "event",
+                                    "event": "stopped",
+                                    "body": {
+                                        "reason": reason,
+                                        "threadId": 1,
+                                        "allThreadsStopped": true
+                                    }
+                                }),
+                            ];
+                        }
+                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                            eprintln!("[kleis-dap] Timeout waiting for stop event");
+                        }
+                        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                            eprintln!("[kleis-dap] Evaluator thread disconnected (finished)");
+                            // Program completed
+                            return vec![
+                                serde_json::json!({
+                                    "seq": 1,
+                                    "type": "response",
+                                    "request_seq": seq,
+                                    "success": true,
+                                    "command": command
+                                }),
+                                serde_json::json!({
+                                    "seq": 2,
+                                    "type": "event",
+                                    "event": "output",
+                                    "body": {
+                                        "category": "console",
+                                        "output": "\n✅ Execution completed\n"
+                                    }
+                                }),
+                                serde_json::json!({
+                                    "seq": 3,
+                                    "type": "event",
+                                    "event": "terminated"
+                                }),
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Fallback: simulated stepping (when no controller)
             if state.step_next() {
-                // Check if we hit a breakpoint
                 let reason = if state.is_at_breakpoint() {
                     "breakpoint"
                 } else {
                     "step"
                 };
 
-                // Return response + stopped event
                 vec![
                     serde_json::json!({
                         "seq": 1,
