@@ -4,7 +4,45 @@
 
 ---
 
-## 🎯 CRITICAL: Wire DAP to Real Evaluator with DebugHook
+## ✅ DONE: Thread-Safe AST Cache (ADR-025)
+
+**See:** `docs/adr/adr-025-debugger-shared-context.md`
+
+Implemented thread-safe AST cache shared between LSP and DAP:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Thread-Safe AST Cache                         │
+│     Arc<RwLock<HashMap<PathBuf, CachedDocument>>>               │
+│                                                                  │
+│  CachedDocument {                                                │
+│    source: String,                                               │
+│    program: Option<Program>,  // The AST                         │
+│    imports: HashSet<PathBuf>, // Dependencies                    │
+│    dirty: bool,               // Needs re-parse?                 │
+│  }                                                               │
+└─────────────────────────────────────────────────────────────────┘
+           ↑                              ↑
+           │ write                        │ read (or write if miss)
+           │                              │
+    ┌──────┴───────┐               ┌──────┴───────┐
+    │     LSP      │               │     DAP      │
+    │  (Thread 1)  │               │  (Thread 2)  │
+    │              │               │              │
+    │  Evaluator   │               │  Evaluator   │
+    │  (own copy)  │               │  (own copy)  │
+    └──────────────┘               └──────────────┘
+```
+
+**Key features:**
+- LSP updates cache when documents change
+- DAP reads from cache (or parses and caches if missing/dirty)
+- Cascade invalidation: dirty files propagate to dependents
+- Each thread has its own `Evaluator` (because `RefCell` is not `Sync`)
+
+---
+
+## 🎯 NEXT: Wire DAP to Real Evaluator with DebugHook
 
 ### Problem Statement
 
