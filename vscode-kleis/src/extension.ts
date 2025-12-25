@@ -380,7 +380,8 @@ class KleisDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
             if (standalonePath) {
                 console.log('Using standalone debug adapter (no shared state with LSP)');
                 window.showWarningMessage('Kleis LSP server not found; using standalone debug adapter (no shared state with LSP).');
-                return new vscode.DebugAdapterExecutable(standalonePath, []);
+                // Run kleis with 'dap' subcommand for standalone DAP server over stdio
+                return new vscode.DebugAdapterExecutable(standalonePath, ['dap']);
             } else {
                 window.showErrorMessage('Kleis LSP not found. Debugging requires the Kleis server. Build it with `cargo build --release --bin kleis` or set "kleis.serverPath" in settings.');
                 throw new Error('Kleis LSP not found');
@@ -391,22 +392,46 @@ class KleisDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 
 /**
  * Find standalone debug adapter for fallback when LSP is not running
+ * Checks:
+ * 1. kleis.debugAdapterPath setting
+ * 2. kleis binary in workspace target directories
+ * 3. kleis binary in PATH
  */
 function findStandaloneDebugAdapter(): string | undefined {
+    const config = workspace.getConfiguration('kleis');
+    
+    // Check configured path first
+    const configuredPath = config.get<string>('debugAdapterPath');
+    if (configuredPath && fs.existsSync(configuredPath)) {
+        return configuredPath;
+    }
+    
+    // Check workspace build directories for kleis binary
     const workspaceFolders = workspace.workspaceFolders;
     if (workspaceFolders) {
         for (const folder of workspaceFolders) {
-            // Check for kleis-debug binary
-            const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'debug');
+            // Check for unified kleis binary
+            const releasePath = path.join(folder.uri.fsPath, 'target', 'release', 'kleis');
             if (fs.existsSync(releasePath)) {
                 return releasePath;
             }
-            const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'debug');
+            const debugPath = path.join(folder.uri.fsPath, 'target', 'debug', 'kleis');
             if (fs.existsSync(debugPath)) {
                 return debugPath;
             }
         }
     }
+    
+    // Check PATH
+    const pathEnv = process.env.PATH || '';
+    const pathDirs = pathEnv.split(path.delimiter);
+    for (const dir of pathDirs) {
+        const kleisPath = path.join(dir, 'kleis');
+        if (fs.existsSync(kleisPath)) {
+            return kleisPath;
+        }
+    }
+    
     return undefined;
 }
 

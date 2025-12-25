@@ -82,6 +82,13 @@ enum Commands {
         #[arg(short, long)]
         load: Vec<PathBuf>,
     },
+
+    /// Start standalone DAP server over stdio (for IDE debugging without LSP)
+    Dap {
+        /// Enable verbose logging (to stderr)
+        #[arg(short, long)]
+        verbose: bool,
+    },
 }
 
 #[tokio::main]
@@ -107,6 +114,9 @@ async fn main() {
         }
         Commands::Repl { load } => {
             run_repl(load);
+        }
+        Commands::Dap { verbose } => {
+            run_dap(verbose);
         }
     }
 }
@@ -338,6 +348,21 @@ fn run_repl(load: Vec<PathBuf>) {
     }
     eprintln!("TODO: Integrate with existing REPL implementation");
     eprintln!("For now, use: cargo run --bin repl");
+}
+
+/// Run standalone DAP server over stdio
+/// This is used when the LSP server is not available
+fn run_dap(verbose: bool) {
+    use kleis::dap::run_stdio_server;
+
+    if verbose {
+        eprintln!("[kleis-dap] Starting standalone DAP server over stdio");
+    }
+
+    if let Err(e) = run_stdio_server() {
+        eprintln!("[kleis-dap] Error: {}", e);
+        std::process::exit(1);
+    }
 }
 
 // ============================================================================
@@ -754,11 +779,15 @@ fn handle_dap_request(
         }
         "launch" => {
             // Load program from file
-            if let Some(program_path) = request
+            let program_path = request
                 .get("arguments")
                 .and_then(|a| a.get("program"))
-                .and_then(|p| p.as_str())
-            {
+                .and_then(|p| p.as_str());
+
+            eprintln!("[kleis-dap] Launch request, program: {:?}", program_path);
+
+            if let Some(program_path) = program_path {
+                eprintln!("[kleis-dap] Loading file: {}", program_path);
                 match std::fs::read_to_string(program_path) {
                     Ok(source) => match parse_kleis_program(&source) {
                         Ok(program) => {
@@ -797,6 +826,16 @@ fn handle_dap_request(
                         })];
                     }
                 }
+            } else {
+                eprintln!("[kleis-dap] No program path provided!");
+                return vec![serde_json::json!({
+                    "seq": 1,
+                    "type": "response",
+                    "request_seq": seq,
+                    "success": false,
+                    "command": "launch",
+                    "message": "No program path provided"
+                })];
             }
             vec![serde_json::json!({
                 "seq": 1,
