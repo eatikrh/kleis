@@ -807,41 +807,29 @@ impl LanguageServer for KleisUnifiedServer {
 }
 
 /// Run the DAP server on an existing listener
-/// DAP session state with smart stepping using AST spans
+/// DAP session state - uses real evaluator with DebugHook for stepping
 struct DapState {
     /// Thread-safe AST cache (shared with LSP)
     ast_cache: AstCache,
     /// DAP's own evaluator (not shared with LSP)
     evaluator: Evaluator,
-    /// Current file being debugged
+    /// Current file being debugged (updated from StopEvent)
     current_file: Option<PathBuf>,
+    /// Current line (updated from StopEvent)
     current_line: u32,
-    /// Statement line numbers from parsed AST (real source locations)
-    statement_lines: Vec<u32>,
-    /// Index into statement_lines for current position
-    stmt_index: usize,
-    /// Fallback: lines that contain executable code (text-based analysis)
-    executable_lines: Vec<u32>,
-    /// Total lines in file
-    total_lines: u32,
-    /// Validated breakpoints (only on statement lines)
-    breakpoints: Vec<u32>,
+    /// Breakpoints set by VS Code (used to configure DapDebugHook)
+    breakpoints: Vec<kleis::debug::Breakpoint>,
 
     // === Channel-based debugging (real evaluator integration) ===
 
     /// Controller for channel-based communication with DebugHook
-    /// Created in `launch`, used in step commands
     controller: Option<kleis::debug::DapDebugController>,
-
-    /// Handle to evaluation thread (spawned in configurationDone)
+    /// Handle to evaluation thread
     eval_thread: Option<std::thread::JoinHandle<()>>,
-
     /// Parsed program (for finding example blocks to debug)
     program: Option<kleis::kleis_ast::Program>,
-
     /// Last stop event received from the evaluator
     last_stop_event: Option<kleis::debug::StopEvent>,
-
     /// Debug hook (created in launch, moved to eval thread in configurationDone)
     pending_hook: Option<kleis::debug::DapDebugHook>,
 }
@@ -853,12 +841,7 @@ impl DapState {
             evaluator: Evaluator::new(),
             current_file: None,
             current_line: 1,
-            statement_lines: Vec::new(),
-            stmt_index: 0,
-            executable_lines: Vec::new(),
-            total_lines: 0,
             breakpoints: Vec::new(),
-            // New fields for real evaluator integration
             controller: None,
             eval_thread: None,
             program: None,
@@ -872,8 +855,7 @@ impl DapState {
     /// Load file using the shared AST cache
     ///
     /// Gets the AST from the cache (which may already have it from LSP)
-    /// and extracts statement line numbers for debugging.
-    /// If not in cache or dirty, parses and caches it.
+    /// and loads it into the evaluator.
     fn load_file(&mut self, path: &str) -> std::result::Result<(), String> {
         use kleis::kleis_parser::parse_kleis_program_with_file;
 
@@ -884,12 +866,10 @@ impl DapState {
             .unwrap_or_else(|_| path_buf.clone());
 
         self.current_file = Some(canonical.clone());
-        self.statement_lines.clear();
-        self.executable_lines.clear();
-        self.stmt_index = 0;
+        self.current_line = 1;
 
         // Try to get AST from cache, or parse if needed
-        let (program, source) = {
+        let program = {
             let cache = self
                 .ast_cache
                 .read()
@@ -898,23 +878,21 @@ impl DapState {
             if let Some(doc) = cache.get(&canonical) {
                 if !doc.dirty && doc.program.is_some() {
                     // Cache hit: use cached AST
-                    (doc.program.clone(), doc.source.clone())
+                    doc.program.clone()
                 } else {
-                    // Dirty or no program: need to re-parse
-                    (None, doc.source.clone())
+                    None
                 }
             } else {
-                // Not in cache: read from disk
-                let source = std::fs::read_to_string(&canonical)
-                    .map_err(|e| format!("Cannot read file: {}", e))?;
-                (None, source)
+                None
             }
         };
 
         let program = if let Some(p) = program {
             p
         } else {
-            // Parse the file
+            // Not in cache or dirty: read from disk and parse
+            let source = std::fs::read_to_string(&canonical)
+                .map_err(|e| format!("Cannot read file: {}", e))?;
             let file_path_str = canonical.to_string_lossy().to_string();
             let parsed = parse_kleis_program_with_file(&source, &file_path_str)
                 .map_err(|e| format!("Parse error: {}", e.message))?;
@@ -934,7 +912,7 @@ impl DapState {
                     .collect();
 
                 let cached_doc = CachedDocument {
-                    source: source.clone(),
+                    source,
                     program: Some(parsed.clone()),
                     diagnostics: vec![],
                     imports,
@@ -946,124 +924,48 @@ impl DapState {
             parsed
         };
 
-        // Extract statement lines from AST
-        for item in &program.items {
-            self.extract_item_lines(item);
-        }
+        // Store program for later use (finding example blocks)
+        self.program = Some(program.clone());
 
         // Load program into DAP's evaluator
         self.evaluator.load_program(&program)?;
 
-        // Get line count for fallback
-        let lines: Vec<&str> = source.lines().collect();
-        self.total_lines = lines.len() as u32;
-
-        // Fallback: text-based analysis for non-example code
-        if self.statement_lines.is_empty() {
-            for (i, line) in lines.iter().enumerate() {
-                let line_num = (i + 1) as u32;
-                if Self::is_executable_line(line) {
-                    self.executable_lines.push(line_num);
-                }
-            }
-        }
-
-        // Combine and deduplicate
-        let mut all_lines: Vec<u32> = self.statement_lines.clone();
-        all_lines.extend(&self.executable_lines);
-        all_lines.sort();
-        all_lines.dedup();
-        self.statement_lines = all_lines;
-
-        // Start at first statement line
-        if let Some(&first) = self.statement_lines.first() {
-            self.current_line = first;
-            self.stmt_index = 0;
-        } else {
-            self.current_line = 1;
-        }
-
         Ok(())
     }
 
-    /// Extract line numbers from a top-level item
-    fn extract_item_lines(&mut self, item: &kleis::kleis_ast::TopLevel) {
-        use kleis::kleis_ast::{ExampleStatement, TopLevel};
-
-        match item {
-            TopLevel::ExampleBlock(example) => {
-                // Extract line numbers from each statement
-                for stmt in &example.statements {
-                    match stmt {
-                        ExampleStatement::Let { location, .. } => {
-                            if let Some(loc) = location {
-                                self.statement_lines.push(loc.line);
+    /// Check if a line is a valid breakpoint location (has executable code)
+    /// Uses the AST to determine valid locations
+    fn is_valid_breakpoint_line(&self, line: u32) -> bool {
+        if let Some(ref program) = self.program {
+            for item in &program.items {
+                if let kleis::kleis_ast::TopLevel::ExampleBlock(example) = item {
+                    for stmt in &example.statements {
+                        let stmt_line = match stmt {
+                            kleis::kleis_ast::ExampleStatement::Let { location, .. } => {
+                                location.as_ref().map(|l| l.line)
                             }
+                            kleis::kleis_ast::ExampleStatement::Assert { location, .. } => {
+                                location.as_ref().map(|l| l.line)
+                            }
+                            kleis::kleis_ast::ExampleStatement::Expr { location, .. } => {
+                                location.as_ref().map(|l| l.line)
+                            }
+                        };
+                        if stmt_line == Some(line) {
+                            return true;
                         }
-                        ExampleStatement::Assert { location, .. } => {
-                            if let Some(loc) = location {
-                                self.statement_lines.push(loc.line);
-                            }
-                        }
-                        ExampleStatement::Expr { location, .. } => {
-                            if let Some(loc) = location {
-                                self.statement_lines.push(loc.line);
-                            }
+                    }
+                }
+                if let kleis::kleis_ast::TopLevel::FunctionDef(func) = item {
+                    if let Some(ref span) = func.span {
+                        if span.line == line {
+                            return true;
                         }
                     }
                 }
             }
-            TopLevel::FunctionDef(func) => {
-                // Function definitions also have spans
-                if let Some(sp) = &func.span {
-                    self.statement_lines.push(sp.line);
-                }
-            }
-            _ => {
-                // Other top-level items don't have spans yet
-            }
         }
-    }
-
-    /// Check if a line contains executable code (text-based fallback)
-    fn is_executable_line(line: &str) -> bool {
-        let trimmed = line.trim();
-
-        if trimmed.is_empty() {
-            return false;
-        }
-        if trimmed.starts_with("//") || trimmed.starts_with('#') {
-            return false;
-        }
-        if trimmed == "{" || trimmed == "}" || trimmed == "(" || trimmed == ")" {
-            return false;
-        }
-        if trimmed.starts_with("/*") || trimmed.ends_with("*/") || trimmed == "*/" {
-            return false;
-        }
-
-        true
-    }
-
-    /// Step to next statement, returns true if stepped
-    fn step_next(&mut self) -> bool {
-        if self.stmt_index + 1 < self.statement_lines.len() {
-            self.stmt_index += 1;
-            self.current_line = self.statement_lines[self.stmt_index];
-            true
-        } else {
-            false // No more statements
-        }
-    }
-
-    /// Validate a breakpoint - returns true if it's on a statement line
-    fn validate_breakpoint(&self, line: u32) -> bool {
-        self.statement_lines.contains(&line)
-    }
-
-    /// Check if current line hits a breakpoint
-    fn is_at_breakpoint(&self) -> bool {
-        self.breakpoints.contains(&self.current_line)
+        false
     }
 }
 
@@ -1190,7 +1092,7 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             ]
         }
         "launch" => {
-            use kleis::debug::{Breakpoint as DebugBreakpoint, DapDebugHook};
+            use kleis::debug::DapDebugHook;
 
             // Load program from file
             let program_path = request
@@ -1214,19 +1116,11 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                 }
 
                 eprintln!(
-                    "[kleis-dap] Loaded file with {} executable lines, starting at line {}",
-                    state.statement_lines.len(),
+                    "[kleis-dap] Loaded file, starting at line {}",
                     state.current_line
                 );
 
-                // Store the program for later (to find example blocks)
-                if let Ok(cache) = state.ast_cache.read() {
-                    if let Some(file_path) = &state.current_file {
-                        if let Some(doc) = cache.get(file_path) {
-                            state.program = doc.program.clone();
-                        }
-                    }
-                }
+                // Note: load_file already stores the program in state.program
 
                 // Create the debug hook and controller for channel-based communication
                 let (mut hook, controller) = DapDebugHook::new();
@@ -1236,11 +1130,9 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                     hook.set_file(file_path.clone());
                 }
 
-                // Add breakpoints to the hook (validated breakpoints from setBreakpoints)
-                if let Some(ref file_path) = state.current_file {
-                    for &line in &state.breakpoints {
-                        hook.add_breakpoint(DebugBreakpoint::new(file_path.clone(), line));
-                    }
+                // Add breakpoints to the hook
+                for bp in &state.breakpoints {
+                    hook.add_breakpoint(bp.clone());
                 }
 
                 // Store controller and hook for later
@@ -1465,32 +1357,46 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             })]
         }
         "setBreakpoints" => {
+            use kleis::debug::Breakpoint as DebugBreakpoint;
+
             // Extract requested breakpoint lines and validate them
             let mut breakpoints_response = Vec::new();
             state.breakpoints.clear();
+
+            // Get file path from source in arguments
+            let file_path = request
+                .get("arguments")
+                .and_then(|a| a.get("source"))
+                .and_then(|s| s.get("path"))
+                .and_then(|p| p.as_str())
+                .map(PathBuf::from);
 
             if let Some(args) = request.get("arguments") {
                 if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
                     for bp in bps {
                         if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
                             let line = line as u32;
-                            let is_valid = state.validate_breakpoint(line);
+                            let is_valid = state.is_valid_breakpoint_line(line);
 
                             if is_valid {
-                                state.breakpoints.push(line);
+                                if let Some(ref path) = file_path {
+                                    state
+                                        .breakpoints
+                                        .push(DebugBreakpoint::new(path.clone(), line));
+                                }
                             }
 
-                            let mut bp = serde_json::json!({
+                            let mut bp_resp = serde_json::json!({
                                 "verified": is_valid,
                                 "line": line
                             });
                             if !is_valid {
-                                bp["message"] = serde_json::Value::String(
-                                    "Cannot set breakpoint on this line (comment or empty)"
+                                bp_resp["message"] = serde_json::Value::String(
+                                    "Cannot set breakpoint on this line (no executable code)"
                                         .to_string(),
                                 );
                             }
-                            breakpoints_response.push(bp);
+                            breakpoints_response.push(bp_resp);
                         }
                     }
                 }
@@ -1697,60 +1603,31 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                 }
             }
 
-            // Fallback: simulated continue
-            let mut hit_breakpoint = false;
-            while state.step_next() {
-                if state.is_at_breakpoint() {
-                    hit_breakpoint = true;
-                    break;
-                }
-            }
-
-            if hit_breakpoint {
-                vec![
-                    serde_json::json!({
-                        "seq": 1,
-                        "type": "response",
-                        "request_seq": seq,
-                        "success": true,
-                        "command": "continue"
-                    }),
-                    serde_json::json!({
-                        "seq": 2,
-                        "type": "event",
-                        "event": "stopped",
-                        "body": {
-                            "reason": "breakpoint",
-                            "threadId": 1,
-                            "allThreadsStopped": true
-                        }
-                    }),
-                ]
-            } else {
-                vec![
-                    serde_json::json!({
-                        "seq": 1,
-                        "type": "response",
-                        "request_seq": seq,
-                        "success": true,
-                        "command": "continue"
-                    }),
-                    serde_json::json!({
-                        "seq": 2,
-                        "type": "event",
-                        "event": "output",
-                        "body": {
-                            "category": "console",
-                            "output": "\n✅ Execution completed\n"
-                        }
-                    }),
-                    serde_json::json!({
-                        "seq": 3,
-                        "type": "event",
-                        "event": "terminated"
-                    }),
-                ]
-            }
+            // Fallback: no controller available, terminate
+            eprintln!("[kleis-dap] No controller available for continue");
+            vec![
+                serde_json::json!({
+                    "seq": 1,
+                    "type": "response",
+                    "request_seq": seq,
+                    "success": true,
+                    "command": "continue"
+                }),
+                serde_json::json!({
+                    "seq": 2,
+                    "type": "event",
+                    "event": "output",
+                    "body": {
+                        "category": "console",
+                        "output": "⚠️ No debug session active\n"
+                    }
+                }),
+                serde_json::json!({
+                    "seq": 3,
+                    "type": "event",
+                    "event": "terminated"
+                }),
+            ]
         }
         "next" | "stepIn" | "stepOut" => {
             use kleis::debug::DebugAction;
@@ -1846,59 +1723,31 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                 }
             }
 
-            // Fallback: simulated stepping (when no controller)
-            if state.step_next() {
-                let reason = if state.is_at_breakpoint() {
-                    "breakpoint"
-                } else {
-                    "step"
-                };
-
-                vec![
-                    serde_json::json!({
-                        "seq": 1,
-                        "type": "response",
-                        "request_seq": seq,
-                        "success": true,
-                        "command": command
-                    }),
-                    serde_json::json!({
-                        "seq": 2,
-                        "type": "event",
-                        "event": "stopped",
-                        "body": {
-                            "reason": reason,
-                            "threadId": 1,
-                            "allThreadsStopped": true
-                        }
-                    }),
-                ]
-            } else {
-                // End of file - terminate
-                vec![
-                    serde_json::json!({
-                        "seq": 1,
-                        "type": "response",
-                        "request_seq": seq,
-                        "success": true,
-                        "command": command
-                    }),
-                    serde_json::json!({
-                        "seq": 2,
-                        "type": "event",
-                        "event": "output",
-                        "body": {
-                            "category": "console",
-                            "output": "\n✅ End of file reached\n"
-                        }
-                    }),
-                    serde_json::json!({
-                        "seq": 3,
-                        "type": "event",
-                        "event": "terminated"
-                    }),
-                ]
-            }
+            // Fallback: no controller available, terminate
+            eprintln!("[kleis-dap] No controller available for step command");
+            vec![
+                serde_json::json!({
+                    "seq": 1,
+                    "type": "response",
+                    "request_seq": seq,
+                    "success": true,
+                    "command": command
+                }),
+                serde_json::json!({
+                    "seq": 2,
+                    "type": "event",
+                    "event": "output",
+                    "body": {
+                        "category": "console",
+                        "output": "⚠️ No debug session active\n"
+                    }
+                }),
+                serde_json::json!({
+                    "seq": 3,
+                    "type": "event",
+                    "event": "terminated"
+                }),
+            ]
         }
         "disconnect" | "terminate" => {
             vec![serde_json::json!({
