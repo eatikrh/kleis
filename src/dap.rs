@@ -597,8 +597,7 @@ impl DapDebugger {
 
         let response_breakpoints: Vec<serde_json::Value> = breakpoints
             .iter()
-            .enumerate()
-            .map(|(_, bp)| {
+            .map(|bp| {
                 if bp.verified {
                     serde_json::json!({
                         "verified": true,
@@ -713,7 +712,7 @@ impl DapDebugger {
                     "id": 1,
                     "name": "<top-level>",
                     "source": {
-                        "name": current_file.split('/').last().unwrap_or("unknown"),
+                        "name": current_file.split('/').next_back().unwrap_or("unknown"),
                         "path": current_file
                     },
                     "line": current_line,

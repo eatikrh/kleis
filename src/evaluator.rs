@@ -755,19 +755,6 @@ impl Evaluator {
     // Example Block Evaluation (v0.93)
     // =========================================================================
 
-    /// Evaluate an example block, returning the result
-    ///
-    /// Example blocks execute statements sequentially:
-    /// - `let` bindings add to local scope
-    /// - `assert` statements check conditions
-    /// - Expression statements are evaluated for side effects
-    ///
-    /// # Arguments
-    /// * `example` - The example block to evaluate
-    ///
-    /// # Returns
-    /// * `ExampleResult` - Summary of the example execution
-
     /// Helper: Get the source location of a statement (if available)
     fn get_statement_location(stmt: &ExampleStatement) -> Option<crate::ast::FullSourceLocation> {
         match stmt {
@@ -786,6 +773,18 @@ impl Evaluator {
         }
     }
 
+    /// Evaluate an example block, returning the result
+    ///
+    /// Example blocks execute statements sequentially:
+    /// - `let` bindings add to local scope
+    /// - `assert` statements check conditions
+    /// - Expression statements are evaluated for side effects
+    ///
+    /// # Arguments
+    /// * `example` - The example block to evaluate
+    ///
+    /// # Returns
+    /// * `ExampleResult` - Summary of the example execution
     pub fn eval_example_block(&mut self, example: &ExampleBlock) -> ExampleResult {
         let mut assertions_passed = 0;
         let mut assertions_total = 0;
