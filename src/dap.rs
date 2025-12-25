@@ -175,7 +175,10 @@ fn run_server_loop<R: BufRead, W: Write>(
         dap_log!("Waiting for DAP message...");
         let message = match read_dap_message(reader) {
             Ok(Some(msg)) => {
-                dap_log!("Received message: {}", &msg[..std::cmp::min(200, msg.len())]);
+                dap_log!(
+                    "Received message: {}",
+                    &msg[..std::cmp::min(200, msg.len())]
+                );
                 msg
             }
             Ok(None) => {
@@ -190,7 +193,10 @@ fn run_server_loop<R: BufRead, W: Write>(
 
         // Handle the message and get response
         let response = debugger.handle_message(&message);
-        dap_log!("Response: {:?}", response.as_ref().map(|r| &r[..std::cmp::min(200, r.len())]));
+        dap_log!(
+            "Response: {:?}",
+            response.as_ref().map(|r| &r[..std::cmp::min(200, r.len())])
+        );
 
         // Send response
         if let Some(resp) = response {
@@ -399,7 +405,7 @@ impl DapDebugger {
 
     fn handle_initialize(&mut self, request_seq: i32) -> Option<String> {
         dap_log!("=== handle_initialize ===");
-        
+
         let response = serde_json::json!({
             "seq": self.next_seq(),
             "type": "response",

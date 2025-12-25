@@ -10,7 +10,7 @@ use std::path::PathBuf;
 // ============================================================================
 
 /// Source span: location in source code (line and column, 1-based)
-/// 
+///
 /// Note: SourceSpan is Copy for efficiency. For file paths, use SourceLocation
 /// which wraps SourceSpan with an optional PathBuf.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -34,7 +34,7 @@ impl SourceSpan {
             end_column: column,
         }
     }
-    
+
     pub fn with_end(mut self, end_line: u32, end_column: u32) -> Self {
         self.end_line = end_line;
         self.end_column = end_column;
@@ -43,7 +43,7 @@ impl SourceSpan {
 }
 
 /// Full source location: span + file path (for cross-file debugging)
-/// 
+///
 /// This is the complete location information needed for debugging,
 /// especially when stepping through imported files.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -59,14 +59,18 @@ pub struct FullSourceLocation {
 
 impl FullSourceLocation {
     pub fn new(line: u32, column: u32) -> Self {
-        Self { line, column, file: None }
+        Self {
+            line,
+            column,
+            file: None,
+        }
     }
-    
+
     pub fn with_file(mut self, file: impl Into<String>) -> Self {
         self.file = Some(file.into());
         self
     }
-    
+
     pub fn from_span(span: &SourceSpan) -> Self {
         Self {
             line: span.line,
@@ -74,7 +78,7 @@ impl FullSourceLocation {
             file: None,
         }
     }
-    
+
     pub fn from_span_with_file(span: &SourceSpan, file: impl Into<String>) -> Self {
         Self {
             line: span.line,
@@ -98,23 +102,23 @@ impl SourceLocation {
             file: None,
         }
     }
-    
+
     pub fn with_file(mut self, file: PathBuf) -> Self {
         self.file = Some(file);
         self
     }
-    
+
     pub fn line(&self) -> u32 {
         self.span.line
     }
-    
+
     pub fn column(&self) -> u32 {
         self.span.column
     }
 }
 
 /// Expression with source location attached
-/// 
+///
 /// This wrapper allows tracking source locations without modifying the
 /// core Expression enum. Use this in the parser for new code paths.
 #[derive(Debug, Clone, PartialEq)]
@@ -125,9 +129,12 @@ pub struct Spanned<T> {
 
 impl<T> Spanned<T> {
     pub fn new(node: T, span: SourceSpan) -> Self {
-        Self { node, span: Some(span) }
+        Self {
+            node,
+            span: Some(span),
+        }
     }
-    
+
     pub fn unspanned(node: T) -> Self {
         Self { node, span: None }
     }

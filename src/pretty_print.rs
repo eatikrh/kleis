@@ -1022,7 +1022,10 @@ impl PrettyPrinter {
                     )
                 }
             }
-            ExampleStatement::Assert { condition, location: _ } => {
+            ExampleStatement::Assert {
+                condition,
+                location: _,
+            } => {
                 format!("assert({})", self.format_expression(condition))
             }
             ExampleStatement::Expr { expr, location: _ } => self.format_expression(expr),

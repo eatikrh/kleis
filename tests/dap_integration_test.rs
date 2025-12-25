@@ -60,14 +60,14 @@ fn recv_dap_message<R: BufRead>(reader: &mut R) -> std::io::Result<Option<serde_
 fn recv_all_messages<R: BufRead>(reader: &mut R, timeout_ms: u64) -> Vec<serde_json::Value> {
     let mut messages = Vec::new();
     let start = std::time::Instant::now();
-    
+
     while start.elapsed().as_millis() < timeout_ms as u128 {
         match recv_dap_message(reader) {
             Ok(Some(msg)) => messages.push(msg),
             _ => break,
         }
     }
-    
+
     messages
 }
 
@@ -84,7 +84,11 @@ impl DapTestClient {
         stream.set_read_timeout(Some(Duration::from_secs(5)))?;
         let reader = BufReader::new(stream.try_clone()?);
         let writer = stream;
-        Ok(Self { reader, writer, seq: 0 })
+        Ok(Self {
+            reader,
+            writer,
+            seq: 0,
+        })
     }
 
     fn next_seq(&mut self) -> i32 {
@@ -92,7 +96,11 @@ impl DapTestClient {
         self.seq
     }
 
-    fn send_request(&mut self, command: &str, arguments: Option<serde_json::Value>) -> std::io::Result<()> {
+    fn send_request(
+        &mut self,
+        command: &str,
+        arguments: Option<serde_json::Value>,
+    ) -> std::io::Result<()> {
         let mut msg = serde_json::json!({
             "seq": self.next_seq(),
             "type": "request",
@@ -159,7 +167,7 @@ fn start_dap_server() -> std::io::Result<(Child, u16)> {
     // Start the kleis dap server
     // We need to spawn it to listen on the port we just found
     // For now, let's use the library directly in a thread
-    
+
     // Actually, let's use a different approach - run the test inline
     Ok((Command::new("true").spawn()?, port))
 }
@@ -173,29 +181,38 @@ mod tests {
     #[test]
     fn test_dap_initialize_response() {
         let mut debugger = DapDebugger::new(None);
-        
+
         // Send initialize request
-        let response = debugger.handle_message(r#"{"seq":1,"type":"request","command":"initialize","arguments":{"clientID":"test"}}"#);
-        
+        let response = debugger.handle_message(
+            r#"{"seq":1,"type":"request","command":"initialize","arguments":{"clientID":"test"}}"#,
+        );
+
         assert!(response.is_some(), "Should return a response");
         let resp: serde_json::Value = serde_json::from_str(&response.unwrap()).unwrap();
-        
+
         assert_eq!(resp["type"], "response");
         assert_eq!(resp["command"], "initialize");
         assert_eq!(resp["success"], true);
-        assert!(resp["body"]["supportsConfigurationDoneRequest"].as_bool().unwrap_or(false));
+        assert!(resp["body"]["supportsConfigurationDoneRequest"]
+            .as_bool()
+            .unwrap_or(false));
     }
 
     #[test]
     fn test_dap_initialized_event_is_queued() {
         let mut debugger = DapDebugger::new(None);
-        
+
         // Send initialize request
-        let _ = debugger.handle_message(r#"{"seq":1,"type":"request","command":"initialize","arguments":{"clientID":"test"}}"#);
-        
+        let _ = debugger.handle_message(
+            r#"{"seq":1,"type":"request","command":"initialize","arguments":{"clientID":"test"}}"#,
+        );
+
         // Check that initialized event was queued
-        assert!(!debugger.pending_events.is_empty(), "Should have pending events");
-        
+        assert!(
+            !debugger.pending_events.is_empty(),
+            "Should have pending events"
+        );
+
         let event: serde_json::Value = serde_json::from_str(&debugger.pending_events[0]).unwrap();
         assert_eq!(event["type"], "event");
         assert_eq!(event["event"], "initialized");
@@ -204,21 +221,29 @@ mod tests {
     #[test]
     fn test_dap_full_launch_sequence() {
         let mut debugger = DapDebugger::new(None);
-        
+
         // 1. Initialize
-        let resp = debugger.handle_message(r#"{"seq":1,"type":"request","command":"initialize","arguments":{"clientID":"test"}}"#);
+        let resp = debugger.handle_message(
+            r#"{"seq":1,"type":"request","command":"initialize","arguments":{"clientID":"test"}}"#,
+        );
         assert!(resp.is_some());
         let resp_json: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
         assert_eq!(resp_json["success"], true, "initialize should succeed");
-        
+
         // Check initialized event was queued
-        assert!(!debugger.pending_events.is_empty(), "Should have initialized event");
-        let init_event: serde_json::Value = serde_json::from_str(&debugger.pending_events[0]).unwrap();
+        assert!(
+            !debugger.pending_events.is_empty(),
+            "Should have initialized event"
+        );
+        let init_event: serde_json::Value =
+            serde_json::from_str(&debugger.pending_events[0]).unwrap();
         assert_eq!(init_event["event"], "initialized");
         debugger.pending_events.clear();
-        
+
         // 2. Launch
-        let program = std::env::current_dir().unwrap().join("examples/example_blocks.kleis");
+        let program = std::env::current_dir()
+            .unwrap()
+            .join("examples/example_blocks.kleis");
         let launch_msg = format!(
             r#"{{"seq":2,"type":"request","command":"launch","arguments":{{"program":"{}","stopOnEntry":true}}}}"#,
             program.display()
@@ -227,46 +252,61 @@ mod tests {
         assert!(resp.is_some());
         let resp_json: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
         assert_eq!(resp_json["success"], true, "launch should succeed");
-        
+
         // 3. ConfigurationDone
-        let resp = debugger.handle_message(r#"{"seq":3,"type":"request","command":"configurationDone"}"#);
+        let resp =
+            debugger.handle_message(r#"{"seq":3,"type":"request","command":"configurationDone"}"#);
         assert!(resp.is_some());
         let resp_json: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
-        assert_eq!(resp_json["success"], true, "configurationDone should succeed");
-        
+        assert_eq!(
+            resp_json["success"], true,
+            "configurationDone should succeed"
+        );
+
         // Check that stopped event was queued
         let has_stopped = debugger.pending_events.iter().any(|e| {
             let event: serde_json::Value = serde_json::from_str(e).unwrap_or_default();
             event["event"] == "stopped"
         });
-        assert!(has_stopped, "Should have stopped event after configurationDone");
-        
+        assert!(
+            has_stopped,
+            "Should have stopped event after configurationDone"
+        );
+
         // 4. Threads
         let resp = debugger.handle_message(r#"{"seq":4,"type":"request","command":"threads"}"#);
         assert!(resp.is_some());
         let resp_json: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
         assert_eq!(resp_json["success"], true);
         assert!(resp_json["body"]["threads"].as_array().unwrap().len() > 0);
-        
+
         // 5. StackTrace
-        let resp = debugger.handle_message(r#"{"seq":5,"type":"request","command":"stackTrace","arguments":{"threadId":1}}"#);
+        let resp = debugger.handle_message(
+            r#"{"seq":5,"type":"request","command":"stackTrace","arguments":{"threadId":1}}"#,
+        );
         assert!(resp.is_some());
         let resp_json: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
         assert_eq!(resp_json["success"], true);
         let frames = resp_json["body"]["stackFrames"].as_array().unwrap();
         assert!(frames.len() > 0, "Should have at least one stack frame");
-        assert!(frames[0]["line"].as_u64().unwrap() > 0, "Stack frame should have a line number");
+        assert!(
+            frames[0]["line"].as_u64().unwrap() > 0,
+            "Stack frame should have a line number"
+        );
     }
 
     #[test]
     fn test_dap_stepping() {
         let mut debugger = DapDebugger::new(None);
-        
+
         // Initialize and launch
-        debugger.handle_message(r#"{"seq":1,"type":"request","command":"initialize","arguments":{}}"#);
+        debugger
+            .handle_message(r#"{"seq":1,"type":"request","command":"initialize","arguments":{}}"#);
         debugger.pending_events.clear();
-        
-        let program = std::env::current_dir().unwrap().join("examples/example_blocks.kleis");
+
+        let program = std::env::current_dir()
+            .unwrap()
+            .join("examples/example_blocks.kleis");
         let launch_msg = format!(
             r#"{{"seq":2,"type":"request","command":"launch","arguments":{{"program":"{}"}}}}"#,
             program.display()
@@ -274,19 +314,23 @@ mod tests {
         debugger.handle_message(&launch_msg);
         debugger.handle_message(r#"{"seq":3,"type":"request","command":"configurationDone"}"#);
         debugger.pending_events.clear();
-        
+
         // Step next
-        let resp = debugger.handle_message(r#"{"seq":4,"type":"request","command":"next","arguments":{"threadId":1}}"#);
+        let resp = debugger.handle_message(
+            r#"{"seq":4,"type":"request","command":"next","arguments":{"threadId":1}}"#,
+        );
         assert!(resp.is_some());
         let resp_json: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
         assert_eq!(resp_json["success"], true);
-        
+
         // Check that stopped event was queued
         let has_stopped = debugger.pending_events.iter().any(|e| {
             let event: serde_json::Value = serde_json::from_str(e).unwrap_or_default();
             event["event"] == "stopped" && event["body"]["reason"] == "step"
         });
-        assert!(has_stopped, "Should have stopped event with reason 'step' after next");
+        assert!(
+            has_stopped,
+            "Should have stopped event with reason 'step' after next"
+        );
     }
 }
-

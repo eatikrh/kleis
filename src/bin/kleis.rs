@@ -699,29 +699,31 @@ impl Default for DapState {
 impl DapState {
     /// Parse file and extract statement line numbers from AST
     fn load_file(&mut self, path: &str) -> std::result::Result<(), String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("Cannot read file: {}", e))?;
-        
+        let content =
+            std::fs::read_to_string(path).map_err(|e| format!("Cannot read file: {}", e))?;
+
         // Canonicalize path for VS Code (needs absolute paths in stack traces)
         let path_buf = std::path::PathBuf::from(path);
         let canonical = path_buf.canonicalize().unwrap_or(path_buf);
         let canonical_str = canonical.to_string_lossy().to_string();
-        
+
         self.current_file = Some(canonical_str.clone());
         self.statement_lines.clear();
         self.executable_lines.clear();
         self.stmt_index = 0;
-        
+
         let lines: Vec<&str> = content.lines().collect();
         self.total_lines = lines.len() as u32;
-        
+
         // Parse with canonicalized file path for VS Code debugging support
-        if let Ok(program) = kleis::kleis_parser::parse_kleis_program_with_file(&content, &canonical_str) {
+        if let Ok(program) =
+            kleis::kleis_parser::parse_kleis_program_with_file(&content, &canonical_str)
+        {
             for item in &program.items {
                 self.extract_item_lines(item);
             }
         }
-        
+
         // Fallback: also do text-based analysis for non-example code
         if self.statement_lines.is_empty() {
             for (i, line) in lines.iter().enumerate() {
@@ -731,14 +733,14 @@ impl DapState {
                 }
             }
         }
-        
+
         // Combine and deduplicate
         let mut all_lines: Vec<u32> = self.statement_lines.clone();
         all_lines.extend(&self.executable_lines);
         all_lines.sort();
         all_lines.dedup();
         self.statement_lines = all_lines;
-        
+
         // Start at first statement line
         if let Some(&first) = self.statement_lines.first() {
             self.current_line = first;
@@ -746,14 +748,14 @@ impl DapState {
         } else {
             self.current_line = 1;
         }
-        
+
         Ok(())
     }
-    
+
     /// Extract line numbers from a top-level item
     fn extract_item_lines(&mut self, item: &kleis::kleis_ast::TopLevel) {
-        use kleis::kleis_ast::{TopLevel, ExampleStatement};
-        
+        use kleis::kleis_ast::{ExampleStatement, TopLevel};
+
         match item {
             TopLevel::ExampleBlock(example) => {
                 // Extract line numbers from each statement
@@ -788,19 +790,27 @@ impl DapState {
             }
         }
     }
-    
+
     /// Check if a line contains executable code (text-based fallback)
     fn is_executable_line(line: &str) -> bool {
         let trimmed = line.trim();
-        
-        if trimmed.is_empty() { return false; }
-        if trimmed.starts_with("//") || trimmed.starts_with('#') { return false; }
-        if trimmed == "{" || trimmed == "}" || trimmed == "(" || trimmed == ")" { return false; }
-        if trimmed.starts_with("/*") || trimmed.ends_with("*/") || trimmed == "*/" { return false; }
-        
+
+        if trimmed.is_empty() {
+            return false;
+        }
+        if trimmed.starts_with("//") || trimmed.starts_with('#') {
+            return false;
+        }
+        if trimmed == "{" || trimmed == "}" || trimmed == "(" || trimmed == ")" {
+            return false;
+        }
+        if trimmed.starts_with("/*") || trimmed.ends_with("*/") || trimmed == "*/" {
+            return false;
+        }
+
         true
     }
-    
+
     /// Step to next statement, returns true if stepped
     fn step_next(&mut self) -> bool {
         if self.stmt_index + 1 < self.statement_lines.len() {
@@ -811,12 +821,12 @@ impl DapState {
             false // No more statements
         }
     }
-    
+
     /// Validate a breakpoint - returns true if it's on a statement line
     fn validate_breakpoint(&self, line: u32) -> bool {
         self.statement_lines.contains(&line)
     }
-    
+
     /// Check if current line hits a breakpoint
     fn is_at_breakpoint(&self) -> bool {
         self.breakpoints.contains(&self.current_line)
@@ -943,7 +953,7 @@ fn handle_dap_request(
                     "seq": 2,
                     "type": "event",
                     "event": "initialized"
-                })
+                }),
             ]
         }
         "launch" => {
@@ -967,13 +977,13 @@ fn handle_dap_request(
                         "message": e
                     })];
                 }
-                
+
                 eprintln!(
                     "[kleis-dap] Loaded file with {} executable lines, starting at line {}",
                     state.executable_lines.len(),
                     state.current_line
                 );
-                
+
                 // Parse and load into evaluator
                 match std::fs::read_to_string(program_path) {
                     Ok(source) => match parse_kleis_program(&source) {
@@ -1060,7 +1070,7 @@ fn handle_dap_request(
             // Return a stack frame with proper source info
             let file_path = state.current_file.clone().unwrap_or_default();
             let file_name = file_path.split('/').last().unwrap_or("unknown").to_string();
-            
+
             vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
@@ -1168,25 +1178,26 @@ fn handle_dap_request(
             // Extract requested breakpoint lines and validate them
             let mut breakpoints_response = Vec::new();
             state.breakpoints.clear();
-            
+
             if let Some(args) = request.get("arguments") {
                 if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
                     for bp in bps {
                         if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
                             let line = line as u32;
                             let is_valid = state.validate_breakpoint(line);
-                            
+
                             if is_valid {
                                 state.breakpoints.push(line);
                             }
-                            
+
                             let mut bp = serde_json::json!({
                                 "verified": is_valid,
                                 "line": line
                             });
                             if !is_valid {
                                 bp["message"] = serde_json::Value::String(
-                                    "Cannot set breakpoint on this line (comment or empty)".to_string()
+                                    "Cannot set breakpoint on this line (comment or empty)"
+                                        .to_string(),
                                 );
                             }
                             breakpoints_response.push(bp);
@@ -1194,7 +1205,7 @@ fn handle_dap_request(
                     }
                 }
             }
-            
+
             vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
@@ -1248,7 +1259,7 @@ fn handle_dap_request(
                     break;
                 }
             }
-            
+
             if hit_breakpoint {
                 // Stopped at breakpoint
                 vec![
@@ -1268,7 +1279,7 @@ fn handle_dap_request(
                             "threadId": 1,
                             "allThreadsStopped": true
                         }
-                    })
+                    }),
                 ]
             } else {
                 // End of file - terminate
@@ -1293,7 +1304,7 @@ fn handle_dap_request(
                         "seq": 3,
                         "type": "event",
                         "event": "terminated"
-                    })
+                    }),
                 ]
             }
         }
@@ -1301,8 +1312,12 @@ fn handle_dap_request(
             // Step to next executable line
             if state.step_next() {
                 // Check if we hit a breakpoint
-                let reason = if state.is_at_breakpoint() { "breakpoint" } else { "step" };
-                
+                let reason = if state.is_at_breakpoint() {
+                    "breakpoint"
+                } else {
+                    "step"
+                };
+
                 // Return response + stopped event
                 vec![
                     serde_json::json!({
@@ -1321,7 +1336,7 @@ fn handle_dap_request(
                             "threadId": 1,
                             "allThreadsStopped": true
                         }
-                    })
+                    }),
                 ]
             } else {
                 // End of file - terminate
@@ -1346,7 +1361,7 @@ fn handle_dap_request(
                         "seq": 3,
                         "type": "event",
                         "event": "terminated"
-                    })
+                    }),
                 ]
             }
         }

@@ -68,8 +68,8 @@ impl fmt::Display for KleisParseError {
 impl std::error::Error for KleisParseError {}
 
 // Re-export SourceSpan from ast.rs for backward compatibility
-pub use crate::ast::SourceSpan;
 pub use crate::ast::FullSourceLocation;
+pub use crate::ast::SourceSpan;
 
 pub struct KleisParser {
     input: Vec<char>,
@@ -92,7 +92,7 @@ impl KleisParser {
             current_file: None,
         }
     }
-    
+
     /// Create a parser with a known file path
     pub fn new_with_file(input: &str, file: impl Into<String>) -> Self {
         KleisParser {
@@ -103,7 +103,7 @@ impl KleisParser {
             current_file: Some(file.into()),
         }
     }
-    
+
     /// Set the current file path
     pub fn set_file(&mut self, file: impl Into<String>) {
         self.current_file = Some(file.into());
@@ -113,7 +113,7 @@ impl KleisParser {
     pub fn current_span(&self) -> SourceSpan {
         SourceSpan::new(self.line, self.column)
     }
-    
+
     /// Get the current full source location (with file)
     pub fn current_location(&self) -> FullSourceLocation {
         let mut loc = FullSourceLocation::new(self.line, self.column);
@@ -4006,7 +4006,7 @@ impl KleisParser {
     /// Parse a single statement within an example block
     fn parse_example_statement(&mut self) -> Result<ExampleStatement, KleisParseError> {
         self.skip_whitespace();
-        
+
         // Capture full location (line, column, file) at start of statement
         let start_location = self.current_location();
 
@@ -4030,14 +4030,17 @@ impl KleisParser {
             self.advance();
         }
 
-        Ok(ExampleStatement::Expr { 
-            expr, 
+        Ok(ExampleStatement::Expr {
+            expr,
             location: Some(start_location),
         })
     }
 
     /// Parse a let binding in an example block: let name = expr or let name : T = expr
-    fn parse_example_let_with_location(&mut self, location: FullSourceLocation) -> Result<ExampleStatement, KleisParseError> {
+    fn parse_example_let_with_location(
+        &mut self,
+        location: FullSourceLocation,
+    ) -> Result<ExampleStatement, KleisParseError> {
         self.skip_whitespace();
         self.expect_word("let")?;
         self.skip_whitespace();
@@ -4082,7 +4085,10 @@ impl KleisParser {
     }
 
     /// Parse an assert statement: assert(expression)
-    fn parse_assert_statement_with_location(&mut self, location: FullSourceLocation) -> Result<ExampleStatement, KleisParseError> {
+    fn parse_assert_statement_with_location(
+        &mut self,
+        location: FullSourceLocation,
+    ) -> Result<ExampleStatement, KleisParseError> {
         self.skip_whitespace();
         self.expect_word("assert")?;
         self.skip_whitespace();
@@ -4108,7 +4114,10 @@ impl KleisParser {
             });
         }
 
-        Ok(ExampleStatement::Assert { condition, location: Some(location) })
+        Ok(ExampleStatement::Assert {
+            condition,
+            location: Some(location),
+        })
     }
 
     /// Parse a complete program (multiple top-level items)
@@ -4223,10 +4232,13 @@ pub fn parse_kleis_program(input: &str) -> Result<Program, KleisParseError> {
 }
 
 /// Parse a complete Kleis program with file path information
-/// 
+///
 /// This function attaches the file path to all source locations,
 /// enabling cross-file debugging.
-pub fn parse_kleis_program_with_file(input: &str, file: impl Into<String>) -> Result<Program, KleisParseError> {
+pub fn parse_kleis_program_with_file(
+    input: &str,
+    file: impl Into<String>,
+) -> Result<Program, KleisParseError> {
     let mut parser = KleisParser::new_with_file(input, file);
     parser.parse_program()
 }
@@ -7091,7 +7103,10 @@ mod tests {
             TopLevel::ExampleBlock(example) => {
                 assert_eq!(example.statements.len(), 2);
                 // Second statement is an expression
-                assert!(matches!(&example.statements[1], ExampleStatement::Expr { .. }));
+                assert!(matches!(
+                    &example.statements[1],
+                    ExampleStatement::Expr { .. }
+                ));
             }
             _ => panic!("Expected ExampleBlock"),
         }
@@ -7117,4 +7132,3 @@ mod tests {
         assert!(matches!(&result.items[1], TopLevel::ExampleBlock(_)));
     }
 }
-

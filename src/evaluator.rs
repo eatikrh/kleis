@@ -767,7 +767,7 @@ impl Evaluator {
     ///
     /// # Returns
     /// * `ExampleResult` - Summary of the example execution
-    
+
     /// Helper: Get the source location of a statement (if available)
     fn get_statement_location(stmt: &ExampleStatement) -> Option<crate::ast::FullSourceLocation> {
         match stmt {
@@ -776,7 +776,7 @@ impl Evaluator {
             ExampleStatement::Expr { location, .. } => location.clone(),
         }
     }
-    
+
     /// Helper: Convert a statement to an expression for debug hook
     fn statement_to_expr(stmt: &ExampleStatement) -> Expression {
         match stmt {
@@ -785,7 +785,7 @@ impl Evaluator {
             ExampleStatement::Expr { expr, .. } => expr.clone(),
         }
     }
-    
+
     pub fn eval_example_block(&mut self, example: &ExampleBlock) -> ExampleResult {
         let mut assertions_passed = 0;
         let mut assertions_total = 0;
@@ -803,7 +803,7 @@ impl Evaluator {
                 } else {
                     loc
                 };
-                
+
                 if let Some(ref mut hook) = *self.debug_hook.borrow_mut() {
                     let action = hook.on_eval_start(
                         &Self::statement_to_expr(stmt),
@@ -813,7 +813,7 @@ impl Evaluator {
                     // Handle step/continue actions
                     match action {
                         crate::debug::DebugAction::Continue => {}
-                        crate::debug::DebugAction::StepInto 
+                        crate::debug::DebugAction::StepInto
                         | crate::debug::DebugAction::StepOver
                         | crate::debug::DebugAction::StepOut => {
                             // These will be handled by the hook's wait_for_command
@@ -821,7 +821,7 @@ impl Evaluator {
                     }
                 }
             }
-            
+
             match stmt {
                 ExampleStatement::Let {
                     name,
@@ -847,7 +847,10 @@ impl Evaluator {
                         }
                     }
                 }
-                ExampleStatement::Assert { condition, location: _ } => {
+                ExampleStatement::Assert {
+                    condition,
+                    location: _,
+                } => {
                     assertions_total += 1;
                     match self.eval_assert(condition) {
                         AssertResult::Passed => {

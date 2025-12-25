@@ -33,7 +33,7 @@ impl SourceLocation {
         self.file = Some(file);
         self
     }
-    
+
     /// Create from a SourceSpan (from the AST)
     pub fn from_span(span: &crate::ast::SourceSpan) -> Self {
         Self {
@@ -42,7 +42,7 @@ impl SourceLocation {
             column: span.column,
         }
     }
-    
+
     /// Create from a SourceSpan with file path
     pub fn from_span_with_file(span: &crate::ast::SourceSpan, file: PathBuf) -> Self {
         Self {
@@ -435,7 +435,7 @@ pub enum StopReason {
 }
 
 /// A debug hook designed for DAP integration
-/// 
+///
 /// Uses channels for thread-safe communication:
 /// - `command_rx`: Receives commands from DAP (Continue, StepOver, etc.)
 /// - `event_tx`: Sends stop events to DAP
@@ -464,7 +464,7 @@ impl DapDebugHook {
     pub fn new() -> (Self, DapDebugController) {
         let (command_tx, command_rx) = mpsc::channel();
         let (event_tx, event_rx) = mpsc::channel();
-        
+
         let hook = Self {
             state: DebugState::Paused, // Start paused
             stack: vec![StackFrame::top_level()],
@@ -474,15 +474,15 @@ impl DapDebugHook {
             command_rx,
             event_tx,
         };
-        
+
         let controller = DapDebugController {
             command_tx,
             event_rx,
         };
-        
+
         (hook, controller)
     }
-    
+
     /// Set the current file being debugged
     pub fn set_file(&mut self, file: PathBuf) {
         self.current_file = Some(file.clone());
@@ -490,17 +490,17 @@ impl DapDebugHook {
             frame.location.file = Some(file);
         }
     }
-    
+
     /// Add a breakpoint
     pub fn add_breakpoint(&mut self, bp: Breakpoint) {
         self.breakpoints.push(bp);
     }
-    
+
     /// Clear breakpoints for a file
     pub fn clear_breakpoints(&mut self, file: &PathBuf) {
         self.breakpoints.retain(|bp| &bp.file != file);
     }
-    
+
     /// Check if location matches a breakpoint
     fn matches_breakpoint(&self, location: &SourceLocation) -> bool {
         if let Some(ref file) = location.file {
@@ -511,14 +511,14 @@ impl DapDebugHook {
             false
         }
     }
-    
+
     /// Send stop event to DAP and wait for command
     fn stop_and_wait(&mut self, reason: StopReason, location: &SourceLocation) -> DebugAction {
         // Update current location in top frame
         if let Some(frame) = self.stack.first_mut() {
             frame.location = location.clone();
         }
-        
+
         // Send stop event
         let event = StopEvent {
             reason,
@@ -526,7 +526,7 @@ impl DapDebugHook {
             stack: self.stack.clone(),
         };
         let _ = self.event_tx.send(event);
-        
+
         // Block waiting for command
         match self.command_rx.recv() {
             Ok(action) => {
@@ -563,7 +563,7 @@ impl DebugHook for DapDebugHook {
         depth: usize,
     ) -> DebugAction {
         self.current_depth = depth;
-        
+
         // Determine if we should stop
         let should_stop = match &self.state {
             DebugState::Paused => true,
@@ -572,7 +572,7 @@ impl DebugHook for DapDebugHook {
             DebugState::SteppingOver { target_depth } => depth <= *target_depth,
             DebugState::SteppingOut { target_depth } => depth <= *target_depth,
         };
-        
+
         if should_stop {
             let reason = if self.matches_breakpoint(location) {
                 StopReason::Breakpoint
@@ -582,10 +582,10 @@ impl DebugHook for DapDebugHook {
             self.state = DebugState::Paused;
             return self.stop_and_wait(reason, location);
         }
-        
+
         DebugAction::Continue
     }
-    
+
     fn on_eval_end(
         &mut self,
         _expr: &Expression,
@@ -593,7 +593,7 @@ impl DebugHook for DapDebugHook {
         _depth: usize,
     ) {
     }
-    
+
     fn on_function_enter(&mut self, name: &str, _args: &[Expression], depth: usize) {
         let mut frame = StackFrame::new(name, SourceLocation::default());
         if let Some(ref file) = self.current_file {
@@ -602,7 +602,7 @@ impl DebugHook for DapDebugHook {
         self.push_frame(frame);
         self.current_depth = depth;
     }
-    
+
     fn on_function_exit(
         &mut self,
         _name: &str,
@@ -612,17 +612,19 @@ impl DebugHook for DapDebugHook {
         self.pop_frame();
         self.current_depth = depth;
     }
-    
+
     fn on_bind(&mut self, name: &str, value: &Expression, _depth: usize) {
         if let Some(frame) = self.stack.last_mut() {
-            frame.bindings.insert(name.to_string(), format!("{:?}", value));
+            frame
+                .bindings
+                .insert(name.to_string(), format!("{:?}", value));
         }
     }
-    
+
     fn state(&self) -> &DebugState {
         &self.state
     }
-    
+
     fn should_stop(&self, location: &SourceLocation, depth: usize) -> bool {
         match &self.state {
             DebugState::Paused => true,
@@ -632,22 +634,22 @@ impl DebugHook for DapDebugHook {
             DebugState::SteppingOut { target_depth } => depth <= *target_depth,
         }
     }
-    
+
     fn wait_for_command(&mut self) -> DebugAction {
         match self.command_rx.recv() {
             Ok(action) => action,
             Err(_) => DebugAction::Continue,
         }
     }
-    
+
     fn get_stack(&self) -> &[StackFrame] {
         &self.stack
     }
-    
+
     fn push_frame(&mut self, frame: StackFrame) {
         self.stack.push(frame);
     }
-    
+
     fn pop_frame(&mut self) -> Option<StackFrame> {
         if self.stack.len() > 1 {
             self.stack.pop()
