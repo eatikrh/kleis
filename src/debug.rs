@@ -8,6 +8,7 @@ use crate::ast::Expression;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{Arc, RwLock};
 
 /// Source location information
 #[derive(Debug, Clone, Default)]
@@ -439,10 +440,14 @@ pub enum StopReason {
 /// Uses channels for thread-safe communication:
 /// - `command_rx`: Receives commands from DAP (Continue, StepOver, etc.)
 /// - `event_tx`: Sends stop events to DAP
+/// Shared breakpoints that can be updated from DAP server thread
+pub type SharedBreakpoints = Arc<RwLock<Vec<Breakpoint>>>;
+
 pub struct DapDebugHook {
     state: DebugState,
     stack: Vec<StackFrame>,
-    breakpoints: Vec<Breakpoint>,
+    /// Shared with DAP server - can be updated mid-session
+    breakpoints: SharedBreakpoints,
     current_depth: usize,
     current_file: Option<PathBuf>,
     /// Receive commands from DAP server
@@ -457,18 +462,26 @@ pub struct DapDebugController {
     pub command_tx: Sender<DebugAction>,
     /// Receive stop events from the evaluator
     pub event_rx: Receiver<StopEvent>,
+    /// Shared breakpoints - update these to add/remove breakpoints mid-session
+    pub breakpoints: SharedBreakpoints,
 }
 
 impl DapDebugHook {
     /// Create a new DAP debug hook with its controller
+    ///
+    /// The returned controller has a `breakpoints` field that can be updated
+    /// from the DAP server thread - changes are visible to the evaluator thread.
     pub fn new() -> (Self, DapDebugController) {
         let (command_tx, command_rx) = mpsc::channel();
         let (event_tx, event_rx) = mpsc::channel();
 
+        // Shared breakpoints between hook (evaluator thread) and controller (DAP thread)
+        let breakpoints = Arc::new(RwLock::new(Vec::new()));
+
         let hook = Self {
             state: DebugState::Paused, // Start paused
             stack: vec![StackFrame::top_level()],
-            breakpoints: Vec::new(),
+            breakpoints: Arc::clone(&breakpoints),
             current_depth: 0,
             current_file: None,
             command_rx,
@@ -478,6 +491,7 @@ impl DapDebugHook {
         let controller = DapDebugController {
             command_tx,
             event_rx,
+            breakpoints,
         };
 
         (hook, controller)
@@ -491,22 +505,29 @@ impl DapDebugHook {
         }
     }
 
-    /// Add a breakpoint
-    pub fn add_breakpoint(&mut self, bp: Breakpoint) {
-        self.breakpoints.push(bp);
+    /// Add a breakpoint (thread-safe)
+    pub fn add_breakpoint(&self, bp: Breakpoint) {
+        if let Ok(mut bps) = self.breakpoints.write() {
+            bps.push(bp);
+        }
     }
 
-    /// Clear breakpoints for a file
-    pub fn clear_breakpoints(&mut self, file: &PathBuf) {
-        self.breakpoints.retain(|bp| &bp.file != file);
+    /// Clear breakpoints for a file (thread-safe)
+    pub fn clear_breakpoints(&self, file: &PathBuf) {
+        if let Ok(mut bps) = self.breakpoints.write() {
+            bps.retain(|bp| &bp.file != file);
+        }
     }
 
-    /// Check if location matches a breakpoint
+    /// Check if location matches a breakpoint (thread-safe)
     fn matches_breakpoint(&self, location: &SourceLocation) -> bool {
         if let Some(ref file) = location.file {
-            self.breakpoints
-                .iter()
-                .any(|bp| bp.enabled && &bp.file == file && bp.line == location.line)
+            if let Ok(bps) = self.breakpoints.read() {
+                bps.iter()
+                    .any(|bp| bp.enabled && &bp.file == file && bp.line == location.line)
+            } else {
+                false
+            }
         } else {
             false
         }

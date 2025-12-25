@@ -817,12 +817,11 @@ struct DapState {
     current_file: Option<PathBuf>,
     /// Current line (updated from StopEvent)
     current_line: u32,
-    /// Breakpoints set by VS Code (used to configure DapDebugHook)
-    breakpoints: Vec<kleis::debug::Breakpoint>,
 
     // === Channel-based debugging (real evaluator integration) ===
 
     /// Controller for channel-based communication with DebugHook
+    /// Also holds shared breakpoints (can be updated mid-session from this thread)
     controller: Option<kleis::debug::DapDebugController>,
     /// Handle to evaluation thread
     eval_thread: Option<std::thread::JoinHandle<()>>,
@@ -841,7 +840,6 @@ impl DapState {
             evaluator: Evaluator::new(),
             current_file: None,
             current_line: 1,
-            breakpoints: Vec::new(),
             controller: None,
             eval_thread: None,
             program: None,
@@ -1123,6 +1121,7 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                 // Note: load_file already stores the program in state.program
 
                 // Create the debug hook and controller for channel-based communication
+                // Breakpoints are shared between controller and hook via Arc<RwLock>
                 let (mut hook, controller) = DapDebugHook::new();
 
                 // Set the current file on the hook
@@ -1130,12 +1129,9 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                     hook.set_file(file_path.clone());
                 }
 
-                // Add breakpoints to the hook
-                for bp in &state.breakpoints {
-                    hook.add_breakpoint(bp.clone());
-                }
-
-                // Store controller and hook for later
+                // Store controller and hook
+                // Note: Breakpoints are shared via controller.breakpoints (Arc<RwLock>)
+                // setBreakpoints handler will update them, evaluator sees changes immediately
                 state.controller = Some(controller);
                 state.pending_hook = Some(hook);
 
@@ -1361,7 +1357,6 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
 
             // Extract requested breakpoint lines and validate them
             let mut breakpoints_response = Vec::new();
-            state.breakpoints.clear();
 
             // Get file path from source in arguments
             let file_path = request
@@ -1371,32 +1366,66 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                 .and_then(|p| p.as_str())
                 .map(PathBuf::from);
 
-            if let Some(args) = request.get("arguments") {
-                if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
-                    for bp in bps {
-                        if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
-                            let line = line as u32;
-                            let is_valid = state.is_valid_breakpoint_line(line);
+            // Clear old breakpoints for this file and add new ones
+            // Uses shared breakpoints via controller (thread-safe, visible to evaluator)
+            if let Some(ref controller) = state.controller {
+                if let Some(ref path) = file_path {
+                    // Clear breakpoints for this file
+                    if let Ok(mut bps) = controller.breakpoints.write() {
+                        bps.retain(|bp| &bp.file != path);
+                    }
+                }
 
-                            if is_valid {
-                                if let Some(ref path) = file_path {
-                                    state
-                                        .breakpoints
-                                        .push(DebugBreakpoint::new(path.clone(), line));
+                if let Some(args) = request.get("arguments") {
+                    if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
+                        for bp in bps {
+                            if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
+                                let line = line as u32;
+                                let is_valid = state.is_valid_breakpoint_line(line);
+
+                                if is_valid {
+                                    if let Some(ref path) = file_path {
+                                        if let Ok(mut shared_bps) = controller.breakpoints.write() {
+                                            shared_bps.push(DebugBreakpoint::new(path.clone(), line));
+                                        }
+                                    }
                                 }
-                            }
 
-                            let mut bp_resp = serde_json::json!({
-                                "verified": is_valid,
-                                "line": line
-                            });
-                            if !is_valid {
-                                bp_resp["message"] = serde_json::Value::String(
-                                    "Cannot set breakpoint on this line (no executable code)"
-                                        .to_string(),
-                                );
+                                let mut bp_resp = serde_json::json!({
+                                    "verified": is_valid,
+                                    "line": line
+                                });
+                                if !is_valid {
+                                    bp_resp["message"] = serde_json::Value::String(
+                                        "Cannot set breakpoint on this line (no executable code)"
+                                            .to_string(),
+                                    );
+                                }
+                                breakpoints_response.push(bp_resp);
                             }
-                            breakpoints_response.push(bp_resp);
+                        }
+                    }
+                }
+            } else {
+                // No controller yet (before launch) - just validate
+                if let Some(args) = request.get("arguments") {
+                    if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
+                        for bp in bps {
+                            if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
+                                let line = line as u32;
+                                let is_valid = state.is_valid_breakpoint_line(line);
+                                let mut bp_resp = serde_json::json!({
+                                    "verified": is_valid,
+                                    "line": line
+                                });
+                                if !is_valid {
+                                    bp_resp["message"] = serde_json::Value::String(
+                                        "Cannot set breakpoint on this line (no executable code)"
+                                            .to_string(),
+                                    );
+                                }
+                                breakpoints_response.push(bp_resp);
+                            }
                         }
                     }
                 }
