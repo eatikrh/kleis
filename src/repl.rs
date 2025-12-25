@@ -1429,7 +1429,7 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
 
             // Check if we should stop
             if *self.should_stop.lock().unwrap() {
-                return DebugAction::Stop;
+                return DebugAction::Continue; // Just continue, the flag will end the loop
             }
 
             // Return the current action
@@ -1449,16 +1449,11 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
             let pp = PrettyPrinter::new();
             let args_str: Vec<String> = args.iter().map(|a| pp.format_expression(a)).collect();
             let indent = "  ".repeat(depth);
-            println!(
-                "{}→ entering {}({})",
-                indent,
-                name,
-                args_str.join(", ")
-            );
+            println!("{}→ entering {}({})", indent, name, args_str.join(", "));
             self.stack.push(StackFrame {
-                function_name: name.to_string(),
+                name: name.to_string(),
                 location: SourceLocation::new(0, 0),
-                bindings: vec![],
+                bindings: std::collections::HashMap::new(),
             });
         }
 
@@ -1484,12 +1479,7 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
         fn on_bind(&mut self, name: &str, value: &Expression, depth: usize) {
             let pp = PrettyPrinter::new();
             let indent = "  ".repeat(depth);
-            println!(
-                "{}  {} = {}",
-                indent,
-                name,
-                pp.format_expression(value)
-            );
+            println!("{}  {} = {}", indent, name, pp.format_expression(value));
             self.bindings
                 .push((name.to_string(), pp.format_expression(value)));
         }
@@ -1510,7 +1500,8 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
             let stdin = io::stdin();
             let mut line = String::new();
             if stdin.lock().read_line(&mut line).is_err() {
-                return DebugAction::Stop;
+                *self.should_stop.lock().unwrap() = true;
+                return DebugAction::Continue;
             }
 
             match line.trim() {
@@ -1519,8 +1510,8 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
                     DebugAction::StepOver
                 }
                 "s" | "step" => {
-                    *self.action.lock().unwrap() = DebugAction::StepIn;
-                    DebugAction::StepIn
+                    *self.action.lock().unwrap() = DebugAction::StepInto;
+                    DebugAction::StepInto
                 }
                 "c" | "continue" => {
                     *self.action.lock().unwrap() = DebugAction::Continue;
@@ -1540,7 +1531,7 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
                 }
                 "q" | "quit" => {
                     *self.should_stop.lock().unwrap() = true;
-                    DebugAction::Stop
+                    DebugAction::Continue // Stop flag will end the loop
                 }
                 "" => {
                     // Default to step

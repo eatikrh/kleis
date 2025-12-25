@@ -232,6 +232,7 @@ fn write_dap_message<W: Write>(writer: &mut W, message: &str) -> io::Result<()> 
 }
 
 /// The Kleis DAP debugger state
+#[allow(dead_code)] // Fields prepared for full DAP implementation
 struct DapDebugger {
     /// Sequence number for responses
     seq: i32,
@@ -253,6 +254,7 @@ struct DapDebugger {
 
 /// Info about an example block for debugging
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Used for DAP example block debugging
 struct ExampleBlockInfo {
     name: String,
     start_line: u32,
@@ -261,6 +263,7 @@ struct ExampleBlockInfo {
 
 /// Current execution state
 #[derive(Debug, Clone, Default)]
+#[allow(dead_code)] // Prepared for step-through debugging
 struct ExecutionState {
     /// Index of current example being debugged (-1 = none)
     current_example: i32,
@@ -374,6 +377,9 @@ impl DapDebugger {
         dap_log!("Launching: {}", program_path);
 
         // Load the program into the shared evaluator
+        // Collect error message outside the borrow scope to avoid borrow conflicts
+        let mut error_message: Option<String> = None;
+
         if let Some(ref ctx) = self.context {
             if let Ok(mut ctx_guard) = ctx.write() {
                 // Read and parse the file
@@ -384,55 +390,56 @@ impl DapDebugger {
                             Ok(program) => {
                                 if let Err(e) = ctx_guard.evaluator.load_program(&program) {
                                     dap_log!("Failed to load program: {}", e);
-                                    return Some(self.error_response(
-                                        request_seq,
-                                        "launch",
-                                        &format!("Failed to load: {}", e),
-                                    ));
-                                }
-                                dap_log!("Program loaded successfully");
-                                
-                                // Store the program path for breakpoint matching
-                                self.current_file = Some(program_path.to_string());
-                                
-                                // Detect example blocks (v0.93)
-                                use crate::kleis_ast::TopLevel;
-                                self.example_blocks.clear();
-                                for (idx, item) in program.items.iter().enumerate() {
-                                    if let TopLevel::ExampleBlock(ex) = item {
-                                        self.example_blocks.push(ExampleBlockInfo {
-                                            name: ex.name.clone(),
-                                            start_line: (idx + 1) as u32, // Approximate line
-                                            statement_count: ex.statements.len(),
-                                        });
-                                        dap_log!("Found example: {} ({} statements)", ex.name, ex.statements.len());
+                                    error_message = Some(format!("Failed to load: {}", e));
+                                } else {
+                                    dap_log!("Program loaded successfully");
+
+                                    // Store the program path for breakpoint matching
+                                    self.current_file = Some(program_path.to_string());
+
+                                    // Detect example blocks (v0.93)
+                                    use crate::kleis_ast::TopLevel;
+                                    self.example_blocks.clear();
+                                    for (idx, item) in program.items.iter().enumerate() {
+                                        if let TopLevel::ExampleBlock(ex) = item {
+                                            self.example_blocks.push(ExampleBlockInfo {
+                                                name: ex.name.clone(),
+                                                start_line: (idx + 1) as u32, // Approximate line
+                                                statement_count: ex.statements.len(),
+                                            });
+                                            dap_log!(
+                                                "Found example: {} ({} statements)",
+                                                ex.name,
+                                                ex.statements.len()
+                                            );
+                                        }
                                     }
-                                }
-                                
-                                if !self.example_blocks.is_empty() {
-                                    dap_log!("Found {} example blocks", self.example_blocks.len());
+
+                                    if !self.example_blocks.is_empty() {
+                                        dap_log!(
+                                            "Found {} example blocks",
+                                            self.example_blocks.len()
+                                        );
+                                    }
                                 }
                             }
                             Err(e) => {
                                 dap_log!("Parse error: {}", e);
-                                return Some(self.error_response(
-                                    request_seq,
-                                    "launch",
-                                    &format!("Parse error: {}", e),
-                                ));
+                                error_message = Some(format!("Parse error: {}", e));
                             }
                         }
                     }
                     Err(e) => {
                         dap_log!("Cannot read file: {}", e);
-                        return Some(self.error_response(
-                            request_seq,
-                            "launch",
-                            &format!("Cannot read file: {}", e),
-                        ));
+                        error_message = Some(format!("Cannot read file: {}", e));
                     }
                 }
             }
+        }
+
+        // Return error if any occurred (outside the borrow scope)
+        if let Some(msg) = error_message {
+            return Some(self.error_response(request_seq, "launch", &msg));
         }
 
         let response = serde_json::json!({
@@ -573,7 +580,7 @@ impl DapDebugger {
     ) -> Option<String> {
         // Get variables from the shared evaluator
         let mut variables = Vec::new();
-        
+
         if let Some(ref ctx) = self.context {
             if let Ok(ctx_guard) = ctx.read() {
                 // Get all bindings from evaluator
@@ -584,7 +591,7 @@ impl DapDebugger {
                         "variablesReference": 0  // No nested variables for now
                     }));
                 }
-                
+
                 // Also show defined functions
                 for func_name in ctx_guard.evaluator.list_functions() {
                     variables.push(serde_json::json!({
@@ -595,7 +602,7 @@ impl DapDebugger {
                 }
             }
         }
-        
+
         let response = serde_json::json!({
             "seq": self.next_seq(),
             "type": "response",

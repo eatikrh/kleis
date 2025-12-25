@@ -313,6 +313,7 @@ impl Default for KleisContext {
 pub type SharedContext = Arc<RwLock<KleisContext>>;
 
 /// Create a new shared context
+#[allow(clippy::arc_with_non_send_sync)] // Context is used single-threaded for now
 pub fn create_shared_context() -> SharedContext {
     Arc::new(RwLock::new(KleisContext::new()))
 }

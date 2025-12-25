@@ -2,6 +2,8 @@
 
 pub mod ast;
 pub mod axiom_verifier; // Z3 integration for axiom verification
+pub mod context; // Shared context for LSP/REPL/Debugger
+pub mod dap; // Debug Adapter Protocol implementation
 pub mod data_registry;
 pub mod debug; // Debug hooks for step-through debugging
 pub mod dimension_solver; // Built-in solver for type-level dimension constraints
@@ -20,6 +22,7 @@ pub mod pretty_print; // Pretty-printer for exporting Kleis source
 pub mod provenance; // Track which file each definition came from
 pub mod render;
 pub mod render_editor; // EditorNode-only renderer (no Expression conversion)
+pub mod repl; // REPL implementation
 pub mod signature_interpreter;
 pub mod solvers; // Pluggable solver backends (Z3, CVC5, etc.)
 pub mod structure_registry;
