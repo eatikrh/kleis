@@ -549,11 +549,20 @@ impl DapDebugger {
 
         let response_breakpoints: Vec<serde_json::Value> = breakpoints
             .iter()
-            .map(|bp| {
-                serde_json::json!({
-                    "verified": bp.verified,
-                    "line": bp.line
-                })
+            .enumerate()
+            .map(|(_, bp)| {
+                if bp.verified {
+                    serde_json::json!({
+                        "verified": true,
+                        "line": bp.line
+                    })
+                } else {
+                    serde_json::json!({
+                        "verified": false,
+                        "line": bp.line,
+                        "message": "Cannot set breakpoint on comment, empty line, or brace"
+                    })
+                }
             })
             .collect();
 
