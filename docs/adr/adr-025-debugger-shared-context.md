@@ -115,10 +115,42 @@ For typical Kleis projects (10-50 files), no eviction is needed.
 ### Neutral
 - Each thread still has its own `Evaluator` (necessary due to `RefCell`)
 
+## Process Architecture: Why Same-Process Matters
+
+```
+VS Code
+   │
+   ├── Spawns: "kleis server" (ONE process)
+   │           │
+   │           ├── LSP handler (main thread)
+   │           │       │
+   │           │       └── Arc<RwLock<AstCache>> ◄────┐
+   │           │                                      │ SHARED
+   │           └── DAP handler (separate thread)      │
+   │                   │                              │
+   │                   └── Arc<RwLock<AstCache>> ◄────┘
+   │
+   └── Connects to DAP via TCP (port from LSP command)
+```
+
+**Critical design decision:** The extension uses `DebugAdapterServer` (TCP connection to existing process)
+instead of `DebugAdapterExecutable` (spawn new process).
+
+If DAP ran as a separate process, there would be no shared memory and the AST cache
+couldn't be reused. Our unified server approach ensures:
+
+1. `kleis server` is spawned once by VS Code for LSP
+2. When debugging starts, the extension sends `kleis.startDebugSession` command via LSP
+3. The server spawns DAP handler **in the same process, different thread**
+4. Returns TCP port, VS Code connects via `DebugAdapterServer(port)`
+
+This is why we use `Arc<RwLock<...>>` (thread-safe) rather than `Rc<RefCell<...>>` (single-threaded).
+
 ## Implementation
 
 - `src/context.rs` - `Document` struct with `imports: HashSet<PathBuf>` and `dirty: bool`
 - `src/bin/kleis.rs` - `AstCache` type alias and `invalidate_dependents()` function
+- `vscode-kleis/src/extension.ts` - `KleisDebugAdapterFactory` uses LSP command, not executable spawn
 - Tests in `src/context.rs` verify cascade invalidation
 
 ## Related ADRs
