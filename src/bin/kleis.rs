@@ -62,6 +62,20 @@ enum Commands {
         file: PathBuf,
     },
 
+    /// Run example blocks as tests (v0.93)
+    Test {
+        /// File containing example blocks to test
+        file: PathBuf,
+
+        /// Run only examples matching this name
+        #[arg(short, long)]
+        example: Option<String>,
+
+        /// Show detailed output for each example
+        #[arg(short, long)]
+        verbose: bool,
+    },
+
     /// Start an interactive REPL
     Repl {
         /// Files to load on startup
@@ -83,6 +97,13 @@ async fn main() {
         }
         Commands::Check { file } => {
             run_check(file);
+        }
+        Commands::Test {
+            file,
+            example,
+            verbose,
+        } => {
+            run_test(file, example, verbose);
         }
         Commands::Repl { load } => {
             run_repl(load);
@@ -196,6 +217,114 @@ fn run_check(file: PathBuf) {
             eprintln!("{}: {}", file.display(), e);
             std::process::exit(1);
         }
+    }
+}
+
+/// Run example blocks as tests (v0.93)
+fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool) {
+    use kleis::evaluator::Evaluator;
+    use kleis::kleis_ast::TopLevel;
+    use kleis::kleis_parser::parse_kleis_program;
+
+    // Read the file
+    let source = match std::fs::read_to_string(&file) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("{}: {}", file.display(), e);
+            std::process::exit(1);
+        }
+    };
+
+    // Parse the program
+    let program = match parse_kleis_program(&source) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{}: parse error: {}", file.display(), e);
+            std::process::exit(1);
+        }
+    };
+
+    // Load the program into evaluator
+    let mut evaluator = Evaluator::new();
+    if let Err(e) = evaluator.load_program(&program) {
+        eprintln!("{}: error: {}", file.display(), e);
+        std::process::exit(1);
+    }
+
+    // Count example blocks
+    let examples: Vec<_> = program
+        .items
+        .iter()
+        .filter_map(|item| {
+            if let TopLevel::ExampleBlock(ex) = item {
+                Some(ex)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if examples.is_empty() {
+        println!("{}: no example blocks found", file.display());
+        return;
+    }
+
+    // Run examples
+    let mut passed = 0;
+    let mut failed = 0;
+    let mut skipped = 0;
+
+    for example in &examples {
+        // Apply filter if specified
+        if let Some(ref filter) = example_filter {
+            if !example.name.contains(filter.as_str()) {
+                skipped += 1;
+                if verbose {
+                    println!("⏭️  {} (skipped)", example.name);
+                }
+                continue;
+            }
+        }
+
+        let result = evaluator.eval_example_block(example);
+
+        if result.passed {
+            passed += 1;
+            if verbose {
+                println!(
+                    "✅ {}: passed ({}/{} assertions)",
+                    result.name, result.assertions_passed, result.assertions_total
+                );
+            } else {
+                println!("✅ {}", result.name);
+            }
+        } else {
+            failed += 1;
+            println!("❌ {}", result.name);
+            if let Some(error) = &result.error {
+                println!("   {}", error);
+            }
+        }
+    }
+
+    // Print summary
+    println!();
+    let total = passed + failed;
+    if failed == 0 {
+        println!(
+            "✅ {} example{} passed",
+            total,
+            if total == 1 { "" } else { "s" }
+        );
+        if skipped > 0 {
+            println!("   ({} skipped by filter)", skipped);
+        }
+    } else {
+        println!(
+            "❌ {}/{} examples passed ({} failed)",
+            passed, total, failed
+        );
+        std::process::exit(1);
     }
 }
 

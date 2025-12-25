@@ -1,0 +1,26 @@
+// Example blocks demonstration (v0.93)
+
+// Simple arithmetic example
+example "basic arithmetic" {
+    let x = 5
+    let y = 5
+    assert(x = y)
+}
+
+// Example with multiple assertions
+example "multiple assertions" {
+    let a = 10
+    let b = 10
+    let c = 20
+    assert(a = b)
+    assert(c = c)
+}
+
+// Example that should fail (for testing error reporting)
+// Uncomment to test:
+// example "failing example" {
+//     let x = 1
+//     let y = 2
+//     assert(x = y)
+// }
+
