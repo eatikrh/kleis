@@ -204,6 +204,78 @@ When file X changes:
 > LSP sees what user sees. DAP uses what LSP sees.
 > No stale ASTs. No duplicate parsing.
 
+### The Algorithm (Classic Incremental Compilation)
+
+This is the same algorithm used by `make`, `cargo`, Webpack, and TypeScript.
+
+**1. Build Dependency Graph (on parse):**
+```rust
+fn on_parse(file: &Path, ast: &Program) {
+    for import_path in ast.imports() {
+        // Forward edge: file imports import_path
+        cache[file].imports.push(import_path);
+        // Reverse edge: import_path is imported_by file
+        cache[import_path].imported_by.push(file);
+    }
+}
+```
+
+**2. Invalidation (on file change) — propagate UP the tree:**
+```rust
+fn invalidate(file: &Path) {
+    if let Some(doc) = cache.remove(file) {
+        // Recursively invalidate all dependents
+        for dependent in doc.imported_by {
+            invalidate(&dependent);
+        }
+    }
+}
+```
+
+**3. Lazy Re-parse (on demand) — parse dependencies FIRST:**
+```rust
+fn get_ast(file: &Path) -> &Program {
+    if cache.contains(file) {
+        return &cache[file].ast;
+    }
+    
+    // Parse the file
+    let ast = parse(file);
+    
+    // Ensure all imports are in cache first (topological order)
+    for import_path in ast.imports() {
+        get_ast(&import_path);  // Recursive
+    }
+    
+    // Store and return
+    cache.insert(file, CachedDocument { ast, ... });
+    &cache[file].ast
+}
+```
+
+**Visual Example:**
+```
+stdlib/prelude.kleis CHANGES
+         ↓ invalidate
+    helper.kleis (imports stdlib) → EVICTED
+         ↓ invalidate  
+    main.kleis (imports helper) → EVICTED
+
+Later, when DAP needs main.kleis:
+    get_ast(main.kleis)
+        → get_ast(helper.kleis)  // dependency first
+            → get_ast(stdlib/prelude.kleis)  // leaf first
+            ← parse stdlib, cache it
+        ← parse helper, cache it
+    ← parse main, cache it
+```
+
+**Key Properties:**
+- Parse each file at most once per change
+- Dependencies parsed before dependents (topological order)
+- Lazy: only re-parse when actually needed
+- Minimal work: only affected files re-parsed
+
 ### Files to Modify
 
 | File | Changes |
