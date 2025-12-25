@@ -203,6 +203,11 @@ fn run_server_loop<R: BufRead, W: Write>(
             write_dap_message(writer, &resp)?;
         }
 
+        // Send any pending events (e.g., stopped event after launch)
+        while let Some(event) = debugger.pending_events.pop() {
+            write_dap_message(writer, &event)?;
+        }
+
         // Check if we should terminate
         if debugger.should_terminate {
             break;
@@ -284,6 +289,8 @@ struct DapDebugger {
     example_blocks: Vec<ExampleBlockInfo>,
     /// Current execution state
     execution_state: ExecutionState,
+    /// Pending events to send (e.g., stopped event after launch)
+    pending_events: Vec<String>,
 }
 
 /// Info about an example block for debugging
@@ -326,6 +333,7 @@ impl DapDebugger {
             current_file: None,
             example_blocks: Vec::new(),
             execution_state: ExecutionState::default(),
+            pending_events: Vec::new(),
         }
     }
 
@@ -476,6 +484,24 @@ impl DapDebugger {
             return Some(self.error_response(request_seq, "launch", &msg));
         }
 
+        // Mark as stopped at entry point
+        self.is_stopped = true;
+
+        // Queue a "stopped" event so VS Code knows we're paused
+        let stopped_event = serde_json::json!({
+            "seq": self.next_seq(),
+            "type": "event",
+            "event": "stopped",
+            "body": {
+                "reason": "entry",
+                "description": "Paused on entry",
+                "threadId": 1,
+                "allThreadsStopped": true
+            }
+        });
+        self.pending_events.push(stopped_event.to_string());
+
+        // Build launch response
         let response = serde_json::json!({
             "seq": self.next_seq(),
             "type": "response",
