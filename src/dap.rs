@@ -123,6 +123,40 @@ pub fn run_tcp_server_with_context(
     Ok(())
 }
 
+/// Run the DAP server over TCP with optional shared context on a specific port
+/// This version is designed to be called from the LSP server to start a DAP session
+pub fn run_tcp_server_with_context_on_port(
+    port: u16,
+    ctx: Option<SharedContext>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // TCP mode: console output is allowed
+    STDIO_MODE.store(false, Ordering::Relaxed);
+
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", port))?;
+    dap_log!(
+        "🐛 Kleis DAP server listening on port {} (single session)",
+        port
+    );
+
+    // Only accept one connection for this session
+    if let Some(stream) = listener.incoming().next() {
+        let stream = stream?;
+        dap_log!("Client connected: {:?}", stream.peer_addr());
+
+        let reader = BufReader::new(stream.try_clone()?);
+        let writer = stream;
+
+        if let Some(ctx) = ctx {
+            run_server_with_context(reader, writer, ctx)?;
+        } else {
+            run_server(reader, writer)?;
+        }
+    }
+
+    dap_log!("DAP session ended");
+    Ok(())
+}
+
 /// Main DAP message loop
 fn run_server<R: BufRead, W: Write>(
     reader: R,

@@ -529,6 +529,11 @@ impl LanguageServer for KleisLanguageServer {
                         },
                     ),
                 ),
+                // Execute Command - for debugger integration
+                execute_command_provider: Some(ExecuteCommandOptions {
+                    commands: vec!["kleis.startDebugSession".to_string()],
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -1991,6 +1996,66 @@ impl LanguageServer for KleisLanguageServer {
             data: tokens,
         })))
     }
+
+    /// Handle workspace/executeCommand requests (for debugger integration)
+    async fn execute_command(&self, params: ExecuteCommandParams) -> Result<Option<serde_json::Value>> {
+        match params.command.as_str() {
+            "kleis.startDebugSession" => {
+                // Start DAP server on a dynamic port
+                let program_path = params.arguments
+                    .first()
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                
+                self.client
+                    .log_message(MessageType::INFO, format!("Starting debug session for: {}", program_path))
+                    .await;
+                
+                // Find an available port
+                let port = find_available_port().unwrap_or(0);
+                
+                if port == 0 {
+                    return Ok(Some(serde_json::json!({
+                        "error": "Could not find available port for DAP server"
+                    })));
+                }
+                
+                // Spawn DAP server in background
+                let ctx = self.shared_ctx.clone();
+                std::thread::spawn(move || {
+                    if let Err(e) = crate::dap::run_tcp_server_with_context_on_port(port, ctx) {
+                        eprintln!("DAP server error: {}", e);
+                    }
+                });
+                
+                // Give the server a moment to start
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                
+                self.client
+                    .log_message(MessageType::INFO, format!("DAP server started on port {}", port))
+                    .await;
+                
+                Ok(Some(serde_json::json!({
+                    "port": port
+                })))
+            }
+            _ => {
+                self.client
+                    .log_message(MessageType::WARNING, format!("Unknown command: {}", params.command))
+                    .await;
+                Ok(None)
+            }
+        }
+    }
+}
+
+/// Find an available TCP port for the DAP server
+fn find_available_port() -> Option<u16> {
+    // Try to bind to port 0 to get an available port from the OS
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .ok()
+        .and_then(|listener| listener.local_addr().ok())
+        .map(|addr| addr.port())
 }
 
 /// Tokenize Kleis source for semantic highlighting
