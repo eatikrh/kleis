@@ -245,6 +245,29 @@ struct DapDebugger {
     context: Option<SharedContext>,
     /// Currently loaded file path
     current_file: Option<String>,
+    /// Example blocks found in the program (v0.93)
+    example_blocks: Vec<ExampleBlockInfo>,
+    /// Current execution state
+    execution_state: ExecutionState,
+}
+
+/// Info about an example block for debugging
+#[derive(Debug, Clone)]
+struct ExampleBlockInfo {
+    name: String,
+    start_line: u32,
+    statement_count: usize,
+}
+
+/// Current execution state
+#[derive(Debug, Clone, Default)]
+struct ExecutionState {
+    /// Index of current example being debugged (-1 = none)
+    current_example: i32,
+    /// Index of current statement within example
+    current_statement: usize,
+    /// Whether execution is paused
+    paused: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -264,6 +287,8 @@ impl DapDebugger {
             is_stopped: false,
             context,
             current_file: None,
+            example_blocks: Vec::new(),
+            execution_state: ExecutionState::default(),
         }
     }
 
@@ -369,6 +394,24 @@ impl DapDebugger {
                                 
                                 // Store the program path for breakpoint matching
                                 self.current_file = Some(program_path.to_string());
+                                
+                                // Detect example blocks (v0.93)
+                                use crate::kleis_ast::TopLevel;
+                                self.example_blocks.clear();
+                                for (idx, item) in program.items.iter().enumerate() {
+                                    if let TopLevel::ExampleBlock(ex) = item {
+                                        self.example_blocks.push(ExampleBlockInfo {
+                                            name: ex.name.clone(),
+                                            start_line: (idx + 1) as u32, // Approximate line
+                                            statement_count: ex.statements.len(),
+                                        });
+                                        dap_log!("Found example: {} ({} statements)", ex.name, ex.statements.len());
+                                    }
+                                }
+                                
+                                if !self.example_blocks.is_empty() {
+                                    dap_log!("Found {} example blocks", self.example_blocks.len());
+                                }
                             }
                             Err(e) => {
                                 dap_log!("Parse error: {}", e);

@@ -164,6 +164,11 @@
                 "type": "boolean",
                 "description": "Automatically stop at entry point.",
                 "default": true
+              },
+              "example": {
+                "type": "string",
+                "description": "Name of specific example block to debug (v0.93). Leave empty to run all examples.",
+                "default": ""
               }
             }
           }
@@ -175,6 +180,14 @@
             "name": "Debug Kleis File",
             "program": "${file}",
             "stopOnEntry": true
+          },
+          {
+            "type": "kleis",
+            "request": "launch",
+            "name": "Debug Example Blocks",
+            "program": "${file}",
+            "stopOnEntry": true,
+            "example": ""
           }
         ],
         "configurationSnippets": [

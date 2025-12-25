@@ -111,7 +111,7 @@
       "patterns": [
         {
           "name": "keyword.control.kleis",
-          "match": "\\b(data|structure|implements|operation|element|axiom|supports|notation|define|let|in|if|then|else|match|type|object|const|narrow|over|extends|verify|where|import)\\b"
+          "match": "\\b(data|structure|implements|operation|element|axiom|supports|notation|define|let|in|if|then|else|match|type|object|const|narrow|over|extends|verify|where|import|example|assert)\\b"
         },
         {
           "name": "keyword.other.math.kleis",
