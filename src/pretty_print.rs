@@ -21,8 +21,9 @@
 use crate::ast::{Expression, MatchCase, Pattern, QuantifiedVar, QuantifierKind};
 use crate::evaluator::Closure;
 use crate::kleis_ast::{
-    DataDef, FunctionDef, ImplMember, Implementation, ImplementsDef, OperationDecl, Program,
-    StructureDef, StructureMember, TopLevel, TypeAlias, WhereConstraint,
+    DataDef, ExampleBlock, ExampleStatement, FunctionDef, ImplMember, Implementation,
+    ImplementsDef, OperationDecl, Program, StructureDef, StructureMember, TopLevel, TypeAlias,
+    WhereConstraint,
 };
 
 /// Pretty-printer configuration
@@ -974,6 +975,56 @@ impl PrettyPrinter {
             TopLevel::OperationDecl(o) => self.format_operation_decl(o),
             TopLevel::FunctionDef(f) => self.format_function_def(f),
             TopLevel::TypeAlias(a) => self.format_type_alias(a),
+            TopLevel::ExampleBlock(e) => self.format_example_block(e),
+        }
+    }
+
+    /// Format an example block (v0.93)
+    pub fn format_example_block(&self, example: &ExampleBlock) -> String {
+        let mut result = format!("example \"{}\" {{\n", example.name);
+
+        for stmt in &example.statements {
+            result.push_str("    ");
+            result.push_str(&self.format_example_statement(stmt));
+            result.push('\n');
+        }
+
+        result.push('}');
+        result
+    }
+
+    /// Format a statement within an example block
+    fn format_example_statement(&self, stmt: &ExampleStatement) -> String {
+        match stmt {
+            ExampleStatement::Let {
+                name,
+                type_annotation,
+                value,
+            } => {
+                let type_part = match type_annotation {
+                    Some(te) => format!(" : {}", Self::format_type_expr(te)),
+                    None => String::new(),
+                };
+                // Check if value is just the name (symbolic declaration)
+                let is_symbolic = match value {
+                    Expression::Object(obj_name) => obj_name == name,
+                    _ => false,
+                };
+                if is_symbolic {
+                    format!("let {}{}", name, type_part)
+                } else {
+                    format!(
+                        "let {}{} = {}",
+                        name,
+                        type_part,
+                        self.format_expression(value)
+                    )
+                }
+            }
+            ExampleStatement::Assert(condition) => {
+                format!("assert({})", self.format_expression(condition))
+            }
+            ExampleStatement::Expr(expr) => self.format_expression(expr),
         }
     }
 }

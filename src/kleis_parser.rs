@@ -43,9 +43,9 @@
 //! **Purpose:** Validate ADR-015 design decisions, not production-ready!
 use crate::ast::{Expression, MatchCase, Pattern};
 use crate::kleis_ast::{
-    DataDef, DataField, DataVariant, DimExpr, FunctionDef, ImplMember, Implementation,
-    ImplementsDef, OperationDecl, Program, StructureDef, StructureMember, TopLevel, TypeAlias,
-    TypeAliasParam, TypeExpr,
+    DataDef, DataField, DataVariant, DimExpr, ExampleBlock, ExampleStatement, FunctionDef,
+    ImplMember, Implementation, ImplementsDef, OperationDecl, Program, StructureDef,
+    StructureMember, TopLevel, TypeAlias, TypeAliasParam, TypeExpr,
 };
 use std::fmt;
 
@@ -3937,6 +3937,156 @@ impl KleisParser {
         Ok(path)
     }
 
+    /// Parse an example block (v0.93): example "name" { statements }
+    ///
+    /// Grammar:
+    ///   exampleBlock ::= "example" string "{" exampleBody "}"
+    ///   exampleBody  ::= { exampleStatement }
+    ///   exampleStatement ::= letBinding | assertStatement | expression ";"
+    fn parse_example_block(&mut self) -> Result<ExampleBlock, KleisParseError> {
+        self.skip_whitespace();
+
+        // Consume 'example' keyword (already peeked)
+        self.expect_word("example")?;
+        self.skip_whitespace();
+
+        // Parse the example name as a string literal
+        let name = self.parse_string_literal()?;
+        self.skip_whitespace();
+
+        // Expect opening brace
+        if self.advance() != Some('{') {
+            return Err(KleisParseError {
+                message: "Expected '{' to start example block".to_string(),
+                position: self.pos,
+            });
+        }
+
+        // Parse statements until closing brace
+        let mut statements = Vec::new();
+        loop {
+            self.skip_whitespace();
+
+            if self.peek() == Some('}') {
+                self.advance(); // consume '}'
+                break;
+            }
+
+            if self.pos >= self.input.len() {
+                return Err(KleisParseError {
+                    message: "Unexpected end of input in example block".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            let stmt = self.parse_example_statement()?;
+            statements.push(stmt);
+        }
+
+        Ok(ExampleBlock { name, statements })
+    }
+
+    /// Parse a single statement within an example block
+    fn parse_example_statement(&mut self) -> Result<ExampleStatement, KleisParseError> {
+        self.skip_whitespace();
+
+        // Check for 'let' binding
+        if self.peek_word("let") {
+            return self.parse_example_let();
+        }
+
+        // Check for 'assert' statement
+        if self.peek_word("assert") {
+            return self.parse_assert_statement();
+        }
+
+        // Otherwise, parse as expression statement
+        // Use parse_expression() not parse() since we don't want to check for EOF
+        let expr = self.parse_expression()?;
+
+        // Optionally consume trailing semicolon (for consistency)
+        self.skip_whitespace();
+        if self.peek() == Some(';') {
+            self.advance();
+        }
+
+        Ok(ExampleStatement::Expr(expr))
+    }
+
+    /// Parse a let binding in an example block: let name = expr or let name : T = expr
+    fn parse_example_let(&mut self) -> Result<ExampleStatement, KleisParseError> {
+        self.skip_whitespace();
+        self.expect_word("let")?;
+        self.skip_whitespace();
+
+        let name = self.parse_identifier()?;
+        self.skip_whitespace();
+
+        // Optional type annotation
+        let type_annotation = if self.peek() == Some(':') {
+            self.advance(); // consume ':'
+            self.skip_whitespace();
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+
+        self.skip_whitespace();
+
+        // For symbolic bindings without initializer: let x : T (no '=' needed)
+        let value = if self.peek() == Some('=') {
+            self.advance(); // consume '='
+            self.skip_whitespace();
+            // Use parse_expression() not parse() since we don't want to check for EOF
+            self.parse_expression()?
+        } else if type_annotation.is_some() {
+            // Symbolic variable declaration (no value, just type)
+            // Create a placeholder identifier for this symbolic variable
+            Expression::Object(name.clone())
+        } else {
+            return Err(KleisParseError {
+                message: "Expected '=' or ':' in let binding".to_string(),
+                position: self.pos,
+            });
+        };
+
+        Ok(ExampleStatement::Let {
+            name,
+            type_annotation,
+            value,
+        })
+    }
+
+    /// Parse an assert statement: assert(expression)
+    fn parse_assert_statement(&mut self) -> Result<ExampleStatement, KleisParseError> {
+        self.skip_whitespace();
+        self.expect_word("assert")?;
+        self.skip_whitespace();
+
+        // Expect opening paren
+        if self.advance() != Some('(') {
+            return Err(KleisParseError {
+                message: "Expected '(' after 'assert'".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+        // Use parse_expression() not parse() since we don't want to check for EOF
+        let condition = self.parse_expression()?;
+        self.skip_whitespace();
+
+        // Expect closing paren
+        if self.advance() != Some(')') {
+            return Err(KleisParseError {
+                message: "Expected ')' to close assert".to_string(),
+                position: self.pos,
+            });
+        }
+
+        Ok(ExampleStatement::Assert(condition))
+    }
+
     /// Parse a complete program (multiple top-level items)
     pub fn parse_program(&mut self) -> Result<Program, KleisParseError> {
         let mut program = Program::new();
@@ -3976,9 +4126,12 @@ impl KleisParser {
             } else if self.peek_word("define") {
                 let function_def = self.parse_function_def()?;
                 program.add_item(TopLevel::FunctionDef(function_def));
+            } else if self.peek_word("example") {
+                let example_block = self.parse_example_block()?;
+                program.add_item(TopLevel::ExampleBlock(example_block));
             } else {
                 return Err(KleisParseError {
-                    message: "Expected 'import', 'structure', 'implements', 'data', 'operation', 'type', or 'define'"
+                    message: "Expected 'import', 'structure', 'implements', 'data', 'operation', 'type', 'define', or 'example'"
                         .to_string(),
                     position: self.pos,
                 });
@@ -6828,5 +6981,106 @@ mod tests {
             }
             _ => panic!("Expected Unit pattern"),
         }
+    }
+
+    // =========================================
+    // Example Block Tests (v0.93)
+    // =========================================
+
+    #[test]
+    fn test_parse_example_block_simple() {
+        let code = r#"
+            example "complex arithmetic" {
+                let z1 = Complex(1, 2)
+                let z2 = Complex(3, 4)
+                assert(add(z1, z2) = sum)
+            }
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+        assert_eq!(result.items.len(), 1);
+
+        match &result.items[0] {
+            TopLevel::ExampleBlock(example) => {
+                assert_eq!(example.name, "complex arithmetic");
+                assert_eq!(example.statements.len(), 3);
+            }
+            _ => panic!("Expected ExampleBlock"),
+        }
+    }
+
+    #[test]
+    fn test_parse_example_block_with_symbolic_let() {
+        let code = r#"
+            example "symbolic test" {
+                let A : Matrix(3, 3)
+                let B : Matrix(3, 3)
+                assert(det(multiply(A, B)) = det(A) * det(B))
+            }
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+        assert_eq!(result.items.len(), 1);
+
+        match &result.items[0] {
+            TopLevel::ExampleBlock(example) => {
+                assert_eq!(example.name, "symbolic test");
+                assert_eq!(example.statements.len(), 3);
+                // First two are symbolic let bindings
+                match &example.statements[0] {
+                    ExampleStatement::Let {
+                        name,
+                        type_annotation,
+                        ..
+                    } => {
+                        assert_eq!(name, "A");
+                        assert!(type_annotation.is_some());
+                    }
+                    _ => panic!("Expected Let"),
+                }
+            }
+            _ => panic!("Expected ExampleBlock"),
+        }
+    }
+
+    #[test]
+    fn test_parse_example_block_with_expression() {
+        let code = r#"
+            example "final expression" {
+                let x = 1 + 2
+                x * 3
+            }
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+
+        match &result.items[0] {
+            TopLevel::ExampleBlock(example) => {
+                assert_eq!(example.statements.len(), 2);
+                // Second statement is an expression
+                assert!(matches!(&example.statements[1], ExampleStatement::Expr(_)));
+            }
+            _ => panic!("Expected ExampleBlock"),
+        }
+    }
+
+    #[test]
+    fn test_parse_program_with_example() {
+        let code = r#"
+            structure Complex(re: ℝ, im: ℝ) {
+                operation add : Complex → Complex
+            }
+
+            example "complex addition" {
+                let z1 = Complex(1, 2)
+                let z2 = Complex(3, 4)
+                assert(add(z1, z2) = add(z2, z1))
+            }
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+        assert_eq!(result.items.len(), 2);
+        assert!(matches!(&result.items[0], TopLevel::StructureDef(_)));
+        assert!(matches!(&result.items[1], TopLevel::ExampleBlock(_)));
     }
 }
