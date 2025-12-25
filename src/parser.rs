@@ -33,6 +33,7 @@ fn op(name: impl Into<String>, args: Vec<Expression>) -> Expression {
     Expression::Operation {
         name: name.into(),
         args,
+        span: None,
     }
 }
 
@@ -1643,6 +1644,7 @@ fn collapse_script_literals(expr: Expression) -> Expression {
                 Expression::Operation {
                     name: "literal_chain".to_string(),
                     args: tokens,
+                    span: None,
                 }
             } else {
                 expr
@@ -1657,7 +1659,7 @@ fn extract_literal_tokens(expr: &Expression) -> Option<Vec<Expression>> {
         Expression::Const(_) | Expression::String(_) | Expression::Object(_) => {
             Some(vec![expr.clone()])
         }
-        Expression::Operation { name, args } if name == "scalar_multiply" && args.len() == 2 => {
+        Expression::Operation { name, args, .. } if name == "scalar_multiply" && args.len() == 2 => {
             let mut left_tokens = extract_literal_tokens(&args[0])?;
             let mut right_tokens = extract_literal_tokens(&args[1])?;
             left_tokens.append(&mut right_tokens);

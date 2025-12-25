@@ -391,15 +391,16 @@ impl Evaluator {
                 subst.get(name).cloned().unwrap_or_else(|| expr.clone())
             }
 
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 // Recursively substitute in arguments
                 Expression::Operation {
                     name: name.clone(),
                     args: args.iter().map(|arg| self.substitute(arg, subst)).collect(),
+                    span: None,
                 }
             }
 
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 // Substitute in scrutinee
                 let new_scrutinee = Box::new(self.substitute(scrutinee, subst));
 
@@ -416,6 +417,7 @@ impl Evaluator {
                 Expression::Match {
                     scrutinee: new_scrutinee,
                     cases: new_cases,
+                    span: None,
                 }
             }
 
@@ -449,10 +451,12 @@ impl Evaluator {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => Expression::Conditional {
                 condition: Box::new(self.substitute(condition, subst)),
                 then_branch: Box::new(self.substitute(then_branch, subst)),
                 else_branch: Box::new(self.substitute(else_branch, subst)),
+                span: None,
             },
 
             // Let bindings - substitute in value and body
@@ -462,6 +466,7 @@ impl Evaluator {
                 type_annotation,
                 value,
                 body,
+                ..
             } => {
                 let subst_value = self.substitute(value, subst);
                 // Create new substitution map without the shadowed variables
@@ -474,6 +479,7 @@ impl Evaluator {
                     type_annotation: type_annotation.clone(),
                     value: Box::new(subst_value),
                     body: Box::new(subst_body),
+                    span: None,
                 }
             }
 
@@ -487,7 +493,7 @@ impl Evaluator {
             },
 
             // Lambda - substitute in body, avoiding capture
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 // Filter out substitutions for variables that are shadowed by lambda params
                 let shadowed: std::collections::HashSet<_> =
                     params.iter().map(|p| p.name.clone()).collect();
@@ -499,6 +505,7 @@ impl Evaluator {
                 Expression::Lambda {
                     params: params.clone(),
                     body: Box::new(self.substitute(body, &filtered_subst)),
+                    span: None,
                 }
             }
 
@@ -537,7 +544,7 @@ impl Evaluator {
         // Evaluate based on expression type
         let result = match expr {
             // Check if this is a function application
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 if self.functions.contains_key(name) {
                     // Get the function's full source location (span + file) for debugging
                     let func_location = self
@@ -587,12 +594,13 @@ impl Evaluator {
                     Ok(Expression::Operation {
                         name: name.clone(),
                         args: eval_args,
+                        span: None,
                     })
                 }
             }
 
             // Match expressions - delegate to PatternMatcher
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 let eval_scrutinee = self.eval_internal(scrutinee, depth + 1)?;
                 let result = self.matcher.eval_match(&eval_scrutinee, cases)?;
                 self.eval_internal(&result, depth + 1)
@@ -618,6 +626,7 @@ impl Evaluator {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 let eval_cond = self.eval_internal(condition, depth + 1)?;
                 let eval_then = self.eval_internal(then_branch, depth + 1)?;
@@ -629,6 +638,7 @@ impl Evaluator {
                     condition: Box::new(eval_cond),
                     then_branch: Box::new(eval_then),
                     else_branch: Box::new(eval_else),
+                    span: None,
                 })
             }
 
@@ -959,7 +969,7 @@ impl Evaluator {
     /// - Symbolic values - Return Unknown (for future Z3 integration)
     fn eval_assert(&self, condition: &Expression) -> AssertResult {
         // Check if this is an equality assertion: a = b
-        if let Expression::Operation { name, args } = condition {
+        if let Expression::Operation { name, args, .. } = condition {
             if (name == "eq" || name == "equals" || name == "=") && args.len() == 2 {
                 return self.eval_equality_assert(&args[0], &args[1]);
             }
@@ -1021,9 +1031,10 @@ impl Evaluator {
                     expr.clone()
                 }
             }
-            Expression::Operation { name, args } => Expression::Operation {
+            Expression::Operation { name, args, .. } => Expression::Operation {
                 name: name.clone(),
                 args: args.iter().map(|a| self.resolve_expression(a)).collect(),
+                span: None,
             },
             _ => expr.clone(),
         }
@@ -1042,8 +1053,8 @@ impl Evaluator {
             (Expression::String(a), Expression::String(b)) => a == b,
             (Expression::Object(a), Expression::Object(b)) => a == b,
             (
-                Expression::Operation { name: n1, args: a1 },
-                Expression::Operation { name: n2, args: a2 },
+                Expression::Operation { name: n1, args: a1, .. },
+                Expression::Operation { name: n2, args: a2, .. },
             ) => {
                 n1 == n2
                     && a1.len() == a2.len()
@@ -1108,7 +1119,7 @@ impl Evaluator {
     /// ```
     pub fn beta_reduce(&self, lambda: &Expression, arg: &Expression) -> Result<Expression, String> {
         match lambda {
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 if params.is_empty() {
                     // No params, return body as-is
                     return Ok((**body).clone());
@@ -1134,6 +1145,7 @@ impl Evaluator {
                     Ok(Expression::Lambda {
                         params: params[1..].to_vec(),
                         body: Box::new(reduced_body),
+                        span: None,
                     })
                 }
             }
@@ -1192,7 +1204,7 @@ impl Evaluator {
         match expr {
             // Check for lambda application pattern in Operation
             // This handles: f(arg) where f resolves to a lambda
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 // First, check if this is a named function that's actually a lambda
                 if let Some(closure) = self.functions.get(name) {
                     // Check if the stored function body is a lambda
@@ -1214,6 +1226,7 @@ impl Evaluator {
                         return Ok(Some(Expression::Operation {
                             name: name.clone(),
                             args: new_args,
+                            span: None,
                         }));
                     }
                 }
@@ -1222,11 +1235,12 @@ impl Evaluator {
             }
 
             // Lambda body reduction
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 if let Some(reduced_body) = self.reduction_step(body)? {
                     Ok(Some(Expression::Lambda {
                         params: params.clone(),
                         body: Box::new(reduced_body),
+                        span: None,
                     }))
                 } else {
                     Ok(None)
@@ -1248,6 +1262,7 @@ impl Evaluator {
                         type_annotation: None,
                         value: Box::new(reduced_value),
                         body: body.clone(),
+                        span: None,
                     }));
                 }
 
@@ -1263,6 +1278,7 @@ impl Evaluator {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 // Try to reduce condition first
                 if let Some(reduced_cond) = self.reduction_step(condition)? {
@@ -1270,6 +1286,7 @@ impl Evaluator {
                         condition: Box::new(reduced_cond),
                         then_branch: then_branch.clone(),
                         else_branch: else_branch.clone(),
+                        span: None,
                     }));
                 }
 
@@ -1288,6 +1305,7 @@ impl Evaluator {
                                 condition: condition.clone(),
                                 then_branch: Box::new(reduced),
                                 else_branch: else_branch.clone(),
+                                span: None,
                             }));
                         }
                         // Reduce else branch
@@ -1296,6 +1314,7 @@ impl Evaluator {
                                 condition: condition.clone(),
                                 then_branch: then_branch.clone(),
                                 else_branch: Box::new(reduced),
+                                span: None,
                             }));
                         }
                         Ok(None)
@@ -1401,7 +1420,7 @@ impl Evaluator {
                     self.collect_free_variables(arg, bound, free);
                 }
             }
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 let mut new_bound = bound.clone();
                 for p in params {
                     new_bound.insert(p.name.clone());
@@ -1423,6 +1442,7 @@ impl Evaluator {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 self.collect_free_variables(condition, bound, free);
                 self.collect_free_variables(then_branch, bound, free);
@@ -1443,7 +1463,7 @@ impl Evaluator {
                 }
                 self.collect_free_variables(body, &mut new_bound, free);
             }
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 self.collect_free_variables(scrutinee, bound, free);
                 for case in cases {
                     // Pattern variables are bound in the case body
@@ -1551,6 +1571,7 @@ impl Evaluator {
                 if let Expression::Operation {
                     name: op_name,
                     args: op_args,
+                    ..
                 } = value
                 {
                     if name == op_name && args.len() == op_args.len() {
@@ -1632,7 +1653,7 @@ impl Evaluator {
     /// Helper to collect all bound variables
     fn collect_bound_variables(&self, expr: &Expression, bound: &mut HashSet<String>) {
         match expr {
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 for p in params {
                     bound.insert(p.name.clone());
                 }
@@ -1671,12 +1692,13 @@ impl Evaluator {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 self.collect_bound_variables(condition, bound);
                 self.collect_bound_variables(then_branch, bound);
                 self.collect_bound_variables(else_branch, bound);
             }
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 self.collect_bound_variables(scrutinee, bound);
                 for case in cases {
                     self.collect_pattern_vars_from_pattern(&case.pattern, bound);
@@ -1718,7 +1740,7 @@ impl Evaluator {
     #[allow(clippy::only_used_in_recursion)]
     fn alpha_convert(&self, expr: &Expression, old_name: &str, new_name: &str) -> Expression {
         match expr {
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 // Check if this lambda binds the old name
                 let binds_old = params.iter().any(|p| p.name == old_name);
 
@@ -1741,12 +1763,14 @@ impl Evaluator {
                     Expression::Lambda {
                         params: new_params,
                         body: Box::new(new_body),
+                        span: None,
                     }
                 } else {
                     // Just recurse into body
                     Expression::Lambda {
                         params: params.clone(),
                         body: Box::new(self.alpha_convert(body, old_name, new_name)),
+                        span: None,
                     }
                 }
             }
@@ -1758,6 +1782,7 @@ impl Evaluator {
                 type_annotation,
                 value,
                 body,
+                ..
             } => {
                 let new_value = self.alpha_convert(value, old_name, new_name);
                 // Alpha-convert variables in the pattern
@@ -1767,23 +1792,27 @@ impl Evaluator {
                     type_annotation: type_annotation.clone(),
                     value: Box::new(new_value),
                     body: Box::new(self.alpha_convert(body, old_name, new_name)),
+                    span: None,
                 }
             }
-            Expression::Operation { name, args } => Expression::Operation {
+            Expression::Operation { name, args, .. } => Expression::Operation {
                 name: name.clone(),
                 args: args
                     .iter()
                     .map(|a| self.alpha_convert(a, old_name, new_name))
                     .collect(),
+                span: None,
             },
             Expression::Conditional {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => Expression::Conditional {
                 condition: Box::new(self.alpha_convert(condition, old_name, new_name)),
                 then_branch: Box::new(self.alpha_convert(then_branch, old_name, new_name)),
                 else_branch: Box::new(self.alpha_convert(else_branch, old_name, new_name)),
+                span: None,
             },
             Expression::List(elements) => Expression::List(
                 elements
@@ -1855,7 +1884,7 @@ impl Evaluator {
             }
 
             // Operations: evaluate args then apply built-in or user-defined function
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 // First, evaluate all arguments
                 // First, evaluate all arguments
                 let eval_args: Result<Vec<_>, _> =
@@ -1868,6 +1897,7 @@ impl Evaluator {
                     return Ok(Expression::Operation {
                         name: name.clone(),
                         args: eval_args,
+                        span: None,
                     });
                 }
 
@@ -1886,6 +1916,7 @@ impl Evaluator {
                 Ok(Expression::Operation {
                     name: name.clone(),
                     args: eval_args,
+                    span: None,
                 })
             }
 
@@ -1894,6 +1925,7 @@ impl Evaluator {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 let eval_cond = self.eval_concrete(condition)?;
                 match &eval_cond {
@@ -1915,6 +1947,7 @@ impl Evaluator {
                             condition: Box::new(eval_cond),
                             then_branch: Box::new(self.eval_concrete(then_branch)?),
                             else_branch: Box::new(self.eval_concrete(else_branch)?),
+                            span: None,
                         })
                     }
                 }
@@ -1935,7 +1968,7 @@ impl Evaluator {
             }
 
             // Match expressions
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 let eval_scrutinee = self.eval_concrete(scrutinee)?;
                 let result = self.matcher.eval_match(&eval_scrutinee, cases)?;
                 self.eval_concrete(&result)
@@ -2226,6 +2259,7 @@ impl Evaluator {
                 Ok(Some(Expression::Operation {
                     name: "Cons".to_string(),
                     args: args.to_vec(),
+                    span: None,
                 }))
             }
             "Nil" | "nil" => {
@@ -2238,7 +2272,7 @@ impl Evaluator {
                     return Ok(None);
                 }
                 match &args[0] {
-                    Expression::Operation { name, args: inner }
+                    Expression::Operation { name, args: inner, .. }
                         if name == "Cons" && inner.len() == 2 =>
                     {
                         Ok(Some(inner[0].clone()))
@@ -2255,7 +2289,7 @@ impl Evaluator {
                     return Ok(None);
                 }
                 match &args[0] {
-                    Expression::Operation { name, args: inner }
+                    Expression::Operation { name, args: inner, .. }
                         if name == "Cons" && inner.len() == 2 =>
                     {
                         Ok(Some(inner[1].clone()))
@@ -2294,7 +2328,7 @@ impl Evaluator {
                     Expression::Object(s) if s == "Nil" => {
                         Ok(Some(Expression::Const("0".to_string())))
                     }
-                    Expression::Operation { name, args: inner } if name == "Cons" => {
+                    Expression::Operation { name, args: inner, .. } if name == "Cons" => {
                         // Count recursively: 1 + length(tail)
                         let tail_len = self.apply_builtin("length", &[inner[1].clone()])?;
                         if let Some(Expression::Const(n)) = tail_len {
@@ -2319,10 +2353,10 @@ impl Evaluator {
                     {
                         Ok(Some(elements[i as usize].clone()))
                     }
-                    (Expression::Operation { name, args: inner }, Some(0)) if name == "Cons" => {
+                    (Expression::Operation { name, args: inner, .. }, Some(0)) if name == "Cons" => {
                         Ok(Some(inner[0].clone()))
                     }
-                    (Expression::Operation { name, args: inner }, Some(i))
+                    (Expression::Operation { name, args: inner, .. }, Some(i))
                         if name == "Cons" && i > 0 =>
                     {
                         self.apply_builtin(
@@ -4169,29 +4203,29 @@ impl Evaluator {
         match expr {
             Expression::Const(s) => s.parse().ok(),
             // Handle negate(x) -> -x
-            Expression::Operation { name, args } if name == "negate" && args.len() == 1 => {
+            Expression::Operation { name, args, .. } if name == "negate" && args.len() == 1 => {
                 self.as_number(&args[0]).map(|n| -n)
             }
             // Handle minus(a, b) -> a - b
-            Expression::Operation { name, args } if name == "minus" && args.len() == 2 => {
+            Expression::Operation { name, args, .. } if name == "minus" && args.len() == 2 => {
                 let a = self.as_number(&args[0])?;
                 let b = self.as_number(&args[1])?;
                 Some(a - b)
             }
             // Handle plus(a, b) -> a + b
-            Expression::Operation { name, args } if name == "plus" && args.len() == 2 => {
+            Expression::Operation { name, args, .. } if name == "plus" && args.len() == 2 => {
                 let a = self.as_number(&args[0])?;
                 let b = self.as_number(&args[1])?;
                 Some(a + b)
             }
             // Handle times(a, b) -> a * b
-            Expression::Operation { name, args } if name == "times" && args.len() == 2 => {
+            Expression::Operation { name, args, .. } if name == "times" && args.len() == 2 => {
                 let a = self.as_number(&args[0])?;
                 let b = self.as_number(&args[1])?;
                 Some(a * b)
             }
             // Handle divide(a, b) -> a / b
-            Expression::Operation { name, args } if name == "divide" && args.len() == 2 => {
+            Expression::Operation { name, args, .. } if name == "divide" && args.len() == 2 => {
                 let a = self.as_number(&args[0])?;
                 let b = self.as_number(&args[1])?;
                 if b != 0.0 {
@@ -4269,7 +4303,7 @@ impl Evaluator {
     /// Handles: Matrix(m, n, [elements]) or Matrix(m, n, List([elements]))
     fn extract_matrix(&self, expr: &Expression) -> Option<(usize, usize, Vec<Expression>)> {
         match expr {
-            Expression::Operation { name, args } if name == "Matrix" && args.len() >= 3 => {
+            Expression::Operation { name, args, .. } if name == "Matrix" && args.len() >= 3 => {
                 // Matrix(m, n, elements)
                 let m = self.as_integer(&args[0])? as usize;
                 let n = self.as_integer(&args[1])? as usize;
@@ -4280,6 +4314,7 @@ impl Evaluator {
                     Expression::Operation {
                         name: list_name,
                         args: list_args,
+                        ..
                     } if list_name == "List" => list_args.clone(),
                     // If more than 3 args, elements are inline (old format)
                     _ if args.len() > 3 => args[2..].to_vec(),
@@ -4306,6 +4341,7 @@ impl Evaluator {
                 Expression::Const(format!("{}", n)),
                 Expression::List(elements),
             ],
+            span: None,
         }
     }
 
@@ -4331,6 +4367,7 @@ impl Evaluator {
             _ => Expression::Operation {
                 name: "plus".to_string(),
                 args: vec![a.clone(), b.clone()],
+                span: None,
             },
         }
     }
@@ -4352,6 +4389,7 @@ impl Evaluator {
             _ => Expression::Operation {
                 name: "minus".to_string(),
                 args: vec![a.clone(), b.clone()],
+                span: None,
             },
         }
     }
@@ -4379,6 +4417,7 @@ impl Evaluator {
             _ => Expression::Operation {
                 name: "times".to_string(),
                 args: vec![a.clone(), b.clone()],
+                span: None,
             },
         }
     }
@@ -4402,6 +4441,7 @@ impl Evaluator {
             None => Expression::Operation {
                 name: "negate".to_string(),
                 args: vec![a.clone()],
+                span: None,
             },
         }
     }
@@ -4412,7 +4452,7 @@ impl Evaluator {
     /// Handles: complex(re, im) or Complex(re, im)
     fn extract_complex(&self, expr: &Expression) -> Option<(Expression, Expression)> {
         match expr {
-            Expression::Operation { name, args }
+            Expression::Operation { name, args, .. }
                 if (name == "complex" || name == "Complex") && args.len() == 2 =>
             {
                 Some((args[0].clone(), args[1].clone()))
@@ -4426,6 +4466,7 @@ impl Evaluator {
         Expression::Operation {
             name: "complex".to_string(),
             args: vec![re, im],
+            span: None,
         }
     }
 
@@ -4446,7 +4487,7 @@ impl Evaluator {
                 }
             }
             // Operation format: pair(A, B) or tuple(A, B)
-            Expression::Operation { name, args }
+            Expression::Operation { name, args, .. }
                 if (name == "pair" || name == "tuple" || name == "Pair" || name == "Tuple")
                     && args.len() == 2 =>
             {

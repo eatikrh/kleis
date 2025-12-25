@@ -396,6 +396,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "negate".to_string(),
                 args: vec![arg],
+                span: None,
             });
         }
 
@@ -406,6 +407,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "logical_not".to_string(),
                 args: vec![arg],
+                span: None,
             });
         }
 
@@ -426,6 +428,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "gradient".to_string(),
                 args: vec![arg],
+                span: None,
             });
         }
 
@@ -437,6 +440,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "Integrate".to_string(),
                 args: vec![arg],
+                span: None,
             });
         }
 
@@ -447,6 +451,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "DoubleIntegral".to_string(),
                 args: vec![arg],
+                span: None,
             });
         }
 
@@ -457,6 +462,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "TripleIntegral".to_string(),
                 args: vec![arg],
+                span: None,
             });
         }
 
@@ -467,6 +473,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "LineIntegral".to_string(),
                 args: vec![arg],
+                span: None,
             });
         }
 
@@ -477,6 +484,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "SurfaceIntegral".to_string(),
                 args: vec![arg],
+                span: None,
             });
         }
 
@@ -521,6 +529,7 @@ impl KleisParser {
                 return Ok(Expression::Operation {
                     name: "Unit".to_string(),
                     args: vec![],
+                    span: None,
                 });
             }
 
@@ -555,6 +564,7 @@ impl KleisParser {
                 return Ok(Expression::Operation {
                     name: constructor.to_string(),
                     args: elements,
+                    span: None,
                 });
             } else {
                 // Just a grouped expression
@@ -599,7 +609,7 @@ impl KleisParser {
                         position: self.pos,
                     });
                 }
-                return Ok(Expression::Operation { name: id, args });
+                return Ok(Expression::Operation { name: id, args, span: None });
             }
 
             // Just an identifier
@@ -624,6 +634,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "power".to_string(),
                 args: vec![left, right],
+                span: None,
             };
         }
 
@@ -645,6 +656,7 @@ impl KleisParser {
                     expr = Expression::Operation {
                         name: "factorial".to_string(),
                         args: vec![expr],
+                        span: None,
                     };
                 }
                 Some('ᵀ') => {
@@ -652,6 +664,7 @@ impl KleisParser {
                     expr = Expression::Operation {
                         name: "transpose".to_string(),
                         args: vec![expr],
+                        span: None,
                     };
                 }
                 Some('†') => {
@@ -659,6 +672,7 @@ impl KleisParser {
                     expr = Expression::Operation {
                         name: "dagger".to_string(),
                         args: vec![expr],
+                        span: None,
                     };
                 }
                 _ => break,
@@ -686,6 +700,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
+                span: None,
             };
         }
 
@@ -742,6 +757,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "iff".to_string(),
                 args: vec![left, right],
+                span: None,
             };
         }
 
@@ -766,6 +782,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "implies".to_string(),
                 args: vec![left, right],
+                span: None,
             };
         }
 
@@ -789,6 +806,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "logical_or".to_string(),
                 args: vec![left, right],
+                span: None,
             };
         }
 
@@ -812,6 +830,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "logical_and".to_string(),
                 args: vec![left, right],
+                span: None,
             };
         }
 
@@ -900,6 +919,7 @@ impl KleisParser {
             Ok(Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
+                span: None,
             })
         } else {
             Ok(left)
@@ -970,6 +990,7 @@ impl KleisParser {
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
+                    span: None,
                 };
             } else {
                 break;
@@ -1210,6 +1231,7 @@ impl KleisParser {
             Ok(Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
+                span: None,
             })
         } else {
             Ok(left)
@@ -1242,6 +1264,7 @@ impl KleisParser {
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
+                    span: None,
                 };
             } else {
                 break;
@@ -2146,6 +2169,7 @@ impl KleisParser {
             condition: Box::new(condition),
             then_branch: Box::new(then_branch),
             else_branch: Box::new(else_branch),
+            span: None,
         })
     }
 
@@ -2205,6 +2229,7 @@ impl KleisParser {
             type_annotation,
             value: Box::new(value),
             body: Box::new(body),
+            span: None,
         })
     }
 
@@ -2258,6 +2283,7 @@ impl KleisParser {
         Ok(Expression::Lambda {
             params,
             body: Box::new(body),
+            span: None,
         })
     }
 
@@ -2322,6 +2348,7 @@ impl KleisParser {
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
+                    span: None,
                 };
             } else {
                 // No more operators, stop
@@ -2383,6 +2410,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_and".to_string(),
                     args: vec![expr, right],
+                    span: None,
                 };
             } else if self.peek() == Some('∨') {
                 self.advance();
@@ -2391,6 +2419,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_or".to_string(),
                     args: vec![expr, right],
+                    span: None,
                 };
             } else if self.peek_n(2).as_deref() == Some("&&") {
                 self.pos += 2;
@@ -2399,6 +2428,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_and".to_string(),
                     args: vec![expr, right],
+                    span: None,
                 };
             } else if self.peek_n(2).as_deref() == Some("||") {
                 self.pos += 2;
@@ -2407,6 +2437,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_or".to_string(),
                     args: vec![expr, right],
+                    span: None,
                 };
             } else {
                 // No more operators, stop

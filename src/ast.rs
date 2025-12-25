@@ -186,7 +186,12 @@ pub enum Expression {
     /// - plus(a, b) for addition
     /// - sqrt(x) for square root
     /// - frac(num, den) for fractions
-    Operation { name: String, args: Vec<Expression> },
+    Operation {
+        name: String,
+        args: Vec<Expression>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
+    },
 
     /// Placeholder for structural editing
     /// Used to represent empty slots that need to be filled
@@ -199,6 +204,8 @@ pub enum Expression {
     Match {
         scrutinee: Box<Expression>,
         cases: Vec<MatchCase>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
     },
 
     /// List literal
@@ -224,6 +231,8 @@ pub enum Expression {
         condition: Box<Expression>,
         then_branch: Box<Expression>,
         else_branch: Box<Expression>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
     },
 
     /// Let binding expression with pattern support (Grammar v0.8)
@@ -245,6 +254,8 @@ pub enum Expression {
         type_annotation: Option<String>,
         value: Box<Expression>,
         body: Box<Expression>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
     },
 
     /// Type ascription expression
@@ -265,6 +276,8 @@ pub enum Expression {
     Lambda {
         params: Vec<LambdaParam>,
         body: Box<Expression>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
     },
 }
 
@@ -382,6 +395,7 @@ impl Expression {
         Expression::Operation {
             name: name.into(),
             args,
+            span: None,
         }
     }
 
@@ -398,6 +412,7 @@ impl Expression {
         Expression::Match {
             scrutinee: Box::new(scrutinee),
             cases,
+            span: None,
         }
     }
 
@@ -431,6 +446,7 @@ impl Expression {
             condition: Box::new(condition),
             then_branch: Box::new(then_branch),
             else_branch: Box::new(else_branch),
+            span: None,
         }
     }
 
@@ -443,6 +459,7 @@ impl Expression {
             type_annotation: None,
             value: Box::new(value),
             body: Box::new(body),
+            span: None,
         }
     }
 
@@ -459,6 +476,7 @@ impl Expression {
             type_annotation: type_annotation.map(|t| t.into()),
             value: Box::new(value),
             body: Box::new(body),
+            span: None,
         }
     }
 
@@ -470,6 +488,7 @@ impl Expression {
             type_annotation: None,
             value: Box::new(value),
             body: Box::new(body),
+            span: None,
         }
     }
 
@@ -488,6 +507,7 @@ impl Expression {
         Expression::Lambda {
             params,
             body: Box::new(body),
+            span: None,
         }
     }
 
@@ -508,7 +528,7 @@ impl Expression {
                     arg.collect_placeholders(acc);
                 }
             }
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 scrutinee.collect_placeholders(acc);
                 for case in cases {
                     case.body.collect_placeholders(acc);
@@ -526,6 +546,7 @@ impl Expression {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 condition.collect_placeholders(acc);
                 then_branch.collect_placeholders(acc);
