@@ -554,4 +554,85 @@ mod tests {
             assert!(guard.get_document(&PathBuf::from("test.kleis")).is_some());
         }
     }
+
+    #[test]
+    fn test_imports_tracking() {
+        let mut ctx = KleisContext::new();
+
+        // Create a file with an import statement
+        // Note: The import won't resolve (file doesn't exist), but it will be parsed
+        let source = r#"
+import "helper.kleis"
+define x = 1
+"#;
+        ctx.set_document_content(PathBuf::from("/test/main.kleis"), source.to_string());
+
+        let doc = ctx.get_document(&PathBuf::from("/test/main.kleis")).unwrap();
+        assert!(doc.program.is_some());
+        // Import is extracted even if file doesn't exist (just won't resolve)
+        // The imports set will be empty since the file doesn't exist on disk
+        // This is correct behavior - we only track resolved imports
+    }
+
+    #[test]
+    fn test_dirty_flag() {
+        let mut ctx = KleisContext::new();
+        let path = PathBuf::from("test.kleis");
+
+        // Initial document is not dirty
+        ctx.set_document_content(path.clone(), "define x = 1".to_string());
+        assert!(!ctx.get_document(&path).unwrap().dirty);
+
+        // Manually mark as dirty
+        if let Some(doc) = ctx.get_document_mut(&path) {
+            doc.dirty = true;
+        }
+        assert!(ctx.get_document(&path).unwrap().dirty);
+
+        // Re-setting content clears dirty flag
+        ctx.set_document_content(path.clone(), "define x = 2".to_string());
+        assert!(!ctx.get_document(&path).unwrap().dirty);
+    }
+
+    #[test]
+    fn test_cascade_invalidation() {
+        let mut ctx = KleisContext::new();
+
+        // Create two documents where A imports B
+        let path_a = PathBuf::from("/test/a.kleis");
+        let path_b = PathBuf::from("/test/b.kleis");
+
+        ctx.set_document_content(path_b.clone(), "define helper = 1".to_string());
+
+        // Manually set up the import relationship (since files don't exist on disk)
+        ctx.set_document_content(path_a.clone(), "define main = 2".to_string());
+        if let Some(doc_a) = ctx.get_document_mut(&path_a) {
+            doc_a.imports.insert(path_b.clone());
+        }
+
+        // Both should be clean
+        assert!(!ctx.get_document(&path_a).unwrap().dirty);
+        assert!(!ctx.get_document(&path_b).unwrap().dirty);
+
+        // Now invalidate B (simulating an edit)
+        ctx.invalidate_dependents(&path_b);
+
+        // B should be dirty
+        assert!(ctx.get_document(&path_b).unwrap().dirty);
+
+        // A should also be dirty (because it imports B)
+        assert!(ctx.get_document(&path_a).unwrap().dirty);
+    }
+
+    #[test]
+    fn test_document_with_imports_hashset() {
+        let mut ctx = KleisContext::new();
+        let path = PathBuf::from("test.kleis");
+
+        ctx.set_document_content(path.clone(), "define x = 1".to_string());
+
+        let doc = ctx.get_document(&path).unwrap();
+        // Imports should be an empty HashSet for a file with no imports
+        assert!(doc.imports.is_empty());
+    }
 }
