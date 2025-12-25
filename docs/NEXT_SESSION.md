@@ -130,6 +130,80 @@ When stepping into a function from an imported file, the AST node has that file'
 The hook receives it, checks breakpoints, sends stop event with the correct file.
 **No per-construct hardcoding needed.**
 
+---
+
+## 🧠 CRITICAL ARCHITECTURE: SharedContext AST Cache
+
+### The Insight
+
+**LSP already parses every file the user has open.** It re-parses on every edit.
+DAP should NOT parse files separately — it should use the SAME cached AST.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              SharedContext.documents                         │
+│                                                              │
+│   HashMap<PathBuf, CachedDocument>                          │
+│                                                              │
+│   "/path/to/main.kleis"    → AST (parsed by LSP on open)    │
+│   "/path/to/helper.kleis"  → AST (parsed by LSP on open)    │
+│   "/path/to/stdlib/prelude" → AST (parsed by DAP if needed) │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+        ↑                              ↑
+   LSP updates on edit             DAP reads (parses only if missing)
+```
+
+### The Rule
+
+1. **DAP checks cache first** before parsing any file
+2. **If found** → use it (FREE, already parsed by LSP)
+3. **If not found** → parse, then ADD to cache for future use
+4. **Both LSP and DAP use the same cache**
+
+### Cache Invalidation (CRITICAL)
+
+**When a file changes, all files that IMPORT it must be evicted from cache.**
+
+Example:
+```
+main.kleis imports helper.kleis
+helper.kleis imports stdlib/prelude.kleis
+
+If stdlib/prelude.kleis changes:
+  → Evict helper.kleis (imports stdlib)
+  → Evict main.kleis (imports helper which imports stdlib)
+```
+
+This requires **dependency tracking**:
+```rust
+struct CachedDocument {
+    ast: Program,
+    imports: Vec<PathBuf>,        // Files this doc imports
+    imported_by: Vec<PathBuf>,    // Files that import this doc (reverse)
+}
+```
+
+When file X changes:
+1. Evict X from cache
+2. For each file that imports X, recursively evict
+
+### Performance Impact
+
+| Without Cache | With Cache |
+|---------------|------------|
+| Debug start: parse file (50ms) | 0ms (already parsed) |
+| Step into import: parse (50ms) | 0ms if open in editor |
+| Edit during debug: parse twice | Parse once (LSP only) |
+
+### Why This Matters
+
+> **The user's editor IS the source of truth.**
+> LSP sees what user sees. DAP uses what LSP sees.
+> No stale ASTs. No duplicate parsing.
+
 ### Files to Modify
 
 | File | Changes |
