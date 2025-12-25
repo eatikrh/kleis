@@ -698,15 +698,17 @@ fn run_dap_on_listener(
                 }
             }
 
-            // Handle the request (simplified for now)
-            let response = handle_dap_request(&request, &evaluator);
+            // Handle the request - may return multiple messages (response + events)
+            let messages = handle_dap_request(&request, &evaluator);
 
-            // Send response
-            let response_str = serde_json::to_string(&response).unwrap();
-            let header = format!("Content-Length: {}\r\n\r\n", response_str.len());
-            writer.write_all(header.as_bytes()).ok();
-            writer.write_all(response_str.as_bytes()).ok();
-            writer.flush().ok();
+            // Send all messages
+            for msg in messages {
+                let msg_str = serde_json::to_string(&msg).unwrap();
+                let header = format!("Content-Length: {}\r\n\r\n", msg_str.len());
+                writer.write_all(header.as_bytes()).ok();
+                writer.write_all(msg_str.as_bytes()).ok();
+                writer.flush().ok();
+            }
 
             // Check for terminate
             if request.get("command").and_then(|c| c.as_str()) == Some("disconnect") {
@@ -723,10 +725,11 @@ fn run_dap_on_listener(
 }
 
 /// Handle a DAP request with actual evaluator integration
+/// Returns a vector of messages to send (response + any events)
 fn handle_dap_request(
     request: &serde_json::Value,
     evaluator: &Arc<Mutex<Evaluator>>,
-) -> serde_json::Value {
+) -> Vec<serde_json::Value> {
     let seq = request.get("seq").and_then(|s| s.as_i64()).unwrap_or(0);
     let command = request
         .get("command")
@@ -735,7 +738,7 @@ fn handle_dap_request(
 
     match command {
         "initialize" => {
-            serde_json::json!({
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
@@ -744,9 +747,10 @@ fn handle_dap_request(
                 "body": {
                     "supportsConfigurationDoneRequest": true,
                     "supportsEvaluateForHovers": true,
-                    "supportsConditionalBreakpoints": true
+                    "supportsConditionalBreakpoints": true,
+                    "supportsStepInTargetsRequest": true
                 }
-            })
+            })]
         }
         "launch" => {
             // Load program from file
@@ -760,59 +764,59 @@ fn handle_dap_request(
                         Ok(program) => {
                             if let Ok(mut eval) = evaluator.lock() {
                                 if let Err(e) = eval.load_program(&program) {
-                                    return serde_json::json!({
+                                    return vec![serde_json::json!({
                                         "seq": 1,
                                         "type": "response",
                                         "request_seq": seq,
                                         "success": false,
                                         "command": "launch",
                                         "message": format!("Load error: {}", e)
-                                    });
+                                    })];
                                 }
                             }
                         }
                         Err(e) => {
-                            return serde_json::json!({
+                            return vec![serde_json::json!({
                                 "seq": 1,
                                 "type": "response",
                                 "request_seq": seq,
                                 "success": false,
                                 "command": "launch",
                                 "message": format!("Parse error: {}", e)
-                            });
+                            })];
                         }
                     },
                     Err(e) => {
-                        return serde_json::json!({
+                        return vec![serde_json::json!({
                             "seq": 1,
                             "type": "response",
                             "request_seq": seq,
                             "success": false,
                             "command": "launch",
                             "message": format!("Cannot read file: {}", e)
-                        });
+                        })];
                     }
                 }
             }
-            serde_json::json!({
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
                 "success": true,
                 "command": "launch"
-            })
+            })]
         }
         "attach" => {
-            serde_json::json!({
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
                 "success": true,
                 "command": "attach"
-            })
+            })]
         }
         "threads" => {
-            serde_json::json!({
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
@@ -824,23 +828,29 @@ fn handle_dap_request(
                         "name": "main"
                     }]
                 }
-            })
+            })]
         }
         "stackTrace" => {
-            serde_json::json!({
+            // Return a stack frame so stepping works
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
                 "success": true,
                 "command": "stackTrace",
                 "body": {
-                    "stackFrames": [],
-                    "totalFrames": 0
+                    "stackFrames": [{
+                        "id": 1,
+                        "name": "<top-level>",
+                        "line": 1,
+                        "column": 1
+                    }],
+                    "totalFrames": 1
                 }
-            })
+            })]
         }
         "scopes" => {
-            serde_json::json!({
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
@@ -853,7 +863,7 @@ fn handle_dap_request(
                         "expensive": false
                     }]
                 }
-            })
+            })]
         }
         "variables" => {
             // Return actual variables from the evaluator
@@ -875,7 +885,7 @@ fn handle_dap_request(
                     "variablesReference": 0
                 }));
             }
-            serde_json::json!({
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
@@ -884,7 +894,7 @@ fn handle_dap_request(
                 "body": {
                     "variables": variables
                 }
-            })
+            })]
         }
         "evaluate" => {
             // Evaluate an expression
@@ -909,7 +919,7 @@ fn handle_dap_request(
             } else {
                 "No expression".to_string()
             };
-            serde_json::json!({
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
@@ -919,34 +929,79 @@ fn handle_dap_request(
                     "result": result,
                     "variablesReference": 0
                 }
-            })
+            })]
         }
-        "setBreakpoints" | "configurationDone" | "continue" | "next" | "stepIn" | "stepOut" => {
-            serde_json::json!({
+        "setBreakpoints" => {
+            vec![serde_json::json!({
+                "seq": 1,
+                "type": "response",
+                "request_seq": seq,
+                "success": true,
+                "command": command,
+                "body": { "breakpoints": [] }
+            })]
+        }
+        "configurationDone" => {
+            // Response + stopped event + output events
+            vec![
+                // Response
+                serde_json::json!({
+                    "seq": 1,
+                    "type": "response",
+                    "request_seq": seq,
+                    "success": true,
+                    "command": "configurationDone"
+                }),
+                // Output to Debug Console
+                serde_json::json!({
+                    "seq": 2,
+                    "type": "event",
+                    "event": "output",
+                    "body": {
+                        "category": "console",
+                        "output": "🐛 Kleis Debugger\nPaused at entry point. Use Step Over (F10) to step through code.\n"
+                    }
+                }),
+                // Stopped event - THIS IS CRITICAL for VS Code to show Paused state
+                serde_json::json!({
+                    "seq": 3,
+                    "type": "event",
+                    "event": "stopped",
+                    "body": {
+                        "reason": "entry",
+                        "description": "Paused on entry",
+                        "threadId": 1,
+                        "allThreadsStopped": true
+                    }
+                }),
+            ]
+        }
+        "continue" | "next" | "stepIn" | "stepOut" => {
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
                 "success": true,
                 "command": command
-            })
+            })]
         }
         "disconnect" | "terminate" => {
-            serde_json::json!({
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
                 "success": true,
                 "command": command
-            })
+            })]
         }
         _ => {
-            serde_json::json!({
+            vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
                 "request_seq": seq,
                 "success": true,
                 "command": command
-            })
+            })]
         }
     }
 }

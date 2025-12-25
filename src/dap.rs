@@ -204,16 +204,16 @@ fn run_server_loop<R: BufRead, W: Write>(
         }
 
         // Send any pending events (e.g., stopped event after launch)
-        let event_count = debugger.pending_events.len();
-        if event_count > 0 {
-            dap_log!("Sending {} pending events", event_count);
-        }
-        while let Some(event) = debugger.pending_events.pop() {
-            dap_log!(
-                "Sending event: {}",
-                &event[..std::cmp::min(200, event.len())]
-            );
-            write_dap_message(writer, &event)?;
+        // Note: drain in order (not pop which reverses order)
+        if !debugger.pending_events.is_empty() {
+            dap_log!("Sending {} pending events", debugger.pending_events.len());
+            for event in debugger.pending_events.drain(..) {
+                dap_log!(
+                    "Sending event: {}",
+                    &event[..std::cmp::min(200, event.len())]
+                );
+                write_dap_message(writer, &event)?;
+            }
         }
 
         // Check if we should terminate
@@ -617,6 +617,8 @@ impl DapDebugger {
     }
 
     fn handle_configuration_done(&mut self, request_seq: i32) -> Option<String> {
+        dap_log!("=== configurationDone received ===");
+
         let response = serde_json::json!({
             "seq": self.next_seq(),
             "type": "response",
@@ -626,6 +628,7 @@ impl DapDebugger {
         });
 
         // Send welcome message to Debug Console
+        dap_log!("Queueing output events...");
         if let Some(file) = &self.current_file {
             self.queue_output(&format!("🐛 Kleis Debugger - {}", file), "console");
         } else {
@@ -638,8 +641,14 @@ impl DapDebugger {
 
         // Now that configuration is done, pause at entry point
         self.is_stopped = true;
+        dap_log!(
+            "current_line={}, current_file={:?}",
+            self.current_line,
+            self.current_file
+        );
 
         // Queue stopped event - VS Code is now ready to receive it
+        dap_log!("Queueing stopped event...");
         let stopped_event = serde_json::json!({
             "seq": self.next_seq(),
             "type": "event",
@@ -652,6 +661,7 @@ impl DapDebugger {
             }
         });
         self.pending_events.push(stopped_event.to_string());
+        dap_log!("Total pending events: {}", self.pending_events.len());
 
         Some(response.to_string())
     }
@@ -983,5 +993,45 @@ mod tests {
         let resp: serde_json::Value = serde_json::from_str(&response.unwrap()).unwrap();
         assert_eq!(resp["success"], true);
         assert_eq!(resp["command"], "initialize");
+    }
+
+    #[test]
+    fn test_configuration_done_queues_stopped_event() {
+        let mut debugger = DapDebugger::new(None);
+
+        // Initialize
+        debugger
+            .handle_message(r#"{"seq":1,"type":"request","command":"initialize","arguments":{}}"#);
+
+        // Launch (set current_file)
+        debugger.current_file = Some("/tmp/test.kleis".to_string());
+        debugger.current_line = 5;
+
+        // ConfigurationDone should queue stopped event
+        let response =
+            debugger.handle_message(r#"{"seq":2,"type":"request","command":"configurationDone"}"#);
+        assert!(response.is_some());
+
+        // Check pending events
+        println!("Pending events count: {}", debugger.pending_events.len());
+        for (i, event) in debugger.pending_events.iter().enumerate() {
+            println!("Event {}: {}", i, event);
+        }
+
+        // Should have 3 events: 2 output + 1 stopped
+        assert!(
+            debugger.pending_events.len() >= 1,
+            "Expected at least 1 pending event, got {}",
+            debugger.pending_events.len()
+        );
+
+        // Last event should be the stopped event
+        let last_event = debugger.pending_events.last().unwrap();
+        let event_json: serde_json::Value = serde_json::from_str(last_event).unwrap();
+        assert_eq!(
+            event_json["event"], "stopped",
+            "Last event should be 'stopped'"
+        );
+        assert_eq!(event_json["body"]["reason"], "entry");
     }
 }
