@@ -39,7 +39,7 @@
 //! dap::run(ctx.clone());
 //! ```
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
@@ -55,8 +55,8 @@ pub struct Document {
     pub program: Option<Program>,
     /// Parse/type errors for this document
     pub diagnostics: Vec<Diagnostic>,
-    /// Import paths found in this document
-    pub imports: Vec<String>,
+    /// Import paths found in this document (resolved to absolute paths)
+    pub imports: HashSet<PathBuf>,
     /// Whether the document has been modified since last parse
     pub dirty: bool,
 }
@@ -193,15 +193,24 @@ impl KleisContext {
     }
 
     /// Set document content (for LSP didOpen/didChange)
+    ///
+    /// This method:
+    /// 1. Parses the source code
+    /// 2. Extracts and resolves imports
+    /// 3. Triggers cascading invalidation of dependent documents
     pub fn set_document_content(&mut self, path: PathBuf, source: String) {
         use crate::kleis_parser::parse_kleis_program_with_file;
+
+        // Canonicalize path for consistency with VS Code
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+
+        // Mark this document and all dependents as dirty
+        self.invalidate_dependents(&canonical);
 
         let mut diagnostics = Vec::new();
         let mut program = None;
 
         // Parse with canonicalized file path for VS Code debugging support
-        // VS Code needs absolute paths in stack traces
-        let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
         let file_path_str = canonical.to_string_lossy().to_string();
         match parse_kleis_program_with_file(&source, &file_path_str) {
             Ok(p) => {
@@ -217,20 +226,20 @@ impl KleisContext {
             }
         }
 
-        // Extract imports
-        let imports = if let Some(ref p) = program {
+        // Extract and resolve imports to absolute paths
+        let imports: HashSet<PathBuf> = if let Some(ref p) = program {
             p.items
                 .iter()
                 .filter_map(|item| {
-                    if let crate::kleis_ast::TopLevel::Import(path) = item {
-                        Some(path.clone())
+                    if let crate::kleis_ast::TopLevel::Import(import_path) = item {
+                        self.resolve_import_path(import_path, &canonical)
                     } else {
                         None
                     }
                 })
                 .collect()
         } else {
-            Vec::new()
+            HashSet::new()
         };
 
         let doc = Document {
@@ -241,7 +250,111 @@ impl KleisContext {
             dirty: false,
         };
 
-        self.documents.insert(path, doc);
+        self.documents.insert(canonical, doc);
+    }
+
+    /// Resolve an import path relative to the importing file
+    ///
+    /// Handles:
+    /// - Relative paths (./foo.kleis, ../bar.kleis)
+    /// - stdlib/ paths (searches in common locations)
+    /// - Absolute paths (passed through)
+    fn resolve_import_path(&self, import_path: &str, from_file: &PathBuf) -> Option<PathBuf> {
+        // Handle stdlib imports specially
+        if import_path.starts_with("stdlib/") {
+            // Try relative to current working directory
+            let stdlib_path = self.cwd.join(import_path);
+            if stdlib_path.exists() {
+                return stdlib_path.canonicalize().ok();
+            }
+
+            // Try relative to project root (common pattern)
+            if let Some(parent) = from_file.parent() {
+                // Walk up looking for stdlib directory
+                let mut dir = parent.to_path_buf();
+                for _ in 0..10 {
+                    // Max 10 levels up
+                    let candidate = dir.join(import_path);
+                    if candidate.exists() {
+                        return candidate.canonicalize().ok();
+                    }
+                    if let Some(p) = dir.parent() {
+                        dir = p.to_path_buf();
+                    } else {
+                        break;
+                    }
+                }
+            }
+            return None;
+        }
+
+        // Handle relative paths
+        if let Some(parent) = from_file.parent() {
+            let resolved = parent.join(import_path);
+            if resolved.exists() {
+                return resolved.canonicalize().ok();
+            }
+            // Try with .kleis extension
+            let with_ext = parent.join(format!("{}.kleis", import_path));
+            if with_ext.exists() {
+                return with_ext.canonicalize().ok();
+            }
+        }
+
+        // Try as absolute path
+        let abs_path = PathBuf::from(import_path);
+        if abs_path.exists() {
+            return abs_path.canonicalize().ok();
+        }
+
+        None
+    }
+
+    /// Invalidate a document and all documents that depend on it
+    ///
+    /// Iterates over all documents to find those that import the changed file.
+    /// Cascades upward: if A imports B and B is dirty, A becomes dirty too.
+    fn invalidate_dependents(&mut self, path: &PathBuf) {
+        // Mark the changed document as dirty
+        if let Some(doc) = self.documents.get_mut(path) {
+            doc.dirty = true;
+        }
+
+        // Keep iterating until no new documents are marked dirty
+        loop {
+            let mut newly_dirtied = false;
+
+            // Collect paths of dirty documents
+            let dirty_paths: HashSet<PathBuf> = self
+                .documents
+                .iter()
+                .filter(|(_, doc)| doc.dirty)
+                .map(|(p, _)| p.clone())
+                .collect();
+
+            // For each non-dirty document, check if it imports any dirty document
+            for (doc_path, doc) in self.documents.iter_mut() {
+                if doc.dirty {
+                    continue;
+                }
+
+                // If this document imports any dirty file, mark it dirty
+                if doc.imports.iter().any(|imp| dirty_paths.contains(imp)) {
+                    doc.dirty = true;
+                    newly_dirtied = true;
+                }
+
+                // Also mark dirty if the document path itself is the changed one
+                if doc_path == path {
+                    doc.dirty = true;
+                    newly_dirtied = true;
+                }
+            }
+
+            if !newly_dirtied {
+                break;
+            }
+        }
     }
 
     /// Close a document
@@ -303,6 +416,82 @@ impl KleisContext {
         if let Some(ref mut debug_state) = self.debug_state {
             debug_state.breakpoints.insert(path, breakpoints);
         }
+    }
+
+    /// Get the AST for a file, loading and parsing if necessary
+    ///
+    /// This is the main entry point for DAP to get ASTs.
+    /// It reuses cached ASTs from LSP parsing when available.
+    pub fn get_or_load_ast(&mut self, path: &PathBuf) -> Result<&Program, String> {
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+
+        // Check if we need to (re)parse
+        let needs_parse = match self.documents.get(&canonical) {
+            None => true,
+            Some(doc) => doc.dirty || doc.program.is_none(),
+        };
+
+        if needs_parse {
+            let source = std::fs::read_to_string(&canonical)
+                .map_err(|e| format!("Failed to read {}: {}", canonical.display(), e))?;
+            self.set_document_content(canonical.clone(), source);
+        }
+
+        // Now get the AST
+        self.documents
+            .get(&canonical)
+            .and_then(|doc| doc.program.as_ref())
+            .ok_or_else(|| format!("Failed to parse {}", canonical.display()))
+    }
+
+    /// Get all cached ASTs for a program and its imports
+    ///
+    /// Returns a list of (path, program) pairs in dependency order (leaves first).
+    /// This is useful for the debugger to know all files that might have breakpoints.
+    pub fn get_all_program_asts(
+        &mut self,
+        main_path: &PathBuf,
+    ) -> Result<Vec<(PathBuf, Program)>, String> {
+        let canonical = main_path.canonicalize().unwrap_or_else(|_| main_path.clone());
+
+        // First, ensure the main file is parsed
+        self.get_or_load_ast(&canonical)?;
+
+        // Collect all transitively imported files
+        let mut to_visit: Vec<PathBuf> = vec![canonical.clone()];
+        let mut visited: HashSet<PathBuf> = HashSet::new();
+        let mut result: Vec<(PathBuf, Program)> = Vec::new();
+
+        while let Some(current) = to_visit.pop() {
+            if visited.contains(&current) {
+                continue;
+            }
+            visited.insert(current.clone());
+
+            // Ensure this file is parsed
+            if let Err(e) = self.get_or_load_ast(&current) {
+                // Log but don't fail - partial loading is OK
+                eprintln!("Warning: {}", e);
+                continue;
+            }
+
+            if let Some(doc) = self.documents.get(&current) {
+                if let Some(ref program) = doc.program {
+                    // Add imports to visit queue (iterate over HashSet)
+                    for import_path in doc.imports.iter() {
+                        if !visited.contains(import_path) {
+                            to_visit.push(import_path.clone());
+                        }
+                    }
+
+                    result.push((current.clone(), program.clone()));
+                }
+            }
+        }
+
+        // Reverse to get dependency order (leaves first)
+        result.reverse();
+        Ok(result)
     }
 }
 

@@ -370,22 +370,35 @@ fn run_dap(verbose: bool) {
 // ============================================================================
 
 use dashmap::DashMap;
+use kleis::context::Document as CachedDocument;
 use kleis::evaluator::Evaluator;
 use kleis::kleis_ast::Program;
-use kleis::kleis_parser::parse_kleis_program;
 use kleis::structure_registry::StructureRegistry;
 use kleis::type_checker::TypeChecker;
 use ropey::Rope;
+use std::collections::HashMap;
 use std::net::TcpListener;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 
+/// Thread-safe AST cache shared between LSP and DAP
+/// This contains only the parsed ASTs and source code, NOT the evaluator
+type AstCache = Arc<RwLock<HashMap<PathBuf, CachedDocument>>>;
+
 /// Shared context between LSP, DAP, and REPL
 #[allow(dead_code)]
+/// Server-side shared context
+///
+/// Architecture:
+/// - `ast_cache`: Thread-safe AST cache shared between LSP and DAP
+/// - `evaluator`: Per-thread evaluator (LSP has its own, each DAP session creates its own)
+/// - `structure_registry`: Shared structure registry
 struct SharedContext {
-    /// The evaluator (holds functions, bindings)
+    /// Thread-safe AST cache (shared between LSP and DAP threads)
+    ast_cache: AstCache,
+    /// LSP's evaluator (not shared with DAP - each DAP session creates its own)
     evaluator: Arc<Mutex<Evaluator>>,
     /// Type checker
     type_checker: Arc<Mutex<TypeChecker>>,
@@ -396,6 +409,7 @@ struct SharedContext {
 impl SharedContext {
     fn new() -> Self {
         Self {
+            ast_cache: Arc::new(RwLock::new(HashMap::new())),
             evaluator: Arc::new(Mutex::new(Evaluator::new())),
             type_checker: Arc::new(Mutex::new(TypeChecker::new())),
             structure_registry: Arc::new(Mutex::new(StructureRegistry::new())),
@@ -450,13 +464,13 @@ impl KleisUnifiedServer {
 
         self.log(&format!("DAP server starting on port {}", port));
 
-        // Clone shared context for the DAP thread
-        let evaluator = self.shared.evaluator.clone();
+        // Clone AST cache for the DAP thread (thread-safe)
+        let ast_cache = self.shared.ast_cache.clone();
         let verbose = self.verbose;
 
         // Spawn DAP server thread
         std::thread::spawn(move || {
-            if let Err(e) = run_dap_on_listener(listener, evaluator, verbose) {
+            if let Err(e) = run_dap_on_listener(listener, ast_cache, verbose) {
                 eprintln!("[kleis-dap] Error: {}", e);
             }
         });
@@ -468,26 +482,26 @@ impl KleisUnifiedServer {
     }
 
     /// Parse and validate a document
-    fn parse_document(&self, _uri: &Url, content: &str) -> (Option<Program>, Vec<Diagnostic>) {
+    ///
+    /// Updates the thread-safe AST cache and loads into the LSP evaluator.
+    fn parse_document(&self, uri: &Url, content: &str) -> (Option<Program>, Vec<Diagnostic>) {
+        use kleis::kleis_parser::parse_kleis_program_with_file;
+
         let mut diagnostics = Vec::new();
 
-        match parse_kleis_program(content) {
-            Ok(program) => {
-                // Load into shared evaluator
-                if let Ok(mut eval) = self.shared.evaluator.lock() {
-                    if let Err(e) = eval.load_program(&program) {
-                        diagnostics.push(Diagnostic {
-                            range: Range::default(),
-                            severity: Some(DiagnosticSeverity::ERROR),
-                            message: format!("Load error: {}", e),
-                            ..Default::default()
-                        });
-                    }
-                }
-                (Some(program), diagnostics)
-            }
+        // Convert URI to canonical path
+        let path = uri
+            .to_file_path()
+            .unwrap_or_else(|_| PathBuf::from(uri.path()));
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+
+        // Parse the document
+        let file_path_str = canonical.to_string_lossy().to_string();
+        let parse_result = parse_kleis_program_with_file(content, &file_path_str);
+
+        let program = match parse_result {
+            Ok(p) => Some(p),
             Err(e) => {
-                // Convert parse error to diagnostic
                 let line = content[..e.position.min(content.len())]
                     .chars()
                     .filter(|c| *c == '\n')
@@ -496,18 +510,145 @@ impl KleisUnifiedServer {
                 diagnostics.push(Diagnostic {
                     range: Range {
                         start: Position { line, character: 0 },
-                        end: Position {
-                            line,
-                            character: 100,
-                        },
+                        end: Position { line, character: 100 },
                     },
                     severity: Some(DiagnosticSeverity::ERROR),
-                    message: e.message,
+                    message: e.message.clone(),
                     ..Default::default()
                 });
-
-                (None, diagnostics)
+                None
             }
+        };
+
+        // Update the thread-safe AST cache
+        if let Ok(mut cache) = self.shared.ast_cache.write() {
+            // Extract imports from program
+            let imports: std::collections::HashSet<PathBuf> = program
+                .as_ref()
+                .map(|p| {
+                    p.items
+                        .iter()
+                        .filter_map(|item| {
+                            if let kleis::kleis_ast::TopLevel::Import(import_path) = item {
+                                // Resolve import path relative to current file
+                                resolve_import_path(import_path, &canonical)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            // Mark dependents as dirty (cascade invalidation)
+            invalidate_dependents(&mut cache, &canonical);
+
+            // Store in cache
+            let cached_doc = CachedDocument {
+                source: content.to_string(),
+                program: program.clone(),
+                diagnostics: vec![], // LSP handles diagnostics separately
+                imports,
+                dirty: false,
+            };
+            cache.insert(canonical.clone(), cached_doc);
+        }
+
+        // Load into LSP's evaluator
+        if let Some(ref prog) = program {
+            if let Ok(mut eval) = self.shared.evaluator.lock() {
+                if let Err(e) = eval.load_program(prog) {
+                    diagnostics.push(Diagnostic {
+                        range: Range::default(),
+                        severity: Some(DiagnosticSeverity::ERROR),
+                        message: format!("Load error: {}", e),
+                        ..Default::default()
+                    });
+                }
+            }
+        }
+
+        (program, diagnostics)
+    }
+}
+
+/// Resolve an import path relative to the importing file
+fn resolve_import_path(import_path: &str, from_file: &PathBuf) -> Option<PathBuf> {
+    // Handle stdlib imports
+    if import_path.starts_with("stdlib/") {
+        // Try relative to project root (walk up from current file)
+        if let Some(parent) = from_file.parent() {
+            let mut dir = parent.to_path_buf();
+            for _ in 0..10 {
+                let candidate = dir.join(import_path);
+                if candidate.exists() {
+                    return candidate.canonicalize().ok();
+                }
+                if let Some(p) = dir.parent() {
+                    dir = p.to_path_buf();
+                } else {
+                    break;
+                }
+            }
+        }
+        return None;
+    }
+
+    // Handle relative paths
+    if let Some(parent) = from_file.parent() {
+        let resolved = parent.join(import_path);
+        if resolved.exists() {
+            return resolved.canonicalize().ok();
+        }
+        // Try with .kleis extension
+        let with_ext = parent.join(format!("{}.kleis", import_path));
+        if with_ext.exists() {
+            return with_ext.canonicalize().ok();
+        }
+    }
+
+    None
+}
+
+/// Mark a document and all its dependents as dirty in the cache
+fn invalidate_dependents(cache: &mut HashMap<PathBuf, CachedDocument>, path: &PathBuf) {
+    // Mark the changed document as dirty
+    if let Some(doc) = cache.get_mut(path) {
+        doc.dirty = true;
+    }
+
+    // Keep iterating until no new documents are marked dirty
+    loop {
+        let mut newly_dirtied = false;
+
+        // Collect paths of dirty documents
+        let dirty_paths: std::collections::HashSet<PathBuf> = cache
+            .iter()
+            .filter(|(_, doc)| doc.dirty)
+            .map(|(p, _)| p.clone())
+            .collect();
+
+        // For each non-dirty document, check if it imports any dirty document
+        for (doc_path, doc) in cache.iter_mut() {
+            if doc.dirty {
+                continue;
+            }
+
+            // If this document imports any dirty file, mark it dirty
+            if doc.imports.iter().any(|imp| dirty_paths.contains(imp)) {
+                doc.dirty = true;
+                newly_dirtied = true;
+            }
+
+            // Also mark dirty if the document path itself is the changed one
+            if doc_path == path && !doc.dirty {
+                doc.dirty = true;
+                newly_dirtied = true;
+            }
+        }
+
+        if !newly_dirtied {
+            break;
         }
     }
 }
@@ -668,7 +809,12 @@ impl LanguageServer for KleisUnifiedServer {
 /// Run the DAP server on an existing listener
 /// DAP session state with smart stepping using AST spans
 struct DapState {
-    current_file: Option<String>,
+    /// Thread-safe AST cache (shared with LSP)
+    ast_cache: AstCache,
+    /// DAP's own evaluator (not shared with LSP)
+    evaluator: Evaluator,
+    /// Current file being debugged
+    current_file: Option<PathBuf>,
     current_line: u32,
     /// Statement line numbers from parsed AST (real source locations)
     statement_lines: Vec<u32>,
@@ -682,9 +828,11 @@ struct DapState {
     breakpoints: Vec<u32>,
 }
 
-impl Default for DapState {
-    fn default() -> Self {
+impl DapState {
+    fn new(ast_cache: AstCache) -> Self {
         Self {
+            ast_cache,
+            evaluator: Evaluator::new(),
             current_file: None,
             current_line: 1,
             statement_lines: Vec::new(),
@@ -697,34 +845,96 @@ impl Default for DapState {
 }
 
 impl DapState {
-    /// Parse file and extract statement line numbers from AST
+    /// Load file using the shared AST cache
+    ///
+    /// Gets the AST from the cache (which may already have it from LSP)
+    /// and extracts statement line numbers for debugging.
+    /// If not in cache or dirty, parses and caches it.
     fn load_file(&mut self, path: &str) -> std::result::Result<(), String> {
-        let content =
-            std::fs::read_to_string(path).map_err(|e| format!("Cannot read file: {}", e))?;
+        use kleis::kleis_parser::parse_kleis_program_with_file;
 
         // Canonicalize path for VS Code (needs absolute paths in stack traces)
-        let path_buf = std::path::PathBuf::from(path);
-        let canonical = path_buf.canonicalize().unwrap_or(path_buf);
-        let canonical_str = canonical.to_string_lossy().to_string();
+        let path_buf = PathBuf::from(path);
+        let canonical = path_buf
+            .canonicalize()
+            .unwrap_or_else(|_| path_buf.clone());
 
-        self.current_file = Some(canonical_str.clone());
+        self.current_file = Some(canonical.clone());
         self.statement_lines.clear();
         self.executable_lines.clear();
         self.stmt_index = 0;
 
-        let lines: Vec<&str> = content.lines().collect();
-        self.total_lines = lines.len() as u32;
+        // Try to get AST from cache, or parse if needed
+        let (program, source) = {
+            let cache = self
+                .ast_cache
+                .read()
+                .map_err(|e| format!("Failed to lock cache: {}", e))?;
 
-        // Parse with canonicalized file path for VS Code debugging support
-        if let Ok(program) =
-            kleis::kleis_parser::parse_kleis_program_with_file(&content, &canonical_str)
-        {
-            for item in &program.items {
-                self.extract_item_lines(item);
+            if let Some(doc) = cache.get(&canonical) {
+                if !doc.dirty && doc.program.is_some() {
+                    // Cache hit: use cached AST
+                    (doc.program.clone(), doc.source.clone())
+                } else {
+                    // Dirty or no program: need to re-parse
+                    (None, doc.source.clone())
+                }
+            } else {
+                // Not in cache: read from disk
+                let source = std::fs::read_to_string(&canonical)
+                    .map_err(|e| format!("Cannot read file: {}", e))?;
+                (None, source)
             }
+        };
+
+        let program = if let Some(p) = program {
+            p
+        } else {
+            // Parse the file
+            let file_path_str = canonical.to_string_lossy().to_string();
+            let parsed = parse_kleis_program_with_file(&source, &file_path_str)
+                .map_err(|e| format!("Parse error: {}", e.message))?;
+
+            // Update cache with parsed AST
+            if let Ok(mut cache) = self.ast_cache.write() {
+                let imports: std::collections::HashSet<PathBuf> = parsed
+                    .items
+                    .iter()
+                    .filter_map(|item| {
+                        if let kleis::kleis_ast::TopLevel::Import(import_path) = item {
+                            resolve_import_path(import_path, &canonical)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                let cached_doc = CachedDocument {
+                    source: source.clone(),
+                    program: Some(parsed.clone()),
+                    diagnostics: vec![],
+                    imports,
+                    dirty: false,
+                };
+                cache.insert(canonical.clone(), cached_doc);
+            }
+
+            parsed
+        };
+
+        // Extract statement lines from AST
+        for item in &program.items {
+            self.extract_item_lines(item);
         }
 
-        // Fallback: also do text-based analysis for non-example code
+        // Load program into DAP's evaluator
+        self.evaluator.load_program(&program)?;
+
+        // Get line count for fallback
+        let lines: Vec<&str> = source.lines().collect();
+        self.total_lines = lines.len() as u32;
+
+        // Fallback: text-based analysis for non-example code
         if self.statement_lines.is_empty() {
             for (i, line) in lines.iter().enumerate() {
                 let line_num = (i + 1) as u32;
@@ -835,7 +1045,7 @@ impl DapState {
 
 fn run_dap_on_listener(
     listener: TcpListener,
-    evaluator: Arc<Mutex<Evaluator>>,
+    ast_cache: AstCache,
     verbose: bool,
 ) -> std::result::Result<(), String> {
     use std::io::{BufRead, BufReader, Read, Write};
@@ -855,7 +1065,9 @@ fn run_dap_on_listener(
 
     let mut reader = BufReader::new(stream.try_clone().unwrap());
     let mut writer = stream;
-    let mut state = DapState::default();
+
+    // Create DAP state with shared AST cache and its own evaluator
+    let mut state = DapState::new(ast_cache.clone());
 
     // Simple DAP message loop
     loop {
@@ -892,7 +1104,7 @@ fn run_dap_on_listener(
             }
 
             // Handle the request - may return multiple messages (response + events)
-            let messages = handle_dap_request(&request, &evaluator, &mut state);
+            let messages = handle_dap_request(&request, &mut state);
 
             // Send all messages
             for msg in messages {
@@ -919,11 +1131,8 @@ fn run_dap_on_listener(
 
 /// Handle a DAP request with actual evaluator integration
 /// Returns a vector of messages to send (response + any events)
-fn handle_dap_request(
-    request: &serde_json::Value,
-    evaluator: &Arc<Mutex<Evaluator>>,
-    state: &mut DapState,
-) -> Vec<serde_json::Value> {
+/// The evaluator is now part of state (state.evaluator)
+fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<serde_json::Value> {
     let seq = request.get("seq").and_then(|s| s.as_i64()).unwrap_or(0);
     let command = request
         .get("command")
@@ -984,45 +1193,7 @@ fn handle_dap_request(
                     state.current_line
                 );
 
-                // Parse and load into evaluator
-                match std::fs::read_to_string(program_path) {
-                    Ok(source) => match parse_kleis_program(&source) {
-                        Ok(program) => {
-                            if let Ok(mut eval) = evaluator.lock() {
-                                if let Err(e) = eval.load_program(&program) {
-                                    return vec![serde_json::json!({
-                                        "seq": 1,
-                                        "type": "response",
-                                        "request_seq": seq,
-                                        "success": false,
-                                        "command": "launch",
-                                        "message": format!("Load error: {}", e)
-                                    })];
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            return vec![serde_json::json!({
-                                "seq": 1,
-                                "type": "response",
-                                "request_seq": seq,
-                                "success": false,
-                                "command": "launch",
-                                "message": format!("Parse error: {}", e)
-                            })];
-                        }
-                    },
-                    Err(e) => {
-                        return vec![serde_json::json!({
-                            "seq": 1,
-                            "type": "response",
-                            "request_seq": seq,
-                            "success": false,
-                            "command": "launch",
-                            "message": format!("Cannot read file: {}", e)
-                        })];
-                    }
-                }
+                // Note: load_file already loaded the program into state.evaluator
             } else {
                 eprintln!("[kleis-dap] No program path provided!");
                 return vec![serde_json::json!({
@@ -1068,12 +1239,17 @@ fn handle_dap_request(
         }
         "stackTrace" => {
             // Return a stack frame with proper source info
-            let file_path = state.current_file.clone().unwrap_or_default();
-            let file_name = file_path
-                .split('/')
-                .next_back()
-                .unwrap_or("unknown")
-                .to_string();
+            let file_path = state
+                .current_file
+                .as_ref()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+            let file_name = state
+                .current_file
+                .as_ref()
+                .and_then(|p| p.file_name())
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| "unknown".to_string());
 
             vec![serde_json::json!({
                 "seq": 1,
@@ -1115,23 +1291,21 @@ fn handle_dap_request(
         "variables" => {
             // Return actual variables from the evaluator
             let mut variables = Vec::new();
-            if let Ok(eval) = evaluator.lock() {
-                // Get all bindings
-                for (name, value) in eval.get_all_bindings() {
-                    variables.push(serde_json::json!({
-                        "name": name,
-                        "value": format!("{:?}", value),
-                        "variablesReference": 0
-                    }));
-                }
-                // Show function count
-                let func_count = eval.list_functions().len();
+            // Get all bindings from DAP's evaluator
+            for (name, value) in state.evaluator.get_all_bindings() {
                 variables.push(serde_json::json!({
-                    "name": "<functions>",
-                    "value": format!("{} defined", func_count),
+                    "name": name,
+                    "value": format!("{:?}", value),
                     "variablesReference": 0
                 }));
             }
+            // Show function count
+            let func_count = state.evaluator.list_functions().len();
+            variables.push(serde_json::json!({
+                "name": "<functions>",
+                "value": format!("{} defined", func_count),
+                "variablesReference": 0
+            }));
             vec![serde_json::json!({
                 "seq": 1,
                 "type": "response",
@@ -1144,23 +1318,17 @@ fn handle_dap_request(
             })]
         }
         "evaluate" => {
-            // Evaluate an expression
+            // Evaluate an expression using DAP's evaluator
             let result = if let Some(expr_str) = request
                 .get("arguments")
                 .and_then(|a| a.get("expression"))
                 .and_then(|e| e.as_str())
             {
                 match kleis::kleis_parser::parse_kleis(expr_str) {
-                    Ok(expr) => {
-                        if let Ok(eval) = evaluator.lock() {
-                            match eval.eval(&expr) {
-                                Ok(result) => format!("{:?}", result),
-                                Err(e) => format!("Error: {}", e),
-                            }
-                        } else {
-                            "Evaluator locked".to_string()
-                        }
-                    }
+                    Ok(expr) => match state.evaluator.eval(&expr) {
+                        Ok(result) => format!("{:?}", result),
+                        Err(e) => format!("Error: {}", e),
+                    },
                     Err(e) => format!("Parse error: {}", e),
                 }
             } else {
