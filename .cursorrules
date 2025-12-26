@@ -14,6 +14,39 @@ This document contains:
 
 ---
 
+## DAP Debugger Context - CRITICAL
+
+**REMINDER: Debugging is about Expression::Operation and its span. NOT about functions or substitution.**
+
+### What Matters for Debugging
+
+1. **Expression::Operation has a span field**
+   - The span contains: line, column, file (Arc<PathBuf>)
+   - This information comes from the PARSER when parsing Kleis source files
+   - The parser populates span.file via `current_span()` which uses `current_file`
+
+2. **When reporting to VS Code:**
+   - The span already has ALL the location information
+   - Extract it via `expr.get_span()` → `SourceLocation::from_span()`
+   - Report this location in `on_eval_start`
+   - VS Code uses this in the stack trace to show the correct file
+
+3. **DO NOT get distracted by:**
+   - ❌ Functions and function definitions
+   - ❌ Substitution of parameters
+   - ❌ `find_definition_line` or similar lookups
+   - ❌ Tracking file paths separately from the Expression
+
+4. **The span IS the source of truth**
+   - Parser puts file path in span
+   - Evaluator extracts span from Expression
+   - Debug hook receives location from span
+   - VS Code receives location from debug hook
+
+**If debugging doesn't show the right file, check: Does the Expression's span have the correct file?**
+
+---
+
 ## Git Repository Rules
 
 **CRITICAL: NEVER push to any git repository without explicit user permission.**
