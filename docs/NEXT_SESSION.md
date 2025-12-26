@@ -73,6 +73,46 @@ Type inference (`src/type_inference.rs`) should:
 
 ---
 
+## 🔴 Tech Debt: assert() Not Using Z3 Verification
+
+### Problem
+`assert()` in example blocks uses **simple evaluation**, not Z3 verification.
+
+**Current implementation** (`src/evaluator.rs` lines 1006-1057):
+```rust
+fn eval_assert(&self, condition: &Expression) -> AssertResult {
+    // Evaluates and checks is_truthy or expressions_equal
+    // Does NOT use AxiomVerifier or Z3Backend
+}
+```
+
+**What exists** (`src/axiom_verifier.rs`):
+- Full `AxiomVerifier` with `Z3Backend`
+- Proper `VerificationResult::Valid/Invalid/Unknown`
+- Symbolic verification infrastructure
+
+**The gap:** These two are not connected.
+
+### Expected Behavior
+```kleis
+assert(x + y = y + x)   // Should verify with Z3 (commutativity)
+assert(4 = 4)           // Can verify trivially or with Z3
+```
+
+Both should go through `AxiomVerifier` for proper symbolic verification.
+
+### Solution
+Wire `eval_assert` to use `AxiomVerifier.verify_axiom()` instead of simple evaluation:
+1. Create/reuse AxiomVerifier in Evaluator
+2. Call `verify_axiom(condition)` for assert()
+3. Map `VerificationResult` to `AssertResult`
+
+### Files to Modify
+- `src/evaluator.rs` - Connect eval_assert to AxiomVerifier
+- May need feature flag handling (`axiom-verification`)
+
+---
+
 ## ✅ DONE: Thread-Safe AST Cache (ADR-025)
 
 **See:** `docs/adr/adr-025-debugger-shared-context.md`
