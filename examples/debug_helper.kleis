@@ -1,17 +1,66 @@
 // Helper file for cross-file debugging test
 // This file is imported by debug_main.kleis
 
-// Double a number
-// Set breakpoint on line 6 to catch when this is called
+// ============================================
+// ARITHMETIC OPERATIONS
+// ============================================
+
+// Double a number (line 9)
 define double(n) = 
     n + n
 
-// Triple a number  
-// Set breakpoint on line 10 to catch when this is called
+// Triple a number (line 13)
 define triple(n) = 
     n + n + n
 
-// A constant for testing
+// Multiply two numbers (line 17)
+define multiply(a, b) = 
+    a * b
+
+// Power function (line 21)
+define square(x) = 
+    x ^ 2
+
+// Division (line 25)
+define half(x) = 
+    x / 2
+
+// ============================================
+// LOGICAL OPERATIONS
+// ============================================
+
+// Logical AND (line 33)
+define both_true(p, q) = 
+    p ∧ q
+
+// Logical OR (line 37)
+define either_true(p, q) = 
+    p ∨ q
+
+// Implication (line 41)
+define implies_that(p, q) = 
+    p ⟹ q
+
+// ============================================
+// COMPARISON OPERATIONS
+// ============================================
+
+// Greater than (line 49)
+define is_greater(a, b) = 
+    a > b
+
+// Less than (line 53)
+define is_less(a, b) = 
+    a < b
+
+// Equality (line 57)
+define is_equal(a, b) = 
+    a = b
+
+// ============================================
+// CONSTANTS
+// ============================================
+
 define helper_constant = 42
 
 example "helper tests" {
@@ -21,4 +70,3 @@ example "helper tests" {
     assert(a = 10)
     assert(b = 15)
 }
-

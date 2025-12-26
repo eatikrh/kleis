@@ -81,6 +81,57 @@ example "basic assertions" {
 
 **Important:** `assert(expr)` evaluates `expr` and checks if it equals `True` or if both sides of `=` are equal.
 
+### Symbolic Assertions with Z3
+
+**New in v0.93:** Assertions with symbolic (unbound) variables are verified using Z3!
+
+```kleis
+structure CommutativeRing(R) {
+    operation (+) : R × R → R
+    axiom commutativity: ∀(a b : R). a + b = b + a
+}
+
+example "algebraic properties" {
+    // Z3 verifies this using the commutativity axiom!
+    assert(x + y = y + x)
+    
+    // Z3 proves associativity if the axiom is defined
+    assert((a + b) + c = a + (b + c))
+}
+```
+
+When an assertion contains unbound variables (like `x`, `y`), Kleis:
+
+1. Detects the expression is symbolic
+2. Loads axioms from defined structures
+3. Passes the claim to Z3 for verification
+4. Reports: Verified, Disproved (with counterexample), or Unknown
+
+```kleis
+example "z3 finds counterexamples" {
+    // Z3 disproves this with: "Counterexample: y!1 -> 1, x!0 -> 0"
+    // assert(x + y = y + y)  // Would fail!
+}
+```
+
+This enables **theorem proving** in your tests:
+
+```kleis
+structure Field(F) {
+    operation (*) : F × F → F
+    operation inverse : F → F
+    
+    axiom inverse_right: ∀(x : F). x * inverse(x) = 1
+    axiom inverse_left: ∀(x : F). inverse(x) * x = 1
+}
+
+example "inverse properties" {
+    // Z3 verifies using field axioms
+    assert(a * inverse(a) = 1)
+    assert(inverse(inverse(a)) = a)  // Derived property!
+}
+```
+
 ## Example Blocks as Entry Points
 
 Example blocks are the **entry points for debugging**. Unlike function definitions which are just declarations, example blocks contain executable code:

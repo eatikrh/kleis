@@ -10,6 +10,33 @@ use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, RwLock};
 
+/// Create a human-readable description of an expression for debugging
+pub fn describe_expression(expr: &Expression) -> String {
+    match expr {
+        Expression::Const(val) => format!("Const({})", val),
+        Expression::String(s) => format!("String(\"{}\")", s),
+        Expression::Object(name) => format!("Object({})", name),
+        Expression::Operation { name, args, .. } => {
+            if args.is_empty() {
+                format!("{}()", name)
+            } else {
+                format!("{}(...) [{} args]", name, args.len())
+            }
+        }
+        Expression::Let { pattern, .. } => format!("let {:?} = ...", pattern),
+        Expression::Lambda { params, .. } => {
+            let param_names: Vec<_> = params.iter().map(|p| p.name.as_str()).collect();
+            format!("λ({})", param_names.join(", "))
+        }
+        Expression::Match { .. } => "match ...".to_string(),
+        Expression::Conditional { .. } => "if ... then ... else ...".to_string(),
+        Expression::Quantifier { quantifier, .. } => format!("{:?} ...", quantifier),
+        Expression::List(elements) => format!("[...] ({} elements)", elements.len()),
+        Expression::Placeholder { hint, .. } => format!("Placeholder({})", hint),
+        Expression::Ascription { expr, .. } => format!("{} : Type", describe_expression(expr)),
+    }
+}
+
 /// Source location information
 #[derive(Debug, Clone, Default)]
 pub struct SourceLocation {
@@ -36,15 +63,20 @@ impl SourceLocation {
     }
 
     /// Create from a SourceSpan (from the AST)
+    ///
+    /// This extracts line, column, AND file path from the span.
+    /// The span's Arc<PathBuf> is dereferenced and cloned into a PathBuf.
     pub fn from_span(span: &crate::ast::SourceSpan) -> Self {
         Self {
-            file: None,
+            file: span.file.as_ref().map(|arc| (**arc).clone()),
             line: span.line,
             column: span.column,
         }
     }
 
-    /// Create from a SourceSpan with file path
+    /// Create from a SourceSpan with explicit file path override
+    ///
+    /// Use this when you want to override the span's file path.
     pub fn from_span_with_file(span: &crate::ast::SourceSpan, file: PathBuf) -> Self {
         Self {
             file: Some(file),
@@ -443,6 +475,8 @@ pub struct StopEvent {
     pub reason: StopReason,
     pub location: SourceLocation,
     pub stack: Vec<StackFrame>,
+    /// Description of what expression is being evaluated
+    pub expression_desc: Option<String>,
 }
 
 /// Why execution stopped
@@ -469,6 +503,8 @@ pub struct DapDebugHook {
     breakpoints: SharedBreakpoints,
     current_depth: usize,
     current_file: Option<PathBuf>,
+    /// Description of current expression being evaluated
+    current_expression_desc: Option<String>,
     /// Receive commands from DAP server
     command_rx: Receiver<DebugAction>,
     /// Send stop events to DAP server  
@@ -503,6 +539,7 @@ impl DapDebugHook {
             breakpoints: Arc::clone(&breakpoints),
             current_depth: 0,
             current_file: None,
+            current_expression_desc: None,
             command_rx,
             event_tx,
         };
@@ -593,6 +630,7 @@ impl DapDebugHook {
             reason,
             location: actual_location,
             stack: self.stack.clone(),
+            expression_desc: self.current_expression_desc.clone(),
         };
         let _ = self.event_tx.send(event);
 
@@ -627,11 +665,14 @@ impl DapDebugHook {
 impl DebugHook for DapDebugHook {
     fn on_eval_start(
         &mut self,
-        _expr: &Expression,
+        expr: &Expression,
         location: &SourceLocation,
         depth: usize,
     ) -> DebugAction {
         self.current_depth = depth;
+
+        // Set expression description for debugging output
+        self.current_expression_desc = Some(describe_expression(expr));
 
         // Determine if we should stop
         let should_stop = match &self.state {
@@ -692,6 +733,21 @@ impl DebugHook for DapDebugHook {
             );
         }
         self.current_depth = depth;
+
+        // When stepping INTO a function, pause at the function definition
+        // This allows the user to see the function body in the imported file
+        if matches!(self.state, DebugState::Stepping) {
+            crate::logging::log(
+                "DEBUG",
+                "hook",
+                &format!(
+                    "on_function_enter '{}': stopping at function (StepInto mode)",
+                    name
+                ),
+            );
+            self.state = DebugState::Paused;
+            let _ = self.stop_and_wait(StopReason::Step, location);
+        }
     }
 
     fn on_function_exit(

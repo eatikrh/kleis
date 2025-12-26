@@ -989,8 +989,15 @@ impl DapState {
 
     /// Check if a line is a valid breakpoint location (has executable code)
     /// Uses the AST to determine valid locations
+    #[allow(dead_code)]
     fn is_valid_breakpoint_line(&self, line: u32) -> bool {
-        if let Some(ref program) = self.program {
+        self.is_valid_breakpoint_line_in_file(line, None)
+    }
+
+    /// Check if a line is a valid breakpoint location in a specific file
+    fn is_valid_breakpoint_line_in_file(&self, line: u32, file_path: Option<&PathBuf>) -> bool {
+        // Helper to check a program for valid breakpoint lines
+        let check_program = |program: &kleis::kleis_ast::Program| -> bool {
             for item in &program.items {
                 if let kleis::kleis_ast::TopLevel::ExampleBlock(example) = item {
                     for stmt in &example.statements {
@@ -1018,7 +1025,27 @@ impl DapState {
                     }
                 }
             }
+            false
+        };
+
+        // If no file path given or file matches main program, check main program
+        if file_path.is_none() || file_path == self.current_file.as_ref() {
+            if let Some(ref program) = self.program {
+                if check_program(program) {
+                    return true;
+                }
+            }
         }
+
+        // Check imported files
+        if let Some(file_path) = file_path {
+            for (import_program, import_path) in &self.loaded_imports {
+                if import_path == file_path && check_program(import_program) {
+                    return true;
+                }
+            }
+        }
+
         false
     }
 }
@@ -1437,7 +1464,8 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                         for bp in bps {
                             if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
                                 let line = line as u32;
-                                let is_valid = state.is_valid_breakpoint_line(line);
+                                let is_valid = state
+                                    .is_valid_breakpoint_line_in_file(line, file_path.as_ref());
 
                                 if is_valid {
                                     if let Some(ref path) = file_path {
@@ -1470,7 +1498,8 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                         for bp in bps {
                             if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
                                 let line = line as u32;
-                                let is_valid = state.is_valid_breakpoint_line(line);
+                                let is_valid = state
+                                    .is_valid_breakpoint_line_in_file(line, file_path.as_ref());
                                 let mut bp_resp = serde_json::json!({
                                     "verified": is_valid,
                                     "line": line
@@ -1657,6 +1686,15 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                                 kleis::debug::StopReason::Pause => "pause",
                             };
 
+                            // Build description with expression info
+                            let description =
+                                if let Some(ref expr_desc) = stop_event.expression_desc {
+                                    format!("Evaluating: {}", expr_desc)
+                                } else {
+                                    format!("Stopped at line {}", stop_event.location.line)
+                                };
+                            eprintln!("[kleis-dap] {}", description);
+
                             return vec![
                                 serde_json::json!({
                                     "seq": 1,
@@ -1671,6 +1709,8 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                                     "event": "stopped",
                                     "body": {
                                         "reason": reason,
+                                        "description": description,
+                                        "text": stop_event.expression_desc.clone().unwrap_or_default(),
                                         "threadId": 1,
                                         "allThreadsStopped": true
                                     }
@@ -1779,6 +1819,15 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                                 kleis::debug::StopReason::Pause => "pause",
                             };
 
+                            // Build description with expression info
+                            let description =
+                                if let Some(ref expr_desc) = stop_event.expression_desc {
+                                    format!("Evaluating: {}", expr_desc)
+                                } else {
+                                    format!("Stopped at line {}", stop_event.location.line)
+                                };
+                            eprintln!("[kleis-dap] {}", description);
+
                             return vec![
                                 serde_json::json!({
                                     "seq": 1,
@@ -1793,6 +1842,8 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                                     "event": "stopped",
                                     "body": {
                                         "reason": reason,
+                                        "description": description,
+                                        "text": stop_event.expression_desc.clone().unwrap_or_default(),
                                         "threadId": 1,
                                         "allThreadsStopped": true
                                     }

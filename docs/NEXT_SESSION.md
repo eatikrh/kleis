@@ -1,33 +1,144 @@
 # Next Session Notes
 
-**Last Updated:** December 25, 2024
+**Last Updated:** December 26, 2024
 
 ---
 
-## 🔴 PRIORITY: Expression Spans for Debugger Line Numbers
+## ✅ DONE: DAP Debugger Fully Working! (Dec 26, 2024)
 
-### Status: Cross-File Debugging Works!
-- ✅ File switching works - debugger opens imported files when stepping
-- ⚠️ Line numbers always show as `1` (expressions don't carry location)
+### What Works
+- ✅ Cross-file debugging (VS Code opens imported files)
+- ✅ Correct line numbers for ALL operation types (arithmetic, logical, comparison)
+- ✅ Breakpoints work in both main and imported files
+- ✅ Variables panel shows AST expressions (symbolic representation!)
+- ✅ Stack frames tracked correctly
+- ✅ Step over, step into, step out all work
 
-### Solution (see docs/a_possible_debugger_proper_solution.txt)
-Add `span: Option<SourceSpan>` ONLY to executable variants:
-- `Operation { name, args, span }`
-- `Match { scrutinee, cases, span }`
-- `Conditional { condition, then, else, span }`
-- `Let { pattern, type, value, body, span }`
-- `Lambda { params, body, span }`
+### Key Insight: DAP as a Window to Kleis Internals
+The debugger shows variables as **AST expressions**, not evaluated values:
+```
+doubled = Operation { name: "plus", args: [Object("x"), Object("x")], span: ... }
+x = Const("10")
+```
 
-### Implementation Steps
-1. **AST changes** (`src/ast.rs`): Add span field to 5 variants
-2. **Pattern matches**: Add `..` to ~50 matches (ignore span when not needed)
-3. **Expression creation**: Add `span: None` to ~134 places
-4. **Parser**: Capture spans when building executable nodes
-5. **Evaluator**: Preserve spans through substitute() and AST rebuilding
-6. **Debug hook**: Use expression spans for line numbers
+This is **exactly right** for a symbolic mathematics system! Variables hold
+symbolic expressions that can be passed to Z3 for verification.
 
-### Safe checkpoint
-Tag: `checkpoint-crossfile-working` - can return here if refactor fails
+### Fixes Applied (Dec 26, 2024)
+1. **Skip expressions without spans** - No more line 1 spurious stops
+2. **Parser span capture at START** - Fixed 8 parsing functions to capture span
+   before parsing, not after (parse_arithmetic, parse_term, parse_factor,
+   parse_comparison, parse_conjunction, parse_disjunction, parse_implication,
+   parse_biconditional, parse_where_term)
+3. **Fixed double pop_frame bug** - Removed redundant pop_frame() call
+4. **Custom operator spans** - Fixed parse_where_term
+
+### Future Ideas
+
+#### 1. Eval Command in Debug Panel
+Add ability to evaluate an AST expression to a concrete value during debugging.
+The infrastructure exists (`evaluator.eval()`).
+
+#### 2. Extend `example` Block Grammar
+Current grammar only allows: `let`, `assert`, expressions.
+
+**Could add:**
+```kleis
+example "test" {
+    define local_fn(x) = x + 1   // Local function definition
+    let y = local_fn(5)
+    assert(y = 6)
+}
+```
+
+**Pros:** Self-contained test cases, useful for testing helpers
+**Cons:** `example` is for testing not defining; functions can be top-level
+
+#### 3. ✅ Wire assert() to Z3 - DONE! (Dec 26, 2024)
+**IMPLEMENTED!** `assert()` in example blocks now uses Z3 for symbolic verification:
+
+```kleis
+structure CommutativeRing(R) {
+    operation (+) : R × R → R
+    axiom commutativity: ∀(a b : R). a + b = b + a
+}
+
+example "test commutativity" {
+    assert(x + y = y + x)  // ✅ Z3 verifies this using the commutativity axiom!
+}
+```
+
+**How it works:**
+1. `eval_assert()` checks if expressions are symbolic (`is_symbolic()`)
+2. If symbolic → calls `verify_with_z3()` using `AxiomVerifier`
+3. Z3 loads structure axioms and verifies/disproves the assertion
+4. Results: `Verified`, `Disproved { counterexample }`, or `Unknown`
+
+**Test cases added:**
+- `test_assert_with_z3_verification` - Verifies commutativity axiom
+- `test_assert_associativity` - Verifies associativity axiom  
+- `test_assert_invalid_symbolic` - Z3 correctly disproves `x + y = y + y`
+- `test_assert_concrete_values` - Structural equality for bound variables
+
+---
+
+---
+
+## 🔴 Tech Debt: Type Promotion (Lift) Not Implemented
+
+### Problem
+The Equation Editor shows `Int` for expressions like `(1 + sin(x)) / 2` instead of `ℝ`.
+
+**Why:** The stdlib defines `Lift(From, To)` structures for the numeric tower:
+- `Lift(Nat, Int)` 
+- `Lift(Int, Rational)`
+- `Lift(Rational, Real)`
+
+But the **type checker doesn't query them**. When inferring `1 + sin(x)`:
+- `1` is parsed as `Int`
+- `sin(x)` returns `ℝ`
+- Type checker should find `Lift(Int, Real)` and promote `1` to `ℝ`
+- Instead, it just returns `Int` (the first operand's type)
+
+### Solution
+Type inference (`src/type_inference.rs`) should:
+1. Query `structure_registry` for `Lift` implementations
+2. When types don't match, check if `Lift(T1, T2)` or `Lift(T2, T1)` exists
+3. Use the "larger" type as the result
+
+### Files to Modify
+- `src/type_inference.rs` - Add Lift query to type unification
+- `src/structure_registry.rs` - May need method to query Lift instances
+
+### Impact
+- Equation Editor type display will be correct
+- REPL `:type` command will show correct types
+- Better user experience when mixing numeric types
+
+---
+
+## ✅ DONE: assert() Uses Z3 Verification (Dec 26, 2024)
+
+**Implemented!** `assert()` in example blocks now uses Z3 for symbolic verification.
+
+### Changes Made
+- Added `is_symbolic()` to detect if expressions contain unbound variables
+- Added `verify_with_z3()` to call `AxiomVerifier.verify_axiom()`
+- Modified `eval_equality_assert()` to try Z3 when expressions are symbolic
+- Added `AssertResult::Verified` and `AssertResult::Disproved` variants
+
+### Tests Added (`tests/crossfile_debug_test.rs`)
+- `test_assert_with_z3_verification` - Verifies commutativity axiom
+- `test_assert_associativity` - Verifies associativity axiom
+- `test_assert_invalid_symbolic` - Z3 correctly disproves `x + y = y + y`
+- `test_assert_concrete_values` - Structural equality for bound variables
+
+### How It Works
+```kleis
+assert(x + y = y + x)   // ✅ Z3 verifies via commutativity axiom
+assert(x + y = y + y)   // ❌ Z3 disproves: "Counterexample: y!1 -> 1, x!0 -> 0"
+assert(4 = 4)           // ✅ Concrete equality (no Z3 needed)
+```
 
 ---
 
@@ -69,27 +180,27 @@ Implemented thread-safe AST cache shared between LSP and DAP:
 
 ---
 
-## 🎯 NEXT: Wire DAP to Real Evaluator with DebugHook
+## 🎯 NEXT: Fix Remaining DAP Line Number Issues
 
 ### Problem Statement
 
-The DAP server currently **simulates stepping** by incrementing line numbers. It does NOT:
-- Set the `DapDebugHook` on the evaluator
-- Run actual evaluation
-- Support cross-file debugging (stepping into imported files)
+Cross-file debugging mostly works, but line numbers are erratic:
+- File switching works (VS Code opens imported files)
+- But debugger briefly shows line 1 before jumping to correct line
 
 ### Current State (What Works)
 
 | Component | Status |
 |-----------|--------|
-| Parser populates `FullSourceLocation` (file + line + column) | ✅ |
+| Parser populates `SourceSpan` with file path | ✅ |
 | `ExampleStatement` carries location | ✅ |
 | Evaluator calls `on_eval_start()` for every expression | ✅ |
 | `DapDebugHook` exists with channel-based communication | ✅ |
 | DAP returns stack traces with file paths | ✅ |
 | VS Code shows debugger UI | ✅ |
-| **DAP wires hook to evaluator** | ❌ NOT DONE |
-| **Cross-file debugging** | ❌ NOT DONE |
+| DAP wires hook to evaluator | ✅ |
+| Cross-file debugging (file switching) | ✅ |
+| **Line numbers accurate in cross-file stepping** | ⚠️ ERRATIC |
 
 ### Architecture (from `REPL_ENHANCEMENTS.md`)
 
@@ -391,18 +502,19 @@ The `feature/debugger-dap` branch has 63+ incremental commits. Before merging to
 
 ---
 
-## 📋 Previous: Debugger Status Before Wiring
+## 📋 Current Debugger Status
 
 | Feature | Status |
 |---------|--------|
 | Launch/attach | ✅ |
 | Breakpoints (set) | ✅ |
-| Breakpoints (hit) | ⚠️ Simulated, not real |
-| Step in/over/out | ⚠️ Simulated line increment |
-| Continue | ⚠️ Simulated |
+| Breakpoints (hit) | ✅ Real, wired to evaluator |
+| Step in/over/out | ✅ Real evaluation |
+| Continue | ✅ Real evaluation |
 | Stack trace | ✅ Correct file paths |
 | Variables | ✅ From evaluator |
-| Cross-file | ❌ Not working |
+| Cross-file (file switching) | ✅ Works |
+| Cross-file (line numbers) | ⚠️ Erratic, visits line 1 first |
 
 ### Files to Review
 
