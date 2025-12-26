@@ -310,9 +310,13 @@ impl Evaluator {
     pub fn get_function_location(&self, name: &str) -> Option<SourceLocation> {
         self.functions.get(name).and_then(|c| {
             c.span.clone().map(|span| {
-                let mut loc = SourceLocation::new(span.line, span.column);
-                if let Some(ref file) = c.file {
-                    loc = loc.with_file(file.clone());
+                // Use SourceLocation::from_span which extracts file from span.file
+                let mut loc = SourceLocation::from_span(&span);
+                // Fall back to Closure.file if span.file is None (legacy support)
+                if loc.file.is_none() {
+                    if let Some(ref file) = c.file {
+                        loc = loc.with_file(file.clone());
+                    }
                 }
                 loc
             })
