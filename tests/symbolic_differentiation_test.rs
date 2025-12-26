@@ -14,6 +14,7 @@
 //! 1. **Constant Rule**: D(c, x) = 0 (where c is a constant)
 //! 2. **Identity Rule**: D(x, x) = 1
 //! 3. **Linearity**: D(a*f + b*g, x) = a*D(f,x) + b*D(g,x)
+//! 3. **Linearity**: D(a*f + b*g, x) = a*D(f,x) + b*D(g,x)
 //! 4. **Product Rule**: D(f*g, x) = f*D(g,x) + g*D(f,x)
 //! 5. **Quotient Rule**: D(f/g, x) = (g*D(f,x) - f*D(g,x)) / g^2
 //! 6. **Chain Rule**: D(f(g), x) = D(f,g) * D(g,x)
@@ -54,6 +55,7 @@ fn test_derivative_translation() {
             Expression::Object("f".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -77,11 +79,13 @@ fn test_second_derivative_translation() {
             Expression::Object("f".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let expr = Expression::Operation {
         name: "D".to_string(),
         args: vec![inner_d, Expression::Object("x".to_string())],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -106,6 +110,7 @@ fn test_mixed_partial_derivative() {
             Expression::Object("x".to_string()),
             Expression::Object("y".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -135,6 +140,7 @@ fn test_derivative_of_constant() {
             Expression::Const("5".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let zero = Expression::Const("0".to_string());
@@ -143,6 +149,7 @@ fn test_derivative_of_constant() {
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![d_const, zero],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -166,11 +173,13 @@ fn test_derivative_linearity_addition() {
             Expression::Object("f".to_string()),
             Expression::Object("g".to_string()),
         ],
+        span: None,
     };
 
     let lhs = Expression::Operation {
         name: "D".to_string(),
         args: vec![f_plus_g, Expression::Object("x".to_string())],
+        span: None,
     };
 
     // Right side: D(f, x) + D(g, x)
@@ -180,6 +189,7 @@ fn test_derivative_linearity_addition() {
             Expression::Object("f".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let d_g = Expression::Operation {
@@ -188,17 +198,20 @@ fn test_derivative_linearity_addition() {
             Expression::Object("g".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let rhs = Expression::Operation {
         name: "plus".to_string(),
         args: vec![d_f, d_g],
+        span: None,
     };
 
     // Check if D(f+g, x) = D(f,x) + D(g,x) is satisfiable
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![lhs, rhs],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -222,11 +235,13 @@ fn test_derivative_scalar_multiplication() {
             Expression::Object("c".to_string()),
             Expression::Object("f".to_string()),
         ],
+        span: None,
     };
 
     let lhs = Expression::Operation {
         name: "D".to_string(),
         args: vec![c_times_f, Expression::Object("x".to_string())],
+        span: None,
     };
 
     // Right side: c * D(f, x)
@@ -236,16 +251,19 @@ fn test_derivative_scalar_multiplication() {
             Expression::Object("f".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let rhs = Expression::Operation {
         name: "times".to_string(),
         args: vec![Expression::Object("c".to_string()), d_f],
+        span: None,
     };
 
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![lhs, rhs],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -273,11 +291,13 @@ fn test_product_rule() {
             Expression::Object("f".to_string()),
             Expression::Object("g".to_string()),
         ],
+        span: None,
     };
 
     let lhs = Expression::Operation {
         name: "D".to_string(),
         args: vec![f_times_g, Expression::Object("x".to_string())],
+        span: None,
     };
 
     // Right side: f*D(g,x) + g*D(f,x)
@@ -287,6 +307,7 @@ fn test_product_rule() {
             Expression::Object("g".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let d_f = Expression::Operation {
@@ -295,26 +316,31 @@ fn test_product_rule() {
             Expression::Object("f".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let f_times_dg = Expression::Operation {
         name: "times".to_string(),
         args: vec![Expression::Object("f".to_string()), d_g],
+        span: None,
     };
 
     let g_times_df = Expression::Operation {
         name: "times".to_string(),
         args: vec![Expression::Object("g".to_string()), d_f],
+        span: None,
     };
 
     let rhs = Expression::Operation {
         name: "plus".to_string(),
         args: vec![f_times_dg, g_times_df],
+        span: None,
     };
 
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![lhs, rhs],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -345,11 +371,13 @@ fn test_chain_rule_structure() {
             Expression::Object("f".to_string()),
             Expression::Object("g".to_string()),
         ],
+        span: None,
     };
 
     let d_compose = Expression::Operation {
         name: "D".to_string(),
         args: vec![compose, Expression::Object("x".to_string())],
+        span: None,
     };
 
     let result = backend.simplify(&d_compose);
@@ -377,11 +405,13 @@ fn test_power_rule_structure() {
             Expression::Object("x".to_string()),
             Expression::Object("n".to_string()),
         ],
+        span: None,
     };
 
     let lhs = Expression::Operation {
         name: "D".to_string(),
         args: vec![x_to_n, Expression::Object("x".to_string())],
+        span: None,
     };
 
     // Right side: n * x^(n-1)
@@ -391,21 +421,25 @@ fn test_power_rule_structure() {
             Expression::Object("n".to_string()),
             Expression::Const("1".to_string()),
         ],
+        span: None,
     };
 
     let x_to_n_minus_1 = Expression::Operation {
         name: "power".to_string(),
         args: vec![Expression::Object("x".to_string()), n_minus_1],
+        span: None,
     };
 
     let rhs = Expression::Operation {
         name: "times".to_string(),
         args: vec![Expression::Object("n".to_string()), x_to_n_minus_1],
+        span: None,
     };
 
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![lhs, rhs],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -429,11 +463,13 @@ fn test_power_rule_squared() {
             Expression::Object("x".to_string()),
             Expression::Const("2".to_string()),
         ],
+        span: None,
     };
 
     let lhs = Expression::Operation {
         name: "D".to_string(),
         args: vec![x_squared, Expression::Object("x".to_string())],
+        span: None,
     };
 
     // 2*x
@@ -443,11 +479,13 @@ fn test_power_rule_squared() {
             Expression::Const("2".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![lhs, rhs],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -472,22 +510,26 @@ fn test_derivative_sine() {
     let sin_x = Expression::Operation {
         name: "sin".to_string(),
         args: vec![Expression::Object("x".to_string())],
+        span: None,
     };
 
     let lhs = Expression::Operation {
         name: "D".to_string(),
         args: vec![sin_x, Expression::Object("x".to_string())],
+        span: None,
     };
 
     // cos(x)
     let rhs = Expression::Operation {
         name: "cos".to_string(),
         args: vec![Expression::Object("x".to_string())],
+        span: None,
     };
 
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![lhs, rhs],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -508,27 +550,32 @@ fn test_derivative_cosine() {
     let cos_x = Expression::Operation {
         name: "cos".to_string(),
         args: vec![Expression::Object("x".to_string())],
+        span: None,
     };
 
     let lhs = Expression::Operation {
         name: "D".to_string(),
         args: vec![cos_x, Expression::Object("x".to_string())],
+        span: None,
     };
 
     // -sin(x) = negate(sin(x))
     let sin_x = Expression::Operation {
         name: "sin".to_string(),
         args: vec![Expression::Object("x".to_string())],
+        span: None,
     };
 
     let rhs = Expression::Operation {
         name: "negate".to_string(),
         args: vec![sin_x],
+        span: None,
     };
 
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![lhs, rhs],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -553,17 +600,20 @@ fn test_derivative_exponential() {
     let exp_x = Expression::Operation {
         name: "exp".to_string(),
         args: vec![Expression::Object("x".to_string())],
+        span: None,
     };
 
     let lhs = Expression::Operation {
         name: "D".to_string(),
         args: vec![exp_x.clone(), Expression::Object("x".to_string())],
+        span: None,
     };
 
     // exp(x) - derivative of e^x is itself
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![lhs, exp_x],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -584,11 +634,13 @@ fn test_derivative_natural_log() {
     let ln_x = Expression::Operation {
         name: "ln".to_string(),
         args: vec![Expression::Object("x".to_string())],
+        span: None,
     };
 
     let lhs = Expression::Operation {
         name: "D".to_string(),
         args: vec![ln_x, Expression::Object("x".to_string())],
+        span: None,
     };
 
     // 1/x = divide(1, x)
@@ -598,11 +650,13 @@ fn test_derivative_natural_log() {
             Expression::Const("1".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let equation = Expression::Operation {
         name: "eq".to_string(),
         args: vec![lhs, rhs],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -630,6 +684,7 @@ fn test_total_derivative_translation() {
             Expression::Object("f".to_string()),
             Expression::Object("t".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -650,11 +705,13 @@ fn test_total_derivative_chain_rule() {
     let f_of_x = Expression::Operation {
         name: "f".to_string(),
         args: vec![Expression::Object("x".to_string())],
+        span: None,
     };
 
     let dt_f = Expression::Operation {
         name: "Dt".to_string(),
         args: vec![f_of_x, Expression::Object("t".to_string())],
+        span: None,
     };
 
     let result = backend.simplify(&dt_f);
@@ -676,7 +733,7 @@ fn test_parse_derivative() {
 
     assert!(result.is_ok(), "D(f, x) should parse");
 
-    if let Ok(Expression::Operation { name, args }) = result {
+    if let Ok(Expression::Operation { name, args, .. }) = result {
         assert_eq!(name, "D");
         assert_eq!(args.len(), 2);
         println!("   ✅ Parsed D(f, x) correctly");
@@ -707,7 +764,7 @@ fn test_parse_mixed_partial() {
 
     assert!(result.is_ok(), "D(f, x, y) should parse");
 
-    if let Ok(Expression::Operation { name, args }) = result {
+    if let Ok(Expression::Operation { name, args, .. }) = result {
         assert_eq!(name, "D");
         assert_eq!(args.len(), 3);
         println!("   ✅ Parsed mixed partial D(f, x, y) with 3 args");
@@ -726,7 +783,7 @@ fn test_parse_total_derivative() {
 
     assert!(result.is_ok(), "Dt(f, t) should parse");
 
-    if let Ok(Expression::Operation { name, args }) = result {
+    if let Ok(Expression::Operation { name, args, .. }) = result {
         assert_eq!(name, "Dt");
         assert_eq!(args.len(), 2);
         println!("   ✅ Parsed Dt(f, t) correctly");
@@ -745,7 +802,7 @@ fn test_parse_derivative_in_expression() {
 
     assert!(result.is_ok(), "Expression with derivatives should parse");
 
-    if let Ok(Expression::Operation { name, args }) = result {
+    if let Ok(Expression::Operation { name, args, .. }) = result {
         assert_eq!(name, "plus");
         assert_eq!(args.len(), 2);
         // Both args should be D operations

@@ -42,6 +42,7 @@ fn test_partial_derivative_uninterpreted() {
             Expression::Object("f".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     // Should not error - just create uninterpreted function
@@ -65,6 +66,7 @@ fn test_total_derivative_uninterpreted() {
             Expression::Object("f".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -87,6 +89,7 @@ fn test_indefinite_integral_uninterpreted() {
             Expression::Object("f".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -115,6 +118,7 @@ fn test_definite_integral_uninterpreted() {
             Expression::Const("0".to_string()),
             Expression::Const("1".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -142,6 +146,7 @@ fn test_limit_uninterpreted() {
             Expression::Object("x".to_string()),
             Expression::Const("0".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -175,6 +180,7 @@ fn test_sum_function_call() {
             Expression::Const("1".to_string()),  // lower bound
             Expression::Object("n".to_string()), // upper bound
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -201,6 +207,7 @@ fn test_product_function_call() {
             Expression::Const("1".to_string()),
             Expression::Object("n".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -231,9 +238,11 @@ fn test_arithmetic_evaluation() {
                     Expression::Const("2".to_string()),
                     Expression::Const("3".to_string()),
                 ],
+                span: None,
             },
             Expression::Const("4".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -261,6 +270,7 @@ fn test_power_verification() {
             Expression::Const("2".to_string()),
             Expression::Const("3".to_string()),
         ],
+        span: None,
     };
 
     let rhs = Expression::Const("8".to_string());
@@ -290,6 +300,7 @@ fn test_comparison_operations() {
             Expression::Const("5".to_string()),
             Expression::Const("3".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&expr).unwrap();
@@ -327,6 +338,7 @@ fn test_boolean_verification() {
                             Expression::Object("x".to_string()),
                             Expression::Const("0".to_string()),
                         ],
+                        span: None,
                     },
                     Expression::Operation {
                         name: "greater_than".to_string(),
@@ -334,8 +346,10 @@ fn test_boolean_verification() {
                             Expression::Object("y".to_string()),
                             Expression::Const("0".to_string()),
                         ],
+                        span: None,
                     },
                 ],
+                span: None,
             },
             // (x + y > 0)
             Expression::Operation {
@@ -347,11 +361,14 @@ fn test_boolean_verification() {
                             Expression::Object("x".to_string()),
                             Expression::Object("y".to_string()),
                         ],
+                        span: None,
                     },
                     Expression::Const("0".to_string()),
                 ],
+                span: None,
             },
         ],
+        span: None,
     };
 
     let result = backend.verify_axiom(&expr).unwrap();
@@ -380,9 +397,11 @@ fn test_conditional_expression() {
                 Expression::Const("5".to_string()),
                 Expression::Const("3".to_string()),
             ],
+            span: None,
         }),
         then_branch: Box::new(Expression::Const("100".to_string())),
         else_branch: Box::new(Expression::Const("0".to_string())),
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -414,7 +433,9 @@ fn test_let_binding() {
                 Expression::Object("x".to_string()),
                 Expression::Const("3".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -446,8 +467,11 @@ fn test_nested_let_binding() {
                     Expression::Object("x".to_string()),
                     Expression::Object("y".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         }),
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -481,6 +505,7 @@ fn test_let_constructor_destructuring() {
                 Expression::Const("3".to_string()),
                 Expression::Const("4".to_string()),
             ],
+            span: None,
         }),
         body: Box::new(Expression::Operation {
             name: "plus".to_string(),
@@ -488,7 +513,9 @@ fn test_let_constructor_destructuring() {
                 Expression::Object("x".to_string()),
                 Expression::Object("y".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -537,6 +564,7 @@ fn test_let_nested_constructor_destructuring() {
                         Expression::Const("1".to_string()),
                         Expression::Const("2".to_string()),
                     ],
+                    span: None,
                 },
                 Expression::Operation {
                     name: "Point".to_string(),
@@ -544,8 +572,10 @@ fn test_let_nested_constructor_destructuring() {
                         Expression::Const("3".to_string()),
                         Expression::Const("4".to_string()),
                     ],
+                    span: None,
                 },
             ],
+            span: None,
         }),
         body: Box::new(Expression::Operation {
             name: "plus".to_string(),
@@ -559,13 +589,17 @@ fn test_let_nested_constructor_destructuring() {
                                 Expression::Object("a".to_string()),
                                 Expression::Object("b".to_string()),
                             ],
+                            span: None,
                         },
                         Expression::Object("c".to_string()),
                     ],
+                    span: None,
                 },
                 Expression::Object("d".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -599,6 +633,7 @@ fn test_let_destructuring_with_wildcard() {
                 Expression::Const("5".to_string()),
                 Expression::Const("10".to_string()),
             ],
+            span: None,
         }),
         body: Box::new(Expression::Operation {
             name: "times".to_string(),
@@ -606,7 +641,9 @@ fn test_let_destructuring_with_wildcard() {
                 Expression::Object("x".to_string()),
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -644,6 +681,7 @@ fn test_let_destructuring_with_as_pattern() {
                 Expression::Const("3".to_string()),
                 Expression::Const("4".to_string()),
             ],
+            span: None,
         }),
         body: Box::new(Expression::Operation {
             name: "plus".to_string(),
@@ -651,7 +689,9 @@ fn test_let_destructuring_with_as_pattern() {
                 Expression::Object("x".to_string()),
                 Expression::Object("y".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -679,6 +719,7 @@ fn test_expression_equivalence() {
             Expression::Object("x".to_string()),
             Expression::Object("y".to_string()),
         ],
+        span: None,
     };
 
     let expr2 = Expression::Operation {
@@ -687,6 +728,7 @@ fn test_expression_equivalence() {
             Expression::Object("y".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let equivalent = backend.are_equivalent(&expr1, &expr2).unwrap();
@@ -710,6 +752,7 @@ fn test_expression_non_equivalence() {
             Expression::Object("x".to_string()),
             Expression::Object("y".to_string()),
         ],
+        span: None,
     };
 
     let expr2 = Expression::Operation {
@@ -718,6 +761,7 @@ fn test_expression_non_equivalence() {
             Expression::Object("y".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let equivalent = backend.are_equivalent(&expr1, &expr2).unwrap();
@@ -760,6 +804,7 @@ fn test_match_with_constants() {
                 body: Expression::Const("300".to_string()),
             },
         ],
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -799,6 +844,7 @@ fn test_match_wildcard_fallback() {
                 body: Expression::Const("300".to_string()),
             },
         ],
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -835,6 +881,7 @@ fn test_forall_simple() {
                 Expression::Object("x".to_string()),
                 Expression::Object("x".to_string()),
             ],
+            span: None,
         }),
     };
 
@@ -876,6 +923,7 @@ fn test_matrix_vector_multiply() {
                 Expression::Const("1".to_string()),
             ]),
         ],
+        span: None,
     };
 
     let vector = Expression::Operation {
@@ -888,11 +936,13 @@ fn test_matrix_vector_multiply() {
                 Expression::Const("7".to_string()),
             ]),
         ],
+        span: None,
     };
 
     let multiply = Expression::Operation {
         name: "multiply".to_string(),
         args: vec![matrix, vector.clone()],
+        span: None,
     };
 
     // The result should be equivalent to the original vector
@@ -921,6 +971,7 @@ fn test_double_integral() {
             Expression::Object("x".to_string()),
             Expression::Object("y".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -943,6 +994,7 @@ fn test_line_integral() {
             Expression::Object("f".to_string()),
             Expression::Object("C".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -969,7 +1021,9 @@ fn test_absolute_value() {
         args: vec![Expression::Operation {
             name: "negate".to_string(),
             args: vec![Expression::Const("5".to_string())],
+            span: None,
         }],
+        span: None,
     };
 
     let result = backend.evaluate(&expr).unwrap();
@@ -989,6 +1043,7 @@ fn test_sqrt_uninterpreted() {
     let expr = Expression::Operation {
         name: "sqrt".to_string(),
         args: vec![Expression::Object("x".to_string())],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -1016,6 +1071,7 @@ fn test_nth_root() {
             Expression::Const("3".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.simplify(&expr);
@@ -1157,7 +1213,9 @@ fn test_lambda_z3_translation() {
                 Expression::Object("x".to_string()),
                 Expression::Const("1".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     println!("   Lambda: λ x . x + 1");
@@ -1182,6 +1240,7 @@ fn test_lambda_z3_translation() {
     let equation = Expression::Operation {
         name: "equals".to_string(),
         args: vec![lambda.clone(), Expression::Const("5".to_string())],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -1211,7 +1270,9 @@ fn test_lambda_typed_z3() {
                 Expression::Object("x".to_string()),
                 Expression::Object("x".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     println!("   Lambda: λ (x : ℝ) . x * x");
@@ -1259,12 +1320,15 @@ fn test_lambda_nested_z3() {
                 Expression::Object("x".to_string()),
                 Expression::Object("y".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     let outer = Expression::Lambda {
         params: vec![LambdaParam::new("x")],
         body: Box::new(inner),
+        span: None,
     };
 
     println!("   Lambda: λ x . λ y . x + y");
@@ -1284,7 +1348,7 @@ fn test_lambda_nested_z3() {
     println!("   ✅ Z3 backend initialized");
 
     // Verify nested structure
-    if let Expression::Lambda { params, body } = &outer {
+    if let Expression::Lambda { params, body, .. } = &outer {
         assert_eq!(params[0].name, "x");
         if let Expression::Lambda {
             params: inner_params,
@@ -1323,7 +1387,9 @@ fn test_beta_reduction_z3_integration() {
                 Expression::Object("x".to_string()),
                 Expression::Const("1".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     // Apply lambda to 5 - simulating (λ x . x + 1)(5)
@@ -1344,11 +1410,13 @@ fn test_beta_reduction_z3_integration() {
             Expression::Const("5".to_string()),
             Expression::Const("1".to_string()),
         ],
+        span: None,
     };
 
     let equation = Expression::Operation {
         name: "equals".to_string(),
         args: vec![reduced_application, Expression::Const("6".to_string())],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -1389,7 +1457,7 @@ fn test_lambda_roundtrip_parse_reduce_verify() {
 
     // Verify the reduced form is 5 + 1
     match &reduced {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "plus");
             assert!(matches!(&args[0], Expression::Const(s) if s == "5"));
             assert!(matches!(&args[1], Expression::Const(s) if s == "1"));
@@ -1405,6 +1473,7 @@ fn test_lambda_roundtrip_parse_reduce_verify() {
     let equation = Expression::Operation {
         name: "equals".to_string(),
         args: vec![reduced, Expression::Const("6".to_string())],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -1437,7 +1506,9 @@ fn test_curried_lambda_reduction_z3() {
                 Expression::Object("x".to_string()),
                 Expression::Object("y".to_string()),
             ],
+            span: None,
         }),
+        span: None,
     };
 
     let evaluator = Evaluator::new();
@@ -1462,7 +1533,7 @@ fn test_curried_lambda_reduction_z3() {
         .expect("Full application failed");
 
     match &full {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "plus");
             println!("   ✅ Full: (λ y . 3 + y)(4) → 3 + 4");
             assert!(matches!(&args[0], Expression::Const(s) if s == "3"));
@@ -1478,6 +1549,7 @@ fn test_curried_lambda_reduction_z3() {
     let equation = Expression::Operation {
         name: "equals".to_string(),
         args: vec![full, Expression::Const("7".to_string())],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&equation);
@@ -1514,8 +1586,11 @@ fn test_variable_capture_avoidance_z3() {
                     Expression::Object("x".to_string()),
                     Expression::Object("y".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         }),
+        span: None,
     };
 
     let evaluator = Evaluator::new();
@@ -1527,7 +1602,7 @@ fn test_variable_capture_avoidance_z3() {
 
     // Result should be λ y' . y + y' (with fresh variable)
     match &result {
-        Expression::Lambda { params, body } => {
+        Expression::Lambda { params, body, .. } => {
             let inner_param = &params[0].name;
             // The parameter should be renamed to avoid capture
             assert_ne!(inner_param, "y", "Variable capture should be avoided!");

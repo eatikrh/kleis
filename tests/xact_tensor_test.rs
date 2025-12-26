@@ -168,6 +168,7 @@ fn test_non_xact_falls_through() {
     let plus_expr = Expression::Operation {
         name: "plus".to_string(),
         args: vec![obj("x"), obj("y")],
+        span: None,
     };
 
     let unicode = render_expression(&plus_expr, &ctx, &RenderTarget::Unicode);

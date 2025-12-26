@@ -98,7 +98,7 @@ impl PrettyPrinter {
 
             Expression::Object(name) => name.clone(),
 
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 self.format_operation_at_depth(name, args, depth)
             }
 
@@ -106,7 +106,7 @@ impl PrettyPrinter {
                 format!("□{}", hint)
             }
 
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 self.format_match_at_depth(scrutinee, cases, depth)
             }
 
@@ -123,6 +123,7 @@ impl PrettyPrinter {
                 variables,
                 where_clause,
                 body,
+                ..
             } => self.format_quantifier_at_depth(
                 quantifier,
                 variables,
@@ -135,6 +136,7 @@ impl PrettyPrinter {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => self.format_conditional_at_depth(condition, then_branch, else_branch, depth),
 
             Expression::Let {
@@ -142,6 +144,7 @@ impl PrettyPrinter {
                 type_annotation,
                 value,
                 body,
+                ..
             } => self.format_let_at_depth(pattern, type_annotation.as_deref(), value, body, depth),
 
             Expression::Ascription {
@@ -152,7 +155,7 @@ impl PrettyPrinter {
                 format!("({}) : {}", inner, type_annotation)
             }
 
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 let param_strs: Vec<_> = params
                     .iter()
                     .map(|p| {
@@ -508,7 +511,7 @@ impl PrettyPrinter {
     /// Add parentheses around complex expressions when needed
     fn maybe_paren(&self, expr: &Expression, formatted: &str) -> String {
         match expr {
-            Expression::Operation { name, args } if args.len() == 2 => {
+            Expression::Operation { name, args, .. } if args.len() == 2 => {
                 // Check if it's an infix operation that might need parens
                 let needs_parens = matches!(
                     name.as_str(),
@@ -1060,6 +1063,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Const("1".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "x + 1");
     }
@@ -1070,6 +1074,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "sin".to_string(),
             args: vec![Expression::Object("x".to_string())],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "sin(x)");
     }
@@ -1084,12 +1089,15 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Const("0".to_string()),
                 ],
+                span: None,
             }),
             then_branch: Box::new(Expression::Object("x".to_string())),
             else_branch: Box::new(Expression::Operation {
                 name: "neg".to_string(),
                 args: vec![Expression::Object("x".to_string())],
+                span: None,
             }),
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "if x > 0 then x else -x");
     }
@@ -1107,7 +1115,9 @@ mod tests {
                     Expression::Object("y".to_string()),
                     Expression::Object("y".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "let y = 5 in y + y");
     }
@@ -1120,6 +1130,7 @@ mod tests {
             type_annotation: Some("ℝ".to_string()),
             value: Box::new(Expression::Const("5".to_string())),
             body: Box::new(Expression::Object("x".to_string())),
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "let x : ℝ = 5 in x");
     }
@@ -1141,6 +1152,7 @@ mod tests {
                     body: Expression::Const("0".to_string()),
                 },
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "match x { 0 => 1 | _ => 0 }");
     }
@@ -1161,6 +1173,7 @@ mod tests {
                             Expression::Object("n".to_string()),
                             Expression::Const("0".to_string()),
                         ],
+                        span: None,
                     }),
                     body: Expression::Const("negative".to_string()),
                 },
@@ -1170,6 +1183,7 @@ mod tests {
                     body: Expression::Const("non-negative".to_string()),
                 },
             ],
+            span: None,
         };
         assert_eq!(
             pp.format_expression(&expr),
@@ -1216,7 +1230,9 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Object("y".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "let Point(x, y) = p in x + y");
     }
@@ -1232,9 +1248,11 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Object("x".to_string()),
                 ],
+                span: None,
             },
             env: std::collections::HashMap::new(),
             span: None,
+            file: None,
         };
         assert_eq!(
             pp.format_function("double", &closure),
@@ -1299,6 +1317,7 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Const("2".to_string()),
                 ],
+                span: None,
             },
             span: None,
         };
@@ -1319,6 +1338,7 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Object("x".to_string()),
                 ],
+                span: None,
             },
             span: None,
         };
@@ -1368,6 +1388,7 @@ mod tests {
                             Expression::Const("-1".to_string()),
                             Expression::Object("x".to_string()),
                         ],
+                        span: None,
                     },
                 },
             }],
@@ -1416,6 +1437,7 @@ mod tests {
                 Expression::Const("1".to_string()),
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "1/2");
     }
@@ -1430,6 +1452,7 @@ mod tests {
                 Expression::Object("a".to_string()),
                 Expression::Object("b".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "a + b");
     }
@@ -1444,6 +1467,7 @@ mod tests {
                 Expression::Object("a".to_string()),
                 Expression::Object("b".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "a × b");
     }
@@ -1455,6 +1479,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "neg_rational".to_string(),
             args: vec![Expression::Object("q".to_string())],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "-q");
     }
@@ -1478,6 +1503,7 @@ mod tests {
                 Expression::String("hello".to_string()),
                 Expression::String(" world".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "\"hello\" ++ \" world\"");
     }
@@ -1494,6 +1520,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Object("y".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "x & y");
     }
@@ -1508,6 +1535,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Object("y".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "x | y");
     }
@@ -1522,6 +1550,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Object("y".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "x ⊕ y");
     }
@@ -1533,6 +1562,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "bvnot".to_string(),
             args: vec![Expression::Object("x".to_string())],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "~x");
     }
@@ -1547,6 +1577,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "x << 2");
     }
@@ -1561,6 +1592,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Const("1".to_string()),
             ],
+            span: None,
         };
         assert_eq!(pp.format_expression(&expr), "x >> 1");
     }
@@ -1655,6 +1687,7 @@ mod tests {
                     Expression::Const("3".to_string()),
                 ]),
             ],
+            span: None,
         };
 
         let formatted = pp.format_expression(&expr);
@@ -1666,7 +1699,7 @@ mod tests {
 
         // Verify structure matches
         match parsed {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "SomeOp");
                 assert_eq!(args.len(), 3);
                 match &args[2] {

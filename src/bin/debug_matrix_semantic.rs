@@ -84,6 +84,7 @@ fn matrix2x2(a11: Expression, a12: Expression, a21: Expression, a22: Expression)
     Expression::Operation {
         name: "matrix2x2".to_string(),
         args: vec![a11, a12, a21, a22],
+        span: None,
     }
 }
 
@@ -111,6 +112,7 @@ fn sin(arg: Expression) -> Expression {
     Expression::Operation {
         name: "sin".to_string(),
         args: vec![arg],
+        span: None,
     }
 }
 
@@ -146,7 +148,7 @@ fn collect_slots_recursive(
             });
             *next_auto_id += 1;
         }
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             for (i, arg) in args.iter().enumerate() {
                 let mut child_path = path.clone();
                 child_path.push(i);
@@ -175,6 +177,7 @@ fn collect_slots_recursive(
             condition,
             then_branch,
             else_branch,
+            ..
         } => {
             let mut cond_path = path.clone();
             cond_path.push(0);

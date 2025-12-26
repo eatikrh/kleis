@@ -816,6 +816,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "plus".to_string(),
             args: vec![z1.clone(), z2.clone()],
+            span: None,
         };
 
         // Create typed AST with complex types
@@ -833,7 +834,7 @@ mod tests {
 
         // Should be rewritten to complex_add
         match lowered {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "complex_add");
                 assert_eq!(args.len(), 2);
                 println!("✅ plus(ℂ, ℂ) → complex_add");
@@ -852,6 +853,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "plus".to_string(),
             args: vec![three.clone(), z.clone()],
+            span: None,
         };
 
         // Create typed AST
@@ -869,7 +871,7 @@ mod tests {
 
         // Should be: complex_add(complex(3, 0), z)
         match lowered {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "complex_add");
                 assert_eq!(args.len(), 2);
 
@@ -878,6 +880,7 @@ mod tests {
                     Expression::Operation {
                         name: lift_name,
                         args: lift_args,
+                        ..
                     } => {
                         assert_eq!(lift_name, "complex");
                         assert_eq!(lift_args.len(), 2);
@@ -903,6 +906,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "times".to_string(),
             args: vec![z1.clone(), z2.clone()],
+            span: None,
         };
 
         let typed = TypedExpr::node(
@@ -935,6 +939,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "neg".to_string(),
             args: vec![z.clone()],
+            span: None,
         };
 
         let typed = TypedExpr::node(
@@ -968,6 +973,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "plus".to_string(),
             args: vec![one.clone(), two.clone()],
+            span: None,
         };
 
         let typed = TypedExpr::node(
@@ -1000,11 +1006,13 @@ mod tests {
         let inner = Expression::Operation {
             name: "plus".to_string(),
             args: vec![z1.clone(), z2.clone()],
+            span: None,
         };
 
         let outer = Expression::Operation {
             name: "times".to_string(),
             args: vec![inner.clone(), z3.clone()],
+            span: None,
         };
 
         let complex_ty = Type::Data {
@@ -1030,7 +1038,7 @@ mod tests {
 
         // Outer should be complex_mul
         match &lowered {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "complex_mul");
 
                 // Inner (first arg) should be complex_add
@@ -1060,6 +1068,7 @@ mod tests {
                 Expression::Const("1".to_string()),
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         };
 
         // Step 1: Type inference

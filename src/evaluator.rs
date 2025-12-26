@@ -4727,6 +4727,7 @@ impl Evaluator {
             Expression::Operation {
                 name,
                 args: op_args,
+                span: None
             } if name == "Vector" => {
                 // Vector(n, [elements])
                 if op_args.len() >= 2 {
@@ -4742,6 +4743,7 @@ impl Evaluator {
             Expression::Operation {
                 name,
                 args: op_args,
+                span: None
             } if name == "Matrix" || name == "matrix" => {
                 // Matrix(rows, cols, [elements]) - extract elements from column matrix
                 if op_args.len() >= 3 {
@@ -5149,7 +5151,7 @@ mod tests {
 
         // Should get: 5 + 5 (symbolic)
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "plus");
                 assert_eq!(args.len(), 2);
                 assert!(matches!(args[0], Expression::Const(ref s) if s == "5"));
@@ -5180,7 +5182,7 @@ mod tests {
 
         // Should get: 3 + 7 (symbolic)
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "plus");
                 assert_eq!(args.len(), 2);
             }
@@ -5200,6 +5202,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "double".to_string(),
             args: vec![Expression::Const("5".to_string())],
+            span: None,
         };
 
         let result = eval.eval(&expr).unwrap();
@@ -5272,6 +5275,7 @@ mod tests {
         let lambda = Expression::Lambda {
             params: vec![LambdaParam::new("x")],
             body: Box::new(Expression::Object("x".to_string())),
+            span: None,
         };
 
         let result = eval
@@ -5294,7 +5298,9 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Const("1".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         };
 
         let result = eval
@@ -5302,7 +5308,7 @@ mod tests {
             .unwrap();
 
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "plus");
                 assert!(matches!(args[0], Expression::Const(ref s) if s == "5"));
                 assert!(matches!(args[1], Expression::Const(ref s) if s == "1"));
@@ -5324,7 +5330,9 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Object("y".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         };
 
         let result = eval
@@ -5333,12 +5341,12 @@ mod tests {
 
         // Should be λ y . 3 + y
         match result {
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 assert_eq!(params.len(), 1);
                 assert_eq!(params[0].name, "y");
 
                 match *body {
-                    Expression::Operation { name, ref args } => {
+                    Expression::Operation { name, ref args, .. } => {
                         assert_eq!(name, "plus");
                         assert!(matches!(args[0], Expression::Const(ref s) if s == "3"));
                         assert!(matches!(args[1], Expression::Object(ref s) if s == "y"));
@@ -5363,7 +5371,9 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Object("y".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         };
 
         // Apply first argument
@@ -5377,7 +5387,7 @@ mod tests {
             .unwrap();
 
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "plus");
                 assert!(matches!(args[0], Expression::Const(ref s) if s == "3"));
                 assert!(matches!(args[1], Expression::Const(ref s) if s == "4"));
@@ -5399,7 +5409,9 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Object("y".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         };
 
         let result = eval
@@ -5413,7 +5425,7 @@ mod tests {
             .unwrap();
 
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "times");
                 assert!(matches!(args[0], Expression::Const(ref s) if s == "2"));
                 assert!(matches!(args[1], Expression::Const(ref s) if s == "3"));
@@ -5433,6 +5445,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Object("y".to_string()),
             ],
+            span: None,
         };
 
         let free = eval.free_variables(&expr);
@@ -5454,7 +5467,9 @@ mod tests {
                     Expression::Object("x".to_string()),
                     Expression::Object("y".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         };
 
         let free = eval.free_variables(&lambda);
@@ -5478,8 +5493,11 @@ mod tests {
                         Expression::Object("x".to_string()),
                         Expression::Object("y".to_string()),
                     ],
+                    span: None,
                 }),
+                span: None,
             }),
+            span: None,
         };
 
         let bound = eval.bound_variables(&lambda);
@@ -5495,12 +5513,13 @@ mod tests {
         let lambda = Expression::Lambda {
             params: vec![LambdaParam::new("y")],
             body: Box::new(Expression::Object("y".to_string())),
+            span: None,
         };
 
         let converted = eval.alpha_convert(&lambda, "y", "z");
 
         match converted {
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 assert_eq!(params[0].name, "z");
                 assert!(matches!(*body, Expression::Object(ref s) if s == "z"));
             }
@@ -5524,8 +5543,11 @@ mod tests {
                         Expression::Object("x".to_string()),
                         Expression::Object("y".to_string()),
                     ],
+                    span: None,
                 }),
+                span: None,
             }),
+            span: None,
         };
 
         // Apply with 'y' as argument (potential capture)
@@ -5535,7 +5557,7 @@ mod tests {
 
         // Result should be λ y' . y + y' (or similar fresh name)
         match result {
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 let inner_param = &params[0].name;
                 // The inner param should NOT be 'y' anymore (renamed to avoid capture)
                 assert_ne!(inner_param, "y");
@@ -5568,12 +5590,13 @@ mod tests {
         let expr = Expression::Operation {
             name: "f".to_string(),
             args: vec![Expression::Const("5".to_string())],
+            span: None,
         };
 
         let result = eval.reduce_to_normal_form(&expr).unwrap();
 
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "plus");
                 assert!(matches!(args[0], Expression::Const(ref s) if s == "5"));
                 assert!(matches!(args[1], Expression::Const(ref s) if s == "1"));
@@ -5597,6 +5620,7 @@ mod tests {
         let partial = Expression::Operation {
             name: "add".to_string(),
             args: vec![Expression::Const("3".to_string())],
+            span: None,
         };
 
         let reduced_partial = eval.reduce_to_normal_form(&partial).unwrap();
@@ -5615,6 +5639,7 @@ mod tests {
             type_annotation: None,
             value: Box::new(Expression::Const("1".to_string())),
             body: Box::new(Expression::Object("x".to_string())),
+            span: None,
         };
 
         // Should complete within fuel limit
@@ -5637,6 +5662,7 @@ mod tests {
                 Expression::Const("2".to_string()),
                 Expression::Const("3".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "5"));
@@ -5648,6 +5674,7 @@ mod tests {
                 Expression::Const("10".to_string()),
                 Expression::Const("5".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "50"));
@@ -5659,6 +5686,7 @@ mod tests {
                 Expression::Const("7".to_string()),
                 Expression::Const("3".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "4"));
@@ -5675,6 +5703,7 @@ mod tests {
                 Expression::String("hello".to_string()),
                 Expression::String(" world".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::String(ref s) if s == "hello world"));
@@ -5683,6 +5712,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "strlen".to_string(),
             args: vec![Expression::String("kleis".to_string())],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "5"));
@@ -5694,6 +5724,7 @@ mod tests {
                 Expression::String("(define fib)".to_string()),
                 Expression::String("(define".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Object(ref s) if s == "true"));
@@ -5705,6 +5736,7 @@ mod tests {
                 Expression::String("hello world".to_string()),
                 Expression::String("wor".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Object(ref s) if s == "true"));
@@ -5721,6 +5753,7 @@ mod tests {
                 Expression::Const("5".to_string()),
                 Expression::Const("3".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Object(ref s) if s == "true"));
@@ -5732,6 +5765,7 @@ mod tests {
                 Expression::Const("2".to_string()),
                 Expression::Const("10".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Object(ref s) if s == "true"));
@@ -5743,6 +5777,7 @@ mod tests {
                 Expression::Const("5".to_string()),
                 Expression::Const("5".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Object(ref s) if s == "true"));
@@ -5760,9 +5795,11 @@ mod tests {
                     Expression::Const("5".to_string()),
                     Expression::Const("3".to_string()),
                 ],
+                span: None,
             }),
             then_branch: Box::new(Expression::String("yes".to_string())),
             else_branch: Box::new(Expression::String("no".to_string())),
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::String(ref s) if s == "yes"));
@@ -5775,9 +5812,11 @@ mod tests {
                     Expression::Const("5".to_string()),
                     Expression::Const("3".to_string()),
                 ],
+                span: None,
             }),
             then_branch: Box::new(Expression::String("yes".to_string())),
             else_branch: Box::new(Expression::String("no".to_string())),
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::String(ref s) if s == "no"));
@@ -5796,6 +5835,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "double".to_string(),
             args: vec![Expression::Const("5".to_string())],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "10"));
@@ -5814,6 +5854,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "fib".to_string(),
             args: vec![Expression::Const("0".to_string())],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "0"));
@@ -5822,6 +5863,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "fib".to_string(),
             args: vec![Expression::Const("1".to_string())],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "1"));
@@ -5830,6 +5872,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "fib".to_string(),
             args: vec![Expression::Const("5".to_string())],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "5"));
@@ -5838,6 +5881,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "fib".to_string(),
             args: vec![Expression::Const("10".to_string())],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "55"));
@@ -5860,6 +5904,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "is_list_expr".to_string(),
             args: vec![Expression::String("(+ 2 3)".to_string())],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::Object(ref s) if s == "true"));
@@ -5868,6 +5913,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "strip_parens".to_string(),
             args: vec![Expression::String("(+ 2 3)".to_string())],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::String(ref s) if s == "+ 2 3"));
@@ -5876,6 +5922,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "get_op".to_string(),
             args: vec![Expression::String("(+ 2 3)".to_string())],
+            span: None,
         };
         let result = eval.eval_concrete(&expr).unwrap();
         assert!(matches!(result, Expression::String(ref s) if s == "+"));
@@ -6017,13 +6064,14 @@ mod tests {
         let expr = Expression::Operation {
             name: "double".to_string(),
             args: vec![Expression::Const("5".to_string())],
+            span: None,
         };
         let result = eval.eval(&expr);
         assert!(result.is_ok());
 
         // Result should be 5 + 5 (symbolic)
         match result.unwrap() {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "plus"); // Parser converts + to "plus"
                 assert_eq!(args.len(), 2);
             }
@@ -6051,7 +6099,7 @@ mod tests {
                 DebugAction::Continue
             }
             fn on_eval_end(&mut self, _: &Expression, _: &Result<Expression, String>, _: usize) {}
-            fn on_function_enter(&mut self, _: &str, _: &[Expression], _: usize) {}
+            fn on_function_enter(&mut self, _: &str, _: &[Expression], _: &SourceLocation, _: usize) {}
             fn on_function_exit(&mut self, _: &str, _: &Result<Expression, String>, _: usize) {}
             fn on_bind(&mut self, name: &str, value: &Expression, _: usize) {
                 self.bindings
@@ -6100,6 +6148,7 @@ mod tests {
                 Expression::Const("1".to_string()),
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         };
         let result = eval.eval(&expr);
         assert!(result.is_ok());
@@ -6165,6 +6214,7 @@ mod tests {
                             Expression::Object("x".to_string()),
                             Expression::Object("y".to_string()),
                         ],
+                        span: None,
                     },
                     location: None,
                 },
@@ -6210,6 +6260,7 @@ mod tests {
                             Expression::Object("x".to_string()),
                             Expression::Object("y".to_string()),
                         ],
+                        span: None,
                     },
                     location: None,
                 },

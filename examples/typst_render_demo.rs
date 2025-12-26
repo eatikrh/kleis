@@ -46,6 +46,7 @@ fn main() {
             Expression::Object("x".to_string()),
             Expression::Object("\\alpha".to_string()),
         ],
+        span: None,
     };
 
     let unicode2 = render_expression(&expr2, &ctx, &RenderTarget::Unicode);
@@ -70,6 +71,7 @@ fn main() {
             Expression::Object("b".to_string()),
             Expression::Object("x".to_string()),
         ],
+        span: None,
     };
 
     let unicode3 = render_expression(&expr3, &ctx, &RenderTarget::Unicode);
@@ -92,9 +94,11 @@ fn main() {
                     Expression::Object("x".to_string()),
                     Expression::Object("y".to_string()),
                 ],
+                span: None,
             },
             Expression::Const("2".to_string()),
         ],
+        span: None,
     };
 
     let unicode4 = render_expression(&expr4, &ctx, &RenderTarget::Unicode);

@@ -109,7 +109,7 @@ pub fn layout_expression(expr: &Expression, context: &LayoutContext) -> LayoutBo
         }
         Expression::Object(s) => layout_symbol(s, context),
         Expression::Placeholder { id, hint } => layout_placeholder(*id, hint, context),
-        Expression::Operation { name, args } => layout_operation(name, args, context),
+        Expression::Operation { name, args, .. } => layout_operation(name, args, context),
 
         Expression::Quantifier { .. } => {
             // Quantifiers are for axioms, not regular layout

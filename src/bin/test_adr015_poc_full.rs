@@ -93,7 +93,7 @@ fn test_parse(text: &str, expected_op: &str, expected_args: usize, visual: &str)
             println!("  AST:    {:?}", ast);
 
             match ast {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     if name == expected_op && args.len() == expected_args {
                         println!("  Visual: {}", visual);
                         println!("  ✓ Parsed correctly: '{}' with {} args", name, args.len());
@@ -195,9 +195,9 @@ fn test_nested() -> bool {
             println!("  AST:    {:?}", ast);
 
             match ast {
-                Expression::Operation { name, args } if name == "abs" && args.len() == 1 => {
+                Expression::Operation { name, args, .. } if name == "abs" && args.len() == 1 => {
                     match &args[0] {
-                        Expression::Operation { name, args }
+                        Expression::Operation { name, args, .. }
                             if name == "frac" && args.len() == 2 =>
                         {
                             println!("  Visual: |a/b|  or  |a─b|");

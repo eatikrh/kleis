@@ -30,7 +30,7 @@ fn test_multiplication_binds_tighter_than_addition() {
     println!("\n🔍 Testing: {} -> plus(a, times(b, c))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "plus", "Top-level should be plus");
             assert_eq!(args.len(), 2);
 
@@ -42,7 +42,7 @@ fn test_multiplication_binds_tighter_than_addition() {
 
             // Right arg should be times(b, c)
             match &args[1] {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     assert_eq!(name, "times");
                     assert_eq!(args.len(), 2);
                 }
@@ -64,7 +64,7 @@ fn test_multiplication_binds_tighter_than_subtraction() {
     println!("\n🔍 Testing: {} -> minus(a, times(b, c))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "minus", "Top-level should be minus");
 
             // Right arg should be times(b, c)
@@ -90,7 +90,7 @@ fn test_left_to_right_associativity_addition() {
     println!("\n🔍 Testing: {} -> plus(plus(a, b), c)", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "plus", "Top-level should be plus");
 
             // Left arg should be plus(a, b)
@@ -122,7 +122,7 @@ fn test_left_to_right_associativity_multiplication() {
     println!("\n🔍 Testing: {} -> times(times(a, b), c)", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "times", "Top-level should be times");
 
             // Left arg should be times(a, b)
@@ -148,7 +148,7 @@ fn test_division_binds_like_multiplication() {
     println!("\n🔍 Testing: {} -> plus(a, divide(b, c))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "plus", "Top-level should be plus");
 
             // Right arg should be divide(b, c)
@@ -178,7 +178,7 @@ fn test_comparison_binds_looser_than_arithmetic() {
     println!("\n🔍 Testing: {} -> lt(times(a,b), times(c,d))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "less_than", "Top-level should be less_than");
             assert_eq!(args.len(), 2);
 
@@ -213,7 +213,7 @@ fn test_geq_with_arithmetic_on_both_sides() {
     println!("\n🔍 Testing: {} -> geq(times(a,100), times(b,80))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "geq", "Top-level should be geq");
             assert_eq!(args.len(), 2);
 
@@ -247,7 +247,7 @@ fn test_leq_with_arithmetic() {
     println!("\n🔍 Testing: {} -> leq(plus(a,b), minus(c,d))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "leq", "Top-level should be leq");
 
             match &args[0] {
@@ -275,7 +275,7 @@ fn test_neq_with_arithmetic() {
     println!("\n🔍 Testing: {} -> neq(times(a,2), divide(b,3))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "neq", "Top-level should be neq");
 
             match &args[0] {
@@ -307,7 +307,7 @@ fn test_conjunction_binds_tighter_than_disjunction() {
     println!("\n🔍 Testing: {} -> or(a, and(b, c))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "logical_or", "Top-level should be logical_or");
 
             // Right arg should be logical_and(b, c)
@@ -333,7 +333,7 @@ fn test_comparison_binds_tighter_than_conjunction() {
     println!("\n🔍 Testing: {} -> and(lt(a,b), gt(c,d))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "logical_and", "Top-level should be logical_and");
 
             match &args[0] {
@@ -361,7 +361,7 @@ fn test_implication_binds_loosest() {
     println!("\n🔍 Testing: {} -> implies(and(a,b), or(c,d))", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "implies", "Top-level should be implies");
 
             match &args[0] {
@@ -393,12 +393,12 @@ fn test_complex_mixed_precedence() {
     println!("\n🔍 Testing complex expression: {}", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "geq", "Top-level should be geq");
 
             // Left: a + (b * c)
             match &args[0] {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     assert_eq!(name, "plus");
                     match &args[1] {
                         Expression::Operation { name, .. } => assert_eq!(name, "times"),
@@ -410,7 +410,7 @@ fn test_complex_mixed_precedence() {
 
             // Right: d - (e / f)
             match &args[1] {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     assert_eq!(name, "minus");
                     match &args[1] {
                         Expression::Operation { name, .. } => assert_eq!(name, "divide"),
@@ -436,7 +436,7 @@ fn test_arithmetic_comparison_logical_combined() {
     println!("\n🔍 Testing: {}", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "logical_and", "Top-level should be logical_and");
 
             // Both children should be comparisons
@@ -472,7 +472,7 @@ fn test_conditional_condition_precedence() {
         Expression::Conditional { condition, .. } => {
             // Condition should be geq(times(a, b), c)
             match condition.as_ref() {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     assert_eq!(name, "geq", "Condition should be geq");
                     match &args[0] {
                         Expression::Operation { name, .. } => assert_eq!(name, "times"),
@@ -535,7 +535,7 @@ fn test_parentheses_override_precedence() {
     println!("\n🔍 Testing: {} -> times(plus(a,b), c)", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "times", "Top-level should be times");
 
             // Left should be plus(a, b)
@@ -559,11 +559,11 @@ fn test_parentheses_in_comparison() {
     println!("\n🔍 Testing: {}", input);
 
     match result {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "geq");
 
             match &args[0] {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     assert_eq!(name, "times");
                     match &args[1] {
                         Expression::Operation { name, .. } => assert_eq!(name, "plus"),
@@ -620,11 +620,11 @@ fn test_unicode_leq_same_as_ascii() {
         (
             Expression::Operation {
                 name: name1,
-                args: args1,
+                args: args1, ..
             },
             Expression::Operation {
                 name: name2,
-                args: args2,
+                args: args2, ..
             },
         ) => {
             assert_eq!(name1, name2, "≤ and <= should produce same operator");
@@ -650,11 +650,11 @@ fn test_unicode_geq_same_as_ascii() {
         (
             Expression::Operation {
                 name: name1,
-                args: args1,
+                args: args1, ..
             },
             Expression::Operation {
                 name: name2,
-                args: args2,
+                args: args2, ..
             },
         ) => {
             assert_eq!(name1, name2, "≥ and >= should produce same operator");

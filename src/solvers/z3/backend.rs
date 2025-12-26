@@ -242,6 +242,7 @@ impl<'r> Z3Backend<'r> {
             variables,
             where_clause,
             body,
+            ..
         } = expr
         {
             // Create Z3 forall
@@ -412,7 +413,7 @@ impl<'r> Z3Backend<'r> {
                 Ok(z3::ast::String::from(s.clone()).into())
             }
 
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 // Matrix and tensor operations are handled via axioms from stdlib/*.kleis
                 // Use assert_axioms_from_registry() to load them before verification
 
@@ -430,6 +431,7 @@ impl<'r> Z3Backend<'r> {
                 variables,
                 where_clause,
                 body,
+                ..
             } => {
                 let bool_result = self.translate_quantifier(
                     quantifier,
@@ -445,6 +447,7 @@ impl<'r> Z3Backend<'r> {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 // Translate all three parts
                 let cond_z3 = self.kleis_to_z3(condition, vars)?;
@@ -478,7 +481,7 @@ impl<'r> Z3Backend<'r> {
                 self.kleis_to_z3(body, &extended_vars)
             }
 
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 // Translate match expression to nested ite
                 self.translate_match(scrutinee, cases, vars)
             }
@@ -494,7 +497,7 @@ impl<'r> Z3Backend<'r> {
                 self.kleis_to_z3(expr, vars)
             }
 
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 // Lambda expressions in Z3 context:
                 // Translate the lambda body with parameters bound as fresh Int variables.
                 // This allows Z3 to reason about the body symbolically.
@@ -2192,6 +2195,7 @@ impl<'r> Z3Backend<'r> {
                 if let Expression::Operation {
                     name: _,
                     args: scrutinee_args,
+                    ..
                 } = scrutinee
                 {
                     if args.len() == scrutinee_args.len() {
@@ -2247,6 +2251,7 @@ impl<'r> Z3Backend<'r> {
                     Expression::Operation {
                         name: op_name,
                         args: op_args,
+                        ..
                     } if op_name == name && op_args.len() == args.len() => {
                         // Recursively bind each pattern argument to the corresponding operation argument
                         for (pat, arg_expr) in args.iter().zip(op_args.iter()) {
@@ -2329,6 +2334,7 @@ impl<'r> Z3Backend<'r> {
                 if let Expression::Operation {
                     name: scrutinee_name,
                     args: scrutinee_args,
+                    ..
                 } = scrutinee_expr
                 {
                     if scrutinee_name == name && args.len() == scrutinee_args.len() {
@@ -2849,6 +2855,7 @@ mod tests {
                 Expression::Const("2".to_string()),
                 Expression::Const("3".to_string()),
             ],
+            span: None,
         };
 
         let result = backend.evaluate(&expr).unwrap();
@@ -2874,6 +2881,7 @@ mod tests {
                 Expression::Const("42".to_string()),
                 Expression::Const("0".to_string()),
             ],
+            span: None,
         };
 
         let result = backend.simplify(&expr).unwrap();
@@ -2912,9 +2920,11 @@ mod tests {
                     Expression::Const("1".to_string()),
                     Expression::Const("1".to_string()),
                 ],
+                span: None,
             }),
             then_branch: Box::new(Expression::Const("42".to_string())),
             else_branch: Box::new(Expression::Const("0".to_string())),
+            span: None,
         };
 
         let result = backend.evaluate(&expr).unwrap();
@@ -2934,9 +2944,11 @@ mod tests {
                     Expression::Const("1".to_string()),
                     Expression::Const("2".to_string()),
                 ],
+                span: None,
             }),
             then_branch: Box::new(Expression::Const("42".to_string())),
             else_branch: Box::new(Expression::Const("0".to_string())),
+            span: None,
         };
 
         let result = backend.evaluate(&expr).unwrap();
@@ -2956,6 +2968,7 @@ mod tests {
                     Expression::Const("5".to_string()),
                     Expression::Const("3".to_string()),
                 ],
+                span: None,
             }),
             then_branch: Box::new(Expression::Operation {
                 name: "plus".to_string(),
@@ -2963,6 +2976,7 @@ mod tests {
                     Expression::Const("10".to_string()),
                     Expression::Const("1".to_string()),
                 ],
+                span: None,
             }),
             else_branch: Box::new(Expression::Operation {
                 name: "plus".to_string(),
@@ -2970,7 +2984,9 @@ mod tests {
                     Expression::Const("20".to_string()),
                     Expression::Const("1".to_string()),
                 ],
+                span: None,
             }),
+            span: None,
         };
 
         let result = backend.evaluate(&expr).unwrap();
@@ -2990,6 +3006,7 @@ mod tests {
                     Expression::Const("1".to_string()),
                     Expression::Const("2".to_string()),
                 ],
+                span: None,
             }),
             then_branch: Box::new(Expression::Const("100".to_string())),
             else_branch: Box::new(Expression::Conditional {
@@ -2999,10 +3016,13 @@ mod tests {
                         Expression::Const("2".to_string()),
                         Expression::Const("1".to_string()),
                     ],
+                    span: None,
                 }),
                 then_branch: Box::new(Expression::Const("200".to_string())),
                 else_branch: Box::new(Expression::Const("300".to_string())),
+                span: None,
             }),
+            span: None,
         };
 
         let result = backend.evaluate(&expr).unwrap();
@@ -3022,9 +3042,11 @@ mod tests {
                     Expression::Const("1".to_string()),
                     Expression::Const("1".to_string()),
                 ],
+                span: None,
             }),
             then_branch: Box::new(Expression::Const("5".to_string())),
             else_branch: Box::new(Expression::Const("10".to_string())),
+            span: None,
         };
 
         let result = backend.simplify(&expr).unwrap();

@@ -25,6 +25,7 @@ fn op(name: &str, args: Vec<Expression>) -> Expression {
     Expression::Operation {
         name: name.to_string(),
         args,
+        span: None,
     }
 }
 
@@ -292,6 +293,7 @@ fn roundtrip_conditional() {
         condition: Box::new(op("greater_than", vec![o("x"), c("0")])),
         then_branch: Box::new(o("x")),
         else_branch: Box::new(op("negate", vec![o("x")])),
+        span: None,
     };
     let (rendered, parsed) = roundtrip(&cond_expr);
     println!("Rendered: {}", rendered);
@@ -307,6 +309,7 @@ fn roundtrip_let_binding() {
         type_annotation: None,
         value: Box::new(c("5")),
         body: Box::new(op("plus", vec![o("x"), o("x")])),
+        span: None,
     };
     let (rendered, parsed) = roundtrip(&let_expr);
     println!("Rendered: {}", rendered);
@@ -386,11 +389,12 @@ fn roundtrip_lambda_simple() {
     let expr = Expression::Lambda {
         params: vec![kleis::ast::LambdaParam::new("x")],
         body: Box::new(o("x")),
+        span: None,
     };
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
     assert!(parsed.is_ok(), "Failed to parse: {}", rendered);
-    if let Ok(Expression::Lambda { params, body }) = parsed {
+    if let Ok(Expression::Lambda { params, body, .. }) = parsed {
         assert_eq!(params.len(), 1);
         assert_eq!(params[0].name, "x");
         assert!(matches!(*body, Expression::Object(ref n) if n == "x"));
@@ -405,6 +409,7 @@ fn roundtrip_lambda_arithmetic() {
     let expr = Expression::Lambda {
         params: vec![kleis::ast::LambdaParam::new("x")],
         body: Box::new(op("plus", vec![o("x"), c("1")])),
+        span: None,
     };
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
@@ -420,6 +425,7 @@ fn roundtrip_lambda_multiple_params() {
             kleis::ast::LambdaParam::new("y"),
         ],
         body: Box::new(op("plus", vec![o("x"), o("y")])),
+        span: None,
     };
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
@@ -437,6 +443,7 @@ fn roundtrip_lambda_typed_param() {
     let expr = Expression::Lambda {
         params: vec![kleis::ast::LambdaParam::typed("x", "ℝ")],
         body: Box::new(op("times", vec![o("x"), o("x")])),
+        span: None,
     };
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
@@ -452,10 +459,12 @@ fn roundtrip_lambda_nested() {
     let inner = Expression::Lambda {
         params: vec![kleis::ast::LambdaParam::new("y")],
         body: Box::new(op("plus", vec![o("x"), o("y")])),
+        span: None,
     };
     let expr = Expression::Lambda {
         params: vec![kleis::ast::LambdaParam::new("x")],
         body: Box::new(inner),
+        span: None,
     };
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);

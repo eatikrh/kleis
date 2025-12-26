@@ -63,6 +63,7 @@ fn complex_matrix() -> Expression {
             trig_op("sin", riemann_cell(&mut id_gen)),
             placeholder(&mut id_gen, "a33"),
         ],
+        span: None,
     }
 }
 
@@ -70,6 +71,7 @@ fn trig_op(op: &str, arg: Expression) -> Expression {
     Expression::Operation {
         name: op.to_string(),
         args: vec![arg],
+        span: None,
     }
 }
 
@@ -83,6 +85,7 @@ fn riemann_cell(id_gen: &mut IdGen) -> Expression {
             placeholder(id_gen, "lower₂"),
             placeholder(id_gen, "lower₃"),
         ],
+        span: None,
     }
 }
 
@@ -94,6 +97,7 @@ fn christoffel_cell(id_gen: &mut IdGen) -> Expression {
             placeholder(id_gen, "lower₁"),
             placeholder(id_gen, "lower₂"),
         ],
+        span: None,
     }
 }
 
@@ -101,6 +105,7 @@ fn gradient_cell(id_gen: &mut IdGen) -> Expression {
     Expression::Operation {
         name: "grad".to_string(),
         args: vec![placeholder(id_gen, "potential")],
+        span: None,
     }
 }
 

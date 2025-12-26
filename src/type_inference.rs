@@ -446,12 +446,12 @@ impl TypeInference {
             Expression::Placeholder { .. } => Ok(self.context.fresh_var()),
 
             // Operations: infer based on operation type
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 self.infer_operation(name, args, context_builder)
             }
 
             // Pattern matching: infer scrutinee and all branches
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 self.infer_match(scrutinee, cases, context_builder)
             }
 
@@ -478,6 +478,7 @@ impl TypeInference {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 // Condition must be Bool
                 let cond_ty = self.infer(condition, context_builder)?;
@@ -500,6 +501,7 @@ impl TypeInference {
                 type_annotation,
                 value,
                 body,
+                ..
             } => {
                 // Determine the type to bind:
                 // 1. If type annotation is present, parse and use it
@@ -533,7 +535,7 @@ impl TypeInference {
 
             // Lambda expression: λ params . body
             // Type is: param_types → body_type
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 // Create fresh type variables for each parameter and bind them
                 for param in params {
                     let param_type = self.context.fresh_var();
@@ -594,7 +596,7 @@ impl TypeInference {
             }
 
             // Operations: recurse into arguments
-            Expression::Operation { name: _, args } => {
+            Expression::Operation { name: _, args, .. } => {
                 // First infer types of all arguments
                 let typed_args: Result<Vec<TypedExpr>, String> = args
                     .iter()
@@ -621,7 +623,7 @@ impl TypeInference {
             }
 
             // Match: scrutinee + case bodies
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 let typed_scrutinee = self.infer_typed(scrutinee, context_builder)?;
 
                 // For each case, type the body (patterns are not expressions)
@@ -645,6 +647,7 @@ impl TypeInference {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 let typed_cond = self.infer_typed(condition, context_builder)?;
                 let typed_then = self.infer_typed(then_branch, context_builder)?;
@@ -688,7 +691,7 @@ impl TypeInference {
             }
 
             // Lambda: body
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 // Bind parameters
                 for param in params {
                     let param_type = self.context.fresh_var();
@@ -2317,6 +2320,7 @@ mod tests {
         let true_expr = Expression::Operation {
             name: "True".to_string(),
             args: vec![],
+            span: None,
         };
 
         let ty = infer.infer(&true_expr, None).unwrap();
@@ -2369,6 +2373,7 @@ mod tests {
         let vector_expr = Expression::Operation {
             name: "Vector".to_string(),
             args: vec![Expression::Const("3".to_string())],
+            span: None,
         };
 
         let ty = infer.infer(&vector_expr, None).unwrap();
@@ -2425,6 +2430,7 @@ mod tests {
         let none_expr = Expression::Operation {
             name: "None".to_string(),
             args: vec![],
+            span: None,
         };
 
         let ty = infer.infer(&none_expr, None).unwrap();
@@ -2468,6 +2474,7 @@ mod tests {
         let bad_expr = Expression::Operation {
             name: "Vector".to_string(),
             args: vec![], // Should have 1 arg!
+            span: None,
         };
 
         let result = infer.infer(&bad_expr, None);
@@ -2482,6 +2489,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "UnknownConstructor".to_string(),
             args: vec![],
+            span: None,
         };
 
         // Should fall back to context_builder (returns type var)
@@ -2547,6 +2555,7 @@ mod tests {
                     Expression::Const("0".to_string()),
                 ),
             ],
+            span: None,
         };
 
         let ty = infer.infer(&match_expr, None).unwrap();
@@ -2616,6 +2625,7 @@ mod tests {
                     Expression::Object("x".to_string()),
                 ),
             ],
+            span: None,
         };
 
         let ty = infer.infer(&match_expr, None).unwrap();
@@ -2676,6 +2686,7 @@ mod tests {
                 ),
                 MatchCase::new(Pattern::Wildcard, Expression::Const("0".to_string())),
             ],
+            span: None,
         };
 
         let ty = infer.infer(&match_expr, None).unwrap();
@@ -2778,6 +2789,7 @@ mod tests {
                     Expression::Const("0".to_string()),
                 ),
             ],
+            span: None,
         };
 
         let ty = infer.infer(&match_expr, None).unwrap();
@@ -2843,6 +2855,7 @@ mod tests {
                 },
                 Expression::Const("0".to_string()),
             )],
+            span: None,
         };
 
         let result = infer.infer(&match_expr, None);
@@ -2895,6 +2908,7 @@ mod tests {
                 },
                 Expression::Const("0".to_string()),
             )],
+            span: None,
         };
 
         let result = infer.infer(&match_expr, None);
@@ -2912,6 +2926,7 @@ mod tests {
         let match_expr = Expression::Match {
             scrutinee: Box::new(Expression::Object("x".to_string())),
             cases: vec![],
+            span: None,
         };
 
         let result = infer.infer(&match_expr, None);
@@ -2941,6 +2956,7 @@ mod tests {
                 ),
                 MatchCase::new(Pattern::Wildcard, Expression::Object("other".to_string())),
             ],
+            span: None,
         };
 
         // Should infer successfully (all branches return type variables that unify)
@@ -2982,6 +2998,7 @@ mod tests {
                 &Expression::Operation {
                     name: "True".to_string(),
                     args: vec![],
+                    span: None,
                 },
                 None,
             )
@@ -2992,6 +3009,7 @@ mod tests {
                 &Expression::Operation {
                     name: "False".to_string(),
                     args: vec![],
+                    span: None,
                 },
                 None,
             )
@@ -3048,6 +3066,7 @@ mod tests {
                         Expression::Const("2".to_string()),
                         Expression::Const("3".to_string()),
                     ],
+                    span: None,
                 },
                 None,
             )
@@ -3062,6 +3081,7 @@ mod tests {
                         Expression::Const("3".to_string()),
                         Expression::Const("2".to_string()),
                     ],
+                    span: None,
                 },
                 None,
             )
@@ -3133,6 +3153,7 @@ mod tests {
                     Expression::Const("0".to_string()),
                 ),
             ],
+            span: None,
         };
 
         // Infer the match
@@ -3197,8 +3218,10 @@ mod tests {
                         Expression::Object("a".to_string()),
                         Expression::Object("b".to_string()),
                     ],
+                    span: None,
                 },
             )],
+            span: None,
         };
 
         // Should infer successfully

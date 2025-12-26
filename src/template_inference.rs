@@ -17,11 +17,12 @@ use crate::ast::Expression;
 pub fn infer_templates(expr: Expression) -> Expression {
     // First recursively infer within child expressions
     let expr = match expr {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             let new_args = args.into_iter().map(infer_templates).collect();
             Expression::Operation {
                 name,
                 args: new_args,
+                span: None,
             }
         }
         other => other,
@@ -53,7 +54,7 @@ fn try_infer_double_integral(expr: &Expression) -> Option<Expression> {
 
     // 1. Check first term is sub(\iint, region)
     let region = match &terms[0] {
-        Expression::Operation { name, args } if name == "sub" && args.len() == 2 => {
+        Expression::Operation { name, args, .. } if name == "sub" && args.len() == 2 => {
             match &args[0] {
                 Expression::Object(s) if s == "\\iint" => args[1].clone(),
                 _ => return None,
@@ -78,6 +79,7 @@ fn try_infer_double_integral(expr: &Expression) -> Option<Expression> {
                 variables[0].clone(),
                 variables[1].clone(),
             ],
+            span: None,
         })
     } else {
         None
@@ -120,6 +122,7 @@ fn try_infer_logical_implication(expr: &Expression) -> Option<Expression> {
         return Some(Expression::Operation {
             name: op_name.to_string(),
             args: vec![left, right],
+            span: None,
         });
     }
 
@@ -135,7 +138,7 @@ fn try_infer_logical_implication(expr: &Expression) -> Option<Expression> {
 fn try_infer_quantifier(expr: &Expression) -> Option<Expression> {
     // Check if top-level is a relational operation (in_set, equals, etc.)
     match expr {
-        Expression::Operation { name, args } if is_relational_op(name) && args.len() == 2 => {
+        Expression::Operation { name, args, .. } if is_relational_op(name) && args.len() == 2 => {
             // Check if left operand contains quantifier pattern
             let left_terms = flatten_multiply(&args[0]);
 
@@ -175,11 +178,13 @@ fn try_infer_quantifier(expr: &Expression) -> Option<Expression> {
                 let body = Expression::Operation {
                     name: name.clone(),
                     args: vec![remaining_left, args[1].clone()],
+                    span: None,
                 };
 
                 return Some(Expression::Operation {
                     name: op_name.to_string(),
                     args: vec![var, body],
+                    span: None,
                 });
             }
         }
@@ -221,7 +226,7 @@ fn try_infer_triple_integral(expr: &Expression) -> Option<Expression> {
 
     // 1. Check first term is sub(\iiint, region)
     let region = match &terms[0] {
-        Expression::Operation { name, args } if name == "sub" && args.len() == 2 => {
+        Expression::Operation { name, args, .. } if name == "sub" && args.len() == 2 => {
             match &args[0] {
                 Expression::Object(s) if s == "\\iiint" => args[1].clone(),
                 _ => return None,
@@ -247,6 +252,7 @@ fn try_infer_triple_integral(expr: &Expression) -> Option<Expression> {
                 variables[1].clone(),
                 variables[2].clone(),
             ],
+            span: None,
         })
     } else {
         None
@@ -259,7 +265,7 @@ fn try_infer_triple_integral(expr: &Expression) -> Option<Expression> {
 fn try_infer_modular_congruence(expr: &Expression) -> Option<Expression> {
     // Check if top-level is equiv operation
     match expr {
-        Expression::Operation { name, args } if name == "equiv" && args.len() == 2 => {
+        Expression::Operation { name, args, .. } if name == "equiv" && args.len() == 2 => {
             let left = &args[0];
             let right = &args[1];
 
@@ -292,6 +298,7 @@ fn try_infer_modular_congruence(expr: &Expression) -> Option<Expression> {
             return Some(Expression::Operation {
                 name: "congruent_mod".to_string(),
                 args: vec![left.clone(), value, modulus],
+                span: None,
             });
         }
         _ => {}
@@ -308,12 +315,13 @@ fn try_infer_modular_congruence(expr: &Expression) -> Option<Expression> {
 fn try_infer_statistics_functions(expr: &Expression) -> Option<Expression> {
     // Check if this is a multiplication of mathrm and function_call
     match expr {
-        Expression::Operation { name, args } if name == "scalar_multiply" && args.len() == 2 => {
+        Expression::Operation { name, args, .. } if name == "scalar_multiply" && args.len() == 2 => {
             // Check if left is mathrm(function_name)
             let func_name = match &args[0] {
                 Expression::Operation {
                     name,
                     args: inner_args,
+                    ..
                 } if name == "mathrm" && inner_args.len() == 1 => match &inner_args[0] {
                     Expression::Object(s) => s.clone(),
                     _ => return None,
@@ -333,6 +341,7 @@ fn try_infer_statistics_functions(expr: &Expression) -> Option<Expression> {
                         Expression::Operation {
                             name,
                             args: func_args,
+                            ..
                         } if name == "function_call" && func_args.len() == 2 => {
                             // func_args[0] is X (treated as func name), [1] is Y
                             // This is actually (X, Y) parsed as function call
@@ -362,6 +371,7 @@ fn try_infer_statistics_functions(expr: &Expression) -> Option<Expression> {
             return Some(Expression::Operation {
                 name: op_name.to_string(),
                 args: new_args,
+                span: None,
             });
         }
         _ => {}
@@ -375,13 +385,14 @@ fn try_infer_statistics_functions(expr: &Expression) -> Option<Expression> {
 /// Pattern: scalar_multiply(\nabla, vector_like) => curl(vector_like)
 fn try_infer_curl(expr: &Expression) -> Option<Expression> {
     match expr {
-        Expression::Operation { name, args } if name == "scalar_multiply" && args.len() == 2 => {
+        Expression::Operation { name, args, .. } if name == "scalar_multiply" && args.len() == 2 => {
             if matches!(&args[0], Expression::Object(s) if s == "\\nabla" || s == "∇")
                 && is_vector_like(&args[1])
             {
                 return Some(Expression::Operation {
                     name: "curl".to_string(),
                     args: vec![args[1].clone()],
+                    span: None,
                 });
             }
         }
@@ -411,6 +422,7 @@ fn rebuild_multiply(terms: &[Expression]) -> Expression {
         result = Expression::Operation {
             name: "scalar_multiply".to_string(),
             args: vec![result, term.clone()],
+            span: None,
         };
     }
     result
@@ -421,7 +433,7 @@ fn rebuild_multiply(terms: &[Expression]) -> Expression {
 /// Example: scalar_multiply(scalar_multiply(a, b), c) -> [a, b, c]
 fn flatten_multiply(expr: &Expression) -> Vec<Expression> {
     match expr {
-        Expression::Operation { name, args } if name == "scalar_multiply" && args.len() == 2 => {
+        Expression::Operation { name, args, .. } if name == "scalar_multiply" && args.len() == 2 => {
             let mut result = flatten_multiply(&args[0]);
             result.extend(flatten_multiply(&args[1]));
             result
@@ -458,7 +470,7 @@ fn extract_differential_vars(terms: &[Expression], start: usize) -> Vec<Expressi
 /// Check if an expression is mathrm(d)
 fn is_mathrm_d(expr: &Expression) -> bool {
     match expr {
-        Expression::Operation { name, args } if name == "mathrm" && args.len() == 1 => {
+        Expression::Operation { name, args, .. } if name == "mathrm" && args.len() == 1 => {
             matches!(&args[0], Expression::Object(s) if s == "d")
         }
         _ => false,
@@ -482,7 +494,7 @@ fn is_vector_like(expr: &Expression) -> bool {
             true
         }
         // Allow grouped vector expressions, e.g., parentheses wrapping a vector
-        Expression::Operation { name, args } if name == "group" && args.len() == 1 => {
+        Expression::Operation { name, args, .. } if name == "group" && args.len() == 1 => {
             is_vector_like(&args[0])
         }
         _ => false,
@@ -503,7 +515,7 @@ mod tests {
 
         // Check it's now a double_integral operation
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "double_integral");
                 assert_eq!(args.len(), 4);
             }
@@ -525,7 +537,7 @@ mod tests {
         let inferred = infer_templates(flat_ast);
 
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "triple_integral");
                 assert_eq!(args.len(), 5);
             }
@@ -540,7 +552,7 @@ mod tests {
         let inferred = infer_templates(flat_ast);
 
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "implies");
                 assert_eq!(args.len(), 2);
             }
@@ -560,7 +572,7 @@ mod tests {
         let inferred = infer_templates(flat_ast);
 
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "iff");
                 assert_eq!(args.len(), 2);
             }
@@ -575,7 +587,7 @@ mod tests {
         let inferred = infer_templates(flat_ast);
 
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "exists");
                 assert_eq!(args.len(), 2);
                 // args[0] should be the variable
@@ -592,7 +604,7 @@ mod tests {
         let inferred = infer_templates(flat_ast);
 
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "forall");
                 assert_eq!(args.len(), 2);
             }
@@ -607,7 +619,7 @@ mod tests {
         let inferred = infer_templates(flat_ast);
 
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "congruent_mod");
                 assert_eq!(args.len(), 3); // left, right, modulus
             }
@@ -628,7 +640,7 @@ mod tests {
         let inferred = infer_templates(flat_ast);
 
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "variance");
                 assert_eq!(args.len(), 1);
             }
@@ -643,7 +655,7 @@ mod tests {
         let inferred = infer_templates(flat_ast);
 
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "covariance");
                 assert_eq!(args.len(), 2);
             }
@@ -658,7 +670,7 @@ mod tests {
         let inferred = infer_templates(flat_ast);
 
         match &inferred {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "curl");
                 assert_eq!(args.len(), 1);
             }

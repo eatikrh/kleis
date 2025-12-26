@@ -1636,7 +1636,7 @@ fn trace_match(input: &str, _registry: &StructureRegistry, evaluator: &Evaluator
     match parser.parse() {
         Ok(expr) => {
             // Check if it's a match expression
-            if let Expression::Match { scrutinee, cases } = &expr {
+            if let Expression::Match { scrutinee, cases, .. } = &expr {
                 println!("🔍 Match Trace");
                 println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 println!("Scrutinee: {}", pp.format_expression(scrutinee));
@@ -1781,7 +1781,7 @@ fn check_pattern_matches(
         (Pattern::Constant(p), Expression::String(v)) => p == v,
         (
             Pattern::Constructor { name: pn, args: pa },
-            Expression::Operation { name: vn, args: va },
+            Expression::Operation { name: vn, args: va, .. },
         ) => {
             pn == vn
                 && pa.len() == va.len()
@@ -1811,7 +1811,7 @@ fn check_pattern_matches(
         let substituted_guard = substitute_pattern_bindings(guard_expr, pattern, value);
         match evaluator.eval(&substituted_guard) {
             Ok(Expression::Const(s)) if s == "true" || s == "True" => PatternMatchResult::Matches,
-            Ok(Expression::Operation { name, args }) if name == "True" && args.is_empty() => {
+            Ok(Expression::Operation { name, args, .. }) if name == "True" && args.is_empty() => {
                 PatternMatchResult::Matches
             }
             _ => PatternMatchResult::DoesNotMatch,
@@ -1881,7 +1881,7 @@ fn expand_user_functions(
     use crate::ast::Expression;
 
     match expr {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             // First, recursively expand args
             let expanded_args: Vec<Expression> = args
                 .iter()
@@ -1905,6 +1905,7 @@ fn expand_user_functions(
             Expression::Operation {
                 name: name.clone(),
                 args: expanded_args,
+                span: None,
             }
         }
         Expression::Quantifier {
@@ -1924,23 +1925,27 @@ fn expand_user_functions(
             condition,
             then_branch,
             else_branch,
+            ..
         } => Expression::Conditional {
             condition: Box::new(expand_user_functions(condition, evaluator)),
             then_branch: Box::new(expand_user_functions(then_branch, evaluator)),
             else_branch: Box::new(expand_user_functions(else_branch, evaluator)),
+            span: None,
         },
         Expression::Let {
             pattern,
             type_annotation,
             value,
             body,
+            ..
         } => Expression::Let {
             pattern: pattern.clone(),
             type_annotation: type_annotation.clone(),
             value: Box::new(expand_user_functions(value, evaluator)),
             body: Box::new(expand_user_functions(body, evaluator)),
+            span: None,
         },
-        Expression::Match { scrutinee, cases } => {
+        Expression::Match { scrutinee, cases, .. } => {
             use crate::ast::MatchCase;
             Expression::Match {
                 scrutinee: Box::new(expand_user_functions(scrutinee, evaluator)),
@@ -1955,6 +1960,7 @@ fn expand_user_functions(
                         body: expand_user_functions(&c.body, evaluator),
                     })
                     .collect(),
+                span: None,
             }
         }
         Expression::List(items) => Expression::List(
@@ -1963,9 +1969,10 @@ fn expand_user_functions(
                 .map(|i| expand_user_functions(i, evaluator))
                 .collect(),
         ),
-        Expression::Lambda { params, body } => Expression::Lambda {
+        Expression::Lambda { params, body, .. } => Expression::Lambda {
             params: params.clone(),
             body: Box::new(expand_user_functions(body, evaluator)),
+            span: None,
         },
         Expression::Ascription {
             expr: inner,
@@ -1990,12 +1997,13 @@ fn substitute_var(
 
     match expr {
         Expression::Object(name) if name == var_name => replacement.clone(),
-        Expression::Operation { name, args } => Expression::Operation {
+        Expression::Operation { name, args, .. } => Expression::Operation {
             name: name.clone(),
             args: args
                 .iter()
                 .map(|a| substitute_var(a, var_name, replacement))
                 .collect(),
+            span: None,
         },
         Expression::Quantifier {
             quantifier,
@@ -2022,16 +2030,19 @@ fn substitute_var(
             condition,
             then_branch,
             else_branch,
+            ..
         } => Expression::Conditional {
             condition: Box::new(substitute_var(condition, var_name, replacement)),
             then_branch: Box::new(substitute_var(then_branch, var_name, replacement)),
             else_branch: Box::new(substitute_var(else_branch, var_name, replacement)),
+            span: None,
         },
         Expression::Let {
             pattern,
             type_annotation,
             value,
             body,
+            ..
         } => {
             // Don't substitute in body if pattern binds the same variable
             let binds_var = pattern_binds_var(pattern, var_name);
@@ -2041,6 +2052,7 @@ fn substitute_var(
                     type_annotation: type_annotation.clone(),
                     value: Box::new(substitute_var(value, var_name, replacement)),
                     body: body.clone(),
+                    span: None,
                 }
             } else {
                 Expression::Let {
@@ -2048,10 +2060,11 @@ fn substitute_var(
                     type_annotation: type_annotation.clone(),
                     value: Box::new(substitute_var(value, var_name, replacement)),
                     body: Box::new(substitute_var(body, var_name, replacement)),
+                    span: None,
                 }
             }
         }
-        Expression::Match { scrutinee, cases } => {
+        Expression::Match { scrutinee, cases, .. } => {
             use crate::ast::MatchCase;
             Expression::Match {
                 scrutinee: Box::new(substitute_var(scrutinee, var_name, replacement)),
@@ -2077,6 +2090,7 @@ fn substitute_var(
                         }
                     })
                     .collect(),
+                span: None,
             }
         }
         Expression::List(items) => Expression::List(
@@ -2085,7 +2099,7 @@ fn substitute_var(
                 .map(|i| substitute_var(i, var_name, replacement))
                 .collect(),
         ),
-        Expression::Lambda { params, body } => {
+        Expression::Lambda { params, body, .. } => {
             // Don't substitute in body if lambda binds the same variable
             let shadows = params.iter().any(|p| p.name == var_name);
             if shadows {
@@ -2094,6 +2108,7 @@ fn substitute_var(
                 Expression::Lambda {
                     params: params.clone(),
                     body: Box::new(substitute_var(body, var_name, replacement)),
+                    span: None,
                 }
             }
         }

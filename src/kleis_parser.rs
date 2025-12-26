@@ -4300,7 +4300,7 @@ mod tests {
     fn test_function_call_single_arg() {
         let result = parse_kleis("abs(x)").unwrap();
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "abs");
                 assert_eq!(args.len(), 1);
                 assert!(matches!(args[0], Expression::Object(ref s) if s == "x"));
@@ -4313,7 +4313,7 @@ mod tests {
     fn test_function_call_two_args() {
         let result = parse_kleis("frac(a, b)").unwrap();
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "frac");
                 assert_eq!(args.len(), 2);
             }
@@ -4325,11 +4325,11 @@ mod tests {
     fn test_nested_call() {
         let result = parse_kleis("abs(frac(a, b))").unwrap();
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "abs");
                 assert_eq!(args.len(), 1);
                 match &args[0] {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "frac");
                         assert_eq!(args.len(), 2);
                     }
@@ -5051,7 +5051,7 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 assert_eq!(*scrutinee, Expression::Object("x".to_string()));
                 assert_eq!(cases.len(), 2);
 
@@ -5086,7 +5086,7 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 assert_eq!(*scrutinee, Expression::Object("opt".to_string()));
                 assert_eq!(cases.len(), 2);
 
@@ -5192,7 +5192,7 @@ mod tests {
             Expression::Match { cases, .. } => {
                 assert_eq!(cases.len(), 1);
                 match &cases[0].body {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "plus");
                         assert_eq!(args.len(), 2);
                     }
@@ -5501,6 +5501,7 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 assert_eq!(*condition, Expression::Object("x".to_string()));
                 assert_eq!(*then_branch, Expression::Const("1".to_string()));
@@ -5521,10 +5522,11 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 // Condition should be a comparison operation
                 match condition.as_ref() {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "greater_than");
                         assert_eq!(args.len(), 2);
                     }
@@ -5548,6 +5550,7 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 // Condition
                 match condition.as_ref() {
@@ -5587,6 +5590,7 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 assert_eq!(*condition, Expression::Object("a".to_string()));
                 assert_eq!(*then_branch, Expression::Const("1".to_string()));
@@ -5597,6 +5601,7 @@ mod tests {
                         condition: inner_cond,
                         then_branch: inner_then,
                         else_branch: inner_else,
+                        ..
                     } => {
                         assert_eq!(**inner_cond, Expression::Object("b".to_string()));
                         assert_eq!(**inner_then, Expression::Const("2".to_string()));
@@ -5620,9 +5625,10 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 match condition.as_ref() {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "valid");
                         assert_eq!(args.len(), 1);
                     }
@@ -5635,7 +5641,7 @@ mod tests {
                     _ => panic!("Expected function call in then branch"),
                 }
                 match else_branch.as_ref() {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "default");
                         assert!(args.is_empty());
                     }
@@ -5671,7 +5677,7 @@ mod tests {
 
         match result {
             Expression::Conditional { condition, .. } => match condition.as_ref() {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     assert_eq!(name, "logical_and");
                     assert_eq!(args.len(), 2);
                 }
@@ -5754,6 +5760,7 @@ mod tests {
                     Expression::Operation {
                         name: op_name,
                         args,
+                        ..
                     } => {
                         assert_eq!(op_name, "plus");
                         assert_eq!(args.len(), 2);
@@ -5897,6 +5904,7 @@ mod tests {
                     Expression::Operation {
                         name: op_name,
                         args,
+                        ..
                     } => {
                         assert_eq!(op_name, "compute");
                         assert_eq!(args.len(), 2);
@@ -5922,6 +5930,7 @@ mod tests {
                 type_annotation,
                 value,
                 body,
+                ..
             } => {
                 assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "x"));
                 assert_eq!(type_annotation, Some("ℝ".to_string()));
@@ -6228,7 +6237,7 @@ mod tests {
         let result = parser.parse().unwrap();
         assert!(matches!(
             result,
-            Expression::Operation { name, args } if name == "factorial" && args.len() == 1
+            Expression::Operation { name, args, .. } if name == "factorial" && args.len() == 1
         ));
     }
 
@@ -6237,7 +6246,7 @@ mod tests {
         // (n + 1)!
         let mut parser = KleisParser::new("(n + 1)!");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "factorial");
             assert_eq!(args.len(), 1);
             // The argument should be (n + 1)
@@ -6253,7 +6262,7 @@ mod tests {
         let result = parser.parse().unwrap();
         assert!(matches!(
             result,
-            Expression::Operation { name, args } if name == "transpose" && args.len() == 1
+            Expression::Operation { name, args, .. } if name == "transpose" && args.len() == 1
         ));
     }
 
@@ -6263,7 +6272,7 @@ mod tests {
         let result = parser.parse().unwrap();
         assert!(matches!(
             result,
-            Expression::Operation { name, args } if name == "dagger" && args.len() == 1
+            Expression::Operation { name, args, .. } if name == "dagger" && args.len() == 1
         ));
     }
 
@@ -6272,13 +6281,14 @@ mod tests {
         // A!ᵀ should parse as transpose(factorial(A))
         let mut parser = KleisParser::new("A!ᵀ");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "transpose");
             assert_eq!(args.len(), 1);
             // Inner should be factorial(A)
             if let Expression::Operation {
                 name: inner_name,
                 args: inner_args,
+                ..
             } = &args[0]
             {
                 assert_eq!(inner_name, "factorial");
@@ -6296,7 +6306,7 @@ mod tests {
         // n!^2 should parse as power(factorial(n), 2)
         let mut parser = KleisParser::new("n!^2");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "power");
             assert_eq!(args.len(), 2);
             // Left should be factorial(n)
@@ -6318,7 +6328,7 @@ mod tests {
         // n != m should NOT be factorial, should be neq (not equal)
         let mut parser = KleisParser::new("n != m");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "neq"); // Parser uses "neq" for !=
             assert_eq!(args.len(), 2);
         } else {
@@ -6331,7 +6341,7 @@ mod tests {
         // Aᵀ * B
         let mut parser = KleisParser::new("Aᵀ * B");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "times");
             assert_eq!(args.len(), 2);
             // Left should be transpose(A)
@@ -6357,7 +6367,7 @@ mod tests {
         // λ x . x
         let mut parser = KleisParser::new("λ x . x");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             assert!(params[0].type_annotation.is_none());
@@ -6372,7 +6382,7 @@ mod tests {
         // lambda x . x (using keyword instead of symbol)
         let mut parser = KleisParser::new("lambda x . x");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             assert!(matches!(*body, Expression::Object(ref name) if name == "x"));
@@ -6386,7 +6396,7 @@ mod tests {
         // λ x y . x + y
         let mut parser = KleisParser::new("λ x y . x + y");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 2);
             assert_eq!(params[0].name, "x");
             assert_eq!(params[1].name, "y");
@@ -6401,7 +6411,7 @@ mod tests {
         // λ (x : ℝ) . x^2
         let mut parser = KleisParser::new("λ (x : ℝ) . x^2");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             assert_eq!(params[0].type_annotation, Some("ℝ".to_string()));
@@ -6416,7 +6426,7 @@ mod tests {
         // λ (x : ℝ) (y : ℝ) . x * y
         let mut parser = KleisParser::new("λ (x : ℝ) (y : ℝ) . x * y");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 2);
             assert_eq!(params[0].name, "x");
             assert_eq!(params[0].type_annotation, Some("ℝ".to_string()));
@@ -6433,13 +6443,14 @@ mod tests {
         // λ x . λ y . x + y (curried function)
         let mut parser = KleisParser::new("λ x . λ y . x + y");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             // Body should be another lambda
             if let Expression::Lambda {
                 params: inner_params,
                 body: inner_body,
+                ..
             } = *body
             {
                 assert_eq!(inner_params.len(), 1);
@@ -6460,7 +6471,7 @@ mod tests {
         // f(λ x . x + 1)
         let mut parser = KleisParser::new("f(λ x . x + 1)");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "f");
             assert_eq!(args.len(), 1);
             assert!(matches!(args[0], Expression::Lambda { .. }));
@@ -6474,10 +6485,10 @@ mod tests {
         // λ f . f(0)
         let mut parser = KleisParser::new("λ f . f(0)");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "f");
-            if let Expression::Operation { name, args } = *body {
+            if let Expression::Operation { name, args, .. } = *body {
                 assert_eq!(name, "f");
                 assert_eq!(args.len(), 1);
             } else {
@@ -6499,7 +6510,7 @@ mod tests {
         assert!(result.params.is_empty()); // No traditional params, lambda captures them
 
         // Body should be a lambda
-        if let Expression::Lambda { params, body } = result.body {
+        if let Expression::Lambda { params, body, .. } = result.body {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             // Inner body should be another lambda
@@ -6529,7 +6540,7 @@ mod tests {
         let mut parser = KleisParser::new(code);
         let result = parser.parse().unwrap();
 
-        if let Expression::Match { scrutinee, cases } = result {
+        if let Expression::Match { scrutinee, cases, .. } = result {
             assert_eq!(*scrutinee, Expression::Object("x".to_string()));
             assert_eq!(cases.len(), 2);
 
@@ -6540,7 +6551,7 @@ mod tests {
 
             // Guard should be n < 0 (parsed as less_than(n, 0))
             if let Some(guard) = &case1.guard {
-                if let Expression::Operation { name, args } = guard {
+                if let Expression::Operation { name, args, .. } = guard {
                     assert_eq!(name, "less_than");
                     assert_eq!(args.len(), 2);
                 } else {
@@ -6904,7 +6915,7 @@ mod tests {
     fn test_string_in_function_call() {
         let result = parse_kleis(r#"concat("hello", "world")"#).unwrap();
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "concat");
                 assert_eq!(args.len(), 2);
                 assert!(matches!(&args[0], Expression::String(s) if s == "hello"));

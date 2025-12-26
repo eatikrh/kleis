@@ -117,7 +117,7 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             "square.stroked".to_string()
         }
 
-        Expression::Operation { name, args } => operation_to_typst(name, args, ctx),
+        Expression::Operation { name, args, .. } => operation_to_typst(name, args, ctx),
 
         Expression::Match { .. } => {
             // TODO: Implement pattern matching rendering
@@ -129,6 +129,7 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             condition,
             then_branch,
             else_branch,
+            ..
         } => {
             // Render as: "if" condition "then" then_branch "else" else_branch
             let cond = expression_to_typst(condition, ctx);
@@ -159,7 +160,7 @@ pub fn expression_to_typst(expr: &Expression, ctx: &mut ConversionContext) -> St
             format!("({}) : {}", inner, type_annotation)
         }
 
-        Expression::Lambda { params, body } => {
+        Expression::Lambda { params, body, .. } => {
             let param_strs: Vec<_> = params
                 .iter()
                 .map(|p| {
@@ -381,6 +382,7 @@ mod tests {
                 },
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         };
         let mut ctx = ConversionContext::new();
         let markup = expression_to_typst(&expr, &mut ctx);
@@ -402,6 +404,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         };
         let mut ctx = ConversionContext::new();
         let markup = expression_to_typst(&expr, &mut ctx);
@@ -426,12 +429,14 @@ mod tests {
                         },
                         Expression::Object("x".to_string()),
                     ],
+                    span: None,
                 },
                 Expression::Placeholder {
                     id: 2,
                     hint: "b".to_string(),
                 },
             ],
+            span: None,
         };
         let mut ctx = ConversionContext::new();
         let markup = expression_to_typst(&expr, &mut ctx);

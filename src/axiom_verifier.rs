@@ -197,7 +197,7 @@ impl<'r> AxiomVerifier<'r> {
         let mut structures = HashSet::new();
 
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 // Check if this operation belongs to a known structure
                 if let Some(owners) = self.registry.get_operation_owners(name) {
                     structures.extend(owners);
@@ -235,6 +235,7 @@ impl<'r> AxiomVerifier<'r> {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 // Analyze all three parts of the conditional
                 structures.extend(self.analyze_dependencies(condition));
@@ -242,7 +243,7 @@ impl<'r> AxiomVerifier<'r> {
                 structures.extend(self.analyze_dependencies(else_branch));
             }
 
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match { scrutinee, cases, .. } => {
                 // Analyze scrutinee and all case bodies
                 structures.extend(self.analyze_dependencies(scrutinee));
                 for case in cases {
@@ -687,6 +688,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Const("0".to_string()),
             ],
+            span: None,
         };
         let deps = verifier.analyze_dependencies(&expr);
         // Dependencies depend on registry content

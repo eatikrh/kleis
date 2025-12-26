@@ -13,6 +13,7 @@ fn main() {
         Expression::Operation {
             name: name.to_string(),
             args,
+            span: None,
         }
     }
 

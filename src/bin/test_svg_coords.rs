@@ -15,6 +15,7 @@ fn main() {
             Expression::Object("a".to_string()),
             Expression::Object("b".to_string()),
         ],
+        span: None,
     };
 
     let ctx = build_default_context();

@@ -94,7 +94,7 @@ fn test_evaluator_loads_structure_functions() {
     // Should expand to: a + negate(b)
     // Note: The function body uses whatever operation name is in the definition
     match expanded {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             println!("   ✅ Correctly expanded to: {} operation", name);
             assert_eq!(args.len(), 2, "Should have 2 arguments");
 

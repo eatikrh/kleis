@@ -306,7 +306,7 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
         Expression::String(s) => json!({"String": s}),
         Expression::Object(s) => json!({"Object": s}),
         Expression::Placeholder { id, hint } => json!({"Placeholder": {"id": id, "hint": hint}}),
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             let args_json: Vec<serde_json::Value> = args.iter().map(expression_to_json).collect();
             json!({"Operation": {"name": name, "args": args_json}})
         }
@@ -343,6 +343,7 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
             condition,
             then_branch,
             else_branch,
+            ..
         } => {
             json!({
                 "Conditional": {
@@ -357,6 +358,7 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
             type_annotation,
             value,
             body,
+            ..
         } => {
             json!({
                 "Let": {
@@ -376,7 +378,7 @@ fn expression_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
                 "type_annotation": type_annotation
             }
         }),
-        Expression::Lambda { params, body } => {
+        Expression::Lambda { params, body, .. } => {
             let param_objs: Vec<_> = params
                 .iter()
                 .map(|p| {
@@ -435,7 +437,7 @@ fn json_to_expression(json: &serde_json::Value) -> Result<kleis::ast::Expression
                     .ok_or("Missing or invalid operation args")?;
                 let args: Result<Vec<Expression>, String> =
                     args_json.iter().map(json_to_expression).collect();
-                return Ok(Expression::Operation { name, args: args? });
+                return Ok(Expression::Operation { name, args: args?, span: None });
             }
         } else if let Some(list_val) = obj.get("List") {
             if let Some(list_array) = list_val.as_array() {
@@ -840,7 +842,7 @@ fn collect_slots_recursive(
                 role: role.clone(),
             });
         }
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             // Create a slot for the operation itself (for bounding box positioning)
             let uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
             slots.push(ArgumentSlot {
@@ -903,6 +905,7 @@ fn collect_slots_recursive(
             condition,
             then_branch,
             else_branch,
+            ..
         } => {
             // Collect slots from all three parts
             let mut cond_path = path.clone();
@@ -1071,6 +1074,7 @@ fn editor_node_to_expression(
             Ok(Expression::Operation {
                 name: operation.name.clone(),
                 args: args?,
+                span: None,
             })
         }
         EditorNode::List { list } => {

@@ -122,13 +122,17 @@ fn nested_fraction_num() -> Expression {
                                     Expression::Object("x".to_string()),
                                     Expression::Object("y".to_string()),
                                 ],
+                                span: None,
                             },
                         ],
+                        span: None,
                     },
                 ],
+                span: None,
             },
             Expression::Const("2".to_string()),
         ],
+        span: None,
     }
 }
 
@@ -152,12 +156,16 @@ fn nested_fraction_den() -> Expression {
                                     Expression::Object("x".to_string()),
                                     Expression::Object("y".to_string()),
                                 ],
+                                span: None,
                             },
                         ],
+                        span: None,
                     },
                 ],
+                span: None,
             },
         ],
+        span: None,
     }
 }
 
@@ -177,6 +185,7 @@ fn tall_sqrt() -> Expression {
                                 Expression::Object("a".to_string()),
                                 Expression::Const("2".to_string()),
                             ],
+                            span: None,
                         },
                         Expression::Operation {
                             name: "sup".to_string(),
@@ -184,8 +193,10 @@ fn tall_sqrt() -> Expression {
                                 Expression::Object("b".to_string()),
                                 Expression::Const("2".to_string()),
                             ],
+                            span: None,
                         },
                     ],
+                    span: None,
                 },
                 Expression::Operation {
                     name: "sup".to_string(),
@@ -193,9 +204,12 @@ fn tall_sqrt() -> Expression {
                         Expression::Object("c".to_string()),
                         Expression::Const("2".to_string()),
                     ],
+                    span: None,
                 },
             ],
+            span: None,
         }],
+        span: None,
     }
 }
 
@@ -210,6 +224,7 @@ fn mixed_scripts() -> Expression {
                     Expression::Object("x".to_string()),
                     Expression::Object("i".to_string()),
                 ],
+                span: None,
             },
             Expression::Operation {
                 name: "plus".to_string(),
@@ -220,6 +235,7 @@ fn mixed_scripts() -> Expression {
                             Expression::Object("y".to_string()),
                             Expression::Object("n".to_string()),
                         ],
+                        span: None,
                     },
                     Expression::Operation {
                         name: "sub".to_string(),
@@ -231,11 +247,15 @@ fn mixed_scripts() -> Expression {
                                     Expression::Object("k".to_string()),
                                     Expression::Const("1".to_string()),
                                 ],
+                                span: None,
                             },
                         ],
+                        span: None,
                     },
                 ],
+                span: None,
             },
         ],
+        span: None,
     }
 }
