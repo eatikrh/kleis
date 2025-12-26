@@ -31,12 +31,14 @@ fn main() {
                         hint: "g".to_string(),
                     },
                 ],
+                span: None,
             },
             Expression::Placeholder {
                 id: 3,
                 hint: "something".to_string(),
             },
         ],
+        span: None,
     };
 
     println!("Testing: plus(einstein(...), ?)");

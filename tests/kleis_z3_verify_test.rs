@@ -33,6 +33,7 @@ fn op(name: &str, args: Vec<Expression>) -> Expression {
     Expression::Operation {
         name: name.to_string(),
         args,
+        span: None,
     }
 }
 
@@ -230,6 +231,7 @@ fn z3_verify_conditional() {
         condition: Box::new(x_gt_0),
         then_branch: Box::new(x.clone()),
         else_branch: Box::new(neg_x),
+        span: None,
     };
 
     let (rendered, parsed, z3_ok) = verify_pipeline(&cond);
@@ -256,6 +258,7 @@ fn z3_verify_let_binding() {
         type_annotation: None,
         value: Box::new(five),
         body: Box::new(x_plus_x),
+        span: None,
     };
 
     let (rendered, parsed, z3_ok) = verify_pipeline(&let_expr);

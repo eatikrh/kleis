@@ -28,6 +28,7 @@ fn main() {
             },
             Expression::Const("2".to_string()),
         ],
+        span: None,
     };
 
     println!("Step 1: Expression created");

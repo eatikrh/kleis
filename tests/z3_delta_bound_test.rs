@@ -25,6 +25,7 @@ fn test_delta_lower_bound_n3() {
             Expression::Object("a".to_string()),
             Expression::Const("0".to_string()),
         ],
+        span: None,
     };
 
     // a < b
@@ -34,6 +35,7 @@ fn test_delta_lower_bound_n3() {
             Expression::Object("a".to_string()),
             Expression::Object("b".to_string()),
         ],
+        span: None,
     };
 
     // b³ - a³ ≤ (b-1)³  (negation of what we want to prove)
@@ -47,6 +49,7 @@ fn test_delta_lower_bound_n3() {
             Expression::Object("a".to_string()),
             Expression::Const("3".to_string()),
         ],
+        span: None,
     };
 
     // 3b² - 3b + 1
@@ -56,16 +59,19 @@ fn test_delta_lower_bound_n3() {
             Expression::Object("b".to_string()),
             Expression::Const("2".to_string()),
         ],
+        span: None,
     };
     let three = Expression::Const("3".to_string());
     let one = Expression::Const("1".to_string());
     let three_b_sq = Expression::Operation {
         name: "multiply".to_string(),
         args: vec![three.clone(), b_sq],
+        span: None,
     };
     let three_b = Expression::Operation {
         name: "multiply".to_string(),
         args: vec![three, Expression::Object("b".to_string())],
+        span: None,
     };
     let rhs = Expression::Operation {
         name: "subtract".to_string(),
@@ -73,25 +79,30 @@ fn test_delta_lower_bound_n3() {
             Expression::Operation {
                 name: "add".to_string(),
                 args: vec![three_b_sq, one],
+                span: None,
             },
             three_b,
         ],
+        span: None,
     };
 
     // a³ ≥ 3b² - 3b + 1
     let counterex = Expression::Operation {
         name: "geq".to_string(),
         args: vec![a_cubed, rhs],
+        span: None,
     };
 
     // Combine: a_pos ∧ a_lt_b ∧ counterex
     let and1 = Expression::Operation {
         name: "and".to_string(),
         args: vec![a_pos, a_lt_b],
+        span: None,
     };
     let expr = Expression::Operation {
         name: "and".to_string(),
         args: vec![and1, counterex],
+        span: None,
     };
 
     println!("Testing δ > -1 bound for n=3");

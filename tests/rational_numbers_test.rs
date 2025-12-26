@@ -425,7 +425,7 @@ fn parse_infer_lower(input: &str) -> kleis::ast::Expression {
 fn test_lowering_rational_addition() {
     let lowered = parse_infer_lower("rational(1, 2) + rational(1, 3)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(
                 name, "rational_add",
                 "plus(ℚ, ℚ) should lower to rational_add"
@@ -440,7 +440,7 @@ fn test_lowering_rational_addition() {
 fn test_lowering_rational_multiplication() {
     let lowered = parse_infer_lower("rational(1, 2) * rational(2, 3)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(
                 name, "rational_mul",
                 "times(ℚ, ℚ) should lower to rational_mul"
@@ -455,7 +455,7 @@ fn test_lowering_rational_multiplication() {
 fn test_lowering_rational_negation() {
     let lowered = parse_infer_lower("-rational(1, 2)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(name, "neg_rational", "neg(ℚ) should lower to neg_rational");
             assert_eq!(args.len(), 1);
         }
@@ -626,7 +626,7 @@ fn test_lowering_mixed_rational_scalar() {
     // This is correct because Z3's Real sort handles ℚ arithmetic natively
     let lowered = parse_infer_lower("rational(1, 2) + 3");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             // Stays as "plus" because 3 is Scalar, not Int
             // Z3 handles plus(Real, Real) correctly since Real is actually ℚ
             assert_eq!(args.len(), 2);
@@ -645,7 +645,7 @@ fn test_lowering_scalar_mixed_rational() {
     // 5 + rational(1, 3): numeric constants are Scalar
     let lowered = parse_infer_lower("5 + rational(1, 3)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(args.len(), 2);
             assert!(
                 name == "plus" || name == "rational_add",
@@ -661,7 +661,7 @@ fn test_lowering_scalar_mixed_rational() {
 fn test_lowering_rational_subtraction() {
     let lowered = parse_infer_lower("rational(3, 4) - rational(1, 4)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(
                 name, "rational_sub",
                 "minus(ℚ, ℚ) should lower to rational_sub"
@@ -676,7 +676,7 @@ fn test_lowering_rational_subtraction() {
 fn test_lowering_rational_division() {
     let lowered = parse_infer_lower("rational(1, 2) / rational(1, 3)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(
                 name, "rational_div",
                 "divide(ℚ, ℚ) should lower to rational_div"

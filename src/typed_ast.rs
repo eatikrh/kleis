@@ -158,6 +158,7 @@ mod tests {
         let op_expr = Expression::Operation {
             name: "plus".to_string(),
             args: vec![const_expr.clone(), const_expr],
+            span: None,
         };
         let typed = TypedExpr::node(op_expr, Type::scalar(), vec![child.clone(), child]);
 
@@ -193,6 +194,7 @@ mod tests {
                 Expression::Const("1".to_string()),
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         };
 
         let mut inference = TypeInference::new();
@@ -237,10 +239,12 @@ mod tests {
                 Expression::Const("1".to_string()),
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         };
         let expr = Expression::Operation {
             name: "times".to_string(),
             args: vec![inner, Expression::Const("3".to_string())],
+            span: None,
         };
 
         let mut inference = TypeInference::new();
@@ -272,6 +276,7 @@ mod tests {
                 Expression::Const("42".to_string()),
                 Expression::Object("x".to_string()),
             ],
+            span: None,
         };
 
         let mut inference = TypeInference::new();

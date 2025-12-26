@@ -1,5 +1,19 @@
 # Cursor AI Rules for this Project
 
+## Session Start Rules
+
+**CRITICAL: At the start of each session, read `docs/NEXT_SESSION.md`.**
+
+This document contains:
+- Current work in progress and implementation plans
+- Architecture decisions and context from previous sessions
+- Test plans and files to review
+- Lessons learned and things NOT to do
+
+**Always start by understanding what was happening before continuing.**
+
+---
+
 ## Git Repository Rules
 
 **CRITICAL: NEVER push to any git repository without explicit user permission.**

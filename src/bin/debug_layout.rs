@@ -28,10 +28,13 @@ fn main() {
                             Expression::Object("z".to_string()),
                             Expression::Const("7".to_string()),
                         ],
+                        span: None,
                     },
                 ],
+                span: None,
             },
         ],
+        span: None,
     };
 
     // Denominator: x + 3/x
@@ -45,14 +48,17 @@ fn main() {
                     Expression::Const("3".to_string()),
                     Expression::Object("x".to_string()),
                 ],
+                span: None,
             },
         ],
+        span: None,
     };
 
     // Main fraction
     let expr = Expression::Operation {
         name: "scalar_divide".to_string(),
         args: vec![num, den],
+        span: None,
     };
 
     // 1. Render to Typst

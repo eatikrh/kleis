@@ -14,6 +14,7 @@ fn main() {
             Expression::Object("a".to_string()),
             Expression::Object("b".to_string()),
         ],
+        span: None,
     };
 
     println!("Testing two-pass rendering for: frac(a, b)\n");

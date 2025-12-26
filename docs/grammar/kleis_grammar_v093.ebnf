@@ -1,0 +1,602 @@
+(* ============================================ *)
+(* Kleis Grammar v0.93 - EBNF Specification    *)
+(* Date: 2025-12-24                             *)
+(* NEW: Example Blocks                          *)
+(*   - example "name" { ... }                   *)
+(*   - Executable documentation blocks          *)
+(*   - assert() for verification                *)
+(* Based on: v0.92 (type-level arithmetic)      *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* CHANGES FROM v0.92                           *)
+(*                                              *)
+(* 1. EXAMPLE BLOCKS                            *)
+(*    Executable documentation/test blocks:     *)
+(*                                              *)
+(*    example "complex arithmetic" {            *)
+(*      let z1 = Complex(1, 2)                  *)
+(*      let z2 = Complex(3, 4)                  *)
+(*      let sum = add(z1, z2)                   *)
+(*      assert(sum.re = 4)                      *)
+(*      assert(sum.im = 6)                      *)
+(*    }                                         *)
+(*                                              *)
+(* 2. ASSERT STATEMENT                          *)
+(*    Verifies conditions in example blocks:    *)
+(*                                              *)
+(*    assert(x = 4)          -- equality        *)
+(*    assert(x ≈ 4.0)        -- approximate     *)
+(*    assert(valid(p))       -- predicate       *)
+(*                                              *)
+(* 3. REPL :DEBUG COMMAND (not grammar)         *)
+(*    Interactive debugging for expressions     *)
+(*    :debug expression                         *)
+(*                                              *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* TOP-LEVEL DECLARATIONS                       *)
+(* ============================================ *)
+
+program ::= { declaration } ;
+
+declaration 
+    ::= importDecl
+      | libraryAnnotation
+      | versionAnnotation
+      | structureDecl
+      | implementsDecl
+      | dataDecl
+      | functionDef
+      | letBinding
+      | typeAlias
+      | exampleBlock        (* v0.93: NEW *)
+      ;
+
+(* ============================================ *)
+(* EXAMPLE BLOCKS (v0.93: NEW)                  *)
+(* ============================================ *)
+
+(* Example blocks are executable documentation.
+ * They serve multiple purposes:
+ *   - Documentation: Illustrate how to use structures
+ *   - Testing: Verify expected behavior
+ *   - Debugging: Entry points for step-through debugging
+ * 
+ * Semantics:
+ *   - Statements execute sequentially
+ *   - Each let binding is a debuggable step
+ *   - assert() failures are reported as errors
+ *   - The final expression's value is the example's result
+ *)
+exampleBlock
+    ::= "example" string "{" exampleBody "}"
+      ;
+
+exampleBody
+    ::= { exampleStatement } [ expression ]
+      ;
+
+exampleStatement
+    ::= letBinding
+      | assertStatement
+      | expression ";"      (* expression with side-effect *)
+      ;
+
+(* Assert statements verify symbolic conditions.
+ * 
+ * Unlike traditional unit tests that check concrete values,
+ * Kleis assert verifies SYMBOLIC expressions using:
+ *   - Z3 theorem prover for logical validity
+ *   - Axioms in scope for algebraic identities
+ *   - Type system for type-level assertions
+ * 
+ * Forms:
+ *   assert(a + b = b + a)          -- symbolic equivalence (Z3)
+ *   assert(∀(x : ℝ). x + 0 = x)    -- universal property (Z3)
+ *   assert(det(A × B) = det(A) × det(B))  -- algebraic identity
+ *   assert(2 + 2 = 4)              -- concrete evaluation
+ * 
+ * Semantics:
+ *   - Concrete expressions: evaluate and check
+ *   - Symbolic expressions: ask Z3 to prove from axioms
+ *   - If Z3 times out: report "unknown" (not failure)
+ *   - The expression itself is the error message
+ *)
+assertStatement
+    ::= "assert" "(" expression ")"
+      ;
+
+(* ============================================ *)
+(* IMPORTS & ANNOTATIONS                        *)
+(* ============================================ *)
+
+importDecl 
+    ::= "import" string
+      ;
+
+libraryAnnotation 
+    ::= "@library" "(" string ")"
+      ;
+
+versionAnnotation 
+    ::= "@version" "(" string ")"
+      ;
+
+(* ============================================ *)
+(* STRUCTURES                                   *)
+(* ============================================ *)
+
+structureDecl
+    ::= "structure" identifier [ "(" typeParams ")" ] 
+        [ extendsClause ] [ overClause ]
+        "{" { structureBody } "}"
+      ;
+
+typeParams ::= typeParam { "," typeParam } ;
+typeParam ::= identifier [ ":" kind ] ;
+extendsClause ::= "extends" identifier [ "(" typeArgs ")" ] ;
+overClause ::= "over" "Field" "(" type ")" ;
+
+structureBody
+    ::= operationDecl
+      | elementDecl
+      | axiomDecl
+      | functionDef
+      | supportsBlock
+      | notationDecl
+      ;
+
+operationDecl ::= "operation" operatorSymbol ":" typeSignature ;
+elementDecl ::= "element" identifier ":" type ;
+axiomDecl ::= "axiom" identifier ":" proposition ;
+supportsBlock ::= "supports" "{" { operationDecl } "}" ;
+notationDecl ::= "notation" identifier "(" params ")" "=" expression ;
+
+(* ============================================ *)
+(* IMPLEMENTS                                   *)
+(* ============================================ *)
+
+implementsDecl
+    ::= "implements" identifier [ "(" typeArgs ")" ] 
+        "{" { implementsBody } "}"
+      ;
+
+implementsBody
+    ::= operationImpl
+      | elementImpl
+      | verifyStmt
+      ;
+
+operationImpl ::= "operation" operatorSymbol "=" expression ;
+elementImpl ::= "element" identifier "=" expression ;
+verifyStmt ::= "verify" identifier ;
+
+(* ============================================ *)
+(* DATA TYPES (ADTs)                            *)
+(* ============================================ *)
+
+dataDecl
+    ::= "data" identifier [ "(" typeParams ")" ] "=" dataConstructors
+      ;
+
+dataConstructors 
+    ::= dataConstructor { "|" dataConstructor }
+      ;
+
+dataConstructor
+    ::= identifier [ "(" dataFields ")" ]
+      ;
+
+dataFields ::= dataField { "," dataField } ;
+dataField ::= identifier ":" type ;
+
+(* ============================================ *)
+(* FUNCTIONS                                    *)
+(* ============================================ *)
+
+functionDef
+    ::= "define" identifier [ "(" params ")" ] [ ":" type ] "=" expression
+      ;
+
+params ::= param { "," param } ;
+param ::= identifier [ ":" type ] ;
+
+(* ============================================ *)
+(* LET BINDINGS                                 *)
+(* ============================================ *)
+
+letBinding
+    ::= "let" pattern [ ":" type ] "=" expression
+      ;
+
+(* ============================================ *)
+(* TYPE SYSTEM (from v0.92)                     *)
+(* ============================================ *)
+
+type
+    ::= primitiveType
+      | parametricType
+      | functionType
+      | tupleType
+      | productType
+      | typeVariable
+      | "(" type ")"
+      ;
+
+primitiveType
+    ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
+      | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
+      | "Bool" | "String"
+      ;
+
+parametricType ::= identifier "(" typeArgList ")" ;
+typeArgList ::= typeArg { "," typeArg } ;
+
+(* Type argument can be a type OR a dimension expression (v0.92) *)
+typeArg
+    ::= type
+      | dimExpr
+      ;
+
+functionType
+    ::= type "→" type
+      | type "->" type
+      ;
+
+tupleType
+    ::= "(" type "," type { "," type } ")"
+      ;
+
+productType
+    ::= type "×" type
+      ;
+
+typeVariable
+    ::= greekLower
+      | identifier
+      ;
+
+typeAnnotation ::= ":" type ;
+
+typeAlias
+    ::= "type" identifier [ "(" typeAliasParams ")" ] "=" type
+      ;
+
+typeAliasParams ::= typeAliasParam { "," typeAliasParam } ;
+typeAliasParam ::= identifier [ ":" kind ] ;
+
+kind
+    ::= "Type"
+      | "Nat"
+      | kind "→" kind
+      ;
+
+typeSignature
+    ::= type { "→" type }
+      | type { "->" type }
+      ;
+
+(* ============================================ *)
+(* DIMENSION EXPRESSIONS (from v0.92)           *)
+(* ============================================ *)
+
+dimExpr ::= dimAddExpr ;
+
+dimAddExpr ::= dimMulExpr { dimAddOp dimMulExpr } ;
+dimAddOp ::= "+" | "-" ;
+
+dimMulExpr ::= dimPowExpr { dimMulOp dimPowExpr } ;
+dimMulOp ::= "*" | "/" ;
+
+dimPowExpr ::= dimPrimary [ "^" dimPowExpr ] ;
+
+dimPrimary
+    ::= natLiteral
+      | identifier
+      | dimFunctionCall
+      | "(" dimExpr ")"
+      ;
+
+natLiteral ::= digit { digit } ;
+
+dimFunctionCall
+    ::= dimFunctionName "(" dimExpr { "," dimExpr } ")"
+      ;
+
+dimFunctionName ::= "min" | "max" | "gcd" | "lcm" ;
+
+(* ============================================ *)
+(* EXPRESSIONS                                  *)
+(* ============================================ *)
+
+expression
+    ::= letExpression
+      | matchExpression
+      | ifExpression
+      | lambdaExpression
+      | quantifiedExpression
+      | binaryExpression
+      ;
+
+letExpression
+    ::= "let" pattern [ ":" type ] "=" expression "in" expression
+      ;
+
+matchExpression
+    ::= "match" expression "with" matchArms
+      ;
+
+matchArms ::= { matchArm } ;
+matchArm ::= "|" pattern [ guard ] "=>" expression ;
+guard ::= "when" expression ;
+
+ifExpression
+    ::= "if" expression "then" expression "else" expression
+      ;
+
+lambdaExpression
+    ::= "λ" params "." expression
+      | "\\" params "." expression
+      ;
+
+quantifiedExpression
+    ::= forAllQuantifier "(" bindings ")" "." expression
+      | existsQuantifier "(" bindings ")" "." expression
+      ;
+
+forAllQuantifier ::= "∀" | "forall" ;
+existsQuantifier ::= "∃" | "exists" ;
+
+bindings ::= binding { "," binding } ;
+binding ::= identifier ":" type ;
+
+binaryExpression
+    ::= unaryExpression { binaryOp unaryExpression }
+      ;
+
+binaryOp
+    ::= "+" | "-" | "*" | "/" | "^"
+      | "=" | "≠" | "<" | ">" | "≤" | "≥"
+      | "∧" | "∨" | "→" | "↔"
+      | "and" | "or" | "implies" | "iff"
+      | "≈"   (* approximate equality *)
+      ;
+
+unaryExpression
+    ::= unaryOp unaryExpression
+      | applicationExpression
+      ;
+
+unaryOp ::= "-" | "¬" | "not" ;
+
+applicationExpression
+    ::= primaryExpression { applicationSuffix }
+      ;
+
+applicationSuffix
+    ::= "(" arguments ")"       (* function call *)
+      | "." identifier          (* field access *)
+      | "[" expression "]"      (* indexing *)
+      ;
+
+arguments ::= expression { "," expression } ;
+
+primaryExpression
+    ::= literal
+      | identifier
+      | placeholder
+      | tupleExpression
+      | listExpression
+      | "(" expression ")"
+      ;
+
+literal
+    ::= number
+      | string
+      | boolean
+      ;
+
+number ::= integer | decimal | scientific ;
+integer ::= [ "-" ] digit { digit } ;
+decimal ::= integer "." digit { digit } ;
+scientific ::= decimal "e" [ "+" | "-" ] digit { digit } ;
+string ::= '"' { character } '"' ;
+boolean ::= "True" | "False" ;
+
+placeholder ::= "□" | "_" ;
+
+tupleExpression
+    ::= "(" expression "," expression { "," expression } ")"
+      ;
+
+listExpression
+    ::= "[" [ expression { "," expression } ] "]"
+      ;
+
+(* ============================================ *)
+(* PATTERNS                                     *)
+(* ============================================ *)
+
+pattern
+    ::= wildcardPattern
+      | literalPattern
+      | variablePattern
+      | constructorPattern
+      | tuplePattern
+      | listPattern
+      | asPattern
+      ;
+
+wildcardPattern ::= "_" ;
+literalPattern ::= literal ;
+variablePattern ::= identifier ;
+constructorPattern ::= identifier [ "(" patternArgs ")" ] ;
+patternArgs ::= pattern { "," pattern } ;
+tuplePattern ::= "(" pattern "," pattern { "," pattern } ")" ;
+listPattern ::= "[" [ pattern { "," pattern } ] "]" ;
+asPattern ::= identifier "@" pattern ;
+
+(* ============================================ *)
+(* PROPOSITIONS                                 *)
+(* ============================================ *)
+
+proposition
+    ::= quantifiedProp
+      | implicationProp
+      | expression
+      ;
+
+quantifiedProp
+    ::= forAllQuantifier "(" bindings ")" "." proposition
+      | existsQuantifier "(" bindings ")" "." proposition
+      ;
+
+implicationProp
+    ::= proposition ( "⇒" | "=>" ) proposition
+      | proposition ( "↔" | "<=>" ) proposition
+      ;
+
+(* ============================================ *)
+(* OPERATOR SYMBOLS                             *)
+(* ============================================ *)
+
+operatorSymbol
+    ::= identifier
+      | "(" operator ")"
+      ;
+
+operator
+    ::= "+" | "-" | "*" | "/" | "^"
+      | "⊕" | "⊗" | "⊙"
+      | customOp
+      ;
+
+customOp ::= letter { letter | digit | "_" } ;
+
+(* ============================================ *)
+(* LEXICAL ELEMENTS                             *)
+(* ============================================ *)
+
+identifier ::= letter { letter | digit | "_" | "'" } ;
+letter ::= "a"..."z" | "A"..."Z" | greekLetter ;
+greekLetter ::= greekLower | greekUpper ;
+greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ" | "ι" | "κ" 
+             | "λ" | "μ" | "ν" | "ξ" | "ο" | "π" | "ρ" | "σ" | "τ" | "υ" 
+             | "φ" | "χ" | "ψ" | "ω" ;
+greekUpper ::= "Α" | "Β" | "Γ" | "Δ" | "Ε" | "Ζ" | "Η" | "Θ" | "Ι" | "Κ" 
+             | "Λ" | "Μ" | "Ν" | "Ξ" | "Ο" | "Π" | "Ρ" | "Σ" | "Τ" | "Υ" 
+             | "Φ" | "Χ" | "Ψ" | "Ω" ;
+digit ::= "0"..."9" ;
+character ::= ? any Unicode character except '"' and newline ? ;
+
+(* ============================================ *)
+(* EXAMPLES OF v0.93 FEATURES                   *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* EXAMPLES: SYMBOLIC ASSERTIONS               *)
+(* ============================================ *)
+
+(* Example: Verifying algebraic properties
+ * 
+ * structure Complex(re: ℝ, im: ℝ) {
+ *     operation add : Complex → Complex
+ *     axiom add_comm: ∀(z1 z2 : Complex). add(z1, z2) = add(z2, z1)
+ * }
+ * 
+ * example "complex addition is commutative" {
+ *     let z1 : Complex
+ *     let z2 : Complex
+ *     
+ *     // Z3 proves this from the add_comm axiom
+ *     assert(add(z1, z2) = add(z2, z1))
+ * }
+ *)
+
+(* Example: Concrete evaluation 
+ * 
+ * example "concrete arithmetic" {
+ *     // These evaluate to concrete values
+ *     assert(2 + 2 = 4)
+ *     assert(3 * 4 = 12)
+ *     
+ *     let z = Complex(1, 2)
+ *     let w = Complex(3, 4)
+ *     let sum = add(z, w)
+ *     
+ *     // Concrete check after evaluation
+ *     assert(sum.re = 4)
+ *     assert(sum.im = 6)
+ * }
+ *)
+
+(* Example: Matrix identity from axioms
+ * 
+ * structure Matrix(m: ℕ, n: ℕ) {
+ *     operation multiply : Matrix(n, p) → Matrix(m, p)
+ *     operation inverse : Matrix(n, n) → Matrix(n, n)
+ *     element identity : Matrix(n, n)
+ *     
+ *     axiom inverse_right: ∀(A : Matrix(n, n)).
+ *         multiply(A, inverse(A)) = identity
+ * }
+ * 
+ * example "inverse property" {
+ *     let A : Matrix(3, 3)
+ *     
+ *     // Z3 proves from inverse_right axiom
+ *     assert(multiply(A, inverse(A)) = identity)
+ * }
+ *)
+
+(* Example: Universal quantifier verification
+ * 
+ * example "addition identity" {
+ *     // Z3 checks this holds for all x
+ *     assert(∀(x : ℝ). x + 0 = x)
+ * }
+ *)
+
+(* Example: Determinant multiplicativity (symbolic)
+ * 
+ * structure Determinant {
+ *     operation det : Matrix(n, n) → ℝ
+ *     
+ *     axiom multiplicative: ∀(A B : Matrix(n, n)).
+ *         det(multiply(A, B)) = det(A) * det(B)
+ * }
+ * 
+ * example "determinant of product" {
+ *     let A : Matrix(3, 3)
+ *     let B : Matrix(3, 3)
+ *     
+ *     // Follows from multiplicative axiom
+ *     assert(det(multiply(A, B)) = det(A) * det(B))
+ * }
+ *)
+
+(* ============================================ *)
+(* VERSION HISTORY                              *)
+(* ============================================ *)
+
+(* v0.93 (2025-12-24):
+ *   - Added example blocks for executable documentation
+ *   - Added assert statement for verification
+ *   - Enables step-through debugging
+ * 
+ * v0.92 (2025-12-22):
+ *   - Type-level arithmetic (2*n, n+1, etc.)
+ *   - Dimension expressions in type parameters
+ * 
+ * v0.91 (2025-12-22):
+ *   - Parameterized type aliases
+ *   - Tuple types (A, B) syntax
+ * 
+ * v0.8 (2025-12-18):
+ *   - Pattern matching with guards
+ *   - Tuple patterns
+ *   - Import statements
+ *)
+

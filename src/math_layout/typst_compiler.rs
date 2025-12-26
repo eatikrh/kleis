@@ -420,7 +420,7 @@ fn extract_semantic_argument_boxes(
     eprintln!("Created {} semantic argument boxes", result.len());
 
     // POST-PROCESSING: Fix matrix cell order if needed
-    if let Expression::Operation { name, args } = ast {
+    if let Expression::Operation { name, args, .. } = ast {
         let is_matrix = name.starts_with("matrix")
             || name.starts_with("vmatrix")
             || name.starts_with("pmatrix");
@@ -570,7 +570,7 @@ fn assign_boxes_recursive(
     uuid_positions: &std::collections::HashMap<String, (f64, f64, f64, f64)>,
     result: &mut Vec<ArgumentBoundingBox>,
 ) -> Result<(), String> {
-    if let Expression::Operation { name, args } = expr {
+    if let Expression::Operation { name, args, .. } = expr {
         eprintln!(
             "assign_boxes_recursive: node={}, operation={}, args={}, available_boxes={}",
             node_id,

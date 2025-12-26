@@ -123,6 +123,7 @@ impl PatternMatcher {
                     Expression::Operation {
                         name: value_name,
                         args: value_args,
+                        ..
                     } if value_name == name => {
                         // Check arity
                         if value_args.len() != args.len() {
@@ -231,10 +232,10 @@ impl PatternMatcher {
     fn evaluate_guard(&self, guard: &Expression) -> bool {
         match guard {
             // Constructor True
-            Expression::Operation { name, args } if name == "True" && args.is_empty() => true,
+            Expression::Operation { name, args, .. } if name == "True" && args.is_empty() => true,
             Expression::Object(name) if name == "True" => true,
             // Constructor False
-            Expression::Operation { name, args } if name == "False" && args.is_empty() => false,
+            Expression::Operation { name, args, .. } if name == "False" && args.is_empty() => false,
             Expression::Object(name) if name == "False" => false,
             // Comparison results (from Z3 or evaluator)
             Expression::Const(s) if s == "true" || s == "True" => true,
@@ -266,7 +267,7 @@ impl PatternMatcher {
                 }
             }
 
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 // Recursively substitute in arguments
                 let substituted_args = args
                     .iter()
@@ -275,7 +276,9 @@ impl PatternMatcher {
                 Expression::operation(name.clone(), substituted_args)
             }
 
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 // Substitute in scrutinee, guards, and case bodies
                 let subst_scrutinee = Box::new(self.substitute_bindings(scrutinee, bindings));
                 let subst_cases = cases
@@ -292,6 +295,7 @@ impl PatternMatcher {
                 Expression::Match {
                     scrutinee: subst_scrutinee,
                     cases: subst_cases,
+                    span: None,
                 }
             }
 
@@ -325,10 +329,12 @@ impl PatternMatcher {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => Expression::Conditional {
                 condition: Box::new(self.substitute_bindings(condition, bindings)),
                 then_branch: Box::new(self.substitute_bindings(then_branch, bindings)),
                 else_branch: Box::new(self.substitute_bindings(else_branch, bindings)),
+                span: None,
             },
 
             Expression::Let {
@@ -336,6 +342,7 @@ impl PatternMatcher {
                 type_annotation,
                 value,
                 body,
+                ..
             } => {
                 let subst_value = self.substitute_bindings(value, bindings);
                 // Create new bindings without the shadowed variables
@@ -347,6 +354,7 @@ impl PatternMatcher {
                     type_annotation: type_annotation.clone(),
                     value: Box::new(subst_value),
                     body: Box::new(subst_body),
+                    span: None,
                 }
             }
 
@@ -358,7 +366,7 @@ impl PatternMatcher {
                 type_annotation: type_annotation.clone(),
             },
 
-            Expression::Lambda { params, body } => {
+            Expression::Lambda { params, body, .. } => {
                 // Filter out bindings that are shadowed by lambda params
                 let shadowed: std::collections::HashSet<_> =
                     params.iter().map(|p| p.name.as_str()).collect();
@@ -370,6 +378,7 @@ impl PatternMatcher {
                 Expression::Lambda {
                     params: params.clone(),
                     body: Box::new(self.substitute_bindings(body, &filtered_bindings)),
+                    span: None,
                 }
             }
 
@@ -684,6 +693,7 @@ mod tests {
         let value = Expression::Operation {
             name: "Some".to_string(),
             args: vec![Expression::Const("5".to_string())],
+            span: None,
         };
         let pattern = Pattern::Constructor {
             name: "Some".to_string(),
@@ -701,6 +711,7 @@ mod tests {
         let value = Expression::Operation {
             name: "Some".to_string(),
             args: vec![Expression::Const("5".to_string())],
+            span: None,
         };
         let pattern = Pattern::Constructor {
             name: "None".to_string(),
@@ -722,7 +733,9 @@ mod tests {
                     Expression::Const("1".to_string()),
                     Expression::Const("2".to_string()),
                 ],
+                span: None,
             }],
+            span: None,
         };
         let pattern = Pattern::Constructor {
             name: "Some".to_string(),
@@ -772,6 +785,7 @@ mod tests {
         let scrutinee = Expression::Operation {
             name: "Some".to_string(),
             args: vec![Expression::Const("5".to_string())],
+            span: None,
         };
         let cases = vec![
             MatchCase::new(
@@ -850,6 +864,7 @@ mod tests {
                 Expression::Object("x".to_string()),
                 Expression::Object("y".to_string()),
             ],
+            span: None,
         };
         let mut bindings = HashMap::new();
         bindings.insert("x".to_string(), Expression::Const("3".to_string()));
@@ -857,7 +872,7 @@ mod tests {
 
         let result = matcher.substitute_bindings(&expr, &bindings);
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "plus");
                 assert_eq!(args.len(), 2);
                 assert_eq!(args[0], Expression::Const("3".to_string()));
@@ -876,6 +891,7 @@ mod tests {
                 Expression::Const("3".to_string()),
                 Expression::Const("4".to_string()),
             ],
+            span: None,
         };
         let cases = vec![MatchCase::new(
             Pattern::Constructor {
@@ -891,12 +907,13 @@ mod tests {
                     Expression::Object("a".to_string()),
                     Expression::Object("b".to_string()),
                 ],
+                span: None,
             },
         )];
 
         let result = matcher.eval_match(&scrutinee, &cases).unwrap();
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "plus");
                 assert_eq!(args[0], Expression::Const("3".to_string()));
                 assert_eq!(args[1], Expression::Const("4".to_string()));
@@ -1350,8 +1367,10 @@ mod tests {
                 Expression::Operation {
                     name: "Nil".to_string(),
                     args: vec![],
+                    span: None,
                 },
             ],
+            span: None,
         };
 
         let pattern = Pattern::As {
@@ -1383,8 +1402,10 @@ mod tests {
                 Expression::Operation {
                     name: "Nil".to_string(),
                     args: vec![],
+                    span: None,
                 },
             ],
+            span: None,
         };
 
         let cases = vec![MatchCase::new(

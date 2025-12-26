@@ -147,28 +147,90 @@ definitions_by_file: HashMap<PathBuf, DefinitionSet>
 - [ ] On reload, identify which bindings may be stale
 - [ ] Show specific warnings: "bindings X, Y reference 'multiply'"
 
-### Phase 5: IDE Integration
-- [ ] Create VS Code extension skeleton
-- [ ] Add REPL panel (webview)
-- [ ] Connect to kleis-lsp
-- [ ] Add file change notifications
+### Phase 5: IDE Integration ✅ DONE
+- [x] Create VS Code extension skeleton
+- [x] Add REPL panel (webview)
+- [x] Connect to kleis-lsp
+- [x] Add file change notifications
 
-### Phase 6: Debugging
-- [ ] Create `kleis-debug` binary
-- [ ] Implement DAP protocol
-- [ ] Add tracing to evaluator
-- [ ] Step-through execution
+### Phase 6: Debugging (In Progress)
+- [x] Create `kleis-debug` binary (standalone)
+- [x] Implement DAP protocol basics
+- [x] Add tracing to evaluator (DebugHook trait)
+- [x] Source location tracking (SourceSpan in FunctionDef/Closure)
+- [x] Align debugger scopes with evaluator model
+- [x] Create unified `kleis` binary (LSP + DAP)
+- [x] DAP via dynamic TCP port
+- [x] VS Code integration with unified server
+- [ ] Test end-to-end debugging session
+
+### Phase 6.5: Expression-Level Spans (Planned — see `EXPRESSION_SPANS.md`)
+
+**Current Limitation:** Breakpoints only work at function entry, not arbitrary lines.
+
+| Feature | Current State | With Expression Spans |
+|---------|---------------|----------------------|
+| Breakpoints (set) | ✅ Stored | ✅ Stored |
+| Breakpoints (hit) | ⚠️ Function entry only | ✅ Any expression line |
+| Stack trace | ✅ Real names | ✅ Real names |
+| Variables | ✅ Substitution model | ✅ Substitution model |
+| Scopes | ✅ Matches evaluator | ✅ Matches evaluator |
+
+**Why This Matters Beyond Debugging:**
+
+| System | Benefit from Expression Spans |
+|--------|-------------------------------|
+| **LSP Diagnostics** | Point to exact sub-expression with error |
+| **LSP Hover** | Show type of specific sub-expression under cursor |
+| **Go to Definition** | Know exactly which identifier was clicked |
+| **DAP Breakpoints** | Stop at specific expressions, not just function entry |
+| **Error Messages** | "Type mismatch at 5:12-5:17" vs "Error on line 5" |
+
+**Effort Estimate:** 3-5 days (see `docs/plans/EXPRESSION_SPANS.md` for full analysis)
+
+### Unified Server Architecture
+
+The unified server (`kleis server`) combines LSP and DAP in a single process:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         VS Code                              │
+└─────────────────────────────────────────────────────────────┘
+           │ LSP (stdio)             │ DAP (TCP)
+           ▼                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     kleis server                             │
+│                                                             │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐       │
+│  │   LSP       │◄─►│  Shared     │◄─►│   DAP       │       │
+│  │  Handler    │   │  Context    │   │  Handler    │       │
+│  └─────────────┘   │             │   └─────────────┘       │
+│                    │ - Evaluator │                          │
+│                    │ - Types     │                          │
+│                    │ - Structs   │                          │
+│                    └─────────────┘                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Design Decisions:**
+1. **LSP on stdio** — Standard, how VS Code expects it
+2. **DAP on dynamic TCP port** — Avoids port conflicts
+3. **Shared Evaluator** — Same state for editing and debugging
+4. **Port returned via LSP** — `kleis.startDebugSession` command
 
 ---
 
 ## 6. Related Files
 
+- `src/bin/kleis.rs` — **Unified binary** (LSP + DAP + eval + check)
 - `src/bin/repl.rs` — REPL implementation
-- `src/bin/lsp.rs` — Language Server
-- `src/evaluator.rs` — Function storage
+- `src/bin/lsp.rs` — Standalone Language Server (legacy, use `kleis server` instead)
+- `src/bin/debug.rs` — Standalone Debug Adapter (fallback)
+- `src/debug.rs` — DebugHook trait and implementations
+- `src/evaluator.rs` — Function storage, eval with debug hooks
 - `src/structure_registry.rs` — Structure storage
-- `src/type_checker.rs` — Type checking
-- `src/type_context.rs` — Type context building
+- `src/provenance.rs` — File → definition tracking
+- `vscode-kleis/` — VS Code extension
 
 ---
 

@@ -1,8 +1,8 @@
 {
   "name": "kleis",
   "displayName": "Kleis Language Support",
-  "description": "Language support for Kleis: syntax highlighting, diagnostics, hover, and go-to-definition",
-  "version": "0.3.0",
+  "description": "Language support for Kleis: syntax highlighting, diagnostics, hover, go-to-definition, and debugging",
+  "version": "0.4.11",
   "publisher": "eatikrh",
   "author": "Engin Atik <eatik@redhat.com>",
   "license": "MIT",
@@ -16,7 +16,8 @@
   },
   "categories": [
     "Programming Languages",
-    "Linters"
+    "Linters",
+    "Debuggers"
   ],
   "keywords": [
     "kleis",
@@ -28,14 +29,23 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [
-    "onLanguage:kleis"
+    "onLanguage:kleis",
+    "onCommand:kleis.openRepl",
+    "onCommand:kleis.runSelection",
+    "onCommand:kleis.loadFileInRepl",
+    "onCommand:kleis.showStatus"
   ],
   "contributes": {
     "languages": [
       {
         "id": "kleis",
-        "aliases": ["Kleis", "kleis"],
-        "extensions": [".kleis"],
+        "aliases": [
+          "Kleis",
+          "kleis"
+        ],
+        "extensions": [
+          ".kleis"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -110,23 +120,102 @@
           "default": "",
           "description": "Path to kleis-repl executable. Leave empty to find in PATH or build location."
         },
+        "kleis.debugAdapterPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to kleis-debug executable. Leave empty to find in PATH or build location."
+        },
         "kleis.trace.server": {
           "type": "string",
-          "enum": ["off", "messages", "verbose"],
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
           "default": "off",
           "description": "Traces the communication between VS Code and the Kleis language server."
         }
       }
-    }
+    },
+    "breakpoints": [
+      {
+        "language": "kleis"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "kleis",
+        "label": "Kleis Debug",
+        "languages": [
+          "kleis"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Absolute path to the Kleis file to debug.",
+                "default": "${file}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop at entry point.",
+                "default": true
+              },
+              "example": {
+                "type": "string",
+                "description": "Name of specific example block to debug (v0.93). Leave empty to run all examples.",
+                "default": ""
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "kleis",
+            "request": "launch",
+            "name": "Debug Kleis File",
+            "program": "${file}",
+            "stopOnEntry": true
+          },
+          {
+            "type": "kleis",
+            "request": "launch",
+            "name": "Debug Example Blocks",
+            "program": "${file}",
+            "stopOnEntry": true,
+            "example": ""
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Kleis: Launch",
+            "description": "Launch and debug a Kleis file",
+            "body": {
+              "type": "kleis",
+              "request": "launch",
+              "name": "Debug ${1:file}",
+              "program": "^\"\\${file}\"",
+              "stopOnEntry": true
+            }
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "package": "vsce package --allow-missing-repository",
     "lint-grammar": "node ./tools/lintGrammar.js",
     "inspect-scopes": "npm run lint-grammar && node ./tools/inspectScopes.js",
     "prepublishOnly": "npm run lint-grammar",
-    "test-syntax": "node ./tools/tests/tokenScopeTest.js"
+    "test-syntax": "node ./tools/tests/tokenScopeTest.js",
+    "test-activation": "node ./tools/tests/activationTest.js"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
@@ -134,10 +223,9 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.75.0",
+    "@vscode/vsce": "^3.7.1",
     "typescript": "^5.0.0",
-    "vscode-textmate": "^5.3.0",
-    "vscode-oniguruma": "^1.6.2"
+    "vscode-oniguruma": "^1.6.2",
+    "vscode-textmate": "^5.3.0"
   }
 }
-
-

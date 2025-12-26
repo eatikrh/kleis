@@ -1,493 +1,191 @@
-// ============================================
-// Kleis Language v0.9 - Complete Syntax Example
-// For syntax highlighting testing
-// ============================================
+// Kleis Language Syntax Highlighting Example
+// Real code demonstrating all language features
 
-// --- Annotations ---
-@library("kleis-examples")
-@version("0.7.0")
-
-// --- Type Alias ---
-type Scalar = ℝ
-type Complex = ℂ
-
-// ============================================
-// ALGEBRAIC DATA TYPES (ADR-021)
-// ============================================
-
-// Simple enumeration
-data Bool = True | False
-
-// Parameterized types
-data Option(T) = None | Some(T)
-data Result(T, E) = Ok(T) | Err(E)
-
-// With typed fields
-data Point(T) = Point2D(x: T, y: T) | Point3D(x: T, y: T, z: T)
-
-// Physics constants with proper typed fields
-data Constant = 
-    SpeedOfLight(value: ℝ) 
-    | PlanckReduced(value: ℝ) 
-    | GravitationalConstant(value: ℝ)
-
-// ============================================
-// STRUCTURE DEFINITIONS
-// ============================================
-
-// Basic structure with operations and axioms
-structure Magma(M) {
-    operation (•) : M → M → M
-    
-    // No axioms required for magma
-}
-
-// Structure with extends clause
-structure Semigroup(S) extends Magma(S) {
-    axiom associativity:
-        ∀(x y z : S). (x • y) • z = x • (y • z)
-}
-
-// Structure with element declaration
-structure Monoid(M) extends Semigroup(M) {
-    element identity : M
-    
-    axiom left_identity:
-        ∀(a : M). identity • a = a
-    
-    axiom right_identity:
-        ∀(a : M). a • identity = a
-}
-
-// Structure with multiple operations
-structure Group(G) extends Monoid(G) {
-    operation inv : G → G
-    
-    axiom left_inverse:
-        ∀(x : G). inv(x) • x = identity
-    
-    axiom right_inverse:
-        ∀(x : G). x • inv(x) = identity
-}
-
-// Structure with 'over' clause for fields
-structure VectorSpace(V) over Field(F) {
-    operation (⊕) : V → V → V
-    operation (⊙) : F → V → V
-    element zero : V
-    
-    axiom additive_closure:
-        ∀(u v : V). u ⊕ v ∈ V
-    
-    axiom scalar_distributive:
-        ∀(α : F)(v w : V). α ⊙ (v ⊕ w) = (α ⊙ v) ⊕ (α ⊙ w)
-}
-
-// Parameterized structure
+// --- Matrix structures with type parameters ---
 structure Matrix(m: Nat, n: Nat, T) {
     operation transpose : Matrix(m, n, T) → Matrix(n, m, T)
     operation trace : Matrix(n, n, T) → T
-    
-    // Derived operation (v0.6 feature)
-    define add(A: Matrix(m, n, T), B: Matrix(m, n, T)) = 
-        builtin_matrix_add(A, B)
 }
 
-// Nested structure
-structure Ring(R) extends Group(R) {
-    operation (×) : R → R → R
-    element one : R
-    
-    structure MultiplicativeMonoid : Monoid(R) {
-        operation (•) = (×)
-        element identity = one
-    }
-    
-    axiom distributive_left:
-        ∀(a b c : R). a × (b • c) = (a × b) • (a × c)
-}
-
-// ============================================
-// IMPLEMENTS BLOCKS
-// ============================================
-
-implements Monoid(ℤ) {
-    element identity = 0
-    operation (•) = builtin_add
-    
-    verify associativity
-    verify left_identity
-}
-
-implements Matrix(2, 2, ℝ) {
+implements Matrix(m, n, ℝ) {
     operation transpose = builtin_transpose
     operation trace = builtin_trace
 }
 
-// ============================================
-// FUNCTION DEFINITIONS
-// ============================================
-
-// Simple function
-define square(x: ℝ) = x × x
-
-// Function with type annotation
-define factorial : ℕ → ℕ
-define factorial(n) = if n = 0 then 1 else n × factorial(n - 1)
-
-// Multi-parameter function
-define add(x: ℝ, y: ℝ) : ℝ = x + y
-
-// Grouped parameters with same type
-define distance((x1 x2 : ℝ), (y1 y2 : ℝ)) = 
-    √((x2 - x1)² + (y2 - y1)²)
-
-// Function composition with lambda
-define compose(f: A → B, g: B → C) : A → C =
-    λx. g(f(x))
-
-// ============================================
-// PATTERN MATCHING (v0.5)
-// ============================================
-
-// Basic pattern matching
-define isZero(n: ℕ) = match n {
-    0 => True
-    _ => False
-}
-
-// With constructors
-define unwrap(opt: Option(T), default: T) = match opt {
-    None => default
-    Some(x) => x
-}
-
-// Nested patterns
-define handleResult(r: Result(Option(ℝ), String)) = match r {
-    Ok(Some(x)) => x
-    Ok(None) => 0
-    Err(_) => -1
-}
-
-// Pattern with pipe separator
-define sign(x: ℝ) = match x {
-    0 => 0 | _ => if x > 0 then 1 else -1
-}
-
-// ============================================
-// EXPRESSIONS
-// ============================================
-
-// Let binding
-define example1 = 
-    let x : ℝ = 5 in
-    let y = x × 2 in
-    x + y
-
-// Conditional
-define abs(x: ℝ) = if x ≥ 0 then x else -x
-
-// Lambda expressions
-define double = λx. x + x
-define curry = λf. λx. λy. f(x, y)
-
-// List/vector literal
-define vector3 = [1, 2, 3]
-define empty_list = []
-
-// Set literal  
-define primes = {2, 3, 5, 7, 11}
-
-// ============================================
-// CALCULUS NOTATION (v0.7 - Mathematica-style)
-// ============================================
-
-// Partial derivative - D(f, x)
-define velocity(x: ℝ → ℝ, t: ℝ) = D(x, t)
-
-// Mixed partial - D(f, x, y)
-define laplacian_xy(f: ℝ → ℝ → ℝ) = D(D(f, x), y)
-
-// Total derivative - Dt(f, x)
-define total_rate(f: ℝ → ℝ, t: ℝ) = Dt(f, t)
-
-// Indefinite integral
-define antiderivative(f: ℝ → ℝ, x: ℝ) = Integrate(f, x)
-
-// Definite integral
-define area(f: ℝ → ℝ, a: ℝ, b: ℝ) = Integrate(f, x, a, b)
-
-// Summation - function call style
-define sum_to_n(n: ℕ) = Sum(i, i, 1, n)
-
-// Product - function call style  
-define factorial_alt(n: ℕ) = Product(i, i, 1, n)
-
-// Limit (v0.7 new)
-define sinc_at_zero = Limit(sin(x)/x, x, 0)
-
-// Unicode summation with subscript/superscript
-define series(n: ℕ) = Σ_{i=1}^{n} (1/i²)
-
-// Unicode product
-define double_factorial(n: ℕ) = Π_{i=1}^{n} (2×i)
-
-// ============================================
-// OPERATORS
-// ============================================
-
-// Prefix operators
-define negation(x: ℝ) = -x
-define logical_not(p: Bool) = ¬p
-define gradient(f: ℝ³ → ℝ) = ∇f
-define sqrt_example = √16
-
-// Postfix operators
-define factorial_post(n: ℕ) = n!
-define adjoint(A: Matrix(n, n, ℂ)) = A†
-define transpose_post(M: Matrix(m, n, T)) = Mᵀ
-
-// Infix arithmetic
-define arithmetic_ops(a: ℝ, b: ℝ) = 
-    (a + b) × (a - b) / (a · b)
-
-// Tensor product
-define tensor(v: V, w: W) = v ⊗ w
-
-// Composition
-define compose_op(f: A → B, g: B → C) = g ∘ f
-
-// Custom operators (Unicode math symbols)
-define custom_binary(a: S, b: S) = a ⋆ b
-
-// Relation operators
-define relations(x: ℝ, y: ℝ) = 
-    x = y ∧ x ≠ 0 ∧ x < y ∧ x ≤ y ∧ x > 0 ∧ x ≥ 0
-
-// Approximate and equivalent
-define approx_equiv(a: ℝ, b: ℝ) = a ≈ b ∧ a ≡ b
-
-// Set membership
-define membership(x: T, S: Set(T)) = x ∈ S ∧ x ∉ ∅ ∧ S ⊂ T ∧ S ⊆ T
-
-// Logical operators
-define logic(p: Bool, q: Bool) = 
-    (p ∧ q) ∨ (¬p) ⟹ (p ⟺ q)
-
-// ============================================
-// SYMBOLIC CONSTANTS
-// ============================================
-
-define circle_area(r: ℝ) = π × r²
-define euler_identity = e^(i × π) + 1 = 0
-define reduced_planck = ℏ
-define speed_of_light = c
-define golden_ratio = φ
-define infinity_example = 1/∞ = 0
-define empty_set_example = ∅
-
-// ============================================
-// TYPE SYSTEM
-// ============================================
-
-// Primitive types
-define real_val : ℝ = 3.14
-define complex_val : ℂ = 1 + 2×i
-define integer_val : ℤ = -42
-define natural_val : ℕ = 100
-define rational_val : ℚ = 1/3
-define bool_val : Bool = True
-define string_val : String = "hello"
-
-// Parametric types
-define option_val : Option(ℝ) = Some(3.14)
-define matrix_val : Matrix(2, 3, ℝ) = [[1, 2, 3], [4, 5, 6]]
-
-// Function types with arrow
-define mapper : ℝ → ℝ = λx. x × 2
-define binary_fn : ℝ → ℝ → ℝ = λx. λy. x + y
-
-// Polymorphic type (in structure context)
-structure Functor(F: Type → Type) {
-    operation map : ∀α β. (α → β) → F(α) → F(β)
-}
-
-// Type with constraints
-structure OrderedField(F) extends Field(F) {
-    operation (<) : F → F → Bool
+// --- Vector spaces and operations ---
+structure VectorSpace(V, F) {
+    operation (⊕) : V → V → V
+    operation (⊙) : F → V → V
     
-    axiom trichotomy:
-        ∀(x y : F). x < y ∨ x = y ∨ y < x
+    axiom associativity:
+        ∀(u v w : V). (u ⊕ v) ⊕ w = u ⊕ (v ⊕ w)
+    
+    axiom identity:
+        ∃(zero : V). ∀(v : V). v ⊕ zero = v
+    
+    axiom distributivity:
+        ∀(α : F)(v w : V). α ⊙ (v ⊕ w) = (α ⊙ v) ⊕ (α ⊙ w)
 }
 
-// ============================================
-// PROPOSITIONS WITH QUANTIFIERS
-// ============================================
+// --- Quantum mechanics structures ---
+structure HilbertSpace(H, ℂ) extends VectorSpace(H, ℂ) {
+    operation (•) : H → H → ℂ  // Inner product
+    operation (⊗) : H → H → H  // Tensor product
+    
+    axiom inner_product_conjugate_symmetry:
+        ∀(ψ φ : H). ψ • φ = conj(φ • ψ)
+}
 
+// --- Symbolic constants in physics ---
+data PhysicalConstant =
+    | SpeedOfLight(c)      // c ≈ 3×10⁸ m/s
+    | PlanckReduced(ℏ)     // ℏ ≈ 1.055×10⁻³⁴ J·s
+    | GoldenRatio(φ)       // φ = (1+√5)/2
+    | Pi(π)                // π ≈ 3.14159
+    | Euler(e)             // e ≈ 2.71828
+    | Imaginary(i)         // i² = -1
+
+// --- Set operations with Unicode operators ---
+structure Set(T) {
+    operation (∪) : Set(T) → Set(T) → Set(T)  // Union
+    operation (∩) : Set(T) → Set(T) → Set(T)  // Intersection
+    operation (⊖) : Set(T) → Set(T) → Set(T)  // Symmetric difference
+    operation (∅) : Set(T)                     // Empty set
+    
+    axiom union_commutative:
+        ∀(A B : Set(T)). A ∪ B = B ∪ A
+    
+    axiom intersection_idempotent:
+        ∀(A : Set(T)). A ∩ A = A
+    
+    axiom empty_identity:
+        ∀(A : Set(T)). A ∪ ∅ = A
+}
+
+// --- Algebraic structures with binary operations ---
+structure Monoid(M) {
+    operation (⋆) : M → M → M
+    element identity : M
+    
+    axiom associative:
+        ∀(a b c : M). (a ⋆ b) ⋆ c = a ⋆ (b ⋆ c)
+    
+    axiom left_identity:
+        ∀(a : M). identity ⋆ a = a
+    
+    axiom right_identity:
+        ∀(a : M). a ⋆ identity = a
+}
+
+// --- Pattern matching with algebraic data types ---
+data Option(T) = None | Some(T)
+data Result(T, E) = Ok(T) | Err(E)
+
+define safeDivide(x: ℝ, y: ℝ) = match y {
+    0 => None
+    _ => Some(x / y)
+}
+
+define unwrapOr(opt: Option(T), default: T) = match opt {
+    None => default
+    Some(value) => value
+}
+
+// --- Field axioms with Greek variables ---
 structure Field(F) {
     operation (+) : F → F → F
     operation (×) : F → F → F
     operation (-) : F → F
-    element zero : F
-    element one : F
+    operation (/) : F → F → F
     
-    // Universal quantifier
-    axiom additive_inverse:
-        ∀(x : F). x + (-x) = zero
+    axiom addition_commutative:
+        ∀(α β : F). α + β = β + α
     
-    // Existential quantifier
+    axiom multiplication_associative:
+        ∀(α β γ : F). (α × β) × γ = α × (β × γ)
+    
+    axiom distributive:
+        ∀(α β γ : F). α × (β + γ) = (α × β) + (α × γ)
+    
     axiom multiplicative_inverse:
-        ∀(x : F) where x ≠ zero. ∃(y : F). x × y = one
-    
-    // Multiple variables
-    axiom commutativity:
-        ∀(a b : F). a + b = b + a
-    
-    // Grouped variables
-    axiom associativity:
-        ∀(x y z : F). (x + y) + z = x + (y + z)
-    
-    // Element-of syntax
-    axiom closure:
-        ∀x ∈ F. ∀y ∈ F. x + y ∈ F
+        ∀(α : F). α ≠ 0 ⇒ ∃(α⁻¹ : F). α × α⁻¹ = 1
 }
 
-// ============================================
-// SPECIAL NOTATION
-// ============================================
+// --- Template placeholders for structural editor ---
+define quadratic_formula(a: ℝ, b: ℝ, c: ℝ) =
+    (□ ± √(□² - 4·□·□)) / (2·□)
+    //  Placeholders for guided formula construction
 
-// Placeholder for structural editor
-define quadratic(a: ℝ, b: ℝ, c: ℝ) = 
-    (-b ± √(b² - 4×a×c)) / (2×a)
-
-// Subscript and superscript
-define indexed(x: ℝ) = x_{1}^{2} + x_{2}^{2}
-
-// ============================================
-// BLOCK AND LINE COMMENTS
-// ============================================
-
-// This is a line comment
-
-/* 
-   This is a block comment.
-   It can span multiple lines.
-   
-   Mathematical expressions work here too:
-   ∀(x : ℝ). x² ≥ 0
-   
-   Even nested structure references:
-   structure Example { ... }
-*/
-
-// Inline comment after code
-define commented(x: ℝ) = x × x  // squares the input
-
-// ============================================
-// GRAMMAR v0.9 - NESTED QUANTIFIERS & FUNCTION TYPES
-// ============================================
-
-// Quantifier inside conjunction (NEW in v0.9)
-structure Analysis {
-    axiom bounded_positive: (x > 0) ∧ (∀(y : ℝ). abs(y) <= x)
+// --- Lattice operations ---
+structure Lattice(L) {
+    operation (⊔) : L → L → L  // Join (supremum)
+    operation (⊓) : L → L → L  // Meet (infimum)
     
-    // Deeply nested quantifiers
-    axiom epsilon_delta: ∀(L a : ℝ, ε : ℝ). ε > 0 → 
-        (∃(δ : ℝ). δ > 0 ∧ (∀(x : ℝ). abs(x - a) < δ → abs(f(x) - L) < ε))
+    axiom join_commutative:
+        ∀(x y : L). x ⊔ y = y ⊔ x
+    
+    axiom meet_associative:
+        ∀(x y z : L). (x ⊓ y) ⊓ z = x ⊓ (y ⊓ z)
 }
 
-// Function types in quantifiers (NEW in v0.9)
-structure FunctionSpaces {
-    // Quantify over functions
-    axiom continuous: ∀(f : ℝ → ℝ, x : ℝ). is_continuous(f, x)
+// --- Ring operations with direct sum ---
+structure Ring(R) {
+    operation (⊕) : R → R → R  // Addition (explicit)
+    operation (⊙) : R → R → R  // Multiplication (explicit)
     
-    // Multiple function variables
-    axiom compose: ∀(f : ℝ → ℝ, g : ℝ → ℝ). compose(f, g) = λ x . f(g(x))
-    
-    // Curried function type (right-associative)
-    axiom curried: ∀(f : ℝ → ℝ → ℝ). f = f
+    axiom ring_distributive:
+        ∀(a b c : R). a ⊙ (b ⊕ c) = (a ⊙ b) ⊕ (a ⊙ c)
 }
 
-// Topology with function types (NEW in v0.9)
-structure Topology {
-    axiom continuity: ∀(f : X → Y, V : Set(Y)). 
-        is_open(V) → is_open(preimage(f, V))
+// --- Tensor products and contractions ---
+structure TensorSpace(T) {
+    operation (⊗) : T → T → T  // Tensor product
+    operation (⨂) : List(T) → T  // n-ary tensor product
+    operation contract : T → T  // Contraction
+}
+
+// --- Boolean algebra with XOR, NAND, NOR ---
+structure BooleanAlgebra(B) {
+    operation (⊻) : B → B → B  // XOR (exclusive or)
+    operation (⊼) : B → B → B  // NAND
+    operation (⊽) : B → B → B  // NOR
     
-    axiom homeomorphism: ∀(f : X → Y, g : Y → X). 
-        (∀(x : X). g(f(x)) = x) ∧ (∀(y : Y). f(g(y)) = y) → bijective(f)
+    axiom xor_commutative:
+        ∀(p q : B). p ⊻ q = q ⊻ p
 }
 
-// Bourbaki-style analysis (NEW in v0.9)
-structure MetricSpace(X) {
-    operation d : X × X → ℝ
-    
-    axiom non_negative: ∀(x y : X). d(x, y) >= 0
-    axiom identity: ∀(x y : X). d(x, y) = 0 ↔ x = y
-    axiom symmetry: ∀(x y : X). d(x, y) = d(y, x)
-    axiom triangle: ∀(x y z : X). d(x, z) <= d(x, y) + d(y, z)
+// --- Composition operators ---
+define compose(f: A → B, g: B → C) : A → C =
+    λ(x : A). g(f(x))
+    // Function composition: (g ∘ f)(x) = g(f(x))
+
+// --- Multiset and bag operations ---
+structure Multiset(T) {
+    operation (⊎) : Multiset(T) → Multiset(T) → Multiset(T)  // Multiset sum
+    operation (⊍) : Multiset(T) → Multiset(T) → Multiset(T)  // Multiset union
 }
 
-// Sequence convergence (NEW in v0.9)
-structure Sequences {
-    axiom converges: ∀(a : ℕ → ℝ, L : ℝ). 
-        converges_to(a, L) ↔ 
-        (∀(ε : ℝ). ε > 0 → (∃(N : ℕ). ∀(n : ℕ). n > N → abs(a(n) - L) < ε))
-}
-
+// --- Block comments with complex nested structure ---
 /*
-  End of Kleis v0.9 syntax example.
-  All grammar features demonstrated:
-  - Annotations (@library, @version)
-  - Type aliases
-  - Data types (ADR-021)
-  - Pattern matching (v0.5)
-  - Structures (extends, over, nested)
-  - Implements blocks
-  - Function definitions
-  - All expression types
-  - Calculus notation (v0.7 Mathematica-style)
-  - All operators
-  - Symbolic constants
-  - Full type system
-  - Quantified propositions
-  - Comments
-  - Nested quantifiers (v0.9)
-  - Function types in quantifiers (v0.9)
-  - Epsilon-delta definitions (v0.9)
-  - Topology with function types (v0.9)
-  - Rational numbers ℚ with operator overloading
+   This is a block comment demonstrating:
+   - Axiom verification with Z3
+   - Type inference with Hindley-Milner
+   - Universal verification across domains
+   
+   Example: ∀(x : ℝ). x² ≥ 0
+   
+   Nested comment style:
+   /* Inner comment */ (not supported by most parsers)
 */
 
-// ============================================
-// RATIONAL NUMBERS (ℚ)
-// ============================================
+// --- Real quantum mechanics example ---
+axiom schrodinger_equation:
+    ∀(ψ : HilbertSpace(ℂ))(H : Operator).
+        i·ℏ·(∂ψ/∂t) = H·ψ
 
-// Rational constructor and basic values
-define half = rational(1, 2)
-define third = rational(1, 3)
-define quarter = rational(1, 4)
+// --- Einstein field equations ---
+axiom einstein_field_equations:
+    ∀(μ ν : Nat).
+        Rμν - (1/2)·gμν·R + Λ·gμν = (8·π·G/c⁴)·Tμν
 
-// Rational arithmetic (operator overloading)
-define sum_q : ℚ = rational(1, 2) + rational(1, 3)
-define prod_q : ℚ = rational(2, 3) * rational(3, 4)
-define diff_q : ℚ = rational(1, 2) - rational(1, 4)
-
-// Mixed type operations (type promotion)
-define rational_plus_int : ℚ = rational(1, 2) + 3
-define int_plus_rational : ℚ = 5 + rational(1, 3)
-
-// Rational field axioms
-structure RationalFieldAxioms {
-    axiom add_comm: ∀(r1 r2 : ℚ). rational_add(r1, r2) = rational_add(r2, r1)
-    axiom mul_comm: ∀(r1 r2 : ℚ). rational_mul(r1, r2) = rational_mul(r2, r1)
-    axiom add_zero: ∀(r : ℚ). rational_add(r, rational(0, 1)) = r
-    axiom mul_one: ∀(r : ℚ). rational_mul(r, rational(1, 1)) = r
-    axiom mul_inverse: ∀(r : ℚ). r ≠ rational(0, 1) → 
-        rational_mul(r, rational_inv(r)) = rational(1, 1)
-}
-
-// Density of rationals
-structure RationalDensity {
-    axiom density: ∀(r1 r2 : ℚ). 
-        rational_lt(r1, r2) → (∃(r : ℚ). rational_lt(r1, r) ∧ rational_lt(r, r2))
-}
+/* End of Kleis syntax highlighting example */

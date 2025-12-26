@@ -28,6 +28,7 @@ fn build_matrix_equation() -> Expression {
                 Expression::Const("11".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // Matrix A: [[1,2],[3,4]]
@@ -43,6 +44,7 @@ fn build_matrix_equation() -> Expression {
                 Expression::Const("4".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // Vector x: [[x], [y]] - with free variables
@@ -56,18 +58,21 @@ fn build_matrix_equation() -> Expression {
                 Expression::Object("y".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // A × x
     let product = Expression::Operation {
         name: "multiply".to_string(),
         args: vec![matrix_a, vector_x],
+        span: None,
     };
 
     // result = A × x
     Expression::Operation {
         name: "equals".to_string(),
         args: vec![result_matrix, product],
+        span: None,
     }
 }
 
@@ -133,6 +138,7 @@ fn build_matrix_equation_with_natural_constraints() -> Expression {
             Expression::Object("x".to_string()),
             Expression::Const("0".to_string()),
         ],
+        span: None,
     };
 
     // y >= 0
@@ -142,18 +148,21 @@ fn build_matrix_equation_with_natural_constraints() -> Expression {
             Expression::Object("y".to_string()),
             Expression::Const("0".to_string()),
         ],
+        span: None,
     };
 
     // x >= 0 AND y >= 0
     let naturals = Expression::Operation {
         name: "and".to_string(),
         args: vec![x_natural, y_natural],
+        span: None,
     };
 
     // (matrix equation) AND (x,y are natural)
     Expression::Operation {
         name: "and".to_string(),
         args: vec![matrix_eq, naturals],
+        span: None,
     }
 }
 
@@ -210,6 +219,7 @@ fn build_no_integer_solution_equation() -> Expression {
                 Expression::Const("11".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // Matrix A: [[1,2],[3,4]]
@@ -225,6 +235,7 @@ fn build_no_integer_solution_equation() -> Expression {
                 Expression::Const("4".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // Vector x: [[x], [y]]
@@ -238,18 +249,21 @@ fn build_no_integer_solution_equation() -> Expression {
                 Expression::Object("y".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // A × x
     let product = Expression::Operation {
         name: "multiply".to_string(),
         args: vec![matrix_a, vector_x],
+        span: None,
     };
 
     // result = A × x
     Expression::Operation {
         name: "equals".to_string(),
         args: vec![result_matrix, product],
+        span: None,
     }
 }
 
@@ -317,6 +331,7 @@ fn test_z3_verifies_correct_solution() {
                         Expression::Const("11".to_string()),
                     ]),
                 ],
+                span: None,
             },
             // Right: [[1,2],[3,4]] × [[1],[2]]
             Expression::Operation {
@@ -334,6 +349,7 @@ fn test_z3_verifies_correct_solution() {
                                 Expression::Const("4".to_string()),
                             ]),
                         ],
+                        span: None,
                     },
                     Expression::Operation {
                         name: "Matrix".to_string(),
@@ -345,10 +361,13 @@ fn test_z3_verifies_correct_solution() {
                                 Expression::Const("2".to_string()),
                             ]),
                         ],
+                        span: None,
                     },
                 ],
+                span: None,
             },
         ],
+        span: None,
     };
 
     println!("Testing: [[5],[11]] = [[1,2],[3,4]] × [[1],[2]]");

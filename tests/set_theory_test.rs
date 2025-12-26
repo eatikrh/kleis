@@ -288,6 +288,7 @@ fn test_set_type_inference() {
             Expression::Const("3".to_string()),
             Expression::Object("empty_set".to_string()),
         ],
+        span: None,
     };
     let result = checker.check(&in_set_expr);
     match result {
@@ -304,6 +305,7 @@ fn test_set_type_inference() {
             Expression::Object("A".to_string()),
             Expression::Object("B".to_string()),
         ],
+        span: None,
     };
     let result = checker.check(&subset_expr);
     match result {
@@ -320,6 +322,7 @@ fn test_set_type_inference() {
             Expression::Object("empty_set".to_string()),
             Expression::Object("empty_set".to_string()),
         ],
+        span: None,
     };
     let result = checker.check(&union_expr);
     match result {
@@ -340,6 +343,7 @@ fn test_set_type_inference() {
             Expression::Const("5".to_string()),
             Expression::Object("empty_set".to_string()),
         ],
+        span: None,
     };
     let result = checker.check(&insert_expr);
     match result {

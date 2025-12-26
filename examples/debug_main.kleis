@@ -1,0 +1,20 @@
+// Main file for cross-file debugging test
+// This imports debug_helper.kleis
+
+import "debug_helper.kleis"
+
+example "cross-file debugging" {
+    // Set breakpoint here (line 7)
+    let x = 10
+    
+    // This calls a function from the imported file
+    let doubled = double(x)
+    
+    // Set another breakpoint here (line 13)
+    let tripled = triple(x)
+    
+    // Final assertion
+    assert(doubled = 20)
+    assert(tripled = 30)
+}
+

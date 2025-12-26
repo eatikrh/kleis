@@ -334,7 +334,7 @@ impl TypeChecker {
     /// Generate helpful suggestion based on error
     fn generate_suggestion(&self, expr: &Expression, _error: &str) -> Option<String> {
         // Check if it's an operation that's not supported for a type
-        if let Expression::Operation { name, args } = expr {
+        if let Expression::Operation { name, args, .. } = expr {
             if args.is_empty() {
                 return None;
             }

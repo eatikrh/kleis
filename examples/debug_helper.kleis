@@ -1,0 +1,24 @@
+// Helper file for cross-file debugging test
+// This file is imported by debug_main.kleis
+
+// Double a number
+// Set breakpoint on line 6 to catch when this is called
+define double(n) = 
+    n + n
+
+// Triple a number  
+// Set breakpoint on line 10 to catch when this is called
+define triple(n) = 
+    n + n + n
+
+// A constant for testing
+define helper_constant = 42
+
+example "helper tests" {
+    // These run when testing this file directly
+    let a = double(5)
+    let b = triple(5)
+    assert(a = 10)
+    assert(b = 15)
+}
+

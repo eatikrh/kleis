@@ -19,6 +19,7 @@ fn matrix_expr(m: usize, n: usize, elements: Vec<Expression>) -> Expression {
             Expression::Const(n.to_string()),
             Expression::List(elements),
         ],
+        span: None,
     }
 }
 
@@ -27,6 +28,7 @@ fn plus_expr(a: Expression, b: Expression) -> Expression {
     Expression::Operation {
         name: "plus".to_string(),
         args: vec![a, b],
+        span: None,
     }
 }
 
@@ -233,6 +235,7 @@ fn test_matrix_minus_same_dimensions_succeeds() {
     let expr = Expression::Operation {
         name: "minus".to_string(),
         args: vec![matrix_a, matrix_b],
+        span: None,
     };
     let result = checker.check(&expr);
 
@@ -281,6 +284,7 @@ fn test_matrix_add_via_specialized_operation() {
     let expr = Expression::Operation {
         name: "matrix_add".to_string(),
         args: vec![matrix_a, matrix_b],
+        span: None,
     };
     let result = checker.check(&expr);
 

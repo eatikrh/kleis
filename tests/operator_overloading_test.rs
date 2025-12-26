@@ -39,7 +39,7 @@ fn infer_type(input: &str) -> Type {
 fn test_complex_addition_lowered_to_complex_add() {
     let lowered = parse_infer_lower("complex(1, 2) + complex(3, 4)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(
                 name, "complex_add",
                 "plus(ℂ, ℂ) should lower to complex_add"
@@ -54,7 +54,7 @@ fn test_complex_addition_lowered_to_complex_add() {
 fn test_complex_multiplication_lowered_to_complex_mul() {
     let lowered = parse_infer_lower("complex(1, 2) * complex(3, 4)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(
                 name, "complex_mul",
                 "times(ℂ, ℂ) should lower to complex_mul"
@@ -69,7 +69,7 @@ fn test_complex_multiplication_lowered_to_complex_mul() {
 fn test_real_plus_complex_lifts_real() {
     let lowered = parse_infer_lower("5 + complex(1, 2)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(
                 name, "complex_add",
                 "plus(ℝ, ℂ) should lower to complex_add"
@@ -79,6 +79,7 @@ fn test_real_plus_complex_lifts_real() {
                 kleis::ast::Expression::Operation {
                     name: inner_name,
                     args: inner_args,
+                    ..
                 } => {
                     assert_eq!(inner_name, "complex");
                     assert_eq!(inner_args.len(), 2);
@@ -191,7 +192,7 @@ fn test_quantified_i_real_shadows_imaginary() {
     match lowered {
         kleis::ast::Expression::Quantifier { body, .. } => {
             match *body {
-                kleis::ast::Expression::Operation { name, ref args } => {
+                kleis::ast::Expression::Operation { name, ref args, .. } => {
                     assert_eq!(name, "equals");
                     // Check the LHS: i + 1
                     match &args[0] {
@@ -232,7 +233,7 @@ fn test_quantified_i_complex_uses_complex_ops() {
     match lowered {
         kleis::ast::Expression::Quantifier { body, .. } => {
             match *body {
-                kleis::ast::Expression::Operation { name, ref args } => {
+                kleis::ast::Expression::Operation { name, ref args, .. } => {
                     assert_eq!(name, "equals");
                     // Check the LHS: i + complex(0, 0)
                     match &args[0] {
@@ -298,7 +299,7 @@ fn test_nested_complex_expression() {
     // (complex(1,2) + complex(3,4)) * complex(5,6)
     let lowered = parse_infer_lower("(complex(1,2) + complex(3,4)) * complex(5,6)");
     match lowered {
-        kleis::ast::Expression::Operation { name, args } => {
+        kleis::ast::Expression::Operation { name, args, .. } => {
             assert_eq!(name, "complex_mul");
             // First arg should be complex_add
             match &args[0] {

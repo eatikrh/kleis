@@ -1,17 +1,36 @@
 # Grammar Synchronization Status
 
-**Date:** December 18, 2025  
-**Status:** ⚠️ PENDING SYNC (v0.8 needs G4 update)
+**Date:** December 24, 2025  
+**Status:** 🆕 v0.93 Released (Example Blocks)
+
+## Current Version: v0.93
+
+### What's New in v0.93
+
+**Example Blocks** - Executable documentation for testing and debugging:
+
+```kleis
+example "complex arithmetic" {
+    let z1 = Complex(1, 2)
+    let z2 = Complex(3, 4)
+    let sum = add(z1, z2)
+    
+    assert(sum.re = 4)
+    assert(sum.im = 6)
+}
+```
 
 ## File Versions
 
 | File | Version | Last Updated | Status |
 |------|---------|--------------|--------|
-| `kleis_grammar_v08.ebnf` | v0.8 | Dec 18, 2025 | ✅ Reference |
-| `kleis_grammar_v08.md` | v0.8 | Dec 18, 2025 | ✅ Documented |
-| `kleis_grammar_v07.ebnf` | v0.7 | Dec 13, 2025 | ✅ Previous |
+| `kleis_grammar_v093.ebnf` | v0.93 | Dec 24, 2025 | ✅ Reference |
+| `kleis_grammar_v093.md` | v0.93 | Dec 24, 2025 | ✅ Documented |
+| `kleis_grammar_v092.ebnf` | v0.92 | Dec 22, 2025 | ✅ Previous |
+| `kleis_grammar_v091.ebnf` | v0.91 | Dec 22, 2025 | ✅ Previous |
+| `kleis_grammar_v08.ebnf` | v0.8 | Dec 18, 2025 | ✅ Full grammar |
 | `Kleis_v08.g4` | v0.8 | - | ⚠️ TODO |
-| `vscode-kleis/docs/grammar/` | v0.8 | Dec 18, 2025 | ✅ Synced |
+| `vscode-kleis/docs/grammar/` | v0.8 | Dec 18, 2025 | ⚠️ Needs v0.93 |
 
 ---
 
@@ -278,6 +297,24 @@ implements Ring(ℤ) {
 ---
 
 ## Version History
+
+**v0.93 (Dec 24, 2025):**
+- ADDED: `example` blocks for executable documentation
+- ADDED: `assert()` statement for verification
+- ADDED: REPL `:debug` command (runtime feature)
+- Entry points for step-through debugging
+- No breaking changes from v0.92
+
+**v0.92 (Dec 22, 2025):**
+- ADDED: Type-level arithmetic expressions (2*n, n+1, etc.)
+- ADDED: Dimension expressions in type parameters
+- Enables dependent dimension types
+- No breaking changes from v0.91
+
+**v0.91 (Dec 22, 2025):**
+- ADDED: Parameterized type aliases `type Name(params) = Type`
+- ADDED: Tuple types `(A, B)` syntax
+- No breaking changes from v0.8
 
 **v0.8 (Dec 18, 2025):**
 - ADDED: Pattern guards - `n if n < 0 => "negative"`

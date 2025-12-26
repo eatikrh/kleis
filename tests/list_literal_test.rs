@@ -67,7 +67,7 @@ fn test_matrix_with_list_new_format() {
     println!("✓ Parsed Matrix(2, 2, [a, b, c, d])");
 
     // Verify it's an Operation with 3 args
-    if let kleis::ast::Expression::Operation { name, args } = &expr {
+    if let kleis::ast::Expression::Operation { name, args, .. } = &expr {
         assert_eq!(name, "Matrix");
         assert_eq!(args.len(), 3, "New format should have 3 args");
 
@@ -93,7 +93,7 @@ fn test_matrix_old_format_still_works() {
     println!("✓ Parsed Matrix(2, 2, a, b, c, d) (old format)");
 
     // Verify it's an Operation with 6 args
-    if let kleis::ast::Expression::Operation { name, args } = &expr {
+    if let kleis::ast::Expression::Operation { name, args, .. } = &expr {
         assert_eq!(name, "Matrix");
         assert_eq!(args.len(), 6, "Old format should have 6 args");
         println!("✓ Old format has 6 args (backwards compatible)");

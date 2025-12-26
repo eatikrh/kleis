@@ -1,5 +1,8 @@
 # Kleis Language Support for VS Code
 
+[![CI](https://github.com/eatikrh/kleis/actions/workflows/ci.yml/badge.svg)](https://github.com/eatikrh/kleis/actions/workflows/ci.yml)
+
+
 Syntax highlighting for the **Kleis** formal verification language.
 
 ## Features

@@ -141,6 +141,7 @@ impl SemanticLowering {
         Some(Expression::Operation {
             name: lowered_op,
             args: vec![lifted_arg1, lifted_arg2],
+            span: None,
         })
     }
 
@@ -164,6 +165,7 @@ impl SemanticLowering {
                     result = Expression::Operation {
                         name: fn_name.to_string(),
                         args: vec![result],
+                        span: None,
                     };
                 }
                 result
@@ -173,6 +175,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: single_lift,
                     args: vec![expr.clone()],
+                    span: None,
                 }
             }
         }
@@ -192,7 +195,7 @@ impl SemanticLowering {
     /// operations based on the types of their operands.
     pub fn lower(&self, typed: &TypedExpr) -> Expression {
         match &typed.expr {
-            Expression::Operation { name, args: _ } => {
+            Expression::Operation { name, .. } => {
                 // First, recursively lower all children
                 let lowered_children: Vec<Expression> =
                     typed.children.iter().map(|c| self.lower(c)).collect();
@@ -215,10 +218,7 @@ impl SemanticLowering {
             }
 
             // Match: lower scrutinee and case bodies
-            Expression::Match {
-                scrutinee: _,
-                cases,
-            } => {
+            Expression::Match { cases, .. } => {
                 // children[0] is scrutinee, children[1..] are case bodies
                 let lowered_scrutinee = Box::new(self.lower(&typed.children[0]));
 
@@ -235,6 +235,7 @@ impl SemanticLowering {
                 Expression::Match {
                     scrutinee: lowered_scrutinee,
                     cases: lowered_cases,
+                    span: None,
                 }
             }
 
@@ -248,6 +249,7 @@ impl SemanticLowering {
                     condition: lowered_cond,
                     then_branch: lowered_then,
                     else_branch: lowered_else,
+                    span: None,
                 }
             }
 
@@ -265,6 +267,7 @@ impl SemanticLowering {
                     type_annotation: type_annotation.clone(),
                     value: lowered_value,
                     body: lowered_body,
+                    span: None,
                 }
             }
 
@@ -285,6 +288,7 @@ impl SemanticLowering {
                 Expression::Lambda {
                     params: params.clone(),
                     body: lowered_body,
+                    span: None,
                 }
             }
 
@@ -345,6 +349,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "complex_add".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -356,6 +361,7 @@ impl SemanticLowering {
                         self.lift_to_complex(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -367,6 +373,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_complex(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -375,6 +382,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "complex_sub".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -386,6 +394,7 @@ impl SemanticLowering {
                         self.lift_to_complex(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -397,6 +406,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_complex(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -405,6 +415,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "complex_mul".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -416,6 +427,7 @@ impl SemanticLowering {
                         self.lift_to_complex(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -427,6 +439,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_complex(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -437,6 +450,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "complex_div".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -448,6 +462,7 @@ impl SemanticLowering {
                         self.lift_to_complex(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -459,6 +474,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_complex(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -466,6 +482,7 @@ impl SemanticLowering {
             ("neg" | "negate", [t1]) if self.is_complex(t1) => Expression::Operation {
                 name: "neg_complex".to_string(),
                 args: lowered_args.to_vec(),
+                span: None,
             },
 
             // ============================================
@@ -477,6 +494,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "rational_add".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -488,6 +506,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_rational(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -499,6 +518,7 @@ impl SemanticLowering {
                         self.lift_to_rational(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -507,6 +527,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "plus".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -515,6 +536,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "plus".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -526,6 +548,7 @@ impl SemanticLowering {
                         self.lift_to_complex(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -537,6 +560,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_complex(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -545,6 +569,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "rational_sub".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -556,6 +581,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_rational(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -567,6 +593,7 @@ impl SemanticLowering {
                         self.lift_to_rational(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -575,6 +602,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "rational_mul".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -586,6 +614,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_rational(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -597,6 +626,7 @@ impl SemanticLowering {
                         self.lift_to_rational(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -608,6 +638,7 @@ impl SemanticLowering {
                         self.lift_to_complex(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -619,6 +650,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_complex(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -629,6 +661,7 @@ impl SemanticLowering {
                 Expression::Operation {
                     name: "rational_div".to_string(),
                     args: lowered_args.to_vec(),
+                    span: None,
                 }
             }
 
@@ -642,6 +675,7 @@ impl SemanticLowering {
                         lowered_args[0].clone(),
                         self.lift_to_rational(&lowered_args[1]),
                     ],
+                    span: None,
                 }
             }
 
@@ -655,6 +689,7 @@ impl SemanticLowering {
                         self.lift_to_rational(&lowered_args[0]),
                         lowered_args[1].clone(),
                     ],
+                    span: None,
                 }
             }
 
@@ -662,6 +697,7 @@ impl SemanticLowering {
             ("neg" | "negate", [t1]) if self.is_rational(t1) => Expression::Operation {
                 name: "neg_rational".to_string(),
                 args: lowered_args.to_vec(),
+                span: None,
             },
 
             // ============================================
@@ -670,6 +706,7 @@ impl SemanticLowering {
             _ => Expression::Operation {
                 name: name.to_string(),
                 args: lowered_args.to_vec(),
+                span: None,
             },
         }
     }
@@ -679,6 +716,7 @@ impl SemanticLowering {
         Expression::Operation {
             name: "complex".to_string(),
             args: vec![expr.clone(), Expression::Const("0".to_string())],
+            span: None,
         }
     }
 
@@ -731,6 +769,7 @@ impl SemanticLowering {
         Expression::Operation {
             name: "rational".to_string(),
             args: vec![expr.clone(), Expression::Const("1".to_string())],
+            span: None,
         }
     }
 }
@@ -774,6 +813,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "plus".to_string(),
             args: vec![z1.clone(), z2.clone()],
+            span: None,
         };
 
         // Create typed AST with complex types
@@ -791,7 +831,7 @@ mod tests {
 
         // Should be rewritten to complex_add
         match lowered {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "complex_add");
                 assert_eq!(args.len(), 2);
                 println!("✅ plus(ℂ, ℂ) → complex_add");
@@ -810,6 +850,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "plus".to_string(),
             args: vec![three.clone(), z.clone()],
+            span: None,
         };
 
         // Create typed AST
@@ -827,7 +868,7 @@ mod tests {
 
         // Should be: complex_add(complex(3, 0), z)
         match lowered {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "complex_add");
                 assert_eq!(args.len(), 2);
 
@@ -836,6 +877,7 @@ mod tests {
                     Expression::Operation {
                         name: lift_name,
                         args: lift_args,
+                        ..
                     } => {
                         assert_eq!(lift_name, "complex");
                         assert_eq!(lift_args.len(), 2);
@@ -861,6 +903,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "times".to_string(),
             args: vec![z1.clone(), z2.clone()],
+            span: None,
         };
 
         let typed = TypedExpr::node(
@@ -893,6 +936,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "neg".to_string(),
             args: vec![z.clone()],
+            span: None,
         };
 
         let typed = TypedExpr::node(
@@ -926,6 +970,7 @@ mod tests {
         let expr = Expression::Operation {
             name: "plus".to_string(),
             args: vec![one.clone(), two.clone()],
+            span: None,
         };
 
         let typed = TypedExpr::node(
@@ -958,11 +1003,13 @@ mod tests {
         let inner = Expression::Operation {
             name: "plus".to_string(),
             args: vec![z1.clone(), z2.clone()],
+            span: None,
         };
 
         let outer = Expression::Operation {
             name: "times".to_string(),
             args: vec![inner.clone(), z3.clone()],
+            span: None,
         };
 
         let complex_ty = Type::Data {
@@ -988,7 +1035,7 @@ mod tests {
 
         // Outer should be complex_mul
         match &lowered {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "complex_mul");
 
                 // Inner (first arg) should be complex_add
@@ -1018,6 +1065,7 @@ mod tests {
                 Expression::Const("1".to_string()),
                 Expression::Const("2".to_string()),
             ],
+            span: None,
         };
 
         // Step 1: Type inference

@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1b677653.js";
+            window.path_to_searchindex_js = "searchindex-feff52f3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-adba3566.js"></script>
+        <script src="toc-433b9a47.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -2568,6 +2568,178 @@ structure Functor(C, D) {
 → <a href="#appendix-c-standard-library">Appendix C: Standard Library</a>
 → <a href="#appendix-lisp-interpreter-in-kleis">Appendix D: LISP Interpreter</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="example-blocks-v093"><a class="header" href="#example-blocks-v093">Example Blocks (v0.93)</a></h1>
+<p>Kleis v0.93 introduces <strong>example blocks</strong> — executable documentation that serves as tests, debugging entry points, and living examples.</p>
+<h2 id="syntax"><a class="header" href="#syntax">Syntax</a></h2>
+<pre><code class="language-kleis">example "descriptive name" {
+    let x = 5
+    let y = double(x)
+    assert(y = 10)
+}
+</code></pre>
+<p>An example block contains:</p>
+<ul>
+<li><strong>Let bindings</strong> — bind values to names</li>
+<li><strong>Assert statements</strong> — verify expected results</li>
+<li><strong>Expressions</strong> — any valid Kleis expression</li>
+</ul>
+<h2 id="why-example-blocks"><a class="header" href="#why-example-blocks">Why Example Blocks?</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Traditional Tests</th><th>Example Blocks</th></tr>
+</thead>
+<tbody>
+<tr><td>Separate test files</td><td>Inline with code</td></tr>
+<tr><td>Run with test runner</td><td>Run with <code>kleis test</code></td></tr>
+<tr><td>Not visible in docs</td><td>Executable documentation</td></tr>
+<tr><td>Hard to debug</td><td>Full DAP debugger support</td></tr>
+</tbody>
+</table>
+</div>
+<p>Example blocks serve three purposes:</p>
+<ol>
+<li><strong>Documentation</strong> — Show how to use your functions</li>
+<li><strong>Testing</strong> — Verify behavior with assertions</li>
+<li><strong>Debugging</strong> — Set breakpoints and step through</li>
+</ol>
+<h2 id="running-examples"><a class="header" href="#running-examples">Running Examples</a></h2>
+<p>Use the <code>kleis test</code> command:</p>
+<pre><code class="language-bash">$ kleis test examples/math/complex_demo.kleis
+
+✅ complex arithmetic basics
+✅ euler's formula
+✅ quadratic roots
+
+3/3 examples passed
+</code></pre>
+<p>Failed assertions show details:</p>
+<pre><code class="language-bash">$ kleis test broken.kleis
+
+❌ my test
+   Assertion failed: expected Const("20"), got Const("15")
+
+0/1 examples passed (1 failed)
+</code></pre>
+<h2 id="assert-statement"><a class="header" href="#assert-statement">Assert Statement</a></h2>
+<p>The <code>assert</code> statement verifies a condition:</p>
+<pre><code class="language-kleis">example "basic assertions" {
+    let x = 5
+    
+    // Simple equality
+    assert(x = 5)
+    
+    // Expression equality
+    assert(x + x = 10)
+    
+    // Boolean conditions
+    assert(x &gt; 0)
+    
+    // Function results
+    assert(double(x) = 10)
+}
+</code></pre>
+<p><strong>Important:</strong> <code>assert(expr)</code> evaluates <code>expr</code> and checks if it equals <code>True</code> or if both sides of <code>=</code> are equal.</p>
+<h2 id="example-blocks-as-entry-points"><a class="header" href="#example-blocks-as-entry-points">Example Blocks as Entry Points</a></h2>
+<p>Example blocks are the <strong>entry points for debugging</strong>. Unlike function definitions which are just declarations, example blocks contain executable code:</p>
+<pre><code class="language-kleis">// Function definition (not executable on its own)
+define fib(n) = 
+    if n &lt;= 1 then n 
+    else fib(n - 1) + fib(n - 2)
+
+// Example block (executable, can set breakpoints)
+example "fibonacci test" {
+    let f5 = fib(5)      // ← Set breakpoint here
+    let f10 = fib(10)    // ← Or here
+    assert(f5 = 5)
+    assert(f10 = 55)
+}
+</code></pre>
+<p>When debugging:</p>
+<ol>
+<li>Set a breakpoint on a line in an example block</li>
+<li>Launch the debugger</li>
+<li>Execution stops at your breakpoint</li>
+<li>Step through, inspect variables, step into functions</li>
+</ol>
+<h2 id="cross-file-debugging"><a class="header" href="#cross-file-debugging">Cross-File Debugging</a></h2>
+<p>Example blocks work with imports. When you step into a function from an imported file, the debugger opens that file:</p>
+<pre><code class="language-kleis">// main.kleis
+import "stdlib/complex.kleis"
+
+example "complex math" {
+    let z = complex(3, 4)
+    let mag = abs(z)        // ← Step into this
+    assert(mag = 5)         // Opens complex.kleis, shows abs definition
+}
+</code></pre>
+<p>The debugger tracks source locations across files, showing you exactly where you are.</p>
+<h2 id="source-location-tracking"><a class="header" href="#source-location-tracking">Source Location Tracking</a></h2>
+<p>Every expression in Kleis carries its <strong>source location</strong> (line, column, file). This enables:</p>
+<ul>
+<li>Accurate error messages</li>
+<li>Precise debugger breakpoints</li>
+<li>Cross-file stepping</li>
+<li>Stack traces with file paths</li>
+</ul>
+<p>The location travels with the expression through evaluation, so even after function application, the debugger knows the original source.</p>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-one-concept-per-example"><a class="header" href="#1-one-concept-per-example">1. One Concept Per Example</a></h3>
+<pre><code class="language-kleis">// Good: focused examples
+example "addition is commutative" {
+    assert(2 + 3 = 3 + 2)
+}
+
+example "multiplication distributes" {
+    assert(2 * (3 + 4) = 2 * 3 + 2 * 4)
+}
+
+// Bad: too much in one example
+example "all arithmetic" {
+    assert(2 + 3 = 3 + 2)
+    assert(2 * 3 = 3 * 2)
+    assert(2 * (3 + 4) = 2 * 3 + 2 * 4)
+    // ... many more assertions
+}
+</code></pre>
+<h3 id="2-descriptive-names"><a class="header" href="#2-descriptive-names">2. Descriptive Names</a></h3>
+<pre><code class="language-kleis">// Good: describes what's being tested
+example "negative numbers square to positive" { ... }
+
+// Bad: vague
+example "test1" { ... }
+</code></pre>
+<h3 id="3-use-let-bindings-for-clarity"><a class="header" href="#3-use-let-bindings-for-clarity">3. Use Let Bindings for Clarity</a></h3>
+<pre><code class="language-kleis">// Good: intermediate values have names
+example "quadratic formula" {
+    let a = 1
+    let b = -5
+    let c = 6
+    let discriminant = b * b - 4 * a * c
+    let root1 = (-b + sqrt(discriminant)) / (2 * a)
+    assert(root1 = 3)
+}
+
+// Bad: one big expression
+example "quadratic formula" {
+    assert((-(-5) + sqrt((-5) * (-5) - 4 * 1 * 6)) / (2 * 1) = 3)
+}
+</code></pre>
+<h2 id="grammar-reference"><a class="header" href="#grammar-reference">Grammar Reference</a></h2>
+<pre><code class="language-ebnf">exampleBlock    ::= "example" string "{" exampleBody "}"
+exampleBody     ::= { exampleStatement }
+exampleStatement ::= letBinding 
+                   | assertStatement 
+                   | expression ";"
+
+assertStatement ::= "assert" "(" expression ")"
+
+letBinding      ::= "let" identifier [":" type] "=" expression
+</code></pre>
+<h2 id="whats-next-13"><a class="header" href="#whats-next-13">What’s Next?</a></h2>
+<p>Learn how to set up VS Code for debugging:</p>
+<p>→ <a href="#vs-code-debugging">Appendix: VS Code Debugging</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="complex-numbers"><a class="header" href="#complex-numbers">Complex Numbers</a></h1>
 <p>Kleis has first-class support for complex numbers (ℂ), enabling symbolic reasoning about complex arithmetic, verification of identities, and theorem proving in complex analysis.</p>
 <h2 id="natural-arithmetic-syntax--new"><a class="header" href="#natural-arithmetic-syntax--new">Natural Arithmetic Syntax ✨ NEW</a></h2>
@@ -3067,7 +3239,7 @@ structure ComplexTest {
 </tbody>
 </table>
 </div>
-<h2 id="whats-next-13"><a class="header" href="#whats-next-13">What’s Next?</a></h2>
+<h2 id="whats-next-14"><a class="header" href="#whats-next-14">What’s Next?</a></h2>
 <p>Complex numbers enable reasoning about:</p>
 <ul>
 <li>Signal processing (Fourier transforms)</li>
@@ -4453,9 +4625,9 @@ det(sI - A + LC) = s² + (3 + l₁)s + (2 + l₂)</p>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
-<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.9).</p>
+<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.93).</p>
 <blockquote>
-<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v09.md</code> for the full specification.</p>
+<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v093.md</code> for the full specification.</p>
 </blockquote>
 <h2 id="program-structure"><a class="header" href="#program-structure">Program Structure</a></h2>
 <pre><code class="language-ebnf">program ::= { declaration }
@@ -4469,6 +4641,7 @@ declaration ::= importDecl              // v0.8: Module imports
               | functionDef
               | operationDecl
               | typeAlias
+              | exampleBlock            // v0.93: Executable documentation
 </code></pre>
 <h2 id="import-statements-v08"><a class="header" href="#import-statements-v08">Import Statements (v0.8)</a></h2>
 <pre><code class="language-ebnf">importDecl ::= "import" string
@@ -5908,6 +6081,206 @@ define run_with_env(code: String, env: Env) : LispVal =
 <p><strong>Meta-circular potential</strong> — With minor extensions, this could interpret a subset of Kleis itself, demonstrating meta-circularity.</p>
 </li>
 </ol>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="vs-code-debugging"><a class="header" href="#vs-code-debugging">VS Code Debugging</a></h1>
+<p>This appendix explains how to set up and use the VS Code debugger with Kleis.</p>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
+<ol>
+<li><strong>VS Code</strong> installed</li>
+<li><strong>Kleis extension</strong> installed (provides syntax highlighting + debugging)</li>
+<li><strong>Kleis binaries</strong> built:
+<pre><code class="language-bash">cargo build --release --bin kleis --bin kleis-lsp
+</code></pre>
+</li>
+</ol>
+<h2 id="extension-setup"><a class="header" href="#extension-setup">Extension Setup</a></h2>
+<p>The Kleis VS Code extension is located in <code>kleis-vscode/</code>. Install it:</p>
+<pre><code class="language-bash">cd kleis-vscode
+npm install
+npm run compile
+code --install-extension kleis-0.1.0.vsix
+</code></pre>
+<p>Or for development, open the extension folder in VS Code and press F5 to launch an Extension Development Host.</p>
+<h2 id="launch-configuration"><a class="header" href="#launch-configuration">Launch Configuration</a></h2>
+<p>Create <code>.vscode/launch.json</code> in your project:</p>
+<pre><code class="language-json">{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "kleis",
+            "request": "launch",
+            "name": "Debug Kleis File",
+            "program": "${file}",
+            "stopOnEntry": false
+        }
+    ]
+}
+</code></pre>
+<h3 id="configuration-options"><a class="header" href="#configuration-options">Configuration Options</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Option</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>program</code></td><td>string</td><td>Path to .kleis file to debug</td></tr>
+<tr><td><code>stopOnEntry</code></td><td>boolean</td><td>Stop at first line (default: false)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="setting-breakpoints"><a class="header" href="#setting-breakpoints">Setting Breakpoints</a></h2>
+<p>Click in the gutter (left margin) next to any line in an example block:</p>
+<pre><code class="language-kleis">example "my test" {
+    let x = 5          // ← Click here to set breakpoint
+    let y = double(x)  // ← Or here
+    assert(y = 10)
+}
+</code></pre>
+<p><strong>Note:</strong> Breakpoints only work on executable lines inside example blocks. Function definitions are declarations, not executable code.</p>
+<h2 id="starting-a-debug-session"><a class="header" href="#starting-a-debug-session">Starting a Debug Session</a></h2>
+<ol>
+<li>Open a <code>.kleis</code> file with example blocks</li>
+<li>Set breakpoints on lines you want to inspect</li>
+<li>Press <strong>F5</strong> or click <strong>Run → Start Debugging</strong></li>
+<li>Select “Debug Kleis File” configuration</li>
+</ol>
+<h2 id="debug-controls"><a class="header" href="#debug-controls">Debug Controls</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Action</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>F5</td><td>Continue</td><td>Run until next breakpoint</td></tr>
+<tr><td>F10</td><td>Step Over</td><td>Execute current line, don’t enter functions</td></tr>
+<tr><td>F11</td><td>Step Into</td><td>Enter function calls</td></tr>
+<tr><td>Shift+F11</td><td>Step Out</td><td>Finish current function, return to caller</td></tr>
+<tr><td>Shift+F5</td><td>Stop</td><td>End debug session</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="inspecting-variables"><a class="header" href="#inspecting-variables">Inspecting Variables</a></h2>
+<p>The <strong>Variables</strong> panel (left sidebar) shows:</p>
+<ul>
+<li><strong>Local variables</strong> — Let bindings in current scope</li>
+<li><strong>Function parameters</strong> — Arguments passed to current function</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-kleis">example "inspection demo" {
+    let x = 5
+    let y = 10
+    // Breakpoint here shows: x = 5, y = 10
+    let sum = x + y
+}
+</code></pre>
+<h2 id="call-stack"><a class="header" href="#call-stack">Call Stack</a></h2>
+<p>The <strong>Call Stack</strong> panel shows the execution path:</p>
+<pre><code>fibonacci (n=5)          ← Currently here
+fibonacci (n=6)
+example "fib test"       ← Entry point
+</code></pre>
+<p>Click any frame to see its local variables and source location.</p>
+<h2 id="cross-file-debugging-1"><a class="header" href="#cross-file-debugging-1">Cross-File Debugging</a></h2>
+<p>When stepping into imported functions, VS Code opens the source file:</p>
+<pre><code class="language-kleis">// main.kleis
+import "helpers.kleis"
+
+example "cross-file" {
+    let result = helper_function(5)  // ← Step Into (F11)
+    // VS Code opens helpers.kleis at helper_function definition
+}
+</code></pre>
+<h3 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h3>
+<p>Every expression carries its <strong>source location</strong> (line, column, file path). When the evaluator processes an expression from an imported file, the debugger reports that file’s location to VS Code, which opens it automatically.</p>
+<h2 id="debug-console"><a class="header" href="#debug-console">Debug Console</a></h2>
+<p>The Debug Console (bottom panel) shows:</p>
+<ul>
+<li>Evaluation progress</li>
+<li>Any print output</li>
+<li>Error messages</li>
+</ul>
+<p>You can also evaluate expressions in the console during a paused debug session.</p>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="breakpoints-not-hitting"><a class="header" href="#breakpoints-not-hitting">Breakpoints Not Hitting</a></h3>
+<p><strong>Problem:</strong> Breakpoint shows as gray (unverified) or never hits.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Ensure breakpoint is on a line inside an example block</li>
+<li>Ensure the example block is actually executed</li>
+<li>Rebuild the Kleis binaries: <code>cargo build --release</code></li>
+</ol>
+<h3 id="file-not-found-errors"><a class="header" href="#file-not-found-errors">“File not found” Errors</a></h3>
+<p><strong>Problem:</strong> Debugger can’t find imported files.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Use relative paths in imports: <code>import "stdlib/complex.kleis"</code></li>
+<li>Run debug session from the project root directory</li>
+<li>Check that the imported file exists at the specified path</li>
+</ol>
+<h3 id="slow-stepping"><a class="header" href="#slow-stepping">Slow Stepping</a></h3>
+<p><strong>Problem:</strong> Each step takes several seconds.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Use release builds: <code>cargo build --release</code></li>
+<li>Avoid stepping through deeply recursive functions</li>
+<li>Use “Step Over” (F10) instead of “Step Into” (F11) for library functions</li>
+</ol>
+<h3 id="debug-session-wont-start"><a class="header" href="#debug-session-wont-start">Debug Session Won’t Start</a></h3>
+<p><strong>Problem:</strong> F5 does nothing or shows an error.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Check <code>.vscode/launch.json</code> exists and is valid JSON</li>
+<li>Ensure Kleis extension is installed and enabled</li>
+<li>Check the Output panel (View → Output → Kleis) for error messages</li>
+<li>Verify binaries exist: <code>ls target/release/kleis*</code></li>
+</ol>
+<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<p>The debugging system uses the <strong>Debug Adapter Protocol (DAP)</strong>:</p>
+<pre><code>┌─────────────┐      DAP         ┌──────────────┐
+│   VS Code   │ ←───────────────→ │ kleis server │
+│   (client)  │    JSON-RPC      │   (adapter)  │
+└─────────────┘                   └──────────────┘
+                                        │
+                                        ▼
+                                  ┌──────────────┐
+                                  │  Evaluator   │
+                                  │  + DebugHook │
+                                  └──────────────┘
+</code></pre>
+<ol>
+<li>VS Code sends DAP commands (setBreakpoints, next, stepIn, etc.)</li>
+<li>Kleis server translates to evaluator debug hook calls</li>
+<li>Evaluator pauses at breakpoints, reports current expression’s span</li>
+<li>Server sends stopped events with location (line, column, file)</li>
+<li>VS Code highlights the current line</li>
+</ol>
+<h3 id="source-span-tracking"><a class="header" href="#source-span-tracking">Source Span Tracking</a></h3>
+<p>The key to accurate debugging is <strong>SourceSpan</strong>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SourceSpan {
+    pub line: u32,
+    pub column: u32,
+    pub end_line: u32,
+    pub end_column: u32,
+    pub file: Option&lt;Arc&lt;PathBuf&gt;&gt;,  // File path (Arc for cheap cloning)
+}
+<span class="boring">}</span></code></pre>
+<p>Every <code>Expression</code> node has an optional span. The parser attaches the span during parsing. When evaluating, the span travels with the expression, so the debugger always knows the source location.</p>
+<h2 id="tips-for-effective-debugging"><a class="header" href="#tips-for-effective-debugging">Tips for Effective Debugging</a></h2>
+<ol>
+<li><strong>Start with simple examples</strong> — Debug small example blocks first</li>
+<li><strong>Use Step Over for library code</strong> — Don’t step into stdlib functions unless needed</li>
+<li><strong>Watch the Variables panel</strong> — See how values change as you step</li>
+<li><strong>Set multiple breakpoints</strong> — Mark key points in your logic</li>
+<li><strong>Use the Call Stack</strong> — Understand how you got to the current line</li>
+</ol>
+<h2 id="see-also-2"><a class="header" href="#see-also-2">See Also</a></h2>
+<ul>
+<li><a href="#example-blocks-v093">Example Blocks</a> — How to write debuggable code</li>
+<li><a href="#the-repl-1">The REPL</a> — Interactive exploration</li>
+<li><a href="#appendix-a-grammar-reference">Grammar Reference</a> — Full language syntax</li>
+</ul>
 
                     </main>
 

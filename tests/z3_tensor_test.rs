@@ -37,6 +37,7 @@ fn neg(name: &str) -> Expression {
     Expression::Operation {
         name: "negate".to_string(),
         args: vec![obj(name)],
+        span: None,
     }
 }
 
@@ -45,6 +46,7 @@ fn op(name: &str, args: Vec<Expression>) -> Expression {
     Expression::Operation {
         name: name.to_string(),
         args,
+        span: None,
     }
 }
 
@@ -53,6 +55,7 @@ fn equals(left: Expression, right: Expression) -> Expression {
     Expression::Operation {
         name: "equals".to_string(),
         args: vec![left, right],
+        span: None,
     }
 }
 
@@ -675,6 +678,7 @@ fn test_concrete_tensor2_component() {
                 Expression::Const("4".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // component(T, 0, 1) should be 2
@@ -685,6 +689,7 @@ fn test_concrete_tensor2_component() {
             Expression::Const("0".to_string()),
             Expression::Const("1".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.evaluate(&comp_01);
@@ -699,6 +704,7 @@ fn test_concrete_tensor2_component() {
             Expression::Const("1".to_string()),
             Expression::Const("0".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.evaluate(&comp_10);
@@ -737,11 +743,13 @@ fn test_concrete_tensor_trace() {
                 Expression::Const("7".to_string()),
             ]),
         ],
+        span: None,
     };
 
     let trace_expr = Expression::Operation {
         name: "trace".to_string(),
         args: vec![tensor],
+        span: None,
     };
 
     let result = backend.evaluate(&trace_expr);
@@ -784,6 +792,7 @@ fn test_concrete_tensor_contraction() {
                 Expression::Const("1".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // B = [[2, 3], [4, 5]]
@@ -798,12 +807,14 @@ fn test_concrete_tensor_contraction() {
                 Expression::Const("5".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // contract(I, B) should equal B (identity property)
     let contracted = Expression::Operation {
         name: "contract".to_string(),
         args: vec![a.clone(), b.clone()],
+        span: None,
     };
 
     let result = backend.evaluate(&contracted);
@@ -844,6 +855,7 @@ fn test_concrete_index_lower_minkowski() {
                 Expression::Operation {
                     name: "negate".to_string(),
                     args: vec![Expression::Const("1".to_string())],
+                    span: None,
                 },
                 Expression::Const("0".to_string()),
                 Expression::Const("0".to_string()),
@@ -865,6 +877,7 @@ fn test_concrete_index_lower_minkowski() {
                 Expression::Const("1".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // 4-velocity in special relativity: u^μ = (1, 0, 0, 0) (at rest)
@@ -879,12 +892,14 @@ fn test_concrete_index_lower_minkowski() {
                 Expression::Const("0".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // Lower index: u_μ = η_μν u^ν = (-1, 0, 0, 0)
     let u_down = Expression::Operation {
         name: "lower_index".to_string(),
         args: vec![eta, u_up],
+        span: None,
     };
 
     let result = backend.evaluate(&u_down);
@@ -920,6 +935,7 @@ fn test_concrete_raise_lower_separate() {
                 Expression::Const("1".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // Vector: [3, 4]
@@ -932,12 +948,14 @@ fn test_concrete_raise_lower_separate() {
                 Expression::Const("4".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // lower_index(g, V) with identity metric should give same encoding as V
     let lowered = Expression::Operation {
         name: "lower_index".to_string(),
         args: vec![g.clone(), v.clone()],
+        span: None,
     };
 
     let lowered_result = backend.evaluate(&lowered);
@@ -961,12 +979,14 @@ fn test_concrete_raise_lower_separate() {
                 Expression::Const("3".to_string()),
             ]),
         ],
+        span: None,
     };
 
     // lower_index(g2, V) should give [2*3 + 0*4, 0*3 + 3*4] = [6, 12]
     let lowered2 = Expression::Operation {
         name: "lower_index".to_string(),
         args: vec![g2, v.clone()],
+        span: None,
     };
 
     let lowered2_result = backend.evaluate(&lowered2);
@@ -1055,9 +1075,11 @@ fn test_axioms_used_for_verification() {
                         Expression::Object("x".to_string()),
                         Expression::Const("0".to_string()),
                     ],
+                    span: None,
                 },
                 Expression::Object("x".to_string()),
             ],
+            span: None,
         }),
     };
 
@@ -1093,9 +1115,11 @@ fn test_axioms_used_for_verification() {
                     Expression::Object("a".to_string()),
                     Expression::Const("0".to_string()),
                 ],
+                span: None,
             },
             Expression::Object("a".to_string()),
         ],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&test_expr);
@@ -1147,16 +1171,19 @@ fn test_macro_loads_stdlib() {
     let g_mu_nu = Expression::Operation {
         name: "component".to_string(),
         args: vec![obj("g"), obj("mu"), obj("nu")],
+        span: None,
     };
 
     let g_nu_mu = Expression::Operation {
         name: "component".to_string(),
         args: vec![obj("g"), obj("nu"), obj("mu")],
+        span: None,
     };
 
     let symmetry = Expression::Operation {
         name: "equals".to_string(),
         args: vec![g_mu_nu, g_nu_mu],
+        span: None,
     };
 
     let result = backend.check_satisfiability(&symmetry);

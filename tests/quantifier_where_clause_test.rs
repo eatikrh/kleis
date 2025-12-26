@@ -33,7 +33,7 @@ fn test_parse_quantifier_with_where_simple() {
 
             // Where clause should be: x ≠ zero
             match where_clause.unwrap().as_ref() {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     assert_eq!(name, "neq");
                     assert_eq!(args.len(), 2);
                     println!("   ✅ Where clause: x ≠ zero");

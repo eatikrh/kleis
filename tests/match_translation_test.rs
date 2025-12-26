@@ -31,12 +31,14 @@ fn test_match_simple_wildcard() {
             pattern: Pattern::Wildcard,
             body: Expression::Const("1".to_string()),
         }],
+        span: None,
     };
 
     // The match should always produce 1
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("1".to_string())],
+        span: None,
     };
 
     match verify_expression(&axiom) {
@@ -59,11 +61,13 @@ fn test_match_variable_binding() {
             pattern: Pattern::Variable("x".to_string()),
             body: Expression::Object("x".to_string()),
         }],
+        span: None,
     };
 
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("5".to_string())],
+        span: None,
     };
 
     match verify_expression(&axiom) {
@@ -94,11 +98,13 @@ fn test_match_constant_pattern() {
                 body: Expression::Const("20".to_string()),
             },
         ],
+        span: None,
     };
 
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("10".to_string())],
+        span: None,
     };
 
     match verify_expression(&axiom) {
@@ -134,11 +140,13 @@ fn test_match_multiple_cases() {
                 body: Expression::Const("300".to_string()),
             },
         ],
+        span: None,
     };
 
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("200".to_string())],
+        span: None,
     };
 
     match verify_expression(&axiom) {
@@ -174,11 +182,13 @@ fn test_match_fallthrough_to_wildcard() {
                 body: Expression::Const("300".to_string()),
             },
         ],
+        span: None,
     };
 
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("300".to_string())],
+        span: None,
     };
 
     match verify_expression(&axiom) {
@@ -204,13 +214,16 @@ fn test_match_with_arithmetic_in_body() {
                     Expression::Object("y".to_string()),
                     Expression::Const("1".to_string()),
                 ],
+                span: None,
             },
         }],
+        span: None,
     };
 
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("6".to_string())],
+        span: None,
     };
 
     match verify_expression(&axiom) {
@@ -229,6 +242,7 @@ fn test_match_constructor_simple() {
     let scrutinee = Expression::Operation {
         name: "Some".to_string(),
         args: vec![Expression::Const("5".to_string())],
+        span: None,
     };
 
     let match_expr = Expression::Match {
@@ -251,12 +265,14 @@ fn test_match_constructor_simple() {
                 body: Expression::Const("0".to_string()),
             },
         ],
+        span: None,
     };
 
     // Should extract x = 5
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("5".to_string())],
+        span: None,
     };
 
     match verify_expression(&axiom) {
@@ -277,6 +293,7 @@ fn test_match_nested_constructor() {
             Expression::Const("1".to_string()),
             Expression::Const("2".to_string()),
         ],
+        span: None,
     };
 
     let match_expr = Expression::Match {
@@ -296,13 +313,16 @@ fn test_match_nested_constructor() {
                     Expression::Object("a".to_string()),
                     Expression::Object("b".to_string()),
                 ],
+                span: None,
             },
         }],
+        span: None,
     };
 
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("3".to_string())],
+        span: None,
     };
 
     match verify_expression(&axiom) {
@@ -373,12 +393,14 @@ fn test_match_symbolic_adt_nullary_constructor() {
                 body: Expression::Const("0".to_string()),
             },
         ],
+        span: None,
     };
 
     // Axiom: match Owner { ... } = 4
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("4".to_string())],
+        span: None,
     };
 
     match verifier.verify_axiom(&axiom) {
@@ -435,12 +457,14 @@ fn test_match_symbolic_adt_different_constructors() {
                 body: Expression::Const("0".to_string()),
             },
         ],
+        span: None,
     };
 
     // Axiom: match Editor { ... } = 3
     let axiom = Expression::Operation {
         name: "equals".to_string(),
         args: vec![match_expr, Expression::Const("3".to_string())],
+        span: None,
     };
 
     match verifier.verify_axiom(&axiom) {

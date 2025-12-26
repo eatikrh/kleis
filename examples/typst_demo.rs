@@ -24,6 +24,7 @@ fn main() {
             },
             Expression::Const("2".to_string()),
         ],
+        span: None,
     };
 
     let mut ctx1 = ConversionContext::new();
@@ -61,6 +62,7 @@ fn main() {
                                 hint: "b".to_string(),
                             },
                         ],
+                        span: None,
                     },
                     Expression::Operation {
                         name: "sqrt".to_string(),
@@ -76,6 +78,7 @@ fn main() {
                                         },
                                         Expression::Const("2".to_string()),
                                     ],
+                                    span: None,
                                 },
                                 Expression::Operation {
                                     name: "scalar_multiply".to_string(),
@@ -86,11 +89,15 @@ fn main() {
                                             hint: "a".to_string(),
                                         },
                                     ],
+                                    span: None,
                                 },
                             ],
+                            span: None,
                         }],
+                        span: None,
                     },
                 ],
+                span: None,
             },
             Expression::Operation {
                 name: "scalar_multiply".to_string(),
@@ -101,8 +108,10 @@ fn main() {
                         hint: "a".to_string(),
                     },
                 ],
+                span: None,
             },
         ],
+        span: None,
     };
 
     let mut ctx2 = ConversionContext::new();
@@ -135,6 +144,7 @@ fn main() {
                 hint: "exponent".to_string(),
             },
         ],
+        span: None,
     };
 
     let mut ctx3 = ConversionContext::new();

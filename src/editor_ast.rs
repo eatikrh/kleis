@@ -235,7 +235,7 @@ fn translate_with_context(expr: &Expression, ctx: &TranslationContext) -> Editor
 
         Expression::Placeholder { id, hint } => EditorNode::placeholder(*id, Some(hint.clone())),
 
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             let translated_args: Vec<EditorNode> = args
                 .iter()
                 .map(|a| translate_with_context(a, ctx))
@@ -318,9 +318,9 @@ fn infer_index_structure(args: &[Expression]) -> Vec<String> {
     args.iter()
         .map(|arg| {
             match arg {
-                Expression::Operation { name, args: inner }
-                    if name == "negate" && inner.len() == 1 =>
-                {
+                Expression::Operation {
+                    name, args: inner, ..
+                } if name == "negate" && inner.len() == 1 => {
                     "down".to_string() // Covariant
                 }
                 _ => "up".to_string(), // Contravariant
@@ -390,12 +390,15 @@ mod tests {
                 Expression::Operation {
                     name: "negate".to_string(),
                     args: vec![Expression::Object("μ".to_string())],
+                    span: None,
                 },
                 Expression::Operation {
                     name: "negate".to_string(),
                     args: vec![Expression::Object("ν".to_string())],
+                    span: None,
                 },
             ],
+            span: None,
         };
 
         let ctx = TranslationContext::with_default_tensors();

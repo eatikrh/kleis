@@ -3,6 +3,190 @@
 //! This module defines the core Expression type used throughout the system.
 //! Both the parser and renderer use this shared representation.
 
+use std::path::PathBuf;
+use std::sync::Arc;
+
+// ============================================================================
+// Source Location Types (for debugging and error reporting)
+// ============================================================================
+
+/// Source span: complete location in source code including file path
+///
+/// Contains line/column positions and an Arc-wrapped file path for efficient
+/// sharing across all expressions from the same file. The Arc means cloning
+/// a SourceSpan is cheap (just increments reference count).
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SourceSpan {
+    /// Line number (1-based)
+    pub line: u32,
+    /// Column number (1-based)  
+    pub column: u32,
+    /// End line (for multi-line expressions)
+    pub end_line: u32,
+    /// End column
+    pub end_column: u32,
+    /// File path (Arc for cheap cloning - all expressions in same file share this)
+    #[serde(skip)]
+    pub file: Option<Arc<PathBuf>>,
+}
+
+impl SourceSpan {
+    pub fn new(line: u32, column: u32) -> Self {
+        Self {
+            line,
+            column,
+            end_line: line,
+            end_column: column,
+            file: None,
+        }
+    }
+
+    pub fn with_end(mut self, end_line: u32, end_column: u32) -> Self {
+        self.end_line = end_line;
+        self.end_column = end_column;
+        self
+    }
+
+    pub fn with_file(mut self, file: Arc<PathBuf>) -> Self {
+        self.file = Some(file);
+        self
+    }
+
+    /// Get the file path as a string (for debugging/display)
+    pub fn file_path(&self) -> Option<&PathBuf> {
+        self.file.as_deref()
+    }
+}
+
+/// Full source location: span + file path (for cross-file debugging)
+///
+/// This is the complete location information needed for debugging,
+/// especially when stepping through imported files.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct FullSourceLocation {
+    /// Line number (1-based)
+    pub line: u32,
+    /// Column number (1-based)
+    pub column: u32,
+    /// File path (if known)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
+}
+
+impl FullSourceLocation {
+    pub fn new(line: u32, column: u32) -> Self {
+        Self {
+            line,
+            column,
+            file: None,
+        }
+    }
+
+    pub fn with_file(mut self, file: impl Into<String>) -> Self {
+        self.file = Some(file.into());
+        self
+    }
+
+    pub fn from_span(span: &SourceSpan) -> Self {
+        Self {
+            line: span.line,
+            column: span.column,
+            file: None,
+        }
+    }
+
+    pub fn from_span_with_file(span: &SourceSpan, file: impl Into<String>) -> Self {
+        Self {
+            line: span.line,
+            column: span.column,
+            file: Some(file.into()),
+        }
+    }
+}
+
+/// Source location with optional file path (for cross-file debugging)
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceLocation {
+    pub span: SourceSpan,
+    pub file: Option<PathBuf>,
+}
+
+impl SourceLocation {
+    pub fn new(line: u32, column: u32) -> Self {
+        Self {
+            span: SourceSpan::new(line, column),
+            file: None,
+        }
+    }
+
+    pub fn with_file(mut self, file: PathBuf) -> Self {
+        self.file = Some(file);
+        self
+    }
+
+    pub fn line(&self) -> u32 {
+        self.span.line
+    }
+
+    pub fn column(&self) -> u32 {
+        self.span.column
+    }
+}
+
+/// Expression with source location attached
+///
+/// This wrapper allows tracking source locations without modifying the
+/// core Expression enum. Use this in the parser for new code paths.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Spanned<T> {
+    pub node: T,
+    pub span: Option<SourceSpan>,
+    /// File path for cross-file debugging
+    pub file: Option<PathBuf>,
+}
+
+impl<T> Spanned<T> {
+    pub fn new(node: T, span: SourceSpan) -> Self {
+        Self {
+            node,
+            span: Some(span),
+            file: None,
+        }
+    }
+
+    pub fn with_file(mut self, file: PathBuf) -> Self {
+        self.file = Some(file);
+        self
+    }
+
+    pub fn new_with_file(node: T, span: SourceSpan, file: PathBuf) -> Self {
+        Self {
+            node,
+            span: Some(span),
+            file: Some(file),
+        }
+    }
+
+    pub fn unspanned(node: T) -> Self {
+        Self {
+            node,
+            span: None,
+            file: None,
+        }
+    }
+
+    /// Get full source location (span + file) for debugging
+    pub fn location(&self) -> Option<SourceLocation> {
+        self.span.clone().map(|s| SourceLocation {
+            span: s,
+            file: self.file.clone(),
+        })
+    }
+}
+
+/// Spanned expression - an expression with its source location
+pub type SpannedExpr = Spanned<Expression>;
+
 /// Core expression type representing mathematical structures
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Expression {
@@ -22,7 +206,12 @@ pub enum Expression {
     /// - plus(a, b) for addition
     /// - sqrt(x) for square root
     /// - frac(num, den) for fractions
-    Operation { name: String, args: Vec<Expression> },
+    Operation {
+        name: String,
+        args: Vec<Expression>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
+    },
 
     /// Placeholder for structural editing
     /// Used to represent empty slots that need to be filled
@@ -35,6 +224,8 @@ pub enum Expression {
     Match {
         scrutinee: Box<Expression>,
         cases: Vec<MatchCase>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
     },
 
     /// List literal
@@ -60,6 +251,8 @@ pub enum Expression {
         condition: Box<Expression>,
         then_branch: Box<Expression>,
         else_branch: Box<Expression>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
     },
 
     /// Let binding expression with pattern support (Grammar v0.8)
@@ -81,6 +274,8 @@ pub enum Expression {
         type_annotation: Option<String>,
         value: Box<Expression>,
         body: Box<Expression>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
     },
 
     /// Type ascription expression
@@ -101,6 +296,8 @@ pub enum Expression {
     Lambda {
         params: Vec<LambdaParam>,
         body: Box<Expression>,
+        #[serde(skip)]
+        span: Option<SourceSpan>,
     },
 }
 
@@ -218,6 +415,7 @@ impl Expression {
         Expression::Operation {
             name: name.into(),
             args,
+            span: None,
         }
     }
 
@@ -234,6 +432,7 @@ impl Expression {
         Expression::Match {
             scrutinee: Box::new(scrutinee),
             cases,
+            span: None,
         }
     }
 
@@ -267,6 +466,7 @@ impl Expression {
             condition: Box::new(condition),
             then_branch: Box::new(then_branch),
             else_branch: Box::new(else_branch),
+            span: None,
         }
     }
 
@@ -279,6 +479,7 @@ impl Expression {
             type_annotation: None,
             value: Box::new(value),
             body: Box::new(body),
+            span: None,
         }
     }
 
@@ -295,6 +496,7 @@ impl Expression {
             type_annotation: type_annotation.map(|t| t.into()),
             value: Box::new(value),
             body: Box::new(body),
+            span: None,
         }
     }
 
@@ -306,6 +508,7 @@ impl Expression {
             type_annotation: None,
             value: Box::new(value),
             body: Box::new(body),
+            span: None,
         }
     }
 
@@ -324,6 +527,7 @@ impl Expression {
         Expression::Lambda {
             params,
             body: Box::new(body),
+            span: None,
         }
     }
 
@@ -344,7 +548,9 @@ impl Expression {
                     arg.collect_placeholders(acc);
                 }
             }
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 scrutinee.collect_placeholders(acc);
                 for case in cases {
                     case.body.collect_placeholders(acc);
@@ -362,6 +568,7 @@ impl Expression {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 condition.collect_placeholders(acc);
                 then_branch.collect_placeholders(acc);

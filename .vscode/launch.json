@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "kleis",
+            "request": "launch",
+            "name": "Debug Current Kleis File",
+            "program": "${file}",
+            "stopOnEntry": true
+        },
+        {
+            "type": "kleis",
+            "request": "launch",
+            "name": "Debug examples/fibonacci.kleis",
+            "program": "${workspaceFolder}/examples/fibonacci.kleis",
+            "stopOnEntry": true
+        }
+    ]
+}
+

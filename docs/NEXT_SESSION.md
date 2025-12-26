@@ -1,6 +1,415 @@
 # Next Session Notes
 
-**Last Updated:** December 21, 2024
+**Last Updated:** December 25, 2024
+
+---
+
+## 🔴 PRIORITY: Expression Spans for Debugger Line Numbers
+
+### Status: Cross-File Debugging Works!
+- ✅ File switching works - debugger opens imported files when stepping
+- ⚠️ Line numbers always show as `1` (expressions don't carry location)
+
+### Solution (see docs/a_possible_debugger_proper_solution.txt)
+Add `span: Option<SourceSpan>` ONLY to executable variants:
+- `Operation { name, args, span }`
+- `Match { scrutinee, cases, span }`
+- `Conditional { condition, then, else, span }`
+- `Let { pattern, type, value, body, span }`
+- `Lambda { params, body, span }`
+
+### Implementation Steps
+1. **AST changes** (`src/ast.rs`): Add span field to 5 variants
+2. **Pattern matches**: Add `..` to ~50 matches (ignore span when not needed)
+3. **Expression creation**: Add `span: None` to ~134 places
+4. **Parser**: Capture spans when building executable nodes
+5. **Evaluator**: Preserve spans through substitute() and AST rebuilding
+6. **Debug hook**: Use expression spans for line numbers
+
+### Safe checkpoint
+Tag: `checkpoint-crossfile-working` - can return here if refactor fails
+
+---
+
+## ✅ DONE: Thread-Safe AST Cache (ADR-025)
+
+**See:** `docs/adr/adr-025-debugger-shared-context.md`
+
+Implemented thread-safe AST cache shared between LSP and DAP:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Thread-Safe AST Cache                         │
+│     Arc<RwLock<HashMap<PathBuf, CachedDocument>>>               │
+│                                                                  │
+│  CachedDocument {                                                │
+│    source: String,                                               │
+│    program: Option<Program>,  // The AST                         │
+│    imports: HashSet<PathBuf>, // Dependencies                    │
+│    dirty: bool,               // Needs re-parse?                 │
+│  }                                                               │
+└─────────────────────────────────────────────────────────────────┘
+           ↑                              ↑
+           │ write                        │ read (or write if miss)
+           │                              │
+    ┌──────┴───────┐               ┌──────┴───────┐
+    │     LSP      │               │     DAP      │
+    │  (Thread 1)  │               │  (Thread 2)  │
+    │              │               │              │
+    │  Evaluator   │               │  Evaluator   │
+    │  (own copy)  │               │  (own copy)  │
+    └──────────────┘               └──────────────┘
+```
+
+**Key features:**
+- LSP updates cache when documents change
+- DAP reads from cache (or parses and caches if missing/dirty)
+- Cascade invalidation: dirty files propagate to dependents
+- Each thread has its own `Evaluator` (because `RefCell` is not `Sync`)
+
+---
+
+## 🎯 NEXT: Wire DAP to Real Evaluator with DebugHook
+
+### Problem Statement
+
+The DAP server currently **simulates stepping** by incrementing line numbers. It does NOT:
+- Set the `DapDebugHook` on the evaluator
+- Run actual evaluation
+- Support cross-file debugging (stepping into imported files)
+
+### Current State (What Works)
+
+| Component | Status |
+|-----------|--------|
+| Parser populates `FullSourceLocation` (file + line + column) | ✅ |
+| `ExampleStatement` carries location | ✅ |
+| Evaluator calls `on_eval_start()` for every expression | ✅ |
+| `DapDebugHook` exists with channel-based communication | ✅ |
+| DAP returns stack traces with file paths | ✅ |
+| VS Code shows debugger UI | ✅ |
+| **DAP wires hook to evaluator** | ❌ NOT DONE |
+| **Cross-file debugging** | ❌ NOT DONE |
+
+### Architecture (from `REPL_ENHANCEMENTS.md`)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     kleis server                             │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐       │
+│  │   LSP       │◄─►│  Shared     │◄─►│   DAP       │       │
+│  │  Handler    │   │  Context    │   │  Handler    │       │
+│  └─────────────┘   │ - Evaluator │   └─────────────┘       │
+│                    │ - Types     │                          │
+│                    │ - Structs   │                          │
+│                    └─────────────┘                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Design Points:**
+- **RefCell** ensures zero overhead when not debugging (hook is `None`)
+- **DapDebugHook** blocks in evaluator thread, communicates via channels
+- **DapDebugController** held by DAP server, sends commands, receives events
+- **DO NOT change RefCell** - it's there for a purpose!
+
+### Implementation Plan
+
+#### Step 1: Update `DapState` to Hold Controller
+
+```rust
+struct DapState {
+    // ... existing fields ...
+    
+    /// Controller for channel-based communication with DebugHook
+    controller: Option<DapDebugController>,
+    
+    /// Handle to evaluation thread
+    eval_thread: Option<std::thread::JoinHandle<()>>,
+    
+    /// Parsed program (for finding example blocks)
+    program: Option<Program>,
+}
+```
+
+#### Step 2: Wire `launch` Handler
+
+1. Parse file with `parse_kleis_program_with_file(source, canonical_path)`
+2. Find first `ExampleBlock` to debug
+3. Create `DapDebugHook` + `DapDebugController` via `DapDebugHook::new()`
+4. Store controller in `DapState`
+5. **Don't start evaluation yet** (wait for `configurationDone`)
+
+#### Step 3: Wire `setBreakpoints` Handler
+
+1. Create `Breakpoint { file, line, enabled: true }` for each
+2. Store in `DapState.breakpoints`
+3. Will be added to hook before evaluation starts
+
+#### Step 4: Wire `configurationDone` Handler
+
+1. Lock evaluator, set hook: `evaluator.set_debug_hook(hook)`
+2. Spawn evaluation thread:
+   ```rust
+   thread::spawn(move || {
+       evaluator.eval_example_block(&example);
+       // Send terminated when done
+   });
+   ```
+3. Wait for first `StopEvent` from `controller.event_rx`
+4. Send `stopped` event to VS Code
+
+#### Step 5: Wire Step Commands
+
+| DAP Command | DebugAction |
+|-------------|-------------|
+| `next` | `StepOver` |
+| `stepIn` | `StepInto` |
+| `stepOut` | `StepOut` |
+| `continue` | `Continue` |
+
+1. Send via `controller.command_tx.send(action)`
+2. Wait for `StopEvent` from `controller.event_rx`
+3. Update `current_file` and `current_line` from event
+4. Send `stopped` event to VS Code
+
+#### Step 6: Wire `stackTrace` Handler
+
+- Get stack from `StopEvent.stack`
+- Store latest stack in `DapState`
+- Return frames with `source.path` (absolute paths)
+
+#### Step 7: Wire `variables` Handler
+
+- Get bindings from top stack frame
+- Return as DAP variables
+
+#### Step 8: Handle Evaluation Complete
+
+- Add `Terminated` variant to `StopEvent` (or use channel close)
+- Send `terminated` event to VS Code
+
+### Why This Works for Cross-File Debugging
+
+The evaluator calls `on_eval_start` with whatever `SourceLocation` the AST has.
+When stepping into a function from an imported file, the AST node has that file's path.
+The hook receives it, checks breakpoints, sends stop event with the correct file.
+**No per-construct hardcoding needed.**
+
+---
+
+## 🧠 CRITICAL ARCHITECTURE: SharedContext AST Cache
+
+### The Insight
+
+**LSP already parses every file the user has open.** It re-parses on every edit.
+DAP should NOT parse files separately — it should use the SAME cached AST.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              SharedContext.documents                         │
+│                                                              │
+│   HashMap<PathBuf, CachedDocument>                          │
+│                                                              │
+│   "/path/to/main.kleis"    → AST (parsed by LSP on open)    │
+│   "/path/to/helper.kleis"  → AST (parsed by LSP on open)    │
+│   "/path/to/stdlib/prelude" → AST (parsed by DAP if needed) │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+        ↑                              ↑
+   LSP updates on edit             DAP reads (parses only if missing)
+```
+
+### The Rule
+
+1. **DAP checks cache first** before parsing any file
+2. **If found** → use it (FREE, already parsed by LSP)
+3. **If not found** → parse, then ADD to cache for future use
+4. **Both LSP and DAP use the same cache**
+
+### Cache Invalidation (CRITICAL)
+
+**When a file changes, all files that IMPORT it must be evicted from cache.**
+
+Example:
+```
+main.kleis imports helper.kleis
+helper.kleis imports stdlib/prelude.kleis
+
+If stdlib/prelude.kleis changes:
+  → Evict helper.kleis (imports stdlib)
+  → Evict main.kleis (imports helper which imports stdlib)
+```
+
+This requires **dependency tracking**:
+```rust
+struct CachedDocument {
+    ast: Program,
+    imports: Vec<PathBuf>,        // Files this doc imports
+    imported_by: Vec<PathBuf>,    // Files that import this doc (reverse)
+}
+```
+
+When file X changes:
+1. Evict X from cache
+2. For each file that imports X, recursively evict
+
+### Performance Impact
+
+| Without Cache | With Cache |
+|---------------|------------|
+| Debug start: parse file (50ms) | 0ms (already parsed) |
+| Step into import: parse (50ms) | 0ms if open in editor |
+| Edit during debug: parse twice | Parse once (LSP only) |
+
+### Why This Matters
+
+> **The user's editor IS the source of truth.**
+> LSP sees what user sees. DAP uses what LSP sees.
+> No stale ASTs. No duplicate parsing.
+
+### The Algorithm (Classic Incremental Compilation)
+
+This is the same algorithm used by `make`, `cargo`, Webpack, and TypeScript.
+
+**1. Build Dependency Graph (on parse):**
+```rust
+fn on_parse(file: &Path, ast: &Program) {
+    for import_path in ast.imports() {
+        // Forward edge: file imports import_path
+        cache[file].imports.push(import_path);
+        // Reverse edge: import_path is imported_by file
+        cache[import_path].imported_by.push(file);
+    }
+}
+```
+
+**2. Invalidation (on file change) — propagate UP the tree:**
+```rust
+fn invalidate(file: &Path) {
+    if let Some(doc) = cache.remove(file) {
+        // Recursively invalidate all dependents
+        for dependent in doc.imported_by {
+            invalidate(&dependent);
+        }
+    }
+}
+```
+
+**3. Lazy Re-parse (on demand) — parse dependencies FIRST:**
+```rust
+fn get_ast(file: &Path) -> &Program {
+    if cache.contains(file) {
+        return &cache[file].ast;
+    }
+    
+    // Parse the file
+    let ast = parse(file);
+    
+    // Ensure all imports are in cache first (topological order)
+    for import_path in ast.imports() {
+        get_ast(&import_path);  // Recursive
+    }
+    
+    // Store and return
+    cache.insert(file, CachedDocument { ast, ... });
+    &cache[file].ast
+}
+```
+
+**Visual Example:**
+```
+stdlib/prelude.kleis CHANGES
+         ↓ invalidate
+    helper.kleis (imports stdlib) → EVICTED
+         ↓ invalidate  
+    main.kleis (imports helper) → EVICTED
+
+Later, when DAP needs main.kleis:
+    get_ast(main.kleis)
+        → get_ast(helper.kleis)  // dependency first
+            → get_ast(stdlib/prelude.kleis)  // leaf first
+            ← parse stdlib, cache it
+        ← parse helper, cache it
+    ← parse main, cache it
+```
+
+**Key Properties:**
+- Parse each file at most once per change
+- Dependencies parsed before dependents (topological order)
+- Lazy: only re-parse when actually needed
+- Minimal work: only affected files re-parsed
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/bin/kleis.rs` | Update `DapState`, wire handlers |
+| `src/debug.rs` | Add `Terminated` event (if needed) |
+
+### Technical Debt to Address
+
+**1. Consolidate DAP Implementations**
+- `src/dap.rs` — Library version (marked `#[deprecated]`)
+- `src/bin/kleis.rs` — Used by `kleis server` (the active one)
+- **Action:** Remove `src/dap.rs` after confirming `kleis server` works end-to-end
+
+**2. Review DebugHook Implementations**
+We have 3 implementations in `src/debug.rs`:
+- `NoOpDebugHook` — Zero overhead when not debugging (KEEP)
+- `InteractiveDebugHook` — For REPL `:debug` command (KEEP for REPL)
+- `DapDebugHook` — For VS Code DAP integration (KEEP for DAP)
+
+**Action:** After wiring is complete, review if `InteractiveDebugHook` and `DapDebugHook` can share more code or if the separation is justified.
+
+**3. Squash Commits Before Merging**
+The `feature/debugger-dap` branch has 63+ incremental commits. Before merging to `main`, squash into logical commits:
+- "Add example blocks and assert to grammar (v0.93)"
+- "Implement REPL :debug command"  
+- "Add DAP infrastructure for VS Code debugging"
+- "Add source location tracking to parser"
+- "Wire DAP to evaluator with DapDebugHook"
+
+**Command:** `git rebase -i origin/main` then squash/fixup related commits.
+
+### Test Plan
+
+1. Set breakpoint in `examples/debug_main.kleis` on line 8
+2. Set breakpoint in `examples/debug_helper.kleis` on line 6
+3. Start debugging `debug_main.kleis`
+4. Should stop at line 8
+5. Step over to line 11 (`let doubled = double(x)`)
+6. Step into → should jump to `debug_helper.kleis` line 6
+7. Step out → should return to `debug_main.kleis`
+
+### Key Documents
+
+1. **`docs/plans/REPL_ENHANCEMENTS.md`** — Master plan, Phase 6 (Debugging)
+2. **`docs/plans/EXPRESSION_SPANS.md`** — Future: spans on all Expressions
+3. **`src/debug.rs`** — DebugHook trait and DapDebugHook implementation
+
+---
+
+## 📋 Previous: Debugger Status Before Wiring
+
+| Feature | Status |
+|---------|--------|
+| Launch/attach | ✅ |
+| Breakpoints (set) | ✅ |
+| Breakpoints (hit) | ⚠️ Simulated, not real |
+| Step in/over/out | ⚠️ Simulated line increment |
+| Continue | ⚠️ Simulated |
+| Stack trace | ✅ Correct file paths |
+| Variables | ✅ From evaluator |
+| Cross-file | ❌ Not working |
+
+### Files to Review
+
+- `src/bin/kleis.rs` — Unified binary (DAP implementation here)
+- `src/debug.rs` — DebugHook trait and DapDebugHook
+- `src/evaluator.rs` — Calls debug hooks at key points
+- `vscode-kleis/src/extension.ts` — VS Code integration
 
 ---
 

@@ -31,6 +31,7 @@ fn main() {
                         hint: "metric".to_string(),
                     },
                 ],
+                span: None,
             },
             Expression::Operation {
                 name: "scalar_multiply".to_string(),
@@ -41,8 +42,10 @@ fn main() {
                         hint: "metric_g_mu_nu".to_string(),
                     },
                 ],
+                span: None,
             },
         ],
+        span: None,
     };
 
     println!("Testing: plus(einstein(...), scalar_multiply(Λ, ?))");

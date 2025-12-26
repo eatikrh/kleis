@@ -43,11 +43,13 @@
 //! **Purpose:** Validate ADR-015 design decisions, not production-ready!
 use crate::ast::{Expression, MatchCase, Pattern};
 use crate::kleis_ast::{
-    DataDef, DataField, DataVariant, DimExpr, FunctionDef, ImplMember, Implementation,
-    ImplementsDef, OperationDecl, Program, StructureDef, StructureMember, TopLevel, TypeAlias,
-    TypeAliasParam, TypeExpr,
+    DataDef, DataField, DataVariant, DimExpr, ExampleBlock, ExampleStatement, FunctionDef,
+    ImplMember, Implementation, ImplementsDef, OperationDecl, Program, StructureDef,
+    StructureMember, TopLevel, TypeAlias, TypeAliasParam, TypeExpr,
 };
 use std::fmt;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct KleisParseError {
@@ -67,9 +69,19 @@ impl fmt::Display for KleisParseError {
 
 impl std::error::Error for KleisParseError {}
 
+// Re-export SourceSpan from ast.rs for backward compatibility
+pub use crate::ast::FullSourceLocation;
+pub use crate::ast::SourceSpan;
+
 pub struct KleisParser {
     input: Vec<char>,
     pos: usize,
+    /// Current line number (1-based)
+    line: u32,
+    /// Current column number (1-based)
+    column: u32,
+    /// Current file path (Arc for cheap cloning across all expressions)
+    current_file: Option<Arc<PathBuf>>,
 }
 
 impl KleisParser {
@@ -77,7 +89,46 @@ impl KleisParser {
         KleisParser {
             input: input.chars().collect(),
             pos: 0,
+            line: 1,
+            column: 1,
+            current_file: None,
         }
+    }
+
+    /// Create a parser with a known file path
+    /// The path is wrapped in Arc so all expressions share the same reference
+    pub fn new_with_file(input: &str, file: impl Into<PathBuf>) -> Self {
+        KleisParser {
+            input: input.chars().collect(),
+            pos: 0,
+            line: 1,
+            column: 1,
+            current_file: Some(Arc::new(file.into())),
+        }
+    }
+
+    /// Set the current file path
+    pub fn set_file(&mut self, file: impl Into<PathBuf>) {
+        self.current_file = Some(Arc::new(file.into()));
+    }
+
+    /// Get the current source span (includes file if known)
+    pub fn current_span(&self) -> SourceSpan {
+        let mut span = SourceSpan::new(self.line, self.column);
+        if let Some(ref file) = self.current_file {
+            span.file = Some(Arc::clone(file));
+        }
+        span
+    }
+
+    /// Get the current full source location (with file as String)
+    /// Deprecated: prefer current_span() which includes file in the span
+    pub fn current_location(&self) -> FullSourceLocation {
+        let mut loc = FullSourceLocation::new(self.line, self.column);
+        if let Some(ref file) = self.current_file {
+            loc.file = Some(file.to_string_lossy().to_string());
+        }
+        loc
     }
 
     fn peek(&self) -> Option<char> {
@@ -92,6 +143,15 @@ impl KleisParser {
         if self.pos < self.input.len() {
             let ch = self.input[self.pos];
             self.pos += 1;
+
+            // Track line and column
+            if ch == '\n' {
+                self.line += 1;
+                self.column = 1;
+            } else {
+                self.column += 1;
+            }
+
             Some(ch)
         } else {
             None
@@ -344,6 +404,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "negate".to_string(),
                 args: vec![arg],
+                span: Some(self.current_span()),
             });
         }
 
@@ -354,6 +415,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "logical_not".to_string(),
                 args: vec![arg],
+                span: Some(self.current_span()),
             });
         }
 
@@ -374,6 +436,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "gradient".to_string(),
                 args: vec![arg],
+                span: Some(self.current_span()),
             });
         }
 
@@ -385,6 +448,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "Integrate".to_string(),
                 args: vec![arg],
+                span: Some(self.current_span()),
             });
         }
 
@@ -395,6 +459,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "DoubleIntegral".to_string(),
                 args: vec![arg],
+                span: Some(self.current_span()),
             });
         }
 
@@ -405,6 +470,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "TripleIntegral".to_string(),
                 args: vec![arg],
+                span: Some(self.current_span()),
             });
         }
 
@@ -415,6 +481,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "LineIntegral".to_string(),
                 args: vec![arg],
+                span: Some(self.current_span()),
             });
         }
 
@@ -425,6 +492,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "SurfaceIntegral".to_string(),
                 args: vec![arg],
+                span: Some(self.current_span()),
             });
         }
 
@@ -469,6 +537,7 @@ impl KleisParser {
                 return Ok(Expression::Operation {
                     name: "Unit".to_string(),
                     args: vec![],
+                    span: Some(self.current_span()),
                 });
             }
 
@@ -503,6 +572,7 @@ impl KleisParser {
                 return Ok(Expression::Operation {
                     name: constructor.to_string(),
                     args: elements,
+                    span: Some(self.current_span()),
                 });
             } else {
                 // Just a grouped expression
@@ -547,7 +617,11 @@ impl KleisParser {
                         position: self.pos,
                     });
                 }
-                return Ok(Expression::Operation { name: id, args });
+                return Ok(Expression::Operation {
+                    name: id,
+                    args,
+                    span: Some(self.current_span()),
+                });
             }
 
             // Just an identifier
@@ -572,6 +646,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "power".to_string(),
                 args: vec![left, right],
+                span: Some(self.current_span()),
             };
         }
 
@@ -593,6 +668,7 @@ impl KleisParser {
                     expr = Expression::Operation {
                         name: "factorial".to_string(),
                         args: vec![expr],
+                        span: Some(self.current_span()),
                     };
                 }
                 Some('ᵀ') => {
@@ -600,6 +676,7 @@ impl KleisParser {
                     expr = Expression::Operation {
                         name: "transpose".to_string(),
                         args: vec![expr],
+                        span: Some(self.current_span()),
                     };
                 }
                 Some('†') => {
@@ -607,6 +684,7 @@ impl KleisParser {
                     expr = Expression::Operation {
                         name: "dagger".to_string(),
                         args: vec![expr],
+                        span: Some(self.current_span()),
                     };
                 }
                 _ => break,
@@ -634,6 +712,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
+                span: Some(self.current_span()),
             };
         }
 
@@ -690,6 +769,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "iff".to_string(),
                 args: vec![left, right],
+                span: Some(self.current_span()),
             };
         }
 
@@ -714,6 +794,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "implies".to_string(),
                 args: vec![left, right],
+                span: Some(self.current_span()),
             };
         }
 
@@ -737,6 +818,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "logical_or".to_string(),
                 args: vec![left, right],
+                span: Some(self.current_span()),
             };
         }
 
@@ -760,6 +842,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "logical_and".to_string(),
                 args: vec![left, right],
+                span: Some(self.current_span()),
             };
         }
 
@@ -848,6 +931,7 @@ impl KleisParser {
             Ok(Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
+                span: Some(self.current_span()),
             })
         } else {
             Ok(left)
@@ -918,6 +1002,7 @@ impl KleisParser {
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
+                    span: Some(self.current_span()),
                 };
             } else {
                 break;
@@ -1158,6 +1243,7 @@ impl KleisParser {
             Ok(Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
+                span: Some(self.current_span()),
             })
         } else {
             Ok(left)
@@ -1190,6 +1276,7 @@ impl KleisParser {
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
+                    span: Some(self.current_span()),
                 };
             } else {
                 break;
@@ -2094,6 +2181,7 @@ impl KleisParser {
             condition: Box::new(condition),
             then_branch: Box::new(then_branch),
             else_branch: Box::new(else_branch),
+            span: Some(self.current_span()),
         })
     }
 
@@ -2153,6 +2241,7 @@ impl KleisParser {
             type_annotation,
             value: Box::new(value),
             body: Box::new(body),
+            span: Some(self.current_span()),
         })
     }
 
@@ -2206,6 +2295,7 @@ impl KleisParser {
         Ok(Expression::Lambda {
             params,
             body: Box::new(body),
+            span: Some(self.current_span()),
         })
     }
 
@@ -2270,6 +2360,7 @@ impl KleisParser {
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
+                    span: Some(self.current_span()),
                 };
             } else {
                 // No more operators, stop
@@ -2331,6 +2422,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_and".to_string(),
                     args: vec![expr, right],
+                    span: Some(self.current_span()),
                 };
             } else if self.peek() == Some('∨') {
                 self.advance();
@@ -2339,6 +2431,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_or".to_string(),
                     args: vec![expr, right],
+                    span: Some(self.current_span()),
                 };
             } else if self.peek_n(2).as_deref() == Some("&&") {
                 self.pos += 2;
@@ -2347,6 +2440,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_and".to_string(),
                     args: vec![expr, right],
+                    span: Some(self.current_span()),
                 };
             } else if self.peek_n(2).as_deref() == Some("||") {
                 self.pos += 2;
@@ -2355,6 +2449,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_or".to_string(),
                     args: vec![expr, right],
+                    span: Some(self.current_span()),
                 };
             } else {
                 // No more operators, stop
@@ -3284,6 +3379,9 @@ impl KleisParser {
     pub fn parse_function_def(&mut self) -> Result<FunctionDef, KleisParseError> {
         self.skip_whitespace();
 
+        // Capture source location at start of definition
+        let span = self.current_span();
+
         // Expect 'define' keyword
         let keyword = self.parse_identifier()?;
         if keyword != "define" {
@@ -3360,6 +3458,7 @@ impl KleisParser {
             params,
             type_annotation,
             body,
+            span: Some(span),
         })
     }
 
@@ -3898,6 +3997,172 @@ impl KleisParser {
         Ok(path)
     }
 
+    /// Parse an example block (v0.93): example "name" { statements }
+    ///
+    /// Grammar:
+    ///   exampleBlock ::= "example" string "{" exampleBody "}"
+    ///   exampleBody  ::= { exampleStatement }
+    ///   exampleStatement ::= letBinding | assertStatement | expression ";"
+    fn parse_example_block(&mut self) -> Result<ExampleBlock, KleisParseError> {
+        self.skip_whitespace();
+
+        // Consume 'example' keyword (already peeked)
+        self.expect_word("example")?;
+        self.skip_whitespace();
+
+        // Parse the example name as a string literal
+        let name = self.parse_string_literal()?;
+        self.skip_whitespace();
+
+        // Expect opening brace
+        if self.advance() != Some('{') {
+            return Err(KleisParseError {
+                message: "Expected '{' to start example block".to_string(),
+                position: self.pos,
+            });
+        }
+
+        // Parse statements until closing brace
+        let mut statements = Vec::new();
+        loop {
+            self.skip_whitespace();
+
+            if self.peek() == Some('}') {
+                self.advance(); // consume '}'
+                break;
+            }
+
+            if self.pos >= self.input.len() {
+                return Err(KleisParseError {
+                    message: "Unexpected end of input in example block".to_string(),
+                    position: self.pos,
+                });
+            }
+
+            let stmt = self.parse_example_statement()?;
+            statements.push(stmt);
+        }
+
+        Ok(ExampleBlock { name, statements })
+    }
+
+    /// Parse a single statement within an example block
+    fn parse_example_statement(&mut self) -> Result<ExampleStatement, KleisParseError> {
+        self.skip_whitespace();
+
+        // Capture full location (line, column, file) at start of statement
+        let start_location = self.current_location();
+
+        // Check for 'let' binding
+        if self.peek_word("let") {
+            return self.parse_example_let_with_location(start_location);
+        }
+
+        // Check for 'assert' statement
+        if self.peek_word("assert") {
+            return self.parse_assert_statement_with_location(start_location);
+        }
+
+        // Otherwise, parse as expression statement
+        // Use parse_expression() not parse() since we don't want to check for EOF
+        let expr = self.parse_expression()?;
+
+        // Optionally consume trailing semicolon (for consistency)
+        self.skip_whitespace();
+        if self.peek() == Some(';') {
+            self.advance();
+        }
+
+        Ok(ExampleStatement::Expr {
+            expr,
+            location: Some(start_location),
+        })
+    }
+
+    /// Parse a let binding in an example block: let name = expr or let name : T = expr
+    fn parse_example_let_with_location(
+        &mut self,
+        location: FullSourceLocation,
+    ) -> Result<ExampleStatement, KleisParseError> {
+        self.skip_whitespace();
+        self.expect_word("let")?;
+        self.skip_whitespace();
+
+        let name = self.parse_identifier()?;
+        self.skip_whitespace();
+
+        // Optional type annotation
+        let type_annotation = if self.peek() == Some(':') {
+            self.advance(); // consume ':'
+            self.skip_whitespace();
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+
+        self.skip_whitespace();
+
+        // For symbolic bindings without initializer: let x : T (no '=' needed)
+        let value = if self.peek() == Some('=') {
+            self.advance(); // consume '='
+            self.skip_whitespace();
+            // Use parse_expression() not parse() since we don't want to check for EOF
+            self.parse_expression()?
+        } else if type_annotation.is_some() {
+            // Symbolic variable declaration (no value, just type)
+            // Create a placeholder identifier for this symbolic variable
+            Expression::Object(name.clone())
+        } else {
+            return Err(KleisParseError {
+                message: "Expected '=' or ':' in let binding".to_string(),
+                position: self.pos,
+            });
+        };
+
+        Ok(ExampleStatement::Let {
+            name,
+            type_annotation,
+            value,
+            location: Some(location),
+        })
+    }
+
+    /// Parse an assert statement: assert(expression)
+    fn parse_assert_statement_with_location(
+        &mut self,
+        location: FullSourceLocation,
+    ) -> Result<ExampleStatement, KleisParseError> {
+        self.skip_whitespace();
+        self.expect_word("assert")?;
+        self.skip_whitespace();
+
+        // Expect opening paren
+        if self.advance() != Some('(') {
+            return Err(KleisParseError {
+                message: "Expected '(' after 'assert'".to_string(),
+                position: self.pos,
+            });
+        }
+
+        self.skip_whitespace();
+        // Use parse_expression() not parse() since we don't want to check for EOF
+        let condition = self.parse_expression()?;
+        self.skip_whitespace();
+
+        // Expect closing paren
+        if self.advance() != Some(')') {
+            return Err(KleisParseError {
+                message: "Expected ')' to close assert".to_string(),
+                position: self.pos,
+            });
+        }
+
+        Ok(ExampleStatement::Assert {
+            condition,
+            location: Some(location),
+        })
+    }
+
     /// Parse a complete program (multiple top-level items)
     pub fn parse_program(&mut self) -> Result<Program, KleisParseError> {
         let mut program = Program::new();
@@ -3937,9 +4202,12 @@ impl KleisParser {
             } else if self.peek_word("define") {
                 let function_def = self.parse_function_def()?;
                 program.add_item(TopLevel::FunctionDef(function_def));
+            } else if self.peek_word("example") {
+                let example_block = self.parse_example_block()?;
+                program.add_item(TopLevel::ExampleBlock(example_block));
             } else {
                 return Err(KleisParseError {
-                    message: "Expected 'import', 'structure', 'implements', 'data', 'operation', 'type', or 'define'"
+                    message: "Expected 'import', 'structure', 'implements', 'data', 'operation', 'type', 'define', or 'example'"
                         .to_string(),
                     position: self.pos,
                 });
@@ -4006,6 +4274,19 @@ pub fn parse_kleis_program(input: &str) -> Result<Program, KleisParseError> {
     parser.parse_program()
 }
 
+/// Parse a complete Kleis program with file path information
+///
+/// This function attaches the file path to all source locations,
+/// enabling cross-file debugging. The file path is wrapped in Arc
+/// so all expressions from this file share the same reference.
+pub fn parse_kleis_program_with_file(
+    input: &str,
+    file: impl Into<PathBuf>,
+) -> Result<Program, KleisParseError> {
+    let mut parser = KleisParser::new_with_file(input, file);
+    parser.parse_program()
+}
+
 /// Parse a type expression
 pub fn parse_type_expr(input: &str) -> Result<TypeExpr, KleisParseError> {
     let mut parser = KleisParser::new(input);
@@ -4032,7 +4313,7 @@ mod tests {
     fn test_function_call_single_arg() {
         let result = parse_kleis("abs(x)").unwrap();
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "abs");
                 assert_eq!(args.len(), 1);
                 assert!(matches!(args[0], Expression::Object(ref s) if s == "x"));
@@ -4045,7 +4326,7 @@ mod tests {
     fn test_function_call_two_args() {
         let result = parse_kleis("frac(a, b)").unwrap();
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "frac");
                 assert_eq!(args.len(), 2);
             }
@@ -4057,11 +4338,11 @@ mod tests {
     fn test_nested_call() {
         let result = parse_kleis("abs(frac(a, b))").unwrap();
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "abs");
                 assert_eq!(args.len(), 1);
                 match &args[0] {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "frac");
                         assert_eq!(args.len(), 2);
                     }
@@ -4783,7 +5064,9 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 assert_eq!(*scrutinee, Expression::Object("x".to_string()));
                 assert_eq!(cases.len(), 2);
 
@@ -4818,7 +5101,9 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Match { scrutinee, cases } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 assert_eq!(*scrutinee, Expression::Object("opt".to_string()));
                 assert_eq!(cases.len(), 2);
 
@@ -4924,7 +5209,7 @@ mod tests {
             Expression::Match { cases, .. } => {
                 assert_eq!(cases.len(), 1);
                 match &cases[0].body {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "plus");
                         assert_eq!(args.len(), 2);
                     }
@@ -5233,6 +5518,7 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 assert_eq!(*condition, Expression::Object("x".to_string()));
                 assert_eq!(*then_branch, Expression::Const("1".to_string()));
@@ -5253,10 +5539,11 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 // Condition should be a comparison operation
                 match condition.as_ref() {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "greater_than");
                         assert_eq!(args.len(), 2);
                     }
@@ -5280,6 +5567,7 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 // Condition
                 match condition.as_ref() {
@@ -5319,6 +5607,7 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 assert_eq!(*condition, Expression::Object("a".to_string()));
                 assert_eq!(*then_branch, Expression::Const("1".to_string()));
@@ -5329,6 +5618,7 @@ mod tests {
                         condition: inner_cond,
                         then_branch: inner_then,
                         else_branch: inner_else,
+                        ..
                     } => {
                         assert_eq!(**inner_cond, Expression::Object("b".to_string()));
                         assert_eq!(**inner_then, Expression::Const("2".to_string()));
@@ -5352,9 +5642,10 @@ mod tests {
                 condition,
                 then_branch,
                 else_branch,
+                ..
             } => {
                 match condition.as_ref() {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "valid");
                         assert_eq!(args.len(), 1);
                     }
@@ -5367,7 +5658,7 @@ mod tests {
                     _ => panic!("Expected function call in then branch"),
                 }
                 match else_branch.as_ref() {
-                    Expression::Operation { name, args } => {
+                    Expression::Operation { name, args, .. } => {
                         assert_eq!(name, "default");
                         assert!(args.is_empty());
                     }
@@ -5403,7 +5694,7 @@ mod tests {
 
         match result {
             Expression::Conditional { condition, .. } => match condition.as_ref() {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     assert_eq!(name, "logical_and");
                     assert_eq!(args.len(), 2);
                 }
@@ -5486,6 +5777,7 @@ mod tests {
                     Expression::Operation {
                         name: op_name,
                         args,
+                        ..
                     } => {
                         assert_eq!(op_name, "plus");
                         assert_eq!(args.len(), 2);
@@ -5629,6 +5921,7 @@ mod tests {
                     Expression::Operation {
                         name: op_name,
                         args,
+                        ..
                     } => {
                         assert_eq!(op_name, "compute");
                         assert_eq!(args.len(), 2);
@@ -5654,6 +5947,7 @@ mod tests {
                 type_annotation,
                 value,
                 body,
+                ..
             } => {
                 assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "x"));
                 assert_eq!(type_annotation, Some("ℝ".to_string()));
@@ -5960,7 +6254,7 @@ mod tests {
         let result = parser.parse().unwrap();
         assert!(matches!(
             result,
-            Expression::Operation { name, args } if name == "factorial" && args.len() == 1
+            Expression::Operation { name, args, .. } if name == "factorial" && args.len() == 1
         ));
     }
 
@@ -5969,7 +6263,7 @@ mod tests {
         // (n + 1)!
         let mut parser = KleisParser::new("(n + 1)!");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "factorial");
             assert_eq!(args.len(), 1);
             // The argument should be (n + 1)
@@ -5985,7 +6279,7 @@ mod tests {
         let result = parser.parse().unwrap();
         assert!(matches!(
             result,
-            Expression::Operation { name, args } if name == "transpose" && args.len() == 1
+            Expression::Operation { name, args, .. } if name == "transpose" && args.len() == 1
         ));
     }
 
@@ -5995,7 +6289,7 @@ mod tests {
         let result = parser.parse().unwrap();
         assert!(matches!(
             result,
-            Expression::Operation { name, args } if name == "dagger" && args.len() == 1
+            Expression::Operation { name, args, .. } if name == "dagger" && args.len() == 1
         ));
     }
 
@@ -6004,13 +6298,14 @@ mod tests {
         // A!ᵀ should parse as transpose(factorial(A))
         let mut parser = KleisParser::new("A!ᵀ");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "transpose");
             assert_eq!(args.len(), 1);
             // Inner should be factorial(A)
             if let Expression::Operation {
                 name: inner_name,
                 args: inner_args,
+                ..
             } = &args[0]
             {
                 assert_eq!(inner_name, "factorial");
@@ -6028,7 +6323,7 @@ mod tests {
         // n!^2 should parse as power(factorial(n), 2)
         let mut parser = KleisParser::new("n!^2");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "power");
             assert_eq!(args.len(), 2);
             // Left should be factorial(n)
@@ -6050,7 +6345,7 @@ mod tests {
         // n != m should NOT be factorial, should be neq (not equal)
         let mut parser = KleisParser::new("n != m");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "neq"); // Parser uses "neq" for !=
             assert_eq!(args.len(), 2);
         } else {
@@ -6063,7 +6358,7 @@ mod tests {
         // Aᵀ * B
         let mut parser = KleisParser::new("Aᵀ * B");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "times");
             assert_eq!(args.len(), 2);
             // Left should be transpose(A)
@@ -6089,7 +6384,7 @@ mod tests {
         // λ x . x
         let mut parser = KleisParser::new("λ x . x");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             assert!(params[0].type_annotation.is_none());
@@ -6104,7 +6399,7 @@ mod tests {
         // lambda x . x (using keyword instead of symbol)
         let mut parser = KleisParser::new("lambda x . x");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             assert!(matches!(*body, Expression::Object(ref name) if name == "x"));
@@ -6118,7 +6413,7 @@ mod tests {
         // λ x y . x + y
         let mut parser = KleisParser::new("λ x y . x + y");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 2);
             assert_eq!(params[0].name, "x");
             assert_eq!(params[1].name, "y");
@@ -6133,7 +6428,7 @@ mod tests {
         // λ (x : ℝ) . x^2
         let mut parser = KleisParser::new("λ (x : ℝ) . x^2");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             assert_eq!(params[0].type_annotation, Some("ℝ".to_string()));
@@ -6148,7 +6443,7 @@ mod tests {
         // λ (x : ℝ) (y : ℝ) . x * y
         let mut parser = KleisParser::new("λ (x : ℝ) (y : ℝ) . x * y");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 2);
             assert_eq!(params[0].name, "x");
             assert_eq!(params[0].type_annotation, Some("ℝ".to_string()));
@@ -6165,13 +6460,14 @@ mod tests {
         // λ x . λ y . x + y (curried function)
         let mut parser = KleisParser::new("λ x . λ y . x + y");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             // Body should be another lambda
             if let Expression::Lambda {
                 params: inner_params,
                 body: inner_body,
+                ..
             } = *body
             {
                 assert_eq!(inner_params.len(), 1);
@@ -6192,7 +6488,7 @@ mod tests {
         // f(λ x . x + 1)
         let mut parser = KleisParser::new("f(λ x . x + 1)");
         let result = parser.parse().unwrap();
-        if let Expression::Operation { name, args } = result {
+        if let Expression::Operation { name, args, .. } = result {
             assert_eq!(name, "f");
             assert_eq!(args.len(), 1);
             assert!(matches!(args[0], Expression::Lambda { .. }));
@@ -6206,10 +6502,10 @@ mod tests {
         // λ f . f(0)
         let mut parser = KleisParser::new("λ f . f(0)");
         let result = parser.parse().unwrap();
-        if let Expression::Lambda { params, body } = result {
+        if let Expression::Lambda { params, body, .. } = result {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "f");
-            if let Expression::Operation { name, args } = *body {
+            if let Expression::Operation { name, args, .. } = *body {
                 assert_eq!(name, "f");
                 assert_eq!(args.len(), 1);
             } else {
@@ -6231,7 +6527,7 @@ mod tests {
         assert!(result.params.is_empty()); // No traditional params, lambda captures them
 
         // Body should be a lambda
-        if let Expression::Lambda { params, body } = result.body {
+        if let Expression::Lambda { params, body, .. } = result.body {
             assert_eq!(params.len(), 1);
             assert_eq!(params[0].name, "x");
             // Inner body should be another lambda
@@ -6261,7 +6557,10 @@ mod tests {
         let mut parser = KleisParser::new(code);
         let result = parser.parse().unwrap();
 
-        if let Expression::Match { scrutinee, cases } = result {
+        if let Expression::Match {
+            scrutinee, cases, ..
+        } = result
+        {
             assert_eq!(*scrutinee, Expression::Object("x".to_string()));
             assert_eq!(cases.len(), 2);
 
@@ -6272,7 +6571,7 @@ mod tests {
 
             // Guard should be n < 0 (parsed as less_than(n, 0))
             if let Some(guard) = &case1.guard {
-                if let Expression::Operation { name, args } = guard {
+                if let Expression::Operation { name, args, .. } = guard {
                     assert_eq!(name, "less_than");
                     assert_eq!(args.len(), 2);
                 } else {
@@ -6636,7 +6935,7 @@ mod tests {
     fn test_string_in_function_call() {
         let result = parse_kleis(r#"concat("hello", "world")"#).unwrap();
         match result {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "concat");
                 assert_eq!(args.len(), 2);
                 assert!(matches!(&args[0], Expression::String(s) if s == "hello"));
@@ -6789,5 +7088,109 @@ mod tests {
             }
             _ => panic!("Expected Unit pattern"),
         }
+    }
+
+    // =========================================
+    // Example Block Tests (v0.93)
+    // =========================================
+
+    #[test]
+    fn test_parse_example_block_simple() {
+        let code = r#"
+            example "complex arithmetic" {
+                let z1 = Complex(1, 2)
+                let z2 = Complex(3, 4)
+                assert(add(z1, z2) = sum)
+            }
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+        assert_eq!(result.items.len(), 1);
+
+        match &result.items[0] {
+            TopLevel::ExampleBlock(example) => {
+                assert_eq!(example.name, "complex arithmetic");
+                assert_eq!(example.statements.len(), 3);
+            }
+            _ => panic!("Expected ExampleBlock"),
+        }
+    }
+
+    #[test]
+    fn test_parse_example_block_with_symbolic_let() {
+        let code = r#"
+            example "symbolic test" {
+                let A : Matrix(3, 3)
+                let B : Matrix(3, 3)
+                assert(det(multiply(A, B)) = det(A) * det(B))
+            }
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+        assert_eq!(result.items.len(), 1);
+
+        match &result.items[0] {
+            TopLevel::ExampleBlock(example) => {
+                assert_eq!(example.name, "symbolic test");
+                assert_eq!(example.statements.len(), 3);
+                // First two are symbolic let bindings
+                match &example.statements[0] {
+                    ExampleStatement::Let {
+                        name,
+                        type_annotation,
+                        ..
+                    } => {
+                        assert_eq!(name, "A");
+                        assert!(type_annotation.is_some());
+                    }
+                    _ => panic!("Expected Let"),
+                }
+            }
+            _ => panic!("Expected ExampleBlock"),
+        }
+    }
+
+    #[test]
+    fn test_parse_example_block_with_expression() {
+        let code = r#"
+            example "final expression" {
+                let x = 1 + 2
+                x * 3
+            }
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+
+        match &result.items[0] {
+            TopLevel::ExampleBlock(example) => {
+                assert_eq!(example.statements.len(), 2);
+                // Second statement is an expression
+                assert!(matches!(
+                    &example.statements[1],
+                    ExampleStatement::Expr { .. }
+                ));
+            }
+            _ => panic!("Expected ExampleBlock"),
+        }
+    }
+
+    #[test]
+    fn test_parse_program_with_example() {
+        let code = r#"
+            structure Complex(re: ℝ, im: ℝ) {
+                operation add : Complex → Complex
+            }
+
+            example "complex addition" {
+                let z1 = Complex(1, 2)
+                let z2 = Complex(3, 4)
+                assert(add(z1, z2) = add(z2, z1))
+            }
+        "#;
+
+        let result = parse_kleis_program(code).unwrap();
+        assert_eq!(result.items.len(), 2);
+        assert!(matches!(&result.items[0], TopLevel::StructureDef(_)));
+        assert!(matches!(&result.items[1], TopLevel::ExampleBlock(_)));
     }
 }

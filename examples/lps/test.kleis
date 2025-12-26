@@ -1,0 +1,19 @@
+import "stdlib/prelude.kleis"
+import "stdlib/complex.kleis"
+import "stdlib/calculus.kleis"
+import "stdlib/matrices.kleis"
+
+
+// Option 2: Type annotation before the =
+define matrixMultiplication1 =
+  let a : Matrix(3, 3, ℝ) = matrix(1,2,3,4,5,6,7,8,9) in
+  let b : Matrix(3, 3, ℝ) = matrix(9,8,7,6,5,4,3,2,1) in
+  multiply(a, b)
+
+// 3×3 matrix times 3×2 matrix → 3×2 result
+define matrixMultiplication =
+  let a : Matrix(3, 3, ℝ) = matrix(1,2,3,/**/4,5,6,/**/7,8,9)  in
+  let b : Matrix(3, 2, ℝ) = matrix(9,8,7,/**/6,5,4)  in
+  multiply(a, b)
+
+∃(x : ℝ). x * x = 4

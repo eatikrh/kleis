@@ -31,6 +31,7 @@ fn main() {
                 hint: "g_mu_nu".to_string(),
             },
         ],
+        span: None,
     };
 
     println!("Testing: einstein(?, ?, ?)");

@@ -924,7 +924,7 @@ mod tests {
         reset_placeholder_counter();
         let frac = template_fraction();
         match frac {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "scalar_divide");
                 assert_eq!(args.len(), 2);
                 assert!(matches!(args[0], Expression::Placeholder { .. }));
@@ -939,7 +939,7 @@ mod tests {
         reset_placeholder_counter();
         let integral = template_integral();
         match integral {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "int_bounds");
                 assert_eq!(args.len(), 4);
                 for arg in args {
@@ -955,7 +955,7 @@ mod tests {
         reset_placeholder_counter();
         let matrix = template_matrix_2x2();
         match matrix {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Matrix");
                 // NEW FORMAT: 2 dimension args + 1 List = 3 total
                 assert_eq!(args.len(), 3);
@@ -988,7 +988,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_fourier_transform();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "fourier_transform");
                 assert_eq!(args.len(), 2);
             }
@@ -1001,7 +1001,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_laplace_transform();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "laplace_transform");
                 assert_eq!(args.len(), 2);
             }
@@ -1014,7 +1014,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_convolution();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "convolution");
                 assert_eq!(args.len(), 3);
             }
@@ -1027,7 +1027,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_kernel_integral();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "kernel_integral");
                 assert_eq!(args.len(), 4);
             }
@@ -1040,7 +1040,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_greens_function();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "greens_function");
                 assert_eq!(args.len(), 2);
             }
@@ -1055,7 +1055,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_projection();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "projection");
                 assert_eq!(args.len(), 2);
             }
@@ -1068,7 +1068,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_modal_integral();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "modal_integral");
                 assert_eq!(args.len(), 3);
             }
@@ -1081,7 +1081,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_projection_kernel();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "projection_kernel");
                 assert_eq!(args.len(), 2);
             }
@@ -1094,7 +1094,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_causal_bound();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "causal_bound");
                 assert_eq!(args.len(), 1);
             }
@@ -1106,7 +1106,7 @@ mod tests {
     fn test_spacetime() {
         let expr = template_spacetime();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "spacetime");
                 assert_eq!(args.len(), 0);
             }
@@ -1119,7 +1119,7 @@ mod tests {
         reset_placeholder_counter();
         let expr = template_hont();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "hont");
                 assert_eq!(args.len(), 1);
             }

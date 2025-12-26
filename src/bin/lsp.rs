@@ -237,14 +237,14 @@ impl KleisLanguageServer {
         // =======================================================================
         // TYPE CHECKING - Run type inference on function definitions
         // =======================================================================
-        let type_diagnostics = self.run_type_checking(&program, text);
+        let type_diagnostics = self.run_type_checking(&program);
         all_diagnostics.extend(type_diagnostics);
 
         (Some(program), Some(builder), imports, all_diagnostics)
     }
 
     /// Run type checking on function definitions and collect diagnostics
-    fn run_type_checking(&self, program: &Program, text: &str) -> Vec<Diagnostic> {
+    fn run_type_checking(&self, program: &Program) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         // Create a type checker with stdlib loaded
@@ -267,17 +267,28 @@ impl KleisLanguageServer {
                         // We could add an info diagnostic or store the type for inlay hints
                     }
                     Err(e) => {
-                        // Type error - create diagnostic
-                        let line_num = find_definition_line(text, &func_def.name);
+                        // Type error - create diagnostic using span from parsed AST
+                        let (line, col, end_line, end_col) = func_def
+                            .span
+                            .clone()
+                            .map(|s| {
+                                (
+                                    s.line.saturating_sub(1),
+                                    s.column.saturating_sub(1),
+                                    s.end_line.saturating_sub(1),
+                                    s.end_column,
+                                )
+                            })
+                            .unwrap_or((0, 0, 0, 80));
                         diagnostics.push(Diagnostic {
                             range: Range {
                                 start: Position {
-                                    line: line_num,
-                                    character: 0,
+                                    line,
+                                    character: col,
                                 },
                                 end: Position {
-                                    line: line_num,
-                                    character: 80,
+                                    line: end_line,
+                                    character: end_col,
                                 },
                             },
                             severity: Some(DiagnosticSeverity::ERROR),
@@ -2403,29 +2414,6 @@ fn byte_offset_to_position(text: &str, offset: usize) -> (usize, usize) {
     }
 
     (line, col)
-}
-
-/// Find the line number where a definition (function, data, etc.) is declared
-fn find_definition_line(text: &str, name: &str) -> u32 {
-    let patterns = [
-        format!("define {}(", name),
-        format!("define {} =", name),
-        format!("define {} :", name),
-        format!("data {} =", name),
-        format!("data {}(", name),
-        format!("structure {}(", name),
-        format!("structure {} ", name),
-    ];
-
-    for (line_num, line) in text.lines().enumerate() {
-        for pattern in &patterns {
-            if line.contains(pattern.as_str()) {
-                return line_num as u32;
-            }
-        }
-    }
-
-    0 // Default to first line if not found
 }
 
 /// Extract the word at a given column position in a line

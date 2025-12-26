@@ -33,6 +33,7 @@ fn op(name: impl Into<String>, args: Vec<Expression>) -> Expression {
     Expression::Operation {
         name: name.into(),
         args,
+        span: None,
     }
 }
 
@@ -1643,6 +1644,7 @@ fn collapse_script_literals(expr: Expression) -> Expression {
                 Expression::Operation {
                     name: "literal_chain".to_string(),
                     args: tokens,
+                    span: None,
                 }
             } else {
                 expr
@@ -1657,7 +1659,9 @@ fn extract_literal_tokens(expr: &Expression) -> Option<Vec<Expression>> {
         Expression::Const(_) | Expression::String(_) | Expression::Object(_) => {
             Some(vec![expr.clone()])
         }
-        Expression::Operation { name, args } if name == "scalar_multiply" && args.len() == 2 => {
+        Expression::Operation { name, args, .. }
+            if name == "scalar_multiply" && args.len() == 2 =>
+        {
             let mut left_tokens = extract_literal_tokens(&args[0])?;
             let mut right_tokens = extract_literal_tokens(&args[1])?;
             left_tokens.append(&mut right_tokens);
@@ -1708,7 +1712,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "scalar_divide");
                 assert_eq!(args.len(), 2);
             }
@@ -1859,7 +1863,7 @@ mod tests {
     fn parses_factorial_operator() {
         let expr = parse_latex("n!").expect("should parse factorial");
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "factorial");
                 assert_eq!(args.len(), 1);
             }
@@ -1871,12 +1875,13 @@ mod tests {
     fn preserves_literal_subscripts() {
         let expr = parse_latex("a_{1n}").expect("should parse subscript");
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "sub");
                 match &args[1] {
                     Expression::Operation {
                         name,
                         args: chain_args,
+                        ..
                     } if name == "literal_chain" => {
                         assert_eq!(chain_args.len(), 2);
                         assert!(matches!(&chain_args[0], Expression::Const(s) if s == "1"));
@@ -1928,7 +1933,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Matrix");
                 // Check dimensions
                 assert!(matches!(&args[0], Expression::Const(s) if s == "2"));
@@ -1944,7 +1949,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Matrix");
                 // First cell (after dimensions) should be a scalar_divide operation, not a string
                 match &args[2] {
@@ -1966,7 +1971,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Matrix");
                 // First cell (after dimensions) should be a sqrt operation
                 match &args[2] {
@@ -1988,7 +1993,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Matrix");
                 // First cell (after dimensions) should be sin operation
                 match &args[2] {
@@ -2011,7 +2016,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Matrix");
                 // First cell (after dimensions) should be scalar_divide with sqrt in denominator
                 match &args[2] {
@@ -2019,6 +2024,7 @@ mod tests {
                     Expression::Operation {
                         name,
                         args: inner_args,
+                        ..
                     } => {
                         assert_eq!(name, "scalar_divide");
                         // Check denominator is sqrt
@@ -2044,7 +2050,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Matrix");
                 // Check that ellipsis symbols are preserved
                 // args[3] should be \cdots (args[0-1] are dimensions, args[2] is first element)
@@ -2065,7 +2071,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Piecewise");
                 assert_eq!(args.len(), 3); // n, [exprs], [conds]
                                            // args[0] = Const("2")
@@ -2082,7 +2088,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Piecewise");
                 assert_eq!(args.len(), 3); // n, [exprs], [conds]
                                            // args[0] = Const("3")
@@ -2116,7 +2122,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "minus");
                 assert_eq!(args.len(), 2);
             }
@@ -2176,7 +2182,7 @@ mod tests {
         let result = parse_latex("F(x, y)");
         assert!(result.is_ok());
         let expr = result.unwrap();
-        if let Expression::Operation { name: _, args } = expr {
+        if let Expression::Operation { name: _, args, .. } = expr {
             // Should detect as function call or implicit multiply with group
             assert!(args.len() >= 2);
         }
@@ -2209,7 +2215,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "equals");
                 assert_eq!(args.len(), 2);
             }
@@ -2223,7 +2229,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "leq");
                 assert_eq!(args.len(), 2);
             }
@@ -2237,7 +2243,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "in_set");
                 assert_eq!(args.len(), 2);
             }
@@ -2251,7 +2257,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "subseteq");
                 assert_eq!(args.len(), 2);
             }
@@ -2265,7 +2271,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "union");
                 assert_eq!(args.len(), 2);
             }
@@ -2279,7 +2285,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "bra");
                 assert_eq!(args.len(), 1);
             }
@@ -2578,7 +2584,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "nth_root");
                 assert_eq!(args.len(), 2);
             }
@@ -2777,7 +2783,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "bar");
                 assert_eq!(args.len(), 1);
             }
@@ -2791,7 +2797,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "tilde");
                 assert_eq!(args.len(), 1);
             }
@@ -2805,7 +2811,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "overline");
                 assert_eq!(args.len(), 1);
             }
@@ -2819,7 +2825,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "dot_accent");
                 assert_eq!(args.len(), 1);
             }
@@ -2833,7 +2839,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "ddot_accent");
                 assert_eq!(args.len(), 1);
             }
@@ -2865,7 +2871,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "text");
                 assert_eq!(args.len(), 1);
             }
@@ -2965,7 +2971,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "binomial");
                 assert_eq!(args.len(), 2);
             }
@@ -2994,7 +3000,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "floor");
                 assert_eq!(args.len(), 1);
             }
@@ -3008,7 +3014,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "ceiling");
                 assert_eq!(args.len(), 1);
             }
@@ -3023,7 +3029,7 @@ mod tests {
         assert!(result.is_ok());
         let expr = result.unwrap();
         match expr {
-            Expression::Operation { name, args } => {
+            Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "floor");
                 assert_eq!(args.len(), 1);
                 // Check that the argument is a division

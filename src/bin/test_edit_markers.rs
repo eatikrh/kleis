@@ -80,6 +80,7 @@ fn op(name: &str, args: Vec<Expression>) -> Expression {
     Expression::Operation {
         name: name.to_string(),
         args,
+        span: None,
     }
 }
 

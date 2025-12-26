@@ -19,6 +19,7 @@ fn op(name: &str, args: Vec<Expression>) -> Expression {
     Expression::Operation {
         name: name.to_string(),
         args,
+        span: None,
     }
 }
 
@@ -258,6 +259,7 @@ fn kleis_render_conditional() {
         condition: Box::new(op("greater_than", vec![o("x"), c("0")])),
         then_branch: Box::new(o("x")),
         else_branch: Box::new(op("negate", vec![o("x")])),
+        span: None,
     };
     let out = render_expression(&cond_expr, &ctx, &RenderTarget::Kleis);
 
@@ -278,6 +280,7 @@ fn kleis_render_let_binding() {
         type_annotation: None,
         value: Box::new(c("5")),
         body: Box::new(op("plus", vec![o("x"), o("x")])),
+        span: None,
     };
     let out = render_expression(&let_expr, &ctx, &RenderTarget::Kleis);
 

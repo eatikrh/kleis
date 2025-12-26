@@ -26,6 +26,7 @@
 
 - [The REPL](./chapters/12-repl.md)
 - [Applications](./chapters/13-applications.md)
+- [Example Blocks](./chapters/20-example-blocks.md)
 
 # Mathematics
 
@@ -42,4 +43,5 @@
 - [Operators](./appendix/operators.md)
 - [Standard Library](./appendix/stdlib.md)
 - [LISP Interpreter](./appendix/lisp-interpreter.md)
+- [VS Code Debugging](./appendix/vscode-debugging.md)
 

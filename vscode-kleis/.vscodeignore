@@ -7,6 +7,14 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
-node_modules/**
+src/**
 *.vsix
+
+# Exclude dev dependencies but keep production dependencies
+node_modules/.bin/**
+node_modules/@types/**
+node_modules/typescript/**
+node_modules/@vscode/vsce/**
+node_modules/vscode-oniguruma/**
+node_modules/vscode-textmate/**
 

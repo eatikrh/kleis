@@ -65,6 +65,7 @@ fn op<S: Into<String>>(name: S, args: Vec<Expression>) -> Expression {
     Expression::Operation {
         name: name.into(),
         args,
+        span: None,
     }
 }
 #[allow(dead_code)]
@@ -706,6 +707,7 @@ fn try_render_xact_tensor(
             Expression::Operation {
                 name: op_name,
                 args: inner_args,
+                ..
             } if op_name == "negate" && inner_args.len() == 1 => {
                 if let Expression::Object(_) = &inner_args[0] {
                     has_covariant_index = true;
@@ -830,6 +832,7 @@ fn try_render_xact_tensor(
                         Expression::Operation {
                             name: op,
                             args: inner,
+                            ..
                         } if op == "negate" && inner.len() == 1 => {
                             if let Expression::Object(idx) = &inner[0] {
                                 format!("-{}", idx)
@@ -958,7 +961,7 @@ fn render_expression_internal(
                 RenderTarget::Kleis => "□".to_string(),
             }
         }
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             if name == "literal_chain" {
                 return render_literal_chain(args, ctx, target, node_id, node_id_to_uuid);
             }
@@ -1819,6 +1822,7 @@ fn render_expression_internal(
             condition,
             then_branch,
             else_branch,
+            ..
         } => {
             let cond_id = format!("{}.cond", node_id);
             let then_id = format!("{}.then", node_id);
@@ -1924,7 +1928,7 @@ fn render_expression_internal(
             }
         }
 
-        Expression::Lambda { params, body } => {
+        Expression::Lambda { params, body, .. } => {
             let body_id = format!("{}.body", node_id);
             let body_str = render_expression_internal(body, ctx, target, &body_id, node_id_to_uuid);
 
@@ -6770,6 +6774,7 @@ fn editor_node_to_expression(node: &EditorNode) -> Expression {
                 .iter()
                 .map(editor_node_to_expression)
                 .collect(),
+            span: None,
         },
         EditorNode::List { list } => {
             Expression::List(list.iter().map(editor_node_to_expression).collect())
@@ -6808,6 +6813,7 @@ fn render_operation(
             let expr = Expression::Operation {
                 name: op.name.clone(),
                 args: op.args.iter().map(editor_node_to_expression).collect(),
+                span: None,
             };
             // Pass UUID map - matrix dimensions are filtered out at slot collection time,
             // not here. This allows filled matrix elements to have clickable overlays.

@@ -8,6 +8,7 @@
 //!
 //! Used for parsing complete Kleis programs with user-defined types.
 use crate::ast::Expression;
+use crate::kleis_parser::SourceSpan;
 
 /// Top-level program items
 #[derive(Debug, Clone, PartialEq)]
@@ -32,6 +33,51 @@ pub enum TopLevel {
 
     /// Type alias: type Name = Type
     TypeAlias(TypeAlias),
+
+    /// Example block (v0.93): example "name" { statements }
+    /// Executable documentation and test blocks
+    ExampleBlock(ExampleBlock),
+}
+
+/// Example block: executable documentation and test block (v0.93)
+///
+/// Example:
+///   example "complex arithmetic" {
+///       let z1 = Complex(1, 2)
+///       let z2 = Complex(3, 4)
+///       assert(add(z1, z2).re = 4)
+///   }
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExampleBlock {
+    /// Name of the example (for reporting)
+    pub name: String,
+    /// Statements in the example block
+    pub statements: Vec<ExampleStatement>,
+}
+
+/// Statement within an example block
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExampleStatement {
+    /// Let binding: let x = expr or let x : T = expr
+    Let {
+        name: String,
+        type_annotation: Option<TypeExpr>,
+        value: Expression,
+        /// Full source location (line, column, file) for debugging
+        location: Option<crate::ast::FullSourceLocation>,
+    },
+    /// Assert statement: assert(condition)
+    Assert {
+        condition: Expression,
+        /// Full source location (line, column, file) for debugging
+        location: Option<crate::ast::FullSourceLocation>,
+    },
+    /// Expression statement (for side effects or final result)
+    Expr {
+        expr: Expression,
+        /// Full source location (line, column, file) for debugging
+        location: Option<crate::ast::FullSourceLocation>,
+    },
 }
 
 /// Structure definition
@@ -102,6 +148,8 @@ pub struct FunctionDef {
     pub params: Vec<String>,
     pub type_annotation: Option<TypeExpr>,
     pub body: Expression,
+    /// Source location where this function is defined
+    pub span: Option<SourceSpan>,
 }
 
 /// Type alias

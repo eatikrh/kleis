@@ -14,6 +14,7 @@ fn build_flt_n3() -> Expression {
             Expression::Object("a".to_string()),
             Expression::Const("3".to_string()),
         ],
+        span: None,
     };
     let b_cubed = Expression::Operation {
         name: "power".to_string(),
@@ -21,6 +22,7 @@ fn build_flt_n3() -> Expression {
             Expression::Object("b".to_string()),
             Expression::Const("3".to_string()),
         ],
+        span: None,
     };
     let c_cubed = Expression::Operation {
         name: "power".to_string(),
@@ -28,14 +30,17 @@ fn build_flt_n3() -> Expression {
             Expression::Object("c".to_string()),
             Expression::Const("3".to_string()),
         ],
+        span: None,
     };
     let sum = Expression::Operation {
         name: "add".to_string(),
         args: vec![a_cubed, b_cubed],
+        span: None,
     };
     let eq = Expression::Operation {
         name: "equals".to_string(),
         args: vec![sum, c_cubed],
+        span: None,
     };
 
     // Add positivity constraints: a > 0 ∧ b > 0 ∧ c > 0
@@ -43,28 +48,34 @@ fn build_flt_n3() -> Expression {
     let a_pos = Expression::Operation {
         name: "gt".to_string(),
         args: vec![Expression::Object("a".to_string()), zero.clone()],
+        span: None,
     };
     let b_pos = Expression::Operation {
         name: "gt".to_string(),
         args: vec![Expression::Object("b".to_string()), zero.clone()],
+        span: None,
     };
     let c_pos = Expression::Operation {
         name: "gt".to_string(),
         args: vec![Expression::Object("c".to_string()), zero],
+        span: None,
     };
 
     // Combine: ((eq ∧ a_pos) ∧ b_pos) ∧ c_pos
     let and1 = Expression::Operation {
         name: "and".to_string(),
         args: vec![eq, a_pos],
+        span: None,
     };
     let and2 = Expression::Operation {
         name: "and".to_string(),
         args: vec![and1, b_pos],
+        span: None,
     };
     Expression::Operation {
         name: "and".to_string(),
         args: vec![and2, c_pos],
+        span: None,
     }
 }
 
@@ -112,6 +123,7 @@ fn test_z3_flt_n4_satisfiability() {
             Expression::Object("a".to_string()),
             Expression::Const("4".to_string()),
         ],
+        span: None,
     };
     let b4 = Expression::Operation {
         name: "power".to_string(),
@@ -119,6 +131,7 @@ fn test_z3_flt_n4_satisfiability() {
             Expression::Object("b".to_string()),
             Expression::Const("4".to_string()),
         ],
+        span: None,
     };
     let c4 = Expression::Operation {
         name: "power".to_string(),
@@ -126,14 +139,17 @@ fn test_z3_flt_n4_satisfiability() {
             Expression::Object("c".to_string()),
             Expression::Const("4".to_string()),
         ],
+        span: None,
     };
     let sum = Expression::Operation {
         name: "add".to_string(),
         args: vec![a4, b4],
+        span: None,
     };
     let expr = Expression::Operation {
         name: "equals".to_string(),
         args: vec![sum, c4],
+        span: None,
     };
 
     println!("Testing FLT n=4: a⁴ + b⁴ = c⁴");
