@@ -10,6 +10,7 @@ use kleis::kleis_ast::TopLevel;
 use kleis::kleis_parser::parse_kleis_program_with_file;
 
 // Track all on_eval_start calls
+#[allow(clippy::type_complexity)]
 struct Tracker {
     calls: Arc<Mutex<Vec<(u32, Option<PathBuf>)>>>, // (line, file)
 }
@@ -28,14 +29,7 @@ impl DebugHook for Tracker {
         DebugAction::Continue
     }
     fn on_eval_end(&mut self, _: &Expression, _: &Result<Expression, String>, _: usize) {}
-    fn on_function_enter(
-        &mut self,
-        _: &str,
-        _: &[Expression],
-        _: &SourceLocation,
-        _: usize,
-    ) {
-    }
+    fn on_function_enter(&mut self, _: &str, _: &[Expression], _: &SourceLocation, _: usize) {}
     fn on_function_exit(&mut self, _: &str, _: &Result<Expression, String>, _: usize) {}
     fn on_bind(&mut self, _: &str, _: &Expression, _: usize) {}
     fn state(&self) -> &DebugState {
@@ -81,7 +75,7 @@ example "test" {
 }
 "#;
     let main_program = parse_kleis_program_with_file(main_source, "/test/main.kleis").unwrap();
-    
+
     // Find and run the example block
     for item in &main_program.items {
         if let TopLevel::ExampleBlock(example) = item {
@@ -112,4 +106,3 @@ example "test" {
         "on_eval_start should be called with helper.kleis file"
     );
 }
-

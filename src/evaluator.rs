@@ -594,7 +594,8 @@ impl Evaluator {
                             let result_location = SourceLocation::from_span(span);
                             let mut hook_ref = self.debug_hook.borrow_mut();
                             if let Some(ref mut hook) = *hook_ref {
-                                let _action = hook.on_eval_start(result_expr, &result_location, depth);
+                                let _action =
+                                    hook.on_eval_start(result_expr, &result_location, depth);
                             }
                         }
                     }

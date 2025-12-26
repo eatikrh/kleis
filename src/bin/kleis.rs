@@ -989,6 +989,7 @@ impl DapState {
 
     /// Check if a line is a valid breakpoint location (has executable code)
     /// Uses the AST to determine valid locations
+    #[allow(dead_code)]
     fn is_valid_breakpoint_line(&self, line: u32) -> bool {
         self.is_valid_breakpoint_line_in_file(line, None)
     }
@@ -1039,10 +1040,8 @@ impl DapState {
         // Check imported files
         if let Some(file_path) = file_path {
             for (import_program, import_path) in &self.loaded_imports {
-                if import_path == file_path {
-                    if check_program(import_program) {
-                        return true;
-                    }
+                if import_path == file_path && check_program(import_program) {
+                    return true;
                 }
             }
         }
@@ -1688,11 +1687,12 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                             };
 
                             // Build description with expression info
-                            let description = if let Some(ref expr_desc) = stop_event.expression_desc {
-                                format!("Evaluating: {}", expr_desc)
-                            } else {
-                                format!("Stopped at line {}", stop_event.location.line)
-                            };
+                            let description =
+                                if let Some(ref expr_desc) = stop_event.expression_desc {
+                                    format!("Evaluating: {}", expr_desc)
+                                } else {
+                                    format!("Stopped at line {}", stop_event.location.line)
+                                };
                             eprintln!("[kleis-dap] {}", description);
 
                             return vec![
@@ -1820,11 +1820,12 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                             };
 
                             // Build description with expression info
-                            let description = if let Some(ref expr_desc) = stop_event.expression_desc {
-                                format!("Evaluating: {}", expr_desc)
-                            } else {
-                                format!("Stopped at line {}", stop_event.location.line)
-                            };
+                            let description =
+                                if let Some(ref expr_desc) = stop_event.expression_desc {
+                                    format!("Evaluating: {}", expr_desc)
+                                } else {
+                                    format!("Stopped at line {}", stop_event.location.line)
+                                };
                             eprintln!("[kleis-dap] {}", description);
 
                             return vec![

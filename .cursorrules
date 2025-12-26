@@ -45,6 +45,29 @@ This document contains:
 
 **If debugging doesn't show the right file, check: Does the Expression's span have the correct file?**
 
+### CRITICAL LESSON (Learned the Hard Way)
+
+**Substitution does NOT modify spans. The span is just NUMBERS and a filename.**
+
+- Line number = a number
+- Column number = a number  
+- File path = a path string (the filename)
+
+The parser puts these numbers in the Expression. Nothing else changes them.
+Substitution creates new expressions but PRESERVES the original span.
+
+**STOP fixating on "functions" and "substitution"!**
+- When you think "function call" → think "Expression::Operation"
+- When you think "substitution" → remember the span is UNCHANGED
+- The span already has the file. Just read it and report it.
+
+**If you find yourself writing code about:**
+- "find_definition_line" → STOP. The span has the line.
+- "on_function_enter" → STOP. Focus on Expression::Operation.
+- "tracking which file we're in" → STOP. The span has the file.
+
+The span. Has. Everything. Just. Use. It.
+
 ---
 
 ## Git Repository Rules
