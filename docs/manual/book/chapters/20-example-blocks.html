@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-64afadb9.js";
+            window.path_to_searchindex_js = "../searchindex-6fd7cefa.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-433b9a47.js"></script>
@@ -252,6 +252,48 @@
 }
 </code></pre>
 <p><strong>Important:</strong> <code>assert(expr)</code> evaluates <code>expr</code> and checks if it equals <code>True</code> or if both sides of <code>=</code> are equal.</p>
+<h3 id="symbolic-assertions-with-z3"><a class="header" href="#symbolic-assertions-with-z3">Symbolic Assertions with Z3</a></h3>
+<p><strong>New in v0.93:</strong> Assertions with symbolic (unbound) variables are verified using Z3!</p>
+<pre><code class="language-kleis">structure CommutativeRing(R) {
+    operation (+) : R × R → R
+    axiom commutativity: ∀(a b : R). a + b = b + a
+}
+
+example "algebraic properties" {
+    // Z3 verifies this using the commutativity axiom!
+    assert(x + y = y + x)
+    
+    // Z3 proves associativity if the axiom is defined
+    assert((a + b) + c = a + (b + c))
+}
+</code></pre>
+<p>When an assertion contains unbound variables (like <code>x</code>, <code>y</code>), Kleis:</p>
+<ol>
+<li>Detects the expression is symbolic</li>
+<li>Loads axioms from defined structures</li>
+<li>Passes the claim to Z3 for verification</li>
+<li>Reports: Verified, Disproved (with counterexample), or Unknown</li>
+</ol>
+<pre><code class="language-kleis">example "z3 finds counterexamples" {
+    // Z3 disproves this with: "Counterexample: y!1 -&gt; 1, x!0 -&gt; 0"
+    // assert(x + y = y + y)  // Would fail!
+}
+</code></pre>
+<p>This enables <strong>theorem proving</strong> in your tests:</p>
+<pre><code class="language-kleis">structure Field(F) {
+    operation (*) : F × F → F
+    operation inverse : F → F
+    
+    axiom inverse_right: ∀(x : F). x * inverse(x) = 1
+    axiom inverse_left: ∀(x : F). inverse(x) * x = 1
+}
+
+example "inverse properties" {
+    // Z3 verifies using field axioms
+    assert(a * inverse(a) = 1)
+    assert(inverse(inverse(a)) = a)  // Derived property!
+}
+</code></pre>
 <h2 id="example-blocks-as-entry-points"><a class="header" href="#example-blocks-as-entry-points">Example Blocks as Entry Points</a></h2>
 <p>Example blocks are the <strong>entry points for debugging</strong>. Unlike function definitions which are just declarations, example blocks contain executable code:</p>
 <pre><code class="language-kleis">// Function definition (not executable on its own)

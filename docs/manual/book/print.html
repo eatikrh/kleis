@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-64afadb9.js";
+            window.path_to_searchindex_js = "searchindex-6fd7cefa.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-433b9a47.js"></script>
@@ -2640,6 +2640,48 @@ structure Functor(C, D) {
 }
 </code></pre>
 <p><strong>Important:</strong> <code>assert(expr)</code> evaluates <code>expr</code> and checks if it equals <code>True</code> or if both sides of <code>=</code> are equal.</p>
+<h3 id="symbolic-assertions-with-z3"><a class="header" href="#symbolic-assertions-with-z3">Symbolic Assertions with Z3</a></h3>
+<p><strong>New in v0.93:</strong> Assertions with symbolic (unbound) variables are verified using Z3!</p>
+<pre><code class="language-kleis">structure CommutativeRing(R) {
+    operation (+) : R × R → R
+    axiom commutativity: ∀(a b : R). a + b = b + a
+}
+
+example "algebraic properties" {
+    // Z3 verifies this using the commutativity axiom!
+    assert(x + y = y + x)
+    
+    // Z3 proves associativity if the axiom is defined
+    assert((a + b) + c = a + (b + c))
+}
+</code></pre>
+<p>When an assertion contains unbound variables (like <code>x</code>, <code>y</code>), Kleis:</p>
+<ol>
+<li>Detects the expression is symbolic</li>
+<li>Loads axioms from defined structures</li>
+<li>Passes the claim to Z3 for verification</li>
+<li>Reports: Verified, Disproved (with counterexample), or Unknown</li>
+</ol>
+<pre><code class="language-kleis">example "z3 finds counterexamples" {
+    // Z3 disproves this with: "Counterexample: y!1 -&gt; 1, x!0 -&gt; 0"
+    // assert(x + y = y + y)  // Would fail!
+}
+</code></pre>
+<p>This enables <strong>theorem proving</strong> in your tests:</p>
+<pre><code class="language-kleis">structure Field(F) {
+    operation (*) : F × F → F
+    operation inverse : F → F
+    
+    axiom inverse_right: ∀(x : F). x * inverse(x) = 1
+    axiom inverse_left: ∀(x : F). inverse(x) * x = 1
+}
+
+example "inverse properties" {
+    // Z3 verifies using field axioms
+    assert(a * inverse(a) = 1)
+    assert(inverse(inverse(a)) = a)  // Derived property!
+}
+</code></pre>
 <h2 id="example-blocks-as-entry-points"><a class="header" href="#example-blocks-as-entry-points">Example Blocks as Entry Points</a></h2>
 <p>Example blocks are the <strong>entry points for debugging</strong>. Unlike function definitions which are just declarations, example blocks contain executable code:</p>
 <pre><code class="language-kleis">// Function definition (not executable on its own)
@@ -6136,7 +6178,34 @@ code --install-extension kleis-0.1.0.vsix
     assert(y = 10)
 }
 </code></pre>
-<p><strong>Note:</strong> Breakpoints only work on executable lines inside example blocks. Function definitions are declarations, not executable code.</p>
+<h3 id="where-breakpoints-work"><a class="header" href="#where-breakpoints-work">Where Breakpoints Work</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Location</th><th>Works?</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Inside example blocks</td><td>✅ Yes</td><td><code>let</code>, <code>assert</code>, expressions</td></tr>
+<tr><td>Function body lines</td><td>✅ Yes</td><td>Stops when function is called</td></tr>
+<tr><td>Top-level definitions</td><td>❌ No</td><td>Declarations, not executable</td></tr>
+<tr><td>Imported files</td><td>✅ Yes</td><td>Set breakpoints in helper files</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="breakpoints-in-imported-files"><a class="header" href="#breakpoints-in-imported-files">Breakpoints in Imported Files</a></h3>
+<p>You can set breakpoints in imported files:</p>
+<pre><code class="language-kleis">// helpers.kleis
+define double(n) =
+    n + n    // ← Breakpoint here catches all calls to double()
+
+// main.kleis
+import "helpers.kleis"
+
+example "cross-file breakpoint" {
+    let x = double(5)  // Stops at the breakpoint in helpers.kleis
+}
+</code></pre>
+<p><strong>Tip:</strong> Open the imported file and set breakpoints before starting the debug session.</p>
 <h2 id="starting-a-debug-session"><a class="header" href="#starting-a-debug-session">Starting a Debug Session</a></h2>
 <ol>
 <li>Open a <code>.kleis</code> file with example blocks</li>
@@ -6165,14 +6234,21 @@ code --install-extension kleis-0.1.0.vsix
 <li><strong>Local variables</strong> — Let bindings in current scope</li>
 <li><strong>Function parameters</strong> — Arguments passed to current function</li>
 </ul>
-<p>Example:</p>
+<p><strong>Important:</strong> Variables are displayed as <strong>AST expressions</strong>, not just values:</p>
 <pre><code class="language-kleis">example "inspection demo" {
     let x = 5
-    let y = 10
-    // Breakpoint here shows: x = 5, y = 10
-    let sum = x + y
+    let y = x + 1
+    // Variables panel shows:
+    //   x = Const("5")
+    //   y = Operation { name: "plus", args: [Const("5"), Const("1")] }
 }
 </code></pre>
+<p>This is intentional! Kleis is a <strong>symbolic mathematics system</strong>. Variables hold expressions that represent mathematical objects, not just computed values. This enables:</p>
+<ol>
+<li><strong>Symbolic manipulation</strong> — See the structure of expressions</li>
+<li><strong>Z3 verification</strong> — Pass expressions to the theorem prover</li>
+<li><strong>Provenance tracking</strong> — Understand where values came from</li>
+</ol>
 <h2 id="call-stack"><a class="header" href="#call-stack">Call Stack</a></h2>
 <p>The <strong>Call Stack</strong> panel shows the execution path:</p>
 <pre><code>fibonacci (n=5)          ← Currently here
@@ -6200,6 +6276,92 @@ example "cross-file" {
 <li>Error messages</li>
 </ul>
 <p>You can also evaluate expressions in the console during a paused debug session.</p>
+<h2 id="assert-with-z3-verification"><a class="header" href="#assert-with-z3-verification">Assert with Z3 Verification</a></h2>
+<p><strong>New in v0.93:</strong> Assertions in example blocks use Z3 for symbolic verification!</p>
+<h3 id="how-it-works-1"><a class="header" href="#how-it-works-1">How It Works</a></h3>
+<p>When you write <code>assert(expr)</code>:</p>
+<ol>
+<li><strong>Concrete values</strong> — Checked via structural equality</li>
+<li><strong>Symbolic expressions</strong> — Verified using Z3 theorem prover</li>
+</ol>
+<pre><code class="language-kleis">structure CommutativeRing(R) {
+    operation (+) : R × R → R
+    axiom commutativity: ∀(a b : R). a + b = b + a
+}
+
+example "symbolic verification" {
+    // ✅ Z3 verifies using commutativity axiom!
+    assert(x + y = y + x)
+    
+    // ❌ Z3 disproves with counterexample
+    // assert(x + y = y + y)  // "Counterexample: y!1 -&gt; 1, x!0 -&gt; 0"
+    
+    // ✅ Concrete: structural equality
+    let a = 5
+    assert(a = 5)
+}
+</code></pre>
+<h3 id="assertion-results"><a class="header" href="#assertion-results">Assertion Results</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Result</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Passed</code></td><td>Concrete values match structurally</td></tr>
+<tr><td><code>Verified</code></td><td>Z3 proved the symbolic claim</td></tr>
+<tr><td><code>Failed { expected, actual }</code></td><td>Concrete values differ</td></tr>
+<tr><td><code>Disproved { counterexample }</code></td><td>Z3 found a counterexample</td></tr>
+<tr><td><code>Unknown</code></td><td>Neither could determine (treated as pass)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="requirements"><a class="header" href="#requirements">Requirements</a></h3>
+<ul>
+<li>Structure axioms must be defined for the operations used</li>
+<li>Z3 must be able to load the relevant axioms</li>
+<li>Works best with algebraic properties (commutativity, associativity, etc.)</li>
+</ul>
+<h2 id="numerical-computations"><a class="header" href="#numerical-computations">Numerical Computations</a></h2>
+<p>For concrete numerical computations, build with the <code>numerical</code> feature:</p>
+<pre><code class="language-bash">cargo build --release --features numerical
+</code></pre>
+<p>This enables LAPACK-backed operations:</p>
+<pre><code class="language-kleis">example "numerical" {
+    let A = Matrix(2, 2, [4, 1, 1, 4])
+    
+    // Compute eigenvalues (requires numerical feature)
+    let eigs = eigenvalues(A)
+    // eigs = [5, 3]
+    
+    // Matrix multiplication
+    let B = Matrix(2, 2, [1, 0, 0, 2])
+    let C = matmul(A, B)
+    
+    // SVD decomposition
+    let usv = svd(A)  // Returns [U, S, V]
+}
+</code></pre>
+<h3 id="available-numerical-operations"><a class="header" href="#available-numerical-operations">Available Numerical Operations</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>eigenvalues(M)</code></td><td>Compute eigenvalues</td></tr>
+<tr><td><code>eig(M)</code></td><td>Eigenvalues and eigenvectors</td></tr>
+<tr><td><code>svd(M)</code></td><td>Singular value decomposition</td></tr>
+<tr><td><code>solve(A, b)</code></td><td>Solve linear system Ax = b</td></tr>
+<tr><td><code>inv(M)</code></td><td>Matrix inverse</td></tr>
+<tr><td><code>det(M)</code></td><td>Determinant</td></tr>
+<tr><td><code>cholesky(M)</code></td><td>Cholesky decomposition</td></tr>
+<tr><td><code>qr(M)</code></td><td>QR factorization</td></tr>
+<tr><td><code>matmul(A, B)</code></td><td>Matrix multiplication</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Note:</strong> Numerical operations require concrete values. Symbolic matrices remain symbolic.</p>
 <h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
 <h3 id="breakpoints-not-hitting"><a class="header" href="#breakpoints-not-hitting">Breakpoints Not Hitting</a></h3>
 <p><strong>Problem:</strong> Breakpoint shows as gray (unverified) or never hits.</p>
@@ -6267,13 +6429,51 @@ example "cross-file" {
 }
 <span class="boring">}</span></code></pre>
 <p>Every <code>Expression</code> node has an optional span. The parser attaches the span during parsing. When evaluating, the span travels with the expression, so the debugger always knows the source location.</p>
+<h2 id="understanding-symbolic-debugging"><a class="header" href="#understanding-symbolic-debugging">Understanding Symbolic Debugging</a></h2>
+<p>Kleis debugging differs from traditional debuggers because Kleis is a <strong>symbolic mathematics system</strong>, not an imperative programming language.</p>
+<h3 id="what-execution-means-in-kleis"><a class="header" href="#what-execution-means-in-kleis">What “Execution” Means in Kleis</a></h3>
+<p>In Kleis, “execution” means <strong>symbolic evaluation</strong>:</p>
+<ol>
+<li><strong>Substitution</strong> — Replace function calls with their definitions</li>
+<li><strong>Pattern matching</strong> — Dispatch based on structure</li>
+<li><strong>Simplification</strong> — Apply algebraic rules</li>
+</ol>
+<p>There’s no “program counter” moving through instructions. Instead, expressions transform into simpler expressions.</p>
+<h3 id="variables-hold-expressions-not-values"><a class="header" href="#variables-hold-expressions-not-values">Variables Hold Expressions, Not Values</a></h3>
+<pre><code class="language-kleis">let y = sin(x) + cos(x)
+// y doesn't hold a number
+// y holds: Operation { name: "plus", args: [sin(x), cos(x)] }
+</code></pre>
+<p>This is intentional! It enables:</p>
+<ul>
+<li>Passing expressions to Z3 for verification</li>
+<li>Symbolic differentiation, integration</li>
+<li>Algebraic manipulation</li>
+</ul>
+<h3 id="when-to-use-the-debugger"><a class="header" href="#when-to-use-the-debugger">When to Use the Debugger</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Use Case</th><th>Debugger Helps?</th></tr>
+</thead>
+<tbody>
+<tr><td>Understanding expression evaluation</td><td>✅ Excellent</td></tr>
+<tr><td>Verifying axiom applications</td><td>✅ See Z3 results</td></tr>
+<tr><td>Finding structural issues</td><td>✅ See AST in Variables</td></tr>
+<tr><td>Computing numeric values</td><td>🔶 Need <code>numerical</code> feature</td></tr>
+<tr><td>Traditional imperative debugging</td><td>❌ Wrong mental model</td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="tips-for-effective-debugging"><a class="header" href="#tips-for-effective-debugging">Tips for Effective Debugging</a></h2>
 <ol>
 <li><strong>Start with simple examples</strong> — Debug small example blocks first</li>
 <li><strong>Use Step Over for library code</strong> — Don’t step into stdlib functions unless needed</li>
-<li><strong>Watch the Variables panel</strong> — See how values change as you step</li>
+<li><strong>Watch the Variables panel</strong> — See how expressions transform as you step</li>
 <li><strong>Set multiple breakpoints</strong> — Mark key points in your logic</li>
-<li><strong>Use the Call Stack</strong> — Understand how you got to the current line</li>
+<li><strong>Use the Call Stack</strong> — Understand the substitution chain</li>
+<li><strong>Think symbolically</strong> — Variables hold AST, not computed values</li>
+<li><strong>Use Z3 for verification</strong> — Let <code>assert()</code> prove symbolic claims</li>
 </ol>
 <h2 id="see-also-2"><a class="header" href="#see-also-2">See Also</a></h2>
 <ul>
