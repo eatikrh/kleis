@@ -1,6 +1,6 @@
 # Next Session Notes
 
-**Last Updated:** December 26, 2024
+**Last Updated:** December 26, 2024 (Evening)
 
 ---
 
@@ -13,6 +13,7 @@
 - ✅ Variables panel shows AST expressions (symbolic representation!)
 - ✅ Stack frames tracked correctly
 - ✅ Step over, step into, step out all work
+- ✅ **assert() uses Z3 for symbolic verification!**
 
 ### Key Insight: DAP as a Window to Kleis Internals
 The debugger shows variables as **AST expressions**, not evaluated values:
@@ -180,15 +181,15 @@ Implemented thread-safe AST cache shared between LSP and DAP:
 
 ---
 
-## 🎯 NEXT: Fix Remaining DAP Line Number Issues
+## ✅ DONE: DAP Line Number Issues FIXED! (Dec 26, 2024)
 
-### Problem Statement
+### What Was Fixed
 
-Cross-file debugging mostly works, but line numbers are erratic:
-- File switching works (VS Code opens imported files)
-- But debugger briefly shows line 1 before jumping to correct line
+1. **Parser span capture at START of operations** - Fixed 8 parsing functions
+2. **Skip expressions without spans** - No more line 1 spurious stops
+3. **Custom operator spans** - Fixed parse_where_term
 
-### Current State (What Works)
+### Current State (ALL WORKING!)
 
 | Component | Status |
 |-----------|--------|
@@ -200,7 +201,7 @@ Cross-file debugging mostly works, but line numbers are erratic:
 | VS Code shows debugger UI | ✅ |
 | DAP wires hook to evaluator | ✅ |
 | Cross-file debugging (file switching) | ✅ |
-| **Line numbers accurate in cross-file stepping** | ⚠️ ERRATIC |
+| **Line numbers accurate in cross-file stepping** | ✅ FIXED! |
 
 ### Architecture (from `REPL_ENHANCEMENTS.md`)
 
@@ -502,19 +503,21 @@ The `feature/debugger-dap` branch has 63+ incremental commits. Before merging to
 
 ---
 
-## 📋 Current Debugger Status
+## ✅ Current Debugger Status (ALL WORKING!)
 
 | Feature | Status |
 |---------|--------|
 | Launch/attach | ✅ |
 | Breakpoints (set) | ✅ |
 | Breakpoints (hit) | ✅ Real, wired to evaluator |
+| Breakpoints in imported files | ✅ Works! |
 | Step in/over/out | ✅ Real evaluation |
 | Continue | ✅ Real evaluation |
 | Stack trace | ✅ Correct file paths |
-| Variables | ✅ From evaluator |
+| Variables | ✅ Shows AST expressions |
 | Cross-file (file switching) | ✅ Works |
-| Cross-file (line numbers) | ⚠️ Erratic, visits line 1 first |
+| Cross-file (line numbers) | ✅ **FIXED!** All operations correct |
+| assert() with Z3 | ✅ **NEW!** Symbolic verification |
 
 ### Files to Review
 
@@ -845,12 +848,14 @@ structure ZFC {
 
 | Metric | Value |
 |--------|-------|
-| Tests | 663+ passing |
-| Commits | 840+ |
-| ADRs | 23 |
-| Grammar | v0.8 |
+| Tests | 755+ passing |
+| Commits | 850+ |
+| ADRs | 25 |
+| Grammar | v0.93 |
 | Unique Cloners | 505+ |
 | Bourbaki Coverage | ~15-20% (axiomatic) |
+| DAP Debugger | ✅ Fully working! |
+| Z3 Assert Verification | ✅ Implemented! |
 
 ---
 
