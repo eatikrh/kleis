@@ -82,7 +82,9 @@ fn test_parse_forall_with_operation() {
         Expression::Quantifier { body, .. } => {
             // Body should be Operation("plus", [x, e])
             match *body {
-                Expression::Operation { ref name, ref args, .. } => {
+                Expression::Operation {
+                    ref name, ref args, ..
+                } => {
                     assert_eq!(name, "plus");
                     assert_eq!(args.len(), 2);
                 }

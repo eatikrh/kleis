@@ -1659,7 +1659,9 @@ fn extract_literal_tokens(expr: &Expression) -> Option<Vec<Expression>> {
         Expression::Const(_) | Expression::String(_) | Expression::Object(_) => {
             Some(vec![expr.clone()])
         }
-        Expression::Operation { name, args, .. } if name == "scalar_multiply" && args.len() == 2 => {
+        Expression::Operation { name, args, .. }
+            if name == "scalar_multiply" && args.len() == 2 =>
+        {
             let mut left_tokens = extract_literal_tokens(&args[0])?;
             let mut right_tokens = extract_literal_tokens(&args[1])?;
             left_tokens.append(&mut right_tokens);

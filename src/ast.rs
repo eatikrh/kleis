@@ -4,16 +4,18 @@
 //! Both the parser and renderer use this shared representation.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 // ============================================================================
 // Source Location Types (for debugging and error reporting)
 // ============================================================================
 
-/// Source span: location in source code (line and column, 1-based)
+/// Source span: complete location in source code including file path
 ///
-/// Note: SourceSpan is Copy for efficiency. For file paths, use SourceLocation
-/// which wraps SourceSpan with an optional PathBuf.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// Contains line/column positions and an Arc-wrapped file path for efficient
+/// sharing across all expressions from the same file. The Arc means cloning
+/// a SourceSpan is cheap (just increments reference count).
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SourceSpan {
     /// Line number (1-based)
     pub line: u32,
@@ -23,6 +25,9 @@ pub struct SourceSpan {
     pub end_line: u32,
     /// End column
     pub end_column: u32,
+    /// File path (Arc for cheap cloning - all expressions in same file share this)
+    #[serde(skip)]
+    pub file: Option<Arc<PathBuf>>,
 }
 
 impl SourceSpan {
@@ -32,6 +37,7 @@ impl SourceSpan {
             column,
             end_line: line,
             end_column: column,
+            file: None,
         }
     }
 
@@ -39,6 +45,16 @@ impl SourceSpan {
         self.end_line = end_line;
         self.end_column = end_column;
         self
+    }
+
+    pub fn with_file(mut self, file: Arc<PathBuf>) -> Self {
+        self.file = Some(file);
+        self
+    }
+
+    /// Get the file path as a string (for debugging/display)
+    pub fn file_path(&self) -> Option<&PathBuf> {
+        self.file.as_deref()
     }
 }
 
@@ -152,12 +168,16 @@ impl<T> Spanned<T> {
     }
 
     pub fn unspanned(node: T) -> Self {
-        Self { node, span: None, file: None }
+        Self {
+            node,
+            span: None,
+            file: None,
+        }
     }
 
     /// Get full source location (span + file) for debugging
     pub fn location(&self) -> Option<SourceLocation> {
-        self.span.map(|s| SourceLocation {
+        self.span.clone().map(|s| SourceLocation {
             span: s,
             file: self.file.clone(),
         })
@@ -528,7 +548,9 @@ impl Expression {
                     arg.collect_placeholders(acc);
                 }
             }
-            Expression::Match { scrutinee, cases, .. } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 scrutinee.collect_placeholders(acc);
                 for case in cases {
                     case.body.collect_placeholders(acc);

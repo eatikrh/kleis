@@ -20,6 +20,7 @@ fn main() {
                 hint: "unknown".to_string(),
             },
         ],
+        span: None,
     };
 
     println!("Testing: scalar_multiply(Λ, ?)");

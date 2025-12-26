@@ -1445,7 +1445,13 @@ fn debug_expression(input: &str, evaluator: &mut Evaluator) {
             // Could show result here if verbose
         }
 
-        fn on_function_enter(&mut self, name: &str, args: &[Expression], location: &SourceLocation, depth: usize) {
+        fn on_function_enter(
+            &mut self,
+            name: &str,
+            args: &[Expression],
+            location: &SourceLocation,
+            depth: usize,
+        ) {
             let pp = PrettyPrinter::new();
             let args_str: Vec<String> = args.iter().map(|a| pp.format_expression(a)).collect();
             let indent = "  ".repeat(depth);
@@ -1636,7 +1642,10 @@ fn trace_match(input: &str, _registry: &StructureRegistry, evaluator: &Evaluator
     match parser.parse() {
         Ok(expr) => {
             // Check if it's a match expression
-            if let Expression::Match { scrutinee, cases, .. } = &expr {
+            if let Expression::Match {
+                scrutinee, cases, ..
+            } = &expr
+            {
                 println!("🔍 Match Trace");
                 println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 println!("Scrutinee: {}", pp.format_expression(scrutinee));
@@ -1781,7 +1790,9 @@ fn check_pattern_matches(
         (Pattern::Constant(p), Expression::String(v)) => p == v,
         (
             Pattern::Constructor { name: pn, args: pa },
-            Expression::Operation { name: vn, args: va, .. },
+            Expression::Operation {
+                name: vn, args: va, ..
+            },
         ) => {
             pn == vn
                 && pa.len() == va.len()
@@ -1945,7 +1956,9 @@ fn expand_user_functions(
             body: Box::new(expand_user_functions(body, evaluator)),
             span: None,
         },
-        Expression::Match { scrutinee, cases, .. } => {
+        Expression::Match {
+            scrutinee, cases, ..
+        } => {
             use crate::ast::MatchCase;
             Expression::Match {
                 scrutinee: Box::new(expand_user_functions(scrutinee, evaluator)),
@@ -2064,7 +2077,9 @@ fn substitute_var(
                 }
             }
         }
-        Expression::Match { scrutinee, cases, .. } => {
+        Expression::Match {
+            scrutinee, cases, ..
+        } => {
             use crate::ast::MatchCase;
             Expression::Match {
                 scrutinee: Box::new(substitute_var(scrutinee, var_name, replacement)),

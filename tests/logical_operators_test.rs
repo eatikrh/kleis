@@ -20,7 +20,7 @@ fn test_parse_conjunction() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "logical_and");
             assert_eq!(args.len(), 2);
         }
@@ -38,7 +38,7 @@ fn test_parse_disjunction() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "logical_or");
             assert_eq!(args.len(), 2);
         }
@@ -56,7 +56,7 @@ fn test_parse_negation() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "logical_not");
             assert_eq!(args.len(), 1);
         }
@@ -74,7 +74,7 @@ fn test_parse_implication() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "implies");
             assert_eq!(args.len(), 2);
         }
@@ -92,7 +92,7 @@ fn test_parse_comparison() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "equals");
             assert_eq!(args.len(), 2);
         }
@@ -111,7 +111,7 @@ fn test_logical_precedence() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "logical_or");
             // Left arg should be a ∧ b
             match &args[0] {
@@ -135,7 +135,7 @@ fn test_implication_with_conjunction() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "implies");
             // Left should be conjunction
             match &args[0] {

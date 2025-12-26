@@ -18,6 +18,7 @@ fn neg(name: &str) -> Expression {
     Expression::Operation {
         name: "negate".to_string(),
         args: vec![obj(name)],
+        span: None,
     }
 }
 
@@ -26,6 +27,7 @@ fn tensor(name: &str, indices: Vec<Expression>) -> Expression {
     Expression::Operation {
         name: name.to_string(),
         args: indices,
+        span: None,
     }
 }
 

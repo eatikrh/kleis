@@ -23,7 +23,7 @@ fn test_parse_bullet_operator() {
 
     let expr = result.unwrap();
     match expr {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             println!("✅ Parsed as operation: {}", name);
             assert_eq!(name, "•");
             assert_eq!(args.len(), 2);
@@ -52,7 +52,7 @@ fn test_parse_tensor_product() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             println!("✅ Parsed as operation: {}", name);
             assert_eq!(name, "⊗");
             assert_eq!(args.len(), 2);
@@ -112,14 +112,14 @@ fn test_parse_nested_custom_operators() {
 
     // Should parse as •(•(x, y), z)
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             println!("✅ Parsed as operation: {}", name);
             assert_eq!(name, "•");
             assert_eq!(args.len(), 2);
 
             // First arg should be •(x, y)
             match &args[0] {
-                Expression::Operation { name, args } => {
+                Expression::Operation { name, args, .. } => {
                     assert_eq!(name, "•");
                     assert_eq!(args.len(), 2);
                 }
@@ -143,7 +143,7 @@ fn test_parse_custom_operator_with_equality() {
 
     // Should parse as =(•(x, y), •(y, x))
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             println!("✅ Parsed as operation: {}", name);
             assert_eq!(name, "equals");
             assert_eq!(args.len(), 2);
@@ -219,7 +219,7 @@ fn test_multiple_custom_operators() {
 
     // Should parse as ⊕(⊗(a, b), c) due to left-to-right associativity
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             println!("✅ Parsed with multiple custom operators");
             assert_eq!(name, "⊕");
             assert_eq!(args.len(), 2);

@@ -21,7 +21,7 @@ fn test_parse_unary_minus() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             println!("✅ Parsed as operation: {}", name);
             assert_eq!(name, "negate");
             assert_eq!(args.len(), 1);
@@ -47,7 +47,7 @@ fn test_parse_double_negative() {
 
     // Should parse as negate(negate(x))
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "negate");
 
             match &args[0] {
@@ -73,7 +73,7 @@ fn test_parse_unary_minus_with_number() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "negate");
             match &args[0] {
                 Expression::Const(n) => assert_eq!(n, "5"),
@@ -94,7 +94,7 @@ fn test_parse_binary_vs_unary_minus() {
 
     assert!(result1.is_ok());
     match result1.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "minus"); // Binary
             assert_eq!(args.len(), 2);
             println!("✅ Binary minus: a - b");
@@ -109,7 +109,7 @@ fn test_parse_binary_vs_unary_minus() {
 
     assert!(result2.is_ok());
     match result2.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "negate"); // Unary
             assert_eq!(args.len(), 1);
             println!("✅ Unary minus: -a");
@@ -130,7 +130,7 @@ fn test_parse_expression_with_unary() {
     assert!(result.is_ok(), "Failed to parse: {:?}", result.err());
 
     match result.unwrap() {
-        Expression::Operation { name, args } => {
+        Expression::Operation { name, args, .. } => {
             assert_eq!(name, "plus");
             assert_eq!(args.len(), 2);
 

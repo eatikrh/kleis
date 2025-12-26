@@ -19,7 +19,7 @@ pub fn init_file_logging(path: impl Into<PathBuf>) {
         .append(true)
         .open(&path)
         .ok();
-    
+
     let _ = LOG_FILE.set(Mutex::new(file));
 }
 
@@ -35,7 +35,11 @@ pub fn log(level: &str, component: &str, message: &str) {
         if let Ok(mut guard) = mutex.lock() {
             if let Some(ref mut file) = *guard {
                 let timestamp = chrono_lite_timestamp();
-                let _ = writeln!(file, "[{}] [{}] [{}] {}", timestamp, level, component, message);
+                let _ = writeln!(
+                    file,
+                    "[{}] [{}] [{}] {}",
+                    timestamp, level, component, message
+                );
                 let _ = file.flush();
             }
         }
@@ -51,7 +55,7 @@ fn chrono_lite_timestamp() -> String {
             let millis = d.subsec_millis();
             format!("{}.{:03}", secs, millis)
         }
-        Err(_) => "0.000".to_string()
+        Err(_) => "0.000".to_string(),
     }
 }
 
@@ -87,4 +91,3 @@ mod tests {
         log("INFO", "test", "Test message");
     }
 }
-

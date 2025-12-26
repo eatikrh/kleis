@@ -108,6 +108,7 @@ fn main() {
                         hint: "a".to_string(),
                     },
                 ],
+                span: None,
             },
         ],
         span: None,

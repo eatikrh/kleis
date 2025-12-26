@@ -481,7 +481,9 @@ impl<'r> Z3Backend<'r> {
                 self.kleis_to_z3(body, &extended_vars)
             }
 
-            Expression::Match { scrutinee, cases, .. } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 // Translate match expression to nested ite
                 self.translate_match(scrutinee, cases, vars)
             }

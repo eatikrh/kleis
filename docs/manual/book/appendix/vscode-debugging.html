@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Starting Out - Learn You Some Kleis</title>
+        <title>VS Code Debugging - Learn You Some Kleis</title>
 
 
         <!-- Custom HTML head -->
@@ -146,7 +146,7 @@
                         <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/01-starting-out.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/appendix/vscode-debugging.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -180,94 +180,214 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="starting-out"><a class="header" href="#starting-out">Starting Out</a></h1>
-<h2 id="your-first-kleis-expression"><a class="header" href="#your-first-kleis-expression">Your First Kleis Expression</a></h2>
-<p>The simplest things in Kleis are <strong>expressions</strong>. An expression is anything that has a value:</p>
-<pre><code class="language-kleis">define answer = 42              // A number
-define pi_approx = 3.14159      // A decimal
-define sum(x, y) = x + y        // An arithmetic expression
-define angle_sin(θ) = sin(θ)    // A function call
+                        <h1 id="vs-code-debugging"><a class="header" href="#vs-code-debugging">VS Code Debugging</a></h1>
+<p>This appendix explains how to set up and use the VS Code debugger with Kleis.</p>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
+<ol>
+<li><strong>VS Code</strong> installed</li>
+<li><strong>Kleis extension</strong> installed (provides syntax highlighting + debugging)</li>
+<li><strong>Kleis binaries</strong> built:
+<pre><code class="language-bash">cargo build --release --bin kleis --bin kleis-lsp
 </code></pre>
-<h2 id="the-repl"><a class="header" href="#the-repl">The REPL</a></h2>
-<p>The easiest way to experiment with Kleis is the <strong>REPL</strong> (Read-Eval-Print Loop):</p>
-<pre><code class="language-bash">$ cargo run --bin repl
-🧮 Kleis REPL v0.1.0
-   Type :help for commands, :quit to exit
-
-λ&gt; 2 + 2
-2 + 2
-
-λ&gt;  let x = 5 in x * x
-times(5, 5)
+</li>
+</ol>
+<h2 id="extension-setup"><a class="header" href="#extension-setup">Extension Setup</a></h2>
+<p>The Kleis VS Code extension is located in <code>kleis-vscode/</code>. Install it:</p>
+<pre><code class="language-bash">cd kleis-vscode
+npm install
+npm run compile
+code --install-extension kleis-0.1.0.vsix
 </code></pre>
-<h2 id="basic-arithmetic"><a class="header" href="#basic-arithmetic">Basic Arithmetic</a></h2>
-<p>Kleis supports the usual arithmetic operations:</p>
-<pre><code class="language-kleis">define add_example = 2 + 3       // Addition: 5
-define sub_example = 10 - 4      // Subtraction: 6
-define mul_example = 3 * 7       // Multiplication: 21
-define div_example = 15 / 3      // Division: 5
-define pow_example = 2 ^ 10      // Exponentiation: 1024
+<p>Or for development, open the extension folder in VS Code and press F5 to launch an Extension Development Host.</p>
+<h2 id="launch-configuration"><a class="header" href="#launch-configuration">Launch Configuration</a></h2>
+<p>Create <code>.vscode/launch.json</code> in your project:</p>
+<pre><code class="language-json">{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "kleis",
+            "request": "launch",
+            "name": "Debug Kleis File",
+            "program": "${file}",
+            "stopOnEntry": false
+        }
+    ]
+}
 </code></pre>
-<h2 id="variables-and-definitions"><a class="header" href="#variables-and-definitions">Variables and Definitions</a></h2>
-<p>Use <code>define</code> to create named values:</p>
-<pre><code class="language-kleis">define pi = 3.14159
-define e = 2.71828
-define golden_ratio = (1 + sqrt(5)) / 2
-</code></pre>
-<p>Functions are defined similarly:</p>
-<pre><code class="language-kleis">define square(x) = x * x
-define cube(x) = x * x * x
-define area_circle(r) = pi * r^2
-</code></pre>
-<h2 id="comments"><a class="header" href="#comments">Comments</a></h2>
-<p>Kleis uses C-style comments:</p>
-<pre><code class="language-kleis">// This is a single-line comment
-define x = 42  // Inline comment
-
-/* 
-   Multi-line comments
-   use slash-star syntax
-*/
-</code></pre>
-<h2 id="unicode-support"><a class="header" href="#unicode-support">Unicode Support</a></h2>
-<p>Kleis embraces mathematical notation with full Unicode support:</p>
-<pre><code class="language-kleis example">// Greek letters
-define α = 0.5
-define β = 1.0
-define θ = π / 4
-
-// Mathematical symbols in axioms
-axiom reflexivity : ∀(x : ℝ). x = x           // Universal quantifier
-axiom positive_exists : ∃(y : ℝ). y &gt; 0       // Existential quantifier
-</code></pre>
-<p>You can use ASCII alternatives too:</p>
+<h3 id="configuration-options"><a class="header" href="#configuration-options">Configuration Options</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Unicode</th><th>ASCII Alternative</th></tr>
+<tr><th>Option</th><th>Type</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>∀</code></td><td><code>forall</code></td></tr>
-<tr><td><code>∃</code></td><td><code>exists</code></td></tr>
-<tr><td><code>→</code></td><td><code>-&gt;</code></td></tr>
+<tr><td><code>program</code></td><td>string</td><td>Path to .kleis file to debug</td></tr>
+<tr><td><code>stopOnEntry</code></td><td>boolean</td><td>Stop at first line (default: false)</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
-<p>Now that you can write basic expressions, let’s learn about the type system!</p>
-<p>→ <a href="./02-types.html">Next: Types and Values</a></p>
+<h2 id="setting-breakpoints"><a class="header" href="#setting-breakpoints">Setting Breakpoints</a></h2>
+<p>Click in the gutter (left margin) next to any line in an example block:</p>
+<pre><code class="language-kleis">example "my test" {
+    let x = 5          // ← Click here to set breakpoint
+    let y = double(x)  // ← Or here
+    assert(y = 10)
+}
+</code></pre>
+<p><strong>Note:</strong> Breakpoints only work on executable lines inside example blocks. Function definitions are declarations, not executable code.</p>
+<h2 id="starting-a-debug-session"><a class="header" href="#starting-a-debug-session">Starting a Debug Session</a></h2>
+<ol>
+<li>Open a <code>.kleis</code> file with example blocks</li>
+<li>Set breakpoints on lines you want to inspect</li>
+<li>Press <strong>F5</strong> or click <strong>Run → Start Debugging</strong></li>
+<li>Select “Debug Kleis File” configuration</li>
+</ol>
+<h2 id="debug-controls"><a class="header" href="#debug-controls">Debug Controls</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Action</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>F5</td><td>Continue</td><td>Run until next breakpoint</td></tr>
+<tr><td>F10</td><td>Step Over</td><td>Execute current line, don’t enter functions</td></tr>
+<tr><td>F11</td><td>Step Into</td><td>Enter function calls</td></tr>
+<tr><td>Shift+F11</td><td>Step Out</td><td>Finish current function, return to caller</td></tr>
+<tr><td>Shift+F5</td><td>Stop</td><td>End debug session</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="inspecting-variables"><a class="header" href="#inspecting-variables">Inspecting Variables</a></h2>
+<p>The <strong>Variables</strong> panel (left sidebar) shows:</p>
+<ul>
+<li><strong>Local variables</strong> — Let bindings in current scope</li>
+<li><strong>Function parameters</strong> — Arguments passed to current function</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-kleis">example "inspection demo" {
+    let x = 5
+    let y = 10
+    // Breakpoint here shows: x = 5, y = 10
+    let sum = x + y
+}
+</code></pre>
+<h2 id="call-stack"><a class="header" href="#call-stack">Call Stack</a></h2>
+<p>The <strong>Call Stack</strong> panel shows the execution path:</p>
+<pre><code>fibonacci (n=5)          ← Currently here
+fibonacci (n=6)
+example "fib test"       ← Entry point
+</code></pre>
+<p>Click any frame to see its local variables and source location.</p>
+<h2 id="cross-file-debugging"><a class="header" href="#cross-file-debugging">Cross-File Debugging</a></h2>
+<p>When stepping into imported functions, VS Code opens the source file:</p>
+<pre><code class="language-kleis">// main.kleis
+import "helpers.kleis"
+
+example "cross-file" {
+    let result = helper_function(5)  // ← Step Into (F11)
+    // VS Code opens helpers.kleis at helper_function definition
+}
+</code></pre>
+<h3 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h3>
+<p>Every expression carries its <strong>source location</strong> (line, column, file path). When the evaluator processes an expression from an imported file, the debugger reports that file’s location to VS Code, which opens it automatically.</p>
+<h2 id="debug-console"><a class="header" href="#debug-console">Debug Console</a></h2>
+<p>The Debug Console (bottom panel) shows:</p>
+<ul>
+<li>Evaluation progress</li>
+<li>Any print output</li>
+<li>Error messages</li>
+</ul>
+<p>You can also evaluate expressions in the console during a paused debug session.</p>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="breakpoints-not-hitting"><a class="header" href="#breakpoints-not-hitting">Breakpoints Not Hitting</a></h3>
+<p><strong>Problem:</strong> Breakpoint shows as gray (unverified) or never hits.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Ensure breakpoint is on a line inside an example block</li>
+<li>Ensure the example block is actually executed</li>
+<li>Rebuild the Kleis binaries: <code>cargo build --release</code></li>
+</ol>
+<h3 id="file-not-found-errors"><a class="header" href="#file-not-found-errors">“File not found” Errors</a></h3>
+<p><strong>Problem:</strong> Debugger can’t find imported files.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Use relative paths in imports: <code>import "stdlib/complex.kleis"</code></li>
+<li>Run debug session from the project root directory</li>
+<li>Check that the imported file exists at the specified path</li>
+</ol>
+<h3 id="slow-stepping"><a class="header" href="#slow-stepping">Slow Stepping</a></h3>
+<p><strong>Problem:</strong> Each step takes several seconds.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Use release builds: <code>cargo build --release</code></li>
+<li>Avoid stepping through deeply recursive functions</li>
+<li>Use “Step Over” (F10) instead of “Step Into” (F11) for library functions</li>
+</ol>
+<h3 id="debug-session-wont-start"><a class="header" href="#debug-session-wont-start">Debug Session Won’t Start</a></h3>
+<p><strong>Problem:</strong> F5 does nothing or shows an error.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Check <code>.vscode/launch.json</code> exists and is valid JSON</li>
+<li>Ensure Kleis extension is installed and enabled</li>
+<li>Check the Output panel (View → Output → Kleis) for error messages</li>
+<li>Verify binaries exist: <code>ls target/release/kleis*</code></li>
+</ol>
+<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<p>The debugging system uses the <strong>Debug Adapter Protocol (DAP)</strong>:</p>
+<pre><code>┌─────────────┐      DAP         ┌──────────────┐
+│   VS Code   │ ←───────────────→ │ kleis server │
+│   (client)  │    JSON-RPC      │   (adapter)  │
+└─────────────┘                   └──────────────┘
+                                        │
+                                        ▼
+                                  ┌──────────────┐
+                                  │  Evaluator   │
+                                  │  + DebugHook │
+                                  └──────────────┘
+</code></pre>
+<ol>
+<li>VS Code sends DAP commands (setBreakpoints, next, stepIn, etc.)</li>
+<li>Kleis server translates to evaluator debug hook calls</li>
+<li>Evaluator pauses at breakpoints, reports current expression’s span</li>
+<li>Server sends stopped events with location (line, column, file)</li>
+<li>VS Code highlights the current line</li>
+</ol>
+<h3 id="source-span-tracking"><a class="header" href="#source-span-tracking">Source Span Tracking</a></h3>
+<p>The key to accurate debugging is <strong>SourceSpan</strong>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SourceSpan {
+    pub line: u32,
+    pub column: u32,
+    pub end_line: u32,
+    pub end_column: u32,
+    pub file: Option&lt;Arc&lt;PathBuf&gt;&gt;,  // File path (Arc for cheap cloning)
+}
+<span class="boring">}</span></code></pre>
+<p>Every <code>Expression</code> node has an optional span. The parser attaches the span during parsing. When evaluating, the span travels with the expression, so the debugger always knows the source location.</p>
+<h2 id="tips-for-effective-debugging"><a class="header" href="#tips-for-effective-debugging">Tips for Effective Debugging</a></h2>
+<ol>
+<li><strong>Start with simple examples</strong> — Debug small example blocks first</li>
+<li><strong>Use Step Over for library code</strong> — Don’t step into stdlib functions unless needed</li>
+<li><strong>Watch the Variables panel</strong> — See how values change as you step</li>
+<li><strong>Set multiple breakpoints</strong> — Mark key points in your logic</li>
+<li><strong>Use the Call Stack</strong> — Understand how you got to the current line</li>
+</ol>
+<h2 id="see-also"><a class="header" href="#see-also">See Also</a></h2>
+<ul>
+<li><a href="../chapters/20-example-blocks.html">Example Blocks</a> — How to write debuggable code</li>
+<li><a href="../chapters/12-repl.html">The REPL</a> — Interactive exploration</li>
+<li><a href="./grammar.html">Grammar Reference</a> — Full language syntax</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../appendix/lisp-interpreter.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../chapters/02-types.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -275,13 +395,10 @@ axiom positive_exists : ∃(y : ℝ). y &gt; 0       // Existential quantifier
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../appendix/lisp-interpreter.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../chapters/02-types.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                    </a>
             </nav>
 
         </div>

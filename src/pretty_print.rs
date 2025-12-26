@@ -106,9 +106,9 @@ impl PrettyPrinter {
                 format!("□{}", hint)
             }
 
-            Expression::Match { scrutinee, cases, .. } => {
-                self.format_match_at_depth(scrutinee, cases, depth)
-            }
+            Expression::Match {
+                scrutinee, cases, ..
+            } => self.format_match_at_depth(scrutinee, cases, depth),
 
             Expression::List(items) => {
                 let formatted: Vec<String> = items

@@ -276,7 +276,9 @@ impl PatternMatcher {
                 Expression::operation(name.clone(), substituted_args)
             }
 
-            Expression::Match { scrutinee, cases, .. } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 // Substitute in scrutinee, guards, and case bodies
                 let subst_scrutinee = Box::new(self.substitute_bindings(scrutinee, bindings));
                 let subst_cases = cases

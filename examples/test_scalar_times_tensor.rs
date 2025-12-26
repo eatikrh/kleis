@@ -34,8 +34,10 @@ fn main() {
                         hint: "g".to_string(),
                     },
                 ],
+                span: None,
             },
         ],
+        span: None,
     };
 
     println!("Testing: scalar_multiply(Λ, einstein(...))");

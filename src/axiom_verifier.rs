@@ -243,7 +243,9 @@ impl<'r> AxiomVerifier<'r> {
                 structures.extend(self.analyze_dependencies(else_branch));
             }
 
-            Expression::Match { scrutinee, cases, .. } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 // Analyze scrutinee and all case bodies
                 structures.extend(self.analyze_dependencies(scrutinee));
                 for case in cases {

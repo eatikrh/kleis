@@ -503,7 +503,7 @@ fn test_nested_conditional_precedence() {
                 Expression::Conditional { condition, .. } => {
                     // Inner condition: c * 2 <= d
                     match condition.as_ref() {
-                        Expression::Operation { name, args } => {
+                        Expression::Operation { name, args, .. } => {
                             assert_eq!(name, "leq");
                             match &args[0] {
                                 Expression::Operation { name, .. } => assert_eq!(name, "times"),
@@ -620,11 +620,13 @@ fn test_unicode_leq_same_as_ascii() {
         (
             Expression::Operation {
                 name: name1,
-                args: args1, ..
+                args: args1,
+                ..
             },
             Expression::Operation {
                 name: name2,
-                args: args2, ..
+                args: args2,
+                ..
             },
         ) => {
             assert_eq!(name1, name2, "≤ and <= should produce same operator");
@@ -650,11 +652,13 @@ fn test_unicode_geq_same_as_ascii() {
         (
             Expression::Operation {
                 name: name1,
-                args: args1, ..
+                args: args1,
+                ..
             },
             Expression::Operation {
                 name: name2,
-                args: args2, ..
+                args: args2,
+                ..
             },
         ) => {
             assert_eq!(name1, name2, "≥ and >= should produce same operator");

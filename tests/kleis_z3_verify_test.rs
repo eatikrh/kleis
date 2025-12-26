@@ -231,6 +231,7 @@ fn z3_verify_conditional() {
         condition: Box::new(x_gt_0),
         then_branch: Box::new(x.clone()),
         else_branch: Box::new(neg_x),
+        span: None,
     };
 
     let (rendered, parsed, z3_ok) = verify_pipeline(&cond);

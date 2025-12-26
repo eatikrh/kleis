@@ -35,6 +35,7 @@ fn main() {
                         hint: "g1".to_string(),
                     },
                 ],
+                span: None,
             },
             Expression::Operation {
                 name: "einstein".to_string(),
@@ -52,8 +53,10 @@ fn main() {
                         hint: "g2".to_string(),
                     },
                 ],
+                span: None,
             },
         ],
+        span: None,
     };
 
     println!("Testing: plus(einstein(...), einstein(...))");

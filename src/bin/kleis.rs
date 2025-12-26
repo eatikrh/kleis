@@ -26,7 +26,7 @@
 //! ```
 
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Kleis - A symbolic mathematics language
 #[derive(Parser)]
@@ -513,7 +513,10 @@ impl KleisUnifiedServer {
                 diagnostics.push(Diagnostic {
                     range: Range {
                         start: Position { line, character: 0 },
-                        end: Position { line, character: 100 },
+                        end: Position {
+                            line,
+                            character: 100,
+                        },
                     },
                     severity: Some(DiagnosticSeverity::ERROR),
                     message: e.message.clone(),
@@ -576,7 +579,7 @@ impl KleisUnifiedServer {
 }
 
 /// Resolve an import path relative to the importing file
-fn resolve_import_path(import_path: &str, from_file: &PathBuf) -> Option<PathBuf> {
+fn resolve_import_path(import_path: &str, from_file: &Path) -> Option<PathBuf> {
     // Handle stdlib imports
     if import_path.starts_with("stdlib/") {
         // Try relative to project root (walk up from current file)
@@ -822,7 +825,6 @@ struct DapState {
     current_line: u32,
 
     // === Channel-based debugging (real evaluator integration) ===
-
     /// Controller for channel-based communication with DebugHook
     /// Also holds shared breakpoints (can be updated mid-session from this thread)
     controller: Option<kleis::debug::DapDebugController>,
@@ -868,9 +870,7 @@ impl DapState {
 
         // Canonicalize path for VS Code (needs absolute paths in stack traces)
         let path_buf = PathBuf::from(path);
-        let canonical = path_buf
-            .canonicalize()
-            .unwrap_or_else(|_| path_buf.clone());
+        let canonical = path_buf.canonicalize().unwrap_or_else(|_| path_buf.clone());
 
         self.current_file = Some(canonical.clone());
         self.current_line = 1;
@@ -935,7 +935,8 @@ impl DapState {
         self.program = Some(program.clone());
 
         // Load program into DAP's evaluator with file path for cross-file debugging
-        self.evaluator.load_program_with_file(&program, self.current_file.clone())?;
+        self.evaluator
+            .load_program_with_file(&program, self.current_file.clone())?;
 
         // Recursively load imported files
         for item in &program.items {
@@ -968,7 +969,8 @@ impl DapState {
             .map_err(|e| format!("Parse error in '{}': {}", path.display(), e.message))?;
 
         // Load functions from the imported file with that file's path
-        self.evaluator.load_program_with_file(&program, Some(path.clone()))?;
+        self.evaluator
+            .load_program_with_file(&program, Some(path.clone()))?;
 
         // Store for later use in eval thread
         self.loaded_imports.push((program.clone(), path.clone()));
@@ -1346,9 +1348,9 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             // Also include evaluator's global bindings (as fallback or supplement)
             for (name, value) in state.evaluator.get_all_bindings() {
                 // Avoid duplicates
-                let already_exists = variables.iter().any(|v| {
-                    v.get("name").and_then(|n| n.as_str()) == Some(&name)
-                });
+                let already_exists = variables
+                    .iter()
+                    .any(|v| v.get("name").and_then(|n| n.as_str()) == Some(name));
                 if !already_exists {
                     variables.push(serde_json::json!({
                         "name": name,
@@ -1440,7 +1442,8 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                                 if is_valid {
                                     if let Some(ref path) = file_path {
                                         if let Ok(mut shared_bps) = controller.breakpoints.write() {
-                                            shared_bps.push(DebugBreakpoint::new(path.clone(), line));
+                                            shared_bps
+                                                .push(DebugBreakpoint::new(path.clone(), line));
                                         }
                                     }
                                 }
@@ -1512,8 +1515,14 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
 
                     // Load all imported files into the eval evaluator
                     for (import_program, import_path) in &state.loaded_imports {
-                        if let Err(e) = eval_evaluator.load_program_with_file(import_program, Some(import_path.clone())) {
-                            eprintln!("[kleis-dap] Failed to load import '{}': {}", import_path.display(), e);
+                        if let Err(e) = eval_evaluator
+                            .load_program_with_file(import_program, Some(import_path.clone()))
+                        {
+                            eprintln!(
+                                "[kleis-dap] Failed to load import '{}': {}",
+                                import_path.display(),
+                                e
+                            );
                         }
                     }
 
@@ -1529,16 +1538,17 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                             if let kleis::kleis_ast::TopLevel::ExampleBlock(example) = item {
                                 eprintln!(
                                     "[kleis-dap] Evaluating example block: {}",
-                                    if example.name.is_empty() { "(anonymous)" } else { &example.name }
+                                    if example.name.is_empty() {
+                                        "(anonymous)"
+                                    } else {
+                                        &example.name
+                                    }
                                 );
                                 let result = eval_evaluator.eval_example_block(example);
                                 if result.passed {
                                     eprintln!("[kleis-dap] Example passed");
                                 } else {
-                                    eprintln!(
-                                        "[kleis-dap] Example failed: {:?}",
-                                        result.error
-                                    );
+                                    eprintln!("[kleis-dap] Example failed: {:?}", result.error);
                                 }
                                 break; // Only evaluate first example for now
                             }
@@ -1553,7 +1563,10 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                     // Wait for the first stop event from the hook
                     if let Some(ref controller) = state.controller {
                         // Try to receive with a short timeout
-                        match controller.event_rx.recv_timeout(std::time::Duration::from_millis(500)) {
+                        match controller
+                            .event_rx
+                            .recv_timeout(std::time::Duration::from_millis(500))
+                        {
                             Ok(stop_event) => {
                                 eprintln!(
                                     "[kleis-dap] Received stop event: {:?} at line {}",
@@ -1622,7 +1635,10 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                     eprintln!("[kleis-dap] Failed to send Continue: {:?}", e);
                 } else {
                     // Wait for the next stop event (breakpoint or end)
-                    match controller.event_rx.recv_timeout(std::time::Duration::from_secs(30)) {
+                    match controller
+                        .event_rx
+                        .recv_timeout(std::time::Duration::from_secs(30))
+                    {
                         Ok(stop_event) => {
                             eprintln!(
                                 "[kleis-dap] Received stop event: {:?} at line {}",
@@ -1741,7 +1757,10 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                     // Fall back to simulated stepping
                 } else {
                     // Wait for the stop event
-                    match controller.event_rx.recv_timeout(std::time::Duration::from_secs(5)) {
+                    match controller
+                        .event_rx
+                        .recv_timeout(std::time::Duration::from_secs(5))
+                    {
                         Ok(stop_event) => {
                             eprintln!(
                                 "[kleis-dap] Received stop event: {:?} at line {}",

@@ -437,7 +437,11 @@ fn json_to_expression(json: &serde_json::Value) -> Result<kleis::ast::Expression
                     .ok_or("Missing or invalid operation args")?;
                 let args: Result<Vec<Expression>, String> =
                     args_json.iter().map(json_to_expression).collect();
-                return Ok(Expression::Operation { name, args: args?, span: None });
+                return Ok(Expression::Operation {
+                    name,
+                    args: args?,
+                    span: None,
+                });
             }
         } else if let Some(list_val) = obj.get("List") {
             if let Some(list_array) = list_val.as_array() {

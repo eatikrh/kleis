@@ -218,10 +218,7 @@ impl SemanticLowering {
             }
 
             // Match: lower scrutinee and case bodies
-            Expression::Match {
-                cases,
-                ..
-            } => {
+            Expression::Match { cases, .. } => {
                 // children[0] is scrutinee, children[1..] are case bodies
                 let lowered_scrutinee = Box::new(self.lower(&typed.children[0]));
 

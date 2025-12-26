@@ -3,11 +3,13 @@
 
 // Double a number
 // Set breakpoint on line 6 to catch when this is called
-define double(n) = n + n
+define double(n) = 
+    n + n
 
 // Triple a number  
 // Set breakpoint on line 10 to catch when this is called
-define triple(n) = n + n + n
+define triple(n) = 
+    n + n + n
 
 // A constant for testing
 define helper_constant = 42

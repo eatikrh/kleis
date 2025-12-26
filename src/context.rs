@@ -40,7 +40,7 @@
 //! ```
 
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
 use crate::evaluator::Evaluator;
@@ -259,7 +259,7 @@ impl KleisContext {
     /// - Relative paths (./foo.kleis, ../bar.kleis)
     /// - stdlib/ paths (searches in common locations)
     /// - Absolute paths (passed through)
-    fn resolve_import_path(&self, import_path: &str, from_file: &PathBuf) -> Option<PathBuf> {
+    fn resolve_import_path(&self, import_path: &str, from_file: &Path) -> Option<PathBuf> {
         // Handle stdlib imports specially
         if import_path.starts_with("stdlib/") {
             // Try relative to current working directory
@@ -422,8 +422,8 @@ impl KleisContext {
     ///
     /// This is the main entry point for DAP to get ASTs.
     /// It reuses cached ASTs from LSP parsing when available.
-    pub fn get_or_load_ast(&mut self, path: &PathBuf) -> Result<&Program, String> {
-        let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+    pub fn get_or_load_ast(&mut self, path: &Path) -> Result<&Program, String> {
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
 
         // Check if we need to (re)parse
         let needs_parse = match self.documents.get(&canonical) {
@@ -450,9 +450,11 @@ impl KleisContext {
     /// This is useful for the debugger to know all files that might have breakpoints.
     pub fn get_all_program_asts(
         &mut self,
-        main_path: &PathBuf,
+        main_path: &Path,
     ) -> Result<Vec<(PathBuf, Program)>, String> {
-        let canonical = main_path.canonicalize().unwrap_or_else(|_| main_path.clone());
+        let canonical = main_path
+            .canonicalize()
+            .unwrap_or_else(|_| main_path.to_path_buf());
 
         // First, ensure the main file is parsed
         self.get_or_load_ast(&canonical)?;
@@ -567,7 +569,9 @@ define x = 1
 "#;
         ctx.set_document_content(PathBuf::from("/test/main.kleis"), source.to_string());
 
-        let doc = ctx.get_document(&PathBuf::from("/test/main.kleis")).unwrap();
+        let doc = ctx
+            .get_document(&PathBuf::from("/test/main.kleis"))
+            .unwrap();
         assert!(doc.program.is_some());
         // Import is extracted even if file doesn't exist (just won't resolve)
         // The imports set will be empty since the file doesn't exist on disk

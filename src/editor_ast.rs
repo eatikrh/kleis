@@ -318,9 +318,9 @@ fn infer_index_structure(args: &[Expression]) -> Vec<String> {
     args.iter()
         .map(|arg| {
             match arg {
-                Expression::Operation { name, args: inner, .. }
-                    if name == "negate" && inner.len() == 1 =>
-                {
+                Expression::Operation {
+                    name, args: inner, ..
+                } if name == "negate" && inner.len() == 1 => {
                     "down".to_string() // Covariant
                 }
                 _ => "up".to_string(), // Contravariant

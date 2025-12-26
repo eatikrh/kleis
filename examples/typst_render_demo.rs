@@ -27,6 +27,7 @@ fn main() {
             },
             Expression::Const("2".to_string()),
         ],
+        span: None,
     };
 
     let unicode1 = render_expression(&expr1, &ctx, &RenderTarget::Unicode);

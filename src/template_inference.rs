@@ -315,7 +315,9 @@ fn try_infer_modular_congruence(expr: &Expression) -> Option<Expression> {
 fn try_infer_statistics_functions(expr: &Expression) -> Option<Expression> {
     // Check if this is a multiplication of mathrm and function_call
     match expr {
-        Expression::Operation { name, args, .. } if name == "scalar_multiply" && args.len() == 2 => {
+        Expression::Operation { name, args, .. }
+            if name == "scalar_multiply" && args.len() == 2 =>
+        {
             // Check if left is mathrm(function_name)
             let func_name = match &args[0] {
                 Expression::Operation {
@@ -385,7 +387,9 @@ fn try_infer_statistics_functions(expr: &Expression) -> Option<Expression> {
 /// Pattern: scalar_multiply(\nabla, vector_like) => curl(vector_like)
 fn try_infer_curl(expr: &Expression) -> Option<Expression> {
     match expr {
-        Expression::Operation { name, args, .. } if name == "scalar_multiply" && args.len() == 2 => {
+        Expression::Operation { name, args, .. }
+            if name == "scalar_multiply" && args.len() == 2 =>
+        {
             if matches!(&args[0], Expression::Object(s) if s == "\\nabla" || s == "∇")
                 && is_vector_like(&args[1])
             {
@@ -433,7 +437,9 @@ fn rebuild_multiply(terms: &[Expression]) -> Expression {
 /// Example: scalar_multiply(scalar_multiply(a, b), c) -> [a, b, c]
 fn flatten_multiply(expr: &Expression) -> Vec<Expression> {
     match expr {
-        Expression::Operation { name, args, .. } if name == "scalar_multiply" && args.len() == 2 => {
+        Expression::Operation { name, args, .. }
+            if name == "scalar_multiply" && args.len() == 2 =>
+        {
             let mut result = flatten_multiply(&args[0]);
             result.extend(flatten_multiply(&args[1]));
             result

@@ -451,9 +451,9 @@ impl TypeInference {
             }
 
             // Pattern matching: infer scrutinee and all branches
-            Expression::Match { scrutinee, cases, .. } => {
-                self.infer_match(scrutinee, cases, context_builder)
-            }
+            Expression::Match {
+                scrutinee, cases, ..
+            } => self.infer_match(scrutinee, cases, context_builder),
 
             // List literal: infer element types and unify
             Expression::List(elements) => self.infer_list(elements, context_builder),
@@ -623,7 +623,9 @@ impl TypeInference {
             }
 
             // Match: scrutinee + case bodies
-            Expression::Match { scrutinee, cases, .. } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 let typed_scrutinee = self.infer_typed(scrutinee, context_builder)?;
 
                 // For each case, type the body (patterns are not expressions)

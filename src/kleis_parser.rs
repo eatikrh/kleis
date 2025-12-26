@@ -48,6 +48,8 @@ use crate::kleis_ast::{
     StructureMember, TopLevel, TypeAlias, TypeAliasParam, TypeExpr,
 };
 use std::fmt;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct KleisParseError {
@@ -78,8 +80,8 @@ pub struct KleisParser {
     line: u32,
     /// Current column number (1-based)
     column: u32,
-    /// Current file path (for cross-file debugging)
-    current_file: Option<String>,
+    /// Current file path (Arc for cheap cloning across all expressions)
+    current_file: Option<Arc<PathBuf>>,
 }
 
 impl KleisParser {
@@ -94,31 +96,37 @@ impl KleisParser {
     }
 
     /// Create a parser with a known file path
-    pub fn new_with_file(input: &str, file: impl Into<String>) -> Self {
+    /// The path is wrapped in Arc so all expressions share the same reference
+    pub fn new_with_file(input: &str, file: impl Into<PathBuf>) -> Self {
         KleisParser {
             input: input.chars().collect(),
             pos: 0,
             line: 1,
             column: 1,
-            current_file: Some(file.into()),
+            current_file: Some(Arc::new(file.into())),
         }
     }
 
     /// Set the current file path
-    pub fn set_file(&mut self, file: impl Into<String>) {
-        self.current_file = Some(file.into());
+    pub fn set_file(&mut self, file: impl Into<PathBuf>) {
+        self.current_file = Some(Arc::new(file.into()));
     }
 
-    /// Get the current source location (without file)
+    /// Get the current source span (includes file if known)
     pub fn current_span(&self) -> SourceSpan {
-        SourceSpan::new(self.line, self.column)
+        let mut span = SourceSpan::new(self.line, self.column);
+        if let Some(ref file) = self.current_file {
+            span.file = Some(Arc::clone(file));
+        }
+        span
     }
 
-    /// Get the current full source location (with file)
+    /// Get the current full source location (with file as String)
+    /// Deprecated: prefer current_span() which includes file in the span
     pub fn current_location(&self) -> FullSourceLocation {
         let mut loc = FullSourceLocation::new(self.line, self.column);
         if let Some(ref file) = self.current_file {
-            loc.file = Some(file.clone());
+            loc.file = Some(file.to_string_lossy().to_string());
         }
         loc
     }
@@ -396,7 +404,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "negate".to_string(),
                 args: vec![arg],
-                span: None,
+                span: Some(self.current_span()),
             });
         }
 
@@ -407,7 +415,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "logical_not".to_string(),
                 args: vec![arg],
-                span: None,
+                span: Some(self.current_span()),
             });
         }
 
@@ -428,7 +436,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "gradient".to_string(),
                 args: vec![arg],
-                span: None,
+                span: Some(self.current_span()),
             });
         }
 
@@ -440,7 +448,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "Integrate".to_string(),
                 args: vec![arg],
-                span: None,
+                span: Some(self.current_span()),
             });
         }
 
@@ -451,7 +459,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "DoubleIntegral".to_string(),
                 args: vec![arg],
-                span: None,
+                span: Some(self.current_span()),
             });
         }
 
@@ -462,7 +470,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "TripleIntegral".to_string(),
                 args: vec![arg],
-                span: None,
+                span: Some(self.current_span()),
             });
         }
 
@@ -473,7 +481,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "LineIntegral".to_string(),
                 args: vec![arg],
-                span: None,
+                span: Some(self.current_span()),
             });
         }
 
@@ -484,7 +492,7 @@ impl KleisParser {
             return Ok(Expression::Operation {
                 name: "SurfaceIntegral".to_string(),
                 args: vec![arg],
-                span: None,
+                span: Some(self.current_span()),
             });
         }
 
@@ -529,7 +537,7 @@ impl KleisParser {
                 return Ok(Expression::Operation {
                     name: "Unit".to_string(),
                     args: vec![],
-                    span: None,
+                    span: Some(self.current_span()),
                 });
             }
 
@@ -564,7 +572,7 @@ impl KleisParser {
                 return Ok(Expression::Operation {
                     name: constructor.to_string(),
                     args: elements,
-                    span: None,
+                    span: Some(self.current_span()),
                 });
             } else {
                 // Just a grouped expression
@@ -609,7 +617,11 @@ impl KleisParser {
                         position: self.pos,
                     });
                 }
-                return Ok(Expression::Operation { name: id, args, span: None });
+                return Ok(Expression::Operation {
+                    name: id,
+                    args,
+                    span: Some(self.current_span()),
+                });
             }
 
             // Just an identifier
@@ -634,7 +646,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "power".to_string(),
                 args: vec![left, right],
-                span: None,
+                span: Some(self.current_span()),
             };
         }
 
@@ -656,7 +668,7 @@ impl KleisParser {
                     expr = Expression::Operation {
                         name: "factorial".to_string(),
                         args: vec![expr],
-                        span: None,
+                        span: Some(self.current_span()),
                     };
                 }
                 Some('ᵀ') => {
@@ -664,7 +676,7 @@ impl KleisParser {
                     expr = Expression::Operation {
                         name: "transpose".to_string(),
                         args: vec![expr],
-                        span: None,
+                        span: Some(self.current_span()),
                     };
                 }
                 Some('†') => {
@@ -672,7 +684,7 @@ impl KleisParser {
                     expr = Expression::Operation {
                         name: "dagger".to_string(),
                         args: vec![expr],
-                        span: None,
+                        span: Some(self.current_span()),
                     };
                 }
                 _ => break,
@@ -700,7 +712,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
-                span: None,
+                span: Some(self.current_span()),
             };
         }
 
@@ -757,7 +769,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "iff".to_string(),
                 args: vec![left, right],
-                span: None,
+                span: Some(self.current_span()),
             };
         }
 
@@ -782,7 +794,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "implies".to_string(),
                 args: vec![left, right],
-                span: None,
+                span: Some(self.current_span()),
             };
         }
 
@@ -806,7 +818,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "logical_or".to_string(),
                 args: vec![left, right],
-                span: None,
+                span: Some(self.current_span()),
             };
         }
 
@@ -830,7 +842,7 @@ impl KleisParser {
             left = Expression::Operation {
                 name: "logical_and".to_string(),
                 args: vec![left, right],
-                span: None,
+                span: Some(self.current_span()),
             };
         }
 
@@ -919,7 +931,7 @@ impl KleisParser {
             Ok(Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
-                span: None,
+                span: Some(self.current_span()),
             })
         } else {
             Ok(left)
@@ -990,7 +1002,7 @@ impl KleisParser {
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
-                    span: None,
+                    span: Some(self.current_span()),
                 };
             } else {
                 break;
@@ -1231,7 +1243,7 @@ impl KleisParser {
             Ok(Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
-                span: None,
+                span: Some(self.current_span()),
             })
         } else {
             Ok(left)
@@ -1264,7 +1276,7 @@ impl KleisParser {
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
-                    span: None,
+                    span: Some(self.current_span()),
                 };
             } else {
                 break;
@@ -2169,7 +2181,7 @@ impl KleisParser {
             condition: Box::new(condition),
             then_branch: Box::new(then_branch),
             else_branch: Box::new(else_branch),
-            span: None,
+            span: Some(self.current_span()),
         })
     }
 
@@ -2229,7 +2241,7 @@ impl KleisParser {
             type_annotation,
             value: Box::new(value),
             body: Box::new(body),
-            span: None,
+            span: Some(self.current_span()),
         })
     }
 
@@ -2283,7 +2295,7 @@ impl KleisParser {
         Ok(Expression::Lambda {
             params,
             body: Box::new(body),
-            span: None,
+            span: Some(self.current_span()),
         })
     }
 
@@ -2348,7 +2360,7 @@ impl KleisParser {
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
-                    span: None,
+                    span: Some(self.current_span()),
                 };
             } else {
                 // No more operators, stop
@@ -2410,7 +2422,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_and".to_string(),
                     args: vec![expr, right],
-                    span: None,
+                    span: Some(self.current_span()),
                 };
             } else if self.peek() == Some('∨') {
                 self.advance();
@@ -2419,7 +2431,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_or".to_string(),
                     args: vec![expr, right],
-                    span: None,
+                    span: Some(self.current_span()),
                 };
             } else if self.peek_n(2).as_deref() == Some("&&") {
                 self.pos += 2;
@@ -2428,7 +2440,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_and".to_string(),
                     args: vec![expr, right],
-                    span: None,
+                    span: Some(self.current_span()),
                 };
             } else if self.peek_n(2).as_deref() == Some("||") {
                 self.pos += 2;
@@ -2437,7 +2449,7 @@ impl KleisParser {
                 expr = Expression::Operation {
                     name: "logical_or".to_string(),
                     args: vec![expr, right],
-                    span: None,
+                    span: Some(self.current_span()),
                 };
             } else {
                 // No more operators, stop
@@ -4265,10 +4277,11 @@ pub fn parse_kleis_program(input: &str) -> Result<Program, KleisParseError> {
 /// Parse a complete Kleis program with file path information
 ///
 /// This function attaches the file path to all source locations,
-/// enabling cross-file debugging.
+/// enabling cross-file debugging. The file path is wrapped in Arc
+/// so all expressions from this file share the same reference.
 pub fn parse_kleis_program_with_file(
     input: &str,
-    file: impl Into<String>,
+    file: impl Into<PathBuf>,
 ) -> Result<Program, KleisParseError> {
     let mut parser = KleisParser::new_with_file(input, file);
     parser.parse_program()
@@ -5051,7 +5064,9 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Match { scrutinee, cases, .. } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 assert_eq!(*scrutinee, Expression::Object("x".to_string()));
                 assert_eq!(cases.len(), 2);
 
@@ -5086,7 +5101,9 @@ mod tests {
         let result = parser.parse().unwrap();
 
         match result {
-            Expression::Match { scrutinee, cases, .. } => {
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
                 assert_eq!(*scrutinee, Expression::Object("opt".to_string()));
                 assert_eq!(cases.len(), 2);
 
@@ -6540,7 +6557,10 @@ mod tests {
         let mut parser = KleisParser::new(code);
         let result = parser.parse().unwrap();
 
-        if let Expression::Match { scrutinee, cases, .. } = result {
+        if let Expression::Match {
+            scrutinee, cases, ..
+        } = result
+        {
             assert_eq!(*scrutinee, Expression::Object("x".to_string()));
             assert_eq!(cases.len(), 2);
 
