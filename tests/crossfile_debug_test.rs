@@ -147,7 +147,7 @@ fn test_debug_all_operation_types() {
         .filter(|e| {
             e.file
                 .as_ref()
-                .map_or(false, |f| f.to_string_lossy().contains("debug_helper"))
+                .is_some_and(|f| f.to_string_lossy().contains("debug_helper"))
         })
         .filter(|e| e.operation_name.is_some())
         .collect();
@@ -201,7 +201,7 @@ fn test_debug_all_operation_types() {
         .filter(|e| {
             e.file
                 .as_ref()
-                .map_or(false, |f| f.to_string_lossy().contains("debug_main"))
+                .is_some_and(|f| f.to_string_lossy().contains("debug_main"))
         })
         .count();
     let helper_steps = all_events
@@ -209,7 +209,7 @@ fn test_debug_all_operation_types() {
         .filter(|e| {
             e.file
                 .as_ref()
-                .map_or(false, |f| f.to_string_lossy().contains("debug_helper"))
+                .is_some_and(|f| f.to_string_lossy().contains("debug_helper"))
         })
         .count();
     let no_file_steps = all_events.iter().filter(|e| e.file.is_none()).count();
@@ -305,7 +305,7 @@ fn test_breakpoints_in_both_files() {
         line: u32,
     }
 
-    let breakpoints = vec![
+    let breakpoints = [
         Breakpoint {
             file_suffix: "debug_main.kleis",
             line: 16,
