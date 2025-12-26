@@ -62,7 +62,33 @@ example "my test" {
 }
 ```
 
-**Note:** Breakpoints only work on executable lines inside example blocks. Function definitions are declarations, not executable code.
+### Where Breakpoints Work
+
+| Location | Works? | Notes |
+|----------|--------|-------|
+| Inside example blocks | ✅ Yes | `let`, `assert`, expressions |
+| Function body lines | ✅ Yes | Stops when function is called |
+| Top-level definitions | ❌ No | Declarations, not executable |
+| Imported files | ✅ Yes | Set breakpoints in helper files |
+
+### Breakpoints in Imported Files
+
+You can set breakpoints in imported files:
+
+```kleis
+// helpers.kleis
+define double(n) =
+    n + n    // ← Breakpoint here catches all calls to double()
+
+// main.kleis
+import "helpers.kleis"
+
+example "cross-file breakpoint" {
+    let x = double(5)  // Stops at the breakpoint in helpers.kleis
+}
+```
+
+**Tip:** Open the imported file and set breakpoints before starting the debug session.
 
 ## Starting a Debug Session
 
@@ -88,16 +114,23 @@ The **Variables** panel (left sidebar) shows:
 - **Local variables** — Let bindings in current scope
 - **Function parameters** — Arguments passed to current function
 
-Example:
+**Important:** Variables are displayed as **AST expressions**, not just values:
 
 ```kleis
 example "inspection demo" {
     let x = 5
-    let y = 10
-    // Breakpoint here shows: x = 5, y = 10
-    let sum = x + y
+    let y = x + 1
+    // Variables panel shows:
+    //   x = Const("5")
+    //   y = Operation { name: "plus", args: [Const("5"), Const("1")] }
 }
 ```
+
+This is intentional! Kleis is a **symbolic mathematics system**. Variables hold expressions that represent mathematical objects, not just computed values. This enables:
+
+1. **Symbolic manipulation** — See the structure of expressions
+2. **Z3 verification** — Pass expressions to the theorem prover
+3. **Provenance tracking** — Understand where values came from
 
 ## Call Stack
 
@@ -138,6 +171,95 @@ The Debug Console (bottom panel) shows:
 - Error messages
 
 You can also evaluate expressions in the console during a paused debug session.
+
+## Assert with Z3 Verification
+
+**New in v0.93:** Assertions in example blocks use Z3 for symbolic verification!
+
+### How It Works
+
+When you write `assert(expr)`:
+
+1. **Concrete values** — Checked via structural equality
+2. **Symbolic expressions** — Verified using Z3 theorem prover
+
+```kleis
+structure CommutativeRing(R) {
+    operation (+) : R × R → R
+    axiom commutativity: ∀(a b : R). a + b = b + a
+}
+
+example "symbolic verification" {
+    // ✅ Z3 verifies using commutativity axiom!
+    assert(x + y = y + x)
+    
+    // ❌ Z3 disproves with counterexample
+    // assert(x + y = y + y)  // "Counterexample: y!1 -> 1, x!0 -> 0"
+    
+    // ✅ Concrete: structural equality
+    let a = 5
+    assert(a = 5)
+}
+```
+
+### Assertion Results
+
+| Result | Meaning |
+|--------|---------|
+| `Passed` | Concrete values match structurally |
+| `Verified` | Z3 proved the symbolic claim |
+| `Failed { expected, actual }` | Concrete values differ |
+| `Disproved { counterexample }` | Z3 found a counterexample |
+| `Unknown` | Neither could determine (treated as pass) |
+
+### Requirements
+
+- Structure axioms must be defined for the operations used
+- Z3 must be able to load the relevant axioms
+- Works best with algebraic properties (commutativity, associativity, etc.)
+
+## Numerical Computations
+
+For concrete numerical computations, build with the `numerical` feature:
+
+```bash
+cargo build --release --features numerical
+```
+
+This enables LAPACK-backed operations:
+
+```kleis
+example "numerical" {
+    let A = Matrix(2, 2, [4, 1, 1, 4])
+    
+    // Compute eigenvalues (requires numerical feature)
+    let eigs = eigenvalues(A)
+    // eigs = [5, 3]
+    
+    // Matrix multiplication
+    let B = Matrix(2, 2, [1, 0, 0, 2])
+    let C = matmul(A, B)
+    
+    // SVD decomposition
+    let usv = svd(A)  // Returns [U, S, V]
+}
+```
+
+### Available Numerical Operations
+
+| Operation | Description |
+|-----------|-------------|
+| `eigenvalues(M)` | Compute eigenvalues |
+| `eig(M)` | Eigenvalues and eigenvectors |
+| `svd(M)` | Singular value decomposition |
+| `solve(A, b)` | Solve linear system Ax = b |
+| `inv(M)` | Matrix inverse |
+| `det(M)` | Determinant |
+| `cholesky(M)` | Cholesky decomposition |
+| `qr(M)` | QR factorization |
+| `matmul(A, B)` | Matrix multiplication |
+
+**Note:** Numerical operations require concrete values. Symbolic matrices remain symbolic.
 
 ## Troubleshooting
 
@@ -217,13 +339,52 @@ pub struct SourceSpan {
 
 Every `Expression` node has an optional span. The parser attaches the span during parsing. When evaluating, the span travels with the expression, so the debugger always knows the source location.
 
+## Understanding Symbolic Debugging
+
+Kleis debugging differs from traditional debuggers because Kleis is a **symbolic mathematics system**, not an imperative programming language.
+
+### What "Execution" Means in Kleis
+
+In Kleis, "execution" means **symbolic evaluation**:
+
+1. **Substitution** — Replace function calls with their definitions
+2. **Pattern matching** — Dispatch based on structure
+3. **Simplification** — Apply algebraic rules
+
+There's no "program counter" moving through instructions. Instead, expressions transform into simpler expressions.
+
+### Variables Hold Expressions, Not Values
+
+```kleis
+let y = sin(x) + cos(x)
+// y doesn't hold a number
+// y holds: Operation { name: "plus", args: [sin(x), cos(x)] }
+```
+
+This is intentional! It enables:
+- Passing expressions to Z3 for verification
+- Symbolic differentiation, integration
+- Algebraic manipulation
+
+### When to Use the Debugger
+
+| Use Case | Debugger Helps? |
+|----------|-----------------|
+| Understanding expression evaluation | ✅ Excellent |
+| Verifying axiom applications | ✅ See Z3 results |
+| Finding structural issues | ✅ See AST in Variables |
+| Computing numeric values | 🔶 Need `numerical` feature |
+| Traditional imperative debugging | ❌ Wrong mental model |
+
 ## Tips for Effective Debugging
 
 1. **Start with simple examples** — Debug small example blocks first
 2. **Use Step Over for library code** — Don't step into stdlib functions unless needed
-3. **Watch the Variables panel** — See how values change as you step
+3. **Watch the Variables panel** — See how expressions transform as you step
 4. **Set multiple breakpoints** — Mark key points in your logic
-5. **Use the Call Stack** — Understand how you got to the current line
+5. **Use the Call Stack** — Understand the substitution chain
+6. **Think symbolically** — Variables hold AST, not computed values
+7. **Use Z3 for verification** — Let `assert()` prove symbolic claims
 
 ## See Also
 
