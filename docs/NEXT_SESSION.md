@@ -1,33 +1,75 @@
 # Next Session Notes
 
-**Last Updated:** December 25, 2024
+**Last Updated:** December 26, 2024
 
 ---
 
-## 🔴 PRIORITY: Expression Spans for Debugger Line Numbers
+## 🔴 PRIORITY: Fix Debugger Line Number Erratic Behavior
 
-### Status: Cross-File Debugging Works!
-- ✅ File switching works - debugger opens imported files when stepping
-- ⚠️ Line numbers always show as `1` (expressions don't carry location)
+### Status: Expression Spans Implemented!
+- ✅ `span: Option<SourceSpan>` added to 5 executable Expression variants
+- ✅ `SourceSpan` includes `file: Option<Arc<PathBuf>>`
+- ✅ Parser populates file paths in spans via `KleisParser::new_with_file()`
+- ✅ `substitute()` preserves spans when rewriting expressions
+- ✅ Cross-file debugging works (VS Code opens imported files)
+- ⚠️ Line numbers still erratic - visits line 1 before going to actual line
 
-### Solution (see docs/a_possible_debugger_proper_solution.txt)
-Add `span: Option<SourceSpan>` ONLY to executable variants:
-- `Operation { name, args, span }`
-- `Match { scrutinee, cases, span }`
-- `Conditional { condition, then, else, span }`
-- `Let { pattern, type, value, body, span }`
-- `Lambda { params, body, span }`
+### Remaining Issue
+The debugger visits line 1 of imported files before going to the correct line.
+User reported: "It is now opening the imported file. It visits the first line 
+of the file before going to the execution point in the next step over."
 
-### Implementation Steps
-1. **AST changes** (`src/ast.rs`): Add span field to 5 variants
-2. **Pattern matches**: Add `..` to ~50 matches (ignore span when not needed)
-3. **Expression creation**: Add `span: None` to ~134 places
-4. **Parser**: Capture spans when building executable nodes
-5. **Evaluator**: Preserve spans through substitute() and AST rebuilding
-6. **Debug hook**: Use expression spans for line numbers
+### Suspected Root Cause
+`eval_internal` in `src/evaluator.rs` still creates dummy `SourceLocation::new(1, 1)`
+in some code paths instead of extracting actual span from the Expression.
 
-### Safe checkpoint
-Tag: `checkpoint-crossfile-working` - can return here if refactor fails
+### Next Steps
+1. **Find all `SourceLocation::new(1, 1)`** calls in evaluator.rs
+2. **Replace with expression span extraction** where applicable
+3. **Test with debug_main.kleis → debug_helper.kleis** scenario
+
+### Completed in Previous Branch (feature/debugger-dap)
+1. ✅ AST changes (`src/ast.rs`): Added span field to 5 variants
+2. ✅ Pattern matches: Added `..` to ~50 matches
+3. ✅ Expression creation: Added `span: None` to all constructors
+4. ✅ Parser: Captures spans with file path when building executable nodes
+5. ✅ Evaluator: `substitute()` preserves spans through AST rebuilding
+6. ⚠️ Debug hook: Still using dummy locations in some paths
+
+---
+
+---
+
+## 🔴 Tech Debt: Type Promotion (Lift) Not Implemented
+
+### Problem
+The Equation Editor shows `Int` for expressions like `(1 + sin(x)) / 2` instead of `ℝ`.
+
+**Why:** The stdlib defines `Lift(From, To)` structures for the numeric tower:
+- `Lift(Nat, Int)` 
+- `Lift(Int, Rational)`
+- `Lift(Rational, Real)`
+
+But the **type checker doesn't query them**. When inferring `1 + sin(x)`:
+- `1` is parsed as `Int`
+- `sin(x)` returns `ℝ`
+- Type checker should find `Lift(Int, Real)` and promote `1` to `ℝ`
+- Instead, it just returns `Int` (the first operand's type)
+
+### Solution
+Type inference (`src/type_inference.rs`) should:
+1. Query `structure_registry` for `Lift` implementations
+2. When types don't match, check if `Lift(T1, T2)` or `Lift(T2, T1)` exists
+3. Use the "larger" type as the result
+
+### Files to Modify
+- `src/type_inference.rs` - Add Lift query to type unification
+- `src/structure_registry.rs` - May need method to query Lift instances
+
+### Impact
+- Equation Editor type display will be correct
+- REPL `:type` command will show correct types
+- Better user experience when mixing numeric types
 
 ---
 
@@ -69,27 +111,27 @@ Implemented thread-safe AST cache shared between LSP and DAP:
 
 ---
 
-## 🎯 NEXT: Wire DAP to Real Evaluator with DebugHook
+## 🎯 NEXT: Fix Remaining DAP Line Number Issues
 
 ### Problem Statement
 
-The DAP server currently **simulates stepping** by incrementing line numbers. It does NOT:
-- Set the `DapDebugHook` on the evaluator
-- Run actual evaluation
-- Support cross-file debugging (stepping into imported files)
+Cross-file debugging mostly works, but line numbers are erratic:
+- File switching works (VS Code opens imported files)
+- But debugger briefly shows line 1 before jumping to correct line
 
 ### Current State (What Works)
 
 | Component | Status |
 |-----------|--------|
-| Parser populates `FullSourceLocation` (file + line + column) | ✅ |
+| Parser populates `SourceSpan` with file path | ✅ |
 | `ExampleStatement` carries location | ✅ |
 | Evaluator calls `on_eval_start()` for every expression | ✅ |
 | `DapDebugHook` exists with channel-based communication | ✅ |
 | DAP returns stack traces with file paths | ✅ |
 | VS Code shows debugger UI | ✅ |
-| **DAP wires hook to evaluator** | ❌ NOT DONE |
-| **Cross-file debugging** | ❌ NOT DONE |
+| DAP wires hook to evaluator | ✅ |
+| Cross-file debugging (file switching) | ✅ |
+| **Line numbers accurate in cross-file stepping** | ⚠️ ERRATIC |
 
 ### Architecture (from `REPL_ENHANCEMENTS.md`)
 
@@ -391,18 +433,19 @@ The `feature/debugger-dap` branch has 63+ incremental commits. Before merging to
 
 ---
 
-## 📋 Previous: Debugger Status Before Wiring
+## 📋 Current Debugger Status
 
 | Feature | Status |
 |---------|--------|
 | Launch/attach | ✅ |
 | Breakpoints (set) | ✅ |
-| Breakpoints (hit) | ⚠️ Simulated, not real |
-| Step in/over/out | ⚠️ Simulated line increment |
-| Continue | ⚠️ Simulated |
+| Breakpoints (hit) | ✅ Real, wired to evaluator |
+| Step in/over/out | ✅ Real evaluation |
+| Continue | ✅ Real evaluation |
 | Stack trace | ✅ Correct file paths |
 | Variables | ✅ From evaluator |
-| Cross-file | ❌ Not working |
+| Cross-file (file switching) | ✅ Works |
+| Cross-file (line numbers) | ⚠️ Erratic, visits line 1 first |
 
 ### Files to Review
 
