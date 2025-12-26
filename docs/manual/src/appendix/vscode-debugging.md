@@ -134,7 +134,7 @@ Every expression carries its **source location** (line, column, file path). When
 The Debug Console (bottom panel) shows:
 
 - Evaluation progress
-- Any print output
+- Assertion results (pass/fail)
 - Error messages
 
 You can also evaluate expressions in the console during a paused debug session.
