@@ -912,6 +912,13 @@ impl Evaluator {
                     // Evaluate the value and bind it
                     match self.eval(value) {
                         Ok(evaluated) => {
+                            // Notify debug hook about the binding
+                            {
+                                let mut hook_ref = self.debug_hook.borrow_mut();
+                                if let Some(ref mut hook) = *hook_ref {
+                                    hook.on_bind(name, &evaluated, 0);
+                                }
+                            }
                             self.bindings.insert(name.clone(), evaluated);
                         }
                         Err(e) => {

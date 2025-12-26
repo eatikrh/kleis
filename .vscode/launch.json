@@ -11,6 +11,14 @@
         {
             "type": "kleis",
             "request": "launch",
+            "name": "Run Current Kleis File (no debug)",
+            "program": "${file}",
+            "stopOnEntry": false,
+            "noDebug": true
+        },
+        {
+            "type": "kleis",
+            "request": "launch",
             "name": "Debug examples/fibonacci.kleis",
             "program": "${workspaceFolder}/examples/fibonacci.kleis",
             "stopOnEntry": true
