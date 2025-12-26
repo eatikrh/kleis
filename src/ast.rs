@@ -608,6 +608,26 @@ impl Expression {
             .filter(|id| *id < current_id)
             .max()
     }
+
+    /// Get the source span for this expression, if any.
+    /// Only executable expressions (Operation, Match, Conditional, Let, Lambda) have spans.
+    pub fn get_span(&self) -> Option<&SourceSpan> {
+        match self {
+            Expression::Operation { span, .. } => span.as_ref(),
+            Expression::Match { span, .. } => span.as_ref(),
+            Expression::Conditional { span, .. } => span.as_ref(),
+            Expression::Let { span, .. } => span.as_ref(),
+            Expression::Lambda { span, .. } => span.as_ref(),
+            // Non-executable expressions don't carry spans
+            Expression::Const(_)
+            | Expression::String(_)
+            | Expression::Object(_)
+            | Expression::Placeholder { .. }
+            | Expression::List(_)
+            | Expression::Quantifier { .. }
+            | Expression::Ascription { .. } => None,
+        }
+    }
 }
 
 impl MatchCase {

@@ -36,15 +36,20 @@ impl SourceLocation {
     }
 
     /// Create from a SourceSpan (from the AST)
+    ///
+    /// This extracts line, column, AND file path from the span.
+    /// The span's Arc<PathBuf> is dereferenced and cloned into a PathBuf.
     pub fn from_span(span: &crate::ast::SourceSpan) -> Self {
         Self {
-            file: None,
+            file: span.file.as_ref().map(|arc| (**arc).clone()),
             line: span.line,
             column: span.column,
         }
     }
 
-    /// Create from a SourceSpan with file path
+    /// Create from a SourceSpan with explicit file path override
+    ///
+    /// Use this when you want to override the span's file path.
     pub fn from_span_with_file(span: &crate::ast::SourceSpan, file: PathBuf) -> Self {
         Self {
             file: Some(file),

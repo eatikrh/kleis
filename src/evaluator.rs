@@ -533,8 +533,11 @@ impl Evaluator {
 
     /// Internal evaluation with depth tracking for debugging
     fn eval_internal(&self, expr: &Expression, depth: usize) -> Result<Expression, String> {
-        // Create default source location (will be overridden for functions)
-        let location = SourceLocation::new(1, 1);
+        // Extract source location from expression span, or use default (1, 1)
+        let location = expr
+            .get_span()
+            .map(SourceLocation::from_span)
+            .unwrap_or_else(|| SourceLocation::new(1, 1));
 
         // Call debug hook if present (before evaluation)
         {
