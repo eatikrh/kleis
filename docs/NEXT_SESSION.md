@@ -1,6 +1,6 @@
 # Next Session Notes
 
-**Last Updated:** December 25, 2024
+**Last Updated:** December 26, 2024
 
 ---
 
@@ -28,6 +28,77 @@ Add `span: Option<SourceSpan>` ONLY to executable variants:
 
 ### Safe checkpoint
 Tag: `checkpoint-crossfile-working` - can return here if refactor fails
+
+---
+
+## 🟡 Tech Debt: Type Promotion (Lift) Not Implemented
+
+**Discovered:** December 26, 2024
+
+### The Problem
+
+The Equation Editor shows `Int` for expressions like `(1 + sin(x)) / 2` when it should show `ℝ`.
+
+### What Exists
+
+| Layer | Status |
+|-------|--------|
+| **Manual** | Documents promotion as working ✓ |
+| **Stdlib** | Defines `Lift(From, To)` structures ✓ |
+| **Type Checker** | Has comment about it, **doesn't implement** ✗ |
+
+The stdlib (`stdlib/prelude.kleis`) defines:
+
+```kleis
+structure Lift(From, To) {
+  operation lift : From → To
+}
+
+implements Lift(ℤ, ℝ) { operation lift = int_to_real }
+// ... full numeric tower: ℕ → ℤ → ℚ → ℝ → ℂ
+```
+
+### What's Missing
+
+The type checker (`src/type_inference.rs:568`) has this comment:
+
+```rust
+/// `plus(Real, Complex)` → `complex_add(lift(Real), Complex)`
+```
+
+But the actual promotion logic is not implemented. When inferring `plus(Int, ℝ)`:
+1. Should query stdlib for `Lift(Int, ℝ)` 
+2. If found, result type is `ℝ`
+3. Currently falls back to `Int` (wrong)
+
+### Fix Required
+
+In `src/type_inference.rs`, when checking binary operations:
+
+```rust
+// Pseudocode for what's needed:
+fn infer_binary_op(&mut self, op: &str, left: Type, right: Type) -> Type {
+    if left == right { return left; }
+    
+    // Check if Lift(left, right) exists
+    if self.stdlib_has_lift(&left, &right) {
+        return right;  // Promote left to right
+    }
+    // Check if Lift(right, left) exists
+    if self.stdlib_has_lift(&right, &left) {
+        return left;   // Promote right to left
+    }
+    
+    // Type error: no promotion path
+    Err("Cannot unify {} and {}", left, right)
+}
+```
+
+### References
+
+- `stdlib/prelude.kleis:300-347` - Lift structure definitions
+- `src/type_inference.rs:568` - Comment mentioning lift
+- Manual: "Type Promotion (Embedding)" section
 
 ---
 
