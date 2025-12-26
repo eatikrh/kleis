@@ -4,17 +4,67 @@
 import "debug_helper.kleis"
 
 example "cross-file debugging" {
-    // Set breakpoint here (line 7)
-    let x = 10
+    // ============================================
+    // ARITHMETIC OPERATIONS
+    // ============================================
     
-    // This calls a function from the imported file
+    // Basic variables (line 11)
+    let x = 10
+    let y = 5
+    
+    // Addition - calls double() from helper (line 15)
     let doubled = double(x)
     
-    // Set another breakpoint here (line 13)
+    // More addition - calls triple() from helper (line 18)
     let tripled = triple(x)
     
-    // Final assertion
+    // Multiplication - calls multiply() from helper (line 21)
+    let product = multiply(x, y)
+    
+    // Power - calls square() from helper (line 24)
+    let squared = square(x)
+    
+    // Division - calls half() from helper (line 27)
+    let halved = half(x)
+    
+    // ============================================
+    // LOGICAL OPERATIONS
+    // ============================================
+    
+    // Logical AND (line 33)
+    let p = true
+    let q = true
+    let and_result = both_true(p, q)
+    
+    // Logical OR (line 38)
+    let or_result = either_true(p, q)
+    
+    // ============================================
+    // COMPARISON OPERATIONS
+    // ============================================
+    
+    // Comparisons (line 44)
+    let greater = is_greater(x, y)
+    let lesser = is_less(y, x)
+    let equal_check = is_equal(x, x)
+    
+    // ============================================
+    // ASSERTIONS
+    // ============================================
+    
+    // Verify arithmetic (line 52)
     assert(doubled = 20)
     assert(tripled = 30)
+    assert(product = 50)
+    assert(squared = 100)
+    assert(halved = 5)
+    
+    // Verify logic (line 59)
+    assert(and_result = true)
+    assert(or_result = true)
+    
+    // Verify comparisons (line 63)
+    assert(greater = true)
+    assert(lesser = true)
+    assert(equal_check = true)
 }
-

@@ -29,10 +29,12 @@
 //! // result = plus(5, 5) (symbolic, not computed to 10)
 //! ```
 use crate::ast::{Expression, LambdaParam};
+use crate::axiom_verifier::{AxiomVerifier, VerificationResult};
 use crate::debug::{DebugHook, SourceLocation};
 use crate::kleis_ast::{ExampleBlock, ExampleStatement, FunctionDef, Program, TopLevel};
 use crate::kleis_parser::SourceSpan;
 use crate::pattern_matcher::PatternMatcher;
+use crate::structure_registry::StructureRegistry;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -55,13 +57,17 @@ pub struct ExampleResult {
 /// Result of a single assertion
 #[derive(Debug, Clone)]
 pub enum AssertResult {
-    /// Assertion passed
+    /// Assertion passed (concrete equality)
     Passed,
+    /// Assertion verified by Z3 (symbolic proof)
+    Verified,
     /// Assertion failed with concrete values (boxed to reduce enum size)
     Failed {
         expected: Box<Expression>,
         actual: Box<Expression>,
     },
+    /// Assertion disproved by Z3 with counterexample
+    Disproved { counterexample: String },
     /// Assertion couldn't be evaluated (symbolic)
     Unknown(String),
 }
@@ -537,14 +543,10 @@ impl Evaluator {
 
     /// Internal evaluation with depth tracking for debugging
     fn eval_internal(&self, expr: &Expression, depth: usize) -> Result<Expression, String> {
-        // Extract source location from expression span, or use default (1, 1)
-        let location = expr
-            .get_span()
-            .map(SourceLocation::from_span)
-            .unwrap_or_else(|| SourceLocation::new(1, 1));
-
-        // Call debug hook if present (before evaluation)
-        {
+        // Call debug hook ONLY if expression has a valid span
+        // Leaf expressions (Const, Object) without spans should NOT trigger stops
+        if let Some(span) = expr.get_span() {
+            let location = SourceLocation::from_span(span);
             let mut hook_ref = self.debug_hook.borrow_mut();
             if let Some(ref mut hook) = *hook_ref {
                 let _action = hook.on_eval_start(expr, &location, depth);
@@ -555,12 +557,15 @@ impl Evaluator {
         // Evaluate based on expression type
         let result = match expr {
             // Check if this is a function application
-            Expression::Operation { name, args, .. } => {
+            Expression::Operation { name, args, span } => {
                 if self.functions.contains_key(name) {
                     // Get the function's full source location (span + file) for debugging
-                    let func_location = self
-                        .get_function_location(name)
-                        .unwrap_or_else(|| location.clone());
+                    // Fallback to expression span if function location not found
+                    let expr_location = span
+                        .as_ref()
+                        .map(SourceLocation::from_span)
+                        .unwrap_or_else(|| SourceLocation::new(1, 1));
+                    let func_location = self.get_function_location(name).unwrap_or(expr_location);
 
                     crate::logging::log(
                         "DEBUG",
@@ -601,11 +606,11 @@ impl Evaluator {
                     }
 
                     // Call debug hook for function exit
+                    // Note: on_function_exit already calls pop_frame internally
                     {
                         let mut hook_ref = self.debug_hook.borrow_mut();
                         if let Some(ref mut hook) = *hook_ref {
                             hook.on_function_exit(name, &func_result, depth);
-                            hook.pop_frame();
                         }
                     }
 
@@ -943,6 +948,10 @@ impl Evaluator {
                         AssertResult::Passed => {
                             assertions_passed += 1;
                         }
+                        AssertResult::Verified => {
+                            // Z3 verified the symbolic assertion!
+                            assertions_passed += 1;
+                        }
                         AssertResult::Failed { expected, actual } => {
                             // Restore bindings and return error
                             self.bindings = saved_bindings;
@@ -957,12 +966,24 @@ impl Evaluator {
                                 assertions_total,
                             };
                         }
+                        AssertResult::Disproved { counterexample } => {
+                            // Z3 found a counterexample!
+                            self.bindings = saved_bindings;
+                            return ExampleResult {
+                                name: example.name.clone(),
+                                passed: false,
+                                error: Some(format!(
+                                    "Assertion disproved by Z3. Counterexample: {}",
+                                    counterexample
+                                )),
+                                assertions_passed,
+                                assertions_total,
+                            };
+                        }
                         AssertResult::Unknown(reason) => {
                             // For symbolic assertions, we can't verify - treat as unknown
-                            // In the future, this will integrate with Z3
                             // For now, we'll pass symbolic assertions (optimistic)
                             assertions_passed += 1;
-                            // TODO: When Z3 integration is complete, prove symbolically
                             let _ = reason; // Suppress unused warning
                         }
                     }
@@ -1027,6 +1048,40 @@ impl Evaluator {
         }
     }
 
+    /// Build a StructureRegistry from the evaluator's loaded structures
+    fn build_registry(&self) -> StructureRegistry {
+        let mut registry = StructureRegistry::new();
+        for structure in &self.structures {
+            let _ = registry.register(structure.clone());
+        }
+        registry
+    }
+
+    /// Try to verify an assertion using Z3 (for symbolic claims)
+    fn verify_with_z3(&self, condition: &Expression) -> Option<AssertResult> {
+        let registry = self.build_registry();
+
+        match AxiomVerifier::new(&registry) {
+            Ok(mut verifier) => {
+                // Load ADT constructors
+                verifier.load_adt_constructors(self.adt_constructors.iter());
+
+                match verifier.verify_axiom(condition) {
+                    Ok(result) => match result {
+                        VerificationResult::Valid => Some(AssertResult::Verified),
+                        VerificationResult::Invalid { counterexample } => {
+                            Some(AssertResult::Disproved { counterexample })
+                        }
+                        VerificationResult::Unknown => None, // Fall back to simple eval
+                        VerificationResult::Disabled => None, // Feature not enabled
+                    },
+                    Err(_) => None, // Verification error, fall back
+                }
+            }
+            Err(_) => None, // Couldn't create verifier, fall back
+        }
+    }
+
     /// Evaluate an equality assertion: assert(a = b)
     fn eval_equality_assert(&self, left: &Expression, right: &Expression) -> AssertResult {
         // First, resolve any variables in the expressions
@@ -1041,19 +1096,95 @@ impl Evaluator {
             (Ok(left_val), Ok(right_val)) => {
                 // Both sides evaluated - check structural equality
                 if self.expressions_equal(&left_val, &right_val) {
-                    AssertResult::Passed
-                } else {
-                    AssertResult::Failed {
-                        expected: Box::new(right_val),
-                        actual: Box::new(left_val),
+                    return AssertResult::Passed;
+                }
+
+                // Structural equality failed - check if either side is symbolic
+                // If so, try Z3 verification
+                if self.is_symbolic(&left_val) || self.is_symbolic(&right_val) {
+                    let equality_expr = Expression::Operation {
+                        name: "equals".to_string(),
+                        args: vec![left_val.clone(), right_val.clone()],
+                        span: None,
+                    };
+
+                    if let Some(result) = self.verify_with_z3(&equality_expr) {
+                        return result;
                     }
+
+                    // Z3 couldn't help - return unknown (optimistic)
+                    return AssertResult::Unknown(format!(
+                        "Symbolic assertion: cannot verify {} = {}",
+                        self.expr_summary(&left_val),
+                        self.expr_summary(&right_val)
+                    ));
+                }
+
+                // Both sides are concrete but not equal - fail
+                AssertResult::Failed {
+                    expected: Box::new(right_val),
+                    actual: Box::new(left_val),
                 }
             }
-            (Err(e), _) | (_, Err(e)) => {
-                // At least one side couldn't be evaluated - symbolic
-                AssertResult::Unknown(format!("Symbolic assertion: {}", e))
+            (Err(_), _) | (_, Err(_)) => {
+                // At least one side couldn't be evaluated - try Z3 verification
+                let equality_expr = Expression::Operation {
+                    name: "equals".to_string(),
+                    args: vec![left_resolved.clone(), right_resolved.clone()],
+                    span: None,
+                };
+
+                if let Some(result) = self.verify_with_z3(&equality_expr) {
+                    return result;
+                }
+
+                // Z3 couldn't help - return unknown
+                AssertResult::Unknown(format!(
+                    "Symbolic assertion: {} = {}",
+                    self.expr_summary(&left_resolved),
+                    self.expr_summary(&right_resolved)
+                ))
             }
         }
+    }
+
+    /// Check if an expression is symbolic (contains unbound variables)
+    fn is_symbolic(&self, expr: &Expression) -> bool {
+        match expr {
+            Expression::Object(name) => {
+                // It's symbolic if not bound and not an ADT constructor
+                !self.bindings.contains_key(name) && !self.adt_constructors.contains(name)
+            }
+            Expression::Const(_) | Expression::String(_) | Expression::Placeholder { .. } => false,
+            Expression::Operation { args, .. } => args.iter().any(|arg| self.is_symbolic(arg)),
+            Expression::List(elements) => elements.iter().any(|e| self.is_symbolic(e)),
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
+                self.is_symbolic(scrutinee) || cases.iter().any(|case| self.is_symbolic(&case.body))
+            }
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.is_symbolic(condition)
+                    || self.is_symbolic(then_branch)
+                    || self.is_symbolic(else_branch)
+            }
+            Expression::Let { value, body, .. } => {
+                self.is_symbolic(value) || self.is_symbolic(body)
+            }
+            Expression::Lambda { body, .. } => self.is_symbolic(body),
+            Expression::Ascription { expr, .. } => self.is_symbolic(expr),
+            Expression::Quantifier { body, .. } => self.is_symbolic(body),
+        }
+    }
+
+    /// Get a short summary of an expression for error messages
+    fn expr_summary(&self, expr: &Expression) -> String {
+        format!("{:?}", expr).chars().take(40).collect()
     }
 
     /// Resolve variables in an expression using current bindings

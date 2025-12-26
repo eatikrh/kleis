@@ -4,37 +4,81 @@
 
 ---
 
-## 🔴 PRIORITY: Fix Debugger Line Number Erratic Behavior
+## ✅ DONE: DAP Debugger Fully Working! (Dec 26, 2024)
 
-### Status: Expression Spans Implemented!
-- ✅ `span: Option<SourceSpan>` added to 5 executable Expression variants
-- ✅ `SourceSpan` includes `file: Option<Arc<PathBuf>>`
-- ✅ Parser populates file paths in spans via `KleisParser::new_with_file()`
-- ✅ `substitute()` preserves spans when rewriting expressions
-- ✅ Cross-file debugging works (VS Code opens imported files)
-- ⚠️ Line numbers still erratic - visits line 1 before going to actual line
+### What Works
+- ✅ Cross-file debugging (VS Code opens imported files)
+- ✅ Correct line numbers for ALL operation types (arithmetic, logical, comparison)
+- ✅ Breakpoints work in both main and imported files
+- ✅ Variables panel shows AST expressions (symbolic representation!)
+- ✅ Stack frames tracked correctly
+- ✅ Step over, step into, step out all work
 
-### Remaining Issue
-The debugger visits line 1 of imported files before going to the correct line.
-User reported: "It is now opening the imported file. It visits the first line 
-of the file before going to the execution point in the next step over."
+### Key Insight: DAP as a Window to Kleis Internals
+The debugger shows variables as **AST expressions**, not evaluated values:
+```
+doubled = Operation { name: "plus", args: [Object("x"), Object("x")], span: ... }
+x = Const("10")
+```
 
-### Suspected Root Cause
-`eval_internal` in `src/evaluator.rs` still creates dummy `SourceLocation::new(1, 1)`
-in some code paths instead of extracting actual span from the Expression.
+This is **exactly right** for a symbolic mathematics system! Variables hold
+symbolic expressions that can be passed to Z3 for verification.
 
-### Next Steps
-1. **Find all `SourceLocation::new(1, 1)`** calls in evaluator.rs
-2. **Replace with expression span extraction** where applicable
-3. **Test with debug_main.kleis → debug_helper.kleis** scenario
+### Fixes Applied (Dec 26, 2024)
+1. **Skip expressions without spans** - No more line 1 spurious stops
+2. **Parser span capture at START** - Fixed 8 parsing functions to capture span
+   before parsing, not after (parse_arithmetic, parse_term, parse_factor,
+   parse_comparison, parse_conjunction, parse_disjunction, parse_implication,
+   parse_biconditional, parse_where_term)
+3. **Fixed double pop_frame bug** - Removed redundant pop_frame() call
+4. **Custom operator spans** - Fixed parse_where_term
 
-### Completed in Previous Branch (feature/debugger-dap)
-1. ✅ AST changes (`src/ast.rs`): Added span field to 5 variants
-2. ✅ Pattern matches: Added `..` to ~50 matches
-3. ✅ Expression creation: Added `span: None` to all constructors
-4. ✅ Parser: Captures spans with file path when building executable nodes
-5. ✅ Evaluator: `substitute()` preserves spans through AST rebuilding
-6. ⚠️ Debug hook: Still using dummy locations in some paths
+### Future Ideas
+
+#### 1. Eval Command in Debug Panel
+Add ability to evaluate an AST expression to a concrete value during debugging.
+The infrastructure exists (`evaluator.eval()`).
+
+#### 2. Extend `example` Block Grammar
+Current grammar only allows: `let`, `assert`, expressions.
+
+**Could add:**
+```kleis
+example "test" {
+    define local_fn(x) = x + 1   // Local function definition
+    let y = local_fn(5)
+    assert(y = 6)
+}
+```
+
+**Pros:** Self-contained test cases, useful for testing helpers
+**Cons:** `example` is for testing not defining; functions can be top-level
+
+#### 3. ✅ Wire assert() to Z3 - DONE! (Dec 26, 2024)
+**IMPLEMENTED!** `assert()` in example blocks now uses Z3 for symbolic verification:
+
+```kleis
+structure CommutativeRing(R) {
+    operation (+) : R × R → R
+    axiom commutativity: ∀(a b : R). a + b = b + a
+}
+
+example "test commutativity" {
+    assert(x + y = y + x)  // ✅ Z3 verifies this using the commutativity axiom!
+}
+```
+
+**How it works:**
+1. `eval_assert()` checks if expressions are symbolic (`is_symbolic()`)
+2. If symbolic → calls `verify_with_z3()` using `AxiomVerifier`
+3. Z3 loads structure axioms and verifies/disproves the assertion
+4. Results: `Verified`, `Disproved { counterexample }`, or `Unknown`
+
+**Test cases added:**
+- `test_assert_with_z3_verification` - Verifies commutativity axiom
+- `test_assert_associativity` - Verifies associativity axiom  
+- `test_assert_invalid_symbolic` - Z3 correctly disproves `x + y = y + y`
+- `test_assert_concrete_values` - Structural equality for bound variables
 
 ---
 
@@ -73,43 +117,28 @@ Type inference (`src/type_inference.rs`) should:
 
 ---
 
-## 🔴 Tech Debt: assert() Not Using Z3 Verification
+## ✅ DONE: assert() Uses Z3 Verification (Dec 26, 2024)
 
-### Problem
-`assert()` in example blocks uses **simple evaluation**, not Z3 verification.
+**Implemented!** `assert()` in example blocks now uses Z3 for symbolic verification.
 
-**Current implementation** (`src/evaluator.rs` lines 1006-1057):
-```rust
-fn eval_assert(&self, condition: &Expression) -> AssertResult {
-    // Evaluates and checks is_truthy or expressions_equal
-    // Does NOT use AxiomVerifier or Z3Backend
-}
-```
+### Changes Made
+- Added `is_symbolic()` to detect if expressions contain unbound variables
+- Added `verify_with_z3()` to call `AxiomVerifier.verify_axiom()`
+- Modified `eval_equality_assert()` to try Z3 when expressions are symbolic
+- Added `AssertResult::Verified` and `AssertResult::Disproved` variants
 
-**What exists** (`src/axiom_verifier.rs`):
-- Full `AxiomVerifier` with `Z3Backend`
-- Proper `VerificationResult::Valid/Invalid/Unknown`
-- Symbolic verification infrastructure
+### Tests Added (`tests/crossfile_debug_test.rs`)
+- `test_assert_with_z3_verification` - Verifies commutativity axiom
+- `test_assert_associativity` - Verifies associativity axiom
+- `test_assert_invalid_symbolic` - Z3 correctly disproves `x + y = y + y`
+- `test_assert_concrete_values` - Structural equality for bound variables
 
-**The gap:** These two are not connected.
-
-### Expected Behavior
+### How It Works
 ```kleis
-assert(x + y = y + x)   // Should verify with Z3 (commutativity)
-assert(4 = 4)           // Can verify trivially or with Z3
+assert(x + y = y + x)   // ✅ Z3 verifies via commutativity axiom
+assert(x + y = y + y)   // ❌ Z3 disproves: "Counterexample: y!1 -> 1, x!0 -> 0"
+assert(4 = 4)           // ✅ Concrete equality (no Z3 needed)
 ```
-
-Both should go through `AxiomVerifier` for proper symbolic verification.
-
-### Solution
-Wire `eval_assert` to use `AxiomVerifier.verify_axiom()` instead of simple evaluation:
-1. Create/reuse AxiomVerifier in Evaluator
-2. Call `verify_axiom(condition)` for assert()
-3. Map `VerificationResult` to `AssertResult`
-
-### Files to Modify
-- `src/evaluator.rs` - Connect eval_assert to AxiomVerifier
-- May need feature flag handling (`axiom-verification`)
 
 ---
 

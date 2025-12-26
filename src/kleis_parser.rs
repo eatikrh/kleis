@@ -636,6 +636,7 @@ impl KleisParser {
 
     fn parse_factor(&mut self) -> Result<Expression, KleisParseError> {
         // Primary with optional postfix operators
+        let start_span = self.current_span();
         let mut left = self.parse_primary_with_postfix()?;
 
         self.skip_whitespace();
@@ -643,10 +644,14 @@ impl KleisParser {
             self.advance();
             // Recurse to parse_factor for right-associativity: 2^3^2 = 2^(3^2)
             let right = self.parse_factor()?;
+            let expr_span = left
+                .get_span()
+                .cloned()
+                .unwrap_or_else(|| start_span.clone());
             left = Expression::Operation {
                 name: "power".to_string(),
                 args: vec![left, right],
-                span: Some(self.current_span()),
+                span: Some(expr_span),
             };
         }
 
@@ -695,6 +700,7 @@ impl KleisParser {
     }
 
     fn parse_term(&mut self) -> Result<Expression, KleisParseError> {
+        let start_span = self.current_span();
         let mut left = self.parse_factor()?;
 
         loop {
@@ -709,10 +715,14 @@ impl KleisParser {
 
             self.advance();
             let right = self.parse_factor()?;
+            let expr_span = left
+                .get_span()
+                .cloned()
+                .unwrap_or_else(|| start_span.clone());
             left = Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
-                span: Some(self.current_span()),
+                span: Some(expr_span),
             };
         }
 
@@ -755,6 +765,7 @@ impl KleisParser {
     /// Parse biconditional: A ↔ B (logical iff, lowest precedence, left associative)
     /// Supports: ↔ (U+2194), ⟺ (U+27FA), ⇔ (U+21D4)
     fn parse_biconditional(&mut self) -> Result<Expression, KleisParseError> {
+        let start_span = self.current_span();
         let mut left = self.parse_implication()?;
 
         loop {
@@ -766,10 +777,14 @@ impl KleisParser {
 
             self.advance(); // consume ↔, ⟺, or ⇔
             let right = self.parse_implication()?;
+            let expr_span = left
+                .get_span()
+                .cloned()
+                .unwrap_or_else(|| start_span.clone());
             left = Expression::Operation {
                 name: "iff".to_string(),
                 args: vec![left, right],
-                span: Some(self.current_span()),
+                span: Some(expr_span),
             };
         }
 
@@ -778,6 +793,7 @@ impl KleisParser {
 
     /// Parse implication: A ⟹ B or A → B (right associative)
     fn parse_implication(&mut self) -> Result<Expression, KleisParseError> {
+        let start_span = self.current_span();
         let mut left = self.parse_disjunction()?;
 
         loop {
@@ -791,10 +807,14 @@ impl KleisParser {
 
             self.advance(); // consume ⟹ or →
             let right = self.parse_disjunction()?;
+            let expr_span = left
+                .get_span()
+                .cloned()
+                .unwrap_or_else(|| start_span.clone());
             left = Expression::Operation {
                 name: "implies".to_string(),
                 args: vec![left, right],
-                span: Some(self.current_span()),
+                span: Some(expr_span),
             };
         }
 
@@ -803,6 +823,7 @@ impl KleisParser {
 
     /// Parse disjunction: A ∨ B (logical or)
     fn parse_disjunction(&mut self) -> Result<Expression, KleisParseError> {
+        let start_span = self.current_span();
         let mut left = self.parse_conjunction()?;
 
         loop {
@@ -815,10 +836,14 @@ impl KleisParser {
 
             self.advance(); // consume ∨
             let right = self.parse_conjunction()?;
+            let expr_span = left
+                .get_span()
+                .cloned()
+                .unwrap_or_else(|| start_span.clone());
             left = Expression::Operation {
                 name: "logical_or".to_string(),
                 args: vec![left, right],
-                span: Some(self.current_span()),
+                span: Some(expr_span),
             };
         }
 
@@ -827,6 +852,7 @@ impl KleisParser {
 
     /// Parse conjunction: A ∧ B (logical and)
     fn parse_conjunction(&mut self) -> Result<Expression, KleisParseError> {
+        let start_span = self.current_span();
         let mut left = self.parse_comparison()?;
 
         loop {
@@ -839,10 +865,14 @@ impl KleisParser {
 
             self.advance(); // consume ∧
             let right = self.parse_comparison()?;
+            let expr_span = left
+                .get_span()
+                .cloned()
+                .unwrap_or_else(|| start_span.clone());
             left = Expression::Operation {
                 name: "logical_and".to_string(),
                 args: vec![left, right],
-                span: Some(self.current_span()),
+                span: Some(expr_span),
             };
         }
 
@@ -851,6 +881,7 @@ impl KleisParser {
 
     /// Parse comparison: A = B, A < B, A <= B, A >= B, etc.
     fn parse_comparison(&mut self) -> Result<Expression, KleisParseError> {
+        let start_span = self.current_span();
         let left = self.parse_arithmetic()?;
 
         self.skip_whitespace();
@@ -928,10 +959,14 @@ impl KleisParser {
 
         if let Some(op) = op {
             let right = self.parse_arithmetic()?;
+            let expr_span = left
+                .get_span()
+                .cloned()
+                .unwrap_or_else(|| start_span.clone());
             Ok(Expression::Operation {
                 name: op.to_string(),
                 args: vec![left, right],
-                span: Some(self.current_span()),
+                span: Some(expr_span),
             })
         } else {
             Ok(left)
@@ -976,6 +1011,8 @@ impl KleisParser {
 
     /// Parse arithmetic expressions: +, -, and custom operators
     fn parse_arithmetic(&mut self) -> Result<Expression, KleisParseError> {
+        // Capture span at START of expression (where left operand begins)
+        let start_span = self.current_span();
         let mut left = self.parse_term()?;
 
         loop {
@@ -999,10 +1036,15 @@ impl KleisParser {
 
             if let Some(op) = op {
                 let right = self.parse_term()?;
+                // Use left operand's span if available, otherwise use start position
+                let expr_span = left
+                    .get_span()
+                    .cloned()
+                    .unwrap_or_else(|| start_span.clone());
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
-                    span: Some(self.current_span()),
+                    span: Some(expr_span),
                 };
             } else {
                 break;
@@ -1253,6 +1295,7 @@ impl KleisParser {
     /// Parse a term in where condition (stops at '.', '=', '<', '>', etc.)
     fn parse_where_term(&mut self) -> Result<Expression, KleisParseError> {
         self.skip_whitespace();
+        let start_span = self.current_span();
 
         // Parse primary expressions and custom operators
         // But stop at comparison operators and '.'
@@ -1273,10 +1316,14 @@ impl KleisParser {
             // Check for custom operator
             if let Some(op) = self.try_parse_custom_operator() {
                 let right = self.parse_primary()?;
+                let expr_span = left
+                    .get_span()
+                    .cloned()
+                    .unwrap_or_else(|| start_span.clone());
                 left = Expression::Operation {
                     name: op,
                     args: vec![left, right],
-                    span: Some(self.current_span()),
+                    span: Some(expr_span),
                 };
             } else {
                 break;

@@ -394,6 +394,40 @@ cargo test  # NOT cargo test --lib, run ALL tests!
 - Other stats (stars, commits, papers) are dynamic via GitHub API
 - Helps track project growth over time
 
+## Efficient Test Running
+
+**CRITICAL: Don't recompile the entire project when running a single test.**
+
+### Rules
+
+1. **Don't run `cargo check` before `cargo test`** - wasteful, test compiles anyway
+2. **Run tests directly:** `cargo test --test test_name -- --nocapture`
+3. **If only the test file changed** - compilation should be fast (seconds, not minutes)
+4. **If library files changed** - recompilation is unavoidable, but only run once
+
+### What Triggers Full Recompilation
+
+| Change | Recompile? |
+|--------|-----------|
+| Test file only (`tests/*.rs`) | NO - just recompile test |
+| Library file (`src/*.rs`) | YES - must recompile library |
+| `cargo check` then `cargo test` | YES - different profiles! |
+
+### Avoid This Pattern
+
+```bash
+# WASTEFUL - compiles twice!
+cargo check
+cargo test --test my_test
+```
+
+### Do This Instead
+
+```bash
+# Just run the test directly
+cargo test --test my_test -- --nocapture
+```
+
 ## Rust Code Quality Rules
 
 **CRITICAL: Run quality checks before committing .rs files.**
