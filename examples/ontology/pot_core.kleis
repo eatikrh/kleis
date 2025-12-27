@@ -149,23 +149,52 @@ structure ParticlePredicates {
 }
 
 // =============================================================================
-// 9. EQUIVALENCE UNDER KERNEL
+// 9. EQUIVALENCE UNDER KERNEL (quotient by ker(project))
 // =============================================================================
 
 structure ProjectiveEquivalence over GreenKernel {
     operation equiv : Flow × Flow → Bool
     
     // equiv is exactly the kernel-quotient: same projection ↔ equivalent
+    // These two axioms define equiv as the quotient relation.
+    // refl/sym/trans are DERIVABLE from these (via equality properties).
     axiom equiv_elim: ∀(a b : Flow).
         equiv(a, b) → project(a) = project(b)
     
     axiom equiv_intro: ∀(a b : Flow).
         project(a) = project(b) → equiv(a, b)
+}
 
-    // Standard equivalence relation properties
-    axiom refl:  ∀(a : Flow). equiv(a, a)
-    axiom sym:   ∀(a b : Flow). equiv(a, b) → equiv(b, a)
-    axiom trans: ∀(a b c : Flow). equiv(a, b) ∧ equiv(b, c) → equiv(a, c)
+// DERIVED THEOREMS: Standard equivalence relation properties
+// These follow from equiv_elim + equiv_intro and properties of equality.
+
+example "equiv is reflexive (derived)" {
+    // ∀(a : Flow). equiv(a, a)
+    // Proof sketch:
+    //   project(a) = project(a)   by reflexivity of equality
+    //   equiv(a, a)               by equiv_intro
+    assert(∀(a : Flow). equiv(a, a))
+}
+
+example "equiv is symmetric (derived)" {
+    // ∀(a b : Flow). equiv(a, b) → equiv(b, a)
+    // Proof sketch:
+    //   equiv(a, b)                          assumption
+    //   project(a) = project(b)              by equiv_elim
+    //   project(b) = project(a)              by symmetry of equality
+    //   equiv(b, a)                          by equiv_intro
+    assert(∀(a b : Flow). equiv(a, b) → equiv(b, a))
+}
+
+example "equiv is transitive (derived)" {
+    // ∀(a b c : Flow). equiv(a, b) ∧ equiv(b, c) → equiv(a, c)
+    // Proof sketch:
+    //   equiv(a, b) ∧ equiv(b, c)            assumption
+    //   project(a) = project(b)              by equiv_elim
+    //   project(b) = project(c)              by equiv_elim
+    //   project(a) = project(c)              by transitivity of equality
+    //   equiv(a, c)                          by equiv_intro
+    assert(∀(a b c : Flow). equiv(a, b) ∧ equiv(b, c) → equiv(a, c))
 }
 
 // =============================================================================
