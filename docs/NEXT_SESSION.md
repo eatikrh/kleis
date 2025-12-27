@@ -85,35 +85,47 @@ example "test commutativity" {
 
 ---
 
-## 🔴 Tech Debt: Type Promotion (Lift) Not Implemented
+## ✅ DONE: Type Promotion (Lift) Implemented (Dec 26, 2024)
 
-### Problem
-The Equation Editor shows `Int` for expressions like `(1 + sin(x)) / 2` instead of `ℝ`.
+### What Was Fixed
 
-**Why:** The stdlib defines `Lift(From, To)` structures for the numeric tower:
-- `Lift(Nat, Int)` 
-- `Lift(Int, Rational)`
-- `Lift(Rational, Real)`
+The type checker now correctly promotes types through the `Promotes` structure.
 
-But the **type checker doesn't query them**. When inferring `1 + sin(x)`:
-- `1` is parsed as `Int`
-- `sin(x)` returns `ℝ`
-- Type checker should find `Lift(Int, Real)` and promote `1` to `ℝ`
-- Instead, it just returns `Int` (the first operand's type)
+**Before:** `:type 1 + sin(x)` → `Int` ❌
+**After:** `:type 1 + sin(x)` → `Scalar` ✅
 
-### Solution
-Type inference (`src/type_inference.rs`) should:
-1. Query `structure_registry` for `Lift` implementations
-2. When types don't match, check if `Lift(T1, T2)` or `Lift(T2, T1)` exists
-3. Use the "larger" type as the result
+### Bugs Fixed
 
-### Files to Modify
-- `src/type_inference.rs` - Add Lift query to type unification
-- `src/structure_registry.rs` - May need method to query Lift instances
+1. **OperationRegistry.merge() missing fields**
+   - Added merge for `structure_extends` and `type_promotions`
+   - Without this, promotions registered in stdlib weren't available to type checker
 
-### Impact
-- Equation Editor shows wrong types for mixed expressions
-- Type inference is incomplete for numeric tower
+2. **Unicode type names not normalized when registering**
+   - `implements Promotes(ℕ, ℤ)` was registering as `("ℕ", "ℤ")`
+   - But `has_promotion` and `find_common_supertype` normalize to `("Nat", "Int")`
+   - Fix: Normalize in `register_implements` before storing
+
+3. **Top-level operations not registered**
+   - Operations like `operation sin : ℝ → ℝ` were ignored (TODO stub)
+   - Added `toplevel_operation_types` to `OperationRegistry`
+   - Type inference now queries these for function return types
+
+4. **Added type_expr_to_type helper**
+   - Converts `TypeExpr` to `Type` for return type extraction
+   - Handles Function, Named, Parametric, Product, ForAll, DimExpr
+
+### Test Results
+
+All 8 type promotion tests pass:
+- `:type sin(x) = Scalar` ✅ (was `Var(TypeVar(0))`)
+- `:type 1 + sin(x) = Scalar` ✅ (was `Int`)
+- `:type (1 + sin(x)) / 2 = Scalar` ✅ (was `Int`)
+- `:type 1 + 3.14 = Scalar` ✅
+- Promotions registered: Nat→Int, Int→Scalar, etc. ✅
+
+### Files Modified
+- `src/type_context.rs` - Major fixes to registry and type lookup
+- `tests/type_promotion_test.rs` - New test file with 8 tests
 
 ---
 
