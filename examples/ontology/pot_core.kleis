@@ -218,15 +218,20 @@ structure POTSanityTheorems {
         equiv(psi1, psi2) → 
             residue(project(psi1), e, c) = residue(project(psi2), e, c)
     
-    // THEOREM 2: Fields distinguishable by residues (contrapositive form)
-    // If all residues match, fields are equal
-    axiom field_distinguishable: ∀(f1 f2 : FieldR4, e : Event, c : Channel).
-        f1 ≠ f2 → residue(f1, e, c) ≠ residue(f2, e, c)
+    // THEOREM 2: Fields distinguishable by residues (EXISTENTIAL separation)
+    // If fields differ, there EXISTS some (event, channel) that detects it
+    // (ChatGPT fix: was incorrectly universal over e, c)
+    axiom field_distinguishable: ∀(f1 f2 : FieldR4).
+        f1 ≠ f2 → ∃(e : Event, c : Channel). residue(f1, e, c) ≠ residue(f2, e, c)
     
-    // THEOREM 3: Different projections → different residues
-    // (Key POT result: kernel determines what's observable)
-    axiom projection_distinguishable: ∀(f1 f2 : FieldR4, e : Event, c : Channel).
-        f1 ≠ f2 → residue(f1, e, c) ≠ residue(f2, e, c)
+    // THEOREM 3: Different universes → different observables
+    // Key POT result: different kernels produce distinguishable physics
+    // (Uses helper: apply_kernel(G, psi) since no dot notation)
+    axiom universe_distinguishable: ∀(G1 G2 : GreenKernel).
+        different_universes(G1, G2) →
+            ∃(psi : Flow, e : Event, c : Channel).
+                residue(apply_kernel(G1, psi), e, c) ≠ 
+                residue(apply_kernel(G2, psi), e, c)
 }
 
 // =============================================================================
