@@ -47,6 +47,10 @@ pub struct StructureRegistry {
     /// Maps structure name to all its implementations
     /// Example: "MatrixMultipliable" → [ImplementsDef with where Semiring(T)]
     implements: HashMap<String, Vec<crate::kleis_ast::ImplementsDef>>,
+
+    /// Top-level operation declarations
+    /// Example: "apply_kernel" → TypeExpr::Function(Product([GreenKernel, Flow]), FieldR4)
+    toplevel_operations: HashMap<String, crate::kleis_ast::TypeExpr>,
 }
 
 impl StructureRegistry {
@@ -55,7 +59,17 @@ impl StructureRegistry {
         StructureRegistry {
             structures: HashMap::new(),
             implements: HashMap::new(),
+            toplevel_operations: HashMap::new(),
         }
+    }
+
+    /// Register a top-level operation declaration
+    pub fn register_toplevel_operation(
+        &mut self,
+        name: String,
+        type_sig: crate::kleis_ast::TypeExpr,
+    ) {
+        self.toplevel_operations.insert(name, type_sig);
     }
 
     /// Load structures from a Kleis file
@@ -250,6 +264,38 @@ impl StructureRegistry {
         } else {
             Vec::new()
         }
+    }
+
+    /// Get a specific operation's type signature from any structure or top-level declaration
+    ///
+    /// Searches:
+    /// 1. All registered structures for the operation
+    /// 2. Top-level operation declarations
+    ///
+    /// Returns the TypeExpr (e.g., `ℂ × Flow → Flow` for `flow_smul`)
+    ///
+    /// Used by Z3 backend to determine correct sorts for function declarations.
+    pub fn get_operation_signature(
+        &self,
+        operation_name: &str,
+    ) -> Option<&crate::kleis_ast::TypeExpr> {
+        // First check structures
+        for structure in self.structures.values() {
+            for member in &structure.members {
+                if let crate::kleis_ast::StructureMember::Operation {
+                    name,
+                    type_signature,
+                } = member
+                {
+                    if name == operation_name {
+                        return Some(type_signature);
+                    }
+                }
+            }
+        }
+
+        // Then check top-level operations
+        self.toplevel_operations.get(operation_name)
     }
 
     /// Check if a structure has a specific axiom

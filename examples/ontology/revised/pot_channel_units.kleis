@@ -1,0 +1,107 @@
+// ============================================================================
+// POT Channel Units (drop-in, uses dimensional_analysis.kleis conventions)
+// ============================================================================
+// STATUS: ASPIRATIONAL - requires grammar extensions:
+//   - Top-level axiom definitions (currently must be inside structures)
+//   - Parameterized structure constructors in define statements
+// ============================================================================
+//
+// Purpose:
+//   - Associate each POT ConservedChannel (Mass/EM/Spin/Color) with a physical
+//     dimension / unit.
+//   - Provide a unit-aware wrapper for residues without forcing you to refactor
+//     existing residue : ... → ℝ immediately.
+//
+// Notes:
+//   - dimensional_analysis.kleis currently models mechanical dimensions [L,M,T].
+//     That is sufficient for Mass, but NOT for EM/Charge.
+//   - Therefore we introduce Dimension4 = [L,M,T,Q] with a minimal extra base
+//     exponent Q (charge).
+//
+// Parser-friendly: no integrals, no function types, no dot-notation.
+// ============================================================================
+
+import "../../physics/dimensional_analysis.kleis"
+import "spacetime_type_kernel_projection.kleis"
+import "pot_core_kernel_projection.kleis"
+
+// ============================================================================
+// PART 1: Extended dimension system [L, M, T, Q]
+// ============================================================================
+
+structure Dimension4(L : ℤ, M : ℤ, T : ℤ, Q : ℤ) {}
+
+// Embed the original mechanical Dimension into Dimension4 with Q = 0
+operation embed_LMT : Dimension → Dimension4
+
+axiom embed_LMT_def: ∀(d : Dimension).
+    embed_LMT(d) = Dimension4(L(d), M(d), T(d), 0)
+
+// Convenient named dimensions (avoid name collisions with Channel elements)
+define Dimless4   = Dimension4(0, 0, 0, 0)
+define Length4    = Dimension4(1, 0, 0, 0)
+define Mass4      = Dimension4(0, 1, 0, 0)
+define Time4      = Dimension4(0, 0, 1, 0)
+define Charge4    = Dimension4(0, 0, 0, 1)
+
+// ============================================================================
+// PART 2: Quantity4 = Value + Dimension4
+// ============================================================================
+
+structure Quantity4(value : ℝ, dim : Dimension4) {}
+
+// Optional constructors (base units)
+define kilogram4(x : ℝ) = Quantity4(x, Mass4)
+define coulomb4(x : ℝ)  = Quantity4(x, Charge4)
+
+// ============================================================================
+// PART 3: Map POT channels → units
+// ============================================================================
+
+structure ChannelUnits extends ConservedChannel {
+    // Return the dimension/unit associated with a channel
+    operation unit_of : Channel → Dimension4
+
+    // Core channel-unit bindings
+    axiom unit_mass  : unit_of(Mass)  = Mass4
+    axiom unit_em    : unit_of(EM)    = Charge4
+
+    // Spin & Color:
+    // You can keep these dimensionless for now, or later introduce extra base
+    // exponents (e.g., S for spin, C for color) if you want them typed too.
+    axiom unit_spin  : unit_of(Spin)  = Dimless4
+    axiom unit_color : unit_of(Color) = Dimless4
+}
+
+// ============================================================================
+// PART 4: Unit-aware residues (non-invasive wrapper)
+// ============================================================================
+
+structure ResidueDimensionality extends ConservedChannel, ChannelUnits {
+    // Keep your existing residue : FieldR4 × Event × Channel → ℝ
+    // and provide a unit-aware wrapper residue_q : ... → Quantity4.
+    operation residue_q : FieldR4 × Event × Channel → Quantity4
+
+    // residue_q agrees with residue on numeric value
+    axiom residue_value:
+        ∀(f : FieldR4, e : Event, c : Channel).
+            value(residue_q(f, e, c)) = residue(f, e, c)
+
+    // residue_q carries the correct channel unit
+    axiom residue_dim:
+        ∀(f : FieldR4, e : Event, c : Channel).
+            dim(residue_q(f, e, c)) = unit_of(c)
+}
+
+// ============================================================================
+// PART 5: Practical payoff (what you asked earlier)
+// ============================================================================
+//
+// If you "derive mass from the residue", you now know it is in kilograms
+// (dimension Mass4) because:
+//
+//   dim(residue_q(f, e, Mass)) = Mass4
+//
+// i.e., the type-level unit constraint enforces it.
+// ============================================================================
+

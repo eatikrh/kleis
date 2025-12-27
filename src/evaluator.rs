@@ -121,6 +121,9 @@ pub struct Evaluator {
     /// Loaded structure definitions (for export)
     structures: Vec<crate::kleis_ast::StructureDef>,
 
+    /// Top-level operation declarations (for Z3 type signatures)
+    toplevel_operations: HashMap<String, crate::kleis_ast::TypeExpr>,
+
     /// Optional debug hook for step-through debugging
     /// When set, eval() calls hook methods at key points
     /// Uses RefCell for interior mutability (hook needs &mut self)
@@ -139,6 +142,7 @@ impl Evaluator {
             all_constructors: std::collections::HashSet::new(),
             data_types: Vec::new(),
             structures: Vec::new(),
+            toplevel_operations: HashMap::new(),
             debug_hook: RefCell::new(None),
         }
     }
@@ -224,6 +228,14 @@ impl Evaluator {
         // Store structure definitions for export
         for structure in program.structures() {
             self.structures.push(structure.clone());
+        }
+
+        // Store top-level operation declarations for Z3 type lookup
+        for item in &program.items {
+            if let TopLevel::OperationDecl(op_decl) = item {
+                self.toplevel_operations
+                    .insert(op_decl.name.clone(), op_decl.type_signature.clone());
+            }
         }
 
         Ok(())
@@ -981,10 +993,16 @@ impl Evaluator {
                             };
                         }
                         AssertResult::Unknown(reason) => {
-                            // For symbolic assertions, we can't verify - treat as unknown
-                            // For now, we'll pass symbolic assertions (optimistic)
-                            assertions_passed += 1;
-                            let _ = reason; // Suppress unused warning
+                            // Unknown means we couldn't verify - fail with explanation
+                            // (could be Z3 timeout, feature disabled, or symbolic limitation)
+                            self.bindings = saved_bindings;
+                            return ExampleResult {
+                                name: example.name.clone(),
+                                passed: false,
+                                error: Some(format!("Assertion unknown: {}", reason)),
+                                assertions_passed,
+                                assertions_total,
+                            };
                         }
                     }
                 }
@@ -1071,6 +1089,10 @@ impl Evaluator {
         let mut registry = StructureRegistry::new();
         for structure in &self.structures {
             let _ = registry.register(structure.clone());
+        }
+        // Add top-level operations
+        for (name, type_sig) in &self.toplevel_operations {
+            registry.register_toplevel_operation(name.clone(), type_sig.clone());
         }
         registry
     }

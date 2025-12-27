@@ -186,6 +186,58 @@ pub trait SolverBackend {
     ///
     /// Clears all assertions and loaded structures.
     fn reset(&mut self);
+
+    /// Load an identity element (nullary operation) as a distinct constant
+    ///
+    /// Identity elements like `zero`, `one`, `e` are symbolic constants that
+    /// must be mutually distinct. The solver asserts distinctness constraints
+    /// between all loaded identity elements.
+    ///
+    /// # Arguments
+    /// * `name` - Name of the identity element (e.g., "zero", "one")
+    ///
+    /// # Example
+    /// ```ignore
+    /// backend.load_identity_element("zero");
+    /// backend.load_identity_element("one");
+    /// // Now zero ≠ one is asserted in the solver
+    /// ```
+    fn load_identity_element(&mut self, name: &str);
+
+    /// Assert a Kleis expression as a boolean constraint
+    ///
+    /// The expression must evaluate to a boolean in the solver.
+    /// Used for asserting axioms, assumptions, and constraints.
+    ///
+    /// # Arguments
+    /// * `expr` - Kleis expression (must be boolean)
+    ///
+    /// # Returns
+    /// * `Ok(())` if assertion succeeded
+    /// * `Err` if expression couldn't be translated or isn't boolean
+    fn assert_expression(&mut self, expr: &Expression) -> Result<(), String>;
+
+    /// Define a function with parameters and body
+    ///
+    /// Creates a function declaration and asserts its definitional equality:
+    /// `∀ params. f(params) = body`
+    ///
+    /// # Arguments
+    /// * `name` - Function name
+    /// * `params` - Parameter names
+    /// * `body` - Function body expression
+    ///
+    /// # Example
+    /// ```ignore
+    /// // Define: abs(x) = if x < 0 then -x else x
+    /// backend.define_function("abs", &["x".to_string()], &abs_body)?;
+    /// ```
+    fn define_function(
+        &mut self,
+        name: &str,
+        params: &[String],
+        body: &Expression,
+    ) -> Result<(), String>;
 }
 
 /// Statistics about solver backend state

@@ -1,0 +1,41 @@
+// ============================================================================
+// Minimal admissible kernel class (v0)
+// ============================================================================
+// STATUS: ASPIRATIONAL - requires grammar extensions:
+//   - Parameterized structures with structure-typed parameters
+//   - See NEXT_SESSION.md "Future Enhancement: Parameterized Structures"
+// ============================================================================
+//
+// Goal: capture the weakest "transform-like" constraints on a kernel
+// so POT remains general (not hardcoding GR/QM), but still structured.
+//
+// This is intentionally algebraic (no integrals, no topology assumptions).
+// Projections need not correspond to observers;
+// they correspond to admissible structural constraints.
+// ============================================================================
+
+structure AdmissibleKernel(G : GreenKernel) extends FlowAlgebra, FieldR4Algebra {
+
+    // ------------------------------------------------------------------------
+    // (K1) Linearity: projection respects superposition
+    // ------------------------------------------------------------------------
+
+    axiom kernel_lin_add:
+        ∀(a b : Flow).
+            apply_kernel(G, flow_add(a, b))
+            =
+            field_add(apply_kernel(G, a), apply_kernel(G, b))
+
+    axiom kernel_lin_smul:
+        ∀(α : ℂ, a : Flow).
+            apply_kernel(G, flow_smul(α, a))
+            =
+            field_smul(α, apply_kernel(G, a))
+
+    // ------------------------------------------------------------------------
+    // (K2) Zero preservation
+    // ------------------------------------------------------------------------
+
+    axiom kernel_maps_zero:
+        apply_kernel(G, flow_zero) = field_zero
+}
