@@ -1032,12 +1032,30 @@ impl Evaluator {
             }
         }
 
+        // For quantified assertions, try Z3 first (they can't be evaluated concretely)
+        if matches!(condition, Expression::Quantifier { .. }) {
+            if let Some(result) = self.verify_with_z3(condition) {
+                return result;
+            }
+            // Z3 couldn't help - return unknown
+            return AssertResult::Unknown(
+                "Quantified assertion could not be verified (Z3 unavailable or inconclusive)"
+                    .to_string(),
+            );
+        }
+
         // Otherwise, evaluate the condition and check if it's "true"
         match self.eval(condition) {
             Ok(result) => {
                 if self.is_truthy(&result) {
                     AssertResult::Passed
                 } else {
+                    // If evaluation returned a symbolic result, try Z3
+                    if self.is_symbolic(&result) {
+                        if let Some(z3_result) = self.verify_with_z3(condition) {
+                            return z3_result;
+                        }
+                    }
                     AssertResult::Failed {
                         expected: Box::new(Expression::Object("true".to_string())),
                         actual: Box::new(result),
