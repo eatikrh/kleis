@@ -1,0 +1,119 @@
+// Projected Ontology Theory - Core Structures
+// Minimal formalization that Kleis can parse and verify
+
+// =============================================================================
+// COMPLEX VECTOR SPACE (C³ = H_ont)
+// =============================================================================
+
+structure ComplexVectorSpace(n : Nat) {
+    operation add : Vector(n, C) × Vector(n, C) → Vector(n, C)
+    operation scale : C × Vector(n, C) → Vector(n, C)
+    element zero : Vector(n, C)
+    
+    axiom add_commutative: ∀(u v : Vector(n, C)). add(u, v) = add(v, u)
+    axiom add_associative: ∀(u v w : Vector(n, C)). 
+        add(add(u, v), w) = add(u, add(v, w))
+    axiom add_identity: ∀(v : Vector(n, C)). add(v, zero) = v
+    axiom scale_identity: ∀(v : Vector(n, C)). scale(1, v) = v
+}
+
+// =============================================================================
+// INNER PRODUCT (Hilbert structure)
+// =============================================================================
+
+structure InnerProductSpace(n : Nat) extends ComplexVectorSpace(n) {
+    operation inner : Vector(n, C) × Vector(n, C) → C
+    
+    axiom conjugate_symmetry: ∀(x y : Vector(n, C)). 
+        inner(x, y) = conjugate(inner(y, x))
+}
+
+// =============================================================================
+// PROJECTION OPERATORS
+// =============================================================================
+
+structure Projector(n : Nat) over InnerProductSpace(n) {
+    operation P : Vector(n, C) → Vector(n, C)
+    
+    // P² = P (idempotent)
+    axiom idempotent: ∀(v : Vector(n, C)). P(P(v)) = P(v)
+    
+    // P* = P (self-adjoint)  
+    axiom self_adjoint: ∀(x y : Vector(n, C)). 
+        inner(P(x), y) = inner(x, P(y))
+}
+
+// =============================================================================
+// ONTOLOGICAL REPRESENTATION
+// =============================================================================
+
+// Entities map to vectors in C³
+structure OntologyMap over InnerProductSpace(3) {
+    // Domain: abstract ontological entities
+    operation Phi : Entity → Vector(3, C)
+    
+    // Similarity via normalized inner product
+    operation sim : Entity × Entity → R
+    
+    axiom similarity_symmetric: ∀(a b : Entity). sim(a, b) = sim(b, a)
+    axiom similarity_self: ∀(a : Entity). sim(a, a) = 1
+}
+
+// =============================================================================
+// KERNEL AND UNIVERSE
+// =============================================================================
+
+// A Green kernel projects ontology to spacetime
+structure GreenKernel {
+    // Project modal flow to R4
+    operation project : Flow → Spacetime
+    
+    // Null space: exists ontologically but invisible in R4
+    operation nullspace : Set(Flow)
+    
+    axiom null_projects_zero: ∀(psi : Flow). 
+        in_set(psi, nullspace) → project(psi) = zero_spacetime
+}
+
+// =============================================================================
+// EQUIVALENCE UNDER PROJECTION
+// =============================================================================
+
+// Same reality = same projection
+structure ProjectiveEquivalence(G : GreenKernel) {
+    operation equiv : Flow × Flow → Bool
+    
+    // Reflexive
+    axiom equiv_refl: ∀(psi : Flow). equiv(psi, psi)
+    
+    // Symmetric
+    axiom equiv_sym: ∀(psi1 psi2 : Flow). equiv(psi1, psi2) → equiv(psi2, psi1)
+    
+    // Transitive
+    axiom equiv_trans: ∀(psi1 psi2 psi3 : Flow). 
+        equiv(psi1, psi2) ∧ equiv(psi2, psi3) → equiv(psi1, psi3)
+}
+
+// =============================================================================
+// KEY THEOREM: Different Kernels → Different Universes
+// =============================================================================
+
+structure KernelDistinction {
+    operation distinct : GreenKernel × GreenKernel → Bool
+}
+
+// =============================================================================
+// EXAMPLE: Verify basic properties
+// =============================================================================
+
+example "projector is idempotent" {
+    assert(∀(v : Vector(3, C)). P(P(v)) = P(v))
+}
+
+example "similarity is symmetric" {
+    assert(∀(a b : Entity). sim(a, b) = sim(b, a))
+}
+
+example "equivalence is reflexive" {
+    assert(∀(psi : Flow). equiv(psi, psi))
+}
