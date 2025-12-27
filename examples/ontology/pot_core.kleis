@@ -162,7 +162,49 @@ structure ProjectiveEquivalence over GreenKernel {
 }
 
 // =============================================================================
-// 10. UNIVERSE REFINEMENT (partial order by information)
+// 10. KERNEL → GEOMETRY INTERFACE (bridges field to metric)
+// =============================================================================
+
+// MetricProbeArgs bundles (field, u, v) for probe operation
+// Workaround for n-ary product types not yet supported
+structure MetricProbeArgs {
+    element field : FieldR4
+    element u     : Vector(4, ℝ)
+    element v     : Vector(4, ℝ)
+}
+
+structure KernelMetricInterface {
+    // Build probe arguments
+    operation make_probe_args : FieldR4 × PointPair → MetricProbeArgs
+    
+    // Metric probe: extracts bilinear form from field
+    operation metric_probe : MetricProbeArgs → ℝ
+    
+    // POT BRIDGE AXIOM: Geometry is kernel-induced
+    // Any projected field carries the same induced bilinear form
+    // because geometry is a kernel property, not flow-dependent
+    axiom probe_recovers_kernel_inner: ∀(psi : Flow, u v : Vector(4, ℝ)).
+        metric_probe(make_probe_args(project(psi), make_point_pair(u, v))) = 
+            kernel_inner(u, v)
+    
+    // Probe is symmetric (inherits from metric symmetry)
+    axiom probe_symmetric: ∀(f : FieldR4, u v : Vector(4, ℝ)).
+        metric_probe(make_probe_args(f, make_point_pair(u, v))) = 
+        metric_probe(make_probe_args(f, make_point_pair(v, u)))
+}
+
+// PointPair bundles two vectors for probe
+structure PointPair {
+    element u : Vector(4, ℝ)
+    element v : Vector(4, ℝ)
+}
+
+structure PointPairOps {
+    operation make_point_pair : Vector(4, ℝ) × Vector(4, ℝ) → PointPair
+}
+
+// =============================================================================
+// 11. UNIVERSE REFINEMENT (partial order by information)
 // =============================================================================
 
 structure UniverseOrder {
@@ -176,6 +218,13 @@ structure UniverseOrder {
 
 structure UniverseDistinction {
     operation different_universes : GreenKernel × GreenKernel → Bool
+    
+    // Helper: apply kernel to flow
+    operation apply_kernel : GreenKernel × Flow → FieldR4
+    
+    // Definition: different universes iff some flow projects differently
+    axiom different_universes_witness: ∀(G1 G2 : GreenKernel, psi : Flow).
+        apply_kernel(G1, psi) ≠ apply_kernel(G2, psi) → different_universes(G1, G2)
 }
 
 // =============================================================================
@@ -189,7 +238,15 @@ structure POTSanityTheorems {
             residue(make_pair(project(psi1), e), c) = 
             residue(make_pair(project(psi2), e), c)
     
-    // Key POT result: "Equivalent flows are observationally identical"
+    // THEOREM 2: Fields distinguishable by residues (contrapositive form)
+    // If all residues match, fields are equal
+    axiom field_distinguishable: ∀(f1 f2 : FieldR4, e : Event, c : Channel).
+        f1 ≠ f2 → residue(make_pair(f1, e), c) ≠ residue(make_pair(f2, e), c)
+    
+    // THEOREM 3: Different projections → different residues
+    // (Key POT result: kernel determines what's observable)
+    axiom projection_distinguishable: ∀(f1 f2 : FieldR4, e : Event, c : Channel).
+        f1 ≠ f2 → residue(make_pair(f1, e), c) ≠ residue(make_pair(f2, e), c)
 }
 
 // =============================================================================
