@@ -132,6 +132,15 @@ pub enum Type {
         args: Vec<Type>,
     },
 
+    // ===== Function Types =====
+    /// Function type: A → B
+    /// Enables proper type checking of higher-order functions.
+    ///
+    /// Examples:
+    /// - sin : ℝ → ℝ → Function(Scalar, Scalar)
+    /// - map : (T → U) → List(T) → List(U) → Function(Function(T, U), Function(List(T), List(U)))
+    Function(Box<Type>, Box<Type>),
+
     // ===== Meta-Level Types =====
     // These exist at the type inference level, not user level
     /// Type variable (for inference)
@@ -190,6 +199,9 @@ impl Substitution {
                     constructor: constructor.clone(),
                     args: new_args,
                 }
+            }
+            Type::Function(from, to) => {
+                Type::Function(Box::new(self.apply(from)), Box::new(self.apply(to)))
             }
             Type::ForAll(v, t) => Type::ForAll(v.clone(), Box::new(self.apply(t))),
             // Bootstrap types have no substructure (leaf types)
@@ -1992,6 +2004,15 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
             Ok(subst)
         }
 
+        // Function types: A → B unifies with C → D if A ~ C and B ~ D
+        (Type::Function(from1, to1), Type::Function(from2, to2)) => {
+            // Unify domains
+            let s1 = unify(from1, from2)?;
+            // Unify codomains with substitution applied
+            let s2 = unify(&s1.apply(to1), &s1.apply(to2))?;
+            Ok(s1.compose(&s2))
+        }
+
         // Type variable unifies with anything (if not occurs)
         (Type::Var(v1), Type::Var(v2)) if v1 == v2 => {
             // Same type variable - trivially unifies with itself
@@ -2015,6 +2036,7 @@ fn occurs(v: &TypeVar, t: &Type) -> bool {
     match t {
         Type::Var(v2) => v == v2,
         Type::Data { args, .. } => args.iter().any(|arg| occurs(v, arg)),
+        Type::Function(from, to) => occurs(v, from) || occurs(v, to),
         Type::ForAll(_, t) => occurs(v, t),
         // Leaf types (no type variables can occur in them)
         // NatExpr has dimension variables, not type variables
@@ -2140,6 +2162,9 @@ impl std::fmt::Display for Type {
 
             // Symbolic dimension expression (v0.92)
             Type::NatExpr(dim) => write!(f, "{}", format_dim_expr(dim)),
+
+            // Function types
+            Type::Function(from, to) => write!(f, "{} → {}", from, to),
 
             // Meta-level types
             Type::Var(TypeVar(n)) => write!(f, "α{}", n),
