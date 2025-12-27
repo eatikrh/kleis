@@ -2,6 +2,22 @@
 
 All notable changes to the Kleis VS Code extension will be documented in this file.
 
+## [0.4.12] - 2025-12-26
+
+### Added
+- **Grammar v0.94 support**: N-ary product types
+  - `A × B × C × D` (any number of factors)
+  - Right-associative: `A × B × C = A × (B × C)`
+  - Enables clean multi-argument type signatures:
+    ```kleis
+    operation metric_probe : FieldR4 × Point × Point → ℝ
+    operation mass_at : GreenKernel × Flow × Event → ℝ
+    ```
+
+### Documentation
+- Added `kleis_grammar_v093.ebnf`, `kleis_grammar_v093.md`
+- Added `kleis_grammar_v094.ebnf`, `kleis_grammar_v094.md`
+
 ## [0.3.0] - 2025-12-22
 
 ### Added
