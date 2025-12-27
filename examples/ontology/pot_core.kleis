@@ -1,5 +1,9 @@
 // Projected Ontology Theory - Core Structures
 // Minimal formalization that Kleis can parse and verify
+//
+// Import spacetime_type.kleis for R4Space, MetricOnR4, etc.
+
+import "spacetime_type.kleis"
 
 // =============================================================================
 // COMPLEX VECTOR SPACE (C³ = H_ont)
@@ -18,7 +22,7 @@ structure ComplexVectorSpace(n : Nat) {
 }
 
 // =============================================================================
-// INNER PRODUCT (Hilbert structure)
+// INNER PRODUCT (Hilbert structure for H_ont)
 // =============================================================================
 
 structure InnerProductSpace(n : Nat) extends ComplexVectorSpace(n) {
@@ -28,8 +32,11 @@ structure InnerProductSpace(n : Nat) extends ComplexVectorSpace(n) {
         inner(x, y) = conjugate(inner(y, x))
 }
 
+// H_ont = C³ with inner product
+// This is the ontological Hilbert space
+
 // =============================================================================
-// PROJECTION OPERATORS
+// PROJECTION OPERATORS (Views/Contexts)
 // =============================================================================
 
 structure Projector(n : Nat) over InnerProductSpace(n) {
@@ -47,9 +54,9 @@ structure Projector(n : Nat) over InnerProductSpace(n) {
 // ONTOLOGICAL REPRESENTATION
 // =============================================================================
 
-// Entities map to vectors in C³
+// Entities map to vectors in C³ (H_ont)
 structure OntologyMap over InnerProductSpace(3) {
-    // Domain: abstract ontological entities
+    // Representation map Φ: Entity → H_ont
     operation Phi : Entity → Vector(3, C)
     
     // Similarity via normalized inner product
@@ -57,16 +64,21 @@ structure OntologyMap over InnerProductSpace(3) {
     
     axiom similarity_symmetric: ∀(a b : Entity). sim(a, b) = sim(b, a)
     axiom similarity_self: ∀(a : Entity). sim(a, a) = 1
+    
+    // Orthogonality = maximal distinction
+    axiom orthogonal_zero_sim: ∀(a b : Entity). 
+        inner(Phi(a), Phi(b)) = 0 → sim(a, b) = 0
 }
 
 // =============================================================================
-// KERNEL AND UNIVERSE
+// GREEN KERNEL: Projects H_ont → ℝ⁴
 // =============================================================================
 
-// A Green kernel projects ontology to spacetime
-// Spacetime ℝ⁴ represented as Vector(4, ℝ)
+// Flow represents modal dynamics in H_ont
+// (abstracted here; could be parameterized by τ)
+
 structure GreenKernel {
-    // Project modal flow to ℝ⁴ (spacetime)
+    // Project modal flow to ℝ⁴ (uses R4Space carrier = Vector(4, ℝ))
     operation project : Flow → Vector(4, ℝ)
     
     // Null space: exists ontologically but invisible in ℝ⁴
@@ -80,11 +92,48 @@ structure GreenKernel {
 }
 
 // =============================================================================
+// FIELD ON R4: What the kernel produces
+// =============================================================================
+
+structure FieldR4 {
+    // A scalar field on spacetime
+    operation value : Vector(4, ℝ) → ℝ
+}
+
+// =============================================================================
+// RESIDUE OPERATIONS: Mass and Charge as projection residues
+// =============================================================================
+
+// Key POT insight: "Point mass is residue of projection"
+// Mass and charge are not fundamental - they are emergent from kernel singularities
+
+structure ResidueOperations {
+    // Residue of field at an event (like contour integral residue)
+    operation residue_mass : FieldR4 × Event → ℝ
+    operation residue_charge : FieldR4 × Event → ℝ
+    
+    // The field induced by projecting a flow
+    operation field_from_projection : GreenKernel × Flow → FieldR4
+    
+    // Observable mass/charge operations
+    operation mass_at : GreenKernel × Flow × Event → ℝ
+    operation charge_at : GreenKernel × Flow × Event → ℝ
+    
+    // Mass at event = residue of projected field
+    axiom mass_from_projection: ∀(G : GreenKernel, psi : Flow, e : Event).
+        mass_at(G, psi, e) = residue_mass(field_from_projection(G, psi), e)
+    
+    // Charge similarly
+    axiom charge_from_projection: ∀(G : GreenKernel, psi : Flow, e : Event).
+        charge_at(G, psi, e) = residue_charge(field_from_projection(G, psi), e)
+}
+
+// =============================================================================
 // EQUIVALENCE UNDER PROJECTION
 // =============================================================================
 
 // Same reality = same projection
-structure ProjectiveEquivalence(G : GreenKernel) {
+structure ProjectiveEquivalence {
     operation equiv : Flow × Flow → Bool
     
     // Reflexive
@@ -107,7 +156,7 @@ structure KernelDistinction {
 }
 
 // =============================================================================
-// EXAMPLE: Verify basic properties
+// EXAMPLES
 // =============================================================================
 
 example "projector is idempotent" {
@@ -120,4 +169,10 @@ example "similarity is symmetric" {
 
 example "equivalence is reflexive" {
     assert(∀(psi : Flow). equiv(psi, psi))
+}
+
+example "mass comes from residue" {
+    // Key POT statement: Mass is not fundamental, it's a residue
+    assert(∀(G : GreenKernel, psi : Flow, e : Event).
+        mass_at(G, psi, e) = residue_mass(field_from_projection(G, psi), e))
 }

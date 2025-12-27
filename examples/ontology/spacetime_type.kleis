@@ -5,14 +5,13 @@
 // We do NOT presuppose GR, Minkowski, or Euclidean geometry
 
 // ============================================================================
-// ℝ⁴ as bare vector space (no metric)
+// R4Space: The carrier type is Vector(4, ℝ)
 // ============================================================================
+// 
+// Carrier type convention: Point := Vector(4, ℝ)
 
-structure R4 {
-    // ℝ⁴ is simply a 4-dimensional real vector space
-    // No inner product, no metric, no distance
-    
-    // Components are just projections to coordinate axes
+structure R4Space {
+    // Component access (indices 0..3)
     operation component : Vector(4, ℝ) × Nat → ℝ
     
     // Construct from components
@@ -24,75 +23,131 @@ structure R4 {
     // Vector space operations
     operation add : Vector(4, ℝ) × Vector(4, ℝ) → Vector(4, ℝ)
     operation scale : ℝ × Vector(4, ℝ) → Vector(4, ℝ)
+    operation neg : Vector(4, ℝ) → Vector(4, ℝ)
+    
+    // ----------------------------------------------------------------
+    // Component axioms
+    // ----------------------------------------------------------------
+    
+    axiom component_0: ∀(a b c d : ℝ). component(make(a, b, c, d), 0) = a
+    axiom component_1: ∀(a b c d : ℝ). component(make(a, b, c, d), 1) = b
+    axiom component_2: ∀(a b c d : ℝ). component(make(a, b, c, d), 2) = c
+    axiom component_3: ∀(a b c d : ℝ). component(make(a, b, c, d), 3) = d
+    
+    // Out of range indices return 0
+    axiom component_out_of_range: ∀(p : Vector(4, ℝ), i : Nat).
+        i ≥ 4 → component(p, i) = 0
+    
+    // ----------------------------------------------------------------
+    // Vector space axioms
+    // ----------------------------------------------------------------
     
     axiom add_commutative: ∀(u v : Vector(4, ℝ)). add(u, v) = add(v, u)
+    axiom add_associative: ∀(u v w : Vector(4, ℝ)). add(add(u, v), w) = add(u, add(v, w))
     axiom add_identity: ∀(v : Vector(4, ℝ)). add(v, zero) = v
+    axiom add_inverse: ∀(v : Vector(4, ℝ)). add(v, neg(v)) = zero
+    
     axiom scale_identity: ∀(v : Vector(4, ℝ)). scale(1, v) = v
+    axiom scale_zero: ∀(v : Vector(4, ℝ)). scale(0, v) = zero
+    axiom scale_distributes: ∀(a : ℝ, u v : Vector(4, ℝ)). 
+        scale(a, add(u, v)) = add(scale(a, u), scale(a, v))
+    axiom scale_associative: ∀(a b : ℝ, v : Vector(4, ℝ)). 
+        scale(a, scale(b, v)) = scale(times(a, b), v)
+    
+    // ----------------------------------------------------------------
+    // Componentwise operations
+    // ----------------------------------------------------------------
+    
+    axiom add_component: ∀(u v : Vector(4, ℝ), i : Nat).
+        i < 4 → component(add(u, v), i) = plus(component(u, i), component(v, i))
+    
+    axiom scale_component: ∀(a : ℝ, v : Vector(4, ℝ), i : Nat).
+        i < 4 → component(scale(a, v), i) = times(a, component(v, i))
+    
+    axiom zero_component: ∀(i : Nat). i < 4 → component(zero, i) = 0
 }
 
 // ============================================================================
-// Metric as EMERGENT structure (not assumed)
+// MetricOnR4: A metric is ADDITIONAL structure (not assumed)
 // ============================================================================
 
-// A metric is ADDITIONAL structure that may or may not emerge
-// from the projection kernel G
-
 structure MetricOnR4 {
-    // A metric tensor g : ℝ⁴ × ℝ⁴ → ℝ
+    // A metric tensor g : Point × Point → ℝ
     operation g : Vector(4, ℝ) × Vector(4, ℝ) → ℝ
     
-    // Metric must be symmetric
+    // Symmetry
     axiom symmetric: ∀(u v : Vector(4, ℝ)). g(u, v) = g(v, u)
     
-    // Bilinearity
+    // Bilinearity (left) - uses R4Space ops
     axiom bilinear_left: ∀(a : ℝ, u v w : Vector(4, ℝ)).
         g(add(scale(a, u), v), w) = plus(times(a, g(u, w)), g(v, w))
     
-    // Non-degeneracy: g(u, v) = 0 for all v implies u = 0
-    // (Not requiring positive-definiteness - allows Lorentzian signature)
+    // Bilinearity (right)
+    axiom bilinear_right: ∀(a : ℝ, u v w : Vector(4, ℝ)).
+        g(u, add(scale(a, v), w)) = plus(times(a, g(u, v)), g(u, w))
+    
+    // Non-degeneracy: NOT requiring positive-definiteness (allows Lorentzian)
 }
 
 // ============================================================================
-// The Key Question: Does POT kernel induce a metric?
+// KernelInducedMetric: Metric EMERGES from Green kernel
 // ============================================================================
 
-// If G : H_ont → ℝ⁴ is the projection kernel, 
-// does the structure of G induce a metric on ℝ⁴?
-//
-// Hypothesis: g(u, v) = ∫∫ K(u, v; τ₁, τ₂) dτ₁ dτ₂
-// where K is derived from the kernel G
-//
-// This is what we want to DERIVE, not assume!
-
-structure KernelInducedMetric(G : GreenKernel) extends MetricOnR4 {
-    // The metric induced by kernel G on ℝ⁴
-    // This structure captures: "G determines geometry"
+structure KernelInducedMetric extends MetricOnR4 {
+    // The metric induced by a kernel G on ℝ⁴
+    // Key insight: "G determines geometry"
     
-    // The metric comes from kernel's inner product structure
+    // Kernel-derived bilinear form (axiomatized, not computed)
     operation kernel_inner : Vector(4, ℝ) × Vector(4, ℝ) → ℝ
     
+    // The metric IS the kernel inner product
     axiom metric_from_kernel: ∀(u v : Vector(4, ℝ)).
         g(u, v) = kernel_inner(u, v)
+    
+    // Note: kernel_inner can later be interpreted as:
+    // ∫∫ K(u, v; τ₁, τ₂) dτ₁ dτ₂
+    // but for SMT verification we axiomatize it directly
+}
+
+// ============================================================================
+// Event: A point in spacetime
+// ============================================================================
+
+structure Event {
+    element p : Vector(4, ℝ)
 }
 
 // ============================================================================
 // What we want to PROVE (not assume):
 // ============================================================================
 //
-// THEOREM (to derive): Under suitable conditions on G,
+// THEOREM: Under suitable conditions on G,
 // the induced metric has Lorentzian signature (-,+,+,+)
 //
-// THEOREM (to derive): The null geodesics of the induced metric
+// THEOREM: Null geodesics of the induced metric
 // correspond to certain kernel properties
 //
-// THEOREM (to derive): Einstein's field equations emerge as
+// THEOREM: Einstein's field equations emerge as
 // consistency conditions on kernel evolution
+
+// ============================================================================
+// Example: R4Space is just a vector space
+// ============================================================================
 
 example "R4 is just a vector space" {
     let v = make(1, 2, 3, 4)
     let w = make(5, 6, 7, 8)
-    // We can add vectors
+    
+    // Component access
     assert(component(v, 0) = 1)
+    assert(component(v, 1) = 2)
     assert(component(w, 0) = 5)
-    // But NO metric operations yet - those must emerge from G!
+    
+    // Out of range returns 0
+    assert(component(v, 999) = 0)
+    
+    // Vector addition is commutative
+    assert(add(v, w) = add(w, v))
+    
+    // NO metric operations yet - those must emerge from G!
 }
