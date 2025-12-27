@@ -934,6 +934,13 @@ impl TypeContextBuilder {
             // Symbolic dimension expression
             Type::NatExpr(dim) => Some(format!("{}", dim)),
 
+            // Function types
+            Type::Function(from, to) => {
+                let from_name = self.type_to_name(from)?;
+                let to_name = self.type_to_name(to)?;
+                Some(format!("{} → {}", from_name, to_name))
+            }
+
             // Meta-level types
             Type::Var(_) => None, // Type variables can't be validated (polymorphic)
             Type::ForAll(_, _) => None, // Polymorphic types handled elsewhere
@@ -1121,15 +1128,22 @@ impl TypeContextBuilder {
     /// Handles:
     /// - Simple function types: `ℝ → ℝ` returns `ℝ`
     /// - Multi-arg functions: `ℝ × ℝ → ℝ` returns `ℝ`
+    #[allow(clippy::only_used_in_recursion)]
     fn interpret_toplevel_operation_type(
         &self,
         type_sig: &TypeExpr,
-        _arg_types: &[Type],
+        arg_types: &[Type],
     ) -> Result<Type, String> {
         match type_sig {
             TypeExpr::Function(_from, to) => {
-                // Function type: return the codomain
+                // Function type: return the codomain (the result of applying the function)
+                // The codomain might also be a function (for curried types), but we still
+                // want to return it as a full type.
                 self.type_expr_to_type(to)
+            }
+            TypeExpr::ForAll { body, .. } => {
+                // Quantified type: unwrap and interpret the body
+                self.interpret_toplevel_operation_type(body, arg_types)
             }
             _ => {
                 // Non-function type: return as-is (e.g., constant operations)
@@ -1159,10 +1173,11 @@ impl TypeContextBuilder {
                     args: param_types?,
                 })
             }
-            TypeExpr::Function(_from, to) => {
-                // For now, return the codomain for function types
-                // Full function type support would need Type::Function
-                self.type_expr_to_type(to)
+            TypeExpr::Function(from, to) => {
+                // First-class function types: A → B becomes Type::Function(A, B)
+                let from_type = self.type_expr_to_type(from)?;
+                let to_type = self.type_expr_to_type(to)?;
+                Ok(Type::Function(Box::new(from_type), Box::new(to_type)))
             }
             TypeExpr::Product(types) => {
                 if types.len() == 1 {

@@ -1,6 +1,6 @@
 # Next Session Notes
 
-**Last Updated:** December 26, 2024 (Evening)
+**Last Updated:** December 26, 2024 (Late Evening)
 
 ---
 
@@ -129,27 +129,37 @@ All 8 type promotion tests pass:
 
 ---
 
-## 🔴 Tech Debt: First-Class Function Types Not Supported
+## ✅ DONE: First-Class Function Types Implemented (Dec 26, 2024)
 
-### Problem
-The type system doesn't have a `Type::Function` variant. When converting `TypeExpr::Function`
-to `Type`, we just extract the codomain (return type) and discard the domain.
+### What Was Implemented
 
-**Location:** `src/type_context.rs` lines 1162-1165
+Added `Type::Function(Box<Type>, Box<Type>)` variant to the type system:
 
 ```rust
-TypeExpr::Function(_from, to) => {
-    // For now, return the codomain for function types
-    // Full function type support would need Type::Function
-    self.type_expr_to_type(to)
+pub enum Type {
+    // ...
+    /// Function type: A → B
+    Function(Box<Type>, Box<Type>),
+    // ...
 }
 ```
 
-### Impact
-- Can't properly type higher-order functions
-- Can't check that a function argument has the correct signature
+### Files Modified
+- `src/type_inference.rs` - Added Function variant, updated unify(), occurs(), apply()
+- `src/type_context.rs` - Updated type_expr_to_type() and interpret_toplevel_operation_type()
+- `tests/function_type_test.rs` - New test file with 9 tests
 
-**Also:** Product types affected (lines 1167-1175):
+### What Works Now
+- **Display:** `sin : Scalar → Scalar` displays correctly with arrow
+- **Unification:** Function types unify properly (same domains/codomains)
+- **Occurs check:** Prevents infinite types like `α = α → ℝ`
+- **Higher-order functions:** Can represent `(T → U) → List(T) → List(U)`
+- **Curried functions:** Can represent `ℝ → ℝ → ℝ`
+
+### Still TODO: Product Types
+
+Product types still need proper support (lines ~1175 in type_context.rs):
+
 ```rust
 TypeExpr::Product(types) => {
     // Product type - for now return first type
@@ -157,16 +167,8 @@ TypeExpr::Product(types) => {
     self.type_expr_to_type(&types[0])
 }
 ```
+
 Returns first element only instead of proper tuple type.
-
-### Solution
-Add `Type::Function(Box<Type>, Box<Type>)` variant to enable:
-- `operation map : (T → U) × List(T) → List(U)`
-- Proper currying: `f : A → B → C`
-
-### Workaround
-Works fine for current use case (extracting return type for top-level operations like `sin : ℝ → ℝ`).
-Only becomes a problem when type-checking higher-order functions.
 
 ---
 
