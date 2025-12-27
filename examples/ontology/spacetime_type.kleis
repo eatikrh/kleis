@@ -1,0 +1,48 @@
+// Spacetime as ℝ×ℝ×ℝ×ℝ product type
+//
+// POT projects ontology from C³ to spacetime ℝ⁴
+
+// Type alias for spacetime (4-tuple of reals)
+// Uses Vector(4, ℝ) which is parseable
+
+structure Spacetime {
+    // A spacetime point is a 4-vector of reals
+    element point : Vector(4, ℝ)
+    
+    // Access components (t, x, y, z)
+    operation time : Vector(4, ℝ) → ℝ
+    operation spatial_x : Vector(4, ℝ) → ℝ
+    operation spatial_y : Vector(4, ℝ) → ℝ
+    operation spatial_z : Vector(4, ℝ) → ℝ
+    
+    // Construct spacetime point from components
+    operation make_point : ℝ × ℝ × ℝ × ℝ → Vector(4, ℝ)
+    
+    // Minkowski metric: ds² = -dt² + dx² + dy² + dz²
+    operation interval : Vector(4, ℝ) × Vector(4, ℝ) → ℝ
+    
+    axiom interval_def: ∀(p q : Vector(4, ℝ)).
+        interval(p, q) = 
+            minus(
+                plus(
+                    power(minus(spatial_x(q), spatial_x(p)), 2),
+                    plus(
+                        power(minus(spatial_y(q), spatial_y(p)), 2),
+                        power(minus(spatial_z(q), spatial_z(p)), 2)
+                    )
+                ),
+                power(minus(time(q), time(p)), 2)
+            )
+}
+
+// Alternatively: use a type alias syntax (if supported)
+// type R4 = Vector(4, ℝ)
+// type Spacetime = R4
+
+example "spacetime interval" {
+    let p = make_point(0, 0, 0, 0)
+    let q = make_point(1, 3, 4, 0)
+    // Interval should be 3² + 4² - 1² = 9 + 16 - 1 = 24
+    assert(interval(p, q) = 24)
+}
+

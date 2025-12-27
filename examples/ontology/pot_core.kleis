@@ -64,12 +64,16 @@ structure OntologyMap over InnerProductSpace(3) {
 // =============================================================================
 
 // A Green kernel projects ontology to spacetime
+// Spacetime ℝ⁴ represented as Vector(4, ℝ)
 structure GreenKernel {
-    // Project modal flow to R4
-    operation project : Flow → Spacetime
+    // Project modal flow to ℝ⁴ (spacetime)
+    operation project : Flow → Vector(4, ℝ)
     
-    // Null space: exists ontologically but invisible in R4
+    // Null space: exists ontologically but invisible in ℝ⁴
     operation nullspace : Set(Flow)
+    
+    // Zero in spacetime
+    element zero_spacetime : Vector(4, ℝ)
     
     axiom null_projects_zero: ∀(psi : Flow). 
         in_set(psi, nullspace) → project(psi) = zero_spacetime
