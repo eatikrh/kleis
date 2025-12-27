@@ -156,19 +156,9 @@ pub enum Type {
 - **Higher-order functions:** Can represent `(T → U) → List(T) → List(U)`
 - **Curried functions:** Can represent `ℝ → ℝ → ℝ`
 
-### Still TODO: Product Types
+### ✅ Product Types - DONE
 
-Product types still need proper support (lines ~1175 in type_context.rs):
-
-```rust
-TypeExpr::Product(types) => {
-    // Product type - for now return first type
-    // TODO: Proper tuple/product type support
-    self.type_expr_to_type(&types[0])
-}
-```
-
-Returns first element only instead of proper tuple type.
+Product types now have proper support with `Type::Product(Vec<Type>)` variant.
 
 ---
 
@@ -219,54 +209,20 @@ Works today - just not self-hosting. Low priority.
 
 ---
 
-## 🔴 Tech Debt: N-ary Product Types Not Supported
+## ✅ DONE: N-ary Product Types (Grammar v0.94)
 
-### Problem
-The parser only supports **binary product types** (`A × B`), not n-ary products.
+Parser now supports n-ary product types:
 
-This fails to parse:
 ```kleis
-operation mass_at : GreenKernel × Flow × Event → ℝ  // ❌ Parse error
+operation mass_at : GreenKernel × Flow × Event → ℝ  // ✅ Works!
 ```
 
-### Root Cause
-The type parser in `kleis_parser.rs` parses product types as binary operations:
-```
-type → base_type ('×' base_type)?
-```
+**Implementation:** `src/kleis_parser.rs` lines 1609-1635
+- `parse_product_type()` is right-associative
+- `A × B × C × D` flattens into `TypeExpr::Product([A, B, C, D])`
+- `×` binds tighter than `→`
 
-When it sees `A × B × C × D`, the grammar only handles one `×` without proper
-right-associativity or n-ary grouping.
-
-### Options
-
-**Option 1: Make `×` right-associative**
-- `A × B × C` parses as `A × (B × C)`
-- Minimal parser change
-- Semantically correct (nested pairs)
-
-**Option 2: Add n-ary tuple syntax**
-- `(A, B, C, D)` as a first-class n-tuple type
-- More parser work but cleaner syntax
-- Matches common mathematical notation
-
-**Option 3: Keep binary, use structures (current workaround)**
-- Bundle multi-arg data into structures (`ResiduePair`, `SourceSpec`)
-- Verbose but works now
-- Used in POT formalization
-
-### Workarounds (what we did for POT)
-1. Bundle data into structures: `ResiduePair { field: FieldR4, event: Event }`
-2. Use `make_pair` operations: `operation make_pair : FieldR4 × Event → ResiduePair`
-3. Break multi-arg operations into smaller pieces
-
-### Files to Modify
-- `src/kleis_parser.rs` - `parse_type()` function
-
-### Impact
-- Equation Editor type display will be correct
-- REPL `:type` command will show correct types
-- Better user experience when mixing numeric types
+**✅ DONE:** `Type::Product(Vec<Type>)` variant added - full product type support in type inference
 
 ---
 

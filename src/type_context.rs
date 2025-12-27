@@ -941,6 +941,17 @@ impl TypeContextBuilder {
                 Some(format!("{} → {}", from_name, to_name))
             }
 
+            // Product types
+            Type::Product(types) => {
+                let names: Vec<String> =
+                    types.iter().filter_map(|t| self.type_to_name(t)).collect();
+                if names.len() == types.len() {
+                    Some(names.join(" × "))
+                } else {
+                    None // Some types couldn't be named
+                }
+            }
+
             // Meta-level types
             Type::Var(_) => None, // Type variables can't be validated (polymorphic)
             Type::ForAll(_, _) => None, // Polymorphic types handled elsewhere
@@ -1181,11 +1192,13 @@ impl TypeContextBuilder {
             }
             TypeExpr::Product(types) => {
                 if types.len() == 1 {
+                    // Single element product is just the element
                     self.type_expr_to_type(&types[0])
                 } else {
-                    // Product type - for now return first type
-                    // TODO: Proper tuple/product type support
-                    self.type_expr_to_type(&types[0])
+                    // First-class product types: A × B × C becomes Type::Product([A, B, C])
+                    let converted: Result<Vec<Type>, String> =
+                        types.iter().map(|t| self.type_expr_to_type(t)).collect();
+                    Ok(Type::Product(converted?))
                 }
             }
             TypeExpr::Var(_) => {

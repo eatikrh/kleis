@@ -141,6 +141,15 @@ pub enum Type {
     /// - map : (T → U) → List(T) → List(U) → Function(Function(T, U), Function(List(T), List(U)))
     Function(Box<Type>, Box<Type>),
 
+    // ===== Product Types =====
+    /// Product type: A × B × C
+    /// Represents tuples/pairs of types.
+    ///
+    /// Examples:
+    /// - (ℝ, ℝ) → Product([Scalar, Scalar])
+    /// - operation add : ℝ × ℝ → ℝ → domain is Product([Scalar, Scalar])
+    Product(Vec<Type>),
+
     // ===== Meta-Level Types =====
     // These exist at the type inference level, not user level
     /// Type variable (for inference)
@@ -203,6 +212,7 @@ impl Substitution {
             Type::Function(from, to) => {
                 Type::Function(Box::new(self.apply(from)), Box::new(self.apply(to)))
             }
+            Type::Product(types) => Type::Product(types.iter().map(|t| self.apply(t)).collect()),
             Type::ForAll(v, t) => Type::ForAll(v.clone(), Box::new(self.apply(t))),
             // Bootstrap types have no substructure (leaf types)
             // NatExpr is also a leaf - dimension variables are separate from type variables
@@ -2013,6 +2023,23 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
             Ok(s1.compose(&s2))
         }
 
+        // Product types: A × B × C unifies with D × E × F if same length and elements unify
+        (Type::Product(types1), Type::Product(types2)) => {
+            if types1.len() != types2.len() {
+                return Err(format!(
+                    "Cannot unify products of different lengths: {} vs {}",
+                    types1.len(),
+                    types2.len()
+                ));
+            }
+            let mut subst = Substitution::empty();
+            for (t1, t2) in types1.iter().zip(types2.iter()) {
+                let s = unify(&subst.apply(t1), &subst.apply(t2))?;
+                subst = subst.compose(&s);
+            }
+            Ok(subst)
+        }
+
         // Type variable unifies with anything (if not occurs)
         (Type::Var(v1), Type::Var(v2)) if v1 == v2 => {
             // Same type variable - trivially unifies with itself
@@ -2037,6 +2064,7 @@ fn occurs(v: &TypeVar, t: &Type) -> bool {
         Type::Var(v2) => v == v2,
         Type::Data { args, .. } => args.iter().any(|arg| occurs(v, arg)),
         Type::Function(from, to) => occurs(v, from) || occurs(v, to),
+        Type::Product(types) => types.iter().any(|ty| occurs(v, ty)),
         Type::ForAll(_, t) => occurs(v, t),
         // Leaf types (no type variables can occur in them)
         // NatExpr has dimension variables, not type variables
@@ -2165,6 +2193,17 @@ impl std::fmt::Display for Type {
 
             // Function types
             Type::Function(from, to) => write!(f, "{} → {}", from, to),
+
+            // Product types
+            Type::Product(types) => {
+                for (i, ty) in types.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " × ")?;
+                    }
+                    write!(f, "{}", ty)?;
+                }
+                Ok(())
+            }
 
             // Meta-level types
             Type::Var(TypeVar(n)) => write!(f, "α{}", n),
