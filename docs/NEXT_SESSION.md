@@ -85,35 +85,88 @@ example "test commutativity" {
 
 ---
 
-## 🔴 Tech Debt: Type Promotion (Lift) Not Implemented
+## ✅ DONE: Type Promotion (Lift) Implemented (Dec 26, 2024)
+
+### What Was Fixed
+
+The type checker now correctly promotes types through the `Promotes` structure.
+
+**Before:** `:type 1 + sin(x)` → `Int` ❌
+**After:** `:type 1 + sin(x)` → `Scalar` ✅
+
+### Bugs Fixed
+
+1. **OperationRegistry.merge() missing fields**
+   - Added merge for `structure_extends` and `type_promotions`
+   - Without this, promotions registered in stdlib weren't available to type checker
+
+2. **Unicode type names not normalized when registering**
+   - `implements Promotes(ℕ, ℤ)` was registering as `("ℕ", "ℤ")`
+   - But `has_promotion` and `find_common_supertype` normalize to `("Nat", "Int")`
+   - Fix: Normalize in `register_implements` before storing
+
+3. **Top-level operations not registered**
+   - Operations like `operation sin : ℝ → ℝ` were ignored (TODO stub)
+   - Added `toplevel_operation_types` to `OperationRegistry`
+   - Type inference now queries these for function return types
+
+4. **Added type_expr_to_type helper**
+   - Converts `TypeExpr` to `Type` for return type extraction
+   - Handles Function, Named, Parametric, Product, ForAll, DimExpr
+
+### Test Results
+
+All 8 type promotion tests pass:
+- `:type sin(x) = Scalar` ✅ (was `Var(TypeVar(0))`)
+- `:type 1 + sin(x) = Scalar` ✅ (was `Int`)
+- `:type (1 + sin(x)) / 2 = Scalar` ✅ (was `Int`)
+- `:type 1 + 3.14 = Scalar` ✅
+- Promotions registered: Nat→Int, Int→Scalar, etc. ✅
+
+### Files Modified
+- `src/type_context.rs` - Major fixes to registry and type lookup
+- `tests/type_promotion_test.rs` - New test file with 8 tests
+
+---
+
+## 🔴 Tech Debt: First-Class Function Types Not Supported
 
 ### Problem
-The Equation Editor shows `Int` for expressions like `(1 + sin(x)) / 2` instead of `ℝ`.
+The type system doesn't have a `Type::Function` variant. When converting `TypeExpr::Function`
+to `Type`, we just extract the codomain (return type) and discard the domain.
 
-**Why:** The stdlib defines `Lift(From, To)` structures for the numeric tower:
-- `Lift(Nat, Int)` 
-- `Lift(Int, Rational)`
-- `Lift(Rational, Real)`
+**Location:** `src/type_context.rs` lines 1162-1165
 
-But the **type checker doesn't query them**. When inferring `1 + sin(x)`:
-- `1` is parsed as `Int`
-- `sin(x)` returns `ℝ`
-- Type checker should find `Lift(Int, Real)` and promote `1` to `ℝ`
-- Instead, it just returns `Int` (the first operand's type)
-
-### Solution
-Type inference (`src/type_inference.rs`) should:
-1. Query `structure_registry` for `Lift` implementations
-2. When types don't match, check if `Lift(T1, T2)` or `Lift(T2, T1)` exists
-3. Use the "larger" type as the result
-
-### Files to Modify
-- `src/type_inference.rs` - Add Lift query to type unification
-- `src/structure_registry.rs` - May need method to query Lift instances
+```rust
+TypeExpr::Function(_from, to) => {
+    // For now, return the codomain for function types
+    // Full function type support would need Type::Function
+    self.type_expr_to_type(to)
+}
+```
 
 ### Impact
-- Equation Editor shows wrong types for mixed expressions
-- Type inference is incomplete for numeric tower
+- Can't properly type higher-order functions
+- Can't check that a function argument has the correct signature
+
+**Also:** Product types affected (lines 1167-1175):
+```rust
+TypeExpr::Product(types) => {
+    // Product type - for now return first type
+    // TODO: Proper tuple/product type support
+    self.type_expr_to_type(&types[0])
+}
+```
+Returns first element only instead of proper tuple type.
+
+### Solution
+Add `Type::Function(Box<Type>, Box<Type>)` variant to enable:
+- `operation map : (T → U) × List(T) → List(U)`
+- Proper currying: `f : A → B → C`
+
+### Workaround
+Works fine for current use case (extracting return type for top-level operations like `sin : ℝ → ℝ`).
+Only becomes a problem when type-checking higher-order functions.
 
 ---
 
