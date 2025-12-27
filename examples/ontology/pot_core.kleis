@@ -1,6 +1,11 @@
-// Projected Ontology Theory - Core (v3, with ChatGPT enhancements)
+// Projected Ontology Theory - Core (v4, with n-ary product types)
 //
-// New in v3:
+// New in v4:
+// - Uses n-ary product types from grammar v0.94
+// - Cleaner type signatures: FieldR4 × Event × Channel → ℝ
+// - Removed workaround structures: MetricProbeArgs, PointPair, etc.
+//
+// From v3:
 // 1. Typed channels for residues (scalable conserved quantities)
 // 2. Particle = residue support predicate
 // 3. Universe refinement ordering
@@ -102,29 +107,25 @@ structure ConservedChannel {
     element Spin   : Channel
     element Color  : Channel
     
-    operation residue : ResiduePair × Channel → ℝ
+    // v0.94: Direct n-ary product type!
+    // Previously: residue : ResiduePair × Channel → ℝ (needed wrapper)
+    operation residue : FieldR4 × Event × Channel → ℝ
 }
 
 // =============================================================================
-// 7. RESIDUE PAIR AND POINT SOURCES
+// 7. POINT SOURCES
 // =============================================================================
-
-structure ResiduePair {
-    element field : FieldR4
-    element event : Event
-}
 
 structure PointSources {
-    operation make_pair : FieldR4 × Event → ResiduePair
-    
     operation point_mass   : Event × ℝ → FieldR4
     operation point_charge : Event × ℝ → FieldR4
 
+    // v0.94: Direct 3-arg product type in axioms
     axiom residue_point_mass: ∀(e : Event, m : ℝ).
-        residue(make_pair(point_mass(e, m), e), Mass) = m
+        residue(point_mass(e, m), e, Mass) = m
 
     axiom residue_point_charge: ∀(e : Event, q : ℝ).
-        residue(make_pair(point_charge(e, q), e), EM) = q
+        residue(point_charge(e, q), e, EM) = q
     
     axiom point_mass_nonzero: ∀(e : Event, m : ℝ).
         m ≠ 0 → point_mass(e, m) ≠ field_zero
@@ -135,15 +136,16 @@ structure PointSources {
 // =============================================================================
 
 structure ParticlePredicates {
-    operation has_mass : ResiduePair → Bool
+    // v0.94: Use product type directly
+    operation has_mass : FieldR4 × Event → Bool
     
-    axiom has_mass_def: ∀(rp : ResiduePair).
-        has_mass(rp) → residue(rp, Mass) ≠ 0
+    axiom has_mass_def: ∀(f : FieldR4, e : Event).
+        has_mass(f, e) → residue(f, e, Mass) ≠ 0
     
-    operation is_particle : ResiduePair → Bool
+    operation is_particle : FieldR4 × Event → Bool
     
-    axiom particle_is_mass: ∀(rp : ResiduePair).
-        is_particle(rp) → has_mass(rp)
+    axiom particle_is_mass: ∀(f : FieldR4, e : Event).
+        is_particle(f, e) → has_mass(f, e)
 }
 
 // =============================================================================
@@ -165,42 +167,20 @@ structure ProjectiveEquivalence over GreenKernel {
 // 10. KERNEL → GEOMETRY INTERFACE (bridges field to metric)
 // =============================================================================
 
-// MetricProbeArgs bundles (field, u, v) for probe operation
-// Workaround for n-ary product types not yet supported
-structure MetricProbeArgs {
-    element field : FieldR4
-    element u     : Vector(4, ℝ)
-    element v     : Vector(4, ℝ)
-}
-
 structure KernelMetricInterface {
-    // Build probe arguments
-    operation make_probe_args : FieldR4 × PointPair → MetricProbeArgs
-    
-    // Metric probe: extracts bilinear form from field
-    operation metric_probe : MetricProbeArgs → ℝ
+    // v0.94: Direct n-ary product type - no wrapper structure needed!
+    // Previously: metric_probe : MetricProbeArgs → ℝ (with wrapper)
+    operation metric_probe : FieldR4 × Vector(4, ℝ) × Vector(4, ℝ) → ℝ
     
     // POT BRIDGE AXIOM: Geometry is kernel-induced
     // Any projected field carries the same induced bilinear form
     // because geometry is a kernel property, not flow-dependent
     axiom probe_recovers_kernel_inner: ∀(psi : Flow, u v : Vector(4, ℝ)).
-        metric_probe(make_probe_args(project(psi), make_point_pair(u, v))) = 
-            kernel_inner(u, v)
+        metric_probe(project(psi), u, v) = kernel_inner(u, v)
     
     // Probe is symmetric (inherits from metric symmetry)
     axiom probe_symmetric: ∀(f : FieldR4, u v : Vector(4, ℝ)).
-        metric_probe(make_probe_args(f, make_point_pair(u, v))) = 
-        metric_probe(make_probe_args(f, make_point_pair(v, u)))
-}
-
-// PointPair bundles two vectors for probe
-structure PointPair {
-    element u : Vector(4, ℝ)
-    element v : Vector(4, ℝ)
-}
-
-structure PointPairOps {
-    operation make_point_pair : Vector(4, ℝ) × Vector(4, ℝ) → PointPair
+        metric_probe(f, u, v) = metric_probe(f, v, u)
 }
 
 // =============================================================================
@@ -228,29 +208,29 @@ structure UniverseDistinction {
 }
 
 // =============================================================================
-// 11. POT SANITY THEOREMS
+// 12. POT SANITY THEOREMS
 // =============================================================================
 
 structure POTSanityTheorems {
     // THEOREM 1: Equivalence preserves all channel residues
+    // v0.94: Direct function call with 3 args
     axiom equiv_preserves_residue: ∀(psi1 psi2 : Flow, e : Event, c : Channel).
         equiv(psi1, psi2) → 
-            residue(make_pair(project(psi1), e), c) = 
-            residue(make_pair(project(psi2), e), c)
+            residue(project(psi1), e, c) = residue(project(psi2), e, c)
     
     // THEOREM 2: Fields distinguishable by residues (contrapositive form)
     // If all residues match, fields are equal
     axiom field_distinguishable: ∀(f1 f2 : FieldR4, e : Event, c : Channel).
-        f1 ≠ f2 → residue(make_pair(f1, e), c) ≠ residue(make_pair(f2, e), c)
+        f1 ≠ f2 → residue(f1, e, c) ≠ residue(f2, e, c)
     
     // THEOREM 3: Different projections → different residues
     // (Key POT result: kernel determines what's observable)
     axiom projection_distinguishable: ∀(f1 f2 : FieldR4, e : Event, c : Channel).
-        f1 ≠ f2 → residue(make_pair(f1, e), c) ≠ residue(make_pair(f2, e), c)
+        f1 ≠ f2 → residue(f1, e, c) ≠ residue(f2, e, c)
 }
 
 // =============================================================================
-// 12. EXAMPLES
+// 13. EXAMPLES
 // =============================================================================
 
 example "projector is idempotent" {
@@ -266,7 +246,14 @@ example "refinement is transitive" {
         refines(G2, G1) ∧ refines(G3, G2) → refines(G3, G1))
 }
 
-example "point mass residue" {
+example "point mass residue (v0.94: 3-arg call)" {
+    // v0.94: residue(field, event, channel) - no wrapper!
     assert(∀(e : Event, m : ℝ).
-        residue(make_pair(point_mass(e, m), e), Mass) = m)
+        residue(point_mass(e, m), e, Mass) = m)
+}
+
+example "metric probe symmetry (v0.94: 3-arg call)" {
+    // v0.94: metric_probe(field, u, v) - no wrapper!
+    assert(∀(f : FieldR4, u v : Vector(4, ℝ)).
+        metric_probe(f, u, v) = metric_probe(f, v, u))
 }
