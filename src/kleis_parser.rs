@@ -1560,8 +1560,15 @@ impl KleisParser {
         }
     }
 
-    /// Parse a type expression
-    /// Examples: ℝ, Vector(3), Set(ℤ), ℝ → ℝ, ∀(n : ℕ). Vector(n) → ℝ
+    /// Parse a type expression (v0.94: with proper precedence)
+    ///
+    /// Grammar v0.94 precedence (loosest to tightest):
+    ///   1. Quantified types: ∀(vars). body
+    ///   2. Function types: A → B (right-associative)
+    ///   3. Product types: A × B × C (right-associative, NEW in v0.94)
+    ///   4. Simple types: ℝ, Vector(3), (T), etc.
+    ///
+    /// Examples: ℝ, Vector(3), Set(ℤ), ℝ → ℝ, A × B → C, ∀(n : ℕ). Vector(n) → ℝ
     pub fn parse_type(&mut self) -> Result<TypeExpr, KleisParseError> {
         self.skip_whitespace();
 
@@ -1570,52 +1577,112 @@ impl KleisParser {
             return self.parse_forall_type();
         }
 
+        // Otherwise, parse function type (which handles product types internally)
+        self.parse_function_type()
+    }
+
+    /// Parse function type: productType → type (right-associative)
+    ///
+    /// v0.94: Product types bind tighter than function types.
+    /// A × B → C  parses as  (A × B) → C
+    fn parse_function_type(&mut self) -> Result<TypeExpr, KleisParseError> {
+        // Parse the left side as a product type
+        let left = self.parse_product_type()?;
+
+        self.skip_whitespace();
+
+        // Check for function type arrow: → or ->
+        if self.peek() == Some('→') {
+            self.advance();
+            let right = self.parse_function_type()?; // Right-associative recursion
+            Ok(TypeExpr::Function(Box::new(left), Box::new(right)))
+        } else if self.peek() == Some('-') && self.peek_ahead(1) == Some('>') {
+            self.advance(); // -
+            self.advance(); // >
+            let right = self.parse_function_type()?; // Right-associative recursion
+            Ok(TypeExpr::Function(Box::new(left), Box::new(right)))
+        } else {
+            Ok(left)
+        }
+    }
+
+    /// Parse product type: simpleType × productType (right-associative)
+    ///
+    /// v0.94: N-ary product types
+    /// A × B × C × D  parses as  A × (B × (C × D))
+    fn parse_product_type(&mut self) -> Result<TypeExpr, KleisParseError> {
+        let left = self.parse_simple_type()?;
+
+        self.skip_whitespace();
+
+        // Check for product type: ×
+        if self.peek() == Some('×') {
+            self.advance();
+            let right = self.parse_product_type()?; // Right-associative recursion
+
+            // Flatten into a Product list for consistency with tuple types
+            // (A × B) × C becomes Product([A, B, C]) not nested Products
+            match right {
+                TypeExpr::Product(mut types) => {
+                    types.insert(0, left);
+                    Ok(TypeExpr::Product(types))
+                }
+                _ => Ok(TypeExpr::Product(vec![left, right])),
+            }
+        } else {
+            Ok(left)
+        }
+    }
+
+    /// Parse simple type (no function arrows or product × at this level)
+    ///
+    /// Handles: ℝ, Vector(3), (ℝ × ℝ → ℝ), (A, B, C), etc.
+    fn parse_simple_type(&mut self) -> Result<TypeExpr, KleisParseError> {
+        self.skip_whitespace();
+
         // Check for parenthesized type: (T), (T → U), or tuple type (A, B, ...)
-        // v0.91: (A, B) is a tuple type (desugars to Pair(A, B))
-        // v0.91: (A, B, C) is a tuple type (desugars to Tuple3(A, B, C))
-        // (T) alone is just grouping, not a tuple
-        let mut ty = if self.peek() == Some('(') {
+        if self.peek() == Some('(') {
             self.advance(); // consume '('
             self.skip_whitespace();
 
             // Check for empty parens (Unit type)
             if self.peek() == Some(')') {
                 self.advance();
-                TypeExpr::Named("Unit".to_string())
-            } else {
-                // Parse first type
-                let first = self.parse_type()?;
-                self.skip_whitespace();
+                return Ok(TypeExpr::Named("Unit".to_string()));
+            }
 
-                if self.peek() == Some(',') {
-                    // v0.91: Tuple type (A, B, ...)
-                    let mut types = vec![first];
-                    while self.peek() == Some(',') {
-                        self.advance(); // consume ','
-                        self.skip_whitespace();
-                        types.push(self.parse_type()?);
-                        self.skip_whitespace();
-                    }
+            // Parse first type (full type, not just simple)
+            let first = self.parse_type()?;
+            self.skip_whitespace();
 
-                    if self.advance() != Some(')') {
-                        return Err(KleisParseError {
-                            message: "Expected ')' after tuple type".to_string(),
-                            position: self.pos,
-                        });
-                    }
+            if self.peek() == Some(',') {
+                // v0.91: Tuple type (A, B, ...)
+                let mut types = vec![first];
+                while self.peek() == Some(',') {
+                    self.advance(); // consume ','
+                    self.skip_whitespace();
+                    types.push(self.parse_type()?);
+                    self.skip_whitespace();
+                }
 
-                    // Desugar to Product type
-                    TypeExpr::Product(types)
-                } else if self.peek() == Some(')') {
-                    // Just grouping: (T) -> T
-                    self.advance();
-                    first
-                } else {
+                if self.advance() != Some(')') {
                     return Err(KleisParseError {
-                        message: "Expected ',' or ')' in parenthesized type".to_string(),
+                        message: "Expected ')' after tuple type".to_string(),
                         position: self.pos,
                     });
                 }
+
+                // Tuple type (desugars to Product)
+                Ok(TypeExpr::Product(types))
+            } else if self.peek() == Some(')') {
+                // Just grouping: (T) -> T
+                self.advance();
+                Ok(first)
+            } else {
+                Err(KleisParseError {
+                    message: "Expected ',' or ')' in parenthesized type".to_string(),
+                    position: self.pos,
+                })
             }
         } else {
             // Parse base type - could be identifier or number (for dimension literals)
@@ -1639,7 +1706,6 @@ impl KleisParser {
                     }
 
                     // v0.92: Try to parse as dimension expression first if it looks like one
-                    // (starts with number or identifier followed by arithmetic operator)
                     params.push(self.parse_type_or_dim_expr()?);
                     self.skip_whitespace();
 
@@ -1662,41 +1728,11 @@ impl KleisParser {
                     });
                 }
 
-                TypeExpr::Parametric(base_name, params)
+                Ok(TypeExpr::Parametric(base_name, params))
             } else {
-                TypeExpr::Named(base_name)
+                Ok(TypeExpr::Named(base_name))
             }
-        };
-
-        // Check for function type: T1 → T2 or T1 -> T2
-        self.skip_whitespace();
-        if self.peek() == Some('→') || (self.peek() == Some('-') && self.peek_ahead(1) == Some('>'))
-        {
-            // Consume arrow
-            if self.peek() == Some('→') {
-                self.advance();
-            } else {
-                self.advance(); // -
-                self.advance(); // >
-            }
-
-            let return_type = self.parse_type()?;
-            ty = TypeExpr::Function(Box::new(ty), Box::new(return_type));
         }
-
-        // Check for × (product type for multi-arg functions)
-        self.skip_whitespace();
-        if self.peek() == Some('×') {
-            let mut product_types = vec![ty];
-            while self.peek() == Some('×') {
-                self.advance();
-                product_types.push(self.parse_type()?);
-                self.skip_whitespace();
-            }
-            ty = TypeExpr::Product(product_types);
-        }
-
-        Ok(ty)
     }
 
     /// v0.92: Parse a type argument that could be a type OR a dimension expression
@@ -4596,6 +4632,208 @@ mod tests {
         let result = parse_type_expr(code).unwrap();
 
         assert_eq!(result, TypeExpr::Named("Unit".to_string()));
+    }
+
+    // ============================================
+    // v0.94 Grammar Tests: N-ary Product Types
+    // ============================================
+
+    #[test]
+    fn test_parse_nary_product_binary() {
+        // Basic binary product
+        let code = "A × B";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Product(types) => {
+                assert_eq!(types.len(), 2);
+                assert_eq!(types[0], TypeExpr::Named("A".to_string()));
+                assert_eq!(types[1], TypeExpr::Named("B".to_string()));
+            }
+            _ => panic!("Expected Product type, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_nary_product_ternary() {
+        // Ternary product: A × B × C
+        let code = "A × B × C";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Product(types) => {
+                assert_eq!(types.len(), 3);
+                assert_eq!(types[0], TypeExpr::Named("A".to_string()));
+                assert_eq!(types[1], TypeExpr::Named("B".to_string()));
+                assert_eq!(types[2], TypeExpr::Named("C".to_string()));
+            }
+            _ => panic!("Expected Product type, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_nary_product_quaternary() {
+        // Four-way product: A × B × C × D
+        let code = "A × B × C × D";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Product(types) => {
+                assert_eq!(types.len(), 4);
+                assert_eq!(types[0], TypeExpr::Named("A".to_string()));
+                assert_eq!(types[1], TypeExpr::Named("B".to_string()));
+                assert_eq!(types[2], TypeExpr::Named("C".to_string()));
+                assert_eq!(types[3], TypeExpr::Named("D".to_string()));
+            }
+            _ => panic!("Expected Product type, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_nary_product_with_function() {
+        // Product binds tighter than function: A × B → C
+        // Should parse as (A × B) → C
+        let code = "A × B → C";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Function(domain, codomain) => {
+                // Domain should be Product(A, B)
+                match *domain {
+                    TypeExpr::Product(types) => {
+                        assert_eq!(types.len(), 2);
+                        assert_eq!(types[0], TypeExpr::Named("A".to_string()));
+                        assert_eq!(types[1], TypeExpr::Named("B".to_string()));
+                    }
+                    _ => panic!("Expected Product domain, got {:?}", domain),
+                }
+                // Codomain should be C
+                assert_eq!(*codomain, TypeExpr::Named("C".to_string()));
+            }
+            _ => panic!("Expected Function type, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_nary_product_to_function() {
+        // POT-style: FieldR4 × Point × Point → ℝ
+        let code = "FieldR4 × Point × Point → ℝ";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Function(domain, codomain) => {
+                // Domain should be Product(FieldR4, Point, Point)
+                match *domain {
+                    TypeExpr::Product(types) => {
+                        assert_eq!(types.len(), 3);
+                        assert_eq!(types[0], TypeExpr::Named("FieldR4".to_string()));
+                        assert_eq!(types[1], TypeExpr::Named("Point".to_string()));
+                        assert_eq!(types[2], TypeExpr::Named("Point".to_string()));
+                    }
+                    _ => panic!("Expected Product domain, got {:?}", domain),
+                }
+                // Codomain should be ℝ
+                assert_eq!(*codomain, TypeExpr::Named("ℝ".to_string()));
+            }
+            _ => panic!("Expected Function type, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_nary_product_ascii_arrow() {
+        // ASCII arrow version: A × B × C -> D
+        let code = "A × B × C -> D";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Function(domain, codomain) => {
+                match *domain {
+                    TypeExpr::Product(types) => {
+                        assert_eq!(types.len(), 3);
+                    }
+                    _ => panic!("Expected Product domain"),
+                }
+                assert_eq!(*codomain, TypeExpr::Named("D".to_string()));
+            }
+            _ => panic!("Expected Function type"),
+        }
+    }
+
+    #[test]
+    fn test_parse_nary_product_with_parametric() {
+        // Product with parametric types: Vector(4, ℝ) × Vector(4, ℝ) → ℝ
+        let code = "Vector(4, ℝ) × Vector(4, ℝ) → ℝ";
+        let result = parse_type_expr(code).unwrap();
+
+        match result {
+            TypeExpr::Function(domain, codomain) => {
+                match *domain {
+                    TypeExpr::Product(types) => {
+                        assert_eq!(types.len(), 2);
+                        // Both should be Vector(4, ℝ)
+                        for t in &types {
+                            match t {
+                                TypeExpr::Parametric(name, _) => assert_eq!(name, "Vector"),
+                                _ => panic!("Expected Parametric type"),
+                            }
+                        }
+                    }
+                    _ => panic!("Expected Product domain"),
+                }
+                assert_eq!(*codomain, TypeExpr::Named("ℝ".to_string()));
+            }
+            _ => panic!("Expected Function type"),
+        }
+    }
+
+    #[test]
+    fn test_parse_nary_product_grouped() {
+        // Explicit grouping with parens: (A × B) × C
+        // Left-associative grouping is preserved (different from A × B × C)
+        let code = "(A × B) × C";
+        let result = parse_type_expr(code).unwrap();
+
+        // Should be Product([Product([A, B]), C]) - a 2-element product
+        // First element is the grouped (A × B)
+        match result {
+            TypeExpr::Product(types) => {
+                assert_eq!(types.len(), 2);
+                // First element should be Product([A, B])
+                match &types[0] {
+                    TypeExpr::Product(inner) => {
+                        assert_eq!(inner.len(), 2);
+                        assert_eq!(inner[0], TypeExpr::Named("A".to_string()));
+                        assert_eq!(inner[1], TypeExpr::Named("B".to_string()));
+                    }
+                    _ => panic!("Expected inner Product, got {:?}", types[0]),
+                }
+                // Second element should be C
+                assert_eq!(types[1], TypeExpr::Named("C".to_string()));
+            }
+            _ => panic!("Expected Product type, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_parse_nary_product_right_assoc() {
+        // Without parens: A × B × C is right-associative
+        // Parses as A × (B × C), but flattened to [A, B, C]
+        let code1 = "A × B × C";
+        let result1 = parse_type_expr(code1).unwrap();
+
+        // With parens on right: A × (B × C) - same as without parens
+        let code2 = "A × (B × C)";
+        let result2 = parse_type_expr(code2).unwrap();
+
+        // Both should produce the same flat Product
+        match (&result1, &result2) {
+            (TypeExpr::Product(t1), TypeExpr::Product(t2)) => {
+                assert_eq!(t1.len(), 3);
+                assert_eq!(t2.len(), 3);
+                assert_eq!(t1, t2);
+            }
+            _ => panic!("Expected Product types"),
+        }
     }
 
     #[test]
