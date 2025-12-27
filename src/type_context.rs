@@ -48,6 +48,11 @@ pub struct OperationRegistry {
     /// Populated from `implements Promotes(From, To) { operation lift = ... }`
     /// Example: ("Int", "Rational") → "int_to_rational"
     type_promotions: HashMap<(String, String), String>,
+
+    /// Top-level operation type signatures
+    /// Populated from `operation sin : ℝ → ℝ` at file scope
+    /// Example: "sin" → (vec!["Scalar"], "Scalar")  // (arg types, return type)
+    toplevel_operation_types: HashMap<String, TypeExpr>,
 }
 
 impl Default for OperationRegistry {
@@ -65,6 +70,7 @@ impl OperationRegistry {
             type_to_structures: HashMap::new(),
             structure_extends: HashMap::new(),
             type_promotions: HashMap::new(),
+            toplevel_operation_types: HashMap::new(),
         }
     }
 
@@ -116,6 +122,18 @@ impl OperationRegistry {
             current = parent;
         }
         false
+    }
+
+    /// Register a top-level operation with its type signature
+    /// Example: register_toplevel_operation("sin", TypeExpr::Function(Scalar, Scalar))
+    pub fn register_toplevel_operation(&mut self, name: &str, type_sig: TypeExpr) {
+        self.toplevel_operation_types
+            .insert(name.to_string(), type_sig);
+    }
+
+    /// Get the type signature for a top-level operation
+    pub fn get_toplevel_operation_type(&self, name: &str) -> Option<&TypeExpr> {
+        self.toplevel_operation_types.get(name)
     }
 
     /// Get the parent structure of a given structure (if any)
@@ -224,6 +242,21 @@ impl OperationRegistry {
                 .entry(ty)
                 .or_default()
                 .extend(structures);
+        }
+
+        // Merge structure_extends
+        for (child, parent) in other.structure_extends {
+            self.structure_extends.insert(child, parent);
+        }
+
+        // Merge type_promotions (Promotes implementations)
+        for ((from, to), lift_fn) in other.type_promotions {
+            self.type_promotions.insert((from, to), lift_fn);
+        }
+
+        // Merge toplevel_operation_types
+        for (name, type_sig) in other.toplevel_operation_types {
+            self.toplevel_operation_types.insert(name, type_sig);
         }
 
         Ok(())
@@ -378,10 +411,15 @@ impl TypeContextBuilder {
     fn register_implements(&mut self, impl_def: &ImplementsDef) -> Result<(), String> {
         // Special handling for Promotes(From, To) - register type promotion
         if impl_def.structure_name == "Promotes" && impl_def.type_args.len() == 2 {
-            let from_type =
+            let from_type_raw =
                 self.type_expr_to_string(&self.normalize_type_expr(&impl_def.type_args[0])?);
-            let to_type =
+            let to_type_raw =
                 self.type_expr_to_string(&self.normalize_type_expr(&impl_def.type_args[1])?);
+
+            // Normalize Unicode type names to canonical ASCII names
+            // This ensures ℕ→ℤ is registered as Nat→Int
+            let from_type = Self::normalize_type_name(&from_type_raw).to_string();
+            let to_type = Self::normalize_type_name(&to_type_raw).to_string();
 
             // Find the lift operation implementation
             for member in &impl_def.members {
@@ -462,11 +500,12 @@ impl TypeContextBuilder {
 
     fn register_toplevel_operation(
         &mut self,
-        _op_decl: &crate::kleis_ast::OperationDecl,
+        op_decl: &crate::kleis_ast::OperationDecl,
     ) -> Result<(), String> {
-        // Top-level operations (like frac for display mode)
-        // These are utility operations, not tied to structures
-        // TODO: Register these separately if needed
+        // Top-level operations (like sin, cos, frac)
+        // Register their type signatures for type inference
+        self.registry
+            .register_toplevel_operation(&op_decl.name, op_decl.type_signature.clone());
         Ok(())
     }
 
@@ -999,6 +1038,12 @@ impl TypeContextBuilder {
             _ => {}
         }
 
+        // Check for top-level operations (like sin : ℝ → ℝ)
+        if let Some(type_sig) = self.registry.get_toplevel_operation_type(op_name) {
+            // Found a top-level operation - interpret its type signature
+            return self.interpret_toplevel_operation_type(type_sig, arg_types);
+        }
+
         // Query registry for operation
         if let Some(structure_name) = self.registry.structure_for_operation(op_name) {
             // Found the structure that defines this operation
@@ -1067,6 +1112,76 @@ impl TypeContextBuilder {
                  Check stdlib or define it in a custom structure.",
                 op_name
             ))
+        }
+    }
+
+    /// Interpret a top-level operation's type signature
+    ///
+    /// For operations like `operation sin : ℝ → ℝ`, this extracts the return type.
+    /// Handles:
+    /// - Simple function types: `ℝ → ℝ` returns `ℝ`
+    /// - Multi-arg functions: `ℝ × ℝ → ℝ` returns `ℝ`
+    fn interpret_toplevel_operation_type(
+        &self,
+        type_sig: &TypeExpr,
+        _arg_types: &[Type],
+    ) -> Result<Type, String> {
+        match type_sig {
+            TypeExpr::Function(_from, to) => {
+                // Function type: return the codomain
+                self.type_expr_to_type(to)
+            }
+            _ => {
+                // Non-function type: return as-is (e.g., constant operations)
+                self.type_expr_to_type(type_sig)
+            }
+        }
+    }
+
+    /// Convert a TypeExpr to a Type (for return type extraction)
+    fn type_expr_to_type(&self, type_expr: &TypeExpr) -> Result<Type, String> {
+        match type_expr {
+            TypeExpr::Named(name) => {
+                // Normalize Unicode names
+                let normalized = Self::normalize_type_name(name);
+                Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: normalized.to_string(),
+                    args: vec![],
+                })
+            }
+            TypeExpr::Parametric(name, params) => {
+                let param_types: Result<Vec<Type>, String> =
+                    params.iter().map(|p| self.type_expr_to_type(p)).collect();
+                Ok(Type::Data {
+                    type_name: "Type".to_string(),
+                    constructor: name.clone(),
+                    args: param_types?,
+                })
+            }
+            TypeExpr::Function(_from, to) => {
+                // For now, return the codomain for function types
+                // Full function type support would need Type::Function
+                self.type_expr_to_type(to)
+            }
+            TypeExpr::Product(types) => {
+                if types.len() == 1 {
+                    self.type_expr_to_type(&types[0])
+                } else {
+                    // Product type - for now return first type
+                    // TODO: Proper tuple/product type support
+                    self.type_expr_to_type(&types[0])
+                }
+            }
+            TypeExpr::Var(_) => {
+                // Type variable - return as fresh variable
+                Ok(Type::Var(crate::type_inference::TypeVar(0)))
+            }
+            TypeExpr::ForAll { body, .. } => {
+                // Quantified type - unwrap and interpret the body
+                self.type_expr_to_type(body)
+            }
+            TypeExpr::DimExpr(dim) => Ok(Type::NatExpr(dim.clone())),
         }
     }
 
