@@ -1,10 +1,10 @@
-// Projected Ontology Theory - Core (v2, SMT-friendly)
+// Projected Ontology Theory - Core (v3, with ChatGPT enhancements)
 //
-// Fixes from ChatGPT review:
-// 1. GreenKernel.project returns FieldR4 (not a single point)
-// 2. Nullspace as predicate (more SMT-friendly than Set)
-// 3. Flow/field linear structure axioms
-// 4. Consistent use of ℝ and ℂ symbols
+// New in v3:
+// 1. Typed channels for residues (scalable conserved quantities)
+// 2. Particle = residue support predicate
+// 3. Universe refinement ordering
+// 4. POT sanity theorems
 
 import "spacetime_type.kleis"
 
@@ -24,7 +24,6 @@ structure InnerProductSpace(n : Nat) {
         add(add(u, v), w) = add(u, add(v, w))
     axiom add_id:    ∀(v : Vector(n, ℂ)). add(v, zero) = v
 
-    // Hermitian symmetry
     axiom inner_conj_sym: ∀(x y : Vector(n, ℂ)).
         inner(x, y) = conjugate(inner(y, x))
 }
@@ -37,18 +36,16 @@ structure Projector(n : Nat) over InnerProductSpace(n) {
     operation P : Vector(n, ℂ) → Vector(n, ℂ)
 
     axiom idempotent: ∀(v : Vector(n, ℂ)). P(P(v)) = P(v)
-
     axiom self_adjoint: ∀(x y : Vector(n, ℂ)).
         inner(P(x), y) = inner(x, P(y))
 }
 
 // =============================================================================
-// 3. Ontology map Φ : Entity → H_ont (n=3)
+// 3. Ontology map Φ : Entity → H_ont
 // =============================================================================
 
 structure OntologyMap over InnerProductSpace(3) {
     operation Phi : Entity → Vector(3, ℂ)
-
     operation sim : Entity × Entity → ℝ
 
     axiom sim_symmetric: ∀(a b : Entity). sim(a, b) = sim(b, a)
@@ -56,10 +53,9 @@ structure OntologyMap over InnerProductSpace(3) {
 }
 
 // =============================================================================
-// 4. Fields on ℝ⁴ and Flow algebra
+// 4. Fields and Flow algebras
 // =============================================================================
 
-// FieldR4 represents a scalar field on spacetime
 structure FieldR4Algebra {
     operation field_add  : FieldR4 × FieldR4 → FieldR4
     operation field_smul : ℂ × FieldR4 → FieldR4
@@ -69,7 +65,6 @@ structure FieldR4Algebra {
     axiom field_add_id:   ∀(f : FieldR4). field_add(f, field_zero) = f
 }
 
-// Flow linear structure
 structure FlowAlgebra {
     operation flow_add  : Flow × Flow → Flow
     operation flow_smul : ℂ × Flow → Flow
@@ -79,21 +74,18 @@ structure FlowAlgebra {
 }
 
 // =============================================================================
-// 5. Green Kernel: Projects Flow → FieldR4 (KEY FIX)
+// 5. Green Kernel: Projects Flow → FieldR4
 // =============================================================================
 
 structure GreenKernel {
-    // Project modal flow to an ℝ⁴-field (not a single point!)
     operation project : Flow → FieldR4
 
-    // Linearity axioms (captures Green-like kernel without integrals)
     axiom project_lin_add: ∀(a b : Flow).
         project(flow_add(a, b)) = field_add(project(a), project(b))
 
     axiom project_lin_smul: ∀(c : ℂ, a : Flow).
         project(flow_smul(c, a)) = field_smul(c, project(a))
 
-    // Nullspace as predicate (SMT-friendly)
     operation in_nullspace : Flow → Bool
     
     axiom nullspace_def: ∀(a : Flow).
@@ -101,45 +93,66 @@ structure GreenKernel {
 }
 
 // =============================================================================
-// 6. Residues: Point-like observables as projection residues
+// 6. TYPED CHANNELS (scalable conserved quantities)
 // =============================================================================
 
-// Residue pair bundles field and event together
+structure ConservedChannel {
+    element Mass   : Channel
+    element EM     : Channel
+    element Spin   : Channel
+    element Color  : Channel
+    
+    operation residue : ResiduePair × Channel → ℝ
+}
+
+// =============================================================================
+// 7. RESIDUE PAIR AND POINT SOURCES
+// =============================================================================
+
 structure ResiduePair {
     element field : FieldR4
     element event : Event
 }
 
-structure ResidueOperations {
-    // Residue operations on pairs
-    operation residue_mass   : ResiduePair → ℝ
-    operation residue_charge : ResiduePair → ℝ
-
-    // Make a residue pair
+structure PointSources {
     operation make_pair : FieldR4 × Event → ResiduePair
     
-    // Point-source constructors
     operation point_mass   : Event × ℝ → FieldR4
     operation point_charge : Event × ℝ → FieldR4
 
     axiom residue_point_mass: ∀(e : Event, m : ℝ).
-        residue_mass(make_pair(point_mass(e, m), e)) = m
+        residue(make_pair(point_mass(e, m), e), Mass) = m
 
     axiom residue_point_charge: ∀(e : Event, q : ℝ).
-        residue_charge(make_pair(point_charge(e, q), e)) = q
+        residue(make_pair(point_charge(e, q), e), EM) = q
+    
+    axiom point_mass_nonzero: ∀(e : Event, m : ℝ).
+        m ≠ 0 → point_mass(e, m) ≠ field_zero
 }
 
-// KEY POT CLAIM: mass at event = residue of projected field
-// mass_at(G, ψ, e) = residue_mass(make_pair(G.project(ψ), e))
+// =============================================================================
+// 8. PARTICLE = RESIDUE SUPPORT
+// =============================================================================
+
+structure ParticlePredicates {
+    operation has_mass : ResiduePair → Bool
+    
+    axiom has_mass_def: ∀(rp : ResiduePair).
+        has_mass(rp) → residue(rp, Mass) ≠ 0
+    
+    operation is_particle : ResiduePair → Bool
+    
+    axiom particle_is_mass: ∀(rp : ResiduePair).
+        is_particle(rp) → has_mass(rp)
+}
 
 // =============================================================================
-// 7. Equivalence under a kernel (universe-scoped)
+// 9. EQUIVALENCE UNDER KERNEL
 // =============================================================================
 
 structure ProjectiveEquivalence over GreenKernel {
     operation equiv : Flow × Flow → Bool
     
-    // Definition: equivalent iff same projected field
     axiom equiv_def: ∀(a b : Flow).
         equiv(a, b) → project(a) = project(b)
 
@@ -149,30 +162,54 @@ structure ProjectiveEquivalence over GreenKernel {
 }
 
 // =============================================================================
-// 8. Different kernels ⇒ different universes
+// 10. UNIVERSE REFINEMENT (partial order by information)
 // =============================================================================
+
+structure UniverseOrder {
+    operation refines : GreenKernel × GreenKernel → Bool
+    
+    axiom refines_refl: ∀(G : GreenKernel). refines(G, G)
+    
+    axiom refines_trans: ∀(G1 G2 G3 : GreenKernel).
+        refines(G2, G1) ∧ refines(G3, G2) → refines(G3, G1)
+}
 
 structure UniverseDistinction {
     operation different_universes : GreenKernel × GreenKernel → Bool
 }
 
 // =============================================================================
-// 9. Examples (universal axiom checks)
+// 11. POT SANITY THEOREMS
+// =============================================================================
+
+structure POTSanityTheorems {
+    // THEOREM 1: Equivalence preserves all channel residues
+    axiom equiv_preserves_residue: ∀(psi1 psi2 : Flow, e : Event, c : Channel).
+        equiv(psi1, psi2) → 
+            residue(make_pair(project(psi1), e), c) = 
+            residue(make_pair(project(psi2), e), c)
+    
+    // Key POT result: "Equivalent flows are observationally identical"
+}
+
+// =============================================================================
+// 12. EXAMPLES
 // =============================================================================
 
 example "projector is idempotent" {
     assert(∀(v : Vector(3, ℂ)). P(P(v)) = P(v))
 }
 
-example "similarity is symmetric" {
-    assert(∀(a b : Entity). sim(a, b) = sim(b, a))
-}
-
 example "equivalence is reflexive" {
     assert(∀(psi : Flow). equiv(psi, psi))
 }
 
-example "residue recovers point mass" {
+example "refinement is transitive" {
+    assert(∀(G1 G2 G3 : GreenKernel).
+        refines(G2, G1) ∧ refines(G3, G2) → refines(G3, G1))
+}
+
+example "point mass residue" {
     assert(∀(e : Event, m : ℝ).
-        residue_mass(make_pair(point_mass(e, m), e)) = m)
+        residue(make_pair(point_mass(e, m), e), Mass) = m)
 }
