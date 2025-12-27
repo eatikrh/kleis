@@ -1,0 +1,29 @@
+// ============================================================================
+// Spacetime Types for POT (kernel projection version)
+// ============================================================================
+//
+// ℝ⁴ is treated as a bare vector space carrier for Events.
+// No metric is assumed; any metric is additional/emergent structure.
+// ============================================================================
+
+structure R4Space {
+    // Carrier
+    element zero : Vector(4, ℝ)
+    operation add   : Vector(4, ℝ) × Vector(4, ℝ) → Vector(4, ℝ)
+    operation scale : ℝ × Vector(4, ℝ) → Vector(4, ℝ)
+
+    axiom add_comm: ∀(u v : Vector(4, ℝ)). add(u, v) = add(v, u)
+    axiom add_id:   ∀(v : Vector(4, ℝ)). add(v, zero) = v
+    axiom smul_id:  ∀(v : Vector(4, ℝ)). scale(1, v) = v
+}
+
+// Observable index (a spacetime event)
+structure Event {
+    element p : Vector(4, ℝ)
+}
+
+// Optional extra structure (not assumed)
+structure MetricOnR4 {
+    operation g : Vector(4, ℝ) × Vector(4, ℝ) → ℝ
+    axiom symmetric: ∀(u v : Vector(4, ℝ)). g(u, v) = g(v, u)
+}
