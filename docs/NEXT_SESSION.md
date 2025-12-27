@@ -156,19 +156,9 @@ pub enum Type {
 - **Higher-order functions:** Can represent `(T → U) → List(T) → List(U)`
 - **Curried functions:** Can represent `ℝ → ℝ → ℝ`
 
-### Still TODO: Product Types
+### ✅ Product Types - DONE
 
-Product types still need proper support (lines ~1175 in type_context.rs):
-
-```rust
-TypeExpr::Product(types) => {
-    // Product type - for now return first type
-    // TODO: Proper tuple/product type support
-    self.type_expr_to_type(&types[0])
-}
-```
-
-Returns first element only instead of proper tuple type.
+Product types now have proper support with `Type::Product(Vec<Type>)` variant.
 
 ---
 
@@ -232,7 +222,7 @@ operation mass_at : GreenKernel × Flow × Event → ℝ  // ✅ Works!
 - `A × B × C × D` flattens into `TypeExpr::Product([A, B, C, D])`
 - `×` binds tighter than `→`
 
-**Still TODO:** `Type::Product` variant in type inference (currently returns first element only)
+**✅ DONE:** `Type::Product(Vec<Type>)` variant added - full product type support in type inference
 
 ---
 
