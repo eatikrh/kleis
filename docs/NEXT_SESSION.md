@@ -1,6 +1,98 @@
 # Next Session Notes
 
-**Last Updated:** December 26, 2024 (Late Evening)
+**Last Updated:** December 27, 2024
+
+---
+
+## 🎯 POT Formalization: Admissible Kernel Class (Next Steps)
+
+### Current Status (Dec 27, 2024)
+
+The POT formalization in `examples/ontology/revised/` is now **airtight**:
+- ✅ Option A refactor complete: all projection is kernel-parameterized
+- ✅ `apply_kernel(G, ψ)` is the canonical operation (no implicit kernel)
+- ✅ `equiv(G, a, b)` and `in_nullspace(G, a)` are definitional (bidirectional)
+- ✅ Field extensionality via `field_at` + `field_ext`
+- ✅ No "hidden context" leakage
+
+### Next Move: Minimal Admissible Kernel Class (v0)
+
+Pin down constraints on valid kernels that are:
+1. Expressible in Kleis today (no integrals needed)
+2. Not so strong it hard-codes known physics
+3. Strong enough to generate falsifiable constraints
+
+#### 1) Algebraic Admissibility
+
+**(K1) Linearity over flows** — superposition must survive projection:
+```kleis
+axiom kernel_linear_add: ∀(G : GreenKernel, a b : Flow).
+    apply_kernel(G, flow_add(a, b)) = field_add(apply_kernel(G, a), apply_kernel(G, b))
+
+axiom kernel_linear_smul: ∀(G : GreenKernel, α : ℂ, a : Flow).
+    apply_kernel(G, flow_smul(α, a)) = field_smul(α, apply_kernel(G, a))
+```
+
+**(K2) Zero preservation** — zero flow projects to zero field:
+```kleis
+axiom kernel_zero: ∀(G : GreenKernel).
+    apply_kernel(G, flow_zero) = field_zero
+```
+
+**Status:** K1 already implemented (`project_lin_add`, `project_lin_smul`). K2 needs adding.
+
+#### 2) Observational Equivalence Compatibility
+
+**(K3) Equivalence respects kernel action** — already have via `equiv_elim`/`equiv_intro`.
+
+#### 3) Regularity / Locality (Weak, Falsifiable)
+
+**(K4) Event-local determinacy via probes**:
+```kleis
+// Residues depend only on local probe at the event
+operation probe : GreenKernel × Flow × Event → ℝ
+
+axiom residue_local: ∀(G : GreenKernel, ψ1 ψ2 : Flow, e : Event, c : Channel).
+    probe(G, ψ1, e) = probe(G, ψ2, e) → residue(apply_kernel(G, ψ1), e, c) = residue(apply_kernel(G, ψ2), e, c)
+```
+
+This keeps "physics local-ish" without hardcoding PDEs.
+
+#### 4) Dimensional Well-Typedness
+
+**(K5) Units constraint** — residues must output quantities with declared units:
+```kleis
+// Mass channel returns Quantity(kg), Charge returns Quantity(C), etc.
+// Prevents "mass in bananas" from being a legal model
+```
+
+This requires deciding if Kleis should have a units system (future work).
+
+### Falsifiable Claim Patterns
+
+Once `AdmissibleKernel(G)` exists:
+
+**Pattern A: Invariants**
+```kleis
+// For all admissible kernels, conserved channels satisfy constraint C
+∀(G : AdmissibleKernel). conservation_law(G) → constraint(G)
+```
+
+**Pattern B: Geometry Emergence**
+```kleis
+// For all admissible kernels with symmetry S, induced metric has property P
+∀(G : AdmissibleKernel). has_symmetry(G, S) → metric_property(apply_kernel(G, _), P)
+```
+
+These are falsifiable because P can be tested against observation.
+
+### Files
+
+- `examples/ontology/revised/pot_core_kernel_projection.kleis` — core formalization
+- `examples/ontology/revised/pot_foundations_kernel_projection.kleis` — postulates
+- `examples/ontology/revised/spacetime_type_kernel_projection.kleis` — spacetime types
+
+---
 
 ---
 
