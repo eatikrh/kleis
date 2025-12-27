@@ -137,8 +137,12 @@ structure GreenKernel {
 
     operation in_nullspace : GreenKernel × Flow → Bool
 
-    axiom nullspace_def: ∀(G : GreenKernel, a : Flow).
+    // in_nullspace is DEFINITIONAL: ψ is in nullspace iff it projects to zero
+    axiom nullspace_elim: ∀(G : GreenKernel, a : Flow).
         in_nullspace(G, a) → apply_kernel(G, a) = field_zero
+
+    axiom nullspace_intro: ∀(G : GreenKernel, a : Flow).
+        apply_kernel(G, a) = field_zero → in_nullspace(G, a)
 }
 
 // =============================================================================
