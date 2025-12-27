@@ -129,6 +129,47 @@ All 8 type promotion tests pass:
 
 ---
 
+## 🔴 Tech Debt: First-Class Function Types Not Supported
+
+### Problem
+The type system doesn't have a `Type::Function` variant. When converting `TypeExpr::Function`
+to `Type`, we just extract the codomain (return type) and discard the domain.
+
+**Location:** `src/type_context.rs` lines 1162-1165
+
+```rust
+TypeExpr::Function(_from, to) => {
+    // For now, return the codomain for function types
+    // Full function type support would need Type::Function
+    self.type_expr_to_type(to)
+}
+```
+
+### Impact
+- Can't properly type higher-order functions
+- Can't check that a function argument has the correct signature
+
+**Also:** Product types affected (lines 1167-1175):
+```rust
+TypeExpr::Product(types) => {
+    // Product type - for now return first type
+    // TODO: Proper tuple/product type support
+    self.type_expr_to_type(&types[0])
+}
+```
+Returns first element only instead of proper tuple type.
+
+### Solution
+Add `Type::Function(Box<Type>, Box<Type>)` variant to enable:
+- `operation map : (T → U) × List(T) → List(U)`
+- Proper currying: `f : A → B → C`
+
+### Workaround
+Works fine for current use case (extracting return type for top-level operations like `sin : ℝ → ℝ`).
+Only becomes a problem when type-checking higher-order functions.
+
+---
+
 ## 🔴 Tech Debt: N-ary Product Types Not Supported
 
 ### Problem
