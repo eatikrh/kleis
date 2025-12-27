@@ -1,48 +1,98 @@
-// Spacetime as ℝ×ℝ×ℝ×ℝ product type
+// ℝ⁴ as a vector space - NO METRIC ASSUMED
 //
-// POT projects ontology from C³ to spacetime ℝ⁴
+// POT projects ontology from C³ to ℝ⁴
+// The metric structure (if any) must EMERGE from kernel properties
+// We do NOT presuppose GR, Minkowski, or Euclidean geometry
 
-// Type alias for spacetime (4-tuple of reals)
-// Uses Vector(4, ℝ) which is parseable
+// ============================================================================
+// ℝ⁴ as bare vector space (no metric)
+// ============================================================================
 
-structure Spacetime {
-    // A spacetime point is a 4-vector of reals
-    element point : Vector(4, ℝ)
+structure R4 {
+    // ℝ⁴ is simply a 4-dimensional real vector space
+    // No inner product, no metric, no distance
     
-    // Access components (t, x, y, z)
-    operation time : Vector(4, ℝ) → ℝ
-    operation spatial_x : Vector(4, ℝ) → ℝ
-    operation spatial_y : Vector(4, ℝ) → ℝ
-    operation spatial_z : Vector(4, ℝ) → ℝ
+    // Components are just projections to coordinate axes
+    operation component : Vector(4, ℝ) × Nat → ℝ
     
-    // Construct spacetime point from components
-    operation make_point : ℝ × ℝ × ℝ × ℝ → Vector(4, ℝ)
+    // Construct from components
+    operation make : ℝ × ℝ × ℝ × ℝ → Vector(4, ℝ)
     
-    // Minkowski metric: ds² = -dt² + dx² + dy² + dz²
-    operation interval : Vector(4, ℝ) × Vector(4, ℝ) → ℝ
+    // Zero vector
+    element zero : Vector(4, ℝ)
     
-    axiom interval_def: ∀(p q : Vector(4, ℝ)).
-        interval(p, q) = 
-            minus(
-                plus(
-                    power(minus(spatial_x(q), spatial_x(p)), 2),
-                    plus(
-                        power(minus(spatial_y(q), spatial_y(p)), 2),
-                        power(minus(spatial_z(q), spatial_z(p)), 2)
-                    )
-                ),
-                power(minus(time(q), time(p)), 2)
-            )
+    // Vector space operations
+    operation add : Vector(4, ℝ) × Vector(4, ℝ) → Vector(4, ℝ)
+    operation scale : ℝ × Vector(4, ℝ) → Vector(4, ℝ)
+    
+    axiom add_commutative: ∀(u v : Vector(4, ℝ)). add(u, v) = add(v, u)
+    axiom add_identity: ∀(v : Vector(4, ℝ)). add(v, zero) = v
+    axiom scale_identity: ∀(v : Vector(4, ℝ)). scale(1, v) = v
 }
 
-// Alternatively: use a type alias syntax (if supported)
-// type R4 = Vector(4, ℝ)
-// type Spacetime = R4
+// ============================================================================
+// Metric as EMERGENT structure (not assumed)
+// ============================================================================
 
-example "spacetime interval" {
-    let p = make_point(0, 0, 0, 0)
-    let q = make_point(1, 3, 4, 0)
-    // Interval should be 3² + 4² - 1² = 9 + 16 - 1 = 24
-    assert(interval(p, q) = 24)
+// A metric is ADDITIONAL structure that may or may not emerge
+// from the projection kernel G
+
+structure MetricOnR4 {
+    // A metric tensor g : ℝ⁴ × ℝ⁴ → ℝ
+    operation g : Vector(4, ℝ) × Vector(4, ℝ) → ℝ
+    
+    // Metric must be symmetric
+    axiom symmetric: ∀(u v : Vector(4, ℝ)). g(u, v) = g(v, u)
+    
+    // Bilinearity
+    axiom bilinear_left: ∀(a : ℝ, u v w : Vector(4, ℝ)).
+        g(add(scale(a, u), v), w) = plus(times(a, g(u, w)), g(v, w))
+    
+    // Non-degeneracy: g(u, v) = 0 for all v implies u = 0
+    // (Not requiring positive-definiteness - allows Lorentzian signature)
 }
 
+// ============================================================================
+// The Key Question: Does POT kernel induce a metric?
+// ============================================================================
+
+// If G : H_ont → ℝ⁴ is the projection kernel, 
+// does the structure of G induce a metric on ℝ⁴?
+//
+// Hypothesis: g(u, v) = ∫∫ K(u, v; τ₁, τ₂) dτ₁ dτ₂
+// where K is derived from the kernel G
+//
+// This is what we want to DERIVE, not assume!
+
+structure KernelInducedMetric(G : GreenKernel) extends MetricOnR4 {
+    // The metric induced by kernel G on ℝ⁴
+    // This structure captures: "G determines geometry"
+    
+    // The metric comes from kernel's inner product structure
+    operation kernel_inner : Vector(4, ℝ) × Vector(4, ℝ) → ℝ
+    
+    axiom metric_from_kernel: ∀(u v : Vector(4, ℝ)).
+        g(u, v) = kernel_inner(u, v)
+}
+
+// ============================================================================
+// What we want to PROVE (not assume):
+// ============================================================================
+//
+// THEOREM (to derive): Under suitable conditions on G,
+// the induced metric has Lorentzian signature (-,+,+,+)
+//
+// THEOREM (to derive): The null geodesics of the induced metric
+// correspond to certain kernel properties
+//
+// THEOREM (to derive): Einstein's field equations emerge as
+// consistency conditions on kernel evolution
+
+example "R4 is just a vector space" {
+    let v = make(1, 2, 3, 4)
+    let w = make(5, 6, 7, 8)
+    // We can add vectors
+    assert(component(v, 0) = 1)
+    assert(component(w, 0) = 5)
+    // But NO metric operations yet - those must emerge from G!
+}
