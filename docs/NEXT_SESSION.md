@@ -172,6 +172,53 @@ Returns first element only instead of proper tuple type.
 
 ---
 
+## 🔴 Tech Debt: Hardcoded Type Annotation Parsing
+
+### Problem
+
+`type_inference.rs` has `parse_type_annotation()` (lines 1017-1080) that parses type 
+annotation strings like `"Matrix(3, 3, ℝ)"`. It **hardcodes** type names instead of 
+querying the registry.
+
+**Location:** `src/type_inference.rs` lines 1017-1080
+
+```rust
+fn parse_type_annotation(&self, annotation: &str) -> Type {
+    match annotation.trim() {
+        "ℝ" | "Real" => return Type::scalar(),    // Hardcoded
+        "ℂ" | "Complex" => /* hardcoded */,
+        // ...
+    }
+    
+    match type_name {
+        "Matrix" => /* hardcoded parsing */,       // Should query registry
+        "Vector" => /* hardcoded parsing */,       // Should query registry
+        // ...
+    }
+}
+```
+
+Also: convenience constructors `Type::matrix()`, `Type::pmatrix()`, etc. at lines 2087-2131.
+
+### Impact
+
+- Works fine because Matrix/Vector ARE defined in stdlib
+- But violates ADR-016 (operations/types should come from structures, not Rust)
+- Adding new parametric types requires Rust code changes
+
+### Solution
+
+Query registry for known parametric types:
+1. Get list of parametric structures from registry
+2. Parse type args based on structure's parameter list
+3. Remove hardcoded type name matching
+
+### Workaround
+
+Works today - just not self-hosting. Low priority.
+
+---
+
 ## 🔴 Tech Debt: N-ary Product Types Not Supported
 
 ### Problem
