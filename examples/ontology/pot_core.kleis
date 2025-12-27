@@ -202,36 +202,37 @@ structure UniverseDistinction {
     // Helper: apply kernel to flow
     operation apply_kernel : GreenKernel × Flow → FieldR4
     
-    // Definition: different universes iff some flow projects differently
-    axiom different_universes_witness: ∀(G1 G2 : GreenKernel, psi : Flow).
+    // DEFINITION of different_universes (both directions)
+    // Direction 1: witnessing a difference → universes are different
+    axiom different_universes_intro: ∀(G1 G2 : GreenKernel, psi : Flow).
         apply_kernel(G1, psi) ≠ apply_kernel(G2, psi) → different_universes(G1, G2)
+    
+    // Direction 2: universes are different → there exists a witnessing flow
+    // (This is the key axiom for deriving universe_distinguishable)
+    axiom different_universes_elim: ∀(G1 G2 : GreenKernel).
+        different_universes(G1, G2) → ∃(psi : Flow). 
+            apply_kernel(G1, psi) ≠ apply_kernel(G2, psi)
 }
 
 // =============================================================================
-// 12. POT SANITY THEOREMS
+// 12. POT CORE AXIOMS (minimal set)
 // =============================================================================
 
-structure POTSanityTheorems {
-    // THEOREM 1: Equivalence preserves all channel residues
-    // v0.94: Direct function call with 3 args
+structure POTCoreAxioms {
+    // AXIOM 1: Equivalence preserves all channel residues
     axiom equiv_preserves_residue: ∀(psi1 psi2 : Flow, e : Event, c : Channel).
         equiv(psi1, psi2) → 
             residue(project(psi1), e, c) = residue(project(psi2), e, c)
     
-    // THEOREM 2: Fields distinguishable by residues (EXISTENTIAL separation)
+    // AXIOM 2: Fields distinguishable by residues (EXISTENTIAL separation)
     // If fields differ, there EXISTS some (event, channel) that detects it
-    // (ChatGPT fix: was incorrectly universal over e, c)
+    // This is the minimal separation principle.
     axiom field_distinguishable: ∀(f1 f2 : FieldR4).
         f1 ≠ f2 → ∃(e : Event, c : Channel). residue(f1, e, c) ≠ residue(f2, e, c)
     
-    // THEOREM 3: Different universes → different observables
-    // Key POT result: different kernels produce distinguishable physics
-    // (Uses helper: apply_kernel(G, psi) since no dot notation)
-    axiom universe_distinguishable: ∀(G1 G2 : GreenKernel).
-        different_universes(G1, G2) →
-            ∃(psi : Flow, e : Event, c : Channel).
-                residue(apply_kernel(G1, psi), e, c) ≠ 
-                residue(apply_kernel(G2, psi), e, c)
+    // NOTE: universe_distinguishable is now a DERIVED THEOREM, not an axiom!
+    // It follows from: different_universes_elim + field_distinguishable
+    // See example block "universe distinguishable theorem" below.
 }
 
 // =============================================================================
@@ -261,4 +262,28 @@ example "metric probe symmetry (v0.94: 3-arg call)" {
     // v0.94: metric_probe(field, u, v) - no wrapper!
     assert(∀(f : FieldR4, u v : Vector(4, ℝ)).
         metric_probe(f, u, v) = metric_probe(f, v, u))
+}
+
+// =============================================================================
+// DERIVED THEOREM: Universe Distinguishability
+// =============================================================================
+// 
+// This is NOT an axiom - it follows from:
+//   1. different_universes_elim: different_universes(G1,G2) → ∃psi. apply_kernel differs
+//   2. field_distinguishable: f1 ≠ f2 → ∃(e,c). residue differs
+//
+// Proof sketch:
+//   - From different_universes(G1,G2), get witness psi via (1)
+//   - Let f1 = apply_kernel(G1,psi), f2 = apply_kernel(G2,psi), with f1 ≠ f2
+//   - Apply (2) to get (e,c) such that residue(f1,e,c) ≠ residue(f2,e,c)
+//   - Done: we have (psi, e, c) witnessing the observable difference
+
+example "universe distinguishable theorem (derived)" {
+    // Key POT result: different kernels produce distinguishable physics
+    // This follows from different_universes_elim + field_distinguishable
+    assert(∀(G1 G2 : GreenKernel).
+        different_universes(G1, G2) →
+            ∃(psi : Flow, e : Event, c : Channel).
+                residue(apply_kernel(G1, psi), e, c) ≠ 
+                residue(apply_kernel(G2, psi), e, c))
 }
