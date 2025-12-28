@@ -69,6 +69,9 @@ structure ChannelUnits {
 // ============================================================================
 
 structure ResidueDimensionality {
+    // Raw residue function (returns scalar value)
+    operation residue : FieldR4 × Event × Channel → ℝ
+    
     // Unit-aware wrapper for residue
     operation residue_q : FieldR4 × Event × Channel → Quantity4
 

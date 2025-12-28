@@ -722,6 +722,119 @@ Parser extensions have immediate value when axioms are verifiable!
 
 ---
 
+## Enhanced Registry Integration (December 27, 2025)
+
+### Context
+
+The `StructureRegistry` now stores:
+- **Structures and operations** (already used by Z3)
+- **Implements blocks** (for implementation verification)
+- **Data types (ADTs)** (e.g., `data Channel = Mass | EM | Spin | Color`)
+- **Type aliases** (e.g., `type FieldR4 = ℂ → Event → ℂ`)
+
+**Current gap:** Z3 backend only queries structure operations. Data types and type aliases 
+are loaded into registry but not leveraged by Z3 for enhanced reasoning.
+
+### Benefits of Z3 Using `data_types` from Registry
+
+1. **Automatic Z3 ADT Declaration**
+   - Kleis: `data Channel = Mass | EM | Spin | Color`
+   - Z3 automatically creates corresponding ADT with constructors and recognizers
+   - No manual Z3 datatype definition needed
+
+2. **Constructor Distinctness (Free!)**
+   - Z3 ADTs automatically enforce: `Mass ≠ EM ≠ Spin ≠ Color`
+   - Critical for proving channel-specific properties
+   - Currently requires manual axioms; with registry integration, it's automatic
+
+3. **Exhaustiveness Checking**
+   - Z3 can verify pattern matching is exhaustive
+   - If axiom says "for all channels", Z3 knows exactly which channels exist
+
+4. **Accessor Functions for Fields**
+   - `data Result(T, E) = Ok(value: T) | Err(error: E)`
+   - Z3 generates: `Ok_value(r)`, `Err_error(r)` accessor functions
+   - Enables reasoning about contents of sum types
+
+5. **Inductive Reasoning**
+   - For recursive types: `data List(T) = Nil | Cons(head: T, tail: List(T))`
+   - Z3 can use datatype induction for proofs
+   - Enables proving properties about all lists, trees, etc.
+
+6. **No Hardcoding**
+   - User-defined data types get first-class Z3 support
+   - No Rust code changes needed to support new ADTs
+   - Follows ADR-015 (Text as Source of Truth)
+
+### Benefits of Z3 Using `type_aliases` from Registry
+
+1. **Sort Resolution**
+   - `type FieldR4 = ℂ → Event → ℂ`
+   - Z3 resolves `FieldR4` to the underlying function sort
+   - Consistent typing across all axioms using the alias
+
+2. **Semantic Type Names**
+   - Write axioms using domain-meaningful names: `f : FieldR4`
+   - Z3 understands this is `Complex → Event → Complex` under the hood
+   - Better error messages and debugging
+
+3. **Parameterized Alias Resolution**
+   - `type Matrix(m, n) = Array(m, Array(n, ℝ))`
+   - Z3 can resolve parameterized aliases to concrete sorts
+   - Enables generic matrix reasoning
+
+4. **Consistency**
+   - Same alias resolves the same way everywhere
+   - Prevents sort mismatches between different parts of verification
+
+### Implementation Plan
+
+**Phase 1: Data Types → Z3 ADTs**
+```rust
+// When Z3Backend encounters a data type from registry:
+fn declare_data_type(&mut self, data_def: &DataDef) {
+    // Create Z3 datatype
+    let sort = DatatypeSort::new(&self.ctx, &data_def.name);
+    for variant in &data_def.variants {
+        // Add constructors with fields
+        sort.add_variant(&variant.name, variant.fields...);
+    }
+    self.data_sorts.insert(data_def.name.clone(), sort);
+}
+```
+
+**Phase 2: Type Alias Resolution**
+```rust
+// When translating types, resolve aliases first:
+fn type_expr_to_sort(&self, ty: &TypeExpr) -> Sort {
+    // Check if it's an alias
+    if let Some((params, underlying)) = self.registry.get_type_alias(&ty.name) {
+        // Substitute params and recurse
+        let resolved = substitute_params(underlying, params, ty.args);
+        return self.type_expr_to_sort(&resolved);
+    }
+    // ... existing logic
+}
+```
+
+**Phase 3: Implements Block Verification**
+- Verify that `implements` blocks satisfy structure axioms
+- Use Z3 to check implementation consistency
+
+### Impact Assessment
+
+| Feature | Current | With Registry Integration |
+|---------|---------|---------------------------|
+| Data types | Manual axioms for distinctness | Automatic ADT support |
+| Type aliases | Not resolved | Automatic resolution |
+| Constructor patterns | Limited symbolic support | Full ADT pattern matching |
+| Exhaustiveness | Manual | Automatic Z3 checking |
+| New user types | Requires code changes | Just add `.kleis` file |
+
+**This is a major enhancement to Kleis's verification capabilities!**
+
+---
+
 ## Status: Implemented ✅
 
 - Implementation complete: December 10, 2025

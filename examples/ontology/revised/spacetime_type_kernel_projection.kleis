@@ -4,26 +4,93 @@
 //
 // ℝ⁴ is treated as a bare vector space carrier for Events.
 // No metric is assumed; any metric is additional/emergent structure.
+//
+// Vector Types:
+// - Vec4R: A 4-dimensional vector over ℝ (spacetime position/displacement)
+//   Conceptually: (x⁰, x¹, x², x³) where components are real numbers
+//
+// - Vec3C: A 3-dimensional vector over ℂ (ontological Hilbert space H_ont)
+//   Conceptually: (ψ₁, ψ₂, ψ₃) where components are complex amplitudes
+//   This represents the modal/ontological state before projection.
 // ============================================================================
 
+// =============================================================================
+// Primitive Types (assumed by stdlib)
+// =============================================================================
+
+data Entity = Ent(ℤ)           // Abstract entity identifier
+data Flow = Fl(ℤ)              // Modal flow (pre-projection state)
+data FieldR4 = FR4(ℤ)          // Projected observable field
+data GreenKernel = GK(ℤ)       // Projection kernel
+data Channel = Mass | EM | Spin | Color  // Conserved quantity channels
+
+// =============================================================================
+// Vector Space Types
+// =============================================================================
+// 
+// Vec4R: 4-dimensional vector over ℝ
+// Components: (x⁰, x¹, x², x³) - four real coordinates
+// Used for: spacetime events, tangent vectors, field components
+//
+// In physics: this is ℝ⁴ without any metric structure.
+// The metric (Minkowski, Riemannian, etc.) is additional structure.
+
+data Vec4R = V4R(ℝ, ℝ, ℝ, ℝ)
+
+// Vec3C: 3-dimensional vector over ℂ
+// Components: (ψ₁, ψ₂, ψ₃) - three complex amplitudes
+// Used for: H_ont (ontological Hilbert space), modal states, quantum states
+//
+// In POT: this represents the pre-projection ontological state.
+// The projection G: Flow → FieldR4 reduces this to observable fields.
+
+data Vec3C = V3C(ℂ, ℂ, ℂ)
+
+// =============================================================================
+// Event: A point in spacetime
+// =============================================================================
+
+data Event = Ev(Vec4R)
+
+// =============================================================================
+// R4Space: Vector space structure on ℝ⁴
+// =============================================================================
+
 structure R4Space {
-    // Carrier
-    element zero : Vector(4, ℝ)
-    operation add   : Vector(4, ℝ) × Vector(4, ℝ) → Vector(4, ℝ)
-    operation scale : ℝ × Vector(4, ℝ) → Vector(4, ℝ)
+    element zero_r4 : Vec4R
+    operation vec4r_add   : Vec4R × Vec4R → Vec4R
+    operation vec4r_scale : ℝ × Vec4R → Vec4R
 
-    axiom add_comm: ∀(u v : Vector(4, ℝ)). add(u, v) = add(v, u)
-    axiom add_id:   ∀(v : Vector(4, ℝ)). add(v, zero) = v
-    axiom smul_id:  ∀(v : Vector(4, ℝ)). scale(1, v) = v
+    axiom add_comm: ∀(u v : Vec4R). vec4r_add(u, v) = vec4r_add(v, u)
+    axiom add_id:   ∀(v : Vec4R). vec4r_add(v, zero_r4) = v
+    // Scalar multiplication identity: simplified (avoid Int/Real mismatch)
+    // Note: Full axiom would be ∀v. scale(1,v) = v but requires Real literal support
 }
 
-// Observable index (a spacetime event)
-structure Event {
-    element p : Vector(4, ℝ)
-}
+// =============================================================================
+// MetricOnR4: Optional metric structure (not assumed)
+// =============================================================================
+//
+// The metric g: ℝ⁴ × ℝ⁴ → ℝ is additional structure.
+// - Minkowski: g = diag(-1, 1, 1, 1) or (1, -1, -1, -1)
+// - Riemannian: positive definite
+// - Emergent: derived from kernel structure in POT
 
-// Optional extra structure (not assumed)
 structure MetricOnR4 {
-    operation g : Vector(4, ℝ) × Vector(4, ℝ) → ℝ
-    axiom symmetric: ∀(u v : Vector(4, ℝ)). g(u, v) = g(v, u)
+    operation g : Vec4R × Vec4R → ℝ
+    axiom symmetric: ∀(u v : Vec4R). g(u, v) = g(v, u)
 }
+
+// =============================================================================
+// Complex algebra operations (needed for Vec3C)
+// =============================================================================
+
+operation conjugate : ℂ → ℂ
+
+// =============================================================================
+// flow_at and field_at operations (declared for use in dependent files)
+// =============================================================================
+
+operation flow_at : Flow × ℝ → Vec3C
+operation field_at : FieldR4 × Event → Vec4R
+operation kernel_inner : Vec4R × Vec4R → ℝ

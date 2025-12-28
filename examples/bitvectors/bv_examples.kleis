@@ -1,0 +1,266 @@
+// Bitvector Theory - Examples
+// ============================
+// Test examples for bitvector theory axioms.
+// These use Z3's decidable QF_BV theory.
+
+import "bv_axioms.kleis"
+
+// ============================================
+// Examples: Bitwise Logic
+// ============================================
+
+example "AND is commutative" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8). bvand(a, b) = bvand(b, a))
+}
+
+example "OR is commutative" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8). bvor(a, b) = bvor(b, a))
+}
+
+example "XOR is commutative" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8). bvxor(a, b) = bvxor(b, a))
+}
+
+example "AND is associative" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8). ∀(c : BitVec8).
+           bvand(bvand(a, b), c) = bvand(a, bvand(b, c)))
+}
+
+example "OR is associative" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8). ∀(c : BitVec8).
+           bvor(bvor(a, b), c) = bvor(a, bvor(b, c)))
+}
+
+example "AND is idempotent" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). bvand(a, a) = a)
+}
+
+example "OR is idempotent" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). bvor(a, a) = a)
+}
+
+example "XOR self is zero" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). bvxor(a, a) = bv_zero)
+}
+
+example "double NOT is identity" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). bvnot(bvnot(a)) = a)
+}
+
+example "De Morgan AND" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8).
+           bvnot(bvand(a, b)) = bvor(bvnot(a), bvnot(b)))
+}
+
+example "De Morgan OR" {
+    uses BitwiseLogic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8).
+           bvnot(bvor(a, b)) = bvand(bvnot(a), bvnot(b)))
+}
+
+// ============================================
+// Examples: Arithmetic
+// ============================================
+
+example "ADD is commutative" {
+    uses BitvectorArithmetic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8). bvadd(a, b) = bvadd(b, a))
+}
+
+example "ADD is associative" {
+    uses BitvectorArithmetic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8). ∀(c : BitVec8).
+           bvadd(bvadd(a, b), c) = bvadd(a, bvadd(b, c)))
+}
+
+example "zero is additive identity" {
+    uses BitvectorArithmetic
+    
+    assert(∀(a : BitVec8). bvadd(a, bv_zero) = a)
+}
+
+example "additive inverse" {
+    uses BitvectorArithmetic
+    
+    assert(∀(a : BitVec8). bvadd(a, bvneg(a)) = bv_zero)
+}
+
+example "subtraction as addition of negation" {
+    uses BitvectorArithmetic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8). bvsub(a, b) = bvadd(a, bvneg(b)))
+}
+
+example "MUL is commutative" {
+    uses BitvectorArithmetic
+    
+    assert(∀(a : BitVec8). ∀(b : BitVec8). bvmul(a, b) = bvmul(b, a))
+}
+
+example "zero is multiplicative annihilator" {
+    uses BitvectorArithmetic
+    
+    assert(∀(a : BitVec8). bvmul(a, bv_zero) = bv_zero)
+}
+
+example "double negation" {
+    uses BitvectorArithmetic
+    
+    assert(∀(a : BitVec8). bvneg(bvneg(a)) = a)
+}
+
+example "negation of zero" {
+    uses BitvectorArithmetic
+    
+    assert(bvneg(bv_zero) = bv_zero)
+}
+
+// ============================================
+// Examples: Zero and Ones
+// ============================================
+
+example "AND with zero is zero" {
+    uses BitvectorZeroOnes
+    
+    assert(∀(a : BitVec8). bvand(a, bv_zero) = bv_zero)
+}
+
+example "AND with ones is identity" {
+    uses BitvectorZeroOnes
+    
+    assert(∀(a : BitVec8). bvand(a, bv_ones) = a)
+}
+
+example "OR with zero is identity" {
+    uses BitvectorZeroOnes
+    
+    assert(∀(a : BitVec8). bvor(a, bv_zero) = a)
+}
+
+example "OR with ones is ones" {
+    uses BitvectorZeroOnes
+    
+    assert(∀(a : BitVec8). bvor(a, bv_ones) = bv_ones)
+}
+
+example "XOR with zero is identity" {
+    uses BitvectorZeroOnes
+    
+    assert(∀(a : BitVec8). bvxor(a, bv_zero) = a)
+}
+
+example "XOR with ones is NOT" {
+    uses BitvectorZeroOnes
+    
+    assert(∀(a : BitVec8). bvxor(a, bv_ones) = bvnot(a))
+}
+
+example "NOT of zero is ones" {
+    uses BitvectorZeroOnes
+    
+    assert(bvnot(bv_zero) = bv_ones)
+}
+
+example "NOT of ones is zero" {
+    uses BitvectorZeroOnes
+    
+    assert(bvnot(bv_ones) = bv_zero)
+}
+
+// ============================================
+// Examples: Comparisons
+// ============================================
+
+example "unsigned less-or-equal is reflexive" {
+    uses BitvectorComparisons
+    
+    assert(∀(a : BitVec8). bvule(a, a))
+}
+
+example "unsigned less-than is irreflexive" {
+    uses BitvectorComparisons
+    
+    assert(∀(a : BitVec8). ¬bvult(a, a))
+}
+
+example "signed less-or-equal is reflexive" {
+    uses BitvectorComparisons
+    
+    assert(∀(a : BitVec8). bvsle(a, a))
+}
+
+example "signed less-than is irreflexive" {
+    uses BitvectorComparisons
+    
+    assert(∀(a : BitVec8). ¬bvslt(a, a))
+}
+
+example "zero is unsigned minimum" {
+    uses BitvectorComparisons
+    
+    assert(∀(a : BitVec8). bvule(bv_zero, a))
+}
+
+example "ones is unsigned maximum" {
+    uses BitvectorComparisons
+    
+    assert(∀(a : BitVec8). bvule(a, bv_ones))
+}
+
+// ============================================
+// Examples: Shifts
+// ============================================
+
+example "shift left by zero is identity" {
+    uses BitvectorShifts
+    
+    assert(∀(a : BitVec8). bvshl(a, bv_zero) = a)
+}
+
+example "logical shift right by zero is identity" {
+    uses BitvectorShifts
+    
+    assert(∀(a : BitVec8). bvlshr(a, bv_zero) = a)
+}
+
+example "arithmetic shift right by zero is identity" {
+    uses BitvectorShifts
+    
+    assert(∀(a : BitVec8). bvashr(a, bv_zero) = a)
+}
+
+example "shift left of zero is zero" {
+    uses BitvectorShifts
+    
+    assert(∀(n : BitVec8). bvshl(bv_zero, n) = bv_zero)
+}
+
+example "logical shift right of zero is zero" {
+    uses BitvectorShifts
+    
+    assert(∀(n : BitVec8). bvlshr(bv_zero, n) = bv_zero)
+}
+

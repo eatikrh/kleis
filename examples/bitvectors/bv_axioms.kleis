@@ -1,0 +1,213 @@
+// Bitvector Theory - Axioms
+// ==========================
+// Core axioms of bitvector theory using Z3's built-in QF_BV.
+// These axioms express properties of fixed-width binary arithmetic.
+
+import "bv_types.kleis"
+
+// ============================================
+// Structure: BitwiseLogic
+// Axioms for bitwise AND, OR, XOR, NOT
+// ============================================
+
+structure BitwiseLogic {
+    // AND is commutative
+    axiom and_commutative:
+        ∀(a : BitVec8). ∀(b : BitVec8). bvand(a, b) = bvand(b, a)
+    
+    // OR is commutative
+    axiom or_commutative:
+        ∀(a : BitVec8). ∀(b : BitVec8). bvor(a, b) = bvor(b, a)
+    
+    // XOR is commutative
+    axiom xor_commutative:
+        ∀(a : BitVec8). ∀(b : BitVec8). bvxor(a, b) = bvxor(b, a)
+    
+    // AND is associative
+    axiom and_associative:
+        ∀(a : BitVec8). ∀(b : BitVec8). ∀(c : BitVec8).
+            bvand(bvand(a, b), c) = bvand(a, bvand(b, c))
+    
+    // OR is associative
+    axiom or_associative:
+        ∀(a : BitVec8). ∀(b : BitVec8). ∀(c : BitVec8).
+            bvor(bvor(a, b), c) = bvor(a, bvor(b, c))
+    
+    // XOR is associative
+    axiom xor_associative:
+        ∀(a : BitVec8). ∀(b : BitVec8). ∀(c : BitVec8).
+            bvxor(bvxor(a, b), c) = bvxor(a, bvxor(b, c))
+    
+    // AND is idempotent: a & a = a
+    axiom and_idempotent:
+        ∀(a : BitVec8). bvand(a, a) = a
+    
+    // OR is idempotent: a | a = a
+    axiom or_idempotent:
+        ∀(a : BitVec8). bvor(a, a) = a
+    
+    // XOR self is zero: a ^ a = 0
+    axiom xor_self_zero:
+        ∀(a : BitVec8). bvxor(a, a) = bv_zero
+    
+    // Double negation: ~~a = a
+    axiom double_not:
+        ∀(a : BitVec8). bvnot(bvnot(a)) = a
+    
+    // De Morgan's law: ~(a & b) = ~a | ~b
+    axiom de_morgan_and:
+        ∀(a : BitVec8). ∀(b : BitVec8).
+            bvnot(bvand(a, b)) = bvor(bvnot(a), bvnot(b))
+    
+    // De Morgan's law: ~(a | b) = ~a & ~b
+    axiom de_morgan_or:
+        ∀(a : BitVec8). ∀(b : BitVec8).
+            bvnot(bvor(a, b)) = bvand(bvnot(a), bvnot(b))
+}
+
+// ============================================
+// Structure: BitvectorArithmetic
+// Axioms for modular arithmetic
+// ============================================
+
+structure BitvectorArithmetic {
+    // Addition is commutative
+    axiom add_commutative:
+        ∀(a : BitVec8). ∀(b : BitVec8). bvadd(a, b) = bvadd(b, a)
+    
+    // Addition is associative
+    axiom add_associative:
+        ∀(a : BitVec8). ∀(b : BitVec8). ∀(c : BitVec8).
+            bvadd(bvadd(a, b), c) = bvadd(a, bvadd(b, c))
+    
+    // Zero is additive identity
+    axiom add_zero_identity:
+        ∀(a : BitVec8). bvadd(a, bv_zero) = a
+    
+    // Additive inverse: a + (-a) = 0
+    axiom add_neg_inverse:
+        ∀(a : BitVec8). bvadd(a, bvneg(a)) = bv_zero
+    
+    // Subtraction definition: a - b = a + (-b)
+    axiom sub_definition:
+        ∀(a : BitVec8). ∀(b : BitVec8). bvsub(a, b) = bvadd(a, bvneg(b))
+    
+    // Multiplication is commutative
+    axiom mul_commutative:
+        ∀(a : BitVec8). ∀(b : BitVec8). bvmul(a, b) = bvmul(b, a)
+    
+    // Multiplication is associative
+    axiom mul_associative:
+        ∀(a : BitVec8). ∀(b : BitVec8). ∀(c : BitVec8).
+            bvmul(bvmul(a, b), c) = bvmul(a, bvmul(b, c))
+    
+    // Zero is multiplicative annihilator
+    axiom mul_zero_annihilator:
+        ∀(a : BitVec8). bvmul(a, bv_zero) = bv_zero
+    
+    // Double negation: -(-a) = a
+    axiom double_neg:
+        ∀(a : BitVec8). bvneg(bvneg(a)) = a
+    
+    // Negation of zero: -0 = 0
+    axiom neg_zero:
+        bvneg(bv_zero) = bv_zero
+}
+
+// ============================================
+// Structure: BitvectorZeroOnes
+// Axioms about zero and all-ones constants
+// ============================================
+
+structure BitvectorZeroOnes {
+    // AND with zero is zero
+    axiom and_zero:
+        ∀(a : BitVec8). bvand(a, bv_zero) = bv_zero
+    
+    // AND with all-ones is identity
+    axiom and_ones_identity:
+        ∀(a : BitVec8). bvand(a, bv_ones) = a
+    
+    // OR with zero is identity
+    axiom or_zero_identity:
+        ∀(a : BitVec8). bvor(a, bv_zero) = a
+    
+    // OR with all-ones is all-ones
+    axiom or_ones:
+        ∀(a : BitVec8). bvor(a, bv_ones) = bv_ones
+    
+    // XOR with zero is identity
+    axiom xor_zero_identity:
+        ∀(a : BitVec8). bvxor(a, bv_zero) = a
+    
+    // XOR with all-ones is NOT
+    axiom xor_ones_is_not:
+        ∀(a : BitVec8). bvxor(a, bv_ones) = bvnot(a)
+    
+    // NOT of zero is all-ones
+    axiom not_zero:
+        bvnot(bv_zero) = bv_ones
+    
+    // NOT of all-ones is zero
+    axiom not_ones:
+        bvnot(bv_ones) = bv_zero
+}
+
+// ============================================
+// Structure: BitvectorComparisons
+// Axioms for comparison operations
+// ============================================
+
+structure BitvectorComparisons {
+    // Less-or-equal is reflexive
+    axiom ule_reflexive:
+        ∀(a : BitVec8). bvule(a, a)
+    
+    // Less-than is irreflexive
+    axiom ult_irreflexive:
+        ∀(a : BitVec8). ¬bvult(a, a)
+    
+    // Signed less-or-equal is reflexive
+    axiom sle_reflexive:
+        ∀(a : BitVec8). bvsle(a, a)
+    
+    // Signed less-than is irreflexive
+    axiom slt_irreflexive:
+        ∀(a : BitVec8). ¬bvslt(a, a)
+    
+    // Zero is minimum (unsigned)
+    axiom zero_minimum_unsigned:
+        ∀(a : BitVec8). bvule(bv_zero, a)
+    
+    // All-ones is maximum (unsigned)
+    axiom ones_maximum_unsigned:
+        ∀(a : BitVec8). bvule(a, bv_ones)
+}
+
+// ============================================
+// Structure: BitvectorShifts
+// Axioms for shift operations
+// ============================================
+
+structure BitvectorShifts {
+    // Shift left by zero is identity
+    axiom shl_zero:
+        ∀(a : BitVec8). bvshl(a, bv_zero) = a
+    
+    // Logical shift right by zero is identity
+    axiom lshr_zero:
+        ∀(a : BitVec8). bvlshr(a, bv_zero) = a
+    
+    // Arithmetic shift right by zero is identity
+    axiom ashr_zero:
+        ∀(a : BitVec8). bvashr(a, bv_zero) = a
+    
+    // Shift left of zero is zero
+    axiom shl_of_zero:
+        ∀(n : BitVec8). bvshl(bv_zero, n) = bv_zero
+    
+    // Logical shift right of zero is zero
+    axiom lshr_of_zero:
+        ∀(n : BitVec8). bvlshr(bv_zero, n) = bv_zero
+}
+

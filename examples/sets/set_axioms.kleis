@@ -1,0 +1,162 @@
+// Set Theory - Axioms
+// ====================
+// Core axioms of set theory using Z3's built-in set operations.
+// These are decidable because Z3's set theory is based on arrays.
+
+import "set_types.kleis"
+
+// ============================================
+// Structure: SetMembership
+// Basic axioms about membership and empty set
+// ============================================
+
+structure SetMembership {
+    // Empty set has no members
+    axiom empty_has_no_members:
+        ∀(x : ℤ). ¬member(x, empty_set)
+    
+    // Singleton contains exactly its element
+    axiom singleton_membership:
+        ∀(x : ℤ). ∀(y : ℤ). member(y, singleton(x)) ↔ (y = x)
+    
+    // Insert adds element
+    axiom insert_membership:
+        ∀(x : ℤ). ∀(y : ℤ). ∀(S : Set).
+            member(y, insert(x, S)) ↔ (y = x ∨ member(y, S))
+    
+    // Remove removes element
+    axiom remove_membership:
+        ∀(x : ℤ). ∀(y : ℤ). ∀(S : Set).
+            member(y, remove(x, S)) ↔ (y ≠ x ∧ member(y, S))
+}
+
+// ============================================
+// Structure: SetOperations
+// Axioms for union, intersection, difference
+// ============================================
+
+structure SetOperations {
+    // Union membership: x ∈ (A ∪ B) ↔ (x ∈ A ∨ x ∈ B)
+    axiom union_membership:
+        ∀(x : ℤ). ∀(A : Set). ∀(B : Set).
+            member(x, union(A, B)) ↔ (member(x, A) ∨ member(x, B))
+    
+    // Intersection membership: x ∈ (A ∩ B) ↔ (x ∈ A ∧ x ∈ B)
+    axiom intersect_membership:
+        ∀(x : ℤ). ∀(A : Set). ∀(B : Set).
+            member(x, intersect(A, B)) ↔ (member(x, A) ∧ member(x, B))
+    
+    // Difference membership: x ∈ (A \ B) ↔ (x ∈ A ∧ x ∉ B)
+    axiom difference_membership:
+        ∀(x : ℤ). ∀(A : Set). ∀(B : Set).
+            member(x, difference(A, B)) ↔ (member(x, A) ∧ ¬member(x, B))
+    
+    // Complement membership: x ∈ Aᶜ ↔ x ∉ A
+    axiom complement_membership:
+        ∀(x : ℤ). ∀(A : Set).
+            member(x, complement(A)) ↔ ¬member(x, A)
+}
+
+// ============================================
+// Structure: SetAlgebraLaws
+// Algebraic properties of set operations
+// ============================================
+
+structure SetAlgebraLaws {
+    // Union is commutative: A ∪ B = B ∪ A
+    axiom union_commutative:
+        ∀(A : Set). ∀(B : Set). ∀(x : ℤ).
+            member(x, union(A, B)) ↔ member(x, union(B, A))
+    
+    // Union is associative: (A ∪ B) ∪ C = A ∪ (B ∪ C)
+    axiom union_associative:
+        ∀(A : Set). ∀(B : Set). ∀(C : Set). ∀(x : ℤ).
+            member(x, union(union(A, B), C)) ↔ member(x, union(A, union(B, C)))
+    
+    // Intersection is commutative: A ∩ B = B ∩ A
+    axiom intersect_commutative:
+        ∀(A : Set). ∀(B : Set). ∀(x : ℤ).
+            member(x, intersect(A, B)) ↔ member(x, intersect(B, A))
+    
+    // Intersection is associative: (A ∩ B) ∩ C = A ∩ (B ∩ C)
+    axiom intersect_associative:
+        ∀(A : Set). ∀(B : Set). ∀(C : Set). ∀(x : ℤ).
+            member(x, intersect(intersect(A, B), C)) ↔ member(x, intersect(A, intersect(B, C)))
+    
+    // Empty set is union identity: A ∪ ∅ = A
+    axiom union_empty_identity:
+        ∀(A : Set). ∀(x : ℤ).
+            member(x, union(A, empty_set)) ↔ member(x, A)
+    
+    // Empty set is intersection annihilator: A ∩ ∅ = ∅
+    axiom intersect_empty_annihilator:
+        ∀(A : Set). ∀(x : ℤ).
+            ¬member(x, intersect(A, empty_set))
+    
+    // Union is idempotent: A ∪ A = A
+    axiom union_idempotent:
+        ∀(A : Set). ∀(x : ℤ).
+            member(x, union(A, A)) ↔ member(x, A)
+    
+    // Intersection is idempotent: A ∩ A = A
+    axiom intersect_idempotent:
+        ∀(A : Set). ∀(x : ℤ).
+            member(x, intersect(A, A)) ↔ member(x, A)
+    
+    // Distributivity: A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩ C)
+    axiom intersect_distributes_over_union:
+        ∀(A : Set). ∀(B : Set). ∀(C : Set). ∀(x : ℤ).
+            member(x, intersect(A, union(B, C))) ↔ 
+            member(x, union(intersect(A, B), intersect(A, C)))
+    
+    // De Morgan's law: (A ∪ B)ᶜ = Aᶜ ∩ Bᶜ
+    axiom de_morgan_union:
+        ∀(A : Set). ∀(B : Set). ∀(x : ℤ).
+            member(x, complement(union(A, B))) ↔ 
+            member(x, intersect(complement(A), complement(B)))
+    
+    // De Morgan's law: (A ∩ B)ᶜ = Aᶜ ∪ Bᶜ
+    axiom de_morgan_intersect:
+        ∀(A : Set). ∀(B : Set). ∀(x : ℤ).
+            member(x, complement(intersect(A, B))) ↔ 
+            member(x, union(complement(A), complement(B)))
+    
+    // Double complement: (Aᶜ)ᶜ = A
+    axiom double_complement:
+        ∀(A : Set). ∀(x : ℤ).
+            member(x, complement(complement(A))) ↔ member(x, A)
+}
+
+// ============================================
+// Structure: SubsetRelation
+// Properties of the subset relation
+// ============================================
+
+structure SubsetRelation {
+    // Subset definition: A ⊆ B ↔ ∀x. (x ∈ A → x ∈ B)
+    axiom subset_definition:
+        ∀(A : Set). ∀(B : Set).
+            subset(A, B) ↔ (∀(x : ℤ). member(x, A) → member(x, B))
+    
+    // Subset is reflexive: A ⊆ A
+    axiom subset_reflexive:
+        ∀(A : Set). subset(A, A)
+    
+    // Subset is transitive: A ⊆ B ∧ B ⊆ C → A ⊆ C
+    axiom subset_transitive:
+        ∀(A : Set). ∀(B : Set). ∀(C : Set).
+            (subset(A, B) ∧ subset(B, C)) → subset(A, C)
+    
+    // Empty set is subset of everything: ∅ ⊆ A
+    axiom empty_subset_all:
+        ∀(A : Set). subset(empty_set, A)
+    
+    // A ⊆ A ∪ B
+    axiom subset_union_left:
+        ∀(A : Set). ∀(B : Set). subset(A, union(A, B))
+    
+    // A ∩ B ⊆ A
+    axiom intersect_subset_left:
+        ∀(A : Set). ∀(B : Set). subset(intersect(A, B), A)
+}
+

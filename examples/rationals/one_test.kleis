@@ -1,0 +1,5 @@
+import "rational_field_axioms.kleis"
+
+example "one is unique identity" {
+    assert(∀(u : ℚ). (∀(a : ℚ). rat_mul(a, u) = a) → u = one)
+}

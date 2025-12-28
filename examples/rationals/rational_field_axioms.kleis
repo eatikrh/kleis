@@ -1,0 +1,121 @@
+// ============================================================================
+// Rational Number Field Axioms
+// ============================================================================
+//
+// The rationals ℚ form a FIELD - the prototypical example of a field.
+// A field satisfies:
+//   1. (ℚ, +) is an abelian group with identity 0
+//   2. (ℚ \ {0}, ×) is an abelian group with identity 1
+//   3. Multiplication distributes over addition
+//
+// This file imports types and defines the field axioms.
+// ============================================================================
+
+import "rational_types.kleis"
+
+// ============================================================================
+// Additive Structure: (ℚ, +, 0) is an abelian group
+// ============================================================================
+
+structure RationalAdditiveGroup {
+    element zero : ℚ
+
+    // Commutativity: a + b = b + a
+    axiom add_comm: ∀(a b : ℚ). rat_add(a, b) = rat_add(b, a)
+
+    // Associativity: (a + b) + c = a + (b + c)
+    axiom add_assoc: ∀(a b c : ℚ).
+        rat_add(rat_add(a, b), c) = rat_add(a, rat_add(b, c))
+
+    // Identity: a + 0 = a
+    axiom add_identity: ∀(a : ℚ). rat_add(a, zero) = a
+
+    // Inverse: a + (-a) = 0
+    axiom add_inverse: ∀(a : ℚ). rat_add(a, rat_neg(a)) = zero
+
+    // Subtraction is addition of negative
+    axiom sub_def: ∀(a b : ℚ). rat_sub(a, b) = rat_add(a, rat_neg(b))
+}
+
+// ============================================================================
+// Multiplicative Structure: (ℚ \ {0}, ×, 1) is an abelian group
+// ============================================================================
+
+structure RationalMultiplicativeGroup {
+    element one : ℚ
+
+    // Commutativity: a × b = b × a
+    axiom mul_comm: ∀(a b : ℚ). rat_mul(a, b) = rat_mul(b, a)
+
+    // Associativity: (a × b) × c = a × (b × c)
+    axiom mul_assoc: ∀(a b c : ℚ).
+        rat_mul(rat_mul(a, b), c) = rat_mul(a, rat_mul(b, c))
+
+    // Identity: a × 1 = a
+    axiom mul_identity: ∀(a : ℚ). rat_mul(a, one) = a
+
+    // Inverse (for non-zero): a × (1/a) = 1
+    // Note: This requires a ≠ 0 precondition
+    axiom mul_inverse: ∀(a : ℚ). a ≠ zero → rat_mul(a, rat_inv(a)) = one
+
+    // Division is multiplication by inverse
+    axiom div_def: ∀(a b : ℚ). b ≠ zero → rat_div(a, b) = rat_mul(a, rat_inv(b))
+}
+
+// ============================================================================
+// Field Axioms: Combining additive and multiplicative structures
+// ============================================================================
+
+structure RationalField {
+    // Distributivity: a × (b + c) = (a × b) + (a × c)
+    axiom left_distrib: ∀(a b c : ℚ).
+        rat_mul(a, rat_add(b, c)) = rat_add(rat_mul(a, b), rat_mul(a, c))
+
+    // Right distributivity (derivable from left + commutativity, but stated explicitly)
+    axiom right_distrib: ∀(a b c : ℚ).
+        rat_mul(rat_add(a, b), c) = rat_add(rat_mul(a, c), rat_mul(b, c))
+
+    // Multiplication by zero
+    axiom mul_zero: ∀(a : ℚ). rat_mul(a, zero) = zero
+
+    // Negation properties
+    axiom neg_neg: ∀(a : ℚ). rat_neg(rat_neg(a)) = a
+    axiom neg_mul: ∀(a b : ℚ). rat_neg(rat_mul(a, b)) = rat_mul(rat_neg(a), b)
+
+    // Zero and one are distinct
+    axiom zero_neq_one: zero ≠ one
+}
+
+// ============================================================================
+// Order Axioms: ℚ is an ordered field
+// ============================================================================
+
+structure RationalOrderedField {
+    // Trichotomy: exactly one of a < b, a = b, a > b holds
+    axiom trichotomy: ∀(a b : ℚ).
+        (rat_lt(a, b) ∧ ¬(a = b) ∧ ¬rat_gt(a, b)) ∨
+        (¬rat_lt(a, b) ∧ a = b ∧ ¬rat_gt(a, b)) ∨
+        (¬rat_lt(a, b) ∧ ¬(a = b) ∧ rat_gt(a, b))
+
+    // Transitivity: a < b ∧ b < c → a < c
+    axiom lt_trans: ∀(a b c : ℚ).
+        rat_lt(a, b) ∧ rat_lt(b, c) → rat_lt(a, c)
+
+    // Addition preserves order: a < b → a + c < b + c
+    axiom add_preserves_order: ∀(a b c : ℚ).
+        rat_lt(a, b) → rat_lt(rat_add(a, c), rat_add(b, c))
+
+    // Multiplication by positive preserves order: 0 < c ∧ a < b → a × c < b × c
+    axiom mul_pos_preserves_order: ∀(a b c : ℚ).
+        rat_lt(zero, c) ∧ rat_lt(a, b) → rat_lt(rat_mul(a, c), rat_mul(b, c))
+
+    // Less-than-or-equal definition
+    axiom le_def: ∀(a b : ℚ). rat_le(a, b) = (rat_lt(a, b) ∨ a = b)
+
+    // Greater-than is reverse of less-than
+    axiom gt_def: ∀(a b : ℚ). rat_gt(a, b) = rat_lt(b, a)
+
+    // Greater-than-or-equal definition
+    axiom ge_def: ∀(a b : ℚ). rat_ge(a, b) = rat_le(b, a)
+}
+

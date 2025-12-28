@@ -1,0 +1,157 @@
+// String Theory - Simple Direct Examples
+// =======================================
+// These examples test Z3's built-in string operations directly.
+// No axioms needed - uses Z3's native string theory.
+
+import "string_types.kleis"
+
+structure StringDirect {
+    // Empty structure - no axioms needed for built-in operations
+}
+
+// ============================================
+// Basic String Properties
+// ============================================
+
+example "empty string has zero length" {
+    uses StringDirect
+    
+    assert(strlen(empty_string) = 0)
+}
+
+example "string lengths are non-negative" {
+    uses StringDirect
+    
+    assert(∀(s : String). strlen(s) ≥ 0)
+}
+
+example "concatenation adds lengths" {
+    uses StringDirect
+    
+    assert(∀(s : String). ∀(t : String). strlen(concat(s, t)) = strlen(s) + strlen(t))
+}
+
+example "empty concat left identity" {
+    uses StringDirect
+    
+    assert(∀(s : String). concat(empty_string, s) = s)
+}
+
+example "empty concat right identity" {
+    uses StringDirect
+    
+    assert(∀(s : String). concat(s, empty_string) = s)
+}
+
+example "concat is associative" {
+    uses StringDirect
+    
+    assert(∀(a : String). ∀(b : String). ∀(c : String).
+           concat(concat(a, b), c) = concat(a, concat(b, c)))
+}
+
+// ============================================
+// Containment Properties
+// ============================================
+
+example "string contains itself" {
+    uses StringDirect
+    
+    assert(∀(s : String). contains(s, s))
+}
+
+example "string contains empty" {
+    uses StringDirect
+    
+    assert(∀(s : String). contains(s, empty_string))
+}
+
+example "prefix of empty is trivial" {
+    uses StringDirect
+    
+    assert(∀(s : String). hasPrefix(s, empty_string))
+}
+
+example "suffix of empty is trivial" {
+    uses StringDirect
+    
+    assert(∀(s : String). hasSuffix(s, empty_string))
+}
+
+example "string is its own prefix" {
+    uses StringDirect
+    
+    assert(∀(s : String). hasPrefix(s, s))
+}
+
+example "string is its own suffix" {
+    uses StringDirect
+    
+    assert(∀(s : String). hasSuffix(s, s))
+}
+
+// ============================================
+// Substring Properties
+// ============================================
+
+example "zero length substring is empty" {
+    uses StringDirect
+    
+    assert(∀(s : String). ∀(i : ℤ). substr(s, i, 0) = empty_string)
+}
+
+example "full substring equals original" {
+    uses StringDirect
+    
+    assert(∀(s : String). substr(s, 0, strlen(s)) = s)
+}
+
+example "substring length at most requested" {
+    uses StringDirect
+    
+    assert(∀(s : String). ∀(i : ℤ). ∀(n : ℤ).
+           (i ≥ 0 ∧ n ≥ 0) → strlen(substr(s, i, n)) ≤ n)
+}
+
+// ============================================
+// indexOf Properties
+// ============================================
+
+example "indexOf finds string at start" {
+    uses StringDirect
+    
+    assert(∀(s : String). strlen(s) > 0 → indexOf(s, s, 0) = 0)
+}
+
+example "indexOf empty returns start" {
+    uses StringDirect
+    
+    assert(∀(s : String). ∀(i : ℤ). (i ≥ 0 ∧ i ≤ strlen(s)) → indexOf(s, empty_string, i) = i)
+}
+
+// ============================================
+// Conversion Properties
+// ============================================
+
+example "int to string and back" {
+    uses StringDirect
+    
+    assert(∀(n : ℤ). n ≥ 0 → strToInt(intToStr(n)) = n)
+}
+
+// ============================================
+// Implication Tests
+// ============================================
+
+example "prefix implies contains" {
+    uses StringDirect
+    
+    assert(∀(s : String). ∀(p : String). hasPrefix(s, p) → contains(s, p))
+}
+
+example "suffix implies contains" {
+    uses StringDirect
+    
+    assert(∀(s : String). ∀(p : String). hasSuffix(s, p) → contains(s, p))
+}
+

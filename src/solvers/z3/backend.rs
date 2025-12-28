@@ -37,9 +37,7 @@ pub struct Z3Backend<'r> {
     solver: Solver,
 
     /// Structure registry (source of axioms and operations)
-    /// Currently passed through from AxiomVerifier, will be used for
-    /// advanced features (coverage analysis, operation lookup, etc.)
-    #[allow(dead_code)]
+    /// Used for axiom loading, operation lookup, data types, and type aliases
     registry: &'r StructureRegistry,
 
     /// Capability manifest (loaded from capabilities.toml)
@@ -63,6 +61,15 @@ pub struct Z3Backend<'r> {
     /// Complex number datatype for hybrid translation
     /// Enables concrete complex arithmetic: complex(1,2) + complex(3,4) = complex(4,6)
     complex_datatype: Option<ComplexDatatype>,
+
+    /// Registry-loaded data types as Z3 ADTs
+    /// Maps data type name (e.g., "Channel") to its Z3 DatatypeSort
+    /// Enables automatic constructor distinctness and exhaustiveness
+    declared_data_types: HashMap<String, DatatypeSort>,
+
+    /// Warnings collected during translation (e.g., unknown types, duplicate operations)
+    /// These are surfaced when verification fails to help diagnose issues
+    warnings: Vec<String>,
 }
 
 /// Complex number Z3 datatype
@@ -96,6 +103,73 @@ impl ComplexDatatype {
 }
 
 impl<'r> Z3Backend<'r> {
+    /// Helper function to convert a Dynamic to a Set
+    /// Z3's .as_set() may fail on dynamically-created set constants,
+    /// so we use a fallback that checks the sort kind.
+    fn dynamic_to_set(d: &Dynamic) -> Option<z3::ast::Set> {
+        // First try the standard conversion
+        if let Some(s) = d.as_set() {
+            return Some(s);
+        }
+
+        // Fallback: check if the sort is a set sort (Array with Bool range)
+        // and manually construct the Set
+        use z3::SortKind;
+        let sort = d.get_sort();
+        if sort.kind() == SortKind::Array {
+            // Z3 represents sets as Array from element type to Bool
+            // Use unsafe to wrap as Set since we've verified the sort
+            let ctx = &z3::Context::thread_local();
+            unsafe {
+                // The Dynamic has a set sort, so we can wrap it as a Set
+                Some(z3::ast::Set::wrap(ctx, d.get_z3_ast()))
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Helper function to convert a Dynamic to a String
+    /// Z3's .as_string() may fail on dynamically-created string constants,
+    /// so we use a fallback that checks the sort kind.
+    fn dynamic_to_string(d: &Dynamic) -> Option<z3::ast::String> {
+        // First try the standard conversion
+        if let Some(s) = d.as_string() {
+            return Some(s);
+        }
+
+        // Fallback: check if the sort is a string sort
+        use z3::SortKind;
+        let sort = d.get_sort();
+        if sort.kind() == SortKind::Seq {
+            // Z3 String is a sequence sort
+            let ctx = &z3::Context::thread_local();
+            unsafe { Some(z3::ast::String::wrap(ctx, d.get_z3_ast())) }
+        } else {
+            None
+        }
+    }
+
+    /// Helper function to convert a Dynamic to a BV (bitvector)
+    /// Z3's .as_bv() may fail on dynamically-created bitvector constants,
+    /// so we use a fallback that checks the sort kind.
+    fn dynamic_to_bv(d: &Dynamic) -> Option<z3::ast::BV> {
+        // First try the standard conversion
+        if let Some(bv) = d.as_bv() {
+            return Some(bv);
+        }
+
+        // Fallback: check if the sort is a bitvector sort
+        use z3::SortKind;
+        let sort = d.get_sort();
+        if sort.kind() == SortKind::BV {
+            let ctx = &z3::Context::thread_local();
+            unsafe { Some(z3::ast::BV::wrap(ctx, d.get_z3_ast())) }
+        } else {
+            None
+        }
+    }
+
     /// Create a new Z3 backend
     ///
     /// # Arguments
@@ -105,11 +179,17 @@ impl<'r> Z3Backend<'r> {
     /// Axioms are loaded from stdlib/*.kleis files via assert_axioms_from_registry().
     /// Call this method after creating the backend to load all axioms before verification.
     pub fn new(registry: &'r StructureRegistry) -> Result<Self, String> {
-        // Create solver with 30 second timeout to avoid hangs on complex quantified axioms
+        // Set global timeout BEFORE creating solver
+        // This ensures the timeout applies to all Z3 operations
+        z3::set_global_param("timeout", "5000"); // 5 seconds in milliseconds
+
+        // Create solver
         let solver = Solver::new();
-        // Set timeout via solver parameters
+
+        // Also set solver-specific timeouts
         let mut params = z3::Params::new();
-        params.set_u32("timeout", 30000); // 30 seconds
+        params.set_u32("timeout", 5000); // 5 seconds for solver1
+        params.set_u32("solver2_timeout", 5000); // 5 seconds for solver2 (incremental)
         solver.set_params(&params);
 
         let capabilities = super::load_capabilities()?;
@@ -137,6 +217,8 @@ impl<'r> Z3Backend<'r> {
             free_variables: HashMap::new(),
             converter: Z3ResultConverter,
             complex_datatype: Some(complex_datatype),
+            declared_data_types: HashMap::new(),
+            warnings: Vec::new(),
         };
 
         // Initialize complex number constant 'i' as complex(0, 1)
@@ -144,6 +226,128 @@ impl<'r> Z3Backend<'r> {
         backend.initialize_complex_i();
 
         Ok(backend)
+    }
+
+    /// Add a warning message (surfaced when verification fails)
+    fn add_warning(&mut self, msg: String) {
+        // Deduplicate warnings
+        if !self.warnings.contains(&msg) {
+            self.warnings.push(msg);
+        }
+    }
+
+    /// Get all collected warnings
+    pub fn get_warnings(&self) -> &[String] {
+        &self.warnings
+    }
+
+    /// Clear all warnings (e.g., before a new verification)
+    pub fn clear_warnings(&mut self) {
+        self.warnings.clear();
+    }
+
+    /// Format warnings for display
+    pub fn format_warnings(&self) -> String {
+        if self.warnings.is_empty() {
+            String::new()
+        } else {
+            let mut result = String::from("\n⚠️  Warnings during verification:\n");
+            for (i, warning) in self.warnings.iter().enumerate() {
+                result.push_str(&format!("  {}. {}\n", i + 1, warning));
+            }
+            result
+        }
+    }
+
+    /// Initialize Z3 with all registry data (data types, axioms, etc.)
+    ///
+    /// Call this after creation to fully initialize Z3 with:
+    /// - Data types as Z3 ADTs (automatic constructor distinctness)
+    /// - Axioms from structures
+    ///
+    /// # Example
+    /// ```ignore
+    /// let mut backend = Z3Backend::new(&registry)?;
+    /// backend.initialize_from_registry()?;  // Load everything
+    /// ```
+    pub fn initialize_from_registry(&mut self) -> Result<(), String> {
+        // 1. Declare data types first (needed for function sort resolution)
+        let _dt_count = self.declare_data_types_from_registry()?;
+
+        // 2. Load identity elements from structures (needed for axiom translation)
+        let _id_count = self.load_identity_elements_from_registry()?;
+
+        // 3. Then load axioms
+        let _axiom_count = self.assert_axioms_from_registry()?;
+
+        Ok(())
+    }
+
+    /// Load all identity elements (nullary operations) from the registry
+    ///
+    /// Identity elements like `zero : M` are registered with their correct Z3 sort.
+    fn load_identity_elements_from_registry(&mut self) -> Result<usize, String> {
+        use crate::kleis_ast::TypeExpr;
+
+        let mut count = 0;
+
+        // Collect structures (need to avoid borrow issues)
+        let structure_names: Vec<String> = self
+            .registry
+            .structure_names()
+            .iter()
+            .map(|s| (*s).clone())
+            .collect();
+
+        for structure_name in structure_names {
+            if let Some(structure) = self.registry.get(&structure_name) {
+                // Collect identity elements from this structure
+                let elements: Vec<(String, TypeExpr)> =
+                    Self::collect_identity_elements(&structure.members);
+
+                for (name, type_expr) in elements {
+                    if !self.identity_elements.contains_key(&name) {
+                        let sort = self.type_expr_to_sort(&type_expr);
+                        let z3_const: Dynamic = Dynamic::fresh_const(&name, &sort);
+                        self.identity_elements.insert(name, z3_const);
+                        count += 1;
+                    }
+                }
+            }
+        }
+
+        Ok(count)
+    }
+
+    /// Collect identity elements from structure members (helper function)
+    fn collect_identity_elements(
+        members: &[crate::kleis_ast::StructureMember],
+    ) -> Vec<(String, crate::kleis_ast::TypeExpr)> {
+        use crate::kleis_ast::{StructureMember, TypeExpr};
+
+        let mut elements = Vec::new();
+
+        for member in members {
+            match member {
+                StructureMember::Operation {
+                    name,
+                    type_signature,
+                } => {
+                    // Check if nullary (identity element)
+                    let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
+                    if is_nullary {
+                        elements.push((name.clone(), type_signature.clone()));
+                    }
+                }
+                StructureMember::NestedStructure { members, .. } => {
+                    // Recursively collect from nested structure
+                    elements.extend(Self::collect_identity_elements(members));
+                }
+                _ => {}
+            }
+        }
+
+        elements
     }
 
     /// Assert all axioms from the registry into Z3 solver
@@ -198,6 +402,511 @@ impl<'r> Z3Backend<'r> {
         }
 
         Ok(count)
+    }
+
+    // =========================================================================
+    // Registry Data Type Integration (ADR-022 Enhanced)
+    // =========================================================================
+
+    /// Declare all data types from the registry as Z3 ADTs
+    ///
+    /// This converts Kleis `data` declarations into Z3 algebraic data types,
+    /// enabling automatic constructor distinctness and exhaustiveness checking.
+    ///
+    /// # Benefits
+    /// - **Constructor Distinctness**: Z3 automatically knows `Mass ≠ EM ≠ Spin`
+    /// - **Exhaustiveness**: Z3 verifies pattern matching is exhaustive
+    /// - **Accessor Functions**: Fields can be accessed in Z3 reasoning
+    /// - **No Hardcoding**: User-defined data types get first-class Z3 support
+    ///
+    /// # Example
+    /// ```ignore
+    /// // In Kleis: data Channel = Mass | EM | Spin | Color
+    /// backend.declare_data_types_from_registry()?;
+    /// // Z3 now has: Channel sort with Mass, EM, Spin, Color constructors
+    /// // Automatic: Mass ≠ EM, Mass ≠ Spin, etc.
+    /// ```
+    ///
+    /// # Returns
+    /// - Ok(count) - number of data types successfully declared
+    /// - Err if any data type fails to translate
+    pub fn declare_data_types_from_registry(&mut self) -> Result<usize, String> {
+        use crate::kleis_ast::TypeExpr;
+
+        // Collect data types from registry
+        let data_types: Vec<_> = self.registry.data_types().cloned().collect();
+
+        // Build dependency graph: for each type, which other data types does it reference?
+        let mut dependencies: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
+        let mut all_dt_names: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        for data_def in &data_types {
+            all_dt_names.insert(data_def.name.clone());
+        }
+
+        for data_def in &data_types {
+            let mut deps = Vec::new();
+            for variant in &data_def.variants {
+                for field in &variant.fields {
+                    // Check if field type references another data type
+                    if let TypeExpr::Named(name) = &field.type_expr {
+                        if all_dt_names.contains(name) && name != &data_def.name {
+                            deps.push(name.clone());
+                        }
+                    }
+                }
+            }
+            dependencies.insert(data_def.name.clone(), deps);
+        }
+
+        // Topological sort - declare types with no dependencies first
+        let mut declared: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut ordered: Vec<crate::kleis_ast::DataDef> = Vec::new();
+        let mut remaining: Vec<_> = data_types;
+
+        // Simple iterative topological sort
+        let max_iterations = remaining.len() + 1;
+        for _ in 0..max_iterations {
+            let mut made_progress = false;
+            let mut still_remaining = Vec::new();
+
+            for data_def in remaining {
+                let deps = dependencies
+                    .get(&data_def.name)
+                    .cloned()
+                    .unwrap_or_default();
+                let all_deps_satisfied = deps.iter().all(|d| declared.contains(d));
+
+                if all_deps_satisfied {
+                    declared.insert(data_def.name.clone());
+                    ordered.push(data_def);
+                    made_progress = true;
+                } else {
+                    still_remaining.push(data_def);
+                }
+            }
+
+            remaining = still_remaining;
+
+            if remaining.is_empty() || !made_progress {
+                break;
+            }
+        }
+
+        // Add any remaining (cyclic dependencies) at the end
+        for data_def in remaining {
+            ordered.push(data_def);
+        }
+
+        // Now declare in order
+        let mut count = 0;
+        for data_def in ordered {
+            // Skip if already declared
+            if self.declared_data_types.contains_key(&data_def.name) {
+                continue;
+            }
+
+            // Build Z3 datatype
+            match self.declare_data_type(&data_def) {
+                Ok(dt_sort) => {
+                    self.declared_data_types
+                        .insert(data_def.name.clone(), dt_sort);
+                    count += 1;
+                }
+                Err(e) => {
+                    // Log but continue - some data types may use unsupported features
+                    eprintln!(
+                        "Warning: Could not declare data type '{}': {}",
+                        data_def.name, e
+                    );
+                }
+            }
+        }
+
+        Ok(count)
+    }
+
+    /// Declare a single data type as a Z3 ADT
+    ///
+    /// Converts a Kleis DataDef into a Z3 DatatypeSort with constructors.
+    fn declare_data_type(
+        &self,
+        data_def: &crate::kleis_ast::DataDef,
+    ) -> Result<DatatypeSort, String> {
+        let mut builder = DatatypeBuilder::new(data_def.name.as_str());
+
+        for variant in &data_def.variants {
+            if variant.fields.is_empty() {
+                // Nullary constructor (like True, False, None, Mass, EM)
+                builder = builder.variant(variant.name.as_str(), vec![]);
+            } else {
+                // Constructor with fields
+                // We need to store the names so they outlive the accessor_refs slice
+                let field_names: Vec<String> = variant
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .map(|(i, field)| field.name.clone().unwrap_or_else(|| format!("field_{}", i)))
+                    .collect();
+
+                let accessor_refs: Vec<(&str, DatatypeAccessor)> = variant
+                    .fields
+                    .iter()
+                    .zip(field_names.iter())
+                    .map(|(field, name)| {
+                        let accessor = self.type_expr_to_accessor(&field.type_expr);
+                        (name.as_str(), accessor)
+                    })
+                    .collect();
+
+                builder = builder.variant(variant.name.as_str(), accessor_refs);
+            }
+        }
+
+        Ok(builder.finish())
+    }
+
+    /// Convert a TypeExpr to a Z3 DatatypeAccessor
+    ///
+    /// Used when building ADT constructors with fields.
+    ///
+    /// For declared data types, uses `DatatypeAccessor::Datatype` which enables:
+    /// - Recursive types (e.g., `data List(T) = Nil | Cons(T, List(T))`)
+    /// - Cross-references between data types
+    /// - Proper sort matching in Z3
+    fn type_expr_to_accessor(&self, type_expr: &crate::kleis_ast::TypeExpr) -> DatatypeAccessor {
+        use crate::kleis_ast::TypeExpr;
+
+        match type_expr {
+            TypeExpr::Named(name) => self.type_name_to_accessor(name),
+            TypeExpr::Parametric(base_name, _) => {
+                // Parametric types like Option(T) - check if base is a known type
+                self.type_name_to_accessor(base_name)
+            }
+            TypeExpr::Function(_, _) => {
+                // Function types - not directly representable as ADT field
+                // Use Int as uninterpreted representation
+                DatatypeAccessor::sort(Sort::int())
+            }
+            TypeExpr::Product(_) => {
+                // Product types - would need tuple support in Z3
+                DatatypeAccessor::sort(Sort::int())
+            }
+            TypeExpr::ForAll { body, .. } => {
+                // Polymorphic types - use body
+                self.type_expr_to_accessor(body)
+            }
+            TypeExpr::Var(name) => {
+                // Type variable - check if it resolves to something known
+                self.type_name_to_accessor(name)
+            }
+            TypeExpr::DimExpr(_) => {
+                // Dimension expression - use Int (dimensions are natural numbers)
+                DatatypeAccessor::sort(Sort::int())
+            }
+        }
+    }
+
+    /// Convert a type name to a Z3 DatatypeAccessor
+    ///
+    /// Checks in order:
+    /// 1. Built-in primitive types (Bool, Int, Real, Complex, Rational)
+    /// 2. Declared data types from registry
+    /// 3. Type aliases from registry
+    /// 4. Default to Int for unknown types
+    fn type_name_to_accessor(&self, name: &str) -> DatatypeAccessor {
+        match name {
+            // Boolean types
+            "Bool" | "Boolean" => DatatypeAccessor::sort(Sort::bool()),
+
+            // Integer types (including naturals)
+            "ℤ" | "Int" | "Z" | "Integer" | "ℕ" | "Nat" | "Natural" => {
+                DatatypeAccessor::sort(Sort::int())
+            }
+
+            // Real types (scalars)
+            "ℝ" | "Real" | "R" | "Scalar" => DatatypeAccessor::sort(Sort::real()),
+
+            // Rational types (Z3 Real is actually ℚ)
+            "ℚ" | "Rational" | "Q" => DatatypeAccessor::sort(Sort::real()),
+
+            // Complex numbers - use the already-created Complex sort
+            "ℂ" | "Complex" | "C" => {
+                if let Some(ref cdt) = self.complex_datatype {
+                    // cdt.sort is DatatypeSort, cdt.sort.sort is the underlying Sort
+                    DatatypeAccessor::sort(cdt.sort.sort.clone())
+                } else {
+                    // Fallback: if Complex wasn't created, use two reals
+                    DatatypeAccessor::sort(Sort::real())
+                }
+            }
+
+            // Bitvector types - common widths
+            // Note: For parametric BitVec(n), we'd need to extract n from the type
+            "BitVec8" | "Byte" | "U8" | "I8" => DatatypeAccessor::sort(Sort::bitvector(8)),
+            "BitVec16" | "U16" | "I16" => DatatypeAccessor::sort(Sort::bitvector(16)),
+            "BitVec32" | "U32" | "I32" | "Word" => DatatypeAccessor::sort(Sort::bitvector(32)),
+            "BitVec64" | "U64" | "I64" => DatatypeAccessor::sort(Sort::bitvector(64)),
+
+            // Set types - Z3 sets are arrays from element type to Bool
+            // For generic Set, we use Set(Int) as default
+            "Set" | "IntSet" => DatatypeAccessor::sort(Sort::set(&Sort::int())),
+            "RealSet" => DatatypeAccessor::sort(Sort::set(&Sort::real())),
+            "BoolSet" => DatatypeAccessor::sort(Sort::set(&Sort::bool())),
+
+            // String type
+            "String" | "Str" => {
+                // Z3 has a String sort, but for ADT fields we use Int as placeholder
+                DatatypeAccessor::sort(Sort::int())
+            }
+
+            // Check if it's a declared data type
+            type_name => {
+                if let Some(dt_sort) = self.declared_data_types.get(type_name) {
+                    // Already declared - use its Sort directly
+                    // This is the correct approach for non-mutually-recursive types
+                    DatatypeAccessor::sort(dt_sort.sort.clone())
+                } else if self.registry.has_data_type(type_name) {
+                    // Data type is in registry but not yet declared in Z3
+                    // Use DatatypeAccessor::datatype for forward-reference (mutual recursion)
+                    // Note: This only works if the referenced type will be in the same batch
+                    DatatypeAccessor::datatype(type_name)
+                } else if self.registry.has_type_alias(type_name) {
+                    // Type alias - resolve and recurse
+                    if let Some((_params, underlying)) = self.registry.get_type_alias(type_name) {
+                        self.type_expr_to_accessor(underlying)
+                    } else {
+                        DatatypeAccessor::sort(Sort::int())
+                    }
+                } else {
+                    // Unknown type - use Int as uninterpreted
+                    DatatypeAccessor::sort(Sort::int())
+                }
+            }
+        }
+    }
+
+    /// Check if a name is a known data type constructor
+    ///
+    /// Returns the data type name and variant if found.
+    pub fn get_data_constructor_info(&self, name: &str) -> Option<(&str, usize)> {
+        for (dt_name, dt_sort) in &self.declared_data_types {
+            for (i, variant) in dt_sort.variants.iter().enumerate() {
+                // Check if the constructor name matches
+                // The constructor's name in Z3 matches the variant name we provided
+                if variant.constructor.name() == name {
+                    return Some((dt_name.as_str(), i));
+                }
+            }
+        }
+        None
+    }
+
+    /// Get a Z3 constructor function for a data type variant
+    ///
+    /// Used when translating constructor expressions to Z3.
+    pub fn get_data_constructor(&self, type_name: &str, variant_name: &str) -> Option<&FuncDecl> {
+        if let Some(dt_sort) = self.declared_data_types.get(type_name) {
+            for variant in &dt_sort.variants {
+                if variant.constructor.name() == variant_name {
+                    return Some(&variant.constructor);
+                }
+            }
+        }
+        None
+    }
+
+    /// Get the Z3 Sort for a declared data type
+    pub fn get_data_type_sort(&self, name: &str) -> Option<&Sort> {
+        self.declared_data_types.get(name).map(|dt| &dt.sort)
+    }
+
+    /// Get a nullary constructor value as a Z3 Dynamic
+    ///
+    /// For data types like `data Channel = Mass | EM | Spin | Color`,
+    /// this returns the Z3 value for `Mass`, `EM`, etc.
+    fn get_nullary_constructor(&self, name: &str) -> Option<Dynamic> {
+        // Search through all declared data types for a matching constructor
+        for dt_sort in self.declared_data_types.values() {
+            for variant in &dt_sort.variants {
+                if variant.constructor.name() == name {
+                    // Check if it's a nullary constructor (arity 0)
+                    if variant.constructor.arity() == 0 {
+                        // Apply the constructor with no arguments to get the value
+                        let ast_args: Vec<&dyn Ast> = vec![];
+                        return Some(variant.constructor.apply(&ast_args));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Check if a name is a constructor in a declared data type
+    ///
+    /// Used to avoid loading ADT constructors as separate identity elements.
+    fn is_declared_constructor_internal(&self, name: &str) -> bool {
+        for dt_sort in self.declared_data_types.values() {
+            for variant in &dt_sort.variants {
+                if variant.constructor.name() == name {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    // =========================================================================
+    // Type Alias Resolution (ADR-022 Enhanced)
+    // =========================================================================
+
+    /// Resolve a type alias to its underlying TypeExpr
+    ///
+    /// Recursively resolves aliases until reaching a non-alias type.
+    pub fn resolve_type_alias(
+        &self,
+        type_expr: &crate::kleis_ast::TypeExpr,
+    ) -> crate::kleis_ast::TypeExpr {
+        use crate::kleis_ast::TypeExpr;
+
+        match type_expr {
+            TypeExpr::Named(name) => {
+                // Check if this name is a type alias
+                if let Some((params, underlying)) = self.registry.get_type_alias(name) {
+                    if params.is_empty() {
+                        // Simple alias - recursively resolve
+                        self.resolve_type_alias(underlying)
+                    } else {
+                        // Parameterized alias without args - can't resolve
+                        type_expr.clone()
+                    }
+                } else {
+                    // Not an alias
+                    type_expr.clone()
+                }
+            }
+            TypeExpr::Parametric(base_name, args) => {
+                // Check if base is a parameterized type alias
+                if let Some((params, underlying)) = self.registry.get_type_alias(base_name) {
+                    if params.len() == args.len() {
+                        // Substitute parameters
+                        let substituted = self.substitute_type_params(underlying, params, args);
+                        // Recursively resolve
+                        self.resolve_type_alias(&substituted)
+                    } else {
+                        // Arity mismatch - keep as is
+                        type_expr.clone()
+                    }
+                } else {
+                    // Not an alias, but resolve args
+                    TypeExpr::Parametric(
+                        base_name.clone(),
+                        args.iter().map(|a| self.resolve_type_alias(a)).collect(),
+                    )
+                }
+            }
+            TypeExpr::Function(domain, codomain) => TypeExpr::Function(
+                Box::new(self.resolve_type_alias(domain)),
+                Box::new(self.resolve_type_alias(codomain)),
+            ),
+            TypeExpr::Product(types) => {
+                TypeExpr::Product(types.iter().map(|t| self.resolve_type_alias(t)).collect())
+            }
+            TypeExpr::Var(name) => {
+                // Check if this is a type alias
+                if let Some((params, underlying)) = self.registry.get_type_alias(name) {
+                    if params.is_empty() {
+                        self.resolve_type_alias(underlying)
+                    } else {
+                        type_expr.clone()
+                    }
+                } else {
+                    type_expr.clone()
+                }
+            }
+            TypeExpr::ForAll { vars, body } => TypeExpr::ForAll {
+                vars: vars.clone(),
+                body: Box::new(self.resolve_type_alias(body)),
+            },
+            TypeExpr::DimExpr(_) => type_expr.clone(),
+        }
+    }
+
+    /// Substitute type parameters in a type expression
+    fn substitute_type_params(
+        &self,
+        type_expr: &crate::kleis_ast::TypeExpr,
+        params: &[crate::kleis_ast::TypeAliasParam],
+        args: &[crate::kleis_ast::TypeExpr],
+    ) -> crate::kleis_ast::TypeExpr {
+        use crate::kleis_ast::TypeExpr;
+
+        // Build substitution map
+        let subst: HashMap<&str, &TypeExpr> = params
+            .iter()
+            .zip(args.iter())
+            .map(|(p, a)| (p.name.as_str(), a))
+            .collect();
+
+        self.apply_type_substitution(type_expr, &subst)
+    }
+
+    /// Apply a type substitution to a type expression
+    fn apply_type_substitution(
+        &self,
+        type_expr: &crate::kleis_ast::TypeExpr,
+        subst: &HashMap<&str, &crate::kleis_ast::TypeExpr>,
+    ) -> crate::kleis_ast::TypeExpr {
+        use crate::kleis_ast::TypeExpr;
+
+        match type_expr {
+            TypeExpr::Named(name) => {
+                if let Some(replacement) = subst.get(name.as_str()) {
+                    (*replacement).clone()
+                } else {
+                    type_expr.clone()
+                }
+            }
+            TypeExpr::Parametric(base, args) => {
+                let new_args: Vec<_> = args
+                    .iter()
+                    .map(|a| self.apply_type_substitution(a, subst))
+                    .collect();
+                TypeExpr::Parametric(base.clone(), new_args)
+            }
+            TypeExpr::Function(domain, codomain) => TypeExpr::Function(
+                Box::new(self.apply_type_substitution(domain, subst)),
+                Box::new(self.apply_type_substitution(codomain, subst)),
+            ),
+            TypeExpr::Product(types) => TypeExpr::Product(
+                types
+                    .iter()
+                    .map(|t| self.apply_type_substitution(t, subst))
+                    .collect(),
+            ),
+            TypeExpr::Var(name) => {
+                if let Some(replacement) = subst.get(name.as_str()) {
+                    (*replacement).clone()
+                } else {
+                    type_expr.clone()
+                }
+            }
+            TypeExpr::ForAll { vars, body } => {
+                // Don't substitute bound variables
+                let bound: HashSet<&str> = vars.iter().map(|(name, _)| name.as_str()).collect();
+                let filtered: HashMap<&str, &TypeExpr> = subst
+                    .iter()
+                    .filter(|(k, _)| !bound.contains(*k))
+                    .map(|(k, v)| (*k, *v))
+                    .collect();
+                TypeExpr::ForAll {
+                    vars: vars.clone(),
+                    body: Box::new(self.apply_type_substitution(body, &filtered)),
+                }
+            }
+            TypeExpr::DimExpr(_) => type_expr.clone(),
+        }
     }
 
     // =========================================================================
@@ -288,15 +997,61 @@ impl<'r> Z3Backend<'r> {
         for var in variables {
             let z3_var: Dynamic = if let Some(type_annotation) = &var.type_annotation {
                 match type_annotation.as_str() {
+                    // Boolean types
                     "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
-                    "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
-                    "ℤ" | "Int" | "Z" | "Nat" => Int::fresh_const(&var.name).into(),
-                    "ℂ" | "Complex" | "C" => {
-                        // Create fresh Complex constant for quantified complex variables
-                        self.fresh_complex_const(&var.name)
-                            .unwrap_or_else(|| Int::fresh_const(&var.name).into())
+
+                    // Real types
+                    "ℝ" | "Real" => Real::fresh_const(&var.name).into(),
+
+                    // Rational types (Z3's Real is actually ℚ)
+                    "ℚ" | "Rational" | "Q" => Real::fresh_const(&var.name).into(),
+
+                    // Integer/Natural types
+                    "ℤ" | "Int" | "Z" | "Integer" | "ℕ" | "Nat" | "Natural" => {
+                        Int::fresh_const(&var.name).into()
                     }
-                    _ => Int::fresh_const(&var.name).into(),
+
+                    // Complex types
+                    "ℂ" | "Complex" | "C" => self
+                        .fresh_complex_const(&var.name)
+                        .unwrap_or_else(|| Int::fresh_const(&var.name).into()),
+
+                    // Bitvector types - common widths
+                    "BitVec8" | "Byte" | "U8" | "I8" => {
+                        Dynamic::fresh_const(&var.name, &Sort::bitvector(8))
+                    }
+                    "BitVec16" | "U16" | "I16" => {
+                        Dynamic::fresh_const(&var.name, &Sort::bitvector(16))
+                    }
+                    "BitVec32" | "U32" | "I32" | "Word" => {
+                        Dynamic::fresh_const(&var.name, &Sort::bitvector(32))
+                    }
+                    "BitVec64" | "U64" | "I64" => {
+                        Dynamic::fresh_const(&var.name, &Sort::bitvector(64))
+                    }
+
+                    // Set types
+                    "Set" | "IntSet" => Dynamic::fresh_const(&var.name, &Sort::set(&Sort::int())),
+                    "RealSet" => Dynamic::fresh_const(&var.name, &Sort::set(&Sort::real())),
+                    "BoolSet" => Dynamic::fresh_const(&var.name, &Sort::set(&Sort::bool())),
+
+                    // String type
+                    "String" | "Str" => z3::ast::String::fresh_const(&var.name).into(),
+
+                    type_name => {
+                        // Check if it's a declared data type
+                        if let Some(dt_sort) = self.declared_data_types.get(type_name) {
+                            Dynamic::fresh_const(&var.name, &dt_sort.sort)
+                        } else {
+                            // Unknown type - add warning and default to Int
+                            self.add_warning(format!(
+                                "Unknown type '{}' for variable '{}'. Treating as Int. \
+                                 Consider adding: data {} = ...  or ensure it's imported.",
+                                type_name, var.name, type_name
+                            ));
+                            Int::fresh_const(&var.name).into()
+                        }
+                    }
                 }
             } else {
                 Int::fresh_const(&var.name).into()
@@ -383,7 +1138,43 @@ impl<'r> Z3Backend<'r> {
                     return Ok(identity.clone());
                 }
 
-                // 3. Special case: 'i' as the complex imaginary unit
+                // DEBUG: Log when we fall through for known identity element names
+                if name == "zero" || name == "one" {
+                    eprintln!(
+                        "DEBUG: '{}' not found in identity_elements. Available: {:?}",
+                        name,
+                        self.identity_elements.keys().collect::<Vec<_>>()
+                    );
+                }
+
+                // 3. Check if it's a nullary constructor from a declared data type
+                // e.g., Mass, EM, Spin, Color from "data Channel = Mass | EM | Spin | Color"
+                if let Some(constructor_z3) = self.get_nullary_constructor(name) {
+                    return Ok(constructor_z3);
+                }
+
+                // 3.5. Special case: empty_set is a nullary operation that returns the empty set
+                if name == "empty_set" || name == "∅" {
+                    let int_sort = z3::Sort::int();
+                    return Ok(z3::ast::Set::empty(&int_sort).into());
+                }
+
+                // 3.6. Special case: empty_string is a nullary operation that returns ""
+                if name == "empty_string" || name == "ε" {
+                    return Ok(z3::ast::String::from("").into());
+                }
+
+                // 3.7. Special case: bv_zero is the all-zeros bitvector (8-bit)
+                if name == "bv_zero" {
+                    return Ok(z3::ast::BV::from_i64(0, 8).into());
+                }
+
+                // 3.8. Special case: bv_ones is the all-ones bitvector (0xFF for 8-bit)
+                if name == "bv_ones" {
+                    return Ok(z3::ast::BV::from_i64(255, 8).into());
+                }
+
+                // 4. Special case: 'i' as the complex imaginary unit
                 // Only use complex i if NOT already in free_variables (which means
                 // it was used as a loop variable first)
                 if name == "i" && !self.free_variables.contains_key("i") {
@@ -392,12 +1183,12 @@ impl<'r> Z3Backend<'r> {
                     }
                 }
 
-                // 4. Check already-created free variables
+                // 5. Check already-created free variables
                 if let Some(free_var) = self.free_variables.get(name) {
                     return Ok(free_var.clone());
                 }
 
-                // 5. Create fresh constant for this free variable
+                // 6. Create fresh constant for this free variable
                 // This allows equations like "A = Matrix(...)" to be verified
                 let fresh = Int::fresh_const(name);
                 let dynamic: Dynamic = fresh.into();
@@ -520,11 +1311,53 @@ impl<'r> Z3Backend<'r> {
                     // Use type annotation if available, default to Int
                     let z3_var: Dynamic = if let Some(ref ty) = param.type_annotation {
                         match ty.as_str() {
+                            // Boolean types
                             "Bool" | "Boolean" => Bool::fresh_const(&param.name).into(),
-                            "ℝ" | "Real" | "R" => Real::fresh_const(&param.name).into(),
+
+                            // Real types
+                            "ℝ" | "Real" => Real::fresh_const(&param.name).into(),
+
+                            // Rational types (Z3's Real is actually ℚ)
+                            "ℚ" | "Rational" | "Q" => Real::fresh_const(&param.name).into(),
+
+                            // Integer/Natural types
+                            "ℤ" | "Int" | "Z" | "Integer" | "ℕ" | "Nat" | "Natural" => {
+                                Int::fresh_const(&param.name).into()
+                            }
+
+                            // Complex types
                             "ℂ" | "Complex" | "C" => self
                                 .fresh_complex_const(&param.name)
                                 .unwrap_or_else(|| Int::fresh_const(&param.name).into()),
+
+                            // Bitvector types
+                            "BitVec8" | "Byte" | "U8" | "I8" => {
+                                Dynamic::fresh_const(&param.name, &Sort::bitvector(8))
+                            }
+                            "BitVec16" | "U16" | "I16" => {
+                                Dynamic::fresh_const(&param.name, &Sort::bitvector(16))
+                            }
+                            "BitVec32" | "U32" | "I32" | "Word" => {
+                                Dynamic::fresh_const(&param.name, &Sort::bitvector(32))
+                            }
+                            "BitVec64" | "U64" | "I64" => {
+                                Dynamic::fresh_const(&param.name, &Sort::bitvector(64))
+                            }
+
+                            // Set types
+                            "Set" | "IntSet" => {
+                                Dynamic::fresh_const(&param.name, &Sort::set(&Sort::int()))
+                            }
+                            "RealSet" => {
+                                Dynamic::fresh_const(&param.name, &Sort::set(&Sort::real()))
+                            }
+                            "BoolSet" => {
+                                Dynamic::fresh_const(&param.name, &Sort::set(&Sort::bool()))
+                            }
+
+                            // String type
+                            "String" | "Str" => z3::ast::String::fresh_const(&param.name).into(),
+
                             _ => Int::fresh_const(&param.name).into(),
                         }
                     } else {
@@ -621,26 +1454,133 @@ impl<'r> Z3Backend<'r> {
                 Ok(boolean::translate_implies(&args[0], &args[1])?.into())
             }
 
-            // Arithmetic operations
-            "plus" | "add" => {
+            // Biconditional (iff): A ↔ B is equivalent to (A → B) ∧ (B → A)
+            "iff" | "biconditional" | "equiv_bool" => {
+                if args.len() != 2 {
+                    return Err("iff requires 2 arguments".to_string());
+                }
+                // A ↔ B = (A → B) ∧ (B → A), which for booleans is A == B
+                if let (Some(a), Some(b)) = (args[0].as_bool(), args[1].as_bool()) {
+                    // Use Z3's built-in boolean equality for iff
+                    #[allow(deprecated)]
+                    Ok(a._eq(&b).into())
+                } else {
+                    Err("iff requires boolean arguments".to_string())
+                }
+            }
+
+            // Arithmetic operations - including rat_* operations for rationals
+            "plus" | "add" | "rat_add" => {
                 if args.len() != 2 {
                     return Err("plus requires 2 arguments".to_string());
                 }
                 arithmetic::translate_plus(&args[0], &args[1])
             }
 
-            "minus" | "subtract" => {
+            "minus" | "subtract" | "rat_sub" => {
                 if args.len() != 2 {
                     return Err("minus requires 2 arguments".to_string());
                 }
                 arithmetic::translate_minus(&args[0], &args[1])
             }
 
-            "times" | "multiply" => {
+            "times" | "multiply" | "rat_mul" => {
                 if args.len() != 2 {
                     return Err("times requires 2 arguments".to_string());
                 }
                 arithmetic::translate_times(&args[0], &args[1])
+            }
+
+            "negate" | "rat_neg" => {
+                if args.len() != 1 {
+                    return Err("negate requires 1 argument".to_string());
+                }
+                arithmetic::translate_negate(&args[0])
+            }
+
+            "rat_inv" | "inv" | "reciprocal" => {
+                if args.len() != 1 {
+                    return Err("rat_inv requires 1 argument".to_string());
+                }
+                // Division by 1/x: represented as 1/x in Z3
+                #[allow(deprecated)]
+                let one = Real::from_real(1, 1);
+                if let Some(r) = args[0].as_real() {
+                    Ok(one.div(&r).into())
+                } else if let Some(i) = args[0].as_int() {
+                    let r = Int::to_real(&i);
+                    Ok(one.div(&r).into())
+                } else {
+                    Err("rat_inv requires a numeric argument".to_string())
+                }
+            }
+
+            "rat_div" | "divide" => {
+                if args.len() != 2 {
+                    return Err("rat_div requires 2 arguments".to_string());
+                }
+                // Translate division as a/b
+                if let (Some(a), Some(b)) = (args[0].as_real(), args[1].as_real()) {
+                    Ok(a.div(&b).into())
+                } else if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    let a_real = Int::to_real(&a);
+                    let b_real = Int::to_real(&b);
+                    Ok(a_real.div(&b_real).into())
+                } else {
+                    Err("rat_div requires numeric arguments".to_string())
+                }
+            }
+
+            "rat_lt" => {
+                if args.len() != 2 {
+                    return Err("rat_lt requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_real(), args[1].as_real()) {
+                    Ok(a.lt(&b).into())
+                } else if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.lt(&b).into())
+                } else {
+                    Err("rat_lt requires numeric arguments".to_string())
+                }
+            }
+
+            "rat_gt" => {
+                if args.len() != 2 {
+                    return Err("rat_gt requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_real(), args[1].as_real()) {
+                    Ok(a.gt(&b).into())
+                } else if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.gt(&b).into())
+                } else {
+                    Err("rat_gt requires numeric arguments".to_string())
+                }
+            }
+
+            "rat_le" => {
+                if args.len() != 2 {
+                    return Err("rat_le requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_real(), args[1].as_real()) {
+                    Ok(a.le(&b).into())
+                } else if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.le(&b).into())
+                } else {
+                    Err("rat_le requires numeric arguments".to_string())
+                }
+            }
+
+            "rat_ge" => {
+                if args.len() != 2 {
+                    return Err("rat_ge requires 2 arguments".to_string());
+                }
+                if let (Some(a), Some(b)) = (args[0].as_real(), args[1].as_real()) {
+                    Ok(a.ge(&b).into())
+                } else if let (Some(a), Some(b)) = (args[0].as_int(), args[1].as_int()) {
+                    Ok(a.ge(&b).into())
+                } else {
+                    Err("rat_ge requires numeric arguments".to_string())
+                }
             }
 
             "power" | "pow" | "^" => {
@@ -748,9 +1688,9 @@ impl<'r> Z3Backend<'r> {
                 arithmetic::translate_abs(&args[0])
             }
 
-            "neg" | "negate" => {
+            "neg" => {
                 if args.len() != 1 {
-                    return Err("negate requires 1 argument".to_string());
+                    return Err("neg requires 1 argument".to_string());
                 }
                 arithmetic::translate_negate(&args[0])
             }
@@ -780,7 +1720,7 @@ impl<'r> Z3Backend<'r> {
                 let strings: Result<Vec<z3::ast::String>, String> = args
                     .iter()
                     .map(|a| {
-                        a.as_string()
+                        Self::dynamic_to_string(a)
                             .ok_or_else(|| "concat arguments must be strings".to_string())
                     })
                     .collect();
@@ -795,8 +1735,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("strlen requires 1 argument".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "strlen argument must be a string".to_string())?;
                 Ok(s.length().into())
             }
@@ -806,11 +1745,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("contains requires 2 arguments".to_string());
                 }
-                let haystack = args[0]
-                    .as_string()
+                let haystack = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "contains first argument must be a string".to_string())?;
-                let needle = args[1]
-                    .as_string()
+                let needle = Self::dynamic_to_string(&args[1])
                     .ok_or_else(|| "contains second argument must be a string".to_string())?;
                 Ok(haystack.contains(&needle).into())
             }
@@ -820,11 +1757,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("hasPrefix requires 2 arguments".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "hasPrefix first argument must be a string".to_string())?;
-                let pre = args[1]
-                    .as_string()
+                let pre = Self::dynamic_to_string(&args[1])
                     .ok_or_else(|| "hasPrefix second argument must be a string".to_string())?;
                 Ok(pre.prefix(&s).into())
             }
@@ -834,11 +1769,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("hasSuffix requires 2 arguments".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "hasSuffix first argument must be a string".to_string())?;
-                let suf = args[1]
-                    .as_string()
+                let suf = Self::dynamic_to_string(&args[1])
                     .ok_or_else(|| "hasSuffix second argument must be a string".to_string())?;
                 Ok(suf.suffix(&s).into())
             }
@@ -852,8 +1785,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 3 {
                     return Err("substr requires 3 arguments (string, start, length)".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "substr first argument must be a string".to_string())?;
                 let start = args[1].as_int().ok_or_else(|| {
                     "substr second argument (start) must be an integer".to_string()
@@ -871,11 +1803,9 @@ impl<'r> Z3Backend<'r> {
                         "indexOf requires 3 arguments (haystack, needle, start)".to_string()
                     );
                 }
-                let haystack = args[0]
-                    .as_string()
+                let haystack = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "indexOf first argument must be a string".to_string())?;
-                let needle = args[1]
-                    .as_string()
+                let needle = Self::dynamic_to_string(&args[1])
                     .ok_or_else(|| "indexOf second argument must be a string".to_string())?;
                 let start = args[2]
                     .as_int()
@@ -888,14 +1818,11 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 3 {
                     return Err("replace requires 3 arguments (string, old, new)".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "replace first argument must be a string".to_string())?;
-                let old = args[1]
-                    .as_string()
+                let old = Self::dynamic_to_string(&args[1])
                     .ok_or_else(|| "replace second argument must be a string".to_string())?;
-                let new_str = args[2]
-                    .as_string()
+                let new_str = Self::dynamic_to_string(&args[2])
                     .ok_or_else(|| "replace third argument must be a string".to_string())?;
                 Ok(s.replace(&old, &new_str).into())
             }
@@ -906,8 +1833,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("charAt requires 2 arguments (string, index)".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "charAt first argument must be a string".to_string())?;
                 let idx = args[1]
                     .as_int()
@@ -924,8 +1850,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("strToInt requires 1 argument".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "strToInt argument must be a string".to_string())?;
                 Ok(s.to_int().into())
             }
@@ -952,11 +1877,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("matchesRegex requires 2 arguments (string, pattern)".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "matchesRegex first argument must be a string".to_string())?;
-                let pattern = args[1]
-                    .as_string()
+                let pattern = Self::dynamic_to_string(&args[1])
                     .ok_or_else(|| "matchesRegex second argument must be a string".to_string())?;
                 // Get the pattern as a Rust string and create a literal regex
                 // Note: This treats the pattern as a literal string match
@@ -976,8 +1899,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("isDigits requires 1 argument".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "isDigits argument must be a string".to_string())?;
                 // Regex for zero or more digits: [0-9]*
                 let digit = z3::ast::Regexp::range(&'0', &'9');
@@ -990,8 +1912,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("isAlpha requires 1 argument".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "isAlpha argument must be a string".to_string())?;
                 // Regex for letters: [a-zA-Z]*
                 let lower = z3::ast::Regexp::range(&'a', &'z');
@@ -1006,8 +1927,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("isAlphaNum requires 1 argument".to_string());
                 }
-                let s = args[0]
-                    .as_string()
+                let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "isAlphaNum argument must be a string".to_string())?;
                 // Regex for alphanumeric: [a-zA-Z0-9]*
                 let lower = z3::ast::Regexp::range(&'a', &'z');
@@ -1035,8 +1955,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("in_set requires 2 arguments (element, set)".to_string());
                 }
-                let set = args[1]
-                    .as_set()
+                let set = Self::dynamic_to_set(&args[1])
                     .ok_or_else(|| "in_set second argument must be a set".to_string())?;
                 Ok(set.member(&args[0]).into())
             }
@@ -1049,7 +1968,7 @@ impl<'r> Z3Backend<'r> {
                 let sets: Result<Vec<z3::ast::Set>, String> = args
                     .iter()
                     .map(|a| {
-                        a.as_set()
+                        Self::dynamic_to_set(a)
                             .ok_or_else(|| "union arguments must be sets".to_string())
                     })
                     .collect();
@@ -1066,7 +1985,7 @@ impl<'r> Z3Backend<'r> {
                 let sets: Result<Vec<z3::ast::Set>, String> = args
                     .iter()
                     .map(|a| {
-                        a.as_set()
+                        Self::dynamic_to_set(a)
                             .ok_or_else(|| "intersect arguments must be sets".to_string())
                     })
                     .collect();
@@ -1080,11 +1999,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("difference requires 2 arguments".to_string());
                 }
-                let set_a = args[0]
-                    .as_set()
+                let set_a = Self::dynamic_to_set(&args[0])
                     .ok_or_else(|| "difference first argument must be a set".to_string())?;
-                let set_b = args[1]
-                    .as_set()
+                let set_b = Self::dynamic_to_set(&args[1])
                     .ok_or_else(|| "difference second argument must be a set".to_string())?;
                 Ok(set_a.difference(&set_b).into())
             }
@@ -1094,8 +2011,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("complement requires 1 argument".to_string());
                 }
-                let set = args[0]
-                    .as_set()
+                let set = Self::dynamic_to_set(&args[0])
                     .ok_or_else(|| "complement argument must be a set".to_string())?;
                 Ok(set.complement().into())
             }
@@ -1105,11 +2021,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("subset requires 2 arguments".to_string());
                 }
-                let set_a = args[0]
-                    .as_set()
+                let set_a = Self::dynamic_to_set(&args[0])
                     .ok_or_else(|| "subset first argument must be a set".to_string())?;
-                let set_b = args[1]
-                    .as_set()
+                let set_b = Self::dynamic_to_set(&args[1])
                     .ok_or_else(|| "subset second argument must be a set".to_string())?;
                 Ok(set_a.set_subset(&set_b).into())
             }
@@ -1130,8 +2044,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("insert requires 2 arguments (element, set)".to_string());
                 }
-                let set = args[1]
-                    .as_set()
+                let set = Self::dynamic_to_set(&args[1])
                     .ok_or_else(|| "insert second argument must be a set".to_string())?;
                 Ok(set.add(&args[0]).into())
             }
@@ -1141,8 +2054,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("remove requires 2 arguments (element, set)".to_string());
                 }
-                let set = args[1]
-                    .as_set()
+                let set = Self::dynamic_to_set(&args[1])
                     .ok_or_else(|| "remove second argument must be a set".to_string())?;
                 Ok(set.del(&args[0]).into())
             }
@@ -1769,7 +2681,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvand requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvand(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvand", 2);
@@ -1783,7 +2697,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvor requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvor(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvor", 2);
@@ -1797,7 +2713,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvxor requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvxor(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvxor", 2);
@@ -1811,7 +2729,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("bvnot requires 1 argument".to_string());
                 }
-                if let Some(a) = args[0].as_bv() {
+                if let Some(a) = Self::dynamic_to_bv(&args[0]) {
                     Ok(a.bvnot().into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvnot", 1);
@@ -1825,7 +2743,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvadd requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvadd(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvadd", 2);
@@ -1839,7 +2759,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvsub requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvsub(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvsub", 2);
@@ -1853,7 +2775,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvmul requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvmul(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvmul", 2);
@@ -1867,7 +2791,7 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("bvneg requires 1 argument".to_string());
                 }
-                if let Some(a) = args[0].as_bv() {
+                if let Some(a) = Self::dynamic_to_bv(&args[0]) {
                     Ok(a.bvneg().into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvneg", 1);
@@ -1881,7 +2805,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvudiv requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvudiv(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvudiv", 2);
@@ -1895,7 +2821,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvsdiv requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvsdiv(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvsdiv", 2);
@@ -1909,7 +2837,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvurem requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvurem(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvurem", 2);
@@ -1923,7 +2853,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvshl requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvshl(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvshl", 2);
@@ -1937,7 +2869,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvlshr requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvlshr(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvlshr", 2);
@@ -1951,7 +2885,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvashr requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvashr(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvashr", 2);
@@ -1965,7 +2901,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvult requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvult(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvult", 2);
@@ -1979,7 +2917,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvule requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvule(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvule", 2);
@@ -1993,7 +2933,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvslt requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvslt(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvslt", 2);
@@ -2007,7 +2949,9 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("bvsle requires 2 arguments".to_string());
                 }
-                if let (Some(a), Some(b)) = (args[0].as_bv(), args[1].as_bv()) {
+                if let (Some(a), Some(b)) =
+                    (Self::dynamic_to_bv(&args[0]), Self::dynamic_to_bv(&args[1]))
+                {
                     Ok(a.bvsle(&b).into())
                 } else {
                     let func_decl = self.declare_uninterpreted("bvsle", 2);
@@ -2019,6 +2963,26 @@ impl<'r> Z3Backend<'r> {
             // Unknown operation - use uninterpreted function with proper typing
             _ => {
                 let func_decl = self.declare_uninterpreted(name, args.len());
+
+                // CRITICAL: Check for sort mismatches BEFORE calling apply()
+                // Z3's apply() panics on sort mismatch - we want a helpful error instead
+                let arity = func_decl.arity();
+                for i in 0..arity {
+                    if let Some(expected_sort_kind) = func_decl.domain(i) {
+                        if let Some(arg) = args.get(i) {
+                            let actual_sort = arg.get_sort();
+                            if expected_sort_kind != actual_sort.kind() {
+                                return Err(format!(
+                                    "Type mismatch in call to '{}': argument {} has type {:?} but expected {:?}.\n\
+                                     Hint: Check if '{}' is declared with the correct signature, or if there are \
+                                     duplicate definitions with different types.",
+                                    name, i + 1, actual_sort, expected_sort_kind, name
+                                ));
+                            }
+                        }
+                    }
+                }
+
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
@@ -2057,10 +3021,11 @@ impl<'r> Z3Backend<'r> {
         // No signature found: default to Int → Int (uninterpreted)
         // Operations that need Bool return type MUST be declared with proper signatures
         if !self.declared_ops.contains(name) {
-            println!(
-                "   ⚠️  Declaring untyped function: {} with arity {} → Int (no signature in registry)",
-                name, arity
-            );
+            self.add_warning(format!(
+                "Operation '{}' has no type signature in registry. Using untyped fallback (Int → Int). \
+                 Consider adding: operation {} : <args> → <return_type>",
+                name, name
+            ));
             self.declared_ops.insert(name.to_string());
         }
 
@@ -2136,15 +3101,49 @@ impl<'r> Z3Backend<'r> {
                 // For parametric types like Vector(3, ℂ), use the base type name
                 self.type_name_to_sort(name)
             }
-            _ => Sort::int(), // Default for complex expressions
+            TypeExpr::Function(_, _) => {
+                // Function types - use Int as uninterpreted
+                Sort::int()
+            }
+            TypeExpr::Product(_) => {
+                // Product types - use Int as uninterpreted
+                Sort::int()
+            }
+            TypeExpr::Var(name) => {
+                // Type variable - check if it's a known type
+                self.type_name_to_sort(name)
+            }
+            TypeExpr::ForAll { body, .. } => {
+                // Polymorphic type - use body's sort
+                self.type_expr_to_sort(body)
+            }
+            TypeExpr::DimExpr(_) => {
+                // Dimension expression - use Int
+                Sort::int()
+            }
         }
     }
 
     /// Convert a type name string to Z3 Sort
     ///
-    /// Only exact type names map to specific sorts. Single letters like R, S, M
-    /// are type variables that should all map to Int (uninterpreted).
+    /// Priority order:
+    /// 1. Declared data types from registry
+    /// 2. Type aliases from registry (resolved to underlying type)
+    /// 3. Built-in primitive types
+    /// 4. Default to Int for unknown/type variables
     fn type_name_to_sort(&self, name: &str) -> Sort {
+        // 1. Check declared data types from registry
+        if let Some(dt_sort) = self.declared_data_types.get(name) {
+            return dt_sort.sort.clone();
+        }
+
+        // 2. Check type aliases from registry
+        if let Some((_params, underlying)) = self.registry.get_type_alias(name) {
+            // Resolve the alias (only for simple aliases without parameters)
+            return self.type_expr_to_sort(underlying);
+        }
+
+        // 3. Built-in primitive types
         match name {
             // Complex type → Complex datatype sort (exact matches only)
             "ℂ" | "Complex" => {
@@ -2156,11 +3155,25 @@ impl<'r> Z3Backend<'r> {
             }
             // Real types → Real sort (exact matches only, not single letter R)
             "ℝ" | "Real" | "Scalar" => Sort::real(),
+            // Rational types → Real sort (Z3's Real is actually ℚ, not ℝ)
+            "ℚ" | "Rational" | "Q" => Sort::real(),
             // Integer types → Int sort (exact matches only)
-            "ℤ" | "Int" | "Integer" | "ℕ" | "Nat" => Sort::int(),
+            "ℤ" | "Int" | "Integer" | "ℕ" | "Nat" | "Natural" => Sort::int(),
             // Boolean → Bool sort
             "Bool" | "Boolean" => Sort::bool(),
-            // Everything else (type variables like S, M, G, R, T, and abstract types) → Int
+
+            // Bitvector types - common widths
+            "BitVec8" | "Byte" | "U8" | "I8" => Sort::bitvector(8),
+            "BitVec16" | "U16" | "I16" => Sort::bitvector(16),
+            "BitVec32" | "U32" | "I32" | "Word" => Sort::bitvector(32),
+            "BitVec64" | "U64" | "I64" => Sort::bitvector(64),
+
+            // Set types - Z3 sets are arrays from element type to Bool
+            "Set" | "IntSet" => Sort::set(&Sort::int()),
+            "RealSet" => Sort::set(&Sort::real()),
+            "BoolSet" => Sort::set(&Sort::bool()),
+
+            // 4. Everything else (type variables like S, M, G, R, T, and abstract types) → Int
             // Type variables must all map to the same sort for consistency
             _ => Sort::int(),
         }
@@ -2189,20 +3202,61 @@ impl<'r> Z3Backend<'r> {
         for var in variables {
             let z3_var: Dynamic = if let Some(type_annotation) = &var.type_annotation {
                 match type_annotation.as_str() {
+                    // Boolean types
                     "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
-                    "ℝ" | "Real" | "R" => Real::fresh_const(&var.name).into(),
-                    "ℤ" | "Int" | "Z" => Int::fresh_const(&var.name).into(),
+
+                    // Real types
+                    "ℝ" | "Real" => Real::fresh_const(&var.name).into(),
+
+                    // Rational types (Z3's Real is actually ℚ)
+                    "ℚ" | "Rational" | "Q" => Real::fresh_const(&var.name).into(),
+
+                    // Integer/Natural types
+                    "ℤ" | "Int" | "Z" | "Integer" | "ℕ" | "Nat" | "Natural" => {
+                        Int::fresh_const(&var.name).into()
+                    }
+
+                    // Complex types
+                    "ℂ" | "Complex" | "C" => self
+                        .fresh_complex_const(&var.name)
+                        .unwrap_or_else(|| Int::fresh_const(&var.name).into()),
+
+                    // Bitvector types - common widths
+                    "BitVec8" | "Byte" | "U8" | "I8" => {
+                        Dynamic::fresh_const(&var.name, &Sort::bitvector(8))
+                    }
+                    "BitVec16" | "U16" | "I16" => {
+                        Dynamic::fresh_const(&var.name, &Sort::bitvector(16))
+                    }
+                    "BitVec32" | "U32" | "I32" | "Word" => {
+                        Dynamic::fresh_const(&var.name, &Sort::bitvector(32))
+                    }
+                    "BitVec64" | "U64" | "I64" => {
+                        Dynamic::fresh_const(&var.name, &Sort::bitvector(64))
+                    }
+
+                    // Set types
+                    "Set" | "IntSet" => Dynamic::fresh_const(&var.name, &Sort::set(&Sort::int())),
+                    "RealSet" => Dynamic::fresh_const(&var.name, &Sort::set(&Sort::real())),
+                    "BoolSet" => Dynamic::fresh_const(&var.name, &Sort::set(&Sort::bool())),
+
+                    // String type
                     "String" | "Str" => z3::ast::String::fresh_const(&var.name).into(),
-                    "ℂ" | "Complex" | "C" => {
-                        // Create fresh Complex constant for quantified complex variables
-                        self.fresh_complex_const(&var.name)
-                            .unwrap_or_else(|| Int::fresh_const(&var.name).into())
+
+                    type_name => {
+                        // Check if it's a declared data type
+                        if let Some(dt_sort) = self.declared_data_types.get(type_name) {
+                            Dynamic::fresh_const(&var.name, &dt_sort.sort)
+                        } else {
+                            // Unknown type - add warning and default to Int
+                            self.add_warning(format!(
+                                "Unknown type '{}' for variable '{}'. Treating as Int. \
+                                 Consider adding: data {} = ...  or ensure it's imported.",
+                                type_name, var.name, type_name
+                            ));
+                            Int::fresh_const(&var.name).into()
+                        }
                     }
-                    "ℚ" | "Rational" | "Q" => {
-                        // Rationals are represented as Z3 Real (which is actually ℚ)
-                        Real::fresh_const(&var.name).into()
-                    }
-                    _ => Int::fresh_const(&var.name).into(),
                 }
             } else {
                 Int::fresh_const(&var.name).into()
@@ -2901,26 +3955,29 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         self.identity_elements.clear();
     }
 
-    fn load_identity_element(&mut self, name: &str) {
+    fn load_identity_element(&mut self, name: &str, type_expr: &TypeExpr) {
         if !self.identity_elements.contains_key(name) {
-            let z3_const: Dynamic = Int::fresh_const(name).into();
+            // Create constant with the correct sort based on the type expression
+            let sort = self.type_expr_to_sort(type_expr);
+            let z3_const: Dynamic = Dynamic::fresh_const(name, &sort);
 
-            // Assert this new constant is distinct from all existing identity elements
+            // Assert this new constant is distinct from all existing identity elements of the SAME sort
             // This is critical for symbolic ADT matching to work correctly!
-            for (existing_name, existing_z3) in &self.identity_elements {
-                if let (Some(new_int), Some(existing_int)) =
-                    (z3_const.as_int(), existing_z3.as_int())
-                {
-                    // Assert: new_const ≠ existing_const
-                    let distinct = new_int.eq(&existing_int).not();
+            for existing_z3 in self.identity_elements.values() {
+                // Only assert distinct if sorts are compatible
+                if z3_const.get_sort() == existing_z3.get_sort() {
+                    #[allow(deprecated)]
+                    let distinct = z3_const._eq(existing_z3).not();
                     self.solver.assert(&distinct);
-                    println!("   🔒 Asserted distinct: {} ≠ {}", name, existing_name);
                 }
             }
 
             self.identity_elements.insert(name.to_string(), z3_const);
-            println!("   📌 Loaded identity element: {}", name);
         }
+    }
+
+    fn is_declared_constructor(&self, name: &str) -> bool {
+        self.is_declared_constructor_internal(name)
     }
 
     fn assert_expression(&mut self, expr: &Expression) -> Result<(), String> {
