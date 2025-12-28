@@ -124,6 +124,9 @@ pub struct Evaluator {
     /// Top-level operation declarations (for Z3 type signatures)
     toplevel_operations: HashMap<String, crate::kleis_ast::TypeExpr>,
 
+    /// Implements blocks (for registry - where constraints and concrete bindings)
+    implements_blocks: Vec<crate::kleis_ast::ImplementsDef>,
+
     /// Optional debug hook for step-through debugging
     /// When set, eval() calls hook methods at key points
     /// Uses RefCell for interior mutability (hook needs &mut self)
@@ -143,6 +146,7 @@ impl Evaluator {
             data_types: Vec::new(),
             structures: Vec::new(),
             toplevel_operations: HashMap::new(),
+            implements_blocks: Vec::new(),
             debug_hook: RefCell::new(None),
         }
     }
@@ -228,6 +232,13 @@ impl Evaluator {
         // Store structure definitions for export
         for structure in program.structures() {
             self.structures.push(structure.clone());
+        }
+
+        // Store implements blocks for registry
+        for item in &program.items {
+            if let TopLevel::ImplementsDef(impl_def) = item {
+                self.implements_blocks.push(impl_def.clone());
+            }
         }
 
         // Store top-level operation declarations for Z3 type lookup
@@ -1089,6 +1100,10 @@ impl Evaluator {
         let mut registry = StructureRegistry::new();
         for structure in &self.structures {
             let _ = registry.register(structure.clone());
+        }
+        // Add implements blocks (for where constraints)
+        for impl_def in &self.implements_blocks {
+            registry.register_implements(impl_def.clone());
         }
         // Add top-level operations
         for (name, type_sig) in &self.toplevel_operations {

@@ -4,6 +4,48 @@
 
 ---
 
+## ✅ DONE: Import Registry Fix (Dec 27, 2024)
+
+### Summary
+
+Fixed critical issue where `kleis test` command wasn't loading imported structures and their operations into the registry for Z3 verification.
+
+### Problem
+
+When running `kleis test` on a file that imports another file:
+1. The imported file's structures were NOT loaded into the evaluator
+2. Operations from imported structures weren't in the registry
+3. Z3 fell back to declaring all operations as untyped (`flow_add → Int`)
+4. Implements blocks weren't loaded
+
+### Fixes
+
+1. **Added `load_imports_recursive` in `kleis.rs`**
+   - `run_test` now recursively loads all imports before the main file
+   - Imported structures, operations, and data types are now in the evaluator
+
+2. **Added `implements_blocks` to Evaluator**
+   - New field: `implements_blocks: Vec<ImplementsDef>`
+   - Loaded in `load_program_with_file`
+   - Added to registry in `build_registry`
+
+3. **Registry now complete**
+   - Structures ✅
+   - Structure operations ✅
+   - Top-level operations ✅
+   - Implements blocks ✅
+
+### Tests
+
+Added `tests/import_registry_test.rs` with 5 tests:
+- `test_imported_structures_in_registry`
+- `test_standalone_structures_no_import_needed`
+- `test_structure_registry_has_operations`
+- `test_multiple_structures_operations_accessible`
+- `test_implements_blocks_in_registry`
+
+---
+
 ## ✅ DONE: Z3 Backend Major Fixes (Dec 27, 2024)
 
 ### Summary
