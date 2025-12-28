@@ -30,10 +30,15 @@ When running `kleis test` on a file that imports another file:
    - Added to registry in `build_registry`
 
 3. **Registry now complete**
-   - Structures ✅
-   - Structure operations ✅
-   - Top-level operations ✅
-   - Implements blocks ✅
+
+   | TopLevel Variant | Loaded in Evaluator | Added to Registry |
+   |-----------------|---------------------|-------------------|
+   | `StructureDef` | ✅ | ✅ |
+   | `OperationDecl` | ✅ | ✅ |
+   | `DataDef` | ✅ | ✅ |
+   | `FunctionDef` | ✅ | N/A |
+   | `ImplementsDef` | ✅ | ✅ |
+   | `TypeAlias` | ✅ | ✅ |
 
 ### Tests
 

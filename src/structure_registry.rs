@@ -51,6 +51,20 @@ pub struct StructureRegistry {
     /// Top-level operation declarations
     /// Example: "apply_kernel" → TypeExpr::Function(Product([GreenKernel, Flow]), FieldR4)
     toplevel_operations: HashMap<String, crate::kleis_ast::TypeExpr>,
+
+    /// Data type definitions (ADTs)
+    /// Example: "Channel" → DataDef { name: "Channel", variants: [Mass, EM, Spin, Color] }
+    data_types: HashMap<String, crate::kleis_ast::DataDef>,
+
+    /// Type aliases
+    /// Example: "Vector" → (params, TypeExpr)
+    type_aliases: HashMap<
+        String,
+        (
+            Vec<crate::kleis_ast::TypeAliasParam>,
+            crate::kleis_ast::TypeExpr,
+        ),
+    >,
 }
 
 impl StructureRegistry {
@@ -60,7 +74,50 @@ impl StructureRegistry {
             structures: HashMap::new(),
             implements: HashMap::new(),
             toplevel_operations: HashMap::new(),
+            data_types: HashMap::new(),
+            type_aliases: HashMap::new(),
         }
+    }
+
+    /// Register a data type (ADT) definition
+    pub fn register_data_type(&mut self, data_def: crate::kleis_ast::DataDef) {
+        self.data_types.insert(data_def.name.clone(), data_def);
+    }
+
+    /// Get a data type by name
+    pub fn get_data_type(&self, name: &str) -> Option<&crate::kleis_ast::DataDef> {
+        self.data_types.get(name)
+    }
+
+    /// Check if a name is a known data type
+    pub fn has_data_type(&self, name: &str) -> bool {
+        self.data_types.contains_key(name)
+    }
+
+    /// Register a type alias
+    pub fn register_type_alias(
+        &mut self,
+        name: String,
+        params: Vec<crate::kleis_ast::TypeAliasParam>,
+        type_expr: crate::kleis_ast::TypeExpr,
+    ) {
+        self.type_aliases.insert(name, (params, type_expr));
+    }
+
+    /// Get a type alias by name
+    pub fn get_type_alias(
+        &self,
+        name: &str,
+    ) -> Option<&(
+        Vec<crate::kleis_ast::TypeAliasParam>,
+        crate::kleis_ast::TypeExpr,
+    )> {
+        self.type_aliases.get(name)
+    }
+
+    /// Check if a name is a known type alias
+    pub fn has_type_alias(&self, name: &str) -> bool {
+        self.type_aliases.contains_key(name)
     }
 
     /// Register a top-level operation declaration

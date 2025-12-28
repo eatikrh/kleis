@@ -127,6 +127,9 @@ pub struct Evaluator {
     /// Implements blocks (for registry - where constraints and concrete bindings)
     implements_blocks: Vec<crate::kleis_ast::ImplementsDef>,
 
+    /// Type aliases (for registry - type abbreviations)
+    type_aliases: Vec<crate::kleis_ast::TypeAlias>,
+
     /// Optional debug hook for step-through debugging
     /// When set, eval() calls hook methods at key points
     /// Uses RefCell for interior mutability (hook needs &mut self)
@@ -147,6 +150,7 @@ impl Evaluator {
             structures: Vec::new(),
             toplevel_operations: HashMap::new(),
             implements_blocks: Vec::new(),
+            type_aliases: Vec::new(),
             debug_hook: RefCell::new(None),
         }
     }
@@ -238,6 +242,13 @@ impl Evaluator {
         for item in &program.items {
             if let TopLevel::ImplementsDef(impl_def) = item {
                 self.implements_blocks.push(impl_def.clone());
+            }
+        }
+
+        // Store type aliases for registry
+        for item in &program.items {
+            if let TopLevel::TypeAlias(type_alias) = item {
+                self.type_aliases.push(type_alias.clone());
             }
         }
 
@@ -1104,6 +1115,18 @@ impl Evaluator {
         // Add implements blocks (for where constraints)
         for impl_def in &self.implements_blocks {
             registry.register_implements(impl_def.clone());
+        }
+        // Add data types (for ADT constructor recognition)
+        for data_def in &self.data_types {
+            registry.register_data_type(data_def.clone());
+        }
+        // Add type aliases
+        for type_alias in &self.type_aliases {
+            registry.register_type_alias(
+                type_alias.name.clone(),
+                type_alias.params.clone(),
+                type_alias.type_expr.clone(),
+            );
         }
         // Add top-level operations
         for (name, type_sig) in &self.toplevel_operations {
