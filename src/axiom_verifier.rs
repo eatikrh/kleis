@@ -85,7 +85,11 @@ impl<'r> AxiomVerifier<'r> {
     /// ```
     #[cfg(feature = "axiom-verification")]
     pub fn new(registry: &'r StructureRegistry) -> Result<Self, String> {
-        let backend = Z3Backend::new(registry)?;
+        let mut backend = Z3Backend::new(registry)?;
+
+        // Initialize Z3 with registry data (data types, axioms)
+        // This must be done before any verification
+        backend.initialize_from_registry()?;
 
         Ok(Self {
             backend,
@@ -165,14 +169,25 @@ impl<'r> AxiomVerifier<'r> {
     /// Nullary constructors (like TCP, UDP, ICMP) are values, not functions.
     /// They need to be registered as Z3 constants so expressions like
     /// `Packet(4, 5, 100, 64, TCP, src, dst)` can be translated.
+    ///
+    /// NOTE: This skips constructors that are already declared in Z3 data types.
+    /// Those are handled via `get_nullary_constructor` instead.
     #[cfg(feature = "axiom-verification")]
     pub fn load_adt_constructors<I, S>(&mut self, constructors: I)
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
+        use crate::kleis_ast::TypeExpr;
+        // ADT constructors without explicit types default to Int
+        let default_type = TypeExpr::Named("Int".to_string());
         for name in constructors {
-            self.backend.load_identity_element(name.as_ref());
+            let name_str = name.as_ref();
+            // Skip if this is already a declared data type constructor
+            if self.backend.is_declared_constructor(name_str) {
+                continue;
+            }
+            self.backend.load_identity_element(name_str, &default_type);
         }
     }
 
@@ -377,8 +392,8 @@ impl<'r> AxiomVerifier<'r> {
                     let is_nullary = !matches!(type_signature, TypeExpr::Function(..));
 
                     if is_nullary {
-                        // Delegate to backend to load identity element
-                        self.backend.load_identity_element(name);
+                        // Delegate to backend to load identity element with its type
+                        self.backend.load_identity_element(name, type_signature);
                     }
                 }
                 StructureMember::NestedStructure { members, .. } => {

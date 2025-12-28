@@ -1,0 +1,195 @@
+// Set Theory - Simple Examples
+// =============================
+// These examples test Z3's built-in set operations directly.
+// They don't depend on complex axioms with nested quantifiers.
+
+import "set_types.kleis"
+
+// ============================================
+// Simple Structure: Just declares the types
+// ============================================
+
+structure SetBasics {
+    // Empty structure - no axioms needed for built-in operations
+}
+
+// ============================================
+// Examples: Direct Z3 Set Operations
+// These work because they use Z3's built-in set semantics
+// ============================================
+
+example "singleton membership" {
+    uses SetBasics
+    
+    // n is in singleton(n)
+    assert(∀(n : ℤ). member(n, singleton(n)))
+}
+
+example "singleton non-membership" {
+    uses SetBasics
+    
+    // If x ≠ y, then x is not in singleton(y)
+    assert(∀(x : ℤ). ∀(y : ℤ). (x ≠ y) → ¬member(x, singleton(y)))
+}
+
+example "union contains left" {
+    uses SetBasics
+    
+    // If x is in A, then x is in A ∪ B
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). 
+           member(x, A) → member(x, union(A, B)))
+}
+
+example "union contains right" {
+    uses SetBasics
+    
+    // If x is in B, then x is in A ∪ B
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). 
+           member(x, B) → member(x, union(A, B)))
+}
+
+example "intersection requires both" {
+    uses SetBasics
+    
+    // x is in A ∩ B iff x is in both A and B
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). 
+           member(x, intersect(A, B)) ↔ (member(x, A) ∧ member(x, B)))
+}
+
+example "difference excludes B" {
+    uses SetBasics
+    
+    // x is in A \ B iff x is in A and not in B
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). 
+           member(x, difference(A, B)) ↔ (member(x, A) ∧ ¬member(x, B)))
+}
+
+example "complement is negation" {
+    uses SetBasics
+    
+    // x is in complement(A) iff x is not in A
+    assert(∀(x : ℤ). ∀(A : Set). 
+           member(x, complement(A)) ↔ ¬member(x, A))
+}
+
+example "insert adds element" {
+    uses SetBasics
+    
+    // After inserting x into S, x is a member
+    assert(∀(x : ℤ). ∀(S : Set). member(x, insert(x, S)))
+}
+
+example "insert preserves existing" {
+    uses SetBasics
+    
+    // Inserting y doesn't affect x's membership (if x was already there)
+    assert(∀(x : ℤ). ∀(y : ℤ). ∀(S : Set). 
+           member(x, S) → member(x, insert(y, S)))
+}
+
+example "remove removes element" {
+    uses SetBasics
+    
+    // After removing x from S, x is not a member
+    assert(∀(x : ℤ). ∀(S : Set). ¬member(x, remove(x, S)))
+}
+
+example "remove preserves other elements" {
+    uses SetBasics
+    
+    // Removing y doesn't affect x's membership (if x ≠ y)
+    assert(∀(x : ℤ). ∀(y : ℤ). ∀(S : Set). 
+           (x ≠ y ∧ member(x, S)) → member(x, remove(y, S)))
+}
+
+example "double complement" {
+    uses SetBasics
+    
+    // complement(complement(A)) = A
+    assert(∀(x : ℤ). ∀(A : Set). 
+           member(x, complement(complement(A))) ↔ member(x, A))
+}
+
+example "De Morgan for union" {
+    uses SetBasics
+    
+    // complement(A ∪ B) = complement(A) ∩ complement(B)
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). 
+           member(x, complement(union(A, B))) ↔ 
+           member(x, intersect(complement(A), complement(B))))
+}
+
+example "De Morgan for intersection" {
+    uses SetBasics
+    
+    // complement(A ∩ B) = complement(A) ∪ complement(B)
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). 
+           member(x, complement(intersect(A, B))) ↔ 
+           member(x, union(complement(A), complement(B))))
+}
+
+example "union is commutative" {
+    uses SetBasics
+    
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). 
+           member(x, union(A, B)) ↔ member(x, union(B, A)))
+}
+
+example "intersection is commutative" {
+    uses SetBasics
+    
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). 
+           member(x, intersect(A, B)) ↔ member(x, intersect(B, A)))
+}
+
+example "union is associative" {
+    uses SetBasics
+    
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). ∀(C : Set). 
+           member(x, union(union(A, B), C)) ↔ member(x, union(A, union(B, C))))
+}
+
+example "intersection is associative" {
+    uses SetBasics
+    
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). ∀(C : Set). 
+           member(x, intersect(intersect(A, B), C)) ↔ member(x, intersect(A, intersect(B, C))))
+}
+
+example "union is idempotent" {
+    uses SetBasics
+    
+    assert(∀(x : ℤ). ∀(A : Set). 
+           member(x, union(A, A)) ↔ member(x, A))
+}
+
+example "intersection is idempotent" {
+    uses SetBasics
+    
+    assert(∀(x : ℤ). ∀(A : Set). 
+           member(x, intersect(A, A)) ↔ member(x, A))
+}
+
+example "self difference is empty" {
+    uses SetBasics
+    
+    // A \ A contains nothing
+    assert(∀(x : ℤ). ∀(A : Set). ¬member(x, difference(A, A)))
+}
+
+example "distributivity: intersection over union" {
+    uses SetBasics
+    
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). ∀(C : Set). 
+           member(x, intersect(A, union(B, C))) ↔ 
+           member(x, union(intersect(A, B), intersect(A, C))))
+}
+
+example "subset via implication" {
+    uses SetBasics
+    
+    // If A ⊆ B then every element of A is in B
+    assert(∀(x : ℤ). ∀(A : Set). ∀(B : Set). 
+           subset(A, B) → (member(x, A) → member(x, B)))
+}
+

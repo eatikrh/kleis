@@ -1,0 +1,84 @@
+// Set Theory - Empty Set Examples
+// ================================
+// Examples involving the empty set.
+// These verify that empty_set behaves correctly.
+
+import "set_types.kleis"
+
+structure EmptySetAxioms {
+    // The empty set has no members
+    // Note: empty_set is a built-in constant that Z3 handles specially
+}
+
+example "empty set contains nothing (direct)" {
+    uses EmptySetAxioms
+    
+    // For any specific element, it's not in empty_set
+    // We use concrete values here to avoid universal quantifiers over empty_set
+    assert(¬member(0, empty_set))
+}
+
+example "empty set is subset of any singleton" {
+    uses EmptySetAxioms
+    
+    // empty_set ⊆ {n} for any n
+    // This checks the subset relationship
+    assert(∀(n : ℤ). subset(empty_set, singleton(n)))
+}
+
+example "union with singleton gives singleton" {
+    uses EmptySetAxioms
+    
+    // empty_set ∪ {n} has exactly the element n
+    assert(∀(n : ℤ). member(n, union(empty_set, singleton(n))))
+}
+
+example "intersection with singleton is empty" {
+    uses EmptySetAxioms
+    
+    // empty_set ∩ {n} is empty
+    assert(∀(n : ℤ). ∀(x : ℤ). ¬member(x, intersect(empty_set, singleton(n))))
+}
+
+example "difference from singleton is empty" {
+    uses EmptySetAxioms
+    
+    // empty_set \ {n} is empty
+    assert(∀(n : ℤ). ∀(x : ℤ). ¬member(x, difference(empty_set, singleton(n))))
+}
+
+example "singleton minus singleton is empty" {
+    uses EmptySetAxioms
+    
+    // {n} \ {n} is empty
+    assert(∀(n : ℤ). ∀(x : ℤ). ¬member(x, difference(singleton(n), singleton(n))))
+}
+
+example "inserting into empty creates singleton" {
+    uses EmptySetAxioms
+    
+    // insert(n, empty_set) contains n
+    assert(∀(n : ℤ). member(n, insert(n, empty_set)))
+}
+
+example "inserting preserves emptiness for other elements" {
+    uses EmptySetAxioms
+    
+    // insert(n, empty_set) only contains n
+    assert(∀(n : ℤ). ∀(m : ℤ). (n ≠ m) → ¬member(m, insert(n, empty_set)))
+}
+
+example "removing from singleton gives empty behavior" {
+    uses EmptySetAxioms
+    
+    // {n} \ {n} has no members
+    assert(∀(n : ℤ). ∀(x : ℤ). ¬member(x, remove(n, singleton(n))))
+}
+
+example "subset of self" {
+    uses EmptySetAxioms
+    
+    // Any set is a subset of itself
+    assert(∀(A : Set). subset(A, A))
+}
+

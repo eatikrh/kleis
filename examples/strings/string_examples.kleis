@@ -1,0 +1,153 @@
+// String Theory - Examples
+// =========================
+// Test examples for string theory axioms.
+// These use Z3's decidable string theory (QF_SLIA).
+
+import "string_axioms.kleis"
+
+// ============================================
+// Examples: Basic String Properties
+// ============================================
+
+example "empty string length is zero" {
+    uses StringBasics
+    
+    assert(strlen(empty_string) = 0)
+}
+
+example "length is non-negative" {
+    uses StringBasics
+    
+    assert(∀(s : String). strlen(s) ≥ 0)
+}
+
+example "concat with empty left is identity" {
+    uses StringBasics
+    
+    assert(∀(s : String). concat(empty_string, s) = s)
+}
+
+example "concat with empty right is identity" {
+    uses StringBasics
+    
+    assert(∀(s : String). concat(s, empty_string) = s)
+}
+
+example "concat length is additive" {
+    uses StringBasics
+    
+    assert(∀(s : String). ∀(t : String). strlen(concat(s, t)) = strlen(s) + strlen(t))
+}
+
+// ============================================
+// Examples: Concatenation Properties
+// ============================================
+
+example "concatenation is associative" {
+    uses StringConcatenation
+    
+    assert(∀(a : String). ∀(b : String). ∀(c : String).
+           concat(concat(a, b), c) = concat(a, concat(b, c)))
+}
+
+// ============================================
+// Examples: Containment Properties
+// ============================================
+
+example "every string contains itself" {
+    uses StringContainment
+    
+    assert(∀(s : String). contains(s, s))
+}
+
+example "every string contains empty" {
+    uses StringContainment
+    
+    assert(∀(s : String). contains(s, empty_string))
+}
+
+example "empty string is prefix of all" {
+    uses StringContainment
+    
+    assert(∀(s : String). hasPrefix(s, empty_string))
+}
+
+example "empty string is suffix of all" {
+    uses StringContainment
+    
+    assert(∀(s : String). hasSuffix(s, empty_string))
+}
+
+example "every string has itself as prefix" {
+    uses StringContainment
+    
+    assert(∀(s : String). hasPrefix(s, s))
+}
+
+example "every string has itself as suffix" {
+    uses StringContainment
+    
+    assert(∀(s : String). hasSuffix(s, s))
+}
+
+example "prefix implies contains" {
+    uses StringContainment
+    
+    assert(∀(s : String). ∀(p : String). hasPrefix(s, p) → contains(s, p))
+}
+
+example "suffix implies contains" {
+    uses StringContainment
+    
+    assert(∀(s : String). ∀(p : String). hasSuffix(s, p) → contains(s, p))
+}
+
+// ============================================
+// Examples: Substring Properties
+// ============================================
+
+example "substring of length 0 is empty" {
+    uses SubstringProperties
+    
+    assert(∀(s : String). ∀(i : ℤ). substr(s, i, 0) = empty_string)
+}
+
+example "full substring is the string" {
+    uses SubstringProperties
+    
+    assert(∀(s : String). substr(s, 0, strlen(s)) = s)
+}
+
+example "substring length bound" {
+    uses SubstringProperties
+    
+    assert(∀(s : String). ∀(i : ℤ). ∀(n : ℤ).
+           (i ≥ 0 ∧ n ≥ 0) → strlen(substr(s, i, n)) ≤ n)
+}
+
+// ============================================
+// Examples: indexOf Properties
+// ============================================
+
+example "indexOf self at 0 returns 0" {
+    uses IndexOfProperties
+    
+    assert(∀(s : String). strlen(s) > 0 → indexOf(s, s, 0) = 0)
+}
+
+example "indexOf empty returns start position" {
+    uses IndexOfProperties
+    
+    assert(∀(s : String). ∀(i : ℤ). (i ≥ 0 ∧ i ≤ strlen(s)) → indexOf(s, empty_string, i) = i)
+}
+
+// ============================================
+// Examples: String Conversion
+// ============================================
+
+example "positive int roundtrip" {
+    uses StringConversion
+    
+    assert(∀(n : ℤ). n ≥ 0 → strToInt(intToStr(n)) = n)
+}
+

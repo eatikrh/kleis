@@ -1,32 +1,31 @@
-// Projected Ontology Theory - Core (v4, with n-ary product types)
+// Projected Ontology Theory - Core (v5, with concrete vector types)
 //
-// New in v4:
-// - Uses n-ary product types from grammar v0.94
-// - Cleaner type signatures: FieldR4 × Event × Channel → ℝ
-// - Removed workaround structures: MetricProbeArgs, PointPair, etc.
+// Vector Type Definitions:
+// - Vec3C: 3-dimensional vector over ℂ (H_ont - ontological Hilbert space)
+//   Represents modal/ontological state: (ψ₁, ψ₂, ψ₃) ∈ ℂ³
+// - Vec4R: 4-dimensional vector over ℝ (spacetime)
+//   Represents observable position/field: (x⁰, x¹, x², x³) ∈ ℝ⁴
 //
-// From v3:
-// 1. Typed channels for residues (scalable conserved quantities)
-// 2. Particle = residue support predicate
-// 3. Universe refinement ordering
-// 4. POT sanity theorems
+// The Green kernel G projects from H_ont to ℝ⁴:
+//   G : Flow → FieldR4  where Flow ≈ C⁰(ℝ, Vec3C) and FieldR4 ≈ C⁰(Event, Vec4R)
 //
-// This work is not an interpretation of physical theories, but an attempt to
-// formalize the structural preconditions under which any physical theory can meaningfully exist.
+// Changes from v4:
+// - Concrete vector types (Vec3C, Vec4R) instead of aspirational Vector(n, T)
+// - All structures now use parseable Kleis syntax
+//
+// This work formalizes structural preconditions under which physical theories exist.
 
 import "spacetime_type_kernel_projection.kleis"
 
-
-
 // =============================================================================
-// Projection semantics clarification (Flow→Field, complex→real)
+// Projection Semantics Clarification (Flow→Field, complex→real)
 // =============================================================================
 // In POT, Flow is NOT a point in ℂ³.
-// Conceptually, Flow is a complex-valued modal flow τ ↦ ψ(τ) ∈ Vector(3, ℂ),
+// Conceptually, Flow is a complex-valued modal function τ ↦ ψ(τ) ∈ Vec3C,
 // where τ is an ontological evolution parameter (not physical time).
 //
 // Likewise, FieldR4 is an observable field indexed by Events,
-// e ↦ f(e) ∈ Vector(4, ℝ).
+// e ↦ f(e) ∈ Vec4R.
 //
 // We keep Flow and FieldR4 abstract in the core, but equip them with
 // evaluation operations and extensionality axioms. This makes the
@@ -34,14 +33,14 @@ import "spacetime_type_kernel_projection.kleis"
 // =============================================================================
 
 structure FlowAsFunction {
-    operation flow_at : Flow × ℝ → Vector(3, ℂ)
+    operation flow_at : Flow × ℝ → Vec3C
 
     axiom flow_ext: ∀(a b : Flow).
         (∀(τ : ℝ). flow_at(a, τ) = flow_at(b, τ)) → a = b
 }
 
 structure FieldAsFunction {
-    operation field_at : FieldR4 × Event → Vector(4, ℝ)
+    operation field_at : FieldR4 × Event → Vec4R
 
     axiom field_ext: ∀(f g : FieldR4).
         (∀(e : Event). field_at(f, e) = field_at(g, e)) → f = g
@@ -50,41 +49,46 @@ structure FieldAsFunction {
 // =============================================================================
 // 1. H_ont = ℂ³ with inner product
 // =============================================================================
+// Vec3C represents the 3-dimensional complex Hilbert space H_ont.
+// This is the ontological state space before projection to observables.
 
-structure InnerProductSpace(n : Nat) {
-    operation add   : Vector(n, ℂ) × Vector(n, ℂ) → Vector(n, ℂ)
-    operation scale : ℂ × Vector(n, ℂ) → Vector(n, ℂ)
-    element zero    : Vector(n, ℂ)
+structure InnerProductSpace3C {
+    operation vec3c_add   : Vec3C × Vec3C → Vec3C
+    operation vec3c_scale : ℂ × Vec3C → Vec3C
+    element zero_c3 : Vec3C
 
-    operation inner : Vector(n, ℂ) × Vector(n, ℂ) → ℂ
+    operation vec3c_inner : Vec3C × Vec3C → ℂ
 
-    axiom add_comm:  ∀(u v : Vector(n, ℂ)). add(u, v) = add(v, u)
-    axiom add_assoc: ∀(u v w : Vector(n, ℂ)).
-        add(add(u, v), w) = add(u, add(v, w))
-    axiom add_id:    ∀(v : Vector(n, ℂ)). add(v, zero) = v
+    axiom add_comm:  ∀(u v : Vec3C). vec3c_add(u, v) = vec3c_add(v, u)
+    axiom add_assoc: ∀(u v w : Vec3C).
+        vec3c_add(vec3c_add(u, v), w) = vec3c_add(u, vec3c_add(v, w))
+    axiom add_id:    ∀(v : Vec3C). vec3c_add(v, zero_c3) = v
 
-    axiom inner_conj_sym: ∀(x y : Vector(n, ℂ)).
-        inner(x, y) = conjugate(inner(y, x))
+    axiom inner_conj_sym: ∀(x y : Vec3C).
+        vec3c_inner(x, y) = conjugate(vec3c_inner(y, x))
 }
 
 // =============================================================================
 // 2. Views/contexts as projectors on H_ont
 // =============================================================================
+// A projector P: Vec3C → Vec3C represents a "view" or "context" that
+// selects certain aspects of the ontological state.
 
-structure Projector(n : Nat) over InnerProductSpace(n) {
-    operation P : Vector(n, ℂ) → Vector(n, ℂ)
+structure Projector3C {
+    operation P : Vec3C → Vec3C
 
-    axiom idempotent: ∀(v : Vector(n, ℂ)). P(P(v)) = P(v)
-    axiom self_adjoint: ∀(x y : Vector(n, ℂ)).
-        inner(P(x), y) = inner(x, P(y))
+    axiom idempotent: ∀(v : Vec3C). P(P(v)) = P(v)
+    axiom self_adjoint: ∀(x y : Vec3C).
+        vec3c_inner(P(x), y) = vec3c_inner(x, P(y))
 }
 
 // =============================================================================
 // 3. Ontology map Φ : Entity → H_ont
 // =============================================================================
+// Every entity has an ontological representation in H_ont.
 
-structure OntologyMap over InnerProductSpace(3) {
-    operation Phi : Entity → Vector(3, ℂ)
+structure OntologyMap {
+    operation Phi : Entity → Vec3C
     operation sim : Entity × Entity → ℝ
 
     axiom sim_symmetric: ∀(a b : Entity). sim(a, b) = sim(b, a)
@@ -123,12 +127,12 @@ structure FlowAlgebra {
 // Top-level projection operation (canonical notion)
 operation apply_kernel : GreenKernel × Flow → FieldR4
 
-structure GreenKernel {
+structure GreenKernelAxioms {
     // Kernel action (abstract): contribution of modal value at τ to event e.
     // Think of this as the integrand of a Green/Fourier-type transform.
-    operation kernel_action : Event × ℝ × Vector(3, ℂ) → Vector(4, ℝ)
+    operation kernel_action : Event × ℝ × Vec3C → Vec4R
 
-    // Minimal kernel-mediated requirement: pointwise-equal flows project to the same field.
+    // Minimal kernel-mediated requirement: pointwise-equal flows project to same field.
     axiom project_extensional: ∀(G : GreenKernel, a b : Flow).
         (∀(τ : ℝ). flow_at(a, τ) = flow_at(b, τ)) → apply_kernel(G, a) = apply_kernel(G, b)
 
@@ -153,13 +157,10 @@ structure GreenKernel {
 // =============================================================================
 
 structure ConservedChannel {
-    element Mass   : Channel
-    element EM     : Channel
-    element Spin   : Channel
-    element Color  : Channel
+    // Channel values already defined in spacetime_type_kernel_projection.kleis
+    // as: data Channel = Mass | EM | Spin | Color
 
     // v0.94: Direct n-ary product type!
-    // Previously: residue : ResiduePair × Channel → ℝ (needed wrapper)
     operation residue : FieldR4 × Event × Channel → ℝ
 }
 
@@ -187,7 +188,6 @@ structure PointSources {
 // =============================================================================
 
 structure ParticlePredicates {
-    // v0.94: Use product type directly
     operation has_mass : FieldR4 × Event → Bool
 
     axiom has_mass_def: ∀(f : FieldR4, e : Event).
@@ -221,35 +221,16 @@ structure ProjectiveEquivalence {
 }
 
 // DERIVED THEOREMS: Standard equivalence relation properties
-// These follow from equiv_elim + equiv_intro and properties of equality.
-// Note: All are parameterized by kernel G.
 
 example "equiv is reflexive (derived)" {
-    // ∀(G : GreenKernel, a : Flow). equiv(G, a, a)
-    // Proof sketch:
-    //   apply_kernel(G, a) = apply_kernel(G, a)   by reflexivity of equality
-    //   equiv(G, a, a)                            by equiv_intro
     assert(∀(G : GreenKernel, a : Flow). equiv(G, a, a))
 }
 
 example "equiv is symmetric (derived)" {
-    // ∀(G : GreenKernel, a b : Flow). equiv(G, a, b) → equiv(G, b, a)
-    // Proof sketch:
-    //   equiv(G, a, b)                            assumption
-    //   apply_kernel(G, a) = apply_kernel(G, b)   by equiv_elim
-    //   apply_kernel(G, b) = apply_kernel(G, a)   by symmetry of equality
-    //   equiv(G, b, a)                            by equiv_intro
     assert(∀(G : GreenKernel, a b : Flow). equiv(G, a, b) → equiv(G, b, a))
 }
 
 example "equiv is transitive (derived)" {
-    // ∀(G : GreenKernel, a b c : Flow). equiv(G, a, b) ∧ equiv(G, b, c) → equiv(G, a, c)
-    // Proof sketch:
-    //   equiv(G, a, b) ∧ equiv(G, b, c)           assumption
-    //   apply_kernel(G, a) = apply_kernel(G, b)   by equiv_elim
-    //   apply_kernel(G, b) = apply_kernel(G, c)   by equiv_elim
-    //   apply_kernel(G, a) = apply_kernel(G, c)   by transitivity of equality
-    //   equiv(G, a, c)                            by equiv_intro
     assert(∀(G : GreenKernel, a b c : Flow). equiv(G, a, b) ∧ equiv(G, b, c) → equiv(G, a, c))
 }
 
@@ -259,18 +240,14 @@ example "equiv is transitive (derived)" {
 
 structure KernelMetricInterface {
     // v0.94: Direct n-ary product type - no wrapper structure needed!
-    // Previously: metric_probe : MetricProbeArgs → ℝ (with wrapper)
-    operation metric_probe : FieldR4 × Vector(4, ℝ) × Vector(4, ℝ) → ℝ
+    operation metric_probe : FieldR4 × Vec4R × Vec4R → ℝ
 
     // POT BRIDGE AXIOM: Geometry is kernel-induced
-    // Any projected field carries the same induced bilinear form
-    // because geometry is a kernel property, not flow-dependent
-    // OPTION A: Now explicit about kernel G
-    axiom probe_recovers_kernel_inner: ∀(G : GreenKernel, psi : Flow, u v : Vector(4, ℝ)).
+    axiom probe_recovers_kernel_inner: ∀(G : GreenKernel, psi : Flow, u v : Vec4R).
         metric_probe(apply_kernel(G, psi), u, v) = kernel_inner(u, v)
 
     // Probe is symmetric (inherits from metric symmetry)
-    axiom probe_symmetric: ∀(f : FieldR4, u v : Vector(4, ℝ)).
+    axiom probe_symmetric: ∀(f : FieldR4, u v : Vec4R).
         metric_probe(f, u, v) = metric_probe(f, v, u)
 }
 
@@ -290,16 +267,10 @@ structure UniverseOrder {
 structure UniverseDistinction {
     operation different_universes : GreenKernel × GreenKernel → Bool
 
-    // NOTE: apply_kernel is now a top-level operation (see section 5)
-    // No need to redeclare it here.
-
     // DEFINITION of different_universes (both directions)
-    // Direction 1: witnessing a difference → universes are different
     axiom different_universes_intro: ∀(G1 G2 : GreenKernel, psi : Flow).
         apply_kernel(G1, psi) ≠ apply_kernel(G2, psi) → different_universes(G1, G2)
 
-    // Direction 2: universes are different → there exists a witnessing flow
-    // (This is the key axiom for deriving universe_distinguishable)
     axiom different_universes_elim: ∀(G1 G2 : GreenKernel).
         different_universes(G1, G2) → ∃(psi : Flow).
             apply_kernel(G1, psi) ≠ apply_kernel(G2, psi)
@@ -311,20 +282,13 @@ structure UniverseDistinction {
 
 structure POTCoreAxioms {
     // AXIOM 1: Equivalence preserves all channel residues
-    // OPTION A: Now explicit about kernel G
     axiom equiv_preserves_residue: ∀(G : GreenKernel, psi1 psi2 : Flow, e : Event, c : Channel).
         equiv(G, psi1, psi2) →
             residue(apply_kernel(G, psi1), e, c) = residue(apply_kernel(G, psi2), e, c)
 
     // AXIOM 2: Fields distinguishable by residues (EXISTENTIAL separation)
-    // If fields differ, there EXISTS some (event, channel) that detects it
-    // This is the minimal separation principle.
     axiom field_distinguishable: ∀(f1 f2 : FieldR4).
         f1 ≠ f2 → ∃(e : Event, c : Channel). residue(f1, e, c) ≠ residue(f2, e, c)
-
-    // NOTE: universe_distinguishable is now a DERIVED THEOREM, not an axiom!
-    // It follows from: different_universes_elim + field_distinguishable
-    // See example block "universe distinguishable theorem" below.
 }
 
 // =============================================================================
@@ -332,7 +296,7 @@ structure POTCoreAxioms {
 // =============================================================================
 
 example "projector is idempotent" {
-    assert(∀(v : Vector(3, ℂ)). P(P(v)) = P(v))
+    assert(∀(v : Vec3C). P(P(v)) = P(v))
 }
 
 example "equivalence is reflexive" {
@@ -345,34 +309,20 @@ example "refinement is transitive" {
 }
 
 example "point mass residue (v0.94: 3-arg call)" {
-    // v0.94: residue(field, event, channel) - no wrapper!
     assert(∀(e : Event, m : ℝ).
         residue(point_mass(e, m), e, Mass) = m)
 }
 
 example "metric probe symmetry (v0.94: 3-arg call)" {
-    // v0.94: metric_probe(field, u, v) - no wrapper!
-    assert(∀(f : FieldR4, u v : Vector(4, ℝ)).
+    assert(∀(f : FieldR4, u v : Vec4R).
         metric_probe(f, u, v) = metric_probe(f, v, u))
 }
 
 // =============================================================================
 // DERIVED THEOREM: Universe Distinguishability
 // =============================================================================
-//
-// This is NOT an axiom - it follows from:
-//   1. different_universes_elim: different_universes(G1,G2) → ∃psi. apply_kernel differs
-//   2. field_distinguishable: f1 ≠ f2 → ∃(e,c). residue differs
-//
-// Proof sketch:
-//   - From different_universes(G1,G2), get witness psi via (1)
-//   - Let f1 = apply_kernel(G1,psi), f2 = apply_kernel(G2,psi), with f1 ≠ f2
-//   - Apply (2) to get (e,c) such that residue(f1,e,c) ≠ residue(f2,e,c)
-//   - Done: we have (psi, e, c) witnessing the observable difference
 
 example "universe distinguishable theorem (derived)" {
-    // Key POT result: different kernels produce distinguishable physics
-    // This follows from different_universes_elim + field_distinguishable
     assert(∀(G1 G2 : GreenKernel).
         different_universes(G1, G2) →
             ∃(psi : Flow, e : Event, c : Channel).

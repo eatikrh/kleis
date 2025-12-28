@@ -17,6 +17,7 @@
 //! See: docs/session-2024-12-12/SOLVER_ABSTRACTION_LAYER_DESIGN.md
 
 use crate::ast::Expression;
+use crate::kleis_ast::TypeExpr;
 use crate::solvers::capabilities::SolverCapabilities;
 
 /// Result of axiom verification
@@ -195,14 +196,22 @@ pub trait SolverBackend {
     ///
     /// # Arguments
     /// * `name` - Name of the identity element (e.g., "zero", "one")
+    /// * `type_expr` - The type of the identity element
     ///
     /// # Example
     /// ```ignore
-    /// backend.load_identity_element("zero");
-    /// backend.load_identity_element("one");
+    /// backend.load_identity_element("zero", &TypeExpr::Named("M".to_string()));
+    /// backend.load_identity_element("one", &TypeExpr::Named("M".to_string()));
     /// // Now zero ≠ one is asserted in the solver
     /// ```
-    fn load_identity_element(&mut self, name: &str);
+    fn load_identity_element(&mut self, name: &str, type_expr: &TypeExpr);
+
+    /// Check if a name is a constructor in a declared data type
+    ///
+    /// Returns true if the name matches a nullary constructor in any
+    /// declared data type. Used to avoid loading ADT constructors as
+    /// separate identity elements when they're already part of a data type.
+    fn is_declared_constructor(&self, name: &str) -> bool;
 
     /// Assert a Kleis expression as a boolean constraint
     ///

@@ -1,0 +1,145 @@
+// String Theory - Axioms
+// =======================
+// Core axioms of string theory using Z3's built-in string operations.
+// Z3's string theory (QF_SLIA) is decidable for many fragments.
+
+import "string_types.kleis"
+
+// ============================================
+// Structure: StringBasics
+// Basic axioms about string length and empty string
+// ============================================
+
+structure StringBasics {
+    // Empty string has length 0
+    axiom empty_length:
+        strlen(empty_string) = 0
+    
+    // Length is non-negative
+    axiom length_nonnegative:
+        ∀(s : String). strlen(s) ≥ 0
+    
+    // Concatenation length is sum of lengths
+    axiom concat_length:
+        ∀(s : String). ∀(t : String). strlen(concat(s, t)) = strlen(s) + strlen(t)
+    
+    // Concatenation with empty string (left identity)
+    axiom concat_empty_left:
+        ∀(s : String). concat(empty_string, s) = s
+    
+    // Concatenation with empty string (right identity)
+    axiom concat_empty_right:
+        ∀(s : String). concat(s, empty_string) = s
+}
+
+// ============================================
+// Structure: StringConcatenation
+// Axioms about string concatenation
+// ============================================
+
+structure StringConcatenation {
+    // Concatenation is associative
+    axiom concat_associative:
+        ∀(a : String). ∀(b : String). ∀(c : String).
+            concat(concat(a, b), c) = concat(a, concat(b, c))
+    
+    // Empty string is unique left identity
+    axiom empty_unique_left:
+        ∀(e : String). (∀(s : String). concat(e, s) = s) → e = empty_string
+    
+    // Empty string is unique right identity
+    axiom empty_unique_right:
+        ∀(e : String). (∀(s : String). concat(s, e) = s) → e = empty_string
+}
+
+// ============================================
+// Structure: StringContainment
+// Axioms about contains, prefix, and suffix
+// ============================================
+
+structure StringContainment {
+    // Every string contains itself
+    axiom contains_self:
+        ∀(s : String). contains(s, s)
+    
+    // Every string contains the empty string
+    axiom contains_empty:
+        ∀(s : String). contains(s, empty_string)
+    
+    // Empty string has empty prefix
+    axiom empty_prefix:
+        ∀(s : String). hasPrefix(s, empty_string)
+    
+    // Empty string has empty suffix
+    axiom empty_suffix:
+        ∀(s : String). hasSuffix(s, empty_string)
+    
+    // Every string has itself as prefix
+    axiom prefix_self:
+        ∀(s : String). hasPrefix(s, s)
+    
+    // Every string has itself as suffix
+    axiom suffix_self:
+        ∀(s : String). hasSuffix(s, s)
+    
+    // If s has prefix p, then s contains p
+    axiom prefix_implies_contains:
+        ∀(s : String). ∀(p : String). hasPrefix(s, p) → contains(s, p)
+    
+    // If s has suffix p, then s contains p
+    axiom suffix_implies_contains:
+        ∀(s : String). ∀(p : String). hasSuffix(s, p) → contains(s, p)
+}
+
+// ============================================
+// Structure: SubstringProperties
+// Axioms about substring operations
+// ============================================
+
+structure SubstringProperties {
+    // Substring of length 0 is empty
+    axiom substr_zero_length:
+        ∀(s : String). ∀(i : ℤ). substr(s, i, 0) = empty_string
+    
+    // Substring starting at 0 with full length is the string itself
+    axiom substr_full:
+        ∀(s : String). substr(s, 0, strlen(s)) = s
+    
+    // Length of substring is at most the requested length
+    axiom substr_length_bound:
+        ∀(s : String). ∀(i : ℤ). ∀(n : ℤ).
+            (i ≥ 0 ∧ n ≥ 0) → strlen(substr(s, i, n)) ≤ n
+}
+
+// ============================================
+// Structure: IndexOfProperties
+// Axioms about indexOf
+// ============================================
+
+structure IndexOfProperties {
+    // Finding a string in itself at position 0 returns 0
+    axiom indexOf_self:
+        ∀(s : String). strlen(s) > 0 → indexOf(s, s, 0) = 0
+    
+    // Finding empty string returns the start position
+    axiom indexOf_empty:
+        ∀(s : String). ∀(i : ℤ). (i ≥ 0 ∧ i ≤ strlen(s)) → indexOf(s, empty_string, i) = i
+    
+    // If needle not found, returns -1
+    // (This is a property, not always provable without concrete examples)
+}
+
+// ============================================
+// Structure: StringConversion
+// Axioms about string-integer conversion
+// ============================================
+
+structure StringConversion {
+    // Converting 0 to string gives "0"
+    // Note: Z3's intToStr uses a specific representation
+    
+    // Converting a digit string to int and back preserves value
+    axiom int_roundtrip:
+        ∀(n : ℤ). n ≥ 0 → strToInt(intToStr(n)) = n
+}
+

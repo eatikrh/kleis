@@ -1,0 +1,38 @@
+// Set Theory - Basic Type Definitions
+// ====================================
+// This file defines the basic types and operations for set theory.
+// Uses Z3's built-in set operations for decidable verification.
+
+// Operations on sets of integers (IntSet)
+// Z3 represents sets as arrays from element type to Bool
+
+// Membership test: is x an element of set S?
+operation member : ℤ × Set → Bool
+
+// Empty set constant
+operation empty_set : Set
+
+// Singleton set: {x}
+operation singleton : ℤ → Set
+
+// Set union: A ∪ B
+operation union : Set × Set → Set
+
+// Set intersection: A ∩ B
+operation intersect : Set × Set → Set
+
+// Set difference: A \ B (elements in A but not in B)
+operation difference : Set × Set → Set
+
+// Set complement: all elements NOT in A
+operation complement : Set → Set
+
+// Subset relation: A ⊆ B
+operation subset : Set × Set → Bool
+
+// Insert element into set: {x} ∪ S
+operation insert : ℤ × Set → Set
+
+// Remove element from set: S \ {x}
+operation remove : ℤ × Set → Set
+

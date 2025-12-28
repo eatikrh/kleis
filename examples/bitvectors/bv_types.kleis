@@ -1,0 +1,42 @@
+// Bitvector Theory - Basic Type Definitions
+// ==========================================
+// This file defines the basic operations for bitvector theory.
+// Uses Z3's built-in bitvector operations (QF_BV theory).
+// We use 8-bit bitvectors for simplicity.
+
+// Bitwise logical operations
+operation bvand : BitVec8 × BitVec8 → BitVec8
+operation bvor : BitVec8 × BitVec8 → BitVec8
+operation bvxor : BitVec8 × BitVec8 → BitVec8
+operation bvnot : BitVec8 → BitVec8
+
+// Arithmetic operations (modular/wrapping)
+operation bvadd : BitVec8 × BitVec8 → BitVec8
+operation bvsub : BitVec8 × BitVec8 → BitVec8
+operation bvmul : BitVec8 × BitVec8 → BitVec8
+operation bvneg : BitVec8 → BitVec8
+
+// Division and remainder (unsigned)
+operation bvudiv : BitVec8 × BitVec8 → BitVec8
+operation bvurem : BitVec8 × BitVec8 → BitVec8
+
+// Division (signed)
+operation bvsdiv : BitVec8 × BitVec8 → BitVec8
+
+// Shift operations
+operation bvshl : BitVec8 × BitVec8 → BitVec8
+operation bvlshr : BitVec8 × BitVec8 → BitVec8
+operation bvashr : BitVec8 × BitVec8 → BitVec8
+
+// Comparison operations (unsigned)
+operation bvult : BitVec8 × BitVec8 → Bool
+operation bvule : BitVec8 × BitVec8 → Bool
+
+// Comparison operations (signed)
+operation bvslt : BitVec8 × BitVec8 → Bool
+operation bvsle : BitVec8 × BitVec8 → Bool
+
+// Zero and all-ones constants
+operation bv_zero : BitVec8
+operation bv_ones : BitVec8
+

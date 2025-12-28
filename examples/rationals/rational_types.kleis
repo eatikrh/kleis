@@ -1,0 +1,36 @@
+// ============================================================================
+// Rational Number Types and Basic Operations
+// ============================================================================
+//
+// ℚ (the rationals) form a field - the simplest infinite field.
+// Z3's Real sort is actually ℚ (rationals), not ℝ (reals), making this
+// a natural fit for SMT verification.
+//
+// This file defines the basic types and operations.
+// ============================================================================
+
+// The rational number type
+// In Z3, this maps to the Real sort (which is actually ℚ)
+data Rat = Q(ℤ, ℤ)  // Numerator and denominator (conceptual representation)
+
+// Basic arithmetic operations
+operation rat_add  : ℚ × ℚ → ℚ
+operation rat_sub  : ℚ × ℚ → ℚ
+operation rat_mul  : ℚ × ℚ → ℚ
+operation rat_div  : ℚ × ℚ → ℚ
+operation rat_neg  : ℚ → ℚ
+operation rat_inv  : ℚ → ℚ      // Multiplicative inverse (1/x)
+
+// Comparison operations
+operation rat_eq   : ℚ × ℚ → Bool
+operation rat_lt   : ℚ × ℚ → Bool
+operation rat_le   : ℚ × ℚ → Bool
+operation rat_gt   : ℚ × ℚ → Bool
+operation rat_ge   : ℚ × ℚ → Bool
+
+// Absolute value
+operation rat_abs  : ℚ → ℚ
+
+// Sign function: returns -1, 0, or 1
+operation rat_sign : ℚ → ℤ
+

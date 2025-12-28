@@ -4,6 +4,171 @@
 
 ---
 
+## ✅ DONE: Bitvector Theory Examples (Dec 27, 2024)
+
+### Summary
+
+Created `examples/bitvectors/` directory with comprehensive bitvector theory axioms and examples verified by Z3.
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `bv_types.kleis` | Type/operation declarations for 8-bit bitvectors |
+| `bv_axioms.kleis` | Formal axioms (bitwise logic, arithmetic, zero/ones, comparisons, shifts) |
+| `bv_examples.kleis` | Axiom verification tests (39 examples) |
+
+### Operations Supported
+
+**Bitwise Logic:**
+- `bvand`, `bvor`, `bvxor`, `bvnot`
+
+**Arithmetic (modular):**
+- `bvadd`, `bvsub`, `bvmul`, `bvneg`
+- `bvudiv`, `bvurem` (unsigned division/remainder)
+- `bvsdiv` (signed division)
+
+**Shifts:**
+- `bvshl` (left shift)
+- `bvlshr` (logical right shift)
+- `bvashr` (arithmetic right shift)
+
+**Comparisons:**
+- `bvult`, `bvule` (unsigned)
+- `bvslt`, `bvsle` (signed)
+
+**Constants:**
+- `bv_zero` (0x00)
+- `bv_ones` (0xFF)
+
+### Results
+
+**39/39 examples pass** using Z3's built-in decidable bitvector theory (QF_BV).
+
+---
+
+## ✅ DONE: String Theory Examples (Dec 27, 2024)
+
+### Summary
+
+Created `examples/strings/` directory with comprehensive string theory axioms and examples verified by Z3.
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `string_types.kleis` | Type/operation declarations for strings |
+| `string_axioms.kleis` | Formal axioms (basics, concatenation, containment, substring, indexOf, conversion) |
+| `string_examples.kleis` | Full axiom verification tests (20 examples) |
+| `string_simple_examples.kleis` | Direct Z3 string operation tests (20 examples) |
+
+### Operations Supported
+
+- `concat(s, t)` - String concatenation
+- `strlen(s)` - String length
+- `empty_string` - Empty string constant ""
+- `contains(s, sub)` - Substring containment
+- `hasPrefix(s, p)` - Prefix check
+- `hasSuffix(s, suf)` - Suffix check
+- `substr(s, start, len)` - Substring extraction
+- `indexOf(s, sub, start)` - Find index of substring
+- `replace(s, old, new)` - Replace first occurrence
+- `charAt(s, i)` - Get character at index
+- `strToInt(s)` / `intToStr(n)` - String-integer conversion
+
+### Results
+
+**40/40 examples pass** using Z3's built-in decidable string theory (QF_SLIA).
+
+---
+
+## ✅ DONE: Set Theory Examples (Dec 27, 2024)
+
+### Summary
+
+Created `examples/sets/` directory with comprehensive set theory axioms and examples verified by Z3.
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `set_types.kleis` | Type/operation declarations for sets |
+| `set_axioms.kleis` | Formal axioms (membership, operations, algebra laws, subsets) |
+| `set_empty_examples.kleis` | Empty set behavior tests (10 examples) |
+| `set_examples.kleis` | Full axiom verification tests (22 examples) |
+| `set_simple_examples.kleis` | Direct Z3 set operation tests (23 examples) |
+
+### Key Fixes
+
+1. **Added `iff` operator handling** - `↔` (biconditional) now maps to Z3 boolean equality
+2. **Added `dynamic_to_set()` helper** - Properly converts Dynamic set variables to Z3 Set type
+3. **Added `empty_set` special case** - Recognizes `empty_set` as a nullary operation returning the empty set
+
+### Results
+
+**55/55 examples pass** using Z3's built-in decidable set theory.
+
+---
+
+## ✅ DONE: Z3 Built-in Arithmetic Mapping (Dec 27, 2024)
+
+### Summary
+
+Fixed critical performance issue where Z3 was hanging on quantified axioms. The root cause was using **uninterpreted functions** for arithmetic operations instead of Z3's **built-in decidable arithmetic**.
+
+### Problem
+
+Kleis files defined operations like `rat_add`, `rat_mul`, `flow_add`, etc. These were being translated to Z3 as **uninterpreted functions**:
+
+```smt2
+; SLOW - Uninterpreted function
+(forall ((a Real) (b Real)) (= (rat_mul a b) (rat_mul b a)))
+```
+
+With quantifiers, Z3 uses E-matching to instantiate universally quantified axioms. This can be:
+- Slow (exponential search)
+- Incomplete (may return "unknown")
+- Prone to matching loops
+
+### Solution
+
+Map common arithmetic operation names to Z3's **built-in arithmetic**:
+
+```smt2
+; FAST - Built-in multiplication
+(forall ((a Real) (b Real)) (= (* a b) (* b a)))
+```
+
+Z3's built-in Real/Integer arithmetic is **decidable**, so quantified formulas complete instantly.
+
+### Operations Mapped
+
+| User Operation | Z3 Built-in |
+|---------------|-------------|
+| `plus`, `add`, `rat_add` | `+` |
+| `minus`, `subtract`, `rat_sub` | `-` |
+| `times`, `multiply`, `rat_mul` | `*` |
+| `negate`, `rat_neg` | unary `-` |
+| `rat_inv`, `inv`, `reciprocal` | `1/x` |
+| `rat_div`, `divide` | `/` |
+| `rat_lt`, `rat_gt`, `rat_le`, `rat_ge` | `<`, `>`, `<=`, `>=` |
+
+### Results
+
+- `examples/rationals/rational_examples.kleis`: 18/18 pass (was hanging)
+- `examples/ontology/revised/*.kleis`: All complete quickly
+- Z3 verification is now practical for field axioms
+
+### Key Insight
+
+**Use built-in arithmetic when possible, uninterpreted functions only when necessary.**
+
+- Field theory (rationals, reals): Use built-in
+- Custom abstract algebra (groups over user-defined types): Use uninterpreted
+- Mixed: Map operations to built-in where types match
+
+---
+
 ## ✅ DONE: Import Registry Fix (Dec 27, 2024)
 
 ### Summary
@@ -150,6 +315,79 @@ structure AdmissibleKernel(
 - All 755 unit tests pass
 - POT examples verify correctly (when Z3 completes in time)
 - Examples that timeout are correctly reported as "unknown" (failed)
+
+---
+
+## ✅ DONE: Z3 Enhanced Registry Integration (Dec 27, 2024)
+
+### Summary
+
+Extended Z3 backend to leverage `data_types` and `type_aliases` from the StructureRegistry for enhanced verification capabilities.
+
+### What Was Implemented
+
+1. **Z3 ADT Declaration from Registry**
+   - New method: `declare_data_types_from_registry()`
+   - Converts Kleis `data` declarations into Z3 algebraic data types
+   - Automatic constructor distinctness: `Mass ≠ EM ≠ Spin ≠ Color`
+   - New field: `declared_data_types: HashMap<String, DatatypeSort>`
+
+2. **Type Alias Resolution**
+   - New method: `resolve_type_alias(&TypeExpr) -> TypeExpr`
+   - Resolves type aliases before Z3 sort mapping
+   - Supports parameterized alias substitution
+
+3. **Enhanced `type_name_to_sort`**
+   - Now checks declared data types first
+   - Then checks type aliases from registry
+   - Falls back to built-in primitives
+
+4. **Registry Iterator Methods**
+   - Added `data_types()` iterator
+   - Added `type_aliases()` iterator
+   - Added `data_type_count()` and `type_alias_count()`
+
+### Complete Registry Support Table
+
+| TopLevel Variant | Loaded in Evaluator | Added to Registry | Used by Z3 |
+|-----------------|---------------------|-------------------|------------|
+| `StructureDef` | ✅ | ✅ | ✅ (operations, axioms) |
+| `OperationDecl` | ✅ | ✅ | ✅ (typed declarations) |
+| `DataDef` | ✅ | ✅ | ✅ (Z3 ADT, distinctness) |
+| `FunctionDef` | ✅ | N/A | N/A |
+| `ImplementsDef` | ✅ | ✅ | ⏳ (verification planned) |
+| `TypeAlias` | ✅ | ✅ | ✅ (sort resolution) |
+
+### Benefits of Z3 Using Registry Data Types
+
+1. **Automatic Constructor Distinctness** - Z3 knows `Mass ≠ EM` without explicit axioms
+2. **Exhaustiveness Checking** - Z3 can verify pattern matching covers all cases
+3. **Accessor Functions** - Fields accessible in Z3 reasoning
+4. **No Hardcoding** - User-defined data types get first-class Z3 support
+5. **Inductive Reasoning** - For recursive types like `List(T)`
+
+### Benefits of Z3 Using Type Aliases
+
+1. **Consistent Sort Resolution** - `type Scalar = ℝ` always resolves to Real sort
+2. **Semantic Type Names** - Write axioms using domain-meaningful names
+3. **Parameterized Resolution** - `type Matrix(m, n) = ...` can be resolved
+
+### New Tests
+
+Added to `tests/z3_backend_fixes_test.rs`:
+- `test_data_types_registered_in_registry`
+- `test_type_aliases_registered_in_registry`
+- `test_z3_declares_data_types_from_registry` (with axiom-verification feature)
+- `test_z3_resolves_type_aliases` (with axiom-verification feature)
+- `test_z3_data_type_constructor_distinctness`
+- `test_registry_iteration_methods`
+
+### Documentation
+
+Updated ADR-022 (Z3 Integration) with new "Enhanced Registry Integration" section documenting:
+- Benefits of data types → Z3 ADTs
+- Benefits of type alias resolution
+- Implementation plan and impact assessment
 
 ---
 

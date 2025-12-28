@@ -1,0 +1,12 @@
+// Minimal test - no imports, no axioms
+
+operation plus : ℚ × ℚ → ℚ
+
+structure SimpleRat {
+    axiom comm: ∀(a b : ℚ). plus(a, b) = plus(b, a)
+}
+
+example "commutativity" {
+    assert(∀(x y : ℚ). plus(x, y) = plus(y, x))
+}
+

@@ -120,6 +120,36 @@ impl StructureRegistry {
         self.type_aliases.contains_key(name)
     }
 
+    /// Iterate over all registered data types
+    pub fn data_types(&self) -> impl Iterator<Item = &crate::kleis_ast::DataDef> {
+        self.data_types.values()
+    }
+
+    /// Get the number of registered data types
+    pub fn data_type_count(&self) -> usize {
+        self.data_types.len()
+    }
+
+    /// Iterate over all registered type aliases
+    pub fn type_aliases(
+        &self,
+    ) -> impl Iterator<
+        Item = (
+            &String,
+            &(
+                Vec<crate::kleis_ast::TypeAliasParam>,
+                crate::kleis_ast::TypeExpr,
+            ),
+        ),
+    > {
+        self.type_aliases.iter()
+    }
+
+    /// Get the number of registered type aliases
+    pub fn type_alias_count(&self) -> usize {
+        self.type_aliases.len()
+    }
+
     /// Register a top-level operation declaration
     pub fn register_toplevel_operation(
         &mut self,
