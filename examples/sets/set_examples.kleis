@@ -10,21 +10,18 @@ import "set_axioms.kleis"
 // ============================================
 
 example "empty set has no elements" {
-    uses SetMembership
     
     // Nothing is in the empty set
     assert(∀(x : ℤ). ¬member(x, empty_set))
 }
 
 example "singleton contains its element" {
-    uses SetMembership
     
     // 5 is in {5}
     assert(∀(n : ℤ). member(n, singleton(n)))
 }
 
 example "element not in singleton of different value" {
-    uses SetMembership
     
     // If x ≠ y, then x is not in {y}
     assert(∀(x : ℤ). ∀(y : ℤ). (x ≠ y) → ¬member(x, singleton(y)))
@@ -35,27 +32,23 @@ example "element not in singleton of different value" {
 // ============================================
 
 example "union with empty set is identity" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(x : ℤ). member(x, union(A, empty_set)) ↔ member(x, A))
 }
 
 example "union is commutative" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(B : Set). ∀(x : ℤ). 
            member(x, union(A, B)) ↔ member(x, union(B, A)))
 }
 
 example "union is associative" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(B : Set). ∀(C : Set). ∀(x : ℤ).
            member(x, union(union(A, B), C)) ↔ member(x, union(A, union(B, C))))
 }
 
 example "union is idempotent" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(x : ℤ). member(x, union(A, A)) ↔ member(x, A))
 }
@@ -65,27 +58,23 @@ example "union is idempotent" {
 // ============================================
 
 example "intersection with empty set is empty" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(x : ℤ). ¬member(x, intersect(A, empty_set)))
 }
 
 example "intersection is commutative" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(B : Set). ∀(x : ℤ).
            member(x, intersect(A, B)) ↔ member(x, intersect(B, A)))
 }
 
 example "intersection is associative" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(B : Set). ∀(C : Set). ∀(x : ℤ).
            member(x, intersect(intersect(A, B), C)) ↔ member(x, intersect(A, intersect(B, C))))
 }
 
 example "intersection is idempotent" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(x : ℤ). member(x, intersect(A, A)) ↔ member(x, A))
 }
@@ -95,20 +84,17 @@ example "intersection is idempotent" {
 // ============================================
 
 example "double complement is identity" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(x : ℤ). member(x, complement(complement(A))) ↔ member(x, A))
 }
 
 example "De Morgan union" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(B : Set). ∀(x : ℤ).
            member(x, complement(union(A, B))) ↔ member(x, intersect(complement(A), complement(B))))
 }
 
 example "De Morgan intersection" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(B : Set). ∀(x : ℤ).
            member(x, complement(intersect(A, B))) ↔ member(x, union(complement(A), complement(B))))
@@ -119,25 +105,21 @@ example "De Morgan intersection" {
 // ============================================
 
 example "subset is reflexive" {
-    uses SubsetRelation
     
     assert(∀(A : Set). subset(A, A))
 }
 
 example "empty set is subset of all" {
-    uses SubsetRelation
     
     assert(∀(A : Set). subset(empty_set, A))
 }
 
 example "subset of union" {
-    uses SubsetRelation
     
     assert(∀(A : Set). ∀(B : Set). subset(A, union(A, B)))
 }
 
 example "intersection is subset" {
-    uses SubsetRelation
     
     assert(∀(A : Set). ∀(B : Set). subset(intersect(A, B), A))
 }
@@ -147,7 +129,6 @@ example "intersection is subset" {
 // ============================================
 
 example "intersection distributes over union" {
-    uses SetAlgebraLaws
     
     assert(∀(A : Set). ∀(B : Set). ∀(C : Set). ∀(x : ℤ).
            member(x, intersect(A, union(B, C))) ↔ 
@@ -159,19 +140,16 @@ example "intersection distributes over union" {
 // ============================================
 
 example "difference with empty set is identity" {
-    uses SetOperations
     
     assert(∀(A : Set). ∀(x : ℤ). member(x, difference(A, empty_set)) ↔ member(x, A))
 }
 
 example "difference from self is empty" {
-    uses SetOperations
     
     assert(∀(A : Set). ∀(x : ℤ). ¬member(x, difference(A, A)))
 }
 
 example "empty set difference with anything is empty" {
-    uses SetOperations
     
     assert(∀(A : Set). ∀(x : ℤ). ¬member(x, difference(empty_set, A)))
 }
