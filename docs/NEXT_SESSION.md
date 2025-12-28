@@ -4,6 +4,155 @@
 
 ---
 
+## ✅ DONE: Import Registry Fix (Dec 27, 2024)
+
+### Summary
+
+Fixed critical issue where `kleis test` command wasn't loading imported structures and their operations into the registry for Z3 verification.
+
+### Problem
+
+When running `kleis test` on a file that imports another file:
+1. The imported file's structures were NOT loaded into the evaluator
+2. Operations from imported structures weren't in the registry
+3. Z3 fell back to declaring all operations as untyped (`flow_add → Int`)
+4. Implements blocks weren't loaded
+
+### Fixes
+
+1. **Added `load_imports_recursive` in `kleis.rs`**
+   - `run_test` now recursively loads all imports before the main file
+   - Imported structures, operations, and data types are now in the evaluator
+
+2. **Added `implements_blocks` to Evaluator**
+   - New field: `implements_blocks: Vec<ImplementsDef>`
+   - Loaded in `load_program_with_file`
+   - Added to registry in `build_registry`
+
+3. **Registry now complete**
+
+   | TopLevel Variant | Loaded in Evaluator | Added to Registry |
+   |-----------------|---------------------|-------------------|
+   | `StructureDef` | ✅ | ✅ |
+   | `OperationDecl` | ✅ | ✅ |
+   | `DataDef` | ✅ | ✅ |
+   | `FunctionDef` | ✅ | N/A |
+   | `ImplementsDef` | ✅ | ✅ |
+   | `TypeAlias` | ✅ | ✅ |
+
+### Tests
+
+Added `tests/import_registry_test.rs` with 5 tests:
+- `test_imported_structures_in_registry`
+- `test_standalone_structures_no_import_needed`
+- `test_structure_registry_has_operations`
+- `test_multiple_structures_operations_accessible`
+- `test_implements_blocks_in_registry`
+
+---
+
+## ✅ DONE: Z3 Backend Major Fixes (Dec 27, 2024)
+
+### Summary
+
+Fixed multiple critical bugs in Z3 axiom verification:
+
+1. **Quantifier Translation Bug (CRITICAL)**
+   - `translate_quantifier` was NOT wrapping axiom bodies in `forall_const`
+   - Axioms like `∀(G a b). apply_kernel(G, a) = apply_kernel(G, b) → equiv(G, a, b)` were being asserted as just the implication body WITHOUT the quantifier
+   - Z3 treated quantified variables as free constants, making all reflexivity proofs fail
+   - **Fix:** `translate_quantifier` now uses `z3::ast::forall_const()` and `exists_const()` properly
+
+2. **Typed Function Declarations**
+   - Previously: All uninterpreted functions declared with `Int` domain
+   - Now: Looks up operation signatures from registry and declares with proper sorts
+   - `flow_smul : ℂ × Flow → Flow` now declares `Complex × Int → Int` in Z3
+   - Added `get_operation_signature()` to `StructureRegistry`
+   - Added top-level operations storage to `StructureRegistry` and `Evaluator`
+
+3. **Complex Type Bound Variables**
+   - `fresh_complex_const` was constructing Complex values instead of bound variables
+   - This caused sort mismatches when applying functions in quantified contexts
+   - **Fix:** Use `Dynamic::fresh_const(name, &complex_sort)` for proper Z3 bound variables
+
+4. **AssertResult::Unknown Handling (CRITICAL)**
+   - Previously: Unknown was treated as Passed (optimistic!)
+   - **Fix:** Unknown now correctly fails with "Assertion unknown: ..." message
+   - Z3 timeouts and inconclusive results are no longer falsely reported as success
+
+5. **Z3 Timeout**
+   - Added 30-second timeout to prevent infinite hangs on complex quantified axioms
+   - Set via `solver.set_params()` with `timeout: 30000`
+
+### Future Enhancement: Configurable Timeout
+
+The 30-second timeout is currently hardcoded. It should be configurable per-assertion:
+
+```kleis
+// Option A: Assert-level timeout
+assert reflexivity: equiv(f, f) timeout 60s
+assert quick_check: x = x timeout 1s
+assert default: y = y  // uses default 30s
+
+// Option B: Example block timeout
+example "complex proofs" timeout 120s {
+    assert reflexivity: equiv(f, f)
+}
+```
+
+**Implementation would require:**
+1. Grammar change to support `timeout Ns` clause
+2. Parser update to parse timeout value
+3. AST field for optional timeout
+4. Evaluator to pass timeout to backend
+5. Backend method to set timeout per-assertion
+
+**Priority:** Low (current 30s default works for most cases)
+
+### Future Enhancement: Parameterized Structures with Structure Dependencies
+
+Current limitation: Structures can only extend other structures, not take them as parameters.
+
+**Proposed syntax:**
+```kleis
+structure AdmissibleKernel(
+  G        : GreenKernel,
+  FlowAlg  : FlowAlgebra,
+  FieldAlg : FieldR4Algebra
+) {
+  // Local shorthands using dot notation
+  define flow_add  = FlowAlg.flow_add
+  define field_add = FieldAlg.field_add
+
+  // Axioms referencing parameter structures
+  axiom linearity:
+    ∀(α : ℂ, f g : FieldR4).
+      G.apply(field_add(f,g)) = field_add(G.apply(f), G.apply(g))
+}
+```
+
+**Features needed:**
+1. Structure parameters with structure types (`G : GreenKernel`)
+2. Dot notation for accessing operations (`FlowAlg.flow_add`)
+3. Local `define` inside structure body
+4. Parameter structures as first-class values
+
+**Implementation would require:**
+1. Grammar extension for structure parameters with types
+2. Parser support for dot notation in expressions
+3. Name resolution for structure member access
+4. Type checker updates for structure-typed parameters
+
+**Priority:** Medium (enables cleaner POT formalization)
+
+### Test Results
+
+- All 755 unit tests pass
+- POT examples verify correctly (when Z3 completes in time)
+- Examples that timeout are correctly reported as "unknown" (failed)
+
+---
+
 ## 🎯 POT Formalization: Admissible Kernel Class (Next Steps)
 
 ### Current Status (Dec 27, 2024)

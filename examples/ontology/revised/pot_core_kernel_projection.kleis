@@ -10,6 +10,9 @@
 // 2. Particle = residue support predicate
 // 3. Universe refinement ordering
 // 4. POT sanity theorems
+//
+// This work is not an interpretation of physical theories, but an attempt to
+// formalize the structural preconditions under which any physical theory can meaningfully exist.
 
 import "spacetime_type_kernel_projection.kleis"
 

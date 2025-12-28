@@ -134,11 +134,8 @@ impl<'r> AxiomVerifier<'r> {
         let mut count = 0;
         for item in &program.items {
             if let TopLevel::FunctionDef(func_def) = item {
-                self.backend.declare_and_define_function(
-                    &func_def.name,
-                    &func_def.params,
-                    &func_def.body,
-                )?;
+                self.backend
+                    .define_function(&func_def.name, &func_def.params, &func_def.body)?;
                 println!(
                     "   ✅ Top-level function '{}' loaded into Z3",
                     func_def.name
@@ -412,11 +409,11 @@ impl<'r> AxiomVerifier<'r> {
             match member {
                 StructureMember::Axiom { proposition, .. } => {
                     // Delegate to backend for assertion
-                    self.backend.assert_kleis_expression(proposition)?;
+                    self.backend.assert_expression(proposition)?;
                 }
                 StructureMember::FunctionDef(func_def) => {
                     // Grammar v0.6: Load function definition via backend
-                    self.backend.declare_and_define_function(
+                    self.backend.define_function(
                         &func_def.name,
                         &func_def.params,
                         &func_def.body,

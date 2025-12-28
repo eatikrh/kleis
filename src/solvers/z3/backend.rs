@@ -15,6 +15,7 @@
 
 use crate::ast::{Expression, QuantifiedVar, QuantifierKind};
 use crate::evaluator::Evaluator;
+use crate::kleis_ast::TypeExpr;
 use crate::solvers::backend::{
     SatisfiabilityResult, SolverBackend, SolverStats, VerificationResult,
 };
@@ -104,7 +105,13 @@ impl<'r> Z3Backend<'r> {
     /// Axioms are loaded from stdlib/*.kleis files via assert_axioms_from_registry().
     /// Call this method after creating the backend to load all axioms before verification.
     pub fn new(registry: &'r StructureRegistry) -> Result<Self, String> {
+        // Create solver with 30 second timeout to avoid hangs on complex quantified axioms
         let solver = Solver::new();
+        // Set timeout via solver parameters
+        let mut params = z3::Params::new();
+        params.set_u32("timeout", 30000); // 30 seconds
+        solver.set_params(&params);
+
         let capabilities = super::load_capabilities()?;
 
         // Create Complex number datatype: Complex = mk_complex(re: Real, im: Real)
@@ -1018,8 +1025,7 @@ impl<'r> Z3Backend<'r> {
 
             // Empty set: empty_set or builtin_set_empty
             "empty_set" | "builtin_set_empty" | "set_empty" => {
-                // For empty set, we need to know the element type
-                // Default to Int sort for now
+                // Empty sets require element type; default to Int (uninterpreted elements)
                 let int_sort = z3::Sort::int();
                 Ok(z3::ast::Set::empty(&int_sort).into())
             }
@@ -2010,7 +2016,7 @@ impl<'r> Z3Backend<'r> {
                 }
             }
 
-            // Unknown operation - use uninterpreted function
+            // Unknown operation - use uninterpreted function with proper typing
             _ => {
                 let func_decl = self.declare_uninterpreted(name, args.len());
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
@@ -2031,11 +2037,28 @@ impl<'r> Z3Backend<'r> {
         }
     }
 
-    /// Declare an uninterpreted function in Z3
+    /// Declare an uninterpreted function in Z3 with proper typing
+    ///
+    /// Looks up the operation signature from the registry to determine:
+    /// - Domain sorts (from argument types)
+    /// - Range sort (from return type)
+    ///
+    /// Type mapping:
+    /// - ℂ/Complex → Complex datatype sort
+    /// - ℝ/Scalar/Real → Real sort
+    /// - Bool → Bool sort  
+    /// - Everything else → Int sort (uninterpreted as integers)
     fn declare_uninterpreted(&mut self, name: &str, arity: usize) -> FuncDecl {
+        // Try to get the operation signature from the registry
+        if let Some(type_sig) = self.registry.get_operation_signature(name) {
+            return self.declare_typed_function(name, type_sig, arity);
+        }
+
+        // No signature found: default to Int → Int (uninterpreted)
+        // Operations that need Bool return type MUST be declared with proper signatures
         if !self.declared_ops.contains(name) {
             println!(
-                "   🔧 Declaring uninterpreted function: {} with arity {}",
+                "   ⚠️  Declaring untyped function: {} with arity {} → Int (no signature in registry)",
                 name, arity
             );
             self.declared_ops.insert(name.to_string());
@@ -2046,16 +2069,121 @@ impl<'r> Z3Backend<'r> {
         FuncDecl::new(name, &domain_refs, &Sort::int())
     }
 
-    /// Translate quantifier to Z3
+    /// Declare a function with proper types from its signature
+    fn declare_typed_function(
+        &mut self,
+        name: &str,
+        type_sig: &TypeExpr,
+        arity: usize,
+    ) -> FuncDecl {
+        // Extract argument types and return type from signature
+        let (arg_types, ret_type) = self.extract_signature_types(type_sig);
+
+        // Convert to Z3 sorts
+        let domain: Vec<Sort> = if arg_types.is_empty() {
+            // Fallback if we couldn't extract arg types
+            (0..arity).map(|_| Sort::int()).collect()
+        } else {
+            arg_types
+                .iter()
+                .map(|t| self.type_expr_to_sort(t))
+                .collect()
+        };
+
+        let range = self.type_expr_to_sort(&ret_type);
+
+        if !self.declared_ops.contains(name) {
+            let domain_strs: Vec<String> = domain.iter().map(|s| format!("{}", s)).collect();
+            println!(
+                "   🔧 Declaring typed function: {} : {} → {}",
+                name,
+                domain_strs.join(" × "),
+                range
+            );
+            self.declared_ops.insert(name.to_string());
+        }
+
+        let domain_refs: Vec<_> = domain.iter().collect();
+        FuncDecl::new(name, &domain_refs, &range)
+    }
+
+    /// Extract argument types and return type from a function signature
+    ///
+    /// Handles curried types: `A → B → C` means args=[A, B], return=C
+    fn extract_signature_types(&self, type_sig: &TypeExpr) -> (Vec<TypeExpr>, TypeExpr) {
+        let mut args = Vec::new();
+        let mut current = type_sig.clone();
+
+        // Uncurry: A → B → C → D becomes args=[A, B, C], return=D
+        while let TypeExpr::Function(from, to) = current {
+            // Handle Product types in arguments (tuple parameters)
+            match from.as_ref() {
+                TypeExpr::Product(types) => args.extend(types.clone()),
+                single => args.push(single.clone()),
+            }
+            current = *to;
+        }
+
+        // current is now the final return type (non-function)
+        (args, current)
+    }
+
+    /// Convert a Kleis TypeExpr to a Z3 Sort
+    fn type_expr_to_sort(&self, type_expr: &TypeExpr) -> Sort {
+        match type_expr {
+            TypeExpr::Named(name) => self.type_name_to_sort(name),
+            TypeExpr::Parametric(name, _) => {
+                // For parametric types like Vector(3, ℂ), use the base type name
+                self.type_name_to_sort(name)
+            }
+            _ => Sort::int(), // Default for complex expressions
+        }
+    }
+
+    /// Convert a type name string to Z3 Sort
+    ///
+    /// Only exact type names map to specific sorts. Single letters like R, S, M
+    /// are type variables that should all map to Int (uninterpreted).
+    fn type_name_to_sort(&self, name: &str) -> Sort {
+        match name {
+            // Complex type → Complex datatype sort (exact matches only)
+            "ℂ" | "Complex" => {
+                if let Some(ref cdt) = self.complex_datatype {
+                    cdt.sort.sort.clone()
+                } else {
+                    Sort::real() // Fallback
+                }
+            }
+            // Real types → Real sort (exact matches only, not single letter R)
+            "ℝ" | "Real" | "Scalar" => Sort::real(),
+            // Integer types → Int sort (exact matches only)
+            "ℤ" | "Int" | "Integer" | "ℕ" | "Nat" => Sort::int(),
+            // Boolean → Bool sort
+            "Bool" | "Boolean" => Sort::bool(),
+            // Everything else (type variables like S, M, G, R, T, and abstract types) → Int
+            // Type variables must all map to the same sort for consistency
+            _ => Sort::int(),
+        }
+    }
+
+    /// Check if an operation returns Bool (based on registry, no heuristics)
+    ///
+    /// This is ONLY used when the operation signature is not found in the registry.
+    /// In a mathematical verifier, we cannot use heuristics - if the type is unknown,
+    /// we default to Int (uninterpreted) and log a warning.
+    ///
+    /// Operations that return Bool MUST be declared with proper type signatures.
+    /// Translate quantifier to Z3 with proper forall/exists wrapper
     fn translate_quantifier(
         &mut self,
-        _quantifier: &QuantifierKind,
+        quantifier: &QuantifierKind,
         variables: &[QuantifiedVar],
         where_clause: Option<&Expression>,
         body: &Expression,
         vars: &HashMap<String, Dynamic>,
     ) -> Result<Bool, String> {
-        // Create fresh Z3 variables
+        // Create Z3 bound variables
+        let mut bound_vars: Vec<Dynamic> = Vec::new();
         let mut new_vars = vars.clone();
 
         for var in variables {
@@ -2079,6 +2207,7 @@ impl<'r> Z3Backend<'r> {
             } else {
                 Int::fresh_const(&var.name).into()
             };
+            bound_vars.push(z3_var.clone());
             new_vars.insert(var.name.clone(), z3_var);
         }
 
@@ -2103,7 +2232,15 @@ impl<'r> Z3Backend<'r> {
                 .ok_or_else(|| "Quantifier body must be boolean".to_string())?
         };
 
-        Ok(body_z3)
+        // Create proper Z3 forall/exists with bound variables
+        let bound_refs: Vec<&dyn Ast> = bound_vars.iter().map(|v| v as &dyn Ast).collect();
+
+        let result = match quantifier {
+            QuantifierKind::ForAll => z3::ast::forall_const(&bound_refs, &[], &body_z3),
+            QuantifierKind::Exists => z3::ast::exists_const(&bound_refs, &[], &body_z3),
+        };
+
+        Ok(result)
     }
 
     /// Translate match expression to nested Z3 ite
@@ -2263,10 +2400,12 @@ impl<'r> Z3Backend<'r> {
                         Ok(())
                     }
                     Expression::Object(var_name) => {
-                        // The value is a variable - we can't destructure it at Z3 level
-                        // This would require Z3 datatypes with accessors
-                        // For now, create symbolic field accessors as fresh variables
-                        // This allows verification to proceed with symbolic field values
+                        // Symbolic variable destructuring: create fresh Z3 variables for fields
+                        //
+                        // Since we don't have Z3 ADT accessors, we create fresh symbolic variables
+                        // to represent "whatever the field values could be". This is sound for
+                        // verification: if a property holds for all possible field values, it holds
+                        // for the actual (unknown) field values.
                         for (i, pat) in args.iter().enumerate() {
                             let field_var_name = format!("{}_{}_field{}", var_name, name, i);
                             let field_z3: Dynamic = Int::fresh_const(&field_var_name).into();
@@ -2277,8 +2416,7 @@ impl<'r> Z3Backend<'r> {
                         Ok(())
                     }
                     _ => {
-                        // For other expressions, we can try to evaluate/translate and extract
-                        // For now, return a more helpful error
+                        // Other expression types cannot be destructured without Z3 ADT support
                         Err(format!(
                             "Cannot destructure pattern '{}({})' from expression type {:?}. \
                              Constructor destructuring requires a matching Operation or Object.",
@@ -2396,8 +2534,20 @@ impl<'r> Z3Backend<'r> {
                         Ok(None)
                     }
                 } else {
-                    // Constructor with args on symbolic scrutinee - can't handle yet
-                    // Would need Z3 ADT sorts for proper handling
+                    // LIMITATION: Constructor patterns with arguments on symbolic scrutinees
+                    // Example: match p { Cons(x, xs) => ... } where p is a symbolic variable
+                    //
+                    // Proper handling requires Z3 ADT (Algebraic Data Type) sorts:
+                    // 1. Declare datatype: (declare-datatypes ((List T)) ((nil) (cons (head T) (tail List))))
+                    // 2. Use accessors: (head p), (tail p)
+                    // 3. Use recognizers: (is-cons p)
+                    //
+                    // Current workaround: Return None, causing match to fall through to else branch
+                    // This is correct for verification (conservative) but limits expressiveness
+                    eprintln!(
+                        "   ⚠️  Limitation: Constructor '{}' with args on symbolic scrutinee not supported",
+                        name
+                    );
                     Ok(None)
                 }
             }
@@ -2413,7 +2563,7 @@ impl<'r> Z3Backend<'r> {
         SolverStats {
             loaded_structures: self.loaded_structures.len(),
             declared_operations: self.declared_ops.len(),
-            assertion_count: 0, // TODO: Track assertions
+            assertion_count: self.solver.get_assertions().len(),
         }
     }
 
@@ -2474,83 +2624,13 @@ impl<'r> Z3Backend<'r> {
     }
 
     /// Create a fresh Complex constant for quantified variables
-    /// Returns complex(re_fresh, im_fresh) where re and im are fresh Real constants
+    /// Uses Dynamic::fresh_const with Complex sort for proper Z3 bound variables
     fn fresh_complex_const(&self, name: &str) -> Option<Dynamic> {
         self.complex_datatype.as_ref().map(|cdt| {
-            // Create fresh Real constants for the real and imaginary parts
-            let re = Real::fresh_const(&format!("{}_re", name));
-            let im = Real::fresh_const(&format!("{}_im", name));
-            // Construct the complex number
-            cdt.constructor().apply(&[&re as &dyn Ast, &im as &dyn Ast])
+            // Use Dynamic::fresh_const with the Complex sort
+            // This creates a proper Z3 bound variable that works with forall_const
+            Dynamic::fresh_const(name, &cdt.sort.sort)
         })
-    }
-
-    // TODO: These methods are temporary to support AxiomVerifier's axiom loading
-    // Should be refactored when axiom loading is moved to backend properly
-
-    /// Load an identity element (nullary operation like zero, one, e)
-    pub fn load_identity_element(&mut self, name: &str) {
-        if !self.identity_elements.contains_key(name) {
-            let z3_const: Dynamic = Int::fresh_const(name).into();
-
-            // Assert this new constant is distinct from all existing identity elements
-            // This is critical for symbolic ADT matching to work correctly!
-            for (existing_name, existing_z3) in &self.identity_elements {
-                if let (Some(new_int), Some(existing_int)) =
-                    (z3_const.as_int(), existing_z3.as_int())
-                {
-                    // Assert: new_const ≠ existing_const
-                    let distinct = new_int.eq(&existing_int).not();
-                    self.solver.assert(&distinct);
-                    println!("   🔒 Asserted distinct: {} ≠ {}", name, existing_name);
-                }
-            }
-
-            self.identity_elements.insert(name.to_string(), z3_const);
-            println!("   📌 Loaded identity element: {}", name);
-        }
-    }
-
-    /// Translate Kleis expression to Z3 and assert it (for axiom loading)
-    pub fn assert_kleis_expression(&mut self, expr: &Expression) -> Result<(), String> {
-        let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
-        let z3_bool = z3_expr
-            .as_bool()
-            .ok_or_else(|| "Expression must be boolean for assertion".to_string())?;
-        self.solver.assert(&z3_bool);
-        Ok(())
-    }
-
-    /// Declare a function and assert its definition (for function loading)
-    pub fn declare_and_define_function(
-        &mut self,
-        name: &str,
-        params: &[String],
-        body: &Expression,
-    ) -> Result<(), String> {
-        // Create fresh Z3 variables for parameters
-        let mut z3_vars = HashMap::new();
-        let mut param_ints = Vec::new();
-
-        for param in params {
-            let z3_var = Int::fresh_const(param);
-            param_ints.push(z3_var.clone());
-            z3_vars.insert(param.clone(), z3_var.into());
-        }
-
-        // Translate function body
-        let body_z3 = self.kleis_to_z3(body, &z3_vars)?;
-
-        // Declare function
-        let func_decl = self.declare_uninterpreted(name, params.len());
-
-        // Create application and assert definition
-        let ast_args: Vec<&dyn Ast> = param_ints.iter().map(|p| p as &dyn Ast).collect();
-        let func_app = func_decl.apply(&ast_args);
-        let definition = func_app.eq(&body_z3);
-        self.solver.assert(&definition);
-
-        Ok(())
     }
 }
 
@@ -2667,7 +2747,9 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         }
 
         // For symbolic expressions, try to get a satisfying model
-        // NOTE: This can hang with quantified axioms! Use with caution.
+        // WARNING: With quantified axioms loaded, Z3's E-matching can cause
+        // exponential blowup. The 30-second timeout (set in Z3Backend::new)
+        // protects against infinite hangs, but evaluation may still time out.
 
         // Create a fresh variable and assert it equals our expression
         let result_var = Int::fresh_const("eval_result");
@@ -2742,10 +2824,8 @@ impl<'r> SolverBackend for Z3Backend<'r> {
             return Ok(Expression::Const(real_val.to_string()));
         }
 
-        // For complex expressions that can't be simplified to constants,
-        // we need to reconstruct the Kleis AST from Z3's simplified form
-        // For now, return string representation (TODO: proper AST reconstruction)
-        Ok(Expression::Const(simplified.to_string()))
+        // For complex expressions, use the result converter to reconstruct Kleis AST
+        self.converter.to_expression(&simplified)
     }
 
     fn are_equivalent(&mut self, expr1: &Expression, expr2: &Expression) -> Result<bool, String> {
@@ -2782,11 +2862,26 @@ impl<'r> SolverBackend for Z3Backend<'r> {
 
     fn load_structure_axioms(
         &mut self,
-        _structure_name: &str,
-        _axioms: &[Expression],
+        structure_name: &str,
+        axioms: &[Expression],
     ) -> Result<(), String> {
-        // TODO: Implement axiom loading
-        // This would translate axioms to Z3 and assert them
+        if self.loaded_structures.contains(structure_name) {
+            return Ok(()); // Already loaded
+        }
+
+        for axiom in axioms {
+            let z3_expr = self.kleis_to_z3(axiom, &HashMap::new())?;
+            if let Some(z3_bool) = z3_expr.as_bool() {
+                self.solver.assert(&z3_bool);
+            } else {
+                return Err(format!(
+                    "Axiom in {} is not a boolean expression",
+                    structure_name
+                ));
+            }
+        }
+
+        self.loaded_structures.insert(structure_name.to_string());
         Ok(())
     }
 
@@ -2804,6 +2899,68 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         self.declared_ops.clear();
         self.loaded_structures.clear();
         self.identity_elements.clear();
+    }
+
+    fn load_identity_element(&mut self, name: &str) {
+        if !self.identity_elements.contains_key(name) {
+            let z3_const: Dynamic = Int::fresh_const(name).into();
+
+            // Assert this new constant is distinct from all existing identity elements
+            // This is critical for symbolic ADT matching to work correctly!
+            for (existing_name, existing_z3) in &self.identity_elements {
+                if let (Some(new_int), Some(existing_int)) =
+                    (z3_const.as_int(), existing_z3.as_int())
+                {
+                    // Assert: new_const ≠ existing_const
+                    let distinct = new_int.eq(&existing_int).not();
+                    self.solver.assert(&distinct);
+                    println!("   🔒 Asserted distinct: {} ≠ {}", name, existing_name);
+                }
+            }
+
+            self.identity_elements.insert(name.to_string(), z3_const);
+            println!("   📌 Loaded identity element: {}", name);
+        }
+    }
+
+    fn assert_expression(&mut self, expr: &Expression) -> Result<(), String> {
+        let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
+        let z3_bool = z3_expr
+            .as_bool()
+            .ok_or_else(|| "Expression must be boolean for assertion".to_string())?;
+        self.solver.assert(&z3_bool);
+        Ok(())
+    }
+
+    fn define_function(
+        &mut self,
+        name: &str,
+        params: &[String],
+        body: &Expression,
+    ) -> Result<(), String> {
+        // Create fresh Z3 variables for parameters
+        let mut z3_vars = HashMap::new();
+        let mut param_ints = Vec::new();
+
+        for param in params {
+            let z3_var = Int::fresh_const(param);
+            param_ints.push(z3_var.clone());
+            z3_vars.insert(param.clone(), z3_var.into());
+        }
+
+        // Translate function body
+        let body_z3 = self.kleis_to_z3(body, &z3_vars)?;
+
+        // Declare function
+        let func_decl = self.declare_uninterpreted(name, params.len());
+
+        // Create application and assert definition
+        let ast_args: Vec<&dyn Ast> = param_ints.iter().map(|p| p as &dyn Ast).collect();
+        let func_app = func_decl.apply(&ast_args);
+        let definition = func_app.eq(&body_z3);
+        self.solver.assert(&definition);
+
+        Ok(())
     }
 }
 

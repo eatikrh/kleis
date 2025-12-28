@@ -121,6 +121,15 @@ pub struct Evaluator {
     /// Loaded structure definitions (for export)
     structures: Vec<crate::kleis_ast::StructureDef>,
 
+    /// Top-level operation declarations (for Z3 type signatures)
+    toplevel_operations: HashMap<String, crate::kleis_ast::TypeExpr>,
+
+    /// Implements blocks (for registry - where constraints and concrete bindings)
+    implements_blocks: Vec<crate::kleis_ast::ImplementsDef>,
+
+    /// Type aliases (for registry - type abbreviations)
+    type_aliases: Vec<crate::kleis_ast::TypeAlias>,
+
     /// Optional debug hook for step-through debugging
     /// When set, eval() calls hook methods at key points
     /// Uses RefCell for interior mutability (hook needs &mut self)
@@ -139,6 +148,9 @@ impl Evaluator {
             all_constructors: std::collections::HashSet::new(),
             data_types: Vec::new(),
             structures: Vec::new(),
+            toplevel_operations: HashMap::new(),
+            implements_blocks: Vec::new(),
+            type_aliases: Vec::new(),
             debug_hook: RefCell::new(None),
         }
     }
@@ -224,6 +236,28 @@ impl Evaluator {
         // Store structure definitions for export
         for structure in program.structures() {
             self.structures.push(structure.clone());
+        }
+
+        // Store implements blocks for registry
+        for item in &program.items {
+            if let TopLevel::ImplementsDef(impl_def) = item {
+                self.implements_blocks.push(impl_def.clone());
+            }
+        }
+
+        // Store type aliases for registry
+        for item in &program.items {
+            if let TopLevel::TypeAlias(type_alias) = item {
+                self.type_aliases.push(type_alias.clone());
+            }
+        }
+
+        // Store top-level operation declarations for Z3 type lookup
+        for item in &program.items {
+            if let TopLevel::OperationDecl(op_decl) = item {
+                self.toplevel_operations
+                    .insert(op_decl.name.clone(), op_decl.type_signature.clone());
+            }
         }
 
         Ok(())
@@ -981,10 +1015,16 @@ impl Evaluator {
                             };
                         }
                         AssertResult::Unknown(reason) => {
-                            // For symbolic assertions, we can't verify - treat as unknown
-                            // For now, we'll pass symbolic assertions (optimistic)
-                            assertions_passed += 1;
-                            let _ = reason; // Suppress unused warning
+                            // Unknown means we couldn't verify - fail with explanation
+                            // (could be Z3 timeout, feature disabled, or symbolic limitation)
+                            self.bindings = saved_bindings;
+                            return ExampleResult {
+                                name: example.name.clone(),
+                                passed: false,
+                                error: Some(format!("Assertion unknown: {}", reason)),
+                                assertions_passed,
+                                assertions_total,
+                            };
                         }
                     }
                 }
@@ -1032,12 +1072,30 @@ impl Evaluator {
             }
         }
 
+        // For quantified assertions, try Z3 first (they can't be evaluated concretely)
+        if matches!(condition, Expression::Quantifier { .. }) {
+            if let Some(result) = self.verify_with_z3(condition) {
+                return result;
+            }
+            // Z3 couldn't help - return unknown
+            return AssertResult::Unknown(
+                "Quantified assertion could not be verified (Z3 unavailable or inconclusive)"
+                    .to_string(),
+            );
+        }
+
         // Otherwise, evaluate the condition and check if it's "true"
         match self.eval(condition) {
             Ok(result) => {
                 if self.is_truthy(&result) {
                     AssertResult::Passed
                 } else {
+                    // If evaluation returned a symbolic result, try Z3
+                    if self.is_symbolic(&result) {
+                        if let Some(z3_result) = self.verify_with_z3(condition) {
+                            return z3_result;
+                        }
+                    }
                     AssertResult::Failed {
                         expected: Box::new(Expression::Object("true".to_string())),
                         actual: Box::new(result),
@@ -1053,6 +1111,26 @@ impl Evaluator {
         let mut registry = StructureRegistry::new();
         for structure in &self.structures {
             let _ = registry.register(structure.clone());
+        }
+        // Add implements blocks (for where constraints)
+        for impl_def in &self.implements_blocks {
+            registry.register_implements(impl_def.clone());
+        }
+        // Add data types (for ADT constructor recognition)
+        for data_def in &self.data_types {
+            registry.register_data_type(data_def.clone());
+        }
+        // Add type aliases
+        for type_alias in &self.type_aliases {
+            registry.register_type_alias(
+                type_alias.name.clone(),
+                type_alias.params.clone(),
+                type_alias.type_expr.clone(),
+            );
+        }
+        // Add top-level operations
+        for (name, type_sig) in &self.toplevel_operations {
+            registry.register_toplevel_operation(name.clone(), type_sig.clone());
         }
         registry
     }

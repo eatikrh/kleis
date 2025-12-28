@@ -1,0 +1,92 @@
+// ============================================================================
+// POT Channel Units
+// ============================================================================
+//
+// Purpose: Associate each POT ConservedChannel (Mass/EM/Spin/Color) with a
+// physical dimension/unit.
+// ============================================================================
+
+// Types (must come before structures that use them)
+data Channel = Mass | EM | Spin | Color
+data FieldR4 = FR4(ℤ)
+data Event = Ev(ℤ)
+data Dimension4 = Dim4(ℤ)
+data Quantity4 = Qty4(ℤ)
+
+// ============================================================================
+// Dimension4 system [L, M, T, Q] - length, mass, time, charge
+// ============================================================================
+
+structure Dimension4System {
+    // Dimension constructor (exponents for L, M, T, Q)
+    operation dim4 : ℤ × ℤ × ℤ × ℤ → Dimension4
+    
+    // Named dimensions
+    element Dimless4 : Dimension4
+    element Length4  : Dimension4
+    element Mass4    : Dimension4
+    element Time4    : Dimension4
+    element Charge4  : Dimension4
+    
+    // Definitions
+    axiom dimless_def : Dimless4 = dim4(0, 0, 0, 0)
+    axiom length_def  : Length4  = dim4(1, 0, 0, 0)
+    axiom mass_def    : Mass4    = dim4(0, 1, 0, 0)
+    axiom time_def    : Time4    = dim4(0, 0, 1, 0)
+    axiom charge_def  : Charge4  = dim4(0, 0, 0, 1)
+}
+
+// ============================================================================
+// Quantity4 = Value + Dimension4
+// ============================================================================
+
+structure Quantity4System {
+    operation quantity4 : ℝ × Dimension4 → Quantity4
+    operation value : Quantity4 → ℝ
+    operation dim : Quantity4 → Dimension4
+    
+    axiom value_proj : ∀(v : ℝ, d : Dimension4). value(quantity4(v, d)) = v
+    axiom dim_proj   : ∀(v : ℝ, d : Dimension4). dim(quantity4(v, d)) = d
+}
+
+// ============================================================================
+// Map POT channels → units
+// ============================================================================
+
+structure ChannelUnits {
+    // Return the dimension/unit associated with a channel
+    operation unit_of : Channel → Dimension4
+
+    // Channel-unit bindings
+    axiom unit_mass  : unit_of(Mass)  = Mass4
+    axiom unit_em    : unit_of(EM)    = Charge4
+    axiom unit_spin  : unit_of(Spin)  = Dimless4
+    axiom unit_color : unit_of(Color) = Dimless4
+}
+
+// ============================================================================
+// Unit-aware residues
+// ============================================================================
+
+structure ResidueDimensionality {
+    // Unit-aware wrapper for residue
+    operation residue_q : FieldR4 × Event × Channel → Quantity4
+
+    // residue_q agrees with residue on numeric value
+    axiom residue_value:
+        ∀(f : FieldR4, e : Event, c : Channel).
+            value(residue_q(f, e, c)) = residue(f, e, c)
+
+    // residue_q carries the correct channel unit
+    axiom residue_dim:
+        ∀(f : FieldR4, e : Event, c : Channel).
+            dim(residue_q(f, e, c)) = unit_of(c)
+}
+
+// ============================================================================
+// Examples
+// ============================================================================
+
+example "mass channel has mass dimension" {
+    assert(unit_of(Mass) = Mass4)
+}

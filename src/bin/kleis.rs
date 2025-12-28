@@ -237,10 +237,15 @@ fn run_check(file: PathBuf) {
 fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool) {
     use kleis::evaluator::Evaluator;
     use kleis::kleis_ast::TopLevel;
-    use kleis::kleis_parser::parse_kleis_program;
+    use kleis::kleis_parser::parse_kleis_program_with_file;
+    use std::collections::HashSet;
+
+    // Canonicalize the file path
+    let canonical = file.canonicalize().unwrap_or_else(|_| file.clone());
+    let file_path_str = canonical.to_string_lossy().to_string();
 
     // Read the file
-    let source = match std::fs::read_to_string(&file) {
+    let source = match std::fs::read_to_string(&canonical) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{}: {}", file.display(), e);
@@ -248,8 +253,8 @@ fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool) {
         }
     };
 
-    // Parse the program
-    let program = match parse_kleis_program(&source) {
+    // Parse the program with file path
+    let program = match parse_kleis_program_with_file(&source, &file_path_str) {
         Ok(p) => p,
         Err(e) => {
             eprintln!("{}: parse error: {}", file.display(), e);
@@ -257,9 +262,19 @@ fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool) {
         }
     };
 
-    // Load the program into evaluator
+    // Load the program AND its imports into evaluator
     let mut evaluator = Evaluator::new();
-    if let Err(e) = evaluator.load_program(&program) {
+    let mut loaded_files: HashSet<PathBuf> = HashSet::new();
+
+    // Load imports first (recursively)
+    if let Err(e) = load_imports_recursive(&program, &canonical, &mut evaluator, &mut loaded_files)
+    {
+        eprintln!("{}: import error: {}", file.display(), e);
+        std::process::exit(1);
+    }
+
+    // Then load the main file
+    if let Err(e) = evaluator.load_program_with_file(&program, Some(canonical.clone())) {
         eprintln!("{}: error: {}", file.display(), e);
         std::process::exit(1);
     }
@@ -339,6 +354,63 @@ fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool) {
         );
         std::process::exit(1);
     }
+}
+
+/// Recursively load imports for a program
+fn load_imports_recursive(
+    program: &kleis::kleis_ast::Program,
+    file_path: &Path,
+    evaluator: &mut kleis::evaluator::Evaluator,
+    loaded_files: &mut std::collections::HashSet<PathBuf>,
+) -> std::result::Result<(), String> {
+    use kleis::kleis_ast::TopLevel;
+    use kleis::kleis_parser::parse_kleis_program_with_file;
+
+    // Get base directory for resolving imports
+    let base_dir = file_path.parent().unwrap_or(Path::new("."));
+
+    // Process imports
+    for item in &program.items {
+        if let TopLevel::Import(import_path_str) = item {
+            // Resolve the import path
+            let import_path = Path::new(import_path_str);
+            let resolved = if import_path.is_absolute() {
+                import_path.to_path_buf()
+            } else if import_path_str.starts_with("stdlib/") {
+                // stdlib imports: try relative to project root
+                PathBuf::from(import_path_str)
+            } else {
+                // Relative import: resolve from importing file's directory
+                base_dir.join(import_path)
+            };
+
+            // Canonicalize
+            let canonical = resolved
+                .canonicalize()
+                .map_err(|e| format!("Cannot resolve import '{}': {}", import_path_str, e))?;
+
+            // Skip if already loaded
+            if loaded_files.contains(&canonical) {
+                continue;
+            }
+            loaded_files.insert(canonical.clone());
+
+            // Read and parse the import
+            let source = std::fs::read_to_string(&canonical)
+                .map_err(|e| format!("Cannot read import '{}': {}", import_path_str, e))?;
+            let file_path_str = canonical.to_string_lossy().to_string();
+            let import_program = parse_kleis_program_with_file(&source, &file_path_str)
+                .map_err(|e| format!("Parse error in '{}': {}", import_path_str, e))?;
+
+            // Recursively load this import's imports first
+            load_imports_recursive(&import_program, &canonical, evaluator, loaded_files)?;
+
+            // Then load the import itself
+            evaluator.load_program_with_file(&import_program, Some(canonical.clone()))?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Run the interactive REPL
