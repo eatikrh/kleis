@@ -265,7 +265,7 @@ No breaking changes. All v0.92 code remains valid.
 
 ## Related Documents
 
-- [EXECUTABLE_KLEIS.md](../plans/EXECUTABLE_KLEIS.md) - Design rationale
+- [EXECUTABLE_KLEIS.md](../../../docs/plans/EXECUTABLE_KLEIS.md) - Design rationale
 - [kleis_grammar_v093.ebnf](kleis_grammar_v093.ebnf) - Formal EBNF
 - [kleis_grammar_v092.ebnf](kleis_grammar_v092.ebnf) - Previous version
 
