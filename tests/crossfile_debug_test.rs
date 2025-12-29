@@ -531,9 +531,7 @@ fn test_variables_and_stack_frames() {
                 .unwrap()
                 .push((name.to_string(), format!("{:?}", value)));
             if let Some(frame) = self.stack.last_mut() {
-                frame
-                    .bindings
-                    .insert(name.to_string(), format!("{:?}", value));
+                frame.add_binding(name.to_string(), format!("{:?}", value));
             }
         }
         fn state(&self) -> &DebugState {

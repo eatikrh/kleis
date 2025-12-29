@@ -18,6 +18,135 @@ use tower_http::services::ServeDir;
 // For now, we'll work with LaTeX strings directly
 // Later we'll add proper Expression parsing
 
+/// Recursively load imports from a program into the evaluator
+fn load_imports_recursive(
+    program: &kleis::kleis_ast::Program,
+    file_path: &std::path::Path,
+    evaluator: &mut kleis::evaluator::Evaluator,
+    loaded_files: &mut std::collections::HashSet<std::path::PathBuf>,
+) -> Result<(), String> {
+    use kleis::kleis_ast::TopLevel;
+    use kleis::kleis_parser::parse_kleis_program_with_file;
+
+    let base_dir = file_path.parent().unwrap_or(std::path::Path::new("."));
+
+    for item in &program.items {
+        if let TopLevel::Import(import_path_str) = item {
+            let import_path = std::path::Path::new(import_path_str);
+            let resolved = if import_path.is_absolute() {
+                import_path.to_path_buf()
+            } else if import_path_str.starts_with("stdlib/") {
+                std::path::PathBuf::from(import_path_str)
+            } else {
+                base_dir.join(import_path)
+            };
+
+            let canonical = match resolved.canonicalize() {
+                Ok(c) => c,
+                Err(_) => {
+                    // Try without canonicalize for stdlib paths
+                    if resolved.exists() {
+                        resolved.clone()
+                    } else {
+                        continue; // Skip missing imports silently
+                    }
+                }
+            };
+
+            if loaded_files.contains(&canonical) {
+                continue;
+            }
+            loaded_files.insert(canonical.clone());
+
+            let source = match std::fs::read_to_string(&canonical) {
+                Ok(s) => s,
+                Err(_) => continue, // Skip unreadable files
+            };
+
+            let file_path_str = canonical.to_string_lossy().to_string();
+            let import_program = match parse_kleis_program_with_file(&source, &file_path_str) {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("⚠️  Parse error in '{}': {}", import_path_str, e);
+                    continue;
+                }
+            };
+
+            // Recursively load imports from the imported file
+            load_imports_recursive(&import_program, &canonical, evaluator, loaded_files)?;
+
+            // Load the program into evaluator
+            evaluator.load_program_with_file(&import_program, Some(canonical.clone()))?;
+        }
+    }
+    Ok(())
+}
+
+/// Load stdlib files into a StructureRegistry for Z3 verification
+fn load_stdlib_registry() -> kleis::structure_registry::StructureRegistry {
+    use kleis::evaluator::Evaluator;
+    use kleis::kleis_parser::parse_kleis_program_with_file;
+    use kleis::structure_registry::StructureRegistry;
+
+    let mut evaluator = Evaluator::new();
+    let mut registry = StructureRegistry::default();
+    let mut loaded_files = std::collections::HashSet::new();
+
+    // List of stdlib files to load (order matters - prelude first)
+    let stdlib_files = [
+        "stdlib/prelude.kleis",
+        "stdlib/minimal_prelude.kleis",
+        "stdlib/bigops.kleis",
+        "stdlib/matrices.kleis",
+        "stdlib/tensors.kleis",
+        "stdlib/quantum.kleis",
+    ];
+
+    for file_path_str in &stdlib_files {
+        let file_path = std::path::Path::new(file_path_str);
+        match std::fs::read_to_string(file_path) {
+            Ok(source) => {
+                match parse_kleis_program_with_file(&source, file_path_str) {
+                    Ok(program) => {
+                        // First, recursively load all imports
+                        if let Err(e) = load_imports_recursive(
+                            &program,
+                            file_path,
+                            &mut evaluator,
+                            &mut loaded_files,
+                        ) {
+                            eprintln!("⚠️  Error loading imports from {}: {}", file_path_str, e);
+                        }
+
+                        // Then load the file itself
+                        let canonical = file_path
+                            .canonicalize()
+                            .unwrap_or_else(|_| file_path.to_path_buf());
+                        if !loaded_files.contains(&canonical) {
+                            loaded_files.insert(canonical.clone());
+                            if let Err(e) =
+                                evaluator.load_program_with_file(&program, Some(canonical))
+                            {
+                                eprintln!("⚠️  Error loading {}: {}", file_path_str, e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("⚠️  Parse error in {}: {}", file_path_str, e);
+                    }
+                }
+            }
+            Err(_) => {
+                // File doesn't exist, skip silently
+            }
+        }
+    }
+
+    // Build registry from evaluator
+    evaluator.build_registry(&mut registry);
+    registry
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct RenderRequest {
     latex: String,
@@ -140,6 +269,8 @@ struct CheckSatResponse {
 struct AppState {
     // TypeChecker loaded from stdlib/matrices.kleis
     type_checker: Arc<std::sync::Mutex<Option<kleis::type_checker::TypeChecker>>>,
+    // StructureRegistry preloaded with stdlib for Z3 verification
+    registry: Arc<kleis::structure_registry::StructureRegistry>,
 }
 
 #[tokio::main]
@@ -158,8 +289,17 @@ async fn main() {
         }
     };
 
+    // Initialize StructureRegistry with stdlib for Z3 verification
+    let registry = load_stdlib_registry();
+    println!(
+        "✅ StructureRegistry initialized with {} structures, {} operations",
+        registry.structure_count(),
+        registry.operation_count()
+    );
+
     let state = Arc::new(AppState {
         type_checker: Arc::new(std::sync::Mutex::new(type_checker)),
+        registry: Arc::new(registry),
     });
 
     // Build router
@@ -1373,15 +1513,16 @@ async fn render_kleis_handler(
 
 // Verify AST with Z3
 async fn verify_handler(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(req): Json<VerifyRequest>,
 ) -> impl IntoResponse {
+    use kleis::editor_type_translator::EditorTypeTranslator;
     use kleis::solvers::backend::SolverBackend;
-    use kleis::structure_registry::StructureRegistry;
+    use kleis::type_checker::TypeCheckResult;
 
-    // Parse AST from JSON
-    let expr = match json_to_expression(&req.ast) {
-        Ok(e) => e,
+    // Parse as EditorNode first to preserve type metadata (kind, metadata fields)
+    let editor_node = match json_to_editor_node(&req.ast) {
+        Ok(n) => n,
         Err(e) => {
             return Json(VerifyResponse {
                 success: false,
@@ -1389,6 +1530,25 @@ async fn verify_handler(
                 kleis_syntax: String::new(),
                 counterexample: None,
                 error: Some(format!("Failed to parse AST: {}", e)),
+            });
+        }
+    };
+
+    // Extract type information from EditorNode metadata BEFORE converting to Expression
+    // This preserves the rich type info (tensor indices, matrix dimensions, etc.)
+    let mut inferred_types = std::collections::HashMap::new();
+    extract_types_from_editor_node(&editor_node, &mut inferred_types, "root");
+
+    // Convert EditorNode to Expression for verification
+    let expr = match editor_node_to_expression(&editor_node) {
+        Ok(e) => e,
+        Err(e) => {
+            return Json(VerifyResponse {
+                success: false,
+                result: "error".to_string(),
+                kleis_syntax: String::new(),
+                counterexample: None,
+                error: Some(format!("Failed to convert to Expression: {}", e)),
             });
         }
     };
@@ -1417,9 +1577,24 @@ async fn verify_handler(
     let kleis_syntax =
         kleis::render::render_expression(&expr, &ctx, &kleis::render::RenderTarget::Kleis);
 
-    // Create Z3 backend and verify
-    let registry = StructureRegistry::default();
-    let mut backend = match kleis::solvers::z3::backend::Z3Backend::new(&registry) {
+    // Also run Kleis type checker to supplement EditorNode types
+    // This handles operations where EditorNode doesn't have explicit metadata
+    {
+        let mut type_checker_guard = state.type_checker.lock().unwrap();
+        if let Some(ref mut type_checker) = *type_checker_guard {
+            // Type check the expression
+            if let TypeCheckResult::Success(expr_type) = type_checker.check(&expr) {
+                // Only add if not already inferred from EditorNode
+                inferred_types
+                    .entry("root".to_string())
+                    .or_insert(expr_type);
+            }
+        }
+    }
+
+    // Create Z3 backend with preloaded stdlib registry
+    let registry = &*state.registry;
+    let mut backend = match kleis::solvers::z3::backend::Z3Backend::new(registry) {
         Ok(b) => b,
         Err(e) => {
             return Json(VerifyResponse {
@@ -1431,6 +1606,11 @@ async fn verify_handler(
             });
         }
     };
+
+    // Pass type information to Z3 backend for type-dispatched operations
+    if !inferred_types.is_empty() {
+        backend.set_inferred_types(inferred_types);
+    }
 
     // Try to verify
     match backend.verify_axiom(&expr) {
@@ -1461,17 +1641,49 @@ async fn verify_handler(
     }
 }
 
+/// Recursively extract types from EditorNode tree
+/// This captures the rich type information from editor metadata (kind, dimensions, etc.)
+fn extract_types_from_editor_node(
+    node: &kleis::editor_ast::EditorNode,
+    types: &mut std::collections::HashMap<String, kleis::type_inference::Type>,
+    path: &str,
+) {
+    use kleis::editor_ast::EditorNode;
+    use kleis::editor_type_translator::EditorTypeTranslator;
+
+    // Try to extract type from this node
+    if let Some(ty) = EditorTypeTranslator::translate(node) {
+        types.insert(path.to_string(), ty);
+    }
+
+    // Recurse into children
+    match node {
+        EditorNode::Operation { operation } => {
+            for (i, arg) in operation.args.iter().enumerate() {
+                let child_path = format!("{}.arg{}", path, i);
+                extract_types_from_editor_node(arg, types, &child_path);
+            }
+        }
+        EditorNode::List { list } => {
+            for (i, elem) in list.iter().enumerate() {
+                let child_path = format!("{}.elem{}", path, i);
+                extract_types_from_editor_node(elem, types, &child_path);
+            }
+        }
+        _ => {} // Const, Object, Placeholder have no children
+    }
+}
+
 // Check satisfiability with Z3 (existence check: "Can this be true?")
 async fn check_sat_handler(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(req): Json<VerifyRequest>,
 ) -> impl IntoResponse {
     use kleis::solvers::backend::SolverBackend;
-    use kleis::structure_registry::StructureRegistry;
 
-    // Parse AST from JSON
-    let expr = match json_to_expression(&req.ast) {
-        Ok(e) => e,
+    // Parse as EditorNode first to preserve type metadata (kind, metadata fields)
+    let editor_node = match json_to_editor_node(&req.ast) {
+        Ok(n) => n,
         Err(e) => {
             return Json(CheckSatResponse {
                 success: false,
@@ -1479,6 +1691,24 @@ async fn check_sat_handler(
                 kleis_syntax: String::new(),
                 example: None,
                 error: Some(format!("Failed to parse AST: {}", e)),
+            });
+        }
+    };
+
+    // Extract type information from EditorNode metadata BEFORE converting to Expression
+    let mut inferred_types = std::collections::HashMap::new();
+    extract_types_from_editor_node(&editor_node, &mut inferred_types, "root");
+
+    // Convert EditorNode to Expression for satisfiability check
+    let expr = match editor_node_to_expression(&editor_node) {
+        Ok(e) => e,
+        Err(e) => {
+            return Json(CheckSatResponse {
+                success: false,
+                result: "error".to_string(),
+                kleis_syntax: String::new(),
+                example: None,
+                error: Some(format!("Failed to convert to Expression: {}", e)),
             });
         }
     };
@@ -1507,9 +1737,9 @@ async fn check_sat_handler(
     let kleis_syntax =
         kleis::render::render_expression(&expr, &ctx, &kleis::render::RenderTarget::Kleis);
 
-    // Create Z3 backend and check satisfiability
-    let registry = StructureRegistry::default();
-    let mut backend = match kleis::solvers::z3::backend::Z3Backend::new(&registry) {
+    // Create Z3 backend with preloaded stdlib registry
+    let registry = &*state.registry;
+    let mut backend = match kleis::solvers::z3::backend::Z3Backend::new(registry) {
         Ok(b) => b,
         Err(e) => {
             return Json(CheckSatResponse {
@@ -1521,6 +1751,11 @@ async fn check_sat_handler(
             });
         }
     };
+
+    // Pass type information to Z3 backend for type-dispatched operations
+    if !inferred_types.is_empty() {
+        backend.set_inferred_types(inferred_types);
+    }
 
     // Check satisfiability
     match backend.check_satisfiability(&expr) {

@@ -113,6 +113,7 @@ The **Variables** panel (left sidebar) shows:
 
 - **Local variables** — Let bindings in current scope
 - **Function parameters** — Arguments passed to current function
+- **Inferred types** — When available, types are displayed
 
 **Important:** Variables are displayed as **AST expressions**, not just values:
 
@@ -126,11 +127,29 @@ example "inspection demo" {
 }
 ```
 
+### Type-Aware Variable Display
+
+When type information is available, variables show their inferred types:
+
+```kleis
+example "typed variables" {
+    let M = matrix2x3([[1,2,3],[4,5,6]])
+    let v = vector3([1, 2, 3])
+    let c = complex(1, 2)
+    
+    // Variables panel shows:
+    //   M : Matrix(2,3,ℝ) = [[1,2,3],[4,5,6]]
+    //   v : Vector(3,ℝ) = [1, 2, 3]
+    //   c : ℂ = 1+2i
+}
+```
+
 This is intentional! Kleis is a **symbolic mathematics system**. Variables hold expressions that represent mathematical objects, not just computed values. This enables:
 
 1. **Symbolic manipulation** — See the structure of expressions
 2. **Z3 verification** — Pass expressions to the theorem prover
 3. **Provenance tracking** — Understand where values came from
+4. **Type checking** — Verify types match expectations
 
 ## Call Stack
 
@@ -204,13 +223,15 @@ example "symbolic verification" {
 
 ### Assertion Results
 
-| Result | Meaning |
-|--------|---------|
-| `Passed` | Concrete values match structurally |
-| `Verified` | Z3 proved the symbolic claim |
-| `Failed { expected, actual }` | Concrete values differ |
-| `Disproved { counterexample }` | Z3 found a counterexample |
-| `Unknown` | Neither could determine (treated as pass) |
+| Result | Badge | Meaning |
+|--------|-------|---------|
+| `Passed` | ✓ | Concrete values match structurally |
+| `Verified` | ✓ | Z3 proved the symbolic claim |
+| `Failed { expected, actual }` | ✗ | Concrete values differ |
+| `Disproved { counterexample }` | ✗ | Z3 found a counterexample |
+| `Unknown` | ✗ | Could not verify (treated as failure) |
+
+**Note:** The debugger displays verification badges (✓/✗) next to assertion variables in the Variables panel, so you can see at a glance which assertions passed or failed.
 
 ### Requirements
 

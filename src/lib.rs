@@ -8,6 +8,7 @@ pub mod data_registry;
 pub mod debug; // Debug hooks for step-through debugging
 pub mod dimension_solver; // Built-in solver for type-level dimension constraints
 pub mod editor_ast; // Visual Editor AST (separate from Kleis Core AST)
+pub mod editor_type_translator; // Translates EditorNode types to canonical Kleis types
 pub mod evaluator; // Wire 3: Self-hosting
 pub mod kleis_ast;
 pub mod kleis_parser;

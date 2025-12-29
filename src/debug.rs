@@ -3,8 +3,19 @@
 //! This module provides the infrastructure for debugging Kleis programs.
 //! It uses a callback-based approach where the evaluator calls hook methods
 //! at key points during evaluation.
+//!
+//! ## Type-Aware Debugging
+//!
+//! The debugger integrates with `type_inference::Type` to provide:
+//! - Type display for variables (e.g., `M : Matrix(2,3,ℝ)`)
+//! - Type error detection during stepping
+//! - Z3 verification status for assertions
+//!
+//! This uses the same type infrastructure as the Z3 backend, ensuring
+//! consistency across the platform.
 
 use crate::ast::Expression;
+use crate::type_inference::Type;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -86,6 +97,102 @@ impl SourceLocation {
     }
 }
 
+/// A typed binding in the debug context
+///
+/// Stores a variable's value along with its inferred type.
+/// This enables type-aware debugging features like displaying
+/// `M : Matrix(2,3,ℝ) = [[1,2,3],[4,5,6]]` in the VS Code Variables panel.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TypedBinding {
+    /// The string representation of the value
+    pub value: String,
+    /// The inferred type (if available)
+    pub ty: Option<Type>,
+    /// Z3 verification status (for assertions)
+    pub verified: Option<bool>,
+}
+
+impl TypedBinding {
+    /// Create a new binding without type info
+    pub fn new(value: String) -> Self {
+        Self {
+            value,
+            ty: None,
+            verified: None,
+        }
+    }
+
+    /// Create a new binding with type info
+    pub fn with_type(value: String, ty: Type) -> Self {
+        Self {
+            value,
+            ty: Some(ty),
+            verified: None,
+        }
+    }
+
+    /// Create a new binding with type and verification status
+    pub fn with_verification(value: String, ty: Option<Type>, verified: bool) -> Self {
+        Self {
+            value,
+            ty,
+            verified: Some(verified),
+        }
+    }
+
+    /// Format the binding for display
+    ///
+    /// Returns a string like "M : Matrix(2,3,ℝ) = [[1,2,3],[4,5,6]]"
+    pub fn display(&self, name: &str) -> String {
+        match (&self.ty, self.verified) {
+            (Some(ty), Some(true)) => format!("{} : {} = {} ✓", name, format_type(ty), self.value),
+            (Some(ty), Some(false)) => format!("{} : {} = {} ✗", name, format_type(ty), self.value),
+            (Some(ty), None) => format!("{} : {} = {}", name, format_type(ty), self.value),
+            (None, Some(true)) => format!("{} = {} ✓", name, self.value),
+            (None, Some(false)) => format!("{} = {} ✗", name, self.value),
+            (None, None) => format!("{} = {}", name, self.value),
+        }
+    }
+}
+
+/// Format a Type for display in the debugger
+pub fn format_type(ty: &Type) -> String {
+    match ty {
+        Type::Nat => "ℕ".to_string(),
+        Type::NatValue(n) => n.to_string(),
+        Type::NatExpr(expr) => format!("{:?}", expr),
+        Type::Bool => "Bool".to_string(),
+        Type::String => "String".to_string(),
+        Type::StringValue(s) => format!("\"{}\"", s),
+        Type::Unit => "()".to_string(),
+        Type::Data {
+            type_name,
+            constructor,
+            args,
+        } => {
+            if args.is_empty() {
+                if type_name == constructor {
+                    type_name.clone()
+                } else {
+                    format!("{}.{}", type_name, constructor)
+                }
+            } else {
+                let arg_strs: Vec<String> = args.iter().map(format_type).collect();
+                format!("{}({})", type_name, arg_strs.join(", "))
+            }
+        }
+        Type::Function(from, to) => {
+            format!("{} → {}", format_type(from), format_type(to))
+        }
+        Type::Product(types) => {
+            let type_strs: Vec<String> = types.iter().map(format_type).collect();
+            format!("({})", type_strs.join(" × "))
+        }
+        Type::Var(var) => format!("α{}", var.0),
+        Type::ForAll(var, body) => format!("∀α{}. {}", var.0, format_type(body)),
+    }
+}
+
 /// A frame in the call stack
 #[derive(Debug, Clone)]
 pub struct StackFrame {
@@ -93,8 +200,8 @@ pub struct StackFrame {
     pub name: String,
     /// Source location
     pub location: SourceLocation,
-    /// Local bindings in this frame
-    pub bindings: HashMap<String, String>,
+    /// Local bindings in this frame (with type information)
+    pub bindings: HashMap<String, TypedBinding>,
 }
 
 impl StackFrame {
@@ -108,6 +215,28 @@ impl StackFrame {
 
     pub fn top_level() -> Self {
         Self::new("<top-level>", SourceLocation::default())
+    }
+
+    /// Add a binding without type info (legacy compatibility)
+    pub fn add_binding(&mut self, name: String, value: String) {
+        self.bindings.insert(name, TypedBinding::new(value));
+    }
+
+    /// Add a binding with type info
+    pub fn add_typed_binding(&mut self, name: String, value: String, ty: Type) {
+        self.bindings
+            .insert(name, TypedBinding::with_type(value, ty));
+    }
+
+    /// Get all bindings formatted for display
+    pub fn get_display_bindings(&self) -> Vec<(String, String, Option<String>)> {
+        self.bindings
+            .iter()
+            .map(|(name, binding)| {
+                let type_str = binding.ty.as_ref().map(format_type);
+                (name.clone(), binding.value.clone(), type_str)
+            })
+            .collect()
     }
 }
 
@@ -195,6 +324,32 @@ pub trait DebugHook {
 
     /// Called when a variable is bound
     fn on_bind(&mut self, name: &str, value: &Expression, depth: usize);
+
+    /// Called when a variable is bound with type information
+    ///
+    /// This is the type-aware version of `on_bind`. Prefer this method when
+    /// type information is available from the TypeChecker.
+    fn on_bind_typed(&mut self, name: &str, value: &Expression, ty: Type, depth: usize) {
+        // Default implementation: ignore type and call regular on_bind
+        self.on_bind(name, value, depth);
+        // Derived implementations can override to use the type
+        let _ = ty;
+    }
+
+    /// Called when an assertion is verified by Z3
+    ///
+    /// This allows the debugger to display verification status.
+    /// `verified` is `true` if Z3 proved the assertion, `false` if disproved,
+    /// and the result includes a human-readable message.
+    fn on_assert_verified(
+        &mut self,
+        _condition: &Expression,
+        _verified: bool,
+        _message: &str,
+        _depth: usize,
+    ) {
+        // Default: do nothing
+    }
 
     /// Get the current debug state
     fn state(&self) -> &DebugState;
@@ -416,9 +571,13 @@ impl DebugHook for InteractiveDebugHook {
 
     fn on_bind(&mut self, name: &str, value: &Expression, _depth: usize) {
         if let Some(frame) = self.stack.last_mut() {
-            frame
-                .bindings
-                .insert(name.to_string(), format!("{:?}", value));
+            frame.add_binding(name.to_string(), format!("{:?}", value));
+        }
+    }
+
+    fn on_bind_typed(&mut self, name: &str, value: &Expression, ty: Type, _depth: usize) {
+        if let Some(frame) = self.stack.last_mut() {
+            frame.add_typed_binding(name.to_string(), format!("{:?}", value), ty);
         }
     }
 
@@ -762,9 +921,13 @@ impl DebugHook for DapDebugHook {
 
     fn on_bind(&mut self, name: &str, value: &Expression, _depth: usize) {
         if let Some(frame) = self.stack.last_mut() {
-            frame
-                .bindings
-                .insert(name.to_string(), format!("{:?}", value));
+            frame.add_binding(name.to_string(), format!("{:?}", value));
+        }
+    }
+
+    fn on_bind_typed(&mut self, name: &str, value: &Expression, ty: Type, _depth: usize) {
+        if let Some(frame) = self.stack.last_mut() {
+            frame.add_typed_binding(name.to_string(), format!("{:?}", value), ty);
         }
     }
 

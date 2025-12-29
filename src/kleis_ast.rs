@@ -310,7 +310,7 @@ pub enum TypeExpr {
 
 /// v0.92: Type-level dimension expressions
 /// Used in parametric types: Matrix(2*n, 2*n, ℝ)
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
 pub enum DimExpr {
     /// Literal natural number: 0, 1, 2, ...
     Lit(usize),

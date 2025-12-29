@@ -65,6 +65,10 @@ pub struct StructureRegistry {
             crate::kleis_ast::TypeExpr,
         ),
     >,
+
+    /// Function definitions
+    /// Example: "double" → FunctionDef { params: ["x"], body: add(x, x) }
+    functions: HashMap<String, crate::kleis_ast::FunctionDef>,
 }
 
 impl StructureRegistry {
@@ -76,6 +80,7 @@ impl StructureRegistry {
             toplevel_operations: HashMap::new(),
             data_types: HashMap::new(),
             type_aliases: HashMap::new(),
+            functions: HashMap::new(),
         }
     }
 
@@ -157,6 +162,31 @@ impl StructureRegistry {
         type_sig: crate::kleis_ast::TypeExpr,
     ) {
         self.toplevel_operations.insert(name, type_sig);
+    }
+
+    /// Register a function definition
+    pub fn register_function(&mut self, func_def: crate::kleis_ast::FunctionDef) {
+        self.functions.insert(func_def.name.clone(), func_def);
+    }
+
+    /// Get a function definition by name
+    pub fn get_function(&self, name: &str) -> Option<&crate::kleis_ast::FunctionDef> {
+        self.functions.get(name)
+    }
+
+    /// Check if a function is registered
+    pub fn has_function(&self, name: &str) -> bool {
+        self.functions.contains_key(name)
+    }
+
+    /// Get the number of registered functions
+    pub fn function_count(&self) -> usize {
+        self.functions.len()
+    }
+
+    /// Iterate over all function definitions
+    pub fn functions(&self) -> impl Iterator<Item = &crate::kleis_ast::FunctionDef> {
+        self.functions.values()
     }
 
     /// Load structures from a Kleis file
@@ -271,6 +301,11 @@ impl StructureRegistry {
     /// Get the number of registered structures
     pub fn structure_count(&self) -> usize {
         self.structures.len()
+    }
+
+    /// Get the number of registered top-level operations
+    pub fn operation_count(&self) -> usize {
+        self.toplevel_operations.len()
     }
 
     // =========================================================================

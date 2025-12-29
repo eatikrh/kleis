@@ -267,16 +267,14 @@ impl DebugHook for DapDebugHook {
     }
 
     fn on_bind(&mut self, name: &str, value: &kleis::ast::Expression, _depth: usize) {
-        // Update shared bindings
+        // Update shared bindings (keep simple string format for compatibility)
         let mut bindings = self.bindings.lock().unwrap();
         bindings.insert(name.to_string(), format!("{:?}", value));
 
-        // Also update the top stack frame
+        // Also update the top stack frame using TypedBinding
         let mut stack = self.stack.lock().unwrap();
         if let Some(frame) = stack.last_mut() {
-            frame
-                .bindings
-                .insert(name.to_string(), format!("{:?}", value));
+            frame.add_binding(name.to_string(), format!("{:?}", value));
         }
     }
 
@@ -694,13 +692,20 @@ impl DebugAdapter {
                 frame
                     .bindings
                     .iter()
-                    .map(|(name, value)| {
-                        json!({
+                    .map(|(name, binding)| {
+                        // Extract type info if available
+                        let type_str = binding.ty.as_ref().map(kleis::debug::format_type);
+                        let mut var = json!({
                             "name": name,
-                            "value": value,
-                            "type": "substitution",
+                            "value": &binding.value,
                             "variablesReference": 0
-                        })
+                        });
+                        if let Some(ref ty) = type_str {
+                            var["type"] = json!(ty);
+                        } else {
+                            var["type"] = json!("substitution");
+                        }
+                        var
                     })
                     .collect()
             } else {
