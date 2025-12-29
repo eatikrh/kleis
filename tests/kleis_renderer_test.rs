@@ -34,12 +34,12 @@ fn kleis_render_integral_with_bounds() {
     let expr = op("int_bounds", vec![o("f"), c("0"), c("1"), o("x")]);
     let out = render_expression(&expr, &ctx, &RenderTarget::Kleis);
 
-    // Grammar: integral ::= "∫" [ subscript ] [ superscript ] expression [ "d" identifier ]
+    // v0.95: Kleis renderer outputs parseable sugar syntax: ∫(lower, upper, body, var)
     assert!(out.contains("∫"), "Should contain integral symbol");
     assert!(out.contains("0"), "Should contain lower bound");
     assert!(out.contains("1"), "Should contain upper bound");
     assert!(out.contains("f"), "Should contain integrand");
-    assert!(out.contains("dx"), "Should contain differential");
+    assert!(out.contains("x"), "Should contain variable");
     println!("Kleis integral: {}", out);
 }
 
@@ -105,8 +105,8 @@ fn kleis_render_limit() {
     let expr = op("lim", vec![o("f(x)"), o("x"), c("0")]);
     let out = render_expression(&expr, &ctx, &RenderTarget::Kleis);
 
-    // Grammar v0.7: Limit(body, var, target)
-    assert!(out.contains("Limit("), "Should contain Limit function call");
+    // v0.95: Kleis renderer outputs parseable syntax: lim(var, target, body)
+    assert!(out.contains("lim("), "Should contain lim function call");
     assert!(out.contains("f(x)"), "Should contain body");
     assert!(out.contains("x"), "Should contain variable");
     assert!(out.contains("0"), "Should contain target");
