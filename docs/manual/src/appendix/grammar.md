@@ -1,8 +1,8 @@
 # Appendix A: Grammar Reference
 
-This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.93).
+This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.95).
 
-> **Complete Grammar:** See `docs/grammar/kleis_grammar_v093.md` for the full specification.
+> **Complete Grammar:** See `docs/grammar/kleis_grammar_v095.md` for the full specification.
 
 ## Program Structure
 
@@ -314,6 +314,63 @@ axiom compose: ∀(f : ℝ → ℝ, g : ℝ → ℝ). compose(f, g) = λ x . f(g
 // Topology: continuity via preimages
 axiom continuity: ∀(f : X → Y, V : Set(Y)). 
     is_open(V) → is_open(preimage(f, V))
+```
+
+## v0.95 Big Operators
+
+Big operators (Σ, Π, ∫, lim) can be used with function call syntax:
+
+```ebnf
+bigOpExpr ::= "Σ" "(" expr "," expr "," expr ")"
+            | "Π" "(" expr "," expr "," expr ")"
+            | "∫" "(" expr "," expr "," expr "," expr ")"
+            | "lim" "(" expr "," expr "," expr ")"
+            | ("Σ" | "Π" | "∫") primaryExpr      // prefix form
+```
+
+### Summation: Σ
+
+```text
+// Sum of f(i) from 1 to n
+Σ(1, n, λ i . f(i))
+
+// Parsed as: sum_bounds(λ i . f(i), 1, n)
+```
+
+### Product: Π
+
+```text
+// Product of g(i) from 1 to n
+Π(1, n, λ i . g(i))
+
+// Parsed as: prod_bounds(λ i . g(i), 1, n)
+```
+
+### Integral: ∫
+
+```text
+// Integral of x² from 0 to 1
+∫(0, 1, λ x . x * x, x)
+
+// Parsed as: int_bounds(λ x . x * x, 0, 1, x)
+```
+
+### Limit: lim
+
+```text
+// Limit of sin(x)/x as x approaches 0
+lim(x, 0, sin(x) / x)
+
+// Parsed as: lim(sin(x) / x, x, 0)
+```
+
+### Prefix Forms
+
+Simple prefix forms are also supported:
+
+```text
+Σf        // Parsed as: Sum(f)
+∫g        // Parsed as: Integrate(g)
 ```
 
 ## Calculus Notation (v0.7)

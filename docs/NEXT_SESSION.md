@@ -1,6 +1,170 @@
 # Next Session Notes
 
-**Last Updated:** December 27, 2024
+**Last Updated:** December 29, 2024
+
+---
+
+## 🎯 FUTURE: Big Operators as Unified Binders (Dec 28, 2024)
+
+### Unifying Slogan
+
+**Σ/Π/∫/lim are big operators. Big operators are binders.**
+
+### Binder Structure
+
+Every binder has:
+1. **Bound variable** — the index/parameter being abstracted
+2. **Domain specification** — how it ranges (set, interval, filter, approach)
+3. **Body** — the expression being computed
+4. **Semantics** — algebra/topology that gives meaning
+
+### Current Binders in Kleis
+
+| Binder | Syntax | Bound Var | Domain | Body |
+|--------|--------|-----------|--------|------|
+| `∀` | `∀(x : T). P(x)` | x | type T | P(x) |
+| `∃` | `∃(x : T). P(x)` | x | type T | P(x) |
+| `λ` | `λ x . e` | x | implicit | e |
+| `let` | `let x = v in e` | x | singleton | e |
+| `match` | `match e { P => b }` | pattern vars | scrutinee | b |
+
+### Proposed Big Operator Syntax (Future)
+
+Harmonize with existing binders:
+
+```kleis
+// Sum: Σ(i : ℤ, 1 ≤ i ≤ n). f(i)
+// Prod: Π(i : ℤ, i ∈ S). g(i)
+// Integral: ∫(x : ℝ, a ≤ x ≤ b). h(x) dx
+// Limit: lim(x → a). f(x)
+```
+
+Or simpler prefix form:
+```kleis
+Σ(i = 1..n) f(i)
+Π(i ∈ S) g(i)
+∫(x ∈ [a,b]) h(x)
+lim(x → a) f(x)
+```
+
+### ✅ IMPLEMENTED: Sugar Syntax (Dec 28, 2024)
+
+**Parser now supports Unicode big operator syntax:**
+
+```kleis
+// Summation: Σ(from, to, body) → sum_bounds(body, from, to)
+Σ(1, n, λ i . f(i))
+
+// Product: Π(from, to, body) → prod_bounds(body, from, to)
+Π(1, n, λ i . f(i))
+
+// Integral: ∫(lower, upper, body, var) → int_bounds(body, lower, upper, var)
+∫(0, 1, λ x . x * x, x)
+
+// Limit: lim(var, target, body) → lim(body, var, target)
+lim(x, 0, sin(x) / x)
+```
+
+**Also supports simple prefix forms:**
+```kleis
+Σx    // → Sum(x)
+∫f    // → Integrate(f)
+```
+
+### Kleis Renderer (Round-Trip)
+
+The Kleis renderer outputs parseable syntax:
+- `sum_bounds(body, from, to)` → `Σ(from, to, body)`
+- `prod_bounds(body, from, to)` → `Π(from, to, body)`
+- `int_bounds(body, lower, upper, var)` → `∫(lower, upper, body, var)`
+- `lim(body, var, target)` → `lim(var, target, body)`
+
+### 🏗️ ARCHITECTURE: BigOp as First-Class Binders (v2.0 Target)
+
+**ChatGPT's Design Proposal:**
+
+```rust
+// Dedicated AST node (like Quantifier)
+Expression::BigOp {
+    op: BigOpKind,              // Sum | Prod | Integral | Limit | Sup | Inf
+    binder: (String, Option<TypeExpr>),  // (var, type)
+    domain: DomainExpr,         // Range(a,b) | Set(S) | Filter(P) | Approach(x→a)
+    body: Box<Expression>,
+    annotations: HashMap<String, Expression>,  // measure, differential, etc.
+}
+
+// DomainExpr variants
+enum DomainExpr {
+    Range { from: Expr, to: Expr },           // 1..n, a..b
+    Set(Expr),                                // S, {1,2,3}
+    Filter { domain: Expr, predicate: Expr }, // i ∈ ℤ where P(i)
+    Approach { var: String, target: Expr },   // x → a, x → ∞
+}
+```
+
+**Why This Is More Correct:**
+
+1. **Binder visibility** — Bound variable explicit in AST, not hidden inside lambda
+2. **Type checking** — Clear bound variable type annotation
+3. **Pattern matching** — Match on `BigOp` variant, not function name
+4. **Rendering** — Direct access to binder for pretty-printing (subscript/superscript)
+5. **Alpha-equivalence** — Proper variable renaming without lambda inspection
+6. **Domain clarity** — Range vs Set vs Filter vs Approach are distinct
+
+**Comparison:**
+
+| Aspect | Current (v0.95) | ChatGPT (v2.0 target) |
+|--------|-----------------|----------------------|
+| Implementation | ✅ Done, works now | Requires AST + parser + evaluator changes |
+| Binder visibility | Hidden inside lambda | Explicit in AST |
+| Type checking | Lambda body inference | Clear bound variable type |
+| Rendering | Reconstruct from lambda | Direct access to binder |
+| Pattern matching | Match on function name | Match on BigOp variant |
+| Semantic clarity | "Function with lambda" | "Binder-like operator" |
+
+**Current Approach (v0.95) — Pragmatic Stepping Stone:**
+
+- ✅ Works now
+- ✅ Integrates with existing parser/evaluator
+- ✅ Can be refactored later without breaking user code
+- ✅ Surface syntax (`Σ(1, n, body)`) stays the same
+
+**Recommendation:**
+
+Document ChatGPT's design as the "proper" architecture for v2.0. The current
+implementation is a pragmatic stepping stone that:
+1. Validates the surface syntax design
+2. Provides working semantics for users
+3. Can be upgraded to first-class binders when resources allow
+
+**Migration Path:**
+
+1. v0.95 (current): Functions + lambdas, `Σ(from, to, body)` syntax
+2. v2.0 (future): `Expression::BigOp` AST node, same surface syntax
+3. Users: No code changes required — surface syntax unchanged
+
+### Z3 Limitation
+
+Z3 is first-order — cannot quantify over functions. Higher-order axioms are **specifications**, not Z3-verifiable. See `stdlib/bigops.kleis` for documented semantics.
+
+### Files Created/Updated
+
+- `stdlib/bigops.kleis` — Big operator declarations with equation-editor-compatible names
+- `examples/calculus/sum_examples.kleis` — 4 tests
+- `examples/calculus/integral_examples.kleis` — 3 tests
+- `src/kleis_parser.rs` — Parser for Σ, Π, ∫, lim
+- `src/render.rs` — Updated Kleis templates for round-trip
+
+**7/7 examples pass.**
+
+### Parser Tests Added
+
+- `test_parse_sum_sugar` — Σ(1, 10, x) → sum_bounds(x, 1, 10)
+- `test_parse_product_sugar` — Π(1, n, f(i)) → prod_bounds(...)
+- `test_parse_integral_sugar` — ∫(0, 1, x, x) → int_bounds(x, 0, 1, x)
+- `test_parse_limit_sugar` — lim(x, 0, f(x)) → lim(f(x), x, 0)
+- `test_parse_sum_prefix` — Σx → Sum(x)
+- `test_parse_integral_prefix` — ∫x → Integrate(x)
 
 ---
 

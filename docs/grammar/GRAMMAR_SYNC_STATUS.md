@@ -1,22 +1,40 @@
 # Grammar Synchronization Status
 
-**Date:** December 24, 2025  
-**Status:** 🆕 v0.93 Released (Example Blocks)
+**Date:** December 29, 2025  
+**Status:** 🆕 v0.95 Released (Big Operator Syntax)
 
-## Current Version: v0.93
+## Current Version: v0.95
 
-### What's New in v0.93
+### What's New in v0.95
 
-**Example Blocks** - Executable documentation for testing and debugging:
+**Big Operator Syntax** - Summation, product, integral, and limit:
+
+```kleis
+-- Summation: Σ(from, to, body)
+Σ(1, n, λ i . f(i))
+
+-- Product: Π(from, to, body)
+Π(1, n, λ i . g(i))
+
+-- Integral: ∫(lower, upper, body, var)
+∫(0, 1, λ x . x * x, x)
+
+-- Limit: lim(var, target, body)
+lim(x, 0, sin(x) / x)
+```
+
+### v0.94 - N-ary Product Types
+
+```kleis
+operation f : A × B × C × D → E   -- Multi-factor types
+```
+
+### v0.93 - Example Blocks
 
 ```kleis
 example "complex arithmetic" {
     let z1 = Complex(1, 2)
-    let z2 = Complex(3, 4)
-    let sum = add(z1, z2)
-    
-    assert(sum.re = 4)
-    assert(sum.im = 6)
+    assert(z1.re = 1)
 }
 ```
 
@@ -24,13 +42,13 @@ example "complex arithmetic" {
 
 | File | Version | Last Updated | Status |
 |------|---------|--------------|--------|
-| `kleis_grammar_v093.ebnf` | v0.93 | Dec 24, 2025 | ✅ Reference |
-| `kleis_grammar_v093.md` | v0.93 | Dec 24, 2025 | ✅ Documented |
+| `kleis_grammar_v095.ebnf` | v0.95 | Dec 29, 2025 | ✅ Current |
+| `kleis_grammar_v095.md` | v0.95 | Dec 29, 2025 | ✅ Documented |
+| `kleis_grammar_v094.ebnf` | v0.94 | Dec 26, 2025 | ✅ Previous |
+| `kleis_grammar_v093.ebnf` | v0.93 | Dec 24, 2025 | ✅ Previous |
 | `kleis_grammar_v092.ebnf` | v0.92 | Dec 22, 2025 | ✅ Previous |
-| `kleis_grammar_v091.ebnf` | v0.91 | Dec 22, 2025 | ✅ Previous |
-| `kleis_grammar_v08.ebnf` | v0.8 | Dec 18, 2025 | ✅ Full grammar |
-| `Kleis_v08.g4` | v0.8 | - | ⚠️ TODO |
-| `vscode-kleis/docs/grammar/` | v0.8 | Dec 18, 2025 | ⚠️ Needs v0.93 |
+| `kleis_grammar_v08.ebnf` | v0.8 | Dec 18, 2025 | ✅ Legacy |
+| `vscode-kleis/docs/grammar/` | v0.95 | Dec 29, 2025 | ✅ Synced |
 
 ---
 

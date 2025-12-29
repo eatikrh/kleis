@@ -4113,36 +4113,41 @@ pub fn build_default_context() -> GlyphContext {
     // These output Kleis syntax conforming to the grammar
     let mut kleis_templates = HashMap::new();
 
-    // Calculus - conforming to grammar:
-    // integral ::= "∫" [ subscript ] [ superscript ] expression [ "d" identifier ]
+    // Calculus - parseable function call syntax
+    // Parser: ∫(lower, upper, body, var) → int_bounds(body, lower, upper, var)
+    // Renderer: int_bounds(body, lower, upper, var) → ∫(lower, upper, body, var)
     kleis_templates.insert(
         "int_bounds".to_string(),
-        "∫_{{{lower}}}^{{{upper}}} {integrand} d{int_var}".to_string(),
+        "∫({lower}, {upper}, {integrand}, {int_var})".to_string(),
     );
-    // summation ::= "Σ" [ subscript ] [ superscript ] expression
+    // Parser: Σ(from, to, body) → sum_bounds(body, from, to)
+    // Renderer: sum_bounds(body, from, to) → Σ(from, to, body)
     kleis_templates.insert(
         "sum_bounds".to_string(),
-        "Σ_{{{from}}}^{{{to}}} {body}".to_string(),
+        "Σ({from}, {to}, {body})".to_string(),
     );
-    kleis_templates.insert("sum_index".to_string(), "Σ_{{{from}}} {body}".to_string());
-    // product ::= "Π" [ subscript ] [ superscript ] expression
+    kleis_templates.insert("sum_index".to_string(), "Σ({from}, {body})".to_string());
+    // Parser: Π(from, to, body) → prod_bounds(body, from, to)
+    // Renderer: prod_bounds(body, from, to) → Π(from, to, body)
     kleis_templates.insert(
         "prod_bounds".to_string(),
-        "Π_{{{from}}}^{{{to}}} {body}".to_string(),
+        "Π({from}, {to}, {body})".to_string(),
     );
-    kleis_templates.insert("prod_index".to_string(), "Π_{{{from}}} {body}".to_string());
+    kleis_templates.insert("prod_index".to_string(), "Π({from}, {body})".to_string());
     // v0.7: Mathematica-style derivatives - D() for partial, Dt() for total
     kleis_templates.insert("d_dt".to_string(), "Dt({num}, {den})".to_string());
     kleis_templates.insert("d_part".to_string(), "D({num}, {den})".to_string());
     kleis_templates.insert("d2_part".to_string(), "D({num}, {den}, {den})".to_string());
-    // v0.7: Limit notation - Limit(body, var, target)
+    // v0.7: Limit notation - parseable function call syntax
+    // Parser: lim(var, target, body) → lim(body, var, target)
+    // Renderer: lim(body, var, target) → lim(var, target, body)
     kleis_templates.insert(
         "lim".to_string(),
-        "Limit({body}, {var}, {target})".to_string(),
+        "lim({var}, {target}, {body})".to_string(),
     );
     kleis_templates.insert(
         "limit".to_string(),
-        "Limit({body}, {var}, {target})".to_string(),
+        "lim({var}, {target}, {body})".to_string(),
     );
     // Gradient (prefix operator per grammar)
     kleis_templates.insert("grad".to_string(), "∇{arg}".to_string());
