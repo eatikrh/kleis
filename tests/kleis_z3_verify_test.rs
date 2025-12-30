@@ -181,7 +181,7 @@ fn z3_verify_total_derivative() {
 
 #[test]
 fn z3_verify_limit() {
-    // Limit(f, x, 0)
+    // v0.95: lim(var, target, body)
     let limit = op("lim", vec![o("f"), o("x"), c("0")]);
 
     let (rendered, parsed, z3_ok) = verify_pipeline(&limit);
@@ -190,8 +190,8 @@ fn z3_verify_limit() {
     println!("Z3 translates: {}", z3_ok);
 
     assert!(
-        rendered.contains("Limit("),
-        "Should render as Limit function call"
+        rendered.contains("lim("),
+        "Should render as lim function call"
     );
 }
 
