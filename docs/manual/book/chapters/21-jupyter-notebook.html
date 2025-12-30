@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Structures - Learn You Some Kleis</title>
+        <title>Jupyter Notebook - Learn You Some Kleis</title>
 
 
         <!-- Custom HTML head -->
@@ -155,7 +155,7 @@
                         <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/09-structures.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/21-jupyter-notebook.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -189,194 +189,276 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="structures"><a class="header" href="#structures">Structures</a></h1>
-<h2 id="what-are-structures"><a class="header" href="#what-are-structures">What Are Structures?</a></h2>
-<p>Structures define mathematical objects with their properties and operations. Think of them as “blueprints” for mathematical concepts.</p>
-<pre><code class="language-kleis">structure Vector(n : ℕ) {
-    // Operations this structure supports
-    operation add : Vector(n) → Vector(n)
-    operation scale : ℝ → Vector(n)
-    operation dot : Vector(n) → ℝ
-    
-    // Properties that must hold
-    axiom commutative : ∀(u : Vector(n))(v : Vector(n)).
-        add(u, v) = add(v, u)
-}
+                        <h1 id="jupyter-notebook"><a class="header" href="#jupyter-notebook">Jupyter Notebook</a></h1>
+<p>Kleis provides Jupyter kernel support, allowing you to write and execute Kleis code in Jupyter notebooks. This is ideal for:</p>
+<p><img src="../images/jupyter-kleis-launcher.png" alt="JupyterLab Launcher showing Kleis kernels"></p>
+<p><em>JupyterLab launcher with Kleis and Kleis Numeric kernels</em></p>
+<ul>
+<li><strong>Interactive exploration</strong> of mathematical concepts</li>
+<li><strong>Teaching</strong> mathematical foundations</li>
+<li><strong>Documenting</strong> proofs and derivations</li>
+<li><strong>Numerical computation</strong> with LAPACK operations</li>
+</ul>
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<pre><code class="language-bash">cd kleis-notebook
+./start-jupyter.sh
 </code></pre>
-<h2 id="structure-syntax"><a class="header" href="#structure-syntax">Structure Syntax</a></h2>
-<pre><code class="language-kleis">structure Name(parameters) {
-    // Fields (data) - no "field" keyword needed
-    field1 : Type1
-    field2 : Type2
-    
-    // Operations (functions)
-    operation op1 : InputType → OutputType
-    
-    // Axioms (properties)
-    axiom property : logical_statement
-}
+<p>This will:</p>
+<ol>
+<li>Create a Python virtual environment (if needed)</li>
+<li>Install JupyterLab and the Kleis kernel</li>
+<li>Launch JupyterLab in your browser</li>
+</ol>
+<h2 id="installation"><a class="header" href="#installation">Installation</a></h2>
+<h3 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h3>
+<ol>
+<li><strong>Python 3.8+</strong> with pip</li>
+<li><strong>Kleis binary</strong> compiled with numerical features:</li>
+</ol>
+<pre><code class="language-bash">cd /path/to/kleis
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h  # macOS Apple Silicon
+cargo install --path . --features numerical
 </code></pre>
-<h2 id="example-complex-numbers"><a class="header" href="#example-complex-numbers">Example: Complex Numbers</a></h2>
-<pre><code class="language-kleis">structure Complex {
-    re : ℝ  // real part
-    im : ℝ  // imaginary part
-    
-    operation add : Complex → Complex
-    operation mul : Complex → Complex
-    operation conj : Complex           // conjugate
-    operation mag : ℝ                  // magnitude
-    
-    axiom add_commutative : ∀(z : Complex)(w : Complex).
-        add(z, w) = add(w, z)
-        
-    axiom magnitude_positive : ∀(z : Complex).
-        mag(z) ≥ 0
-        
-    axiom conj_involution : ∀(z : Complex).
-        conj(conj(z)) = z
-}
-</code></pre>
-<h2 id="parametric-structures"><a class="header" href="#parametric-structures">Parametric Structures</a></h2>
-<p>Structures can have type parameters:</p>
-<pre><code class="language-kleis">structure Matrix(m : ℕ, n : ℕ, T) {
-    operation transpose : Matrix(n, m, T)
-    operation add : Matrix(m, n, T) → Matrix(m, n, T)
-    
-    axiom transpose_involution : ∀(A : Matrix(m, n, T)).
-        transpose(transpose(A)) = A
-}
+<blockquote>
+<p><strong>Note:</strong> The <code>--features numerical</code> flag enables LAPACK operations for eigenvalues, SVD, matrix inversion, and more.</p>
+</blockquote>
+<h3 id="install-the-kernel"><a class="header" href="#install-the-kernel">Install the Kernel</a></h3>
+<pre><code class="language-bash">cd kleis-notebook
 
-// Square matrices have more operations
-structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
-    operation det : T
-    operation trace : T
-    operation inv : SquareMatrix(n, T)
-    
-    axiom det_mul : ∀(A : SquareMatrix(n, T))(B : SquareMatrix(n, T)).
-        det(mul(A, B)) = det(A) * det(B)
-}
-</code></pre>
-<h2 id="nested-structures"><a class="header" href="#nested-structures">Nested Structures</a></h2>
-<p>Structures can contain other structures. This enables compositional algebra — defining complex structures from simpler parts:</p>
-<pre><code class="language-kleis">structure Ring(R) {
-    // A ring has an additive group
-    structure additive : AbelianGroup(R) {
-        operation add : R × R → R
-        operation negate : R → R
-        zero : R
-    }
-    
-    // And a multiplicative monoid
-    structure multiplicative : Monoid(R) {
-        operation mul : R × R → R
-        one : R
-    }
-    
-    // With distributivity connecting them
-    axiom distributive : ∀(x : R)(y : R)(z : R).
-        mul(x, add(y, z)) = add(mul(x, y), mul(x, z))
-}
-</code></pre>
-<p>Nested structures can go arbitrarily deep:</p>
-<pre><code class="language-kleis">structure VectorSpace(V, F) {
-    structure vectors : AbelianGroup(V) {
-        operation add : V × V → V
-        zero : V
-    }
-    
-    structure scalars : Field(F) {
-        operation add : F × F → F
-        operation mul : F × F → F
-    }
-    
-    operation scale : F × V → V
-}
-</code></pre>
-<p>When using Z3 verification, axioms from nested structures are automatically available.</p>
-<h2 id="the-extends-keyword"><a class="header" href="#the-extends-keyword">The <code>extends</code> Keyword</a></h2>
-<p>Structures can extend other structures:</p>
-<pre><code class="language-kleis">structure Monoid(M) {
-    e : M
-    operation mul : M × M → M
-    
-    axiom identity : ∀(x : M). mul(e, x) = x ∧ mul(x, e) = x
-    axiom associative : ∀(x : M)(y : M)(z : M).
-        mul(mul(x, y), z) = mul(x, mul(y, z))
-}
+# Option 1: Use the launcher script (recommended)
+./start-jupyter.sh install
 
-structure Group(G) extends Monoid(G) {
-    operation inv : G → G
+# Option 2: Manual installation
+python3 -m venv venv
+source venv/bin/activate
+pip install -e .
+pip install jupyterlab
+python -m kleis_kernel.install
+python -m kleis_kernel.install_numeric
+</code></pre>
+<h2 id="using-kleis-in-jupyter"><a class="header" href="#using-kleis-in-jupyter">Using Kleis in Jupyter</a></h2>
+<h3 id="creating-a-notebook"><a class="header" href="#creating-a-notebook">Creating a Notebook</a></h3>
+<ol>
+<li>Start JupyterLab: <code>./start-jupyter.sh</code></li>
+<li>Click <strong>New Notebook</strong></li>
+<li>Select <strong>Kleis</strong> or <strong>Kleis Numeric</strong> kernel</li>
+</ol>
+<h3 id="example-defining-a-group"><a class="header" href="#example-defining-a-group">Example: Defining a Group</a></h3>
+<pre><code class="language-kleis">structure Group(G) {
+    operation (*) : G × G → G
+    element e : G
     
-    axiom inverse : ∀(x : G). mul(x, inv(x)) = e ∧ mul(inv(x), x) = e
-}
-
-structure AbelianGroup(G) extends Group(G) {
-    axiom commutative : ∀(x : G)(y : G). mul(x, y) = mul(y, x)
+    axiom left_identity: ∀(a : G). e * a = a
+    axiom right_identity: ∀(a : G). a * e = a
+    axiom associativity: ∀(a b c : G). (a * b) * c = a * (b * c)
 }
 </code></pre>
-<h2 id="the-over-keyword"><a class="header" href="#the-over-keyword">The <code>over</code> Keyword</a></h2>
-<p>Many mathematical structures are defined “over” a base structure. A vector space is defined over a field, a module over a ring:</p>
-<pre><code class="language-kleis">// Vector space over a field
-structure VectorSpace(V) over Field(F) {
-    operation add : V × V → V
-    operation scale : F × V → V
-    
-    axiom scalar_identity : ∀(v : V). scale(1, v) = v
-    axiom distributive : ∀(a : F)(u : V)(v : V).
-        scale(a, add(u, v)) = add(scale(a, u), scale(a, v))
-}
-
-// Module over a ring (generalization of vector space)
-structure Module(M) over Ring(R) {
-    operation add : M × M → M
-    operation scale : R × M → M
-}
-
-// Algebra over a ring
-structure Algebra(A) over Ring(R) {
-    operation add : A × A → A
-    operation scale : R × A → A
-    operation mul : A × A → A
-    
-    axiom bilinear : ∀(r : R)(a : A)(b : A).
-        scale(r, mul(a, b)) = mul(scale(r, a), b)
+<h3 id="example-testing-properties"><a class="header" href="#example-testing-properties">Example: Testing Properties</a></h3>
+<pre><code class="language-kleis">example "group identity" {
+    assert(e * e = e)
 }
 </code></pre>
-<p>When you use <code>over</code>, Kleis automatically makes the base structure’s axioms available for verification. For example, when verifying <code>VectorSpace</code> axioms, Z3 knows that <code>F</code> satisfies all <code>Field</code> axioms.</p>
-<h2 id="differential-geometry-structures"><a class="header" href="#differential-geometry-structures">Differential Geometry Structures</a></h2>
-<p>Kleis shines for differential geometry:</p>
-<pre><code class="language-kleis">structure Manifold(M, dim : ℕ) {
-    operation tangent : M → TangentSpace(M)
-    operation metric : M → Tensor(0, 2)
-    
-    axiom metric_symmetric : ∀(p : M).
-        metric(p) = transpose(metric(p))
-}
+<p>Output:</p>
+<pre><code>✅ group identity passed
+</code></pre>
+<h3 id="example-numerical-computation"><a class="header" href="#example-numerical-computation">Example: Numerical Computation</a></h3>
+<pre><code class="language-kleis">eigenvalues([[1.0, 2.0], [3.0, 4.0]])
+</code></pre>
+<p>Output:</p>
+<pre><code>[-0.3722813232690143, 5.372281323269014]
+</code></pre>
+<h2 id="repl-commands"><a class="header" href="#repl-commands">REPL Commands</a></h2>
+<p>Use REPL commands directly in notebook cells:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>:type &lt;expr&gt;</code></td><td>Show inferred type</td><td><code>:type 1 + 2</code></td></tr>
+<tr><td><code>:eval &lt;expr&gt;</code></td><td>Evaluate concretely</td><td><code>:eval det([[1,2],[3,4]])</code></td></tr>
+<tr><td><code>:verify &lt;expr&gt;</code></td><td>Verify with Z3</td><td><code>:verify ∀(x : ℝ). x + 0 = x</code></td></tr>
+<tr><td><code>:ast &lt;expr&gt;</code></td><td>Show parsed AST</td><td><code>:ast sin(x)</code></td></tr>
+<tr><td><code>:env</code></td><td>Show session context</td><td><code>:env</code></td></tr>
+<tr><td><code>:load &lt;file&gt;</code></td><td>Load .kleis file</td><td><code>:load stdlib/prelude.kleis</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="jupyter-magic-commands"><a class="header" href="#jupyter-magic-commands">Jupyter Magic Commands</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>%reset</code></td><td>Clear session context (forget all definitions)</td></tr>
+<tr><td><code>%context</code></td><td>Show accumulated definitions</td></tr>
+<tr><td><code>%version</code></td><td>Show Kleis and kernel versions</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="numerical-operations"><a class="header" href="#numerical-operations">Numerical Operations</a></h2>
+<p>When Kleis is compiled with <code>--features numerical</code>, these LAPACK-powered operations are available:</p>
+<h3 id="eigenvalue-decomposition"><a class="header" href="#eigenvalue-decomposition">Eigenvalue Decomposition</a></h3>
+<pre><code class="language-kleis">// Compute eigenvalues
+eigenvalues([[4.0, 2.0], [1.0, 3.0]])
+// → [5.0, 2.0]
 
-structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
-    operation christoffel : M → Tensor(1, 2)
-    operation riemann : M → Tensor(1, 3)
-    operation ricci : M → Tensor(0, 2)
-    operation scalar_curvature : M → ℝ
-    
-    // R^a_{bcd} + R^a_{cdb} + R^a_{dbc} = 0
-    axiom first_bianchi : ∀(p : M).
-        cyclic_sum(riemann(p)) = 0
+// Full decomposition (eigenvalues + eigenvectors)
+eig([[4.0, 2.0], [1.0, 3.0]])
+// → [[5.0, 2.0], [[0.894, 0.707], [-0.447, 0.707]]]
+</code></pre>
+<h3 id="matrix-factorizations"><a class="header" href="#matrix-factorizations">Matrix Factorizations</a></h3>
+<pre><code class="language-kleis">// Singular Value Decomposition
+svd([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+// → (U, S, Vt)
+
+// QR Decomposition
+qr([[1.0, 2.0], [3.0, 4.0]])
+// → (Q, R)
+
+// Cholesky Decomposition (symmetric positive definite)
+cholesky([[4.0, 2.0], [2.0, 5.0]])
+// → Lower triangular L where A = L * L^T
+
+// Schur Decomposition
+schur([[1.0, 2.0], [3.0, 4.0]])
+// → (U, T, eigenvalues)
+</code></pre>
+<h3 id="linear-algebra"><a class="header" href="#linear-algebra">Linear Algebra</a></h3>
+<pre><code class="language-kleis">// Matrix inverse
+inv([[1.0, 2.0], [3.0, 4.0]])
+// → Matrix(2, 2, [-2, 1, 1.5, -0.5])
+
+// Determinant
+det([[1.0, 2.0], [3.0, 4.0]])
+// → -2
+
+// Solve linear system Ax = b
+solve([[3.0, 1.0], [1.0, 2.0]], [9.0, 8.0])
+// → [2.0, 3.0]
+
+// Matrix rank
+rank([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+// → 2
+
+// Condition number
+cond([[1.0, 2.0], [3.0, 4.0]])
+// → 14.933...
+
+// Matrix norms
+norm([[1.0, 2.0], [3.0, 4.0]])
+// → Frobenius norm
+</code></pre>
+<h3 id="matrix-exponential"><a class="header" href="#matrix-exponential">Matrix Exponential</a></h3>
+<pre><code class="language-kleis">// e^A (useful for differential equations)
+expm([[0.0, 1.0], [-1.0, 0.0]])
+// → rotation matrix
+</code></pre>
+<h2 id="matrix-syntax"><a class="header" href="#matrix-syntax">Matrix Syntax</a></h2>
+<p>Matrices can be specified using nested list syntax:</p>
+<pre><code class="language-kleis">// 2×2 matrix (row-major order)
+[[1, 2], [3, 4]]
+
+// 3×3 identity matrix concept
+[[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+
+// Column vector as 3×1 matrix
+[[1], [2], [3]]
+
+// Row vector as 1×3 matrix
+[[1, 2, 3]]
+</code></pre>
+<h2 id="session-persistence"><a class="header" href="#session-persistence">Session Persistence</a></h2>
+<p>Definitions persist across cells within a session:</p>
+<p><strong>Cell 1:</strong></p>
+<pre><code class="language-kleis">define square(x) = x * x
+</code></pre>
+<p><strong>Cell 2:</strong></p>
+<pre><code class="language-kleis">example "use square" {
+    assert(square(3) = 9)
 }
 </code></pre>
-<h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
-<p>Learn how to implement structures!</p>
-<p>→ <a href="./10-implements.html">Next: Implements</a></p>
+<p>Output:</p>
+<pre><code>✅ use square passed
+</code></pre>
+<p>Use <code>%reset</code> to clear all definitions and start fresh.</p>
+<h2 id="tips-for-effective-notebooks"><a class="header" href="#tips-for-effective-notebooks">Tips for Effective Notebooks</a></h2>
+<ol>
+<li><strong>Start with imports and definitions</strong> at the top</li>
+<li><strong>Use example blocks</strong> for testable assertions</li>
+<li><strong>Use <code>:eval</code></strong> for quick numerical calculations</li>
+<li><strong>Use <code>:verify</code></strong> for Z3-backed proofs</li>
+<li><strong>Document with markdown cells</strong> between code</li>
+<li><strong>Save frequently</strong> - Kleis notebooks are standard <code>.ipynb</code> files</li>
+</ol>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="kleis-binary-not-found"><a class="header" href="#kleis-binary-not-found">“kleis binary not found”</a></h3>
+<p>Install Kleis with:</p>
+<pre><code class="language-bash">cd /path/to/kleis
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
+cargo install --path . --features numerical
+</code></pre>
+<h3 id="numerical-operations-return-symbolic-expressions"><a class="header" href="#numerical-operations-return-symbolic-expressions">Numerical operations return symbolic expressions</a></h3>
+<p>Make sure Kleis was compiled with <code>--features numerical</code>:</p>
+<pre><code class="language-bash">cargo install --path . --features numerical
+</code></pre>
+<h3 id="kernel-dies-unexpectedly"><a class="header" href="#kernel-dies-unexpectedly">Kernel dies unexpectedly</a></h3>
+<p>Check the terminal for error messages. Common causes:</p>
+<ul>
+<li>Z3 timeout on complex verification</li>
+<li>Memory issues with large matrices</li>
+</ul>
+<h3 id="unicode-input"><a class="header" href="#unicode-input">Unicode input</a></h3>
+<p>Use standard Kleis Unicode shortcuts:</p>
+<ul>
+<li><code>\forall</code> → <code>∀</code></li>
+<li><code>\exists</code> → <code>∃</code></li>
+<li><code>\in</code> → <code>∈</code></li>
+<li><code>\R</code> → <code>ℝ</code></li>
+<li><code>\N</code> → <code>ℕ</code></li>
+<li><code>\Z</code> → <code>ℤ</code></li>
+</ul>
+<h2 id="example-notebook"><a class="header" href="#example-notebook">Example Notebook</a></h2>
+<p>Here’s a complete example exploring matrix properties:</p>
+<p><strong>Cell 1: Setup</strong></p>
+<pre><code class="language-kleis">// Define a 2×2 matrix
+let A = [[1.0, 2.0], [3.0, 4.0]]
+</code></pre>
+<p><strong>Cell 2: Basic properties</strong></p>
+<pre><code class="language-kleis">det(A)        // → -2
+trace(A)      // → 5 (not yet implemented, use 1+4)
+</code></pre>
+<p><strong>Cell 3: Eigenvalues</strong></p>
+<pre><code class="language-kleis">eigenvalues(A)
+// → [-0.372..., 5.372...]
+</code></pre>
+<p><strong>Cell 4: Verify Cayley-Hamilton</strong></p>
+<pre><code class="language-kleis">// A matrix satisfies its characteristic polynomial
+// For 2×2: A² - trace(A)*A + det(A)*I = 0
+// This is verified numerically by the eigenvalue product
+</code></pre>
+<p><strong>Cell 5: Matrix inverse</strong></p>
+<pre><code class="language-kleis">let Ainv = inv(A)
+// Verify: A * Ainv should be identity
+// (Matrix multiplication coming soon!)
+</code></pre>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li>Explore the <a href="./12-repl.html">REPL chapter</a> for more interactive features</li>
+<li>See <a href="./19-matrices.html">Matrices</a> for symbolic matrix operations</li>
+<li>Check <a href="./11-z3-verification.html">Z3 Verification</a> for formal proofs</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../chapters/08-conditionals.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../chapters/12-repl.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../chapters/10-implements.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../chapters/13-applications.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -386,11 +468,11 @@ structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../chapters/08-conditionals.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../chapters/12-repl.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../chapters/10-implements.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../chapters/13-applications.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
