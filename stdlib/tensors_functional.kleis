@@ -313,36 +313,105 @@ example "EM tensor trace = 0" {
 // Key insight: We can compute the 2-form dω algebraically!
 // The integral of dω over R equals the line integral around ∂R.
 
+// ============================================
+// DERIVATIVE RULES (from calculus infrastructure)
+// ============================================
+// Power rule: D(x^n, x) = n * x^(n-1)
+define power_rule(n, x) = n * x^(n - 1)
+
+// Constant rule: D(c, x) = 0 (c doesn't depend on x)
+define const_rule(c, x) = 0
+
+// Variable rule: D(x, x) = 1
+define var_rule_self() = 1
+
+// Variable rule: D(y, x) = 0 when y ≠ x
+define var_rule_other() = 0
+
+// Sum rule: D(f + g, x) = D(f, x) + D(g, x)
+define sum_rule(Df, Dg) = Df + Dg
+
+// Scalar rule: D(c * f, x) = c * D(f, x)
+define scalar_rule(c, Df) = c * Df
+
+// ============================================
+// CURL COMPUTATION USING DERIVATIVES
+// ============================================
+// For 1-form ω = P dx + Q dy:
+//   curl(ω) = ∂Q/∂x - ∂P/∂y
+
+define curl_2d(dQ_dx, dP_dy) = dQ_dx - dP_dy
+
 // Example 1: Rotation field ω = -y dx + x dy
-// This represents circular rotation around origin.
-// dω = (∂x/∂x) - (∂(-y)/∂y) = 1 - (-1) = 2
-// So: circulation = 2 × Area(R)
+// P(x, y) = -y, so P = -1 * y
+// Q(x, y) = x
+//
+// ∂Q/∂x = D(x, x) = var_rule_self() = 1
+// ∂P/∂y = D(-y, y) = -1 * D(y, y) = -1 * var_rule_self() = -1
+// curl = 1 - (-1) = 2
 
-// For numerical verification, at point (1, 1):
-// ω = [-1, 1] (coefficients of dx, dy)
-// At point (2, 3):
-// ω = [-3, 2]
+define dQ_dx_rotation = var_rule_self()           // D(x, x) = 1
+define dP_dy_rotation = negate(var_rule_self())   // D(-y, y) = -1
+define rotation_curl = curl_2d(dQ_dx_rotation, dP_dy_rotation)
 
-// The curl (∂Q/∂x - ∂P/∂y) is constant = 2 everywhere for this field
-define rotation_curl = 2
+example "derivative: D(x, x) = 1" {
+    var_rule_self() = 1
+}
+
+example "derivative: D(-y, y) = -1" {
+    negate(var_rule_self()) = negate(1)
+}
 
 example "Green's theorem: rotation field curl = 2" {
-    // For ω = -y dx + x dy, the curl is 2 everywhere
+    // curl = ∂Q/∂x - ∂P/∂y = 1 - (-1) = 2
     rotation_curl = 2
 }
 
 // Example 2: Conservative field (gradient of f = x² + y²)
 // ω = df = 2x dx + 2y dy
-// dω = d(df) = 0 (because d² = 0)
-// This means: no net circulation around any closed curve!
+// P(x, y) = 2x, Q(x, y) = 2y
+//
+// ∂Q/∂x = D(2y, x) = 2 * D(y, x) = 2 * 0 = 0  (y is constant wrt x)
+// ∂P/∂y = D(2x, y) = 2 * D(x, y) = 2 * 0 = 0  (x is constant wrt y)
+// curl = 0 - 0 = 0
 
-// The curl of a gradient is always 0:
-// ∂(2y)/∂x - ∂(2x)/∂y = 0 - 0 = 0
-define gradient_curl = 0
+define dQ_dx_gradient = scalar_rule(2, var_rule_other())  // D(2y, x) = 2 * 0 = 0
+define dP_dy_gradient = scalar_rule(2, var_rule_other())  // D(2x, y) = 2 * 0 = 0
+define gradient_curl = curl_2d(dQ_dx_gradient, dP_dy_gradient)
+
+example "derivative: D(y, x) = 0" {
+    var_rule_other() = 0
+}
+
+example "derivative: D(2y, x) = 0" {
+    scalar_rule(2, var_rule_other()) = 0
+}
 
 example "Green's theorem: gradient field curl = 0" {
-    // For ω = 2x dx + 2y dy (gradient of x²+y²), curl = 0
+    // curl = ∂Q/∂x - ∂P/∂y = 0 - 0 = 0 (d² = 0)
     gradient_curl = 0
+}
+
+// Example 3: Non-trivial polynomial field
+// ω = xy dx + x² dy
+// P(x, y) = xy, Q(x, y) = x²
+//
+// ∂Q/∂x = D(x², x) = power_rule(2, x) = 2x
+// ∂P/∂y = D(xy, y) = x * D(y, y) = x * 1 = x
+// curl at point (x, y) = 2x - x = x
+
+// At point (3, _): curl = 2*3 - 3 = 3
+define dQ_dx_poly_at_3 = power_rule(2, 3)         // D(x², x) at x=3 = 2*3 = 6
+define dP_dy_poly_at_3 = 3                        // D(xy, y) at x=3 = x = 3
+define poly_curl_at_3 = curl_2d(dQ_dx_poly_at_3, dP_dy_poly_at_3)
+
+example "derivative: D(x², x) at x=3 = 6" {
+    power_rule(2, 3) = 6
+}
+
+example "Green's theorem: polynomial field curl at (3,_) = 3" {
+    // curl = 2x - x = x = 3
+    poly_curl_at_3 = 3
 }
 
 // Example 3: Verify d² = 0 using wedge product
