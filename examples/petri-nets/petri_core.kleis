@@ -1,0 +1,56 @@
+// =============================================================================
+// Petri Net Core Library for Kleis
+// Based on ISO/IEC 15909-2 PNML Standard
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Basic Types
+// -----------------------------------------------------------------------------
+
+// Places and transitions identified by integers
+data Place = P(id : ℤ)
+data Transition = Trans(id : ℤ)
+
+// Arcs connect places to transitions or transitions to places
+data Arc = 
+    InputArc(place : ℤ, trans : ℤ, weight : ℕ)
+  | OutputArc(trans : ℤ, place : ℤ, weight : ℕ)
+
+// Marking: token count at a place
+type Marking = ℤ → ℕ
+
+// -----------------------------------------------------------------------------
+// Petri Net Semantics
+// -----------------------------------------------------------------------------
+
+structure PetriNetSemantics {
+    operation input_weight : ℤ × ℤ → ℕ
+    operation output_weight : ℤ × ℤ → ℕ
+    operation enabled : ℤ × Marking → Bool
+    operation fire : ℤ × Marking → Marking
+    operation reachable : Marking × Marking → Bool
+    
+    axiom reachable_refl: ∀(m : Marking). reachable(m, m)
+}
+
+// -----------------------------------------------------------------------------
+// Safety Properties
+// -----------------------------------------------------------------------------
+
+structure SafetyProperties {
+    operation k_bounded : ℤ × ℕ × Marking → Bool
+    operation safe : ℤ × Marking → Bool
+    
+    axiom safe_is_1bounded: ∀(p : ℤ). ∀(m0 : Marking).
+        safe(p, m0) ↔ k_bounded(p, 1, m0)
+}
+
+// -----------------------------------------------------------------------------
+// Liveness Properties  
+// -----------------------------------------------------------------------------
+
+structure LivenessProperties {
+    operation dead : ℤ × Marking → Bool
+    operation deadlock : Marking → Bool
+    operation live : ℤ × Marking → Bool
+}
