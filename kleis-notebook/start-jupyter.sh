@@ -63,10 +63,15 @@ setup_venv() {
         pip install -q jupyterlab
     fi
     
-    # Check if kernel is registered
-    if ! jupyter kernelspec list 2>/dev/null | grep -q kleis; then
-        echo -e "${YELLOW}Registering Kleis kernel...${NC}"
+    # Check if kernels are registered
+    if ! jupyter kernelspec list 2>/dev/null | grep -q "^kleis "; then
+        echo -e "${YELLOW}Registering Kleis (symbolic) kernel...${NC}"
         python -m kleis_kernel.install
+    fi
+    
+    if ! jupyter kernelspec list 2>/dev/null | grep -q "kleis-numeric"; then
+        echo -e "${YELLOW}Registering Kleis Numeric kernel...${NC}"
+        python -m kleis_kernel.install_numeric
     fi
     
     echo -e "${GREEN}✓${NC} Virtual environment ready"
@@ -92,12 +97,17 @@ install_all() {
     pip install -e "$SCRIPT_DIR"
     pip install jupyterlab
     
-    # Register kernel
-    echo "Registering Kleis kernel..."
+    # Register kernels
+    echo "Registering Kleis kernels..."
     python -m kleis_kernel.install
+    python -m kleis_kernel.install_numeric
     
     echo ""
     echo -e "${GREEN}✓ Installation complete!${NC}"
+    echo ""
+    echo "Two kernels available:"
+    echo "  - Kleis: Symbolic evaluation"
+    echo "  - Kleis Numeric: Concrete computation (eigenvalues, SVD, etc.)"
     echo ""
     echo "Run '$0' to start JupyterLab"
 }

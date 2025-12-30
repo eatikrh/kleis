@@ -178,15 +178,19 @@ fn run_eval(expression: Option<String>, file: Option<PathBuf>) {
     // Evaluate expression if provided
     if let Some(expr_str) = expression {
         match parse_kleis(&expr_str) {
-            Ok(expr) => match evaluator.eval(&expr) {
-                Ok(result) => {
-                    println!("{:?}", result);
+            Ok(expr) => {
+                // Use eval_concrete for numerical computation (eigenvalues, svd, etc.)
+                match evaluator.eval_concrete(&expr) {
+                    Ok(result) => {
+                        // Pretty-print the result
+                        println!("{}", format_result(&result));
+                    }
+                    Err(e) => {
+                        eprintln!("Evaluation error: {}", e);
+                        std::process::exit(1);
+                    }
                 }
-                Err(e) => {
-                    eprintln!("Evaluation error: {}", e);
-                    std::process::exit(1);
-                }
-            },
+            }
             Err(e) => {
                 eprintln!("Parse error: {}", e);
                 std::process::exit(1);
@@ -195,6 +199,42 @@ fn run_eval(expression: Option<String>, file: Option<PathBuf>) {
     } else if !has_file {
         eprintln!("Error: Provide an expression or --file");
         std::process::exit(1);
+    }
+}
+
+/// Format an expression result for display
+fn format_result(expr: &kleis::ast::Expression) -> String {
+    use kleis::ast::Expression;
+    
+    match expr {
+        Expression::Const(s) => s.clone(),
+        Expression::String(s) => format!("\"{}\"", s),
+        Expression::Object(s) => s.clone(),
+        Expression::List(items) => {
+            let items_str: Vec<String> = items.iter().map(format_result).collect();
+            format!("[{}]", items_str.join(", "))
+        }
+        Expression::Operation { name, args, .. } => {
+            // Handle complex numbers: complex(re, im)
+            if name == "complex" && args.len() == 2 {
+                let re = format_result(&args[0]);
+                let im = format_result(&args[1]);
+                // Parse imaginary part to handle sign
+                if im.starts_with('-') {
+                    format!("{} - {}i", re, &im[1..])
+                } else if im == "0" || im == "0.0" {
+                    re // Just return real part if imag is zero
+                } else {
+                    format!("{} + {}i", re, im)
+                }
+            } else if args.is_empty() {
+                name.clone()
+            } else {
+                let args_str: Vec<String> = args.iter().map(format_result).collect();
+                format!("{}({})", name, args_str.join(", "))
+            }
+        }
+        _ => format!("{:?}", expr), // Fallback for other cases
     }
 }
 

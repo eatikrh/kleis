@@ -4694,9 +4694,45 @@ impl Evaluator {
     // === Matrix helper methods ===
 
     /// Extract (rows, cols, elements) from a Matrix expression
-    /// Handles: Matrix(m, n, [elements]) or Matrix(m, n, List([elements]))
+    /// Handles:
+    /// - Matrix(m, n, [elements])
+    /// - Matrix(m, n, List([elements]))
+    /// - [[a, b], [c, d]] - nested list syntax (row-major)
     fn extract_matrix(&self, expr: &Expression) -> Option<(usize, usize, Vec<Expression>)> {
         match expr {
+            // Nested list syntax: [[a, b], [c, d]] → 2×2 matrix
+            Expression::List(rows) if !rows.is_empty() => {
+                // Check if this is a list of lists (matrix rows)
+                let first_row = match &rows[0] {
+                    Expression::List(cols) => cols,
+                    _ => return None, // Not a nested list
+                };
+
+                let m = rows.len(); // Number of rows
+                let n = first_row.len(); // Number of columns
+
+                if n == 0 {
+                    return None; // Empty columns
+                }
+
+                // Flatten all rows into elements (row-major order)
+                let mut elements = Vec::with_capacity(m * n);
+                for row in rows {
+                    match row {
+                        Expression::List(cols) => {
+                            if cols.len() != n {
+                                return None; // Inconsistent column count
+                            }
+                            elements.extend(cols.clone());
+                        }
+                        _ => return None, // Not a list row
+                    }
+                }
+
+                Some((m, n, elements))
+            }
+
+            // Explicit Matrix(m, n, elements) format
             Expression::Operation { name, args, .. } if name == "Matrix" && args.len() >= 3 => {
                 // Matrix(m, n, elements)
                 let m = self.as_integer(&args[0])? as usize;
