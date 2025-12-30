@@ -71,7 +71,33 @@ example "group properties" {
 }
 ```
 
-### Magic Commands
+**Cell 3: Use REPL commands**
+```kleis
+:type 1 + 2 * 3
+```
+
+**Cell 4: Evaluate expressions**
+```kleis
+:eval sin(0) + cos(0)
+```
+
+**Cell 5: Verify with Z3**
+```kleis
+:verify ∀(x : ℝ). x + 0 = x
+```
+
+### REPL Commands (Kleis-style)
+
+| Command | Description |
+|---------|-------------|
+| `:type <expr>` | Show inferred type of expression |
+| `:eval <expr>` | Evaluate expression to concrete value |
+| `:verify <expr>` | Verify assertion with Z3 |
+| `:ast <expr>` | Show parsed AST structure |
+| `:env` | Show current session context |
+| `:load <file>` | Load a .kleis file into session |
+
+### Jupyter Magic Commands
 
 | Command | Description |
 |---------|-------------|
