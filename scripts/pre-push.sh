@@ -9,12 +9,13 @@
 echo "🔍 Running pre-push quality gates..."
 echo ""
 
-# Set Z3 header path (required for build)
+# Set Z3 paths (required for build and doc tests)
 # Adjust for your platform:
-# - macOS ARM: /opt/homebrew/opt/z3/include/z3.h
-# - macOS Intel: /usr/local/opt/z3/include/z3.h
-# - Linux: /usr/include/z3.h
+# - macOS ARM: /opt/homebrew/opt/z3/
+# - macOS Intel: /usr/local/opt/z3/
+# - Linux: /usr/
 export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
+export LIBRARY_PATH=/opt/homebrew/opt/z3/lib:${LIBRARY_PATH:-}
 
 # Gate 1: Check formatting
 echo "1️⃣  Checking code formatting..."
@@ -44,12 +45,12 @@ echo ""
 
 # Gate 3: Run ALL tests (unit + integration) - THE CRITICAL ONE
 echo "3️⃣  Running ALL tests (unit + integration)..."
-echo "   CRITICAL: Running 'cargo test' (not --lib)"
-echo "   This includes integration tests that caught bugs today!"
+echo "   CRITICAL: Running 'cargo test --all' (includes vendored crates)"
+echo "   This includes integration tests and vendored Z3 doc tests!"
 echo ""
 
 # Run tests and capture output
-if ! cargo test 2>&1 | tee /tmp/kleis_test_output.txt | grep -q "test result: ok"; then
+if ! cargo test --all 2>&1 | tee /tmp/kleis_test_output.txt | grep -q "test result: ok"; then
     echo ""
     echo "❌ Tests failed!"
     echo "   Some tests did not pass"
