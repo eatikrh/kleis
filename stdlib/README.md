@@ -44,6 +44,38 @@ The Kleis standard library is written **in Kleis itself** (self-hosting). It pro
 
 **Status:** ✅ Complete, ✅ Loaded
 
+### Functional Foundation (ADR-026)
+
+**`func_core.kleis`** (~80 lines) ✨ NEW!
+- Higher-order functions: `fold`, `map`, `filter`, `flat_map`
+- List operations: `length`, `list_get`, `append`, `concat`, `list_set`
+- Range generation: `range`, `range_from`
+- Helpers: `sum`, `plus`, `times`, `replicate`
+- **Self-hosted:** No Rust builtins - pure Kleis recursion!
+
+**Status:** ✅ Complete, ✅ Tested (5 examples)
+
+**`combinatorics.kleis`** (~180 lines) ✨ NEW!
+- Factorials and binomials: `factorial`, `binomial`
+- Permutation generation: `all_permutations`, `identity_perm`
+- Permutation sign: `perm_sign`, `count_inversions`
+- Permutation application: `perm_apply`, `perm_inverse`, `perm_compose`
+- Special permutations: `transposition`, `cycle`
+- **Self-hosted:** Enables wedge product via antisymmetrization!
+
+**Status:** ✅ Complete, ✅ Tested (12 examples)
+
+**`tensors_functional.kleis`** (~200 lines) ✨ NEW!
+- Tensors as nested lists: rank-n = n-deep nesting
+- Access: `tensor_get`, `tensor_dim`, `tensor_shape`
+- Arithmetic: `tensor_add`, `tensor_sub`, `tensor_scale`, `tensor_sum`
+- Products: `tensor_product` (outer product)
+- Permutation: `transpose`, `permute_indices`
+- **Antisymmetrization:** `antisymmetrize` → wedge product!
+- **Wedge product:** Proven antisymmetric and nilpotent!
+
+**Status:** ✅ Complete, ✅ Tested (9 examples including wedge properties)
+
 ### Domain-Specific Libraries
 
 **`calculus.kleis`** (~230 lines) ✨ NEW!

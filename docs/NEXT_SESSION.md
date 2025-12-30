@@ -1,6 +1,73 @@
 # Next Session Notes
 
-**Last Updated:** December 29, 2024
+**Last Updated:** December 30, 2024
+
+---
+
+## 🚀 CURRENT WORK: Self-Hosted Differential Forms (Dec 30, 2024)
+
+### The Breakthrough
+
+**Kleis can implement exterior algebras in PURE KLEIS** — no new Rust builtins needed!
+
+We discovered that:
+1. Nested lists work for tensors (block matrices already prove this)
+2. Recursion + pattern matching + fold/map = Turing complete
+3. Permutations can be generated in pure Kleis
+4. All differential geometry operations reduce to these primitives
+
+### Architecture (ADR-026)
+
+```
+Layer 4: Differential Geometry (pure Kleis)
+  wedge, d, ⋆, ι_X, ℒ_X
+           ↓
+Layer 3: Tensor Algebra (pure Kleis)
+  antisymmetrize, permute_indices, tensor_product
+           ↓
+Layer 2: Combinatorics (pure Kleis)
+  all_permutations, perm_sign, factorial
+           ↓
+Layer 1: Functional Core (pure Kleis)
+  fold, map, range, filter, length, append
+           ↓
+Layer 0: Primitives (Rust - invisible)
+  +, -, *, /, Cons, Nil, match, if, λ
+```
+
+### Implementation Plan
+
+- [ ] **`stdlib/prelude.kleis`** - fold, map, filter, range, length, append
+- [ ] **`stdlib/combinatorics.kleis`** - factorial, permutations, signs
+- [ ] **`stdlib/tensors_functional.kleis`** - tensor ops as Kleis functions
+- [ ] **Update `stdlib/differential_forms.kleis`** - replace builtin_* with pure Kleis
+
+### Gap Analysis (All Resolved!)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Tensor type | ✅ | Use nested lists |
+| fold/map/range | ✅ | Define in Kleis, tested working |
+| Permutations | ✅ | Implement recursively in Kleis |
+| Permutation sign | ✅ | Count inversions |
+| Tensor product | ✅ | Outer product via nested map |
+| Antisymmetrization | ✅ | Sum over permutations with signs |
+| Wedge product | ✅ | antisymmetrize(tensor_product) |
+| Cartan formula | ✅ | **The axiom IS the implementation!** |
+
+### Key Insight
+
+**Cartan's Magic Formula:**
+```kleis
+// This isn't just an axiom — it's the IMPLEMENTATION
+define lie(X, α) = plus(d(interior(X, α)), interior(X, d(α)))
+```
+
+The axioms we wrote for verification ARE the executable definitions!
+
+### Branch
+
+Working in branch: `exterior-algebras`
 
 ---
 
