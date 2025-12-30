@@ -205,7 +205,7 @@ fn run_eval(expression: Option<String>, file: Option<PathBuf>) {
 /// Format an expression result for display
 fn format_result(expr: &kleis::ast::Expression) -> String {
     use kleis::ast::Expression;
-    
+
     match expr {
         Expression::Const(s) => s.clone(),
         Expression::String(s) => format!("\"{}\"", s),
@@ -220,8 +220,8 @@ fn format_result(expr: &kleis::ast::Expression) -> String {
                 let re = format_result(&args[0]);
                 let im = format_result(&args[1]);
                 // Parse imaginary part to handle sign
-                if im.starts_with('-') {
-                    format!("{} - {}i", re, &im[1..])
+                if let Some(stripped) = im.strip_prefix('-') {
+                    format!("{} - {}i", re, stripped)
                 } else if im == "0" || im == "0.0" {
                     re // Just return real part if imag is zero
                 } else {
