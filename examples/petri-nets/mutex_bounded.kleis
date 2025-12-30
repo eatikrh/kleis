@@ -104,11 +104,17 @@ example "SYMMETRY: both processes can reach critical section" {
     assert(∃(s : ℤ). valid_state(s) ∧ m(s, 3) = 1)
 }
 
-example "REVERSIBILITY: can always return to initial" {
-    // From state 1, exit1 leads back to state 0
-    // From state 2, exit2 leads back to state 0
-    assert(can_fire(1, 2) ∧ next(1, 2) = 0)
-    assert(can_fire(2, 3) ∧ next(2, 3) = 0)
+example "REVERSIBILITY: state 1 can return to initial" {
+    // From state 1, exit1 (t=2) leads back to state 0
+    // This is a ground fact that should be verified by Z3 from axioms
+    assert(∀(x : ℤ). x = 1 → can_fire(x, 2))
+    assert(∀(x : ℤ). x = 1 → next(x, 2) = 0)
+}
+
+example "REVERSIBILITY: state 2 can return to initial" {
+    // From state 2, exit2 (t=3) leads back to state 0
+    assert(∀(x : ℤ). x = 2 → can_fire(x, 3))
+    assert(∀(x : ℤ). x = 2 → next(x, 3) = 0)
 }
 
 example "BOUNDED: all places are 1-bounded" {
