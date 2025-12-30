@@ -2,6 +2,10 @@
 
 This appendix explains how to set up and use the VS Code debugger with Kleis.
 
+![VS Code Debugger with Kleis](../images/vscode-debugger.png)
+
+*VS Code debugging a Kleis file: breakpoint on line 69, Variables panel showing expression AST, Call Stack showing evaluation context, and Debug Console with status messages.*
+
 ## Prerequisites
 
 1. **VS Code** installed
