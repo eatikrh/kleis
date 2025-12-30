@@ -649,6 +649,25 @@ impl Evaluator {
                     }
 
                     func_result
+                } else if name == "eval" || name == "reduce" {
+                    // Special built-in: evaluate ground terms via Z3 simplify
+                    // eval(expr) → concrete value if expr has no free variables
+                    if args.len() != 1 {
+                        return Err("eval() takes exactly 1 argument".to_string());
+                    }
+
+                    // First evaluate the argument
+                    let arg_eval = self.eval_internal(&args[0], depth + 1)?;
+
+                    // Check if the expression is symbolic (has free variables)
+                    if self.is_symbolic(&arg_eval) {
+                        return Err("eval() cannot evaluate expressions with free variables. \
+                             Use assert() with Z3 for symbolic verification instead."
+                            .to_string());
+                    }
+
+                    // Use Z3 simplify to reduce the ground term
+                    self.eval_ground_term(&arg_eval)
                 } else {
                     // Built-in operation - just evaluate arguments
                     let eval_args: Result<Vec<_>, _> = args
@@ -1222,6 +1241,37 @@ impl Evaluator {
                 }
             }
             Err(_) => None, // Couldn't create verifier, fall back
+        }
+    }
+
+    /// Evaluate a ground term (no free variables) using Z3 simplify.
+    ///
+    /// This provides concrete evaluation for expressions like:
+    /// - `eval(1 + 2 * 3)` → `7`
+    /// - `eval(if 5 ≤ 3 then 1 else 2)` → `2`
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// - Z3 is not available (axiom-verification feature disabled)
+    /// - Z3 fails to simplify the expression
+    fn eval_ground_term(&self, expr: &Expression) -> Result<Expression, String> {
+        let registry = self.build_registry_internal();
+
+        match AxiomVerifier::new(&registry) {
+            Ok(mut verifier) => {
+                // Load ADT constructors for proper type handling
+                verifier.load_adt_constructors(self.adt_constructors.iter());
+
+                // Use Z3 simplify to evaluate the ground term
+                match verifier.simplify(expr) {
+                    Ok(simplified) => Ok(simplified),
+                    Err(e) => Err(format!("eval() failed to simplify expression: {}", e)),
+                }
+            }
+            Err(e) => Err(format!(
+                "eval() requires Z3 (axiom-verification feature). Error: {}",
+                e
+            )),
         }
     }
 
