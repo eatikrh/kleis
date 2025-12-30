@@ -33,3 +33,12 @@ PITCH_*.md
 # Video/presentation materials (private)
 /pot_video_90/
 kleis_doc_example.html
+
+# Python / Jupyter (kleis-notebook)
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+.ipynb_checkpoints/
+*.ipynb_checkpoints
