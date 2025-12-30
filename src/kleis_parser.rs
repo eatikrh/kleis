@@ -1,7 +1,6 @@
 //! Kleis Text Parser - Parses Kleis text syntax into AST
 //!
-//! **IMPORTANT:** This parser is evolving toward production readiness.
-//! It implements ~85% of the formal Kleis v0.7 grammar.
+//! **Grammar Version:** v0.95 (Big Operator Syntax)
 //!
 //! **What's Supported:**
 //! - Function calls: abs(x), card(S), norm(v), frac(a, b)
@@ -10,6 +9,11 @@
 //! - Logical operators: and, or, not, ¬
 //! - Prefix operators: -x (negate), ∇f (gradient), ∫f (integrate)
 //! - Postfix operators: n! (factorial), Aᵀ (transpose), A† (dagger/adjoint)
+//! - Big operators (v0.95):
+//!   - Σ(from, to, body) → sum_bounds(body, from, to)
+//!   - Π(from, to, body) → prod_bounds(body, from, to)
+//!   - ∫(lower, upper, body, var) → int_bounds(body, lower, upper, var)
+//!   - lim(var, target, body) → lim(body, var, target)
 //! - Type ascription: (a + b) : ℝ
 //! - Identifiers and numbers
 //! - Parentheses for grouping
@@ -22,15 +26,12 @@
 //! - Conditionals: if x > 0 then x else 0
 //! - Vector/list literals: [1, 2, 3]
 //! - Quantifiers: ∀(x : T). P(x)
-//!
-//! **What's NOT Supported (yet):**
 //! - Lambda expressions: λ x . x^2
-//! - Summation/product notation: Σ, Π
 //!
 //! NOTE: π, e, i are parsed as identifiers (user-defined, domain-specific)
 //! NOTE: □ (placeholder) is an editor concept, not a Kleis language construct
 //!
-//! See docs/parser-implementation/PARSER_GRAMMAR_COMPATIBILITY.md for full comparison.
+//! See docs/grammar/kleis_grammar_v095.md for full specification.
 //!
 //! **Grammar (simplified):**
 //!   expression := term (('+' | '-') term)*
@@ -428,6 +429,38 @@ impl KleisParser {
             return self.parse_quantifier();
         }
 
+        // Limit: lim(var, target, body) → lim(body, var, target)
+        // Function call syntax for equation editor compatibility
+        if self.peek_word("lim") {
+            self.consume_word("lim");
+            self.skip_whitespace();
+
+            if self.peek() == Some('(') {
+                self.advance(); // consume (
+                let args = self.parse_arguments()?;
+                if self.advance() != Some(')') {
+                    return Err(KleisParseError {
+                        message: "Expected ')' after lim arguments".to_string(),
+                        position: self.pos,
+                    });
+                }
+                // Reorder: lim(var, target, body) → lim(body, var, target)
+                let reordered_args = if args.len() == 3 {
+                    vec![args[2].clone(), args[0].clone(), args[1].clone()]
+                } else {
+                    args
+                };
+                return Ok(Expression::Operation {
+                    name: "lim".to_string(),
+                    args: reordered_args,
+                    span: Some(self.current_span()),
+                });
+            }
+
+            // Without parens, treat as identifier
+            return Ok(Expression::Object("lim".to_string()));
+        }
+
         // Gradient: ∇f (nabla prefix operator)
         // ∇f is well-defined: the vector of all partial derivatives
         if self.peek() == Some('∇') {
@@ -440,13 +473,119 @@ impl KleisParser {
             });
         }
 
-        // Integral: ∫f (integral prefix operator)
-        // For definite integrals, use Integrate(f, {x, a, b})
+        // Integral: ∫(lower, upper, body, var) or ∫f (prefix)
+        // Function form maps to int_bounds for equation editor compatibility
         if self.peek() == Some('∫') {
             self.advance(); // consume ∫
+            self.skip_whitespace();
+
+            // Check if followed by ( for function call syntax
+            if self.peek() == Some('(') {
+                self.advance(); // consume (
+                let args = self.parse_arguments()?;
+                if self.advance() != Some(')') {
+                    return Err(KleisParseError {
+                        message: "Expected ')' after integral arguments".to_string(),
+                        position: self.pos,
+                    });
+                }
+                // Map to int_bounds: ∫(lower, upper, body, var) → int_bounds(body, lower, upper, var)
+                // Reorder args if 4 args provided: (lower, upper, body, var) → (body, lower, upper, var)
+                let reordered_args = if args.len() == 4 {
+                    vec![
+                        args[2].clone(),
+                        args[0].clone(),
+                        args[1].clone(),
+                        args[3].clone(),
+                    ]
+                } else {
+                    args
+                };
+                return Ok(Expression::Operation {
+                    name: "int_bounds".to_string(),
+                    args: reordered_args,
+                    span: Some(self.current_span()),
+                });
+            }
+
+            // Simple prefix: ∫f
             let arg = self.parse_primary()?;
             return Ok(Expression::Operation {
                 name: "Integrate".to_string(),
+                args: vec![arg],
+                span: Some(self.current_span()),
+            });
+        }
+
+        // Summation: Σ(from, to, body) or Σf (prefix)
+        // Function form maps to sum_bounds for equation editor compatibility
+        if self.peek() == Some('Σ') {
+            self.advance(); // consume Σ
+            self.skip_whitespace();
+
+            if self.peek() == Some('(') {
+                self.advance(); // consume (
+                let args = self.parse_arguments()?;
+                if self.advance() != Some(')') {
+                    return Err(KleisParseError {
+                        message: "Expected ')' after sum arguments".to_string(),
+                        position: self.pos,
+                    });
+                }
+                // Map to sum_bounds: Σ(from, to, body) → sum_bounds(body, from, to)
+                let reordered_args = if args.len() == 3 {
+                    vec![args[2].clone(), args[0].clone(), args[1].clone()]
+                } else {
+                    args
+                };
+                return Ok(Expression::Operation {
+                    name: "sum_bounds".to_string(),
+                    args: reordered_args,
+                    span: Some(self.current_span()),
+                });
+            }
+
+            // Simple prefix: Σf
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "Sum".to_string(),
+                args: vec![arg],
+                span: Some(self.current_span()),
+            });
+        }
+
+        // Product: Π(from, to, body) or Πf (prefix)
+        // Function form maps to prod_bounds for equation editor compatibility
+        if self.peek() == Some('Π') {
+            self.advance(); // consume Π
+            self.skip_whitespace();
+
+            if self.peek() == Some('(') {
+                self.advance(); // consume (
+                let args = self.parse_arguments()?;
+                if self.advance() != Some(')') {
+                    return Err(KleisParseError {
+                        message: "Expected ')' after product arguments".to_string(),
+                        position: self.pos,
+                    });
+                }
+                // Map to prod_bounds: Π(from, to, body) → prod_bounds(body, from, to)
+                let reordered_args = if args.len() == 3 {
+                    vec![args[2].clone(), args[0].clone(), args[1].clone()]
+                } else {
+                    args
+                };
+                return Ok(Expression::Operation {
+                    name: "prod_bounds".to_string(),
+                    args: reordered_args,
+                    span: Some(self.current_span()),
+                });
+            }
+
+            // Simple prefix: Πf
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "Product".to_string(),
                 args: vec![arg],
                 span: Some(self.current_span()),
             });
@@ -7477,5 +7616,107 @@ mod tests {
         assert_eq!(result.items.len(), 2);
         assert!(matches!(&result.items[0], TopLevel::StructureDef(_)));
         assert!(matches!(&result.items[1], TopLevel::ExampleBlock(_)));
+    }
+
+    // =========================================
+    // Big Operator Syntax Sugar Tests
+    // =========================================
+
+    #[test]
+    fn test_parse_sum_sugar() {
+        // Σ(from, to, body) should parse as sum_bounds(body, from, to)
+        let expr = parse_kleis("Σ(1, 10, x)").unwrap();
+
+        match expr {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "sum_bounds");
+                assert_eq!(args.len(), 3);
+                // Args should be reordered: body, from, to
+                assert!(matches!(&args[0], Expression::Object(x) if x == "x"));
+                assert!(matches!(&args[1], Expression::Const(n) if n == "1"));
+                assert!(matches!(&args[2], Expression::Const(n) if n == "10"));
+            }
+            _ => panic!("Expected Operation"),
+        }
+    }
+
+    #[test]
+    fn test_parse_product_sugar() {
+        // Π(from, to, body) should parse as prod_bounds(body, from, to)
+        let expr = parse_kleis("Π(1, n, f(i))").unwrap();
+
+        match expr {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "prod_bounds");
+                assert_eq!(args.len(), 3);
+            }
+            _ => panic!("Expected Operation"),
+        }
+    }
+
+    #[test]
+    fn test_parse_integral_sugar() {
+        // ∫(lower, upper, body, var) should parse as int_bounds(body, lower, upper, var)
+        let expr = parse_kleis("∫(0, 1, x, x)").unwrap();
+
+        match expr {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "int_bounds");
+                assert_eq!(args.len(), 4);
+                // Args should be reordered: body, lower, upper, var
+                assert!(matches!(&args[0], Expression::Object(x) if x == "x"));
+                assert!(matches!(&args[1], Expression::Const(n) if n == "0"));
+                assert!(matches!(&args[2], Expression::Const(n) if n == "1"));
+                assert!(matches!(&args[3], Expression::Object(x) if x == "x"));
+            }
+            _ => panic!("Expected Operation"),
+        }
+    }
+
+    #[test]
+    fn test_parse_limit_sugar() {
+        // lim(var, target, body) should parse as lim(body, var, target)
+        let expr = parse_kleis("lim(x, 0, f(x))").unwrap();
+
+        match expr {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "lim");
+                assert_eq!(args.len(), 3);
+                // Args should be reordered: body, var, target
+                match &args[0] {
+                    Expression::Operation { name, .. } => assert_eq!(name, "f"),
+                    _ => panic!("Expected function call as body"),
+                }
+            }
+            _ => panic!("Expected Operation"),
+        }
+    }
+
+    #[test]
+    fn test_parse_sum_prefix() {
+        // Σf should parse as Sum(f) - simple prefix form
+        let expr = parse_kleis("Σx").unwrap();
+
+        match expr {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "Sum");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected Operation"),
+        }
+    }
+
+    #[test]
+    fn test_parse_integral_prefix() {
+        // ∫f should parse as Integrate(f) - simple prefix form
+        let expr = parse_kleis("∫x").unwrap();
+
+        match expr {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "Integrate");
+                assert_eq!(args.len(), 1);
+            }
+            _ => panic!("Expected Operation"),
+        }
     }
 }

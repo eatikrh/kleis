@@ -103,6 +103,10 @@
         {
           "name": "keyword.operator.quantifier.kleis",
           "match": "[∀∃λ]|\\b(forall|exists|lambda)\\b"
+        },
+        {
+          "name": "keyword.operator.bigop.kleis",
+          "match": "[ΣΠ∫∬∭∮∯]|\\b(lim|sum|prod|integral)\\b"
         }
       ]
     },
@@ -115,7 +119,7 @@
         },
         {
           "name": "keyword.other.math.kleis",
-          "match": "\\b(Sum|Product|Integrate|Limit|D|Dt)\\b"
+          "match": "\\b(Sum|Product|Integrate|Limit|D|Dt|sum_bounds|prod_bounds|int_bounds|sum_set|prod_set|sum_where|integral_measure|contour_integral|limit_inf|limit_neg_inf|sup|inf|ess_sup|argmax|argmin|oint|E|Var|fourier_coeff)\\b"
         },
         {
           "name": "support.function.dimension.kleis",

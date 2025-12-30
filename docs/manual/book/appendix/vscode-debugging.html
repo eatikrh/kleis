@@ -7,6 +7,15 @@
 
 
         <!-- Custom HTML head -->
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4MJCXLSP8V"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-4MJCXLSP8V');
+        </script>
+        
 
         <meta name="description" content="A fun, illustrated guide to the Kleis mathematical language">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -35,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-6fd7cefa.js";
+            window.path_to_searchindex_js = "../searchindex-7bfaaf32.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-433b9a47.js"></script>
@@ -289,6 +298,7 @@ example "cross-file breakpoint" {
 <ul>
 <li><strong>Local variables</strong> — Let bindings in current scope</li>
 <li><strong>Function parameters</strong> — Arguments passed to current function</li>
+<li><strong>Inferred types</strong> — When available, types are displayed</li>
 </ul>
 <p><strong>Important:</strong> Variables are displayed as <strong>AST expressions</strong>, not just values:</p>
 <pre><code class="language-kleis">example "inspection demo" {
@@ -299,11 +309,25 @@ example "cross-file breakpoint" {
     //   y = Operation { name: "plus", args: [Const("5"), Const("1")] }
 }
 </code></pre>
+<h3 id="type-aware-variable-display"><a class="header" href="#type-aware-variable-display">Type-Aware Variable Display</a></h3>
+<p>When type information is available, variables show their inferred types:</p>
+<pre><code class="language-kleis">example "typed variables" {
+    let M = matrix2x3([[1,2,3],[4,5,6]])
+    let v = vector3([1, 2, 3])
+    let c = complex(1, 2)
+    
+    // Variables panel shows:
+    //   M : Matrix(2,3,ℝ) = [[1,2,3],[4,5,6]]
+    //   v : Vector(3,ℝ) = [1, 2, 3]
+    //   c : ℂ = 1+2i
+}
+</code></pre>
 <p>This is intentional! Kleis is a <strong>symbolic mathematics system</strong>. Variables hold expressions that represent mathematical objects, not just computed values. This enables:</p>
 <ol>
 <li><strong>Symbolic manipulation</strong> — See the structure of expressions</li>
 <li><strong>Z3 verification</strong> — Pass expressions to the theorem prover</li>
 <li><strong>Provenance tracking</strong> — Understand where values came from</li>
+<li><strong>Type checking</strong> — Verify types match expectations</li>
 </ol>
 <h2 id="call-stack"><a class="header" href="#call-stack">Call Stack</a></h2>
 <p>The <strong>Call Stack</strong> panel shows the execution path:</p>
@@ -361,17 +385,18 @@ example "symbolic verification" {
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Result</th><th>Meaning</th></tr>
+<tr><th>Result</th><th>Badge</th><th>Meaning</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Passed</code></td><td>Concrete values match structurally</td></tr>
-<tr><td><code>Verified</code></td><td>Z3 proved the symbolic claim</td></tr>
-<tr><td><code>Failed { expected, actual }</code></td><td>Concrete values differ</td></tr>
-<tr><td><code>Disproved { counterexample }</code></td><td>Z3 found a counterexample</td></tr>
-<tr><td><code>Unknown</code></td><td>Neither could determine (treated as pass)</td></tr>
+<tr><td><code>Passed</code></td><td>✓</td><td>Concrete values match structurally</td></tr>
+<tr><td><code>Verified</code></td><td>✓</td><td>Z3 proved the symbolic claim</td></tr>
+<tr><td><code>Failed { expected, actual }</code></td><td>✗</td><td>Concrete values differ</td></tr>
+<tr><td><code>Disproved { counterexample }</code></td><td>✗</td><td>Z3 found a counterexample</td></tr>
+<tr><td><code>Unknown</code></td><td>✗</td><td>Could not verify (treated as failure)</td></tr>
 </tbody>
 </table>
 </div>
+<p><strong>Note:</strong> The debugger displays verification badges (✓/✗) next to assertion variables in the Variables panel, so you can see at a glance which assertions passed or failed.</p>
 <h3 id="requirements"><a class="header" href="#requirements">Requirements</a></h3>
 <ul>
 <li>Structure axioms must be defined for the operations used</li>

@@ -1432,14 +1432,30 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
             let mut variables = Vec::new();
 
             // Try to get bindings from the current stack frame in the stop event
+            // Bindings now include type information (TypedBinding)
             if let Some(ref stop_event) = state.last_stop_event {
                 if let Some(frame) = stop_event.stack.first() {
-                    for (name, value) in &frame.bindings {
-                        variables.push(serde_json::json!({
+                    for (name, binding) in &frame.bindings {
+                        // DAP supports a "type" field for variables
+                        let type_str = binding.ty.as_ref().map(kleis::debug::format_type);
+                        let mut var_json = serde_json::json!({
                             "name": name,
-                            "value": value,
+                            "value": &binding.value,
                             "variablesReference": 0
-                        }));
+                        });
+                        // Add type field if available
+                        if let Some(ref ty) = type_str {
+                            var_json["type"] = serde_json::Value::String(ty.clone());
+                        }
+                        // Add verification badge if available
+                        if let Some(verified) = binding.verified {
+                            let badge = if verified { " ✓" } else { " ✗" };
+                            if let Some(val) = var_json.get("value").and_then(|v| v.as_str()) {
+                                var_json["value"] =
+                                    serde_json::Value::String(format!("{}{}", val, badge));
+                            }
+                        }
+                        variables.push(var_json);
                     }
                 }
             }

@@ -2,6 +2,20 @@
 
 All notable changes to the Kleis VS Code extension will be documented in this file.
 
+## [0.4.13] - 2025-12-29
+
+### Added
+- **Grammar v0.95 support**: Big operator syntax
+  - `Σ(from, to, body)` — Summation
+  - `Π(from, to, body)` — Product
+  - `∫(lower, upper, body, var)` — Integral
+  - `lim(var, target, body)` — Limit
+  - Parser reorders arguments for equation-editor compatibility
+  - Round-trip support: Kleis renderer outputs parseable syntax
+
+### Documentation
+- Added `kleis_grammar_v095.ebnf`, `kleis_grammar_v095.md`
+
 ## [0.4.12] - 2025-12-26
 
 ### Added

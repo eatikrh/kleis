@@ -978,7 +978,56 @@ impl Evaluator {
                     location: _,
                 } => {
                     assertions_total += 1;
-                    match self.eval_assert(condition) {
+                    let result = self.eval_assert(condition);
+
+                    // Notify debug hook about assertion verification
+                    {
+                        let mut hook_ref = self.debug_hook.borrow_mut();
+                        if let Some(ref mut hook) = *hook_ref {
+                            match &result {
+                                AssertResult::Passed => {
+                                    hook.on_assert_verified(
+                                        condition,
+                                        true,
+                                        "Passed (concrete)",
+                                        0,
+                                    );
+                                }
+                                AssertResult::Verified => {
+                                    hook.on_assert_verified(condition, true, "Verified by Z3 ✓", 0);
+                                }
+                                AssertResult::Failed { expected, actual } => {
+                                    hook.on_assert_verified(
+                                        condition,
+                                        false,
+                                        &format!(
+                                            "Failed: expected {:?}, got {:?}",
+                                            expected, actual
+                                        ),
+                                        0,
+                                    );
+                                }
+                                AssertResult::Disproved { counterexample } => {
+                                    hook.on_assert_verified(
+                                        condition,
+                                        false,
+                                        &format!("Disproved by Z3: {}", counterexample),
+                                        0,
+                                    );
+                                }
+                                AssertResult::Unknown(reason) => {
+                                    hook.on_assert_verified(
+                                        condition,
+                                        false,
+                                        &format!("Unknown: {}", reason),
+                                        0,
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    match result {
                         AssertResult::Passed => {
                             assertions_passed += 1;
                         }
@@ -1107,8 +1156,7 @@ impl Evaluator {
     }
 
     /// Build a StructureRegistry from the evaluator's loaded structures
-    fn build_registry(&self) -> StructureRegistry {
-        let mut registry = StructureRegistry::new();
+    pub fn build_registry(&self, registry: &mut StructureRegistry) {
         for structure in &self.structures {
             let _ = registry.register(structure.clone());
         }
@@ -1132,12 +1180,29 @@ impl Evaluator {
         for (name, type_sig) in &self.toplevel_operations {
             registry.register_toplevel_operation(name.clone(), type_sig.clone());
         }
+        // Add function definitions (convert Closure to FunctionDef for Z3)
+        for (name, closure) in &self.functions {
+            let func_def = FunctionDef {
+                name: name.clone(),
+                params: closure.params.clone(),
+                type_annotation: None, // Closures don't preserve type annotations
+                body: closure.body.clone(),
+                span: closure.span.clone(),
+            };
+            registry.register_function(func_def);
+        }
+    }
+
+    /// Build a new StructureRegistry from the evaluator's loaded structures (internal use)
+    fn build_registry_internal(&self) -> StructureRegistry {
+        let mut registry = StructureRegistry::new();
+        self.build_registry(&mut registry);
         registry
     }
 
     /// Try to verify an assertion using Z3 (for symbolic claims)
     fn verify_with_z3(&self, condition: &Expression) -> Option<AssertResult> {
-        let registry = self.build_registry();
+        let registry = self.build_registry_internal();
 
         match AxiomVerifier::new(&registry) {
             Ok(mut verifier) => {

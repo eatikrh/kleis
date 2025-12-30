@@ -196,16 +196,16 @@ fn roundtrip_total_derivative() {
 
 #[test]
 fn roundtrip_limit() {
-    // Grammar v0.7: Limit(body, var, target) - function call style
+    // v0.95: lim(var, target, body) - parseable sugar syntax
     let expr = op("lim", vec![o("f(x)"), o("x"), c("0")]);
     let (rendered, parsed) = roundtrip(&expr);
     println!("Rendered: {}", rendered);
     assert!(
-        rendered.contains("Limit("),
-        "Should render as Limit function call"
+        rendered.contains("lim("),
+        "Should render as lim function call"
     );
     println!("Parse result: {:?}", parsed);
-    // Parser should handle Limit(f, x, 0) as function call
+    // Parser should handle lim(x, 0, f(x)) as sugar for limit
 }
 
 // ============================================================

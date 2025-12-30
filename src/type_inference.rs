@@ -76,7 +76,7 @@ use std::collections::HashMap;
 /// - `Matrix(2, 3)` → Data { type_name: "Type", constructor: "Matrix", args: [Nat(2), Nat(3)] }
 ///
 /// See ADR-021 for complete design.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
 pub enum Type {
     // ===== Bootstrap Types =====
     // These are needed to parse and represent Kleis itself
@@ -162,7 +162,7 @@ pub enum Type {
 }
 
 /// Type variable (α, β, γ, etc.)
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
 pub struct TypeVar(pub usize);
 
 /// Type substitution: maps type variables to types

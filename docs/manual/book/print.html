@@ -8,6 +8,15 @@
 
 
         <!-- Custom HTML head -->
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4MJCXLSP8V"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-4MJCXLSP8V');
+        </script>
+        
 
         <meta name="description" content="A fun, illustrated guide to the Kleis mathematical language">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -36,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6fd7cefa.js";
+            window.path_to_searchindex_js = "searchindex-7bfaaf32.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-433b9a47.js"></script>
@@ -4667,9 +4676,9 @@ det(sI - A + LC) = s² + (3 + l₁)s + (2 + l₂)</p>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
-<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.93).</p>
+<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.95).</p>
 <blockquote>
-<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v093.md</code> for the full specification.</p>
+<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v095.md</code> for the full specification.</p>
 </blockquote>
 <h2 id="program-structure"><a class="header" href="#program-structure">Program Structure</a></h2>
 <pre><code class="language-ebnf">program ::= { declaration }
@@ -4907,6 +4916,43 @@ axiom compose: ∀(f : ℝ → ℝ, g : ℝ → ℝ). compose(f, g) = λ x . f(g
 // Topology: continuity via preimages
 axiom continuity: ∀(f : X → Y, V : Set(Y)). 
     is_open(V) → is_open(preimage(f, V))
+</code></pre>
+<h2 id="v095-big-operators"><a class="header" href="#v095-big-operators">v0.95 Big Operators</a></h2>
+<p>Big operators (Σ, Π, ∫, lim) can be used with function call syntax:</p>
+<pre><code class="language-ebnf">bigOpExpr ::= "Σ" "(" expr "," expr "," expr ")"
+            | "Π" "(" expr "," expr "," expr ")"
+            | "∫" "(" expr "," expr "," expr "," expr ")"
+            | "lim" "(" expr "," expr "," expr ")"
+            | ("Σ" | "Π" | "∫") primaryExpr      // prefix form
+</code></pre>
+<h3 id="summation-σ"><a class="header" href="#summation-σ">Summation: Σ</a></h3>
+<pre><code class="language-text">// Sum of f(i) from 1 to n
+Σ(1, n, λ i . f(i))
+
+// Parsed as: sum_bounds(λ i . f(i), 1, n)
+</code></pre>
+<h3 id="product-π"><a class="header" href="#product-π">Product: Π</a></h3>
+<pre><code class="language-text">// Product of g(i) from 1 to n
+Π(1, n, λ i . g(i))
+
+// Parsed as: prod_bounds(λ i . g(i), 1, n)
+</code></pre>
+<h3 id="integral-"><a class="header" href="#integral-">Integral: ∫</a></h3>
+<pre><code class="language-text">// Integral of x² from 0 to 1
+∫(0, 1, λ x . x * x, x)
+
+// Parsed as: int_bounds(λ x . x * x, 0, 1, x)
+</code></pre>
+<h3 id="limit-lim"><a class="header" href="#limit-lim">Limit: lim</a></h3>
+<pre><code class="language-text">// Limit of sin(x)/x as x approaches 0
+lim(x, 0, sin(x) / x)
+
+// Parsed as: lim(sin(x) / x, x, 0)
+</code></pre>
+<h3 id="prefix-forms"><a class="header" href="#prefix-forms">Prefix Forms</a></h3>
+<p>Simple prefix forms are also supported:</p>
+<pre><code class="language-text">Σf        // Parsed as: Sum(f)
+∫g        // Parsed as: Integrate(g)
 </code></pre>
 <h2 id="calculus-notation-v07"><a class="header" href="#calculus-notation-v07">Calculus Notation (v0.7)</a></h2>
 <p>Kleis uses Mathematica-style notation for calculus operations:</p>
@@ -6233,6 +6279,7 @@ example "cross-file breakpoint" {
 <ul>
 <li><strong>Local variables</strong> — Let bindings in current scope</li>
 <li><strong>Function parameters</strong> — Arguments passed to current function</li>
+<li><strong>Inferred types</strong> — When available, types are displayed</li>
 </ul>
 <p><strong>Important:</strong> Variables are displayed as <strong>AST expressions</strong>, not just values:</p>
 <pre><code class="language-kleis">example "inspection demo" {
@@ -6243,11 +6290,25 @@ example "cross-file breakpoint" {
     //   y = Operation { name: "plus", args: [Const("5"), Const("1")] }
 }
 </code></pre>
+<h3 id="type-aware-variable-display"><a class="header" href="#type-aware-variable-display">Type-Aware Variable Display</a></h3>
+<p>When type information is available, variables show their inferred types:</p>
+<pre><code class="language-kleis">example "typed variables" {
+    let M = matrix2x3([[1,2,3],[4,5,6]])
+    let v = vector3([1, 2, 3])
+    let c = complex(1, 2)
+    
+    // Variables panel shows:
+    //   M : Matrix(2,3,ℝ) = [[1,2,3],[4,5,6]]
+    //   v : Vector(3,ℝ) = [1, 2, 3]
+    //   c : ℂ = 1+2i
+}
+</code></pre>
 <p>This is intentional! Kleis is a <strong>symbolic mathematics system</strong>. Variables hold expressions that represent mathematical objects, not just computed values. This enables:</p>
 <ol>
 <li><strong>Symbolic manipulation</strong> — See the structure of expressions</li>
 <li><strong>Z3 verification</strong> — Pass expressions to the theorem prover</li>
 <li><strong>Provenance tracking</strong> — Understand where values came from</li>
+<li><strong>Type checking</strong> — Verify types match expectations</li>
 </ol>
 <h2 id="call-stack"><a class="header" href="#call-stack">Call Stack</a></h2>
 <p>The <strong>Call Stack</strong> panel shows the execution path:</p>
@@ -6305,17 +6366,18 @@ example "symbolic verification" {
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Result</th><th>Meaning</th></tr>
+<tr><th>Result</th><th>Badge</th><th>Meaning</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Passed</code></td><td>Concrete values match structurally</td></tr>
-<tr><td><code>Verified</code></td><td>Z3 proved the symbolic claim</td></tr>
-<tr><td><code>Failed { expected, actual }</code></td><td>Concrete values differ</td></tr>
-<tr><td><code>Disproved { counterexample }</code></td><td>Z3 found a counterexample</td></tr>
-<tr><td><code>Unknown</code></td><td>Neither could determine (treated as pass)</td></tr>
+<tr><td><code>Passed</code></td><td>✓</td><td>Concrete values match structurally</td></tr>
+<tr><td><code>Verified</code></td><td>✓</td><td>Z3 proved the symbolic claim</td></tr>
+<tr><td><code>Failed { expected, actual }</code></td><td>✗</td><td>Concrete values differ</td></tr>
+<tr><td><code>Disproved { counterexample }</code></td><td>✗</td><td>Z3 found a counterexample</td></tr>
+<tr><td><code>Unknown</code></td><td>✗</td><td>Could not verify (treated as failure)</td></tr>
 </tbody>
 </table>
 </div>
+<p><strong>Note:</strong> The debugger displays verification badges (✓/✗) next to assertion variables in the Variables panel, so you can see at a glance which assertions passed or failed.</p>
 <h3 id="requirements"><a class="header" href="#requirements">Requirements</a></h3>
 <ul>
 <li>Structure axioms must be defined for the operations used</li>

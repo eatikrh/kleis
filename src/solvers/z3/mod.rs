@@ -41,6 +41,7 @@
 pub mod backend;
 pub mod converter;
 pub mod translators;
+pub mod type_mapping;
 
 pub use backend::Z3Backend;
 pub use converter::Z3ResultConverter;

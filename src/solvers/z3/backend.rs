@@ -13,7 +13,7 @@
 //!
 //! **Critical:** All public methods return Kleis Expression, not Z3 types!
 
-use crate::ast::{Expression, QuantifiedVar, QuantifierKind};
+use crate::ast::{Expression, MatchCase, Pattern, QuantifiedVar, QuantifierKind};
 use crate::evaluator::Evaluator;
 use crate::kleis_ast::TypeExpr;
 use crate::solvers::backend::{
@@ -23,7 +23,11 @@ use crate::solvers::capabilities::SolverCapabilities;
 use crate::solvers::result_converter::ResultConverter;
 use crate::solvers::z3::converter::Z3ResultConverter;
 use crate::solvers::z3::translators::{arithmetic, boolean, comparison};
+use crate::solvers::z3::type_mapping::{
+    get_builtin_sort_kind, get_parameterized_sort_name, get_type_dispatch_info,
+};
 use crate::structure_registry::StructureRegistry;
+use crate::type_inference::Type;
 use std::collections::{HashMap, HashSet};
 use z3::ast::{Ast, Bool, Dynamic, Int, Real};
 use z3::{DatatypeAccessor, DatatypeBuilder, DatatypeSort, FuncDecl, SatResult, Solver, Sort};
@@ -70,6 +74,11 @@ pub struct Z3Backend<'r> {
     /// Warnings collected during translation (e.g., unknown types, duplicate operations)
     /// These are surfaced when verification fails to help diagnose issues
     warnings: Vec<String>,
+
+    /// Inferred types from TypeChecker (optional)
+    /// Maps expression signatures to their inferred types
+    /// Used for type-dispatched operations (e.g., plus on Matrix vs plus on Real)
+    inferred_types: Option<HashMap<String, crate::type_inference::Type>>,
 }
 
 /// Complex number Z3 datatype
@@ -219,6 +228,7 @@ impl<'r> Z3Backend<'r> {
             complex_datatype: Some(complex_datatype),
             declared_data_types: HashMap::new(),
             warnings: Vec::new(),
+            inferred_types: None,
         };
 
         // Initialize complex number constant 'i' as complex(0, 1)
@@ -226,6 +236,148 @@ impl<'r> Z3Backend<'r> {
         backend.initialize_complex_i();
 
         Ok(backend)
+    }
+
+    /// Set inferred types from TypeChecker
+    /// Call this after type checking but before verification
+    /// to enable type-dispatched operations (e.g., matrix addition vs scalar addition)
+    pub fn set_inferred_types(&mut self, types: HashMap<String, crate::type_inference::Type>) {
+        self.inferred_types = Some(types);
+    }
+
+    /// Try type-dispatched operation handling
+    ///
+    /// This enables using the correct Z3 operations based on type information:
+    /// - User-defined types (Matrix, Tensor, etc.) → uses uninterpreted functions
+    /// - Built-in types (Real, Int, Bool) → uses Z3's built-in operations
+    ///
+    /// The dispatch logic is delegated to `type_mapping::get_type_dispatch_info`
+    /// which is the SINGLE PLACE where type → operation mappings are defined.
+    ///
+    /// Returns Some(result) if type-based dispatch applies, None to fall through
+    /// to the default operation handling.
+    fn try_type_dispatched_operation(
+        &mut self,
+        op_name: &str,
+        args: &[Expression],
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Option<Dynamic>, String> {
+        // Check if we have type information
+        let types = match &self.inferred_types {
+            Some(t) => t,
+            None => return Ok(None), // No type info, fall through
+        };
+
+        // Look for type info for the first argument
+        let arg_type = self.find_relevant_type_for_args(args, types);
+
+        if let Some(ty) = arg_type {
+            // Use type_mapping to determine if dispatch is needed
+            if let Some(dispatch_info) = get_type_dispatch_info(op_name, &ty) {
+                // Translate arguments
+                let z3_args: Result<Vec<_>, _> =
+                    args.iter().map(|arg| self.kleis_to_z3(arg, vars)).collect();
+                let z3_args = z3_args?;
+
+                // Get result sort for this type
+                let result_sort = self.get_sort_for_type(&ty);
+                let result = self.create_uninterpreted_call(
+                    &dispatch_info.z3_func_name,
+                    &z3_args,
+                    &result_sort,
+                );
+
+                return Ok(Some(result));
+            }
+        }
+
+        Ok(None) // No type-based dispatch applies
+    }
+
+    /// Find relevant type for the operation arguments
+    fn find_relevant_type_for_args(
+        &self,
+        args: &[Expression],
+        types: &HashMap<String, Type>,
+    ) -> Option<Type> {
+        // Strategy 1: Check if any argument is a well-known variable with type info
+        for arg in args {
+            if let Expression::Object(name) = arg {
+                // Check various path patterns that might match
+                for (path, ty) in types {
+                    if path.contains(name) || path == "root" {
+                        return Some(ty.clone());
+                    }
+                }
+            }
+        }
+
+        // Strategy 2: Check if "root" type is available
+        types.get("root").cloned()
+    }
+
+    /// Get Z3 sort for a Kleis type
+    ///
+    /// Uses type_mapping for the mapping logic. Handles:
+    /// 1. Declared data types from registry → use their Z3 sort
+    /// 2. Built-in types (Real, Int, etc.) → use Z3 native sorts
+    /// 3. User-defined types → create uninterpreted sort
+    fn get_sort_for_type(&self, ty: &Type) -> z3::Sort {
+        match ty {
+            // Data types - check registry first, then built-ins, then create uninterpreted
+            Type::Data {
+                type_name, args, ..
+            } => {
+                // 1. Check if it's a declared data type from registry
+                if let Some(dt_sort) = self.declared_data_types.get(type_name) {
+                    return dt_sort.sort.clone();
+                }
+
+                // 2. Check if it's a built-in type (Real, Int, etc.)
+                if let Some(sort_kind) = get_builtin_sort_kind(type_name) {
+                    return match sort_kind {
+                        "Real" => Sort::real(),
+                        "Int" => Sort::int(),
+                        "Bool" => Sort::bool(),
+                        "String" => Sort::string(),
+                        _ => Sort::int(), // Fallback
+                    };
+                }
+
+                // 3. User-defined type - create uninterpreted sort
+                let sort_name = get_parameterized_sort_name(type_name, args);
+                Sort::uninterpreted(sort_name.into())
+            }
+
+            // Primitive types - use Z3 native sorts
+            Type::Nat | Type::NatValue(_) | Type::NatExpr(_) => Sort::int(),
+            Type::Bool => Sort::bool(),
+            Type::String | Type::StringValue(_) => Sort::string(),
+            Type::Unit => Sort::bool(),          // Unit ≈ Bool
+            Type::Function(_, _) => Sort::int(), // Functions as uninterpreted (conservative)
+            Type::Product(_) => Sort::int(),     // Products as uninterpreted
+            Type::Var(_) | Type::ForAll(_, _) => Sort::int(), // Type vars default to Int
+        }
+    }
+
+    /// Create an uninterpreted function call
+    fn create_uninterpreted_call(
+        &mut self,
+        func_name: &str,
+        z3_args: &[Dynamic],
+        result_sort: &z3::Sort,
+    ) -> Dynamic {
+        // Declare the function if not already declared
+        let arg_sorts: Vec<_> = z3_args.iter().map(|a| a.get_sort()).collect();
+        let arg_sort_refs: Vec<&z3::Sort> = arg_sorts.iter().collect();
+
+        let func_decl = z3::FuncDecl::new(func_name, &arg_sort_refs, result_sort);
+
+        // Apply the function to arguments
+        let arg_refs: Vec<&dyn z3::ast::Ast> =
+            z3_args.iter().map(|a| a as &dyn z3::ast::Ast).collect();
+
+        func_decl.apply(&arg_refs)
     }
 
     /// Add a warning message (surfaced when verification fails)
@@ -1214,6 +1366,31 @@ impl<'r> Z3Backend<'r> {
             Expression::Operation { name, args, .. } => {
                 // Matrix and tensor operations are handled via axioms from stdlib/*.kleis
                 // Use assert_axioms_from_registry() to load them before verification
+
+                // Check if this is a defined function (not just an operation)
+                // If so, expand it at the Kleis level before translating to Z3
+                if let Some(func_def) = self.registry.get_function(name) {
+                    if func_def.params.len() == args.len() {
+                        // Create substitution map: param -> arg
+                        let subst: HashMap<String, Expression> = func_def
+                            .params
+                            .iter()
+                            .cloned()
+                            .zip(args.iter().cloned())
+                            .collect();
+                        // Substitute and translate
+                        let substituted_body = substitute_expr(&func_def.body, &subst);
+                        return self.kleis_to_z3(&substituted_body, vars);
+                    }
+                }
+
+                // Type-dispatched operations: check if we have type info for this operation
+                // This enables using matrix_add instead of Z3's + for matrix types
+                if let Some(dispatched_result) =
+                    self.try_type_dispatched_operation(name, args, vars)?
+                {
+                    return Ok(dispatched_result);
+                }
 
                 // Standard path: translate arguments first
                 let z3_args: Result<Vec<_>, _> =
@@ -4018,6 +4195,141 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         self.solver.assert(&definition);
 
         Ok(())
+    }
+}
+
+/// Get all variables bound by a pattern
+fn pattern_bound_variables(pattern: &Pattern) -> Vec<String> {
+    match pattern {
+        Pattern::Wildcard => vec![],
+        Pattern::Variable(name) => vec![name.clone()],
+        Pattern::Constructor { args, .. } => {
+            args.iter().flat_map(pattern_bound_variables).collect()
+        }
+        Pattern::Constant(_) => vec![],
+        Pattern::As { pattern, binding } => {
+            let mut vars = pattern_bound_variables(pattern);
+            vars.push(binding.clone());
+            vars
+        }
+    }
+}
+
+/// Substitute variables in an expression with their values
+/// This is used to expand defined functions before translating to Z3
+fn substitute_expr(expr: &Expression, subst: &HashMap<String, Expression>) -> Expression {
+    match expr {
+        Expression::Object(name) => {
+            if let Some(replacement) = subst.get(name) {
+                replacement.clone()
+            } else {
+                expr.clone()
+            }
+        }
+        Expression::Const(_) | Expression::String(_) => expr.clone(),
+        Expression::Placeholder { .. } => expr.clone(),
+        Expression::Operation { name, args, span } => Expression::Operation {
+            name: name.clone(),
+            args: args.iter().map(|a| substitute_expr(a, subst)).collect(),
+            span: span.clone(),
+        },
+        Expression::Quantifier {
+            quantifier,
+            variables,
+            where_clause,
+            body,
+        } => {
+            // Don't substitute bound variables
+            let mut new_subst = subst.clone();
+            for qvar in variables {
+                new_subst.remove(&qvar.name);
+            }
+            Expression::Quantifier {
+                quantifier: quantifier.clone(),
+                variables: variables.clone(),
+                where_clause: where_clause
+                    .as_ref()
+                    .map(|w| Box::new(substitute_expr(w, &new_subst))),
+                body: Box::new(substitute_expr(body, &new_subst)),
+            }
+        }
+        Expression::Conditional {
+            condition,
+            then_branch,
+            else_branch,
+            span,
+        } => Expression::Conditional {
+            condition: Box::new(substitute_expr(condition, subst)),
+            then_branch: Box::new(substitute_expr(then_branch, subst)),
+            else_branch: Box::new(substitute_expr(else_branch, subst)),
+            span: span.clone(),
+        },
+        Expression::Lambda { params, body, span } => {
+            // Don't substitute bound lambda parameters
+            let mut new_subst = subst.clone();
+            for param in params {
+                new_subst.remove(&param.name);
+            }
+            Expression::Lambda {
+                params: params.clone(),
+                body: Box::new(substitute_expr(body, &new_subst)),
+                span: span.clone(),
+            }
+        }
+        Expression::Let {
+            pattern,
+            type_annotation,
+            value,
+            body,
+            span,
+        } => {
+            let new_value = substitute_expr(value, subst);
+            // Don't substitute variables bound by the pattern
+            let mut new_subst = subst.clone();
+            for var_name in pattern_bound_variables(pattern) {
+                new_subst.remove(&var_name);
+            }
+            Expression::Let {
+                pattern: pattern.clone(),
+                type_annotation: type_annotation.clone(),
+                value: Box::new(new_value),
+                body: Box::new(substitute_expr(body, &new_subst)),
+                span: span.clone(),
+            }
+        }
+        Expression::Match {
+            scrutinee,
+            cases,
+            span,
+        } => Expression::Match {
+            scrutinee: Box::new(substitute_expr(scrutinee, subst)),
+            cases: cases
+                .iter()
+                .map(|case| {
+                    // Don't substitute variables bound by the pattern
+                    let mut new_subst = subst.clone();
+                    for var_name in pattern_bound_variables(&case.pattern) {
+                        new_subst.remove(&var_name);
+                    }
+                    MatchCase {
+                        pattern: case.pattern.clone(),
+                        guard: case.guard.as_ref().map(|g| substitute_expr(g, &new_subst)),
+                        body: substitute_expr(&case.body, &new_subst),
+                    }
+                })
+                .collect(),
+            span: span.clone(),
+        },
+        Expression::List(items) => {
+            Expression::List(items.iter().map(|i| substitute_expr(i, subst)).collect())
+        }
+        Expression::Ascription {
+            expr: inner,
+            type_annotation,
+        } => Expression::Ascription {
+            expr: Box::new(substitute_expr(inner, subst)),
+            type_annotation: type_annotation.clone(),
+        },
     }
 }
 

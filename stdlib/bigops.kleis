@@ -1,0 +1,158 @@
+// Big Operators (Σ, Π, ∫, lim) - Kleis Standard Library
+// ======================================================
+// These are binder-like operations implemented as higher-order functions.
+// They are POLYMORPHIC - work on ℝ, ℂ, vectors, matrices, etc.
+// 
+// Parser Sugar (v0.95):
+//   ∫(a, b, body, x)  parses as  int_bounds(body, a, b, x)
+//   Σ(a, b, body)     parses as  sum_bounds(body, a, b)
+//   Π(a, b, body)     parses as  prod_bounds(body, a, b)
+//   lim(x, a, body)   parses as  lim(body, x, a)
+
+// ============================================
+// Summation: Σ
+// ============================================
+// Works on any type with (+) and zero: ℝ, ℂ, vectors, matrices, etc.
+
+// Finite sum over a range [from, to]
+// T must be an additive monoid (has +, 0)
+operation sum_bounds : (ℤ → T) × ℤ × ℤ → T
+
+// Sum over a finite set
+operation sum_set : Set(A) × (A → T) → T
+
+// Sum with a predicate filter
+operation sum_where : (ℤ → Bool) × (ℤ → T) → T
+
+// ============================================
+// Product: Π
+// ============================================
+// Works on any type with (×) and one: ℝ, ℂ, matrices, etc.
+
+// Finite product over a range [from, to]
+// T must be a multiplicative monoid (has ×, 1)
+operation prod_bounds : (ℤ → T) × ℤ × ℤ → T
+
+// Product over a finite set
+operation prod_set : Set(A) × (A → T) → T
+
+// ============================================
+// Integral: ∫
+// ============================================
+// Works on any Banach space (complete normed vector space)
+// Examples: ℝ, ℂ, ℝⁿ, L²(ℝ), etc.
+
+// Definite integral over interval [a, b]
+// Result type matches the integrand's codomain
+operation int_bounds : (T → S) × T × T × T → S
+
+// Integral with explicit measure (Lebesgue, Riemann-Stieltjes, etc.)
+operation integral_measure : Set(T) × Measure × (T → S) → S
+
+// Contour integral in ℂ
+operation contour_integral : Curve × (ℂ → ℂ) → ℂ
+
+// ============================================
+// Limit: lim
+// ============================================
+// Works in any topological space (has notion of "approach")
+// Examples: ℝ, ℂ, metric spaces, topological groups
+
+// Limit as variable approaches a value
+operation lim : S × T × T → S
+
+// Limit as variable approaches infinity
+operation limit_inf : (T → S) → S
+
+// Limit as variable approaches negative infinity
+operation limit_neg_inf : (T → S) → S
+
+// ============================================
+// Supremum / Infimum
+// ============================================
+// Works on any ordered set (partial or total order)
+
+// Supremum (least upper bound)
+operation sup : Set(T) × (T → S) → S
+
+// Infimum (greatest lower bound)
+operation inf : Set(T) × (T → S) → S
+
+// Essential supremum (measure theory)
+operation ess_sup : Set(T) × Measure × (T → S) → S
+
+// ============================================
+// Argmax / Argmin
+// ============================================
+// Works on any ordered set with a well-defined optimizer
+
+// Argument that maximizes a function
+operation argmax : Set(T) × (T → S) → T
+
+// Argument that minimizes a function
+operation argmin : Set(T) × (T → S) → T
+
+// ============================================
+// Domain-Specific Instances
+// ============================================
+
+// Complex analysis: contour integrals
+// ∮ f(z) dz around a closed curve
+operation oint : Curve × (ℂ → ℂ) → ℂ
+
+// Probability: expectation (integral w.r.t. probability measure)
+operation E : (Ω → ℝ) → ℝ
+
+// Probability: variance
+operation Var : (Ω → ℝ) → ℝ
+
+// Fourier series coefficients
+operation fourier_coeff : (ℝ → ℂ) × ℤ → ℂ
+
+// ============================================
+// Type Constraints (Specifications)
+// ============================================
+// These document the required algebraic structure.
+// Z3 cannot verify higher-order axioms, but these serve as
+// formal specifications.
+
+// Summation requires additive structure:
+//   - T has operation (+) : T × T → T
+//   - T has element zero : T
+//   - (+) is associative: (a + b) + c = a + (b + c)
+//   - zero is identity: a + zero = a
+
+// Product requires multiplicative structure:
+//   - T has operation (×) : T × T → T
+//   - T has element one : T
+//   - (×) is associative
+//   - one is identity
+
+// Integral requires:
+//   - Domain: measure space (Set with σ-algebra and measure)
+//   - Codomain: Banach space (complete normed vector space)
+//   - Linearity: ∫(af + g) = a∫f + ∫g
+
+// Limit requires:
+//   - Domain: topological space (has open sets)
+//   - Target: Hausdorff space (limits are unique)
+
+// ============================================
+// First-Order Structures (Z3-Compatible)
+// ============================================
+
+structure BigOpEquality {
+    // Reflexivity of results
+    axiom sum_reflexive:
+        ∀(s : T). s = s
+    
+    axiom prod_reflexive:
+        ∀(p : T). p = p
+    
+    axiom integral_reflexive:
+        ∀(i : T). i = i
+    
+    axiom limit_reflexive:
+        ∀(l : T). l = l
+}
+
