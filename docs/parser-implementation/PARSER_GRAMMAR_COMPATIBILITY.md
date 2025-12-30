@@ -114,6 +114,81 @@
 | **Line integral** | `∮f`, `LineIntegral(F, curve)` | Uninterpreted function | ✅ Works |
 | **Surface integral** | `∯f`, `SurfaceIntegral(F, surface)` | Uninterpreted function | ✅ Works |
 
+---
+
+## Design Philosophy: Why Kleis Doesn't Need Certain Features
+
+### Why No Abstract Types?
+
+**Other languages:** Abstract types hide implementation details ("you don't need to know what this is").
+
+**Kleis philosophy:** Kleis is about **finding hiding violations**, not enabling them. Everything is transparent so Z3 can verify properties.
+
+```kleis
+-- Kleis way: Full transparency
+structure Ring(R) {
+    operation (+) : R × R → R
+    axiom commutativity: ∀(x y : R). x + y = y + x
+}
+-- Z3 sees everything. No hidden assumptions.
+```
+
+**Kleis doesn't do trust. Kleis does proof.**
+
+### Why No List Comprehensions?
+
+**Other languages:** `[x*2 | x <- [1..10], even x]` generates a list.
+
+**Kleis approach:** Define **typed constructor functions** with axioms - works for any type:
+
+```kleis
+-- Instead of list comprehension syntax:
+operation eye : ℕ → Matrix(n, n, ℝ)
+operation range : ℕ × ℕ → Set(ℕ)
+operation filter : Set(T) × (T → Bool) → Set(T)
+
+-- Properties verified by Z3:
+axiom eye_identity: ∀(n : ℕ, M : Matrix(n, n, ℝ)). M × eye(n) = M
+```
+
+**Benefits over list comprehensions:**
+- Works for any type (Matrix, Set, Vector, not just List)
+- Axioms attached to define behavior
+- Composable: `List(Matrix(3, 3, ℝ))` just works
+- Z3 can verify properties
+
+### Why No Parameterized Structure Dependencies?
+
+**Other languages:** Functors, type class constraints (`class (Eq a, Ord a) => ...`)
+
+**Kleis has:**
+- `extends` for single inheritance
+- `over` for field action
+- Nested structures for composition
+- Imports for using operations
+
+```kleis
+structure Ring(R) {
+    structure additive : AbelianGroup(R) { ... }
+    structure multiplicative : Monoid(R) { ... }
+}
+```
+
+These mechanisms handle algebraic hierarchies without needing structure-typed parameters.
+
+### The Kleis Contract
+
+| Traditional Languages | Kleis |
+|----------------------|-------|
+| Hide implementation | **Expose everything** |
+| Generate values | **State properties** |
+| Trust through encapsulation | **Trust through verification** |
+| Compute results | **Verify claims** |
+
+**Kleis: Mathematical notation → Z3 verification. Clean and focused.**
+
+### ✅ Z3 Integration Features
+
 **Derivative notation follows Mathematica convention:**
 - `D(f, x)` - Partial derivative ∂f/∂x
 - `Dt(f, x)` - Total derivative df/dx
