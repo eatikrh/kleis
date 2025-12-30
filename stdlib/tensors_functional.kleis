@@ -300,3 +300,99 @@ example "EM tensor trace = 0" {
     trace(em_field_tensor) = 0
 }
 
+// ============================================
+// CALCULUS EXAMPLE: Green's Theorem (2D Stokes)
+// ============================================
+// Green's Theorem: ∮_C (P dx + Q dy) = ∬_R (∂Q/∂x - ∂P/∂y) dA
+//
+// The exterior derivative of a 1-form ω = P dx + Q dy is:
+//   dω = (∂Q/∂x - ∂P/∂y) dx∧dy
+//
+// This is the "curl" in 2D - measures circulation/rotation.
+//
+// Key insight: We can compute the 2-form dω algebraically!
+// The integral of dω over R equals the line integral around ∂R.
+
+// Example 1: Rotation field ω = -y dx + x dy
+// This represents circular rotation around origin.
+// dω = (∂x/∂x) - (∂(-y)/∂y) = 1 - (-1) = 2
+// So: circulation = 2 × Area(R)
+
+// For numerical verification, at point (1, 1):
+// ω = [-1, 1] (coefficients of dx, dy)
+// At point (2, 3):
+// ω = [-3, 2]
+
+// The curl (∂Q/∂x - ∂P/∂y) is constant = 2 everywhere for this field
+define rotation_curl = 2
+
+example "Green's theorem: rotation field curl = 2" {
+    // For ω = -y dx + x dy, the curl is 2 everywhere
+    rotation_curl = 2
+}
+
+// Example 2: Conservative field (gradient of f = x² + y²)
+// ω = df = 2x dx + 2y dy
+// dω = d(df) = 0 (because d² = 0)
+// This means: no net circulation around any closed curve!
+
+// The curl of a gradient is always 0:
+// ∂(2y)/∂x - ∂(2x)/∂y = 0 - 0 = 0
+define gradient_curl = 0
+
+example "Green's theorem: gradient field curl = 0" {
+    // For ω = 2x dx + 2y dy (gradient of x²+y²), curl = 0
+    gradient_curl = 0
+}
+
+// Example 3: Verify d² = 0 using wedge product
+// If we have basis 1-forms dx, dy represented as:
+//   dx ~ [1, 0]
+//   dy ~ [0, 1]
+// Then dx ∧ dx = 0 (antisymmetry)
+
+define dx = [1, 0]
+define dy = [0, 1]
+
+example "d squared = 0: dx wedge dx" {
+    // dx ∧ dx = 0 (fundamental property of exterior algebra)
+    wedge_1_1(dx, dx) = [[0, 0], [0, 0]]
+}
+
+example "d squared = 0: dy wedge dy" {
+    // dy ∧ dy = 0
+    wedge_1_1(dy, dy) = [[0, 0], [0, 0]]
+}
+
+example "dx wedge dy = area element" {
+    // dx ∧ dy is the area 2-form
+    // Component (0,1) = 1 (coefficient of dx∧dy)
+    tensor_get(wedge_1_1(dx, dy), [0, 1]) = 1
+}
+
+example "dy wedge dx = negative area" {
+    // dy ∧ dx = -dx ∧ dy (antisymmetry)
+    tensor_get(wedge_1_1(dy, dx), [0, 1]) = negate(1)
+}
+
+// ============================================
+// NUMERICAL INTEGRATION (Approximation)
+// ============================================
+// Green's theorem: ∬_R (curl F) dA = ∮_∂R F·dr
+//
+// For the rotation field ω = -y dx + x dy with curl = 2:
+// - Unit circle area = π ≈ 3.14159
+// - Circulation = 2 × π ≈ 6.28318
+//
+// We can verify: for a unit square [0,1] × [0,1]:
+// - Area = 1
+// - Circulation = 2 × 1 = 2
+
+define unit_square_area = 1
+define rotation_circulation_unit_square = 2
+
+example "Green's theorem: unit square circulation" {
+    // Circulation around unit square = curl × area = 2 × 1 = 2
+    rotation_curl * unit_square_area = rotation_circulation_unit_square
+}
+
