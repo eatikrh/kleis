@@ -237,3 +237,76 @@ example "wedge self zero" {
     wedge_1_1(vec_a, vec_a) = Cons(Cons(0, Cons(0, Nil)), Cons(Cons(0, Cons(0, Nil)), Nil))
 }
 
+// ============================================
+// NUMERICAL EXAMPLE: Parallelogram Area
+// ============================================
+// From linear algebra / differential geometry textbooks:
+//
+// The wedge product of two vectors gives the SIGNED AREA
+// of the parallelogram they span.
+//
+// For u = [a, b] and v = [c, d]:
+//   u ∧ v = [[0, ad-bc], [bc-ad, 0]]
+//   Area = |ad - bc| = determinant!
+
+define u_para = Cons(3, Cons(1, Nil))
+define v_para = Cons(1, Cons(4, Nil))
+
+example "parallelogram area = determinant" {
+    // u = [3,1], v = [1,4]
+    // Area = 3*4 - 1*1 = 11
+    tensor_get(wedge_1_1(u_para, v_para), Cons(0, Cons(1, Nil))) = 11
+}
+
+example "unit square area = 1" {
+    tensor_get(wedge_1_1(Cons(1, Cons(0, Nil)), Cons(0, Cons(1, Nil))), Cons(0, Cons(1, Nil))) = 1
+}
+
+example "rectangle area 3x2 = 6" {
+    tensor_get(wedge_1_1(Cons(3, Cons(0, Nil)), Cons(0, Cons(2, Nil))), Cons(0, Cons(1, Nil))) = 6
+}
+
+// ============================================
+// PHYSICS EXAMPLE: Electromagnetic Field Tensor
+// ============================================
+// From Jackson's "Classical Electrodynamics"
+//
+// F is a 4x4 antisymmetric tensor:
+//   F_μν = |  0   -E_x  -E_y  -E_z |
+//          | E_x   0   -B_z   B_y |
+//          | E_y  B_z   0    -B_x |
+//          | E_z -B_y   B_x   0   |
+//
+// Example: E = [1, 0, 0], B = [0, 0, 1]
+
+define em_field_tensor = Cons(
+    Cons(0, Cons(negate(1), Cons(0, Cons(0, Nil)))),
+    Cons(
+        Cons(1, Cons(0, Cons(0, Cons(0, Nil)))),
+        Cons(
+            Cons(0, Cons(0, Cons(0, Cons(negate(1), Nil)))),
+            Cons(
+                Cons(0, Cons(0, Cons(1, Cons(0, Nil)))),
+                Nil
+            )
+        )
+    )
+)
+
+example "EM tensor antisymmetric F_01 = -F_10" {
+    tensor_get(em_field_tensor, Cons(0, Cons(1, Nil))) = 
+        negate(tensor_get(em_field_tensor, Cons(1, Cons(0, Nil))))
+}
+
+example "EM tensor diagonal zero" {
+    tensor_get(em_field_tensor, Cons(0, Cons(0, Nil))) = 0
+}
+
+example "EM tensor E_x = 1" {
+    tensor_get(em_field_tensor, Cons(1, Cons(0, Nil))) = 1
+}
+
+example "EM tensor trace = 0" {
+    trace(em_field_tensor) = 0
+}
+

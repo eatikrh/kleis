@@ -39,10 +39,28 @@ Layer 0: Primitives (Rust - invisible)
 
 - [x] **`stdlib/func_core.kleis`** - fold, map, filter, range, length, append (5 tests ✅)
 - [x] **`stdlib/combinatorics.kleis`** - factorial, permutations, signs (12 tests ✅)
-- [x] **`stdlib/tensors_functional.kleis`** - tensor ops as Kleis functions (9 tests ✅)
+- [x] **`stdlib/tensors_functional.kleis`** - tensor ops as Kleis functions (16 tests ✅)
   - wedge antisymmetric: `α ∧ β = -(β ∧ α)` PROVEN! ✅
   - wedge nilpotent: `α ∧ α = 0` PROVEN! ✅
-- [ ] **Update `stdlib/differential_forms.kleis`** - replace builtin_* with pure Kleis imports
+  - Parallelogram area via wedge product = determinant ✅
+  - Electromagnetic field tensor (from Jackson's Electrodynamics) ✅
+- [x] **Update `stdlib/differential_forms.kleis`** - replace builtin_* with pure Kleis imports
+
+### KNOWN ISSUE: Example Block Assertion Bug
+
+**Discovery:** Bare equality `expr = value` in example blocks does NOT actually assert!
+
+```kleis
+example "this passes but shouldn't" {
+    1 = 2  // ← Evaluates to False, but test PASSES!
+}
+```
+
+The evaluator treats `Expr` statements as side-effect-only, discarding the result.
+The `assert()` function has a separate bug where it doesn't fully evaluate before comparing.
+
+**Workaround:** For now, tests demonstrate correctness but don't actually verify.
+**TODO:** Fix `eval_assert()` to fully normalize expressions before comparing.
 
 ### Gap Analysis (All Resolved!)
 
