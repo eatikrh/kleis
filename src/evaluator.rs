@@ -1402,6 +1402,13 @@ impl Evaluator {
 
     /// Check if two expressions are structurally equal
     fn expressions_equal(&self, left: &Expression, right: &Expression) -> bool {
+        // First, normalize boolean representations
+        let left_bool = self.as_boolean(left);
+        let right_bool = self.as_boolean(right);
+        if let (Some(l), Some(r)) = (left_bool, right_bool) {
+            return l == r;
+        }
+
         match (left, right) {
             (Expression::Const(a), Expression::Const(b)) => {
                 // Try numeric comparison for constants
@@ -1412,6 +1419,9 @@ impl Evaluator {
             }
             (Expression::String(a), Expression::String(b)) => a == b,
             (Expression::Object(a), Expression::Object(b)) => a == b,
+            // Handle Const/Object cross-comparison for identical strings
+            (Expression::Const(a), Expression::Object(b))
+            | (Expression::Object(a), Expression::Const(b)) => a == b,
             (
                 Expression::Operation {
                     name: n1, args: a1, ..
@@ -1428,6 +1438,18 @@ impl Evaluator {
                         .all(|(x, y)| self.expressions_equal(x, y))
             }
             _ => left == right, // Fall back to Eq trait
+        }
+    }
+
+    /// Try to interpret an expression as a boolean value
+    fn as_boolean(&self, expr: &Expression) -> Option<bool> {
+        match expr {
+            Expression::Const(s) | Expression::Object(s) => match s.to_lowercase().as_str() {
+                "true" => Some(true),
+                "false" => Some(false),
+                _ => None,
+            },
+            _ => None,
         }
     }
 

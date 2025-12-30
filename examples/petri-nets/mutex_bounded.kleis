@@ -110,7 +110,7 @@ example "SYMMETRY: both processes can reach critical section" {
     assert(∃(s : ℤ). valid_state(s) ∧ m(s, 3) = 1)
 }
 
-example "REVERSIBILITY: both states can return to initial" {
+example "REVERSIBILITY via Z3: both states can return to initial" {
     // Verified via Z3 with quantifiers
     assert(∀(x : ℤ). x = 1 → can_fire(x, 2))
     assert(∀(x : ℤ). x = 2 → can_fire(x, 3))
@@ -118,10 +118,17 @@ example "REVERSIBILITY: both states can return to initial" {
     assert(∀(x : ℤ). x = 2 → next(x, 3) = 0)
 }
 
-// Note: eval(can_fire(1, 2)) correctly returns Const("true")
-// but the assertion harness compares against Object("true").
-// This is a representation quirk, not a semantic failure.
-// The Z3 verification above proves the same property.
+example "REVERSIBILITY via eval(): state 1 returns" {
+    // eval() with defined functions - ground term evaluation
+    // Compare to true constant, not boolean object
+    assert(eval(can_fire(1, 2)) = true)
+    assert(eval(next(1, 2)) = 0)
+}
+
+example "REVERSIBILITY via eval(): state 2 returns" {
+    assert(eval(can_fire(2, 3)) = true)
+    assert(eval(next(2, 3)) = 0)
+}
 
 example "BOUNDED: all places are 1-bounded" {
     // No place ever has more than 1 token
