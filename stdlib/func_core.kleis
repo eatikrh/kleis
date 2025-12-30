@@ -1,0 +1,87 @@
+// ============================================
+// Kleis Standard Library - Functional Core
+// Higher-order functions for self-hosted math
+// ============================================
+//
+// ADR-026: Self-Hosted Differential Forms
+
+// Length of a list
+define length(xs) = match xs {
+    Nil => 0
+    | Cons(_, t) => 1 + length(t)
+}
+
+// Get element at index (0-based)
+define list_get(xs, n) = match xs {
+    Nil => 0
+    | Cons(h, t) => if n = 0 then h else list_get(t, n - 1)
+}
+
+// Append two lists
+define append(xs, ys) = match xs {
+    Nil => ys
+    | Cons(h, t) => Cons(h, append(t, ys))
+}
+
+// Concatenate a list of lists
+define concat(xss) = match xss {
+    Nil => Nil
+    | Cons(xs, rest) => append(xs, concat(rest))
+}
+
+// Fold left
+define fold(f, init, xs) = match xs {
+    Nil => init
+    | Cons(h, t) => fold(f, f(init, h), t)
+}
+
+// Map a function over a list
+define map(f, xs) = match xs {
+    Nil => Nil
+    | Cons(h, t) => Cons(f(h), map(f, t))
+}
+
+// Filter elements
+define filter(p, xs) = match xs {
+    Nil => Nil
+    | Cons(h, t) => if p(h) then Cons(h, filter(p, t)) else filter(p, t)
+}
+
+// Flat map
+define flat_map(f, xs) = concat(map(f, xs))
+
+// Generate [0, 1, ..., n-1]
+define range(n) = range_from(0, n)
+
+define range_from(start, end) = 
+    if start >= end then Nil 
+    else Cons(start, range_from(start + 1, end))
+
+// Sum a list
+define sum(xs) = fold(plus, 0, xs)
+
+define plus(a, b) = a + b
+define times(a, b) = a * b
+
+// Replicate
+define replicate(n, x) = 
+    if n <= 0 then Nil
+    else Cons(x, replicate(n - 1, x))
+
+// Map with index
+define map_indexed(f, xs) = map_indexed_from(f, xs, 0)
+
+define map_indexed_from(f, xs, i) = match xs {
+    Nil => Nil
+    | Cons(h, t) => Cons(f(i, h), map_indexed_from(f, t, i + 1))
+}
+
+// Set element at index
+define list_set(xs, i, val) = map_indexed(λ j x . if j = i then val else x, xs)
+
+// Examples
+example "length" { length(Cons(1, Cons(2, Cons(3, Nil)))) = 3 }
+example "range" { range(4) = Cons(0, Cons(1, Cons(2, Cons(3, Nil)))) }
+example "sum" { sum(Cons(1, Cons(2, Cons(3, Nil)))) = 6 }
+example "fold" { fold(plus, 0, Cons(1, Cons(2, Cons(3, Nil)))) = 6 }
+example "map" { map(λ x . x * 2, Cons(1, Cons(2, Nil))) = Cons(2, Cons(4, Nil)) }

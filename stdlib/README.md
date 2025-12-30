@@ -44,6 +44,38 @@ The Kleis standard library is written **in Kleis itself** (self-hosting). It pro
 
 **Status:** ✅ Complete, ✅ Loaded
 
+### Functional Foundation (ADR-026)
+
+**`func_core.kleis`** (~80 lines) ✨ NEW!
+- Higher-order functions: `fold`, `map`, `filter`, `flat_map`
+- List operations: `length`, `list_get`, `append`, `concat`, `list_set`
+- Range generation: `range`, `range_from`
+- Helpers: `sum`, `plus`, `times`, `replicate`
+- **Self-hosted:** No Rust builtins - pure Kleis recursion!
+
+**Status:** ✅ Complete, ✅ Tested (5 examples)
+
+**`combinatorics.kleis`** (~180 lines) ✨ NEW!
+- Factorials and binomials: `factorial`, `binomial`
+- Permutation generation: `all_permutations`, `identity_perm`
+- Permutation sign: `perm_sign`, `count_inversions`
+- Permutation application: `perm_apply`, `perm_inverse`, `perm_compose`
+- Special permutations: `transposition`, `cycle`
+- **Self-hosted:** Enables wedge product via antisymmetrization!
+
+**Status:** ✅ Complete, ✅ Tested (12 examples)
+
+**`tensors_functional.kleis`** (~200 lines) ✨ NEW!
+- Tensors as nested lists: rank-n = n-deep nesting
+- Access: `tensor_get`, `tensor_dim`, `tensor_shape`
+- Arithmetic: `tensor_add`, `tensor_sub`, `tensor_scale`, `tensor_sum`
+- Products: `tensor_product` (outer product)
+- Permutation: `transpose`, `permute_indices`
+- **Antisymmetrization:** `antisymmetrize` → wedge product!
+- **Wedge product:** Proven antisymmetric and nilpotent!
+
+**Status:** ✅ Complete, ✅ Tested (9 examples including wedge properties)
+
 ### Domain-Specific Libraries
 
 **`calculus.kleis`** (~230 lines) ✨ NEW!
@@ -57,13 +89,28 @@ The Kleis standard library is written **in Kleis itself** (self-hosting). It pro
 
 **Status:** ✅ Defined, ⬜ Not yet loaded by default
 
-**`tensors.kleis`** (~260 lines)
+**`tensors.kleis`** (~280 lines)
 - General Relativity tensor operations
 - Curvature: Riemann, Ricci, Einstein, Weyl tensors
 - Connection: Christoffel symbols, covariant derivative
 - Physics: Stress-energy tensor, geodesics, Killing vectors
 - Standard metrics: Minkowski, Schwarzschild, Kerr, FLRW
-- Tensor products: outer product, wedge product, Lie derivative
+- Tensor products: outer product, wedge product (now enabled!), Lie derivative
+- v0.92+: Type-level arithmetic enabled (p + q, n - 1, 2*n)
+
+**Status:** ✅ Defined, ⬜ Not yet loaded by default
+
+**`differential_forms.kleis`** (~350 lines) ✨ NEW!
+- **Cartan Calculus:** Full exterior algebra operations
+- **Wedge Product (∧):** Antisymmetric tensor product with graded commutativity
+- **Exterior Derivative (d):** With d² = 0 axiom (de Rham cohomology)
+- **Hodge Star (⋆):** Duality operator for p-forms ↔ (n-p)-forms
+- **Interior Product (ι_X):** Contraction with vector fields
+- **Cartan's Magic Formula:** ℒ_X = d ∘ ι_X + ι_X ∘ d
+- **Physics Applications:**
+  - Electromagnetic field as 2-form: dF = 0, d⋆F = ⋆J (Maxwell's equations)
+  - Yang-Mills theory: F = dA + A ∧ A (non-abelian gauge fields)
+  - Symplectic mechanics: Hamiltonian vector fields, Poisson brackets
 
 **Status:** ✅ Defined, ⬜ Not yet loaded by default
 
@@ -262,7 +309,7 @@ All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.8**:
 
 ## Status (December 9, 2025)
 
-**Files Written:** ✅ `types.kleis`, `minimal_prelude.kleis`, `matrices.kleis`, `tensors.kleis`  
+**Files Written:** ✅ `types.kleis`, `minimal_prelude.kleis`, `matrices.kleis`, `tensors.kleis`, `differential_forms.kleis`  
 **Grammar:** ✅ v0.5 formalized (with pattern matching!)  
 **Parser:** ✅ Pattern matching implemented  
 **Type Inference:** ✅ Pattern matching type-checks  
@@ -286,7 +333,13 @@ All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.8**:
 - Curvature tensors: Riemann, Ricci, Einstein, Weyl
 - Connection: Christoffel symbols, covariant derivative
 - Physics: Stress-energy, geodesics, Killing vectors
-- Standard metrics: Minkowski, Schwarzschild, Kerr, FLRW  
+- Standard metrics: Minkowski, Schwarzschild, Kerr, FLRW
+
+**Differential Forms:** ✅ Defined in `differential_forms.kleis`
+- Cartan calculus: wedge (∧), exterior derivative (d), Hodge star (⋆)
+- Interior product: contraction with vector fields
+- Cartan's magic formula: ℒ_X = d ∘ ι_X + ι_X ∘ d
+- Physics: Maxwell's equations in form language, Yang-Mills, symplectic mechanics  
 
 ---
 

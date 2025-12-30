@@ -261,20 +261,18 @@ implements CovariantDerivative(dim) {
  * 
  * Ranks add: Tensor(p, q) ⊗ Tensor(r, s) = Tensor(p+r, q+s)
  * 
- * NOTE: Parser doesn't support arithmetic in type parameters yet (p + r).
- * This will be enabled in a future parser version.
+ * v0.92+: Parser now supports arithmetic in type parameters (p + r).
  */
-// COMMENTED OUT - Parser limitation (arithmetic in type params)
-// structure TensorProduct(p: Nat, q: Nat, r: Nat, s: Nat, dim: Nat, T) {
-//     operation tensor_product : 
-//         Tensor(p, q, dim, T) → 
-//         Tensor(r, s, dim, T) → 
-//         Tensor(p + r, q + s, dim, T)
-// }
-// 
-// implements TensorProduct(p, q, r, s, dim, ℝ) {
-//     operation tensor_product = builtin_tensor_product
-// }
+structure TensorProduct(p: Nat, q: Nat, r: Nat, s: Nat, dim: Nat, T) {
+    operation tensor_product : 
+        Tensor(p, q, dim, T) → 
+        Tensor(r, s, dim, T) → 
+        Tensor(p + r, q + s, dim, T)
+}
+
+implements TensorProduct(p, q, r, s, dim, ℝ) {
+    operation tensor_product = builtin_tensor_product
+}
 
 /* Wedge Product (Antisymmetric Tensor Product)
  * 
@@ -286,16 +284,43 @@ implements CovariantDerivative(dim) {
  *   - Associative: (α ∧ β) ∧ γ = α ∧ (β ∧ γ)
  *   - α ∧ α = 0 for any 1-form α
  * 
- * NOTE: Parser doesn't support arithmetic in type parameters yet (p + q).
+ * v0.92+: Parser now supports arithmetic in type parameters (p + q).
+ * 
+ * NOTE: Axioms for antisymmetry/nilpotency require proper Z3 declarations
+ * for scale(), sign_factor(), and zero. These are verified computationally
+ * in stdlib/tensors_functional.kleis instead.
  */
-// COMMENTED OUT - Parser limitation (arithmetic in type params)
-// structure ExteriorAlgebra(p: Nat, q: Nat, dim: Nat) {
-//     operation wedge : Tensor(0, p, dim, ℝ) → Tensor(0, q, dim, ℝ) → Tensor(0, p + q, dim, ℝ)
-// }
-// 
-// implements ExteriorAlgebra(p, q, dim) {
-//     operation wedge = builtin_wedge_product
-// }
+structure ExteriorAlgebra(p: Nat, q: Nat, dim: Nat) {
+    operation wedge : Tensor(0, p, dim, ℝ) → Tensor(0, q, dim, ℝ) → Tensor(0, p + q, dim, ℝ)
+}
+
+/* Wedge Product Nilpotency for 1-forms
+ * 
+ * For any 1-form α: α ∧ α = 0 (the zero 2-form)
+ * 
+ * This follows from antisymmetry: α ∧ α = -α ∧ α implies α ∧ α = 0
+ * Expressed at component level since wedge returns a tensor.
+ * 
+ * In coordinates: if α = a_i dx^i, then
+ *   α ∧ α = Σ(a_i a_j - a_j a_i) dx^i ∧ dx^j = 0
+ */
+structure WedgeNilpotent(dim: Nat) {
+    // Component accessor for 2-forms (rank-2 covariant tensors)
+    operation component2 : Tensor(0, 2, dim, ℝ) → Nat → Nat → ℝ
+    
+    // Every component of α ∧ α is zero
+    axiom wedge_nilpotent : ∀ alpha : Tensor(0, 1, dim, ℝ) .
+        ∀ i : Nat . ∀ j : Nat .
+        component2(wedge(alpha, alpha), i, j) = 0
+}
+
+implements WedgeNilpotent(dim) {
+    operation component2 = builtin_tensor_component2
+}
+
+implements ExteriorAlgebra(p, q, dim) {
+    operation wedge = builtin_wedge_product
+}
 
 /* Lie Derivative - Infinitesimal Diffeomorphisms
  * 
@@ -562,9 +587,10 @@ structure RiemannSymmetries(dim: Nat) {
  * In xAct notation: Γ(λ, -μ, -ν) = Γ(λ, -ν, -μ)
  */
 structure ChristoffelSymmetry(dim: Nat) {
-    axiom christoffel_symmetric : ∀ Γ : Tensor(1, 2, dim, ℝ) .
-        ∀ λ : Nat . ∀ μ : Nat . ∀ ν : Nat .
-        component3(Γ, λ, μ, ν) = component3(Γ, λ, ν, μ)
+    // Note: Using ASCII identifiers due to parser reserved symbols (λ, Γ)
+    axiom christoffel_symmetric : ∀ conn : Tensor(1, 2, dim, ℝ) .
+        ∀ l : Nat . ∀ m : Nat . ∀ n : Nat .
+        component3(conn, l, m, n) = component3(conn, l, n, m)
 }
 
 /* Tensor Addition

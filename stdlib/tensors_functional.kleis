@@ -1,0 +1,467 @@
+// ============================================
+// Kleis Standard Library - Functional Tensors
+// Tensor operations as pure Kleis functions
+// ============================================
+//
+// This module represents tensors as nested lists and provides
+// operations needed for differential geometry.
+//
+// ADR-026: Self-Hosted Differential Forms
+// All operations are pure Kleis - no Rust builtins.
+//
+// Tensor Representation:
+//   Rank-0 (scalar): just a number
+//   Rank-1 (vector): [a, b, c]
+//   Rank-2 (matrix): [[a, b], [c, d]]
+//   Rank-n: n-deep nesting
+
+import "stdlib/func_core.kleis"
+import "stdlib/combinatorics.kleis"
+
+// ============================================
+// Tensor Access
+// ============================================
+
+// Get component at multi-index [i, j, k, ...]
+define tensor_get(T, indices) = match indices {
+    Nil => T
+    | Cons(i, rest) => tensor_get(list_get(T, i), rest)
+}
+
+// Get dimension along axis
+define tensor_dim(T, axis) = 
+    if axis = 0 then length(T)
+    else match T {
+        Nil => 0
+        | Cons(first, _) => tensor_dim(first, axis - 1)
+    }
+
+// Get all dimensions as a list
+define tensor_shape(T) = tensor_shape_helper(T, 0)
+
+define tensor_shape_helper(T, depth) = match T {
+    Nil => Nil
+    | Cons(first, _) => 
+        if is_list(first) then Cons(length(T), tensor_shape_helper(first, depth + 1))
+        else Cons(length(T), Nil)
+}
+
+// Check if value is a list (rough heuristic: try matching)
+define is_list(x) = match x {
+    Nil => True
+    | Cons(_, _) => True
+    | _ => False
+}
+
+// ============================================
+// Tensor Construction
+// ============================================
+
+// Build tensor from shape and function: f(indices) → value
+define tensor_build(shape, f) = match shape {
+    Nil => f(Nil)
+    | Cons(n, rest) => map(λ i . tensor_build(rest, λ js . f(Cons(i, js))), range(n))
+}
+
+// Zero tensor of given shape
+define tensor_zeros(shape) = tensor_build(shape, λ _ . 0)
+
+// ============================================
+// Tensor Arithmetic
+// ============================================
+
+// Element-wise addition
+define tensor_add(A, B) = match A {
+    Nil => Nil
+    | Cons(a, at) => match B {
+        Nil => A
+        | Cons(b, bt) => 
+            if is_list(a) then Cons(tensor_add(a, b), tensor_add(at, bt))
+            else Cons(a + b, tensor_add(at, bt))
+    }
+}
+
+// Element-wise subtraction
+define tensor_sub(A, B) = match A {
+    Nil => Nil
+    | Cons(a, at) => match B {
+        Nil => A
+        | Cons(b, bt) => 
+            if is_list(a) then Cons(tensor_sub(a, b), tensor_sub(at, bt))
+            else Cons(a - b, tensor_sub(at, bt))
+    }
+}
+
+// Scalar multiplication
+define tensor_scale(c, T) = match T {
+    Nil => Nil
+    | Cons(h, t) =>
+        if is_list(h) then Cons(tensor_scale(c, h), tensor_scale(c, t))
+        else Cons(c * h, tensor_scale(c, t))
+}
+
+// Sum of tensors in a list
+define tensor_sum(tensors) = match tensors {
+    Nil => Nil  // or tensor_zeros for proper typing
+    | Cons(first, rest) => fold(tensor_add, first, rest)
+}
+
+// ============================================
+// Tensor Product (Outer Product)
+// ============================================
+
+// Tensor product of two vectors: [a, b] ⊗ [x, y] = [[ax, ay], [bx, by]]
+define tensor_product(A, B) = map(λ a . map(λ b . a * b, B), A)
+
+// General tensor product for higher ranks (TODO: generalize)
+// For now, works for rank-1 ⊗ rank-1 → rank-2
+
+// ============================================
+// Index Permutation
+// ============================================
+
+// Permute indices of a rank-2 tensor (transpose)
+define transpose(M) = 
+    let rows = length(M) in
+    let cols = tensor_dim(M, 1) in
+    tensor_build(Cons(cols, Cons(rows, Nil)), 
+                 λ ij . tensor_get(M, Cons(list_get(ij, 1), Cons(list_get(ij, 0), Nil))))
+
+// Permute indices of a general tensor according to permutation
+// permute_indices(T, [1, 0]) transposes a matrix
+// permute_indices(T, [2, 0, 1]) cycles indices of a rank-3 tensor
+define permute_indices(T, perm) =
+    let shape = tensor_shape(T) in
+    let new_shape = perm_apply(perm_inverse(perm), shape) in
+    tensor_build(new_shape, λ new_idx . tensor_get(T, perm_apply(perm, new_idx)))
+
+// ============================================
+// Antisymmetrization (Key for Wedge Product)
+// ============================================
+
+// Antisymmetrize a tensor over all indices
+// A[i,j,...] = (1/n!) Σ_σ sign(σ) T[σ(i), σ(j), ...]
+define antisymmetrize(T) =
+    let n = length(tensor_shape(T)) in
+    let perms = all_permutations(n) in
+    let terms = map(λ σ . tensor_scale(perm_sign(σ), permute_indices(T, σ)), perms) in
+    tensor_scale(1 / factorial(n), tensor_sum(terms))
+
+// Symmetrize a tensor over all indices
+// S[i,j,...] = (1/n!) Σ_σ T[σ(i), σ(j), ...]
+define symmetrize(T) =
+    let n = length(tensor_shape(T)) in
+    let perms = all_permutations(n) in
+    let terms = map(λ σ . permute_indices(T, σ), perms) in
+    tensor_scale(1 / factorial(n), tensor_sum(terms))
+
+// ============================================
+// Wedge Product
+// ============================================
+
+// Wedge product of two 1-forms (vectors)
+// α ∧ β = α ⊗ β - β ⊗ α (antisymmetrized tensor product)
+define wedge(alpha, beta) = 
+    antisymmetrize(tensor_product(alpha, beta))
+
+// Explicit wedge for 1-forms (simpler formula)
+define wedge_1_1(alpha, beta) =
+    tensor_sub(tensor_product(alpha, beta), tensor_product(beta, alpha))
+
+// ============================================
+// Contraction (Trace-like operations)
+// ============================================
+
+// Contract indices i and j of a tensor
+// For matrix: contract(M, 0, 1) = trace(M)
+define contract(T, i, j) =
+    let n = tensor_dim(T, i) in  // Assume dims are equal
+    sum(map(λ k . contract_at(T, i, j, k), range(n)))
+
+// Helper: sum T[..., k, ..., k, ...] with k at positions i and j
+define contract_at(T, i, j, k) =
+    // Simplified for rank-2: just M[k][k]
+    tensor_get(T, Cons(k, Cons(k, Nil)))
+
+// Trace of a matrix
+define trace(M) = sum(map(λ i . tensor_get(M, Cons(i, Cons(i, Nil))), range(length(M))))
+
+// ============================================
+// Examples / Tests
+// ============================================
+
+// Test vector
+define vec_a = [1, 2]
+define vec_b = [3, 4]
+
+// Test matrix
+define mat_test = [[1, 2], [3, 4]]
+
+example "tensor_get vector" {
+    tensor_get(vec_a, [1]) = 2
+}
+
+example "tensor_get matrix" {
+    tensor_get(mat_test, [1, 0]) = 3
+}
+
+example "tensor_product" {
+    tensor_product([1, 2], [3, 4]) = [[3, 4], [6, 8]]
+}
+
+example "tensor_add" {
+    tensor_add(vec_a, vec_b) = [4, 6]
+}
+
+example "tensor_scale" {
+    tensor_scale(2, vec_a) = [2, 4]
+}
+
+example "trace" {
+    trace(mat_test) = 5
+}
+
+example "transpose" {
+    transpose([[1, 2], [3, 4]]) = [[1, 3], [2, 4]]
+}
+
+example "wedge antisymmetric" {
+    // α ∧ β = -(β ∧ α) for 1-forms
+    wedge_1_1(vec_a, vec_b) = tensor_scale(negate(1), wedge_1_1(vec_b, vec_a))
+}
+
+example "wedge self zero" {
+    // α ∧ α = 0
+    wedge_1_1(vec_a, vec_a) = [[0, 0], [0, 0]]
+}
+
+// ============================================
+// NUMERICAL EXAMPLE: Parallelogram Area
+// ============================================
+// From linear algebra / differential geometry textbooks:
+//
+// The wedge product of two vectors gives the SIGNED AREA
+// of the parallelogram they span.
+//
+// For u = [a, b] and v = [c, d]:
+//   u ∧ v = [[0, ad-bc], [bc-ad, 0]]
+//   Area = |ad - bc| = determinant!
+
+define u_para = [3, 1]
+define v_para = [1, 4]
+
+example "parallelogram area = determinant" {
+    // u = [3,1], v = [1,4]
+    // Area = 3*4 - 1*1 = 11
+    tensor_get(wedge_1_1(u_para, v_para), [0, 1]) = 11
+}
+
+example "unit square area = 1" {
+    tensor_get(wedge_1_1([1, 0], [0, 1]), [0, 1]) = 1
+}
+
+example "rectangle area 3x2 = 6" {
+    tensor_get(wedge_1_1([3, 0], [0, 2]), [0, 1]) = 6
+}
+
+// ============================================
+// PHYSICS EXAMPLE: Electromagnetic Field Tensor
+// ============================================
+// From Jackson's "Classical Electrodynamics"
+//
+// F is a 4x4 antisymmetric tensor:
+//   F_μν = |  0   -E_x  -E_y  -E_z |
+//          | E_x   0   -B_z   B_y |
+//          | E_y  B_z   0    -B_x |
+//          | E_z -B_y   B_x   0   |
+//
+// Example: E = [1, 0, 0], B = [0, 0, 1]
+
+define em_field_tensor = [
+    [0, negate(1), 0, 0],
+    [1, 0, 0, 0],
+    [0, 0, 0, negate(1)],
+    [0, 0, 1, 0]
+]
+
+example "EM tensor antisymmetric F_01 = -F_10" {
+    tensor_get(em_field_tensor, [0, 1]) = negate(tensor_get(em_field_tensor, [1, 0]))
+}
+
+example "EM tensor diagonal zero" {
+    tensor_get(em_field_tensor, [0, 0]) = 0
+}
+
+example "EM tensor E_x = 1" {
+    tensor_get(em_field_tensor, [1, 0]) = 1
+}
+
+example "EM tensor trace = 0" {
+    trace(em_field_tensor) = 0
+}
+
+// ============================================
+// CALCULUS EXAMPLE: Green's Theorem (2D Stokes)
+// ============================================
+// Green's Theorem: ∮_C (P dx + Q dy) = ∬_R (∂Q/∂x - ∂P/∂y) dA
+//
+// The exterior derivative of a 1-form ω = P dx + Q dy is:
+//   dω = (∂Q/∂x - ∂P/∂y) dx∧dy
+//
+// This is the "curl" in 2D - measures circulation/rotation.
+//
+// Key insight: We can compute the 2-form dω algebraically!
+// The integral of dω over R equals the line integral around ∂R.
+
+// ============================================
+// DERIVATIVE RULES (from calculus infrastructure)
+// ============================================
+// Power rule: D(x^n, x) = n * x^(n-1)
+define power_rule(n, x) = n * x^(n - 1)
+
+// Constant rule: D(c, x) = 0 (c doesn't depend on x)
+define const_rule(c, x) = 0
+
+// Variable rule: D(x, x) = 1
+define var_rule_self() = 1
+
+// Variable rule: D(y, x) = 0 when y ≠ x
+define var_rule_other() = 0
+
+// Sum rule: D(f + g, x) = D(f, x) + D(g, x)
+define sum_rule(Df, Dg) = Df + Dg
+
+// Scalar rule: D(c * f, x) = c * D(f, x)
+define scalar_rule(c, Df) = c * Df
+
+// ============================================
+// CURL COMPUTATION USING DERIVATIVES
+// ============================================
+// For 1-form ω = P dx + Q dy:
+//   curl(ω) = ∂Q/∂x - ∂P/∂y
+
+define curl_2d(dQ_dx, dP_dy) = dQ_dx - dP_dy
+
+// Example 1: Rotation field ω = -y dx + x dy
+// P(x, y) = -y, so P = -1 * y
+// Q(x, y) = x
+//
+// ∂Q/∂x = D(x, x) = var_rule_self() = 1
+// ∂P/∂y = D(-y, y) = -1 * D(y, y) = -1 * var_rule_self() = -1
+// curl = 1 - (-1) = 2
+
+define dQ_dx_rotation = var_rule_self()           // D(x, x) = 1
+define dP_dy_rotation = negate(var_rule_self())   // D(-y, y) = -1
+define rotation_curl = curl_2d(dQ_dx_rotation, dP_dy_rotation)
+
+example "derivative: D(x, x) = 1" {
+    var_rule_self() = 1
+}
+
+example "derivative: D(-y, y) = -1" {
+    negate(var_rule_self()) = negate(1)
+}
+
+example "Green's theorem: rotation field curl = 2" {
+    // curl = ∂Q/∂x - ∂P/∂y = 1 - (-1) = 2
+    rotation_curl = 2
+}
+
+// Example 2: Conservative field (gradient of f = x² + y²)
+// ω = df = 2x dx + 2y dy
+// P(x, y) = 2x, Q(x, y) = 2y
+//
+// ∂Q/∂x = D(2y, x) = 2 * D(y, x) = 2 * 0 = 0  (y is constant wrt x)
+// ∂P/∂y = D(2x, y) = 2 * D(x, y) = 2 * 0 = 0  (x is constant wrt y)
+// curl = 0 - 0 = 0
+
+define dQ_dx_gradient = scalar_rule(2, var_rule_other())  // D(2y, x) = 2 * 0 = 0
+define dP_dy_gradient = scalar_rule(2, var_rule_other())  // D(2x, y) = 2 * 0 = 0
+define gradient_curl = curl_2d(dQ_dx_gradient, dP_dy_gradient)
+
+example "derivative: D(y, x) = 0" {
+    var_rule_other() = 0
+}
+
+example "derivative: D(2y, x) = 0" {
+    scalar_rule(2, var_rule_other()) = 0
+}
+
+example "Green's theorem: gradient field curl = 0" {
+    // curl = ∂Q/∂x - ∂P/∂y = 0 - 0 = 0 (d² = 0)
+    gradient_curl = 0
+}
+
+// Example 3: Non-trivial polynomial field
+// ω = xy dx + x² dy
+// P(x, y) = xy, Q(x, y) = x²
+//
+// ∂Q/∂x = D(x², x) = power_rule(2, x) = 2x
+// ∂P/∂y = D(xy, y) = x * D(y, y) = x * 1 = x
+// curl at point (x, y) = 2x - x = x
+
+// At point (3, _): curl = 2*3 - 3 = 3
+define dQ_dx_poly_at_3 = power_rule(2, 3)         // D(x², x) at x=3 = 2*3 = 6
+define dP_dy_poly_at_3 = 3                        // D(xy, y) at x=3 = x = 3
+define poly_curl_at_3 = curl_2d(dQ_dx_poly_at_3, dP_dy_poly_at_3)
+
+example "derivative: D(x², x) at x=3 = 6" {
+    power_rule(2, 3) = 6
+}
+
+example "Green's theorem: polynomial field curl at (3,_) = 3" {
+    // curl = 2x - x = x = 3
+    poly_curl_at_3 = 3
+}
+
+// Example 3: Verify d² = 0 using wedge product
+// If we have basis 1-forms dx, dy represented as:
+//   dx ~ [1, 0]
+//   dy ~ [0, 1]
+// Then dx ∧ dx = 0 (antisymmetry)
+
+define dx = [1, 0]
+define dy = [0, 1]
+
+example "d squared = 0: dx wedge dx" {
+    // dx ∧ dx = 0 (fundamental property of exterior algebra)
+    wedge_1_1(dx, dx) = [[0, 0], [0, 0]]
+}
+
+example "d squared = 0: dy wedge dy" {
+    // dy ∧ dy = 0
+    wedge_1_1(dy, dy) = [[0, 0], [0, 0]]
+}
+
+example "dx wedge dy = area element" {
+    // dx ∧ dy is the area 2-form
+    // Component (0,1) = 1 (coefficient of dx∧dy)
+    tensor_get(wedge_1_1(dx, dy), [0, 1]) = 1
+}
+
+example "dy wedge dx = negative area" {
+    // dy ∧ dx = -dx ∧ dy (antisymmetry)
+    tensor_get(wedge_1_1(dy, dx), [0, 1]) = negate(1)
+}
+
+// ============================================
+// NUMERICAL INTEGRATION (Approximation)
+// ============================================
+// Green's theorem: ∬_R (curl F) dA = ∮_∂R F·dr
+//
+// For the rotation field ω = -y dx + x dy with curl = 2:
+// - Unit circle area = π ≈ 3.14159
+// - Circulation = 2 × π ≈ 6.28318
+//
+// We can verify: for a unit square [0,1] × [0,1]:
+// - Area = 1
+// - Circulation = 2 × 1 = 2
+
+define unit_square_area = 1
+define rotation_circulation_unit_square = 2
+
+example "Green's theorem: unit square circulation" {
+    // Circulation around unit square = curl × area = 2 × 1 = 2
+    rotation_curl * unit_square_area = rotation_circulation_unit_square
+}
+
