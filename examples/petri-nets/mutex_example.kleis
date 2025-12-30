@@ -1,0 +1,87 @@
+// =============================================================================
+// Mutual Exclusion Petri Net Example
+// =============================================================================
+//
+// Classic mutual exclusion protocol modeled as a Petri net.
+// Two processes compete for a shared resource (critical section).
+//
+why are//        ┌─────────────────────────────────────┐
+//        │                                     │
+//   [P1_idle]──▶(enter1)──▶[P1_critical]──▶(exit1)
+//        │         │              │           │
+//        │         ▼              ▼           │
+//        │      [mutex]◀──────────────────────┘
+//        │         │              │           │
+//        │         ▼              ▼           │
+//   [P2_idle]──▶(enter2)──▶[P2_critical]──▶(exit2)
+//        │                                     │
+//        └─────────────────────────────────────┘
+//
+// =============================================================================
+
+import "petri_core.kleis"
+
+// Place IDs
+define P1_IDLE = 0
+define P2_IDLE = 1
+define P1_CRIT = 2
+define P2_CRIT = 3
+define MUTEX = 4
+
+// Transition IDs
+define ENTER1 = 0
+define ENTER2 = 1
+define EXIT1 = 2
+define EXIT2 = 3
+
+// Initial marking: both idle, mutex available
+define initial_marking : Marking = λ p .
+    if p = P1_IDLE then 1
+    else if p = P2_IDLE then 1
+    else if p = MUTEX then 1
+    else 0
+
+// Arc weights for this specific net
+structure MutexNet {
+    // Input arcs (place → transition)
+    axiom in_p1_enter1: input_weight(P1_IDLE, ENTER1) = 1
+    axiom in_mutex_enter1: input_weight(MUTEX, ENTER1) = 1
+    axiom in_p1crit_exit1: input_weight(P1_CRIT, EXIT1) = 1
+    
+    axiom in_p2_enter2: input_weight(P2_IDLE, ENTER2) = 1
+    axiom in_mutex_enter2: input_weight(MUTEX, ENTER2) = 1
+    axiom in_p2crit_exit2: input_weight(P2_CRIT, EXIT2) = 1
+    
+    // Output arcs (transition → place)
+    axiom out_enter1_p1crit: output_weight(ENTER1, P1_CRIT) = 1
+    axiom out_exit1_p1idle: output_weight(EXIT1, P1_IDLE) = 1
+    axiom out_exit1_mutex: output_weight(EXIT1, MUTEX) = 1
+    
+    axiom out_enter2_p2crit: output_weight(ENTER2, P2_CRIT) = 1
+    axiom out_exit2_p2idle: output_weight(EXIT2, P2_IDLE) = 1
+    axiom out_exit2_mutex: output_weight(EXIT2, MUTEX) = 1
+}
+
+// -----------------------------------------------------------------------------
+// Verification Examples
+// -----------------------------------------------------------------------------
+
+example "mutual exclusion: both cannot be in critical section" {
+    // The key safety property
+    assert(∀(m : Marking). reachable(initial_marking, m) → 
+        ¬(m(P1_CRIT) ≥ 1 ∧ m(P2_CRIT) ≥ 1))
+}
+
+example "initial marking enables at least one process" {
+    assert(enabled(ENTER1, initial_marking) ∨ enabled(ENTER2, initial_marking))
+}
+
+example "mutex is safe (1-bounded)" {
+    assert(safe(MUTEX, initial_marking))
+}
+
+example "token conservation" {
+    // Total tokens = 3 always
+    assert(∀(m : Marking). reachable(initial_marking, m) → 
+        m(P1_IDLE) + m(P1_CRIT) + m(P2_IDLE) + m(P2_CRIT) + m(MUTEX) = 3)
+}

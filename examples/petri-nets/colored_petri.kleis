@@ -1,0 +1,85 @@
+// =============================================================================
+// Colored Petri Nets (High-Level Petri Nets)
+// Based on ISO/IEC 15909-2 PNML High-Level Net Standard
+// =============================================================================
+//
+// Colored Petri nets extend basic P/T nets with:
+// - Typed tokens (colors)
+// - Arc inscriptions (expressions over tokens)
+// - Guard conditions on transitions
+//
+// =============================================================================
+
+import "petri_core.kleis"
+
+// -----------------------------------------------------------------------------
+// Color Sets (Sorts in PNML terminology)
+// -----------------------------------------------------------------------------
+
+// Standard color sets from PNML
+data Dot = Dot
+
+// Boolean color set
+data BoolColor = BTrue | BFalse
+
+// Finite enumeration (4 colors)
+data Color4 = Red | Green | Blue | Yellow
+
+// Cyclic successor
+define succ_color(c) = match c {
+    Red => Green
+    Green => Blue
+    Blue => Yellow
+    Yellow => Red
+}
+
+// -----------------------------------------------------------------------------
+// Colored Net Components  
+// -----------------------------------------------------------------------------
+
+// A typed place: has a color set (represented by integer code)
+data TypedPlace = TP(id : ℤ, color_code : ℤ)
+
+// A guarded transition
+data GuardedTransition = GT(id : ℤ, guard_code : ℤ)
+
+// -----------------------------------------------------------------------------
+// Multiset Operations (simplified)
+// -----------------------------------------------------------------------------
+
+structure MultisetOps {
+    // Count of color c in multiset m
+    operation count : ℤ × ℤ → ℕ
+    
+    // Empty multiset has zero count for all colors
+    axiom empty_def: ∀(c : ℤ). count(0, c) = 0
+    
+    // Multiset ordering
+    operation ms_leq : ℤ × ℤ → Bool
+    
+    axiom leq_by_count: ∀(m1 : ℤ). ∀(m2 : ℤ).
+        ms_leq(m1, m2) ↔ ∀(c : ℤ). count(m1, c) ≤ count(m2, c)
+}
+
+// -----------------------------------------------------------------------------
+// Colored Net Semantics
+// -----------------------------------------------------------------------------
+
+structure ColoredNetSemantics {
+    // Guard evaluated under binding
+    operation guard_satisfied : ℤ × ℤ → Bool
+    
+    // Tokens consumed/produced by firing
+    operation arc_consume : ℤ × ℤ → ℤ
+    operation arc_produce : ℤ × ℤ → ℤ
+    
+    // Transition enabled with binding
+    operation c_enabled : ℤ × ℤ → Bool
+    
+    // Fire with binding, returns new marking ID
+    operation c_fire : ℤ × ℤ → ℤ
+    
+    // Firing respects guards
+    axiom fire_requires_guard: ∀(t : ℤ). ∀(b : ℤ).
+        c_enabled(t, b) → guard_satisfied(t, b)
+}
