@@ -2,6 +2,10 @@
 
 Kleis provides Jupyter kernel support, allowing you to write and execute Kleis code in Jupyter notebooks. This is ideal for:
 
+![JupyterLab Launcher showing Kleis kernels](../images/jupyter-kleis-launcher.png)
+
+*JupyterLab launcher with Kleis and Kleis Numeric kernels*
+
 - **Interactive exploration** of mathematical concepts
 - **Teaching** mathematical foundations
 - **Documenting** proofs and derivations
