@@ -42,3 +42,4 @@ venv/
 .venv/
 .ipynb_checkpoints/
 *.ipynb_checkpoints
+Untitled*.ipynb
