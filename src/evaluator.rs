@@ -2393,6 +2393,21 @@ impl Evaluator {
     /// None if it should be handled by user-defined functions.
     fn apply_builtin(&self, name: &str, args: &[Expression]) -> Result<Option<Expression>, String> {
         match name {
+            // === Output (for exploration) ===
+            "out" | "show" | "print" => {
+                // out(expr) - pretty-prints the expression and returns it
+                // Useful for exploring computed values in example blocks and Jupyter
+                if args.len() != 1 {
+                    return Err("out() takes exactly 1 argument".to_string());
+                }
+                let value = &args[0];
+                // Pretty-print the value
+                let formatted = self.pretty_print_value(value);
+                println!("{}", formatted);
+                // Return the value (so it can be used in further expressions)
+                Ok(Some(value.clone()))
+            }
+
             // === Arithmetic ===
             "plus" | "+" => self.builtin_arithmetic(args, |a, b| a + b),
             "minus" | "-" => self.builtin_arithmetic(args, |a, b| a - b),
@@ -4654,6 +4669,86 @@ impl Evaluator {
     /// Create a Const expression from a float, handling near-zero values
     fn const_from_f64(v: f64) -> Expression {
         Expression::Const(Self::format_number(v))
+    }
+
+    /// Pretty-print a value for `out()` function
+    /// Formats lists/matrices nicely for readability
+    fn pretty_print_value(&self, expr: &Expression) -> String {
+        match expr {
+            Expression::Const(s) => s.clone(),
+            Expression::String(s) => format!("\"{}\"", s),
+            Expression::Object(s) => s.clone(),
+            Expression::List(elements) => {
+                // Check if this is a matrix (list of lists)
+                let is_matrix = elements.iter().all(|e| matches!(e, Expression::List(_)));
+                if is_matrix && !elements.is_empty() {
+                    // Pretty-print as matrix with alignment
+                    self.pretty_print_matrix(elements)
+                } else {
+                    // Simple list
+                    let items: Vec<String> =
+                        elements.iter().map(|e| self.pretty_print_value(e)).collect();
+                    format!("[{}]", items.join(", "))
+                }
+            }
+            Expression::Operation { name, args, .. } => {
+                if args.is_empty() {
+                    name.clone()
+                } else {
+                    let args_str: Vec<String> =
+                        args.iter().map(|a| self.pretty_print_value(a)).collect();
+                    format!("{}({})", name, args_str.join(", "))
+                }
+            }
+            _ => format!("{:?}", expr),
+        }
+    }
+
+    /// Pretty-print a matrix (list of lists) with alignment
+    fn pretty_print_matrix(&self, rows: &[Expression]) -> String {
+        // Extract all elements as strings
+        let string_rows: Vec<Vec<String>> = rows
+            .iter()
+            .map(|row| {
+                if let Expression::List(cols) = row {
+                    cols.iter().map(|e| self.pretty_print_value(e)).collect()
+                } else {
+                    vec![self.pretty_print_value(row)]
+                }
+            })
+            .collect();
+
+        if string_rows.is_empty() {
+            return "[]".to_string();
+        }
+
+        // Find max width for each column
+        let num_cols = string_rows[0].len();
+        let col_widths: Vec<usize> = (0..num_cols)
+            .map(|c| {
+                string_rows
+                    .iter()
+                    .map(|row| row.get(c).map(|s| s.len()).unwrap_or(0))
+                    .max()
+                    .unwrap_or(0)
+            })
+            .collect();
+
+        // Build output with box drawing
+        let mut lines = Vec::new();
+        lines.push("┌".to_string() + &" ".repeat(col_widths.iter().sum::<usize>() + num_cols * 2) + "┐");
+        
+        for row in &string_rows {
+            let cells: Vec<String> = row
+                .iter()
+                .enumerate()
+                .map(|(i, s)| format!("{:>width$}", s, width = col_widths[i]))
+                .collect();
+            lines.push(format!("│ {} │", cells.join("  ")));
+        }
+        
+        lines.push("└".to_string() + &" ".repeat(col_widths.iter().sum::<usize>() + num_cols * 2) + "┘");
+        lines.join("\n")
     }
 
     fn as_string(&self, expr: &Expression) -> Option<String> {
