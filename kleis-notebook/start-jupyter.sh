@@ -38,10 +38,15 @@ check_kleis() {
     if ! command -v kleis &> /dev/null; then
         echo -e "${RED}Error: 'kleis' binary not found in PATH${NC}"
         echo ""
-        echo "Install kleis first:"
+        echo "Install kleis with numerical features:"
         echo "  cd /path/to/kleis"
-        echo "  export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h"
-        echo "  cargo install --path ."
+        echo "  export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h  # macOS Apple Silicon"
+        echo "  # export Z3_SYS_Z3_HEADER=/usr/local/opt/z3/include/z3.h  # macOS Intel"
+        echo "  # export Z3_SYS_Z3_HEADER=/usr/include/z3.h               # Linux"
+        echo "  cargo install --path . --features numerical"
+        echo ""
+        echo "The --features numerical flag enables LAPACK operations:"
+        echo "  eigenvalues, svd, inv, det, qr, cholesky, solve, etc."
         exit 1
     fi
     echo -e "${GREEN}✓${NC} kleis binary found: $(which kleis)"

@@ -25,6 +25,7 @@
 # Tools
 
 - [The REPL](./chapters/12-repl.md)
+- [Jupyter Notebook](./chapters/21-jupyter-notebook.md)
 - [Applications](./chapters/13-applications.md)
 - [Example Blocks](./chapters/20-example-blocks.md)
 
