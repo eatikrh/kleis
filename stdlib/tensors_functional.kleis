@@ -191,31 +191,30 @@ define trace(M) = sum(map(λ i . tensor_get(M, Cons(i, Cons(i, Nil))), range(len
 // ============================================
 
 // Test vector
-define vec_a = Cons(1, Cons(2, Nil))
-define vec_b = Cons(3, Cons(4, Nil))
+define vec_a = [1, 2]
+define vec_b = [3, 4]
 
 // Test matrix
-define mat_test = Cons(Cons(1, Cons(2, Nil)), Cons(Cons(3, Cons(4, Nil)), Nil))
+define mat_test = [[1, 2], [3, 4]]
 
 example "tensor_get vector" {
-    tensor_get(vec_a, Cons(1, Nil)) = 2
+    tensor_get(vec_a, [1]) = 2
 }
 
 example "tensor_get matrix" {
-    tensor_get(mat_test, Cons(1, Cons(0, Nil))) = 3
+    tensor_get(mat_test, [1, 0]) = 3
 }
 
 example "tensor_product" {
-    tensor_product(Cons(1, Cons(2, Nil)), Cons(3, Cons(4, Nil))) = 
-        Cons(Cons(3, Cons(4, Nil)), Cons(Cons(6, Cons(8, Nil)), Nil))
+    tensor_product([1, 2], [3, 4]) = [[3, 4], [6, 8]]
 }
 
 example "tensor_add" {
-    tensor_add(vec_a, vec_b) = Cons(4, Cons(6, Nil))
+    tensor_add(vec_a, vec_b) = [4, 6]
 }
 
 example "tensor_scale" {
-    tensor_scale(2, vec_a) = Cons(2, Cons(4, Nil))
+    tensor_scale(2, vec_a) = [2, 4]
 }
 
 example "trace" {
@@ -223,8 +222,7 @@ example "trace" {
 }
 
 example "transpose" {
-    transpose(Cons(Cons(1, Cons(2, Nil)), Cons(Cons(3, Cons(4, Nil)), Nil))) = 
-        Cons(Cons(1, Cons(3, Nil)), Cons(Cons(2, Cons(4, Nil)), Nil))
+    transpose([[1, 2], [3, 4]]) = [[1, 3], [2, 4]]
 }
 
 example "wedge antisymmetric" {
@@ -234,7 +232,7 @@ example "wedge antisymmetric" {
 
 example "wedge self zero" {
     // α ∧ α = 0
-    wedge_1_1(vec_a, vec_a) = Cons(Cons(0, Cons(0, Nil)), Cons(Cons(0, Cons(0, Nil)), Nil))
+    wedge_1_1(vec_a, vec_a) = [[0, 0], [0, 0]]
 }
 
 // ============================================
@@ -249,21 +247,21 @@ example "wedge self zero" {
 //   u ∧ v = [[0, ad-bc], [bc-ad, 0]]
 //   Area = |ad - bc| = determinant!
 
-define u_para = Cons(3, Cons(1, Nil))
-define v_para = Cons(1, Cons(4, Nil))
+define u_para = [3, 1]
+define v_para = [1, 4]
 
 example "parallelogram area = determinant" {
     // u = [3,1], v = [1,4]
     // Area = 3*4 - 1*1 = 11
-    tensor_get(wedge_1_1(u_para, v_para), Cons(0, Cons(1, Nil))) = 11
+    tensor_get(wedge_1_1(u_para, v_para), [0, 1]) = 11
 }
 
 example "unit square area = 1" {
-    tensor_get(wedge_1_1(Cons(1, Cons(0, Nil)), Cons(0, Cons(1, Nil))), Cons(0, Cons(1, Nil))) = 1
+    tensor_get(wedge_1_1([1, 0], [0, 1]), [0, 1]) = 1
 }
 
 example "rectangle area 3x2 = 6" {
-    tensor_get(wedge_1_1(Cons(3, Cons(0, Nil)), Cons(0, Cons(2, Nil))), Cons(0, Cons(1, Nil))) = 6
+    tensor_get(wedge_1_1([3, 0], [0, 2]), [0, 1]) = 6
 }
 
 // ============================================
@@ -279,31 +277,23 @@ example "rectangle area 3x2 = 6" {
 //
 // Example: E = [1, 0, 0], B = [0, 0, 1]
 
-define em_field_tensor = Cons(
-    Cons(0, Cons(negate(1), Cons(0, Cons(0, Nil)))),
-    Cons(
-        Cons(1, Cons(0, Cons(0, Cons(0, Nil)))),
-        Cons(
-            Cons(0, Cons(0, Cons(0, Cons(negate(1), Nil)))),
-            Cons(
-                Cons(0, Cons(0, Cons(1, Cons(0, Nil)))),
-                Nil
-            )
-        )
-    )
-)
+define em_field_tensor = [
+    [0, negate(1), 0, 0],
+    [1, 0, 0, 0],
+    [0, 0, 0, negate(1)],
+    [0, 0, 1, 0]
+]
 
 example "EM tensor antisymmetric F_01 = -F_10" {
-    tensor_get(em_field_tensor, Cons(0, Cons(1, Nil))) = 
-        negate(tensor_get(em_field_tensor, Cons(1, Cons(0, Nil))))
+    tensor_get(em_field_tensor, [0, 1]) = negate(tensor_get(em_field_tensor, [1, 0]))
 }
 
 example "EM tensor diagonal zero" {
-    tensor_get(em_field_tensor, Cons(0, Cons(0, Nil))) = 0
+    tensor_get(em_field_tensor, [0, 0]) = 0
 }
 
 example "EM tensor E_x = 1" {
-    tensor_get(em_field_tensor, Cons(1, Cons(0, Nil))) = 1
+    tensor_get(em_field_tensor, [1, 0]) = 1
 }
 
 example "EM tensor trace = 0" {
