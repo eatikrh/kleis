@@ -285,18 +285,13 @@ implements TensorProduct(p, q, r, s, dim, ℝ) {
  *   - α ∧ α = 0 for any 1-form α
  * 
  * v0.92+: Parser now supports arithmetic in type parameters (p + q).
+ * 
+ * NOTE: Axioms for antisymmetry/nilpotency require proper Z3 declarations
+ * for scale(), sign_factor(), and zero. These are verified computationally
+ * in stdlib/tensors_functional.kleis instead.
  */
 structure ExteriorAlgebra(p: Nat, q: Nat, dim: Nat) {
     operation wedge : Tensor(0, p, dim, ℝ) → Tensor(0, q, dim, ℝ) → Tensor(0, p + q, dim, ℝ)
-    
-    // Antisymmetry: α ∧ β = (-1)^(pq) β ∧ α
-    axiom wedge_antisymmetric : ∀ α : Tensor(0, p, dim, ℝ) .
-        ∀ β : Tensor(0, q, dim, ℝ) .
-        wedge(α, β) = scale(sign_factor(p, q), wedge(β, α))
-    
-    // Nilpotency for 1-forms: α ∧ α = 0
-    axiom wedge_nilpotent : ∀ α : Tensor(0, 1, dim, ℝ) .
-        wedge(α, α) = zero
 }
 
 implements ExteriorAlgebra(p, q, dim) {
@@ -537,16 +532,9 @@ implements MetricIndexOps(dim) {
  * In xAct notation: g(-μ, -ν) = g(-ν, -μ)
  */
 structure MetricSymmetry(dim: Nat) {
-    // Component accessor for axiom
-    operation component : Tensor(0, 2, dim, ℝ) → Nat → Nat → ℝ
-    
     axiom metric_symmetric : ∀ g : Tensor(0, 2, dim, ℝ) .
         ∀ μ : Nat . ∀ ν : Nat .
         component(g, μ, ν) = component(g, ν, μ)
-}
-
-implements MetricSymmetry(dim) {
-    operation component = builtin_tensor_component
 }
 
 /* Riemann Tensor Symmetries
@@ -556,9 +544,6 @@ implements MetricSymmetry(dim) {
  *   2. First Bianchi identity: R^ρ_[σμν] = 0 (cyclic sum)
  */
 structure RiemannSymmetries(dim: Nat) {
-    // Component accessor for rank-4 tensor
-    operation component4 : Tensor(1, 3, dim, ℝ) → Nat → Nat → Nat → Nat → ℝ
-    
     // Antisymmetry in μ, ν
     axiom riemann_antisym_34 : ∀ R : Tensor(1, 3, dim, ℝ) .
         ∀ ρ : Nat . ∀ σ : Nat . ∀ μ : Nat . ∀ ν : Nat .
@@ -572,28 +557,16 @@ structure RiemannSymmetries(dim: Nat) {
                   component4(R, ρ, ν, σ, μ))) = 0
 }
 
-implements RiemannSymmetries(dim) {
-    operation component4 = builtin_tensor_component4
-}
-
 /* Christoffel Symbol Symmetry
  * 
  * Christoffel symbols Γ^λ_μν are symmetric in lower indices: Γ^λ_μν = Γ^λ_νμ
  * In xAct notation: Γ(λ, -μ, -ν) = Γ(λ, -ν, -μ)
- * 
- * Note: Using ASCII identifiers in axioms due to parser reserved symbols (λ, Γ)
  */
 structure ChristoffelSymmetry(dim: Nat) {
-    // Component accessor for rank-3 tensor
-    operation component3 : Tensor(1, 2, dim, ℝ) → Nat → Nat → Nat → ℝ
-    
+    // Note: Using ASCII identifiers due to parser reserved symbols (λ, Γ)
     axiom christoffel_symmetric : ∀ conn : Tensor(1, 2, dim, ℝ) .
         ∀ l : Nat . ∀ m : Nat . ∀ n : Nat .
         component3(conn, l, m, n) = component3(conn, l, n, m)
-}
-
-implements ChristoffelSymmetry(dim) {
-    operation component3 = builtin_tensor_component3
 }
 
 /* Tensor Addition

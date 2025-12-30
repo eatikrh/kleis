@@ -4686,8 +4686,10 @@ impl Evaluator {
                     self.pretty_print_matrix(elements)
                 } else {
                     // Simple list
-                    let items: Vec<String> =
-                        elements.iter().map(|e| self.pretty_print_value(e)).collect();
+                    let items: Vec<String> = elements
+                        .iter()
+                        .map(|e| self.pretty_print_value(e))
+                        .collect();
                     format!("[{}]", items.join(", "))
                 }
             }
@@ -4736,8 +4738,10 @@ impl Evaluator {
 
         // Build output with box drawing
         let mut lines = Vec::new();
-        lines.push("┌".to_string() + &" ".repeat(col_widths.iter().sum::<usize>() + num_cols * 2) + "┐");
-        
+        lines.push(
+            "┌".to_string() + &" ".repeat(col_widths.iter().sum::<usize>() + num_cols * 2) + "┐",
+        );
+
         for row in &string_rows {
             let cells: Vec<String> = row
                 .iter()
@@ -4746,8 +4750,10 @@ impl Evaluator {
                 .collect();
             lines.push(format!("│ {} │", cells.join("  ")));
         }
-        
-        lines.push("└".to_string() + &" ".repeat(col_widths.iter().sum::<usize>() + num_cols * 2) + "┘");
+
+        lines.push(
+            "└".to_string() + &" ".repeat(col_widths.iter().sum::<usize>() + num_cols * 2) + "┘",
+        );
         lines.join("\n")
     }
 
