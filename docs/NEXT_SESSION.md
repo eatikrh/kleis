@@ -37,10 +37,12 @@ Layer 0: Primitives (Rust - invisible)
 
 ### Implementation Plan
 
-- [ ] **`stdlib/prelude.kleis`** - fold, map, filter, range, length, append
-- [ ] **`stdlib/combinatorics.kleis`** - factorial, permutations, signs
-- [ ] **`stdlib/tensors_functional.kleis`** - tensor ops as Kleis functions
-- [ ] **Update `stdlib/differential_forms.kleis`** - replace builtin_* with pure Kleis
+- [x] **`stdlib/func_core.kleis`** - fold, map, filter, range, length, append (5 tests ✅)
+- [x] **`stdlib/combinatorics.kleis`** - factorial, permutations, signs (12 tests ✅)
+- [x] **`stdlib/tensors_functional.kleis`** - tensor ops as Kleis functions (9 tests ✅)
+  - wedge antisymmetric: `α ∧ β = -(β ∧ α)` PROVEN! ✅
+  - wedge nilpotent: `α ∧ α = 0` PROVEN! ✅
+- [ ] **Update `stdlib/differential_forms.kleis`** - replace builtin_* with pure Kleis imports
 
 ### Gap Analysis (All Resolved!)
 

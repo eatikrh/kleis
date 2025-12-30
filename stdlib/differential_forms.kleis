@@ -13,10 +13,17 @@
 //   - Interior product (ι_X): contraction with vector field
 //   - Lie derivative (ℒ_X): via Cartan's magic formula
 //
+// ADR-026: Self-Hosted Differential Forms
+// This module uses PURE KLEIS implementations from tensors_functional.kleis.
+// No Rust builtins required!
+//
 // References:
 //   - Cartan, É. "Leçons sur les invariants intégraux" (1922)
 //   - Flanders, H. "Differential Forms with Applications to the Physical Sciences"
 //   - Nakahara, M. "Geometry, Topology and Physics"
+
+// Import functional tensor operations
+import "stdlib/tensors_functional.kleis"
 
 // ============================================
 // Differential Forms (p-forms)
@@ -72,8 +79,16 @@ structure WedgeProduct(p: Nat, q: Nat, dim: Nat) {
 }
 
 implements WedgeProduct(p, q, dim) {
-    operation wedge = builtin_wedge_product
+    // ADR-026: Self-hosted implementation using tensors_functional.kleis
+    // wedge(α, β) = antisymmetrize(tensor_product(form(α), form(β)))
+    operation wedge = wedge_impl
 }
+
+// Implementation: wedge product is antisymmetrized tensor product
+define wedge_impl(alpha, beta) = 
+    let alpha_tensor = form(alpha) in
+    let beta_tensor = form(beta) in
+    DifferentialForm(antisymmetrize(tensor_product(alpha_tensor, beta_tensor)))
 
 // ============================================
 // Exterior Derivative
@@ -227,8 +242,15 @@ structure CartanCalculus(p: Nat, dim: Nat) {
 }
 
 implements CartanCalculus(p, dim) {
-    operation lie = builtin_lie_derivative_form
+    // ADR-026: Cartan's Magic Formula IS the implementation!
+    // ℒ_X = d ∘ ι_X + ι_X ∘ d
+    operation lie = cartan_magic_impl
 }
+
+// Cartan's Magic Formula: The axiom IS the implementation
+// This is the beauty of mathematical specification languages!
+define cartan_magic_impl(X, alpha) = 
+    plus(d(interior(X, alpha)), interior(X, d(alpha)))
 
 // ============================================
 // De Rham Cohomology (Concepts)
