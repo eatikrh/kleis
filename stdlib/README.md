@@ -57,13 +57,28 @@ The Kleis standard library is written **in Kleis itself** (self-hosting). It pro
 
 **Status:** ✅ Defined, ⬜ Not yet loaded by default
 
-**`tensors.kleis`** (~260 lines)
+**`tensors.kleis`** (~280 lines)
 - General Relativity tensor operations
 - Curvature: Riemann, Ricci, Einstein, Weyl tensors
 - Connection: Christoffel symbols, covariant derivative
 - Physics: Stress-energy tensor, geodesics, Killing vectors
 - Standard metrics: Minkowski, Schwarzschild, Kerr, FLRW
-- Tensor products: outer product, wedge product, Lie derivative
+- Tensor products: outer product, wedge product (now enabled!), Lie derivative
+- v0.92+: Type-level arithmetic enabled (p + q, n - 1, 2*n)
+
+**Status:** ✅ Defined, ⬜ Not yet loaded by default
+
+**`differential_forms.kleis`** (~350 lines) ✨ NEW!
+- **Cartan Calculus:** Full exterior algebra operations
+- **Wedge Product (∧):** Antisymmetric tensor product with graded commutativity
+- **Exterior Derivative (d):** With d² = 0 axiom (de Rham cohomology)
+- **Hodge Star (⋆):** Duality operator for p-forms ↔ (n-p)-forms
+- **Interior Product (ι_X):** Contraction with vector fields
+- **Cartan's Magic Formula:** ℒ_X = d ∘ ι_X + ι_X ∘ d
+- **Physics Applications:**
+  - Electromagnetic field as 2-form: dF = 0, d⋆F = ⋆J (Maxwell's equations)
+  - Yang-Mills theory: F = dA + A ∧ A (non-abelian gauge fields)
+  - Symplectic mechanics: Hamiltonian vector fields, Poisson brackets
 
 **Status:** ✅ Defined, ⬜ Not yet loaded by default
 
@@ -262,7 +277,7 @@ All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.8**:
 
 ## Status (December 9, 2025)
 
-**Files Written:** ✅ `types.kleis`, `minimal_prelude.kleis`, `matrices.kleis`, `tensors.kleis`  
+**Files Written:** ✅ `types.kleis`, `minimal_prelude.kleis`, `matrices.kleis`, `tensors.kleis`, `differential_forms.kleis`  
 **Grammar:** ✅ v0.5 formalized (with pattern matching!)  
 **Parser:** ✅ Pattern matching implemented  
 **Type Inference:** ✅ Pattern matching type-checks  
@@ -286,7 +301,13 @@ All code in `stdlib/*.kleis` conforms to **Kleis Grammar v0.8**:
 - Curvature tensors: Riemann, Ricci, Einstein, Weyl
 - Connection: Christoffel symbols, covariant derivative
 - Physics: Stress-energy, geodesics, Killing vectors
-- Standard metrics: Minkowski, Schwarzschild, Kerr, FLRW  
+- Standard metrics: Minkowski, Schwarzschild, Kerr, FLRW
+
+**Differential Forms:** ✅ Defined in `differential_forms.kleis`
+- Cartan calculus: wedge (∧), exterior derivative (d), Hodge star (⋆)
+- Interior product: contraction with vector fields
+- Cartan's magic formula: ℒ_X = d ∘ ι_X + ι_X ∘ d
+- Physics: Maxwell's equations in form language, Yang-Mills, symplectic mechanics  
 
 ---
 

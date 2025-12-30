@@ -1,0 +1,428 @@
+// ============================================
+// Kleis Standard Library - Differential Forms
+// Cartan Calculus for Exterior Algebras
+// ============================================
+//
+// This module provides differential forms and Cartan calculus operations,
+// fundamental to modern physics (gauge theory, Yang-Mills, General Relativity).
+//
+// Key operations:
+//   - Wedge product (∧): antisymmetric tensor product
+//   - Exterior derivative (d): generalizes gradient, curl, divergence
+//   - Hodge star (⋆): duality between p-forms and (n-p)-forms
+//   - Interior product (ι_X): contraction with vector field
+//   - Lie derivative (ℒ_X): via Cartan's magic formula
+//
+// References:
+//   - Cartan, É. "Leçons sur les invariants intégraux" (1922)
+//   - Flanders, H. "Differential Forms with Applications to the Physical Sciences"
+//   - Nakahara, M. "Geometry, Topology and Physics"
+
+// ============================================
+// Differential Forms (p-forms)
+// ============================================
+
+/* Differential Form
+ * 
+ * A p-form on an n-dimensional manifold is a totally antisymmetric
+ * covariant tensor of rank p.
+ * 
+ * Ωᵖ(M) = space of p-forms on M
+ * 
+ * Examples:
+ *   - 0-form: scalar function f
+ *   - 1-form: covector ω = ωᵢ dxⁱ (like gradient df)
+ *   - 2-form: antisymmetric Fᵢⱼ dxⁱ ∧ dxʲ (like electromagnetic field)
+ *   - 3-form: volume element in 3D
+ *   - n-form: volume form on n-dimensional manifold
+ */
+structure DifferentialForm(p: Nat, dim: Nat) {
+    // A p-form is a totally antisymmetric (0, p) tensor
+    element form : Tensor(0, p, dim, ℝ)
+}
+
+// ============================================
+// Wedge Product
+// ============================================
+
+/* Wedge Product (Exterior Product)
+ * 
+ * The wedge product α ∧ β of a p-form and q-form is a (p+q)-form.
+ * It is the antisymmetrized tensor product.
+ * 
+ * Properties:
+ *   - Antisymmetric: α ∧ β = (-1)^{pq} β ∧ α
+ *   - Associative: (α ∧ β) ∧ γ = α ∧ (β ∧ γ)
+ *   - Bilinear: (aα + β) ∧ γ = a(α ∧ γ) + β ∧ γ
+ *   - For 1-forms: α ∧ α = 0
+ */
+structure WedgeProduct(p: Nat, q: Nat, dim: Nat) {
+    operation wedge : DifferentialForm(p, dim) → DifferentialForm(q, dim) → DifferentialForm(p + q, dim)
+    
+    // Graded antisymmetry
+    axiom graded_antisymmetric : ∀ α : DifferentialForm(p, dim) .
+        ∀ β : DifferentialForm(q, dim) .
+        wedge(α, β) = scale(power(negate(1), times(p, q)), wedge(β, α))
+    
+    // Associativity
+    axiom wedge_associative : ∀ α : DifferentialForm(p, dim) .
+        ∀ β : DifferentialForm(q, dim) .
+        ∀ γ : DifferentialForm(r, dim) .
+        wedge(wedge(α, β), γ) = wedge(α, wedge(β, γ))
+}
+
+implements WedgeProduct(p, q, dim) {
+    operation wedge = builtin_wedge_product
+}
+
+// ============================================
+// Exterior Derivative
+// ============================================
+
+/* Exterior Derivative
+ * 
+ * The exterior derivative d maps p-forms to (p+1)-forms.
+ * It generalizes the classical operations:
+ *   - d on 0-forms = gradient (df)
+ *   - d on 1-forms ≈ curl (in 3D, via Hodge dual)
+ *   - d on 2-forms ≈ divergence (in 3D, via Hodge dual)
+ * 
+ * Fundamental property: d² = 0 (closed forms → exact forms)
+ * This encodes the topology of the manifold (de Rham cohomology).
+ * 
+ * Properties:
+ *   - Nilpotent: d(d α) = 0
+ *   - Linear: d(α + β) = dα + dβ
+ *   - Leibniz rule: d(α ∧ β) = (dα) ∧ β + (-1)^p α ∧ (dβ)
+ */
+structure ExteriorDerivative(p: Nat, dim: Nat) {
+    operation d : DifferentialForm(p, dim) → DifferentialForm(p + 1, dim)
+    
+    // Fundamental: d² = 0
+    axiom d_squared_zero : ∀ α : DifferentialForm(p, dim) .
+        d(d(α)) = zero
+    
+    // Leibniz rule (graded)
+    axiom d_leibniz : ∀ α : DifferentialForm(p, dim) .
+        ∀ β : DifferentialForm(q, dim) .
+        d(wedge(α, β)) = plus(
+            wedge(d(α), β),
+            scale(power(negate(1), p), wedge(α, d(β)))
+        )
+}
+
+implements ExteriorDerivative(p, dim) {
+    operation d = builtin_exterior_derivative
+}
+
+// ============================================
+// Hodge Star Operator
+// ============================================
+
+/* Hodge Star (Hodge Dual)
+ * 
+ * The Hodge star ⋆ maps p-forms to (n-p)-forms on an n-dimensional
+ * oriented Riemannian (or pseudo-Riemannian) manifold.
+ * 
+ * ⋆ : Ωᵖ(M) → Ωⁿ⁻ᵖ(M)
+ * 
+ * Properties:
+ *   - ⋆⋆ = ±id (sign depends on dimension and signature)
+ *   - For Riemannian: ⋆⋆ = (-1)^{p(n-p)}
+ *   - For Lorentzian: ⋆⋆ = (-1)^{p(n-p)+1}
+ *   - α ∧ ⋆β = ⟨α, β⟩ vol (defines inner product)
+ * 
+ * Applications:
+ *   - Maxwell's equations: dF = 0, d⋆F = ⋆J
+ *   - Laplacian: Δ = ⋆d⋆d + d⋆d⋆ (Hodge Laplacian)
+ */
+structure HodgeStar(p: Nat, dim: Nat) {
+    operation star : DifferentialForm(p, dim) → DifferentialForm(dim - p, dim)
+    
+    // Involutivity (Riemannian case)
+    axiom hodge_involutive : ∀ α : DifferentialForm(p, dim) .
+        star(star(α)) = scale(power(negate(1), times(p, minus(dim, p))), α)
+}
+
+implements HodgeStar(p, dim) {
+    operation star = builtin_hodge_star
+}
+
+// ============================================
+// Interior Product (Contraction)
+// ============================================
+
+/* Interior Product
+ * 
+ * The interior product ι_X (or X ⌟ α) contracts a vector field X
+ * with a differential form α, reducing degree by 1.
+ * 
+ * ι_X : Ωᵖ(M) → Ωᵖ⁻¹(M)
+ * 
+ * Properties:
+ *   - ι_X ι_X = 0 (nilpotent)
+ *   - Antiderivation: ι_X(α ∧ β) = (ι_X α) ∧ β + (-1)^p α ∧ (ι_X β)
+ *   - ι_{fX} α = f (ι_X α)
+ * 
+ * Physical meaning: "how much does α contain X direction?"
+ */
+structure InteriorProduct(p: Nat, dim: Nat) {
+    operation interior : Tensor(1, 0, dim, ℝ) → DifferentialForm(p, dim) → DifferentialForm(p - 1, dim)
+    
+    // Nilpotent
+    axiom interior_nilpotent : ∀ X : Tensor(1, 0, dim, ℝ) .
+        ∀ α : DifferentialForm(p, dim) .
+        interior(X, interior(X, α)) = zero
+    
+    // Antiderivation (graded Leibniz)
+    axiom interior_antiderivation : ∀ X : Tensor(1, 0, dim, ℝ) .
+        ∀ α : DifferentialForm(p, dim) .
+        ∀ β : DifferentialForm(q, dim) .
+        interior(X, wedge(α, β)) = plus(
+            wedge(interior(X, α), β),
+            scale(power(negate(1), p), wedge(α, interior(X, β)))
+        )
+}
+
+implements InteriorProduct(p, dim) {
+    operation interior = builtin_interior_product
+}
+
+// ============================================
+// Cartan's Magic Formula
+// ============================================
+
+/* Cartan Calculus: Lie Derivative of Forms
+ * 
+ * Cartan's Magic Formula connects all the operations:
+ * 
+ *   ℒ_X = d ∘ ι_X + ι_X ∘ d
+ * 
+ * The Lie derivative ℒ_X measures how a form changes along X.
+ * This formula is "magic" because it relates the algebraic (ι_X)
+ * and differential (d) operations.
+ * 
+ * Consequences:
+ *   - [ℒ_X, d] = 0 (Lie derivative commutes with d)
+ *   - ℒ_X (α ∧ β) = (ℒ_X α) ∧ β + α ∧ (ℒ_X β)
+ */
+structure CartanCalculus(p: Nat, dim: Nat) {
+    operation lie : Tensor(1, 0, dim, ℝ) → DifferentialForm(p, dim) → DifferentialForm(p, dim)
+    
+    // Cartan's Magic Formula: ℒ_X = d ∘ ι_X + ι_X ∘ d
+    axiom cartan_magic : ∀ X : Tensor(1, 0, dim, ℝ) .
+        ∀ α : DifferentialForm(p, dim) .
+        lie(X, α) = plus(d(interior(X, α)), interior(X, d(α)))
+    
+    // Lie derivative commutes with exterior derivative
+    axiom lie_commutes_d : ∀ X : Tensor(1, 0, dim, ℝ) .
+        ∀ α : DifferentialForm(p, dim) .
+        lie(X, d(α)) = d(lie(X, α))
+    
+    // Derivation on wedge product
+    axiom lie_derivation : ∀ X : Tensor(1, 0, dim, ℝ) .
+        ∀ α : DifferentialForm(p, dim) .
+        ∀ β : DifferentialForm(q, dim) .
+        lie(X, wedge(α, β)) = plus(wedge(lie(X, α), β), wedge(α, lie(X, β)))
+}
+
+implements CartanCalculus(p, dim) {
+    operation lie = builtin_lie_derivative_form
+}
+
+// ============================================
+// De Rham Cohomology (Concepts)
+// ============================================
+
+/* Closed and Exact Forms
+ * 
+ * A p-form α is:
+ *   - Closed: dα = 0
+ *   - Exact: α = dβ for some (p-1)-form β
+ * 
+ * Since d² = 0: exact ⟹ closed (but not vice versa!)
+ * 
+ * The p-th de Rham cohomology group:
+ *   H^p_{dR}(M) = {closed p-forms} / {exact p-forms}
+ * 
+ * This captures the topology of M (holes, handles, etc.)
+ */
+structure DeRhamCohomology(p: Nat, dim: Nat) {
+    // Predicates for closed and exact forms
+    operation is_closed : DifferentialForm(p, dim) → Bool
+    operation is_exact : DifferentialForm(p, dim) → Bool
+    
+    // Every exact form is closed
+    axiom exact_implies_closed : ∀ α : DifferentialForm(p, dim) .
+        is_exact(α) → is_closed(α)
+    
+    // Definition of closed: dα = 0
+    axiom closed_def : ∀ α : DifferentialForm(p, dim) .
+        is_closed(α) ↔ (d(α) = zero)
+}
+
+implements DeRhamCohomology(p, dim) {
+    operation is_closed = builtin_is_closed_form
+    operation is_exact = builtin_is_exact_form
+}
+
+// ============================================
+// Electromagnetic Field (Application)
+// ============================================
+
+/* Electromagnetic 2-Form
+ * 
+ * In differential form language, electromagnetism is elegant:
+ * 
+ *   F = E ∧ dt + B         (field strength 2-form)
+ *   A = φ dt + A⃗           (potential 1-form)
+ *   J = ρ dt + J⃗           (current 3-form on spacetime)
+ * 
+ * Maxwell's equations become:
+ *   dF = 0                  (homogeneous: no magnetic monopoles, Faraday's law)
+ *   d⋆F = ⋆J               (inhomogeneous: Gauss's law, Ampère's law)
+ * 
+ * Gauge invariance: F = dA is invariant under A ↦ A + dχ
+ */
+structure ElectromagneticForm(dim: Nat) {
+    // Field strength (Faraday) 2-form
+    element F : DifferentialForm(2, dim)
+    
+    // Potential 1-form
+    element A : DifferentialForm(1, dim)
+    
+    // Current density 3-form (on 4D spacetime)
+    element J : DifferentialForm(3, 4)
+    
+    // F = dA (field strength from potential)
+    axiom field_from_potential : F = d(A)
+    
+    // Homogeneous Maxwell: dF = 0 (automatic from d²=0 when F=dA)
+    axiom maxwell_homogeneous : d(F) = zero
+}
+
+// ============================================
+// Yang-Mills Theory (Non-Abelian Gauge)
+// ============================================
+
+/* Yang-Mills Field Strength
+ * 
+ * For non-abelian gauge theory (like QCD), the gauge potential A
+ * is Lie algebra valued, and the field strength is:
+ * 
+ *   F = dA + A ∧ A
+ * 
+ * The Bianchi identity becomes:
+ *   D_A F = dF + [A, F] = 0
+ * 
+ * where D_A is the gauge-covariant exterior derivative.
+ */
+structure YangMillsForm(dim: Nat, G) {
+    // Lie algebra valued connection 1-form
+    element A : DifferentialForm(1, dim)
+    
+    // Curvature 2-form
+    element F : DifferentialForm(2, dim)
+    
+    // Gauge covariant exterior derivative
+    operation D : DifferentialForm(p, dim) → DifferentialForm(p + 1, dim)
+    
+    // Field strength: F = dA + A ∧ A
+    axiom curvature_def : F = plus(d(A), wedge(A, A))
+    
+    // Bianchi identity: D_A F = 0
+    axiom bianchi : D(F) = zero
+}
+
+// ============================================
+// Volume Form and Integration
+// ============================================
+
+/* Volume Form
+ * 
+ * The volume form is the unique (up to sign) n-form on an n-dimensional
+ * oriented Riemannian manifold.
+ * 
+ * In coordinates: vol = √|g| dx¹ ∧ dx² ∧ ⋯ ∧ dxⁿ
+ * 
+ * Used for:
+ *   - Integration: ∫_M ω for an n-form ω
+ *   - Hodge star: α ∧ ⋆β = ⟨α, β⟩ vol
+ */
+structure VolumeForm(dim: Nat) {
+    // Volume form
+    element vol : DifferentialForm(dim, dim)
+    
+    // Volume form from metric
+    operation volume_form : Tensor(0, 2, dim, ℝ) → DifferentialForm(dim, dim)
+    
+    // Non-degeneracy: vol ≠ 0 for non-degenerate metric
+    axiom volume_nontrivial : ∀ g : Tensor(0, 2, dim, ℝ) .
+        is_nondegenerate(g) → volume_form(g) ≠ zero
+}
+
+implements VolumeForm(dim) {
+    operation volume_form = builtin_volume_form
+}
+
+// ============================================
+// Symplectic Forms (Hamiltonian Mechanics)
+// ============================================
+
+/* Symplectic Form
+ * 
+ * A symplectic form ω is a closed, non-degenerate 2-form.
+ * It defines the geometry of phase space in Hamiltonian mechanics.
+ * 
+ * Properties:
+ *   - Closed: dω = 0
+ *   - Non-degenerate: ω^n ≠ 0 (volume form)
+ *   - Even dimension: symplectic manifolds have even dimension
+ * 
+ * In canonical coordinates: ω = Σ dpᵢ ∧ dqⁱ
+ */
+structure SymplecticForm(dim: Nat) {
+    element omega : DifferentialForm(2, dim)
+    
+    // Closed
+    axiom symplectic_closed : d(omega) = zero
+    
+    // Non-degenerate (ω^(dim/2) ≠ 0)
+    axiom symplectic_nondegenerate : 
+        wedge_power(omega, divide(dim, 2)) ≠ zero
+}
+
+/* Hamiltonian Vector Field
+ * 
+ * Given a Hamiltonian H and symplectic form ω, the Hamiltonian vector field X_H
+ * is defined by: ι_{X_H} ω = dH
+ * 
+ * Hamilton's equations are then: dx/dt = X_H
+ */
+structure HamiltonianMechanics(dim: Nat) {
+    // Hamiltonian function (0-form)
+    element H : DifferentialForm(0, dim)
+    
+    // Symplectic form
+    element omega : DifferentialForm(2, dim)
+    
+    // Hamiltonian vector field
+    operation hamiltonian_vector : DifferentialForm(0, dim) → Tensor(1, 0, dim, ℝ)
+    
+    // Defining equation: ι_{X_H} ω = dH
+    axiom hamiltonian_def : ∀ H : DifferentialForm(0, dim) .
+        interior(hamiltonian_vector(H), omega) = d(H)
+    
+    // Poisson bracket: {f, g} = ω(X_f, X_g)
+    operation poisson : DifferentialForm(0, dim) → DifferentialForm(0, dim) → DifferentialForm(0, dim)
+    
+    axiom poisson_def : ∀ f : DifferentialForm(0, dim) .
+        ∀ g : DifferentialForm(0, dim) .
+        poisson(f, g) = interior(hamiltonian_vector(g), d(f))
+}
+
+implements HamiltonianMechanics(dim) {
+    operation hamiltonian_vector = builtin_hamiltonian_vector
+    operation poisson = builtin_poisson_bracket
+}
+
