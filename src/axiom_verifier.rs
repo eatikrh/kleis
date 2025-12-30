@@ -605,6 +605,43 @@ impl<'r> AxiomVerifier<'r> {
         self.backend.check_satisfiability(expr)
     }
 
+    /// Simplify an expression using Z3's simplification engine.
+    ///
+    /// This is the core of the `eval()` operation - it reduces ground terms
+    /// (expressions with no free variables) to concrete values.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// // Arithmetic simplification
+    /// let result = verifier.simplify(&parse("1 + 2 * 3")?)?;
+    /// // result: Const("7")
+    ///
+    /// // Conditional evaluation
+    /// let result = verifier.simplify(&parse("if 5 <= 3 then 1 else 2")?)?;
+    /// // result: Const("2")
+    ///
+    /// // Boolean simplification
+    /// let result = verifier.simplify(&parse("true ∧ false")?)?;
+    /// // result: Const("false")
+    /// ```
+    ///
+    /// # Note
+    /// This should only be called on ground terms (no free variables).
+    /// For symbolic expressions, use `verify_axiom()` instead.
+    pub fn simplify(&mut self, expr: &Expression) -> Result<Expression, String> {
+        #[cfg(feature = "axiom-verification")]
+        {
+            use crate::solvers::backend::SolverBackend;
+            self.backend.simplify(expr)
+        }
+
+        #[cfg(not(feature = "axiom-verification"))]
+        {
+            let _ = expr; // Suppress unused variable warning
+            Err("eval() requires axiom-verification feature (Z3 backend)".to_string())
+        }
+    }
+
     /// Check if two expressions are equivalent
     ///
     /// Uses Z3 to determine if expr1 ≡ expr2 for all variable assignments.

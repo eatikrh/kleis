@@ -54,6 +54,125 @@ All components now use the same canonical type system.
 
 ---
 
+## ✅ IMPLEMENTED: Concrete Evaluation via Z3 Simplify (Dec 29, 2024)
+
+### The Problem
+
+Kleis is a **symbolic language** — expressions are kept as ASTs for formal reasoning, not reduced to concrete values. This means:
+
+```kleis
+// User expectation:
+define compute_box_row(r) = if r ≤ 3 then 1 else if r ≤ 6 then 2 else 3
+compute_box_row(5)  // Expected: 2
+
+// Kleis reality:
+compute_box_row(5)  // Returns: if 5 ≤ 3 then 1 else if 5 ≤ 6 then 2 else 3
+                    // (expression is NOT reduced)
+```
+
+### Proposed Solution: `eval()` or `reduce()` via Z3
+
+Use Z3's `simplify` function for ground term (no free variables) reduction:
+
+```kleis
+// New syntax option A: eval() function
+example "concrete calculations" {
+    assert(eval(1 + 2 * 3) = 7)
+    assert(eval(compute_box_row(5)) = 2)
+    assert(eval(∀(x : ℕ). x = x) = true)
+}
+
+// New syntax option B: reduce() function  
+example "concrete calculations" {
+    assert(reduce(1 + 2 * 3) = 7)
+}
+```
+
+### Implementation Approach
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Z3 simplify** | Semantically consistent with verification | Slower, requires Z3 |
+| **Rust evaluator** | Fast, simple | Could diverge from Z3 semantics |
+| **Hybrid** | Fast for arithmetic, Z3 for complex | More complex implementation |
+
+**Recommended: Z3 simplify** — keeps semantics consistent across evaluation and verification.
+
+### Implementation Plan
+
+1. **Add `eval()` operation** to parser (returns result of Z3 simplify)
+2. **Ground term check** — only evaluate if no free variables
+3. **Timeout protection** — 1 second max per evaluation
+4. **Return type** — same as input expression type
+5. **Error handling** — return expression unchanged if can't evaluate
+
+### Z3 Backend Changes
+
+```rust
+// In src/solvers/z3/backend.rs
+impl Z3Backend {
+    /// Evaluate a ground term to a concrete value using Z3 simplify
+    pub fn evaluate_ground(&self, expr: &Expression) -> Result<Expression, String> {
+        if self.has_free_variables(expr) {
+            return Err("Cannot evaluate expression with free variables".to_string());
+        }
+        
+        let z3_ast = self.kleis_to_z3(expr)?;
+        let simplified = z3_ast.simplify();
+        let result = self.z3_to_kleis(&simplified)?;
+        Ok(result)
+    }
+}
+```
+
+### Use Cases
+
+| Use Case | Example |
+|----------|---------|
+| **Unit testing definitions** | `assert(eval(factorial(5)) = 120)` |
+| **Sanity checks** | `assert(eval(box_row(5)) = 2)` |
+| **Interactive exploration** | REPL: `:eval 1 + 2 * 3` |
+| **Debugging** | See concrete value of complex expression |
+
+### Side Effects / Risks
+
+| Risk | Mitigation |
+|------|------------|
+| **Non-termination** | Timeout protection (1 second) |
+| **Free variable error** | Clear error message, return expression unchanged |
+| **Semantic mismatch** | Use Z3 (same engine as verification) |
+| **User confusion** | Clear documentation: `eval` for ground terms only |
+
+### Implementation (Dec 29, 2024)
+
+**Files Modified:**
+- `src/evaluator.rs` — Added `eval()` operation handling and `eval_ground_term()` method
+- `src/axiom_verifier.rs` — Added `simplify()` method that delegates to Z3Backend
+- `examples/sudoku/sudoku.kleis` — Added concrete evaluation examples
+
+**How It Works:**
+1. Parser sees `eval(expr)` → treated as built-in operation
+2. Evaluator evaluates the argument first
+3. Checks `is_symbolic()` — if expression has free variables, returns error
+4. Calls `AxiomVerifier::simplify()` which uses Z3's simplify
+5. Z3 reduces the ground term to a concrete value
+
+**Test Results:**
+- 795 unit tests pass
+- 39 eval_concrete integration tests pass
+- 10 Sudoku examples pass (including 4 new `eval()` tests)
+
+**Limitations:**
+- Boolean comparison: `eval(5 ≤ 3) = false` doesn't work due to `Const("false")` vs `Object("false")` mismatch
+- Workaround: Use conditional `eval(if 5 ≤ 3 then 1 else 0) = 0`
+
+### Related
+
+- ADR-016: Operations in Structures (self-hosting)
+- Sudoku example (`examples/sudoku/sudoku.kleis`) demonstrates the feature
+
+---
+
 ## 🎯 FUTURE: Big Operators as Unified Binders (Dec 28, 2024)
 
 ### Unifying Slogan
