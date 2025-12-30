@@ -294,6 +294,30 @@ structure ExteriorAlgebra(p: Nat, q: Nat, dim: Nat) {
     operation wedge : Tensor(0, p, dim, ℝ) → Tensor(0, q, dim, ℝ) → Tensor(0, p + q, dim, ℝ)
 }
 
+/* Wedge Product Nilpotency for 1-forms
+ * 
+ * For any 1-form α: α ∧ α = 0 (the zero 2-form)
+ * 
+ * This follows from antisymmetry: α ∧ α = -α ∧ α implies α ∧ α = 0
+ * Expressed at component level since wedge returns a tensor.
+ * 
+ * In coordinates: if α = a_i dx^i, then
+ *   α ∧ α = Σ(a_i a_j - a_j a_i) dx^i ∧ dx^j = 0
+ */
+structure WedgeNilpotent(dim: Nat) {
+    // Component accessor for 2-forms (rank-2 covariant tensors)
+    operation component2 : Tensor(0, 2, dim, ℝ) → Nat → Nat → ℝ
+    
+    // Every component of α ∧ α is zero
+    axiom wedge_nilpotent : ∀ alpha : Tensor(0, 1, dim, ℝ) .
+        ∀ i : Nat . ∀ j : Nat .
+        component2(wedge(alpha, alpha), i, j) = 0
+}
+
+implements WedgeNilpotent(dim) {
+    operation component2 = builtin_tensor_component2
+}
+
 implements ExteriorAlgebra(p, q, dim) {
     operation wedge = builtin_wedge_product
 }
