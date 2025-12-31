@@ -1097,8 +1097,8 @@ impl Evaluator {
                     }
                 }
                 ExampleStatement::Expr { expr, location: _ } => {
-                    // Evaluate expression for side effects (or final result)
-                    if let Err(e) = self.eval(expr) {
+                    // Evaluate expression concretely for side effects (e.g., out())
+                    if let Err(e) = self.eval_concrete(expr) {
                         // Restore bindings and return error
                         self.bindings = saved_bindings;
                         return ExampleResult {
@@ -2400,12 +2400,13 @@ impl Evaluator {
                 if args.len() != 1 {
                     return Err("out() takes exactly 1 argument".to_string());
                 }
-                let value = &args[0];
+                // Evaluate the argument first to get the concrete value
+                let value = self.eval_concrete(&args[0])?;
                 // Pretty-print the value
-                let formatted = self.pretty_print_value(value);
+                let formatted = self.pretty_print_value(&value);
                 println!("{}", formatted);
                 // Return the value (so it can be used in further expressions)
-                Ok(Some(value.clone()))
+                Ok(Some(value))
             }
 
             // === Arithmetic ===
