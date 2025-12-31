@@ -1,188 +1,225 @@
 # Kleis
 
-**Kleis** is a **formal mathematical reasoning engine** with rigorous type checking and theorem proving.
+**Kleis** is a **structure-oriented mathematical formalization language** with Z3 verification and LAPACK numerics.
 
-| Feature | Description |
-|---------|-------------|
-| **Type System** | Algebraic hierarchy (Magma → Group → Ring → Field) with Hindley-Milner inference |
-| **Z3 Integration** | Verify mathematical axioms with SMT solving |
-| **Kleis Language** | Self-hosted type definitions, ~80% grammar coverage |
-| **REPL** | Interactive theorem proving with `:verify`, `:load`, `:export` |
-| **Equation Editor** | WYSIWYG formula building with deterministic positioning |
-| **Doc Generator** | Auto-generate docs from .kleis files (Markdown + HTML + MathJax) |
+> *Structures — the foundation of everything.*
 
----
-
-## 🚀 Quick Start
-
-### Run the Web Editor (Original)
-
-```bash
-./run_server.sh
-# Then open http://localhost:3000
-```
-
-Or manually with Z3:
-```bash
-# macOS ARM
-export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
-# macOS Intel: /usr/local/opt/z3/include/z3.h
-# Linux: /usr/include/z3.h
-
-cargo run --bin server
-```
-
-### Run the PatternFly Editor (React)
-
-```bash
-cd patternfly-editor
-npm install
-npm run dev
-# Then open http://localhost:5173
-```
-
-**For full functionality** (rendering, type checking), also run the backend:
-```bash
-# In another terminal
-./run_server.sh   # Starts backend on port 3000
-```
-
-The PatternFly editor is a React/TypeScript reimplementation with hot reloading, component-based architecture, and PatternFly 5 design system.
-
-### Run the REPL
-
-```bash
-export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
-cargo run --bin repl
-```
-
-```
-🧮 Kleis REPL v0.1.0
-λ> :verify ∀(x : R, y : R). x + y = y + x
-✅ Valid
-
-λ> :load examples/protocols/ip_router.kleis
-✅ Loaded: 14 functions
-
-λ> :verify is_loopback(127, 0, 0, 1) = 1
-✅ Valid
-```
-
-**Key commands:** `:help`, `:syntax`, `:examples`, `:symbols`, `:verify`, `:load`, `:export`
-
-### Unified CLI
-
-The `kleis` binary provides a unified interface for all operations:
-
-```bash
-# Build with auto-detected Z3
-./scripts/build-kleis.sh
-
-# Build with numerical features (BLAS/LAPACK for eigenvalues, SVD)
-./scripts/build-kleis.sh --numerical
-
-# Build without Z3 (no axiom verification, faster compile)
-./scripts/build-kleis.sh --minimal
-```
-
-**Run using the wrapper script** (auto-detects Z3 and binary location):
-
-```bash
-./scripts/kleis server          # LSP + DAP for VS Code
-./scripts/kleis eval "1 + 2"    # Evaluate expression
-./scripts/kleis eval -f script.kleis  # Evaluate file
-./scripts/kleis check myfile.kleis    # Check for errors
-./scripts/kleis repl            # Interactive REPL
-```
-
-Or add `scripts/` to your PATH:
-```bash
-export PATH="$PATH:/path/to/kleis/scripts"
-kleis server
-```
-
-| Subcommand | Description |
-|------------|-------------|
-| `kleis server` | Unified LSP + DAP server for IDE integration |
-| `kleis eval` | Evaluate expressions from command line |
-| `kleis check` | Check files for parse/type errors |
-| `kleis repl` | Interactive REPL (same as `cargo run --bin repl`) |
-
-| Build Option | Description |
-|--------------|-------------|
-| `--numerical` | Enable BLAS/LAPACK (eigenvalues, SVD, Schur decomposition) |
-| `--minimal` | Disable Z3 (no `:verify` command, faster compile) |
-| `--debug` | Debug build (faster compile, slower runtime) |
-
-### Run Tests
-
-```bash
-cargo test           # All tests (663+ passing)
-cargo test --lib     # Library tests only
-```
+| Metric | Value |
+|--------|-------|
+| **Grammar** | Fully implemented |
+| **Tests** | 1,762 Rust unit tests |
+| **Examples** | 71 Kleis files across 15+ domains |
+| **Built-in Functions** | 100+ (including LAPACK numerical operations) |
+| **Tooling** | REPL, Jupyter kernel, VS Code extension, DAP debugger |
+| **Turing Complete** | Yes — proven via LISP interpreter in Kleis |
 
 ---
 
-## 🎨 Structural Equation Editor
+## 🎯 What Makes Kleis Different
 
-- **WYSIWYG editing** - Build formulas visually from primitives
-- **Deterministic positioning** - UUID-based markers (92.7% zero heuristics)
-- **8 palette tabs** - Basics, Fences, Accents, Calculus, Linear Algebra, Greek, Logic, Physics
-- **100+ templates** - Fractions, roots, matrices, integrals, summations
-- **Keyboard navigation** - Arrows/Tab between markers, Enter to edit, Cmd+Z undo
-
----
-
-## 🔬 Type System
-
-- **Hindley-Milner inference** with parametric polymorphism
-- **Complete algebraic foundations** - Magma → Semigroup → Monoid → Group → Ring → Field
-- **Vector space axioms** - All 8 axioms formally expressed
-- **Polymorphic dispatch** - Same operator, semantics based on types
-- **Extensible** - Add Groups, Categories, Fiber Bundles via plugin system
-
-**Important distinction:**
-- **Type inference** (automatic, ~1ms) - Checks structure
-- **Axiom verification** (explicit, ~10ms) - Checks properties via Z3
-
----
-
-## 🎓 Theorem Proving
+| Traditional | Kleis |
+|-------------|-------|
+| "What **type** is this?" | "What **structure** does this inhabit?" |
+| Types define data | Structures define **axioms** |
+| Prove every step (Lean/Coq) | State structure, **verify consistency** |
+| Symbolic OR numerical | Symbolic (Z3) **AND** numerical (LAPACK) |
 
 ```kleis
 structure Group(G) extends Monoid(G) {
     operation inv : G → G
     
-    axiom left_inverse:
-        ∀(x : G). inv(x) * x = e
+    axiom left_inverse : ∀ x : G . inv(x) * x = e
+    axiom right_inverse : ∀ x : G . x * inv(x) = e
 }
-```
-
-Z3 verifies axioms automatically:
-```
-λ> :verify ∀(a : R, b : R). (a + b) * (a - b) = a*a - b*b
-✅ Valid
-
-λ> :verify ∀(p : Bool, q : Bool). ¬(p ∧ q) = (¬p ∨ ¬q)
-✅ Valid   (De Morgan's Law)
 ```
 
 ---
 
-## 📊 Capabilities
+## 🚀 Quick Start
 
-### Renderer (100+ Operations)
+### Install & Build
 
-| Category | Operations |
-|----------|------------|
-| **Calculus** | d_dt, d_part, int_bounds, sum_bounds, limit |
-| **Linear Algebra** | matrix, transpose, det, trace, dot, cross |
-| **Quantum** | ket, bra, commutator, anticommutator |
-| **Tensor** | sub, sup, index_mixed, nabla, gamma, riemann |
-| **Functions** | sin, cos, exp, ln, sqrt, factorial |
-| **Logic** | implies, forall, exists, in_set |
+```bash
+# Clone
+git clone https://github.com/eatikrh/kleis.git
+cd kleis
 
-See `PARSER_TODO.md` for details.
+# Build with auto-detected Z3
+./scripts/build-kleis.sh
+
+# Build with numerical features (LAPACK for eigenvalues, SVD, matrix exp)
+./scripts/build-kleis.sh --numerical
+```
+
+### Run the REPL
+
+```bash
+./scripts/kleis repl
+```
+
+```
+🧮 Kleis REPL v0.1.0
+λ> :load examples/control/eigenvalues.kleis
+✅ Loaded
+
+λ> :verify ∀(x : ℝ, y : ℝ). x + y = y + x
+✅ Valid
+```
+
+### Run in Jupyter
+
+```bash
+cd kleis-notebook
+pip install -e .
+python -m kleis_kernel.install
+jupyter notebook
+```
+
+```kleis
+example "eigenvalues" {
+    let A = Matrix([[1, 2], [3, 4]]) in
+    out(eigenvalues(A))
+}
+```
+
+Output:
+```
+┌         ┐
+│ 5.37228 │
+│-0.37228 │
+└         ┘
+```
+
+### Run Tests
+
+```bash
+cargo test           # All 1,762 tests
+cargo test --lib     # Library tests only
+```
+
+---
+
+## 📊 Domain Coverage
+
+Kleis has been used to formalize:
+
+| Domain | Examples |
+|--------|----------|
+| **Mathematics** | Differential forms, tensor algebra, complex analysis, number theory |
+| **Physics** | Dimensional analysis, quantum entanglement, orbital mechanics |
+| **Control Systems** | LQG controllers, eigenvalue analysis, state-space models |
+| **Ontology** | Projected Ontology Theory, spacetime types, kernel projections |
+| **Protocols** | IPv4 packets, IP routing, stop-and-wait ARQ |
+| **Authorization** | OAuth2 scopes, Google Zanzibar |
+| **Formal Methods** | Petri nets, mutex verification, bounded model checking |
+| **Games** | Chess, Contract Bridge, Sudoku |
+| **Business** | Order-to-cash, inventory constraints |
+| **Security** | SQL injection detection |
+| **Meta-programming** | Kleis-in-Kleis, Lisp-in-Kleis |
+
+See `examples/` for all 71 example files.
+
+---
+
+## 🔬 Core Features
+
+### Z3 Axiom Verification
+
+```kleis
+structure MetricSpace(X, d) {
+    axiom symmetry : ∀ x y : X . d(x, y) = d(y, x)
+    axiom triangle : ∀ x y z : X . d(x, z) ≤ d(x, y) + d(y, z)
+    axiom identity : ∀ x y : X . d(x, y) = 0 ↔ x = y
+}
+```
+
+```
+λ> :verify ∀(a : ℝ, b : ℝ). (a + b)² = a² + 2*a*b + b²
+✅ Valid
+```
+
+### Numerical Computation (LAPACK)
+
+| Function | Description |
+|----------|-------------|
+| `eigenvalues(A)` | Eigenvalues of a matrix |
+| `eigenvectors(A)` | Eigenvectors |
+| `svd(A)` | Singular value decomposition |
+| `solve(A, b)` | Solve Ax = b |
+| `inv(A)` | Matrix inverse |
+| `expm(A)` | Matrix exponential |
+| `schur(A)` | Schur decomposition |
+
+Complex variants: `eigenvalues_complex`, `expm_complex`, etc.
+
+### Interactive Output
+
+```kleis
+example "matrix operations" {
+    let A = Matrix([[1, 2], [3, 4]]) in
+    out(A)
+    out(multiply(A, A))
+    out(eigenvalues(A))
+}
+```
+
+Pretty-printed with Unicode box drawing:
+```
+┌     ┐
+│ 1 2 │
+│ 3 4 │
+└     ┘
+```
+
+### Hindley-Milner Type Inference
+
+```kleis
+define compose = λ f . λ g . λ x . f(g(x))
+// Inferred: (β → γ) → (α → β) → α → γ
+```
+
+---
+
+## 🛠️ Tooling
+
+| Tool | Command | Description |
+|------|---------|-------------|
+| **REPL** | `./scripts/kleis repl` | Interactive exploration |
+| **Jupyter** | Kleis kernel | Notebook integration with `out()` |
+| **VS Code** | Extension | Full IDE support (see below) |
+| **DAP Debugger** | `./scripts/kleis server` | Step-through debugging |
+| **CLI** | `./scripts/kleis eval` | Evaluate expressions |
+| **Checker** | `./scripts/kleis check` | Validate .kleis files |
+
+### VS Code Extension
+
+Install from `vscode-kleis/` or search "Kleis" in VS Code Marketplace.
+
+**Features:**
+- **Syntax highlighting** for `.kleis` files
+- **Keyword recognition**: `structure`, `implements`, `operation`, `axiom`, `data`, `match`, `verify`
+- **Type highlighting**: `ℝ`, `ℂ`, `ℤ`, `ℕ`, `Matrix`, `Vector`, `Scalar`
+- **Mathematical operators**: `∀`, `∃`, `λ`, `→`, `⇒`, `∈`, `∇`, `∂`, `∫`, `√`
+- **Greek letters**: Full alphabet (α, β, γ, δ, ...)
+- **Bracket matching** and **comment toggling**
+- **LSP integration** for real-time diagnostics
+
+### DAP Debugger
+
+The unified server provides Debug Adapter Protocol support:
+
+```bash
+./scripts/kleis server   # Starts LSP + DAP on stdio
+```
+
+**Debugging features:**
+- **Breakpoints** in `.kleis` files
+- **Step-through execution** (step in, step over, step out)
+- **Variable inspection** at each step
+- **Call stack** visualization
+- **Expression evaluation** during pause
+
+Configure in VS Code's `launch.json` to debug Kleis files interactively.
 
 ---
 
@@ -190,95 +227,82 @@ See `PARSER_TODO.md` for details.
 
 ```
 kleis/
-├── src/
-│   ├── render.rs       # Renderer (100+ operations)
-│   ├── kleis_ast.rs    # Kleis AST (structures, functions, programs)
-│   ├── kleis_parser.rs # Kleis language parser (.kleis files)
-│   ├── editor_ast.rs   # Editor AST translation layer
-│   ├── parser.rs       # LaTeX parser
-│   └── bin/
-│       ├── server.rs   # HTTP server + web UI
-│       ├── repl.rs     # Interactive REPL
-│       └── gallery.rs  # PDF gallery generator
-├── static/index.html   # Original web equation editor
-├── patternfly-editor/  # React/PatternFly equation editor
-│   ├── src/components/ # React components
-│   └── src/hooks/      # Custom hooks
-├── stdlib/             # Standard library (.kleis files)
-├── examples/           # Example .kleis files
-│   ├── authorization/  # Zanzibar, OAuth2
-│   ├── business/       # Purchase orders, inventory
-│   ├── calculus/       # Derivatives, integrals
-│   ├── control/        # Control theory (LQG, eigenvalues)
-│   └── protocols/      # IP router
-├── docs/               # Documentation
-│   ├── adr/            # 23 Architecture Decision Records
-│   ├── grammar/        # Formal grammar (v03-v07)
-│   └── type-system/    # Type system docs
-└── tests/              # Test suite
+├── src/                    # Rust source (parser, evaluator, type system)
+│   ├── kleis_parser.rs     # Full grammar parser
+│   ├── evaluator.rs        # Expression evaluator (100+ built-ins)
+│   ├── type_inference.rs   # Hindley-Milner type inference
+│   ├── z3_integration.rs   # Z3 axiom verification
+│   └── bin/                # Binaries (repl, server, kleis)
+├── stdlib/                 # Standard library
+│   ├── prelude.kleis       # Core definitions
+│   ├── tensors.kleis       # Tensor algebra axioms
+│   ├── tensors_functional.kleis  # Tensor operations
+│   ├── differential_forms.kleis  # Exterior calculus
+│   └── combinatorics.kleis # Combinatorial structures
+├── examples/               # 71 example files
+│   ├── ontology/           # Projected Ontology Theory
+│   ├── control/            # Control systems
+│   ├── number-theory/      # FLT exploration
+│   └── ...                 # 15+ domains
+├── kleis-notebook/         # Jupyter kernel
+├── docs/                   # Documentation
+│   ├── manual/             # The Kleis Manual (mdBook)
+│   └── adr/                # Architecture Decision Records
+└── tests/                  # 1,762 tests
 ```
-
----
-
-## 🌐 HTTP API
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Web UI |
-| `/api/render` | POST | Render LaTeX → output |
-| `/api/render_ast` | POST | Render AST directly |
-| `/api/render_typst` | POST | Render via Typst (SVG) |
-| `/api/gallery` | GET | All 91 examples |
-| `/health` | GET | Health check |
-
-See `SERVER_README.md` for full API docs.
-
----
-
-## 🎯 Vision
-
-**Same type system for mathematics AND real-world domains:**
-
-| Domain | Example |
-|--------|---------|
-| Mathematics | Vector space axioms, field properties |
-| Business | PurchaseOrder with inventory/credit constraints |
-| Legal | Contract with consent/consideration axioms |
-| Medical | Prescription with safety/interaction checks |
-
-**AI Integration:** LLM generates → Kleis verifies → Human reviews
 
 ---
 
 ## 📚 Documentation
 
-| Document | Description |
+| Resource | Description |
 |----------|-------------|
-| [docs/README.md](docs/README.md) | Documentation index |
-| [docs/adr/](docs/adr/README.md) | 23 Architecture Decision Records |
-| [docs/grammar/](docs/grammar/) | Formal grammar (v03-v07) |
-| [docs/guides/PALETTE_GUIDE.md](docs/guides/PALETTE_GUIDE.md) | Equation editor guide |
-| [SERVER_README.md](SERVER_README.md) | Server API reference |
-| [PARSER_TODO.md](PARSER_TODO.md) | Parser status |
+| [The Kleis Manual](docs/manual/) | Comprehensive language guide |
+| [docs/adr/](docs/adr/) | 23 Architecture Decision Records |
+| [docs/grammar/](docs/grammar/) | Formal grammar specification |
+| [OPERATOR_INVENTORY.md](docs/OPERATOR_INVENTORY.md) | Complete operator reference |
 
 ---
 
-## 🛠️ Development
+## 🎓 Philosophy
 
-### Add New Operation
+Kleis is built on the principle that **structures**, not types, are the foundation of mathematical reasoning.
 
-1. Add helper + template to `render.rs`
-2. Add gallery example
-3. Write tests
-4. Update docs
+A type tells you *what* something is. A structure tells you *what laws it obeys*.
+
+```kleis
+// A type: "x is a real number"
+x : ℝ
+
+// A structure: "ℝ is a field with these axioms"
+structure Field(F) {
+    axiom additive_inverse : ∀ x : F . ∃ y : F . x + y = 0
+    axiom multiplicative_inverse : ∀ x : F . x ≠ 0 → ∃ y : F . x * y = 1
+}
+```
+
+This approach enables:
+- **Cross-domain formalization** — Same framework for physics, protocols, games
+- **Axiom-driven verification** — Z3 checks consistency, not just types
+- **Extensibility** — Add new structures without changing the core
+
+---
+
+## 🏗️ Development
 
 ### Quality Gates
 
 ```bash
-cargo fmt --all
-cargo clippy --all-targets --all-features
-cargo test
+cargo fmt --all                                    # Format code
+cargo clippy --all-targets --all-features          # Lint
+cargo test                                         # Run all 1,762 tests
 ```
+
+### Add a New Built-in
+
+1. Add to `src/evaluator.rs` in `apply_builtin()`
+2. Add tests
+3. Document in `docs/OPERATOR_INVENTORY.md`
 
 ---
 
@@ -288,4 +312,4 @@ See `LICENSE` file.
 
 ---
 
-**Kleis** - Where formal structure meets executable mathematics. 🦀
+**Kleis** — Where structures meet verification. 🦀

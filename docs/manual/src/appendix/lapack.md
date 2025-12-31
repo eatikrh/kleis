@@ -215,3 +215,4 @@ out(inv(A))
 - [Operators](./operators.md) - Operator reference
 - [Jupyter Notebook](../chapters/21-jupyter-notebook.md) - Using numerical Kleis
 
+
