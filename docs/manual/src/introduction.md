@@ -64,7 +64,3 @@ structure Vector(n : ℕ) {
 Ready? Let's dive in!
 
 → [Start with Chapter 1: Starting Out](./chapters/01-starting-out.md)
-
----
-
-*Pedagogical approach inspired by [Learn You a Haskell](https://learnyouahaskell.github.io/).*
