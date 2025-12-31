@@ -45,10 +45,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b6f41dc4.js";
+            window.path_to_searchindex_js = "searchindex-d5fe999d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-62468214.js"></script>
+        <script src="toc-7a44b553.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -2835,7 +2835,7 @@ structure Functor(C, D) {
 <h2 id="whats-next-12"><a class="header" href="#whats-next-12">What’s Next?</a></h2>
 <p>Check out the reference appendices!</p>
 <p>→ <a href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a>
-→ <a href="#appendix-b-operators">Appendix B: Operators</a>
+→ <a href="#appendix-operators">Appendix B: Operators</a>
 → <a href="#appendix-c-standard-library">Appendix C: Standard Library</a>
 → <a href="#appendix-lisp-interpreter-in-kleis">Appendix D: LISP Interpreter</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -5319,20 +5319,22 @@ greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
              | "ρ" | "σ" | "τ" | "υ" | "φ" | "χ" | "ψ" | "ω"
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="appendix-b-operators"><a class="header" href="#appendix-b-operators">Appendix B: Operators</a></h1>
+<h1 id="appendix-operators"><a class="header" href="#appendix-operators">Appendix: Operators</a></h1>
+<p>This appendix covers all operators in the Kleis language. For built-in functions, see <a href="#appendix-built-in-functions">Built-in Functions</a>. For numerical linear algebra, see <a href="#appendix-lapack-functions">LAPACK Functions</a>.</p>
 <h2 id="arithmetic-operators"><a class="header" href="#arithmetic-operators">Arithmetic Operators</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Operator</th><th>Name</th><th>Example</th><th>Result</th></tr>
+<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Example</th><th>Result</th></tr>
 </thead>
 <tbody>
-<tr><td><code>+</code></td><td>Addition</td><td><code>3 + 4</code></td><td><code>7</code></td></tr>
-<tr><td><code>-</code></td><td>Subtraction</td><td><code>10 - 3</code></td><td><code>7</code></td></tr>
-<tr><td><code>*</code></td><td>Multiplication</td><td><code>6 * 7</code></td><td><code>42</code></td></tr>
-<tr><td><code>/</code></td><td>Division</td><td><code>15 / 3</code></td><td><code>5</code></td></tr>
-<tr><td><code>^</code></td><td>Exponentiation</td><td><code>2 ^ 10</code></td><td><code>1024</code></td></tr>
-<tr><td><code>-</code> (unary)</td><td>Negation</td><td><code>-5</code></td><td><code>-5</code></td></tr>
+<tr><td><code>+</code></td><td></td><td>Addition</td><td><code>3 + 4</code></td><td><code>7</code></td></tr>
+<tr><td><code>-</code></td><td></td><td>Subtraction</td><td><code>10 - 3</code></td><td><code>7</code></td></tr>
+<tr><td><code>*</code></td><td><code>×</code></td><td>Multiplication</td><td><code>6 × 7</code></td><td><code>42</code></td></tr>
+<tr><td><code>/</code></td><td><code>÷</code></td><td>Division</td><td><code>15 / 3</code></td><td><code>5</code></td></tr>
+<tr><td><code>^</code></td><td></td><td>Exponentiation</td><td><code>2 ^ 10</code></td><td><code>1024</code></td></tr>
+<tr><td><code>-</code> (unary)</td><td></td><td>Negation</td><td><code>-5</code></td><td><code>-5</code></td></tr>
+<tr><td><code>·</code></td><td></td><td>Dot product</td><td><code>a · b</code></td><td>scalar</td></tr>
 </tbody>
 </table>
 </div>
@@ -5344,6 +5346,7 @@ greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
 </thead>
 <tbody>
 <tr><td><code>=</code></td><td></td><td>Equality</td><td><code>x = y</code></td></tr>
+<tr><td><code>==</code></td><td></td><td>Equality (alt)</td><td><code>x == y</code></td></tr>
 <tr><td><code>!=</code></td><td><code>≠</code></td><td>Inequality</td><td><code>x ≠ y</code></td></tr>
 <tr><td><code>&lt;</code></td><td></td><td>Less than</td><td><code>x &lt; y</code></td></tr>
 <tr><td><code>&gt;</code></td><td></td><td>Greater than</td><td><code>x &gt; y</code></td></tr>
@@ -5364,32 +5367,92 @@ greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
 <tr><td><code>not</code></td><td><code>¬</code></td><td>Negation</td><td><code>¬P</code></td></tr>
 <tr><td><code>implies</code></td><td><code>→</code> <code>⇒</code> <code>⟹</code></td><td>Implication</td><td><code>P → Q</code></td></tr>
 <tr><td><code>iff</code></td><td><code>↔</code> <code>⇔</code> <code>⟺</code></td><td>Biconditional</td><td><code>P ↔ Q</code></td></tr>
+<tr><td><code>&amp;&amp;</code></td><td></td><td>Conjunction (alt)</td><td><code>P &amp;&amp; Q</code></td></tr>
+<tr><td><code>||</code></td><td></td><td>Disjunction (alt)</td><td><code>P || Q</code></td></tr>
 </tbody>
 </table>
 </div>
 <blockquote>
-<p><strong>Note:</strong> All three Unicode variants for implication and biconditional are
-equivalent. Use whichever matches your notation conventions.</p>
+<p><strong>Note:</strong> All Unicode variants for implication (<code>→</code>, <code>⇒</code>, <code>⟹</code>) and biconditional (<code>↔</code>, <code>⇔</code>, <code>⟺</code>) are equivalent.</p>
 </blockquote>
-<h2 id="set-operators"><a class="header" href="#set-operators">Set Operators</a></h2>
-<blockquote>
-<p><strong>Note:</strong> Set operators are parsed as custom operators but don’t have special semantic meaning yet. Use function-call syntax for set operations: <code>member(x, S)</code>, <code>union(A, B)</code>, etc.</p>
-</blockquote>
+<h2 id="postfix-operators-1"><a class="header" href="#postfix-operators-1">Postfix Operators</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Status</th></tr>
+<tr><th>Operator</th><th>Name</th><th>Example</th><th>Result</th></tr>
 </thead>
 <tbody>
-<tr><td><code>∪</code></td><td></td><td>Union</td><td>Custom operator (no special semantics)</td></tr>
-<tr><td><code>∩</code></td><td></td><td>Intersection</td><td>Custom operator (no special semantics)</td></tr>
-<tr><td><code>∈</code></td><td></td><td>Membership</td><td>❌ Not implemented - use <code>member(x, S)</code></td></tr>
-<tr><td><code>∉</code></td><td></td><td>Non-membership</td><td>❌ Not implemented</td></tr>
-<tr><td><code>⊆</code></td><td></td><td>Subset</td><td>❌ Not implemented - use <code>subset(A, B)</code></td></tr>
-<tr><td><code>⊇</code></td><td></td><td>Superset</td><td>❌ Not implemented</td></tr>
+<tr><td><code>!</code></td><td>Factorial</td><td><code>5!</code></td><td><code>120</code></td></tr>
+<tr><td><code>ᵀ</code></td><td>Transpose</td><td><code>Aᵀ</code></td><td>transposed matrix</td></tr>
+<tr><td><code>†</code></td><td>Dagger/Adjoint</td><td><code>A†</code></td><td>conjugate transpose</td></tr>
+<tr><td><code>′</code></td><td>Prime</td><td><code>f′</code></td><td>derivative notation</td></tr>
+<tr><td><code>″</code></td><td>Double prime</td><td><code>f″</code></td><td>second derivative</td></tr>
+<tr><td><code>‴</code></td><td>Triple prime</td><td><code>f‴</code></td><td>third derivative</td></tr>
+<tr><td><code>⁺</code></td><td>Superscript plus</td><td><code>A⁺</code></td><td>pseudo-inverse</td></tr>
+<tr><td><code>⁻</code></td><td>Superscript minus</td><td><code>A⁻</code></td><td>inverse notation</td></tr>
 </tbody>
 </table>
 </div>
+<h2 id="prefix-operators-1"><a class="header" href="#prefix-operators-1">Prefix Operators</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operator</th><th>Name</th><th>Example</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td><code>-</code></td><td>Negation</td><td><code>-x</code></td><td>negated value</td></tr>
+<tr><td><code>∇</code></td><td>Gradient/Del</td><td><code>∇f</code></td><td>gradient of f</td></tr>
+<tr><td><code>∫</code></td><td>Integral</td><td><code>∫f</code></td><td>integral of f</td></tr>
+<tr><td><code>¬</code></td><td>Logical not</td><td><code>¬P</code></td><td>negation of P</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="big-operators-v095"><a class="header" href="#big-operators-v095">Big Operators (v0.95)</a></h2>
+<p>Kleis supports big operator syntax for summations, products, integrals, and limits:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operator</th><th>Name</th><th>Syntax</th><th>Translates to</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Σ</code></td><td>Summation</td><td><code>Σ(from, to, body)</code></td><td><code>sum_bounds(body, from, to)</code></td></tr>
+<tr><td><code>Π</code></td><td>Product</td><td><code>Π(from, to, body)</code></td><td><code>prod_bounds(body, from, to)</code></td></tr>
+<tr><td><code>∫</code></td><td>Integral</td><td><code>∫(lower, upper, body, var)</code></td><td><code>int_bounds(body, lower, upper, var)</code></td></tr>
+<tr><td><code>lim</code></td><td>Limit</td><td><code>lim(var, target, body)</code></td><td><code>lim(body, var, target)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<pre><code class="language-kleis">// Sum from i=1 to n
+Σ(1, n, i^2)
+
+// Product from k=1 to 5
+Π(1, 5, k)
+
+// Integral from 0 to 1
+∫(0, 1, x^2, x)
+
+// Limit as x approaches 0
+lim(x, 0, sin(x)/x)
+</code></pre>
+<h2 id="custom-mathematical-operators"><a class="header" href="#custom-mathematical-operators">Custom Mathematical Operators</a></h2>
+<p>Kleis recognizes many Unicode mathematical symbols as custom binary operators:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Operators</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Products</strong></td><td><code>•</code> (bullet), <code>∘</code> (composition), <code>⊗</code> (tensor), <code>⊙</code> (Hadamard)</td></tr>
+<tr><td><strong>Sums</strong></td><td><code>⊕</code> (direct sum), <code>⊞</code> (squared plus), <code>⨁</code> (n-ary)</td></tr>
+<tr><td><strong>Set-like</strong></td><td><code>∪</code> (union), <code>∩</code> (intersection), <code>⊔</code> (join), <code>⊓</code> (meet)</td></tr>
+<tr><td><strong>Other</strong></td><td><code>⊛</code>, <code>⊘</code>, <code>⊚</code>, <code>⊝</code>, <code>⊟</code>, <code>⊠</code>, <code>⊡</code>, <code>△</code>, <code>▽</code></td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p><strong>Note:</strong> These are parsed as operators but their semantics depend on context. Define their behavior in structures.</p>
+</blockquote>
 <h2 id="type-operators"><a class="header" href="#type-operators">Type Operators</a></h2>
 <div class="table-wrapper">
 <table>
@@ -5413,169 +5476,515 @@ equivalent. Use whichever matches your notation conventions.</p>
 <tbody>
 <tr><td>1</td><td><code>↔</code> <code>⇔</code> <code>⟺</code> (biconditional)</td><td>Left</td></tr>
 <tr><td>2</td><td><code>→</code> <code>⇒</code> <code>⟹</code> (implication)</td><td>Right</td></tr>
-<tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
-<tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
+<tr><td>3</td><td><code>∨</code> <code>or</code> <code>||</code></td><td>Left</td></tr>
+<tr><td>4</td><td><code>∧</code> <code>and</code> <code>&amp;&amp;</code></td><td>Left</td></tr>
 <tr><td>5</td><td><code>¬</code> <code>not</code></td><td>Prefix</td></tr>
 <tr><td>6</td><td><code>=</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-associative</td></tr>
 <tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
 <tr><td>8</td><td><code>*</code> <code>/</code> <code>×</code> <code>·</code></td><td>Left</td></tr>
 <tr><td>9</td><td><code>^</code> (power)</td><td>Right</td></tr>
 <tr><td>10</td><td><code>-</code> (unary negation)</td><td>Prefix</td></tr>
-<tr><td>11</td><td><code>!</code> <code>ᵀ</code> <code>†</code> (postfix)</td><td>Postfix</td></tr>
+<tr><td>11</td><td><code>!</code> <code>ᵀ</code> <code>†</code> <code>′</code> (postfix)</td><td>Postfix</td></tr>
 <tr><td>12</td><td>Function application</td><td>Left</td></tr>
 </tbody>
 </table>
 </div>
-<blockquote>
-<p><strong>Note:</strong> Field access (<code>.</code>) is NOT implemented. Use function-call syntax: <code>field(object)</code> instead of <code>object.field</code>.</p>
-</blockquote>
-<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
+<h2 id="examples-1"><a class="header" href="#examples-1">Examples</a></h2>
+<h3 id="arithmetic-precedence"><a class="header" href="#arithmetic-precedence">Arithmetic Precedence</a></h3>
 <pre><code class="language-kleis">define ex1 = 2 + 3 * 4        // 14 (not 20)
 define ex2 = (2 + 3) * 4      // 20
 define ex3 = 2 ^ 3 ^ 2        // 512 (= 2^9, right associative)
 define neg_sq(x) = -x^2       // -(x^2), not (-x)^2
 </code></pre>
-<h3 id="logical"><a class="header" href="#logical">Logical</a></h3>
+<h3 id="logical-precedence"><a class="header" href="#logical-precedence">Logical Precedence</a></h3>
 <pre><code class="language-kleis">define logic1(P, Q, R) = P ∧ Q ∨ R        // (P ∧ Q) ∨ R
-define logic2(P, Q, R) = P → Q → R        // P → (Q → R) (right associative)
+define logic2(P, Q, R) = P → Q → R        // P → (Q → R)
 define logic3(P, Q) = ¬P ∧ Q              // (¬P) ∧ Q
+</code></pre>
+<h3 id="postfix-with-power"><a class="header" href="#postfix-with-power">Postfix with Power</a></h3>
+<pre><code class="language-kleis">n!^2        // (n!)^2 - factorial first, then square
+Aᵀᵀ         // (Aᵀ)ᵀ = A - transpose twice
 </code></pre>
 <h3 id="type-expressions"><a class="header" href="#type-expressions">Type Expressions</a></h3>
 <pre><code class="language-kleis">ℝ → ℝ → ℝ        // ℝ → (ℝ → ℝ) (curried binary function)
 (ℝ → ℝ) → ℝ      // Higher-order: takes function, returns value
 ℝ × ℝ → ℝ        // Takes pair, returns value
 </code></pre>
-<h2 id="built-in-functions"><a class="header" href="#built-in-functions">Built-in Functions</a></h2>
-<h3 id="mathematical-functions"><a class="header" href="#mathematical-functions">Mathematical Functions</a></h3>
-<pre><code class="language-kleis">sqrt(x)          // Square root
-abs(x)           // Absolute value
-floor(x)         // Round down
-ceil(x)          // Round up
-round(x)         // Round to nearest
-min(x, y)        // Minimum
-max(x, y)        // Maximum
+<h2 id="see-also-2"><a class="header" href="#see-also-2">See Also</a></h2>
+<ul>
+<li><a href="#appendix-built-in-functions">Built-in Functions</a> - List, string, matrix operations</li>
+<li><a href="#appendix-lapack-functions">LAPACK Functions</a> - Numerical linear algebra</li>
+<li><a href="#complex-numbers">Complex Numbers</a> - Complex number operations</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="appendix-built-in-functions"><a class="header" href="#appendix-built-in-functions">Appendix: Built-in Functions</a></h1>
+<p>This appendix covers built-in functions for basic operations. For numerical linear algebra (eigenvalues, SVD, etc.), see <a href="#appendix-lapack-functions">LAPACK Functions</a>.</p>
+<h2 id="output-functions"><a class="header" href="#output-functions">Output Functions</a></h2>
+<p>Functions for displaying values:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>out(x)</code></td><td><code>show(x)</code>, <code>print(x)</code></td><td>Pretty-print value and return it</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example"><a class="header" href="#example">Example</a></h3>
+<pre><code class="language-kleis">out([[1, 2], [3, 4]])
+// Prints:
+// ┌      ┐
+// │ 1  2 │
+// │ 3  4 │
+// └      ┘
 </code></pre>
-<h3 id="trigonometric-functions"><a class="header" href="#trigonometric-functions">Trigonometric Functions</a></h3>
-<pre><code class="language-kleis">sin(x)   cos(x)   tan(x)
-asin(x)  acos(x)  atan(x)
-sinh(x)  cosh(x)  tanh(x)
+<h2 id="arithmetic-functions"><a class="header" href="#arithmetic-functions">Arithmetic Functions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>negate(x)</code></td><td>Unary negation</td><td><code>negate(5)</code> → <code>-5</code></td></tr>
+<tr><td><code>abs(x)</code></td><td>Absolute value</td><td><code>abs(-3)</code> → <code>3</code></td></tr>
+<tr><td><code>sqrt(x)</code></td><td>Square root</td><td><code>sqrt(16)</code> → <code>4</code></td></tr>
+<tr><td><code>floor(x)</code></td><td>Round down</td><td><code>floor(3.7)</code> → <code>3</code></td></tr>
+<tr><td><code>ceil(x)</code></td><td>Round up</td><td><code>ceil(3.2)</code> → <code>4</code></td></tr>
+<tr><td><code>round(x)</code></td><td>Round to nearest</td><td><code>round(3.5)</code> → <code>4</code></td></tr>
+<tr><td><code>min(x, y)</code></td><td>Minimum</td><td><code>min(3, 7)</code> → <code>3</code></td></tr>
+<tr><td><code>max(x, y)</code></td><td>Maximum</td><td><code>max(3, 7)</code> → <code>7</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="trigonometric-functions"><a class="header" href="#trigonometric-functions">Trigonometric Functions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sin(x)</code></td><td>Sine</td></tr>
+<tr><td><code>cos(x)</code></td><td>Cosine</td></tr>
+<tr><td><code>tan(x)</code></td><td>Tangent</td></tr>
+<tr><td><code>asin(x)</code></td><td>Arcsine</td></tr>
+<tr><td><code>acos(x)</code></td><td>Arccosine</td></tr>
+<tr><td><code>atan(x)</code></td><td>Arctangent</td></tr>
+<tr><td><code>sinh(x)</code></td><td>Hyperbolic sine</td></tr>
+<tr><td><code>cosh(x)</code></td><td>Hyperbolic cosine</td></tr>
+<tr><td><code>tanh(x)</code></td><td>Hyperbolic tangent</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="exponential-and-logarithmic-1"><a class="header" href="#exponential-and-logarithmic-1">Exponential and Logarithmic</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>exp(x)</code></td><td>e^x</td><td><code>exp(1)</code> → <code>2.718...</code></td></tr>
+<tr><td><code>ln(x)</code></td><td>Natural logarithm</td><td><code>ln(e)</code> → <code>1</code></td></tr>
+<tr><td><code>log(x)</code></td><td>Base-10 logarithm</td><td><code>log(100)</code> → <code>2</code></td></tr>
+<tr><td><code>log(b, x)</code></td><td>Logarithm base b</td><td><code>log(2, 8)</code> → <code>3</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="list-operations"><a class="header" href="#list-operations">List Operations</a></h2>
+<p>Kleis uses cons-lists with <code>Cons</code> and <code>Nil</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Cons(x, xs)</code></td><td><code>cons</code></td><td>Prepend element</td><td><code>Cons(1, Nil)</code></td></tr>
+<tr><td><code>Nil</code></td><td><code>nil</code></td><td>Empty list</td><td><code>Nil</code></td></tr>
+<tr><td><code>head(xs)</code></td><td><code>car</code></td><td>First element</td><td><code>head([1,2,3])</code> → <code>1</code></td></tr>
+<tr><td><code>tail(xs)</code></td><td><code>cdr</code></td><td>Rest of list</td><td><code>tail([1,2,3])</code> → <code>[2,3]</code></td></tr>
+<tr><td><code>length(xs)</code></td><td></td><td>List length</td><td><code>length([1,2,3])</code> → <code>3</code></td></tr>
+<tr><td><code>nth(xs, n)</code></td><td></td><td>Get nth element</td><td><code>nth([1,2,3], 1)</code> → <code>2</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="list-literal-syntax"><a class="header" href="#list-literal-syntax">List Literal Syntax</a></h3>
+<pre><code class="language-kleis">[1, 2, 3]           // Shorthand for Cons(1, Cons(2, Cons(3, Nil)))
+[]                  // Empty list (Nil)
 </code></pre>
-<h3 id="exponential-and-logarithmic-1"><a class="header" href="#exponential-and-logarithmic-1">Exponential and Logarithmic</a></h3>
-<pre><code class="language-kleis">exp(x)           // e^x
-ln(x)            // Natural logarithm
-log(x)           // Base-10 logarithm
-log(b, x)        // Logarithm base b
+<h2 id="string-operations"><a class="header" href="#string-operations">String Operations</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>concat(a, b)</code></td><td>Concatenate strings</td><td><code>concat("hello", "world")</code> → <code>"helloworld"</code></td></tr>
+<tr><td><code>strlen(s)</code></td><td>String length</td><td><code>strlen("hello")</code> → <code>5</code></td></tr>
+<tr><td><code>contains(s, sub)</code></td><td>Check substring</td><td><code>contains("hello", "ell")</code> → <code>true</code></td></tr>
+<tr><td><code>substr(s, start, len)</code></td><td>Extract substring</td><td><code>substr("hello", 1, 3)</code> → <code>"ell"</code></td></tr>
+<tr><td><code>replace(s, old, new)</code></td><td>Replace substring</td><td><code>replace("hello", "l", "L")</code> → <code>"heLLo"</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="matrix-operations-basic"><a class="header" href="#matrix-operations-basic">Matrix Operations (Basic)</a></h2>
+<p>For advanced operations (eigenvalues, SVD), see <a href="#appendix-lapack-functions">LAPACK Functions</a>.</p>
+<h3 id="matrix-creation"><a class="header" href="#matrix-creation">Matrix Creation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>matrix(rows, cols, elements)</code></td><td></td><td>Create matrix</td><td><code>matrix(2, 2, [1,2,3,4])</code></td></tr>
+<tr><td><code>eye(n)</code></td><td><code>identity(n)</code></td><td>Identity matrix</td><td><code>eye(3)</code></td></tr>
+<tr><td><code>zeros(m, n)</code></td><td></td><td>Zero matrix</td><td><code>zeros(2, 3)</code></td></tr>
+<tr><td><code>ones(m, n)</code></td><td></td><td>Matrix of ones</td><td><code>ones(2, 3)</code></td></tr>
+<tr><td><code>diag_matrix(elements)</code></td><td><code>diagonal</code></td><td>Diagonal matrix</td><td><code>diag_matrix([1,2,3])</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="matrix-literals"><a class="header" href="#matrix-literals">Matrix Literals</a></h3>
+<pre><code class="language-kleis">[[1, 2, 3],
+ [4, 5, 6]]         // 2×3 matrix
 </code></pre>
-<h3 id="constants-1"><a class="header" href="#constants-1">Constants</a></h3>
-<pre><code class="language-kleis">π                // Pi (3.14159...)
-e                // Euler's number (2.71828...)
-i                // Imaginary unit
-</code></pre>
-<h2 id="reserved-keywords"><a class="header" href="#reserved-keywords">Reserved Keywords</a></h2>
-<p>The following words are reserved and cannot be used as variable or function names:</p>
-<h3 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h3>
+<h3 id="matrix-properties-1"><a class="header" href="#matrix-properties-1">Matrix Properties</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>if</code></td><td>Conditional start</td><td><code>if x &gt; 0 then ...</code></td></tr>
-<tr><td><code>then</code></td><td>Conditional consequence</td><td><code>if P then Q else R</code></td></tr>
-<tr><td><code>else</code></td><td>Conditional alternative</td><td><code>if P then Q else R</code></td></tr>
-<tr><td><code>match</code></td><td>Pattern matching</td><td><code>match x { ... }</code></td></tr>
-<tr><td><code>let</code></td><td>Local binding</td><td><code>let x = 5 in ...</code></td></tr>
-<tr><td><code>in</code></td><td>Binding body</td><td><code>let x = 5 in x + 1</code></td></tr>
+<tr><td><code>size(A)</code></td><td><code>shape</code>, <code>dims</code></td><td>Dimensions <code>[rows, cols]</code></td></tr>
+<tr><td><code>nrows(A)</code></td><td><code>num_rows</code></td><td>Number of rows</td></tr>
+<tr><td><code>ncols(A)</code></td><td><code>num_cols</code></td><td>Number of columns</td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="functions-1"><a class="header" href="#functions-1">Functions</a></h3>
+<h3 id="element-access"><a class="header" href="#element-access">Element Access</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>lambda</code></td><td>Anonymous function (ASCII)</td><td><code>lambda x . x + 1</code></td></tr>
-<tr><td><code>λ</code></td><td>Anonymous function (Unicode)</td><td><code>λ x . x + 1</code></td></tr>
-<tr><td><code>define</code></td><td>Function definition</td><td><code>define f(x) = x^2</code></td></tr>
+<tr><td><code>matrix_get(A, i, j)</code></td><td><code>element</code></td><td>Get element at (i, j)</td></tr>
+<tr><td><code>matrix_row(A, i)</code></td><td><code>row</code></td><td>Get row i</td></tr>
+<tr><td><code>matrix_col(A, j)</code></td><td><code>col</code></td><td>Get column j</td></tr>
+<tr><td><code>matrix_diag(A)</code></td><td><code>diag</code></td><td>Get diagonal</td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="quantifiers-1"><a class="header" href="#quantifiers-1">Quantifiers</a></h3>
+<h3 id="element-modification"><a class="header" href="#element-modification">Element Modification</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+<tr><th>Function</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>forall</code></td><td>Universal quantifier (ASCII)</td><td><code>forall x . P(x)</code></td></tr>
-<tr><td><code>∀</code></td><td>Universal quantifier (Unicode)</td><td><code>∀(x : ℝ). x = x</code></td></tr>
-<tr><td><code>exists</code></td><td>Existential quantifier (ASCII)</td><td><code>exists x . P(x)</code></td></tr>
-<tr><td><code>∃</code></td><td>Existential quantifier (Unicode)</td><td><code>∃(x : ℝ). x &gt; 0</code></td></tr>
+<tr><td><code>set_element(A, i, j, val)</code></td><td>Set element at (i, j)</td></tr>
+<tr><td><code>set_row(A, i, row)</code></td><td>Set row i</td></tr>
+<tr><td><code>set_col(A, j, col)</code></td><td>Set column j</td></tr>
+<tr><td><code>set_diag(A, diag)</code></td><td>Set diagonal</td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="logical-operators-keyword-form"><a class="header" href="#logical-operators-keyword-form">Logical Operators (keyword form)</a></h3>
+<h3 id="basic-arithmetic-2"><a class="header" href="#basic-arithmetic-2">Basic Arithmetic</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>and</code></td><td>Logical conjunction</td><td><code>P and Q</code></td></tr>
-<tr><td><code>or</code></td><td>Logical disjunction</td><td><code>P or Q</code></td></tr>
-<tr><td><code>not</code></td><td>Logical negation</td><td><code>not P</code></td></tr>
+<tr><td><code>matrix_add(A, B)</code></td><td><code>builtin_matrix_add</code></td><td>A + B</td></tr>
+<tr><td><code>matrix_sub(A, B)</code></td><td><code>builtin_matrix_sub</code></td><td>A - B</td></tr>
+<tr><td><code>multiply(A, B)</code></td><td><code>matmul</code>, <code>builtin_matrix_mul</code></td><td>A × B</td></tr>
+<tr><td><code>scalar_matrix_mul(c, A)</code></td><td><code>builtin_matrix_scalar_mul</code></td><td>c × A</td></tr>
+<tr><td><code>transpose(A)</code></td><td><code>builtin_transpose</code></td><td>Aᵀ</td></tr>
+<tr><td><code>trace(A)</code></td><td><code>builtin_trace</code></td><td>tr(A)</td></tr>
+<tr><td><code>det(A)</code></td><td><code>builtin_determinant</code></td><td>det(A)</td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="definitions"><a class="header" href="#definitions">Definitions</a></h3>
+<h3 id="matrix-stacking"><a class="header" href="#matrix-stacking">Matrix Stacking</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>structure</code></td><td>Algebraic structure</td><td><code>structure Group(G) { ... }</code></td></tr>
-<tr><td><code>implements</code></td><td>Structure implementation</td><td><code>implements Group(ℤ) { ... }</code></td></tr>
-<tr><td><code>data</code></td><td>Algebraic data type</td><td><code>data Option(T) = Some(T) | None</code></td></tr>
-<tr><td><code>type</code></td><td>Type alias</td><td><code>type Point = (ℝ, ℝ)</code></td></tr>
-<tr><td><code>operation</code></td><td>Operation declaration</td><td><code>operation add : G × G → G</code></td></tr>
-<tr><td><code>element</code></td><td>Element declaration</td><td><code>element zero : G</code></td></tr>
-<tr><td><code>axiom</code></td><td>Axiom declaration</td><td><code>axiom identity : ...</code></td></tr>
+<tr><td><code>vstack(A, B)</code></td><td><code>append_rows</code></td><td>Stack vertically</td></tr>
+<tr><td><code>hstack(A, B)</code></td><td><code>append_cols</code></td><td>Stack horizontally</td></tr>
+<tr><td><code>prepend_row(A, row)</code></td><td></td><td>Add row at top</td></tr>
+<tr><td><code>append_row(A, row)</code></td><td></td><td>Add row at bottom</td></tr>
+<tr><td><code>prepend_col(A, col)</code></td><td></td><td>Add column at left</td></tr>
+<tr><td><code>append_col(A, col)</code></td><td></td><td>Add column at right</td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="modifiers-and-clauses"><a class="header" href="#modifiers-and-clauses">Modifiers and Clauses</a></h3>
+<h2 id="constants-1"><a class="header" href="#constants-1">Constants</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+<tr><th>Constant</th><th>Unicode</th><th>Value</th></tr>
 </thead>
 <tbody>
-<tr><td><code>import</code></td><td>File import</td><td><code>import "stdlib/prelude.kleis"</code></td></tr>
-<tr><td><code>over</code></td><td>Type constraint</td><td><code>structure V over Field(F) { ... }</code></td></tr>
-<tr><td><code>extends</code></td><td>Structure extension</td><td><code>structure Ring extends Group { ... }</code></td></tr>
-<tr><td><code>as</code></td><td>Pattern alias</td><td><code>match x { y as Some(_) =&gt; ... }</code></td></tr>
+<tr><td><code>pi</code></td><td><code>π</code></td><td>3.14159…</td></tr>
+<tr><td><code>e</code></td><td></td><td>2.71828…</td></tr>
+<tr><td><code>i</code></td><td></td><td>√(-1) (imaginary unit)</td></tr>
+<tr><td><code>True</code> / <code>true</code></td><td></td><td>Boolean true</td></tr>
+<tr><td><code>False</code> / <code>false</code></td><td></td><td>Boolean false</td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="commands"><a class="header" href="#commands">Commands</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
-</thead>
-<tbody>
-<tr><td><code>verify</code></td><td>Verification directive</td><td><code>:verify P ∧ Q</code></td></tr>
-</tbody>
-</table>
-</div>
+<h2 id="see-also-3"><a class="header" href="#see-also-3">See Also</a></h2>
+<ul>
+<li><a href="#appendix-operators">Operators</a> - Operator reference</li>
+<li><a href="#appendix-lapack-functions">LAPACK Functions</a> - Numerical linear algebra</li>
+<li><a href="#matrices">Matrices</a> - Matrix chapter</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="appendix-lapack-functions"><a class="header" href="#appendix-lapack-functions">Appendix: LAPACK Functions</a></h1>
+<p>Kleis provides comprehensive numerical linear algebra operations through LAPACK integration. These functions are available when Kleis is compiled with the <code>numerical</code> feature.</p>
 <blockquote>
-<p><strong>Note:</strong> Using a reserved keyword as a variable name will cause a parse error.
-For example, <code>let lambda = 5</code> fails because <code>lambda</code> is reserved for anonymous functions.</p>
+<p><strong>Note:</strong> These operations perform concrete numerical computation. For symbolic matrix operations, see <a href="#appendix-built-in-functions">Built-in Functions</a>.</p>
 </blockquote>
+<h2 id="eigenvalues-and-eigenvectors"><a class="header" href="#eigenvalues-and-eigenvectors">Eigenvalues and Eigenvectors</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Returns</th></tr>
+</thead>
+<tbody>
+<tr><td><code>eigenvalues(A)</code></td><td><code>eigvals</code></td><td>Compute eigenvalues</td><td>List of eigenvalues</td></tr>
+<tr><td><code>eig(A)</code></td><td></td><td>Eigenvalues + eigenvectors</td><td><code>[eigenvalues, eigenvectors]</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-1"><a class="header" href="#example-1">Example</a></h3>
+<pre><code class="language-kleis">// 2×2 matrix
+let A = [[4, 2], [1, 3]] in
+eigenvalues(A)   // → [-5.0, 2.0] (approximately)
+</code></pre>
+<h2 id="singular-value-decomposition"><a class="header" href="#singular-value-decomposition">Singular Value Decomposition</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Returns</th></tr>
+</thead>
+<tbody>
+<tr><td><code>svd(A)</code></td><td></td><td>Full SVD decomposition</td><td><code>[U, S, Vt]</code></td></tr>
+<tr><td><code>singular_values(A)</code></td><td><code>svdvals</code></td><td>Singular values only</td><td>List of singular values</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-1-1"><a class="header" href="#example-1-1">Example</a></h3>
+<pre><code class="language-kleis">let A = [[1, 2], [3, 4], [5, 6]] in
+let [U, S, Vt] = svd(A) in
+// A ≈ U × diag(S) × Vt
+singular_values(A)   // → [9.52..., 0.51...]
+</code></pre>
+<h2 id="matrix-decompositions"><a class="header" href="#matrix-decompositions">Matrix Decompositions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Returns</th></tr>
+</thead>
+<tbody>
+<tr><td><code>qr(A)</code></td><td></td><td>QR decomposition</td><td><code>[Q, R]</code></td></tr>
+<tr><td><code>cholesky(A)</code></td><td><code>chol</code></td><td>Cholesky decomposition</td><td>Lower triangular L</td></tr>
+<tr><td><code>schur(A)</code></td><td><code>schur_decomp</code></td><td>Schur decomposition</td><td><code>[T, Z]</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="qr-example"><a class="header" href="#qr-example">QR Example</a></h3>
+<pre><code class="language-kleis">let A = [[1, 2], [3, 4], [5, 6]] in
+let [Q, R] = qr(A) in
+// A = Q × R, where Q is orthogonal, R is upper triangular
+</code></pre>
+<h3 id="cholesky-example"><a class="header" href="#cholesky-example">Cholesky Example</a></h3>
+<pre><code class="language-kleis">// Positive definite matrix
+let A = [[4, 2], [2, 3]] in
+let L = cholesky(A) in
+// A = L × Lᵀ
+</code></pre>
+<h2 id="linear-systems"><a class="header" href="#linear-systems">Linear Systems</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>solve(A, b)</code></td><td><code>linsolve</code></td><td>Solve Ax = b</td></tr>
+<tr><td><code>inv(A)</code></td><td><code>inverse</code></td><td>Matrix inverse A⁻¹</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-2"><a class="header" href="#example-2">Example</a></h3>
+<pre><code class="language-kleis">let A = [[3, 1], [1, 2]] in
+let b = [9, 8] in
+solve(A, b)   // → [2, 3] (solution x where Ax = b)
+
+inv(A)        // → [[0.4, -0.2], [-0.2, 0.6]]
+</code></pre>
+<h2 id="matrix-properties-2"><a class="header" href="#matrix-properties-2">Matrix Properties</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>rank(A)</code></td><td><code>matrix_rank</code></td><td>Matrix rank</td></tr>
+<tr><td><code>cond(A)</code></td><td><code>condition_number</code></td><td>Condition number</td></tr>
+<tr><td><code>norm(A)</code></td><td><code>matrix_norm</code></td><td>Matrix norm (Frobenius)</td></tr>
+<tr><td><code>det_lapack(A)</code></td><td></td><td>Determinant (via LU)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-3"><a class="header" href="#example-3">Example</a></h3>
+<pre><code class="language-kleis">let A = [[1, 2], [3, 4]] in
+rank(A)    // → 2
+cond(A)    // → 14.93... (κ(A))
+norm(A)    // → 5.47... (Frobenius norm)
+</code></pre>
+<h2 id="matrix-functions"><a class="header" href="#matrix-functions">Matrix Functions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>expm(A)</code></td><td><code>matrix_exp</code></td><td>Matrix exponential e^A</td></tr>
+<tr><td><code>mpow(A, n)</code></td><td><code>matrix_pow</code></td><td>Matrix power A^n</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-4"><a class="header" href="#example-4">Example</a></h3>
+<pre><code class="language-kleis">let A = [[0, 1], [-1, 0]] in
+expm(A)   // → rotation matrix (since A is skew-symmetric)
+
+let B = [[1, 1], [0, 1]] in
+mpow(B, 3)   // → [[1, 3], [0, 1]]
+</code></pre>
+<hr>
+<h2 id="complex-matrix-operations"><a class="header" href="#complex-matrix-operations">Complex Matrix Operations</a></h2>
+<p>For complex matrices, use the <code>cmat_*</code> variants:</p>
+<h3 id="eigenvalues-and-decompositions"><a class="header" href="#eigenvalues-and-decompositions">Eigenvalues and Decompositions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_eigenvalues(A)</code></td><td><code>cmat_eigvals</code></td><td>Complex eigenvalues</td></tr>
+<tr><td><code>cmat_eig(A)</code></td><td></td><td>Complex eigenvalues + eigenvectors</td></tr>
+<tr><td><code>cmat_svd(A)</code></td><td></td><td>Complex SVD</td></tr>
+<tr><td><code>cmat_singular_values(A)</code></td><td><code>cmat_svdvals</code></td><td>Complex singular values</td></tr>
+<tr><td><code>cmat_schur(A)</code></td><td><code>schur_complex</code></td><td>Complex Schur decomposition</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="linear-systems-1"><a class="header" href="#linear-systems-1">Linear Systems</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_solve(A, b)</code></td><td><code>cmat_linsolve</code></td><td>Solve complex Ax = b</td></tr>
+<tr><td><code>cmat_inv(A)</code></td><td><code>cmat_inverse</code></td><td>Complex inverse</td></tr>
+<tr><td><code>cmat_qr(A)</code></td><td></td><td>Complex QR decomposition</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="matrix-properties-1-1"><a class="header" href="#matrix-properties-1-1">Matrix Properties</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_rank(A)</code></td><td><code>cmat_matrix_rank</code></td><td>Complex matrix rank</td></tr>
+<tr><td><code>cmat_cond(A)</code></td><td><code>cmat_condition_number</code></td><td>Complex condition number</td></tr>
+<tr><td><code>cmat_norm(A)</code></td><td><code>cmat_matrix_norm</code></td><td>Complex matrix norm</td></tr>
+<tr><td><code>cmat_det(A)</code></td><td><code>cmat_determinant</code></td><td>Complex determinant</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="matrix-functions-1"><a class="header" href="#matrix-functions-1">Matrix Functions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_expm(A)</code></td><td><code>cmat_matrix_exp</code></td><td>Complex matrix exponential</td></tr>
+<tr><td><code>cmat_mpow(A, n)</code></td><td><code>cmat_matrix_pow</code></td><td>Complex matrix power</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="complex-matrix-utilities"><a class="header" href="#complex-matrix-utilities">Complex Matrix Utilities</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_zero(m, n)</code></td><td><code>builtin_cmat_zero</code></td><td>Complex zero matrix</td></tr>
+<tr><td><code>cmat_eye(n)</code></td><td><code>builtin_cmat_eye</code></td><td>Complex identity</td></tr>
+<tr><td><code>cmat_from_real(A)</code></td><td><code>as_complex</code></td><td>Real → complex matrix</td></tr>
+<tr><td><code>cmat_from_imag(A)</code></td><td><code>as_imaginary</code></td><td>Imag → complex matrix</td></tr>
+<tr><td><code>cmat_real(A)</code></td><td><code>real_part_matrix</code></td><td>Extract real part</td></tr>
+<tr><td><code>cmat_imag(A)</code></td><td><code>imag_part_matrix</code></td><td>Extract imaginary part</td></tr>
+<tr><td><code>cmat_add(A, B)</code></td><td></td><td>Complex addition</td></tr>
+<tr><td><code>cmat_sub(A, B)</code></td><td></td><td>Complex subtraction</td></tr>
+<tr><td><code>cmat_mul(A, B)</code></td><td></td><td>Complex multiplication</td></tr>
+<tr><td><code>cmat_conj(A)</code></td><td></td><td>Element-wise conjugate</td></tr>
+<tr><td><code>cmat_transpose(A)</code></td><td></td><td>Transpose</td></tr>
+<tr><td><code>cmat_dagger(A)</code></td><td><code>cmat_adjoint</code></td><td>Conjugate transpose (A†)</td></tr>
+<tr><td><code>cmat_trace(A)</code></td><td></td><td>Complex trace</td></tr>
+<tr><td><code>cmat_scale_real(c, A)</code></td><td></td><td>Scale by real scalar</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="matrix-conversion"><a class="header" href="#matrix-conversion">Matrix Conversion</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>realify(A)</code></td><td><code>builtin_realify</code></td><td>Complex n×n → Real 2n×2n</td></tr>
+<tr><td><code>complexify(A)</code></td><td><code>builtin_complexify</code></td><td>Real 2n×2n → Complex n×n</td></tr>
+</tbody>
+</table>
+</div>
+<p>These functions convert between complex matrices and their real-valued block representations:</p>
+<pre><code>Complex matrix:     Real representation:
+[a+bi  c+di]   →    [a  -b  c  -d]
+[e+fi  g+hi]        [b   a  d   c]
+                    [e  -f  g  -h]
+                    [f   e  h   g]
+</code></pre>
+<hr>
+<h2 id="jupyter-notebook-usage"><a class="header" href="#jupyter-notebook-usage">Jupyter Notebook Usage</a></h2>
+<p>When using Kleis Numeric kernel in Jupyter:</p>
+<pre><code class="language-kleis">// Define a matrix
+let A = [[1, 2], [3, 4]]
+
+// Compute eigenvalues
+eigenvalues(A)
+
+// Pretty-print with out()
+out(inv(A))
+</code></pre>
+<h2 id="see-also-4"><a class="header" href="#see-also-4">See Also</a></h2>
+<ul>
+<li><a href="#appendix-built-in-functions">Built-in Functions</a> - Basic matrix operations</li>
+<li><a href="#appendix-operators">Operators</a> - Operator reference</li>
+<li><a href="#jupyter-notebook">Jupyter Notebook</a> - Using numerical Kleis</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-c-standard-library"><a class="header" href="#appendix-c-standard-library">Appendix C: Standard Library</a></h1>
 <p>The Kleis standard library provides foundational types, structures, and operations.</p>
@@ -6801,7 +7210,7 @@ example "symbolic verification" {
 <li><strong>Think symbolically</strong> — Variables hold AST, not computed values</li>
 <li><strong>Use Z3 for verification</strong> — Let <code>assert()</code> prove symbolic claims</li>
 </ol>
-<h2 id="see-also-2"><a class="header" href="#see-also-2">See Also</a></h2>
+<h2 id="see-also-5"><a class="header" href="#see-also-5">See Also</a></h2>
 <ul>
 <li><a href="#example-blocks-v093">Example Blocks</a> — How to write debuggable code</li>
 <li><a href="#the-repl-1">The REPL</a> — Interactive exploration</li>

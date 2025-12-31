@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Grammar Reference - The Kleis Manual</title>
+        <title>LAPACK Functions - The Kleis Manual</title>
 
 
         <!-- Custom HTML head -->
@@ -155,7 +155,7 @@
                         <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/appendix/grammar.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/appendix/lapack.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -189,397 +189,258 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
-<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.95).</p>
+                        <h1 id="appendix-lapack-functions"><a class="header" href="#appendix-lapack-functions">Appendix: LAPACK Functions</a></h1>
+<p>Kleis provides comprehensive numerical linear algebra operations through LAPACK integration. These functions are available when Kleis is compiled with the <code>numerical</code> feature.</p>
 <blockquote>
-<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v095.md</code> for the full specification.</p>
+<p><strong>Note:</strong> These operations perform concrete numerical computation. For symbolic matrix operations, see <a href="./builtin-functions.html">Built-in Functions</a>.</p>
 </blockquote>
-<h2 id="program-structure"><a class="header" href="#program-structure">Program Structure</a></h2>
-<pre><code class="language-ebnf">program ::= { declaration }
-
-declaration ::= importDecl              // v0.8: Module imports
-              | libraryAnnotation
-              | versionAnnotation
-              | structureDef
-              | implementsDef
-              | dataDef
-              | functionDef
-              | operationDecl
-              | typeAlias
-              | exampleBlock            // v0.93: Executable documentation
-</code></pre>
-<h2 id="import-statements-v08"><a class="header" href="#import-statements-v08">Import Statements (v0.8)</a></h2>
-<pre><code class="language-ebnf">importDecl ::= "import" string
-</code></pre>
-<p>Example:</p>
-<pre><code class="language-text">import "stdlib/prelude.kleis"
-import "stdlib/complex.kleis"
-</code></pre>
-<h2 id="annotations"><a class="header" href="#annotations">Annotations</a></h2>
-<pre><code class="language-ebnf">libraryAnnotation ::= "@library" "(" string ")"
-versionAnnotation ::= "@version" "(" string ")"
-</code></pre>
-<p>Example:</p>
-<pre><code class="language-text">@library("stdlib/algebra")
-@version("0.7")
-</code></pre>
-<h2 id="data-type-definitions"><a class="header" href="#data-type-definitions">Data Type Definitions</a></h2>
-<pre><code class="language-ebnf">dataDef ::= "data" identifier [ "(" typeParams ")" ] "="
-            dataVariant { "|" dataVariant }
-
-dataVariant ::= identifier [ "(" dataFields ")" ]
-
-dataField ::= identifier ":" type    // Named field
-            | type                   // Positional field
-</code></pre>
-<p>Examples:</p>
-<pre><code class="language-text">data Bool {
-    True
-    False
-}
-data Option(T) {
-    None
-    Some(value : T)
-}
-</code></pre>
-<h2 id="pattern-matching"><a class="header" href="#pattern-matching">Pattern Matching</a></h2>
-<pre><code class="language-ebnf">matchExpr ::= "match" expression "{" matchCases "}"
-
-matchCase ::= pattern [ "if" guardExpression ] "=&gt;" expression   // v0.8: guards
-
-pattern ::= basePattern [ "as" identifier ]  // v0.8: as-patterns
-
-basePattern ::= "_"                              // Wildcard
-              | identifier                       // Variable
-              | identifier [ "(" patternArgs ")" ]  // Constructor
-              | number | string | boolean        // Constant
-              | tuplePattern                     // v0.8: Tuple sugar
-
-tuplePattern ::= "()"                            // Unit
-               | "(" pattern "," pattern { "," pattern } ")"  // Pair, Tuple3, etc.
-</code></pre>
-<p>Examples:</p>
-<pre><code class="language-text">match x { True =&gt; 1 | False =&gt; 0 }
-match opt { None =&gt; 0 | Some(x) =&gt; x }
-match result { Ok(Some(x)) =&gt; x | Ok(None) =&gt; 0 | Err(_) =&gt; -1 }
-
-// v0.8: Pattern guards
-match n { x if x &lt; 0 =&gt; "negative" | x if x &gt; 0 =&gt; "positive" | _ =&gt; "zero" }
-
-// v0.8: As-patterns
-match list { Cons(h, t) as whole =&gt; process(whole) | Nil =&gt; empty }
-</code></pre>
-<h2 id="structure-definitions"><a class="header" href="#structure-definitions">Structure Definitions</a></h2>
-<pre><code class="language-ebnf">structureDef ::= "structure" identifier "(" typeParams ")"
-                 [ extendsClause ] [ overClause ]
-                 "{" { structureMember } "}"
-
-extendsClause ::= "extends" identifier [ "(" typeArgs ")" ]
-overClause ::= "over" "Field" "(" type ")"
-
-structureMember ::= operationDecl
-                  | elementDecl
-                  | axiomDecl
-                  | nestedStructure
-                  | functionDef
-</code></pre>
-<p>Example:</p>
-<pre><code class="language-text">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
-    operation (·) : F × V → V
-    
-    axiom scalar_distributive : ∀(a : F)(b : F)(v : V).
-        (a + b) · v = a · v + b · v
-}
-</code></pre>
-<h2 id="implements"><a class="header" href="#implements">Implements</a></h2>
-<pre><code class="language-ebnf">implementsDef ::= "implements" identifier "(" typeArgs ")"
-                  [ overClause ]
-                  [ "{" { implMember } "}" ]
-
-implMember ::= elementImpl | operationImpl | verifyStmt
-
-operationImpl ::= "operation" operatorSymbol "=" implementation
-                | "operation" operatorSymbol "(" params ")" "=" expression
-</code></pre>
-<p>Example:</p>
-<pre><code class="language-text">implements Ring(ℝ) {
-    operation add = builtin_add
-    operation mul = builtin_mul
-    element zero = 0
-    element one = 1
-}
-</code></pre>
-<h2 id="function-definitions"><a class="header" href="#function-definitions">Function Definitions</a></h2>
-<pre><code class="language-ebnf">functionDef ::= "define" identifier [ typeAnnotation ] "=" expression
-              | "define" identifier "(" params ")" [ ":" type ] "=" expression
-
-param ::= identifier [ ":" type ]
-</code></pre>
-<p>Examples:</p>
-<pre><code class="language-text">define pi = 3.14159
-define square(x) = x * x
-define add(x: ℝ, y: ℝ) : ℝ = x + y
-</code></pre>
-<h2 id="type-system"><a class="header" href="#type-system">Type System</a></h2>
-<pre><code class="language-ebnf">type ::= primitiveType
-       | parametricType
-       | functionType
-       | typeVariable
-       | "(" type ")"
-
-primitiveType ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
-                | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
-                | "Bool" | "String" | "Unit"
-
-parametricType ::= identifier "(" typeArgs ")"
-                 | "BitVec" "(" number ")"      // Fixed-size bit vectors
-
-functionType ::= type "→" type | type "-&gt;" type
-
-typeAlias ::= "type" identifier "=" type
-</code></pre>
-<p>Examples:</p>
-<pre><code class="language-text">ℝ                    // Real numbers
-Vector(3)            // Parameterized type
-ℝ → ℝ               // Function type
-(ℝ → ℝ) → ℝ         // Higher-order function
-type RealFunc = ℝ → ℝ  // Type alias
-</code></pre>
-<h2 id="expressions"><a class="header" href="#expressions">Expressions</a></h2>
-<pre><code class="language-ebnf">expression ::= primary
-             | matchExpr
-             | prefixOp expression
-             | expression postfixOp
-             | expression infixOp expression
-             | expression "(" [ arguments ] ")"
-             | "[" [ expressions ] "]"           // List literal
-             | lambda
-             | letBinding
-             | conditional
-
-primary ::= identifier | number | string | symbolicConstant
-          | "(" expression ")" | placeholder
-
-symbolicConstant ::= "π" | "e" | "i" | "ℏ" | "c" | "φ" | "∞" | "∅"
-
-placeholder ::= "□"
-</code></pre>
-<h2 id="lambda-expressions"><a class="header" href="#lambda-expressions">Lambda Expressions</a></h2>
-<pre><code class="language-ebnf">lambda ::= "λ" params "." expression
-         | "lambda" params "." expression
-</code></pre>
-<p>Examples:</p>
-<pre><code class="language-text">λ x . x + 1              // Simple lambda
-λ x y . x * y            // Multiple parameters
-λ (x : ℝ) . x^2          // With type annotation
-lambda x . x             // Using keyword
-</code></pre>
-<h2 id="let-bindings"><a class="header" href="#let-bindings">Let Bindings</a></h2>
-<pre><code class="language-ebnf">letBinding ::= "let" pattern [ typeAnnotation ] "=" expression "in" expression
-// Note: typeAnnotation only valid when pattern is a simple Variable
-</code></pre>
-<p>Examples:</p>
-<pre><code class="language-text">let x = 5 in x + x
-let x : ℝ = 3.14 in x * 2
-let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
-
-// v0.8: Let destructuring
-let Point(x, y) = origin in x^2 + y^2
-let Some(Pair(a, b)) = opt in a + b
-let Cons(h, _) = list in h
-</code></pre>
-<h2 id="conditionals"><a class="header" href="#conditionals">Conditionals</a></h2>
-<pre><code class="language-ebnf">conditional ::= "if" expression "then" expression "else" expression
-</code></pre>
-<p>Example:</p>
-<pre><code class="language-text">if x &gt; 0 then x else -x
-</code></pre>
-<h2 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h2>
-<pre><code class="language-ebnf">forAllProp ::= ("∀" | "forall") variables [ whereClause ] "." proposition
-existsProp ::= ("∃" | "exists") variables [ whereClause ] "." proposition
-
-varDecl ::= identifier [ ":" type ]
-          | identifier "∈" type
-          | "(" identifier { identifier } ":" type ")"
-
-whereClause ::= "where" expression
-</code></pre>
-<p>Examples:</p>
-<pre><code class="language-text">∀(x : ℝ). x + 0 = x
-∃(x : ℤ). x * x = 4
-∀(a : ℝ)(b : ℝ) where a ≠ 0 . a * (1/a) = 1
-</code></pre>
-<h2 id="v09-enhancements"><a class="header" href="#v09-enhancements">v0.9 Enhancements</a></h2>
-<h3 id="nested-quantifiers-in-expressions"><a class="header" href="#nested-quantifiers-in-expressions">Nested Quantifiers in Expressions</a></h3>
-<p>Quantifiers can now appear as operands in logical expressions:</p>
-<pre><code class="language-text">// v0.9: Quantifier inside conjunction
-axiom nested: (x &gt; 0) ∧ (∀(y : ℝ). y &gt; 0)
-
-// Epsilon-delta limit definition
-axiom epsilon_delta: ∀(ε : ℝ). ε &gt; 0 → 
-    (∃(δ : ℝ). δ &gt; 0 ∧ (∀(x : ℝ). abs(x - a) &lt; δ → abs(f(x) - L) &lt; ε))
-</code></pre>
-<h3 id="function-types-in-type-annotations"><a class="header" href="#function-types-in-type-annotations">Function Types in Type Annotations</a></h3>
-<p>Function types are now allowed in quantifier variable declarations:</p>
-<pre><code class="language-text">// Function from reals to reals
-axiom func: ∀(f : ℝ → ℝ). f(0) = f(0)
-
-// Higher-order function
-axiom compose: ∀(f : ℝ → ℝ, g : ℝ → ℝ). compose(f, g) = λ x . f(g(x))
-
-// Topology: continuity via preimages
-axiom continuity: ∀(f : X → Y, V : Set(Y)). 
-    is_open(V) → is_open(preimage(f, V))
-</code></pre>
-<h2 id="v095-big-operators"><a class="header" href="#v095-big-operators">v0.95 Big Operators</a></h2>
-<p>Big operators (Σ, Π, ∫, lim) can be used with function call syntax:</p>
-<pre><code class="language-ebnf">bigOpExpr ::= "Σ" "(" expr "," expr "," expr ")"
-            | "Π" "(" expr "," expr "," expr ")"
-            | "∫" "(" expr "," expr "," expr "," expr ")"
-            | "lim" "(" expr "," expr "," expr ")"
-            | ("Σ" | "Π" | "∫") primaryExpr      // prefix form
-</code></pre>
-<h3 id="summation-σ"><a class="header" href="#summation-σ">Summation: Σ</a></h3>
-<pre><code class="language-text">// Sum of f(i) from 1 to n
-Σ(1, n, λ i . f(i))
-
-// Parsed as: sum_bounds(λ i . f(i), 1, n)
-</code></pre>
-<h3 id="product-π"><a class="header" href="#product-π">Product: Π</a></h3>
-<pre><code class="language-text">// Product of g(i) from 1 to n
-Π(1, n, λ i . g(i))
-
-// Parsed as: prod_bounds(λ i . g(i), 1, n)
-</code></pre>
-<h3 id="integral-"><a class="header" href="#integral-">Integral: ∫</a></h3>
-<pre><code class="language-text">// Integral of x² from 0 to 1
-∫(0, 1, λ x . x * x, x)
-
-// Parsed as: int_bounds(λ x . x * x, 0, 1, x)
-</code></pre>
-<h3 id="limit-lim"><a class="header" href="#limit-lim">Limit: lim</a></h3>
-<pre><code class="language-text">// Limit of sin(x)/x as x approaches 0
-lim(x, 0, sin(x) / x)
-
-// Parsed as: lim(sin(x) / x, x, 0)
-</code></pre>
-<h3 id="prefix-forms"><a class="header" href="#prefix-forms">Prefix Forms</a></h3>
-<p>Simple prefix forms are also supported:</p>
-<pre><code class="language-text">Σf        // Parsed as: Sum(f)
-∫g        // Parsed as: Integrate(g)
-</code></pre>
-<h2 id="calculus-notation-v07"><a class="header" href="#calculus-notation-v07">Calculus Notation (v0.7)</a></h2>
-<p>Kleis uses Mathematica-style notation for calculus operations:</p>
-<pre><code class="language-ebnf">// Derivatives (function calls)
-D(f, x)              // Partial derivative ∂f/∂x
-D(f, x, y)           // Mixed partial ∂²f/∂x∂y
-D(f, {x, n})         // nth derivative ∂ⁿf/∂xⁿ
-Dt(f, x)             // Total derivative df/dx
-
-// Integrals
-Integrate(f, x)           // Indefinite ∫f dx
-Integrate(f, x, a, b)     // Definite ∫[a,b] f dx
-
-// Sums and Products
-Sum(expr, i, 1, n)        // Σᵢ₌₁ⁿ expr
-Product(expr, i, 1, n)    // Πᵢ₌₁ⁿ expr
-
-// Limits
-Limit(f, x, a)            // lim_{x→a} f
-</code></pre>
-<p>Note: Legacy notation like <code>∂f/∂x</code> and <code>df/dx</code> is deprecated. Use <code>D(f, x)</code> and <code>Dt(f, x)</code> instead.</p>
-<h2 id="operators"><a class="header" href="#operators">Operators</a></h2>
-<h3 id="prefix-operators"><a class="header" href="#prefix-operators">Prefix Operators</a></h3>
-<pre><code class="language-ebnf">prefixOp ::= "-" | "¬" | "∇" | "√" | "∫" | "∬" | "∭" | "∮" | "∯"
-</code></pre>
-<h3 id="postfix-operators"><a class="header" href="#postfix-operators">Postfix Operators</a></h3>
-<pre><code class="language-ebnf">postfixOp ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
-</code></pre>
-<h3 id="infix-operators-by-precedence-low-to-high"><a class="header" href="#infix-operators-by-precedence-low-to-high">Infix Operators (by precedence, low to high)</a></h3>
+<h2 id="eigenvalues-and-eigenvectors"><a class="header" href="#eigenvalues-and-eigenvectors">Eigenvalues and Eigenvectors</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Precedence</th><th>Operators</th><th>Associativity</th></tr>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Returns</th></tr>
 </thead>
 <tbody>
-<tr><td>1</td><td><code>↔</code> <code>⇔</code> <code>⟺</code> (biconditional)</td><td>Left</td></tr>
-<tr><td>2</td><td><code>→</code> <code>⇒</code> <code>⟹</code> (implication)</td><td>Right</td></tr>
-<tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
-<tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
-<tr><td>5</td><td><code>¬</code> <code>not</code> (prefix)</td><td>Prefix</td></tr>
-<tr><td>6</td><td><code>=</code> <code>==</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-assoc</td></tr>
-<tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
-<tr><td>8</td><td><code>*</code> <code>×</code> <code>/</code> <code>·</code></td><td>Left</td></tr>
-<tr><td>9</td><td><code>^</code></td><td>Right</td></tr>
-<tr><td>10</td><td><code>-</code> (unary)</td><td>Prefix</td></tr>
-<tr><td>11</td><td>Postfix (<code>!</code>, <code>ᵀ</code>, <code>†</code>)</td><td>Postfix</td></tr>
-<tr><td>12</td><td>Function application</td><td>Left</td></tr>
+<tr><td><code>eigenvalues(A)</code></td><td><code>eigvals</code></td><td>Compute eigenvalues</td><td>List of eigenvalues</td></tr>
+<tr><td><code>eig(A)</code></td><td></td><td>Eigenvalues + eigenvectors</td><td><code>[eigenvalues, eigenvectors]</code></td></tr>
 </tbody>
 </table>
 </div>
-<blockquote>
-<p><strong>Note:</strong> Set operators (<code>∈</code>, <code>∉</code>, <code>⊆</code>, <code>≈</code>, <code>≡</code>) are not implemented. Use function-call syntax instead.</p>
-</blockquote>
-<h2 id="comments"><a class="header" href="#comments">Comments</a></h2>
-<pre><code class="language-ebnf">lineComment ::= "//" { any character except newline } newline
-blockComment ::= "/*" { any character } "*/"
+<h3 id="example"><a class="header" href="#example">Example</a></h3>
+<pre><code class="language-kleis">// 2×2 matrix
+let A = [[4, 2], [1, 3]] in
+eigenvalues(A)   // → [-5.0, 2.0] (approximately)
 </code></pre>
-<p><strong>Note:</strong> Kleis uses C-style comments (<code>//</code> and <code>/* */</code>), not Haskell-style (<code>--</code> and <code>{- -}</code>).</p>
-<h2 id="unicode-equivalents"><a class="header" href="#unicode-equivalents">Unicode Equivalents</a></h2>
+<h2 id="singular-value-decomposition"><a class="header" href="#singular-value-decomposition">Singular Value Decomposition</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Unicode</th><th>ASCII</th><th>Description</th></tr>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Returns</th></tr>
 </thead>
 <tbody>
-<tr><td><code>∀</code></td><td><code>forall</code></td><td>Universal quantifier</td></tr>
-<tr><td><code>∃</code></td><td><code>exists</code></td><td>Existential quantifier</td></tr>
-<tr><td><code>→</code></td><td><code>-&gt;</code></td><td>Function type / implies</td></tr>
-<tr><td><code>×</code></td><td><code>*</code></td><td>Product type / multiplication</td></tr>
-<tr><td><code>∧</code></td><td><code>and</code>, <code>/\</code></td><td>Logical and</td></tr>
-<tr><td><code>∨</code></td><td><code>or</code>, <code>\/</code></td><td>Logical or</td></tr>
-<tr><td><code>¬</code></td><td><code>not</code>, <code>~</code></td><td>Logical not</td></tr>
-<tr><td><code>≤</code></td><td><code>&lt;=</code></td><td>Less or equal</td></tr>
-<tr><td><code>≥</code></td><td><code>&gt;=</code></td><td>Greater or equal</td></tr>
-<tr><td><code>≠</code></td><td><code>!=</code>, <code>/=</code></td><td>Not equal</td></tr>
-<tr><td><code>ℕ</code></td><td><code>Nat</code></td><td>Natural numbers</td></tr>
-<tr><td><code>ℤ</code></td><td><code>Int</code></td><td>Integers</td></tr>
-<tr><td><code>ℚ</code></td><td><code>Rational</code></td><td>Rational numbers</td></tr>
-<tr><td><code>ℝ</code></td><td><code>Real</code></td><td>Real numbers</td></tr>
-<tr><td><code>ℂ</code></td><td><code>Complex</code></td><td>Complex numbers</td></tr>
-<tr><td><code>λ</code></td><td><code>lambda</code></td><td>Lambda</td></tr>
-<tr><td><code>π</code></td><td><code>pi</code></td><td>Pi constant</td></tr>
-<tr><td><code>∞</code></td><td><code>infinity</code></td><td>Infinity</td></tr>
+<tr><td><code>svd(A)</code></td><td></td><td>Full SVD decomposition</td><td><code>[U, S, Vt]</code></td></tr>
+<tr><td><code>singular_values(A)</code></td><td><code>svdvals</code></td><td>Singular values only</td><td>List of singular values</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="lexical-elements"><a class="header" href="#lexical-elements">Lexical Elements</a></h2>
-<pre><code class="language-ebnf">identifier ::= letter { letter | digit | "_" }
-
-number ::= integer | decimal | scientific
-integer ::= digit { digit }
-decimal ::= digit { digit } "." { digit }
-scientific ::= decimal ("e" | "E") ["+"|"-"] digit { digit }
-
-string ::= '"' { character } '"'
-
-letter ::= "a".."z" | "A".."Z" | greekLetter
-digit ::= "0".."9"
-
-greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
-             | "ι" | "κ" | "λ" | "μ" | "ν" | "ξ" | "ο" | "π"
-             | "ρ" | "σ" | "τ" | "υ" | "φ" | "χ" | "ψ" | "ω"
+<h3 id="example-1"><a class="header" href="#example-1">Example</a></h3>
+<pre><code class="language-kleis">let A = [[1, 2], [3, 4], [5, 6]] in
+let [U, S, Vt] = svd(A) in
+// A ≈ U × diag(S) × Vt
+singular_values(A)   // → [9.52..., 0.51...]
 </code></pre>
+<h2 id="matrix-decompositions"><a class="header" href="#matrix-decompositions">Matrix Decompositions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Returns</th></tr>
+</thead>
+<tbody>
+<tr><td><code>qr(A)</code></td><td></td><td>QR decomposition</td><td><code>[Q, R]</code></td></tr>
+<tr><td><code>cholesky(A)</code></td><td><code>chol</code></td><td>Cholesky decomposition</td><td>Lower triangular L</td></tr>
+<tr><td><code>schur(A)</code></td><td><code>schur_decomp</code></td><td>Schur decomposition</td><td><code>[T, Z]</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="qr-example"><a class="header" href="#qr-example">QR Example</a></h3>
+<pre><code class="language-kleis">let A = [[1, 2], [3, 4], [5, 6]] in
+let [Q, R] = qr(A) in
+// A = Q × R, where Q is orthogonal, R is upper triangular
+</code></pre>
+<h3 id="cholesky-example"><a class="header" href="#cholesky-example">Cholesky Example</a></h3>
+<pre><code class="language-kleis">// Positive definite matrix
+let A = [[4, 2], [2, 3]] in
+let L = cholesky(A) in
+// A = L × Lᵀ
+</code></pre>
+<h2 id="linear-systems"><a class="header" href="#linear-systems">Linear Systems</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>solve(A, b)</code></td><td><code>linsolve</code></td><td>Solve Ax = b</td></tr>
+<tr><td><code>inv(A)</code></td><td><code>inverse</code></td><td>Matrix inverse A⁻¹</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-2"><a class="header" href="#example-2">Example</a></h3>
+<pre><code class="language-kleis">let A = [[3, 1], [1, 2]] in
+let b = [9, 8] in
+solve(A, b)   // → [2, 3] (solution x where Ax = b)
+
+inv(A)        // → [[0.4, -0.2], [-0.2, 0.6]]
+</code></pre>
+<h2 id="matrix-properties"><a class="header" href="#matrix-properties">Matrix Properties</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>rank(A)</code></td><td><code>matrix_rank</code></td><td>Matrix rank</td></tr>
+<tr><td><code>cond(A)</code></td><td><code>condition_number</code></td><td>Condition number</td></tr>
+<tr><td><code>norm(A)</code></td><td><code>matrix_norm</code></td><td>Matrix norm (Frobenius)</td></tr>
+<tr><td><code>det_lapack(A)</code></td><td></td><td>Determinant (via LU)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-3"><a class="header" href="#example-3">Example</a></h3>
+<pre><code class="language-kleis">let A = [[1, 2], [3, 4]] in
+rank(A)    // → 2
+cond(A)    // → 14.93... (κ(A))
+norm(A)    // → 5.47... (Frobenius norm)
+</code></pre>
+<h2 id="matrix-functions"><a class="header" href="#matrix-functions">Matrix Functions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>expm(A)</code></td><td><code>matrix_exp</code></td><td>Matrix exponential e^A</td></tr>
+<tr><td><code>mpow(A, n)</code></td><td><code>matrix_pow</code></td><td>Matrix power A^n</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-4"><a class="header" href="#example-4">Example</a></h3>
+<pre><code class="language-kleis">let A = [[0, 1], [-1, 0]] in
+expm(A)   // → rotation matrix (since A is skew-symmetric)
+
+let B = [[1, 1], [0, 1]] in
+mpow(B, 3)   // → [[1, 3], [0, 1]]
+</code></pre>
+<hr>
+<h2 id="complex-matrix-operations"><a class="header" href="#complex-matrix-operations">Complex Matrix Operations</a></h2>
+<p>For complex matrices, use the <code>cmat_*</code> variants:</p>
+<h3 id="eigenvalues-and-decompositions"><a class="header" href="#eigenvalues-and-decompositions">Eigenvalues and Decompositions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_eigenvalues(A)</code></td><td><code>cmat_eigvals</code></td><td>Complex eigenvalues</td></tr>
+<tr><td><code>cmat_eig(A)</code></td><td></td><td>Complex eigenvalues + eigenvectors</td></tr>
+<tr><td><code>cmat_svd(A)</code></td><td></td><td>Complex SVD</td></tr>
+<tr><td><code>cmat_singular_values(A)</code></td><td><code>cmat_svdvals</code></td><td>Complex singular values</td></tr>
+<tr><td><code>cmat_schur(A)</code></td><td><code>schur_complex</code></td><td>Complex Schur decomposition</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="linear-systems-1"><a class="header" href="#linear-systems-1">Linear Systems</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_solve(A, b)</code></td><td><code>cmat_linsolve</code></td><td>Solve complex Ax = b</td></tr>
+<tr><td><code>cmat_inv(A)</code></td><td><code>cmat_inverse</code></td><td>Complex inverse</td></tr>
+<tr><td><code>cmat_qr(A)</code></td><td></td><td>Complex QR decomposition</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="matrix-properties-1"><a class="header" href="#matrix-properties-1">Matrix Properties</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_rank(A)</code></td><td><code>cmat_matrix_rank</code></td><td>Complex matrix rank</td></tr>
+<tr><td><code>cmat_cond(A)</code></td><td><code>cmat_condition_number</code></td><td>Complex condition number</td></tr>
+<tr><td><code>cmat_norm(A)</code></td><td><code>cmat_matrix_norm</code></td><td>Complex matrix norm</td></tr>
+<tr><td><code>cmat_det(A)</code></td><td><code>cmat_determinant</code></td><td>Complex determinant</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="matrix-functions-1"><a class="header" href="#matrix-functions-1">Matrix Functions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_expm(A)</code></td><td><code>cmat_matrix_exp</code></td><td>Complex matrix exponential</td></tr>
+<tr><td><code>cmat_mpow(A, n)</code></td><td><code>cmat_matrix_pow</code></td><td>Complex matrix power</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="complex-matrix-utilities"><a class="header" href="#complex-matrix-utilities">Complex Matrix Utilities</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cmat_zero(m, n)</code></td><td><code>builtin_cmat_zero</code></td><td>Complex zero matrix</td></tr>
+<tr><td><code>cmat_eye(n)</code></td><td><code>builtin_cmat_eye</code></td><td>Complex identity</td></tr>
+<tr><td><code>cmat_from_real(A)</code></td><td><code>as_complex</code></td><td>Real → complex matrix</td></tr>
+<tr><td><code>cmat_from_imag(A)</code></td><td><code>as_imaginary</code></td><td>Imag → complex matrix</td></tr>
+<tr><td><code>cmat_real(A)</code></td><td><code>real_part_matrix</code></td><td>Extract real part</td></tr>
+<tr><td><code>cmat_imag(A)</code></td><td><code>imag_part_matrix</code></td><td>Extract imaginary part</td></tr>
+<tr><td><code>cmat_add(A, B)</code></td><td></td><td>Complex addition</td></tr>
+<tr><td><code>cmat_sub(A, B)</code></td><td></td><td>Complex subtraction</td></tr>
+<tr><td><code>cmat_mul(A, B)</code></td><td></td><td>Complex multiplication</td></tr>
+<tr><td><code>cmat_conj(A)</code></td><td></td><td>Element-wise conjugate</td></tr>
+<tr><td><code>cmat_transpose(A)</code></td><td></td><td>Transpose</td></tr>
+<tr><td><code>cmat_dagger(A)</code></td><td><code>cmat_adjoint</code></td><td>Conjugate transpose (A†)</td></tr>
+<tr><td><code>cmat_trace(A)</code></td><td></td><td>Complex trace</td></tr>
+<tr><td><code>cmat_scale_real(c, A)</code></td><td></td><td>Scale by real scalar</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="matrix-conversion"><a class="header" href="#matrix-conversion">Matrix Conversion</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>realify(A)</code></td><td><code>builtin_realify</code></td><td>Complex n×n → Real 2n×2n</td></tr>
+<tr><td><code>complexify(A)</code></td><td><code>builtin_complexify</code></td><td>Real 2n×2n → Complex n×n</td></tr>
+</tbody>
+</table>
+</div>
+<p>These functions convert between complex matrices and their real-valued block representations:</p>
+<pre><code>Complex matrix:     Real representation:
+[a+bi  c+di]   →    [a  -b  c  -d]
+[e+fi  g+hi]        [b   a  d   c]
+                    [e  -f  g  -h]
+                    [f   e  h   g]
+</code></pre>
+<hr>
+<h2 id="jupyter-notebook-usage"><a class="header" href="#jupyter-notebook-usage">Jupyter Notebook Usage</a></h2>
+<p>When using Kleis Numeric kernel in Jupyter:</p>
+<pre><code class="language-kleis">// Define a matrix
+let A = [[1, 2], [3, 4]]
+
+// Compute eigenvalues
+eigenvalues(A)
+
+// Pretty-print with out()
+out(inv(A))
+</code></pre>
+<h2 id="see-also"><a class="header" href="#see-also">See Also</a></h2>
+<ul>
+<li><a href="./builtin-functions.html">Built-in Functions</a> - Basic matrix operations</li>
+<li><a href="./operators.html">Operators</a> - Operator reference</li>
+<li><a href="../chapters/21-jupyter-notebook.html">Jupyter Notebook</a> - Using numerical Kleis</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../chapters/19-matrices.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../appendix/builtin-functions.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../appendix/operators.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../appendix/stdlib.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -589,11 +450,11 @@ greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../chapters/19-matrices.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../appendix/builtin-functions.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../appendix/operators.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../appendix/stdlib.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
