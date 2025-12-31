@@ -4695,6 +4695,20 @@ impl Evaluator {
                 }
             }
             Expression::Operation { name, args, .. } => {
+                // Handle Matrix(rows, cols, [elements]) format
+                if (name == "Matrix" || name == "matrix") && args.len() == 3 {
+                    if let (Some(rows), Some(cols)) =
+                        (self.as_integer(&args[0]), self.as_integer(&args[1]))
+                    {
+                        if let Expression::List(elements) = &args[2] {
+                            return self.pretty_print_flat_matrix(
+                                rows as usize,
+                                cols as usize,
+                                elements,
+                            );
+                        }
+                    }
+                }
                 if args.is_empty() {
                     name.clone()
                 } else {
@@ -4755,6 +4769,56 @@ impl Evaluator {
         lines.push(
             "└".to_string() + &" ".repeat(col_widths.iter().sum::<usize>() + num_cols * 2) + "┘",
         );
+        lines.join("\n")
+    }
+
+    /// Pretty-print a flat matrix (Matrix(rows, cols, [flat_elements]))
+    fn pretty_print_flat_matrix(
+        &self,
+        rows: usize,
+        cols: usize,
+        elements: &[Expression],
+    ) -> String {
+        if elements.len() != rows * cols {
+            // Fallback if dimensions don't match
+            return format!("Matrix({}, {}, {:?})", rows, cols, elements);
+        }
+
+        // Convert flat elements to 2D
+        let string_rows: Vec<Vec<String>> = (0..rows)
+            .map(|r| {
+                (0..cols)
+                    .map(|c| self.pretty_print_value(&elements[r * cols + c]))
+                    .collect()
+            })
+            .collect();
+
+        // Find max width for each column
+        let col_widths: Vec<usize> = (0..cols)
+            .map(|c| {
+                string_rows
+                    .iter()
+                    .map(|row| row.get(c).map(|s| s.len()).unwrap_or(0))
+                    .max()
+                    .unwrap_or(0)
+            })
+            .collect();
+
+        // Build output with box drawing
+        let inner_width = col_widths.iter().sum::<usize>() + (cols - 1) * 2;
+        let mut lines = Vec::new();
+        lines.push(format!("┌{}┐", " ".repeat(inner_width + 2)));
+
+        for row in &string_rows {
+            let cells: Vec<String> = row
+                .iter()
+                .enumerate()
+                .map(|(i, s)| format!("{:>width$}", s, width = col_widths[i]))
+                .collect();
+            lines.push(format!("│ {} │", cells.join("  ")));
+        }
+
+        lines.push(format!("└{}┘", " ".repeat(inner_width + 2)));
         lines.join("\n")
     }
 
