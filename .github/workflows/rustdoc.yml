@@ -1,0 +1,78 @@
+# Publish Rust API Documentation to GitHub Pages
+#
+# This workflow builds rustdoc and deploys to GitHub Pages.
+# Access at: https://eatikrh.github.io/kleis/kleis/
+#
+# Triggered on pushes to main branch.
+
+name: Rustdoc
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Rustdoc
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Install Z3
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libz3-dev
+        
+    - name: Set Z3 header path
+      run: echo "Z3_SYS_Z3_HEADER=/usr/include/z3.h" >> $GITHUB_ENV
+      
+    - name: Build documentation
+      run: cargo doc --no-deps --document-private-items --all-features
+      env:
+        RUSTDOCFLAGS: "--enable-index-page -Zunstable-options"
+      continue-on-error: true  # Some features may not build on CI
+      
+    - name: Build documentation (fallback without all-features)
+      if: failure()
+      run: cargo doc --no-deps --document-private-items
+      
+    - name: Create index redirect
+      run: |
+        echo '<meta http-equiv="refresh" content="0; url=kleis/index.html">' > target/doc/index.html
+        
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: target/doc
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+      
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+

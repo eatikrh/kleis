@@ -258,6 +258,7 @@ kleis/
 | Resource | Description |
 |----------|-------------|
 | [The Kleis Manual](docs/manual/) | Comprehensive language guide |
+| [Rust API Docs](https://eatikrh.github.io/kleis/kleis/) | Rustdoc for the codebase |
 | [docs/adr/](docs/adr/) | 23 Architecture Decision Records |
 | [docs/grammar/](docs/grammar/) | Formal grammar specification |
 | [OPERATOR_INVENTORY.md](docs/OPERATOR_INVENTORY.md) | Complete operator reference |
