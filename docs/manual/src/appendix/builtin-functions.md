@@ -173,3 +173,4 @@ For advanced operations (eigenvalues, SVD), see [LAPACK Functions](./lapack.md).
 - [LAPACK Functions](./lapack.md) - Numerical linear algebra
 - [Matrices](../chapters/19-matrices.md) - Matrix chapter
 
+
