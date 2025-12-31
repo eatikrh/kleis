@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d5fe999d.js";
+            window.path_to_searchindex_js = "searchindex-583d4b81.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-7a44b553.js"></script>
@@ -193,37 +193,102 @@
 </blockquote>
 <p>Welcome to <strong>The Kleis Manual</strong>, the official guide to the Kleis mathematical specification language.</p>
 <h2 id="what-is-kleis"><a class="header" href="#what-is-kleis">What is Kleis?</a></h2>
-<p>Kleis is a <strong>mathematical expression language</strong> designed for:</p>
+<p>Kleis is a <strong>structure-oriented mathematical formalization language</strong> with Z3 verification and LAPACK numerics.</p>
+<blockquote>
+<p><strong>Philosophy:</strong> <em>Structures — the foundation of everything.</em></p>
+</blockquote>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td>Grammar</td><td>Fully implemented</td></tr>
+<tr><td>Tests</td><td>1,762 Rust unit tests</td></tr>
+<tr><td>Examples</td><td>71 Kleis files across 15+ domains</td></tr>
+<tr><td>Built-in Functions</td><td>100+ (including LAPACK numerical operations)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="core-capabilities"><a class="header" href="#core-capabilities">Core Capabilities</a></h3>
 <ul>
+<li>🏗️ <strong>Structure-first design</strong> — define mathematical objects by their axioms, not just their data</li>
+<li>✅ <strong>Z3 verification</strong> — prove properties with SMT solving</li>
+<li>🔢 <strong>LAPACK numerics</strong> — eigenvalues, SVD, matrix exponentials, and more</li>
 <li>📐 <strong>Symbolic mathematics</strong> — work with expressions, not just numbers</li>
-<li>✅ <strong>Formal verification</strong> — prove properties with Z3 theorem prover</li>
-<li>🏗️ <strong>Extensible structures</strong> — define your own mathematical objects</li>
-<li>🔬 <strong>Scientific computing</strong> — differential geometry, tensor calculus, and more</li>
+<li>🔬 <strong>Scientific computing</strong> — differential geometry, tensor calculus, control systems</li>
 <li>🔄 <strong>Turing complete</strong> — a full programming language, not just notation</li>
 </ul>
 <blockquote>
 <p><strong>Computational Universality:</strong> Kleis is Turing complete. This was demonstrated by implementing a complete LISP interpreter in Kleis (see <a href="#appendix-lisp-interpreter-in-kleis">Appendix: LISP Interpreter</a>). The combination of algebraic data types, pattern matching, and recursion enables arbitrary computation.</p>
 </blockquote>
+<h3 id="domain-coverage"><a class="header" href="#domain-coverage">Domain Coverage</a></h3>
+<p>Kleis has been used to formalize:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Domain</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Mathematics</strong></td><td>Differential forms, tensor algebra, complex analysis, number theory</td></tr>
+<tr><td><strong>Physics</strong></td><td>Dimensional analysis, quantum entanglement, orbital mechanics</td></tr>
+<tr><td><strong>Control Systems</strong></td><td>LQG controllers, eigenvalue analysis, state-space models</td></tr>
+<tr><td><strong>Ontology</strong></td><td>Projected Ontology Theory, spacetime types</td></tr>
+<tr><td><strong>Protocols</strong></td><td>IPv4 packets, IP routing, stop-and-wait ARQ</td></tr>
+<tr><td><strong>Authorization</strong></td><td>OAuth2 scopes, Google Zanzibar</td></tr>
+<tr><td><strong>Formal Methods</strong></td><td>Petri nets, mutex verification</td></tr>
+<tr><td><strong>Games</strong></td><td>Chess, Contract Bridge, Sudoku</td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="who-is-this-for"><a class="header" href="#who-is-this-for">Who is This For?</a></h2>
-<p>This guide is for anyone who:</p>
+<p>Kleis is for anyone who thinks in terms of <strong>structures and axioms</strong>:</p>
 <ul>
-<li>Wants to express mathematical ideas precisely</li>
-<li>Is curious about formal verification</li>
-<li>Enjoys functional programming (Haskell, ML, etc.)</li>
-<li>Works with differential geometry or tensor calculus</li>
+<li><strong>Mathematicians</strong> — formalize theorems, verify properties, explore number theory</li>
+<li><strong>Physicists</strong> — tensor algebra, differential geometry, dimensional analysis</li>
+<li><strong>Engineers</strong> — control systems, protocol specifications, verified designs</li>
+<li><strong>Security architects</strong> — authorization policies (Zanzibar, OAuth2)</li>
+<li><strong>Researchers</strong> — formalize new theories with Z3 verification</li>
+<li><strong>Functional programmers</strong> — if you enjoy Haskell or ML, you’ll feel at home</li>
 </ul>
+<p>If you’ve ever wished you could <em>prove</em> your specifications are consistent, Kleis is for you.</p>
+<h2 id="why-kleis-now"><a class="header" href="#why-kleis-now">Why Kleis Now?</a></h2>
+<p>Modern systems demand formal verification:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Challenge</th><th>How Kleis Helps</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Security &amp; Compliance</strong></td><td>Machine-checkable proofs for audit trails across sectors</td></tr>
+<tr><td><strong>Complex Systems</strong></td><td>Verify rules across IoT, enterprise, and distributed systems</td></tr>
+<tr><td><strong>AI-Generated Content</strong></td><td>Verify AI outputs against formal specifications</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p><em>Universal verification</em> — same rigor for mathematics, business rules, and beyond.</p>
+</blockquote>
 <h2 id="how-to-read-this-guide"><a class="header" href="#how-to-read-this-guide">How to Read This Guide</a></h2>
 <p>Each chapter builds on the previous ones. We start with the basics:</p>
 <ol>
-<li><strong>Structures</strong> — the foundation of everything</li>
+<li><strong>Starting Out</strong> — expressions, operators, basic syntax</li>
 <li><strong>Types</strong> — naming and composing structures</li>
 <li><strong>Functions</strong> — operations with laws</li>
 </ol>
-<p>Then we explore advanced features:</p>
+<p>Then we explore core concepts:</p>
 <ol start="4">
-<li><strong>Pattern matching</strong> — elegant case analysis</li>
-<li><strong>Verification</strong> — proving things with Z3</li>
-<li><strong>Applications</strong> — real-world examples</li>
+<li><strong>Algebraic Types</strong> — data definitions and constructors</li>
+<li><strong>Pattern Matching</strong> — elegant case analysis</li>
+<li><strong>Let Bindings</strong> — local definitions</li>
+<li><strong>Quantifiers and Logic</strong> — ∀, ∃, and logical operators</li>
+<li><strong>Conditionals</strong> — if-then-else</li>
+</ol>
+<p>And advanced features:</p>
+<ol start="9">
+<li><strong>Structures</strong> — the foundation of everything</li>
+<li><strong>Implements</strong> — structure implementations</li>
+<li><strong>Z3 Verification</strong> — proving things with SMT</li>
 </ol>
 <blockquote>
 <p><strong>Philosophy:</strong> In Kleis, <em>structures</em> define what things <strong>are</strong> through their operations and axioms. Types are names for structures. A metric tensor isn’t “a 2D array” — it’s “something satisfying metric axioms.”</p>
@@ -236,10 +301,20 @@ define square(x) = x * x
 // With type annotation
 define double(x : ℝ) : ℝ = x + x
 
-// Create a structure
-structure Vector(n : ℕ) {
-    axiom dimension : n ≥ 1
-    operation dot : Vector(n) → ℝ
+// Create a structure with axioms
+structure Group(G) {
+    operation e : G                    // identity
+    operation inv : G → G              // inverse
+    operation mul : G × G → G          // multiplication
+    
+    axiom left_identity : ∀ x : G . mul(e, x) = x
+    axiom left_inverse : ∀ x : G . mul(inv(x), x) = e
+}
+
+// Numerical computation
+example "eigenvalues" {
+    let A = Matrix([[1, 2], [3, 4]]) in
+    out(eigenvalues(A))  // Pretty-printed output
 }
 </code></pre>
 <h2 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h2>
