@@ -1,8 +1,8 @@
-# Learn You Some Kleis for Great Good!
+# The Kleis Manual
 
 > *"Mathematics is the language with which God has written the universe."* — Galileo Galilei
 
-Welcome to **Learn You Some Kleis**, an illustrated guide to the Kleis mathematical language!
+Welcome to **The Kleis Manual**, the official guide to the Kleis mathematical specification language.
 
 ## What is Kleis?
 
@@ -29,15 +29,17 @@ This guide is for anyone who:
 
 Each chapter builds on the previous ones. We start with the basics:
 
-1. **Types** — the foundation of everything
-2. **Functions** — defining computations
-3. **Structures** — building mathematical objects
+1. **Structures** — the foundation of everything
+2. **Types** — naming and composing structures
+3. **Functions** — operations with laws
 
 Then we explore advanced features:
 
 4. **Pattern matching** — elegant case analysis
 5. **Verification** — proving things with Z3
 6. **Applications** — real-world examples
+
+> **Philosophy:** In Kleis, *structures* define what things **are** through their operations and axioms. Types are names for structures. A metric tensor isn't "a 2D array" — it's "something satisfying metric axioms."
 
 ## A Taste of Kleis
 
@@ -62,7 +64,3 @@ structure Vector(n : ℕ) {
 Ready? Let's dive in!
 
 → [Start with Chapter 1: Starting Out](./chapters/01-starting-out.md)
-
----
-
-*This guide is inspired by [Learn You a Haskell](https://learnyouahaskell.github.io/) and [Learn You Some Erlang](https://learnyousomeerlang.com/).*
