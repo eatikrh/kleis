@@ -1,0 +1,95 @@
+# Publish Rust API Documentation to GitHub Pages
+#
+# This workflow builds rustdoc and deploys to /api/ subdirectory
+# WITHOUT overwriting the main kleis.io landing page.
+#
+# - kleis.io → Main landing page (index.html, CNAME)
+# - kleis.io/api/ → Rust API docs
+#
+# Triggered on pushes to main branch.
+
+name: Rustdoc
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Install Z3
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libz3-dev
+        
+    - name: Set Z3 header path
+      run: echo "Z3_SYS_Z3_HEADER=/usr/include/z3.h" >> $GITHUB_ENV
+      
+    - name: Build documentation
+      run: cargo doc --no-deps --document-private-items
+      continue-on-error: true
+      
+    - name: Prepare deployment directory
+      run: |
+        # Create deployment directory with main site content
+        mkdir -p _site
+        
+        # Copy main kleis.io content (landing page, assets, etc.)
+        cp -r index.html _site/ 2>/dev/null || true
+        cp -r CNAME _site/ 2>/dev/null || true
+        cp -r favicon.svg _site/ 2>/dev/null || true
+        cp -r *.svg _site/ 2>/dev/null || true
+        cp -r *.html _site/ 2>/dev/null || true
+        cp -r static/ _site/static/ 2>/dev/null || true
+        
+        # Copy rustdoc to /api/ subdirectory
+        mkdir -p _site/api
+        if [ -d "target/doc" ]; then
+          cp -r target/doc/* _site/api/
+          # Create redirect from /api/ to /api/kleis/
+          echo '<meta http-equiv="refresh" content="0; url=kleis/index.html">' > _site/api/index.html
+        fi
+        
+        # List what we're deploying
+        echo "Deployment contents:"
+        ls -la _site/
+        echo "API contents:"
+        ls -la _site/api/ 2>/dev/null || echo "No API docs"
+        
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: _site
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
