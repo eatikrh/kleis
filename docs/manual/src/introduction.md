@@ -29,15 +29,17 @@ This guide is for anyone who:
 
 Each chapter builds on the previous ones. We start with the basics:
 
-1. **Types** — the foundation of everything
-2. **Functions** — defining computations
-3. **Structures** — building mathematical objects
+1. **Structures** — the foundation of everything
+2. **Types** — naming and composing structures
+3. **Functions** — operations with laws
 
 Then we explore advanced features:
 
 4. **Pattern matching** — elegant case analysis
 5. **Verification** — proving things with Z3
 6. **Applications** — real-world examples
+
+> **Philosophy:** In Kleis, *structures* define what things **are** through their operations and axioms. Types are names for structures. A metric tensor isn't "a 2D array" — it's "something satisfying metric axioms."
 
 ## A Taste of Kleis
 
