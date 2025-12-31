@@ -191,6 +191,11 @@ Jupyter Commands:
                 html_lines.append(
                     f'<div style="color: #dc3545; font-family: monospace; font-weight: bold;">{self._escape_html(line)}</div>'
                 )
+            elif line.startswith("[") or line.startswith("Matrix(") or self._is_numeric_result(line):
+                # Highlight out() results (lists, matrices, numbers)
+                html_lines.append(
+                    f'<div style="color: #0066cc; font-family: monospace; font-weight: bold; padding: 4px; background: #e6f2ff; border-radius: 3px; margin: 2px 0;">{self._escape_html(line)}</div>'
+                )
             else:
                 html_lines.append(
                     f'<div style="font-family: monospace;">{self._escape_html(line)}</div>'
@@ -219,6 +224,24 @@ Jupyter Commands:
             .replace(">", "&gt;")
             .replace('"', "&quot;")
         )
+
+    def _is_numeric_result(self, line: str) -> bool:
+        """Check if line looks like a numeric result from out()."""
+        line = line.strip()
+        # Check for plain numbers (int or float)
+        try:
+            float(line)
+            return True
+        except ValueError:
+            pass
+        # Check for negative numbers
+        if line.startswith("-"):
+            try:
+                float(line[1:])
+                return True
+            except ValueError:
+                pass
+        return False
 
     def _is_definition(self, code: str) -> bool:
         """Check if the code contains definitions that should persist."""
