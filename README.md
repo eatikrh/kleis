@@ -285,6 +285,9 @@ This approach enables:
 - **Cross-domain formalization** — Same framework for physics, protocols, games
 - **Axiom-driven verification** — Z3 checks consistency, not just types
 - **Extensibility** — Add new structures without changing the core
+- **Security & Compliance** — Machine-checkable proofs for audit across sectors
+- **Complex systems** — Verify rules across IoT, enterprise, and distributed systems
+- **AI-ready** — Designed to verify AI-generated specifications for logical consistency
 
 ---
 

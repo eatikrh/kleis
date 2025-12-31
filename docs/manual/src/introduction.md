@@ -56,6 +56,18 @@ Kleis is for anyone who thinks in terms of **structures and axioms**:
 
 If you've ever wished you could *prove* your specifications are consistent, Kleis is for you.
 
+## Why Kleis Now?
+
+Modern systems demand formal verification:
+
+| Challenge | How Kleis Helps |
+|-----------|-----------------|
+| **Security & Compliance** | Machine-checkable proofs for audit trails across sectors |
+| **Complex Systems** | Verify rules across IoT, enterprise, and distributed systems |
+| **AI-Generated Content** | Verify AI outputs against formal specifications |
+
+> *Universal verification* — same rigor for mathematics, business rules, and beyond.
+
 ## How to Read This Guide
 
 Each chapter builds on the previous ones. We start with the basics:
