@@ -42,6 +42,8 @@
 
 - [Grammar Reference](./appendix/grammar.md)
 - [Operators](./appendix/operators.md)
+- [Built-in Functions](./appendix/builtin-functions.md)
+- [LAPACK Functions](./appendix/lapack.md)
 - [Standard Library](./appendix/stdlib.md)
 - [LISP Interpreter](./appendix/lisp-interpreter.md)
 - [VS Code Debugging](./appendix/vscode-debugging.md)
