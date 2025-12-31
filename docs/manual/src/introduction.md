@@ -1,8 +1,8 @@
-# Learn You Some Kleis for Great Good!
+# The Kleis Manual
 
 > *"Mathematics is the language with which God has written the universe."* — Galileo Galilei
 
-Welcome to **Learn You Some Kleis**, an illustrated guide to the Kleis mathematical language!
+Welcome to **The Kleis Manual**, the official guide to the Kleis mathematical specification language.
 
 ## What is Kleis?
 
@@ -67,4 +67,4 @@ Ready? Let's dive in!
 
 ---
 
-*This guide is inspired by [Learn You a Haskell](https://learnyouahaskell.github.io/) and [Learn You Some Erlang](https://learnyousomeerlang.com/).*
+*Pedagogical approach inspired by [Learn You a Haskell](https://learnyouahaskell.github.io/).*

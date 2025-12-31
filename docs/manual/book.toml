@@ -1,7 +1,7 @@
 [book]
-title = "Learn You Some Kleis"
+title = "The Kleis Manual"
 authors = ["Eatik"]
-description = "A fun, illustrated guide to the Kleis mathematical language"
+description = "The official guide to the Kleis mathematical specification language"
 language = "en"
 src = "src"
 
