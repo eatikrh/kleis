@@ -1,10 +1,9 @@
-# Publish Rust API Documentation to GitHub Pages
+# Deploy kleis.io to GitHub Pages
 #
-# This workflow builds rustdoc and deploys to /api/ subdirectory
-# WITHOUT overwriting the main kleis.io landing page.
-#
-# - kleis.io → Main landing page (index.html, CNAME)
-# - kleis.io/api/ → Rust API docs
+# This workflow deploys the full kleis.io website:
+# - kleis.io/ → Main landing page (index.html)
+# - kleis.io/docs/manual/book/ → Kleis Manual (mdBook)
+# - kleis.io/api/ → Rust API docs (rustdoc)
 #
 # Triggered on pushes to main branch.
 
@@ -67,17 +66,29 @@ jobs:
         cp -r *.html _site/ 2>/dev/null || true
         cp -r static/ _site/static/ 2>/dev/null || true
         
-        # Copy rustdoc to /api/ subdirectory
+        # Copy mdBook manual to /docs/manual/book/
+        mkdir -p _site/docs/manual
+        if [ -d "docs/manual/book" ]; then
+          cp -r docs/manual/book _site/docs/manual/
+          echo "✅ Manual copied to /docs/manual/book/"
+        else
+          echo "⚠️ Manual not found at docs/manual/book/"
+        fi
+        
+        # Copy rustdoc to /api/ subdirectory (does NOT overwrite manual)
         mkdir -p _site/api
         if [ -d "target/doc" ]; then
           cp -r target/doc/* _site/api/
           # Create redirect from /api/ to /api/kleis/
           echo '<meta http-equiv="refresh" content="0; url=kleis/index.html">' > _site/api/index.html
+          echo "✅ API docs copied to /api/"
         fi
         
         # List what we're deploying
         echo "Deployment contents:"
         ls -la _site/
+        echo "Manual contents:"
+        ls -la _site/docs/manual/book/ 2>/dev/null || echo "No manual"
         echo "API contents:"
         ls -la _site/api/ 2>/dev/null || echo "No API docs"
         
