@@ -4966,18 +4966,14 @@ impl Evaluator {
     /// Helper to extract boolean from Expression
     fn extract_bool(&self, expr: &Expression) -> Result<bool, String> {
         let evaluated = self.eval_concrete(expr)?;
-        match &evaluated {
-            Expression::Const(s) => match s.to_lowercase().as_str() {
-                "true" | "1" => Ok(true),
-                "false" | "0" => Ok(false),
-                _ => Err(format!("Expected boolean, got: {}", s)),
-            },
-            Expression::Object(s) => match s.to_lowercase().as_str() {
-                "true" => Ok(true),
-                "false" => Ok(false),
-                _ => Err(format!("Expected boolean, got: {}", s)),
-            },
-            _ => Err(format!("Expected boolean, got: {:?}", evaluated)),
+        let s = match &evaluated {
+            Expression::Const(s) | Expression::Object(s) => s.to_lowercase(),
+            _ => return Err(format!("Expected boolean, got: {:?}", evaluated)),
+        };
+        match s.as_str() {
+            "true" | "1" => Ok(true),
+            "false" | "0" => Ok(false),
+            _ => Err(format!("Expected boolean, got: {}", s)),
         }
     }
 
