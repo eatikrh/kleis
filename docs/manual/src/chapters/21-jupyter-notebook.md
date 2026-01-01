@@ -10,6 +10,7 @@ Kleis provides Jupyter kernel support, allowing you to write and execute Kleis c
 - **Teaching** mathematical foundations
 - **Documenting** proofs and derivations
 - **Numerical computation** with LAPACK operations
+- **Publication-quality plotting** with Lilaq/Typst integration
 
 ## Quick Start
 
@@ -312,6 +313,220 @@ let Ainv = inv(A)
 // Verify: A * Ainv should be identity
 // (Matrix multiplication coming soon!)
 ```
+
+## Plotting
+
+Kleis integrates with **Lilaq** (Typst's plotting library) to generate publication-quality plots directly in Jupyter notebooks. Plots are rendered as scalable SVG graphics.
+
+### Requirements
+
+- **Typst CLI** must be installed: `brew install typst` (macOS) or see [typst.app](https://typst.app)
+
+### Basic Line Plots
+
+```kleis
+import "stdlib/prelude.kleis"
+
+plot([0, 1, 2, 3, 4, 5], [0, 1, 4, 9, 16, 25])
+```
+
+This plots a quadratic function y = x².
+
+<!-- TODO: Add image of quadratic plot -->
+
+### Scatter Plots
+
+```kleis
+scatter([1, 2, 3, 4, 5], [2.1, 3.9, 6.2, 7.8, 10.1])
+```
+
+<!-- TODO: Add image of scatter plot -->
+
+### Bar Charts
+
+```kleis
+bar([1, 2, 3, 4, 5], [10, 25, 15, 30, 20])
+```
+
+<!-- TODO: Add image of bar chart -->
+
+### Stem Plots
+
+Ideal for discrete signals:
+
+```kleis
+stem([0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 1, 0, 0, 1, 0, 1])
+```
+
+<!-- TODO: Add image of stem plot -->
+
+### Fill Between (Area Under Curve)
+
+```kleis
+fill_between(
+    [0, 1, 2, 3, 4, 5],
+    [1, 2, 4, 5, 4, 3]
+)
+```
+
+Shades the area from the curve down to y=0.
+
+<!-- TODO: Add image of fill_between -->
+
+### Heatmaps
+
+Visualize 2D matrices:
+
+```kleis
+heatmap([
+    [1.0, 2.0, 3.0, 4.0],
+    [5.0, 6.0, 7.0, 8.0],
+    [9.0, 10.0, 11.0, 12.0],
+    [13.0, 14.0, 15.0, 16.0]
+])
+```
+
+<!-- TODO: Add image of heatmap -->
+
+### Boxplots
+
+Statistical summary for multiple datasets:
+
+```kleis
+boxplot(
+    [1, 2, 3, 4, 5, 6, 7],
+    [2, 4, 6, 8, 10, 12, 14],
+    [1, 1, 2, 3, 5, 8, 13]
+)
+```
+
+<!-- TODO: Add image of boxplot -->
+
+### Contour Plots
+
+```kleis
+contour([
+    [1.0, 2.0, 3.0, 4.0],
+    [2.0, 4.0, 6.0, 8.0],
+    [3.0, 6.0, 9.0, 12.0],
+    [4.0, 8.0, 12.0, 16.0]
+])
+```
+
+<!-- TODO: Add image of contour -->
+
+### Vector Fields (Quiver)
+
+Visualize vector fields:
+
+```kleis
+quiver(
+    [0, 1],         // x coordinates
+    [0, 1],         // y coordinates
+    [               // 2×2 grid of [u, v] directions
+        [[1, 0], [0, 1]],
+        [[0, negate(1)], [negate(1), 0]]
+    ]
+)
+```
+
+<!-- TODO: Add image of quiver -->
+
+### Physics Example: Trigonometric Functions
+
+```kleis
+// Sine wave: y = sin(x) from 0 to 2π
+plot(
+    [0, 0.785, 1.571, 2.356, 3.142, 3.927, 4.712, 5.497, 6.283],
+    [0, 0.707, 1.0, 0.707, 0, negate(0.707), negate(1.0), negate(0.707), 0]
+)
+```
+
+<!-- TODO: Add image of sine wave -->
+
+### Physics Example: Damped Oscillation
+
+```kleis
+// e^(-t/5) × cos(t)
+plot(
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    [1.0, 0.44, negate(0.32), negate(0.59), negate(0.30), 0.19, 0.44, 0.26, negate(0.08), negate(0.29), negate(0.20)]
+)
+```
+
+<!-- TODO: Add image of damped oscillation -->
+
+### Quantum Computing: Bell State Probabilities
+
+```kleis
+// Measurement probabilities for |00⟩ + |11⟩ Bell state
+bar([0, 1, 2, 3], [0.5, 0, 0, 0.5])
+```
+
+Shows the characteristic 50-50 distribution of a maximally entangled state.
+
+<!-- TODO: Add image of Bell state -->
+
+### All Plot Functions
+
+| Function | Description |
+|----------|-------------|
+| `plot(x, y)` | Line plot |
+| `scatter(x, y)` | Scatter plot with markers |
+| `bar(x, heights)` | Vertical bar chart |
+| `hbar(y, widths)` | Horizontal bar chart |
+| `stem(x, y)` | Stem plot (discrete signals) |
+| `hstem(x, y)` | Horizontal stem plot |
+| `fill_between(x, y)` | Shaded area under curve |
+| `boxplot(data1, data2, ...)` | Box and whisker plots |
+| `hboxplot(...)` | Horizontal boxplots |
+| `heatmap(matrix)` | 2D color grid |
+| `colormesh(matrix)` | Alias for heatmap |
+| `contour(matrix)` | Contour lines |
+| `quiver(x, y, directions)` | Vector field |
+
+### Titles
+
+All plot functions accept an optional title as the last argument:
+
+```kleis
+plot([0, 1, 2, 3], [0, 1, 4, 9], "Quadratic Growth")
+scatter([1, 2, 3], [1.1, 2.0, 2.9], "Experimental Data")
+```
+
+### Complete Example Notebook
+
+**Cell 1: Import stdlib**
+```kleis
+import "stdlib/prelude.kleis"
+```
+
+**Cell 2: Line plot**
+```kleis
+plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16], "y = x²")
+```
+
+**Cell 3: Multiple plots in one cell**
+```kleis
+example "quadratic" {
+    plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16])
+}
+
+example "linear" {
+    plot([0, 1, 2, 3, 4], [1, 3, 5, 7, 9])
+}
+```
+
+Both plots will be displayed sequentially.
+
+### Future Enhancements
+
+See the [Plotting Roadmap](../../PLOTTING_ROADMAP.md) for planned features:
+- Function plotting (`fplot`)
+- 3D surface plots
+- Color map customization
+- Axis scaling (log, symlog)
+- Equation annotations with Typst math
 
 ## Next Steps
 
