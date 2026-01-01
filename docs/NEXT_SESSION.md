@@ -92,6 +92,38 @@ graph("heatmap", matrix, "label")
 
 **Decision:** Defer until API stabilizes. Current approach works for MVP.
 
+#### 4. Manual: Symbolic Differentiation Example is Weak
+
+**Location:** `docs/manual/src/chapters/13-applications.md`
+
+**Problem:** The current example just shows code without:
+- Naming the calculus rules (Power Rule, Product Rule, Chain Rule, etc.)
+- Referencing Calculus 1 and Calculus 2 curriculum
+- Using axioms to STATE the rules
+- Verifying the implementation against the axioms
+- Showing the Quotient Rule, Inverse Trig, etc.
+
+**Should be rewritten as:**
+```kleis
+structure DifferentiationRules {
+    // Calculus 1
+    axiom constant_rule: ∀(c : ℝ). diff(Const(c), x) = Const(0)
+    axiom power_rule: ∀(n : ℝ). diff(Pow(x, n), x) = Mul(n, Pow(x, n - 1))
+    axiom sum_rule: diff(Add(f, g), x) = Add(diff(f, x), diff(g, x))
+    axiom product_rule: diff(Mul(f, g), x) = Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
+    axiom quotient_rule: diff(Div(f, g), x) = ...
+    axiom chain_rule: diff(Compose(f, g), x) = Mul(diff(f, g(x)), diff(g, x))
+    
+    // Calculus 2
+    axiom exp_rule: diff(Exp(f), x) = Mul(Exp(f), diff(f, x))
+    axiom ln_rule: diff(Ln(f), x) = Div(diff(f, x), f)
+    axiom sin_rule: diff(Sin(x), x) = Cos(x)
+    axiom cos_rule: diff(Cos(x), x) = Neg(Sin(x))
+}
+```
+
+Then implement `diff` and VERIFY it satisfies the axioms. That's the Kleis way.
+
 ---
 
 ## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
