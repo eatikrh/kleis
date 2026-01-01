@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-583d4b81.js";
+            window.path_to_searchindex_js = "searchindex-922a99b2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-7a44b553.js"></script>
@@ -2271,6 +2271,7 @@ Goodbye! 👋
 <li><strong>Teaching</strong> mathematical foundations</li>
 <li><strong>Documenting</strong> proofs and derivations</li>
 <li><strong>Numerical computation</strong> with LAPACK operations</li>
+<li><strong>Publication-quality plotting</strong> with Lilaq/Typst integration</li>
 </ul>
 <h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
 <pre><code class="language-bash">cd kleis-notebook
@@ -2516,6 +2517,130 @@ trace(A)      // → 5 (not yet implemented, use 1+4)
 // Verify: A * Ainv should be identity
 // (Matrix multiplication coming soon!)
 </code></pre>
+<h2 id="plotting"><a class="header" href="#plotting">Plotting</a></h2>
+<p>Kleis integrates with <strong>Lilaq</strong> (Typst’s plotting library) to generate publication-quality plots directly in Jupyter notebooks. Plots are rendered as scalable SVG graphics.</p>
+<p><img src="images/kleis_plots.png" alt="Kleis plotting examples"></p>
+<p><em>Examples of Kleis plots: reciprocal function, projectile motion, and damped oscillation</em></p>
+<h3 id="requirements"><a class="header" href="#requirements">Requirements</a></h3>
+<ul>
+<li><strong>Typst CLI</strong> must be installed: <code>brew install typst</code> (macOS) or see <a href="https://typst.app">typst.app</a></li>
+</ul>
+<h3 id="plot-functions"><a class="header" href="#plot-functions">Plot Functions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>plot(x, y)</code></td><td>Line plot</td><td><code>plot([0,1,2], [0,1,4])</code></td></tr>
+<tr><td><code>scatter(x, y)</code></td><td>Scatter plot</td><td><code>scatter([1,2,3], [2.1,3.9,6.2])</code></td></tr>
+<tr><td><code>bar(x, heights)</code></td><td>Vertical bars</td><td><code>bar([1,2,3], [10,25,15])</code></td></tr>
+<tr><td><code>hbar(y, widths)</code></td><td>Horizontal bars</td><td><code>hbar([1,2,3], [10,25,15])</code></td></tr>
+<tr><td><code>stem(x, y)</code></td><td>Stem plot</td><td><code>stem([0,1,2], [0,1,1])</code></td></tr>
+<tr><td><code>hstem(x, y)</code></td><td>Horizontal stem</td><td><code>hstem([0,1,2], [0,1,1])</code></td></tr>
+<tr><td><code>fill_between(x, y)</code></td><td>Area under curve</td><td><code>fill_between([0,1,2], [1,2,4])</code></td></tr>
+<tr><td><code>boxplot(d1, d2, ...)</code></td><td>Box and whisker</td><td><code>boxplot([1,2,3], [4,5,6])</code></td></tr>
+<tr><td><code>hboxplot(...)</code></td><td>Horizontal boxplot</td><td><code>hboxplot([1,2,3], [4,5,6])</code></td></tr>
+<tr><td><code>heatmap(matrix)</code></td><td>2D color grid</td><td><code>heatmap([[1,2],[3,4]])</code></td></tr>
+<tr><td><code>colormesh(matrix)</code></td><td>Alias for heatmap</td><td><code>colormesh([[1,2],[3,4]])</code></td></tr>
+<tr><td><code>contour(matrix)</code></td><td>Contour lines</td><td><code>contour([[1,2],[3,4]])</code></td></tr>
+<tr><td><code>quiver(x, y, dirs)</code></td><td>Vector field</td><td>See example below</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="basic-examples"><a class="header" href="#basic-examples">Basic Examples</a></h3>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+
+example "line plot" {
+    // Line plot: y = x²
+    plot([0, 1, 2, 3, 4, 5], [0, 1, 4, 9, 16, 25])
+}
+
+example "scatter plot" {
+    scatter([1, 2, 3, 4, 5], [2.1, 3.9, 6.2, 7.8, 10.1])
+}
+
+example "bar chart" {
+    bar([1, 2, 3, 4, 5], [10, 25, 15, 30, 20])
+}
+
+example "heatmap" {
+    heatmap([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0]
+    ])
+}
+</code></pre>
+<h3 id="physics-examples"><a class="header" href="#physics-examples">Physics Examples</a></h3>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+
+example "damped oscillation" {
+    // e^(-t/5) × cos(t)
+    plot(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        [1.0, 0.44, negate(0.32), negate(0.59), negate(0.30), 
+         0.19, 0.44, 0.26, negate(0.08), negate(0.29), negate(0.20)]
+    )
+}
+
+example "projectile motion" {
+    // y = x - 0.1x²
+    plot(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        [0, 0.9, 1.6, 2.1, 2.4, 2.5, 2.4, 2.1, 1.6, 0.9, 0]
+    )
+}
+</code></pre>
+<h3 id="vector-field-example"><a class="header" href="#vector-field-example">Vector Field Example</a></h3>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+
+example "vector field" {
+    quiver(
+        [0, 1],         // x coordinates
+        [0, 1],         // y coordinates
+        [               // 2×2 grid of [u, v] directions
+            [[1, 0], [0, 1]],
+            [[0, negate(1)], [negate(1), 0]]
+        ]
+    )
+}
+</code></pre>
+<h3 id="titles"><a class="header" href="#titles">Titles</a></h3>
+<p>All plot functions accept an optional title as the last argument:</p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+
+example "with title" {
+    plot([0, 1, 2, 3], [0, 1, 4, 9], "Quadratic Growth")
+    scatter([1, 2, 3], [1.1, 2.0, 2.9], "Experimental Data")
+}
+</code></pre>
+<h3 id="complete-example-notebook"><a class="header" href="#complete-example-notebook">Complete Example Notebook</a></h3>
+<p><strong>Cell 1: Import stdlib</strong></p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+</code></pre>
+<p><strong>Cell 2: Line plot</strong></p>
+<pre><code class="language-kleis">plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16], "y = x²")
+</code></pre>
+<p><strong>Cell 3: Multiple plots in one cell</strong></p>
+<pre><code class="language-kleis">example "quadratic" {
+    plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16])
+}
+
+example "linear" {
+    plot([0, 1, 2, 3, 4], [1, 3, 5, 7, 9])
+}
+</code></pre>
+<p>Both plots will be displayed sequentially.</p>
+<h3 id="future-enhancements"><a class="header" href="#future-enhancements">Future Enhancements</a></h3>
+<p>See the <a href="../PLOTTING_ROADMAP.html">Plotting Roadmap</a> for planned features:</p>
+<ul>
+<li>Function plotting (<code>fplot</code>)</li>
+<li>3D surface plots</li>
+<li>Color map customization</li>
+<li>Axis scaling (log, symlog)</li>
+<li>Equation annotations with Typst math</li>
+</ul>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
 <li>Explore the <a href="#the-repl-1">REPL chapter</a> for more interactive features</li>
@@ -7126,7 +7251,7 @@ example "symbolic verification" {
 </table>
 </div>
 <p><strong>Note:</strong> The debugger displays verification badges (✓/✗) next to assertion variables in the Variables panel, so you can see at a glance which assertions passed or failed.</p>
-<h3 id="requirements"><a class="header" href="#requirements">Requirements</a></h3>
+<h3 id="requirements-1"><a class="header" href="#requirements-1">Requirements</a></h3>
 <ul>
 <li>Structure axioms must be defined for the operations used</li>
 <li>Z3 must be able to load the relevant axioms</li>
