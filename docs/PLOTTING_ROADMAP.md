@@ -1,7 +1,7 @@
 # Kleis Plotting Roadmap
 
-> **Last Updated:** December 31, 2024
-> **Status:** Phase 1 COMPLETE - All basic plot types implemented
+> **Last Updated:** January 1, 2025
+> **Status:** Phase 2 COMPLETE - Unified graph() API with comprehensive options
 
 ## Vision
 
@@ -88,13 +88,56 @@ export KLEIS_ROOT=/path/to/kleis
 
 **All functions support optional title:** `plot(x, y, "Title")`
 
-### Phase 2: Plot Styling & Options 🔜 NEXT
+### Phase 2: Plot Styling & Options ✅ COMPLETE
 
-Currently we only support basic `plot(x, y)` calls. Lilaq provides many more styling options that should be exposed through an options record syntax:
+**Unified `graph()` API** with comprehensive styling options:
 
 ```kleis
-plot(x, y, { mark: "o", color: "blue", yerr: errors, smooth: true })
+// Basic usage
+graph("line", [0,1,2,3], [0,1,4,9])
+graph("scatter", xs, ys, "Title")
+
+// With options (string or record syntax)
+graph("line", xs, ys, "Title")  // Simple title
+graph("line", xs, ys, { title: "My Plot", color: "blue", mark: "o" })
+
+// All plot types via single function
+graph("bar", xs, heights)
+graph("heatmap", matrix)
+graph("contour", matrix)
+graph("boxplot", [data1, data2])
+graph("quiver", xs, ys, directions)
 ```
+
+**Valid plot types:** `line`, `scatter`, `bar`, `hbar`, `stem`, `hstem`, `fill_between`, `boxplot`, `hboxplot`, `heatmap`, `contour`, `quiver`
+
+**Implemented options:**
+| Option | Type | Description |
+|--------|------|-------------|
+| `title` | string | Plot title |
+| `xlabel`, `ylabel` | string | Axis labels |
+| `label` | string | Legend label |
+| `color` | string | Line/mark color |
+| `stroke` | string | Line stroke style |
+| `fill`, `fill_color` | string | Fill color for areas |
+| `mark` | string | Marker type: "o", "x", "star", "d", "s" |
+| `mark_size` | number | Marker size in points |
+| `mark_color` | string | Marker color (separate from line) |
+| `opacity`, `alpha` | number | Opacity (0.0 to 1.0) |
+| `yerr`, `xerr` | list | Error bars (symmetric) |
+| `step` | string | Step mode: "none", "start", "end", "center" |
+| `smooth` | bool | Bézier spline interpolation |
+| `every` | int | Mark interval (show every nth) |
+| `clip` | bool | Clip to data area |
+| `z_index` | int | Rendering order |
+| `colormap`, `cmap` | string | "viridis", "magma", "plasma", etc. |
+| `norm` | string | Color normalization: "linear", "log" |
+| `base` | number | Baseline y-coord for stem plots |
+| `base_stroke` | string | Baseline stroke style |
+| `sizes`, `colors` | list | Per-point styling (scatter) |
+| `width`, `height` | number | Plot dimensions in cm |
+
+**Legacy functions still work:** `plot()`, `scatter()`, `bar()`, etc.
 
 #### `plot()` Missing Parameters
 
