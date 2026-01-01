@@ -220,3 +220,78 @@ example "horizontal stem plot" {
     hstem([0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 1, 0, 0, 1, 0, 1])
 }
 
+// =============================================================================
+// Part 15: Unified graph() API
+// =============================================================================
+//
+// The graph() function provides a unified interface for all plot types.
+// Syntax: graph("type", x, y) or graph("type", x, y, options)
+//
+// Valid types: "line", "scatter", "bar", "hbar", "stem", "hstem", 
+//              "fill_between", "boxplot", "hboxplot", "heatmap", "contour", "quiver"
+
+example "graph API - line plot" {
+    out("Unified API: graph(\"line\", xs, ys)")
+    out("")
+    graph("line", [0, 1, 2, 3, 4, 5], [0, 1, 4, 9, 16, 25])
+}
+
+example "graph API - line with title" {
+    out("Line plot with title option")
+    out("")
+    graph("line", [0, 1, 2, 3, 4], [0, 1, 4, 9, 16], "y = x²")
+}
+
+example "graph API - scatter" {
+    out("Unified API: graph(\"scatter\", xs, ys)")
+    out("")
+    graph("scatter", [1, 2, 3, 4, 5], [2.1, 3.9, 6.2, 7.8, 10.1])
+}
+
+example "graph API - bar chart" {
+    out("Unified API: graph(\"bar\", xs, heights)")
+    out("")
+    graph("bar", [1, 2, 3, 4, 5], [10, 25, 15, 30, 20])
+}
+
+example "graph API - heatmap" {
+    out("Unified API: graph(\"heatmap\", matrix)")
+    out("")
+    graph("heatmap", [
+        [1.0, 2.0, 3.0, 4.0],
+        [5.0, 6.0, 7.0, 8.0],
+        [9.0, 10.0, 11.0, 12.0]
+    ])
+}
+
+example "graph API - contour" {
+    out("Unified API: graph(\"contour\", matrix)")
+    out("")
+    graph("contour", [
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0]
+    ])
+}
+
+example "graph API - boxplot" {
+    out("Unified API: graph(\"boxplot\", [dataset1, dataset2, ...])")
+    out("")
+    graph("boxplot", [
+        [1, 2, 3, 4, 5, 6, 7],
+        [2, 4, 6, 8, 10]
+    ])
+}
+
+example "graph API - fill between" {
+    out("Unified API: graph(\"fill_between\", xs, ys)")
+    out("")
+    graph("fill_between", [0, 1, 2, 3, 4], [0, 2, 4, 2, 0])
+}
+
+example "graph API - stem" {
+    out("Unified API: graph(\"stem\", xs, ys)")
+    out("")
+    graph("stem", [0, 1, 2, 3, 4, 5], [1, 2, 1, 3, 1, 2])
+}
+

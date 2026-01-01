@@ -43,7 +43,7 @@ pub struct PlotOutput {
 }
 
 /// Plot type - matches Lilaq plot functions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PlotType {
     /// Line plot with connected points
     Line,
@@ -71,7 +71,46 @@ pub enum PlotType {
     Quiver,
 }
 
-/// Plot configuration
+impl PlotType {
+    /// Parse plot type from string (for unified graph() API)
+    pub fn parse(s: &str) -> Option<PlotType> {
+        match s.to_lowercase().as_str() {
+            "line" | "plot" => Some(PlotType::Line),
+            "scatter" => Some(PlotType::Scatter),
+            "fill_between" | "fillbetween" | "area" => Some(PlotType::FillBetween),
+            "bar" => Some(PlotType::Bar),
+            "hbar" | "barh" => Some(PlotType::HBar),
+            "stem" => Some(PlotType::Stem),
+            "hstem" | "stemh" => Some(PlotType::HStem),
+            "boxplot" | "box" => Some(PlotType::Boxplot),
+            "hboxplot" | "boxh" => Some(PlotType::HBoxplot),
+            "heatmap" | "colormesh" => Some(PlotType::Colormesh),
+            "contour" => Some(PlotType::Contour),
+            "quiver" | "vector" | "arrows" => Some(PlotType::Quiver),
+            _ => None,
+        }
+    }
+
+    /// Get all valid type names (for error messages)
+    pub fn valid_names() -> &'static [&'static str] {
+        &[
+            "line",
+            "scatter",
+            "fill_between",
+            "bar",
+            "hbar",
+            "stem",
+            "hstem",
+            "boxplot",
+            "hboxplot",
+            "heatmap",
+            "contour",
+            "quiver",
+        ]
+    }
+}
+
+/// Plot configuration - comprehensive options matching Lilaq API
 #[derive(Debug, Clone)]
 pub struct PlotConfig {
     pub plot_type: PlotType,
@@ -80,24 +119,67 @@ pub struct PlotConfig {
     pub ylabel: Option<String>,
     pub width: f64,  // cm
     pub height: f64, // cm
+
+    // === Line/Mark Styling (Phase 2) ===
+    /// Marker type: "o", "x", "star", "d" (diamond), "s" (square), etc.
     pub mark: Option<String>,
-    /// Color for the plot (e.g., "blue", "#ff0000", "rgb(255, 0, 0)")
+    /// Marker size in points
+    pub mark_size: Option<f64>,
+    /// Marker color (separate from line color)
+    pub mark_color: Option<String>,
+    /// Combined color for line and marks
     pub color: Option<String>,
+    /// Line stroke style (width, dash pattern)
+    pub stroke: Option<String>,
     /// Fill color for area plots
     pub fill_color: Option<String>,
-    /// Line style: "solid", "dashed", "dotted"
-    pub line_style: Option<String>,
-    /// Line width in points
-    pub line_width: Option<f64>,
     /// Opacity (0.0 to 1.0)
     pub opacity: Option<f64>,
+
+    // === Error Bars ===
+    /// Y error bars (symmetric or asymmetric)
+    pub yerr: Option<Vec<f64>>,
+    /// X error bars (symmetric or asymmetric)
+    pub xerr: Option<Vec<f64>>,
+
+    // === Line Interpolation ===
+    /// Step mode: "none", "start", "end", "center"
+    pub step: Option<String>,
+    /// Bézier spline interpolation
+    pub smooth: bool,
+
+    // === Display Options ===
+    /// Mark interval (show every nth mark)
+    pub every: Option<usize>,
     /// Legend label
     pub label: Option<String>,
-    /// Show grid
+    /// Clip to data area
+    pub clip: bool,
+    /// Rendering order (z-index)
+    pub z_index: Option<i32>,
+
+    // === Scatter-specific (per-point styling) ===
+    /// Per-point sizes (for scatter)
+    pub sizes: Option<Vec<f64>>,
+    /// Per-point colors (for scatter) - floats for colormap
+    pub colors: Option<Vec<f64>>,
+    /// Color map: "viridis", "magma", "plasma", "inferno", "cividis"
+    pub colormap: Option<String>,
+    /// Color range min
+    pub color_min: Option<f64>,
+    /// Color range max
+    pub color_max: Option<f64>,
+    /// Color normalization: "linear", "log"
+    pub norm: Option<String>,
+
+    // === Stem-specific ===
+    /// Baseline y-coordinate for stem plots
+    pub base: Option<f64>,
+    /// Baseline stroke style
+    pub base_stroke: Option<String>,
+
+    // === Legacy compat ===
     pub grid: bool,
-    /// Error bar data (for scatter/plot)
-    pub error_y: Option<Vec<f64>>,
-    pub error_x: Option<Vec<f64>>,
 }
 
 impl Default for PlotConfig {
@@ -109,16 +191,37 @@ impl Default for PlotConfig {
             ylabel: None,
             width: 8.0,
             height: 6.0,
+            // Line/Mark Styling
             mark: None,
+            mark_size: None,
+            mark_color: None,
             color: None,
+            stroke: None,
             fill_color: None,
-            line_style: None,
-            line_width: None,
             opacity: None,
+            // Error Bars
+            yerr: None,
+            xerr: None,
+            // Line Interpolation
+            step: None,
+            smooth: false,
+            // Display Options
+            every: None,
             label: None,
+            clip: true,
+            z_index: None,
+            // Scatter-specific
+            sizes: None,
+            colors: None,
+            colormap: None,
+            color_min: None,
+            color_max: None,
+            norm: None,
+            // Stem-specific
+            base: None,
+            base_stroke: None,
+            // Legacy
             grid: true,
-            error_y: None,
-            error_x: None,
         }
     }
 }
@@ -188,13 +291,13 @@ pub fn generate_lilaq_code(x_data: &[f64], y_data: &[f64], config: &PlotConfig) 
 
 /// Add styling options to the plot command
 fn add_styling_options(code: &mut String, config: &PlotConfig) {
-    // Add mark for scatter
+    // === Mark styling ===
     match config.plot_type {
         PlotType::Scatter => {
             let mark = config.mark.as_deref().unwrap_or("o");
             code.push_str(&format!(",\n    mark: \"{}\"", mark));
         }
-        PlotType::Line => {
+        PlotType::Line | PlotType::Stem | PlotType::HStem => {
             if let Some(mark) = &config.mark {
                 code.push_str(&format!(",\n    mark: \"{}\"", mark));
             }
@@ -202,24 +305,98 @@ fn add_styling_options(code: &mut String, config: &PlotConfig) {
         _ => {}
     }
 
-    // Add color
-    if let Some(color) = &config.color {
-        code.push_str(&format!(",\n    stroke: {}", color));
+    if let Some(size) = config.mark_size {
+        code.push_str(&format!(",\n    mark-size: {}pt", size));
     }
 
-    // Add fill color
+    if let Some(mark_color) = &config.mark_color {
+        code.push_str(&format!(",\n    mark-color: {}", mark_color));
+    }
+
+    // === Color / Stroke ===
+    if let Some(color) = &config.color {
+        code.push_str(&format!(",\n    color: {}", color));
+    }
+
+    if let Some(stroke) = &config.stroke {
+        code.push_str(&format!(",\n    stroke: {}", stroke));
+    }
+
     if let Some(fill) = &config.fill_color {
         code.push_str(&format!(",\n    fill: {}", fill));
     }
 
-    // Add opacity
     if let Some(opacity) = config.opacity {
-        code.push_str(&format!(",\n    fill-opacity: {}", opacity));
+        code.push_str(&format!(",\n    alpha: {}%", (opacity * 100.0) as i32));
     }
 
-    // Add label for legend
+    // === Error bars ===
+    if let Some(yerr) = &config.yerr {
+        code.push_str(&format!(",\n    yerr: {}", format_array(yerr)));
+    }
+
+    if let Some(xerr) = &config.xerr {
+        code.push_str(&format!(",\n    xerr: {}", format_array(xerr)));
+    }
+
+    // === Line interpolation ===
+    if let Some(step) = &config.step {
+        code.push_str(&format!(",\n    step: {}", step));
+    }
+
+    if config.smooth {
+        code.push_str(",\n    smooth: true");
+    }
+
+    // === Display options ===
+    if let Some(every) = config.every {
+        code.push_str(&format!(",\n    every: {}", every));
+    }
+
     if let Some(label) = &config.label {
         code.push_str(&format!(",\n    label: \"{}\"", label));
+    }
+
+    if !config.clip {
+        code.push_str(",\n    clip: false");
+    }
+
+    if let Some(z) = config.z_index {
+        code.push_str(&format!(",\n    z-index: {}", z));
+    }
+
+    // === Scatter-specific: per-point styling ===
+    if let Some(sizes) = &config.sizes {
+        code.push_str(&format!(",\n    size: {}", format_array(sizes)));
+    }
+
+    if let Some(colors) = &config.colors {
+        code.push_str(&format!(",\n    color: {}", format_array(colors)));
+    }
+
+    if let Some(cmap) = &config.colormap {
+        code.push_str(&format!(",\n    map: color.map.{}", cmap));
+    }
+
+    if let Some(cmin) = config.color_min {
+        code.push_str(&format!(",\n    min: {}", cmin));
+    }
+
+    if let Some(cmax) = config.color_max {
+        code.push_str(&format!(",\n    max: {}", cmax));
+    }
+
+    if let Some(norm) = &config.norm {
+        code.push_str(&format!(",\n    norm: \"{}\"", norm));
+    }
+
+    // === Stem-specific ===
+    if let Some(base) = config.base {
+        code.push_str(&format!(",\n    base: {}", base));
+    }
+
+    if let Some(base_stroke) = &config.base_stroke {
+        code.push_str(&format!(",\n    base-stroke: {}", base_stroke));
     }
 }
 

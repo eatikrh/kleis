@@ -2410,15 +2410,21 @@ impl Evaluator {
             }
 
             // === Plotting ===
+            "graph" => {
+                // Unified plotting API: graph("type", x, y) or graph("type", x, y, options)
+                // type: "line", "scatter", "bar", "heatmap", etc.
+                self.builtin_graph(args)
+            }
+
             "plot" => {
-                // plot(x_data, y_data) - generates an SVG plot
+                // Legacy: plot(x_data, y_data) - generates an SVG plot
                 // plot(x_data, y_data, "title") - with title
                 // Returns SVG wrapped in a special expression
                 self.builtin_plot(args)
             }
 
             "scatter" => {
-                // scatter(x_data, y_data) - scatter plot
+                // Legacy: scatter(x_data, y_data) - scatter plot
                 self.builtin_scatter(args)
             }
 
@@ -4654,6 +4660,345 @@ impl Evaluator {
 
     // === Plotting helpers ===
 
+    /// Unified graph() function: graph("type", x, y) or graph("type", x, y, options)
+    ///
+    /// Options can be:
+    /// - A string (treated as title/label)
+    /// - A record: { title: "...", color: "blue", mark: "o", ... }
+    fn builtin_graph(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::plotting::{PlotConfig, PlotType};
+
+        if args.is_empty() {
+            return Err(format!(
+                "graph() requires at least 2 arguments: graph(\"type\", data, ...)\n\
+                 Valid types: {}",
+                PlotType::valid_names().join(", ")
+            ));
+        }
+
+        // First arg must be the plot type
+        let plot_type_str = self.extract_string(&args[0])?;
+        let plot_type = PlotType::parse(&plot_type_str).ok_or_else(|| {
+            format!(
+                "Unknown plot type: \"{}\". Valid types: {}",
+                plot_type_str,
+                PlotType::valid_names().join(", ")
+            )
+        })?;
+
+        // Build config with default values
+        let mut config = PlotConfig {
+            plot_type: plot_type.clone(),
+            ..Default::default()
+        };
+
+        // Parse remaining arguments based on plot type
+        match plot_type {
+            PlotType::Line | PlotType::Scatter | PlotType::Stem | PlotType::HStem => {
+                // graph("line", xs, ys) or graph("line", xs, ys, options)
+                if args.len() < 3 {
+                    return Err(format!(
+                        "graph(\"{}\", ...) requires x and y data: graph(\"{}\", xs, ys) or graph(\"{}\", xs, ys, options)",
+                        plot_type_str, plot_type_str, plot_type_str
+                    ));
+                }
+                let x_data = self.extract_number_list_v2(&args[1])?;
+                let y_data = self.extract_number_list_v2(&args[2])?;
+
+                if x_data.len() != y_data.len() {
+                    return Err(format!(
+                        "graph(): x and y data must have same length (got {} and {})",
+                        x_data.len(),
+                        y_data.len()
+                    ));
+                }
+
+                // Parse options if provided
+                if args.len() >= 4 {
+                    self.parse_graph_options(&args[3], &mut config)?;
+                }
+
+                let code = crate::plotting::generate_lilaq_code(&x_data, &y_data, &config);
+                self.compile_and_output_svg(&code)
+            }
+
+            PlotType::Bar | PlotType::HBar => {
+                // graph("bar", xs, heights) or graph("bar", xs, heights, options)
+                if args.len() < 3 {
+                    return Err(format!(
+                        "graph(\"{}\", ...) requires x and height data",
+                        plot_type_str
+                    ));
+                }
+                let x_data = self.extract_number_list_v2(&args[1])?;
+                let heights = self.extract_number_list_v2(&args[2])?;
+
+                if args.len() >= 4 {
+                    self.parse_graph_options(&args[3], &mut config)?;
+                }
+
+                let code = crate::plotting::generate_bar_chart_code(&x_data, &heights, &config);
+                self.compile_and_output_svg(&code)
+            }
+
+            PlotType::FillBetween => {
+                // graph("fill_between", xs, ys) - fills to y=0
+                if args.len() < 3 {
+                    return Err("graph(\"fill_between\", ...) requires x and y data".to_string());
+                }
+                let x_data = self.extract_number_list_v2(&args[1])?;
+                let y_data = self.extract_number_list_v2(&args[2])?;
+
+                if args.len() >= 4 {
+                    self.parse_graph_options(&args[3], &mut config)?;
+                }
+
+                let code = crate::plotting::generate_fill_between_code(&x_data, &y_data, &config);
+                self.compile_and_output_svg(&code)
+            }
+
+            PlotType::Boxplot | PlotType::HBoxplot => {
+                // graph("boxplot", [data1, data2, ...]) or graph("boxplot", [data1, data2, ...], options)
+                if args.len() < 2 {
+                    return Err(format!(
+                        "graph(\"{}\", ...) requires data arrays",
+                        plot_type_str
+                    ));
+                }
+
+                // Extract as matrix (each row is a dataset)
+                let datasets = self.extract_f64_matrix(&args[1])?;
+
+                if args.len() >= 3 {
+                    self.parse_graph_options(&args[2], &mut config)?;
+                }
+
+                let code = crate::plotting::generate_boxplot_code(&datasets, &config);
+                self.compile_and_output_svg(&code)
+            }
+
+            PlotType::Colormesh => {
+                // graph("heatmap", matrix) or graph("heatmap", matrix, options)
+                if args.len() < 2 {
+                    return Err("graph(\"heatmap\", ...) requires a matrix".to_string());
+                }
+
+                let matrix = self.extract_f64_matrix(&args[1])?;
+
+                if args.len() >= 3 {
+                    self.parse_graph_options(&args[2], &mut config)?;
+                }
+
+                let code = crate::plotting::generate_heatmap_code(&matrix, &config);
+                self.compile_and_output_svg(&code)
+            }
+
+            PlotType::Contour => {
+                // graph("contour", matrix) or graph("contour", matrix, options)
+                if args.len() < 2 {
+                    return Err("graph(\"contour\", ...) requires a matrix".to_string());
+                }
+
+                let matrix = self.extract_f64_matrix(&args[1])?;
+
+                // TODO: extract levels from options if provided
+                if args.len() >= 3 {
+                    self.parse_graph_options(&args[2], &mut config)?;
+                }
+
+                let code = crate::plotting::generate_contour_code(&matrix, None, &config);
+                self.compile_and_output_svg(&code)
+            }
+
+            PlotType::Quiver => {
+                // graph("quiver", xs, ys, directions) or with options
+                if args.len() < 4 {
+                    return Err(
+                        "graph(\"quiver\", ...) requires xs, ys, and directions matrix".to_string(),
+                    );
+                }
+
+                let x_coords = self.extract_number_list_v2(&args[1])?;
+                let y_coords = self.extract_number_list_v2(&args[2])?;
+                let dir_matrix = self.extract_f64_matrix(&args[3])?;
+
+                // Convert matrix to (u, v) tuples
+                let directions: Vec<Vec<(f64, f64)>> = dir_matrix
+                    .iter()
+                    .map(|row| {
+                        row.chunks(2)
+                            .map(|chunk| {
+                                if chunk.len() == 2 {
+                                    (chunk[0], chunk[1])
+                                } else {
+                                    (chunk[0], 0.0)
+                                }
+                            })
+                            .collect()
+                    })
+                    .collect();
+
+                if args.len() >= 5 {
+                    self.parse_graph_options(&args[4], &mut config)?;
+                }
+
+                let code = crate::plotting::generate_quiver_code(
+                    &x_coords,
+                    &y_coords,
+                    &directions,
+                    &config,
+                );
+                self.compile_and_output_svg(&code)
+            }
+        }
+    }
+
+    /// Parse options from a record or string
+    fn parse_graph_options(
+        &self,
+        expr: &Expression,
+        config: &mut crate::plotting::PlotConfig,
+    ) -> Result<(), String> {
+        // If it's a string, treat as title/label
+        if let Ok(s) = self.extract_string(expr) {
+            config.title = Some(s.clone());
+            config.label = Some(s);
+            return Ok(());
+        }
+
+        // Try to evaluate it first
+        let evaluated = self.eval_concrete(expr)?;
+
+        // Check if it's a Record { key: value, ... }
+        if let Expression::Operation { name, args, .. } = &evaluated {
+            if name == "Record" {
+                for arg in args {
+                    if let Expression::Operation {
+                        name: field_name,
+                        args: field_args,
+                        ..
+                    } = arg
+                    {
+                        if field_args.len() == 1 {
+                            self.set_config_field(config, field_name, &field_args[0])?;
+                        }
+                    }
+                }
+                return Ok(());
+            }
+        }
+
+        // Also support simple string as title
+        if let Expression::Const(s) = &evaluated {
+            config.title = Some(s.clone());
+            config.label = Some(s.clone());
+            return Ok(());
+        }
+
+        Err("Options must be a string or record { key: value, ... }".to_string())
+    }
+
+    /// Set a config field from a parsed option
+    fn set_config_field(
+        &self,
+        config: &mut crate::plotting::PlotConfig,
+        field: &str,
+        value: &Expression,
+    ) -> Result<(), String> {
+        match field {
+            "title" => config.title = Some(self.extract_string(value)?),
+            "xlabel" | "x_label" => config.xlabel = Some(self.extract_string(value)?),
+            "ylabel" | "y_label" => config.ylabel = Some(self.extract_string(value)?),
+            "label" => config.label = Some(self.extract_string(value)?),
+            "color" => config.color = Some(self.extract_string(value)?),
+            "stroke" => config.stroke = Some(self.extract_string(value)?),
+            "fill" | "fill_color" => config.fill_color = Some(self.extract_string(value)?),
+            "mark" => config.mark = Some(self.extract_string(value)?),
+            "mark_size" | "marksize" => {
+                config.mark_size = Some(self.extract_number(value)?);
+            }
+            "mark_color" | "markcolor" => {
+                config.mark_color = Some(self.extract_string(value)?);
+            }
+            "opacity" | "alpha" => {
+                config.opacity = Some(self.extract_number(value)?);
+            }
+            "step" => config.step = Some(self.extract_string(value)?),
+            "smooth" => {
+                // Accept true/false or "true"/"false"
+                config.smooth = self.extract_bool(value)?;
+            }
+            "every" => {
+                config.every = Some(self.extract_number(value)? as usize);
+            }
+            "clip" => {
+                config.clip = self.extract_bool(value)?;
+            }
+            "z_index" | "zindex" => {
+                config.z_index = Some(self.extract_number(value)? as i32);
+            }
+            "colormap" | "cmap" | "map" => {
+                config.colormap = Some(self.extract_string(value)?);
+            }
+            "norm" => config.norm = Some(self.extract_string(value)?),
+            "base" => {
+                config.base = Some(self.extract_number(value)?);
+            }
+            "base_stroke" => {
+                config.base_stroke = Some(self.extract_string(value)?);
+            }
+            "width" => config.width = self.extract_number(value)?,
+            "height" => config.height = self.extract_number(value)?,
+            // Error bars (lists)
+            "yerr" => config.yerr = Some(self.extract_number_list_v2(value)?),
+            "xerr" => config.xerr = Some(self.extract_number_list_v2(value)?),
+            // Per-point styling (lists)
+            "sizes" | "size" => config.sizes = Some(self.extract_number_list_v2(value)?),
+            "colors" => config.colors = Some(self.extract_number_list_v2(value)?),
+            _ => {
+                // Unknown option - warn but don't fail
+                eprintln!("Warning: Unknown graph option '{}'", field);
+            }
+        }
+        Ok(())
+    }
+
+    /// Helper to extract boolean from Expression
+    fn extract_bool(&self, expr: &Expression) -> Result<bool, String> {
+        let evaluated = self.eval_concrete(expr)?;
+        match &evaluated {
+            Expression::Const(s) => match s.to_lowercase().as_str() {
+                "true" | "1" => Ok(true),
+                "false" | "0" => Ok(false),
+                _ => Err(format!("Expected boolean, got: {}", s)),
+            },
+            Expression::Object(s) => match s.to_lowercase().as_str() {
+                "true" => Ok(true),
+                "false" => Ok(false),
+                _ => Err(format!("Expected boolean, got: {}", s)),
+            },
+            _ => Err(format!("Expected boolean, got: {:?}", evaluated)),
+        }
+    }
+
+    /// Helper to compile Typst code and output SVG
+    fn compile_and_output_svg(&self, code: &str) -> Result<Option<Expression>, String> {
+        match crate::plotting::compile_to_svg(code) {
+            Ok(output) => {
+                // Return SVG wrapped in special expression for display
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("graph() failed to compile: {}", e)),
+        }
+    }
+
     fn builtin_plot(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         // plot(x_data, y_data) or plot(x_data, y_data, "title")
         if args.len() < 2 || args.len() > 3 {
@@ -5260,6 +5605,19 @@ impl Evaluator {
             }
             Expression::Object(s) => Ok(s.clone()),
             _ => Err(format!("Expected string, got: {:?}", expr)),
+        }
+    }
+
+    /// Extract a single number (f64) from an expression
+    fn extract_number(&self, expr: &Expression) -> Result<f64, String> {
+        let evaluated = self.eval_concrete(expr)?;
+        if let Some(n) = self.as_number(&evaluated) {
+            Ok(n)
+        } else if let Expression::Const(s) = &evaluated {
+            s.parse::<f64>()
+                .map_err(|_| format!("Expected number, got: {}", s))
+        } else {
+            Err(format!("Expected number, got: {:?}", evaluated))
         }
     }
 
