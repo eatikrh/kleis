@@ -124,6 +124,20 @@ structure DifferentiationRules {
 
 Then implement `diff` and VERIFY it satisfies the axioms. That's the Kleis way.
 
+#### 5. Manual: Incorrect Command Path
+
+**Problem:** The manual says:
+```
+Checker    ./scripts/kleis check    Validate .kleis files
+```
+
+**Should say:**
+```
+Checker    kleis check    Validate .kleis files
+```
+
+`./scripts/kleis` is a developer wrapper script (sets up Z3 env). End users would just run `kleis check`.
+
 ---
 
 ## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
