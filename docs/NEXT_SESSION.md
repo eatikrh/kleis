@@ -1,10 +1,71 @@
 # Next Session Notes
 
-**Last Updated:** December 30, 2024
+**Last Updated:** January 1, 2026
 
 ---
 
-## 🚀 CURRENT WORK: Self-Hosted Differential Forms (Dec 30, 2024)
+## 🚀 CURRENT WORK: Plotting Integration Complete! (Jan 1, 2026)
+
+### What's Done
+
+- ✅ **13 plot types implemented** (Phase 1 complete)
+- ✅ **Jupyter kernel integration** working
+- ✅ **Manual section** added with examples and image
+- ✅ **16-phase roadmap** documented in `docs/PLOTTING_ROADMAP.md`
+
+### Known Limitations
+
+#### 1. Calculated Expressions in Plots
+
+**What WORKS:**
+```kleis
+// Arithmetic in lists
+plot([0, 1, 2, 3], [0, 1*1, 2*2, 3*3])  // ✅
+
+// Let bindings
+let xs = [0, 1, 2, 3] in
+let ys = [0, 1, 4, 9] in
+plot(xs, ys)  // ✅
+
+// negate()
+plot(x, [0, negate(1), negate(2)])  // ✅
+```
+
+**What DOESN'T work (yet):**
+```kleis
+// No list comprehensions
+plot(x, [x*x for x in xs])  // ❌ No syntax
+
+// No map over lists  
+plot(x, map(square, xs))  // ❌ Not implemented for plotting
+
+// No linspace/arange
+plot(linspace(0, 10, 100), ...)  // ❌ Phase 10
+```
+
+**Root cause:** Lists must be written explicitly. We lack programmatic list generation.
+
+**Future work:** Phase 10 (linspace, arange, mesh) will address this.
+
+#### 2. Jupyter Kernel: KLEIS_ROOT Environment Variable
+
+**Problem:** When Jupyter runs from arbitrary directories, `import "stdlib/prelude.kleis"` fails because the kernel can't find the Kleis project root.
+
+**Current workaround:** The kernel searches upward for `stdlib/prelude.kleis` and checks common paths like `~/git/cee/kleis`.
+
+**Better solution needed:** Set `KLEIS_ROOT` environment variable:
+```bash
+export KLEIS_ROOT=/path/to/kleis
+```
+
+**TODO:** 
+1. Document KLEIS_ROOT in manual
+2. Make kernel check KLEIS_ROOT first
+3. Consider auto-detection via `kleis --root` command
+
+---
+
+## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
 
 ### The Breakthrough
 

@@ -19,6 +19,53 @@ Kleis Expression  →  Lilaq/Typst  →  SVG  →  Jupyter/Browser/PDF
 
 ---
 
+## Known Limitations
+
+### Calculated Expressions in Plots
+
+**What WORKS:**
+```kleis
+// Arithmetic expressions in lists
+plot([0, 1, 2, 3], [0, 1*1, 2*2, 3*3])  // ✅
+
+// Let bindings
+let xs = [0, 1, 2, 3] in
+let ys = [0, 1, 4, 9] in
+plot(xs, ys)  // ✅
+
+// negate() for negative values
+plot(x, [0, negate(1), negate(2)])  // ✅
+```
+
+**What DOESN'T work (yet):**
+```kleis
+// No list comprehensions
+plot(x, [x*x for x in xs])  // ❌ No syntax
+
+// No map over lists for plotting
+plot(x, map(square, xs))  // ❌ Not implemented
+
+// No linspace/arange
+plot(linspace(0, 10, 100), ...)  // ❌ Phase 10
+```
+
+**Root cause:** The evaluator correctly evaluates expressions, but Kleis lacks programmatic list generation. Lists must be written explicitly.
+
+**Future work:** Phase 10 (linspace, arange, mesh) will address this gap.
+
+### Jupyter Kernel: KLEIS_ROOT Environment Variable
+
+**Problem:** When Jupyter runs from arbitrary directories, `import "stdlib/prelude.kleis"` fails.
+
+**Current workaround:** The kernel searches upward for `stdlib/prelude.kleis` and checks common paths.
+
+**Recommended:** Set `KLEIS_ROOT` environment variable:
+```bash
+export KLEIS_ROOT=/path/to/kleis
+```
+
+---
+
 ## Implementation Status
 
 ### Phase 1: Core 2D Plots ✅ COMPLETE
