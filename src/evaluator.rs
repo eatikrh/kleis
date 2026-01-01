@@ -2478,6 +2478,12 @@ impl Evaluator {
                 self.builtin_quiver(args)
             }
 
+            "grouped_bars" => {
+                // grouped_bars(xs, [ys1, ys2, ...], ["Label1", "Label2", ...])
+                // or: grouped_bars(xs, [ys1, ys2], ["L1", "L2"], [yerr1, yerr2])
+                self.builtin_grouped_bars(args)
+            }
+
             // === Arithmetic ===
             "plus" | "+" => self.builtin_arithmetic(args, |a, b| a + b),
             "minus" | "-" => self.builtin_arithmetic(args, |a, b| a - b),
@@ -4947,6 +4953,13 @@ impl Evaluator {
             "base_stroke" => {
                 config.base_stroke = Some(self.extract_string(value)?);
             }
+            // Bar-specific (Phase 3)
+            "offset" | "bar_offset" => {
+                config.bar_offset = Some(self.extract_number(value)?);
+            }
+            "bar_width" => {
+                config.bar_width = Some(self.extract_number(value)?);
+            }
             "width" => config.width = self.extract_number(value)?,
             "height" => config.height = self.extract_number(value)?,
             // Error bars (lists)
@@ -5463,6 +5476,150 @@ impl Evaluator {
             }
             Err(e) => Err(format!("quiver() failed: {}", e)),
         }
+    }
+
+    /// Grouped bar chart with optional error bars
+    /// grouped_bars(xs, [ys1, ys2, ...], ["Label1", "Label2", ...])
+    /// or: grouped_bars(xs, [ys1, ys2], ["L1", "L2"], [yerr1, yerr2])
+    fn builtin_grouped_bars(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() < 3 || args.len() > 5 {
+            return Err(
+                "grouped_bars() takes 3-5 arguments: grouped_bars(xs, [ys1, ys2, ...], [\"Label1\", \"Label2\", ...]) or with optional [yerr1, yerr2, ...] and \"title\""
+                    .to_string(),
+            );
+        }
+
+        // Extract x coordinates
+        let x_data = self.extract_number_list_v2(&args[0])?;
+
+        // Extract y data series (list of lists)
+        let y_series = self.extract_f64_matrix(&args[1])?;
+
+        // Extract labels (list of strings)
+        let labels = self.extract_string_list(&args[2])?;
+
+        if y_series.len() != labels.len() {
+            return Err(format!(
+                "grouped_bars(): y_series count ({}) must match labels count ({})",
+                y_series.len(),
+                labels.len()
+            ));
+        }
+
+        // Validate all y series have same length as x
+        for (i, ys) in y_series.iter().enumerate() {
+            if ys.len() != x_data.len() {
+                return Err(format!(
+                    "grouped_bars(): y_series[{}] length ({}) must match x_data length ({})",
+                    i,
+                    ys.len(),
+                    x_data.len()
+                ));
+            }
+        }
+
+        // Optional: error bars (list of lists)
+        let yerr_series: Option<Vec<Vec<f64>>> = if args.len() >= 4 {
+            // Check if it's a string (title) or list (error bars)
+            if self.extract_string(&args[3]).is_ok() {
+                None
+            } else {
+                Some(self.extract_f64_matrix(&args[3])?)
+            }
+        } else {
+            None
+        };
+
+        // Validate error bars if provided
+        if let Some(ref yerrs) = yerr_series {
+            if yerrs.len() != y_series.len() {
+                return Err(format!(
+                    "grouped_bars(): yerr count ({}) must match y_series count ({})",
+                    yerrs.len(),
+                    y_series.len()
+                ));
+            }
+            for (i, yerr) in yerrs.iter().enumerate() {
+                if yerr.len() != x_data.len() {
+                    return Err(format!(
+                        "grouped_bars(): yerr[{}] length ({}) must match x_data length ({})",
+                        i,
+                        yerr.len(),
+                        x_data.len()
+                    ));
+                }
+            }
+        }
+
+        // Optional: title (can be arg 4 or arg 5 depending on whether yerr is provided)
+        let title = if args.len() == 5 {
+            self.extract_string(&args[4]).ok()
+        } else if args.len() == 4 && self.extract_string(&args[3]).is_ok() {
+            self.extract_string(&args[3]).ok()
+        } else {
+            None
+        };
+
+        // Build series tuples
+        let series: Vec<(Vec<f64>, String, Option<Vec<f64>>)> = y_series
+            .into_iter()
+            .zip(labels)
+            .enumerate()
+            .map(|(i, (ys, label))| {
+                let yerr = yerr_series.as_ref().map(|yerrs| yerrs[i].clone());
+                (ys, label, yerr)
+            })
+            .collect();
+
+        let config = crate::plotting::PlotConfig {
+            title,
+            ..Default::default()
+        };
+
+        let code = crate::plotting::generate_grouped_bar_code(&x_data, &series, &config);
+
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("grouped_bars() failed: {}", e)),
+        }
+    }
+
+    /// Extract a list of strings from an expression
+    fn extract_string_list(&self, expr: &Expression) -> Result<Vec<String>, String> {
+        let evaluated = self.eval_concrete(expr)?;
+
+        if let Expression::List(items) = &evaluated {
+            let mut result = Vec::new();
+            for item in items {
+                let s = self.extract_string(item)?;
+                result.push(s);
+            }
+            return Ok(result);
+        }
+
+        // Try flat list extraction
+        if let Some(items) = self.extract_flat_list(&evaluated) {
+            let mut result = Vec::new();
+            for item in &items {
+                let s = self.extract_string(item)?;
+                result.push(s);
+            }
+            return Ok(result);
+        }
+
+        Err(format!(
+            "Expected list of strings, got: {:?}",
+            evaluated
+        ))
     }
 
     /// Extract a 2D grid of (u, v) direction pairs for quiver plots

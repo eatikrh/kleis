@@ -178,6 +178,12 @@ pub struct PlotConfig {
     /// Baseline stroke style
     pub base_stroke: Option<String>,
 
+    // === Bar-specific (Phase 3) ===
+    /// Horizontal offset for grouped bars (e.g., -0.2 for left, 0.2 for right)
+    pub bar_offset: Option<f64>,
+    /// Bar width (default 0.8 in Lilaq)
+    pub bar_width: Option<f64>,
+
     // === Legacy compat ===
     pub grid: bool,
 }
@@ -220,6 +226,9 @@ impl Default for PlotConfig {
             // Stem-specific
             base: None,
             base_stroke: None,
+            // Bar-specific
+            bar_offset: None,
+            bar_width: None,
             // Legacy
             grid: true,
         }
@@ -599,13 +608,94 @@ pub fn generate_bar_chart_code(x_data: &[f64], heights: &[f64], config: &PlotCon
     code.push_str(&format!("    {},\n", format_array(x_data)));
     code.push_str(&format!("    {}", format_array(heights)));
 
+    // Bar offset for grouped bars
+    if let Some(offset) = config.bar_offset {
+        code.push_str(&format!(",\n    offset: {}", offset));
+    }
+
+    // Bar width (default 0.8 in Lilaq)
+    if let Some(width) = config.bar_width {
+        code.push_str(&format!(",\n    width: {}", width));
+    }
+
+    // Fill color
     if let Some(fill) = &config.fill_color {
         code.push_str(&format!(",\n    fill: {}", fill));
+    }
+
+    // Label for legend
+    if let Some(label) = &config.label {
+        code.push_str(&format!(",\n    label: [\"{}\"]", label));
     }
 
     code.push_str("\n  )\n");
     code.push_str(")\n");
 
+    code
+}
+
+/// A single bar series: (heights, label, optional error bars)
+pub type BarSeries = (Vec<f64>, String, Option<Vec<f64>>);
+
+/// Generate Lilaq code for grouped bar charts with optional error bars
+///
+/// This creates a single diagram with multiple bar series, automatically
+/// calculating offsets for side-by-side grouping.
+///
+/// # Arguments
+/// * `x_data` - X coordinates for all bars
+/// * `series` - Vec of (heights, label, optional yerr) for each series
+/// * `config` - Plot configuration (title, etc.)
+pub fn generate_grouped_bar_code(
+    x_data: &[f64],
+    series: &[BarSeries],
+    config: &PlotConfig,
+) -> String {
+    let mut code = generate_preamble();
+
+    code.push_str("#lq.diagram(\n");
+
+    // Diagram-level options
+    if let Some(title) = &config.title {
+        code.push_str(&format!("  title: \"{}\",\n", title));
+    }
+
+    // Calculate bar width and offsets based on number of series
+    let n_series = series.len() as f64;
+    let total_width = 0.8; // Total width for all bars at each x
+    let bar_width = total_width / n_series;
+    let start_offset = -total_width / 2.0 + bar_width / 2.0;
+
+    // Legend configuration
+    code.push_str("  legend: (position: left + top),\n");
+
+    // Generate each bar series
+    for (i, (heights, label, yerr)) in series.iter().enumerate() {
+        let offset = start_offset + (i as f64) * bar_width;
+
+        code.push_str("  lq.bar(\n");
+        code.push_str(&format!("    {},\n", format_array(x_data)));
+        code.push_str(&format!("    {}", format_array(heights)));
+        code.push_str(&format!(",\n    offset: {:.2}", offset));
+        code.push_str(&format!(",\n    width: {:.2}", bar_width));
+        code.push_str(&format!(",\n    label: [{}]", label));
+        code.push_str("\n  ),\n");
+
+        // Add error bars as a plot with stroke: none
+        if let Some(err) = yerr {
+            // Offset x coordinates to match bar positions
+            let offset_x: Vec<f64> = x_data.iter().map(|x| x + offset).collect();
+            code.push_str("  lq.plot(\n");
+            code.push_str(&format!("    {},\n", format_array(&offset_x)));
+            code.push_str(&format!("    {}", format_array(heights)));
+            code.push_str(&format!(",\n    yerr: {}", format_array(err)));
+            code.push_str(",\n    color: black");
+            code.push_str(",\n    stroke: none");
+            code.push_str("\n  ),\n");
+        }
+    }
+
+    code.push_str(")\n");
     code
 }
 
