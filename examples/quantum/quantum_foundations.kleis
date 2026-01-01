@@ -1,0 +1,224 @@
+// ============================================================================
+// QUANTUM COMPUTING FOUNDATIONS IN KLEIS
+// ============================================================================
+//
+// This file defines the fundamental structures and axioms of quantum computing.
+// Based on the postulates of quantum mechanics and the circuit model.
+//
+// References:
+//   - Nielsen & Chuang, "Quantum Computation and Quantum Information" (2000)
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// =============================================================================
+// Part 1: Quantum States
+// =============================================================================
+
+structure QuantumState {
+    // An n-qubit quantum state lives in a 2^n dimensional complex Hilbert space
+    operation amplitudes : List(ℂ)
+    operation num_qubits : ℕ
+    
+    // Normalization: sum of |amplitude|² = 1
+    axiom normalized : ∀ psi : QuantumState .
+        sum_abs_squared(amplitudes(psi)) = 1
+}
+
+// Standard basis states for 1 qubit
+structure ComputationalBasis {
+    // |0⟩ = [1, 0]
+    define ket_0 = [1, 0]
+    
+    // |1⟩ = [0, 1]
+    define ket_1 = [0, 1]
+    
+    // |+⟩ = (|0⟩ + |1⟩)/√2
+    define ket_plus = [0.7071, 0.7071]
+    
+    // |−⟩ = (|0⟩ − |1⟩)/√2
+    define ket_minus = [0.7071, negate(0.7071)]
+}
+
+// =============================================================================
+// Part 2: Quantum Gates (Unitary Operators)
+// =============================================================================
+
+structure UnitaryGate {
+    // A quantum gate is a unitary matrix
+    operation dim : ℕ
+    
+    // Unitarity: U†U = I (preserves normalization)
+    axiom unitary : ∀ U : UnitaryGate .
+        multiply(dagger(U), U) = identity(dim(U))
+    
+    // Reversibility: every unitary has an inverse
+    axiom reversible : ∀ U : UnitaryGate .
+        inv(U) = dagger(U)
+}
+
+// Common single-qubit gates
+structure SingleQubitGates {
+    // Pauli-X (NOT gate, bit flip)
+    define X = [[0, 1], [1, 0]]
+    
+    // Pauli-Y
+    define Y = [[0, negate(1)], [1, 0]]
+    
+    // Pauli-Z (phase flip)
+    define Z = [[1, 0], [0, negate(1)]]
+    
+    // Hadamard (creates superposition)
+    define H = [[0.7071, 0.7071], [0.7071, negate(0.7071)]]
+    
+    // Identity
+    define I2 = [[1, 0], [0, 1]]
+}
+
+// Two-qubit gates
+structure TwoQubitGates {
+    // CNOT (Controlled-NOT)
+    define CNOT = [
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 1],
+        [0, 0, 1, 0]
+    ]
+    
+    // CZ (Controlled-Z)
+    define CZ = [
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, negate(1)]
+    ]
+    
+    // SWAP
+    define SWAP = [
+        [1, 0, 0, 0],
+        [0, 0, 1, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 1]
+    ]
+}
+
+// =============================================================================
+// Part 3: Gate Application and Composition
+// =============================================================================
+
+structure GateApplication {
+    // Apply gate to state: |ψ'⟩ = U|ψ⟩
+    operation apply_gate : UnitaryGate × QuantumState → QuantumState
+    
+    // Gate application preserves normalization
+    axiom preserves_norm : ∀ U : UnitaryGate . ∀ psi : QuantumState .
+        norm(apply_gate(U, psi)) = norm(psi)
+    
+    // Sequential composition: (VU)|ψ⟩ = V(U|ψ⟩)
+    axiom sequential : ∀ U : UnitaryGate . ∀ V : UnitaryGate . ∀ psi : QuantumState .
+        apply_gate(compose(V, U), psi) = apply_gate(V, apply_gate(U, psi))
+}
+
+// =============================================================================
+// Part 4: Measurement (Born Rule)
+// =============================================================================
+
+structure Measurement {
+    // Probability of measuring outcome i
+    operation probability : ℕ × QuantumState → ℝ
+    
+    // Born rule: P(i) = |αᵢ|²
+    axiom born_rule : ∀ psi : QuantumState . ∀ i : ℕ .
+        probability(i, psi) = abs(get(amplitudes(psi), i))^2
+    
+    // Probabilities are non-negative
+    axiom non_negative : ∀ psi : QuantumState . ∀ i : ℕ .
+        probability(i, psi) >= 0
+}
+
+// =============================================================================
+// Part 5: No-Cloning Theorem
+// =============================================================================
+
+structure NoCloning {
+    // The no-cloning theorem: cannot copy an arbitrary quantum state
+    // This is fundamental to quantum cryptography (QKD security)
+    
+    axiom no_clone : ∀ U : UnitaryGate . ∀ psi : QuantumState .
+        ¬(apply_gate(U, tensor(psi, ket_0)) = tensor(psi, psi))
+}
+
+// =============================================================================
+// Part 6: Entanglement
+// =============================================================================
+
+structure Entanglement {
+    // A state is separable if it can be written as a tensor product
+    operation separable : QuantumState → Bool
+    
+    // A state is entangled if it is NOT separable
+    axiom entanglement_def : ∀ psi : QuantumState .
+        entangled(psi) = ¬separable(psi)
+}
+
+// Bell states (maximally entangled 2-qubit states)
+structure BellStates {
+    // |Φ+⟩ = (|00⟩ + |11⟩)/√2
+    define bell_phi_plus = [0.7071, 0, 0, 0.7071]
+    
+    // |Φ−⟩ = (|00⟩ − |11⟩)/√2
+    define bell_phi_minus = [0.7071, 0, 0, negate(0.7071)]
+    
+    // |Ψ+⟩ = (|01⟩ + |10⟩)/√2
+    define bell_psi_plus = [0, 0.7071, 0.7071, 0]
+    
+    // |Ψ−⟩ = (|01⟩ − |10⟩)/√2
+    define bell_psi_minus = [0, 0.7071, negate(0.7071), 0]
+}
+
+// =============================================================================
+// Part 7: Examples
+// =============================================================================
+
+example "Hadamard creates superposition" {
+    out("H|0⟩ = |+⟩")
+    out("Hadamard gate: H = [[1/√2, 1/√2], [1/√2, -1/√2]]")
+    out("")
+    out("Applied to |0⟩ = [1, 0]:")
+    out("  H|0⟩ = [1/√2, 1/√2] = |+⟩")
+    out("")
+    out("This is an equal superposition of |0⟩ and |1⟩")
+    out("Measurement: P(0) = 50%, P(1) = 50%")
+}
+
+example "Pauli gates are self-inverse" {
+    out("Pauli gates: X, Y, Z")
+    out("")
+    out("X² = I (bit flip twice = identity)")
+    out("Y² = I")
+    out("Z² = I (phase flip twice = identity)")
+    out("")
+    out("This follows from their eigenvalues being ±1")
+}
+
+example "CNOT creates entanglement" {
+    out("CNOT(H ⊗ I)|00⟩ creates Bell state")
+    out("")
+    out("Step 1: H|0⟩ = |+⟩ = (|0⟩ + |1⟩)/√2")
+    out("Step 2: |+⟩|0⟩ = (|00⟩ + |10⟩)/√2")
+    out("Step 3: CNOT flips target when control is 1")
+    out("        CNOT(|00⟩ + |10⟩)/√2 = (|00⟩ + |11⟩)/√2")
+    out("")
+    out("Result: |Φ+⟩ = (|00⟩ + |11⟩)/√2 (Bell state)")
+    out("This state is maximally entangled!")
+}
+
+example "probability conservation" {
+    out("For any quantum state |ψ⟩: Σᵢ |αᵢ|² = 1")
+    out("")
+    out("Example: |+⟩ = [1/√2, 1/√2]")
+    out("  P(0) = |1/√2|² = 1/2")
+    out("  P(1) = |1/√2|² = 1/2")
+    out("  Total = 1/2 + 1/2 = 1 ✓")
+}

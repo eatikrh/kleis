@@ -1,0 +1,206 @@
+// ============================================================================
+// GROVER'S QUANTUM SEARCH ALGORITHM
+// ============================================================================
+//
+// Grover's algorithm provides a quadratic speedup for unstructured search.
+// Classical: O(N) queries to find a marked item
+// Quantum:   O(√N) queries
+//
+// Reference: L. K. Grover, "A fast quantum mechanical algorithm for 
+//            database search", STOC 1996
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// =============================================================================
+// Part 1: Oracle (Problem Definition)
+// =============================================================================
+
+structure GroverOracle(n) {
+    // The oracle marks the target state by flipping its phase
+    // O|x⟩ = -|x⟩  if x is the target
+    // O|x⟩ = |x⟩   otherwise
+    
+    operation oracle : UnitaryGate(n)
+    operation target : ℕ  // The state we're searching for (0 to 2^n - 1)
+    
+    // Oracle is its own inverse (applying twice = identity)
+    axiom self_inverse : ∀ O : GroverOracle(n) .
+        compose(oracle(O), oracle(O)) = identity(2^n)
+    
+    // Oracle only affects the target state
+    axiom phase_flip : ∀ O : GroverOracle(n) . ∀ x : ℕ .
+        x = target(O) → amplitude_after(x, O) = negate(amplitude_before(x, O))
+    
+    axiom non_target_unchanged : ∀ O : GroverOracle(n) . ∀ x : ℕ .
+        x ≠ target(O) → amplitude_after(x, O) = amplitude_before(x, O)
+}
+
+// =============================================================================
+// Part 2: Diffusion Operator (Amplitude Amplification)
+// =============================================================================
+
+structure DiffusionOperator(n) {
+    // The diffusion operator "inverts about the mean"
+    // D = 2|s⟩⟨s| - I
+    // where |s⟩ is the uniform superposition
+    
+    // Hadamard on all qubits
+    define H_all = tensor_n(H, n)
+    
+    // Reflection about |0...0⟩
+    define reflect_zero = 2 * outer_product(ket_0_n(n), ket_0_n(n)) - identity(2^n)
+    
+    // Diffusion operator: H⊗n · (2|0⟩⟨0| - I) · H⊗n
+    define diffusion = compose(H_all, compose(reflect_zero, H_all))
+    
+    // Diffusion is unitary
+    axiom unitary : is_unitary(diffusion(n))
+    
+    // Diffusion is its own inverse
+    axiom self_inverse : compose(diffusion(n), diffusion(n)) = identity(2^n)
+}
+
+// =============================================================================
+// Part 3: Grover Iteration
+// =============================================================================
+
+structure GroverIteration(n) {
+    // One Grover iteration: Oracle → Diffusion
+    operation oracle : GroverOracle(n)
+    operation diffusion : DiffusionOperator(n)
+    
+    define grover_step = compose(diffusion, oracle)
+    
+    // Each iteration increases target amplitude
+    axiom amplitude_increase : ∀ G : GroverIteration(n) .
+        amplitude(target, apply(grover_step(G), state)) > amplitude(target, state)
+        // (valid until optimal number of iterations)
+}
+
+// =============================================================================
+// Part 4: Complete Grover Algorithm
+// =============================================================================
+
+structure GroverAlgorithm(n) {
+    // Search space size N = 2^n
+    define N = 2^n
+    
+    // Initial state: uniform superposition
+    define initial = apply(tensor_n(H, n), ket_0_n(n))
+    
+    // Optimal number of iterations: ≈ (π/4)√N
+    define optimal_iterations = floor(pi/4 * sqrt(N))
+    
+    // Grover iteration
+    operation grover_iteration : UnitaryGate(n)
+    
+    // Final state after optimal iterations
+    define final_state = apply(iterate(grover_iteration, optimal_iterations), initial)
+    
+    // Success probability after optimal iterations
+    axiom high_probability : 
+        probability(target, final_state) > 1 - 1/N
+    
+    // Query complexity is O(√N)
+    axiom query_complexity :
+        queries(GroverAlgorithm(n)) = O(sqrt(2^n))
+}
+
+// =============================================================================
+// Part 5: Correctness Properties
+// =============================================================================
+
+structure GroverCorrectness(n) {
+    // After optimal iterations, target has high probability
+    axiom finds_target : ∀ G : GroverAlgorithm(n) .
+        probability(target(G), final_state(G)) >= 1 - 1/(2^n)
+    
+    // Quadratic speedup over classical
+    axiom quadratic_speedup :
+        quantum_queries(n) = O(sqrt(2^n)) ∧
+        classical_queries(n) = O(2^n)
+    
+    // Works for single marked item
+    axiom single_target : ∀ G : GroverAlgorithm(n) .
+        count_marked(G) = 1 → optimal_iterations(G) = floor(pi/4 * sqrt(2^n))
+    
+    // Multiple targets: fewer iterations needed
+    axiom multiple_targets : ∀ G : GroverAlgorithm(n) . ∀ k : ℕ .
+        count_marked(G) = k → optimal_iterations(G) = floor(pi/4 * sqrt(2^n / k))
+}
+
+// =============================================================================
+// Part 6: Examples
+// =============================================================================
+
+example "2-qubit Grover (N=4, search among 4 items)" {
+    out("Grover's Algorithm for N=4 (2 qubits)")
+    out("======================================")
+    out("")
+    out("Goal: Find |11⟩ among {|00⟩, |01⟩, |10⟩, |11⟩}")
+    out("")
+    out("Initial state: |ψ₀⟩ = H⊗²|00⟩ = (|00⟩+|01⟩+|10⟩+|11⟩)/2")
+    out("  All amplitudes = 1/2")
+    out("")
+    out("Optimal iterations: ⌊(π/4)√4⌋ = ⌊π/2⌋ = 1")
+    out("")
+    out("After 1 iteration:")
+    out("  Oracle: flips phase of |11⟩")
+    out("  Diffusion: inverts about mean")
+    out("  Result: |11⟩ has amplitude ≈ 1, others ≈ 0")
+    out("")
+    out("Measurement: P(11) ≈ 100%")
+}
+
+example "Grover scaling" {
+    out("Query Complexity Comparison")
+    out("===========================")
+    out("")
+    out("| n qubits | N = 2^n | Classical | Grover  |")
+    out("|----------|---------|-----------|---------|")
+    out("|    2     |    4    |    4      |   1-2   |")
+    out("|    4     |   16    |   16      |   3-4   |")
+    out("|    8     |  256    |  256      |   12    |")
+    out("|   10     | 1024    | 1024      |   25    |")
+    out("|   20     | ~10^6   | ~10^6     |  ~785   |")
+    out("")
+    out("Quadratic speedup: O(N) → O(√N)")
+}
+
+example "amplitude amplification visualization" {
+    out("Amplitude Amplification (Geometric View)")
+    out("=========================================")
+    out("")
+    out("State space can be divided into:")
+    out("  |t⟩ = target state")
+    out("  |s'⟩ = superposition of non-targets")
+    out("")
+    out("Initial: |ψ⟩ = sin(θ)|t⟩ + cos(θ)|s'⟩")
+    out("         where θ = arcsin(1/√N)")
+    out("")
+    out("Each Grover iteration rotates by 2θ:")
+    out("  After k iterations: angle = (2k+1)θ")
+    out("")
+    out("Optimal: when (2k+1)θ ≈ π/2")
+    out("         k ≈ (π/4)√N")
+}
+
+example "oracle construction" {
+    out("Oracle Construction for Marking |11⟩")
+    out("=====================================")
+    out("")
+    out("Oracle O marks |11⟩ by flipping its phase:")
+    out("  O|00⟩ = |00⟩")
+    out("  O|01⟩ = |01⟩")
+    out("  O|10⟩ = |10⟩")
+    out("  O|11⟩ = -|11⟩")
+    out("")
+    out("Matrix form:")
+    out("  O = diag(1, 1, 1, -1)")
+    out("")
+    out("Circuit: CZ (controlled-Z) marks |11⟩")
+    out("  |x₁x₀⟩ → (-1)^(x₁·x₀) |x₁x₀⟩")
+}
+

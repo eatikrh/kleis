@@ -1,0 +1,222 @@
+// ============================================================================
+// PLOTTING EXAMPLES - LILAQ/TYPST INTEGRATION
+// ============================================================================
+//
+// Kleis can generate publication-quality plots using Lilaq (Typst's plotting
+// library). Plots are rendered as SVG and can be displayed in Jupyter or
+// saved to files.
+//
+// Requirements: Typst CLI must be installed (brew install typst)
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// =============================================================================
+// Part 1: Basic Line Plots
+// =============================================================================
+
+example "quadratic function (x²)" {
+    out("Plotting y = x²")
+    out("")
+    plot([0, 1, 2, 3, 4, 5], [0, 1, 4, 9, 16, 25])
+}
+
+example "linear function" {
+    out("Plotting y = 2x + 1")
+    out("")
+    plot([0, 1, 2, 3, 4], [1, 3, 5, 7, 9])
+}
+
+// =============================================================================
+// Part 2: Scatter Plots
+// =============================================================================
+
+example "scatter plot" {
+    out("Scatter plot of data points")
+    out("")
+    scatter([1, 2, 3, 4, 5], [2.1, 3.9, 6.2, 7.8, 10.1])
+}
+
+// =============================================================================
+// Part 3: Trigonometric Functions (sampled)
+// =============================================================================
+
+// Approximate sine values at key points
+example "sine wave (sampled)" {
+    out("Sine wave: y = sin(x)")
+    out("")
+    // x from 0 to 2π in steps
+    // sin(0)=0, sin(π/4)≈0.707, sin(π/2)=1, sin(3π/4)≈0.707, sin(π)=0
+    // sin(5π/4)≈-0.707, sin(3π/2)=-1, sin(7π/4)≈-0.707, sin(2π)=0
+    plot(
+        [0, 0.785, 1.571, 2.356, 3.142, 3.927, 4.712, 5.497, 6.283],
+        [0, 0.707, 1.0, 0.707, 0, negate(0.707), negate(1.0), negate(0.707), 0]
+    )
+}
+
+// =============================================================================
+// Part 4: Mathematical Curves
+// =============================================================================
+
+example "exponential growth" {
+    out("Exponential: y = 2^x")
+    out("")
+    plot([0, 1, 2, 3, 4, 5], [1, 2, 4, 8, 16, 32])
+}
+
+example "reciprocal function" {
+    out("Reciprocal: y = 1/x (positive x)")
+    out("")
+    plot([0.5, 1, 2, 3, 4, 5], [2, 1, 0.5, 0.333, 0.25, 0.2])
+}
+
+// =============================================================================
+// Part 5: Physics Applications
+// =============================================================================
+
+example "projectile motion" {
+    out("Projectile motion: y = x - 0.1x² (parabola)")
+    out("")
+    // t=0 to t=10, y = t - 0.1t²
+    plot(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        [0, 0.9, 1.6, 2.1, 2.4, 2.5, 2.4, 2.1, 1.6, 0.9, 0]
+    )
+}
+
+example "damped oscillation" {
+    out("Damped oscillation: e^(-t/5) * cos(t)")
+    out("")
+    plot(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        [1.0, 0.44, negate(0.32), negate(0.59), negate(0.30), 0.19, 0.44, 0.26, negate(0.08), negate(0.29), negate(0.20)]
+    )
+}
+
+// =============================================================================
+// Part 6: Quantum Probability Distributions
+// =============================================================================
+
+example "measurement probabilities" {
+    out("Quantum measurement probabilities for 2-qubit Bell state")
+    out("")
+    out("States: |00⟩, |01⟩, |10⟩, |11⟩")
+    out("Probabilities: 0.5, 0, 0, 0.5")
+    out("")
+    // Bar chart of probabilities
+    scatter([0, 1, 2, 3], [0.5, 0, 0, 0.5])
+}
+
+// =============================================================================
+// Part 7: Bar Charts
+// =============================================================================
+
+example "bar chart" {
+    out("Bar chart with numeric x values")
+    out("")
+    bar([1, 2, 3, 4, 5], [10, 25, 15, 30, 20])
+}
+
+// =============================================================================
+// Part 8: Stem Plots
+// =============================================================================
+
+example "stem plot" {
+    out("Discrete signal representation")
+    out("")
+    stem([0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 1, 0, 0, 1, 0, 1])
+}
+
+// =============================================================================
+// Part 9: Fill Between (Area Under Curve)
+// =============================================================================
+
+example "area under curve" {
+    out("Shaded area under curve (fills to y=0)")
+    out("")
+    fill_between(
+        [0, 1, 2, 3, 4, 5],
+        [1, 2, 4, 5, 4, 3]
+    )
+}
+
+// =============================================================================
+// Part 10: Heatmaps
+// =============================================================================
+
+example "heatmap - small matrix" {
+    out("2D heatmap / colormesh visualization")
+    out("")
+    heatmap([
+        [1.0, 2.0, 3.0, 4.0],
+        [5.0, 6.0, 7.0, 8.0],
+        [9.0, 10.0, 11.0, 12.0],
+        [13.0, 14.0, 15.0, 16.0]
+    ])
+}
+
+// =============================================================================
+// Part 11: Boxplots
+// =============================================================================
+
+example "boxplot - statistical summary" {
+    out("Box and whisker plots for multiple datasets")
+    out("")
+    boxplot(
+        [1, 2, 3, 4, 5, 6, 7],
+        [2, 4, 6, 8, 10, 12, 14],
+        [1, 1, 2, 3, 5, 8, 13]
+    )
+}
+
+// =============================================================================
+// Part 12: Contour Plots
+// =============================================================================
+
+example "contour plot" {
+    out("Contour lines from 2D data")
+    out("")
+    contour([
+        [1.0, 2.0, 3.0, 4.0],
+        [2.0, 4.0, 6.0, 8.0],
+        [3.0, 6.0, 9.0, 12.0],
+        [4.0, 8.0, 12.0, 16.0]
+    ])
+}
+
+// =============================================================================
+// Part 13: Vector Fields (Quiver)
+// =============================================================================
+
+example "vector field" {
+    out("Quiver plot - vector field visualization")
+    out("")
+    // quiver(x_coords, y_coords, directions)
+    // directions is a 2D grid of [u, v] pairs - rows match y, cols match x
+    quiver(
+        [0, 1],         // x coordinates
+        [0, 1],         // y coordinates
+        [               // 2x2 grid of [u, v] directions
+            [[1, 0], [0, 1]],       // row for y=0
+            [[0, negate(1)], [negate(1), 0]]  // row for y=1
+        ]
+    )
+}
+
+// =============================================================================
+// Part 14: Horizontal Variants
+// =============================================================================
+
+example "horizontal bar chart" {
+    out("Horizontal bar chart")
+    out("")
+    hbar([1, 2, 3, 4, 5], [10, 25, 15, 30, 20])
+}
+
+example "horizontal stem plot" {
+    out("Horizontal stem plot")
+    out("")
+    hstem([0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 1, 0, 0, 1, 0, 1])
+}
+

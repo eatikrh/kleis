@@ -10,6 +10,7 @@ Kleis provides Jupyter kernel support, allowing you to write and execute Kleis c
 - **Teaching** mathematical foundations
 - **Documenting** proofs and derivations
 - **Numerical computation** with LAPACK operations
+- **Publication-quality plotting** with Lilaq/Typst integration
 
 ## Quick Start
 
@@ -312,6 +313,150 @@ let Ainv = inv(A)
 // Verify: A * Ainv should be identity
 // (Matrix multiplication coming soon!)
 ```
+
+## Plotting
+
+Kleis integrates with **Lilaq** (Typst's plotting library) to generate publication-quality plots directly in Jupyter notebooks. Plots are rendered as scalable SVG graphics.
+
+![Kleis plotting examples](../images/kleis_plots.png)
+
+*Examples of Kleis plots: reciprocal function, projectile motion, and damped oscillation*
+
+### Requirements
+
+- **Typst CLI** must be installed: `brew install typst` (macOS) or see [typst.app](https://typst.app)
+
+### Plot Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `plot(x, y)` | Line plot | `plot([0,1,2], [0,1,4])` |
+| `scatter(x, y)` | Scatter plot | `scatter([1,2,3], [2.1,3.9,6.2])` |
+| `bar(x, heights)` | Vertical bars | `bar([1,2,3], [10,25,15])` |
+| `hbar(y, widths)` | Horizontal bars | `hbar([1,2,3], [10,25,15])` |
+| `stem(x, y)` | Stem plot | `stem([0,1,2], [0,1,1])` |
+| `hstem(x, y)` | Horizontal stem | `hstem([0,1,2], [0,1,1])` |
+| `fill_between(x, y)` | Area under curve | `fill_between([0,1,2], [1,2,4])` |
+| `boxplot(d1, d2, ...)` | Box and whisker | `boxplot([1,2,3], [4,5,6])` |
+| `hboxplot(...)` | Horizontal boxplot | `hboxplot([1,2,3], [4,5,6])` |
+| `heatmap(matrix)` | 2D color grid | `heatmap([[1,2],[3,4]])` |
+| `colormesh(matrix)` | Alias for heatmap | `colormesh([[1,2],[3,4]])` |
+| `contour(matrix)` | Contour lines | `contour([[1,2],[3,4]])` |
+| `quiver(x, y, dirs)` | Vector field | See example below |
+
+### Basic Examples
+
+```kleis
+import "stdlib/prelude.kleis"
+
+example "line plot" {
+    // Line plot: y = x²
+    plot([0, 1, 2, 3, 4, 5], [0, 1, 4, 9, 16, 25])
+}
+
+example "scatter plot" {
+    scatter([1, 2, 3, 4, 5], [2.1, 3.9, 6.2, 7.8, 10.1])
+}
+
+example "bar chart" {
+    bar([1, 2, 3, 4, 5], [10, 25, 15, 30, 20])
+}
+
+example "heatmap" {
+    heatmap([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0]
+    ])
+}
+```
+
+### Physics Examples
+
+```kleis
+import "stdlib/prelude.kleis"
+
+example "damped oscillation" {
+    // e^(-t/5) × cos(t)
+    plot(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        [1.0, 0.44, negate(0.32), negate(0.59), negate(0.30), 
+         0.19, 0.44, 0.26, negate(0.08), negate(0.29), negate(0.20)]
+    )
+}
+
+example "projectile motion" {
+    // y = x - 0.1x²
+    plot(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        [0, 0.9, 1.6, 2.1, 2.4, 2.5, 2.4, 2.1, 1.6, 0.9, 0]
+    )
+}
+```
+
+### Vector Field Example
+
+```kleis
+import "stdlib/prelude.kleis"
+
+example "vector field" {
+    quiver(
+        [0, 1],         // x coordinates
+        [0, 1],         // y coordinates
+        [               // 2×2 grid of [u, v] directions
+            [[1, 0], [0, 1]],
+            [[0, negate(1)], [negate(1), 0]]
+        ]
+    )
+}
+```
+
+### Titles
+
+All plot functions accept an optional title as the last argument:
+
+```kleis
+import "stdlib/prelude.kleis"
+
+example "with title" {
+    plot([0, 1, 2, 3], [0, 1, 4, 9], "Quadratic Growth")
+    scatter([1, 2, 3], [1.1, 2.0, 2.9], "Experimental Data")
+}
+```
+
+### Complete Example Notebook
+
+**Cell 1: Import stdlib**
+```kleis
+import "stdlib/prelude.kleis"
+```
+
+**Cell 2: Line plot**
+```kleis
+plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16], "y = x²")
+```
+
+**Cell 3: Multiple plots in one cell**
+```kleis
+example "quadratic" {
+    plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16])
+}
+
+example "linear" {
+    plot([0, 1, 2, 3, 4], [1, 3, 5, 7, 9])
+}
+```
+
+Both plots will be displayed sequentially.
+
+### Future Enhancements
+
+See the [Plotting Roadmap](../../PLOTTING_ROADMAP.md) for planned features:
+- Function plotting (`fplot`)
+- 3D surface plots
+- Color map customization
+- Axis scaling (log, symlog)
+- Equation annotations with Typst math
 
 ## Next Steps
 

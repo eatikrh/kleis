@@ -20,6 +20,7 @@ pub mod math_layout;
 pub mod numerical; // BLAS/LAPACK backend for numerical linear algebra
 pub mod parser;
 pub mod pattern_matcher;
+pub mod plotting; // Lilaq/Typst plotting integration
 pub mod pretty_print; // Pretty-printer for exporting Kleis source
 pub mod provenance; // Track which file each definition came from
 pub mod render;
