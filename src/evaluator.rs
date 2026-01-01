@@ -2409,6 +2409,19 @@ impl Evaluator {
                 Ok(Some(value))
             }
 
+            // === Plotting ===
+            "plot" => {
+                // plot(x_data, y_data) - generates an SVG plot
+                // plot(x_data, y_data, "title") - with title
+                // Returns SVG wrapped in a special expression
+                self.builtin_plot(args)
+            }
+            
+            "scatter" => {
+                // scatter(x_data, y_data) - scatter plot
+                self.builtin_scatter(args)
+            }
+
             // === Arithmetic ===
             "plus" | "+" => self.builtin_arithmetic(args, |a, b| a + b),
             "minus" | "-" => self.builtin_arithmetic(args, |a, b| a - b),
@@ -4587,6 +4600,208 @@ impl Evaluator {
         } else {
             Ok(None)
         }
+    }
+
+    // === Plotting helpers ===
+    
+    fn builtin_plot(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        // plot(x_data, y_data) or plot(x_data, y_data, "title")
+        if args.len() < 2 || args.len() > 3 {
+            return Err("plot() takes 2 or 3 arguments: plot(x_data, y_data) or plot(x_data, y_data, \"title\")".to_string());
+        }
+        
+        // Extract x and y data as lists of numbers
+        let x_data = self.extract_number_list_v2(&args[0])?;
+        let y_data = self.extract_number_list_v2(&args[1])?;
+        
+        if x_data.len() != y_data.len() {
+            return Err(format!(
+                "plot(): x_data and y_data must have same length (got {} and {})",
+                x_data.len(), y_data.len()
+            ));
+        }
+        
+        // Optional title
+        let title = if args.len() == 3 {
+            self.extract_string(&args[2]).ok()
+        } else {
+            None
+        };
+        
+        // Generate plot
+        let config = crate::plotting::PlotConfig {
+            title,
+            ..Default::default()
+        };
+        
+        let code = crate::plotting::generate_lilaq_code(&x_data, &y_data, &config);
+        
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                // Return SVG wrapped in special expression for display
+                // Format: PlotSVG(svg_content, width, height)
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("plot() failed: {}", e)),
+        }
+    }
+    
+    fn builtin_scatter(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        // scatter(x_data, y_data) or scatter(x_data, y_data, "title")
+        if args.len() < 2 || args.len() > 3 {
+            return Err("scatter() takes 2 or 3 arguments".to_string());
+        }
+        
+        let x_data = self.extract_number_list_v2(&args[0])?;
+        let y_data = self.extract_number_list_v2(&args[1])?;
+        
+        if x_data.len() != y_data.len() {
+            return Err(format!(
+                "scatter(): x_data and y_data must have same length (got {} and {})",
+                x_data.len(), y_data.len()
+            ));
+        }
+        
+        let title = if args.len() == 3 {
+            self.extract_string(&args[2]).ok()
+        } else {
+            None
+        };
+        
+        let config = crate::plotting::PlotConfig {
+            plot_type: crate::plotting::PlotType::Scatter,
+            title,
+            mark: Some("o".to_string()),
+            ..Default::default()
+        };
+        
+        let code = crate::plotting::generate_lilaq_code(&x_data, &y_data, &config);
+        
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("scatter() failed: {}", e)),
+        }
+    }
+    
+    /// Extract a list of numbers from an expression (list literal or Cons structure)
+    fn extract_number_list(&self, expr: &Expression) -> Result<Vec<f64>, String> {
+        // Try to evaluate first
+        let evaluated = self.eval_concrete(expr)?;
+        
+        // Check for list literal [[a, b, c, ...]]
+        if let Some(elems) = self.extract_flat_list(&evaluated) {
+            let mut result = Vec::new();
+            for elem in elems {
+                if let Some(n) = self.as_number(&elem) {
+                    result.push(n);
+                } else {
+                    return Err(format!("Expected number in list, got: {:?}", elem));
+                }
+            }
+            return Ok(result);
+        }
+        
+        Err(format!("Expected list of numbers, got: {:?}", evaluated))
+    }
+    
+    /// Extract a string from a Const expression
+    fn extract_string(&self, expr: &Expression) -> Result<String, String> {
+        match expr {
+            Expression::Const(s) => {
+                // Remove quotes if present
+                let s = s.trim_matches('"');
+                Ok(s.to_string())
+            }
+            Expression::Object(s) => Ok(s.clone()),
+            _ => Err(format!("Expected string, got: {:?}", expr)),
+        }
+    }
+    
+    /// Extract elements from a flat list (like [1, 2, 3])
+    fn extract_flat_list(&self, expr: &Expression) -> Option<Vec<Expression>> {
+        match expr {
+            Expression::Operation { name, args, .. } if name == "list" || name == "List" => {
+                Some(args.clone())
+            }
+            Expression::Operation { name, args, .. } if name == "Cons" => {
+                // Recursively extract from Cons structure
+                if args.len() == 2 {
+                    let head = args[0].clone();
+                    if let Some(mut tail) = self.extract_flat_list(&args[1]) {
+                        let mut result = vec![head];
+                        result.append(&mut tail);
+                        return Some(result);
+                    }
+                }
+                None
+            }
+            Expression::Object(s) if s == "Nil" => Some(vec![]),
+            _ => None,
+        }
+    }
+    
+    /// Extract a list of numbers, handling various list representations
+    fn extract_number_list_v2(&self, expr: &Expression) -> Result<Vec<f64>, String> {
+        let evaluated = self.eval_concrete(expr)?;
+        
+        // Handle Expression::List variant (e.g., [1, 2, 3])
+        if let Expression::List(elements) = &evaluated {
+            let mut result = Vec::new();
+            for elem in elements {
+                if let Some(n) = self.as_number(elem) {
+                    result.push(n);
+                } else {
+                    return Err(format!("Expected number in list, got: {:?}", elem));
+                }
+            }
+            return Ok(result);
+        }
+        
+        // Handle List Operation (less common but possible)
+        if let Expression::Operation { name, args, .. } = &evaluated {
+            if name == "List" || name == "list" {
+                let mut result = Vec::new();
+                for arg in args {
+                    if let Some(n) = self.as_number(arg) {
+                        result.push(n);
+                    } else {
+                        return Err(format!("Expected number in list, got: {:?}", arg));
+                    }
+                }
+                return Ok(result);
+            }
+        }
+        
+        // Try flat list extraction (for Cons structures)
+        if let Some(elems) = self.extract_flat_list(&evaluated) {
+            let mut result = Vec::new();
+            for elem in elems {
+                if let Some(n) = self.as_number(&elem) {
+                    result.push(n);
+                } else {
+                    return Err(format!("Expected number in list, got: {:?}", elem));
+                }
+            }
+            return Ok(result);
+        }
+        
+        Err(format!("Expected list of numbers, got: {:?}", evaluated))
     }
 
     fn builtin_comparison<F>(
