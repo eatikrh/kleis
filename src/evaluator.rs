@@ -2805,6 +2805,108 @@ impl Evaluator {
                     _ => Ok(None),
                 }
             }
+            "list_map" => {
+                // list_map(f, [a, b, c]) → [f(a), f(b), f(c)]
+                // Works with Expression::List (bracket lists)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let func = &args[0];
+
+                // Handle Expression::List
+                if let Expression::List(elements) = &args[1] {
+                    let mut results = Vec::with_capacity(elements.len());
+                    for elem in elements {
+                        // Apply function using beta reduction
+                        let reduced = self.beta_reduce(func, elem)?;
+                        let result = self.eval_concrete(&reduced)?;
+                        results.push(result);
+                    }
+                    return Ok(Some(Expression::List(results)));
+                }
+
+                // Also handle Cons/Nil lists for compatibility
+                if let Expression::Object(s) = &args[1] {
+                    if s == "Nil" {
+                        return Ok(Some(Expression::List(vec![])));
+                    }
+                }
+                if let Expression::Operation {
+                    name, args: inner, ..
+                } = &args[1]
+                {
+                    if name == "Nil" {
+                        return Ok(Some(Expression::List(vec![])));
+                    }
+                    if name == "Cons" && inner.len() == 2 {
+                        // Recursively map over Cons list
+                        let head = &inner[0];
+                        let tail = &inner[1];
+
+                        // Apply function to head using beta reduction
+                        let reduced = self.beta_reduce(func, head)?;
+                        let new_head = self.eval_concrete(&reduced)?;
+
+                        // Recursively map over tail
+                        let mapped_tail =
+                            self.apply_builtin("list_map", &[func.clone(), tail.clone()])?;
+                        if let Some(Expression::List(mut tail_elems)) = mapped_tail {
+                            let mut result = vec![new_head];
+                            result.append(&mut tail_elems);
+                            return Ok(Some(Expression::List(result)));
+                        }
+                    }
+                }
+
+                Ok(None)
+            }
+            "list_filter" => {
+                // list_filter(predicate, [a, b, c]) → elements where predicate(x) is true
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let pred = &args[0];
+
+                if let Expression::List(elements) = &args[1] {
+                    let mut results = Vec::new();
+                    for elem in elements {
+                        // Apply predicate using beta reduction
+                        let reduced = self.beta_reduce(pred, elem)?;
+                        let result = self.eval_concrete(&reduced)?;
+                        // Check if result is truthy
+                        if let Expression::Object(s) = &result {
+                            if s == "true" || s == "True" {
+                                results.push(elem.clone());
+                            }
+                        } else if let Expression::Const(s) = &result {
+                            if s == "true" || s == "True" {
+                                results.push(elem.clone());
+                            }
+                        }
+                    }
+                    return Ok(Some(Expression::List(results)));
+                }
+                Ok(None)
+            }
+            "list_fold" => {
+                // list_fold(f, init, [a, b, c]) → f(f(f(init, a), b), c)
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                let func = &args[0];
+                let init = &args[1];
+
+                if let Expression::List(elements) = &args[2] {
+                    let mut acc = init.clone();
+                    for elem in elements {
+                        // Apply function: acc = f(acc, elem) using beta reduction
+                        let reduced = self.beta_reduce_multi(func, &[acc, elem.clone()])?;
+                        acc = self.eval_concrete(&reduced)?;
+                    }
+                    return Ok(Some(acc));
+                }
+                Ok(None)
+            }
 
             // ============================================
             // MATRIX OPERATIONS (Concrete Evaluation)

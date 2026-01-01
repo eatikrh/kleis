@@ -71,12 +71,23 @@ example "simple bar chart" {
     )
 }
 
-example "grouped bars" {
-    out("Multiple bar series in one diagram (Lilaq-style)")
+example "grouped bars with list_map" {
+    out("Grouped bar chart with offset x-coordinates using list_map")
+    out("Replicating Lilaq example: https://lilaq.org/docs/bar")
     out("")
     let xs = [0, 1, 2, 3]
     let ys1 = [1.35, 3, 2.1, 4]
     let ys2 = [1.4, 3.3, 1.9, 4.2]
+    
+    // Compute offset x-coordinates using list_map
+    let xs_left = list_map(λ x . x - 0.2, xs)
+    let xs_right = list_map(λ x . x + 0.2, xs)
+    
+    out("xs_left = ")
+    out(xs_left)
+    out("xs_right = ")
+    out(xs_right)
+    
     diagram(
         bar(xs, ys1),
         bar(xs, ys2)
@@ -271,11 +282,5 @@ example "Bell state probabilities" {
 }
 
 // =============================================================================
-// LEGACY API (still works for backward compatibility)
+// End of Examples
 // =============================================================================
-
-example "legacy graph API" {
-    out("The old graph() API still works")
-    out("")
-    graph("line", [0, 1, 2, 3, 4], [0, 1, 4, 9, 16])
-}
