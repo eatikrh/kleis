@@ -31,6 +31,14 @@ class KleisKernel(Kernel):
     }
     banner = """Kleis - Mathematical Specification Language with Z3 Verification
 
+Plotting:
+  graph("line", xs, ys)      - Unified plotting API
+  graph("scatter", xs, ys)   - Scatter plot
+  graph("bar", xs, heights)  - Bar chart
+  graph("heatmap", matrix)   - Heatmap/colormesh
+  Types: line, scatter, bar, hbar, stem, hstem, fill_between,
+         boxplot, hboxplot, heatmap, contour, quiver
+
 REPL Commands:
   :type <expr>    - Show inferred type
   :eval <expr>    - Evaluate expression
@@ -226,7 +234,7 @@ Jupyter Commands:
         """Format Kleis output for Jupyter display."""
         output = stdout + stderr
 
-        # Check for SVG plot output (from plot() and scatter() builtins)
+        # Check for SVG plot output (from graph(), plot(), scatter() etc.)
         if "PLOT_SVG:" in output:
             # Extract SVG content - find the complete SVG element
             svg_start = output.index("PLOT_SVG:") + 9
@@ -684,7 +692,12 @@ Jupyter Commands:
             "ℕ", "ℤ", "ℝ", "ℂ", "Bool", "Set", "List", "Matrix", "Vector",
             # Built-in functions
             "eval", "sin", "cos", "exp", "log", "sqrt", "det", "trace", "transpose",
-            "eigenvalues", "eigenvectors", "inverse", "norm",
+            "eigenvalues", "eigenvectors", "inverse", "norm", "negate", "out",
+            # Plotting - unified API
+            "graph",
+            # Plotting - legacy functions
+            "plot", "scatter", "bar", "hbar", "stem", "hstem", "fill_between",
+            "boxplot", "hboxplot", "heatmap", "colormesh", "contour", "quiver",
             # REPL commands
             ":type", ":eval", ":verify", ":ast", ":env", ":load",
             # Jupyter magic commands
