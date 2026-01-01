@@ -1,0 +1,85 @@
+// ============================================================================
+// BAR CHART WITH ERROR BARS - Comparison Example
+// ============================================================================
+//
+// Attempting to recreate the Lilaq example:
+// - Two grouped bar series (Left, Right) with offsets
+// - Error bars overlaid on each bar
+//
+// CURRENT LIMITATIONS:
+// 1. No support for multiple series in one diagram (offset, grouped bars)
+// 2. No bar width parameter  
+// 3. No way to overlay plot with just error bars (stroke: none)
+// 4. No legend/label positioning
+//
+// Below are approximations using current capabilities.
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// Data from the Lilaq example
+// xs = [0, 1, 2, 3]
+// ys1 = [1.35, 3, 2.1, 4]       // Left series
+// ys2 = [1.4, 3.3, 1.9, 4.2]    // Right series
+// yerr1 = [0.2, 0.3, 0.5, 0.4]  // Left errors
+// yerr2 = [0.3, 0.3, 0.4, 0.7]  // Right errors
+
+// ----------------------------------------------------------------------------
+// Example 1: Simple bar chart (Left series only)
+// ----------------------------------------------------------------------------
+example "bar chart - left series" {
+    out("Bar chart with Left series data")
+    graph("bar", [0, 1, 2, 3], [1.35, 3, 2.1, 4], "Left Series")
+}
+
+// ----------------------------------------------------------------------------
+// Example 2: Simple bar chart (Right series only)
+// ----------------------------------------------------------------------------
+example "bar chart - right series" {
+    out("Bar chart with Right series data")
+    graph("bar", [0, 1, 2, 3], [1.4, 3.3, 1.9, 4.2], "Right Series")
+}
+
+// ----------------------------------------------------------------------------
+// Example 3: Line plot with error bars (shows yerr capability)
+// ----------------------------------------------------------------------------
+// This demonstrates that we CAN add error bars to line/scatter plots
+// but not yet to bar charts directly
+
+example "plot with error bars" {
+    out("Line plot with error bars (yerr)")
+    out("(This is what we'd overlay on bars)")
+    
+    // NOTE: Record syntax for options not yet implemented in parser
+    // This would be: graph("scatter", xs, ys, { yerr: errors, stroke: "none" })
+    // For now, we can only use string options (title)
+    
+    scatter([0, 1, 2, 3], [1.35, 3, 2.1, 4], "With Error Bars")
+}
+
+// ============================================================================
+// WHAT'S NEEDED FOR FULL LILAQ PARITY:
+// ============================================================================
+//
+// 1. Multiple plots per diagram:
+//    diagram {
+//        bar([0,1,2,3], ys1, { offset: -0.2, width: 0.4, label: "Left" })
+//        bar([0,1,2,3], ys2, { offset: 0.2, width: 0.4, label: "Right" })
+//        plot(xs1, ys1, { yerr: yerr1, stroke: "none" })
+//        plot(xs2, ys2, { yerr: yerr2, stroke: "none" })
+//    }
+//
+// 2. Bar chart options:
+//    - offset: horizontal offset for grouped bars
+//    - width: bar width (default 0.8)
+//
+// 3. Plot options:
+//    - stroke: "none" to hide line (show only markers/error bars)
+//
+// 4. Legend options:
+//    - position: left + top, right + bottom, etc.
+//
+// See docs/PLOTTING_ROADMAP.md for full enhancement list.
+// ============================================================================
+
