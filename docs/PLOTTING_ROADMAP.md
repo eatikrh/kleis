@@ -1,18 +1,23 @@
 # Kleis Plotting Roadmap
 
-> **Last Updated:** January 1, 2025
-> **Status:** Phase 2 COMPLETE - Unified graph() API with comprehensive options
+> **Last Updated:** January 1, 2026
+> **Status:** Lilaq-style Compositional API - `diagram(plot(...), bar(...), ...)`
 
 ## Vision
 
-MATLAB-inspired plotting capabilities integrated with Kleis's numerical (LAPACK) and verification (Z3) features. Seamless workflow: compute → visualize → verify.
+Publication-quality plotting that matches Lilaq 1:1. See https://lilaq.org/docs for reference.
 
 ## Architecture
 
 ```
-Kleis Expression  →  Lilaq/Typst  →  SVG  →  Jupyter/Browser/PDF
+diagram(
+    plot(xs, ys),         → PlotElement
+    bar(xs, heights),     → PlotElement  
+    scatter(xs, ys),      → PlotElement
+)                         → Lilaq/Typst → SVG
 ```
 
+- **Design**: Compositional (matches Lilaq 1:1)
 - **Backend**: Lilaq (Typst's plotting library)
 - **Output**: SVG for web/Jupyter, PDF for documents
 - **Integration**: Jupyter kernel emits `image/svg+xml` MIME bundles
@@ -26,27 +31,34 @@ Kleis Expression  →  Lilaq/Typst  →  SVG  →  Jupyter/Browser/PDF
 **What WORKS:**
 ```kleis
 // Arithmetic expressions in lists
-plot([0, 1, 2, 3], [0, 1*1, 2*2, 3*3])  // ✅
+diagram(plot([0, 1, 2, 3], [0, 1*1, 2*2, 3*3]))  // ✅
 
 // Let bindings
 let xs = [0, 1, 2, 3] in
 let ys = [0, 1, 4, 9] in
-plot(xs, ys)  // ✅
+diagram(plot(xs, ys))  // ✅
 
 // negate() for negative values
-plot(x, [0, negate(1), negate(2)])  // ✅
+diagram(plot(xs, [0, negate(1), negate(2)]))  // ✅
+
+// Multiple plots composed
+diagram(
+    plot(xs, ys1),
+    scatter(xs, ys2),
+    bar(xs, heights)
+)  // ✅
 ```
 
 **What DOESN'T work (yet):**
 ```kleis
 // No list comprehensions
-plot(x, [x*x for x in xs])  // ❌ No syntax
+diagram(plot(x, [x*x for x in xs]))  // ❌ No syntax
 
 // No map over lists for plotting
-plot(x, map(square, xs))  // ❌ Not implemented
+diagram(plot(x, map(square, xs)))  // ❌ Not implemented
 
 // No linspace/arange
-plot(linspace(0, 10, 100), ...)  // ❌ Phase 10
+diagram(plot(linspace(0, 10, 100), ...))  // ❌ Future phase
 ```
 
 **Root cause:** The evaluator correctly evaluates expressions, but Kleis lacks programmatic list generation. Lists must be written explicitly.
@@ -68,25 +80,60 @@ export KLEIS_ROOT=/path/to/kleis
 
 ## Implementation Status
 
-### Phase 1: Core 2D Plots ✅ COMPLETE
+### Core 2D Plots ✅ COMPLETE - Lilaq-style Compositional API
 
-| Function | Status | Description |
-|----------|--------|-------------|
-| `plot(x, y)` | ✅ | Line plot from data points |
-| `scatter(x, y)` | ✅ | Scatter plot with markers |
-| `fill_between(x, y)` | ✅ | Shaded area under curve (to y=0) |
-| `bar(x, heights)` | ✅ | Vertical bar chart |
-| `hbar(y, widths)` | ✅ | Horizontal bar chart |
-| `stem(x, y)` | ✅ | Stem plot (discrete signals) |
-| `hstem(x, y)` | ✅ | Horizontal stem plot |
-| `boxplot(data1, data2, ...)` | ✅ | Box and whisker plots |
-| `hboxplot(...)` | ✅ | Horizontal boxplots |
-| `heatmap(matrix)` | ✅ | 2D color mesh / colormesh |
-| `colormesh(matrix)` | ✅ | Alias for heatmap |
-| `contour(matrix)` | ✅ | Contour lines |
-| `quiver(x, y, u, v)` | ✅ | Vector/arrow field |
+**Matches Lilaq 1:1 - see https://lilaq.org/docs**
 
-**All functions support optional title:** `plot(x, y, "Title")`
+```kleis
+// Basic usage - diagram() composes elements
+diagram(
+    plot([0,1,2,3,4], [0,1,4,9,16]),
+    scatter([0,1,2,3,4], [0,2,4,6,8])
+)
+
+// Individual elements
+plot(xs, ys)           // Line plot
+scatter(xs, ys)        // Scatter plot
+bar(xs, heights)       // Vertical bar chart
+hbar(xs, widths)       // Horizontal bar chart
+stem(xs, ys)           // Stem plot
+hstem(xs, ys)          // Horizontal stem
+fill_between(xs, ys)   // Area under curve
+boxplot(data1, data2)  // Box and whisker
+hboxplot(data...)      // Horizontal boxplot
+heatmap(matrix)        // Color mesh
+contour(matrix)        // Contour lines
+quiver(xs, ys, dirs)   // Vector field
+
+// Multiple bar series (Lilaq-style)
+diagram(
+    bar([0,1,2,3], ys1),
+    bar([0,1,2,3], ys2)
+)
+
+// 2D visualization
+graph("heatmap", matrix)
+graph("contour", matrix)
+
+// Vector fields
+graph("quiver", x_coords, y_coords, directions_matrix)
+```
+
+| Type | Arguments | Description |
+|------|-----------|-------------|
+| `"line"` / `"plot"` | `xs, ys` | Line plot |
+| `"scatter"` | `xs, ys` | Scatter plot with markers |
+| `"bar"` | `xs, heights` | Vertical bar chart |
+| `"hbar"` | `ys, widths` | Horizontal bar chart |
+| `"grouped_bars"` | `xs, [series...], [labels...], [errors...]` | Grouped bars with optional error bars |
+| `"stem"` | `xs, ys` | Stem plot (discrete signals) |
+| `"hstem"` | `xs, ys` | Horizontal stem plot |
+| `"fill_between"` | `xs, ys` | Shaded area under curve |
+| `"boxplot"` | `[[data1], [data2], ...]` | Box and whisker plots |
+| `"hboxplot"` | `[[data1], [data2], ...]` | Horizontal boxplots |
+| `"heatmap"` / `"colormesh"` | `matrix` | 2D color mesh |
+| `"contour"` | `matrix` | Contour lines |
+| `"quiver"` | `x_coords, y_coords, directions` | Vector/arrow field |
 
 ### Phase 2: Plot Styling & Options ✅ COMPLETE
 
