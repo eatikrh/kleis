@@ -138,6 +138,97 @@ Checker    kleis check    Validate .kleis files
 
 `./scripts/kleis` is a developer wrapper script (sets up Z3 env). End users would just run `kleis check`.
 
+#### 6. Jupyter: Render Expressions as SVG (Beautiful Math Display)
+
+**Insight:** We already have all the pieces to render Kleis expressions as beautifully typeset math in Jupyter:
+
+```
+Expression (Kleis AST)
+     ↓ translate_to_editor()
+EditorNode
+     ↓ render_editor_node(Typst)
+Typst code
+     ↓ typst compile
+SVG
+     ↓ Jupyter display_data
+Beautiful rendered equation! 📐
+```
+
+**What this enables:**
+- `∀(x : ℝ). x + 0 = x` → rendered as proper math notation (not text)
+- Verification results: theorem + "✓ Verified by Z3" as formatted equations
+- Step-by-step derivations rendered beautifully
+- Jupyter notebooks look like LaTeX papers
+
+**Implementation:**
+1. Add `render(expr)` function that outputs `EXPR_SVG:<svg>` to stdout
+2. Kernel detects `EXPR_SVG:` and displays as SVG (like plots)
+3. Could also support `render(expr, "latex")` for LaTeX output
+
+**This is "executable mathematics" — compute AND display beautifully.**
+
+#### 7. Long-Term Vision: Executable Papers
+
+**The big picture:** Kleis documents that export to PDF and arXiv.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Kleis Document                            │
+├─────────────────────────────────────────────────────────────┤
+│  Text         │ Abstract, introduction, prose               │
+│  Formulas     │ Theorems, definitions (verified by Z3)      │
+│  Plots        │ Visualizations (Lilaq → SVG)                │
+│  Tables       │ Data, results                               │
+│  Code         │ Examples, computations                       │
+│  Proofs       │ Step-by-step, machine-checked               │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+              ┌───────────┴───────────┐
+              ↓                       ↓
+         Typst → PDF              LaTeX → arXiv
+```
+
+**Aspirational syntax:**
+```kleis
+document "My Paper" {
+    section "Introduction" {
+        text "We prove the following result..."
+    }
+    
+    section "Main Theorem" {
+        theorem "Commutativity" {
+            statement: ∀(a b : ℝ). a + b = b + a
+            proof: verified  // Z3 checked!
+        }
+        
+        example "Numerical demonstration" {
+            graph("line", [0,1,2], [2,1,0], "a + b = b + a")
+        }
+    }
+}
+
+export("paper.pdf")
+export("arxiv/", format: "latex")
+```
+
+**What this enables:**
+- Write once → PDF, arXiv, Jupyter, HTML
+- Every theorem is verified by Z3
+- Every plot is computed from data
+- No copy-paste errors between code and paper
+- Reproducible science by design
+
+**Components needed:**
+1. ✅ Expression → EditorNode → Typst (exists)
+2. ✅ Plotting → SVG (exists)
+3. ⏳ Text + math mixed rendering
+4. ⏳ Document structure (sections, theorems)
+5. ⏳ Tables
+6. ⏳ Export to PDF (Typst does this)
+7. ⏳ Export to LaTeX (for arXiv)
+
+**This is what scientists actually need.**
+
 ---
 
 ## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
