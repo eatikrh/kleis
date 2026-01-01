@@ -2416,10 +2416,60 @@ impl Evaluator {
                 // Returns SVG wrapped in a special expression
                 self.builtin_plot(args)
             }
-            
+
             "scatter" => {
                 // scatter(x_data, y_data) - scatter plot
                 self.builtin_scatter(args)
+            }
+
+            "fill_between" => {
+                // fill_between(x, y1, y2) - shaded area between curves
+                self.builtin_fill_between(args)
+            }
+
+            "bar" => {
+                // bar(labels, heights) or bar(x, heights)
+                self.builtin_bar(args, false)
+            }
+
+            "hbar" => {
+                // hbar(labels, widths) - horizontal bar chart
+                self.builtin_bar(args, true)
+            }
+
+            "stem" => {
+                // stem(x, y) - stem plot
+                self.builtin_stem(args, false)
+            }
+
+            "hstem" => {
+                // hstem(x, y) - horizontal stem plot
+                self.builtin_stem(args, true)
+            }
+
+            "boxplot" => {
+                // boxplot(data1, data2, ...) - box and whisker
+                self.builtin_boxplot(args, false)
+            }
+
+            "hboxplot" => {
+                // hboxplot(data1, data2, ...) - horizontal boxplot
+                self.builtin_boxplot(args, true)
+            }
+
+            "heatmap" | "colormesh" => {
+                // heatmap(matrix) - 2D color grid
+                self.builtin_heatmap(args)
+            }
+
+            "contour" => {
+                // contour(matrix) or contour(matrix, levels)
+                self.builtin_contour(args)
+            }
+
+            "quiver" => {
+                // quiver(x, y, u, v) - vector field
+                self.builtin_quiver(args)
             }
 
             // === Arithmetic ===
@@ -4603,39 +4653,40 @@ impl Evaluator {
     }
 
     // === Plotting helpers ===
-    
+
     fn builtin_plot(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         // plot(x_data, y_data) or plot(x_data, y_data, "title")
         if args.len() < 2 || args.len() > 3 {
             return Err("plot() takes 2 or 3 arguments: plot(x_data, y_data) or plot(x_data, y_data, \"title\")".to_string());
         }
-        
+
         // Extract x and y data as lists of numbers
         let x_data = self.extract_number_list_v2(&args[0])?;
         let y_data = self.extract_number_list_v2(&args[1])?;
-        
+
         if x_data.len() != y_data.len() {
             return Err(format!(
                 "plot(): x_data and y_data must have same length (got {} and {})",
-                x_data.len(), y_data.len()
+                x_data.len(),
+                y_data.len()
             ));
         }
-        
+
         // Optional title
         let title = if args.len() == 3 {
             self.extract_string(&args[2]).ok()
         } else {
             None
         };
-        
+
         // Generate plot
         let config = crate::plotting::PlotConfig {
             title,
             ..Default::default()
         };
-        
+
         let code = crate::plotting::generate_lilaq_code(&x_data, &y_data, &config);
-        
+
         match crate::plotting::compile_to_svg(&code) {
             Ok(output) => {
                 // Return SVG wrapped in special expression for display
@@ -4652,38 +4703,39 @@ impl Evaluator {
             Err(e) => Err(format!("plot() failed: {}", e)),
         }
     }
-    
+
     fn builtin_scatter(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         // scatter(x_data, y_data) or scatter(x_data, y_data, "title")
         if args.len() < 2 || args.len() > 3 {
             return Err("scatter() takes 2 or 3 arguments".to_string());
         }
-        
+
         let x_data = self.extract_number_list_v2(&args[0])?;
         let y_data = self.extract_number_list_v2(&args[1])?;
-        
+
         if x_data.len() != y_data.len() {
             return Err(format!(
                 "scatter(): x_data and y_data must have same length (got {} and {})",
-                x_data.len(), y_data.len()
+                x_data.len(),
+                y_data.len()
             ));
         }
-        
+
         let title = if args.len() == 3 {
             self.extract_string(&args[2]).ok()
         } else {
             None
         };
-        
+
         let config = crate::plotting::PlotConfig {
             plot_type: crate::plotting::PlotType::Scatter,
             title,
             mark: Some("o".to_string()),
             ..Default::default()
         };
-        
+
         let code = crate::plotting::generate_lilaq_code(&x_data, &y_data, &config);
-        
+
         match crate::plotting::compile_to_svg(&code) {
             Ok(output) => {
                 println!("PLOT_SVG:{}", output.svg);
@@ -4698,28 +4750,506 @@ impl Evaluator {
             Err(e) => Err(format!("scatter() failed: {}", e)),
         }
     }
-    
-    /// Extract a list of numbers from an expression (list literal or Cons structure)
-    fn extract_number_list(&self, expr: &Expression) -> Result<Vec<f64>, String> {
-        // Try to evaluate first
-        let evaluated = self.eval_concrete(expr)?;
-        
-        // Check for list literal [[a, b, c, ...]]
-        if let Some(elems) = self.extract_flat_list(&evaluated) {
-            let mut result = Vec::new();
-            for elem in elems {
-                if let Some(n) = self.as_number(&elem) {
-                    result.push(n);
-                } else {
-                    return Err(format!("Expected number in list, got: {:?}", elem));
+
+    fn builtin_fill_between(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        // fill_between(x, y) or fill_between(x, y, "title")
+        // Fills the area between y and y=0
+        if args.len() < 2 || args.len() > 3 {
+            return Err(
+                "fill_between() takes 2 or 3 arguments: fill_between(x, y) or fill_between(x, y, \"title\")".to_string(),
+            );
+        }
+
+        let x_data = self.extract_number_list_v2(&args[0])?;
+        let y_data = self.extract_number_list_v2(&args[1])?;
+
+        if x_data.len() != y_data.len() {
+            return Err(format!(
+                "fill_between(): arrays must have same length (got {}, {})",
+                x_data.len(),
+                y_data.len()
+            ));
+        }
+
+        let title = if args.len() == 3 {
+            self.extract_string(&args[2]).ok()
+        } else {
+            None
+        };
+
+        let config = crate::plotting::PlotConfig {
+            plot_type: crate::plotting::PlotType::FillBetween,
+            title,
+            ..Default::default()
+        };
+
+        let code = crate::plotting::generate_fill_between_code(&x_data, &y_data, &config);
+
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("fill_between() failed: {}", e)),
+        }
+    }
+
+    fn builtin_bar(
+        &self,
+        args: &[Expression],
+        horizontal: bool,
+    ) -> Result<Option<Expression>, String> {
+        let func_name = if horizontal { "hbar" } else { "bar" };
+
+        if args.len() < 2 || args.len() > 3 {
+            return Err(format!(
+                "{}() takes 2 or 3 arguments: {}(x, heights) or {}(x, heights, \"title\")",
+                func_name, func_name, func_name
+            ));
+        }
+
+        let x_data = self.extract_number_list_v2(&args[0])?;
+        let heights = self.extract_number_list_v2(&args[1])?;
+
+        if x_data.len() != heights.len() {
+            return Err(format!(
+                "{}(): x and heights must have same length (got {} and {})",
+                func_name,
+                x_data.len(),
+                heights.len()
+            ));
+        }
+
+        let title = if args.len() == 3 {
+            self.extract_string(&args[2]).ok()
+        } else {
+            None
+        };
+
+        let config = crate::plotting::PlotConfig {
+            plot_type: if horizontal {
+                crate::plotting::PlotType::HBar
+            } else {
+                crate::plotting::PlotType::Bar
+            },
+            title,
+            ..Default::default()
+        };
+
+        let code = crate::plotting::generate_bar_chart_code(&x_data, &heights, &config);
+
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("{}() failed: {}", func_name, e)),
+        }
+    }
+
+    fn builtin_stem(
+        &self,
+        args: &[Expression],
+        horizontal: bool,
+    ) -> Result<Option<Expression>, String> {
+        let func_name = if horizontal { "hstem" } else { "stem" };
+
+        if args.len() < 2 || args.len() > 3 {
+            return Err(format!(
+                "{}() takes 2 or 3 arguments: {}(x, y) or {}(x, y, \"title\")",
+                func_name, func_name, func_name
+            ));
+        }
+
+        let x_data = self.extract_number_list_v2(&args[0])?;
+        let y_data = self.extract_number_list_v2(&args[1])?;
+
+        if x_data.len() != y_data.len() {
+            return Err(format!(
+                "{}(): x and y must have same length (got {} and {})",
+                func_name,
+                x_data.len(),
+                y_data.len()
+            ));
+        }
+
+        let title = if args.len() == 3 {
+            self.extract_string(&args[2]).ok()
+        } else {
+            None
+        };
+
+        let config = crate::plotting::PlotConfig {
+            plot_type: if horizontal {
+                crate::plotting::PlotType::HStem
+            } else {
+                crate::plotting::PlotType::Stem
+            },
+            title,
+            ..Default::default()
+        };
+
+        let code = crate::plotting::generate_lilaq_code(&x_data, &y_data, &config);
+
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("{}() failed: {}", func_name, e)),
+        }
+    }
+
+    fn builtin_boxplot(
+        &self,
+        args: &[Expression],
+        horizontal: bool,
+    ) -> Result<Option<Expression>, String> {
+        let func_name = if horizontal { "hboxplot" } else { "boxplot" };
+
+        if args.is_empty() {
+            return Err(format!(
+                "{}() requires at least one dataset: {}(data1, data2, ...)",
+                func_name, func_name
+            ));
+        }
+
+        // Each argument is a dataset (list of numbers)
+        let mut datasets = Vec::new();
+        for (i, arg) in args.iter().enumerate() {
+            match self.extract_number_list_v2(arg) {
+                Ok(data) => datasets.push(data),
+                Err(e) => {
+                    return Err(format!(
+                        "{}(): argument {} is not a valid number list: {}",
+                        func_name,
+                        i + 1,
+                        e
+                    ))
                 }
             }
-            return Ok(result);
         }
-        
-        Err(format!("Expected list of numbers, got: {:?}", evaluated))
+
+        let config = crate::plotting::PlotConfig {
+            plot_type: if horizontal {
+                crate::plotting::PlotType::HBoxplot
+            } else {
+                crate::plotting::PlotType::Boxplot
+            },
+            ..Default::default()
+        };
+
+        let code = crate::plotting::generate_boxplot_code(&datasets, &config);
+
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("{}() failed: {}", func_name, e)),
+        }
     }
-    
+
+    fn builtin_heatmap(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.is_empty() || args.len() > 2 {
+            return Err(
+                "heatmap() takes 1 or 2 arguments: heatmap(matrix) or heatmap(matrix, \"title\")"
+                    .to_string(),
+            );
+        }
+
+        // Extract matrix (list of lists)
+        let matrix = self.extract_f64_matrix(&args[0])?;
+
+        let title = if args.len() == 2 {
+            self.extract_string(&args[1]).ok()
+        } else {
+            None
+        };
+
+        let config = crate::plotting::PlotConfig {
+            plot_type: crate::plotting::PlotType::Colormesh,
+            title,
+            ..Default::default()
+        };
+
+        let code = crate::plotting::generate_heatmap_code(&matrix, &config);
+
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("heatmap() failed: {}", e)),
+        }
+    }
+
+    fn builtin_contour(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.is_empty() || args.len() > 3 {
+            return Err(
+                "contour() takes 1-3 arguments: contour(matrix), contour(matrix, levels), or contour(matrix, levels, \"title\")"
+                    .to_string(),
+            );
+        }
+
+        let matrix = self.extract_f64_matrix(&args[0])?;
+
+        let levels = if args.len() >= 2 {
+            Some(self.extract_number_list_v2(&args[1])?)
+        } else {
+            None
+        };
+
+        let title = if args.len() == 3 {
+            self.extract_string(&args[2]).ok()
+        } else {
+            None
+        };
+
+        let config = crate::plotting::PlotConfig {
+            plot_type: crate::plotting::PlotType::Contour,
+            title,
+            ..Default::default()
+        };
+
+        let code = crate::plotting::generate_contour_code(&matrix, levels.as_deref(), &config);
+
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("contour() failed: {}", e)),
+        }
+    }
+
+    fn builtin_quiver(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        // quiver(x_coords, y_coords, directions) where directions is a 2D grid of [u, v] pairs
+        // Each row in directions corresponds to a y coordinate, each column to an x coordinate
+        if args.len() < 3 || args.len() > 4 {
+            return Err(
+                "quiver() takes 3 or 4 arguments: quiver(x_coords, y_coords, directions) or quiver(x_coords, y_coords, directions, \"title\")"
+                    .to_string(),
+            );
+        }
+
+        let x_coords = self.extract_number_list_v2(&args[0])?;
+        let y_coords = self.extract_number_list_v2(&args[1])?;
+
+        // Extract directions as a 2D grid of [u, v] pairs
+        let directions = self.extract_direction_grid(&args[2])?;
+
+        // Validate dimensions: directions should be y_coords.len() x x_coords.len()
+        if directions.len() != y_coords.len() {
+            return Err(format!(
+                "quiver(): directions rows ({}) must match y_coords length ({})",
+                directions.len(),
+                y_coords.len()
+            ));
+        }
+        for (i, row) in directions.iter().enumerate() {
+            if row.len() != x_coords.len() {
+                return Err(format!(
+                    "quiver(): directions row {} length ({}) must match x_coords length ({})",
+                    i,
+                    row.len(),
+                    x_coords.len()
+                ));
+            }
+        }
+
+        let title = if args.len() == 4 {
+            self.extract_string(&args[3]).ok()
+        } else {
+            None
+        };
+
+        let config = crate::plotting::PlotConfig {
+            plot_type: crate::plotting::PlotType::Quiver,
+            title,
+            ..Default::default()
+        };
+
+        let code =
+            crate::plotting::generate_quiver_code(&x_coords, &y_coords, &directions, &config);
+
+        match crate::plotting::compile_to_svg(&code) {
+            Ok(output) => {
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
+            Err(e) => Err(format!("quiver() failed: {}", e)),
+        }
+    }
+
+    /// Extract a 2D grid of (u, v) direction pairs for quiver plots
+    fn extract_direction_grid(&self, expr: &Expression) -> Result<Vec<Vec<(f64, f64)>>, String> {
+        let evaluated = self.eval_concrete(expr)?;
+
+        // Expect a list of lists of 2-element lists: [[[u, v], [u, v], ...], ...]
+        let extract_pair = |pair_expr: &Expression| -> Result<(f64, f64), String> {
+            if let Expression::List(elems) = pair_expr {
+                if elems.len() == 2 {
+                    let u = self
+                        .as_number(&elems[0])
+                        .ok_or_else(|| format!("Expected number for u, got: {:?}", elems[0]))?;
+                    let v = self
+                        .as_number(&elems[1])
+                        .ok_or_else(|| format!("Expected number for v, got: {:?}", elems[1]))?;
+                    return Ok((u, v));
+                }
+            }
+            if let Some(list) = self.extract_flat_list(pair_expr) {
+                if list.len() == 2 {
+                    let u = self
+                        .as_number(&list[0])
+                        .ok_or_else(|| format!("Expected number for u, got: {:?}", list[0]))?;
+                    let v = self
+                        .as_number(&list[1])
+                        .ok_or_else(|| format!("Expected number for v, got: {:?}", list[1]))?;
+                    return Ok((u, v));
+                }
+            }
+            Err(format!("Expected [u, v] pair, got: {:?}", pair_expr))
+        };
+
+        let extract_row = |row_expr: &Expression| -> Result<Vec<(f64, f64)>, String> {
+            let mut row = Vec::new();
+            if let Expression::List(elems) = row_expr {
+                for elem in elems {
+                    row.push(extract_pair(elem)?);
+                }
+                return Ok(row);
+            }
+            if let Some(list) = self.extract_flat_list(row_expr) {
+                for elem in list {
+                    row.push(extract_pair(&elem)?);
+                }
+                return Ok(row);
+            }
+            Err(format!("Expected row of [u, v] pairs, got: {:?}", row_expr))
+        };
+
+        let mut grid = Vec::new();
+        if let Expression::List(rows) = &evaluated {
+            for row in rows {
+                grid.push(extract_row(row)?);
+            }
+            return Ok(grid);
+        }
+        if let Some(rows) = self.extract_flat_list(&evaluated) {
+            for row in rows {
+                grid.push(extract_row(&row)?);
+            }
+            return Ok(grid);
+        }
+
+        Err(format!(
+            "Expected 2D grid of [u, v] pairs, got: {:?}",
+            evaluated
+        ))
+    }
+
+    /// Extract a 2D matrix of f64 values from an expression (list of lists)
+    fn extract_f64_matrix(&self, expr: &Expression) -> Result<Vec<Vec<f64>>, String> {
+        // First evaluate the expression
+        let evaluated = self.eval_concrete(expr)?;
+
+        // Helper to extract row from various list representations
+        let extract_row = |row: &Expression| -> Result<Vec<f64>, String> {
+            // Try Expression::List first
+            if let Expression::List(elems) = row {
+                let mut row_data = Vec::new();
+                for elem in elems {
+                    if let Some(n) = self.as_number(elem) {
+                        row_data.push(n);
+                    } else {
+                        return Err(format!("Expected number in matrix, got: {:?}", elem));
+                    }
+                }
+                return Ok(row_data);
+            }
+            // Try extract_flat_list
+            if let Some(elems) = self.extract_flat_list(row) {
+                let mut row_data = Vec::new();
+                for elem in elems {
+                    if let Some(n) = self.as_number(&elem) {
+                        row_data.push(n);
+                    } else {
+                        return Err(format!("Expected number in matrix, got: {:?}", elem));
+                    }
+                }
+                return Ok(row_data);
+            }
+            Err(format!("Expected row to be a list, got: {:?}", row))
+        };
+
+        // Try Expression::List for outer list
+        if let Expression::List(rows) = &evaluated {
+            let mut matrix = Vec::new();
+            for row in rows {
+                matrix.push(extract_row(row)?);
+            }
+            return Ok(matrix);
+        }
+
+        // Try extract_flat_list for outer list
+        if let Some(rows) = self.extract_flat_list(&evaluated) {
+            let mut matrix = Vec::new();
+            for row in rows {
+                matrix.push(extract_row(&row)?);
+            }
+            return Ok(matrix);
+        }
+
+        Err(format!(
+            "Expected matrix (list of lists), got: {:?}",
+            evaluated
+        ))
+    }
+
     /// Extract a string from a Const expression
     fn extract_string(&self, expr: &Expression) -> Result<String, String> {
         match expr {
@@ -4732,7 +5262,7 @@ impl Evaluator {
             _ => Err(format!("Expected string, got: {:?}", expr)),
         }
     }
-    
+
     /// Extract elements from a flat list (like [1, 2, 3])
     fn extract_flat_list(&self, expr: &Expression) -> Option<Vec<Expression>> {
         match expr {
@@ -4755,11 +5285,11 @@ impl Evaluator {
             _ => None,
         }
     }
-    
+
     /// Extract a list of numbers, handling various list representations
     fn extract_number_list_v2(&self, expr: &Expression) -> Result<Vec<f64>, String> {
         let evaluated = self.eval_concrete(expr)?;
-        
+
         // Handle Expression::List variant (e.g., [1, 2, 3])
         if let Expression::List(elements) = &evaluated {
             let mut result = Vec::new();
@@ -4772,7 +5302,7 @@ impl Evaluator {
             }
             return Ok(result);
         }
-        
+
         // Handle List Operation (less common but possible)
         if let Expression::Operation { name, args, .. } = &evaluated {
             if name == "List" || name == "list" {
@@ -4787,7 +5317,7 @@ impl Evaluator {
                 return Ok(result);
             }
         }
-        
+
         // Try flat list extraction (for Cons structures)
         if let Some(elems) = self.extract_flat_list(&evaluated) {
             let mut result = Vec::new();
@@ -4800,7 +5330,7 @@ impl Evaluator {
             }
             return Ok(result);
         }
-        
+
         Err(format!("Expected list of numbers, got: {:?}", evaluated))
     }
 

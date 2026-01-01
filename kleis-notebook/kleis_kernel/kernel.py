@@ -47,6 +47,7 @@ Jupyter Commands:
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._kleis_binary = self._find_kleis_binary()
+        self._kleis_root = self._find_kleis_root()
         self._session_context: list = []  # Accumulated definitions
 
     def _find_kleis_binary(self) -> Optional[str]:
@@ -68,6 +69,55 @@ Jupyter Commands:
             if os.path.isfile(path) and os.access(path, os.X_OK):
                 return path
 
+        return None
+
+    def _find_kleis_root(self) -> Optional[str]:
+        """Find the Kleis project root directory (where stdlib/ is located).
+        
+        This is needed so that imports like 'stdlib/prelude.kleis' work correctly.
+        Search order:
+        1. KLEIS_ROOT environment variable
+        2. Directory containing the kleis binary (if installed in project)
+        3. Common project locations
+        4. Current working directory if it has stdlib/
+        """
+        # Check environment variable first
+        env_root = os.environ.get("KLEIS_ROOT")
+        if env_root and os.path.isdir(os.path.join(env_root, "stdlib")):
+            return env_root
+        
+        # Check if kleis binary is in a project directory
+        if self._kleis_binary:
+            # kleis binary might be in ~/.cargo/bin, so we can't use its location directly
+            # But we can check if KLEIS_ROOT was set during install
+            pass
+        
+        # Check common project locations
+        home = os.path.expanduser("~")
+        candidates = [
+            os.path.join(home, "git", "cee", "kleis"),
+            os.path.join(home, "projects", "kleis"),
+            os.path.join(home, "kleis"),
+            "/opt/kleis",
+            "/usr/local/share/kleis",
+        ]
+        
+        for path in candidates:
+            if os.path.isdir(os.path.join(path, "stdlib")):
+                return path
+        
+        # Check current working directory
+        cwd = os.getcwd()
+        if os.path.isdir(os.path.join(cwd, "stdlib")):
+            return cwd
+        
+        # Check parent directories (in case we're in a subdirectory)
+        parent = os.path.dirname(cwd)
+        for _ in range(3):  # Check up to 3 levels up
+            if os.path.isdir(os.path.join(parent, "stdlib")):
+                return parent
+            parent = os.path.dirname(parent)
+        
         return None
 
     def _run_kleis(self, code: str, mode: str = "auto") -> Tuple[int, str, str]:
@@ -125,6 +175,7 @@ Jupyter Commands:
                 capture_output=True,
                 text=True,
                 timeout=60,
+                cwd=self._kleis_root,  # Run from kleis root so stdlib imports work
             )
             
             return (result.returncode, result.stdout, result.stderr)
@@ -159,6 +210,7 @@ Jupyter Commands:
                 capture_output=True,
                 text=True,
                 timeout=60,
+                cwd=self._kleis_root,  # Run from kleis root so stdlib imports work
             )
 
             return (result.returncode, result.stdout, result.stderr)
@@ -173,6 +225,32 @@ Jupyter Commands:
     def _format_output(self, stdout: str, stderr: str) -> Dict[str, Any]:
         """Format Kleis output for Jupyter display."""
         output = stdout + stderr
+
+        # Check for SVG plot output (from plot() and scatter() builtins)
+        if "PLOT_SVG:" in output:
+            # Extract SVG content - find the complete SVG element
+            svg_start = output.index("PLOT_SVG:") + 9
+            svg_content = output[svg_start:]
+            
+            # Find the end of the SVG (</svg> tag)
+            svg_end = svg_content.find("</svg>")
+            if svg_end != -1:
+                svg_data = svg_content[:svg_end + 6].strip()  # +6 for "</svg>"
+            else:
+                svg_data = svg_content.strip()
+            
+            # Also get any text before the SVG (like out() messages)
+            text_before = output[:output.index("PLOT_SVG:")].strip()
+            
+            result = {
+                "data": {
+                    "image/svg+xml": svg_data,
+                    "text/plain": "[Plot]"
+                },
+                "metadata": {}
+            }
+            
+            return result
 
         html_lines = []
         for line in output.split("\n"):
@@ -307,16 +385,79 @@ Jupyter Commands:
 
         # Format and send output
         if not silent:
-            output = self._format_output(stdout, stderr)
-
-            if "text/html" in output.get("data", {}):
-                self.send_response(self.iopub_socket, "display_data", output)
+            combined = stdout + stderr
+            
+            # Check for SVG plot output - handle MULTIPLE plots
+            if "PLOT_SVG:" in combined:
+                # Find all PLOT_SVG markers and extract each plot
+                remaining = combined
+                
+                while "PLOT_SVG:" in remaining:
+                    svg_idx = remaining.index("PLOT_SVG:")
+                    text_before = remaining[:svg_idx].strip()
+                    svg_raw = remaining[svg_idx + 9:]  # Everything after PLOT_SVG:
+                    
+                    # Find the end of this SVG (</svg> tag)
+                    svg_end_idx = svg_raw.find("</svg>")
+                    if svg_end_idx != -1:
+                        svg_data = svg_raw[:svg_end_idx + 6].strip()  # +6 for "</svg>"
+                        remaining = svg_raw[svg_end_idx + 6:]  # Continue after this SVG
+                    else:
+                        # No closing tag found - use all remaining content
+                        svg_data = svg_raw.strip()
+                        remaining = ""
+                    
+                    # Send any text output before this plot
+                    if text_before:
+                        # Filter out test summary lines for cleaner output
+                        text_lines = [
+                            line for line in text_before.split("\n")
+                            if not line.strip().startswith("✅") 
+                            and not line.strip().startswith("❌")
+                            and "examples passed" not in line
+                        ]
+                        filtered_text = "\n".join(text_lines).strip()
+                        if filtered_text:
+                            self.send_response(self.iopub_socket, "stream", {
+                                "name": "stdout",
+                                "text": filtered_text + "\n"
+                            })
+                    
+                    # Send the SVG as display_data
+                    self.send_response(self.iopub_socket, "display_data", {
+                        "data": {
+                            "image/svg+xml": svg_data,
+                            "text/plain": "[Plot]"
+                        },
+                        "metadata": {}
+                    })
+                
+                # Send any remaining text after the last plot
+                if remaining.strip():
+                    # Filter test summary
+                    text_lines = [
+                        line for line in remaining.split("\n")
+                        if not line.strip().startswith("✅") 
+                        and not line.strip().startswith("❌")
+                        and "examples passed" not in line
+                    ]
+                    filtered_text = "\n".join(text_lines).strip()
+                    if filtered_text:
+                        self.send_response(self.iopub_socket, "stream", {
+                            "name": "stdout",
+                            "text": filtered_text + "\n"
+                        })
             else:
-                stream_content = {
-                    "name": "stdout" if returncode == 0 else "stderr",
-                    "text": stdout + stderr,
-                }
-                self.send_response(self.iopub_socket, "stream", stream_content)
+                output = self._format_output(stdout, stderr)
+
+                if "text/html" in output.get("data", {}):
+                    self.send_response(self.iopub_socket, "display_data", output)
+                else:
+                    stream_content = {
+                        "name": "stdout" if returncode == 0 else "stderr",
+                        "text": stdout + stderr,
+                    }
+                    self.send_response(self.iopub_socket, "stream", stream_content)
 
         return {
             "status": "ok" if returncode == 0 else "error",
