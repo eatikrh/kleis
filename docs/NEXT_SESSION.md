@@ -63,6 +63,35 @@ export KLEIS_ROOT=/path/to/kleis
 2. Make kernel check KLEIS_ROOT first
 3. Consider auto-detection via `kleis --root` command
 
+#### 3. Plotting API Design (Future Consideration)
+
+**Current approach:** Many separate functions
+```kleis
+plot(xs, ys, "label")
+scatter(xs, ys, "label")
+bar(xs, ys, "label")
+heatmap(matrix, "label")
+```
+
+**Alternative:** Single function with type argument
+```kleis
+graph("line", xs, ys, "label")
+graph("scatter", xs, ys, "label")
+graph("bar", xs, ys, "label")
+graph("heatmap", matrix, "label")
+```
+
+**Pros of unified approach:**
+- Simpler API surface (one function to learn)
+- Easier to switch between plot types
+- Options dict could follow: `graph("line", xs, ys, { color: "blue", mark: "o" })`
+
+**Cons:**
+- Less discoverable (can't tab-complete plot types)
+- Type checking harder (different types need different args)
+
+**Decision:** Defer until API stabilizes. Current approach works for MVP.
+
 ---
 
 ## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
