@@ -1,0 +1,222 @@
+// Transcendental Functions - Examples and Tests
+// Using Rust's std::f64: IEEE 754 compliant, < 1-2 ULP accuracy
+// Same accuracy as NumPy, MATLAB, Julia
+//
+// NOTE: assert() currently has a bug where it doesn't fully evaluate
+// expressions before comparing (see NEXT_SESSION.md). Use out() for demos.
+
+// ========================================
+// Trigonometric Functions (radians)
+// ========================================
+
+example "sin and cos" {
+    // sin(0) = 0, cos(0) = 1
+    out(sin(0))   // 0
+    out(cos(0))   // 1
+    
+    // sin(π/2) = 1, cos(π/2) ≈ 0
+    let half_pi = pi() / 2
+    out(sin(half_pi))  // 1.0
+    out(cos(half_pi))  // ~0 (floating point)
+}
+
+example "tan" {
+    // tan(0) = 0
+    out(tan(0))  // 0
+    
+    // tan(π/4) = 1
+    let quarter_pi = pi() / 4
+    out(tan(quarter_pi))  // 1.0
+}
+
+example "inverse trigonometric" {
+    // asin(0) = 0, acos(1) = 0, atan(0) = 0
+    out(asin(0))  // 0
+    out(acos(1))  // 0
+    out(atan(0))  // 0
+    
+    // asin(1) = π/2
+    out(asin(1))  // π/2 ≈ 1.5707...
+    
+    // atan2(1, 1) = π/4
+    out(atan2(1, 1))  // π/4 ≈ 0.7853...
+}
+
+// ========================================
+// Hyperbolic Functions
+// ========================================
+
+example "hyperbolic functions" {
+    // sinh(0) = 0, cosh(0) = 1, tanh(0) = 0
+    out(sinh(0))  // 0
+    out(cosh(0))  // 1
+    out(tanh(0))  // 0
+    
+    // sinh(1), cosh(1) - basic values
+    out(sinh(1))  // ≈ 1.1752...
+    out(cosh(1))  // ≈ 1.5430...
+    
+    // Identity: cosh² - sinh² = 1
+    let x = 0.5
+    let diff = pow(cosh(x), 2) - pow(sinh(x), 2)
+    out(diff)  // 1.0
+}
+
+example "inverse hyperbolic" {
+    // asinh(0) = 0, atanh(0) = 0, acosh(1) = 0
+    out(asinh(0))  // 0
+    out(atanh(0))  // 0
+    out(acosh(1))  // 0
+    
+    out(asinh(1))  // ≈ 0.8813...
+    out(acosh(2))  // ≈ 1.3169...
+}
+
+// ========================================
+// Exponential and Logarithmic Functions
+// ========================================
+
+example "exponential" {
+    // exp(0) = 1
+    out(exp(0))  // 1
+    
+    // exp(1) = e ≈ 2.7182...
+    out(exp(1))
+    out(e())  // Euler's number constant
+    
+    // exp2(3) = 8
+    out(exp2(3))  // 8
+}
+
+example "logarithms" {
+    // log(1) = ln(1) = 0
+    out(log(1))  // 0
+    out(ln(1))   // 0
+    
+    // log(e) = 1
+    out(log(e()))  // 1.0
+    
+    // log10(100) = 2, log2(8) = 3
+    out(log10(100))  // 2
+    out(log2(8))     // 3
+}
+
+example "power function" {
+    // pow(2, 3) = 8
+    out(pow(2, 3))  // 8
+    
+    // pow(4, 0.5) = 2 (square root)
+    out(pow(4, 0.5))  // 2
+    
+    // pow(e, ln(x)) = x
+    let x = 5
+    out(pow(e(), ln(x)))  // 5.0
+}
+
+// ========================================
+// Utility Functions
+// ========================================
+
+example "absolute value and rounding" {
+    // abs(-5) = 5
+    out(abs(negate(5)))  // 5
+    out(abs(3.14))       // 3.14
+    
+    // floor, ceil, round
+    out(floor(3.7))  // 3
+    out(ceil(3.2))   // 4
+    out(round(3.5))  // 4
+    out(round(3.4))  // 3
+}
+
+example "trunc and frac" {
+    // trunc removes decimal part (toward zero)
+    out(trunc(3.7))         // 3
+    out(trunc(negate(3.7))) // -3
+    
+    // frac gives the fractional part
+    out(frac(3.7))  // 0.7 (approximately)
+}
+
+example "sign function" {
+    out(sign(42))         // 1
+    out(sign(negate(42))) // -1
+    out(sign(0))          // 0
+}
+
+example "modulo and remainder" {
+    // mod(7, 3) = 1
+    out(mod(7, 3))   // 1
+    out(mod(10, 4))  // 2
+}
+
+example "min and max" {
+    out(min(3, 7))  // 3
+    out(max(3, 7))  // 7
+    
+    // Works with negative numbers
+    out(min(negate(5), negate(2)))  // -5
+}
+
+example "hypot - stable sqrt(x² + y²)" {
+    // hypot(3, 4) = 5 (3-4-5 triangle)
+    out(hypot(3, 4))  // 5
+    
+    // hypot(1, 1) = sqrt(2)
+    out(hypot(1, 1))  // ≈ 1.4142...
+}
+
+// ========================================
+// Constants
+// ========================================
+
+example "mathematical constants" {
+    out(pi())   // π ≈ 3.14159...
+    out(e())    // e ≈ 2.71828...
+    out(tau())  // τ = 2π ≈ 6.28318...
+    
+    // tau = 2*pi
+    let diff = abs(tau() - 2 * pi())
+    out(diff)  // Should be ~0 (floating point)
+}
+
+// ========================================
+// Angle Conversion
+// ========================================
+
+example "degree to radian conversion" {
+    // radians(180) = π
+    out(radians(180))  // Should be π
+    
+    // radians(90) = π/2
+    let half_pi = radians(90)
+    out(sin(half_pi))  // Should be 1.0
+}
+
+// ========================================
+// Composite Expressions
+// ========================================
+
+example "damped oscillation" {
+    // y(t) = exp(-t) * cos(t)
+    let t = 0.5
+    let y = exp(negate(t)) * cos(t)
+    out(y)  // ≈ 0.5330...
+}
+
+example "Gaussian function" {
+    // f(x) = exp(-x²)
+    let x = 1.0
+    let gaussian = exp(negate(pow(x, 2)))
+    out(gaussian)  // ≈ 0.3678...
+}
+
+example "hyperbolic identity" {
+    // cosh(x) = (exp(x) + exp(-x)) / 2
+    let x = 1.0
+    let manual = (exp(x) + exp(negate(x))) / 2
+    let builtin = cosh(x)
+    let diff = abs(manual - builtin)
+    out(diff)  // Should be ~0 (floating point)
+}
+

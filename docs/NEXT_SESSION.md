@@ -446,6 +446,88 @@ Just like we documented the Solver Abstraction Layer by **reading the code first
 
 ---
 
+## 🎯 NEXT: Transcendental Functions (sin, cos, log, exp, etc.)
+
+### The Gap
+
+Kleis currently handles:
+- ✅ Verification (Z3)
+- ✅ Numerical calculations (arithmetic)
+- ✅ Plotting (Lilaq/Typst)
+
+But lacks **transcendental functions** for scientific computing:
+
+```kleis
+// These don't work yet:
+let y = sin(x)      // ❌
+let z = exp(-t)     // ❌
+plot(xs, map(cos, xs))  // ❌
+```
+
+### Implementation Plan
+
+**Use Rust's `std::f64`** — no external dependencies needed!
+
+| Function | Rust Implementation | Notes |
+|----------|---------------------|-------|
+| `sin(x)` | `x.sin()` | Radians |
+| `cos(x)` | `x.cos()` | Radians |
+| `tan(x)` | `x.tan()` | Radians |
+| `asin(x)` | `x.asin()` | Returns radians |
+| `acos(x)` | `x.acos()` | Returns radians |
+| `atan(x)` | `x.atan()` | Returns radians |
+| `atan2(y, x)` | `y.atan2(x)` | 2-argument arctangent |
+| `sinh(x)` | `x.sinh()` | Hyperbolic |
+| `cosh(x)` | `x.cosh()` | Hyperbolic |
+| `tanh(x)` | `x.tanh()` | Hyperbolic |
+| `exp(x)` | `x.exp()` | e^x |
+| `log(x)` | `x.ln()` | Natural log |
+| `log10(x)` | `x.log10()` | Base-10 log |
+| `log2(x)` | `x.log2()` | Base-2 log |
+| `sqrt(x)` | `x.sqrt()` | Square root |
+| `pow(x, y)` | `x.powf(y)` | x^y |
+| `abs(x)` | `x.abs()` | Absolute value |
+| `floor(x)` | `x.floor()` | Round down |
+| `ceil(x)` | `x.ceil()` | Round up |
+| `round(x)` | `x.round()` | Round to nearest |
+
+**Accuracy:** All functions are IEEE 754 compliant, < 1-2 ULP accuracy (same as NumPy, MATLAB, Julia).
+
+### Files to Modify
+
+1. **`src/evaluator.rs`** — Add `builtin_sin`, `builtin_cos`, etc.
+2. **`stdlib/prelude.kleis`** — Declare operations with types:
+   ```kleis
+   operation sin : ℝ → ℝ
+   operation cos : ℝ → ℝ
+   operation exp : ℝ → ℝ
+   operation log : ℝ → ℝ
+   // etc.
+   ```
+3. **`examples/math/transcendental.kleis`** — Test examples
+4. **`docs/manual/`** — Document in reference
+
+### Example Usage (After Implementation)
+
+```kleis
+example "damped oscillation" {
+    let t = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
+    let y = [exp(negate(0)) * cos(0),
+             exp(negate(0.1)) * cos(0.1),
+             exp(negate(0.2)) * cos(0.2),
+             exp(negate(0.3)) * cos(0.3),
+             exp(negate(0.4)) * cos(0.4),
+             exp(negate(0.5)) * cos(0.5)]
+    plot(t, y, "Damped Oscillation")
+}
+```
+
+### Priority
+
+**High** — Needed for scientific plotting and numerical examples.
+
+---
+
 ## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
 
 ### The Breakthrough
