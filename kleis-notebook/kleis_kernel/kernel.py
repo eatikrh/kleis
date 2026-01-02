@@ -718,7 +718,8 @@ Jupyter Commands:
             # Scatter-specific options
             "colors", "map", "colormap",
             # Axis options
-            "xlim", "ylim", "xaxis_tick_unit", "xaxis_tick_suffix", "theme",
+            "xlim", "ylim", "xscale", "yscale",
+            "xaxis_tick_unit", "xaxis_tick_suffix", "theme",
             # REPL commands
             ":type", ":eval", ":verify", ":ast", ":env", ":load",
             # Jupyter magic commands

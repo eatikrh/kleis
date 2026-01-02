@@ -671,13 +671,38 @@ diagram(
 )
 ```
 
+### Logarithmic Scales
+
+For exponential or power-law data, use logarithmic scales:
+
+```kleis
+// Semi-log plot (linear x, logarithmic y)
+diagram(
+    plot([0, 1, 2, 3, 4], [1, 10, 100, 1000, 10000]),
+    title = "Exponential Growth",
+    yscale = "log"   // "linear", "log", or "symlog"
+)
+
+// Log-log plot (both axes logarithmic)
+diagram(
+    plot([1, 10, 100, 1000], [1, 100, 10000, 1000000]),
+    title = "Power Law",
+    xscale = "log",
+    yscale = "log"
+)
+```
+
+Available scales:
+- `"linear"` - Default linear scale
+- `"log"` - Logarithmic scale (base 10)
+- `"symlog"` - Symmetric log (linear near 0, log elsewhere; handles negative values)
+
 ### Future Enhancements
 
 See the [Plotting Roadmap](../../../PLOTTING_ROADMAP.md) for planned features:
 - Function plotting (`fplot`)
 - 3D surface plots
 - Polar plots
-- Logarithmic scales
 
 ## Next Steps
 
