@@ -1,0 +1,15 @@
+# Kleis - Formal Verification Language
+# https://kleis.io
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://kleis.io/sitemap.xml
+
+# Exclude build artifacts and temporary files
+Disallow: /target/
+Disallow: /node_modules/
+Disallow: /.git/
+Disallow: /vendor/
+

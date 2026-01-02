@@ -87,6 +87,26 @@ fi
 echo "✅ Manual examples validated (all code blocks parse correctly)"
 echo ""
 
+# Gate 5: Regenerate sitemap if SUMMARY.md changed
+echo "5️⃣  Checking sitemap..."
+if python3 scripts/generate_sitemap.py > /tmp/kleis_sitemap_output.txt 2>&1; then
+    # Check if sitemap changed
+    if ! git diff --quiet sitemap.xml 2>/dev/null; then
+        echo "   📝 Sitemap updated (manual structure changed)"
+        echo "   ⚠️  Please commit sitemap.xml and push again:"
+        echo "      git add sitemap.xml"
+        echo "      git commit --amend --no-edit"
+        echo "      git push"
+        echo ""
+        exit 1
+    else
+        echo "✅ Sitemap up to date"
+    fi
+else
+    echo "⚠️  Sitemap generation skipped (script not found or failed)"
+fi
+echo ""
+
 echo "🎉 All quality gates passed! Proceeding with push..."
 echo ""
 echo "📊 Summary:"
@@ -94,5 +114,6 @@ echo "   • Code formatted correctly"
 echo "   • Clippy completed"
 echo "   • All tests passing (unit + integration)"
 echo "   • Manual examples validated"
+echo "   • Sitemap verified"
 echo ""
 
