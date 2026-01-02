@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-369f6478.js";
+            window.path_to_searchindex_js = "../searchindex-6474d96a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-44239f67.js"></script>
@@ -205,7 +205,7 @@
 <pre><code>$ cargo run --bin repl
 🧮 Kleis REPL v0.1.0
 
-λ&gt; :load docs/grammar/lisp_parser.kleis
+λ&gt; :load examples/meta-programming/lisp_parser.kleis
 ✅ Loaded: 2 files, 60 functions, 15 structures, 5 data types
 
 λ&gt; :eval run("(+ 2 3)")
@@ -233,7 +233,7 @@
 </code></pre>
 <hr>
 <h2 id="complete-source-code"><a class="header" href="#complete-source-code">Complete Source Code</a></h2>
-<p>The complete LISP interpreter is in <code>docs/grammar/lisp_parser.kleis</code>. Below is the full implementation.</p>
+<p>The complete LISP interpreter is in <code>examples/meta-programming/lisp_parser.kleis</code>. Below is the full implementation.</p>
 <h3 id="part-1-s-expression-data-types"><a class="header" href="#part-1-s-expression-data-types">Part 1: S-Expression Data Types</a></h3>
 <pre><code class="language-kleis">import "stdlib/prelude.kleis"
 

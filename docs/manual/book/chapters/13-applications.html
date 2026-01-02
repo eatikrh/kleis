@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-369f6478.js";
+            window.path_to_searchindex_js = "../searchindex-6474d96a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-44239f67.js"></script>
@@ -563,7 +563,7 @@ structure Functor(C, D) {
 </code></pre>
 <h2 id="language-implementation"><a class="header" href="#language-implementation">Language Implementation</a></h2>
 <p>Kleis can serve as a <strong>meta-language</strong> — a language for implementing other languages. See the complete LISP interpreter in Kleis:</p>
-<pre><code>λ&gt; :load docs/grammar/lisp_parser.kleis
+<pre><code>λ&gt; :load examples/meta-programming/lisp_parser.kleis
 
 λ&gt; :eval run("(letrec ((fib (lambda (n) (if (&lt; n 2) n (+ (fib (- n 1)) (fib (- n 2))))))) (fib 10))")
 ✅ VNum(55)
