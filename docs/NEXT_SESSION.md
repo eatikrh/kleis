@@ -364,6 +364,54 @@ Standard template library: `std_template_lib/*.kleist` (12 files: basic, calculu
 
 **Priority:** High for publication use case, but significant engineering effort
 
+#### 10. Fun Project: 4-Voice Counterpoint Verification
+
+**Idea:** Implement Bach-style counterpoint rules as Kleis axioms. This would demonstrate Kleis's generality beyond pure mathematics.
+
+**The classic rules (Fux's species counterpoint):**
+
+```kleis
+structure FourVoiceCounterpoint {
+    data Voice = Soprano | Alto | Tenor | Bass
+    data Interval = Unison | Third | Fifth | Sixth | Octave | ...
+    data Motion = Parallel | Contrary | Oblique | Similar
+    
+    // No parallel fifths or octaves
+    axiom no_parallel_fifths: ∀(v1 v2 : Voice, t : Time).
+        interval(v1, v2, t) = Fifth ∧ interval(v1, v2, t+1) = Fifth ∧
+        motion(v1, v2, t) = Parallel → violation
+    
+    axiom no_parallel_octaves: ∀(v1 v2 : Voice, t : Time).
+        interval(v1, v2, t) = Octave ∧ interval(v1, v2, t+1) = Octave ∧
+        motion(v1, v2, t) = Parallel → violation
+    
+    // Voice ranges
+    axiom soprano_range: ∀(t : Time). C4 ≤ pitch(Soprano, t) ≤ G5
+    axiom bass_range: ∀(t : Time). E2 ≤ pitch(Bass, t) ≤ C4
+    
+    // No voice crossing
+    axiom no_crossing: ∀(t : Time). 
+        pitch(Bass, t) < pitch(Tenor, t) ∧
+        pitch(Tenor, t) < pitch(Alto, t) ∧
+        pitch(Alto, t) < pitch(Soprano, t)
+    
+    // Dissonances must resolve
+    axiom dissonance_resolution: ∀(v : Voice, t : Time).
+        is_dissonance(v, t) → resolves_by_step(v, t+1)
+}
+```
+
+**Use case:** Music theory students submit exercises, Z3 verifies all rules instantly.
+
+**Why this matters:** Shows Kleis is a **general verification platform**, not just a "math tool". Any domain with formalizable rules can use the same machinery.
+
+**Files to create:**
+- `examples/music/counterpoint_rules.kleis` — Axiom definitions
+- `examples/music/bach_example.kleis` — Verify a Bach chorale
+- `std_template_lib/music.kleist` — Musical notation templates (♩, ♪, ♯, ♭)
+
+**Priority:** Fun project, educational value, great demo
+
 ---
 
 ## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
