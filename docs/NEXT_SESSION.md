@@ -273,6 +273,66 @@ Expression → translate_to_editor() → EditorNode → render(Typst) → SVG
 
 **Priority:** Medium (depends on whether Jupyter math rendering is pursued)
 
+#### 9. Jupyter + Equation Editor Integration: Publication-Quality Equations
+
+**Objective:** Scientists using Jupyter notebooks need beautiful, publication-quality rendered equations. The Equation Editor already provides this capability — the challenge is bringing it INTO Jupyter.
+
+**What the Equation Editor provides:**
+- Visual, template-based equation building (no LaTeX syntax to memorize)
+- Beautiful SVG output via Typst rendering
+- Export to LaTeX (for journal submission), Kleis (for Z3 verification)
+
+**The integration challenge:**
+
+```
+┌─────────────────┐          ┌─────────────────┐
+│  Jupyter        │    ???   │  Equation       │
+│  Notebook       │ ←──────→ │  Editor         │
+│  (Python kernel)│          │  (Rust server)  │
+└─────────────────┘          └─────────────────┘
+```
+
+The Equation Editor is a web app (`static/index.html` or `patternfly-editor/`) that requires `kleis server` running. Jupyter has its own Python kernel. These are separate processes.
+
+**Key insight:** The deliverable is the **rendered SVG**, not Kleis code. Scientists want:
+```
+      ∂ψ          ℏ²  ∂²ψ
+  iℏ ─── = -  ─── ───── + V(x)ψ
+      ∂t          2m  ∂x²
+```
+Not:
+```
+scalar_divide(diff(psi, t), scalar_multiply(i, hbar))
+```
+
+**Possible integration approaches:**
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **User runs `kleis server` separately** | Simple, works now | Manual step, two processes |
+| **Kernel spawns server as subprocess** | Automatic | Port conflicts, lifecycle management |
+| **Bundle kleis binary with Python package** | Clean install | Large binary, platform-specific builds |
+| **ipywidgets custom widget** | Native Jupyter feel | Requires server running, complex widget dev |
+| **WebAssembly (Typst in browser)** | No server needed! | Significant engineering effort |
+
+**The WASM option is particularly interesting:**
+- If Typst rendering runs in the browser (via WASM), the entire Equation Editor becomes client-side
+- No `kleis server` dependency
+- Works in any Jupyter environment (JupyterHub, Colab, etc.)
+- Typst already has WASM support: https://github.com/typst/typst
+
+**Components to study:**
+- `patternfly-editor/` — React app, could become ipywidget frontend
+- `src/bin/server.rs` — HTTP API endpoints for rendering
+- `src/typst_renderer.rs` — The Typst code generation
+
+**Files:**
+- `static/index.html` — Original Equation Editor
+- `patternfly-editor/` — PatternFly/React version
+- `kleis-notebook/` — Current Jupyter kernel
+
+**Priority:** High for publication use case, but significant engineering effort
+
 ---
 
 ## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
