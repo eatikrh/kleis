@@ -136,6 +136,14 @@ pub struct PlotElementOptions {
     pub scale: Option<f64>,
     /// Arrow pivot: "start", "center", "end"
     pub pivot: Option<String>,
+
+    // === place() specific ===
+    /// Text content for annotations
+    pub text: Option<String>,
+    /// Alignment: "top", "bottom", "left", "right", "center"
+    pub align: Option<String>,
+    /// Padding around text
+    pub padding: Option<String>,
 }
 
 /// Options for the diagram container
@@ -167,6 +175,10 @@ pub struct DiagramOptions {
     pub fill: Option<String>,
     /// Aspect ratio
     pub aspect_ratio: Option<f64>,
+    /// X-axis subticks: "none", "auto", or number
+    pub xaxis_subticks: Option<String>,
+    /// Y-axis subticks: "none", "auto", or number
+    pub yaxis_subticks: Option<String>,
 }
 
 /// Plot type - matches Lilaq plot functions
@@ -198,6 +210,8 @@ pub enum PlotType {
     Quiver,
     /// Grouped bar chart with multiple series
     GroupedBars,
+    /// Text annotation at a specific position
+    Place,
 }
 
 impl PlotType {
@@ -427,6 +441,7 @@ pub fn generate_lilaq_code(x_data: &[f64], y_data: &[f64], config: &PlotConfig) 
         PlotType::Contour => "lq.contour",
         PlotType::Quiver => "lq.quiver",
         PlotType::GroupedBars => "lq.bar", // Uses generate_grouped_bar_code instead
+        PlotType::Place => "lq.place",
     };
 
     code.push_str(&format!("  {}(\n", plot_cmd));
@@ -1009,6 +1024,12 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
     if let Some(ref fill) = options.fill {
         code.push_str(&format!("  fill: {},\n", fill));
     }
+    if let Some(ref subticks) = options.xaxis_subticks {
+        code.push_str(&format!("  xaxis: (subticks: {}),\n", subticks));
+    }
+    if let Some(ref subticks) = options.yaxis_subticks {
+        code.push_str(&format!("  yaxis: (subticks: {}),\n", subticks));
+    }
     if let Some(ratio) = options.aspect_ratio {
         code.push_str(&format!("  aspect-ratio: {},\n", ratio));
     }
@@ -1037,6 +1058,7 @@ fn generate_element_code(element: &PlotElement) -> String {
         PlotType::Contour => generate_contour_element(element),
         PlotType::Quiver => generate_quiver_element(element),
         PlotType::GroupedBars => String::new(), // Handled by multiple bar elements
+        PlotType::Place => generate_place_element(element),
     }
 }
 
@@ -1320,6 +1342,41 @@ fn generate_quiver_element(element: &PlotElement) -> String {
     }
 
     code.push_str("\n  ),\n");
+    code
+}
+
+fn generate_place_element(element: &PlotElement) -> String {
+    let mut code = String::new();
+
+    // place() requires x, y coordinates and text
+    let x = element
+        .x_data
+        .as_ref()
+        .and_then(|v| v.first())
+        .unwrap_or(&0.0);
+    let y = element
+        .y_data
+        .as_ref()
+        .and_then(|v| v.first())
+        .unwrap_or(&0.0);
+    let text = element
+        .options
+        .text
+        .as_ref()
+        .map(|s| s.as_str())
+        .unwrap_or("");
+
+    code.push_str(&format!("  lq.place({}, {}, [{}]", x, y, text));
+
+    let opts = &element.options;
+    if let Some(ref align) = opts.align {
+        code.push_str(&format!(", align: {}", align));
+    }
+    if let Some(ref padding) = opts.padding {
+        code.push_str(&format!(", pad: {}", padding));
+    }
+
+    code.push_str("),\n");
     code
 }
 

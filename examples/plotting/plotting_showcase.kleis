@@ -50,3 +50,46 @@ example "Grouped bars with error bars (Lilaq replication)" {
     )
 }
 
+// =============================================================================
+// Bar Plot with Numbers
+// =============================================================================
+// Original Lilaq:
+// #let xs = range(9)
+// #let ys = (12, 51, 23, 36, 38, 15, 10, 22, 86)
+// #lq.diagram(
+//   width: 9cm,
+//   xaxis: (subticks: none),
+//   lq.bar(xs, ys),
+//   ..xs.zip(ys).map(((x, y)) => {
+//     let align = if y > 12 { top } else { bottom }
+//     lq.place(x, y, pad(0.2em)[#y], align: align)
+//   })
+// )
+
+example "Bar plot with xaxis options" {
+    out("Bar plot with numeric data and xaxis: (subticks: none)")
+    out("")
+    
+    let xs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    let ys = [12, 51, 23, 36, 38, 15, 10, 22, 86]
+    
+    diagram(
+        bar(xs, ys),
+        width = 9,
+        xaxis_subticks = "none"
+    )
+}
+
+// NOTE: For the full Lilaq example with text annotations, we now have:
+// - list_zip(xs, ys) → [(x1, y1), (x2, y2), ...]
+// - place(x, y, text, align = "top") for annotations
+// - However, Kleis doesn't have conditional expressions in list_map yet
+//   (no if-then-else lambda). This would require extending the language.
+
+example "Demonstrating list_zip" {
+    out("list_zip combines two lists into pairs:")
+    let xs = [0, 1, 2]
+    let ys = [10, 20, 30]
+    out(list_zip(xs, ys))
+}
+

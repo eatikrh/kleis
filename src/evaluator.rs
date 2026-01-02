@@ -2436,6 +2436,7 @@ impl Evaluator {
             }
             "contour" => self.builtin_matrix_element(args, crate::plotting::PlotType::Contour),
             "quiver" => self.builtin_quiver_element(args),
+            "place" => self.builtin_place_element(args),
 
             // === Arithmetic ===
             "plus" | "+" => self.builtin_arithmetic(args, |a, b| a + b),
@@ -2904,6 +2905,51 @@ impl Evaluator {
                         acc = self.eval_concrete(&reduced)?;
                     }
                     return Ok(Some(acc));
+                }
+                Ok(None)
+            }
+            "list_zip" => {
+                // list_zip([a, b, c], [1, 2, 3]) → [(a, 1), (b, 2), (c, 3)]
+                // Returns pairs (tuples) of corresponding elements
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+
+                if let (Expression::List(xs), Expression::List(ys)) = (&args[0], &args[1]) {
+                    let pairs: Vec<Expression> = xs
+                        .iter()
+                        .zip(ys.iter())
+                        .map(|(x, y)| Expression::operation("Pair", vec![x.clone(), y.clone()]))
+                        .collect();
+                    return Ok(Some(Expression::List(pairs)));
+                }
+                Ok(None)
+            }
+            "list_nth" => {
+                // list_nth([a, b, c], 1) → b
+                // Index into a list (0-based)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+
+                if let Expression::List(elements) = &args[0] {
+                    if let Some(idx) = self.as_number(&args[1]) {
+                        let idx = idx as usize;
+                        if idx < elements.len() {
+                            return Ok(Some(elements[idx].clone()));
+                        }
+                    }
+                }
+                Ok(None)
+            }
+            "list_length" => {
+                // list_length([a, b, c]) → 3
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+
+                if let Expression::List(elements) = &args[0] {
+                    return Ok(Some(Expression::Const(elements.len().to_string())));
                 }
                 Ok(None)
             }
@@ -4843,6 +4889,12 @@ impl Evaluator {
                         "grid" => options.grid = Some(self.extract_bool(&args[1])?),
                         "fill" => options.fill = Some(self.extract_string(&args[1])?),
                         "aspect_ratio" => options.aspect_ratio = Some(self.extract_f64(&args[1])?),
+                        "xaxis_subticks" | "x_subticks" => {
+                            options.xaxis_subticks = Some(self.extract_string(&args[1])?)
+                        }
+                        "yaxis_subticks" | "y_subticks" => {
+                            options.yaxis_subticks = Some(self.extract_string(&args[1])?)
+                        }
                         _ => {} // Ignore unknown options
                     }
                 }
@@ -4995,6 +5047,31 @@ impl Evaluator {
         Ok(Some(Expression::operation("PlotElement", element_args)))
     }
 
+    /// place(x, y, text, align = "top") - Text annotation at coordinates
+    fn builtin_place_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() < 3 {
+            return Err("place() requires: x, y, text".to_string());
+        }
+
+        let x = self.extract_f64(&args[0])?;
+        let y = self.extract_f64(&args[1])?;
+        let text = self.extract_string(&args[2])?;
+
+        let mut element_args = vec![
+            Expression::Const("Place".to_string()),
+            self.encode_f64_list(&[x]),
+            self.encode_f64_list(&[y]),
+            Expression::String(text),
+        ];
+
+        // Parse options if present (trailing record from named arguments)
+        if args.len() >= 4 {
+            element_args.push(args[3].clone());
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
     /// Encode a list of f64 as an Expression::List
     fn encode_f64_list(&self, data: &[f64]) -> Expression {
         Expression::List(
@@ -5035,6 +5112,7 @@ impl Evaluator {
                 "Colormesh" => PlotType::Colormesh,
                 "Contour" => PlotType::Contour,
                 "Quiver" => PlotType::Quiver,
+                "Place" => PlotType::Place,
                 _ => return Err(format!("Unknown PlotElement type: {}", type_str)),
             };
 
@@ -5102,6 +5180,21 @@ impl Evaluator {
                             })
                             .collect();
                         element.direction_data = Some(directions);
+                    }
+                    if args.len() >= 5 {
+                        self.parse_element_options(&args[4], &mut element.options)?;
+                    }
+                }
+                PlotType::Place => {
+                    if args.len() >= 4 {
+                        element.x_data = Some(self.decode_f64_list(&args[1])?);
+                        element.y_data = Some(self.decode_f64_list(&args[2])?);
+                        // Text is the 4th argument
+                        if let Expression::String(text) = &args[3] {
+                            element.options.text = Some(text.clone());
+                        } else if let Expression::Const(text) = &args[3] {
+                            element.options.text = Some(text.clone());
+                        }
                     }
                     if args.len() >= 5 {
                         self.parse_element_options(&args[4], &mut element.options)?;
@@ -5207,6 +5300,14 @@ impl Evaluator {
                                 "clip" => options.clip = Some(self.extract_bool(&field_args[1])?),
                                 "z_index" => {
                                     options.z_index = Some(self.extract_f64(&field_args[1])? as i32)
+                                }
+                                // place() options
+                                "text" => options.text = Some(self.extract_string(&field_args[1])?),
+                                "align" => {
+                                    options.align = Some(self.extract_string(&field_args[1])?)
+                                }
+                                "padding" | "pad" => {
+                                    options.padding = Some(self.extract_string(&field_args[1])?)
                                 }
                                 _ => {} // Ignore unknown options
                             }
