@@ -698,15 +698,27 @@ Jupyter Commands:
             # Built-in functions
             "eval", "sin", "cos", "exp", "log", "sqrt", "det", "trace", "transpose",
             "eigenvalues", "eigenvectors", "inverse", "norm", "negate", "out",
+            # Math functions
+            "range", "linspace", "pi", "radians",
+            # Random functions
+            "random", "random_uniform", "random_normal",
+            # Vector functions  
+            "vec_add",
             # List functions (v0.96)
-            "list_map", "list_filter", "list_fold",
+            "list_map", "list_filter", "list_fold", "list_zip", "list_nth", "list_length",
+            "list_concat", "list_flatten", "list_slice", "list_rotate", "fst", "snd",
             # Plotting - Lilaq-style compositional API
             "diagram", "plot", "scatter", "bar", "hbar", "stem", "hstem",
             "fill_between", "boxplot", "hboxplot", "heatmap", "contour", "quiver",
             # Plot named arguments (v0.96 - common options)
             "width", "height", "title", "xlabel", "ylabel", "label",
             "color", "stroke", "mark", "mark_size", "yerr", "xerr",
-            "offset", "legend_position",
+            "offset", "legend_position", "xaxis_ticks", "xaxis_tick_rotate",
+            "xaxis_subticks", "yaxis_subticks", "yaxis_mirror", "margin_top",
+            # Scatter-specific options
+            "colors", "map", "colormap",
+            # Axis options
+            "xlim", "ylim", "xaxis_tick_unit", "xaxis_tick_suffix", "theme",
             # REPL commands
             ":type", ":eval", ":verify", ":ast", ":env", ":load",
             # Jupyter magic commands

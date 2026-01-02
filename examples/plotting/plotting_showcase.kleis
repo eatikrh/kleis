@@ -185,6 +185,298 @@ example "Climograph - Twin axis chart" {
         margin_top = "20%",
         yaxis_mirror = false,
         xaxis_ticks = months,
+        xaxis_tick_rotate = -90,
         xaxis_subticks = "none"
+    )
+}
+
+// =============================================================================
+// Dual Axis - Wavelength/Energy Conversion
+// =============================================================================
+// Replication of: https://lilaq.org/docs/xaxis (O2 Spectrum example)
+//
+// Original Lilaq:
+// #let k = 1e9 * h * c / e  // Conversion constant nm ↔ eV
+// #lq.diagram(
+//   width: 10cm, margin: 3%,
+//   xaxis: (offset: 0, mirror: false),
+//   xlabel: [Wavelength (nm)], ylabel: [Relative intensity],
+//   lq.plot(λ, intensity, mark: none),
+//   lq.xaxis(
+//     position: top, label: [Energy (eV)],
+//     offset: 0, exponent: 0, tick-distance: 5e-5,
+//     functions: (λ => k / λ, E => k / E)
+//   )
+// )
+//
+// Note: We use synthetic data since file loading is not available in Kleis
+
+example "Dual Axis - O2 Spectrum (Wavelength ↔ Energy)" {
+    out("O2 Absorption Spectrum with dual x-axes")
+    out("Bottom: Wavelength (nm), Top: Energy (eV)")
+    out("")
+    out("The physics: E = hc/λ, where k = 1239.84 eV·nm")
+    out("As wavelength increases, energy DECREASES (inverse relationship)")
+    out("")
+    
+    // Synthetic O2 B-band spectrum data (simplified, around 687 nm)
+    // Real data would have many sharp peaks with noise
+    let wavelength = [686.99, 687.00, 687.005, 687.01, 687.015, 687.02, 687.025, 687.03, 687.035, 687.04, 687.045, 687.05]
+    let intensity = [0.05, 0.42, 0.08, 0.05, 0.06, 0.04, 0.05, 0.15, 0.04, 0.05, 0.03, 0.04]
+    
+    // k = 1239.84 eV·nm (hc/e in convenient units)
+    // E(eV) = k / λ(nm) ≈ 1.8047 eV at 687 nm
+    
+    diagram(
+        plot(wavelength, intensity, mark = "none", color = "blue"),
+        xaxis(
+            position = "top",
+            axis_label = "Energy (eV)",
+            axis_offset = 0,
+            exponent = 0,
+            tick_distance = 0.00005,
+            functions = ("x => 1239.84 / x", "E => 1239.84 / E")
+        ),
+        width = 10,
+        xlabel = "Wavelength (nm)",
+        ylabel = "Relative intensity"
+    )
+}
+
+// =============================================================================
+// Koch Snowflake - Fractal Path with Recursion
+// =============================================================================
+// Replication of: https://lilaq.org/docs/path (Koch Snowflake example)
+//
+// This demonstrates:
+// - path() function for drawing arbitrary polygons
+// - Complex number arithmetic using Pair(real, imag)
+// - Recursive function definitions with define
+// - List operations: list_flatten, list_nth
+
+// Complex number operations using Pair(real, imag)
+define complex_add(c1, c2) = Pair(fst(c1) + fst(c2), snd(c1) + snd(c2))
+define complex_sub(c1, c2) = Pair(fst(c1) - fst(c2), snd(c1) - snd(c2))
+define complex_mul(c1, c2) = Pair(
+    (fst(c1)*fst(c2)) - (snd(c1)*snd(c2)),
+    (fst(c1)*snd(c2)) + (snd(c1)*fst(c2))
+)
+
+// Triangle vertex at given angle (degrees)
+define triangle_vertex(angle) = Pair(cos(radians(angle)), sin(radians(angle)))
+
+// Base equilateral triangle
+define base_triangle() = [
+    triangle_vertex(90),
+    triangle_vertex(210),
+    triangle_vertex(330)
+]
+
+// Koch edge subdivision: one edge becomes 4 segments
+// Each edge p1→p2 transforms to: p1 → 1/3 → peak → 2/3
+define koch_edge(p1, p2) = 
+    let d = complex_sub(p2, p1) in
+    let third = Pair(1/3, 0) in
+    let twothird = Pair(2/3, 0) in
+    let peak = Pair(0.5, 0 - sqrt(3)/6) in
+    [
+        p1,
+        complex_add(p1, complex_mul(d, third)),
+        complex_add(p1, complex_mul(d, peak)),
+        complex_add(p1, complex_mul(d, twothird))
+    ]
+
+// General Koch iteration: apply koch_edge to all edges of a polygon
+// For N vertices, we get N edges, each becoming 4 points → 4N vertices
+define koch_iter(pts) = 
+    let n = list_length(pts) in
+    let indices = range(n) in
+    let edges = list_map(λ i . 
+        let p1 = list_nth(pts, i) in
+        let p2 = list_nth(pts, mod(i + 1, n)) in
+        koch_edge(p1, p2)
+    , indices) in
+    list_flatten(edges)
+
+example "Koch Snowflake - n=3 (192 vertices)" {
+    out("Koch Snowflake Fractal - Lilaq Replication")
+    out("")
+    out("n=0: 3 vertices (triangle)")
+    out("n=1: 12 vertices (Star of David)")
+    out("n=2: 48 vertices")
+    out("n=3: 192 vertices (shown below)")
+    out("")
+    
+    // Build up iterations
+    let n0 = base_triangle()
+    let n1 = koch_iter(n0)
+    let n2 = koch_iter(n1)
+    let n3 = koch_iter(n2)
+    
+    diagram(
+        path(n3, fill = "blue", closed = true),
+        width = 6,
+        height = 7,
+        xaxis_ticks_none = true,
+        yaxis_ticks_none = true
+    )
+}
+
+// =============================================================================
+// Axis with π Multiples
+// =============================================================================
+// Replication of: https://lilaq.org/docs/ticks (π axis example)
+//
+// Original Lilaq:
+// #lq.diagram(
+//   xlim: (-2*calc.pi, 2*calc.pi),
+//   xaxis: (
+//     locate-ticks: lq.tick-locate.linear.with(unit: calc.pi),
+//     format-ticks: lq.tick-format.linear.with(suffix: $pi$)
+//   )
+// )
+
+example "Axis with π multiples" {
+    out("X-axis showing multiples of π")
+    out("xlim: (-2π, 2π), ticks at -2π, -π, 0, π, 2π")
+    out("")
+    
+    diagram(
+        plot([0], [0.5], mark = "none"),  // Dummy data point
+        xlim = [-6.283185307, 6.283185307],  // -2π to 2π
+        ylim = [0, 1],
+        xaxis_tick_unit = 3.141592653,  // π
+        xaxis_tick_suffix = "pi"
+    )
+}
+
+// =============================================================================
+// Themes - Lilaq Built-in Themes
+// =============================================================================
+// Lilaq has built-in themes in lq.theme module:
+// - schoolbook: Math textbook style with axes at origin
+// - moon: Dark theme for presentations
+// - misty: Soft, muted colors
+// - ocean: Blue-tinted theme
+// - skyline: Clean, modern look
+//
+// See: https://lilaq.org/themes
+
+example "Schoolbook Theme" {
+    out("Schoolbook style - axes at origin with arrow tips")
+    out("Classic math textbook look (lq.theme.schoolbook)")
+    out("")
+    
+    let xs = [0.1, 0.3, 0.5, 0.7, 0.9]
+    let ys = [0.2, 0.6, 0.4, 0.8, 0.5]
+    
+    diagram(
+        plot(xs, ys, color = "blue"),
+        xlabel = "x",
+        ylabel = "y",
+        theme = "schoolbook"
+    )
+}
+
+example "Moon Theme (Dark)" {
+    out("Moon theme - ideal for presentations (lq.theme.moon)")
+    out("")
+    
+    let xs = [0, 1, 2, 3, 4]
+    let ys = [1, 4, 2, 5, 3]
+    
+    diagram(
+        plot(xs, ys, color = "aqua", stroke = "2pt"),
+        xlabel = "Time",
+        ylabel = "Value",
+        title = "Dark Mode Plot",
+        theme = "moon"
+    )
+}
+
+example "Ocean Theme" {
+    out("Ocean theme - blue-tinted (lq.theme.ocean)")
+    out("")
+    
+    let xs = [0, 1, 2, 3, 4, 5]
+    let ys = [2, 3, 1, 4, 2, 5]
+    
+    diagram(
+        plot(xs, ys),
+        xlabel = "x",
+        ylabel = "y",
+        theme = "ocean"
+    )
+}
+
+// =============================================================================
+// Stacked Area Chart
+// =============================================================================
+// Replication of: https://lilaq.org/docs/fill-between (Stacked area chart example)
+//
+// Original Lilaq:
+// #let x = range(10)
+// #let y1 = (0, 1, 3, 9, 5, 4, 2, 2, 1, 0)
+// #let y2 = (5, 3, 2, 0, 1, 2, 2, 2, 3, 2)
+// #let y3 = (0, 0, 0, 0, 1, 2, 4, 5, 5, 9)
+// #lq.diagram(..stacked-area(x, y1, y2, y3))
+
+example "Stacked Area Chart" {
+    out("Stacked area chart showing relationship between categories")
+    out("Using stacked_area() with moon theme")
+    out("")
+    
+    let xs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    let y1 = [0, 1, 3, 9, 5, 4, 2, 2, 1, 0]
+    let y2 = [5, 3, 2, 0, 1, 2, 2, 2, 3, 2]
+    let y3 = [0, 0, 0, 0, 1, 2, 4, 5, 5, 9]
+    
+    diagram(
+        stacked_area(xs, y1, y2, y3),
+        theme = "moon"
+    )
+}
+
+// =============================================================================
+// Example 13: Styled Marks with Colormap
+// =============================================================================
+// Lilaq reference:
+// #let xs = lq.linspace(0, 4 * calc.pi)
+// #let ys = xs.map(calc.sin)
+// #let (rng, noise) = suiji.normal(scale: 0.1, size: xs.len(), rng)
+// #let xs-noisy = lq.vec.add(xs, noise)
+// #let (rng, colors) = suiji.uniform(size: xs.len(), rng)
+// #lq.diagram(
+//   lq.plot(xs, ys, mark: none), 
+//   lq.scatter(xs-noisy, ys, mark: "s", color: colors, map: color.map.turbo, stroke: .5pt + black)
+// )
+
+example "Styled Marks with Colormap" {
+    out("Scatter plot with per-point colors using turbo colormap")
+    out("Shows noisy sine wave data with colored square markers")
+    out("")
+    
+    // Generate ideal sine wave
+    let xs = linspace(0, 12.566370614, 50)  // 0 to 4π
+    let ys = list_map(lambda x . sin(x), xs)
+    
+    // Add pseudo-random noise to x values
+    let noise = random_normal(50, 33, 0.1)  // count=50, seed=33, scale=0.1
+    let xs_noisy = vec_add(xs, noise)
+    
+    // Generate random colors (0-1 values for colormap)
+    let colors = random(50, 42)
+    
+    diagram(
+        // Ideal sine wave (no markers)
+        plot(xs, ys, mark = "none"),
+        // Noisy data with colored markers
+        scatter(xs_noisy, ys, 
+            mark = "s",           // square markers
+            colors = colors,       // per-point color values
+            map = "turbo",        // colormap
+            stroke = "0.5pt + black"
+        ),
+        theme = "moon"
     )
 }

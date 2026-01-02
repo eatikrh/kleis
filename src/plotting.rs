@@ -35,7 +35,7 @@ use std::io::Write;
 use std::process::Command;
 
 /// Lilaq package version
-const LILAQ_VERSION: &str = "0.3.0";
+const LILAQ_VERSION: &str = "0.5.0";
 
 /// Result of a plot compilation
 #[derive(Debug, Clone)]
@@ -60,6 +60,8 @@ pub struct PlotElement {
     pub x_data: Option<Vec<f64>>,
     /// Y data (for most plot types)
     pub y_data: Option<Vec<f64>>,
+    /// Y2 data (for fill-between stacking)
+    pub y2_data: Option<Vec<f64>>,
     /// Matrix data (for heatmap, contour)
     pub matrix_data: Option<Vec<Vec<f64>>>,
     /// Direction data (for quiver)
@@ -146,12 +148,28 @@ pub struct PlotElementOptions {
     pub padding: Option<String>,
 
     // === yaxis() secondary axis specific ===
-    /// Position: "left" or "right"
+    /// Position: "left" or "right" for yaxis, "top" or "bottom" for xaxis
     pub position: Option<String>,
     /// Axis label for secondary axis
     pub axis_label: Option<String>,
     /// Child elements for secondary axis
     pub children: Option<Vec<Box<crate::plotting::PlotElement>>>,
+
+    // === xaxis() secondary axis specific ===
+    /// Tick distance for secondary axis
+    pub tick_distance: Option<f64>,
+    /// Exponent for axis labels (0 = no scientific notation)
+    pub exponent: Option<i32>,
+    /// Axis offset
+    pub axis_offset: Option<f64>,
+    /// Forward transformation function (as Kleis lambda string, e.g., "x => k / x")
+    pub transform_forward: Option<String>,
+    /// Inverse transformation function (as Kleis lambda string, e.g., "x => k / x")
+    pub transform_inverse: Option<String>,
+
+    // === path() specific ===
+    /// Whether to close the path (connect last point to first)
+    pub closed: Option<bool>,
 }
 
 /// Options for the diagram container
@@ -194,8 +212,24 @@ pub struct DiagramOptions {
     pub margin_bottom: Option<String>,
     pub margin_left: Option<String>,
     pub margin_right: Option<String>,
-    /// Custom x-axis tick labels
+    /// Custom x-axis tick labels (or empty vec to hide ticks)
     pub xaxis_ticks: Option<Vec<String>>,
+    /// X-axis tick label rotation in degrees (e.g., -90 for vertical)
+    pub xaxis_tick_rotate: Option<f64>,
+    /// Hide x-axis ticks entirely
+    pub xaxis_ticks_none: Option<bool>,
+    /// Hide y-axis ticks entirely
+    pub yaxis_ticks_none: Option<bool>,
+    /// X-axis tick unit (e.g., π for multiples of pi)
+    pub xaxis_tick_unit: Option<f64>,
+    /// X-axis tick suffix (e.g., "π" to append to tick labels)
+    pub xaxis_tick_suffix: Option<String>,
+    /// Y-axis tick unit
+    pub yaxis_tick_unit: Option<f64>,
+    /// Y-axis tick suffix
+    pub yaxis_tick_suffix: Option<String>,
+    /// Theme: "schoolbook", "dark", etc.
+    pub theme: Option<String>,
 }
 
 /// Plot type - matches Lilaq plot functions
@@ -231,6 +265,10 @@ pub enum PlotType {
     Place,
     /// Secondary Y-axis wrapper (for twin axis charts)
     SecondaryYAxis,
+    /// Secondary X-axis wrapper (for dual axis charts like wavelength/energy)
+    SecondaryXAxis,
+    /// Arbitrary path (for fractals, polygons, custom shapes)
+    Path,
 }
 
 impl PlotType {
@@ -408,10 +446,96 @@ fn generate_preamble() -> String {
     )
 }
 
+/// Generate preamble with theme support
+/// 
+/// Lilaq has built-in themes in lq.theme module:
+/// - lq.theme.misty
+/// - lq.theme.ocean
+/// - lq.theme.skyline  
+/// - lq.theme.schoolbook
+/// - lq.theme.moon (dark theme)
+///
+/// For "schoolbook", we use the full manual implementation with arrow tips.
+/// See: https://lilaq.org/themes
+fn generate_preamble_with_theme(theme: Option<&str>) -> String {
+    let mut code = String::new();
+    
+    // Base imports
+    code.push_str(&format!("#import \"@preview/lilaq:{}\" as lq\n", LILAQ_VERSION));
+    
+    // Theme-specific imports
+    match theme {
+        Some("schoolbook") => {
+            // Full manual implementation requires tiptoe and elembic
+            code.push_str("#import \"@preview/tiptoe:0.3.1\"\n");
+            code.push_str("#import \"@preview/elembic:1.1.1\" as e\n");
+        }
+        _ => {}
+    }
+    
+    code.push_str("\n#set page(width: auto, height: auto, margin: 0.5cm)\n\n");
+    
+    // Apply theme
+    match theme {
+        Some("schoolbook") => {
+            // Full manual schoolbook implementation with arrow tips
+            code.push_str(r#"#let schoolbook-style = it => {
+  let filter(value, distance) = value != 0 and distance >= 5pt
+  let axis-args = (position: 0, filter: filter)
+  
+  show: lq.set-tick(inset: 1.5pt, outset: 1.5pt, pad: 0.4em)
+  show: lq.set-spine(tip: tiptoe.stealth)
+  show: lq.set-grid(stroke: none)
+
+  show: lq.set-diagram(xaxis: axis-args, yaxis: axis-args)
+
+  show: lq.set-label(pad: none, angle: 0deg)
+  show: e.show_(
+    lq.label.with(kind: "y"),
+    it => place(bottom + right, dy: -100% - .0em, dx: -.5em, it)
+  )
+  show: e.show_(
+    lq.label.with(kind: "x"),
+    it => place(left + top, dx: 100% + .0em, dy: .4em, it)
+  )
+  
+  it
+}
+
+#show: schoolbook-style
+
+"#);
+        }
+        Some("moon") | Some("dark") => {
+            // Moon theme requires dark background
+            code.push_str("#set page(fill: rgb(\"#1a1a2e\"))\n");
+            code.push_str("#set text(fill: white)\n");
+            code.push_str("#show: lq.theme.moon\n\n");
+        }
+        Some("misty") => {
+            code.push_str("#show: lq.theme.misty\n\n");
+        }
+        Some("ocean") => {
+            code.push_str("#show: lq.theme.ocean\n\n");
+        }
+        Some("skyline") => {
+            code.push_str("#show: lq.theme.skyline\n\n");
+        }
+        _ => {}
+    }
+    
+    code
+}
+
 /// Format a vector of f64 as Typst array
 fn format_array(data: &[f64]) -> String {
     let items: Vec<String> = data.iter().map(|x| format!("{:.6}", x)).collect();
-    format!("({})", items.join(", "))
+    // Typst requires trailing comma for single-element arrays/tuples
+    if items.len() == 1 {
+        format!("({},)", items[0])
+    } else {
+        format!("({})", items.join(", "))
+    }
 }
 
 fn format_matrix(data: &[Vec<f64>]) -> String {
@@ -462,6 +586,8 @@ pub fn generate_lilaq_code(x_data: &[f64], y_data: &[f64], config: &PlotConfig) 
         PlotType::GroupedBars => "lq.bar", // Uses generate_grouped_bar_code instead
         PlotType::Place => "lq.place",
         PlotType::SecondaryYAxis => "lq.yaxis",
+        PlotType::SecondaryXAxis => "lq.xaxis",
+        PlotType::Path => "lq.path",
     };
 
     code.push_str(&format!("  {}(\n", plot_cmd));
@@ -804,7 +930,7 @@ pub fn generate_bar_chart_code(x_data: &[f64], heights: &[f64], config: &PlotCon
 
     // Label for legend
     if let Some(label) = &config.label {
-        code.push_str(&format!(",\n    label: [\"{}\"]", label));
+        code.push_str(&format!(",\n    label: [{}]", label));
     }
 
     code.push_str("\n  )\n");
@@ -1000,7 +1126,8 @@ where
 
 /// Generate Lilaq code for a diagram with multiple plot elements
 pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions) -> String {
-    let mut code = generate_preamble();
+    // Use theme-aware preamble if theme is specified
+    let mut code = generate_preamble_with_theme(options.theme.as_deref());
 
     // Start diagram
     code.push_str("#lq.diagram(\n");
@@ -1013,7 +1140,7 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
         code.push_str(&format!("  height: {}cm,\n", h));
     }
     if let Some(ref title) = options.title {
-        code.push_str(&format!("  title: \"{}\",\n", title));
+        code.push_str(&format!("  title: [{}],\n", title));
     }
     if let Some(ref xlabel) = options.xlabel {
         code.push_str(&format!("  xlabel: [{}],\n", xlabel));
@@ -1046,17 +1173,50 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
     }
     // X-axis options
     let mut xaxis_opts = Vec::new();
+    if options.xaxis_ticks_none == Some(true) {
+        xaxis_opts.push("ticks: none".to_string());
+    }
     if let Some(ref subticks) = options.xaxis_subticks {
         xaxis_opts.push(format!("subticks: {}", subticks));
     }
-    if let Some(ref ticks) = options.xaxis_ticks {
+    // Tick unit for locating ticks at multiples (e.g., π)
+    if let Some(unit) = options.xaxis_tick_unit {
+        xaxis_opts.push(format!(
+            "locate-ticks: lq.tick-locate.linear.with(unit: {})",
+            unit
+        ));
+    }
+    // Tick suffix for formatting (e.g., "π")
+    if let Some(ref suffix) = options.xaxis_tick_suffix {
+        xaxis_opts.push(format!(
+            "format-ticks: lq.tick-format.linear.with(suffix: ${}$)",
+            suffix
+        ));
+    }
+    if options.xaxis_ticks_none != Some(true) {
+        if let Some(ref ticks) = options.xaxis_ticks {
         // Format ticks as enumerated pairs: ((0, "Jan"), (1, "Feb"), ...)
-        let tick_strs: Vec<String> = ticks
-            .iter()
-            .enumerate()
-            .map(|(i, label)| format!("({}, [{}])", i, label))
-            .collect();
+        // Apply rotation if specified
+        let tick_strs: Vec<String> = if let Some(degrees) = options.xaxis_tick_rotate {
+            ticks
+                .iter()
+                .enumerate()
+                .map(|(i, label)| {
+                    format!(
+                        "({}, rotate({}deg, reflow: true)[{}])",
+                        i, degrees, label
+                    )
+                })
+                .collect()
+        } else {
+            ticks
+                .iter()
+                .enumerate()
+                .map(|(i, label)| format!("({}, [{}])", i, label))
+                .collect()
+        };
         xaxis_opts.push(format!("ticks: ({})", tick_strs.join(", ")));
+        }
     }
     if !xaxis_opts.is_empty() {
         code.push_str(&format!("  xaxis: ({}),\n", xaxis_opts.join(", ")));
@@ -1064,11 +1224,28 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
 
     // Y-axis options
     let mut yaxis_opts = Vec::new();
+    if options.yaxis_ticks_none == Some(true) {
+        yaxis_opts.push("ticks: none".to_string());
+    }
     if let Some(ref subticks) = options.yaxis_subticks {
         yaxis_opts.push(format!("subticks: {}", subticks));
     }
     if let Some(mirror) = options.yaxis_mirror {
         yaxis_opts.push(format!("mirror: {}", mirror));
+    }
+    // Tick unit for locating ticks at multiples
+    if let Some(unit) = options.yaxis_tick_unit {
+        yaxis_opts.push(format!(
+            "locate-ticks: lq.tick-locate.linear.with(unit: {})",
+            unit
+        ));
+    }
+    // Tick suffix for formatting
+    if let Some(ref suffix) = options.yaxis_tick_suffix {
+        yaxis_opts.push(format!(
+            "format-ticks: lq.tick-format.linear.with(suffix: ${}$)",
+            suffix
+        ));
     }
     if !yaxis_opts.is_empty() {
         code.push_str(&format!("  yaxis: ({}),\n", yaxis_opts.join(", ")));
@@ -1107,7 +1284,8 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
 /// Generate Lilaq code for a single plot element
 fn generate_element_code(element: &PlotElement) -> String {
     match element.element_type {
-        PlotType::Line | PlotType::Scatter => generate_plot_element(element),
+        PlotType::Line => generate_plot_element(element),
+        PlotType::Scatter => generate_scatter_element(element),
         PlotType::Bar => generate_bar_element(element, false),
         PlotType::HBar => generate_bar_element(element, true),
         PlotType::Stem => generate_stem_element(element, false),
@@ -1121,6 +1299,8 @@ fn generate_element_code(element: &PlotElement) -> String {
         PlotType::GroupedBars => String::new(), // Handled by multiple bar elements
         PlotType::Place => generate_place_element(element),
         PlotType::SecondaryYAxis => generate_yaxis_element(element),
+        PlotType::SecondaryXAxis => generate_xaxis_element(element),
+        PlotType::Path => generate_path_element(element),
     }
 }
 
@@ -1163,7 +1343,7 @@ fn generate_plot_element(element: &PlotElement) -> String {
         code.push_str(&format!(",\n    every: {}", every));
     }
     if let Some(ref label) = opts.label {
-        code.push_str(&format!(",\n    label: [\"{}\"]", label));
+        code.push_str(&format!(",\n    label: [{}]", label));
     }
     if opts.clip == Some(false) {
         code.push_str(",\n    clip: false");
@@ -1172,12 +1352,57 @@ fn generate_plot_element(element: &PlotElement) -> String {
         code.push_str(&format!(",\n    z-index: {}", z));
     }
 
-    // Scatter-specific
-    if element.element_type == PlotType::Scatter {
-        if opts.mark.is_none() {
-            code.push_str(",\n    stroke: none");
-            code.push_str(",\n    mark: \"o\"");
-        }
+    code.push_str("\n  ),\n");
+    code
+}
+
+/// Generate Lilaq code for a scatter plot element using lq.scatter
+fn generate_scatter_element(element: &PlotElement) -> String {
+    let mut code = String::new();
+    let x = element.x_data.as_ref().unwrap();
+    let y = element.y_data.as_ref().unwrap();
+
+    code.push_str("  lq.scatter(\n");
+    code.push_str(&format!("    {},\n", format_array(x)));
+    code.push_str(&format!("    {}", format_array(y)));
+
+    let opts = &element.options;
+
+    // Mark style (default to circle)
+    let mark = opts.mark.as_deref().unwrap_or("o");
+    code.push_str(&format!(",\n    mark: \"{}\"", mark));
+
+    // Per-point colors (array of floats 0-1 for colormap)
+    if let Some(ref colors) = opts.colors {
+        code.push_str(&format!(",\n    color: {}", format_array(colors)));
+    } else if let Some(ref color) = opts.color {
+        // Single color for all points
+        code.push_str(&format!(",\n    color: {}", color));
+    }
+
+    // Colormap for per-point colors
+    if let Some(ref cmap) = opts.colormap {
+        code.push_str(&format!(",\n    map: color.map.{}", cmap));
+    }
+
+    // Stroke (outline)
+    if let Some(ref stroke) = opts.stroke {
+        code.push_str(&format!(",\n    stroke: {}", stroke));
+    }
+
+    // Mark size
+    if let Some(size) = opts.mark_size {
+        code.push_str(&format!(",\n    size: {}pt", size));
+    }
+
+    // Label for legend
+    if let Some(ref label) = opts.label {
+        code.push_str(&format!(",\n    label: [{}]", label));
+    }
+
+    // Z-index
+    if let Some(z) = opts.z_index {
+        code.push_str(&format!(",\n    z-index: {}", z));
     }
 
     code.push_str("\n  ),\n");
@@ -1211,7 +1436,7 @@ fn generate_bar_element(element: &PlotElement, horizontal: bool) -> String {
         code.push_str(&format!(",\n    base: {}", base));
     }
     if let Some(ref label) = opts.label {
-        code.push_str(&format!(",\n    label: [\"{}\"]", label));
+        code.push_str(&format!(",\n    label: [{}]", label));
     }
     if let Some(z) = opts.z_index {
         code.push_str(&format!(",\n    z-index: {}", z));
@@ -1248,7 +1473,7 @@ fn generate_stem_element(element: &PlotElement, horizontal: bool) -> String {
         code.push_str(&format!(",\n    base-stroke: {}", base_stroke));
     }
     if let Some(ref label) = opts.label {
-        code.push_str(&format!(",\n    label: [\"{}\"]", label));
+        code.push_str(&format!(",\n    label: [{}]", label));
     }
 
     code.push_str("\n  ),\n");
@@ -1264,6 +1489,11 @@ fn generate_fill_between_element(element: &PlotElement) -> String {
     code.push_str(&format!("    {},\n", format_array(x)));
     code.push_str(&format!("    {}", format_array(y)));
 
+    // y2 for stacked area charts
+    if let Some(ref y2) = element.y2_data {
+        code.push_str(&format!(",\n    y2: {}", format_array(y2)));
+    }
+
     let opts = &element.options;
     if let Some(ref fill) = opts.fill {
         code.push_str(&format!(",\n    fill: {}", fill));
@@ -1272,7 +1502,7 @@ fn generate_fill_between_element(element: &PlotElement) -> String {
         code.push_str(&format!(",\n    stroke: {}", stroke));
     }
     if let Some(ref label) = opts.label {
-        code.push_str(&format!(",\n    label: [\"{}\"]", label));
+        code.push_str(&format!(",\n    label: [{}]", label));
     }
 
     code.push_str("\n  ),\n");
@@ -1475,12 +1705,115 @@ fn generate_yaxis_element(element: &PlotElement) -> String {
     code
 }
 
+fn generate_xaxis_element(element: &PlotElement) -> String {
+    let mut code = String::new();
+
+    let opts = &element.options;
+
+    code.push_str("  lq.xaxis(\n");
+
+    // Position (top or bottom)
+    if let Some(ref pos) = opts.position {
+        code.push_str(&format!("    position: {},\n", pos));
+    }
+
+    // Axis label
+    if let Some(ref label) = opts.axis_label {
+        code.push_str(&format!("    label: [{}],\n", label));
+    }
+
+    // Axis offset
+    if let Some(offset) = opts.axis_offset {
+        code.push_str(&format!("    offset: {},\n", offset));
+    }
+
+    // Exponent (0 = no scientific notation)
+    if let Some(exp) = opts.exponent {
+        code.push_str(&format!("    exponent: {},\n", exp));
+    }
+
+    // Tick distance
+    if let Some(dist) = opts.tick_distance {
+        code.push_str(&format!("    tick-distance: {},\n", dist));
+    }
+
+    // Transformation functions (forward and inverse)
+    if let (Some(ref forward), Some(ref inverse)) = (&opts.transform_forward, &opts.transform_inverse) {
+        code.push_str(&format!("    functions: ({}, {}),\n", forward, inverse));
+    }
+
+    // Child elements (plots on this axis)
+    if let Some(ref children) = opts.children {
+        for child in children {
+            code.push_str(&generate_element_code(child));
+        }
+    }
+
+    code.push_str("  ),\n");
+    code
+}
+
+fn generate_path_element(element: &PlotElement) -> String {
+    let mut code = String::new();
+
+    // Path takes individual (x, y) coordinate pairs as variadic arguments
+    // In Lilaq: lq.path(..points, fill: color, closed: true)
+    // We output each point as a separate (x, y) argument
+    code.push_str("  lq.path(\n");
+
+    // Output each point as (x, y) - matching Lilaq's spread syntax
+    if let (Some(ref x_data), Some(ref y_data)) = (&element.x_data, &element.y_data) {
+        for (x, y) in x_data.iter().zip(y_data.iter()) {
+            code.push_str(&format!("    ({}, {}),\n", x, y));
+        }
+    }
+
+    let opts = &element.options;
+
+    // Fill color
+    if let Some(ref fill) = opts.fill {
+        code.push_str(&format!("    fill: {},\n", fill));
+    }
+
+    // Stroke color
+    if let Some(ref stroke) = opts.stroke {
+        code.push_str(&format!("    stroke: {},\n", stroke));
+    }
+
+    // Closed path
+    if let Some(closed) = opts.closed {
+        code.push_str(&format!("    closed: {},\n", closed));
+    }
+
+    // Label for legend
+    if let Some(ref label) = opts.label {
+        code.push_str(&format!("    label: [{}],\n", label));
+    }
+
+    // Clip to data area
+    if opts.clip == Some(false) {
+        code.push_str("    clip: false,\n");
+    }
+
+    // Z-index
+    if let Some(z) = opts.z_index {
+        code.push_str(&format!("    z-index: {},\n", z));
+    }
+
+    code.push_str("  ),\n");
+    code
+}
+
 /// Compile a diagram to SVG
 pub fn compile_diagram(
     elements: &[PlotElement],
     options: &DiagramOptions,
 ) -> Result<PlotOutput, String> {
     let code = generate_diagram_code(elements, options);
+    // Debug: print generated Typst code (set KLEIS_DEBUG_TYPST=1 to enable)
+    if std::env::var("KLEIS_DEBUG_TYPST").is_ok() {
+        eprintln!("=== Generated Typst Code ===\n{}\n===", code);
+    }
     compile_to_svg(&code)
 }
 
