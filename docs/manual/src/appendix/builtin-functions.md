@@ -23,39 +23,60 @@ out([[1, 2], [3, 4]])
 
 ## Arithmetic Functions
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `negate(x)` | Unary negation | `negate(5)` → `-5` |
-| `abs(x)` | Absolute value | `abs(-3)` → `3` |
-| `sqrt(x)` | Square root | `sqrt(16)` → `4` |
-| `floor(x)` | Round down | `floor(3.7)` → `3` |
-| `ceil(x)` | Round up | `ceil(3.2)` → `4` |
-| `round(x)` | Round to nearest | `round(3.5)` → `4` |
-| `min(x, y)` | Minimum | `min(3, 7)` → `3` |
-| `max(x, y)` | Maximum | `max(3, 7)` → `7` |
+| Function | Aliases | Description | Example |
+|----------|---------|-------------|---------|
+| `negate(x)` | | Unary negation | `negate(5)` → `-5` |
+| `abs(x)` | `fabs` | Absolute value | `abs(-3)` → `3` |
+| `sqrt(x)` | | Square root | `sqrt(16)` → `4` |
+| `pow(x, y)` | `power` | x^y | `pow(2, 3)` → `8` |
+| `floor(x)` | | Round down | `floor(3.7)` → `3` |
+| `ceil(x)` | `ceiling` | Round up | `ceil(3.2)` → `4` |
+| `round(x)` | | Round to nearest | `round(3.5)` → `4` |
+| `trunc(x)` | `truncate` | Truncate toward zero | `trunc(-3.7)` → `-3` |
+| `frac(x)` | `fract` | Fractional part | `frac(3.7)` → `0.7` |
+| `sign(x)` | `signum` | Sign (-1, 0, or 1) | `sign(-5)` → `-1` |
+| `min(x, y)` | | Minimum | `min(3, 7)` → `3` |
+| `max(x, y)` | | Maximum | `max(3, 7)` → `7` |
+| `mod(x, y)` | `fmod`, `remainder` | Modulo/remainder | `mod(7, 3)` → `1` |
+| `hypot(x, y)` | | √(x² + y²) stable | `hypot(3, 4)` → `5` |
 
-## Trigonometric Functions
+## Trigonometric Functions (radians)
 
-| Function | Description |
-|----------|-------------|
-| `sin(x)` | Sine |
-| `cos(x)` | Cosine |
-| `tan(x)` | Tangent |
-| `asin(x)` | Arcsine |
-| `acos(x)` | Arccosine |
-| `atan(x)` | Arctangent |
-| `sinh(x)` | Hyperbolic sine |
-| `cosh(x)` | Hyperbolic cosine |
-| `tanh(x)` | Hyperbolic tangent |
+All trigonometric functions use radians, not degrees. Use `radians(deg)` to convert.
+
+| Function | Aliases | Description | Example |
+|----------|---------|-------------|---------|
+| `sin(x)` | | Sine | `sin(0)` → `0` |
+| `cos(x)` | | Cosine | `cos(0)` → `1` |
+| `tan(x)` | | Tangent | `tan(0)` → `0` |
+| `asin(x)` | `arcsin` | Arcsine | `asin(1)` → `π/2` |
+| `acos(x)` | `arccos` | Arccosine | `acos(1)` → `0` |
+| `atan(x)` | `arctan` | Arctangent | `atan(1)` → `π/4` |
+| `atan2(y, x)` | `arctan2` | 2-arg arctangent | `atan2(1, 1)` → `π/4` |
+| `radians(deg)` | `deg_to_rad` | Degrees to radians | `radians(180)` → `π` |
+
+## Hyperbolic Functions
+
+| Function | Aliases | Description |
+|----------|---------|-------------|
+| `sinh(x)` | | Hyperbolic sine |
+| `cosh(x)` | | Hyperbolic cosine |
+| `tanh(x)` | | Hyperbolic tangent |
+| `asinh(x)` | `arcsinh` | Inverse hyperbolic sine |
+| `acosh(x)` | `arccosh` | Inverse hyperbolic cosine |
+| `atanh(x)` | `arctanh` | Inverse hyperbolic tangent |
+
+**Identity:** `cosh(x)² - sinh(x)² = 1`
 
 ## Exponential and Logarithmic
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `exp(x)` | e^x | `exp(1)` → `2.718...` |
-| `ln(x)` | Natural logarithm | `ln(e)` → `1` |
-| `log(x)` | Base-10 logarithm | `log(100)` → `2` |
-| `log(b, x)` | Logarithm base b | `log(2, 8)` → `3` |
+| Function | Aliases | Description | Example |
+|----------|---------|-------------|---------|
+| `exp(x)` | | e^x | `exp(1)` → `2.718...` |
+| `exp2(x)` | | 2^x | `exp2(3)` → `8` |
+| `log(x)` | `ln` | Natural logarithm | `log(e())` → `1` |
+| `log10(x)` | | Base-10 logarithm | `log10(100)` → `2` |
+| `log2(x)` | | Base-2 logarithm | `log2(8)` → `3` |
 
 ## List Operations
 
@@ -157,15 +178,23 @@ For advanced operations (eigenvalues, SVD), see [LAPACK Functions](./lapack.md).
 | `prepend_col(A, col)` | | Add column at left |
 | `append_col(A, col)` | | Add column at right |
 
-## Constants
+## Mathematical Constants
 
-| Constant | Unicode | Value |
-|----------|---------|-------|
-| `pi` | `π` | 3.14159... |
-| `e` | | 2.71828... |
-| `i` | | √(-1) (imaginary unit) |
-| `True` / `true` | | Boolean true |
-| `False` / `false` | | Boolean false |
+| Function | Unicode | Value | Description |
+|----------|---------|-------|-------------|
+| `pi()` | `π` | 3.14159... | Pi |
+| `e()` | | 2.71828... | Euler's number |
+| `tau()` | `τ` | 6.28318... | τ = 2π |
+| `i` | | √(-1) | Imaginary unit |
+
+**Note:** `pi()`, `e()`, and `tau()` are zero-argument functions.
+
+## Boolean Constants
+
+| Constant | Description |
+|----------|-------------|
+| `True` / `true` | Boolean true |
+| `False` / `false` | Boolean false |
 
 ## See Also
 
