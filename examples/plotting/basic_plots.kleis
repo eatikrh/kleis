@@ -71,26 +71,25 @@ example "simple bar chart" {
     )
 }
 
-example "grouped bars with list_map" {
-    out("Grouped bar chart with offset x-coordinates using list_map")
-    out("Replicating Lilaq example: https://lilaq.org/docs/bar")
+example "grouped bars with named arguments (Lilaq replication)" {
+    out("Grouped bar chart with offset and width - Lilaq example")
+    out("See: https://lilaq.org/docs/bar")
     out("")
     let xs = [0, 1, 2, 3]
     let ys1 = [1.35, 3, 2.1, 4]
     let ys2 = [1.4, 3.3, 1.9, 4.2]
+    let yerr1 = [0.2, 0.3, 0.5, 0.4]
+    let yerr2 = [0.3, 0.3, 0.4, 0.7]
     
-    // Compute offset x-coordinates using list_map
+    // Compute offset x-coordinates for error bars using list_map
     let xs_left = list_map(λ x . x - 0.2, xs)
     let xs_right = list_map(λ x . x + 0.2, xs)
     
-    out("xs_left = ")
-    out(xs_left)
-    out("xs_right = ")
-    out(xs_right)
-    
     diagram(
-        bar(xs, ys1),
-        bar(xs, ys2)
+        bar(xs, ys1, offset = -0.2, width = 0.4, label = "Left"),
+        bar(xs, ys2, offset = 0.2, width = 0.4, label = "Right"),
+        plot(xs_left, ys1, yerr = yerr1, color = "black", stroke = "none"),
+        plot(xs_right, ys2, yerr = yerr2, color = "black", stroke = "none")
     )
 }
 
