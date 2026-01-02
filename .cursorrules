@@ -14,6 +14,50 @@ This document contains:
 
 ---
 
+## The Philosophy of Kleis (Level 3)
+
+**CRITICAL: Kleis is not a "math tool" or a "proof assistant."**
+
+It's a **knowledge production substrate** built on a fundamental insight:
+
+> *"Structure is the universal abstraction. Data is structure. Code is structure. Research is structure. Any domain that has notation, rules, and outputs fits the same pattern. Kleis provides the substrate."*
+
+### The Three Levels
+
+```
+Level 3: PHILOSOPHY
+  "Knowledge production has a universal structure.
+   Any domain can be modeled as:
+   Notation + Rules + Verification + Output.
+   Kleis is the substrate for this universal pattern."
+
+Level 2: ARCHITECTURE
+  Solver abstraction, .kleist templates, structures,
+  self-hosting types, Typst integration, Equation Editor
+
+Level 1: IMPLEMENTATION
+  Rust code, parser, Z3 bindings, LSP, DAP, Jupyter kernel
+```
+
+### The Universal Formula
+
+| Component | Kleis Feature | Example Domains |
+|-----------|---------------|-----------------|
+| **Notation** | `.kleist` templates | Tensors, music notes, chemical formulas |
+| **Rules** | `axiom` in structures | Bianchi identity, counterpoint, reaction rules |
+| **Verification** | Solver backends (Z3, etc.) | Proof checking, rule validation |
+| **Output** | Typst rendering | Papers, scores, diagrams |
+
+### Before Implementing, Ask:
+
+1. "How does this serve the philosophy?"
+2. "What domain does this enable?"
+3. "Is this Level 1 work supporting Level 2/3 goals?"
+
+**From Einstein's equations to order-to-cash business rules — same platform, same abstraction.**
+
+---
+
 ## Read Code Before Writing Documentation
 
 **CRITICAL: Read the actual code before documenting or describing it.**
