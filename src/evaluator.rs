@@ -4735,9 +4735,13 @@ impl Evaluator {
 
         let mut options = DiagramOptions::default();
         let mut elements: Vec<PlotElement> = Vec::new();
-        let mut start_idx = 0;
 
-        // First arg might be options record
+        // v0.96: Named arguments produce a trailing record
+        // Check both first arg (legacy) and last arg (v0.96 style)
+        let mut start_idx = 0;
+        let mut end_idx = args.len();
+
+        // Check first arg for options record (legacy style)
         if let Some(first) = args.first() {
             if let Expression::Operation {
                 name, args: opts, ..
@@ -4750,8 +4754,23 @@ impl Evaluator {
             }
         }
 
-        // Collect plot elements
-        for arg in &args[start_idx..] {
+        // Check last arg for options record (v0.96 named arguments style)
+        if end_idx > start_idx {
+            if let Some(last) = args.last() {
+                if let Expression::Operation {
+                    name, args: opts, ..
+                } = last
+                {
+                    if name == "record" {
+                        self.parse_diagram_options(opts, &mut options)?;
+                        end_idx = args.len() - 1;
+                    }
+                }
+            }
+        }
+
+        // Collect plot elements from middle args
+        for arg in &args[start_idx..end_idx] {
             let evaluated = self.eval_concrete(arg)?;
             if let Expression::Operation {
                 name,
@@ -4763,6 +4782,9 @@ impl Evaluator {
                     // Decode PlotElement from expression
                     let element = self.decode_plot_element(&evaluated)?;
                     elements.push(element);
+                } else if name == "record" {
+                    // Skip stray records (already processed)
+                    continue;
                 } else {
                     return Err(format!(
                         "diagram() expects PlotElement, got: {}(). Use plot(), bar(), scatter(), etc.",
