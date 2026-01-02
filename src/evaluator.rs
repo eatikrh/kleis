@@ -2437,6 +2437,20 @@ impl Evaluator {
             "contour" => self.builtin_matrix_element(args, crate::plotting::PlotType::Contour),
             "quiver" => self.builtin_quiver_element(args),
             "place" => self.builtin_place_element(args),
+            "yaxis" | "secondary_yaxis" => self.builtin_yaxis_element(args),
+            "lighten" => {
+                // lighten(color, amount) → "color.lighten(amount)"
+                // For Typst color manipulation
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let color = self.extract_string(&args[0])?;
+                let amount = self.extract_string(&args[1])?;
+                Ok(Some(Expression::String(format!(
+                    "{}.lighten({})",
+                    color, amount
+                ))))
+            }
 
             // === Arithmetic ===
             "plus" | "+" => self.builtin_arithmetic(args, |a, b| a + b),
@@ -4947,6 +4961,20 @@ impl Evaluator {
                         "yaxis_subticks" | "y_subticks" => {
                             options.yaxis_subticks = Some(self.extract_string(&args[1])?)
                         }
+                        "yaxis_mirror" | "y_mirror" => {
+                            options.yaxis_mirror = Some(self.extract_bool(&args[1])?)
+                        }
+                        "margin_top" => options.margin_top = Some(self.extract_string(&args[1])?),
+                        "margin_bottom" => {
+                            options.margin_bottom = Some(self.extract_string(&args[1])?)
+                        }
+                        "margin_left" => options.margin_left = Some(self.extract_string(&args[1])?),
+                        "margin_right" => {
+                            options.margin_right = Some(self.extract_string(&args[1])?)
+                        }
+                        "xaxis_ticks" | "x_ticks" => {
+                            options.xaxis_ticks = Some(self.extract_string_list(&args[1])?)
+                        }
                         _ => {} // Ignore unknown options
                     }
                 }
@@ -5124,6 +5152,49 @@ impl Evaluator {
         Ok(Some(Expression::operation("PlotElement", element_args)))
     }
 
+    /// yaxis(position = "right", label = "...", child_elements...) - Secondary y-axis
+    fn builtin_yaxis_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        // yaxis can contain child plot elements and options
+        // yaxis(bar(...), plot(...), position = "right", label = "...")
+
+        let mut child_elements: Vec<Expression> = Vec::new();
+        let mut options_record: Option<Expression> = None;
+
+        for arg in args {
+            let evaluated = self.eval_concrete(arg)?;
+
+            // Check for options record
+            if let Expression::Operation { name, .. } = &evaluated {
+                if name == "record" {
+                    options_record = Some(evaluated.clone());
+                    continue;
+                }
+                if name == "PlotElement" {
+                    child_elements.push(evaluated);
+                    continue;
+                }
+            }
+
+            // Try to evaluate as a plot element
+            if let Expression::Operation { name, .. } = &arg {
+                if name == "PlotElement" {
+                    child_elements.push(arg.clone());
+                }
+            }
+        }
+
+        let mut element_args = vec![
+            Expression::Const("SecondaryYAxis".to_string()),
+            Expression::List(child_elements),
+        ];
+
+        if let Some(opts) = options_record {
+            element_args.push(opts);
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
     /// Encode a list of f64 as an Expression::List
     fn encode_f64_list(&self, data: &[f64]) -> Expression {
         Expression::List(
@@ -5165,6 +5236,7 @@ impl Evaluator {
                 "Contour" => PlotType::Contour,
                 "Quiver" => PlotType::Quiver,
                 "Place" => PlotType::Place,
+                "SecondaryYAxis" => PlotType::SecondaryYAxis,
                 _ => return Err(format!("Unknown PlotElement type: {}", type_str)),
             };
 
@@ -5250,6 +5322,22 @@ impl Evaluator {
                     }
                     if args.len() >= 5 {
                         self.parse_element_options(&args[4], &mut element.options)?;
+                    }
+                }
+                PlotType::SecondaryYAxis => {
+                    // args[1] is the list of child elements
+                    if args.len() >= 2 {
+                        if let Expression::List(children) = &args[1] {
+                            let mut decoded_children = Vec::new();
+                            for child in children {
+                                let decoded = self.decode_plot_element(child)?;
+                                decoded_children.push(Box::new(decoded));
+                            }
+                            element.options.children = Some(decoded_children);
+                        }
+                    }
+                    if args.len() >= 3 {
+                        self.parse_element_options(&args[2], &mut element.options)?;
                     }
                 }
                 PlotType::GroupedBars => {}
@@ -5361,6 +5449,13 @@ impl Evaluator {
                                 "padding" | "pad" => {
                                     options.padding = Some(self.extract_string(&field_args[1])?)
                                 }
+                                // yaxis() options
+                                "position" => {
+                                    options.position = Some(self.extract_string(&field_args[1])?)
+                                }
+                                "axis_label" => {
+                                    options.axis_label = Some(self.extract_string(&field_args[1])?)
+                                }
                                 _ => {} // Ignore unknown options
                             }
                         }
@@ -5454,6 +5549,16 @@ impl Evaluator {
             Expression::String(s) => Ok(s.clone()),
             Expression::Object(s) => Ok(s.clone()),
             _ => Err(format!("Expected string, got: {:?}", expr)),
+        }
+    }
+
+    /// Extract a list of strings from an expression
+    fn extract_string_list(&self, expr: &Expression) -> Result<Vec<String>, String> {
+        let evaluated = self.eval_concrete(expr)?;
+        if let Expression::List(elements) = evaluated {
+            elements.iter().map(|e| self.extract_string(e)).collect()
+        } else {
+            Err(format!("Expected list of strings, got: {:?}", expr))
         }
     }
 

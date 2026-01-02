@@ -144,6 +144,14 @@ pub struct PlotElementOptions {
     pub align: Option<String>,
     /// Padding around text
     pub padding: Option<String>,
+
+    // === yaxis() secondary axis specific ===
+    /// Position: "left" or "right"
+    pub position: Option<String>,
+    /// Axis label for secondary axis
+    pub axis_label: Option<String>,
+    /// Child elements for secondary axis
+    pub children: Option<Vec<Box<crate::plotting::PlotElement>>>,
 }
 
 /// Options for the diagram container
@@ -179,6 +187,15 @@ pub struct DiagramOptions {
     pub xaxis_subticks: Option<String>,
     /// Y-axis subticks: "none", "auto", or number
     pub yaxis_subticks: Option<String>,
+    /// Y-axis mirror: show on both sides
+    pub yaxis_mirror: Option<bool>,
+    /// Margin (top, bottom, left, right percentages)
+    pub margin_top: Option<String>,
+    pub margin_bottom: Option<String>,
+    pub margin_left: Option<String>,
+    pub margin_right: Option<String>,
+    /// Custom x-axis tick labels
+    pub xaxis_ticks: Option<Vec<String>>,
 }
 
 /// Plot type - matches Lilaq plot functions
@@ -212,6 +229,8 @@ pub enum PlotType {
     GroupedBars,
     /// Text annotation at a specific position
     Place,
+    /// Secondary Y-axis wrapper (for twin axis charts)
+    SecondaryYAxis,
 }
 
 impl PlotType {
@@ -442,6 +461,7 @@ pub fn generate_lilaq_code(x_data: &[f64], y_data: &[f64], config: &PlotConfig) 
         PlotType::Quiver => "lq.quiver",
         PlotType::GroupedBars => "lq.bar", // Uses generate_grouped_bar_code instead
         PlotType::Place => "lq.place",
+        PlotType::SecondaryYAxis => "lq.yaxis",
     };
 
     code.push_str(&format!("  {}(\n", plot_cmd));
@@ -996,10 +1016,10 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
         code.push_str(&format!("  title: \"{}\",\n", title));
     }
     if let Some(ref xlabel) = options.xlabel {
-        code.push_str(&format!("  xlabel: ${}$,\n", xlabel));
+        code.push_str(&format!("  xlabel: [{}],\n", xlabel));
     }
     if let Some(ref ylabel) = options.ylabel {
-        code.push_str(&format!("  ylabel: ${}$,\n", ylabel));
+        code.push_str(&format!("  ylabel: [{}],\n", ylabel));
     }
     if let Some((min, max)) = options.xlim {
         code.push_str(&format!("  xlim: ({}, {}),\n", min, max));
@@ -1024,11 +1044,52 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
     if let Some(ref fill) = options.fill {
         code.push_str(&format!("  fill: {},\n", fill));
     }
+    // X-axis options
+    let mut xaxis_opts = Vec::new();
     if let Some(ref subticks) = options.xaxis_subticks {
-        code.push_str(&format!("  xaxis: (subticks: {}),\n", subticks));
+        xaxis_opts.push(format!("subticks: {}", subticks));
     }
+    if let Some(ref ticks) = options.xaxis_ticks {
+        // Format ticks as enumerated pairs: ((0, "Jan"), (1, "Feb"), ...)
+        let tick_strs: Vec<String> = ticks
+            .iter()
+            .enumerate()
+            .map(|(i, label)| format!("({}, [{}])", i, label))
+            .collect();
+        xaxis_opts.push(format!("ticks: ({})", tick_strs.join(", ")));
+    }
+    if !xaxis_opts.is_empty() {
+        code.push_str(&format!("  xaxis: ({}),\n", xaxis_opts.join(", ")));
+    }
+
+    // Y-axis options
+    let mut yaxis_opts = Vec::new();
     if let Some(ref subticks) = options.yaxis_subticks {
-        code.push_str(&format!("  yaxis: (subticks: {}),\n", subticks));
+        yaxis_opts.push(format!("subticks: {}", subticks));
+    }
+    if let Some(mirror) = options.yaxis_mirror {
+        yaxis_opts.push(format!("mirror: {}", mirror));
+    }
+    if !yaxis_opts.is_empty() {
+        code.push_str(&format!("  yaxis: ({}),\n", yaxis_opts.join(", ")));
+    }
+
+    // Margin options
+    let mut margin_opts = Vec::new();
+    if let Some(ref top) = options.margin_top {
+        margin_opts.push(format!("top: {}", top));
+    }
+    if let Some(ref bottom) = options.margin_bottom {
+        margin_opts.push(format!("bottom: {}", bottom));
+    }
+    if let Some(ref left) = options.margin_left {
+        margin_opts.push(format!("left: {}", left));
+    }
+    if let Some(ref right) = options.margin_right {
+        margin_opts.push(format!("right: {}", right));
+    }
+    if !margin_opts.is_empty() {
+        code.push_str(&format!("  margin: ({}),\n", margin_opts.join(", ")));
     }
     if let Some(ratio) = options.aspect_ratio {
         code.push_str(&format!("  aspect-ratio: {},\n", ratio));
@@ -1059,6 +1120,7 @@ fn generate_element_code(element: &PlotElement) -> String {
         PlotType::Quiver => generate_quiver_element(element),
         PlotType::GroupedBars => String::new(), // Handled by multiple bar elements
         PlotType::Place => generate_place_element(element),
+        PlotType::SecondaryYAxis => generate_yaxis_element(element),
     }
 }
 
@@ -1382,6 +1444,34 @@ fn generate_place_element(element: &PlotElement) -> String {
     }
 
     code.push_str("),\n");
+    code
+}
+
+fn generate_yaxis_element(element: &PlotElement) -> String {
+    let mut code = String::new();
+
+    let opts = &element.options;
+
+    code.push_str("  lq.yaxis(\n");
+
+    // Position (left or right)
+    if let Some(ref pos) = opts.position {
+        code.push_str(&format!("    position: {},\n", pos));
+    }
+
+    // Axis label
+    if let Some(ref label) = opts.axis_label {
+        code.push_str(&format!("    label: [{}],\n", label));
+    }
+
+    // Child elements (plots on this axis)
+    if let Some(ref children) = opts.children {
+        for child in children {
+            code.push_str(&generate_element_code(child));
+        }
+    }
+
+    code.push_str("  ),\n");
     code
 }
 

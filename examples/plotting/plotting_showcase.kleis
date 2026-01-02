@@ -136,3 +136,55 @@ example "Bar plot with text annotations (EXACT Lilaq replication)" {
     )
 }
 
+// =============================================================================
+// Climograph - Twin Axis Chart
+// =============================================================================
+// Replication of: https://lilaq.org/docs/yaxis (Climograph example)
+//
+// Original Lilaq:
+// #let months = ("Jan", "Feb", "Mar", ...)
+// #let precipitation = (56, 41, 53, ...)
+// #let temperature = (0.5, 1.4, 4.4, ...)
+//
+// #lq.diagram(
+//   width: 8cm, title: [Climate of Berlin],
+//   ylabel: [Temperature in °C], xlabel: [Month],
+//   legend: (position: left + top), margin: (top: 20%),
+//   yaxis: (mirror: false),
+//   xaxis: (ticks: months..., subticks: none),
+//   lq.yaxis(position: right, label: [Precipitation in mm],
+//     lq.bar(range(12), precipitation, fill: blue.lighten(40%), label: [Precipitation])
+//   ),
+//   lq.plot(range(12), temperature, label: [Temperature], color: red, stroke: 1pt)
+// )
+
+example "Climograph - Twin axis chart" {
+    out("Climograph of Berlin: Temperature and Precipitation")
+    out("")
+    
+    let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    let precipitation = [56, 41, 53, 42, 60, 67, 81, 62, 56, 49, 48, 54]
+    let temperature = [0.5, 1.4, 4.4, 9.7, 14.4, 17.8, 19.8, 19.5, 15.5, 10.4, 5.6, 2.2]
+    let xs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    
+    diagram(
+        // Secondary y-axis with precipitation bars
+        yaxis(
+            bar(xs, precipitation, fill = "blue.lighten(40%)", label = "Precipitation"),
+            position = "right",
+            axis_label = "Precipitation in mm"
+        ),
+        // Primary y-axis with temperature line
+        plot(xs, temperature, label = "Temperature", color = "red", stroke = "1pt", mark_size = 6),
+        // Diagram options
+        width = 8,
+        title = "Climate of Berlin",
+        ylabel = "Temperature in °C",
+        xlabel = "Month",
+        legend_position = "left + top",
+        margin_top = "20%",
+        yaxis_mirror = false,
+        xaxis_ticks = months,
+        xaxis_subticks = "none"
+    )
+}
