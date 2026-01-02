@@ -321,15 +321,46 @@ scalar_divide(diff(psi, t), scalar_multiply(i, hbar))
 - Works in any Jupyter environment (JupyterHub, Colab, etc.)
 - Typst already has WASM support: https://github.com/typst/typst
 
+**HOWEVER: User-Extensible Templates Require Filesystem Access**
+
+The Equation Editor is designed to be **user-extensible** via `.kleist` template files:
+
+```kleist
+// std_template_lib/chemistry.kleist (user-defined!)
+@template reaction_arrow {
+    pattern: "reaction_arrow(reactants, products)"
+    unicode: "{reactants} → {products}"
+    latex: "{reactants} \\rightarrow {products}"
+    typst: "{reactants} arrow {products}"
+    category: "chemistry"
+}
+```
+
+Standard template library: `std_template_lib/*.kleist` (12 files: basic, calculus, tensors, quantum, etc.)
+
+**This means:**
+- Templates must be loaded from filesystem
+- Pure browser WASM alone won't work for custom templates
+- Need some backend or filesystem API to read `.kleist` files
+- Users expect to add domain-specific notation (chemistry, biology, music, etc.)
+
+**Possible solutions:**
+1. **Hybrid:** WASM for rendering + HTTP endpoint for template loading
+2. **Bundle standard templates** in WASM, custom templates via server
+3. **Jupyter kernel** reads templates, sends to frontend
+4. **File upload** mechanism for custom templates in browser
+
 **Components to study:**
 - `patternfly-editor/` — React app, could become ipywidget frontend
 - `src/bin/server.rs` — HTTP API endpoints for rendering
 - `src/typst_renderer.rs` — The Typst code generation
+- `src/render_editor.rs` — Template-based rendering
 
 **Files:**
 - `static/index.html` — Original Equation Editor
 - `patternfly-editor/` — PatternFly/React version
 - `kleis-notebook/` — Current Jupyter kernel
+- `std_template_lib/*.kleist` — Standard template library (12 files)
 
 **Priority:** High for publication use case, but significant engineering effort
 
