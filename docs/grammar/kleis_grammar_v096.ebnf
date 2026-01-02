@@ -1,0 +1,647 @@
+(* ============================================ *)
+(* Kleis Grammar v0.96 - EBNF Specification    *)
+(* Date: 2026-01-01                             *)
+(* NEW: Named Arguments (keyword arguments)     *)
+(*   - f(x, y, name = value, ...)               *)
+(*   - Parser-level sugar for plotting options  *)
+(* Based on: v0.95 (big operator syntax)        *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* CHANGES FROM v0.95                           *)
+(*                                              *)
+(* 1. NAMED ARGUMENTS                           *)
+(*    Function calls now support named          *)
+(*    arguments (keyword arguments):            *)
+(*                                              *)
+(*    bar(xs, ys, offset = -0.2, width = 0.4)  *)
+(*    plot(x, y, color = "blue", yerr = errs)  *)
+(*    diagram(width = 10, height = 7, ...)     *)
+(*                                              *)
+(* 2. PARSER SUGAR                              *)
+(*    Named arguments are syntactic sugar:      *)
+(*                                              *)
+(*    f(a, b, x = 1, y = 2)                    *)
+(*      → f(a, b, record(                      *)
+(*            field("x", 1),                   *)
+(*            field("y", 2)))                  *)
+(*                                              *)
+(*    This transformation happens at parse     *)
+(*    time, not affecting the type system or   *)
+(*    symbolic evaluation.                     *)
+(*                                              *)
+(* 3. TYPE SYSTEM IMPACT: NONE                  *)
+(*    Named arguments produce a 'record'        *)
+(*    expression that is:                       *)
+(*    - Opaque to type inference               *)
+(*    - Consumed by built-in functions only    *)
+(*    - Never sent to Z3 verification          *)
+(*    - Never used in axioms or theorems       *)
+(*                                              *)
+(*    This ensures unification and symbolic    *)
+(*    operations are unaffected.               *)
+(*                                              *)
+(* 4. SYNTAX CONSTRAINTS                        *)
+(*    - Named args must come AFTER positional  *)
+(*    - Names must be valid identifiers        *)
+(*    - '=' must not be '==' (disambiguation)  *)
+(*                                              *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* TOP-LEVEL DECLARATIONS                       *)
+(* ============================================ *)
+
+program ::= { declaration } ;
+
+declaration 
+    ::= importDecl
+      | libraryAnnotation
+      | versionAnnotation
+      | structureDecl
+      | implementsDecl
+      | dataDecl
+      | functionDef
+      | letBinding
+      | typeAlias
+      | exampleBlock
+      ;
+
+(* ============================================ *)
+(* EXAMPLE BLOCKS (from v0.93)                  *)
+(* ============================================ *)
+
+exampleBlock
+    ::= "example" string "{" exampleBody "}"
+      ;
+
+exampleBody
+    ::= { exampleStatement } [ expression ]
+      ;
+
+exampleStatement
+    ::= letBinding
+      | assertStatement
+      | expression ";"
+      ;
+
+assertStatement
+    ::= "assert" "(" expression ")"
+      ;
+
+(* ============================================ *)
+(* IMPORTS & ANNOTATIONS                        *)
+(* ============================================ *)
+
+importDecl 
+    ::= "import" string
+      ;
+
+libraryAnnotation 
+    ::= "@library" "(" string ")"
+      ;
+
+versionAnnotation 
+    ::= "@version" "(" string ")"
+      ;
+
+(* ============================================ *)
+(* STRUCTURES                                   *)
+(* ============================================ *)
+
+structureDecl
+    ::= "structure" identifier [ "(" typeParams ")" ] 
+        [ extendsClause ] [ overClause ]
+        "{" { structureBody } "}"
+      ;
+
+typeParams ::= typeParam { "," typeParam } ;
+typeParam ::= identifier [ ":" kind ] ;
+extendsClause ::= "extends" identifier [ "(" typeArgs ")" ] ;
+overClause ::= "over" "Field" "(" type ")" ;
+
+structureBody
+    ::= operationDecl
+      | elementDecl
+      | axiomDecl
+      | functionDef
+      | supportsBlock
+      | notationDecl
+      ;
+
+operationDecl ::= "operation" operatorSymbol ":" typeSignature ;
+elementDecl ::= "element" identifier ":" type ;
+axiomDecl ::= "axiom" identifier ":" proposition ;
+supportsBlock ::= "supports" "{" { operationDecl } "}" ;
+notationDecl ::= "notation" identifier "(" params ")" "=" expression ;
+
+(* ============================================ *)
+(* IMPLEMENTS                                   *)
+(* ============================================ *)
+
+implementsDecl
+    ::= "implements" identifier [ "(" typeArgs ")" ] 
+        "{" { implementsBody } "}"
+      ;
+
+implementsBody
+    ::= operationImpl
+      | elementImpl
+      | verifyStmt
+      ;
+
+operationImpl ::= "operation" operatorSymbol "=" expression ;
+elementImpl ::= "element" identifier "=" expression ;
+verifyStmt ::= "verify" identifier ;
+
+(* ============================================ *)
+(* DATA TYPES (ADTs)                            *)
+(* ============================================ *)
+
+dataDecl
+    ::= "data" identifier [ "(" typeParams ")" ] "=" dataConstructors
+      ;
+
+dataConstructors 
+    ::= dataConstructor { "|" dataConstructor }
+      ;
+
+dataConstructor
+    ::= identifier [ "(" dataFields ")" ]
+      ;
+
+dataFields ::= dataField { "," dataField } ;
+dataField ::= identifier ":" type ;
+
+(* ============================================ *)
+(* FUNCTIONS                                    *)
+(* ============================================ *)
+
+functionDef
+    ::= "define" identifier [ "(" params ")" ] [ ":" type ] "=" expression
+      ;
+
+params ::= param { "," param } ;
+param ::= identifier [ ":" type ] ;
+
+(* ============================================ *)
+(* LET BINDINGS                                 *)
+(* ============================================ *)
+
+letBinding
+    ::= "let" pattern [ ":" type ] "=" expression
+      ;
+
+(* ============================================ *)
+(* TYPE SYSTEM (v0.94: N-ary products)          *)
+(* ============================================ *)
+
+(* Top-level type: function types bind loosest *)
+type
+    ::= functionType
+      | productType
+      ;
+
+(* Function types: right-associative
+ * A → B → C  parses as  A → (B → C)
+ *)
+functionType
+    ::= productType "→" type
+      | productType "->" type
+      ;
+
+(* Product types: right-associative (v0.94: NEW)
+ * A × B × C  parses as  A × (B × C)
+ * 
+ * This allows n-ary product types:
+ *   operation f : A × B × C × D → E
+ *)
+productType
+    ::= simpleType "×" productType
+      | simpleType
+      ;
+
+(* Simple types: everything except function and product *)
+simpleType
+    ::= primitiveType
+      | parametricType
+      | tupleType
+      | typeVariable
+      | "(" type ")"
+      ;
+
+primitiveType
+    ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
+      | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
+      | "Bool" | "String"
+      ;
+
+parametricType ::= identifier "(" typeArgList ")" ;
+typeArgList ::= typeArg { "," typeArg } ;
+
+typeArg
+    ::= type
+      | dimExpr
+      ;
+
+tupleType
+    ::= "(" type "," type { "," type } ")"
+      ;
+
+typeVariable
+    ::= greekLower
+      | identifier
+      ;
+
+typeAnnotation ::= ":" type ;
+
+typeAlias
+    ::= "type" identifier [ "(" typeAliasParams ")" ] "=" type
+      ;
+
+typeAliasParams ::= typeAliasParam { "," typeAliasParam } ;
+typeAliasParam ::= identifier [ ":" kind ] ;
+
+kind
+    ::= "Type"
+      | "Nat"
+      | kind "→" kind
+      ;
+
+typeSignature
+    ::= type { "→" type }
+      | type { "->" type }
+      ;
+
+(* ============================================ *)
+(* DIMENSION EXPRESSIONS (from v0.92)           *)
+(* ============================================ *)
+
+dimExpr ::= dimAddExpr ;
+
+dimAddExpr ::= dimMulExpr { dimAddOp dimMulExpr } ;
+dimAddOp ::= "+" | "-" ;
+
+dimMulExpr ::= dimPowExpr { dimMulOp dimPowExpr } ;
+dimMulOp ::= "*" | "/" ;
+
+dimPowExpr ::= dimPrimary [ "^" dimPowExpr ] ;
+
+dimPrimary
+    ::= natLiteral
+      | identifier
+      | dimFunctionCall
+      | "(" dimExpr ")"
+      ;
+
+natLiteral ::= digit { digit } ;
+
+dimFunctionCall
+    ::= dimFunctionName "(" dimExpr { "," dimExpr } ")"
+      ;
+
+dimFunctionName ::= "min" | "max" | "gcd" | "lcm" ;
+
+(* ============================================ *)
+(* EXPRESSIONS                                  *)
+(* ============================================ *)
+
+expression
+    ::= letExpression
+      | matchExpression
+      | ifExpression
+      | lambdaExpression
+      | quantifiedExpression
+      | binaryExpression
+      ;
+
+letExpression
+    ::= "let" pattern [ ":" type ] "=" expression "in" expression
+      ;
+
+matchExpression
+    ::= "match" expression "with" matchArms
+      ;
+
+matchArms ::= { matchArm } ;
+matchArm ::= "|" pattern [ guard ] "=>" expression ;
+guard ::= "when" expression ;
+
+ifExpression
+    ::= "if" expression "then" expression "else" expression
+      ;
+
+lambdaExpression
+    ::= "λ" params "." expression
+      | "\\" params "." expression
+      ;
+
+quantifiedExpression
+    ::= forAllQuantifier "(" bindings ")" "." expression
+      | existsQuantifier "(" bindings ")" "." expression
+      ;
+
+forAllQuantifier ::= "∀" | "forall" ;
+existsQuantifier ::= "∃" | "exists" ;
+
+bindings ::= binding { "," binding } ;
+binding ::= identifier ":" type ;
+
+binaryExpression
+    ::= unaryExpression { binaryOp unaryExpression }
+      ;
+
+binaryOp
+    ::= "+" | "-" | "*" | "/" | "^"
+      | "=" | "≠" | "<" | ">" | "≤" | "≥"
+      | "∧" | "∨" | "→" | "↔"
+      | "and" | "or" | "implies" | "iff"
+      | "≈"
+      ;
+
+unaryExpression
+    ::= unaryOp unaryExpression
+      | bigOpExpression
+      | applicationExpression
+      ;
+
+unaryOp ::= "-" | "¬" | "not" ;
+
+(* ============================================ *)
+(* BIG OPERATORS (v0.95)                        *)
+(* ============================================ *)
+
+bigOpExpression
+    ::= sumOp "(" expression "," expression "," expression ")"
+      | prodOp "(" expression "," expression "," expression ")"
+      | intOp "(" expression "," expression "," expression "," expression ")"
+      | limOp "(" expression "," expression "," expression ")"
+      | sumOp applicationExpression      (* prefix: Σf *)
+      | prodOp applicationExpression     (* prefix: Πf *)
+      | intOp applicationExpression      (* prefix: ∫f *)
+      ;
+
+sumOp  ::= "Σ" ;
+prodOp ::= "Π" ;
+intOp  ::= "∫" ;
+limOp  ::= "lim" ;
+
+(* Argument reordering (semantic, not syntactic):
+   Σ(from, to, body)              → sum_bounds(body, from, to)
+   Π(from, to, body)              → prod_bounds(body, from, to)
+   ∫(lower, upper, body, var)     → int_bounds(body, lower, upper, var)
+   lim(var, target, body)         → lim(body, var, target)
+*)
+
+applicationExpression
+    ::= primaryExpression { applicationSuffix }
+      ;
+
+applicationSuffix
+    ::= "(" arguments ")"
+      | "." identifier
+      | "[" expression "]"
+      ;
+
+(* ============================================ *)
+(* ARGUMENTS (v0.96: Named arguments)           *)
+(* ============================================ *)
+
+(* Arguments can be positional or named (keyword).
+ * Named arguments must come after all positional arguments.
+ * 
+ * Examples:
+ *   f(1, 2, 3)                    -- all positional
+ *   f(1, 2, x = 3, y = 4)        -- mixed
+ *   f(x = 1, y = 2)              -- all named
+ * 
+ * Parser transforms named arguments to a record:
+ *   f(a, b, x = 1, y = 2)
+ *     → f(a, b, record(field("x", 1), field("y", 2)))
+ *)
+arguments 
+    ::= positionalArgs [ "," namedArgs ]
+      | namedArgs
+      | (* empty *)
+      ;
+
+positionalArgs
+    ::= expression { "," expression }
+      ;
+
+namedArgs
+    ::= namedArg { "," namedArg }
+      ;
+
+namedArg
+    ::= identifier "=" expression   (* Note: '=' not '==' *)
+      ;
+
+(* Semantic transformation (at parse time):
+ * 
+ * namedArg: name = value
+ *   → field("name", value)
+ * 
+ * namedArgs: n1 = v1, n2 = v2, ...
+ *   → record(field("n1", v1), field("n2", v2), ...)
+ * 
+ * This transformation ensures:
+ * 1. Type system sees: f : A → B → record → C
+ * 2. 'record' is opaque, not unified
+ * 3. Built-in functions consume record at runtime
+ * 4. User-defined functions ignore trailing record
+ *)
+
+primaryExpression
+    ::= literal
+      | identifier
+      | placeholder
+      | tupleExpression
+      | listExpression
+      | "(" expression ")"
+      ;
+
+literal
+    ::= number
+      | string
+      | boolean
+      ;
+
+number ::= integer | decimal | scientific ;
+integer ::= [ "-" ] digit { digit } ;
+decimal ::= integer "." digit { digit } ;
+scientific ::= decimal "e" [ "+" | "-" ] digit { digit } ;
+string ::= '"' { character } '"' ;
+boolean ::= "True" | "False" ;
+
+placeholder ::= "□" | "_" ;
+
+tupleExpression
+    ::= "(" expression "," expression { "," expression } ")"
+      ;
+
+listExpression
+    ::= "[" [ expression { "," expression } ] "]"
+      ;
+
+(* ============================================ *)
+(* PATTERNS                                     *)
+(* ============================================ *)
+
+pattern
+    ::= wildcardPattern
+      | literalPattern
+      | variablePattern
+      | constructorPattern
+      | tuplePattern
+      | listPattern
+      | asPattern
+      ;
+
+wildcardPattern ::= "_" ;
+literalPattern ::= literal ;
+variablePattern ::= identifier ;
+constructorPattern ::= identifier [ "(" patternArgs ")" ] ;
+patternArgs ::= pattern { "," pattern } ;
+tuplePattern ::= "(" pattern "," pattern { "," pattern } ")" ;
+listPattern ::= "[" [ pattern { "," pattern } ] "]" ;
+asPattern ::= identifier "@" pattern ;
+
+(* ============================================ *)
+(* PROPOSITIONS                                 *)
+(* ============================================ *)
+
+proposition
+    ::= quantifiedProp
+      | implicationProp
+      | expression
+      ;
+
+quantifiedProp
+    ::= forAllQuantifier "(" bindings ")" "." proposition
+      | existsQuantifier "(" bindings ")" "." proposition
+      ;
+
+implicationProp
+    ::= proposition ( "⇒" | "=>" ) proposition
+      | proposition ( "↔" | "<=>" ) proposition
+      ;
+
+(* ============================================ *)
+(* OPERATOR SYMBOLS                             *)
+(* ============================================ *)
+
+operatorSymbol
+    ::= identifier
+      | "(" operator ")"
+      ;
+
+operator
+    ::= "+" | "-" | "*" | "/" | "^"
+      | "⊕" | "⊗" | "⊙"
+      | customOp
+      ;
+
+customOp ::= letter { letter | digit | "_" } ;
+
+(* ============================================ *)
+(* LEXICAL ELEMENTS                             *)
+(* ============================================ *)
+
+identifier ::= letter { letter | digit | "_" | "'" } ;
+letter ::= "a"..."z" | "A"..."Z" | greekLetter ;
+greekLetter ::= greekLower | greekUpper ;
+greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ" | "ι" | "κ" 
+             | "λ" | "μ" | "ν" | "ξ" | "ο" | "π" | "ρ" | "σ" | "τ" | "υ" 
+             | "φ" | "χ" | "ψ" | "ω" ;
+greekUpper ::= "Α" | "Β" | "Γ" | "Δ" | "Ε" | "Ζ" | "Η" | "Θ" | "Ι" | "Κ" 
+             | "Λ" | "Μ" | "Ν" | "Ξ" | "Ο" | "Π" | "Ρ" | "Σ" | "Τ" | "Υ" 
+             | "Φ" | "Χ" | "Ψ" | "Ω" ;
+digit ::= "0"..."9" ;
+character ::= ? any Unicode character except '"' and newline ? ;
+
+(* ============================================ *)
+(* EXAMPLES OF v0.96 FEATURES                   *)
+(* ============================================ *)
+
+(* Example: Plotting with named arguments
+ * 
+ * -- Bar chart with offset and width
+ * diagram(
+ *     bar(xs, ys1, offset = -0.2, width = 0.4, label = "Left"),
+ *     bar(xs, ys2, offset = 0.2, width = 0.4, label = "Right")
+ * )
+ * 
+ * -- Line plot with error bars
+ * plot(x, y, yerr = errors, color = "blue", stroke = "none")
+ * 
+ * -- Diagram with options
+ * diagram(width = 10, height = 7, title = "My Plot",
+ *         plot(x, y))
+ *)
+
+(* Example: Parser transformation
+ * 
+ * -- User writes:
+ * bar(xs, ys, offset = -0.2, width = 0.4)
+ * 
+ * -- Parser produces:
+ * bar(xs, ys, record(
+ *     field("offset", -0.2),
+ *     field("width", 0.4)
+ * ))
+ *)
+
+(* Example: Type system isolation
+ * 
+ * -- Type inference sees:
+ * bar : List(ℝ) → List(ℝ) → record → PlotElement
+ *                            ↑
+ *                      Opaque, not unified
+ * 
+ * -- The 'record' type doesn't participate in:
+ *    - Type unification (α = β)
+ *    - Polymorphic generalization
+ *    - Z3 constraint generation
+ *)
+
+(* ============================================ *)
+(* VERSION HISTORY                              *)
+(* ============================================ *)
+
+(* v0.96 (2026-01-01):
+ *   - Named arguments (keyword arguments)
+ *   - Parser-level sugar: f(x, a = 1) → f(x, record(...))
+ *   - Designed to not affect type system or symbolic ops
+ *   - Primary use case: Plotting configuration
+ * 
+ * v0.95 (2025-12-29):
+ *   - Big operator syntax: Σ(from, to, body)
+ *   - Function-call style for summation, product, integral
+ *   - Argument reordering for equation editor compatibility
+ * 
+ * v0.94 (2025-12-26):
+ *   - N-ary product types: A × B × C × D
+ *   - Right-associative: A × B × C = A × (B × C)
+ *   - Motivated by POT formalization requirements
+ * 
+ * v0.93 (2025-12-24):
+ *   - Added example blocks for executable documentation
+ *   - Added assert statement for verification
+ *   - Enables step-through debugging
+ * 
+ * v0.92 (2025-12-22):
+ *   - Type-level arithmetic (2*n, n+1, etc.)
+ *   - Dimension expressions in type parameters
+ * 
+ * v0.91 (2025-12-22):
+ *   - Parameterized type aliases
+ *   - Tuple types (A, B) syntax
+ * 
+ * v0.8 (2025-12-18):
+ *   - Pattern matching with guards
+ *   - Tuple patterns
+ *   - Import statements
+ *)
+
+
