@@ -2498,10 +2498,14 @@ impl Evaluator {
                     if result { "true" } else { "false" }.to_string(),
                 )))
             }
-            "lt" | "<" => self.builtin_comparison(args, |a, b| a < b),
-            "le" | "<=" | "≤" => self.builtin_comparison(args, |a, b| a <= b),
-            "gt" | ">" => self.builtin_comparison(args, |a, b| a > b),
-            "ge" | ">=" | "≥" => self.builtin_comparison(args, |a, b| a >= b),
+            "lt" | "<" | "less_than" => self.builtin_comparison(args, |a, b| a < b),
+            "le" | "<=" | "≤" | "leq" | "less_or_equal" => {
+                self.builtin_comparison(args, |a, b| a <= b)
+            }
+            "gt" | ">" | "greater_than" => self.builtin_comparison(args, |a, b| a > b),
+            "ge" | ">=" | "≥" | "geq" | "greater_or_equal" => {
+                self.builtin_comparison(args, |a, b| a >= b)
+            }
 
             // === Boolean ===
             "and" | "∧" => {
