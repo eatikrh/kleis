@@ -1281,15 +1281,29 @@ impl Evaluator {
         let left_resolved = self.resolve_expression(left);
         let right_resolved = self.resolve_expression(right);
 
-        // Try to evaluate both sides
-        let left_result = self.eval(&left_resolved);
-        let right_result = self.eval(&right_resolved);
+        // Try to FULLY evaluate both sides using eval_concrete()
+        // This ensures sin(0) becomes 0, not Operation{sin, [0]}
+        let left_result = self.eval_concrete(&left_resolved);
+        let right_result = self.eval_concrete(&right_resolved);
 
         match (left_result, right_result) {
             (Ok(left_val), Ok(right_val)) => {
                 // Both sides evaluated - check structural equality
                 if self.expressions_equal(&left_val, &right_val) {
                     return AssertResult::Passed;
+                }
+
+                // For numeric comparisons, also try floating-point equality
+                // (handles cases like 1.0 vs 1 or floating point rounding)
+                if let (Some(left_num), Some(right_num)) =
+                    (self.as_number(&left_val), self.as_number(&right_val))
+                {
+                    // Use relative epsilon for floating point comparison
+                    let diff = (left_num - right_num).abs();
+                    let max_val = left_num.abs().max(right_num.abs()).max(1.0);
+                    if diff < max_val * 1e-10 {
+                        return AssertResult::Passed;
+                    }
                 }
 
                 // Structural equality failed - check if either side is symbolic
