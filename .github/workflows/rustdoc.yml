@@ -66,6 +66,10 @@ jobs:
         cp -r *.html _site/ 2>/dev/null || true
         cp -r static/ _site/static/ 2>/dev/null || true
         
+        # Copy SEO files
+        cp robots.txt _site/ 2>/dev/null || true
+        cp sitemap.xml _site/ 2>/dev/null || true
+        
         # Copy mdBook manual to /docs/manual/book/
         mkdir -p _site/docs/manual
         if [ -d "docs/manual/book" ]; then
