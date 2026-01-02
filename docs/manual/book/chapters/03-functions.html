@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-922a99b2.js";
+            window.path_to_searchindex_js = "../searchindex-0e9896b4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-7a44b553.js"></script>
@@ -274,6 +274,68 @@ define add = λ x . λ y . x + y
 define add5 = add(5)           // λ y . 5 + y
 define eight = add5(3)         // Result: 8
 </code></pre>
+<h2 id="named-arguments-v096"><a class="header" href="#named-arguments-v096">Named Arguments (v0.96)</a></h2>
+<p>For plotting and numeric functions, Kleis supports named arguments (keyword arguments):</p>
+<pre><code class="language-kleis">// Named arguments come after positional arguments
+diagram(
+    bar(xs, ys, offset = -0.2, width = 0.4, label = "Data"),
+    plot(x, y, color = "blue", yerr = errors),
+    width = 10,
+    height = 7,
+    title = "My Chart"
+)
+</code></pre>
+<h3 id="syntax"><a class="header" href="#syntax">Syntax</a></h3>
+<p>Named arguments use <code>=</code> (not <code>==</code>) and must come after all positional arguments:</p>
+<pre><code class="language-kleis">// ✅ Valid: positional first, then named
+f(a, b, x = 1, y = 2)
+
+// ✅ Valid: all named
+f(x = 1, y = 2)
+
+// ❌ Invalid: positional after named
+f(x = 1, a, b)      // Error!
+</code></pre>
+<h3 id="parser-transformation"><a class="header" href="#parser-transformation">Parser Transformation</a></h3>
+<p>Named arguments are <strong>syntactic sugar</strong>. The parser transforms them into a <code>record</code> expression:</p>
+<pre><code class="language-kleis">// You write:
+bar(xs, ys, offset = -0.2, width = 0.4)
+
+// Parser produces:
+bar(xs, ys, record(
+    field("offset", -0.2),
+    field("width", 0.4)
+))
+</code></pre>
+<h3 id="limitations-numeric-only"><a class="header" href="#limitations-numeric-only">Limitations: Numeric Only</a></h3>
+<blockquote>
+<p><strong>Important:</strong> Named arguments are designed for <strong>concrete numeric computation</strong> (plotting, configuration). They cannot be used in:</p>
+</blockquote>
+<ul>
+<li><code>structure</code> definitions</li>
+<li><code>axiom</code> declarations</li>
+<li><code>implements</code> blocks</li>
+<li>Z3 verification proofs</li>
+</ul>
+<pre><code class="language-kleis">// ❌ Does NOT work in axioms
+structure Bad {
+    axiom wrong: f(x = 1)  // ERROR: named args not for axioms
+}
+
+// ✅ Works in plotting/computation
+let xs = [0, 1, 2, 3]
+let ys = [10, 20, 15, 25]
+diagram(bar(xs, ys, color = "blue"))
+</code></pre>
+<h3 id="why-this-design"><a class="header" href="#why-this-design">Why This Design?</a></h3>
+<p>Named arguments are opaque to the type system:</p>
+<ol>
+<li><strong>Type inference</strong> sees <code>record</code> as an opaque type</li>
+<li><strong>Unification</strong> doesn’t look inside records</li>
+<li><strong>Z3</strong> never receives record expressions</li>
+<li><strong>Built-in functions</strong> consume records at runtime</li>
+</ol>
+<p>This ensures named arguments don’t interfere with symbolic mathematics while providing convenient syntax for plotting and configuration.</p>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
 <p>Learn about algebraic data types for structured data!</p>
 <p>→ <a href="./04-algebraic-types.html">Next: Algebraic Types</a></p>

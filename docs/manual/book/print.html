@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-922a99b2.js";
+            window.path_to_searchindex_js = "searchindex-0e9896b4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-7a44b553.js"></script>
@@ -936,6 +936,68 @@ define add = λ x . λ y . x + y
 define add5 = add(5)           // λ y . 5 + y
 define eight = add5(3)         // Result: 8
 </code></pre>
+<h2 id="named-arguments-v096"><a class="header" href="#named-arguments-v096">Named Arguments (v0.96)</a></h2>
+<p>For plotting and numeric functions, Kleis supports named arguments (keyword arguments):</p>
+<pre><code class="language-kleis">// Named arguments come after positional arguments
+diagram(
+    bar(xs, ys, offset = -0.2, width = 0.4, label = "Data"),
+    plot(x, y, color = "blue", yerr = errors),
+    width = 10,
+    height = 7,
+    title = "My Chart"
+)
+</code></pre>
+<h3 id="syntax"><a class="header" href="#syntax">Syntax</a></h3>
+<p>Named arguments use <code>=</code> (not <code>==</code>) and must come after all positional arguments:</p>
+<pre><code class="language-kleis">// ✅ Valid: positional first, then named
+f(a, b, x = 1, y = 2)
+
+// ✅ Valid: all named
+f(x = 1, y = 2)
+
+// ❌ Invalid: positional after named
+f(x = 1, a, b)      // Error!
+</code></pre>
+<h3 id="parser-transformation"><a class="header" href="#parser-transformation">Parser Transformation</a></h3>
+<p>Named arguments are <strong>syntactic sugar</strong>. The parser transforms them into a <code>record</code> expression:</p>
+<pre><code class="language-kleis">// You write:
+bar(xs, ys, offset = -0.2, width = 0.4)
+
+// Parser produces:
+bar(xs, ys, record(
+    field("offset", -0.2),
+    field("width", 0.4)
+))
+</code></pre>
+<h3 id="limitations-numeric-only"><a class="header" href="#limitations-numeric-only">Limitations: Numeric Only</a></h3>
+<blockquote>
+<p><strong>Important:</strong> Named arguments are designed for <strong>concrete numeric computation</strong> (plotting, configuration). They cannot be used in:</p>
+</blockquote>
+<ul>
+<li><code>structure</code> definitions</li>
+<li><code>axiom</code> declarations</li>
+<li><code>implements</code> blocks</li>
+<li>Z3 verification proofs</li>
+</ul>
+<pre><code class="language-kleis">// ❌ Does NOT work in axioms
+structure Bad {
+    axiom wrong: f(x = 1)  // ERROR: named args not for axioms
+}
+
+// ✅ Works in plotting/computation
+let xs = [0, 1, 2, 3]
+let ys = [10, 20, 15, 25]
+diagram(bar(xs, ys, color = "blue"))
+</code></pre>
+<h3 id="why-this-design"><a class="header" href="#why-this-design">Why This Design?</a></h3>
+<p>Named arguments are opaque to the type system:</p>
+<ol>
+<li><strong>Type inference</strong> sees <code>record</code> as an opaque type</li>
+<li><strong>Unification</strong> doesn’t look inside records</li>
+<li><strong>Z3</strong> never receives record expressions</li>
+<li><strong>Built-in functions</strong> consume records at runtime</li>
+</ol>
+<p>This ensures named arguments don’t interfere with symbolic mathematics while providing convenient syntax for plotting and configuration.</p>
 <h2 id="whats-next-2"><a class="header" href="#whats-next-2">What’s Next?</a></h2>
 <p>Learn about algebraic data types for structured data!</p>
 <p>→ <a href="#algebraic-data-types">Next: Algebraic Types</a></p>
@@ -2429,6 +2491,122 @@ norm([[1.0, 2.0], [3.0, 4.0]])
 expm([[0.0, 1.0], [-1.0, 0.0]])
 // → rotation matrix
 </code></pre>
+<h2 id="built-in-functions-reference"><a class="header" href="#built-in-functions-reference">Built-in Functions Reference</a></h2>
+<blockquote>
+<p><strong>Important:</strong> These functions perform <strong>concrete numeric computation</strong>. They cannot be used in symbolic contexts such as <code>structure</code> definitions, <code>axiom</code> declarations, or abstract proofs. They are designed for interactive exploration, plotting, and numerical analysis.</p>
+</blockquote>
+<h3 id="math-functions"><a class="header" href="#math-functions">Math Functions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sin(x)</code></td><td>Sine (radians)</td><td><code>sin(3.14159)</code> → <code>0.0</code></td></tr>
+<tr><td><code>cos(x)</code></td><td>Cosine (radians)</td><td><code>cos(0)</code> → <code>1.0</code></td></tr>
+<tr><td><code>sqrt(x)</code></td><td>Square root</td><td><code>sqrt(2)</code> → <code>1.414...</code></td></tr>
+<tr><td><code>pi()</code></td><td>π constant</td><td><code>pi()</code> → <code>3.14159...</code></td></tr>
+<tr><td><code>radians(deg)</code></td><td>Degrees to radians</td><td><code>radians(180)</code> → <code>3.14159...</code></td></tr>
+<tr><td><code>mod(a, b)</code></td><td>Modulo operation</td><td><code>mod(7, 3)</code> → <code>1</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="sequence-generation"><a class="header" href="#sequence-generation">Sequence Generation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>range(n)</code></td><td>Integers 0 to n-1</td><td><code>range(5)</code> → <code>[0, 1, 2, 3, 4]</code></td></tr>
+<tr><td><code>range(start, end)</code></td><td>Integers start to end-1</td><td><code>range(2, 5)</code> → <code>[2, 3, 4]</code></td></tr>
+<tr><td><code>linspace(start, end)</code></td><td>50 evenly spaced values</td><td><code>linspace(0, 1)</code> → <code>[0, 0.02, ...]</code></td></tr>
+<tr><td><code>linspace(start, end, n)</code></td><td>n evenly spaced values</td><td><code>linspace(0, 1, 5)</code> → <code>[0, 0.25, 0.5, 0.75, 1]</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="random-number-generation"><a class="header" href="#random-number-generation">Random Number Generation</a></h3>
+<p>These use a deterministic pseudo-random number generator (LCG) for reproducibility.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>random(n)</code></td><td>n uniform random values in [0,1]</td><td><code>random(5)</code> → <code>[0.25, 0.08, ...]</code></td></tr>
+<tr><td><code>random(n, seed)</code></td><td>With explicit seed</td><td><code>random(5, 42)</code> → reproducible</td></tr>
+<tr><td><code>random_normal(n)</code></td><td>n values from N(0,1)</td><td><code>random_normal(5)</code></td></tr>
+<tr><td><code>random_normal(n, seed)</code></td><td>With explicit seed</td><td><code>random_normal(5, 33)</code></td></tr>
+<tr><td><code>random_normal(n, seed, scale)</code></td><td>N(0, scale)</td><td><code>random_normal(50, 33, 0.1)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="vector-operations"><a class="header" href="#vector-operations">Vector Operations</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>vec_add(a, b)</code></td><td>Element-wise addition</td><td><code>vec_add([1,2,3], [4,5,6])</code> → <code>[5, 7, 9]</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="list-manipulation"><a class="header" href="#list-manipulation">List Manipulation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>list_map(f, xs)</code></td><td>Apply f to each element</td><td><code>list_map(λ x . x*2, [1,2,3])</code> → <code>[2, 4, 6]</code></td></tr>
+<tr><td><code>list_filter(p, xs)</code></td><td>Keep elements where p(x) is true</td><td><code>list_filter(λ x . x &gt; 1, [1,2,3])</code> → <code>[2, 3]</code></td></tr>
+<tr><td><code>list_fold(f, init, xs)</code></td><td>Left fold/reduce</td><td><code>list_fold(λ a b . a + b, 0, [1,2,3])</code> → <code>6</code></td></tr>
+<tr><td><code>list_zip(xs, ys)</code></td><td>Pair corresponding elements</td><td><code>list_zip([1,2], ["a","b"])</code> → <code>[Pair(1,"a"), ...]</code></td></tr>
+<tr><td><code>list_nth(xs, i)</code></td><td>Element at index i (0-based)</td><td><code>list_nth([10,20,30], 1)</code> → <code>20</code></td></tr>
+<tr><td><code>list_length(xs)</code></td><td>Number of elements</td><td><code>list_length([1,2,3])</code> → <code>3</code></td></tr>
+<tr><td><code>list_concat(xs, ys)</code></td><td>Concatenate two lists</td><td><code>list_concat([1,2], [3,4])</code> → <code>[1, 2, 3, 4]</code></td></tr>
+<tr><td><code>list_flatten(xss)</code></td><td>Flatten nested lists</td><td><code>list_flatten([[1,2], [3,4]])</code> → <code>[1, 2, 3, 4]</code></td></tr>
+<tr><td><code>list_slice(xs, start, end)</code></td><td>Sublist [start, end)</td><td><code>list_slice([0,1,2,3,4], 1, 3)</code> → <code>[1, 2]</code></td></tr>
+<tr><td><code>list_rotate(xs, n)</code></td><td>Rotate left by n</td><td><code>list_rotate([1,2,3,4], 1)</code> → <code>[2, 3, 4, 1]</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="pair-operations"><a class="header" href="#pair-operations">Pair Operations</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Pair(a, b)</code></td><td>Create a pair/tuple</td><td><code>Pair(1, "x")</code></td></tr>
+<tr><td><code>fst(p)</code></td><td>First element of pair</td><td><code>fst(Pair(1, 2))</code> → <code>1</code></td></tr>
+<tr><td><code>snd(p)</code></td><td>Second element of pair</td><td><code>snd(Pair(1, 2))</code> → <code>2</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="why-numeric-only"><a class="header" href="#why-numeric-only">Why Numeric-Only?</a></h3>
+<p>These functions are implemented in Rust for performance and produce concrete values:</p>
+<pre><code class="language-kleis">// ✅ Works: Concrete computation
+let xs = linspace(0, 6.28, 10)
+let ys = list_map(λ x . sin(x), xs)
+diagram(plot(xs, ys))
+
+// ❌ Does NOT work: Cannot use in axioms
+structure MyStructure(T) {
+    axiom bad: sin(x) = cos(x - pi()/2)  // ERROR: sin/cos/pi are numeric
+}
+</code></pre>
+<p>For symbolic mathematics, define your own abstract operations:</p>
+<pre><code class="language-kleis">// ✅ Correct: Define sin symbolically
+structure Trigonometry(T) {
+    operation sin : T → T
+    operation cos : T → T
+    constant π : T
+    
+    axiom shift: ∀(x : T). sin(x) = cos(x - π/2)
+}
+</code></pre>
 <h2 id="matrix-syntax"><a class="header" href="#matrix-syntax">Matrix Syntax</a></h2>
 <p>Matrices can be specified using nested list syntax:</p>
 <pre><code class="language-kleis">// 2×2 matrix (row-major order)
@@ -2518,13 +2696,28 @@ trace(A)      // → 5 (not yet implemented, use 1+4)
 // (Matrix multiplication coming soon!)
 </code></pre>
 <h2 id="plotting"><a class="header" href="#plotting">Plotting</a></h2>
-<p>Kleis integrates with <strong>Lilaq</strong> (Typst’s plotting library) to generate publication-quality plots directly in Jupyter notebooks. Plots are rendered as scalable SVG graphics.</p>
-<p><img src="images/kleis_plots.png" alt="Kleis plotting examples"></p>
-<p><em>Examples of Kleis plots: reciprocal function, projectile motion, and damped oscillation</em></p>
+<p>Kleis integrates with <strong>Lilaq</strong> (Typst’s plotting library) to generate publication-quality plots directly in Jupyter notebooks. The API mirrors Lilaq’s compositional design, making it easy to create complex visualizations.</p>
 <h3 id="requirements"><a class="header" href="#requirements">Requirements</a></h3>
 <ul>
 <li><strong>Typst CLI</strong> must be installed: <code>brew install typst</code> (macOS) or see <a href="https://typst.app">typst.app</a></li>
+<li>Lilaq 0.5.0+ is automatically imported</li>
 </ul>
+<h3 id="compositional-api"><a class="header" href="#compositional-api">Compositional API</a></h3>
+<p>Kleis uses a compositional plotting API where:</p>
+<ul>
+<li>Individual functions (<code>plot</code>, <code>scatter</code>, <code>bar</code>, etc.) create <strong>PlotElement</strong> objects</li>
+<li>The <code>diagram()</code> function combines elements and renders to SVG</li>
+<li>Named arguments (<code>key = value</code>) configure options</li>
+</ul>
+<pre><code class="language-kleis">diagram(
+    plot(xs, ys, color = "blue"),
+    scatter(xs, ys, mark = "s"),
+    bar(xs, heights, label = "Data"),
+    title = "My Chart",
+    xlabel = "X-axis",
+    theme = "moon"
+)
+</code></pre>
 <h3 id="plot-functions"><a class="header" href="#plot-functions">Plot Functions</a></h3>
 <div class="table-wrapper">
 <table>
@@ -2532,114 +2725,228 @@ trace(A)      // → 5 (not yet implemented, use 1+4)
 <tr><th>Function</th><th>Description</th><th>Example</th></tr>
 </thead>
 <tbody>
-<tr><td><code>plot(x, y)</code></td><td>Line plot</td><td><code>plot([0,1,2], [0,1,4])</code></td></tr>
-<tr><td><code>scatter(x, y)</code></td><td>Scatter plot</td><td><code>scatter([1,2,3], [2.1,3.9,6.2])</code></td></tr>
-<tr><td><code>bar(x, heights)</code></td><td>Vertical bars</td><td><code>bar([1,2,3], [10,25,15])</code></td></tr>
-<tr><td><code>hbar(y, widths)</code></td><td>Horizontal bars</td><td><code>hbar([1,2,3], [10,25,15])</code></td></tr>
+<tr><td><code>plot(x, y, ...)</code></td><td>Line plot</td><td><code>plot([0,1,2], [0,1,4], color = "blue")</code></td></tr>
+<tr><td><code>scatter(x, y, ...)</code></td><td>Scatter with colormaps</td><td><code>scatter(x, y, colors = vals, map = "turbo")</code></td></tr>
+<tr><td><code>bar(x, heights, ...)</code></td><td>Vertical bars</td><td><code>bar([1,2,3], [10,25,15], label = "Data")</code></td></tr>
+<tr><td><code>hbar(y, widths, ...)</code></td><td>Horizontal bars</td><td><code>hbar([1,2,3], [10,25,15])</code></td></tr>
 <tr><td><code>stem(x, y)</code></td><td>Stem plot</td><td><code>stem([0,1,2], [0,1,1])</code></td></tr>
-<tr><td><code>hstem(x, y)</code></td><td>Horizontal stem</td><td><code>hstem([0,1,2], [0,1,1])</code></td></tr>
-<tr><td><code>fill_between(x, y)</code></td><td>Area under curve</td><td><code>fill_between([0,1,2], [1,2,4])</code></td></tr>
+<tr><td><code>fill_between(x, y, ...)</code></td><td>Area under curve</td><td><code>fill_between(x, y1, y2 = y2)</code></td></tr>
+<tr><td><code>stacked_area(x, y1, y2, ...)</code></td><td>Stacked areas</td><td><code>stacked_area(x, y1, y2, y3)</code></td></tr>
 <tr><td><code>boxplot(d1, d2, ...)</code></td><td>Box and whisker</td><td><code>boxplot([1,2,3], [4,5,6])</code></td></tr>
-<tr><td><code>hboxplot(...)</code></td><td>Horizontal boxplot</td><td><code>hboxplot([1,2,3], [4,5,6])</code></td></tr>
 <tr><td><code>heatmap(matrix)</code></td><td>2D color grid</td><td><code>heatmap([[1,2],[3,4]])</code></td></tr>
-<tr><td><code>colormesh(matrix)</code></td><td>Alias for heatmap</td><td><code>colormesh([[1,2],[3,4]])</code></td></tr>
 <tr><td><code>contour(matrix)</code></td><td>Contour lines</td><td><code>contour([[1,2],[3,4]])</code></td></tr>
-<tr><td><code>quiver(x, y, dirs)</code></td><td>Vector field</td><td>See example below</td></tr>
+<tr><td><code>path(points, ...)</code></td><td>Arbitrary polygon</td><td><code>path(pts, fill = "blue", closed = true)</code></td></tr>
+<tr><td><code>place(x, y, text, ...)</code></td><td>Text annotation</td><td><code>place(1, 5, "Peak", align = "top")</code></td></tr>
+<tr><td><code>yaxis(elements, ...)</code></td><td>Secondary y-axis</td><td><code>yaxis(bar(...), position = "right")</code></td></tr>
+<tr><td><code>xaxis(...)</code></td><td>Secondary x-axis</td><td><code>xaxis(position = "top", functions = ...)</code></td></tr>
 </tbody>
 </table>
 </div>
-<h3 id="basic-examples"><a class="header" href="#basic-examples">Basic Examples</a></h3>
-<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+<h3 id="data-generation-functions"><a class="header" href="#data-generation-functions">Data Generation Functions</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>linspace(start, end, n)</code></td><td>Evenly spaced values</td><td><code>linspace(0, 6.28, 50)</code></td></tr>
+<tr><td><code>range(n)</code></td><td>Integers 0 to n-1</td><td><code>range(10)</code></td></tr>
+<tr><td><code>random(n, seed)</code></td><td>Uniform random [0,1]</td><td><code>random(50, 42)</code></td></tr>
+<tr><td><code>random_normal(n, seed, scale)</code></td><td>Normal distribution</td><td><code>random_normal(50, 33, 0.1)</code></td></tr>
+<tr><td><code>vec_add(a, b)</code></td><td>Element-wise addition</td><td><code>vec_add(xs, noise)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-grouped-bar-chart-with-error-bars"><a class="header" href="#example-grouped-bar-chart-with-error-bars">Example: Grouped Bar Chart with Error Bars</a></h3>
+<p><img src="images/plot_grouped_bars.png" alt="Grouped bar chart"></p>
+<pre><code class="language-kleis">let xs = [0, 1, 2, 3]
+let ys1 = [1.35, 3, 2.1, 4]
+let ys2 = [1.4, 3.3, 1.9, 4.2]
+let yerr1 = [0.2, 0.3, 0.5, 0.4]
+let yerr2 = [0.3, 0.3, 0.4, 0.7]
 
-example "line plot" {
-    // Line plot: y = x²
-    plot([0, 1, 2, 3, 4, 5], [0, 1, 4, 9, 16, 25])
-}
+let xs_left = list_map(λ x . x - 0.2, xs)
+let xs_right = list_map(λ x . x + 0.2, xs)
 
-example "scatter plot" {
-    scatter([1, 2, 3, 4, 5], [2.1, 3.9, 6.2, 7.8, 10.1])
-}
-
-example "bar chart" {
-    bar([1, 2, 3, 4, 5], [10, 25, 15, 30, 20])
-}
-
-example "heatmap" {
-    heatmap([
-        [1.0, 2.0, 3.0],
-        [4.0, 5.0, 6.0],
-        [7.0, 8.0, 9.0]
-    ])
-}
+diagram(
+    bar(xs, ys1, offset = -0.2, width = 0.4, label = "Left"),
+    bar(xs, ys2, offset = 0.2, width = 0.4, label = "Right"),
+    plot(xs_left, ys1, yerr = yerr1, color = "black", stroke = "none"),
+    plot(xs_right, ys2, yerr = yerr2, color = "black", stroke = "none"),
+    width = 5,
+    legend_position = "left + top"
+)
 </code></pre>
-<h3 id="physics-examples"><a class="header" href="#physics-examples">Physics Examples</a></h3>
-<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+<h3 id="example-bar-chart-with-dynamic-annotations"><a class="header" href="#example-bar-chart-with-dynamic-annotations">Example: Bar Chart with Dynamic Annotations</a></h3>
+<p><img src="images/plot_bar_annotations.png" alt="Bar chart with annotations"></p>
+<pre><code class="language-kleis">let xs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+let ys = [12, 51, 23, 36, 38, 15, 10, 22, 86]
 
-example "damped oscillation" {
-    // e^(-t/5) × cos(t)
-    plot(
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        [1.0, 0.44, negate(0.32), negate(0.59), negate(0.30), 
-         0.19, 0.44, 0.26, negate(0.08), negate(0.29), negate(0.20)]
-    )
-}
+// Dynamic annotations using list_map and conditionals
+let annotations = list_map(λ p . 
+    let x = fst(p) in
+    let y = snd(p) in
+    let align = if y &gt; 12 then "top" else "bottom" in
+    place(x, y, y, align = align, padding = "0.2em")
+, list_zip(xs, ys))
 
-example "projectile motion" {
-    // y = x - 0.1x²
-    plot(
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        [0, 0.9, 1.6, 2.1, 2.4, 2.5, 2.4, 2.1, 1.6, 0.9, 0]
-    )
-}
+diagram(
+    bar(xs, ys),
+    annotations,
+    width = 9,
+    xaxis_subticks = "none"
+)
 </code></pre>
-<h3 id="vector-field-example"><a class="header" href="#vector-field-example">Vector Field Example</a></h3>
-<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+<h3 id="example-climograph-with-twin-axes"><a class="header" href="#example-climograph-with-twin-axes">Example: Climograph with Twin Axes</a></h3>
+<p><img src="images/plot_climograph.png" alt="Climograph"></p>
+<pre><code class="language-kleis">let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+let precipitation = [56, 41, 53, 42, 60, 67, 81, 62, 56, 49, 48, 54]
+let temperature = [0.5, 1.4, 4.4, 9.7, 14.4, 17.8, 19.8, 19.5, 15.5, 10.4, 5.6, 2.2]
+let xs = range(12)
 
-example "vector field" {
-    quiver(
-        [0, 1],         // x coordinates
-        [0, 1],         // y coordinates
-        [               // 2×2 grid of [u, v] directions
-            [[1, 0], [0, 1]],
-            [[0, negate(1)], [negate(1), 0]]
-        ]
-    )
-}
+diagram(
+    yaxis(
+        bar(xs, precipitation, fill = "blue.lighten(40%)", label = "Precipitation"),
+        position = "right",
+        axis_label = "Precipitation in mm"
+    ),
+    plot(xs, temperature, label = "Temperature", color = "red", stroke = "1pt", mark_size = 6),
+    width = 8,
+    title = "Climate of Berlin",
+    ylabel = "Temperature in °C",
+    xlabel = "Month",
+    xaxis_ticks = months,
+    xaxis_tick_rotate = -90,
+    xaxis_subticks = "none"
+)
 </code></pre>
-<h3 id="titles"><a class="header" href="#titles">Titles</a></h3>
-<p>All plot functions accept an optional title as the last argument:</p>
-<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+<h3 id="example-koch-snowflake-fractal"><a class="header" href="#example-koch-snowflake-fractal">Example: Koch Snowflake Fractal</a></h3>
+<p><img src="images/plot_koch_snowflake.png" alt="Koch Snowflake"></p>
+<pre><code class="language-kleis">// Complex number operations
+define complex_add(c1, c2) = Pair(fst(c1) + fst(c2), snd(c1) + snd(c2))
+define complex_sub(c1, c2) = Pair(fst(c1) - fst(c2), snd(c1) - snd(c2))
+define complex_mul(c1, c2) = Pair(
+    (fst(c1)*fst(c2)) - (snd(c1)*snd(c2)),
+    (fst(c1)*snd(c2)) + (snd(c1)*fst(c2))
+)
 
-example "with title" {
-    plot([0, 1, 2, 3], [0, 1, 4, 9], "Quadratic Growth")
-    scatter([1, 2, 3], [1.1, 2.0, 2.9], "Experimental Data")
-}
+define triangle_vertex(angle) = Pair(cos(radians(angle)), sin(radians(angle)))
+define base_triangle() = [triangle_vertex(90), triangle_vertex(210), triangle_vertex(330)]
+
+define koch_edge(p1, p2) = 
+    let d = complex_sub(p2, p1) in
+    [p1, complex_add(p1, complex_mul(d, Pair(1/3, 0))),
+     complex_add(p1, complex_mul(d, Pair(0.5, 0 - sqrt(3)/6))),
+     complex_add(p1, complex_mul(d, Pair(2/3, 0)))]
+
+define koch_iter(pts) = 
+    let n = list_length(pts) in
+    list_flatten(list_map(λ i . 
+        koch_edge(list_nth(pts, i), list_nth(pts, mod(i + 1, n)))
+    , range(n)))
+
+let n0 = base_triangle()
+let n3 = koch_iter(koch_iter(koch_iter(n0)))  // 192 vertices
+
+diagram(
+    path(n3, fill = "blue", closed = true),
+    width = 6, height = 7,
+    xaxis_ticks_none = true,
+    yaxis_ticks_none = true
+)
 </code></pre>
+<h3 id="example-scatter-plot-with-colormap"><a class="header" href="#example-scatter-plot-with-colormap">Example: Scatter Plot with Colormap</a></h3>
+<p><img src="images/plot_styled_scatter.png" alt="Styled scatter"></p>
+<pre><code class="language-kleis">let xs = linspace(0, 12.566370614, 50)  // 0 to 4π
+let ys = list_map(lambda x . sin(x), xs)
+let noise = random_normal(50, 33, 0.1)
+let xs_noisy = vec_add(xs, noise)
+let colors = random(50, 42)
+
+diagram(
+    plot(xs, ys, mark = "none"),
+    scatter(xs_noisy, ys, 
+        mark = "s",
+        colors = colors,
+        map = "turbo",
+        stroke = "0.5pt + black"
+    ),
+    theme = "moon"
+)
+</code></pre>
+<h3 id="example-stacked-area-chart"><a class="header" href="#example-stacked-area-chart">Example: Stacked Area Chart</a></h3>
+<p><img src="images/plot_stacked_area.png" alt="Stacked area"></p>
+<pre><code class="language-kleis">let xs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+let y1 = [0, 1, 3, 9, 5, 4, 2, 2, 1, 0]
+let y2 = [5, 3, 2, 0, 1, 2, 2, 2, 3, 2]
+let y3 = [0, 0, 0, 0, 1, 2, 4, 5, 5, 9]
+
+diagram(
+    stacked_area(xs, y1, y2, y3),
+    theme = "moon"
+)
+</code></pre>
+<h3 id="themes"><a class="header" href="#themes">Themes</a></h3>
+<p>Kleis supports Lilaq’s built-in themes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Theme</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>schoolbook</code></td><td>Math textbook style with axes at origin</td></tr>
+<tr><td><code>moon</code></td><td>Dark theme for presentations</td></tr>
+<tr><td><code>ocean</code></td><td>Blue-tinted theme</td></tr>
+<tr><td><code>misty</code></td><td>Soft, muted colors</td></tr>
+<tr><td><code>skyline</code></td><td>Clean, modern look</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-kleis">diagram(
+    plot(xs, ys),
+    theme = "moon"
+)
+</code></pre>
+<h3 id="axis-customization"><a class="header" href="#axis-customization">Axis Customization</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Option</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>xlim</code>, <code>ylim</code></td><td>Axis limits</td><td><code>xlim = [-6.28, 6.28]</code></td></tr>
+<tr><td><code>xaxis_tick_unit</code></td><td>Tick spacing unit</td><td><code>xaxis_tick_unit = 3.14159</code></td></tr>
+<tr><td><code>xaxis_tick_suffix</code></td><td>Tick label suffix</td><td><code>xaxis_tick_suffix = "pi"</code></td></tr>
+<tr><td><code>xaxis_tick_rotate</code></td><td>Rotate labels</td><td><code>xaxis_tick_rotate = -90</code></td></tr>
+<tr><td><code>xaxis_ticks_none</code></td><td>Hide ticks</td><td><code>xaxis_ticks_none = true</code></td></tr>
+</tbody>
+</table>
+</div>
 <h3 id="complete-example-notebook"><a class="header" href="#complete-example-notebook">Complete Example Notebook</a></h3>
 <p><strong>Cell 1: Import stdlib</strong></p>
 <pre><code class="language-kleis">import "stdlib/prelude.kleis"
 </code></pre>
-<p><strong>Cell 2: Line plot</strong></p>
-<pre><code class="language-kleis">plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16], "y = x²")
+<p><strong>Cell 2: Generate data with linspace</strong></p>
+<pre><code class="language-kleis">let xs = linspace(0, 6.28, 50)
+let ys = list_map(lambda x . sin(x), xs)
 </code></pre>
-<p><strong>Cell 3: Multiple plots in one cell</strong></p>
-<pre><code class="language-kleis">example "quadratic" {
-    plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16])
-}
-
-example "linear" {
-    plot([0, 1, 2, 3, 4], [1, 3, 5, 7, 9])
-}
+<p><strong>Cell 3: Plot with theme</strong></p>
+<pre><code class="language-kleis">diagram(
+    plot(xs, ys, color = "blue", stroke = "2pt"),
+    title = "Sine Wave",
+    xlabel = "x",
+    ylabel = "sin(x)",
+    theme = "moon"
+)
 </code></pre>
-<p>Both plots will be displayed sequentially.</p>
 <h3 id="future-enhancements"><a class="header" href="#future-enhancements">Future Enhancements</a></h3>
 <p>See the <a href="../PLOTTING_ROADMAP.html">Plotting Roadmap</a> for planned features:</p>
 <ul>
 <li>Function plotting (<code>fplot</code>)</li>
 <li>3D surface plots</li>
-<li>Color map customization</li>
-<li>Axis scaling (log, symlog)</li>
-<li>Equation annotations with Typst math</li>
+<li>Polar plots</li>
+<li>Logarithmic scales</li>
 </ul>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
@@ -3041,7 +3348,7 @@ structure Functor(C, D) {
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="example-blocks-v093"><a class="header" href="#example-blocks-v093">Example Blocks (v0.93)</a></h1>
 <p>Kleis v0.93 introduces <strong>example blocks</strong> — executable documentation that serves as tests, debugging entry points, and living examples.</p>
-<h2 id="syntax"><a class="header" href="#syntax">Syntax</a></h2>
+<h2 id="syntax-1"><a class="header" href="#syntax-1">Syntax</a></h2>
 <pre><code class="language-kleis">example "descriptive name" {
     let x = 5
     let y = double(x)
