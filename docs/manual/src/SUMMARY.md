@@ -29,6 +29,10 @@
 - [Applications](./chapters/13-applications.md)
 - [Example Blocks](./chapters/20-example-blocks.md)
 
+# Standard Library
+
+- [Standard Library Types](./chapters/22-standard-library.md)
+
 # Mathematics
 
 - [Complex Numbers](./chapters/14-complex-numbers.md)
