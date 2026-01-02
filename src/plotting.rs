@@ -1366,14 +1366,19 @@ fn generate_place_element(element: &PlotElement) -> String {
         .map(|s| s.as_str())
         .unwrap_or("");
 
-    code.push_str(&format!("  lq.place({}, {}, [{}]", x, y, text));
-
     let opts = &element.options;
+
+    // Wrap content with pad() if padding specified (like Lilaq: pad(0.2em)[#y])
+    let content = if let Some(ref padding) = opts.padding {
+        format!("pad({})[{}]", padding, text)
+    } else {
+        format!("[{}]", text)
+    };
+
+    code.push_str(&format!("  lq.place({}, {}, {}", x, y, content));
+
     if let Some(ref align) = opts.align {
         code.push_str(&format!(", align: {}", align));
-    }
-    if let Some(ref padding) = opts.padding {
-        code.push_str(&format!(", pad: {}", padding));
     }
 
     code.push_str("),\n");

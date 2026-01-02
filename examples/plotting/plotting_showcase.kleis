@@ -119,11 +119,12 @@ example "Bar plot with text annotations (EXACT Lilaq replication)" {
     let ys = [12, 51, 23, 36, 38, 15, 10, 22, 86]
     
     // Dynamic annotation generation - exactly like Lilaq
+    // Note: Kleis adds "cm" to width automatically, and wraps content with pad()
     let annotations = list_map(λ p . 
         let x = fst(p) in
         let y = snd(p) in
         let align = if y > 12 then "top" else "bottom" in
-        place(x, y, y, align = align)
+        place(x, y, y, align = align, padding = "0.2em")
     , list_zip(xs, ys))
     
     // diagram() now accepts a list of PlotElements (like Lilaq's spread operator)
