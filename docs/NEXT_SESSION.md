@@ -4,14 +4,31 @@
 
 ---
 
-## 🚀 CURRENT WORK: Plotting Integration Complete! (Jan 1, 2026)
+## 🚀 CURRENT WORK: Unified Plotting API Complete! (Jan 1, 2026)
 
 ### What's Done
 
-- ✅ **13 plot types implemented** (Phase 1 complete)
-- ✅ **Jupyter kernel integration** working
-- ✅ **Manual section** added with examples and image
-- ✅ **16-phase roadmap** documented in `docs/PLOTTING_ROADMAP.md`
+- ✅ **Unified `graph()` API** - ONE function for all 14 plot types
+- ✅ **Legacy functions removed** (`plot`, `scatter`, `bar`, etc. - all gone)
+- ✅ **Clean namespace** - Only `graph("type", ...)` remains
+- ✅ **Grouped bars with errors** - `graph("grouped_bars", xs, series, labels, errors)`
+- ✅ **Jupyter kernel updated** - Banner and completions reflect new API
+- ✅ **Examples updated** - `basic_plots.kleis` uses only `graph()`
+- ✅ **20 examples passing**
+
+### The Unified API
+
+```kleis
+// ONE function for everything:
+graph("line", xs, ys)
+graph("scatter", xs, ys)
+graph("bar", xs, heights)
+graph("heatmap", matrix)
+graph("grouped_bars", xs, [series1, series2], ["Label1", "Label2"])
+
+// Types: line, scatter, bar, hbar, stem, hstem, fill_between,
+//        boxplot, hboxplot, heatmap, contour, quiver, grouped_bars
+```
 
 ### Known Limitations
 
@@ -20,38 +37,36 @@
 **What WORKS:**
 ```kleis
 // Arithmetic in lists
-plot([0, 1, 2, 3], [0, 1*1, 2*2, 3*3])  // ✅
+graph("line", [0, 1, 2, 3], [0, 1*1, 2*2, 3*3])  // ✅
 
 // Let bindings
 let xs = [0, 1, 2, 3] in
 let ys = [0, 1, 4, 9] in
-plot(xs, ys)  // ✅
+graph("line", xs, ys)  // ✅
 
 // negate()
-plot(x, [0, negate(1), negate(2)])  // ✅
+graph("line", x, [0, negate(1), negate(2)])  // ✅
 ```
 
 **What DOESN'T work (yet):**
 ```kleis
 // No list comprehensions
-plot(x, [x*x for x in xs])  // ❌ No syntax
+graph("line", x, [x*x for x in xs])  // ❌ No syntax
 
 // No map over lists  
-plot(x, map(square, xs))  // ❌ Not implemented for plotting
+graph("line", x, map(square, xs))  // ❌ Not implemented
 
 // No linspace/arange
-plot(linspace(0, 10, 100), ...)  // ❌ Phase 10
+graph("line", linspace(0, 10, 100), ...)  // ❌ Future phase
 ```
 
 **Root cause:** Lists must be written explicitly. We lack programmatic list generation.
 
-**Future work:** Phase 10 (linspace, arange, mesh) will address this.
-
 #### 2. Jupyter Kernel: KLEIS_ROOT Environment Variable
 
-**Problem:** When Jupyter runs from arbitrary directories, `import "stdlib/prelude.kleis"` fails because the kernel can't find the Kleis project root.
+**Problem:** When Jupyter runs from arbitrary directories, `import "stdlib/prelude.kleis"` fails.
 
-**Current workaround:** The kernel searches upward for `stdlib/prelude.kleis` and checks common paths like `~/git/cee/kleis`.
+**Current workaround:** The kernel searches upward for `stdlib/prelude.kleis`.
 
 **Better solution needed:** Set `KLEIS_ROOT` environment variable:
 ```bash
@@ -63,34 +78,25 @@ export KLEIS_ROOT=/path/to/kleis
 2. Make kernel check KLEIS_ROOT first
 3. Consider auto-detection via `kleis --root` command
 
-#### 3. Plotting API Design (Future Consideration)
+#### 3. Plotting API Design ✅ RESOLVED
 
-**Current approach:** Many separate functions
+**Previous approach:** Many separate functions (plot, scatter, bar, etc.)
+
+**New approach:** Single unified function
 ```kleis
-plot(xs, ys, "label")
-scatter(xs, ys, "label")
-bar(xs, ys, "label")
-heatmap(matrix, "label")
+graph("line", xs, ys)
+graph("scatter", xs, ys)
+graph("bar", xs, heights)
+graph("heatmap", matrix)
 ```
 
-**Alternative:** Single function with type argument
-```kleis
-graph("line", xs, ys, "label")
-graph("scatter", xs, ys, "label")
-graph("bar", xs, ys, "label")
-graph("heatmap", matrix, "label")
-```
-
-**Pros of unified approach:**
+**Why unified is better:**
 - Simpler API surface (one function to learn)
-- Easier to switch between plot types
-- Options dict could follow: `graph("line", xs, ys, { color: "blue", mark: "o" })`
+- Easier to switch between plot types  
+- Clean namespace (no clutter)
+- Options dict supported: `graph("line", xs, ys, { title: "Plot" })`
 
-**Cons:**
-- Less discoverable (can't tab-complete plot types)
-- Type checking harder (different types need different args)
-
-**Decision:** Defer until API stabilizes. Current approach works for MVP.
+**Implemented January 1, 2026.** Legacy functions removed, all 20 examples converted.
 
 #### 4. Manual: Symbolic Differentiation Example is Weak
 

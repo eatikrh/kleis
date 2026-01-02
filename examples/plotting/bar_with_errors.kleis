@@ -1,0 +1,67 @@
+// ============================================================================
+// BAR CHART WITH ERROR BARS - Recreating the Lilaq Example
+// ============================================================================
+//
+// Original Lilaq code:
+// #let xs = range(4)
+// #let ys1 = (1.35, 3, 2.1, 4)
+// #let ys2 = (1.4, 3.3, 1.9, 4.2)
+// #let yerr1 = (0.2, 0.3, 0.5, 0.4)
+// #let yerr2 = (0.3, 0.3, 0.4, 0.7)
+//
+// Uses grouped_bars() to create multiple bar series with error bars.
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ----------------------------------------------------------------------------
+// Example 1: Grouped bars WITHOUT error bars
+// ----------------------------------------------------------------------------
+example "grouped bars - no errors" {
+    out("Two-series grouped bar chart")
+    grouped_bars(
+        [0, 1, 2, 3],                           // x coordinates
+        [[1.35, 3, 2.1, 4], [1.4, 3.3, 1.9, 4.2]],  // Two y series
+        ["Left", "Right"]                        // Labels
+    )
+}
+
+// ----------------------------------------------------------------------------
+// Example 2: Grouped bars WITH error bars (matches Lilaq example exactly)
+// ----------------------------------------------------------------------------
+example "grouped bars - with errors" {
+    out("Grouped bars with error bars (Lilaq example)")
+    grouped_bars(
+        [0, 1, 2, 3],                                   // x coordinates
+        [[1.35, 3, 2.1, 4], [1.4, 3.3, 1.9, 4.2]],          // Two y series
+        ["Left", "Right"],                               // Labels
+        [[0.2, 0.3, 0.5, 0.4], [0.3, 0.3, 0.4, 0.7]]        // Error bars
+    )
+}
+
+// ----------------------------------------------------------------------------
+// Example 3: Three series grouped bars
+// ----------------------------------------------------------------------------
+example "three series grouped bars" {
+    out("Three-series grouped bar chart")
+    grouped_bars(
+        [0, 1, 2],
+        [[1, 2, 3], [1.5, 2.5, 3.5], [2, 3, 4]],
+        ["A", "B", "C"]
+    )
+}
+
+// ----------------------------------------------------------------------------
+// Example 4: With title
+// ----------------------------------------------------------------------------
+example "grouped bars with title" {
+    out("Grouped bars with custom title")
+    grouped_bars(
+        [0, 1, 2, 3],
+        [[1.35, 3, 2.1, 4], [1.4, 3.3, 1.9, 4.2]],
+        ["Left", "Right"],
+        [[0.2, 0.3, 0.5, 0.4], [0.3, 0.3, 0.4, 0.7]],
+        "Sales Comparison"
+    )
+}

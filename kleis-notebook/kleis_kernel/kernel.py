@@ -21,7 +21,7 @@ class KleisKernel(Kernel):
     implementation = "Kleis"
     implementation_version = "0.1.0"
     language = "kleis"
-    language_version = "0.95"
+    language_version = "0.96"
     language_info = {
         "name": "kleis",
         "mimetype": "text/x-kleis",
@@ -29,7 +29,20 @@ class KleisKernel(Kernel):
         "codemirror_mode": "kleis",
         "pygments_lexer": "kleis",
     }
-    banner = """Kleis - Mathematical Specification Language with Z3 Verification
+    banner = """Kleis v0.96 - Mathematical Specification Language with Z3 Verification
+
+Plotting (Lilaq-style compositional API - https://lilaq.org):
+  diagram(
+      plot(xs, ys, color = "blue", yerr = errors),
+      bar(xs, heights, offset = -0.2, width = 0.4, label = "Series A"),
+      width = 10, height = 7, title = "My Plot"
+  )
+  
+  Elements: plot, scatter, bar, hbar, stem, hstem, fill_between,
+            boxplot, hboxplot, heatmap, contour, quiver
+  
+  Named arguments (v0.96): name = value syntax for options
+  List functions: list_map(λ x . f(x), xs), list_filter, list_fold
 
 REPL Commands:
   :type <expr>    - Show inferred type
@@ -226,7 +239,7 @@ Jupyter Commands:
         """Format Kleis output for Jupyter display."""
         output = stdout + stderr
 
-        # Check for SVG plot output (from plot() and scatter() builtins)
+        # Check for SVG plot output (from diagram(), plot(), scatter() etc.)
         if "PLOT_SVG:" in output:
             # Extract SVG content - find the complete SVG element
             svg_start = output.index("PLOT_SVG:") + 9
@@ -684,7 +697,28 @@ Jupyter Commands:
             "ℕ", "ℤ", "ℝ", "ℂ", "Bool", "Set", "List", "Matrix", "Vector",
             # Built-in functions
             "eval", "sin", "cos", "exp", "log", "sqrt", "det", "trace", "transpose",
-            "eigenvalues", "eigenvectors", "inverse", "norm",
+            "eigenvalues", "eigenvectors", "inverse", "norm", "negate", "out",
+            # Math functions
+            "range", "linspace", "pi", "radians",
+            # Random functions
+            "random", "random_uniform", "random_normal",
+            # Vector functions  
+            "vec_add",
+            # List functions (v0.96)
+            "list_map", "list_filter", "list_fold", "list_zip", "list_nth", "list_length",
+            "list_concat", "list_flatten", "list_slice", "list_rotate", "fst", "snd",
+            # Plotting - Lilaq-style compositional API
+            "diagram", "plot", "scatter", "bar", "hbar", "stem", "hstem",
+            "fill_between", "boxplot", "hboxplot", "heatmap", "contour", "quiver",
+            # Plot named arguments (v0.96 - common options)
+            "width", "height", "title", "xlabel", "ylabel", "label",
+            "color", "stroke", "mark", "mark_size", "yerr", "xerr",
+            "offset", "legend_position", "xaxis_ticks", "xaxis_tick_rotate",
+            "xaxis_subticks", "yaxis_subticks", "yaxis_mirror", "margin_top",
+            # Scatter-specific options
+            "colors", "map", "colormap",
+            # Axis options
+            "xlim", "ylim", "xaxis_tick_unit", "xaxis_tick_suffix", "theme",
             # REPL commands
             ":type", ":eval", ":verify", ":ast", ":env", ":load",
             # Jupyter magic commands

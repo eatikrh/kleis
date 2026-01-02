@@ -2409,67 +2409,48 @@ impl Evaluator {
                 Ok(Some(value))
             }
 
-            // === Plotting ===
-            "plot" => {
-                // plot(x_data, y_data) - generates an SVG plot
-                // plot(x_data, y_data, "title") - with title
-                // Returns SVG wrapped in a special expression
-                self.builtin_plot(args)
-            }
-
-            "scatter" => {
-                // scatter(x_data, y_data) - scatter plot
-                self.builtin_scatter(args)
-            }
-
-            "fill_between" => {
-                // fill_between(x, y1, y2) - shaded area between curves
-                self.builtin_fill_between(args)
-            }
-
-            "bar" => {
-                // bar(labels, heights) or bar(x, heights)
-                self.builtin_bar(args, false)
-            }
-
-            "hbar" => {
-                // hbar(labels, widths) - horizontal bar chart
-                self.builtin_bar(args, true)
-            }
-
-            "stem" => {
-                // stem(x, y) - stem plot
-                self.builtin_stem(args, false)
-            }
-
-            "hstem" => {
-                // hstem(x, y) - horizontal stem plot
-                self.builtin_stem(args, true)
-            }
-
-            "boxplot" => {
-                // boxplot(data1, data2, ...) - box and whisker
-                self.builtin_boxplot(args, false)
-            }
-
-            "hboxplot" => {
-                // hboxplot(data1, data2, ...) - horizontal boxplot
-                self.builtin_boxplot(args, true)
-            }
-
+            // === Plotting (Compositional API - matches Lilaq 1:1) ===
+            //
+            // diagram(options, plot(...), bar(...), scatter(...))
+            //   → Combines elements and renders to SVG
+            //
+            // plot(xs, ys, options) → PlotElement
+            // bar(xs, heights, options) → PlotElement
+            // scatter(xs, ys, options) → PlotElement
+            // etc.
+            //
+            "diagram" => self.builtin_diagram(args),
+            "plot" => self.builtin_plot_element(args, crate::plotting::PlotType::Line),
+            "scatter" => self.builtin_plot_element(args, crate::plotting::PlotType::Scatter),
+            "bar" => self.builtin_plot_element(args, crate::plotting::PlotType::Bar),
+            "hbar" => self.builtin_plot_element(args, crate::plotting::PlotType::HBar),
+            "stem" => self.builtin_plot_element(args, crate::plotting::PlotType::Stem),
+            "hstem" => self.builtin_plot_element(args, crate::plotting::PlotType::HStem),
+            "fill_between" => self.builtin_fill_between_element(args),
+            "stacked_area" => self.builtin_stacked_area(args),
+            "boxplot" => self.builtin_boxplot_element(args, false),
+            "hboxplot" => self.builtin_boxplot_element(args, true),
             "heatmap" | "colormesh" => {
-                // heatmap(matrix) - 2D color grid
-                self.builtin_heatmap(args)
+                self.builtin_matrix_element(args, crate::plotting::PlotType::Colormesh)
             }
-
-            "contour" => {
-                // contour(matrix) or contour(matrix, levels)
-                self.builtin_contour(args)
-            }
-
-            "quiver" => {
-                // quiver(x, y, u, v) - vector field
-                self.builtin_quiver(args)
+            "contour" => self.builtin_matrix_element(args, crate::plotting::PlotType::Contour),
+            "quiver" => self.builtin_quiver_element(args),
+            "place" => self.builtin_place_element(args),
+            "yaxis" | "secondary_yaxis" => self.builtin_yaxis_element(args),
+            "xaxis" | "secondary_xaxis" => self.builtin_xaxis_element(args),
+            "path" => self.builtin_path_element(args),
+            "lighten" => {
+                // lighten(color, amount) → "color.lighten(amount)"
+                // For Typst color manipulation
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let color = self.extract_string(&args[0])?;
+                let amount = self.extract_string(&args[1])?;
+                Ok(Some(Expression::String(format!(
+                    "{}.lighten({})",
+                    color, amount
+                ))))
             }
 
             // === Arithmetic ===
@@ -2532,10 +2513,14 @@ impl Evaluator {
                     if result { "true" } else { "false" }.to_string(),
                 )))
             }
-            "lt" | "<" => self.builtin_comparison(args, |a, b| a < b),
-            "le" | "<=" | "≤" => self.builtin_comparison(args, |a, b| a <= b),
-            "gt" | ">" => self.builtin_comparison(args, |a, b| a > b),
-            "ge" | ">=" | "≥" => self.builtin_comparison(args, |a, b| a >= b),
+            "lt" | "<" | "less_than" => self.builtin_comparison(args, |a, b| a < b),
+            "le" | "<=" | "≤" | "leq" | "less_or_equal" => {
+                self.builtin_comparison(args, |a, b| a <= b)
+            }
+            "gt" | ">" | "greater_than" => self.builtin_comparison(args, |a, b| a > b),
+            "ge" | ">=" | "≥" | "geq" | "greater_or_equal" => {
+                self.builtin_comparison(args, |a, b| a >= b)
+            }
 
             // === Boolean ===
             "and" | "∧" => {
@@ -2839,6 +2824,463 @@ impl Evaluator {
                     ),
                     _ => Ok(None),
                 }
+            }
+            "list_map" => {
+                // list_map(f, [a, b, c]) → [f(a), f(b), f(c)]
+                // Works with Expression::List (bracket lists)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let func = &args[0];
+
+                // Evaluate the list argument first (e.g., linspace(0, 10, 5) → [0, 2.5, ...])
+                let evaluated_list = self.eval_concrete(&args[1])?;
+
+                // Handle Expression::List
+                if let Expression::List(elements) = &evaluated_list {
+                    let mut results = Vec::with_capacity(elements.len());
+                    for elem in elements {
+                        // Apply function using beta reduction
+                        let reduced = self.beta_reduce(func, elem)?;
+                        let result = self.eval_concrete(&reduced)?;
+                        results.push(result);
+                    }
+                    return Ok(Some(Expression::List(results)));
+                }
+
+                // Also handle Cons/Nil lists for compatibility
+                if let Expression::Object(s) = &evaluated_list {
+                    if s == "Nil" {
+                        return Ok(Some(Expression::List(vec![])));
+                    }
+                }
+                if let Expression::Operation {
+                    name, args: inner, ..
+                } = &evaluated_list
+                {
+                    if name == "Nil" {
+                        return Ok(Some(Expression::List(vec![])));
+                    }
+                    if name == "Cons" && inner.len() == 2 {
+                        // Recursively map over Cons list
+                        let head = &inner[0];
+                        let tail = &inner[1];
+
+                        // Apply function to head using beta reduction
+                        let reduced = self.beta_reduce(func, head)?;
+                        let new_head = self.eval_concrete(&reduced)?;
+
+                        // Recursively map over tail
+                        let mapped_tail =
+                            self.apply_builtin("list_map", &[func.clone(), tail.clone()])?;
+                        if let Some(Expression::List(mut tail_elems)) = mapped_tail {
+                            let mut result = vec![new_head];
+                            result.append(&mut tail_elems);
+                            return Ok(Some(Expression::List(result)));
+                        }
+                    }
+                }
+
+                Ok(None)
+            }
+            "list_filter" => {
+                // list_filter(predicate, [a, b, c]) → elements where predicate(x) is true
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let pred = &args[0];
+
+                // Evaluate the list argument first
+                let evaluated_list = self.eval_concrete(&args[1])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    let mut results = Vec::new();
+                    for elem in elements {
+                        // Apply predicate using beta reduction
+                        let reduced = self.beta_reduce(pred, elem)?;
+                        let result = self.eval_concrete(&reduced)?;
+                        // Check if result is truthy
+                        if let Expression::Object(s) = &result {
+                            if s == "true" || s == "True" {
+                                results.push(elem.clone());
+                            }
+                        } else if let Expression::Const(s) = &result {
+                            if s == "true" || s == "True" {
+                                results.push(elem.clone());
+                            }
+                        }
+                    }
+                    return Ok(Some(Expression::List(results)));
+                }
+                Ok(None)
+            }
+            "list_fold" => {
+                // list_fold(f, init, [a, b, c]) → f(f(f(init, a), b), c)
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                let func = &args[0];
+                let init = &args[1];
+
+                // Evaluate the list argument first
+                let evaluated_list = self.eval_concrete(&args[2])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    let mut acc = init.clone();
+                    for elem in elements {
+                        // Apply function: acc = f(acc, elem) using beta reduction
+                        let reduced = self.beta_reduce_multi(func, &[acc, elem.clone()])?;
+                        acc = self.eval_concrete(&reduced)?;
+                    }
+                    return Ok(Some(acc));
+                }
+                Ok(None)
+            }
+            "list_zip" => {
+                // list_zip([a, b, c], [1, 2, 3]) → [(a, 1), (b, 2), (c, 3)]
+                // Returns pairs (tuples) of corresponding elements
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+
+                // Evaluate both list arguments first
+                let evaluated_xs = self.eval_concrete(&args[0])?;
+                let evaluated_ys = self.eval_concrete(&args[1])?;
+
+                if let (Expression::List(xs), Expression::List(ys)) = (&evaluated_xs, &evaluated_ys)
+                {
+                    let pairs: Vec<Expression> = xs
+                        .iter()
+                        .zip(ys.iter())
+                        .map(|(x, y)| Expression::operation("Pair", vec![x.clone(), y.clone()]))
+                        .collect();
+                    return Ok(Some(Expression::List(pairs)));
+                }
+                Ok(None)
+            }
+            "fst" | "first" => {
+                // fst(Pair(a, b)) → a
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                // Evaluate the argument first
+                let evaluated = self.eval_concrete(&args[0])?;
+
+                if let Expression::Operation {
+                    name,
+                    args: pair_args,
+                    ..
+                } = &evaluated
+                {
+                    if name == "Pair" && pair_args.len() == 2 {
+                        return Ok(Some(pair_args[0].clone()));
+                    }
+                }
+                Ok(None)
+            }
+            "snd" | "second" => {
+                // snd(Pair(a, b)) → b
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                // Evaluate the argument first
+                let evaluated = self.eval_concrete(&args[0])?;
+
+                if let Expression::Operation {
+                    name,
+                    args: pair_args,
+                    ..
+                } = &evaluated
+                {
+                    if name == "Pair" && pair_args.len() == 2 {
+                        return Ok(Some(pair_args[1].clone()));
+                    }
+                }
+                Ok(None)
+            }
+            "list_nth" => {
+                // list_nth([a, b, c], 1) → b
+                // Index into a list (0-based)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+
+                // Evaluate the list argument first
+                let evaluated_list = self.eval_concrete(&args[0])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    if let Some(idx) = self.as_number(&args[1]) {
+                        let idx = idx as usize;
+                        if idx < elements.len() {
+                            return Ok(Some(elements[idx].clone()));
+                        }
+                    }
+                }
+                Ok(None)
+            }
+            "list_length" => {
+                // list_length([a, b, c]) → 3
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+
+                // Evaluate the list argument first
+                let evaluated_list = self.eval_concrete(&args[0])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    return Ok(Some(Expression::Const(elements.len().to_string())));
+                }
+                Ok(None)
+            }
+            "list_concat" | "list_append" => {
+                // list_concat([a, b], [c, d]) → [a, b, c, d]
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                // Evaluate both list arguments first
+                let evaluated_xs = self.eval_concrete(&args[0])?;
+                let evaluated_ys = self.eval_concrete(&args[1])?;
+
+                if let (Expression::List(xs), Expression::List(ys)) = (&evaluated_xs, &evaluated_ys)
+                {
+                    let mut result = xs.clone();
+                    result.extend(ys.clone());
+                    return Ok(Some(Expression::List(result)));
+                }
+                Ok(None)
+            }
+            "list_flatten" | "list_join" => {
+                // list_flatten([[a, b], [c, d]]) → [a, b, c, d]
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                // Evaluate the list argument first
+                let evaluated_list = self.eval_concrete(&args[0])?;
+
+                if let Expression::List(outer) = &evaluated_list {
+                    let mut result = Vec::new();
+                    for item in outer {
+                        // Also evaluate each inner item in case it's unevaluated
+                        let evaluated_item = self.eval_concrete(item)?;
+                        if let Expression::List(inner) = evaluated_item {
+                            result.extend(inner);
+                        } else {
+                            result.push(evaluated_item);
+                        }
+                    }
+                    return Ok(Some(Expression::List(result)));
+                }
+                Ok(None)
+            }
+            "list_slice" => {
+                // list_slice([a, b, c, d], 1, 3) → [b, c] (from index 1 up to but not including 3)
+                if args.len() < 2 {
+                    return Ok(None);
+                }
+                // Evaluate the list argument first
+                let evaluated_list = self.eval_concrete(&args[0])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    let start = if args.len() >= 2 {
+                        self.extract_f64(&args[1]).unwrap_or(0.0) as usize
+                    } else {
+                        0
+                    };
+                    let end = if args.len() >= 3 {
+                        self.extract_f64(&args[2]).unwrap_or(elements.len() as f64) as usize
+                    } else {
+                        elements.len()
+                    };
+                    let end = end.min(elements.len());
+                    let start = start.min(end);
+                    return Ok(Some(Expression::List(elements[start..end].to_vec())));
+                }
+                Ok(None)
+            }
+            "list_rotate" => {
+                // list_rotate([a, b, c], 1) → [b, c, a] (rotate left by 1)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                // Evaluate the list argument first
+                let evaluated_list = self.eval_concrete(&args[0])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    let n = self.extract_f64(&args[1]).unwrap_or(0.0) as usize;
+                    if elements.is_empty() {
+                        return Ok(Some(Expression::List(vec![])));
+                    }
+                    let n = n % elements.len();
+                    let mut result = elements[n..].to_vec();
+                    result.extend(elements[..n].to_vec());
+                    return Ok(Some(Expression::List(result)));
+                }
+                Ok(None)
+            }
+
+            // ============================================
+            // MATH FUNCTIONS
+            // ============================================
+            "range" => {
+                // range(n) → [0, 1, 2, ..., n-1]
+                // range(start, end) → [start, start+1, ..., end-1]
+                if args.is_empty() {
+                    return Ok(None);
+                }
+                let (start, end) = if args.len() == 1 {
+                    (0, self.extract_f64(&args[0])? as i64)
+                } else {
+                    (
+                        self.extract_f64(&args[0])? as i64,
+                        self.extract_f64(&args[1])? as i64,
+                    )
+                };
+                let result: Vec<Expression> = (start..end)
+                    .map(|i| Expression::Const(i.to_string()))
+                    .collect();
+                Ok(Some(Expression::List(result)))
+            }
+            "linspace" => {
+                // linspace(start, end) → 50 evenly spaced values (default)
+                // linspace(start, end, count) → count evenly spaced values
+                if args.len() < 2 {
+                    return Err("linspace requires at least start and end".to_string());
+                }
+                let start = self.extract_f64(&args[0])?;
+                let end = self.extract_f64(&args[1])?;
+                let count = if args.len() >= 3 {
+                    self.extract_f64(&args[2])? as usize
+                } else {
+                    50 // Default like numpy/Lilaq
+                };
+                if count == 0 {
+                    return Ok(Some(Expression::List(vec![])));
+                }
+                if count == 1 {
+                    return Ok(Some(Expression::List(vec![Expression::Const(
+                        start.to_string(),
+                    )])));
+                }
+                let step = (end - start) / (count - 1) as f64;
+                let result: Vec<Expression> = (0..count)
+                    .map(|i| Expression::Const((start + i as f64 * step).to_string()))
+                    .collect();
+                Ok(Some(Expression::List(result)))
+            }
+            "random" | "random_uniform" => {
+                // random(count) → list of pseudo-random values in [0, 1]
+                // random(count, seed) → reproducible random values
+                // Uses a simple LCG for reproducibility
+                if args.is_empty() {
+                    return Err("random requires count".to_string());
+                }
+                let count = self.extract_f64(&args[0])? as usize;
+                let seed = if args.len() >= 2 {
+                    self.extract_f64(&args[1])? as u64
+                } else {
+                    42 // Default seed
+                };
+                // Simple LCG: x_{n+1} = (a * x_n + c) mod m
+                let a: u64 = 1664525;
+                let c: u64 = 1013904223;
+                let m: u64 = 1 << 32;
+                let mut x = seed;
+                let result: Vec<Expression> = (0..count)
+                    .map(|_| {
+                        x = (a.wrapping_mul(x).wrapping_add(c)) % m;
+                        Expression::Const((x as f64 / m as f64).to_string())
+                    })
+                    .collect();
+                Ok(Some(Expression::List(result)))
+            }
+            "random_normal" => {
+                // random_normal(count) → list of pseudo-random values from N(0, 1)
+                // random_normal(count, seed) → reproducible
+                // random_normal(count, seed, scale) → N(0, scale)
+                // Uses Box-Muller transform
+                if args.is_empty() {
+                    return Err("random_normal requires count".to_string());
+                }
+                let count = self.extract_f64(&args[0])? as usize;
+                let seed = if args.len() >= 2 {
+                    self.extract_f64(&args[1])? as u64
+                } else {
+                    42
+                };
+                let scale = if args.len() >= 3 {
+                    self.extract_f64(&args[2])?
+                } else {
+                    1.0
+                };
+                // Simple LCG
+                let a: u64 = 1664525;
+                let c: u64 = 1013904223;
+                let m: u64 = 1 << 32;
+                let mut x = seed;
+                let mut uniform = || {
+                    x = (a.wrapping_mul(x).wrapping_add(c)) % m;
+                    (x as f64 / m as f64).max(1e-10) // Avoid log(0)
+                };
+                // Box-Muller transform
+                let mut result: Vec<Expression> = Vec::with_capacity(count);
+                while result.len() < count {
+                    let u1 = uniform();
+                    let u2 = uniform();
+                    let z0 = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
+                    let z1 = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).sin();
+                    result.push(Expression::Const((z0 * scale).to_string()));
+                    if result.len() < count {
+                        result.push(Expression::Const((z1 * scale).to_string()));
+                    }
+                }
+                Ok(Some(Expression::List(result)))
+            }
+            "vec_add" => {
+                // Element-wise vector addition: vec_add([a, b], [c, d]) = [a+c, b+d]
+                if args.len() != 2 {
+                    return Err("vec_add requires two lists".to_string());
+                }
+                let list1 = self.extract_number_list_v2(&args[0])?;
+                let list2 = self.extract_number_list_v2(&args[1])?;
+                if list1.len() != list2.len() {
+                    return Err("vec_add: lists must have same length".to_string());
+                }
+                let result: Vec<Expression> = list1
+                    .iter()
+                    .zip(list2.iter())
+                    .map(|(a, b)| Expression::Const((a + b).to_string()))
+                    .collect();
+                Ok(Some(Expression::List(result)))
+            }
+            "cos" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.cos().to_string())))
+            }
+            "sin" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.sin().to_string())))
+            }
+            "sqrt" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.sqrt().to_string())))
+            }
+            "pi" => Ok(Some(Expression::Const(std::f64::consts::PI.to_string()))),
+            "deg_to_rad" | "radians" => {
+                // Convert degrees to radians
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let deg = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(deg.to_radians().to_string())))
             }
 
             // ============================================
@@ -4654,462 +5096,100 @@ impl Evaluator {
 
     // === Plotting helpers ===
 
-    fn builtin_plot(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
-        // plot(x_data, y_data) or plot(x_data, y_data, "title")
-        if args.len() < 2 || args.len() > 3 {
-            return Err("plot() takes 2 or 3 arguments: plot(x_data, y_data) or plot(x_data, y_data, \"title\")".to_string());
-        }
+    // =========================================================================
+    // COMPOSITIONAL PLOTTING API (matches Lilaq 1:1)
+    // =========================================================================
 
-        // Extract x and y data as lists of numbers
-        let x_data = self.extract_number_list_v2(&args[0])?;
-        let y_data = self.extract_number_list_v2(&args[1])?;
-
-        if x_data.len() != y_data.len() {
-            return Err(format!(
-                "plot(): x_data and y_data must have same length (got {} and {})",
-                x_data.len(),
-                y_data.len()
-            ));
-        }
-
-        // Optional title
-        let title = if args.len() == 3 {
-            self.extract_string(&args[2]).ok()
-        } else {
-            None
-        };
-
-        // Generate plot
-        let config = crate::plotting::PlotConfig {
-            title,
-            ..Default::default()
-        };
-
-        let code = crate::plotting::generate_lilaq_code(&x_data, &y_data, &config);
-
-        match crate::plotting::compile_to_svg(&code) {
-            Ok(output) => {
-                // Return SVG wrapped in special expression for display
-                // Format: PlotSVG(svg_content, width, height)
-                println!("PLOT_SVG:{}", output.svg);
-                Ok(Some(Expression::operation(
-                    "PlotSVG",
-                    vec![
-                        Expression::Const(format!("{:.0}", output.width)),
-                        Expression::Const(format!("{:.0}", output.height)),
-                    ],
-                )))
-            }
-            Err(e) => Err(format!("plot() failed: {}", e)),
-        }
-    }
-
-    fn builtin_scatter(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
-        // scatter(x_data, y_data) or scatter(x_data, y_data, "title")
-        if args.len() < 2 || args.len() > 3 {
-            return Err("scatter() takes 2 or 3 arguments".to_string());
-        }
-
-        let x_data = self.extract_number_list_v2(&args[0])?;
-        let y_data = self.extract_number_list_v2(&args[1])?;
-
-        if x_data.len() != y_data.len() {
-            return Err(format!(
-                "scatter(): x_data and y_data must have same length (got {} and {})",
-                x_data.len(),
-                y_data.len()
-            ));
-        }
-
-        let title = if args.len() == 3 {
-            self.extract_string(&args[2]).ok()
-        } else {
-            None
-        };
-
-        let config = crate::plotting::PlotConfig {
-            plot_type: crate::plotting::PlotType::Scatter,
-            title,
-            mark: Some("o".to_string()),
-            ..Default::default()
-        };
-
-        let code = crate::plotting::generate_lilaq_code(&x_data, &y_data, &config);
-
-        match crate::plotting::compile_to_svg(&code) {
-            Ok(output) => {
-                println!("PLOT_SVG:{}", output.svg);
-                Ok(Some(Expression::operation(
-                    "PlotSVG",
-                    vec![
-                        Expression::Const(format!("{:.0}", output.width)),
-                        Expression::Const(format!("{:.0}", output.height)),
-                    ],
-                )))
-            }
-            Err(e) => Err(format!("scatter() failed: {}", e)),
-        }
-    }
-
-    fn builtin_fill_between(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
-        // fill_between(x, y) or fill_between(x, y, "title")
-        // Fills the area between y and y=0
-        if args.len() < 2 || args.len() > 3 {
-            return Err(
-                "fill_between() takes 2 or 3 arguments: fill_between(x, y) or fill_between(x, y, \"title\")".to_string(),
-            );
-        }
-
-        let x_data = self.extract_number_list_v2(&args[0])?;
-        let y_data = self.extract_number_list_v2(&args[1])?;
-
-        if x_data.len() != y_data.len() {
-            return Err(format!(
-                "fill_between(): arrays must have same length (got {}, {})",
-                x_data.len(),
-                y_data.len()
-            ));
-        }
-
-        let title = if args.len() == 3 {
-            self.extract_string(&args[2]).ok()
-        } else {
-            None
-        };
-
-        let config = crate::plotting::PlotConfig {
-            plot_type: crate::plotting::PlotType::FillBetween,
-            title,
-            ..Default::default()
-        };
-
-        let code = crate::plotting::generate_fill_between_code(&x_data, &y_data, &config);
-
-        match crate::plotting::compile_to_svg(&code) {
-            Ok(output) => {
-                println!("PLOT_SVG:{}", output.svg);
-                Ok(Some(Expression::operation(
-                    "PlotSVG",
-                    vec![
-                        Expression::Const(format!("{:.0}", output.width)),
-                        Expression::Const(format!("{:.0}", output.height)),
-                    ],
-                )))
-            }
-            Err(e) => Err(format!("fill_between() failed: {}", e)),
-        }
-    }
-
-    fn builtin_bar(
-        &self,
-        args: &[Expression],
-        horizontal: bool,
-    ) -> Result<Option<Expression>, String> {
-        let func_name = if horizontal { "hbar" } else { "bar" };
-
-        if args.len() < 2 || args.len() > 3 {
-            return Err(format!(
-                "{}() takes 2 or 3 arguments: {}(x, heights) or {}(x, heights, \"title\")",
-                func_name, func_name, func_name
-            ));
-        }
-
-        let x_data = self.extract_number_list_v2(&args[0])?;
-        let heights = self.extract_number_list_v2(&args[1])?;
-
-        if x_data.len() != heights.len() {
-            return Err(format!(
-                "{}(): x and heights must have same length (got {} and {})",
-                func_name,
-                x_data.len(),
-                heights.len()
-            ));
-        }
-
-        let title = if args.len() == 3 {
-            self.extract_string(&args[2]).ok()
-        } else {
-            None
-        };
-
-        let config = crate::plotting::PlotConfig {
-            plot_type: if horizontal {
-                crate::plotting::PlotType::HBar
-            } else {
-                crate::plotting::PlotType::Bar
-            },
-            title,
-            ..Default::default()
-        };
-
-        let code = crate::plotting::generate_bar_chart_code(&x_data, &heights, &config);
-
-        match crate::plotting::compile_to_svg(&code) {
-            Ok(output) => {
-                println!("PLOT_SVG:{}", output.svg);
-                Ok(Some(Expression::operation(
-                    "PlotSVG",
-                    vec![
-                        Expression::Const(format!("{:.0}", output.width)),
-                        Expression::Const(format!("{:.0}", output.height)),
-                    ],
-                )))
-            }
-            Err(e) => Err(format!("{}() failed: {}", func_name, e)),
-        }
-    }
-
-    fn builtin_stem(
-        &self,
-        args: &[Expression],
-        horizontal: bool,
-    ) -> Result<Option<Expression>, String> {
-        let func_name = if horizontal { "hstem" } else { "stem" };
-
-        if args.len() < 2 || args.len() > 3 {
-            return Err(format!(
-                "{}() takes 2 or 3 arguments: {}(x, y) or {}(x, y, \"title\")",
-                func_name, func_name, func_name
-            ));
-        }
-
-        let x_data = self.extract_number_list_v2(&args[0])?;
-        let y_data = self.extract_number_list_v2(&args[1])?;
-
-        if x_data.len() != y_data.len() {
-            return Err(format!(
-                "{}(): x and y must have same length (got {} and {})",
-                func_name,
-                x_data.len(),
-                y_data.len()
-            ));
-        }
-
-        let title = if args.len() == 3 {
-            self.extract_string(&args[2]).ok()
-        } else {
-            None
-        };
-
-        let config = crate::plotting::PlotConfig {
-            plot_type: if horizontal {
-                crate::plotting::PlotType::HStem
-            } else {
-                crate::plotting::PlotType::Stem
-            },
-            title,
-            ..Default::default()
-        };
-
-        let code = crate::plotting::generate_lilaq_code(&x_data, &y_data, &config);
-
-        match crate::plotting::compile_to_svg(&code) {
-            Ok(output) => {
-                println!("PLOT_SVG:{}", output.svg);
-                Ok(Some(Expression::operation(
-                    "PlotSVG",
-                    vec![
-                        Expression::Const(format!("{:.0}", output.width)),
-                        Expression::Const(format!("{:.0}", output.height)),
-                    ],
-                )))
-            }
-            Err(e) => Err(format!("{}() failed: {}", func_name, e)),
-        }
-    }
-
-    fn builtin_boxplot(
-        &self,
-        args: &[Expression],
-        horizontal: bool,
-    ) -> Result<Option<Expression>, String> {
-        let func_name = if horizontal { "hboxplot" } else { "boxplot" };
+    /// diagram(options, element1, element2, ...) - Compose plot elements and render to SVG
+    fn builtin_diagram(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::plotting::{compile_diagram, DiagramOptions, PlotElement};
 
         if args.is_empty() {
-            return Err(format!(
-                "{}() requires at least one dataset: {}(data1, data2, ...)",
-                func_name, func_name
-            ));
+            return Err("diagram() requires at least one plot element".to_string());
         }
 
-        // Each argument is a dataset (list of numbers)
-        let mut datasets = Vec::new();
-        for (i, arg) in args.iter().enumerate() {
-            match self.extract_number_list_v2(arg) {
-                Ok(data) => datasets.push(data),
-                Err(e) => {
-                    return Err(format!(
-                        "{}(): argument {} is not a valid number list: {}",
-                        func_name,
-                        i + 1,
-                        e
-                    ))
+        let mut options = DiagramOptions::default();
+        let mut elements: Vec<PlotElement> = Vec::new();
+
+        // v0.96: Named arguments produce a trailing record
+        // Check both first arg (legacy) and last arg (v0.96 style)
+        let mut start_idx = 0;
+        let mut end_idx = args.len();
+
+        // Check first arg for options record (legacy style)
+        if let Some(Expression::Operation {
+            name, args: opts, ..
+        }) = args.first()
+        {
+            if name == "record" {
+                self.parse_diagram_options(opts, &mut options)?;
+                start_idx = 1;
+            }
+        }
+
+        // Check last arg for options record (v0.96 named arguments style)
+        if end_idx > start_idx {
+            if let Some(Expression::Operation {
+                name, args: opts, ..
+            }) = args.last()
+            {
+                if name == "record" {
+                    self.parse_diagram_options(opts, &mut options)?;
+                    end_idx = args.len() - 1;
                 }
             }
         }
 
-        let config = crate::plotting::PlotConfig {
-            plot_type: if horizontal {
-                crate::plotting::PlotType::HBoxplot
+        // Collect plot elements from middle args
+        for arg in &args[start_idx..end_idx] {
+            let evaluated = self.eval_concrete(arg)?;
+
+            // Handle lists of PlotElements (for dynamic generation with list_map)
+            if let Expression::List(list_elements) = &evaluated {
+                for list_elem in list_elements {
+                    if let Expression::Operation { name, .. } = list_elem {
+                        if name == "PlotElement" {
+                            let element = self.decode_plot_element(list_elem)?;
+                            elements.push(element);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            if let Expression::Operation {
+                name,
+                args: _elem_args,
+                ..
+            } = &evaluated
+            {
+                if name == "PlotElement" {
+                    // Decode PlotElement from expression
+                    let element = self.decode_plot_element(&evaluated)?;
+                    elements.push(element);
+                } else if name == "record" {
+                    // Skip stray records (already processed)
+                    continue;
+                } else {
+                    return Err(format!(
+                        "diagram() expects PlotElement, got: {}(). Use plot(), bar(), scatter(), etc.",
+                        name
+                    ));
+                }
             } else {
-                crate::plotting::PlotType::Boxplot
-            },
-            ..Default::default()
-        };
-
-        let code = crate::plotting::generate_boxplot_code(&datasets, &config);
-
-        match crate::plotting::compile_to_svg(&code) {
-            Ok(output) => {
-                println!("PLOT_SVG:{}", output.svg);
-                Ok(Some(Expression::operation(
-                    "PlotSVG",
-                    vec![
-                        Expression::Const(format!("{:.0}", output.width)),
-                        Expression::Const(format!("{:.0}", output.height)),
-                    ],
-                )))
-            }
-            Err(e) => Err(format!("{}() failed: {}", func_name, e)),
-        }
-    }
-
-    fn builtin_heatmap(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
-        if args.is_empty() || args.len() > 2 {
-            return Err(
-                "heatmap() takes 1 or 2 arguments: heatmap(matrix) or heatmap(matrix, \"title\")"
-                    .to_string(),
-            );
-        }
-
-        // Extract matrix (list of lists)
-        let matrix = self.extract_f64_matrix(&args[0])?;
-
-        let title = if args.len() == 2 {
-            self.extract_string(&args[1]).ok()
-        } else {
-            None
-        };
-
-        let config = crate::plotting::PlotConfig {
-            plot_type: crate::plotting::PlotType::Colormesh,
-            title,
-            ..Default::default()
-        };
-
-        let code = crate::plotting::generate_heatmap_code(&matrix, &config);
-
-        match crate::plotting::compile_to_svg(&code) {
-            Ok(output) => {
-                println!("PLOT_SVG:{}", output.svg);
-                Ok(Some(Expression::operation(
-                    "PlotSVG",
-                    vec![
-                        Expression::Const(format!("{:.0}", output.width)),
-                        Expression::Const(format!("{:.0}", output.height)),
-                    ],
-                )))
-            }
-            Err(e) => Err(format!("heatmap() failed: {}", e)),
-        }
-    }
-
-    fn builtin_contour(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
-        if args.is_empty() || args.len() > 3 {
-            return Err(
-                "contour() takes 1-3 arguments: contour(matrix), contour(matrix, levels), or contour(matrix, levels, \"title\")"
-                    .to_string(),
-            );
-        }
-
-        let matrix = self.extract_f64_matrix(&args[0])?;
-
-        let levels = if args.len() >= 2 {
-            Some(self.extract_number_list_v2(&args[1])?)
-        } else {
-            None
-        };
-
-        let title = if args.len() == 3 {
-            self.extract_string(&args[2]).ok()
-        } else {
-            None
-        };
-
-        let config = crate::plotting::PlotConfig {
-            plot_type: crate::plotting::PlotType::Contour,
-            title,
-            ..Default::default()
-        };
-
-        let code = crate::plotting::generate_contour_code(&matrix, levels.as_deref(), &config);
-
-        match crate::plotting::compile_to_svg(&code) {
-            Ok(output) => {
-                println!("PLOT_SVG:{}", output.svg);
-                Ok(Some(Expression::operation(
-                    "PlotSVG",
-                    vec![
-                        Expression::Const(format!("{:.0}", output.width)),
-                        Expression::Const(format!("{:.0}", output.height)),
-                    ],
-                )))
-            }
-            Err(e) => Err(format!("contour() failed: {}", e)),
-        }
-    }
-
-    fn builtin_quiver(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
-        // quiver(x_coords, y_coords, directions) where directions is a 2D grid of [u, v] pairs
-        // Each row in directions corresponds to a y coordinate, each column to an x coordinate
-        if args.len() < 3 || args.len() > 4 {
-            return Err(
-                "quiver() takes 3 or 4 arguments: quiver(x_coords, y_coords, directions) or quiver(x_coords, y_coords, directions, \"title\")"
-                    .to_string(),
-            );
-        }
-
-        let x_coords = self.extract_number_list_v2(&args[0])?;
-        let y_coords = self.extract_number_list_v2(&args[1])?;
-
-        // Extract directions as a 2D grid of [u, v] pairs
-        let directions = self.extract_direction_grid(&args[2])?;
-
-        // Validate dimensions: directions should be y_coords.len() x x_coords.len()
-        if directions.len() != y_coords.len() {
-            return Err(format!(
-                "quiver(): directions rows ({}) must match y_coords length ({})",
-                directions.len(),
-                y_coords.len()
-            ));
-        }
-        for (i, row) in directions.iter().enumerate() {
-            if row.len() != x_coords.len() {
                 return Err(format!(
-                    "quiver(): directions row {} length ({}) must match x_coords length ({})",
-                    i,
-                    row.len(),
-                    x_coords.len()
+                    "diagram() expects PlotElement, got: {:?}",
+                    evaluated
                 ));
             }
         }
 
-        let title = if args.len() == 4 {
-            self.extract_string(&args[3]).ok()
-        } else {
-            None
-        };
+        if elements.is_empty() {
+            return Err("diagram() requires at least one plot element".to_string());
+        }
 
-        let config = crate::plotting::PlotConfig {
-            plot_type: crate::plotting::PlotType::Quiver,
-            title,
-            ..Default::default()
-        };
-
-        let code =
-            crate::plotting::generate_quiver_code(&x_coords, &y_coords, &directions, &config);
-
-        match crate::plotting::compile_to_svg(&code) {
+        // Compile to SVG
+        match compile_diagram(&elements, &options) {
             Ok(output) => {
                 println!("PLOT_SVG:{}", output.svg);
                 Ok(Some(Expression::operation(
@@ -5120,76 +5200,926 @@ impl Evaluator {
                     ],
                 )))
             }
-            Err(e) => Err(format!("quiver() failed: {}", e)),
+            Err(e) => Err(format!("diagram() failed: {}", e)),
         }
     }
 
-    /// Extract a 2D grid of (u, v) direction pairs for quiver plots
-    fn extract_direction_grid(&self, expr: &Expression) -> Result<Vec<Vec<(f64, f64)>>, String> {
+    /// Parse diagram options from a record expression
+    fn parse_diagram_options(
+        &self,
+        opts: &[Expression],
+        options: &mut crate::plotting::DiagramOptions,
+    ) -> Result<(), String> {
+        for opt in opts {
+            if let Expression::Operation { name, args, .. } = opt {
+                if name == "field" && args.len() == 2 {
+                    let key = self.extract_string(&args[0])?;
+                    match key.as_str() {
+                        "width" => options.width = Some(self.extract_f64(&args[1])?),
+                        "height" => options.height = Some(self.extract_f64(&args[1])?),
+                        "title" => options.title = Some(self.extract_string(&args[1])?),
+                        "xlabel" => options.xlabel = Some(self.extract_string(&args[1])?),
+                        "ylabel" => options.ylabel = Some(self.extract_string(&args[1])?),
+                        "xscale" => options.xscale = Some(self.extract_string(&args[1])?),
+                        "yscale" => options.yscale = Some(self.extract_string(&args[1])?),
+                        "legend" | "legend_position" => {
+                            options.legend_position = Some(self.extract_string(&args[1])?)
+                        }
+                        "grid" => options.grid = Some(self.extract_bool(&args[1])?),
+                        "fill" => options.fill = Some(self.extract_string(&args[1])?),
+                        "aspect_ratio" => options.aspect_ratio = Some(self.extract_f64(&args[1])?),
+                        "xaxis_subticks" | "x_subticks" => {
+                            options.xaxis_subticks = Some(self.extract_string(&args[1])?)
+                        }
+                        "yaxis_subticks" | "y_subticks" => {
+                            options.yaxis_subticks = Some(self.extract_string(&args[1])?)
+                        }
+                        "yaxis_mirror" | "y_mirror" => {
+                            options.yaxis_mirror = Some(self.extract_bool(&args[1])?)
+                        }
+                        "margin_top" => options.margin_top = Some(self.extract_string(&args[1])?),
+                        "margin_bottom" => {
+                            options.margin_bottom = Some(self.extract_string(&args[1])?)
+                        }
+                        "margin_left" => options.margin_left = Some(self.extract_string(&args[1])?),
+                        "margin_right" => {
+                            options.margin_right = Some(self.extract_string(&args[1])?)
+                        }
+                        "xaxis_ticks" | "x_ticks" => {
+                            options.xaxis_ticks = Some(self.extract_string_list(&args[1])?)
+                        }
+                        "xaxis_tick_rotate" | "x_tick_rotate" => {
+                            options.xaxis_tick_rotate = Some(self.extract_f64(&args[1])?)
+                        }
+                        "xaxis_ticks_none" | "hide_xaxis_ticks" => {
+                            options.xaxis_ticks_none = Some(self.extract_bool(&args[1])?)
+                        }
+                        "yaxis_ticks_none" | "hide_yaxis_ticks" => {
+                            options.yaxis_ticks_none = Some(self.extract_bool(&args[1])?)
+                        }
+                        "xaxis_tick_unit" | "x_tick_unit" => {
+                            options.xaxis_tick_unit = Some(self.extract_f64(&args[1])?)
+                        }
+                        "xaxis_tick_suffix" | "x_tick_suffix" => {
+                            options.xaxis_tick_suffix = Some(self.extract_string(&args[1])?)
+                        }
+                        "yaxis_tick_unit" | "y_tick_unit" => {
+                            options.yaxis_tick_unit = Some(self.extract_f64(&args[1])?)
+                        }
+                        "yaxis_tick_suffix" | "y_tick_suffix" => {
+                            options.yaxis_tick_suffix = Some(self.extract_string(&args[1])?)
+                        }
+                        "xlim" | "x_lim" => {
+                            let limits = self.extract_f64_list_from_diagram_option(&args[1])?;
+                            if limits.len() >= 2 {
+                                options.xlim = Some((limits[0], limits[1]));
+                            }
+                        }
+                        "ylim" | "y_lim" => {
+                            let limits = self.extract_f64_list_from_diagram_option(&args[1])?;
+                            if limits.len() >= 2 {
+                                options.ylim = Some((limits[0], limits[1]));
+                            }
+                        }
+                        "theme" => options.theme = Some(self.extract_string(&args[1])?),
+                        _ => {} // Ignore unknown options
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// plot(xs, ys), bar(xs, heights), etc. - Create a PlotElement (not rendered yet)
+    fn builtin_plot_element(
+        &self,
+        args: &[Expression],
+        plot_type: crate::plotting::PlotType,
+    ) -> Result<Option<Expression>, String> {
+        use crate::plotting::PlotType;
+
+        if args.len() < 2 {
+            return Err(format!(
+                "{}() requires at least 2 arguments: x_data, y_data",
+                match plot_type {
+                    PlotType::Line => "plot",
+                    PlotType::Scatter => "scatter",
+                    PlotType::Bar => "bar",
+                    PlotType::HBar => "hbar",
+                    PlotType::Stem => "stem",
+                    PlotType::HStem => "hstem",
+                    PlotType::FillBetween => "fill_between",
+                    _ => "plot",
+                }
+            ));
+        }
+
+        let x_data = self.extract_number_list_v2(&args[0])?;
+        let y_data = self.extract_number_list_v2(&args[1])?;
+
+        if x_data.len() != y_data.len() {
+            return Err(format!(
+                "x_data and y_data must have same length (got {} and {})",
+                x_data.len(),
+                y_data.len()
+            ));
+        }
+
+        // Build PlotElement expression with encoded data
+        let mut element_args = vec![
+            Expression::Const(format!("{:?}", plot_type)),
+            self.encode_f64_list(&x_data),
+            self.encode_f64_list(&y_data),
+        ];
+
+        // Parse options if present
+        if args.len() >= 3 {
+            element_args.push(args[2].clone());
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
+    /// boxplot(data...) - Create a boxplot PlotElement
+    fn builtin_boxplot_element(
+        &self,
+        args: &[Expression],
+        horizontal: bool,
+    ) -> Result<Option<Expression>, String> {
+        if args.is_empty() {
+            return Err("boxplot() requires at least one dataset".to_string());
+        }
+
+        // Extract datasets
+        let mut datasets = Vec::new();
+        for arg in args {
+            let data = self.extract_number_list_v2(arg)?;
+            datasets.push(data);
+        }
+
+        let plot_type = if horizontal {
+            crate::plotting::PlotType::HBoxplot
+        } else {
+            crate::plotting::PlotType::Boxplot
+        };
+
+        // Encode datasets as nested list
+        let datasets_expr =
+            Expression::List(datasets.iter().map(|d| self.encode_f64_list(d)).collect());
+
+        Ok(Some(Expression::operation(
+            "PlotElement",
+            vec![Expression::Const(format!("{:?}", plot_type)), datasets_expr],
+        )))
+    }
+
+    /// heatmap(matrix) or contour(matrix) - Create matrix-based PlotElement
+    fn builtin_matrix_element(
+        &self,
+        args: &[Expression],
+        plot_type: crate::plotting::PlotType,
+    ) -> Result<Option<Expression>, String> {
+        if args.is_empty() {
+            return Err("heatmap/contour() requires a matrix".to_string());
+        }
+
+        let matrix = self.extract_f64_matrix(&args[0])?;
+
+        // Encode matrix
+        let matrix_expr =
+            Expression::List(matrix.iter().map(|row| self.encode_f64_list(row)).collect());
+
+        let mut element_args = vec![Expression::Const(format!("{:?}", plot_type)), matrix_expr];
+
+        // Parse options if present
+        if args.len() >= 2 {
+            element_args.push(args[1].clone());
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
+    /// quiver(xs, ys, directions) - Create vector field PlotElement
+    fn builtin_quiver_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() < 3 {
+            return Err("quiver() requires: x_coords, y_coords, directions".to_string());
+        }
+
+        let x_coords = self.extract_number_list_v2(&args[0])?;
+        let y_coords = self.extract_number_list_v2(&args[1])?;
+        let dir_matrix = self.extract_f64_matrix(&args[2])?;
+
+        // Encode data
+        let x_expr = self.encode_f64_list(&x_coords);
+        let y_expr = self.encode_f64_list(&y_coords);
+        let dir_expr = Expression::List(
+            dir_matrix
+                .iter()
+                .map(|row| self.encode_f64_list(row))
+                .collect(),
+        );
+
+        let mut element_args = vec![
+            Expression::Const("Quiver".to_string()),
+            x_expr,
+            y_expr,
+            dir_expr,
+        ];
+
+        // Parse options if present
+        if args.len() >= 4 {
+            element_args.push(args[3].clone());
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
+    /// place(x, y, text, align = "top") - Text annotation at coordinates
+    fn builtin_place_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() < 3 {
+            return Err("place() requires: x, y, text".to_string());
+        }
+
+        let x = self.extract_f64(&args[0])?;
+        let y = self.extract_f64(&args[1])?;
+        let text = self.extract_string(&args[2])?;
+
+        let mut element_args = vec![
+            Expression::Const("Place".to_string()),
+            self.encode_f64_list(&[x]),
+            self.encode_f64_list(&[y]),
+            Expression::String(text),
+        ];
+
+        // Parse options if present (trailing record from named arguments)
+        if args.len() >= 4 {
+            element_args.push(args[3].clone());
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
+    /// yaxis(position = "right", label = "...", child_elements...) - Secondary y-axis
+    fn builtin_yaxis_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        // yaxis can contain child plot elements and options
+        // yaxis(bar(...), plot(...), position = "right", label = "...")
+
+        let mut child_elements: Vec<Expression> = Vec::new();
+        let mut options_record: Option<Expression> = None;
+
+        for arg in args {
+            let evaluated = self.eval_concrete(arg)?;
+
+            // Check for options record
+            if let Expression::Operation { name, .. } = &evaluated {
+                if name == "record" {
+                    options_record = Some(evaluated.clone());
+                    continue;
+                }
+                if name == "PlotElement" {
+                    child_elements.push(evaluated);
+                    continue;
+                }
+            }
+
+            // Try to evaluate as a plot element
+            if let Expression::Operation { name, .. } = &arg {
+                if name == "PlotElement" {
+                    child_elements.push(arg.clone());
+                }
+            }
+        }
+
+        let mut element_args = vec![
+            Expression::Const("SecondaryYAxis".to_string()),
+            Expression::List(child_elements),
+        ];
+
+        if let Some(opts) = options_record {
+            element_args.push(opts);
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
+    /// xaxis(position = "top", label = "...", functions = ("x => k/x", "x => k/x")) - Secondary x-axis
+    fn builtin_xaxis_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        // xaxis can contain child plot elements and options
+        // xaxis(plot(...), position = "top", label = "Energy (eV)", functions = ...)
+
+        let mut child_elements: Vec<Expression> = Vec::new();
+        let mut options_record: Option<Expression> = None;
+
+        for arg in args {
+            let evaluated = self.eval_concrete(arg)?;
+
+            // Check for options record
+            if let Expression::Operation { name, .. } = &evaluated {
+                if name == "record" {
+                    options_record = Some(evaluated.clone());
+                    continue;
+                }
+                if name == "PlotElement" {
+                    child_elements.push(evaluated);
+                    continue;
+                }
+            }
+
+            // Try to evaluate as a plot element
+            if let Expression::Operation { name, .. } = &arg {
+                if name == "PlotElement" {
+                    child_elements.push(arg.clone());
+                }
+            }
+        }
+
+        let mut element_args = vec![
+            Expression::Const("SecondaryXAxis".to_string()),
+            Expression::List(child_elements),
+        ];
+
+        if let Some(opts) = options_record {
+            element_args.push(opts);
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
+    /// path(points, fill = "blue", closed = true) - Arbitrary path for polygons/fractals
+    fn builtin_path_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        // path can take:
+        // - A list of (x, y) pairs: path([(0,0), (1,1), (2,0)])
+        // - Separate x and y lists: path(xs, ys)
+        // - Options: fill, stroke, closed
+
+        let mut x_data: Vec<f64> = Vec::new();
+        let mut y_data: Vec<f64> = Vec::new();
+        let mut options_record: Option<Expression> = None;
+
+        for arg in args {
+            let evaluated = self.eval_concrete(arg)?;
+
+            // Check for options record
+            if let Expression::Operation { name, .. } = &evaluated {
+                if name == "record" {
+                    options_record = Some(evaluated.clone());
+                    continue;
+                }
+            }
+
+            // Check for list of pairs
+            if let Expression::List(items) = &evaluated {
+                if !items.is_empty() {
+                    // Check if first item is a Pair
+                    if let Expression::Operation {
+                        name,
+                        args: pair_args,
+                        ..
+                    } = self.eval_concrete(&items[0])?
+                    {
+                        if name == "Pair" && pair_args.len() == 2 {
+                            // It's a list of pairs
+                            for item in items {
+                                if let Expression::Operation {
+                                    name: n,
+                                    args: p_args,
+                                    ..
+                                } = self.eval_concrete(item)?
+                                {
+                                    if n == "Pair" && p_args.len() == 2 {
+                                        x_data.push(self.extract_f64(&p_args[0])?);
+                                        y_data.push(self.extract_f64(&p_args[1])?);
+                                    }
+                                }
+                            }
+                            continue;
+                        }
+                    }
+                    // Otherwise it might be a list of numbers (x or y data)
+                    let nums: Result<Vec<f64>, _> =
+                        items.iter().map(|e| self.extract_f64(e)).collect();
+                    if let Ok(nums) = nums {
+                        if x_data.is_empty() {
+                            x_data = nums;
+                        } else {
+                            y_data = nums;
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut element_args = vec![
+            Expression::Const("Path".to_string()),
+            self.encode_f64_list(&x_data),
+            self.encode_f64_list(&y_data),
+        ];
+
+        if let Some(opts) = options_record {
+            element_args.push(opts);
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
+    /// fill_between(xs, y1, y2 = ..., fill = ...) - Shaded area between curves
+    fn builtin_fill_between_element(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
+        if args.len() < 2 {
+            return Err("fill_between() requires at least x and y data".to_string());
+        }
+
+        let x_data = self.extract_number_list_v2(&args[0])?;
+        let y_data = self.extract_number_list_v2(&args[1])?;
+
+        // Check for y2 parameter in options or as third positional arg
+        let mut y2_data: Option<Vec<f64>> = None;
+        let mut options_record: Option<Expression> = None;
+
+        for (i, arg) in args.iter().enumerate().skip(2) {
+            let evaluated = self.eval_concrete(arg)?;
+            if let Expression::Operation {
+                ref name, ref args, ..
+            } = evaluated
+            {
+                if name == "record" {
+                    // Check for y2 in the record
+                    for field_arg in args {
+                        if let Expression::Operation {
+                            name: fname,
+                            args: fargs,
+                            ..
+                        } = field_arg
+                        {
+                            if fname == "field" && fargs.len() >= 2 {
+                                if let Expression::Const(key) = &fargs[0] {
+                                    if key == "y2" {
+                                        y2_data = Some(self.extract_number_list_v2(&fargs[1])?);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    options_record = Some(evaluated);
+                }
+            } else if i == 2 && y2_data.is_none() {
+                // Third positional arg might be y2 array
+                if let Ok(y2) = self.extract_number_list_v2(&evaluated) {
+                    y2_data = Some(y2);
+                }
+            }
+        }
+
+        let mut element_args = vec![
+            Expression::Const("FillBetween".to_string()),
+            self.encode_f64_list(&x_data),
+            self.encode_f64_list(&y_data),
+        ];
+
+        // Add y2 if present
+        if let Some(ref y2) = y2_data {
+            element_args.push(self.encode_f64_list(y2));
+        } else {
+            element_args.push(Expression::List(vec![])); // Empty placeholder
+        }
+
+        if let Some(opts) = options_record {
+            element_args.push(opts);
+        }
+
+        Ok(Some(Expression::operation("PlotElement", element_args)))
+    }
+
+    /// stacked_area(xs, ys1, ys2, ys3, ...) - Create stacked area chart
+    fn builtin_stacked_area(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() < 2 {
+            return Err("stacked_area() requires x data and at least one y series".to_string());
+        }
+
+        let x_data = self.extract_number_list_v2(&args[0])?;
+        let n = x_data.len();
+
+        // Collect all y series
+        let mut y_series: Vec<Vec<f64>> = Vec::new();
+        for arg in args.iter().skip(1) {
+            let evaluated = self.eval_concrete(arg)?;
+            // Skip options records
+            if let Expression::Operation { ref name, .. } = evaluated {
+                if name == "record" {
+                    continue;
+                }
+            }
+            if let Ok(ys) = self.extract_number_list_v2(&evaluated) {
+                if ys.len() == n {
+                    y_series.push(ys);
+                }
+            }
+        }
+
+        if y_series.is_empty() {
+            return Err("stacked_area() requires at least one y series".to_string());
+        }
+
+        // Compute cumulative sums (stacked values)
+        let mut stacked: Vec<Vec<f64>> = vec![vec![0.0; n]]; // Start with zeros
+        for ys in &y_series {
+            let prev = stacked.last().unwrap();
+            let new_stack: Vec<f64> = prev.iter().zip(ys.iter()).map(|(a, b)| a + b).collect();
+            stacked.push(new_stack);
+        }
+
+        // Create fill-between elements for each layer
+        // stacked[i] to stacked[i+1] for i in 0..y_series.len()
+        let mut fill_elements: Vec<Expression> = Vec::new();
+
+        // Default colors for stacked areas
+        let colors = [
+            "#5B8FB9", "#E19F8F", "#B5651D", "#7CB342", "#9C27B0", "#FF9800",
+        ];
+
+        for i in 0..y_series.len() {
+            let y1 = &stacked[i];
+            let y2 = &stacked[i + 1];
+            let color = colors[i % colors.len()];
+
+            let element_args = vec![
+                Expression::Const("FillBetween".to_string()),
+                self.encode_f64_list(&x_data),
+                self.encode_f64_list(y1),
+                self.encode_f64_list(y2),
+                // Options record with fill color
+                Expression::operation(
+                    "record",
+                    vec![Expression::operation(
+                        "field",
+                        vec![
+                            Expression::Const("fill".to_string()),
+                            Expression::Const(format!("rgb(\"{}\")", color)),
+                        ],
+                    )],
+                ),
+            ];
+            fill_elements.push(Expression::operation("PlotElement", element_args));
+        }
+
+        // Return as a list of PlotElements
+        Ok(Some(Expression::List(fill_elements)))
+    }
+
+    /// Encode a list of f64 as an Expression::List
+    fn encode_f64_list(&self, data: &[f64]) -> Expression {
+        Expression::List(
+            data.iter()
+                .map(|&v| Expression::Const(v.to_string()))
+                .collect(),
+        )
+    }
+
+    /// Decode a PlotElement expression back to a PlotElement struct
+    fn decode_plot_element(
+        &self,
+        expr: &Expression,
+    ) -> Result<crate::plotting::PlotElement, String> {
+        use crate::plotting::{PlotElement, PlotElementOptions, PlotType};
+
+        if let Expression::Operation { name, args, .. } = expr {
+            if name != "PlotElement" {
+                return Err(format!("Expected PlotElement, got {}", name));
+            }
+
+            if args.is_empty() {
+                return Err("PlotElement has no arguments".to_string());
+            }
+
+            // First arg is the type
+            let type_str = self.extract_string(&args[0])?;
+            let element_type = match type_str.as_str() {
+                "Line" => PlotType::Line,
+                "Scatter" => PlotType::Scatter,
+                "Bar" => PlotType::Bar,
+                "HBar" => PlotType::HBar,
+                "Stem" => PlotType::Stem,
+                "HStem" => PlotType::HStem,
+                "FillBetween" => PlotType::FillBetween,
+                "Boxplot" => PlotType::Boxplot,
+                "HBoxplot" => PlotType::HBoxplot,
+                "Colormesh" => PlotType::Colormesh,
+                "Contour" => PlotType::Contour,
+                "Quiver" => PlotType::Quiver,
+                "Place" => PlotType::Place,
+                "SecondaryYAxis" => PlotType::SecondaryYAxis,
+                "SecondaryXAxis" => PlotType::SecondaryXAxis,
+                "Path" => PlotType::Path,
+                _ => return Err(format!("Unknown PlotElement type: {}", type_str)),
+            };
+
+            let mut element = PlotElement {
+                element_type: element_type.clone(),
+                x_data: None,
+                y_data: None,
+                y2_data: None,
+                matrix_data: None,
+                direction_data: None,
+                datasets: None,
+                options: PlotElementOptions::default(),
+            };
+
+            // Decode based on type
+            match element_type {
+                PlotType::Line
+                | PlotType::Scatter
+                | PlotType::Bar
+                | PlotType::HBar
+                | PlotType::Stem
+                | PlotType::HStem => {
+                    if args.len() >= 3 {
+                        element.x_data = Some(self.decode_f64_list(&args[1])?);
+                        element.y_data = Some(self.decode_f64_list(&args[2])?);
+                    }
+                    if args.len() >= 4 {
+                        self.parse_element_options(&args[3], &mut element.options)?;
+                    }
+                }
+                PlotType::FillBetween => {
+                    // fill_between(x, y1, y2, options)
+                    if args.len() >= 3 {
+                        element.x_data = Some(self.decode_f64_list(&args[1])?);
+                        element.y_data = Some(self.decode_f64_list(&args[2])?);
+                    }
+                    if args.len() >= 4 {
+                        // arg[3] could be y2 data or options
+                        if let Ok(y2) = self.decode_f64_list(&args[3]) {
+                            if !y2.is_empty() {
+                                element.y2_data = Some(y2);
+                            }
+                        }
+                    }
+                    if args.len() >= 5 {
+                        self.parse_element_options(&args[4], &mut element.options)?;
+                    }
+                }
+                PlotType::Boxplot | PlotType::HBoxplot => {
+                    if args.len() >= 2 {
+                        element.datasets = Some(self.decode_f64_matrix(&args[1])?);
+                    }
+                    if args.len() >= 3 {
+                        self.parse_element_options(&args[2], &mut element.options)?;
+                    }
+                }
+                PlotType::Colormesh | PlotType::Contour => {
+                    if args.len() >= 2 {
+                        element.matrix_data = Some(self.decode_f64_matrix(&args[1])?);
+                    }
+                    if args.len() >= 3 {
+                        self.parse_element_options(&args[2], &mut element.options)?;
+                    }
+                }
+                PlotType::Quiver => {
+                    if args.len() >= 4 {
+                        element.x_data = Some(self.decode_f64_list(&args[1])?);
+                        element.y_data = Some(self.decode_f64_list(&args[2])?);
+                        // Decode directions as matrix, then convert to tuples
+                        let dir_matrix = self.decode_f64_matrix(&args[3])?;
+                        let directions: Vec<Vec<(f64, f64)>> = dir_matrix
+                            .iter()
+                            .map(|row| {
+                                row.chunks(2)
+                                    .map(|chunk| {
+                                        if chunk.len() == 2 {
+                                            (chunk[0], chunk[1])
+                                        } else {
+                                            (chunk[0], 0.0)
+                                        }
+                                    })
+                                    .collect()
+                            })
+                            .collect();
+                        element.direction_data = Some(directions);
+                    }
+                    if args.len() >= 5 {
+                        self.parse_element_options(&args[4], &mut element.options)?;
+                    }
+                }
+                PlotType::Place => {
+                    if args.len() >= 4 {
+                        element.x_data = Some(self.decode_f64_list(&args[1])?);
+                        element.y_data = Some(self.decode_f64_list(&args[2])?);
+                        // Text is the 4th argument
+                        if let Expression::String(text) = &args[3] {
+                            element.options.text = Some(text.clone());
+                        } else if let Expression::Const(text) = &args[3] {
+                            element.options.text = Some(text.clone());
+                        }
+                    }
+                    if args.len() >= 5 {
+                        self.parse_element_options(&args[4], &mut element.options)?;
+                    }
+                }
+                PlotType::SecondaryYAxis | PlotType::SecondaryXAxis => {
+                    // args[1] is the list of child elements
+                    if args.len() >= 2 {
+                        if let Expression::List(children) = &args[1] {
+                            let mut decoded_children = Vec::new();
+                            for child in children {
+                                let decoded = self.decode_plot_element(child)?;
+                                decoded_children.push(Box::new(decoded));
+                            }
+                            element.options.children = Some(decoded_children);
+                        }
+                    }
+                    if args.len() >= 3 {
+                        self.parse_element_options(&args[2], &mut element.options)?;
+                    }
+                }
+                PlotType::GroupedBars => {}
+                PlotType::Path => {
+                    // args[1] is x_data, args[2] is y_data
+                    if args.len() >= 2 {
+                        element.x_data = Some(self.decode_f64_list(&args[1])?);
+                    }
+                    if args.len() >= 3 {
+                        element.y_data = Some(self.decode_f64_list(&args[2])?);
+                    }
+                    if args.len() >= 4 {
+                        self.parse_element_options(&args[3], &mut element.options)?;
+                    }
+                }
+            }
+
+            Ok(element)
+        } else {
+            Err(format!("Expected PlotElement expression, got: {:?}", expr))
+        }
+    }
+
+    /// Decode a list of f64 from an Expression::List
+    fn decode_f64_list(&self, expr: &Expression) -> Result<Vec<f64>, String> {
+        if let Expression::List(items) = expr {
+            let mut result = Vec::new();
+            for item in items {
+                let n = self
+                    .as_number(item)
+                    .ok_or_else(|| format!("Expected number in list, got: {:?}", item))?;
+                result.push(n);
+            }
+            Ok(result)
+        } else {
+            Err(format!("Expected list, got: {:?}", expr))
+        }
+    }
+
+    /// Decode a 2D matrix from nested Expression::List
+    fn decode_f64_matrix(&self, expr: &Expression) -> Result<Vec<Vec<f64>>, String> {
+        if let Expression::List(rows) = expr {
+            let mut result = Vec::new();
+            for row in rows {
+                result.push(self.decode_f64_list(row)?);
+            }
+            Ok(result)
+        } else {
+            Err(format!("Expected matrix (list of lists), got: {:?}", expr))
+        }
+    }
+
+    /// Parse element options from a record expression
+    fn parse_element_options(
+        &self,
+        expr: &Expression,
+        options: &mut crate::plotting::PlotElementOptions,
+    ) -> Result<(), String> {
+        if let Expression::Operation { name, args, .. } = expr {
+            if name == "record" {
+                for opt in args {
+                    if let Expression::Operation {
+                        name: field_name,
+                        args: field_args,
+                        ..
+                    } = opt
+                    {
+                        if field_name == "field" && field_args.len() == 2 {
+                            let key = self.extract_string(&field_args[0])?;
+                            match key.as_str() {
+                                "label" => {
+                                    options.label = Some(self.extract_string(&field_args[1])?)
+                                }
+                                "color" => {
+                                    options.color = Some(self.extract_string(&field_args[1])?)
+                                }
+                                "stroke" => {
+                                    options.stroke = Some(self.extract_string(&field_args[1])?)
+                                }
+                                "mark" => options.mark = Some(self.extract_string(&field_args[1])?),
+                                "mark_size" => {
+                                    options.mark_size = Some(self.extract_f64(&field_args[1])?)
+                                }
+                                "xerr" => {
+                                    options.xerr =
+                                        Some(self.extract_number_list_v2(&field_args[1])?)
+                                }
+                                "yerr" => {
+                                    options.yerr =
+                                        Some(self.extract_number_list_v2(&field_args[1])?)
+                                }
+                                "step" => options.step = Some(self.extract_string(&field_args[1])?),
+                                "smooth" => {
+                                    options.smooth = Some(self.extract_bool(&field_args[1])?)
+                                }
+                                "every" => {
+                                    options.every = Some(self.extract_f64(&field_args[1])? as usize)
+                                }
+                                "offset" => {
+                                    options.offset = Some(self.extract_f64(&field_args[1])?)
+                                }
+                                "width" => options.width = Some(self.extract_f64(&field_args[1])?),
+                                "fill" => options.fill = Some(self.extract_string(&field_args[1])?),
+                                "base" => options.base = Some(self.extract_f64(&field_args[1])?),
+                                "colormap" | "map" => {
+                                    options.colormap = Some(self.extract_string(&field_args[1])?)
+                                }
+                                "colors" | "color_values" => {
+                                    // Per-point color values for scatter plots (floats 0-1)
+                                    options.colors =
+                                        Some(self.extract_number_list_v2(&field_args[1])?)
+                                }
+                                "scale" => options.scale = Some(self.extract_f64(&field_args[1])?),
+                                "pivot" => {
+                                    options.pivot = Some(self.extract_string(&field_args[1])?)
+                                }
+                                "clip" => options.clip = Some(self.extract_bool(&field_args[1])?),
+                                "z_index" => {
+                                    options.z_index = Some(self.extract_f64(&field_args[1])? as i32)
+                                }
+                                // place() options
+                                "text" => options.text = Some(self.extract_string(&field_args[1])?),
+                                "align" => {
+                                    options.align = Some(self.extract_string(&field_args[1])?)
+                                }
+                                "padding" | "pad" => {
+                                    options.padding = Some(self.extract_string(&field_args[1])?)
+                                }
+                                // yaxis() and xaxis() options
+                                "position" => {
+                                    options.position = Some(self.extract_string(&field_args[1])?)
+                                }
+                                "axis_label" => {
+                                    options.axis_label = Some(self.extract_string(&field_args[1])?)
+                                }
+                                // xaxis() specific options
+                                "tick_distance" => {
+                                    options.tick_distance = Some(self.extract_f64(&field_args[1])?)
+                                }
+                                "exponent" => {
+                                    options.exponent =
+                                        Some(self.extract_f64(&field_args[1])? as i32)
+                                }
+                                "axis_offset" => {
+                                    options.axis_offset = Some(self.extract_f64(&field_args[1])?)
+                                }
+                                // path() options
+                                "closed" => {
+                                    options.closed = Some(self.extract_bool(&field_args[1])?)
+                                }
+                                "functions" => {
+                                    // functions = ("x => k/x", "x => k/x")
+                                    // Expect a pair of strings
+                                    if let Expression::Operation {
+                                        name,
+                                        args: fn_args,
+                                        ..
+                                    } = self.eval_concrete(&field_args[1])?
+                                    {
+                                        if name == "Pair" && fn_args.len() == 2 {
+                                            options.transform_forward =
+                                                Some(self.extract_string(&fn_args[0])?);
+                                            options.transform_inverse =
+                                                Some(self.extract_string(&fn_args[1])?);
+                                        }
+                                    }
+                                }
+                                _ => {} // Ignore unknown options
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Helper to extract boolean from Expression
+    fn extract_bool(&self, expr: &Expression) -> Result<bool, String> {
         let evaluated = self.eval_concrete(expr)?;
-
-        // Expect a list of lists of 2-element lists: [[[u, v], [u, v], ...], ...]
-        let extract_pair = |pair_expr: &Expression| -> Result<(f64, f64), String> {
-            if let Expression::List(elems) = pair_expr {
-                if elems.len() == 2 {
-                    let u = self
-                        .as_number(&elems[0])
-                        .ok_or_else(|| format!("Expected number for u, got: {:?}", elems[0]))?;
-                    let v = self
-                        .as_number(&elems[1])
-                        .ok_or_else(|| format!("Expected number for v, got: {:?}", elems[1]))?;
-                    return Ok((u, v));
-                }
-            }
-            if let Some(list) = self.extract_flat_list(pair_expr) {
-                if list.len() == 2 {
-                    let u = self
-                        .as_number(&list[0])
-                        .ok_or_else(|| format!("Expected number for u, got: {:?}", list[0]))?;
-                    let v = self
-                        .as_number(&list[1])
-                        .ok_or_else(|| format!("Expected number for v, got: {:?}", list[1]))?;
-                    return Ok((u, v));
-                }
-            }
-            Err(format!("Expected [u, v] pair, got: {:?}", pair_expr))
+        let s = match &evaluated {
+            Expression::Const(s) | Expression::Object(s) => s.to_lowercase(),
+            _ => return Err(format!("Expected boolean, got: {:?}", evaluated)),
         };
-
-        let extract_row = |row_expr: &Expression| -> Result<Vec<(f64, f64)>, String> {
-            let mut row = Vec::new();
-            if let Expression::List(elems) = row_expr {
-                for elem in elems {
-                    row.push(extract_pair(elem)?);
-                }
-                return Ok(row);
-            }
-            if let Some(list) = self.extract_flat_list(row_expr) {
-                for elem in list {
-                    row.push(extract_pair(&elem)?);
-                }
-                return Ok(row);
-            }
-            Err(format!("Expected row of [u, v] pairs, got: {:?}", row_expr))
-        };
-
-        let mut grid = Vec::new();
-        if let Expression::List(rows) = &evaluated {
-            for row in rows {
-                grid.push(extract_row(row)?);
-            }
-            return Ok(grid);
+        match s.as_str() {
+            "true" | "1" => Ok(true),
+            "false" | "0" => Ok(false),
+            _ => Err(format!("Expected boolean, got: {}", s)),
         }
-        if let Some(rows) = self.extract_flat_list(&evaluated) {
-            for row in rows {
-                grid.push(extract_row(&row)?);
-            }
-            return Ok(grid);
-        }
-
-        Err(format!(
-            "Expected 2D grid of [u, v] pairs, got: {:?}",
-            evaluated
-        ))
     }
 
     /// Extract a 2D matrix of f64 values from an expression (list of lists)
@@ -5258,9 +6188,48 @@ impl Evaluator {
                 let s = s.trim_matches('"');
                 Ok(s.to_string())
             }
+            Expression::String(s) => Ok(s.clone()),
             Expression::Object(s) => Ok(s.clone()),
             _ => Err(format!("Expected string, got: {:?}", expr)),
         }
+    }
+
+    /// Extract a list of strings from an expression
+    fn extract_string_list(&self, expr: &Expression) -> Result<Vec<String>, String> {
+        let evaluated = self.eval_concrete(expr)?;
+        if let Expression::List(elements) = evaluated {
+            elements.iter().map(|e| self.extract_string(e)).collect()
+        } else {
+            Err(format!("Expected list of strings, got: {:?}", expr))
+        }
+    }
+
+    /// Extract a list of f64 numbers from an expression
+    fn extract_f64_list_from_diagram_option(&self, expr: &Expression) -> Result<Vec<f64>, String> {
+        let evaluated = self.eval_concrete(expr)?;
+        if let Expression::List(elements) = evaluated {
+            elements.iter().map(|e| self.extract_f64(e)).collect()
+        } else {
+            Err(format!("Expected list of numbers, got: {:?}", expr))
+        }
+    }
+
+    /// Extract a single number (f64) from an expression
+    fn extract_number(&self, expr: &Expression) -> Result<f64, String> {
+        let evaluated = self.eval_concrete(expr)?;
+        if let Some(n) = self.as_number(&evaluated) {
+            Ok(n)
+        } else if let Expression::Const(s) = &evaluated {
+            s.parse::<f64>()
+                .map_err(|_| format!("Expected number, got: {}", s))
+        } else {
+            Err(format!("Expected number, got: {:?}", evaluated))
+        }
+    }
+
+    /// Alias for extract_number
+    fn extract_f64(&self, expr: &Expression) -> Result<f64, String> {
+        self.extract_number(expr)
     }
 
     /// Extract elements from a flat list (like [1, 2, 3])

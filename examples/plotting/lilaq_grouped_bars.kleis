@@ -1,0 +1,47 @@
+// Kleis equivalent of Lilaq grouped bar chart with error bars
+// Original: https://lilaq.org/docs/bar
+//
+// #let xs = range(4)
+// #let ys1 = (1.35, 3, 2.1, 4)
+// #let ys2 = (1.4, 3.3, 1.9, 4.2)
+// #let yerr1 = (0.2, 0.3, 0.5, 0.4)
+// #let yerr2 = (0.3, 0.3, 0.4, 0.7)
+//
+// #lq.diagram(
+//   width: 5cm,
+//   legend: (position: left + top),
+//   lq.bar(xs, ys1, offset: -0.2, width: 0.4, label: [Left]),
+//   lq.bar(xs, ys2, offset: 0.2, width: 0.4, label: [Right]),
+//   lq.plot(xs.map(x => x - 0.2), ys1, yerr: yerr1, color: black, stroke: none),
+//   lq.plot(xs.map(x => x + 0.2), ys2, yerr: yerr2, color: black, stroke: none)
+// )
+
+import "stdlib/prelude.kleis"
+
+example "Lilaq grouped bar chart - exact replication" {
+    out("Kleis exact equivalent of Lilaq grouped bar chart example")
+    out("https://lilaq.org/docs/bar")
+    out("")
+    
+    // Data (same as Lilaq)
+    let xs = [0, 1, 2, 3]
+    let ys1 = [1.35, 3, 2.1, 4]
+    let ys2 = [1.4, 3.3, 1.9, 4.2]
+    let yerr1 = [0.2, 0.3, 0.5, 0.4]
+    let yerr2 = [0.3, 0.3, 0.4, 0.7]
+    
+    // Compute offset x-coordinates using list_map (like Lilaq's .map())
+    let xs_left = list_map(λ x . x - 0.2, xs)
+    let xs_right = list_map(λ x . x + 0.2, xs)
+    
+    // Diagram with named arguments (v0.96 syntax)
+    diagram(
+        bar(xs, ys1, offset = -0.2, width = 0.4, label = "Left"),
+        bar(xs, ys2, offset = 0.2, width = 0.4, label = "Right"),
+        plot(xs_left, ys1, yerr = yerr1, color = "black", stroke = "none"),
+        plot(xs_right, ys2, yerr = yerr2, color = "black", stroke = "none"),
+        width = 5,
+        legend_position = "left + top"
+    )
+}
+

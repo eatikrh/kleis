@@ -123,6 +123,83 @@ define add5 = add(5)           // λ y . 5 + y
 define eight = add5(3)         // Result: 8
 ```
 
+## Named Arguments (v0.96)
+
+For plotting and numeric functions, Kleis supports named arguments (keyword arguments):
+
+```kleis
+// Named arguments come after positional arguments
+diagram(
+    bar(xs, ys, offset = -0.2, width = 0.4, label = "Data"),
+    plot(x, y, color = "blue", yerr = errors),
+    width = 10,
+    height = 7,
+    title = "My Chart"
+)
+```
+
+### Syntax
+
+Named arguments use `=` (not `==`) and must come after all positional arguments:
+
+```kleis
+// ✅ Valid: positional first, then named
+f(a, b, x = 1, y = 2)
+
+// ✅ Valid: all named
+f(x = 1, y = 2)
+
+// ❌ Invalid: positional after named
+f(x = 1, a, b)      // Error!
+```
+
+### Parser Transformation
+
+Named arguments are **syntactic sugar**. The parser transforms them into a `record` expression:
+
+```kleis
+// You write:
+bar(xs, ys, offset = -0.2, width = 0.4)
+
+// Parser produces:
+bar(xs, ys, record(
+    field("offset", -0.2),
+    field("width", 0.4)
+))
+```
+
+### Limitations: Numeric Only
+
+> **Important:** Named arguments are designed for **concrete numeric computation** (plotting, configuration). They cannot be used in:
+
+- `structure` definitions
+- `axiom` declarations  
+- `implements` blocks
+- Z3 verification proofs
+
+```kleis
+// ❌ Does NOT work in axioms
+structure Bad {
+    axiom wrong: f(x = 1)  // ERROR: named args not for axioms
+}
+
+// ✅ Works in plotting/computation
+let xs = [0, 1, 2, 3]
+let ys = [10, 20, 15, 25]
+diagram(bar(xs, ys, color = "blue"))
+```
+
+### Why This Design?
+
+Named arguments are opaque to the type system:
+
+1. **Type inference** sees `record` as an opaque type
+2. **Unification** doesn't look inside records
+3. **Z3** never receives record expressions
+4. **Built-in functions** consume records at runtime
+
+This ensures named arguments don't interfere with symbolic mathematics while providing convenient syntax for plotting and configuration.
+
 ## What's Next?
 
 Learn about algebraic data types for structured data!

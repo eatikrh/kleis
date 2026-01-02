@@ -323,18 +323,59 @@ impl KleisParser {
     }
 
     fn parse_arguments(&mut self) -> Result<Vec<Expression>, KleisParseError> {
-        let mut args = Vec::new();
+        let mut positional_args = Vec::new();
+        let mut named_args = Vec::new();
 
         // Empty argument list
         self.skip_whitespace();
         if self.peek() == Some(')') {
-            return Ok(args);
+            return Ok(positional_args);
         }
 
-        // Parse comma-separated expressions
+        // Parse comma-separated expressions, detecting named arguments (key = value)
         loop {
             self.skip_whitespace();
-            args.push(self.parse_expression()?);
+
+            // Try to parse as named argument: identifier = expression
+            let start_pos = self.pos;
+            if let Some(name) = self.try_parse_identifier() {
+                self.skip_whitespace();
+                if self.peek() == Some('=') && self.peek_ahead(1) != Some('=') {
+                    // This is a named argument: name = value
+                    self.advance(); // consume '='
+                    self.skip_whitespace();
+                    let value = self.parse_expression()?;
+
+                    // Create a field expression: field("name", value)
+                    let field_expr = Expression::Operation {
+                        name: "field".to_string(),
+                        args: vec![Expression::String(name), value],
+                        span: Some(self.current_span()),
+                    };
+                    named_args.push(field_expr);
+
+                    self.skip_whitespace();
+                    match self.peek() {
+                        Some(',') => {
+                            self.advance();
+                            continue;
+                        }
+                        Some(')') => break,
+                        _ => {
+                            return Err(KleisParseError {
+                                message: "Expected ',' or ')' after named argument".to_string(),
+                                position: self.pos,
+                            });
+                        }
+                    }
+                } else {
+                    // Not a named argument, backtrack and parse as expression
+                    self.pos = start_pos;
+                }
+            }
+
+            // Parse as positional argument
+            positional_args.push(self.parse_expression()?);
             self.skip_whitespace();
 
             match self.peek() {
@@ -352,7 +393,46 @@ impl KleisParser {
             }
         }
 
-        Ok(args)
+        // If there are named arguments, wrap them in a record and append to positional args
+        if !named_args.is_empty() {
+            let record = Expression::Operation {
+                name: "record".to_string(),
+                args: named_args,
+                span: Some(self.current_span()),
+            };
+            positional_args.push(record);
+        }
+
+        Ok(positional_args)
+    }
+
+    /// Try to parse an identifier, returning None if not at an identifier
+    fn try_parse_identifier(&mut self) -> Option<String> {
+        self.skip_whitespace();
+        let start = self.pos;
+
+        // Check first character is valid identifier start
+        let first = self.peek()?;
+        if !first.is_alphabetic() && first != '_' {
+            return None;
+        }
+
+        let mut name = String::new();
+        while let Some(c) = self.peek() {
+            if c.is_alphanumeric() || c == '_' {
+                name.push(c);
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        if name.is_empty() {
+            self.pos = start;
+            None
+        } else {
+            Some(name)
+        }
     }
 
     fn parse_list_literal(&mut self) -> Result<Expression, KleisParseError> {

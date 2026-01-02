@@ -194,6 +194,100 @@ expm([[0.0, 1.0], [-1.0, 0.0]])
 // → rotation matrix
 ```
 
+## Built-in Functions Reference
+
+> **Important:** These functions perform **concrete numeric computation**. They cannot be used in symbolic contexts such as `structure` definitions, `axiom` declarations, or abstract proofs. They are designed for interactive exploration, plotting, and numerical analysis.
+
+### Math Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `sin(x)` | Sine (radians) | `sin(3.14159)` → `0.0` |
+| `cos(x)` | Cosine (radians) | `cos(0)` → `1.0` |
+| `sqrt(x)` | Square root | `sqrt(2)` → `1.414...` |
+| `pi()` | π constant | `pi()` → `3.14159...` |
+| `radians(deg)` | Degrees to radians | `radians(180)` → `3.14159...` |
+| `mod(a, b)` | Modulo operation | `mod(7, 3)` → `1` |
+
+### Sequence Generation
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `range(n)` | Integers 0 to n-1 | `range(5)` → `[0, 1, 2, 3, 4]` |
+| `range(start, end)` | Integers start to end-1 | `range(2, 5)` → `[2, 3, 4]` |
+| `linspace(start, end)` | 50 evenly spaced values | `linspace(0, 1)` → `[0, 0.02, ...]` |
+| `linspace(start, end, n)` | n evenly spaced values | `linspace(0, 1, 5)` → `[0, 0.25, 0.5, 0.75, 1]` |
+
+### Random Number Generation
+
+These use a deterministic pseudo-random number generator (LCG) for reproducibility.
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `random(n)` | n uniform random values in [0,1] | `random(5)` → `[0.25, 0.08, ...]` |
+| `random(n, seed)` | With explicit seed | `random(5, 42)` → reproducible |
+| `random_normal(n)` | n values from N(0,1) | `random_normal(5)` |
+| `random_normal(n, seed)` | With explicit seed | `random_normal(5, 33)` |
+| `random_normal(n, seed, scale)` | N(0, scale) | `random_normal(50, 33, 0.1)` |
+
+### Vector Operations
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `vec_add(a, b)` | Element-wise addition | `vec_add([1,2,3], [4,5,6])` → `[5, 7, 9]` |
+
+### List Manipulation
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `list_map(f, xs)` | Apply f to each element | `list_map(λ x . x*2, [1,2,3])` → `[2, 4, 6]` |
+| `list_filter(p, xs)` | Keep elements where p(x) is true | `list_filter(λ x . x > 1, [1,2,3])` → `[2, 3]` |
+| `list_fold(f, init, xs)` | Left fold/reduce | `list_fold(λ a b . a + b, 0, [1,2,3])` → `6` |
+| `list_zip(xs, ys)` | Pair corresponding elements | `list_zip([1,2], ["a","b"])` → `[Pair(1,"a"), ...]` |
+| `list_nth(xs, i)` | Element at index i (0-based) | `list_nth([10,20,30], 1)` → `20` |
+| `list_length(xs)` | Number of elements | `list_length([1,2,3])` → `3` |
+| `list_concat(xs, ys)` | Concatenate two lists | `list_concat([1,2], [3,4])` → `[1, 2, 3, 4]` |
+| `list_flatten(xss)` | Flatten nested lists | `list_flatten([[1,2], [3,4]])` → `[1, 2, 3, 4]` |
+| `list_slice(xs, start, end)` | Sublist [start, end) | `list_slice([0,1,2,3,4], 1, 3)` → `[1, 2]` |
+| `list_rotate(xs, n)` | Rotate left by n | `list_rotate([1,2,3,4], 1)` → `[2, 3, 4, 1]` |
+
+### Pair Operations
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `Pair(a, b)` | Create a pair/tuple | `Pair(1, "x")` |
+| `fst(p)` | First element of pair | `fst(Pair(1, 2))` → `1` |
+| `snd(p)` | Second element of pair | `snd(Pair(1, 2))` → `2` |
+
+### Why Numeric-Only?
+
+These functions are implemented in Rust for performance and produce concrete values:
+
+```kleis
+// ✅ Works: Concrete computation
+let xs = linspace(0, 6.28, 10)
+let ys = list_map(λ x . sin(x), xs)
+diagram(plot(xs, ys))
+
+// ❌ Does NOT work: Cannot use in axioms
+structure MyStructure(T) {
+    axiom bad: sin(x) = cos(x - pi()/2)  // ERROR: sin/cos/pi are numeric
+}
+```
+
+For symbolic mathematics, define your own abstract operations:
+
+```kleis
+// ✅ Correct: Define sin symbolically
+structure Trigonometry(T) {
+    operation sin : T → T
+    operation cos : T → T
+    constant π : T
+    
+    axiom shift: ∀(x : T). sin(x) = cos(x - π/2)
+}
+```
+
 ## Matrix Syntax
 
 Matrices can be specified using nested list syntax:
@@ -316,113 +410,242 @@ let Ainv = inv(A)
 
 ## Plotting
 
-Kleis integrates with **Lilaq** (Typst's plotting library) to generate publication-quality plots directly in Jupyter notebooks. Plots are rendered as scalable SVG graphics.
-
-![Kleis plotting examples](../images/kleis_plots.png)
-
-*Examples of Kleis plots: reciprocal function, projectile motion, and damped oscillation*
+Kleis integrates with **Lilaq** (Typst's plotting library) to generate publication-quality plots directly in Jupyter notebooks. The API mirrors Lilaq's compositional design, making it easy to create complex visualizations.
 
 ### Requirements
 
 - **Typst CLI** must be installed: `brew install typst` (macOS) or see [typst.app](https://typst.app)
+- Lilaq 0.5.0+ is automatically imported
+
+### Compositional API
+
+Kleis uses a compositional plotting API where:
+- Individual functions (`plot`, `scatter`, `bar`, etc.) create **PlotElement** objects
+- The `diagram()` function combines elements and renders to SVG
+- Named arguments (`key = value`) configure options
+
+```kleis
+diagram(
+    plot(xs, ys, color = "blue"),
+    scatter(xs, ys, mark = "s"),
+    bar(xs, heights, label = "Data"),
+    title = "My Chart",
+    xlabel = "X-axis",
+    theme = "moon"
+)
+```
 
 ### Plot Functions
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `plot(x, y)` | Line plot | `plot([0,1,2], [0,1,4])` |
-| `scatter(x, y)` | Scatter plot | `scatter([1,2,3], [2.1,3.9,6.2])` |
-| `bar(x, heights)` | Vertical bars | `bar([1,2,3], [10,25,15])` |
-| `hbar(y, widths)` | Horizontal bars | `hbar([1,2,3], [10,25,15])` |
+| `plot(x, y, ...)` | Line plot | `plot([0,1,2], [0,1,4], color = "blue")` |
+| `scatter(x, y, ...)` | Scatter with colormaps | `scatter(x, y, colors = vals, map = "turbo")` |
+| `bar(x, heights, ...)` | Vertical bars | `bar([1,2,3], [10,25,15], label = "Data")` |
+| `hbar(y, widths, ...)` | Horizontal bars | `hbar([1,2,3], [10,25,15])` |
 | `stem(x, y)` | Stem plot | `stem([0,1,2], [0,1,1])` |
-| `hstem(x, y)` | Horizontal stem | `hstem([0,1,2], [0,1,1])` |
-| `fill_between(x, y)` | Area under curve | `fill_between([0,1,2], [1,2,4])` |
+| `fill_between(x, y, ...)` | Area under curve | `fill_between(x, y1, y2 = y2)` |
+| `stacked_area(x, y1, y2, ...)` | Stacked areas | `stacked_area(x, y1, y2, y3)` |
 | `boxplot(d1, d2, ...)` | Box and whisker | `boxplot([1,2,3], [4,5,6])` |
-| `hboxplot(...)` | Horizontal boxplot | `hboxplot([1,2,3], [4,5,6])` |
 | `heatmap(matrix)` | 2D color grid | `heatmap([[1,2],[3,4]])` |
-| `colormesh(matrix)` | Alias for heatmap | `colormesh([[1,2],[3,4]])` |
 | `contour(matrix)` | Contour lines | `contour([[1,2],[3,4]])` |
-| `quiver(x, y, dirs)` | Vector field | See example below |
+| `path(points, ...)` | Arbitrary polygon | `path(pts, fill = "blue", closed = true)` |
+| `place(x, y, text, ...)` | Text annotation | `place(1, 5, "Peak", align = "top")` |
+| `yaxis(elements, ...)` | Secondary y-axis | `yaxis(bar(...), position = "right")` |
+| `xaxis(...)` | Secondary x-axis | `xaxis(position = "top", functions = ...)` |
 
-### Basic Examples
+### Data Generation Functions
 
-```kleis
-import "stdlib/prelude.kleis"
+| Function | Description | Example |
+|----------|-------------|---------|
+| `linspace(start, end, n)` | Evenly spaced values | `linspace(0, 6.28, 50)` |
+| `range(n)` | Integers 0 to n-1 | `range(10)` |
+| `random(n, seed)` | Uniform random [0,1] | `random(50, 42)` |
+| `random_normal(n, seed, scale)` | Normal distribution | `random_normal(50, 33, 0.1)` |
+| `vec_add(a, b)` | Element-wise addition | `vec_add(xs, noise)` |
 
-example "line plot" {
-    // Line plot: y = x²
-    plot([0, 1, 2, 3, 4, 5], [0, 1, 4, 9, 16, 25])
-}
+### Example: Grouped Bar Chart with Error Bars
 
-example "scatter plot" {
-    scatter([1, 2, 3, 4, 5], [2.1, 3.9, 6.2, 7.8, 10.1])
-}
-
-example "bar chart" {
-    bar([1, 2, 3, 4, 5], [10, 25, 15, 30, 20])
-}
-
-example "heatmap" {
-    heatmap([
-        [1.0, 2.0, 3.0],
-        [4.0, 5.0, 6.0],
-        [7.0, 8.0, 9.0]
-    ])
-}
-```
-
-### Physics Examples
+![Grouped bar chart](../images/plot_grouped_bars.png)
 
 ```kleis
-import "stdlib/prelude.kleis"
+let xs = [0, 1, 2, 3]
+let ys1 = [1.35, 3, 2.1, 4]
+let ys2 = [1.4, 3.3, 1.9, 4.2]
+let yerr1 = [0.2, 0.3, 0.5, 0.4]
+let yerr2 = [0.3, 0.3, 0.4, 0.7]
 
-example "damped oscillation" {
-    // e^(-t/5) × cos(t)
-    plot(
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        [1.0, 0.44, negate(0.32), negate(0.59), negate(0.30), 
-         0.19, 0.44, 0.26, negate(0.08), negate(0.29), negate(0.20)]
-    )
-}
+let xs_left = list_map(λ x . x - 0.2, xs)
+let xs_right = list_map(λ x . x + 0.2, xs)
 
-example "projectile motion" {
-    // y = x - 0.1x²
-    plot(
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        [0, 0.9, 1.6, 2.1, 2.4, 2.5, 2.4, 2.1, 1.6, 0.9, 0]
-    )
-}
+diagram(
+    bar(xs, ys1, offset = -0.2, width = 0.4, label = "Left"),
+    bar(xs, ys2, offset = 0.2, width = 0.4, label = "Right"),
+    plot(xs_left, ys1, yerr = yerr1, color = "black", stroke = "none"),
+    plot(xs_right, ys2, yerr = yerr2, color = "black", stroke = "none"),
+    width = 5,
+    legend_position = "left + top"
+)
 ```
 
-### Vector Field Example
+### Example: Bar Chart with Dynamic Annotations
+
+![Bar chart with annotations](../images/plot_bar_annotations.png)
 
 ```kleis
-import "stdlib/prelude.kleis"
+let xs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+let ys = [12, 51, 23, 36, 38, 15, 10, 22, 86]
 
-example "vector field" {
-    quiver(
-        [0, 1],         // x coordinates
-        [0, 1],         // y coordinates
-        [               // 2×2 grid of [u, v] directions
-            [[1, 0], [0, 1]],
-            [[0, negate(1)], [negate(1), 0]]
-        ]
-    )
-}
+// Dynamic annotations using list_map and conditionals
+let annotations = list_map(λ p . 
+    let x = fst(p) in
+    let y = snd(p) in
+    let align = if y > 12 then "top" else "bottom" in
+    place(x, y, y, align = align, padding = "0.2em")
+, list_zip(xs, ys))
+
+diagram(
+    bar(xs, ys),
+    annotations,
+    width = 9,
+    xaxis_subticks = "none"
+)
 ```
 
-### Titles
+### Example: Climograph with Twin Axes
 
-All plot functions accept an optional title as the last argument:
+![Climograph](../images/plot_climograph.png)
 
 ```kleis
-import "stdlib/prelude.kleis"
+let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+let precipitation = [56, 41, 53, 42, 60, 67, 81, 62, 56, 49, 48, 54]
+let temperature = [0.5, 1.4, 4.4, 9.7, 14.4, 17.8, 19.8, 19.5, 15.5, 10.4, 5.6, 2.2]
+let xs = range(12)
 
-example "with title" {
-    plot([0, 1, 2, 3], [0, 1, 4, 9], "Quadratic Growth")
-    scatter([1, 2, 3], [1.1, 2.0, 2.9], "Experimental Data")
-}
+diagram(
+    yaxis(
+        bar(xs, precipitation, fill = "blue.lighten(40%)", label = "Precipitation"),
+        position = "right",
+        axis_label = "Precipitation in mm"
+    ),
+    plot(xs, temperature, label = "Temperature", color = "red", stroke = "1pt", mark_size = 6),
+    width = 8,
+    title = "Climate of Berlin",
+    ylabel = "Temperature in °C",
+    xlabel = "Month",
+    xaxis_ticks = months,
+    xaxis_tick_rotate = -90,
+    xaxis_subticks = "none"
+)
 ```
+
+### Example: Koch Snowflake Fractal
+
+![Koch Snowflake](../images/plot_koch_snowflake.png)
+
+```kleis
+// Complex number operations
+define complex_add(c1, c2) = Pair(fst(c1) + fst(c2), snd(c1) + snd(c2))
+define complex_sub(c1, c2) = Pair(fst(c1) - fst(c2), snd(c1) - snd(c2))
+define complex_mul(c1, c2) = Pair(
+    (fst(c1)*fst(c2)) - (snd(c1)*snd(c2)),
+    (fst(c1)*snd(c2)) + (snd(c1)*fst(c2))
+)
+
+define triangle_vertex(angle) = Pair(cos(radians(angle)), sin(radians(angle)))
+define base_triangle() = [triangle_vertex(90), triangle_vertex(210), triangle_vertex(330)]
+
+define koch_edge(p1, p2) = 
+    let d = complex_sub(p2, p1) in
+    [p1, complex_add(p1, complex_mul(d, Pair(1/3, 0))),
+     complex_add(p1, complex_mul(d, Pair(0.5, 0 - sqrt(3)/6))),
+     complex_add(p1, complex_mul(d, Pair(2/3, 0)))]
+
+define koch_iter(pts) = 
+    let n = list_length(pts) in
+    list_flatten(list_map(λ i . 
+        koch_edge(list_nth(pts, i), list_nth(pts, mod(i + 1, n)))
+    , range(n)))
+
+let n0 = base_triangle()
+let n3 = koch_iter(koch_iter(koch_iter(n0)))  // 192 vertices
+
+diagram(
+    path(n3, fill = "blue", closed = true),
+    width = 6, height = 7,
+    xaxis_ticks_none = true,
+    yaxis_ticks_none = true
+)
+```
+
+### Example: Scatter Plot with Colormap
+
+![Styled scatter](../images/plot_styled_scatter.png)
+
+```kleis
+let xs = linspace(0, 12.566370614, 50)  // 0 to 4π
+let ys = list_map(lambda x . sin(x), xs)
+let noise = random_normal(50, 33, 0.1)
+let xs_noisy = vec_add(xs, noise)
+let colors = random(50, 42)
+
+diagram(
+    plot(xs, ys, mark = "none"),
+    scatter(xs_noisy, ys, 
+        mark = "s",
+        colors = colors,
+        map = "turbo",
+        stroke = "0.5pt + black"
+    ),
+    theme = "moon"
+)
+```
+
+### Example: Stacked Area Chart
+
+![Stacked area](../images/plot_stacked_area.png)
+
+```kleis
+let xs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+let y1 = [0, 1, 3, 9, 5, 4, 2, 2, 1, 0]
+let y2 = [5, 3, 2, 0, 1, 2, 2, 2, 3, 2]
+let y3 = [0, 0, 0, 0, 1, 2, 4, 5, 5, 9]
+
+diagram(
+    stacked_area(xs, y1, y2, y3),
+    theme = "moon"
+)
+```
+
+### Themes
+
+Kleis supports Lilaq's built-in themes:
+
+| Theme | Description |
+|-------|-------------|
+| `schoolbook` | Math textbook style with axes at origin |
+| `moon` | Dark theme for presentations |
+| `ocean` | Blue-tinted theme |
+| `misty` | Soft, muted colors |
+| `skyline` | Clean, modern look |
+
+```kleis
+diagram(
+    plot(xs, ys),
+    theme = "moon"
+)
+```
+
+### Axis Customization
+
+| Option | Description | Example |
+|--------|-------------|---------|
+| `xlim`, `ylim` | Axis limits | `xlim = [-6.28, 6.28]` |
+| `xaxis_tick_unit` | Tick spacing unit | `xaxis_tick_unit = 3.14159` |
+| `xaxis_tick_suffix` | Tick label suffix | `xaxis_tick_suffix = "pi"` |
+| `xaxis_tick_rotate` | Rotate labels | `xaxis_tick_rotate = -90` |
+| `xaxis_ticks_none` | Hide ticks | `xaxis_ticks_none = true` |
 
 ### Complete Example Notebook
 
@@ -431,32 +654,30 @@ example "with title" {
 import "stdlib/prelude.kleis"
 ```
 
-**Cell 2: Line plot**
+**Cell 2: Generate data with linspace**
 ```kleis
-plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16], "y = x²")
+let xs = linspace(0, 6.28, 50)
+let ys = list_map(lambda x . sin(x), xs)
 ```
 
-**Cell 3: Multiple plots in one cell**
+**Cell 3: Plot with theme**
 ```kleis
-example "quadratic" {
-    plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16])
-}
-
-example "linear" {
-    plot([0, 1, 2, 3, 4], [1, 3, 5, 7, 9])
-}
+diagram(
+    plot(xs, ys, color = "blue", stroke = "2pt"),
+    title = "Sine Wave",
+    xlabel = "x",
+    ylabel = "sin(x)",
+    theme = "moon"
+)
 ```
-
-Both plots will be displayed sequentially.
 
 ### Future Enhancements
 
 See the [Plotting Roadmap](../../PLOTTING_ROADMAP.md) for planned features:
 - Function plotting (`fplot`)
 - 3D surface plots
-- Color map customization
-- Axis scaling (log, symlog)
-- Equation annotations with Typst math
+- Polar plots
+- Logarithmic scales
 
 ## Next Steps
 

@@ -2,6 +2,24 @@
 
 All notable changes to the Kleis VS Code extension will be documented in this file.
 
+## [0.4.14] - 2026-01-01
+
+### Added
+- **Grammar v0.96 support**: Named arguments (keyword arguments)
+  - `bar(xs, ys, offset = -0.2, width = 0.4, label = "Left")`
+  - `plot(x, y, yerr = errors, color = "blue", stroke = "none")`
+  - `diagram(width = 10, height = 7, title = "My Plot", ...)`
+  - Named arguments must come after positional arguments
+  - Parser-level sugar: converts to `record(field(...), ...)` at parse time
+  - **Does not affect type system or symbolic operations**
+
+### Changed
+- Syntax highlighting for named argument parameters (`variable.parameter.named.kleis`)
+- Syntax highlighting for named argument assignment (`keyword.operator.assignment.named-arg.kleis`)
+
+### Documentation
+- Added `kleis_grammar_v096.ebnf`, `kleis_grammar_v096.md`
+
 ## [0.4.13] - 2025-12-29
 
 ### Added

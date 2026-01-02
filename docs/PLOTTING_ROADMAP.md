@@ -1,18 +1,23 @@
 # Kleis Plotting Roadmap
 
-> **Last Updated:** December 31, 2024
-> **Status:** Phase 1 COMPLETE - All basic plot types implemented
+> **Last Updated:** January 1, 2026
+> **Status:** Lilaq-style Compositional API - `diagram(plot(...), bar(...), ...)`
 
 ## Vision
 
-MATLAB-inspired plotting capabilities integrated with Kleis's numerical (LAPACK) and verification (Z3) features. Seamless workflow: compute → visualize → verify.
+Publication-quality plotting that matches Lilaq 1:1. See https://lilaq.org/docs for reference.
 
 ## Architecture
 
 ```
-Kleis Expression  →  Lilaq/Typst  →  SVG  →  Jupyter/Browser/PDF
+diagram(
+    plot(xs, ys),         → PlotElement
+    bar(xs, heights),     → PlotElement  
+    scatter(xs, ys),      → PlotElement
+)                         → Lilaq/Typst → SVG
 ```
 
+- **Design**: Compositional (matches Lilaq 1:1)
 - **Backend**: Lilaq (Typst's plotting library)
 - **Output**: SVG for web/Jupyter, PDF for documents
 - **Integration**: Jupyter kernel emits `image/svg+xml` MIME bundles
@@ -26,27 +31,34 @@ Kleis Expression  →  Lilaq/Typst  →  SVG  →  Jupyter/Browser/PDF
 **What WORKS:**
 ```kleis
 // Arithmetic expressions in lists
-plot([0, 1, 2, 3], [0, 1*1, 2*2, 3*3])  // ✅
+diagram(plot([0, 1, 2, 3], [0, 1*1, 2*2, 3*3]))  // ✅
 
 // Let bindings
 let xs = [0, 1, 2, 3] in
 let ys = [0, 1, 4, 9] in
-plot(xs, ys)  // ✅
+diagram(plot(xs, ys))  // ✅
 
 // negate() for negative values
-plot(x, [0, negate(1), negate(2)])  // ✅
+diagram(plot(xs, [0, negate(1), negate(2)]))  // ✅
+
+// Multiple plots composed
+diagram(
+    plot(xs, ys1),
+    scatter(xs, ys2),
+    bar(xs, heights)
+)  // ✅
 ```
 
 **What DOESN'T work (yet):**
 ```kleis
 // No list comprehensions
-plot(x, [x*x for x in xs])  // ❌ No syntax
+diagram(plot(x, [x*x for x in xs]))  // ❌ No syntax
 
 // No map over lists for plotting
-plot(x, map(square, xs))  // ❌ Not implemented
+diagram(plot(x, map(square, xs)))  // ❌ Not implemented
 
 // No linspace/arange
-plot(linspace(0, 10, 100), ...)  // ❌ Phase 10
+diagram(plot(linspace(0, 10, 100), ...))  // ❌ Future phase
 ```
 
 **Root cause:** The evaluator correctly evaluates expressions, but Kleis lacks programmatic list generation. Lists must be written explicitly.
@@ -68,33 +80,111 @@ export KLEIS_ROOT=/path/to/kleis
 
 ## Implementation Status
 
-### Phase 1: Core 2D Plots ✅ COMPLETE
+### Core 2D Plots ✅ COMPLETE - Lilaq-style Compositional API
 
-| Function | Status | Description |
-|----------|--------|-------------|
-| `plot(x, y)` | ✅ | Line plot from data points |
-| `scatter(x, y)` | ✅ | Scatter plot with markers |
-| `fill_between(x, y)` | ✅ | Shaded area under curve (to y=0) |
-| `bar(x, heights)` | ✅ | Vertical bar chart |
-| `hbar(y, widths)` | ✅ | Horizontal bar chart |
-| `stem(x, y)` | ✅ | Stem plot (discrete signals) |
-| `hstem(x, y)` | ✅ | Horizontal stem plot |
-| `boxplot(data1, data2, ...)` | ✅ | Box and whisker plots |
-| `hboxplot(...)` | ✅ | Horizontal boxplots |
-| `heatmap(matrix)` | ✅ | 2D color mesh / colormesh |
-| `colormesh(matrix)` | ✅ | Alias for heatmap |
-| `contour(matrix)` | ✅ | Contour lines |
-| `quiver(x, y, u, v)` | ✅ | Vector/arrow field |
-
-**All functions support optional title:** `plot(x, y, "Title")`
-
-### Phase 2: Plot Styling & Options 🔜 NEXT
-
-Currently we only support basic `plot(x, y)` calls. Lilaq provides many more styling options that should be exposed through an options record syntax:
+**Matches Lilaq 1:1 - see https://lilaq.org/docs**
 
 ```kleis
-plot(x, y, { mark: "o", color: "blue", yerr: errors, smooth: true })
+// Basic usage - diagram() composes elements
+diagram(
+    plot([0,1,2,3,4], [0,1,4,9,16]),
+    scatter([0,1,2,3,4], [0,2,4,6,8])
+)
+
+// Individual elements
+plot(xs, ys)           // Line plot
+scatter(xs, ys)        // Scatter plot
+bar(xs, heights)       // Vertical bar chart
+hbar(xs, widths)       // Horizontal bar chart
+stem(xs, ys)           // Stem plot
+hstem(xs, ys)          // Horizontal stem
+fill_between(xs, ys)   // Area under curve
+boxplot(data1, data2)  // Box and whisker
+hboxplot(data...)      // Horizontal boxplot
+heatmap(matrix)        // Color mesh
+contour(matrix)        // Contour lines
+quiver(xs, ys, dirs)   // Vector field
+
+// Multiple bar series (Lilaq-style)
+diagram(
+    bar([0,1,2,3], ys1),
+    bar([0,1,2,3], ys2)
+)
+
+// 2D visualization
+graph("heatmap", matrix)
+graph("contour", matrix)
+
+// Vector fields
+graph("quiver", x_coords, y_coords, directions_matrix)
 ```
+
+| Type | Arguments | Description |
+|------|-----------|-------------|
+| `"line"` / `"plot"` | `xs, ys` | Line plot |
+| `"scatter"` | `xs, ys` | Scatter plot with markers |
+| `"bar"` | `xs, heights` | Vertical bar chart |
+| `"hbar"` | `ys, widths` | Horizontal bar chart |
+| `"grouped_bars"` | `xs, [series...], [labels...], [errors...]` | Grouped bars with optional error bars |
+| `"stem"` | `xs, ys` | Stem plot (discrete signals) |
+| `"hstem"` | `xs, ys` | Horizontal stem plot |
+| `"fill_between"` | `xs, ys` | Shaded area under curve |
+| `"boxplot"` | `[[data1], [data2], ...]` | Box and whisker plots |
+| `"hboxplot"` | `[[data1], [data2], ...]` | Horizontal boxplots |
+| `"heatmap"` / `"colormesh"` | `matrix` | 2D color mesh |
+| `"contour"` | `matrix` | Contour lines |
+| `"quiver"` | `x_coords, y_coords, directions` | Vector/arrow field |
+
+### Phase 2: Plot Styling & Options ✅ COMPLETE
+
+**Unified `graph()` API** with comprehensive styling options:
+
+```kleis
+// Basic usage
+graph("line", [0,1,2,3], [0,1,4,9])
+graph("scatter", xs, ys, "Title")
+
+// With options (string or record syntax)
+graph("line", xs, ys, "Title")  // Simple title
+graph("line", xs, ys, { title: "My Plot", color: "blue", mark: "o" })
+
+// All plot types via single function
+graph("bar", xs, heights)
+graph("heatmap", matrix)
+graph("contour", matrix)
+graph("boxplot", [data1, data2])
+graph("quiver", xs, ys, directions)
+```
+
+**Valid plot types:** `line`, `scatter`, `bar`, `hbar`, `stem`, `hstem`, `fill_between`, `boxplot`, `hboxplot`, `heatmap`, `contour`, `quiver`
+
+**Implemented options:**
+| Option | Type | Description |
+|--------|------|-------------|
+| `title` | string | Plot title |
+| `xlabel`, `ylabel` | string | Axis labels |
+| `label` | string | Legend label |
+| `color` | string | Line/mark color |
+| `stroke` | string | Line stroke style |
+| `fill`, `fill_color` | string | Fill color for areas |
+| `mark` | string | Marker type: "o", "x", "star", "d", "s" |
+| `mark_size` | number | Marker size in points |
+| `mark_color` | string | Marker color (separate from line) |
+| `opacity`, `alpha` | number | Opacity (0.0 to 1.0) |
+| `yerr`, `xerr` | list | Error bars (symmetric) |
+| `step` | string | Step mode: "none", "start", "end", "center" |
+| `smooth` | bool | Bézier spline interpolation |
+| `every` | int | Mark interval (show every nth) |
+| `clip` | bool | Clip to data area |
+| `z_index` | int | Rendering order |
+| `colormap`, `cmap` | string | "viridis", "magma", "plasma", etc. |
+| `norm` | string | Color normalization: "linear", "log" |
+| `base` | number | Baseline y-coord for stem plots |
+| `base_stroke` | string | Baseline stroke style |
+| `sizes`, `colors` | list | Per-point styling (scatter) |
+| `width`, `height` | number | Plot dimensions in cm |
+
+**Legacy functions still work:** `plot()`, `scatter()`, `bar()`, etc.
 
 #### `plot()` Missing Parameters
 
