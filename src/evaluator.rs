@@ -2929,6 +2929,40 @@ impl Evaluator {
                 }
                 Ok(None)
             }
+            "fst" | "first" => {
+                // fst(Pair(a, b)) → a
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Expression::Operation {
+                    name,
+                    args: pair_args,
+                    ..
+                } = &args[0]
+                {
+                    if name == "Pair" && pair_args.len() == 2 {
+                        return Ok(Some(pair_args[0].clone()));
+                    }
+                }
+                Ok(None)
+            }
+            "snd" | "second" => {
+                // snd(Pair(a, b)) → b
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Expression::Operation {
+                    name,
+                    args: pair_args,
+                    ..
+                } = &args[0]
+                {
+                    if name == "Pair" && pair_args.len() == 2 {
+                        return Ok(Some(pair_args[1].clone()));
+                    }
+                }
+                Ok(None)
+            }
             "list_nth" => {
                 // list_nth([a, b, c], 1) → b
                 // Index into a list (0-based)
@@ -4822,6 +4856,20 @@ impl Evaluator {
         // Collect plot elements from middle args
         for arg in &args[start_idx..end_idx] {
             let evaluated = self.eval_concrete(arg)?;
+
+            // Handle lists of PlotElements (for dynamic generation with list_map)
+            if let Expression::List(list_elements) = &evaluated {
+                for list_elem in list_elements {
+                    if let Expression::Operation { name, .. } = list_elem {
+                        if name == "PlotElement" {
+                            let element = self.decode_plot_element(list_elem)?;
+                            elements.push(element);
+                        }
+                    }
+                }
+                continue;
+            }
+
             if let Expression::Operation {
                 name,
                 args: _elem_args,

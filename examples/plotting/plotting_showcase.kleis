@@ -93,32 +93,43 @@ example "Demonstrating list_zip and conditionals" {
 }
 
 // =============================================================================
-// Bar Plot with Numbers - FULL LILAQ REPLICATION
+// Bar Plot with Numbers - FULL LILAQ REPLICATION (DYNAMIC)
 // =============================================================================
-// This is the complete replication of:
+// This is the EXACT replication of:
 // https://lilaq.org/docs/bar (Bar plot with numbers example)
+//
+// Original Lilaq:
+// #let xs = range(9)
+// #let ys = (12, 51, 23, 36, 38, 15, 10, 22, 86)
+// #lq.diagram(
+//   width: 9cm,
+//   xaxis: (subticks: none),
+//   lq.bar(xs, ys),
+//   ..xs.zip(ys).map(((x, y)) => {
+//     let align = if y > 12 { top } else { bottom }
+//     lq.place(x, y, pad(0.2em)[#y], align: align)
+//   })
+// )
 
-example "Bar plot with text annotations (full Lilaq replication)" {
-    out("Bar plot with text annotations (like Lilaq example)")
+example "Bar plot with text annotations (EXACT Lilaq replication)" {
+    out("Bar plot with text annotations - EXACT Lilaq replication")
     out("")
     
     let xs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     let ys = [12, 51, 23, 36, 38, 15, 10, 22, 86]
     
-    // Create text annotations for each bar
-    // Note: We need to convert numbers to strings for display
+    // Dynamic annotation generation - exactly like Lilaq
+    let annotations = list_map(λ p . 
+        let x = fst(p) in
+        let y = snd(p) in
+        let align = if y > 12 then "top" else "bottom" in
+        place(x, y, y, align = align)
+    , list_zip(xs, ys))
+    
+    // diagram() now accepts a list of PlotElements (like Lilaq's spread operator)
     diagram(
         bar(xs, ys),
-        // Annotations using place() - align based on height
-        place(0, 12, "12", align = "top"),
-        place(1, 51, "51", align = "top"),
-        place(2, 23, "23", align = "top"),
-        place(3, 36, "36", align = "top"),
-        place(4, 38, "38", align = "top"),
-        place(5, 15, "15", align = "top"),
-        place(6, 10, "10", align = "bottom"),  // y <= 12, use bottom
-        place(7, 22, "22", align = "top"),
-        place(8, 86, "86", align = "top"),
+        annotations,  // List of place() elements
         width = 9,
         xaxis_subticks = "none"
     )
