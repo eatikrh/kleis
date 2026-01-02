@@ -221,15 +221,35 @@ See: https://opensource.org/licenses/BSD-3-Clause
 
 ---
 
+## Kleis License
+
+Kleis is licensed under the **MIT License** with the following copyright:
+
+```
+Copyright (c) 2024-2026 Engin Atik
+```
+
+**Attribution Requirement**: Any derivative work or product based on Kleis must include attribution to **Engin Atik** as the original author. This is required by the MIT License's copyright notice preservation clause.
+
+---
+
 ## Compliance
 
-To comply with these licenses:
+### For Kleis Users (Creating Derivative Works)
 
-1. **MIT/BSD**: Include copyright notice and license text in distributions
-2. **Apache-2.0**: Include NOTICE file if present, document modifications
-3. **All**: Do not use project names to endorse derived works without permission
+To create derivative works from Kleis, you must:
 
-Kleis itself is licensed under [TBD - your license choice].
+1. **Include the copyright notice**: "Copyright (c) 2024-2026 Engin Atik"
+2. **Include the MIT license text** in your distribution
+3. **Attribute Engin Atik** as the original author in your documentation or about page
+
+### For Kleis (Using Third-Party Dependencies)
+
+Kleis complies with its dependencies' licenses by:
+
+1. **MIT/BSD**: Including copyright notices and license texts in this document
+2. **Apache-2.0**: Documenting the use of Typst and TypeScript
+3. **All**: Not using project names to endorse Kleis without permission
 
 ---
 
