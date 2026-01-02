@@ -412,6 +412,38 @@ structure FourVoiceCounterpoint {
 
 **Priority:** Fun project, educational value, great demo
 
+#### 11. Future Documentation: Equation Editor & .kleist Templates
+
+**Status:** NOT YET DOCUMENTED in the manual. Users don't know the Equation Editor exists.
+
+**The plan:**
+When we integrate the Equation Editor with Jupyter notebooks, we will document:
+
+1. **The Equation Editor itself** - What it is, how it works, visual editing
+2. **`.kleist` template system** - How templates define notation
+3. **User extensibility** - How users can add custom templates (chemistry, music, etc.)
+4. **Template anatomy** - Pattern, rendering for multiple targets, categories
+
+**Documentation approach (lesson learned Jan 2, 2026):**
+Just like we documented the Solver Abstraction Layer by **reading the code first**, we will:
+- Read `static/index.html`, `patternfly-editor/`, `std_template_lib/*.kleist`
+- Understand the actual implementation
+- Then document what exists
+
+**Why wait for Jupyter integration?**
+- Equation Editor as standalone web app is less compelling to document
+- Integration with Jupyter gives it a clear use case (publication-quality equations in notebooks)
+- The documentation will show the complete workflow
+
+**Files to document when ready:**
+- `static/index.html` — Original Equation Editor
+- `patternfly-editor/` — PatternFly/React version
+- `std_template_lib/*.kleist` — Standard template library (12 files)
+- `src/typst_renderer.rs` — Template-based rendering
+- `src/render_editor.rs` — EditorNode rendering
+
+**See also:** Section 9 (Jupyter + Equation Editor Integration)
+
 ---
 
 ## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
