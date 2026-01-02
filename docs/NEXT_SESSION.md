@@ -2085,7 +2085,7 @@ See `docs/vision/VERIFIED_SOFTWARE_DREAM.md` (in abandoned branch) for full anal
 
 ## ✅ DONE: LISP Interpreter Uses stdlib Ordering Operations
 
-The LISP interpreter (`docs/grammar/lisp_parser.kleis`) already:
+The LISP interpreter (`examples/meta-programming/lisp_parser.kleis`) already:
 1. ✅ Imports `stdlib/prelude.kleis`
 2. ✅ Uses `le`, `lt`, `gt`, `ge`, `eq` from stdlib `Ordered(T)` structure
 
@@ -2142,7 +2142,7 @@ See `docs/vision/VERIFIED_SOFTWARE_VISION.md` — this enables:
 - The path to "correct by construction" software
 
 ### Files to Modify
-- `docs/grammar/lisp_parser.kleis` - Add verify form
+- `examples/meta-programming/lisp_parser.kleis` - Add verify form
 - `src/evaluator.rs` - May need Z3 integration
 - `docs/manual/src/appendix/lisp-interpreter.md` - Update with new code
 

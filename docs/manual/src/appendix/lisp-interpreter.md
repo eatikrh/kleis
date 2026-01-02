@@ -16,7 +16,7 @@ The interpreter includes:
 $ cargo run --bin repl
 🧮 Kleis REPL v0.1.0
 
-λ> :load docs/grammar/lisp_parser.kleis
+λ> :load examples/meta-programming/lisp_parser.kleis
 ✅ Loaded: 2 files, 60 functions, 15 structures, 5 data types
 
 λ> :eval run("(+ 2 3)")
@@ -53,7 +53,7 @@ $ cargo run --bin repl
 
 ## Complete Source Code
 
-The complete LISP interpreter is in `docs/grammar/lisp_parser.kleis`. Below is the full implementation.
+The complete LISP interpreter is in `examples/meta-programming/lisp_parser.kleis`. Below is the full implementation.
 
 ### Part 1: S-Expression Data Types
 

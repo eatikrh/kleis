@@ -426,7 +426,7 @@ structure LagrangianMechanics(n : ℕ) {
 Kleis can serve as a **meta-language** — a language for implementing other languages. See the complete LISP interpreter in Kleis:
 
 ```
-λ> :load docs/grammar/lisp_parser.kleis
+λ> :load examples/meta-programming/lisp_parser.kleis
 
 λ> :eval run("(letrec ((fib (lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))) (fib 10))")
 ✅ VNum(55)

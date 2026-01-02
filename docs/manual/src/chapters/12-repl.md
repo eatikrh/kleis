@@ -131,7 +131,7 @@ Check types with `:type`:
 The `:eval` command performs **concrete evaluation** — it actually computes results, including recursive functions:
 
 ```
-λ> :load docs/grammar/lisp_parser.kleis
+λ> :load examples/meta-programming/lisp_parser.kleis
 ✅ Loaded: 60 functions
 
 λ> :eval run("(+ 2 3)")
