@@ -1,6 +1,6 @@
 # Next Session Notes
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 1, 2026 (evening)
 
 ---
 
@@ -234,6 +234,44 @@ export("arxiv/", format: "latex")
 7. ⏳ Export to LaTeX (for arXiv)
 
 **This is what scientists actually need.**
+
+#### 8. Kleis AST → EditorNode Translator: Limited for 2D Math Rendering
+
+**Problem:** The `translate_to_editor()` function in `src/editor_ast.rs` is too basic for proper 2D mathematical rendering. It only handles tensors with index structure but doesn't recognize common mathematical operations that need special visual layout.
+
+**Current limitations:**
+
+| Kleis AST | Current Translation | Should Be |
+|-----------|--------------------| -----------|
+| `a / b` | `Operation {name: "div", args: [a, b]}` | `kind: "frac"` for 2D layout |
+| `sqrt(x + y)` | `Operation {name: "sqrt", args: [...]}` | `kind: "sqrt"` with radical bar |
+| `sum(i, 1, n, f)` | Basic operation | `kind: "sum"` with stacked bounds |
+| `c / (a + b)` | Keeps parentheses in args | Frac bar makes parens implicit |
+
+**What's needed:**
+
+1. **Operation recognition** - Map `div` → fraction, `sqrt` → radical, etc.
+2. **Parenthesis elimination** - Know when 2D layout makes parens unnecessary
+3. **Big operator templates** - `sum`, `prod`, `int` need stacked bound notation
+
+**Enhancement approach:**
+
+```rust
+// In translate_with_context():
+"div" | "/" => EditorNode::operation_with_kind("frac", args, "frac"),
+"sqrt" => EditorNode::operation_with_kind("sqrt", args, "sqrt"),
+"sum" | "Σ" => /* create stacked bounds */ ,
+```
+
+**Files:**
+- `src/editor_ast.rs` - `translate_to_editor()` and `translate_with_context()` (lines 194-310)
+
+**Impact:** Enables beautiful math rendering in Jupyter via the existing pipeline:
+```
+Expression → translate_to_editor() → EditorNode → render(Typst) → SVG
+```
+
+**Priority:** Medium (depends on whether Jupyter math rendering is pursued)
 
 ---
 
