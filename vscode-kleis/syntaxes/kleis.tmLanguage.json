@@ -1,6 +1,8 @@
 {
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Kleis",
   "scopeName": "source.kleis",
+  "version": "0.96.0",
   "fileTypes": ["kleis"],
   "patterns": [
     { "include": "#comments" },
@@ -8,6 +10,7 @@
     { "include": "#numbers" },
     { "include": "#booleans" },
     { "include": "#symbolic-constants" },
+    { "include": "#named-arguments" },
     { "include": "#constructors" },
     { "include": "#types" },
     { "include": "#quantifiers" },
@@ -19,6 +22,19 @@
     { "include": "#identifiers" }
   ],
   "repository": {
+
+    "named-arguments": {
+      "comment": "Named arguments in function calls: name = value (v0.96)",
+      "patterns": [
+        {
+          "match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(=)(?!=)",
+          "captures": {
+            "1": { "name": "variable.parameter.named.kleis" },
+            "2": { "name": "keyword.operator.assignment.named-arg.kleis" }
+          }
+        }
+      ]
+    },
 
     "comments": {
       "patterns": [

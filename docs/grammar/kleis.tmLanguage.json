@@ -1,6 +1,8 @@
 {
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Kleis",
   "scopeName": "source.kleis",
+  "version": "0.96.0",
   "fileTypes": ["kleis"],
   "patterns": [
     { "include": "#comments" },
@@ -8,17 +10,32 @@
     { "include": "#numbers" },
     { "include": "#booleans" },
     { "include": "#symbolic-constants" },
+    { "include": "#named-arguments" },
+    { "include": "#constructors" },
     { "include": "#types" },
     { "include": "#quantifiers" },
     { "include": "#keywords" },
     { "include": "#annotations" },
     { "include": "#operators" },
-    { "include": "#constructors" },
     { "include": "#greek-types" },
     { "include": "#variables" },
     { "include": "#identifiers" }
   ],
   "repository": {
+
+    "named-arguments": {
+      "comment": "Named arguments in function calls: name = value (v0.96)",
+      "patterns": [
+        {
+          "match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(=)(?!=)",
+          "captures": {
+            "1": { "name": "variable.parameter.named.kleis" },
+            "2": { "name": "keyword.operator.assignment.named-arg.kleis" }
+          }
+        }
+      ]
+    },
+
     "comments": {
       "patterns": [
         {
@@ -71,6 +88,14 @@
       "patterns": [
         {
           "name": "constant.language.symbolic.kleis",
+          "match": "\\b(e|i|c)\\b"
+        },
+        {
+          "name": "constant.language.placeholder.kleis",
+          "match": "□"
+        },
+        {
+          "name": "constant.language.symbolic.kleis",
           "match": "[πℏφ∞∅]"
         }
       ]
@@ -80,7 +105,11 @@
       "patterns": [
         {
           "name": "storage.type.primitive.kleis",
-          "match": "ℝ|ℂ|ℤ|ℕ|ℚ|\\b(Real|Complex|Integer|Nat|Rational|Bool|String|Field|Type)\\b"
+          "match": "ℝ|ℂ|ℤ|ℕ|ℚ|𝔹|\\b(Real|Complex|Integer|Nat|Rational|Bool|String|Unit|Scalar)\\b"
+        },
+        {
+          "name": "entity.name.type.constructor.kleis",
+          "match": "\\b(Matrix|Vector|Tensor|List|Set|Option|Result|Field|Type|BitVec)\\b"
         }
       ]
     },
@@ -90,6 +119,10 @@
         {
           "name": "keyword.operator.quantifier.kleis",
           "match": "[∀∃λ]|\\b(forall|exists|lambda)\\b"
+        },
+        {
+          "name": "keyword.operator.bigop.kleis",
+          "match": "[ΣΠ∫∬∭∮∯]|\\b(lim|sum|prod|integral)\\b"
         }
       ]
     },
@@ -98,7 +131,19 @@
       "patterns": [
         {
           "name": "keyword.control.kleis",
-          "match": "\\b(data|structure|implements|operation|element|axiom|supports|notation|define|let|in|if|then|else|match|type|object|const|narrow|over|extends|verify|where)\\b"
+          "match": "\\b(data|structure|implements|operation|element|axiom|supports|notation|define|let|in|if|then|else|match|type|object|const|narrow|over|extends|verify|where|import|example|assert)\\b"
+        },
+        {
+          "name": "keyword.other.math.kleis",
+          "match": "\\b(Sum|Product|Integrate|Limit|D|Dt|sum_bounds|prod_bounds|int_bounds|sum_set|prod_set|sum_where|integral_measure|contour_integral|limit_inf|limit_neg_inf|sup|inf|ess_sup|argmax|argmin|oint|E|Var|fourier_coeff)\\b"
+        },
+        {
+          "name": "support.function.dimension.kleis",
+          "match": "\\b(min|max|gcd|lcm)\\b"
+        },
+        {
+          "name": "support.function.builtin.kleis",
+          "match": "\\b(builtin_[a-z_]+)\\b"
         }
       ]
     },
@@ -124,7 +169,12 @@
       "patterns": [
         {
           "name": "keyword.operator.kleis",
-          "match": "(==|!=|<=|>=|->|=>|→|⇒|⟹|⊗|∘|∗|×|·|\\+|-|\\*|/|\\^|=|≠|<|>|≤|≥|≈|≡|~|∈|∉|⊂|⊆|∧|∨|¬|∂|∇|∫|√|!|†|ᵀ|\\^T|d/dx)"
+          "match": "(==|!=|<=|>=|->|=>|→|⇒|⟹|⊗|∘|∗|×|·|\\+|-|\\*|/|\\^|=|≠|<|>|≤|≥|≈|≡|~|∈|∉|⊂|⊆|∧|∨|¬|∇|∫|√|!|†|ᵀ|\\^T)"
+        }
+        ,
+        {
+          "name": "keyword.operator.unicode.kleis",
+          "match": "(⊕|⊙|⊛|⨂|⨁|⋆|•|∪|∩|⊖|⊘|⨀|⨄|⊚|⊝|⊞|⊟|⊠|⊡|⊻|⊼|⊽|⊓|⊔|⩒|⩓|⨂|⋅|◦)"
         }
       ]
     },
