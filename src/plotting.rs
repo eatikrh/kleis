@@ -1156,12 +1156,7 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
     if let Some((min, max)) = options.ylim {
         code.push_str(&format!("  ylim: ({}, {}),\n", min, max));
     }
-    if let Some(ref xscale) = options.xscale {
-        code.push_str(&format!("  xscale: \"{}\",\n", xscale));
-    }
-    if let Some(ref yscale) = options.yscale {
-        code.push_str(&format!("  yscale: \"{}\",\n", yscale));
-    }
+    // Note: xscale and yscale are handled in xaxis/yaxis options below
     if let Some(ref pos) = options.legend_position {
         code.push_str(&format!("  legend: (position: {}),\n", pos));
     }
@@ -1175,6 +1170,12 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
     }
     // X-axis options
     let mut xaxis_opts = Vec::new();
+    // Scale: "linear" (default), "log", "symlog"
+    if let Some(ref xscale) = options.xscale {
+        if xscale != "linear" {
+            xaxis_opts.push(format!("scale: \"{}\"", xscale));
+        }
+    }
     if options.xaxis_ticks_none == Some(true) {
         xaxis_opts.push("ticks: none".to_string());
     }
@@ -1223,6 +1224,12 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
 
     // Y-axis options
     let mut yaxis_opts = Vec::new();
+    // Scale: "linear" (default), "log", "symlog"
+    if let Some(ref yscale) = options.yscale {
+        if yscale != "linear" {
+            yaxis_opts.push(format!("scale: \"{}\"", yscale));
+        }
+    }
     if options.yaxis_ticks_none == Some(true) {
         yaxis_opts.push("ticks: none".to_string());
     }
