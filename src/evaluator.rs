@@ -3138,7 +3138,7 @@ impl Evaluator {
                 let result: Vec<Expression> = (start..end)
                     .map(|i| Expression::Const(i.to_string()))
                     .collect();
-                return Ok(Some(Expression::List(result)));
+                Ok(Some(Expression::List(result)))
             }
             "linspace" => {
                 // linspace(start, end) → 50 evenly spaced values (default)
@@ -3165,7 +3165,7 @@ impl Evaluator {
                 let result: Vec<Expression> = (0..count)
                     .map(|i| Expression::Const((start + i as f64 * step).to_string()))
                     .collect();
-                return Ok(Some(Expression::List(result)));
+                Ok(Some(Expression::List(result)))
             }
             "random" | "random_uniform" => {
                 // random(count) → list of pseudo-random values in [0, 1]
@@ -3191,7 +3191,7 @@ impl Evaluator {
                         Expression::Const((x as f64 / m as f64).to_string())
                     })
                     .collect();
-                return Ok(Some(Expression::List(result)));
+                Ok(Some(Expression::List(result)))
             }
             "random_normal" => {
                 // random_normal(count) → list of pseudo-random values from N(0, 1)
@@ -3233,7 +3233,7 @@ impl Evaluator {
                         result.push(Expression::Const((z1 * scale).to_string()));
                     }
                 }
-                return Ok(Some(Expression::List(result)));
+                Ok(Some(Expression::List(result)))
             }
             "vec_add" => {
                 // Element-wise vector addition: vec_add([a, b], [c, d]) = [a+c, b+d]
@@ -3250,39 +3250,37 @@ impl Evaluator {
                     .zip(list2.iter())
                     .map(|(a, b)| Expression::Const((a + b).to_string()))
                     .collect();
-                return Ok(Some(Expression::List(result)));
+                Ok(Some(Expression::List(result)))
             }
             "cos" => {
                 if args.len() != 1 {
                     return Ok(None);
                 }
                 let x = self.extract_f64(&args[0])?;
-                return Ok(Some(Expression::Const(x.cos().to_string())));
+                Ok(Some(Expression::Const(x.cos().to_string())))
             }
             "sin" => {
                 if args.len() != 1 {
                     return Ok(None);
                 }
                 let x = self.extract_f64(&args[0])?;
-                return Ok(Some(Expression::Const(x.sin().to_string())));
+                Ok(Some(Expression::Const(x.sin().to_string())))
             }
             "sqrt" => {
                 if args.len() != 1 {
                     return Ok(None);
                 }
                 let x = self.extract_f64(&args[0])?;
-                return Ok(Some(Expression::Const(x.sqrt().to_string())));
+                Ok(Some(Expression::Const(x.sqrt().to_string())))
             }
-            "pi" => {
-                return Ok(Some(Expression::Const(std::f64::consts::PI.to_string())));
-            }
+            "pi" => Ok(Some(Expression::Const(std::f64::consts::PI.to_string()))),
             "deg_to_rad" | "radians" => {
                 // Convert degrees to radians
                 if args.len() != 1 {
                     return Ok(None);
                 }
                 let deg = self.extract_f64(&args[0])?;
-                return Ok(Some(Expression::Const(deg.to_radians().to_string())));
+                Ok(Some(Expression::Const(deg.to_radians().to_string())))
             }
 
             // ============================================
@@ -5119,29 +5117,25 @@ impl Evaluator {
         let mut end_idx = args.len();
 
         // Check first arg for options record (legacy style)
-        if let Some(first) = args.first() {
-            if let Expression::Operation {
-                name, args: opts, ..
-            } = first
-            {
-                if name == "record" {
-                    self.parse_diagram_options(opts, &mut options)?;
-                    start_idx = 1;
-                }
+        if let Some(Expression::Operation {
+            name, args: opts, ..
+        }) = args.first()
+        {
+            if name == "record" {
+                self.parse_diagram_options(opts, &mut options)?;
+                start_idx = 1;
             }
         }
 
         // Check last arg for options record (v0.96 named arguments style)
         if end_idx > start_idx {
-            if let Some(last) = args.last() {
-                if let Expression::Operation {
-                    name, args: opts, ..
-                } = last
-                {
-                    if name == "record" {
-                        self.parse_diagram_options(opts, &mut options)?;
-                        end_idx = args.len() - 1;
-                    }
+            if let Some(Expression::Operation {
+                name, args: opts, ..
+            }) = args.last()
+            {
+                if name == "record" {
+                    self.parse_diagram_options(opts, &mut options)?;
+                    end_idx = args.len() - 1;
                 }
             }
         }
@@ -5287,9 +5281,7 @@ impl Evaluator {
                                 options.ylim = Some((limits[0], limits[1]));
                             }
                         }
-                        "theme" => {
-                            options.theme = Some(self.extract_string(&args[1])?)
-                        }
+                        "theme" => options.theme = Some(self.extract_string(&args[1])?),
                         _ => {} // Ignore unknown options
                     }
                 }
@@ -5579,8 +5571,11 @@ impl Evaluator {
             if let Expression::List(items) = &evaluated {
                 if !items.is_empty() {
                     // Check if first item is a Pair
-                    if let Expression::Operation { name, args: pair_args, .. } =
-                        self.eval_concrete(&items[0])?
+                    if let Expression::Operation {
+                        name,
+                        args: pair_args,
+                        ..
+                    } = self.eval_concrete(&items[0])?
                     {
                         if name == "Pair" && pair_args.len() == 2 {
                             // It's a list of pairs
@@ -5645,11 +5640,19 @@ impl Evaluator {
 
         for (i, arg) in args.iter().enumerate().skip(2) {
             let evaluated = self.eval_concrete(arg)?;
-            if let Expression::Operation { ref name, ref args, .. } = evaluated {
+            if let Expression::Operation {
+                ref name, ref args, ..
+            } = evaluated
+            {
                 if name == "record" {
                     // Check for y2 in the record
                     for field_arg in args {
-                        if let Expression::Operation { name: fname, args: fargs, .. } = field_arg {
+                        if let Expression::Operation {
+                            name: fname,
+                            args: fargs,
+                            ..
+                        } = field_arg
+                        {
                             if fname == "field" && fargs.len() >= 2 {
                                 if let Expression::Const(key) = &fargs[0] {
                                     if key == "y2" {
@@ -5732,7 +5735,9 @@ impl Evaluator {
         let mut fill_elements: Vec<Expression> = Vec::new();
 
         // Default colors for stacked areas
-        let colors = ["#5B8FB9", "#E19F8F", "#B5651D", "#7CB342", "#9C27B0", "#FF9800"];
+        let colors = [
+            "#5B8FB9", "#E19F8F", "#B5651D", "#7CB342", "#9C27B0", "#FF9800",
+        ];
 
         for i in 0..y_series.len() {
             let y1 = &stacked[i];
@@ -6079,8 +6084,11 @@ impl Evaluator {
                                 "functions" => {
                                     // functions = ("x => k/x", "x => k/x")
                                     // Expect a pair of strings
-                                    if let Expression::Operation { name, args: fn_args, .. } =
-                                        self.eval_concrete(&field_args[1])?
+                                    if let Expression::Operation {
+                                        name,
+                                        args: fn_args,
+                                        ..
+                                    } = self.eval_concrete(&field_args[1])?
                                     {
                                         if name == "Pair" && fn_args.len() == 2 {
                                             options.transform_forward =
@@ -6197,10 +6205,7 @@ impl Evaluator {
     }
 
     /// Extract a list of f64 numbers from an expression
-    fn extract_f64_list_from_diagram_option(
-        &self,
-        expr: &Expression,
-    ) -> Result<Vec<f64>, String> {
+    fn extract_f64_list_from_diagram_option(&self, expr: &Expression) -> Result<Vec<f64>, String> {
         let evaluated = self.eval_concrete(expr)?;
         if let Expression::List(elements) = evaluated {
             elements.iter().map(|e| self.extract_f64(e)).collect()

@@ -447,7 +447,7 @@ fn generate_preamble() -> String {
 }
 
 /// Generate preamble with theme support
-/// 
+///
 /// Lilaq has built-in themes in lq.theme module:
 /// - lq.theme.misty
 /// - lq.theme.ocean
@@ -459,27 +459,28 @@ fn generate_preamble() -> String {
 /// See: https://lilaq.org/themes
 fn generate_preamble_with_theme(theme: Option<&str>) -> String {
     let mut code = String::new();
-    
+
     // Base imports
-    code.push_str(&format!("#import \"@preview/lilaq:{}\" as lq\n", LILAQ_VERSION));
-    
+    code.push_str(&format!(
+        "#import \"@preview/lilaq:{}\" as lq\n",
+        LILAQ_VERSION
+    ));
+
     // Theme-specific imports
-    match theme {
-        Some("schoolbook") => {
-            // Full manual implementation requires tiptoe and elembic
-            code.push_str("#import \"@preview/tiptoe:0.3.1\"\n");
-            code.push_str("#import \"@preview/elembic:1.1.1\" as e\n");
-        }
-        _ => {}
+    if let Some("schoolbook") = theme {
+        // Full manual implementation requires tiptoe and elembic
+        code.push_str("#import \"@preview/tiptoe:0.3.1\"\n");
+        code.push_str("#import \"@preview/elembic:1.1.1\" as e\n");
     }
-    
+
     code.push_str("\n#set page(width: auto, height: auto, margin: 0.5cm)\n\n");
-    
+
     // Apply theme
     match theme {
         Some("schoolbook") => {
             // Full manual schoolbook implementation with arrow tips
-            code.push_str(r#"#let schoolbook-style = it => {
+            code.push_str(
+                r#"#let schoolbook-style = it => {
   let filter(value, distance) = value != 0 and distance >= 5pt
   let axis-args = (position: 0, filter: filter)
   
@@ -504,7 +505,8 @@ fn generate_preamble_with_theme(theme: Option<&str>) -> String {
 
 #show: schoolbook-style
 
-"#);
+"#,
+            );
         }
         Some("moon") | Some("dark") => {
             // Moon theme requires dark background
@@ -523,7 +525,7 @@ fn generate_preamble_with_theme(theme: Option<&str>) -> String {
         }
         _ => {}
     }
-    
+
     code
 }
 
@@ -1195,27 +1197,24 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
     }
     if options.xaxis_ticks_none != Some(true) {
         if let Some(ref ticks) = options.xaxis_ticks {
-        // Format ticks as enumerated pairs: ((0, "Jan"), (1, "Feb"), ...)
-        // Apply rotation if specified
-        let tick_strs: Vec<String> = if let Some(degrees) = options.xaxis_tick_rotate {
-            ticks
-                .iter()
-                .enumerate()
-                .map(|(i, label)| {
-                    format!(
-                        "({}, rotate({}deg, reflow: true)[{}])",
-                        i, degrees, label
-                    )
-                })
-                .collect()
-        } else {
-            ticks
-                .iter()
-                .enumerate()
-                .map(|(i, label)| format!("({}, [{}])", i, label))
-                .collect()
-        };
-        xaxis_opts.push(format!("ticks: ({})", tick_strs.join(", ")));
+            // Format ticks as enumerated pairs: ((0, "Jan"), (1, "Feb"), ...)
+            // Apply rotation if specified
+            let tick_strs: Vec<String> = if let Some(degrees) = options.xaxis_tick_rotate {
+                ticks
+                    .iter()
+                    .enumerate()
+                    .map(|(i, label)| {
+                        format!("({}, rotate({}deg, reflow: true)[{}])", i, degrees, label)
+                    })
+                    .collect()
+            } else {
+                ticks
+                    .iter()
+                    .enumerate()
+                    .map(|(i, label)| format!("({}, [{}])", i, label))
+                    .collect()
+            };
+            xaxis_opts.push(format!("ticks: ({})", tick_strs.join(", ")));
         }
     }
     if !xaxis_opts.is_empty() {
@@ -1651,12 +1650,7 @@ fn generate_place_element(element: &PlotElement) -> String {
         .as_ref()
         .and_then(|v| v.first())
         .unwrap_or(&0.0);
-    let text = element
-        .options
-        .text
-        .as_ref()
-        .map(|s| s.as_str())
-        .unwrap_or("");
+    let text = element.options.text.as_deref().unwrap_or("");
 
     let opts = &element.options;
 
@@ -1738,7 +1732,9 @@ fn generate_xaxis_element(element: &PlotElement) -> String {
     }
 
     // Transformation functions (forward and inverse)
-    if let (Some(ref forward), Some(ref inverse)) = (&opts.transform_forward, &opts.transform_inverse) {
+    if let (Some(ref forward), Some(ref inverse)) =
+        (&opts.transform_forward, &opts.transform_inverse)
+    {
         code.push_str(&format!("    functions: ({}, {}),\n", forward, inverse));
     }
 
