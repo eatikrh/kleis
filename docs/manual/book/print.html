@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d06fa1a2.js";
+            window.path_to_searchindex_js = "searchindex-369f6478.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-44239f67.js"></script>
@@ -3086,13 +3086,35 @@ let ys = list_map(lambda x . sin(x), xs)
     theme = "moon"
 )
 </code></pre>
+<h3 id="logarithmic-scales"><a class="header" href="#logarithmic-scales">Logarithmic Scales</a></h3>
+<p>For exponential or power-law data, use logarithmic scales:</p>
+<pre><code class="language-kleis">// Semi-log plot (linear x, logarithmic y)
+diagram(
+    plot([0, 1, 2, 3, 4], [1, 10, 100, 1000, 10000]),
+    title = "Exponential Growth",
+    yscale = "log"   // "linear", "log", or "symlog"
+)
+
+// Log-log plot (both axes logarithmic)
+diagram(
+    plot([1, 10, 100, 1000], [1, 100, 10000, 1000000]),
+    title = "Power Law",
+    xscale = "log",
+    yscale = "log"
+)
+</code></pre>
+<p>Available scales:</p>
+<ul>
+<li><code>"linear"</code> - Default linear scale</li>
+<li><code>"log"</code> - Logarithmic scale (base 10)</li>
+<li><code>"symlog"</code> - Symmetric log (linear near 0, log elsewhere; handles negative values)</li>
+</ul>
 <h3 id="future-enhancements"><a class="header" href="#future-enhancements">Future Enhancements</a></h3>
 <p>See the <a href="../../PLOTTING_ROADMAP.html">Plotting Roadmap</a> for planned features:</p>
 <ul>
 <li>Function plotting (<code>fplot</code>)</li>
 <li>3D surface plots</li>
 <li>Polar plots</li>
-<li>Logarithmic scales</li>
 </ul>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
