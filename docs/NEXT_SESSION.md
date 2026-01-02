@@ -446,6 +446,88 @@ Just like we documented the Solver Abstraction Layer by **reading the code first
 
 ---
 
+## 🎯 NEXT: Transcendental Functions (sin, cos, log, exp, etc.)
+
+### The Gap
+
+Kleis currently handles:
+- ✅ Verification (Z3)
+- ✅ Numerical calculations (arithmetic)
+- ✅ Plotting (Lilaq/Typst)
+
+But lacks **transcendental functions** for scientific computing:
+
+```kleis
+// These don't work yet:
+let y = sin(x)      // ❌
+let z = exp(-t)     // ❌
+plot(xs, map(cos, xs))  // ❌
+```
+
+### Implementation Plan
+
+**Use Rust's `std::f64`** — no external dependencies needed!
+
+| Function | Rust Implementation | Notes |
+|----------|---------------------|-------|
+| `sin(x)` | `x.sin()` | Radians |
+| `cos(x)` | `x.cos()` | Radians |
+| `tan(x)` | `x.tan()` | Radians |
+| `asin(x)` | `x.asin()` | Returns radians |
+| `acos(x)` | `x.acos()` | Returns radians |
+| `atan(x)` | `x.atan()` | Returns radians |
+| `atan2(y, x)` | `y.atan2(x)` | 2-argument arctangent |
+| `sinh(x)` | `x.sinh()` | Hyperbolic |
+| `cosh(x)` | `x.cosh()` | Hyperbolic |
+| `tanh(x)` | `x.tanh()` | Hyperbolic |
+| `exp(x)` | `x.exp()` | e^x |
+| `log(x)` | `x.ln()` | Natural log |
+| `log10(x)` | `x.log10()` | Base-10 log |
+| `log2(x)` | `x.log2()` | Base-2 log |
+| `sqrt(x)` | `x.sqrt()` | Square root |
+| `pow(x, y)` | `x.powf(y)` | x^y |
+| `abs(x)` | `x.abs()` | Absolute value |
+| `floor(x)` | `x.floor()` | Round down |
+| `ceil(x)` | `x.ceil()` | Round up |
+| `round(x)` | `x.round()` | Round to nearest |
+
+**Accuracy:** All functions are IEEE 754 compliant, < 1-2 ULP accuracy (same as NumPy, MATLAB, Julia).
+
+### Files to Modify
+
+1. **`src/evaluator.rs`** — Add `builtin_sin`, `builtin_cos`, etc.
+2. **`stdlib/prelude.kleis`** — Declare operations with types:
+   ```kleis
+   operation sin : ℝ → ℝ
+   operation cos : ℝ → ℝ
+   operation exp : ℝ → ℝ
+   operation log : ℝ → ℝ
+   // etc.
+   ```
+3. **`examples/math/transcendental.kleis`** — Test examples
+4. **`docs/manual/`** — Document in reference
+
+### Example Usage (After Implementation)
+
+```kleis
+example "damped oscillation" {
+    let t = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
+    let y = [exp(negate(0)) * cos(0),
+             exp(negate(0.1)) * cos(0.1),
+             exp(negate(0.2)) * cos(0.2),
+             exp(negate(0.3)) * cos(0.3),
+             exp(negate(0.4)) * cos(0.4),
+             exp(negate(0.5)) * cos(0.5)]
+    plot(t, y, "Damped Oscillation")
+}
+```
+
+### Priority
+
+**High** — Needed for scientific plotting and numerical examples.
+
+---
+
 ## 🚀 PREVIOUS: Self-Hosted Differential Forms (Dec 30, 2024)
 
 ### The Breakthrough
@@ -488,21 +570,19 @@ Layer 0: Primitives (Rust - invisible)
   - Electromagnetic field tensor (from Jackson's Electrodynamics) ✅
 - [x] **Update `stdlib/differential_forms.kleis`** - replace builtin_* with pure Kleis imports
 
-### KNOWN ISSUE: Example Block Assertion Bug
+### ✅ FIXED: Example Block Assertion Bug (Jan 2, 2026)
 
-**Discovery:** Bare equality `expr = value` in example blocks does NOT actually assert!
+**Discovery:** `assert(sin(0) = 0)` was failing because `eval()` returned
+`Operation{sin, [0]}` instead of the value `0`.
 
-```kleis
-example "this passes but shouldn't" {
-    1 = 2  // ← Evaluates to False, but test PASSES!
-}
-```
+**Fix:** `eval_equality_assert()` now uses `eval_concrete()` which fully
+evaluates expressions including all builtin functions.
 
-The evaluator treats `Expr` statements as side-effect-only, discarding the result.
-The `assert()` function has a separate bug where it doesn't fully evaluate before comparing.
+Also added floating-point epsilon comparison (1e-10 relative tolerance)
+for numeric assertions to handle floating point rounding.
 
-**Workaround:** For now, tests demonstrate correctness but don't actually verify.
-**TODO:** Fix `eval_assert()` to fully normalize expressions before comparing.
+**Note:** Bare equality `expr = value` (without `assert()`) is still side-effect-only.
+Always use `assert(a = b)` for actual assertions.
 
 ### Gap Analysis (All Resolved!)
 

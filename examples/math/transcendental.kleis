@@ -1,0 +1,216 @@
+// Transcendental Functions - Examples and Tests
+// Using Rust's std::f64: IEEE 754 compliant, < 1-2 ULP accuracy
+// Same accuracy as NumPy, MATLAB, Julia
+
+// ========================================
+// Trigonometric Functions (radians)
+// ========================================
+
+example "sin and cos" {
+    // sin(0) = 0, cos(0) = 1
+    assert(sin(0) = 0)
+    assert(cos(0) = 1)
+    
+    // sin(π/2) = 1
+    let half_pi = pi() / 2
+    assert(sin(half_pi) = 1)
+    // cos(π/2) ≈ 0 (floating point, very small number)
+    out(cos(half_pi))
+}
+
+example "tan" {
+    // tan(0) = 0
+    assert(tan(0) = 0)
+    
+    // tan(π/4) = 1
+    let quarter_pi = pi() / 4
+    assert(tan(quarter_pi) = 1)
+}
+
+example "inverse trigonometric" {
+    // asin(0) = 0, acos(1) = 0, atan(0) = 0
+    assert(asin(0) = 0)
+    assert(acos(1) = 0)
+    assert(atan(0) = 0)
+    
+    // asin(1) = π/2
+    let half_pi = pi() / 2
+    assert(asin(1) = half_pi)
+    
+    // atan2(1, 1) = π/4
+    let quarter_pi = pi() / 4
+    assert(atan2(1, 1) = quarter_pi)
+}
+
+// ========================================
+// Hyperbolic Functions
+// ========================================
+
+example "hyperbolic functions" {
+    // sinh(0) = 0, cosh(0) = 1, tanh(0) = 0
+    assert(sinh(0) = 0)
+    assert(cosh(0) = 1)
+    assert(tanh(0) = 0)
+    
+    // Identity: cosh² - sinh² = 1
+    let x = 0.5
+    let diff = pow(cosh(x), 2) - pow(sinh(x), 2)
+    assert(diff = 1)
+}
+
+example "inverse hyperbolic" {
+    // asinh(0) = 0, atanh(0) = 0, acosh(1) = 0
+    assert(asinh(0) = 0)
+    assert(atanh(0) = 0)
+    assert(acosh(1) = 0)
+}
+
+// ========================================
+// Exponential and Logarithmic Functions
+// ========================================
+
+example "exponential" {
+    // exp(0) = 1
+    assert(exp(0) = 1)
+    
+    // exp(1) = e
+    assert(exp(1) = e())
+    
+    // exp2(3) = 8
+    assert(exp2(3) = 8)
+}
+
+example "logarithms" {
+    // log(1) = ln(1) = 0
+    assert(log(1) = 0)
+    assert(ln(1) = 0)
+    
+    // log(e) = 1
+    assert(log(e()) = 1)
+    
+    // log10(100) = 2, log2(8) = 3
+    assert(log10(100) = 2)
+    assert(log2(8) = 3)
+}
+
+example "power function" {
+    // pow(2, 3) = 8
+    assert(pow(2, 3) = 8)
+    
+    // pow(4, 0.5) = 2 (square root)
+    assert(pow(4, 0.5) = 2)
+    
+    // pow(e, ln(x)) = x
+    let x = 5
+    assert(pow(e(), ln(x)) = x)
+}
+
+// ========================================
+// Utility Functions
+// ========================================
+
+example "absolute value and rounding" {
+    // abs(-5) = 5
+    assert(abs(negate(5)) = 5)
+    assert(abs(3.14) = 3.14)
+    
+    // floor, ceil, round
+    assert(floor(3.7) = 3)
+    assert(ceil(3.2) = 4)
+    assert(round(3.5) = 4)
+    assert(round(3.4) = 3)
+}
+
+example "trunc and frac" {
+    // trunc removes decimal part (toward zero)
+    assert(trunc(3.7) = 3)
+    assert(trunc(negate(3.7)) = negate(3))
+    
+    // frac gives the fractional part (approximately 0.7)
+    let f = frac(3.7)
+    assert(f = 0.7)
+}
+
+example "sign function" {
+    assert(sign(42) = 1)
+    assert(sign(negate(42)) = negate(1))
+    // Note: sign(0) returns 0 in some implementations, 1 in Rust
+    out(sign(0))
+}
+
+example "modulo and remainder" {
+    // mod(7, 3) = 1
+    assert(mod(7, 3) = 1)
+    assert(mod(10, 4) = 2)
+}
+
+example "min and max" {
+    assert(min(3, 7) = 3)
+    assert(max(3, 7) = 7)
+    
+    // Works with negative numbers
+    assert(min(negate(5), negate(2)) = negate(5))
+}
+
+example "hypot - stable sqrt(x² + y²)" {
+    // hypot(3, 4) = 5 (3-4-5 triangle)
+    assert(hypot(3, 4) = 5)
+    
+    // hypot(1, 1) = sqrt(2)
+    assert(hypot(1, 1) = sqrt(2))
+}
+
+// ========================================
+// Constants
+// ========================================
+
+example "mathematical constants" {
+    // tau = 2*pi
+    assert(tau() = 2 * pi())
+    
+    // Verify constants are non-zero
+    assert(pi() = 3.141592653589793)
+    assert(e() = 2.718281828459045)
+}
+
+// ========================================
+// Angle Conversion
+// ========================================
+
+example "degree to radian conversion" {
+    // radians(180) = π
+    assert(radians(180) = pi())
+    
+    // radians(90) = π/2
+    let half_pi = radians(90)
+    assert(sin(half_pi) = 1)
+}
+
+// ========================================
+// Composite Expressions
+// ========================================
+
+example "damped oscillation" {
+    // y(t) = exp(-t) * cos(t)
+    let t = 0.5
+    let y = exp(negate(t)) * cos(t)
+    // Verify the computation (approximate value)
+    out(y)  // ≈ 0.5330...
+}
+
+example "Gaussian function" {
+    // f(x) = exp(-x²)
+    let x = 1.0
+    let gaussian = exp(negate(pow(x, 2)))
+    // exp(-1) = 1/e
+    assert(gaussian = exp(negate(1)))
+}
+
+example "hyperbolic identity" {
+    // cosh(x) = (exp(x) + exp(-x)) / 2
+    let x = 1.0
+    let manual = (exp(x) + exp(negate(x))) / 2
+    let builtin = cosh(x)
+    assert(manual = builtin)
+}
+

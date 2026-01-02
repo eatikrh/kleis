@@ -696,10 +696,25 @@ Jupyter Commands:
             # Types
             "ℕ", "ℤ", "ℝ", "ℂ", "Bool", "Set", "List", "Matrix", "Vector",
             # Built-in functions
-            "eval", "sin", "cos", "exp", "log", "sqrt", "det", "trace", "transpose",
+            "eval", "det", "trace", "transpose",
             "eigenvalues", "eigenvectors", "inverse", "norm", "negate", "out",
+            # Transcendental functions (v0.97 - IEEE 754 compliant)
+            # Trigonometric (radians)
+            "sin", "cos", "tan", "asin", "acos", "atan", "atan2",
+            "arcsin", "arccos", "arctan", "arctan2",
+            # Hyperbolic
+            "sinh", "cosh", "tanh", "asinh", "acosh", "atanh",
+            "arcsinh", "arccosh", "arctanh",
+            # Exponential/logarithmic
+            "exp", "exp2", "log", "ln", "log10", "log2", "pow", "power",
+            # Utility
+            "sqrt", "abs", "fabs", "floor", "ceil", "ceiling", "round",
+            "trunc", "truncate", "frac", "fract", "sign", "signum",
+            "mod", "fmod", "remainder", "min", "max", "hypot",
+            # Constants
+            "pi", "e", "tau",
             # Math functions
-            "range", "linspace", "pi", "radians",
+            "range", "linspace", "radians", "deg_to_rad",
             # Random functions
             "random", "random_uniform", "random_normal",
             # Vector functions  

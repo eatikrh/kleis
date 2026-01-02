@@ -1281,15 +1281,29 @@ impl Evaluator {
         let left_resolved = self.resolve_expression(left);
         let right_resolved = self.resolve_expression(right);
 
-        // Try to evaluate both sides
-        let left_result = self.eval(&left_resolved);
-        let right_result = self.eval(&right_resolved);
+        // Try to FULLY evaluate both sides using eval_concrete()
+        // This ensures sin(0) becomes 0, not Operation{sin, [0]}
+        let left_result = self.eval_concrete(&left_resolved);
+        let right_result = self.eval_concrete(&right_resolved);
 
         match (left_result, right_result) {
             (Ok(left_val), Ok(right_val)) => {
                 // Both sides evaluated - check structural equality
                 if self.expressions_equal(&left_val, &right_val) {
                     return AssertResult::Passed;
+                }
+
+                // For numeric comparisons, also try floating-point equality
+                // (handles cases like 1.0 vs 1 or floating point rounding)
+                if let (Some(left_num), Some(right_num)) =
+                    (self.as_number(&left_val), self.as_number(&right_val))
+                {
+                    // Use relative epsilon for floating point comparison
+                    let diff = (left_num - right_num).abs();
+                    let max_val = left_num.abs().max(right_num.abs()).max(1.0);
+                    if diff < max_val * 1e-10 {
+                        return AssertResult::Passed;
+                    }
                 }
 
                 // Structural equality failed - check if either side is symbolic
@@ -3281,6 +3295,241 @@ impl Evaluator {
                 }
                 let deg = self.extract_f64(&args[0])?;
                 Ok(Some(Expression::Const(deg.to_radians().to_string())))
+            }
+
+            // ============================================
+            // TRANSCENDENTAL FUNCTIONS (Concrete Evaluation)
+            // ============================================
+            // Using Rust's std::f64 - IEEE 754 compliant, < 1-2 ULP accuracy
+            // Same accuracy as NumPy, MATLAB, Julia
+
+            // Trigonometric functions (radians)
+            "tan" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.tan().to_string())))
+            }
+            "asin" | "arcsin" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.asin().to_string())))
+            }
+            "acos" | "arccos" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.acos().to_string())))
+            }
+            "atan" | "arctan" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.atan().to_string())))
+            }
+            "atan2" | "arctan2" => {
+                // atan2(y, x) - 2-argument arctangent
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let y = self.extract_f64(&args[0])?;
+                let x = self.extract_f64(&args[1])?;
+                Ok(Some(Expression::Const(y.atan2(x).to_string())))
+            }
+
+            // Hyperbolic functions
+            "sinh" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.sinh().to_string())))
+            }
+            "cosh" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.cosh().to_string())))
+            }
+            "tanh" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.tanh().to_string())))
+            }
+            "asinh" | "arcsinh" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.asinh().to_string())))
+            }
+            "acosh" | "arccosh" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.acosh().to_string())))
+            }
+            "atanh" | "arctanh" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.atanh().to_string())))
+            }
+
+            // Exponential and logarithmic functions
+            "exp" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.exp().to_string())))
+            }
+            "exp2" => {
+                // 2^x
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.exp2().to_string())))
+            }
+            "ln" | "log" => {
+                // Natural logarithm (base e)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.ln().to_string())))
+            }
+            "log10" => {
+                // Base-10 logarithm
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.log10().to_string())))
+            }
+            "log2" => {
+                // Base-2 logarithm
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.log2().to_string())))
+            }
+            "pow" | "power" => {
+                // x^y
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                let y = self.extract_f64(&args[1])?;
+                Ok(Some(Expression::Const(x.powf(y).to_string())))
+            }
+
+            // Utility functions
+            "abs" | "fabs" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.abs().to_string())))
+            }
+            "floor" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.floor().to_string())))
+            }
+            "ceil" | "ceiling" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.ceil().to_string())))
+            }
+            "round" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.round().to_string())))
+            }
+            "trunc" | "truncate" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.trunc().to_string())))
+            }
+            "frac" | "fract" => {
+                // Fractional part of x (x - floor(x))
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.fract().to_string())))
+            }
+            "sign" | "signum" => {
+                // Sign of x: -1.0, 0.0, or 1.0
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                Ok(Some(Expression::Const(x.signum().to_string())))
+            }
+            "fmod" | "remainder" => {
+                // Floating-point remainder (x mod y)
+                // Note: "mod" is already handled earlier in this match
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                let y = self.extract_f64(&args[1])?;
+                Ok(Some(Expression::Const((x % y).to_string())))
+            }
+            "min" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let a = self.extract_f64(&args[0])?;
+                let b = self.extract_f64(&args[1])?;
+                Ok(Some(Expression::Const(a.min(b).to_string())))
+            }
+            "max" => {
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let a = self.extract_f64(&args[0])?;
+                let b = self.extract_f64(&args[1])?;
+                Ok(Some(Expression::Const(a.max(b).to_string())))
+            }
+            "hypot" => {
+                // sqrt(x² + y²) computed stably
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let x = self.extract_f64(&args[0])?;
+                let y = self.extract_f64(&args[1])?;
+                Ok(Some(Expression::Const(x.hypot(y).to_string())))
+            }
+            "e" => {
+                // Euler's number
+                Ok(Some(Expression::Const(std::f64::consts::E.to_string())))
+            }
+            "tau" => {
+                // τ = 2π
+                Ok(Some(Expression::Const(std::f64::consts::TAU.to_string())))
             }
 
             // ============================================

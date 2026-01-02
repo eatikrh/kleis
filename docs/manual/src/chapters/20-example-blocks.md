@@ -59,31 +59,33 @@ $ kleis test broken.kleis
 
 ## Assert Statement
 
-The `assert` statement verifies a condition:
+The `assert` statement verifies a condition. Kleis distinguishes between two types:
+
+### Concrete Assertions (Computation)
+
+When both sides of an assertion can be **fully evaluated to values**, Kleis computes them directly:
 
 ```kleis
-example "basic assertions" {
+example "concrete assertions" {
+    // Arithmetic
+    assert(1 + 2 = 3)
+    
+    // Transcendental functions
+    assert(sin(0) = 0)
+    assert(cos(0) = 1)
+    assert(exp(0) = 1)
+    assert(log(1) = 0)
+    
+    // Variables with bound values
     let x = 5
-    
-    // Simple equality
-    assert(x = 5)
-    
-    // Expression equality
     assert(x + x = 10)
-    
-    // Boolean conditions
-    assert(x > 0)
-    
-    // Function results
-    assert(double(x) = 10)
+    assert(pow(x, 2) = 25)
 }
 ```
 
-**Important:** `assert(expr)` evaluates `expr` and checks if it equals `True` or if both sides of `=` are equal.
+Kleis uses `eval_concrete()` to fully evaluate both sides (including functions like `sin`, `cos`, `exp`, etc.), then compares. Floating-point comparisons use a relative tolerance of 1e-10.
 
-### Symbolic Assertions with Z3
-
-**New in v0.93:** Assertions with symbolic (unbound) variables are verified using Z3!
+When an assertion contains **free (unbound) variables**, it becomes a theorem proof using Z3:
 
 ```kleis
 structure CommutativeRing(R) {
@@ -131,6 +133,21 @@ example "inverse properties" {
     assert(inverse(inverse(a)) = a)  // Derived property!
 }
 ```
+
+### How Kleis Chooses: Concrete vs Symbolic
+
+| Expression | Free Variables? | Path Taken |
+|------------|-----------------|------------|
+| `sin(0) = 0` | No | `eval_concrete()` → compare |
+| `x + y = y + x` | Yes (`x`, `y`) | Z3 theorem proving |
+| `sin(x) = 0` | Yes (`x`) | Z3 (can't evaluate) |
+
+The decision flow:
+
+1. Try `eval_concrete()` on both sides
+2. If both reduce to values → compare (with floating-point tolerance)
+3. If either contains free variables → invoke Z3 with loaded axioms
+4. Z3 returns: Verified, Disproved (with counterexample), or Unknown
 
 ## Example Blocks as Entry Points
 
