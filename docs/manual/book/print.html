@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6474d96a.js";
+            window.path_to_searchindex_js = "searchindex-ff35e818.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-44239f67.js"></script>
@@ -3568,26 +3568,27 @@ structure Functor(C, D) {
 0/1 examples passed (1 failed)
 </code></pre>
 <h2 id="assert-statement"><a class="header" href="#assert-statement">Assert Statement</a></h2>
-<p>The <code>assert</code> statement verifies a condition:</p>
-<pre><code class="language-kleis">example "basic assertions" {
+<p>The <code>assert</code> statement verifies a condition. Kleis distinguishes between two types:</p>
+<h3 id="concrete-assertions-computation"><a class="header" href="#concrete-assertions-computation">Concrete Assertions (Computation)</a></h3>
+<p>When both sides of an assertion can be <strong>fully evaluated to values</strong>, Kleis computes them directly:</p>
+<pre><code class="language-kleis">example "concrete assertions" {
+    // Arithmetic
+    assert(1 + 2 = 3)
+    
+    // Transcendental functions
+    assert(sin(0) = 0)
+    assert(cos(0) = 1)
+    assert(exp(0) = 1)
+    assert(log(1) = 0)
+    
+    // Variables with bound values
     let x = 5
-    
-    // Simple equality
-    assert(x = 5)
-    
-    // Expression equality
     assert(x + x = 10)
-    
-    // Boolean conditions
-    assert(x &gt; 0)
-    
-    // Function results
-    assert(double(x) = 10)
+    assert(pow(x, 2) = 25)
 }
 </code></pre>
-<p><strong>Important:</strong> <code>assert(expr)</code> evaluates <code>expr</code> and checks if it equals <code>True</code> or if both sides of <code>=</code> are equal.</p>
-<h3 id="symbolic-assertions-with-z3"><a class="header" href="#symbolic-assertions-with-z3">Symbolic Assertions with Z3</a></h3>
-<p><strong>New in v0.93:</strong> Assertions with symbolic (unbound) variables are verified using Z3!</p>
+<p>Kleis uses <code>eval_concrete()</code> to fully evaluate both sides (including functions like <code>sin</code>, <code>cos</code>, <code>exp</code>, etc.), then compares. Floating-point comparisons use a relative tolerance of 1e-10.</p>
+<p>When an assertion contains <strong>free (unbound) variables</strong>, it becomes a theorem proof using Z3:</p>
 <pre><code class="language-kleis">structure CommutativeRing(R) {
     operation (+) : R × R → R
     axiom commutativity: ∀(a b : R). a + b = b + a
@@ -3628,6 +3629,26 @@ example "inverse properties" {
     assert(inverse(inverse(a)) = a)  // Derived property!
 }
 </code></pre>
+<h3 id="how-kleis-chooses-concrete-vs-symbolic"><a class="header" href="#how-kleis-chooses-concrete-vs-symbolic">How Kleis Chooses: Concrete vs Symbolic</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Expression</th><th>Free Variables?</th><th>Path Taken</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sin(0) = 0</code></td><td>No</td><td><code>eval_concrete()</code> → compare</td></tr>
+<tr><td><code>x + y = y + x</code></td><td>Yes (<code>x</code>, <code>y</code>)</td><td>Z3 theorem proving</td></tr>
+<tr><td><code>sin(x) = 0</code></td><td>Yes (<code>x</code>)</td><td>Z3 (can’t evaluate)</td></tr>
+</tbody>
+</table>
+</div>
+<p>The decision flow:</p>
+<ol>
+<li>Try <code>eval_concrete()</code> on both sides</li>
+<li>If both reduce to values → compare (with floating-point tolerance)</li>
+<li>If either contains free variables → invoke Z3 with loaded axioms</li>
+<li>Z3 returns: Verified, Disproved (with counterexample), or Unknown</li>
+</ol>
 <h2 id="example-blocks-as-entry-points"><a class="header" href="#example-blocks-as-entry-points">Example Blocks as Entry Points</a></h2>
 <p>Example blocks are the <strong>entry points for debugging</strong>. Unlike function definitions which are just declarations, example blocks contain executable code:</p>
 <pre><code class="language-kleis">// Function definition (not executable on its own)
@@ -6556,50 +6577,74 @@ Aᵀᵀ         // (Aᵀ)ᵀ = A - transpose twice
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Example</th></tr>
 </thead>
 <tbody>
-<tr><td><code>negate(x)</code></td><td>Unary negation</td><td><code>negate(5)</code> → <code>-5</code></td></tr>
-<tr><td><code>abs(x)</code></td><td>Absolute value</td><td><code>abs(-3)</code> → <code>3</code></td></tr>
-<tr><td><code>sqrt(x)</code></td><td>Square root</td><td><code>sqrt(16)</code> → <code>4</code></td></tr>
-<tr><td><code>floor(x)</code></td><td>Round down</td><td><code>floor(3.7)</code> → <code>3</code></td></tr>
-<tr><td><code>ceil(x)</code></td><td>Round up</td><td><code>ceil(3.2)</code> → <code>4</code></td></tr>
-<tr><td><code>round(x)</code></td><td>Round to nearest</td><td><code>round(3.5)</code> → <code>4</code></td></tr>
-<tr><td><code>min(x, y)</code></td><td>Minimum</td><td><code>min(3, 7)</code> → <code>3</code></td></tr>
-<tr><td><code>max(x, y)</code></td><td>Maximum</td><td><code>max(3, 7)</code> → <code>7</code></td></tr>
+<tr><td><code>negate(x)</code></td><td></td><td>Unary negation</td><td><code>negate(5)</code> → <code>-5</code></td></tr>
+<tr><td><code>abs(x)</code></td><td><code>fabs</code></td><td>Absolute value</td><td><code>abs(-3)</code> → <code>3</code></td></tr>
+<tr><td><code>sqrt(x)</code></td><td></td><td>Square root</td><td><code>sqrt(16)</code> → <code>4</code></td></tr>
+<tr><td><code>pow(x, y)</code></td><td><code>power</code></td><td>x^y</td><td><code>pow(2, 3)</code> → <code>8</code></td></tr>
+<tr><td><code>floor(x)</code></td><td></td><td>Round down</td><td><code>floor(3.7)</code> → <code>3</code></td></tr>
+<tr><td><code>ceil(x)</code></td><td><code>ceiling</code></td><td>Round up</td><td><code>ceil(3.2)</code> → <code>4</code></td></tr>
+<tr><td><code>round(x)</code></td><td></td><td>Round to nearest</td><td><code>round(3.5)</code> → <code>4</code></td></tr>
+<tr><td><code>trunc(x)</code></td><td><code>truncate</code></td><td>Truncate toward zero</td><td><code>trunc(-3.7)</code> → <code>-3</code></td></tr>
+<tr><td><code>frac(x)</code></td><td><code>fract</code></td><td>Fractional part</td><td><code>frac(3.7)</code> → <code>0.7</code></td></tr>
+<tr><td><code>sign(x)</code></td><td><code>signum</code></td><td>Sign (-1, 0, or 1)</td><td><code>sign(-5)</code> → <code>-1</code></td></tr>
+<tr><td><code>min(x, y)</code></td><td></td><td>Minimum</td><td><code>min(3, 7)</code> → <code>3</code></td></tr>
+<tr><td><code>max(x, y)</code></td><td></td><td>Maximum</td><td><code>max(3, 7)</code> → <code>7</code></td></tr>
+<tr><td><code>mod(x, y)</code></td><td><code>fmod</code>, <code>remainder</code></td><td>Modulo/remainder</td><td><code>mod(7, 3)</code> → <code>1</code></td></tr>
+<tr><td><code>hypot(x, y)</code></td><td></td><td>√(x² + y²) stable</td><td><code>hypot(3, 4)</code> → <code>5</code></td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="trigonometric-functions"><a class="header" href="#trigonometric-functions">Trigonometric Functions</a></h2>
+<h2 id="trigonometric-functions-radians"><a class="header" href="#trigonometric-functions-radians">Trigonometric Functions (radians)</a></h2>
+<p>All trigonometric functions use radians, not degrees. Use <code>radians(deg)</code> to convert.</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Function</th><th>Description</th></tr>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Example</th></tr>
 </thead>
 <tbody>
-<tr><td><code>sin(x)</code></td><td>Sine</td></tr>
-<tr><td><code>cos(x)</code></td><td>Cosine</td></tr>
-<tr><td><code>tan(x)</code></td><td>Tangent</td></tr>
-<tr><td><code>asin(x)</code></td><td>Arcsine</td></tr>
-<tr><td><code>acos(x)</code></td><td>Arccosine</td></tr>
-<tr><td><code>atan(x)</code></td><td>Arctangent</td></tr>
-<tr><td><code>sinh(x)</code></td><td>Hyperbolic sine</td></tr>
-<tr><td><code>cosh(x)</code></td><td>Hyperbolic cosine</td></tr>
-<tr><td><code>tanh(x)</code></td><td>Hyperbolic tangent</td></tr>
+<tr><td><code>sin(x)</code></td><td></td><td>Sine</td><td><code>sin(0)</code> → <code>0</code></td></tr>
+<tr><td><code>cos(x)</code></td><td></td><td>Cosine</td><td><code>cos(0)</code> → <code>1</code></td></tr>
+<tr><td><code>tan(x)</code></td><td></td><td>Tangent</td><td><code>tan(0)</code> → <code>0</code></td></tr>
+<tr><td><code>asin(x)</code></td><td><code>arcsin</code></td><td>Arcsine</td><td><code>asin(1)</code> → <code>π/2</code></td></tr>
+<tr><td><code>acos(x)</code></td><td><code>arccos</code></td><td>Arccosine</td><td><code>acos(1)</code> → <code>0</code></td></tr>
+<tr><td><code>atan(x)</code></td><td><code>arctan</code></td><td>Arctangent</td><td><code>atan(1)</code> → <code>π/4</code></td></tr>
+<tr><td><code>atan2(y, x)</code></td><td><code>arctan2</code></td><td>2-arg arctangent</td><td><code>atan2(1, 1)</code> → <code>π/4</code></td></tr>
+<tr><td><code>radians(deg)</code></td><td><code>deg_to_rad</code></td><td>Degrees to radians</td><td><code>radians(180)</code> → <code>π</code></td></tr>
 </tbody>
 </table>
 </div>
+<h2 id="hyperbolic-functions"><a class="header" href="#hyperbolic-functions">Hyperbolic Functions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sinh(x)</code></td><td></td><td>Hyperbolic sine</td></tr>
+<tr><td><code>cosh(x)</code></td><td></td><td>Hyperbolic cosine</td></tr>
+<tr><td><code>tanh(x)</code></td><td></td><td>Hyperbolic tangent</td></tr>
+<tr><td><code>asinh(x)</code></td><td><code>arcsinh</code></td><td>Inverse hyperbolic sine</td></tr>
+<tr><td><code>acosh(x)</code></td><td><code>arccosh</code></td><td>Inverse hyperbolic cosine</td></tr>
+<tr><td><code>atanh(x)</code></td><td><code>arctanh</code></td><td>Inverse hyperbolic tangent</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Identity:</strong> <code>cosh(x)² - sinh(x)² = 1</code></p>
 <h2 id="exponential-and-logarithmic-1"><a class="header" href="#exponential-and-logarithmic-1">Exponential and Logarithmic</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Example</th></tr>
 </thead>
 <tbody>
-<tr><td><code>exp(x)</code></td><td>e^x</td><td><code>exp(1)</code> → <code>2.718...</code></td></tr>
-<tr><td><code>ln(x)</code></td><td>Natural logarithm</td><td><code>ln(e)</code> → <code>1</code></td></tr>
-<tr><td><code>log(x)</code></td><td>Base-10 logarithm</td><td><code>log(100)</code> → <code>2</code></td></tr>
-<tr><td><code>log(b, x)</code></td><td>Logarithm base b</td><td><code>log(2, 8)</code> → <code>3</code></td></tr>
+<tr><td><code>exp(x)</code></td><td></td><td>e^x</td><td><code>exp(1)</code> → <code>2.718...</code></td></tr>
+<tr><td><code>exp2(x)</code></td><td></td><td>2^x</td><td><code>exp2(3)</code> → <code>8</code></td></tr>
+<tr><td><code>log(x)</code></td><td><code>ln</code></td><td>Natural logarithm</td><td><code>log(e())</code> → <code>1</code></td></tr>
+<tr><td><code>log10(x)</code></td><td></td><td>Base-10 logarithm</td><td><code>log10(100)</code> → <code>2</code></td></tr>
+<tr><td><code>log2(x)</code></td><td></td><td>Base-2 logarithm</td><td><code>log2(8)</code> → <code>3</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -6734,18 +6779,30 @@ Aᵀᵀ         // (Aᵀ)ᵀ = A - transpose twice
 </tbody>
 </table>
 </div>
-<h2 id="constants-1"><a class="header" href="#constants-1">Constants</a></h2>
+<h2 id="mathematical-constants"><a class="header" href="#mathematical-constants">Mathematical Constants</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Constant</th><th>Unicode</th><th>Value</th></tr>
+<tr><th>Function</th><th>Unicode</th><th>Value</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>pi</code></td><td><code>π</code></td><td>3.14159…</td></tr>
-<tr><td><code>e</code></td><td></td><td>2.71828…</td></tr>
-<tr><td><code>i</code></td><td></td><td>√(-1) (imaginary unit)</td></tr>
-<tr><td><code>True</code> / <code>true</code></td><td></td><td>Boolean true</td></tr>
-<tr><td><code>False</code> / <code>false</code></td><td></td><td>Boolean false</td></tr>
+<tr><td><code>pi()</code></td><td><code>π</code></td><td>3.14159…</td><td>Pi</td></tr>
+<tr><td><code>e()</code></td><td></td><td>2.71828…</td><td>Euler’s number</td></tr>
+<tr><td><code>tau()</code></td><td><code>τ</code></td><td>6.28318…</td><td>τ = 2π</td></tr>
+<tr><td><code>i</code></td><td></td><td>√(-1)</td><td>Imaginary unit</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Note:</strong> <code>pi()</code>, <code>e()</code>, and <code>tau()</code> are zero-argument functions.</p>
+<h2 id="boolean-constants"><a class="header" href="#boolean-constants">Boolean Constants</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Constant</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>True</code> / <code>true</code></td><td>Boolean true</td></tr>
+<tr><td><code>False</code> / <code>false</code></td><td>Boolean false</td></tr>
 </tbody>
 </table>
 </div>

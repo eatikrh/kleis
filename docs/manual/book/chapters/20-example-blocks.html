@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-6474d96a.js";
+            window.path_to_searchindex_js = "../searchindex-ff35e818.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-44239f67.js"></script>
@@ -243,26 +243,27 @@
 0/1 examples passed (1 failed)
 </code></pre>
 <h2 id="assert-statement"><a class="header" href="#assert-statement">Assert Statement</a></h2>
-<p>The <code>assert</code> statement verifies a condition:</p>
-<pre><code class="language-kleis">example "basic assertions" {
+<p>The <code>assert</code> statement verifies a condition. Kleis distinguishes between two types:</p>
+<h3 id="concrete-assertions-computation"><a class="header" href="#concrete-assertions-computation">Concrete Assertions (Computation)</a></h3>
+<p>When both sides of an assertion can be <strong>fully evaluated to values</strong>, Kleis computes them directly:</p>
+<pre><code class="language-kleis">example "concrete assertions" {
+    // Arithmetic
+    assert(1 + 2 = 3)
+    
+    // Transcendental functions
+    assert(sin(0) = 0)
+    assert(cos(0) = 1)
+    assert(exp(0) = 1)
+    assert(log(1) = 0)
+    
+    // Variables with bound values
     let x = 5
-    
-    // Simple equality
-    assert(x = 5)
-    
-    // Expression equality
     assert(x + x = 10)
-    
-    // Boolean conditions
-    assert(x &gt; 0)
-    
-    // Function results
-    assert(double(x) = 10)
+    assert(pow(x, 2) = 25)
 }
 </code></pre>
-<p><strong>Important:</strong> <code>assert(expr)</code> evaluates <code>expr</code> and checks if it equals <code>True</code> or if both sides of <code>=</code> are equal.</p>
-<h3 id="symbolic-assertions-with-z3"><a class="header" href="#symbolic-assertions-with-z3">Symbolic Assertions with Z3</a></h3>
-<p><strong>New in v0.93:</strong> Assertions with symbolic (unbound) variables are verified using Z3!</p>
+<p>Kleis uses <code>eval_concrete()</code> to fully evaluate both sides (including functions like <code>sin</code>, <code>cos</code>, <code>exp</code>, etc.), then compares. Floating-point comparisons use a relative tolerance of 1e-10.</p>
+<p>When an assertion contains <strong>free (unbound) variables</strong>, it becomes a theorem proof using Z3:</p>
 <pre><code class="language-kleis">structure CommutativeRing(R) {
     operation (+) : R × R → R
     axiom commutativity: ∀(a b : R). a + b = b + a
@@ -303,6 +304,26 @@ example "inverse properties" {
     assert(inverse(inverse(a)) = a)  // Derived property!
 }
 </code></pre>
+<h3 id="how-kleis-chooses-concrete-vs-symbolic"><a class="header" href="#how-kleis-chooses-concrete-vs-symbolic">How Kleis Chooses: Concrete vs Symbolic</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Expression</th><th>Free Variables?</th><th>Path Taken</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sin(0) = 0</code></td><td>No</td><td><code>eval_concrete()</code> → compare</td></tr>
+<tr><td><code>x + y = y + x</code></td><td>Yes (<code>x</code>, <code>y</code>)</td><td>Z3 theorem proving</td></tr>
+<tr><td><code>sin(x) = 0</code></td><td>Yes (<code>x</code>)</td><td>Z3 (can’t evaluate)</td></tr>
+</tbody>
+</table>
+</div>
+<p>The decision flow:</p>
+<ol>
+<li>Try <code>eval_concrete()</code> on both sides</li>
+<li>If both reduce to values → compare (with floating-point tolerance)</li>
+<li>If either contains free variables → invoke Z3 with loaded axioms</li>
+<li>Z3 returns: Verified, Disproved (with counterexample), or Unknown</li>
+</ol>
 <h2 id="example-blocks-as-entry-points"><a class="header" href="#example-blocks-as-entry-points">Example Blocks as Entry Points</a></h2>
 <p>Example blocks are the <strong>entry points for debugging</strong>. Unlike function definitions which are just declarations, example blocks contain executable code:</p>
 <pre><code class="language-kleis">// Function definition (not executable on its own)
