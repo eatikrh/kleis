@@ -21,7 +21,7 @@ class KleisKernel(Kernel):
     implementation = "Kleis"
     implementation_version = "0.1.0"
     language = "kleis"
-    language_version = "0.95"
+    language_version = "0.96"
     language_info = {
         "name": "kleis",
         "mimetype": "text/x-kleis",
@@ -29,20 +29,20 @@ class KleisKernel(Kernel):
         "codemirror_mode": "kleis",
         "pygments_lexer": "kleis",
     }
-    banner = """Kleis - Mathematical Specification Language with Z3 Verification
+    banner = """Kleis v0.96 - Mathematical Specification Language with Z3 Verification
 
 Plotting (Lilaq-style compositional API - https://lilaq.org):
   diagram(
-      plot(xs, ys),           - Line plot  
-      scatter(xs, ys),        - Scatter plot
-      bar(xs, heights),       - Bar chart
-      ...
+      plot(xs, ys, color = "blue", yerr = errors),
+      bar(xs, heights, offset = -0.2, width = 0.4, label = "Series A"),
+      width = 10, height = 7, title = "My Plot"
   )
   
   Elements: plot, scatter, bar, hbar, stem, hstem, fill_between,
             boxplot, hboxplot, heatmap, contour, quiver
   
-  Multiple elements can be composed in one diagram!
+  Named arguments (v0.96): name = value syntax for options
+  List functions: list_map(λ x . f(x), xs), list_filter, list_fold
 
 REPL Commands:
   :type <expr>    - Show inferred type
@@ -698,9 +698,15 @@ Jupyter Commands:
             # Built-in functions
             "eval", "sin", "cos", "exp", "log", "sqrt", "det", "trace", "transpose",
             "eigenvalues", "eigenvectors", "inverse", "norm", "negate", "out",
+            # List functions (v0.96)
+            "list_map", "list_filter", "list_fold",
             # Plotting - Lilaq-style compositional API
             "diagram", "plot", "scatter", "bar", "hbar", "stem", "hstem",
             "fill_between", "boxplot", "hboxplot", "heatmap", "contour", "quiver",
+            # Plot named arguments (v0.96 - common options)
+            "width", "height", "title", "xlabel", "ylabel", "label",
+            "color", "stroke", "mark", "mark_size", "yerr", "xerr",
+            "offset", "legend_position",
             # REPL commands
             ":type", ":eval", ":verify", ":ast", ":env", ":load",
             # Jupyter magic commands
