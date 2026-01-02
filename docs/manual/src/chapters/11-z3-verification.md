@@ -188,6 +188,156 @@ axiom mul_zero : ∀(x : ℤ). mul(x, zero) = zero
 // Z3 verifies: ✓ Valid
 ```
 
+## Solver Abstraction Layer
+
+While this chapter focuses on Z3, Kleis is designed with a **solver abstraction layer** that can interface with multiple proof backends.
+
+### Architecture
+
+```
+User Code (Kleis Expression)
+         │
+    SolverBackend Trait
+         │
+   ┌─────┴──────┬───────────┬──────────────┐
+   │            │           │              │
+Z3Backend  CVC5Backend  IsabelleBackend  CustomBackend
+   │            │           │              │
+   └─────┬──────┴───────────┴──────────────┘
+         │
+  OperationTranslators
+         │
+   ResultConverter
+         │
+User Code (Kleis Expression)
+```
+
+### The SolverBackend Trait
+
+The core abstraction is defined in `src/solvers/backend.rs`:
+
+```rust
+pub trait SolverBackend {
+    /// Get solver name (e.g., "Z3", "CVC5")
+    fn name(&self) -> &str;
+
+    /// Get solver capabilities (declared upfront, MCP-style)
+    fn capabilities(&self) -> &SolverCapabilities;
+
+    /// Verify an axiom (validity check)
+    fn verify_axiom(&mut self, axiom: &Expression) 
+        -> Result<VerificationResult, String>;
+
+    /// Check if an expression is satisfiable
+    fn check_satisfiability(&mut self, expr: &Expression) 
+        -> Result<SatisfiabilityResult, String>;
+
+    /// Evaluate an expression to a concrete value
+    fn evaluate(&mut self, expr: &Expression) 
+        -> Result<Expression, String>;
+
+    /// Simplify an expression
+    fn simplify(&mut self, expr: &Expression) 
+        -> Result<Expression, String>;
+
+    /// Check if two expressions are equivalent
+    fn are_equivalent(&mut self, e1: &Expression, e2: &Expression) 
+        -> Result<bool, String>;
+
+    // ... additional methods for scope management, assertions, etc.
+}
+```
+
+**Key design principle:** All public methods work with Kleis `Expression`, not solver-specific types. Solver internals never escape the abstraction.
+
+### MCP-Style Capability Declaration
+
+Solvers declare their capabilities upfront (inspired by Model Context Protocol):
+
+```rust
+pub struct SolverCapabilities {
+    pub solver: SolverMetadata,      // name, version, type
+    pub capabilities: Capabilities,   // operations, theories, features
+}
+
+pub struct Capabilities {
+    pub theories: HashSet<String>,              // "arithmetic", "boolean", etc.
+    pub operations: HashMap<String, OperationSpec>,
+    pub features: FeatureFlags,                 // quantifiers, evaluation, etc.
+    pub performance: PerformanceHints,          // timeout, max axioms
+}
+```
+
+This enables:
+- **Coverage analysis** - Know what operations are natively supported
+- **Multi-solver comparison** - Choose the best solver for a program
+- **User extensibility** - Add translators for missing operations
+
+### Verification Results
+
+```rust
+pub enum VerificationResult {
+    Valid,                              // Axiom holds for all inputs
+    Invalid { counterexample: String }, // Found a violation
+    Unknown,                            // Timeout or too complex
+}
+
+pub enum SatisfiabilityResult {
+    Satisfiable { example: String },    // Found satisfying assignment
+    Unsatisfiable,                      // No solution exists
+    Unknown,
+}
+```
+
+### Why Multiple Backends?
+
+Different proof systems have different strengths:
+
+| Backend | Strength | Best For |
+|---------|----------|----------|
+| **Z3** | Fast SMT solving, decidable theories | Arithmetic, quick checks, counterexamples |
+| **CVC5** | Finite model finding, strings | Bounded verification, string operations |
+| **Isabelle** | Structured proofs, automation | Complex inductive proofs, formalization |
+| **Coq/Lean** | Dependent types, program extraction | Certified programs, mathematical libraries |
+
+### Current Implementation
+
+Currently implemented in `src/solvers/`:
+
+| Component | Status | Description |
+|-----------|--------|-------------|
+| `SolverBackend` trait | ✅ Complete | Core abstraction |
+| `SolverCapabilities` | ✅ Complete | MCP-style capability declaration |
+| `Z3Backend` | ✅ Complete | Full Z3 integration |
+| `ResultConverter` | ✅ Complete | Convert solver results to Kleis expressions |
+| `discovery` module | ✅ Complete | List available solvers |
+| CVC5Backend | 🔮 Future | Alternative SMT solver |
+| IsabelleBackend | 🔮 Future | HOL theorem prover |
+
+### Solver Discovery
+
+```rust
+use kleis::solvers::discovery;
+
+// List all available backends
+let solvers = discovery::list_solvers();  // ["Z3"]
+
+// Check if a specific solver is available
+if discovery::is_available("Z3") {
+    let backend = Z3Backend::new()?;
+}
+```
+
+### Benefits of Abstraction
+
+1. **Solver independence** - Swap solvers without code changes
+2. **Unified API** - Same methods regardless of backend
+3. **Capability-aware** - Know what each solver supports before using it
+4. **Extensible** - Add custom backends by implementing the trait
+5. **Future-proof** - New provers can be integrated without changing Kleis code
+
+This architecture makes Kleis a **proof orchestration layer** with beautiful notation, not just another proof assistant.
+
 ## What's Next?
 
 Try the interactive REPL!
