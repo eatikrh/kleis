@@ -1,9 +1,26 @@
 # Grammar Synchronization Status
 
-**Date:** December 29, 2025  
-**Status:** 🆕 v0.95 Released (Big Operator Syntax)
+**Date:** January 1, 2026  
+**Status:** 🆕 v0.96 Released (Named Arguments for Plotting)
 
-## Current Version: v0.95
+## Current Version: v0.96
+
+### What's New in v0.96
+
+**Named Arguments (Parser Sugar)** - For plotting configuration:
+
+```kleis
+// Named arguments in function calls
+diagram(
+    plot(xs, ys, color = "blue", mark = "o"),
+    title = "My Plot",
+    width = 10
+)
+
+// Parser transforms to: record(field("color", "blue"), ...)
+```
+
+See [ADR-023](../architecture/ADR-023-Named-Arguments-Parser-Sugar.md) for details.
 
 ### What's New in v0.95
 
@@ -42,13 +59,13 @@ example "complex arithmetic" {
 
 | File | Version | Last Updated | Status |
 |------|---------|--------------|--------|
-| `kleis_grammar_v095.ebnf` | v0.95 | Dec 29, 2025 | ✅ Current |
-| `kleis_grammar_v095.md` | v0.95 | Dec 29, 2025 | ✅ Documented |
+| `kleis_grammar_v096.ebnf` | v0.96 | Jan 1, 2026 | ✅ Current |
+| `kleis_grammar_v096.md` | v0.96 | Jan 1, 2026 | ✅ Documented |
+| `kleis_grammar_v095.ebnf` | v0.95 | Dec 29, 2025 | ✅ Previous |
 | `kleis_grammar_v094.ebnf` | v0.94 | Dec 26, 2025 | ✅ Previous |
 | `kleis_grammar_v093.ebnf` | v0.93 | Dec 24, 2025 | ✅ Previous |
-| `kleis_grammar_v092.ebnf` | v0.92 | Dec 22, 2025 | ✅ Previous |
-| `kleis_grammar_v08.ebnf` | v0.8 | Dec 18, 2025 | ✅ Legacy |
-| `vscode-kleis/docs/grammar/` | v0.95 | Dec 29, 2025 | ✅ Synced |
+| `archive/kleis_grammar_v08.ebnf` | v0.8 | Dec 18, 2025 | ✅ Legacy |
+| `vscode-kleis/docs/grammar/` | v0.96 | Jan 1, 2026 | ✅ Synced |
 
 ---
 

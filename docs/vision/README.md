@@ -99,7 +99,7 @@ With DO-333:
 
 | Capability | Status | Notes |
 |------------|--------|-------|
-| Formal grammar | ✅ v0.7 | EBNF specification |
+| Formal grammar | ✅ v0.96 | EBNF specification |
 | Type system | ✅ | Hindley-Milner with matrices |
 | Axiom verification | ✅ | Z3 backend |
 | Structure definitions | ✅ | Parameterized types |

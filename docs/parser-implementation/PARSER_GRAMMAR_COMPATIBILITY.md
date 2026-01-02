@@ -1,7 +1,7 @@
 # Kleis Parser vs Formal Grammar Compatibility
 
-**Date:** December 17, 2025 (Updated for typed let bindings)  
-**Formal Grammar:** Kleis v0.7 (Mathematica-style calculus)  
+**Date:** January 1, 2026  
+**Formal Grammar:** Kleis v0.96 (Named Arguments for Plotting)  
 **Parser Implementation:** `src/kleis_parser.rs`  
 **Branch:** `main`
 
@@ -9,7 +9,7 @@
 
 ## TL;DR
 
-✅ **Parser implements ~80% of formal grammar v0.7, with complete algebraic type system including calculus operators**
+✅ **Parser implements ~80% of formal grammar v0.96, with complete algebraic type system including calculus operators and named arguments for plotting**
 
 **Coverage:** ~80% of formal grammar (prefix operators more complete than previously documented)  
 **Purpose:** Complete algebraic type system with theorem proving, calculus, generic constraints, inheritance, and compositional structures  
