@@ -570,21 +570,19 @@ Layer 0: Primitives (Rust - invisible)
   - Electromagnetic field tensor (from Jackson's Electrodynamics) ✅
 - [x] **Update `stdlib/differential_forms.kleis`** - replace builtin_* with pure Kleis imports
 
-### KNOWN ISSUE: Example Block Assertion Bug
+### ✅ FIXED: Example Block Assertion Bug (Jan 2, 2026)
 
-**Discovery:** Bare equality `expr = value` in example blocks does NOT actually assert!
+**Discovery:** `assert(sin(0) = 0)` was failing because `eval()` returned
+`Operation{sin, [0]}` instead of the value `0`.
 
-```kleis
-example "this passes but shouldn't" {
-    1 = 2  // ← Evaluates to False, but test PASSES!
-}
-```
+**Fix:** `eval_equality_assert()` now uses `eval_concrete()` which fully
+evaluates expressions including all builtin functions.
 
-The evaluator treats `Expr` statements as side-effect-only, discarding the result.
-The `assert()` function has a separate bug where it doesn't fully evaluate before comparing.
+Also added floating-point epsilon comparison (1e-10 relative tolerance)
+for numeric assertions to handle floating point rounding.
 
-**Workaround:** For now, tests demonstrate correctness but don't actually verify.
-**TODO:** Fix `eval_assert()` to fully normalize expressions before comparing.
+**Note:** Bare equality `expr = value` (without `assert()`) is still side-effect-only.
+Always use `assert(a = b)` for actual assertions.
 
 ### Gap Analysis (All Resolved!)
 
