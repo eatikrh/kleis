@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-e8523fb6.js";
+            window.path_to_searchindex_js = "searchindex-d06fa1a2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-44239f67.js"></script>
@@ -2008,6 +2008,152 @@ implements Ring(ℤ) {
 axiom mul_zero : ∀(x : ℤ). mul(x, zero) = zero
 // Z3 verifies: ✓ Valid
 </code></pre>
+<h2 id="solver-abstraction-layer"><a class="header" href="#solver-abstraction-layer">Solver Abstraction Layer</a></h2>
+<p>While this chapter focuses on Z3, Kleis is designed with a <strong>solver abstraction layer</strong> that can interface with multiple proof backends.</p>
+<h3 id="architecture"><a class="header" href="#architecture">Architecture</a></h3>
+<pre><code>User Code (Kleis Expression)
+         │
+    SolverBackend Trait
+         │
+   ┌─────┴──────┬───────────┬──────────────┐
+   │            │           │              │
+Z3Backend  CVC5Backend  IsabelleBackend  CustomBackend
+   │            │           │              │
+   └─────┬──────┴───────────┴──────────────┘
+         │
+  OperationTranslators
+         │
+   ResultConverter
+         │
+User Code (Kleis Expression)
+</code></pre>
+<h3 id="the-solverbackend-trait"><a class="header" href="#the-solverbackend-trait">The SolverBackend Trait</a></h3>
+<p>The core abstraction is defined in <code>src/solvers/backend.rs</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait SolverBackend {
+    /// Get solver name (e.g., "Z3", "CVC5")
+    fn name(&amp;self) -&gt; &amp;str;
+
+    /// Get solver capabilities (declared upfront, MCP-style)
+    fn capabilities(&amp;self) -&gt; &amp;SolverCapabilities;
+
+    /// Verify an axiom (validity check)
+    fn verify_axiom(&amp;mut self, axiom: &amp;Expression) 
+        -&gt; Result&lt;VerificationResult, String&gt;;
+
+    /// Check if an expression is satisfiable
+    fn check_satisfiability(&amp;mut self, expr: &amp;Expression) 
+        -&gt; Result&lt;SatisfiabilityResult, String&gt;;
+
+    /// Evaluate an expression to a concrete value
+    fn evaluate(&amp;mut self, expr: &amp;Expression) 
+        -&gt; Result&lt;Expression, String&gt;;
+
+    /// Simplify an expression
+    fn simplify(&amp;mut self, expr: &amp;Expression) 
+        -&gt; Result&lt;Expression, String&gt;;
+
+    /// Check if two expressions are equivalent
+    fn are_equivalent(&amp;mut self, e1: &amp;Expression, e2: &amp;Expression) 
+        -&gt; Result&lt;bool, String&gt;;
+
+    // ... additional methods for scope management, assertions, etc.
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design principle:</strong> All public methods work with Kleis <code>Expression</code>, not solver-specific types. Solver internals never escape the abstraction.</p>
+<h3 id="mcp-style-capability-declaration"><a class="header" href="#mcp-style-capability-declaration">MCP-Style Capability Declaration</a></h3>
+<p>Solvers declare their capabilities upfront (inspired by Model Context Protocol):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SolverCapabilities {
+    pub solver: SolverMetadata,      // name, version, type
+    pub capabilities: Capabilities,   // operations, theories, features
+}
+
+pub struct Capabilities {
+    pub theories: HashSet&lt;String&gt;,              // "arithmetic", "boolean", etc.
+    pub operations: HashMap&lt;String, OperationSpec&gt;,
+    pub features: FeatureFlags,                 // quantifiers, evaluation, etc.
+    pub performance: PerformanceHints,          // timeout, max axioms
+}
+<span class="boring">}</span></code></pre>
+<p>This enables:</p>
+<ul>
+<li><strong>Coverage analysis</strong> - Know what operations are natively supported</li>
+<li><strong>Multi-solver comparison</strong> - Choose the best solver for a program</li>
+<li><strong>User extensibility</strong> - Add translators for missing operations</li>
+</ul>
+<h3 id="verification-results"><a class="header" href="#verification-results">Verification Results</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum VerificationResult {
+    Valid,                              // Axiom holds for all inputs
+    Invalid { counterexample: String }, // Found a violation
+    Unknown,                            // Timeout or too complex
+}
+
+pub enum SatisfiabilityResult {
+    Satisfiable { example: String },    // Found satisfying assignment
+    Unsatisfiable,                      // No solution exists
+    Unknown,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="why-multiple-backends"><a class="header" href="#why-multiple-backends">Why Multiple Backends?</a></h3>
+<p>Different proof systems have different strengths:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Backend</th><th>Strength</th><th>Best For</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Z3</strong></td><td>Fast SMT solving, decidable theories</td><td>Arithmetic, quick checks, counterexamples</td></tr>
+<tr><td><strong>CVC5</strong></td><td>Finite model finding, strings</td><td>Bounded verification, string operations</td></tr>
+<tr><td><strong>Isabelle</strong></td><td>Structured proofs, automation</td><td>Complex inductive proofs, formalization</td></tr>
+<tr><td><strong>Coq/Lean</strong></td><td>Dependent types, program extraction</td><td>Certified programs, mathematical libraries</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="current-implementation"><a class="header" href="#current-implementation">Current Implementation</a></h3>
+<p>Currently implemented in <code>src/solvers/</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Status</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SolverBackend</code> trait</td><td>✅ Complete</td><td>Core abstraction</td></tr>
+<tr><td><code>SolverCapabilities</code></td><td>✅ Complete</td><td>MCP-style capability declaration</td></tr>
+<tr><td><code>Z3Backend</code></td><td>✅ Complete</td><td>Full Z3 integration</td></tr>
+<tr><td><code>ResultConverter</code></td><td>✅ Complete</td><td>Convert solver results to Kleis expressions</td></tr>
+<tr><td><code>discovery</code> module</td><td>✅ Complete</td><td>List available solvers</td></tr>
+<tr><td>CVC5Backend</td><td>🔮 Future</td><td>Alternative SMT solver</td></tr>
+<tr><td>IsabelleBackend</td><td>🔮 Future</td><td>HOL theorem prover</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="solver-discovery"><a class="header" href="#solver-discovery">Solver Discovery</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use kleis::solvers::discovery;
+
+// List all available backends
+let solvers = discovery::list_solvers();  // ["Z3"]
+
+// Check if a specific solver is available
+if discovery::is_available("Z3") {
+    let backend = Z3Backend::new()?;
+}
+<span class="boring">}</span></code></pre>
+<h3 id="benefits-of-abstraction"><a class="header" href="#benefits-of-abstraction">Benefits of Abstraction</a></h3>
+<ol>
+<li><strong>Solver independence</strong> - Swap solvers without code changes</li>
+<li><strong>Unified API</strong> - Same methods regardless of backend</li>
+<li><strong>Capability-aware</strong> - Know what each solver supports before using it</li>
+<li><strong>Extensible</strong> - Add custom backends by implementing the trait</li>
+<li><strong>Future-proof</strong> - New provers can be integrated without changing Kleis code</li>
+</ol>
+<p>This architecture makes Kleis a <strong>proof orchestration layer</strong> with beautiful notation, not just another proof assistant.</p>
 <h2 id="whats-next-10"><a class="header" href="#whats-next-10">What’s Next?</a></h2>
 <p>Try the interactive REPL!</p>
 <p>→ <a href="#the-repl-1">Next: The REPL</a></p>
@@ -7976,7 +8122,7 @@ example "symbolic verification" {
 <li>Check the Output panel (View → Output → Kleis) for error messages</li>
 <li>Verify binaries exist: <code>ls target/release/kleis*</code></li>
 </ol>
-<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<h2 id="architecture-1"><a class="header" href="#architecture-1">Architecture</a></h2>
 <p>The debugging system uses the <strong>Debug Adapter Protocol (DAP)</strong>:</p>
 <pre><code>┌─────────────┐      DAP         ┌──────────────┐
 │   VS Code   │ ←───────────────→ │ kleis server │
