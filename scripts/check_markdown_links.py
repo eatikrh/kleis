@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 
-REPO_ROOT = Path("/Users/eatik_1/Documents/git/cee/kleis")
+REPO_ROOT = Path(__file__).parent.parent.resolve()  # Auto-detect from script location
 EXCLUDE_DIRS = {"node_modules", "target", ".git", "vendor"}
 
 def find_markdown_files():

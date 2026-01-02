@@ -279,6 +279,6 @@ No migration needed. To adopt v0.8 features:
 ## See Also
 
 - [kleis_grammar_v08.ebnf](kleis_grammar_v08.ebnf) - Formal EBNF specification
-- [PATTERN_MATCHING_GRAMMAR_EXTENSION.md](PATTERN_MATCHING_GRAMMAR_EXTENSION.md) - Original pattern matching design
-- [ADR-021](../adr/adr-021-algebraic-data-types.md) - Algebraic data types foundation
+- [PATTERN_MATCHING_GRAMMAR_EXTENSION.md](../PATTERN_MATCHING_GRAMMAR_EXTENSION.md) - Original pattern matching design
+- [ADR-021](../../adr/adr-021-algebraic-data-types.md) - Algebraic data types foundation
 

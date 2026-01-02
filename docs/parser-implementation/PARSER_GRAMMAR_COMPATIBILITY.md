@@ -1107,8 +1107,8 @@ This is **sufficient for:**
 
 ## Related Documents
 
-- **[Kleis Grammar v0.6](../grammar/kleis_grammar_v06.md)** - Complete formal specification (CURRENT)
-- **[Kleis Grammar v0.5](../grammar/kleis_grammar_v05.md)** - Historical specification
+- **[Kleis Grammar v0.96](../grammar/kleis_grammar_v096.md)** - Complete formal specification (CURRENT)
+- **[Kleis Grammar v0.6](../grammar/archive/kleis_grammar_v06.md)** - Historical specification
 - **[Parser Status](KLEIS_PARSER_STATUS.md)** - Implementation details
 - **[ADR-007](../adr/adr-007-bootstrap-grammar.md)** - Bootstrap strategy (~30% → gradual expansion)
 - **[ADR-015](../adr/adr-015-text-as-source-of-truth.md)** - Why we need Kleis text parser

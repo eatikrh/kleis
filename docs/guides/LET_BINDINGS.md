@@ -302,7 +302,7 @@ Type ascription is useful for:
 
 ## See Also
 
-- [Kleis Grammar v0.8](../grammar/kleis_grammar_v08.md) - Full grammar specification
+- [Kleis Grammar v0.96](../grammar/kleis_grammar_v096.md) - Full grammar specification
 - [Pattern Matching](../manual/src/chapters/05-pattern-matching.md) - Using match with let bindings
 - [Conditionals](../manual/src/chapters/08-conditionals.md) - if/then/else expressions
 

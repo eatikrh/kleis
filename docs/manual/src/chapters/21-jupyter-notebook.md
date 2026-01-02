@@ -673,7 +673,7 @@ diagram(
 
 ### Future Enhancements
 
-See the [Plotting Roadmap](../../PLOTTING_ROADMAP.md) for planned features:
+See the [Plotting Roadmap](../../../PLOTTING_ROADMAP.md) for planned features:
 - Function plotting (`fplot`)
 - 3D surface plots
 - Polar plots

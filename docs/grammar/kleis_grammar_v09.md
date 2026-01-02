@@ -178,6 +178,6 @@ No breaking changes. All v0.8 code remains valid in v0.9.
 ## Related Documents
 
 - [Capability Assessment](../CAPABILITY_ASSESSMENT.md) - Why this matters
-- [Grammar v0.8](kleis_grammar_v08.md) - Current grammar
+- [Grammar v0.8](archive/kleis_grammar_v08.md) - Previous grammar
 - [NEXT_SESSION.md](../NEXT_SESSION.md) - Implementation roadmap
 
