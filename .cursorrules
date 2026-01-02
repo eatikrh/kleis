@@ -14,6 +14,43 @@ This document contains:
 
 ---
 
+## Read Code Before Writing Documentation
+
+**CRITICAL: Read the actual code before documenting or describing it.**
+
+### The Problem
+
+Claude tends to generate plausible-sounding documentation without first reading the implementation. This leads to:
+- Inaccurate descriptions of what code does
+- Missing features that are actually implemented
+- Aspirational documentation that doesn't match reality
+
+### The Rule
+
+**Before writing documentation for any component:**
+
+1. **Read the source file(s)** using `read_file` or `grep`
+2. **Understand the actual API** - method signatures, types, return values
+3. **Note what's implemented vs planned** - check for TODOs, feature flags
+4. **Then write** documentation that matches what exists
+
+### Example
+
+❌ **Wrong:** "The solver abstraction probably has a verify method..."
+✅ **Right:** *reads src/solvers/backend.rs* → "The SolverBackend trait defines verify_axiom(), check_satisfiability(), evaluate()..."
+
+### Applies To
+
+- Manual chapters
+- Code comments
+- API documentation
+- Architecture descriptions
+- Any explanation of existing code
+
+**"Claude is learning to read before writing."**
+
+---
+
 ## DAP Debugger Context - CRITICAL
 
 **REMINDER: Debugging is about Expression::Operation and its span. NOT about functions or substitution.**
