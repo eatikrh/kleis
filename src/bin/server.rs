@@ -36,7 +36,17 @@ fn load_imports_recursive(
             let resolved = if import_path.is_absolute() {
                 import_path.to_path_buf()
             } else if import_path_str.starts_with("stdlib/") {
-                std::path::PathBuf::from(import_path_str)
+                // Check KLEIS_ROOT environment variable first
+                if let Ok(kleis_root) = std::env::var("KLEIS_ROOT") {
+                    let candidate = std::path::PathBuf::from(&kleis_root).join(import_path_str);
+                    if candidate.exists() {
+                        candidate
+                    } else {
+                        std::path::PathBuf::from(import_path_str)
+                    }
+                } else {
+                    std::path::PathBuf::from(import_path_str)
+                }
             } else {
                 base_dir.join(import_path)
             };

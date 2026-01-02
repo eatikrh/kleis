@@ -257,11 +257,19 @@ impl KleisContext {
     ///
     /// Handles:
     /// - Relative paths (./foo.kleis, ../bar.kleis)
-    /// - stdlib/ paths (searches in common locations)
+    /// - stdlib/ paths (checks KLEIS_ROOT first, then searches common locations)
     /// - Absolute paths (passed through)
     fn resolve_import_path(&self, import_path: &str, from_file: &Path) -> Option<PathBuf> {
         // Handle stdlib imports specially
         if import_path.starts_with("stdlib/") {
+            // First, check KLEIS_ROOT environment variable
+            if let Ok(kleis_root) = std::env::var("KLEIS_ROOT") {
+                let candidate = PathBuf::from(&kleis_root).join(import_path);
+                if candidate.exists() {
+                    return candidate.canonicalize().ok();
+                }
+            }
+
             // Try relative to current working directory
             let stdlib_path = self.cwd.join(import_path);
             if stdlib_path.exists() {

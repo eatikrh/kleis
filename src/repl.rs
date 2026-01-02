@@ -2455,6 +2455,8 @@ fn load_file_recursive(
 }
 
 /// Resolve an import path relative to the base directory
+///
+/// For stdlib imports, checks KLEIS_ROOT environment variable first.
 fn resolve_import_path(import_path: &str, base_dir: &Path) -> PathBuf {
     let import = Path::new(import_path);
 
@@ -2462,9 +2464,14 @@ fn resolve_import_path(import_path: &str, base_dir: &Path) -> PathBuf {
         // Absolute path: use as-is
         import.to_path_buf()
     } else if import_path.starts_with("stdlib/") {
-        // Standard library path: resolve from project root or known stdlib location
-        // For now, try relative to current working directory
-        // TODO: Support KLEIS_STDLIB_PATH environment variable
+        // Standard library path: check KLEIS_ROOT first, then cwd
+        if let Ok(kleis_root) = std::env::var("KLEIS_ROOT") {
+            let candidate = PathBuf::from(&kleis_root).join(import_path);
+            if candidate.exists() {
+                return candidate;
+            }
+        }
+        // Fallback to current working directory
         PathBuf::from(import_path)
     } else {
         // Relative path: resolve from base directory

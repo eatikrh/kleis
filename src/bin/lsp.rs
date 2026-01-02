@@ -59,6 +59,8 @@ impl KleisLanguageServer {
     }
 
     /// Resolve an import path relative to the document's directory
+    ///
+    /// For stdlib imports, checks KLEIS_ROOT environment variable first.
     fn resolve_import_path(import_path: &str, base_dir: &Path) -> PathBuf {
         let import = Path::new(import_path);
 
@@ -66,9 +68,15 @@ impl KleisLanguageServer {
             // Absolute path: use as-is
             import.to_path_buf()
         } else if import_path.starts_with("stdlib/") {
-            // Standard library: look in common locations
-            // 1. Current working directory
-            // 2. Relative to workspace root
+            // Standard library: check KLEIS_ROOT first
+            if let Ok(kleis_root) = std::env::var("KLEIS_ROOT") {
+                let candidate = PathBuf::from(&kleis_root).join(import_path);
+                if candidate.exists() {
+                    return candidate;
+                }
+            }
+
+            // Try current working directory
             let cwd_path = PathBuf::from(import_path);
             if cwd_path.exists() {
                 return cwd_path;

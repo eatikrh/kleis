@@ -362,6 +362,32 @@ Check the terminal for error messages. Common causes:
 - Z3 timeout on complex verification
 - Memory issues with large matrices
 
+### Imports fail (stdlib not found)
+
+When running Jupyter from a directory other than the Kleis project root, stdlib imports may fail:
+
+```
+Error: Cannot find file: stdlib/prelude.kleis
+```
+
+**Solution:** Set the `KLEIS_ROOT` environment variable to point to your Kleis installation:
+
+```bash
+export KLEIS_ROOT=/path/to/kleis
+jupyter lab
+```
+
+Or add it to your shell profile (`~/.bashrc`, `~/.zshrc`):
+
+```bash
+export KLEIS_ROOT="$HOME/git/cee/kleis"
+```
+
+The Kleis kernel automatically searches for stdlib in:
+1. `$KLEIS_ROOT/stdlib/` (if KLEIS_ROOT is set)
+2. Current working directory
+3. Parent directories (up to 10 levels)
+
 ### Unicode input
 
 Use standard Kleis Unicode shortcuts:
