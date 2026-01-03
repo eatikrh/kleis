@@ -70,6 +70,7 @@ class Section:
     """A document section at any level."""
     level: int  # 1=top level, 2=subsection, etc.
     title: str
+    label: Optional[str] = None  # For cross-referencing (e.g., "sec:intro")
     content: List[Any] = field(default_factory=list)  # Text, equations, figures, subsections
 
 
@@ -545,6 +546,18 @@ class KleisDoc:
             label_match = re.search(r'label\s*=\s*"([^"]*)"', table_body)
             caption_match = re.search(r'caption\s*=\s*"([^"]*)"', table_body)
             headers_match = re.search(r'headers\s*=\s*List\((.*?)\)', table_body)
+            kleis_code_match = re.search(r'kleis_code\s*=\s*"([^"]*)"', table_body)
+            
+            # Parse rows: rows = List(List("a", "b"), List("c", "d"))
+            rows = []
+            rows_match = re.search(r'rows\s*=\s*List\((.*)\)', table_body, re.DOTALL)
+            if rows_match:
+                rows_str = rows_match.group(1)
+                # Find each inner List(...)
+                for row_match in re.finditer(r'List\(([^)]*)\)', rows_str):
+                    row_cells = re.findall(r'"([^"]*)"', row_match.group(1))
+                    if row_cells:
+                        rows.append(row_cells)
             
             if label_match:
                 label = label_match.group(1)
@@ -555,8 +568,9 @@ class KleisDoc:
                 tables[label] = {
                     "label": label,
                     "headers": headers,
-                    "rows": [],  # Rows not currently saved in full
+                    "rows": rows,
                     "caption": caption_match.group(1) if caption_match else "",
+                    "kleis_code": kleis_code_match.group(1) if kleis_code_match else None,
                 }
         
         return tables
@@ -696,11 +710,13 @@ class KleisDoc:
             # Extract fields
             level_match = re.search(r'level\s*=\s*(\d+)', sec_body)
             title_match = re.search(r'title\s*=\s*"([^"]*)"', sec_body)
+            label_match = re.search(r'label\s*=\s*"([^"]*)"', sec_body)
             
             level = int(level_match.group(1)) if level_match else 1
             title = title_match.group(1) if title_match else ""
+            label = label_match.group(1) if label_match else None
             
-            section = Section(level=level, title=title, content=[])
+            section = Section(level=level, title=title, label=label, content=[])
             
             # Extract content items
             content_match = re.search(r'content\s*=\s*List\((.*)\)', sec_body, re.DOTALL)
@@ -969,33 +985,38 @@ example "render_plot"
     # Content Management
     # =========================================================================
     
-    def add_section(self, title: str, content: str = "", level: int = 1) -> Section:
+    def add_section(self, title: str, content: str = "", level: int = 1,
+                    label: str = None) -> Section:
         """Add a section to the document.
         
         Args:
             title: Section title
             content: Initial text content (optional)
             level: Nesting level (1=top, 2=subsection, etc.)
+            label: Optional label for cross-referencing (e.g., "sec:intro")
         
         Returns:
             The created Section object
         """
-        section = Section(level=level, title=title, content=[content] if content else [])
+        section = Section(level=level, title=title, label=label,
+                         content=[content] if content else [])
         self.sections.append(section)
         return section
     
-    def add_subsection(self, parent: Section, title: str, content: str = "") -> Section:
+    def add_subsection(self, parent: Section, title: str, content: str = "",
+                       label: str = None) -> Section:
         """Add a subsection to an existing section.
         
         Args:
             parent: Parent section
             title: Subsection title
             content: Initial text content
+            label: Optional label for cross-referencing (e.g., "sec:methods:data")
         
         Returns:
             The created subsection
         """
-        subsection = Section(level=parent.level + 1, title=title, 
+        subsection = Section(level=parent.level + 1, title=title, label=label,
                             content=[content] if content else [])
         parent.content.append(subsection)
         return subsection
@@ -1362,6 +1383,8 @@ example "render_plot"
             List of error messages (empty if all valid)
         """
         errors = []
+        section_labels = self._get_all_section_labels()
+        
         for ref in self.cross_refs:
             if ref.ref_type == "bib" and ref.target not in self.bibliography:
                 errors.append(f"Missing bibliography entry: {ref.target}")
@@ -1373,7 +1396,24 @@ example "render_plot"
                 errors.append(f"Missing table: {ref.target}")
             elif ref.ref_type == "thm" and ref.target not in self.theorems:
                 errors.append(f"Missing theorem: {ref.target}")
+            elif ref.ref_type == "sec" and ref.target not in section_labels:
+                errors.append(f"Missing section: {ref.target}")
         return errors
+    
+    def _get_all_section_labels(self) -> set:
+        """Get all section labels (including nested subsections)."""
+        labels = set()
+        
+        def collect_labels(sections):
+            for section in sections:
+                if section.label:
+                    labels.add(section.label)
+                # Recurse into nested sections
+                nested = [item for item in section.content if isinstance(item, Section)]
+                collect_labels(nested)
+        
+        collect_labels(self.sections)
+        return labels
     
     # =========================================================================
     # Export
@@ -1555,7 +1595,11 @@ example "render_plot"
     def _section_to_typst(self, section: Section) -> str:
         """Convert a section to Typst code."""
         lines = []
-        lines.append(f'#heading(level: {section.level})[{section.title}]')
+        # Include label for cross-referencing if present
+        if section.label:
+            lines.append(f'#heading(level: {section.level})[{section.title}] <{section.label}>')
+        else:
+            lines.append(f'#heading(level: {section.level})[{section.title}]')
         lines.append('')
         
         for item in section.content:
@@ -1794,7 +1838,18 @@ example "render_plot"
                 lines.append(f'    label = {self._to_kleis_string(table["label"])},')
                 headers = ", ".join(self._to_kleis_string(h) for h in table.get("headers", []))
                 lines.append(f'    headers = List({headers}),')
-                lines.append(f'    caption = {self._to_kleis_string(table.get("caption", ""))}')
+                # Save rows as list of lists
+                rows = table.get("rows", [])
+                if rows:
+                    row_strs = []
+                    for row in rows:
+                        cells = ", ".join(self._to_kleis_string(str(cell)) for cell in row)
+                        row_strs.append(f'List({cells})')
+                    lines.append(f'    rows = List({", ".join(row_strs)}),')
+                else:
+                    lines.append('    rows = List(),')
+                lines.append(f'    caption = {self._to_kleis_string(table.get("caption", ""))},')
+                lines.append(f'    kleis_code = {self._to_kleis_string(table.get("kleis_code") or "")}')
                 lines.append(")")
                 lines.append("")
         
@@ -1967,6 +2022,7 @@ example "render_plot"
         lines.append(f"define {var_name} = Section(")
         lines.append(f"    level = {section.level},")
         lines.append(f"    title = {self._to_kleis_string(section.title)},")
+        lines.append(f"    label = {self._to_kleis_string(section.label) if section.label else 'None'},")
         
         # Build content list
         content_items = []

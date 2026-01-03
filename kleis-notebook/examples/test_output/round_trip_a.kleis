@@ -51,12 +51,14 @@ define fig_test = Figure(
 define section_0 = Section(
     level = 1,
     title = "Introduction",
+    label = None,
     content = List(Text("Intro text"), EqRef("eq:test"), FigRef("fig:test"))
 )
 
 define section_1 = Section(
     level = 1,
     title = "Methods",
+    label = None,
     content = List(Text("Methods text"))
 )
 

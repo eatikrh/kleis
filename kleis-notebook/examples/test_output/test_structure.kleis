@@ -22,12 +22,28 @@ define meta_title = "Structure Test"
 define section_0 = Section(
     level = 1,
     title = "Chapter 1",
-    content = List(Text("Introduction content"), SubSection(2, "Section 1.1"), SubSection(2, "Section 1.2"))
+    label = None,
+    content = List(Text("Introduction content"), SectionRef("section_0_sub0"), SectionRef("section_0_sub1"))
+)
+
+define section_0_sub0 = Section(
+    level = 2,
+    title = "Section 1.1",
+    label = None,
+    content = List(Text("First subsection"))
+)
+
+define section_0_sub1 = Section(
+    level = 2,
+    title = "Section 1.2",
+    label = None,
+    content = List(Text("Second subsection"))
 )
 
 define section_1 = Section(
     level = 1,
     title = "Chapter 2",
+    label = None,
     content = List(Text("Methods content"))
 )
 

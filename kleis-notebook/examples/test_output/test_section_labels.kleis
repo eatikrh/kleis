@@ -10,44 +10,31 @@
 import "examples/documents/kleisdoc_types.kleis"
 
 // ----------------------------------------------------------------------------
-// Template
-// ----------------------------------------------------------------------------
-
-import "examples/documents/kleisdoc_types.kleis"
-
-// ----------------------------------------------------------------------------
 // Document Metadata
 // ----------------------------------------------------------------------------
 
-define meta_title = "Full Round-Trip Test"
-define meta_author = "Test Author"
-define meta_abstract = "This is a test abstract."
+define meta_title = "Section Label Test"
 
 // ----------------------------------------------------------------------------
-// Equations (with EditorNode AST for re-editing)
+// Cross-References
 // ----------------------------------------------------------------------------
 
-define eq_test = Equation(
-    id = "eq_0",
-    label = "eq:test",
-    latex = "",
-    typst = "",
-    ast = EObject("x"),
-    numbered = true,
-    verified = false
+define crossref_0 = CrossRef(
+    ref_type = "sec",
+    target = "sec:intro",
+    text = None
 )
 
-// ----------------------------------------------------------------------------
-// Figures (with Kleis code for regeneration)
-// ----------------------------------------------------------------------------
+define crossref_1 = CrossRef(
+    ref_type = "sec",
+    target = "sec:methods:data",
+    text = None
+)
 
-define fig_test = Figure(
-    id = "fig_0",
-    label = "fig:test",
-    caption = "Test caption",
-    source = Regenerable("plot()", List()),
-    typst_fragment = "",
-    svg_cache = ""
+define crossref_2 = CrossRef(
+    ref_type = "sec",
+    target = "sec:nonexistent",
+    text = None
 )
 
 // ----------------------------------------------------------------------------
@@ -57,15 +44,22 @@ define fig_test = Figure(
 define section_0 = Section(
     level = 1,
     title = "Introduction",
-    label = None,
-    content = List(Text("Intro text"), EqRef("eq:test"), FigRef("fig:test"))
+    label = "sec:intro",
+    content = List()
 )
 
 define section_1 = Section(
     level = 1,
     title = "Methods",
-    label = None,
-    content = List(Text("Methods text"))
+    label = "sec:methods",
+    content = List(SectionRef("section_1_sub0"))
+)
+
+define section_1_sub0 = Section(
+    level = 2,
+    title = "Data Collection",
+    label = "sec:methods:data",
+    content = List()
 )
 
 // ----------------------------------------------------------------------------
@@ -74,7 +68,7 @@ define section_1 = Section(
 
 define document = KleisDoc(
     metadata = doc_metadata,
-    equations = List(eq_test),
-    figures = List(fig_test),
+    equations = List(),
+    figures = List(),
     sections = List(section_0, section_1)
 )

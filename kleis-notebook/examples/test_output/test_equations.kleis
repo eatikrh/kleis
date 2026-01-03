@@ -46,6 +46,7 @@ define eq_quadratic = Equation(
 define section_0 = Section(
     level = 1,
     title = "Introduction",
+    label = None,
     content = List(Text("This tests equations."), EqRef("eq:einstein"), EqRef("eq:quadratic"))
 )
 
