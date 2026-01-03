@@ -190,9 +190,84 @@ fn test_scalar_multiply_typst_implied() {
     assert_eq!(result, "m c", "scalar_multiply Typst should be 'm c'");
 }
 
+#[test]
+fn test_scalar_multiply_html_implied() {
+    let node = op("scalar_multiply", vec![obj("m"), obj("c")]);
+    let result = render_editor_node(&node, &RenderTarget::HTML);
+    assert!(
+        !result.contains('×'),
+        "scalar_multiply HTML should NOT contain ×"
+    );
+    assert_eq!(result, "mc", "scalar_multiply HTML should be 'mc'");
+}
+
 // =============================================================================
 // Complex Expression Tests
 // =============================================================================
+
+#[test]
+fn test_emc2_unicode() {
+    // E = mc²
+    let node = op(
+        "equals",
+        vec![
+            obj("E"),
+            op(
+                "scalar_multiply",
+                vec![obj("m"), op("power", vec![obj("c"), num("2")])],
+            ),
+        ],
+    );
+    let result = render_editor_node(&node, &RenderTarget::Unicode);
+    assert!(
+        !result.contains('×'),
+        "E=mc² Unicode should not contain ×: {}",
+        result
+    );
+    println!("E=mc² Unicode: {}", result);
+}
+
+#[test]
+fn test_emc2_latex() {
+    let node = op(
+        "equals",
+        vec![
+            obj("E"),
+            op(
+                "scalar_multiply",
+                vec![obj("m"), op("power", vec![obj("c"), num("2")])],
+            ),
+        ],
+    );
+    let result = render_editor_node(&node, &RenderTarget::LaTeX);
+    assert!(
+        !result.contains("\\times"),
+        "E=mc² LaTeX should not contain \\times: {}",
+        result
+    );
+    println!("E=mc² LaTeX: {}", result);
+}
+
+#[test]
+fn test_emc2_html() {
+    let node = op(
+        "equals",
+        vec![
+            obj("E"),
+            op(
+                "scalar_multiply",
+                vec![obj("m"), op("power", vec![obj("c"), num("2")])],
+            ),
+        ],
+    );
+    let result = render_editor_node(&node, &RenderTarget::HTML);
+    assert!(
+        !result.contains('×'),
+        "E=mc² HTML should not contain ×: {}",
+        result
+    );
+    println!("E=mc² HTML: {}", result);
+}
 
 #[test]
 fn test_emc2_typst() {
@@ -308,4 +383,84 @@ fn test_quadratic_formula_latex() {
     );
 
     println!("Quadratic formula LaTeX: {}", result);
+}
+
+#[test]
+fn test_quadratic_formula_unicode() {
+    // Same formula in Unicode
+    let discriminant = op(
+        "minus",
+        vec![
+            op("power", vec![obj("b"), num("2")]),
+            op(
+                "scalar_multiply",
+                vec![op("scalar_multiply", vec![num("4"), obj("a")]), obj("c")],
+            ),
+        ],
+    );
+
+    let numerator = op(
+        "plus_minus",
+        vec![op("negate", vec![obj("b")]), op("sqrt", vec![discriminant])],
+    );
+
+    let denominator = op("scalar_multiply", vec![num("2"), obj("a")]);
+
+    let formula = op(
+        "equals",
+        vec![obj("x"), op("frac", vec![numerator, denominator])],
+    );
+
+    let result = render_editor_node(&formula, &RenderTarget::Unicode);
+
+    // Check key elements
+    assert!(result.contains('±'), "Should contain ±: {}", result);
+    assert!(result.contains("-b"), "Should contain -b: {}", result);
+    assert!(
+        !result.contains('×'),
+        "Should NOT contain × (implied mult): {}",
+        result
+    );
+
+    println!("Quadratic formula Unicode: {}", result);
+}
+
+#[test]
+fn test_quadratic_formula_html() {
+    // Same formula in HTML
+    let discriminant = op(
+        "minus",
+        vec![
+            op("power", vec![obj("b"), num("2")]),
+            op(
+                "scalar_multiply",
+                vec![op("scalar_multiply", vec![num("4"), obj("a")]), obj("c")],
+            ),
+        ],
+    );
+
+    let numerator = op(
+        "plus_minus",
+        vec![op("negate", vec![obj("b")]), op("sqrt", vec![discriminant])],
+    );
+
+    let denominator = op("scalar_multiply", vec![num("2"), obj("a")]);
+
+    let formula = op(
+        "equals",
+        vec![obj("x"), op("frac", vec![numerator, denominator])],
+    );
+
+    let result = render_editor_node(&formula, &RenderTarget::HTML);
+
+    // Check key elements
+    assert!(result.contains('±'), "Should contain ±: {}", result);
+    assert!(result.contains("-b"), "Should contain -b: {}", result);
+    assert!(
+        !result.contains('×'),
+        "Should NOT contain × (implied mult): {}",
+        result
+    );
+
+    println!("Quadratic formula HTML: {}", result);
 }
