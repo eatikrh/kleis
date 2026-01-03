@@ -2062,6 +2062,286 @@ example "render_plot"
     # Display (for Jupyter)
     # =========================================================================
     
+    def toc(self, verbose: bool = True) -> List[Dict[str, Any]]:
+        """Display table of contents.
+        
+        Shows the hierarchical structure of sections in the document.
+        Helps PhD students navigate their thesis.
+        
+        Args:
+            verbose: If True, prints formatted output
+        
+        Returns:
+            List of section info dicts
+        
+        Example:
+            >>> doc.toc()
+            📖 Table of Contents:
+               1. Introduction
+                  1.1 Background
+                  1.2 Motivation
+               2. Methods
+                  2.1 Data Collection
+               3. Results
+               4. Conclusion
+        """
+        toc_items = []
+        
+        def collect_sections(sections, prefix="", level_counters=None):
+            if level_counters is None:
+                level_counters = {}
+            
+            for section in sections:
+                # Get or initialize counter for this level
+                level = section.level
+                if level not in level_counters:
+                    level_counters[level] = 0
+                level_counters[level] += 1
+                
+                # Reset counters for deeper levels
+                for deeper_level in list(level_counters.keys()):
+                    if deeper_level > level:
+                        level_counters[deeper_level] = 0
+                
+                # Build section number
+                numbers = []
+                for l in range(1, level + 1):
+                    numbers.append(str(level_counters.get(l, 0)))
+                section_num = ".".join(numbers)
+                
+                item = {
+                    "number": section_num,
+                    "title": section.title,
+                    "level": level,
+                    "label": section.label,
+                }
+                toc_items.append(item)
+                
+                # Process nested sections
+                nested = [c for c in section.content if isinstance(c, Section)]
+                if nested:
+                    collect_sections(nested, prefix + "   ", level_counters)
+        
+        collect_sections(self.sections)
+        
+        if verbose:
+            if not toc_items:
+                print("📖 Table of Contents: (empty)")
+                print("   No sections yet. Use doc.add_section() to add content.")
+            else:
+                print("📖 Table of Contents:")
+                print()
+                for item in toc_items:
+                    indent = "   " * item["level"]
+                    label_str = f" <{item['label']}>" if item["label"] else ""
+                    print(f"{indent}{item['number']}. {item['title']}{label_str}")
+                print()
+        
+        return toc_items
+    
+    def summary(self, verbose: bool = True) -> Dict[str, Any]:
+        """Display document summary.
+        
+        Shows overview of the document including metadata and content counts.
+        Helps PhD students understand what's in their thesis.
+        
+        Args:
+            verbose: If True, prints formatted output
+        
+        Returns:
+            Dict with summary information
+        
+        Example:
+            >>> doc.summary()
+            📊 Document Summary
+            ═══════════════════════════════════════════════════
+            Title: "Quantum Entanglement in Topological Systems"
+            Author: Jane Smith (MIT)
+            
+            Content:
+               📑 Sections:    5
+               🔢 Equations:   12
+               📊 Figures:     8
+               📋 Tables:      3
+               📚 References:  24
+        """
+        # Gather metadata
+        title = self.metadata.get("title", "Untitled")
+        authors = self.metadata.get("authors", [])
+        date = self.metadata.get("date", "")
+        abstract = self.metadata.get("abstract", "")
+        
+        # Count content
+        section_count = len(self.sections)
+        equation_count = len(self.equations)
+        figure_count = len(self.figures)
+        table_count = len(self.tables)
+        bib_count = len(self.bibliography)
+        theorem_count = len(self.theorems)
+        
+        # Count nested sections
+        def count_all_sections(sections):
+            total = len(sections)
+            for s in sections:
+                nested = [c for c in s.content if isinstance(c, Section)]
+                total += count_all_sections(nested)
+            return total
+        
+        total_sections = count_all_sections(self.sections)
+        
+        summary_info = {
+            "title": title,
+            "authors": authors,
+            "date": date,
+            "abstract_length": len(abstract),
+            "sections": total_sections,
+            "equations": equation_count,
+            "figures": figure_count,
+            "tables": table_count,
+            "bibliography": bib_count,
+            "theorems": theorem_count,
+        }
+        
+        if verbose:
+            print("📊 Document Summary")
+            print("═" * 50)
+            print(f'Title: "{title}"')
+            
+            if authors:
+                if isinstance(authors, list) and len(authors) > 0:
+                    if hasattr(authors[0], 'name'):
+                        author_strs = []
+                        for a in authors:
+                            if a.affiliation:
+                                author_strs.append(f"{a.name} ({a.affiliation})")
+                            else:
+                                author_strs.append(a.name)
+                        print(f"Author: {', '.join(author_strs)}")
+                    else:
+                        print(f"Author: {authors}")
+            
+            if date:
+                print(f"Date: {date}")
+            
+            print()
+            print("Content:")
+            print(f"   📑 Sections:    {total_sections}")
+            print(f"   🔢 Equations:   {equation_count}")
+            print(f"   📊 Figures:     {figure_count}")
+            print(f"   📋 Tables:      {table_count}")
+            print(f"   📚 References:  {bib_count}")
+            if theorem_count > 0:
+                print(f"   📐 Theorems:    {theorem_count}")
+            print()
+            
+            if abstract:
+                words = len(abstract.split())
+                print(f"Abstract: {words} words")
+        
+        return summary_info
+    
+    def list_equations(self, verbose: bool = True) -> List[Dict[str, Any]]:
+        """List all equations in the document.
+        
+        Helps PhD students find and update specific equations.
+        
+        Args:
+            verbose: If True, prints formatted output
+        
+        Returns:
+            List of equation info dicts
+        
+        Example:
+            >>> doc.list_equations()
+            🔢 Equations:
+               eq:schrodinger   "i\\hbar\\frac{\\partial}{..."
+               eq:entropy       "S = -k_B \\sum p_i \\log p_i"
+        """
+        eq_list = []
+        
+        for label, eq in self.equations.items():
+            preview = eq.latex[:40] + "..." if len(eq.latex) > 40 else eq.latex
+            eq_list.append({
+                "label": label,
+                "latex": eq.latex,
+                "preview": preview,
+                "has_ast": eq.ast is not None,
+            })
+        
+        if verbose:
+            if not eq_list:
+                print("🔢 Equations: (none)")
+            else:
+                print("🔢 Equations:")
+                for eq in eq_list:
+                    ast_marker = " [AST]" if eq["has_ast"] else ""
+                    print(f'   {eq["label"]:20} "{eq["preview"]}"{ast_marker}')
+                print()
+        
+        return eq_list
+    
+    def list_figures(self, verbose: bool = True) -> List[Dict[str, Any]]:
+        """List all figures in the document.
+        
+        Args:
+            verbose: If True, prints formatted output
+        
+        Returns:
+            List of figure info dicts
+        """
+        fig_list = []
+        
+        for label, fig in self.figures.items():
+            fig_list.append({
+                "label": label,
+                "caption": fig.caption,
+                "has_code": fig.kleis_code is not None,
+                "has_image": fig.image_path is not None,
+            })
+        
+        if verbose:
+            if not fig_list:
+                print("📊 Figures: (none)")
+            else:
+                print("📊 Figures:")
+                for fig in fig_list:
+                    source = "[Kleis]" if fig["has_code"] else "[Image]" if fig["has_image"] else ""
+                    caption_preview = fig["caption"][:30] + "..." if len(fig["caption"]) > 30 else fig["caption"]
+                    print(f'   {fig["label"]:20} "{caption_preview}" {source}')
+                print()
+        
+        return fig_list
+    
+    def list_tables(self, verbose: bool = True) -> List[Dict[str, Any]]:
+        """List all tables in the document.
+        
+        Args:
+            verbose: If True, prints formatted output
+        
+        Returns:
+            List of table info dicts
+        """
+        table_list = []
+        
+        for label, table in self.tables.items():
+            caption = table.get("caption", "") if isinstance(table, dict) else ""
+            table_list.append({
+                "label": label,
+                "caption": caption,
+            })
+        
+        if verbose:
+            if not table_list:
+                print("📋 Tables: (none)")
+            else:
+                print("📋 Tables:")
+                for t in table_list:
+                    caption_preview = t["caption"][:30] + "..." if len(t["caption"]) > 30 else t["caption"]
+                    print(f'   {t["label"]:20} "{caption_preview}"')
+                print()
+        
+        return table_list
+    
     def _repr_html_(self) -> str:
         """HTML representation for Jupyter display."""
         html = ['<div class="kleisdoc" style="font-family: sans-serif; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">']
@@ -2106,3 +2386,129 @@ def list_templates(template_dir: str = "stdlib/templates") -> List[str]:
         for f in path.glob("*.kleis"):
             templates.append(str(f))
     return templates
+
+
+def list_documents(directory: str = ".", verbose: bool = True) -> List[Dict[str, Any]]:
+    """List KleisDoc files in a directory.
+    
+    Scans for .kleis files and extracts their titles and metadata.
+    This helps PhD students find their thesis documents.
+    
+    Args:
+        directory: Directory to search (default: current directory)
+        verbose: If True, prints formatted output
+    
+    Returns:
+        List of dicts with file info: {path, title, modified, size}
+    
+    Example:
+        >>> list_documents()
+        📄 KleisDoc files found:
+           1. thesis.kleis
+              "Quantum Entanglement in Topological Systems"
+              Modified: Jan 3, 2026 | Size: 45 KB
+           2. chapter3.kleis
+              "Chapter 3 Draft"
+              Modified: Jan 2, 2026 | Size: 12 KB
+    """
+    import datetime
+    
+    path = Path(directory).expanduser().resolve()
+    documents = []
+    
+    if not path.exists():
+        if verbose:
+            print(f"❌ Directory not found: {directory}")
+        return documents
+    
+    # Find all .kleis files
+    kleis_files = list(path.glob("*.kleis"))
+    
+    if not kleis_files:
+        if verbose:
+            print(f"📭 No .kleis files found in {directory}")
+        return documents
+    
+    # Extract info from each file
+    for file_path in sorted(kleis_files, key=lambda f: f.stat().st_mtime, reverse=True):
+        try:
+            stat = file_path.stat()
+            modified = datetime.datetime.fromtimestamp(stat.st_mtime)
+            size_kb = stat.st_size / 1024
+            
+            # Try to extract title from file
+            title = _extract_title_from_kleis(file_path)
+            
+            doc_info = {
+                "path": str(file_path),
+                "filename": file_path.name,
+                "title": title,
+                "modified": modified,
+                "size_kb": size_kb,
+            }
+            documents.append(doc_info)
+        except Exception:
+            # Skip files we can't read
+            continue
+    
+    if verbose and documents:
+        print("📄 KleisDoc files found:")
+        print()
+        for i, doc in enumerate(documents, 1):
+            print(f"   {i}. {doc['filename']}")
+            if doc['title']:
+                print(f'      "{doc["title"]}"')
+            mod_str = doc['modified'].strftime("%b %d, %Y %H:%M")
+            print(f"      Modified: {mod_str} | Size: {doc['size_kb']:.1f} KB")
+            print()
+    
+    return documents
+
+
+def _extract_title_from_kleis(file_path: Path) -> Optional[str]:
+    """Extract title from a .kleis file without fully parsing it."""
+    try:
+        with open(file_path, "r") as f:
+            # Read first 50 lines to find title
+            for i, line in enumerate(f):
+                if i > 50:
+                    break
+                # Look for: define meta_title = "..."
+                match = re.match(r'define\s+meta_title\s*=\s*"([^"]*)"', line.strip())
+                if match:
+                    return match.group(1)
+                # Also check for: title = "..."
+                match = re.match(r'title\s*=\s*"([^"]*)"', line.strip())
+                if match:
+                    return match.group(1)
+    except Exception:
+        pass
+    return None
+
+
+def open_recent(directory: str = ".") -> Optional["KleisDoc"]:
+    """Open the most recently modified .kleis document.
+    
+    Convenience function for PhD students to quickly resume work.
+    
+    Args:
+        directory: Directory to search
+    
+    Returns:
+        The most recently modified KleisDoc, or None if no documents found
+    
+    Example:
+        >>> doc = open_recent()
+        📂 Opening: thesis.kleis ("Quantum Entanglement...")
+    """
+    docs = list_documents(directory, verbose=False)
+    if not docs:
+        print(f"📭 No .kleis files found in {directory}")
+        return None
+    
+    most_recent = docs[0]  # Already sorted by modified time
+    print(f'📂 Opening: {most_recent["filename"]}')
+    if most_recent["title"]:
+        print(f'   "{most_recent["title"]}"')
+    
+    return KleisDoc.load(most_recent["path"])
