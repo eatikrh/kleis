@@ -75,15 +75,61 @@ data ValidationStatus =
   | Invalid(message: String)       // Fails validation
 
 // ============================================================================
-// 4. EQUATION REPRESENTATION
+// 4. EDITOR NODE - Visual Equation AST (mirrors Rust's EditorNode)
+// ============================================================================
+
+// Placeholder for user input (the □ boxes)
+data PlaceholderData = Placeholder(id: ℕ, hint: String)
+
+// Index position for tensors
+data IndexPosition = Upper | Lower
+
+// Index structure for a single index
+data IndexMeta = IndexMeta(position: IndexPosition, name: String)
+
+// Metadata for operations (especially tensors)
+data NodeMetadata = 
+    NoMeta
+  | TensorMeta(indices: List(IndexMeta))
+  | MatrixMeta(rows: ℕ, cols: ℕ)
+
+// The EditorNode AST - what the Equation Editor produces
+data EditorNode =
+    // Simple symbol: x, α, Γ
+    EObject(symbol: String)
+    
+    // Numeric or string constant: 42, "hello"
+  | EConst(value: String)
+  
+    // Placeholder for user input: □
+  | EPlaceholder(data: PlaceholderData)
+  
+    // Operation with args and optional semantic metadata
+  | EOp(name: String, args: List(EditorNode), kind: String, meta: NodeMetadata)
+  
+    // List of nodes
+  | EList(nodes: List(EditorNode))
+
+// ============================================================================
+// 5. EQUATION REPRESENTATION
 // ============================================================================
 
 // How is the equation stored?
 data EquationFormat =
+    // Just LaTeX string (legacy, no re-editing)
     LatexOnly(latex: String)
+    
+    // Kleis text (for verification, can be parsed)
   | KleisExpr(kleis_text: String)
-  | EditorAST(ast_json: String)    // JSON-serialized EditorNode
-  | AllFormats(latex: String, kleis_text: String, ast_json: String)
+  
+    // EditorNode AST (full fidelity, re-editable!)
+  | EditorAST(ast: EditorNode)
+  
+    // JSON string (for interop with JS Equation Editor)
+  | EditorJSON(json: String)
+  
+    // All formats (maximum compatibility)
+  | AllFormats(latex: String, kleis_text: String, ast: EditorNode)
 
 data Equation = Equation(
     id: String,                    // "eq-einstein"
@@ -153,9 +199,9 @@ data CodeBlock = CodeBlock(
 // ============================================================================
 
 data TheoremType = 
-    Theorem | Lemma | Proposition | Corollary | Conjecture
+    ThmTheorem | ThmLemma | ThmProposition | ThmCorollary | ThmConjecture
 
-data Theorem = Theorem(
+data Thm = Thm(
     id: String,
     theorem_type: TheoremType,
     number: String,                // "3.1" or ""
@@ -230,7 +276,7 @@ data Chunk =
   | CFig(figure: Figure)
   | CTab(table: Table)
   | CCode(code: CodeBlock)
-  | CThm(theorem: Theorem)
+  | CThm(theorem: Thm)
   | CDef(definition: Definition)
   | CEx(example: Example)
 

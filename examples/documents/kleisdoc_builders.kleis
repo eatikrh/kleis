@@ -1,0 +1,547 @@
+// ============================================================================
+// KLEISDOC BUILDERS - Concise Document Construction
+// ============================================================================
+//
+// These builders reduce verbosity while staying within valid Kleis syntax.
+//
+// BEFORE (verbose):
+//   DocSection("ch1", Chapter, "1", "Introduction",
+//     Cons(CText(TextChunk("ch1-p1", Markdown, "Hello", "Hello")),
+//     Cons(CEq(Equation("ch1-eq1", "eq:x", True, LatexOnly("x^2"), "$ x^2 $", Unchecked)),
+//     Nil)), Nil)
+//
+// AFTER (concise):
+//   chapter(1, "Introduction", [
+//     p("Hello"),
+//     eq("x^2", "eq:x")
+//   ])
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+import "examples/documents/kleisdoc_types.kleis"
+
+// ============================================================================
+// ID GENERATION (simple counter-based for now)
+// ============================================================================
+
+// In practice, we'd want a proper UUID or context-aware ID generator
+// For now, users can override with explicit IDs when needed
+
+// ============================================================================
+// TEXT BUILDERS
+// ============================================================================
+
+// Paragraph - most common case
+define p(content: String) : Chunk =
+    CText(TextChunk("auto", Markdown, content, content))
+
+// Paragraph with explicit ID
+define p_id(id: String, content: String) : Chunk =
+    CText(TextChunk(id, Markdown, content, content))
+
+// Plain text (not markdown)
+define plain(content: String) : Chunk =
+    CText(TextChunk("auto", PlainText, content, content))
+
+// ============================================================================
+// EDITOR NODE BUILDERS - For re-editable equations
+// ============================================================================
+
+// Simple symbol: x, α, μ
+define sym(s: String) : EditorNode = EObject(s)
+
+// Numeric constant
+define num(n: String) : EditorNode = EConst(n)
+
+// Binary operation (no special metadata)
+define binop(op: String, left: EditorNode, right: EditorNode) : EditorNode =
+    EOp(op, [left, right], "", NoMeta)
+
+// Fraction
+define frac(num: EditorNode, denom: EditorNode) : EditorNode =
+    EOp("frac", [num, denom], "fraction", NoMeta)
+
+// Superscript (power)
+define sup(base: EditorNode, exp: EditorNode) : EditorNode =
+    EOp("superscript", [base, exp], "", NoMeta)
+
+// Subscript
+define sub(base: EditorNode, idx: EditorNode) : EditorNode =
+    EOp("subscript", [base, idx], "", NoMeta)
+
+// Square root
+define sqrt(x: EditorNode) : EditorNode =
+    EOp("sqrt", [x], "", NoMeta)
+
+// Tensor with index structure
+define tensor(symbol: String, indices: List(EditorNode), index_meta: List(IndexMeta)) : EditorNode =
+    EOp(symbol, indices, "tensor", TensorMeta(index_meta))
+
+// Upper (contravariant) index marker
+define up(name: String) : IndexMeta = IndexMeta(Upper, name)
+
+// Lower (covariant) index marker
+define lo(name: String) : IndexMeta = IndexMeta(Lower, name)
+
+// Integral
+define integral(lower: EditorNode, upper: EditorNode, body: EditorNode, var: EditorNode) : EditorNode =
+    EOp("integral", [lower, upper, body, var], "integral", NoMeta)
+
+// Sum
+define summation(lower: EditorNode, upper: EditorNode, body: EditorNode) : EditorNode =
+    EOp("sum", [lower, upper, body], "sum", NoMeta)
+
+// Greek letters (convenience)
+define alpha : EditorNode = sym("α")
+define beta : EditorNode = sym("β")
+define gamma_sym : EditorNode = sym("γ")
+define delta : EditorNode = sym("δ")
+define mu : EditorNode = sym("μ")
+define nu : EditorNode = sym("ν")
+define lambda_sym : EditorNode = sym("λ")
+define pi_sym : EditorNode = sym("π")
+
+// ============================================================================
+// EQUATION BUILDERS
+// ============================================================================
+
+// Numbered equation with label (LaTeX only - not re-editable)
+define eq(latex: String, label: String) : Chunk =
+    CEq(Equation(
+        label,                                    // ID = label
+        label,                                    // Label
+        True,                                     // Numbered
+        LatexOnly(latex),                        // Format
+        concat4("$ ", latex, " $ <", concat(label, ">")),  // Typst
+        Unchecked                                // Validation
+    ))
+
+// Equation with EditorNode AST (re-editable!)
+define eq_ast(ast: EditorNode, label: String) : Chunk =
+    CEq(Equation(
+        label,
+        label,
+        True,
+        EditorAST(ast),
+        "",  // Typst generated from AST later
+        Unchecked
+    ))
+
+// Equation with all formats (maximum compatibility)
+define eq_full(latex: String, kleis_text: String, ast: EditorNode, label: String) : Chunk =
+    CEq(Equation(
+        label,
+        label,
+        True,
+        AllFormats(latex, kleis_text, ast),
+        concat4("$ ", latex, " $ <", concat(label, ">")),
+        Unchecked
+    ))
+
+// Unnumbered equation (no label)
+define eq_inline(latex: String) : Chunk =
+    CEq(Equation(
+        "auto",
+        "",
+        False,
+        LatexOnly(latex),
+        concat3("$ ", latex, " $"),
+        Unchecked
+    ))
+
+// Equation from Kleis expression (for verification)
+define eq_kleis(kleis_text: String, label: String) : Chunk =
+    CEq(Equation(
+        label,
+        label,
+        True,
+        KleisExpr(kleis_text),
+        "",  // Typst generated later
+        Unchecked
+    ))
+
+// ============================================================================
+// FIGURE BUILDERS
+// ============================================================================
+
+// Figure from Kleis plot code
+define fig(kleis_code: String, caption: String, label: String) : Chunk =
+    CFig(Figure(
+        label,                                   // ID = label
+        label,                                   // Label
+        caption,
+        "",                                      // Alt text (empty)
+        Regenerable(kleis_code, Nil),           // Source
+        "",                                      // Typst (generated later)
+        "",                                      // SVG cache (generated later)
+        "auto",                                  // Width
+        Here                                     // Placement
+    ))
+
+// Figure with explicit width
+define fig_width(kleis_code: String, caption: String, label: String, width: String) : Chunk =
+    CFig(Figure(
+        label, label, caption, "",
+        Regenerable(kleis_code, Nil),
+        "", "", width, Here
+    ))
+
+// Static image (not regenerable)
+define img(path: String, caption: String, label: String) : Chunk =
+    CFig(Figure(
+        label, label, caption, "",
+        Imported(path, ""),
+        concat3("image(\"", path, "\")"),
+        path,
+        "auto",
+        Here
+    ))
+
+// ============================================================================
+// TABLE BUILDERS
+// ============================================================================
+
+// Simple table from headers and rows (pre-constructed)
+define tbl(headers: List(String), rows: List(TableRow), caption: String, label: String) : Chunk =
+    CTab(Table(
+        label, label, caption,
+        headers,
+        [],  // Default alignments
+        rows,
+        Static,
+        ""   // Typst generated later
+    ))
+
+// Helper to make a table row
+define row(cells: List(String)) : TableRow = Row(cells)
+
+// ============================================================================
+// CODE BLOCK BUILDERS
+// ============================================================================
+
+// Kleis code block
+define code_kleis(source: String) : Chunk =
+    CCode(CodeBlock("auto", "", Kleis, source, True, "", True))
+
+// Python code block
+define code_py(source: String) : Chunk =
+    CCode(CodeBlock("auto", "", Python, source, False, "", True))
+
+// Generic code block
+define code(lang: CodeLanguage, source: String) : Chunk =
+    CCode(CodeBlock("auto", "", lang, source, False, "", True))
+
+// ============================================================================
+// THEOREM BUILDERS
+// ============================================================================
+
+// Theorem with statement only
+define thm(statement: String) : Chunk =
+    CThm(Thm("auto", ThmTheorem, "", "", statement, ""))
+
+// Theorem with name
+define thm_named(name: String, statement: String) : Chunk =
+    CThm(Thm("auto", ThmTheorem, "", name, statement, ""))
+
+// Theorem with proof
+define thm_proof(statement: String, proof: String) : Chunk =
+    CThm(Thm("auto", ThmTheorem, "", "", statement, proof))
+
+// Lemma
+define lem(statement: String) : Chunk =
+    CThm(Thm("auto", ThmLemma, "", "", statement, ""))
+
+// Proposition
+define prop(statement: String) : Chunk =
+    CThm(Thm("auto", ThmProposition, "", "", statement, ""))
+
+// ============================================================================
+// DEFINITION BUILDER
+// ============================================================================
+
+define defn(term: String, definition: String) : Chunk =
+    CDef(Definition("auto", term, definition))
+
+// ============================================================================
+// SECTION BUILDERS
+// ============================================================================
+
+// Helper to convert number to string
+define n2s(n: ℕ) : String =
+    if eq(n, 0) then "0" else if eq(n, 1) then "1" else if eq(n, 2) then "2"
+    else if eq(n, 3) then "3" else if eq(n, 4) then "4" else if eq(n, 5) then "5"
+    else if eq(n, 6) then "6" else if eq(n, 7) then "7" else if eq(n, 8) then "8"
+    else if eq(n, 9) then "9" else if eq(n, 10) then "10" else "N"
+
+// Chapter (no subsections)
+define chapter(num: ℕ, title: String, chunks: List(Chunk)) : DocSection =
+    DocSection(concat("ch", n2s(num)), Chapter, n2s(num), title, chunks, Nil)
+
+// Chapter with subsections
+define chapter_with(num: ℕ, title: String, chunks: List(Chunk), subs: List(DocSection)) : DocSection =
+    DocSection(concat("ch", n2s(num)), Chapter, n2s(num), title, chunks, subs)
+
+// Section within a chapter
+define section(ch_num: ℕ, sec_num: ℕ, title: String, chunks: List(Chunk)) : DocSection =
+    DocSection(
+        concat3("sec", n2s(ch_num), concat(".", n2s(sec_num))),
+        Section,
+        concat3(n2s(ch_num), ".", n2s(sec_num)),
+        title,
+        chunks,
+        Nil
+    )
+
+// Subsection
+define subsec(ch_num: ℕ, sec_num: ℕ, sub_num: ℕ, title: String, chunks: List(Chunk)) : DocSection =
+    DocSection(
+        concat5("subsec", n2s(ch_num), ".", n2s(sec_num), concat(".", n2s(sub_num))),
+        Subsection,
+        concat5(n2s(ch_num), ".", n2s(sec_num), ".", n2s(sub_num)),
+        title,
+        chunks,
+        Nil
+    )
+
+// ============================================================================
+// FRONT MATTER BUILDERS
+// ============================================================================
+
+// Simple title page
+define title_page(title: String, author_name: String, date: String) : FrontMatter =
+    TitlePage(
+        title,
+        [Author("author-1", author_name, "", "", "", Primary)],
+        date,
+        "PhD",
+        ""
+    )
+
+// MIT thesis title page
+define mit_title(title: String, author_name: String, dept: String, degree: String, date: String) : FrontMatter =
+    TitlePage(
+        title,
+        [Author("author-1", author_name, "", "", dept, Primary)],
+        date,
+        degree,
+        dept
+    )
+
+// Abstract
+define abstract(text: String, supervisor: String) : FrontMatter =
+    Abstract(text, supervisor)
+
+// Acknowledgments
+define ack(text: String) : FrontMatter =
+    Acknowledgments(text)
+
+// ============================================================================
+// BACK MATTER BUILDERS
+// ============================================================================
+
+// Bibliography entry
+define bib(key: String, authors: String, title: String, venue: String, year: String) : BibEntry =
+    BibEntry(key, "article", title, authors, venue, year, "", "", 
+        concat5("[", key, "] ", authors, concat5(". ", title, ". ", venue, concat(", ", year))))
+
+// ============================================================================
+// FULL DOCUMENT BUILDER
+// ============================================================================
+
+// Build complete thesis
+define thesis(
+    title: String,
+    author_name: String,
+    dept: String,
+    date: String,
+    abstract_text: String,
+    supervisor: String,
+    chapters: List(DocSection),
+    refs: List(BibEntry)
+) : KleisDoc =
+    KleisDoc(
+        DocMetadata(
+            "thesis-auto",
+            title,
+            [Author("author-1", author_name, "", "", dept, Primary)],
+            [],           // keywords
+            "en-US",
+            CCBY,
+            MITThesisTemplate,
+            "",           // doi
+            "",           // created
+            "",           // modified
+            1,            // version
+            ""            // git commit
+        ),
+        [mit_title(title, author_name, dept, "PhD", date),
+         abstract(abstract_text, supervisor)],
+        chapters,
+        [Bibliography(refs)],
+        [],  // cross_refs (auto-generated)
+        CompilationState("", [], Unchecked),
+        JupyterState("", "", []),
+        [],  // history
+        []   // comments
+    )
+
+// ============================================================================
+// EXAMPLES - Compare Verbose vs Concise
+// ============================================================================
+
+example "verbose_vs_concise_equation" {
+    // VERBOSE (raw constructor)
+    let verbose_eq = CEq(Equation(
+        "eq-einstein",
+        "eq:einstein", 
+        True, 
+        LatexOnly("E = mc^2"),
+        "$ E = mc^2 $ <eq:einstein>",
+        Unchecked
+    ))
+    
+    // CONCISE (builder)
+    let concise_eq = eq("E = mc^2", "eq:einstein")
+    
+    out("Verbose and concise produce equivalent chunks")
+}
+
+example "verbose_vs_concise_chapter" {
+    // VERBOSE
+    let verbose_ch = DocSection(
+        "ch1",
+        Chapter,
+        "1",
+        "Introduction",
+        Cons(CText(TextChunk("ch1-p1", Markdown, "Hello world.", "Hello world.")),
+        Cons(CEq(Equation("ch1-eq1", "eq:test", True, LatexOnly("x^2"), "$ x^2 $", Unchecked)),
+        Nil)),
+        Nil
+    )
+    
+    // CONCISE
+    let concise_ch = chapter(1, "Introduction", [
+        p("Hello world."),
+        eq("x^2", "eq:test")
+    ])
+    
+    out("Chapter construction is much cleaner with builders")
+}
+
+example "full_thesis_concise" {
+    // A complete thesis in concise form
+    let my_thesis = thesis(
+        "Formal Verification of Knowledge Production",
+        "Jane Smith",
+        "Department of EECS",
+        "May 2025",
+        "This thesis presents Kleis, a system for formal knowledge production.",
+        "Prof. Alice Chen",
+        [
+            chapter(1, "Introduction", [
+                p("Knowledge production relies on precise notation."),
+                p("This thesis presents a unified approach."),
+                eq("∀x. P(x) ⇒ Q(x)", "eq:logic")
+            ]),
+            chapter(2, "Background", [
+                p("We build on prior work in formal verification."),
+                defn("Structure", "A collection of types, operations, and axioms."),
+                thm("All structures admit a canonical representation.")
+            ]),
+            chapter(3, "The Kleis System", [
+                p("Kleis is built on three abstractions."),
+                fig("plot(xs, ys)", "System architecture", "fig:arch"),
+                eq("T_{μν} = 0", "eq:einstein")
+            ]),
+            chapter(4, "Conclusion", [
+                p("We have presented Kleis.")
+            ])
+        ],
+        [
+            bib("demoura2008", "de Moura, L.", "Z3: An Efficient SMT Solver", "TACAS", "2008"),
+            bib("typst2023", "Mädje et al.", "Typst: Modern Typesetting", "Software", "2023")
+        ]
+    )
+    
+    out("Complete thesis defined in ~30 lines of concise Kleis code")
+}
+
+example "nested_sections" {
+    // Chapter with sections and subsections
+    let ch = chapter_with(1, "Introduction", 
+        [p("Chapter intro paragraph.")],
+        [
+            section(1, 1, "Motivation", [
+                p("Why this matters."),
+                eq("E = mc^2", "eq:energy")
+            ]),
+            section(1, 2, "Contributions", [
+                p("Our main contributions are:")
+            ])
+        ]
+    )
+    
+    out("Nested structure is clean")
+}
+
+example "reeditable_equation" {
+    // Build Einstein's E=mc² as an EditorNode AST
+    // This can be loaded back into the Equation Editor!
+    
+    let e = sym("E")
+    let m = sym("m")
+    let c = sym("c")
+    let c_squared = sup(c, num("2"))
+    let mc2 = binop("times", m, c_squared)
+    let einstein_ast = binop("equals", e, mc2)
+    
+    // Store with full format info
+    let einstein_eq = eq_full(
+        "E = mc^2",           // LaTeX for display
+        "E = m * c^2",        // Kleis text for verification
+        einstein_ast,         // EditorNode AST for re-editing!
+        "eq:einstein"
+    )
+    
+    out("Created re-editable equation with EditorNode AST")
+}
+
+example "tensor_equation" {
+    // Christoffel symbol: Γ^λ_{μν}
+    let christoffel = tensor(
+        "Γ",
+        [lambda_sym, mu, nu],
+        [up("λ"), lo("μ"), lo("ν")]
+    )
+    
+    // g_{μν} = g_{νμ} (metric symmetry)
+    let g_munu = tensor("g", [mu, nu], [lo("μ"), lo("ν")])
+    let g_numu = tensor("g", [nu, mu], [lo("ν"), lo("μ")])
+    let metric_symmetry = binop("equals", g_munu, g_numu)
+    
+    let sym_eq = eq_ast(metric_symmetry, "eq:metric-sym")
+    
+    out("Created tensor equation with full index structure")
+}
+
+example "integral_equation" {
+    // ∫₀^∞ e^{-x²} dx = √π/2
+    let zero = num("0")
+    let inf = sym("∞")
+    let x = sym("x")
+    let x_sq = sup(x, num("2"))
+    let neg_x_sq = binop("negate", x_sq, x_sq)  // Simplified
+    let exp_part = EOp("exp", [sup(sym("-x"), num("2"))], "", NoMeta)
+    
+    let integral_lhs = integral(zero, inf, exp_part, x)
+    let sqrt_pi = sqrt(pi_sym)
+    let half = frac(sqrt_pi, num("2"))
+    
+    let gaussian_integral = binop("equals", integral_lhs, half)
+    
+    let gauss_eq = eq_ast(gaussian_integral, "eq:gaussian")
+    
+    out("Created integral equation - fully re-editable")
+}
+
