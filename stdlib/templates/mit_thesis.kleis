@@ -2,7 +2,9 @@
 // MIT Thesis Template
 // =============================================================================
 //
-// Based on: https://libraries.mit.edu/distinctive-collections/thesis-specs/
+// Based on:
+// - MIT Libraries Thesis Specifications: https://libraries.mit.edu/distinctive-collections/thesis-specs/
+// - Official mitthesis LaTeX class v1.21 (2025/11/02): https://ctan.org/pkg/mitthesis
 //
 // This template defines:
 // - Required metadata fields
@@ -82,13 +84,14 @@ define document_structure = List(
 )
 
 // -----------------------------------------------------------------------------
-// Typst Styling
+// Typst Styling (based on official mitthesis.cls v1.21, 2025/11/02)
+// Source: https://ctan.org/pkg/mitthesis
 // -----------------------------------------------------------------------------
 
 define typst_page_setup = """
 #set page(
   paper: "us-letter",
-  margin: (top: 1in, bottom: 1in, left: 1.5in, right: 1in),
+  margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
 )
 """
 
@@ -125,7 +128,7 @@ define typst_heading_setup = """
 """
 
 define typst_title_page = """
-#page(margin: (top: 2in, bottom: 1in, left: 1.5in, right: 1in), numbering: none)[
+#page(margin: (top: 2in, bottom: 1in, left: 1in, right: 1in), numbering: none)[
   #align(center)[
     #text(size: 18pt, weight: "bold")[TITLE]
     

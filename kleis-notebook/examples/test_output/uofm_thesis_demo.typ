@@ -77,3 +77,7 @@ This dissertation presents novel approaches to quantum error correction.
 #heading(level: 1)[Introduction]
 
 This is the introduction.
+
+#heading(level: 1)[Background]
+
+This is the background.

@@ -2,7 +2,7 @@
 
 #set page(
   paper: "us-letter",
-  margin: (top: 1in, bottom: 1in, left: 1.5in, right: 1in),
+  margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
 )
 
 
@@ -41,7 +41,7 @@
 )
 
 
-#page(margin: (top: 2in, bottom: 1in, left: 1.5in, right: 1in), numbering: none)[
+#page(margin: (top: 2in, bottom: 1in, left: 1in, right: 1in), numbering: none)[
   #align(center)[
     #text(size: 18pt, weight: "bold")[Machine Learning for Autonomous Systems]
     
@@ -76,3 +76,7 @@ Novel ML algorithms for autonomous vehicle navigation.
 #heading(level: 1)[Introduction]
 
 This is the introduction.
+
+#heading(level: 1)[Background]
+
+This is the background.
