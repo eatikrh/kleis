@@ -1,0 +1,108 @@
+// ============================================================================
+// JANE SMITH'S PHD THESIS
+// ============================================================================
+//
+// A PhD thesis using the MIT thesis template.
+// The student just focuses on CONTENT, the template handles FORMATTING.
+//
+// ============================================================================
+
+import "stdlib/templates/mit_thesis.kleis"
+
+// ============================================================================
+// THESIS CONTENT
+// ============================================================================
+
+// Chapter 1: Introduction
+define chapter_intro : MITDocExpr =
+    MITChapter(1, "Introduction",
+        "Knowledge production in science and mathematics relies on precise notation and rigorous verification. Traditional approaches separate these concerns, leading to errors and inconsistencies. This thesis presents a unified framework that treats notation, verification, and document structure as first-class concepts."
+    )
+
+// Chapter 2: Background  
+define chapter_background : MITDocExpr =
+    MITChapter(2, "Background",
+        "We build on prior work in formal verification, type theory, and scientific computing. SMT solvers like Z3 provide decidable procedures for many useful theories. Typst offers a modern approach to document typesetting."
+    )
+
+// Chapter 3: The Kleis System
+define chapter_kleis : MITDocExpr =
+    MITChapter(3, "The Kleis System",
+        "Kleis is built on three key abstractions: structures for mathematical domains, axioms for verification rules, and templates for notation. This combination enables domain-specific languages for any field with formal notation."
+    )
+
+// Chapter 4: Evaluation
+define chapter_eval : MITDocExpr =
+    MITChapter(4, "Evaluation",
+        "We evaluate Kleis on several case studies including tensor calculus for general relativity, counterpoint rules for music theory, and protocol verification for network security."
+    )
+
+// Chapter 5: Conclusion
+define chapter_conclusion : MITDocExpr =
+    MITChapter(5, "Conclusion",
+        "We have presented Kleis, a substrate for formal knowledge production. Future work includes extending the solver abstraction layer, building domain-specific libraries, and integrating with Jupyter notebooks for interactive research."
+    )
+
+// References
+define ref_z3 : MITDocExpr =
+    MITReference("demoura2008", "de Moura, L. and Bjørner, N. Z3: An Efficient SMT Solver. TACAS 2008.")
+
+define ref_typst : MITDocExpr =
+    MITReference("typst2023", "Mädje, M. and Haug, L. Typst: A New Markup-based Typesetting System. 2023.")
+
+// ============================================================================
+// ASSEMBLE THE THESIS
+// ============================================================================
+
+define my_chapters : List(MITDocExpr) =
+    Cons(chapter_intro,
+    Cons(chapter_background,
+    Cons(chapter_kleis,
+    Cons(chapter_eval,
+    Cons(chapter_conclusion,
+    Cons(ref_z3,
+    Cons(ref_typst, Nil)))))))
+
+define my_thesis : MITThesisDoc =
+    mit_thesis(
+        "Formal Verification of Knowledge Production Systems",
+        "Jane Smith",
+        "Department of Electrical Engineering and Computer Science",
+        "May 2025",
+        Doctor,
+        "This thesis presents Kleis, a formal verification system designed as a universal substrate for knowledge production. We demonstrate that mathematical notation, verification rules, and document structure can be treated as first-class concepts that are axiomatized and validated. Our approach enables researchers to define domain-specific notations while maintaining rigorous verification through SMT solvers like Z3.",
+        "Prof. Alice Chen",
+        my_chapters
+    )
+
+// ============================================================================
+// EXAMPLES
+// ============================================================================
+
+example "validate_thesis" {
+    // Check that the thesis meets MIT requirements
+    assert(valid_mit_thesis(my_thesis) = True)
+    out("✓ Thesis is valid per MIT requirements")
+}
+
+example "check_signature" {
+    // PhD requires signature
+    assert(signature_required(Doctor) = True)
+    
+    // Bachelor's doesn't
+    assert(signature_required(Bachelor) = False)
+    
+    out("✓ Signature requirements validated")
+}
+
+example "compile_thesis" {
+    // Compile to Typst
+    let result = compile_mit_thesis(my_thesis)
+    out(result)
+}
+
+example "degree_info" {
+    out(degree_name(Doctor))
+    out(degree_abbrev(Doctor))
+}
+

@@ -1,0 +1,245 @@
+// ============================================================================
+// MIT THESIS TEMPLATE
+// ============================================================================
+//
+// Official template for MIT thesis documents.
+// Based on: https://libraries.mit.edu/distinctive-collections/thesis-specs/
+//
+// Usage:
+//   import "stdlib/templates/mit_thesis.kleis"
+//
+//   let thesis = mit_thesis(
+//       title = "My Research",
+//       author = "Jane Smith",
+//       ...
+//   )
+//   out(compile_mit_thesis(thesis))
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ============================================================================
+// DEGREE TYPES
+// ============================================================================
+
+data Degree = Bachelor | Master | Doctor
+
+define degree_name(d: Degree) : String = match d {
+    Bachelor => "Bachelor of Science"
+  | Master => "Master of Science"  
+  | Doctor => "Doctor of Philosophy"
+}
+
+define degree_abbrev(d: Degree) : String = match d {
+    Bachelor => "S.B."
+  | Master => "S.M."
+  | Doctor => "Ph.D."
+}
+
+// ============================================================================
+// DOCUMENT STRUCTURE
+// ============================================================================
+
+data MITDocExpr =
+    MITTitle(text: String)
+  | MITAuthor(name: String, dept: String, date: String)
+  | MITAbstract(title: String, author: String, text: String, supervisor: String)
+  | MITChapter(num: ℕ, title: String, content: String)
+  | MITSection(title: String, content: String)
+  | MITEquation(latex: String, label: String)
+  | MITFigure(num: String, caption: String, path: String)
+  | MITReference(key: String, citation: String)
+  | MITSequence(elements: List(MITDocExpr))
+
+// Complete thesis structure
+data MITThesisDoc = Thesis(
+    title: String,
+    author: String,
+    department: String,
+    date: String,
+    degree: Degree,
+    has_signature: Bool,
+    abstract_text: String,
+    supervisor: String,
+    content: List(MITDocExpr)
+)
+
+// ============================================================================
+// VALIDATION - MIT Requirements as Functions
+// ============================================================================
+
+// PhD and Master's require signature page
+define signature_required(d: Degree) : Bool = match d {
+    Bachelor => False
+  | Master => True
+  | Doctor => True
+}
+
+// Validate thesis has required signature for degree
+define valid_signature(thesis: MITThesisDoc) : Bool =
+    match thesis {
+        Thesis(_, _, _, _, degree, has_sig, _, _, _) =>
+            if signature_required(degree) then has_sig else True
+    }
+
+// Validate thesis has content
+define valid_content(thesis: MITThesisDoc) : Bool =
+    match thesis {
+        Thesis(_, _, _, _, _, _, _, _, content) =>
+            not(is_empty_list(content))
+    }
+
+define is_empty_list(xs: List(MITDocExpr)) : Bool = match xs {
+    Nil => True
+  | Cons(_, _) => False
+}
+
+// Full validation
+define valid_mit_thesis(thesis: MITThesisDoc) : Bool =
+    and(valid_signature(thesis), valid_content(thesis))
+
+// ============================================================================
+// COMPILATION - Generate Typst Code
+// ============================================================================
+
+data CompileResult =
+    CTypst(code: String)
+  | CError(message: String)
+
+// MIT preamble
+define mit_preamble : String =
+    "#set page(paper: \"us-letter\", margin: 1in)\n#set text(font: \"New Computer Modern\", size: 12pt)\n#set par(justify: true, leading: 0.65em)\n#set heading(numbering: \"1.1\")\n\n"
+
+// Compile a document expression
+define compile_expr(expr: MITDocExpr, degree: Degree) : CompileResult =
+    match expr {
+        MITTitle(text) =>
+            CTypst(concat5(
+                "#align(center)[\n  #v(2cm)\n  #text(size: 24pt, weight: \"bold\")[",
+                text,
+                "]\n]\n",
+                "",
+                ""
+            ))
+      | MITAuthor(name, dept, date) =>
+            CTypst(concat5(
+                "#align(center)[\n  #text(size: 14pt)[",
+                name,
+                "]\n  #v(0.5cm)\n  Submitted to the ",
+                dept,
+                concat5(
+                    "\n  in partial fulfillment of the requirements for the degree of\n  #v(0.3cm)\n  #text(style: \"italic\")[",
+                    degree_name(degree),
+                    "]\n  #v(0.5cm)\n  ",
+                    date,
+                    "\n]\n#pagebreak()\n"
+                )
+            ))
+      | MITAbstract(title, author, text, supervisor) =>
+            CTypst(concat5(
+                "#align(center)[#text(size: 16pt, weight: \"bold\")[Abstract]]\n\n#text(weight: \"bold\")[",
+                title,
+                "]\n\nby ",
+                author,
+                concat4(
+                    "\n\nSubmitted to the Department on the date shown\nin partial fulfillment of the requirements for the degree.\n\n",
+                    text,
+                    "\n\n#text(weight: \"bold\")[Thesis Supervisor:] ",
+                    concat(supervisor, "\n#pagebreak()\n")
+                )
+            ))
+      | MITChapter(num, title, content) =>
+            CTypst(concat5(
+                "= Chapter ",
+                int_to_str(num),
+                ": ",
+                title,
+                concat("\n\n", concat(content, "\n\n"))
+            ))
+      | MITSection(title, content) =>
+            CTypst(concat4("== ", title, "\n\n", concat(content, "\n\n")))
+      | MITEquation(latex, label) =>
+            CTypst(concat4("$ ", latex, " $ <", concat(label, ">\n\n")))
+      | MITFigure(num, caption, path) =>
+            CTypst(concat5(
+                "#figure(\n  image(\"",
+                path,
+                "\"),\n  caption: [",
+                caption,
+                "]\n)\n\n"
+            ))
+      | MITReference(key, citation) =>
+            CTypst(concat4("[", key, "] ", concat(citation, "\n\n")))
+      | MITSequence(elements) =>
+            compile_sequence(elements, degree)
+    }
+
+define compile_sequence(elements: List(MITDocExpr), degree: Degree) : CompileResult =
+    compile_sequence_acc(elements, degree, "")
+
+define compile_sequence_acc(elements: List(MITDocExpr), degree: Degree, acc: String) : CompileResult =
+    match elements {
+        Nil => CTypst(acc)
+      | Cons(elem, rest) =>
+            match compile_expr(elem, degree) {
+                CTypst(code) => compile_sequence_acc(rest, degree, concat(acc, code))
+              | CError(msg) => CError(msg)
+            }
+    }
+
+// Int to string helper
+define int_to_str(n: ℕ) : String =
+    if eq(n, 0) then "0" else if eq(n, 1) then "1" else if eq(n, 2) then "2"
+    else if eq(n, 3) then "3" else if eq(n, 4) then "4" else if eq(n, 5) then "5"
+    else if eq(n, 6) then "6" else if eq(n, 7) then "7" else if eq(n, 8) then "8"
+    else if eq(n, 9) then "9" else "N"
+
+// ============================================================================
+// MAIN COMPILATION FUNCTION
+// ============================================================================
+
+// Compile a complete thesis
+define compile_mit_thesis(thesis: MITThesisDoc) : CompileResult =
+    match thesis {
+        Thesis(title, author, dept, date, degree, has_sig, abstract_text, supervisor, content) =>
+            // Build document structure
+            let title_expr = MITTitle(title) in
+            let author_expr = MITAuthor(author, dept, date) in
+            let abstract_expr = MITAbstract(title, author, abstract_text, supervisor) in
+            let full_doc = MITSequence(Cons(title_expr, Cons(author_expr, Cons(abstract_expr, content)))) in
+            
+            // Compile
+            match compile_expr(full_doc, degree) {
+                CTypst(body) => CTypst(concat(mit_preamble, body))
+              | CError(msg) => CError(msg)
+            }
+    }
+
+// ============================================================================
+// CONVENIENCE BUILDER
+// ============================================================================
+
+// Build a thesis (for users who don't want to construct Thesis directly)
+define mit_thesis(
+    title: String,
+    author: String,
+    department: String,
+    date: String,
+    degree: Degree,
+    abstract_text: String,
+    supervisor: String,
+    chapters: List(MITDocExpr)
+) : MITThesisDoc =
+    Thesis(
+        title,
+        author,
+        department,
+        date,
+        degree,
+        signature_required(degree),  // Auto-set based on degree
+        abstract_text,
+        supervisor,
+        chapters
+    )
+
