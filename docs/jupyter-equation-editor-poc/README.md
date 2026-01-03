@@ -1,0 +1,270 @@
+# Jupyter + Equation Editor Integration POC
+
+**Date:** January 2, 2026  
+**Branch:** `feature/jupyter-equation-editor-poc`  
+**Status:** POC Complete, Ready for Implementation
+
+---
+
+## Overview
+
+This POC demonstrates how to embed visual widgets (like the Kleis Equation Editor) 
+in Jupyter notebooks and export plots/equations to publication-ready formats.
+
+## 1. Iframe Embedding POC
+
+### Problem
+How can we display the Equation Editor (a React web app) inside a Jupyter notebook cell?
+
+### Solution: Iframe Embedding
+We tested three methods of embedding an HTML widget in Jupyter:
+
+| Method | Description | Result |
+|--------|-------------|--------|
+| **Direct IFrame** | `IPython.display.IFrame(url)` | ✅ Works |
+| **Toggle Button** | Show/hide with JavaScript button | ✅ Works |
+| **Message Passing** | `postMessage` from iframe to kernel | ✅ Works |
+
+### Files Created
+```
+examples/jupyter-iframe-poc/
+├── README.md              # Usage instructions
+├── simple_widget.html     # Test widget with symbol palette
+└── test_iframe.ipynb      # Jupyter notebook with 3 methods
+```
+
+### How to Test
+```bash
+# Terminal 1: Start widget server
+cd examples/jupyter-iframe-poc
+python3 -m http.server 9999
+
+# Terminal 2: Start Jupyter
+cd kleis-notebook && ./start-jupyter.sh
+
+# Open: examples/jupyter-iframe-poc/test_iframe.ipynb
+```
+
+### Key Findings
+
+1. **Cross-origin works**: Jupyter (port 8891) can embed localhost widgets (port 9999)
+2. **Toggle UI works**: JavaScript in notebook cells controls iframe visibility
+3. **postMessage works**: Widget can send data back to notebook
+
+### Architecture for Real Equation Editor
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Jupyter Notebook Cell                                       │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ [📐 Open Equation Editor]                                ││
+│  │                                                          ││
+│  │ ┌──────────────────────────────────────────────────────┐││
+│  │ │  Equation Editor (iframe)                            │││
+│  │ │  - Template palette                                  │││
+│  │ │  - Visual equation building                          │││
+│  │ │  - Live SVG preview                                  │││
+│  │ │  [Insert into Notebook]                              │││
+│  │ └──────────────────────────────────────────────────────┘││
+│  │                                                          ││
+│  │ Received equation: ∫₀^∞ e^{-x²} dx = √π/2              ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Implementation Steps (Future)
+
+1. Add `?mode=jupyter` parameter to Equation Editor
+2. Implement `postMessage` handler in editor to send:
+   - SVG output
+   - LaTeX representation
+   - Kleis AST
+3. Add Python helper in kernel: `equation_editor()`
+4. Handle CORS if needed
+
+---
+
+## 2. Export Typst Functions
+
+### Problem
+How can users collect SVG plots/equations and compile them into a PDF document?
+
+### Solution: `export_typst()` and `export_typst_fragment()`
+
+Two new functions that return Typst code as strings:
+
+| Function | Returns | Use Case |
+|----------|---------|----------|
+| `export_typst(...)` | Complete Typst code with preamble | Standalone `.typ` file |
+| `export_typst_fragment(...)` | Just `lq.diagram(...)` call | Embed in existing document |
+
+### Files Modified
+- `src/plotting.rs` - Added `export_diagram_typst()` and `export_diagram_typst_fragment()`
+- `src/evaluator.rs` - Added `builtin_export_typst()` and `builtin_export_typst_fragment()`
+- `examples/export/export_typst_demo.kleis` - Demo and tests
+
+### Usage
+
+```kleis
+// Get complete Typst file
+let code = export_typst(
+    plot([0, 1, 2, 3], [1, 4, 9, 16], color = "blue"),
+    title = "My Plot",
+    xlabel = "x"
+)
+out(code)
+```
+
+Output:
+```typst
+#import "@preview/lilaq:0.5.0" as lq
+#set page(width: auto, height: auto, margin: 0.5cm)
+
+#lq.diagram(
+  title: [My Plot],
+  xlabel: [x],
+  lq.plot((0, 1, 2, 3), (1, 4, 9, 16), color: blue),
+)
+```
+
+### PDF Workflow
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Kleis Code    │     │   Typst File    │     │      PDF        │
+│                 │     │                 │     │                 │
+│ export_typst()  │ ──► │ paper.typ       │ ──► │ paper.pdf       │
+│                 │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                              │
+                              ▼
+                        typst compile paper.typ
+```
+
+### Example: Multi-Plot Document
+
+```typst
+// paper.typ
+#import "@preview/lilaq:0.5.0" as lq
+
+#set document(title: "Research Results")
+#set page(paper: "a4", margin: 2cm)
+
+= Introduction
+
+Our study examines...
+
+= Results
+
+#figure(
+  // Paste from export_typst_fragment()
+  lq.diagram(
+    title: [Figure 1],
+    lq.plot((0, 1, 2, 3), (1, 4, 9, 16)),
+  ),
+  caption: [Experimental results]
+)
+
+= Conclusion
+
+We conclude that...
+```
+
+---
+
+## 3. LaTeX/arXiv Considerations
+
+### Key Finding
+**Typst does NOT generate LaTeX.** It compiles directly to PDF.
+
+### arXiv Submission Options
+
+| Approach | Works? | Notes |
+|----------|--------|-------|
+| Submit PDF directly | ✅ | arXiv accepts PDF! |
+| Submit Typst source | ❌ | arXiv can't render Typst |
+| Add LaTeX export to Kleis | 🔮 Future | Would need PGFPlots translation |
+
+### Typst Academic Templates
+
+Typst has academic templates that mimic arXiv/journal styles:
+
+```typst
+#import "@preview/charged-ieee:0.1.3": ieee
+#import "@preview/arkheion:0.1.0": arkheion  // arXiv-like
+
+#show: arkheion.with(
+  title: "My Paper",
+  authors: (
+    (name: "Author One", affiliation: "University"),
+  ),
+)
+```
+
+### Future: LaTeX Export
+
+If needed, we could add:
+
+```kleis
+// Hypothetical - not implemented
+let latex = export_latex(
+    plot([0,1,2,3], [1,4,9,16])
+)
+// Returns PGFPlots/TikZ code
+```
+
+This would require translating Lilaq → PGFPlots, which is significant work.
+
+---
+
+## 4. Future Enhancements
+
+### High Priority
+- [ ] `save_typst(filename, ...)` - Write Typst code to file
+- [ ] `compile_pdf(filename, ...)` - Compile directly to PDF
+- [ ] Integrate real Equation Editor with `?mode=jupyter`
+
+### Medium Priority
+- [ ] `export_latex()` - Generate PGFPlots for arXiv compatibility
+- [ ] Typst document builder in Kleis
+- [ ] Jupyter magic command: `%%kleis_typst`
+
+### Low Priority
+- [ ] WASM-based Typst compilation in browser (no server needed)
+- [ ] Custom arXiv template for Kleis documents
+
+---
+
+## 5. Commits in This Branch
+
+```
+8b580e6 feat: Add Jupyter iframe POC for Equation Editor embedding
+2c25c81 feat: Add export_typst() and export_typst_fragment() functions
+```
+
+---
+
+## 6. Testing
+
+```bash
+# Test export_typst functions
+cd /Users/eatik_1/git/cee/kleis
+export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
+cargo run --bin kleis -- test examples/export/export_typst_demo.kleis
+
+# Expected output:
+# ✅ export full typst
+# ✅ export fragment  
+# ✅ build document
+# ✅ 3 examples passed
+```
+
+---
+
+## 7. References
+
+- [Lilaq Documentation](https://github.com/lilaq-project/lilaq)
+- [Typst Documentation](https://typst.app/docs/)
+- [Typst Academic Templates](https://typst.app/universe/search?kind=templates&q=academic)
+- [arXiv Submission Guidelines](https://info.arxiv.org/help/submit/index.html)
+

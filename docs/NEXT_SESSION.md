@@ -1,10 +1,46 @@
 # Next Session Notes
 
-**Last Updated:** January 1, 2026 (evening)
+**Last Updated:** January 2, 2026 (evening)
 
 ---
 
-## 🚀 CURRENT WORK: Unified Plotting API Complete! (Jan 1, 2026)
+## 🚀 CURRENT WORK: Jupyter + Equation Editor POC (Jan 2, 2026)
+
+### Branch: `feature/jupyter-equation-editor-poc`
+
+See full documentation: [`docs/jupyter-equation-editor-poc/README.md`](./jupyter-equation-editor-poc/README.md)
+
+### Summary
+
+1. **Iframe Embedding POC** ✅
+   - Tested embedding HTML widgets in Jupyter via iframe
+   - Three methods work: Direct IFrame, Toggle Button, Message Passing
+   - Files: `examples/jupyter-iframe-poc/`
+
+2. **Export Typst Functions** ✅
+   - `export_typst(...)` - Returns complete Typst code with preamble
+   - `export_typst_fragment(...)` - Returns just `lq.diagram()` for embedding
+   - Files: `examples/export/export_typst_demo.kleis`
+
+3. **PDF Workflow**
+   ```
+   Kleis → export_typst() → paper.typ → typst compile → paper.pdf
+   ```
+
+4. **LaTeX/arXiv Finding**
+   - Typst does NOT generate LaTeX (it's a replacement, not a frontend)
+   - arXiv accepts PDF directly
+   - Future: Could add `export_latex()` using PGFPlots
+
+### Future Enhancements (Not Yet Implemented)
+- `save_typst(filename, ...)` - Write to file directly
+- `compile_pdf(filename, ...)` - Compile to PDF in one step
+- Real Equation Editor integration with `?mode=jupyter`
+- `export_latex()` for PGFPlots output
+
+---
+
+## Previous: Unified Plotting API Complete! (Jan 1, 2026)
 
 ### What's Done
 
