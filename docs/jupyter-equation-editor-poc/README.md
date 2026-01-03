@@ -261,7 +261,115 @@ cargo run --bin kleis -- test examples/export/export_typst_demo.kleis
 
 ---
 
-## 7. References
+## 8. Future: Persistent Publication Format (.kleisdoc)
+
+### The Problem
+
+Documents (papers, theses, books) are written over weeks, months, or years across 
+hundreds of sessions. We need:
+- Persistent storage that survives sessions
+- Equation ASTs that can be reloaded and edited
+- Regenerable content (plots from code) vs static (images)
+- Structure validation against axioms
+- Multi-format output (arXiv, IEEE, thesis templates)
+
+### Proposed Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        User Interfaces                           │
+│  Jupyter Notebook │ Equation Editor │ CLI │ VS Code            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↕
+┌─────────────────────────────────────────────────────────────────┐
+│                    .kleisdoc Format                              │
+│  - Metadata (title, authors, dates)                             │
+│  - Content chunks with stable IDs (tags)                        │
+│  - Equation ASTs (EditorNode format - reloadable!)              │
+│  - Figure specs (regenerable from Kleis code)                   │
+│  - Document outline (structure)                                 │
+│  - Cross-references                                              │
+└─────────────────────────────────────────────────────────────────┘
+                              ↕
+┌─────────────────────────────────────────────────────────────────┐
+│              Structure Definitions (Kleis)                       │
+│  thesis-phd.kleis │ paper-arxiv.kleis │ book.kleis             │
+│  (Axioms: "must have abstract > 150 words")                     │
+└─────────────────────────────────────────────────────────────────┘
+                              ↕
+┌─────────────────────────────────────────────────────────────────┐
+│                    Typst Templates                               │
+│  mit-thesis.typ │ arxiv.typ │ ieee.typ │ nature.typ            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+                        PDF / HTML / EPUB
+```
+
+### Content Types
+
+| Type | Regenerable? | Storage | Example |
+|------|--------------|---------|---------|
+| **Equation** | ✅ Yes | EditorNode AST | Einstein field equations |
+| **Plot** | ✅ Yes | Kleis source code | Convergence diagram |
+| **Table** | ✅ Yes | Data + format spec | Results comparison |
+| **Text** | ❌ No | Markdown | Introduction paragraph |
+| **Image** | ❌ No | File reference | Lab photo |
+
+### Tag System
+
+Content chunks have stable IDs that persist across sessions:
+
+```
+%tag eq-einstein     ← Created Year 1, edited Year 3, same ID
+%tag fig-convergence ← Data updated, same ID
+%tag ch2-intro       ← Text revised 50 times, same ID
+```
+
+### Cross-Session Workflow
+
+```bash
+# Session 1 (January 2024)
+kleis new thesis.kleisdoc --template mit-thesis
+jupyter lab  # Work on Chapter 1
+kleis save
+
+# Session 203 (October 2025)
+kleis open thesis.kleisdoc
+# Click eq-einstein → Equation Editor loads AST
+# Edit visually → Save back to .kleisdoc
+
+# Session 412 (January 2026)
+kleis validate thesis.kleisdoc
+kleis compile thesis.kleisdoc --style mit-thesis → thesis.pdf
+```
+
+### Key Design Principles
+
+1. **Stable IDs**: Content chunks keep their ID forever, enabling:
+   - Cross-references: `See Equation {@eq-einstein}`
+   - Structure reorganization without breaking links
+   - Version tracking per chunk
+
+2. **AST Preservation**: Equations store EditorNode AST, not just rendered output
+   - Equation Editor can reload and edit
+   - Multiple render targets (Typst, LaTeX, MathML)
+
+3. **Regenerable Content**: Plots/tables store source code
+   - Update data → regenerate output
+   - Change style → re-render all figures
+
+4. **Separation of Concerns**:
+   - Content (what you wrote) → .kleisdoc
+   - Structure (what it must be) → Kleis axioms
+   - Style (how it looks) → Typst templates
+
+### Status
+
+🔮 **Not yet implemented** - This is the design direction based on POC findings.
+
+---
+
+## 9. References
 
 - [Lilaq Documentation](https://github.com/lilaq-project/lilaq)
 - [Typst Documentation](https://typst.app/docs/)
