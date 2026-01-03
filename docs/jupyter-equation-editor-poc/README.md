@@ -363,9 +363,133 @@ kleis compile thesis.kleisdoc --style mit-thesis → thesis.pdf
    - Structure (what it must be) → Kleis axioms
    - Style (how it looks) → Typst templates
 
+### The Key Insight: Documents as Examples
+
+Since documents are structures with axioms, we can use Kleis `example` blocks 
+to **validate and compile** in one step - right in Jupyter!
+
+```kleis
+// In Jupyter Notebook
+
+// Cell 1: Import document structures
+import "stdlib/documents.kleis"
+
+// Cell 2: Your data and figures
+let convergence_data = [0.5, 0.25, 0.12, 0.06, 0.03]
+let fig1 = diagram(plot(range(5), convergence_data), 
+                   title = "Convergence", yscale = "log")
+
+// Cell 3: The paper IS an example block!
+example "arxiv_submission" {
+    Paper(
+        title = "A New Approach to Tensor Calculus",
+        abstract = "We present a novel framework for symbolic 
+                    computation in differential geometry that
+                    enables automated verification of tensor
+                    equations using SMT solvers...",
+        
+        sections = [
+            Section("Introduction",
+                text("The study of tensors began with Ricci..."),
+                equation(R(μ,ν) - (1/2)*g(μ,ν)*R = 8*π*T(μ,ν))
+            ),
+            
+            Section("Methods",
+                text("Our implementation uses Z3..."),
+                figure(fig1, caption = "Algorithm convergence")
+            ),
+            
+            Section("Results",
+                text("As shown in Figure 1..."),
+                table(
+                    headers = ["Method", "Accuracy", "Time"],
+                    rows = [["Ours", "99.2%", "1.2s"],
+                            ["Baseline", "87.1%", "5.4s"]]
+                )
+            ),
+            
+            Section("Conclusion",
+                text("We have demonstrated that...")
+            )
+        ],
+        
+        style = "arxiv"
+    )
+}
+
+// Running this cell:
+// ✅ Validates: abstract > 100 words
+// ✅ Validates: has Introduction section
+// ✅ Validates: has Conclusion section  
+// ✅ Validates: all figures have captions
+// → Compiles to PDF via Typst
+// → Displays PDF inline or download link
+```
+
+**Why this is elegant:**
+
+| Traditional Workflow | Kleis Way |
+|---------------------|-----------|
+| Write LaTeX, hope it compiles | Structure defines validity |
+| Forget required section → rejected by journal | Axiom fails → immediate feedback |
+| Separate validation and compilation | `example` block does both |
+| Manual template switching | Change `style = "ieee"` |
+
+**The document definition IS the validation IS the compilation.**
+
+### Different Document Types
+
+```kleis
+// PhD Thesis
+example "dissertation" {
+    Thesis(
+        title = "Symbolic Methods in Differential Geometry",
+        degree = "PhD",
+        advisor = "Prof. Smith",
+        chapters = [
+            Chapter("Introduction", ...),
+            Chapter("Background", ...),
+            Chapter("Methodology", ...),
+            Chapter("Results", ...),
+            Chapter("Conclusion", ...)
+        ],
+        appendices = [Appendix("Proofs", ...)],
+        style = "mit-thesis"
+    )
+}
+
+// Nature submission (different axioms!)
+example "nature_paper" {
+    Paper(
+        title = "...",
+        // Nature has strict word limits
+        abstract = "...",  // axiom: < 150 words
+        sections = [...],  // axiom: no subsections allowed
+        style = "nature"
+    )
+}
+
+// Textbook
+example "kleis_book" {
+    Book(
+        title = "The Kleis Programming Language",
+        preface = "This book introduces...",
+        chapters = [...],
+        index = true,
+        style = "textbook"
+    )
+}
+```
+
 ### Status
 
 🔮 **Not yet implemented** - This is the design direction based on POC findings.
+
+**Implementation would require:**
+1. Document structures in `stdlib/documents.kleis`
+2. Example block output handler for document types
+3. Typst template integration
+4. PDF display in Jupyter output
 
 ---
 
