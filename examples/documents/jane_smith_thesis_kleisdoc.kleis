@@ -1,0 +1,464 @@
+// ============================================================================
+// JANE SMITH PHD THESIS - KleisDoc Format
+// ============================================================================
+//
+// This is a complete thesis using the KleisDoc format with:
+// - Re-editable equations (EditorNode AST)
+// - Lilaq-style plot figures (Kleis code)
+// - Theorems, definitions, proofs
+// - Full metadata and bibliography
+//
+// To compile:
+//   kleis eval examples/documents/jane_smith_thesis_kleisdoc.kleis
+//   typst compile output.typ
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+import "examples/documents/kleisdoc_types.kleis"
+import "examples/documents/kleisdoc_builders.kleis"
+
+// ============================================================================
+// CHAPTER 1: INTRODUCTION
+// ============================================================================
+
+// Einstein's mass-energy equivalence (re-editable!)
+define eq_einstein_ast : EditorNode =
+    binop("equals", 
+        sym("E"),
+        binop("times", sym("m"), sup(sym("c"), num("2"))))
+
+// Logical quantifier equation
+define eq_logic_ast : EditorNode =
+    EOp("forall", [
+        sym("x"),
+        binop("implies", 
+            EOp("P", [sym("x")], "", NoMeta),
+            EOp("Q", [sym("x")], "", NoMeta))
+    ], "quantifier", NoMeta)
+
+define chapter_intro : DocSection =
+    chapter(1, "Introduction", [
+        p("Knowledge production in science and mathematics relies on precise notation and rigorous verification. Traditional approaches separate these concerns, leading to errors when notation outpaces verification or when verification tools cannot express domain-specific concepts."),
+        
+        p("This thesis presents Kleis, a unified framework that treats notation, verification, and document structure as first-class concepts. The core insight is that knowledge production follows a universal pattern:"),
+        
+        eq_ast(eq_logic_ast, "eq:logic"),
+        
+        p("Any domain with formal notation—from tensor calculus to musical counterpoint—can be modeled within this pattern. Kleis provides the substrate."),
+        
+        p("The relationship between mass and energy, famously expressed as:"),
+        
+        eq_full("E = mc^2", "E = m * c^2", eq_einstein_ast, "eq:einstein"),
+        
+        p("demonstrates how a single equation can be stored, verified, and rendered across multiple formats while remaining editable.")
+    ])
+
+// ============================================================================
+// CHAPTER 2: BACKGROUND
+// ============================================================================
+
+// Type inference judgment
+define eq_typing_ast : EditorNode =
+    binop("vdash",
+        sym("Γ"),
+        binop("colon", sym("e"), sym("τ")))
+
+// Hindley-Milner principal type
+define eq_hm_ast : EditorNode =
+    EOp("forall", [
+        sym("α"),
+        binop("arrow", sym("α"), sym("α"))
+    ], "quantifier", NoMeta)
+
+define chapter_background : DocSection =
+    chapter(2, "Background", [
+        p("We build on prior work in formal verification, type theory, and scientific computing. This chapter reviews the key concepts that underpin Kleis."),
+        
+        defn("SMT Solver", "A Satisfiability Modulo Theories solver determines if a logical formula is satisfiable under a given theory (e.g., linear arithmetic, arrays, bitvectors)."),
+        
+        p("The Z3 SMT solver provides decidable procedures for many useful theories. We leverage Z3 for axiom verification while extending it with domain-specific theories."),
+        
+        defn("Type Inference", "The process of automatically deducing the types of expressions in a program without explicit type annotations."),
+        
+        p("Kleis uses Hindley-Milner type inference to assign principal types:"),
+        
+        eq_ast(eq_typing_ast, "eq:typing"),
+        
+        p("This means given a context Γ and expression e, we can infer its type τ. The inference produces the most general (principal) type:"),
+        
+        eq_ast(eq_hm_ast, "eq:principal"),
+        
+        thm("Every well-typed term in Kleis has a principal type that can be computed in polynomial time."),
+        
+        p("Typst offers a modern approach to document typesetting, combining the precision of LaTeX with the simplicity of Markdown. Kleis compiles to Typst for publication-quality output.")
+    ])
+
+// ============================================================================
+// CHAPTER 3: THE KLEIS SYSTEM
+// ============================================================================
+
+// Tensor notation: g_{μν}
+define metric_tensor_ast : EditorNode =
+    tensor("g", [mu, nu], [lo("μ"), lo("ν")])
+
+// Einstein field equations: G_{μν} = 8πT_{μν}
+define eq_einstein_field_ast : EditorNode =
+    binop("equals",
+        tensor("G", [mu, nu], [lo("μ"), lo("ν")]),
+        binop("times",
+            binop("times", num("8"), pi_sym),
+            tensor("T", [mu, nu], [lo("μ"), lo("ν")])))
+
+// Christoffel symbol: Γ^λ_{μν}
+define christoffel_ast : EditorNode =
+    tensor("Γ", [lambda_sym, mu, nu], [up("λ"), lo("μ"), lo("ν")])
+
+// System architecture plot
+define arch_plot_code : String = 
+"diagram(
+    title = \"Kleis System Architecture\",
+    xlabel = \"Component\",
+    ylabel = \"Abstraction Level\",
+    bar([\"Parser\", \"Type Checker\", \"Solver\", \"Renderer\"], [1, 2, 3, 2])
+)"
+
+// Type inference performance plot
+define perf_plot_code : String =
+"let sizes = [10, 100, 1000, 10000]
+let times = [0.001, 0.01, 0.1, 1.0]
+diagram(
+    title = \"Type Inference Performance\",
+    xlabel = \"Program Size (expressions)\",
+    ylabel = \"Time (seconds)\",
+    x_scale = \"log\",
+    y_scale = \"log\",
+    plot(sizes, times, color = \"blue\", label = \"Kleis\"),
+    plot(sizes, list_map(times, fn(t) mul(t, 2.0)), color = \"red\", label = \"Baseline\")
+)"
+
+define chapter_system : DocSection =
+    chapter(3, "The Kleis System", [
+        p("Kleis is built on three key abstractions: structures for mathematical domains, axioms for verification rules, and templates for notation."),
+        
+        fig(arch_plot_code, "Kleis system architecture showing the main components", "fig:architecture"),
+        
+        defn("Structure", "A collection of types, operations, and axioms that define a mathematical domain."),
+        
+        p("For example, a structure for Riemannian geometry includes the metric tensor:"),
+        
+        eq_ast(metric_tensor_ast, "eq:metric"),
+        
+        p("And the Einstein field equations:"),
+        
+        eq_ast(eq_einstein_field_ast, "eq:einstein-field"),
+        
+        p("The Christoffel symbols connect the metric to curvature:"),
+        
+        eq_ast(christoffel_ast, "eq:christoffel"),
+        
+        thm_named("Metric Compatibility", "The Christoffel symbols are the unique connection coefficients that satisfy metric compatibility and torsion-free conditions."),
+        
+        p("Type inference in Kleis scales well with program size:"),
+        
+        fig(perf_plot_code, "Type inference time vs program size (log-log scale)", "fig:performance")
+    ])
+
+// ============================================================================
+// CHAPTER 4: EVALUATION
+// ============================================================================
+
+// Gaussian integral
+define eq_gaussian_ast : EditorNode =
+    binop("equals",
+        integral(num("0"), sym("∞"), 
+            EOp("exp", [binop("negate", sup(sym("x"), num("2")))], "", NoMeta),
+            sym("x")),
+        frac(sqrt(pi_sym), num("2")))
+
+// Verification results plot
+define verify_plot_code : String =
+"let domains = [\"Tensors\", \"Music\", \"Protocols\", \"Finance\"]
+let axioms_checked = [47, 23, 31, 18]
+let time_ms = [120, 45, 89, 32]
+diagram(
+    title = \"Verification Performance by Domain\",
+    xlabel = \"Domain\",
+    ylabel = \"Axioms Verified\",
+    bar(domains, axioms_checked, color = \"steelblue\")
+)"
+
+// Accuracy comparison
+define accuracy_plot_code : String =
+"let methods = [\"Kleis\", \"Manual\", \"Other Tools\"]
+let precision = [0.98, 0.85, 0.91]
+let recall = [0.96, 0.88, 0.89]
+diagram(
+    title = \"Verification Accuracy Comparison\",
+    xlabel = \"Method\",
+    ylabel = \"Score\",
+    grouped_bar(
+        methods,
+        [(precision, \"Precision\"), (recall, \"Recall\")],
+        colors = [\"blue\", \"orange\"]
+    )
+)"
+
+define chapter_evaluation : DocSection =
+    chapter(4, "Evaluation", [
+        p("We evaluate Kleis on several case studies: tensor calculus for general relativity, counterpoint rules for music theory, and protocol verification for network security."),
+        
+        fig(verify_plot_code, "Number of axioms verified per domain", "fig:verification"),
+        
+        p("In tensor calculus, Kleis successfully verified 47 axioms including the Bianchi identities and metric compatibility conditions."),
+        
+        p("A key test case is the Gaussian integral:"),
+        
+        eq_ast(eq_gaussian_ast, "eq:gaussian"),
+        
+        p("Kleis verifies the integral identity by symbolic manipulation and comparison with known results."),
+        
+        fig(accuracy_plot_code, "Comparison of verification accuracy across methods", "fig:accuracy"),
+        
+        p("Results show that Kleis achieves 98% precision and 96% recall on our benchmark suite, outperforming both manual verification and other automated tools."),
+        
+        thm("For any structure with finitely many axioms over a decidable theory, Kleis can verify all axioms in time polynomial in the size of the axiom set.")
+    ])
+
+// ============================================================================
+// CHAPTER 5: CONCLUSION
+// ============================================================================
+
+define chapter_conclusion : DocSection =
+    chapter(5, "Conclusion", [
+        p("We have presented Kleis, a substrate for formal knowledge production. The key contributions of this thesis are:"),
+        
+        p("1. A unified framework treating notation, verification, and documents as first-class concepts"),
+        p("2. The structure abstraction enabling domain-specific languages for any formal domain"),
+        p("3. Integration with SMT solvers for automated axiom verification"),
+        p("4. Compilation to Typst for publication-quality output"),
+        p("5. A persistent document format (.kleisdoc) enabling multi-session editing"),
+        
+        p("Future work includes extending the solver abstraction layer to support additional theories, building domain-specific libraries for physics, chemistry, and biology, and integrating with Jupyter notebooks for interactive research workflows."),
+        
+        p("The vision of Kleis is that any domain with formal notation—from Einstein's field equations to Bach's counterpoint rules—can be modeled, verified, and published using the same universal substrate.")
+    ])
+
+// ============================================================================
+// BIBLIOGRAPHY
+// ============================================================================
+
+define references : List(BibEntry) = [
+    bib("demoura2008", "de Moura, L. and Bjørner, N.", 
+        "Z3: An Efficient SMT Solver", "TACAS", "2008"),
+    bib("typst2023", "Mädje, M. and Haug, L.", 
+        "Typst: A New Markup-based Typesetting System", "Software", "2023"),
+    bib("milner1978", "Milner, R.", 
+        "A Theory of Type Polymorphism in Programming", "JCSS", "1978"),
+    bib("penrose1984", "Penrose, R.", 
+        "Spinors and Space-Time", "Cambridge University Press", "1984"),
+    bib("knuth1984", "Knuth, D.", 
+        "The TeXbook", "Addison-Wesley", "1984")
+]
+
+// ============================================================================
+// COMPLETE THESIS DOCUMENT
+// ============================================================================
+
+define jane_smith_thesis : KleisDoc =
+    KleisDoc(
+        DocMetadata(
+            "thesis-jane-smith-2025",
+            "Formal Verification of Knowledge Production Systems",
+            [Author("author-1", "Jane Smith", "jane@mit.edu", "0000-0002-1234-5678", "MIT CSAIL", Primary),
+             Author("author-2", "Prof. Alice Chen", "alice@mit.edu", "", "MIT CSAIL", Advisor)],
+            ["formal verification", "type theory", "scientific computing", "document generation"],
+            "en-US",
+            CCBY,
+            MITThesisTemplate,
+            "",
+            "2024-09-01T00:00:00Z",
+            "2025-01-02T20:00:00Z",
+            1,
+            "abc123def"
+        ),
+        // Front matter
+        [
+            mit_title(
+                "Formal Verification of Knowledge Production Systems",
+                "Jane Smith",
+                "Department of Electrical Engineering and Computer Science",
+                "Doctor of Philosophy",
+                "May 2025"
+            ),
+            abstract(
+                "This thesis presents Kleis, a formal verification system designed as a universal substrate for knowledge production. We demonstrate that mathematical notation, verification rules, and document structure can be treated as first-class concepts that are axiomatized and validated. Our approach enables researchers to define domain-specific notations while maintaining rigorous verification through SMT solvers like Z3. We evaluate Kleis on case studies in tensor calculus, music theory, and protocol verification, achieving 98% precision in automated axiom checking. The system compiles to Typst for publication-quality documents, bridging the gap between formal methods and practical scientific publishing.",
+                "Prof. Alice Chen"
+            ),
+            ack("I thank my advisor Prof. Alice Chen for her guidance and support. Thanks also to the Kleis development team and the MIT CSAIL community.")
+        ],
+        // Main content
+        [chapter_intro, chapter_background, chapter_system, chapter_evaluation, chapter_conclusion],
+        // Back matter
+        [Bibliography(references)],
+        // Cross-references (to be auto-generated)
+        [],
+        // Compilation state
+        CompilationState("", [], Unchecked),
+        // Jupyter state
+        JupyterState("", "", []),
+        // History
+        [HistoryEntry(1, "2025-01-02T20:00:00Z", "author-1", "Initial complete draft", [], 
+            ["ch1", "ch2", "ch3", "ch4", "ch5"], [])],
+        // Comments
+        []
+    )
+
+// ============================================================================
+// COMPILE TO TYPST
+// ============================================================================
+
+// Typst preamble
+define thesis_preamble : String =
+"#import \"@preview/lilaq:0.5.0\" as lq
+
+#set page(paper: \"us-letter\", margin: 1in)
+#set text(font: \"New Computer Modern\", size: 12pt)
+#set par(justify: true, leading: 0.65em)
+#set heading(numbering: \"1.1\")
+
+"
+
+// Compile EditorNode to Typst math
+define compile_editor_node(node: EditorNode) : String =
+    match node {
+        EObject(s) => s
+      | EConst(v) => v
+      | EPlaceholder(_) => "□"
+      | EOp(name, args, kind, meta) =>
+            if str_eq(name, "equals") then
+                concat3(compile_editor_node(nth(args, 0)), " = ", compile_editor_node(nth(args, 1)))
+            else if str_eq(name, "times") then
+                concat3(compile_editor_node(nth(args, 0)), " ", compile_editor_node(nth(args, 1)))
+            else if str_eq(name, "superscript") then
+                concat3(compile_editor_node(nth(args, 0)), "^", compile_editor_node(nth(args, 1)))
+            else if str_eq(kind, "tensor") then
+                compile_tensor(name, args, meta)
+            else if str_eq(name, "frac") then
+                concat5("(", compile_editor_node(nth(args, 0)), ")/(", compile_editor_node(nth(args, 1)), ")")
+            else if str_eq(name, "sqrt") then
+                concat3("sqrt(", compile_editor_node(nth(args, 0)), ")")
+            else if str_eq(name, "implies") then
+                concat3(compile_editor_node(nth(args, 0)), " => ", compile_editor_node(nth(args, 1)))
+            else if str_eq(name, "forall") then
+                concat4("forall ", compile_editor_node(nth(args, 0)), " . ", compile_editor_node(nth(args, 1)))
+            else if str_eq(name, "vdash") then
+                concat3(compile_editor_node(nth(args, 0)), " tack.r ", compile_editor_node(nth(args, 1)))
+            else if str_eq(name, "colon") then
+                concat3(compile_editor_node(nth(args, 0)), " : ", compile_editor_node(nth(args, 1)))
+            else if str_eq(name, "arrow") then
+                concat3(compile_editor_node(nth(args, 0)), " -> ", compile_editor_node(nth(args, 1)))
+            else if str_eq(name, "integral") then
+                concat5("integral_", compile_editor_node(nth(args, 0)), "^", compile_editor_node(nth(args, 1)), 
+                    concat3(" ", compile_editor_node(nth(args, 2)), concat(" d", compile_editor_node(nth(args, 3)))))
+            else if str_eq(name, "exp") then
+                concat3("e^(", compile_editor_node(nth(args, 0)), ")")
+            else if str_eq(name, "negate") then
+                concat("-", compile_editor_node(nth(args, 0)))
+            else
+                concat3(name, "(", concat(compile_args(args), ")"))
+      | EList(nodes) => compile_args(nodes)
+    }
+
+define compile_args(nodes: List(EditorNode)) : String =
+    match nodes {
+        Nil => ""
+      | Cons(h, Nil) => compile_editor_node(h)
+      | Cons(h, t) => concat3(compile_editor_node(h), ", ", compile_args(t))
+    }
+
+define compile_tensor(name: String, args: List(EditorNode), meta: NodeMetadata) : String =
+    match meta {
+        TensorMeta(indices) => compile_tensor_indices(name, indices)
+      | _ => name
+    }
+
+define compile_tensor_indices(name: String, indices: List(IndexMeta)) : String =
+    let uppers = filter_upper(indices) in
+    let lowers = filter_lower(indices) in
+    let up_str = if isEmpty(uppers) then "" else concat("^(", concat(join_indices(uppers), ")")) in
+    let lo_str = if isEmpty(lowers) then "" else concat("_(", concat(join_indices(lowers), ")")) in
+    concat3(name, up_str, lo_str)
+
+define filter_upper(indices: List(IndexMeta)) : List(IndexMeta) =
+    match indices {
+        Nil => Nil
+      | Cons(IndexMeta(Upper, n), t) => Cons(IndexMeta(Upper, n), filter_upper(t))
+      | Cons(_, t) => filter_upper(t)
+    }
+
+define filter_lower(indices: List(IndexMeta)) : List(IndexMeta) =
+    match indices {
+        Nil => Nil
+      | Cons(IndexMeta(Lower, n), t) => Cons(IndexMeta(Lower, n), filter_lower(t))
+      | Cons(_, t) => filter_lower(t)
+    }
+
+define join_indices(indices: List(IndexMeta)) : String =
+    match indices {
+        Nil => ""
+      | Cons(IndexMeta(_, n), Nil) => n
+      | Cons(IndexMeta(_, n), t) => concat3(n, " ", join_indices(t))
+    }
+
+// Compile equation chunk to Typst
+define compile_eq_chunk(eq: Equation) : String =
+    match eq {
+        Equation(id, label, numbered, format, typst, _) =>
+            match format {
+                LatexOnly(latex) => concat4("$ ", latex, " $ <", concat(label, ">\n\n"))
+              | EditorAST(ast) => concat4("$ ", compile_editor_node(ast), " $ <", concat(label, ">\n\n"))
+              | AllFormats(_, _, ast) => concat4("$ ", compile_editor_node(ast), " $ <", concat(label, ">\n\n"))
+              | _ => typst
+            }
+    }
+
+// ============================================================================
+// EXAMPLE OUTPUT
+// ============================================================================
+
+example "show_einstein_eq" {
+    let result = compile_editor_node(eq_einstein_ast)
+    out("Einstein equation as Typst:")
+    out(result)
+}
+
+example "show_tensor" {
+    let result = compile_editor_node(christoffel_ast)
+    out("Christoffel symbol as Typst:")
+    out(result)
+}
+
+example "show_field_eq" {
+    let result = compile_editor_node(eq_einstein_field_ast)
+    out("Einstein field equations as Typst:")
+    out(result)
+}
+
+example "thesis_metadata" {
+    match jane_smith_thesis {
+        KleisDoc(meta, _, _, _, _, _, _, _, _) =>
+            match meta {
+                DocMetadata(id, title, _, _, _, _, _, _, _, _, _, _) =>
+                    out(concat3("Thesis: ", title, concat(" (ID: ", concat(id, ")"))))
+            }
+    }
+}
+
+example "chapter_count" {
+    match jane_smith_thesis {
+        KleisDoc(_, _, sections, _, _, _, _, _, _) =>
+            out(concat("Number of chapters: ", n2s(length(sections))))
+    }
+}
+
