@@ -1480,6 +1480,11 @@ fn render_operation(
 /// - times(a, b, c) → times(times(a, b), c) → "a b c" (with implied multiplication)
 ///
 /// Returns Some(rendered_string) if folding was applied, None otherwise.
+///
+/// NOTE: This is defensive code. The Equation Editor creates properly nested
+/// binary operations. If this function triggers, it means AST was created
+/// programmatically with incorrect structure. A warning is logged to help
+/// trace the source of malformed ASTs.
 fn fold_variadic_binary_op(
     name: &str,
     rendered_args: &[String],
@@ -1493,6 +1498,14 @@ fn fold_variadic_binary_op(
     if !variadic_binary_ops.contains(&name) || rendered_args.len() <= 2 {
         return None;
     }
+
+    // Warn: This shouldn't happen with properly constructed ASTs
+    eprintln!(
+        "⚠️  Warning: Variadic '{}' operation with {} args (expected 2). \
+         AST should use nested binary operations. Auto-folding to fix.",
+        name,
+        rendered_args.len()
+    );
 
     // Fold left-to-right: times(a, b, c) → render(times(a, b)), then times(result, c)
     let mut result = rendered_args[0].clone();
