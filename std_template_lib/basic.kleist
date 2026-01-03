@@ -70,7 +70,7 @@
 @template scalar_divide {
     pattern: "scalar_divide(num, den)"
     unicode: "{num}/{den}"
-    latex: "\\frac{{{num}}}{{{den}}}"
+    latex: "\\frac{{num}}{{den}}"
     html: "{num}/{den}"
     typst: "frac({num}, {den})"
     kleis: "divide({num}, {den})"
@@ -84,6 +84,50 @@
     html: "{base}<sup>{exponent}</sup>"
     typst: "{base}^({exponent})"
     kleis: "power({base}, {exponent})"
+    category: "arithmetic"
+}
+
+// Aliases for common operation names (from EditorNode builders)
+
+@template times {
+    pattern: "times(left, right)"
+    unicode: "{left} × {right}"
+    latex: "{left} \\times {right}"
+    html: "{left} × {right}"
+    typst: "{left} times {right}"
+    kleis: "times({left}, {right})"
+    category: "arithmetic"
+}
+
+@template superscript {
+    pattern: "superscript(base, exponent)"
+    unicode: "{base}^{exponent}"
+    latex: "{base}^{{{exponent}}}"
+    html: "{base}<sup>{exponent}</sup>"
+    typst: "{base}^({exponent})"
+    kleis: "superscript({base}, {exponent})"
+    category: "arithmetic"
+    glyph: "^"
+}
+
+@template subscript {
+    pattern: "subscript(base, sub)"
+    unicode: "{base}_{sub}"
+    latex: "{base}_{{{sub}}}"
+    html: "{base}<sub>{sub}</sub>"
+    typst: "{base}_({sub})"
+    kleis: "subscript({base}, {sub})"
+    category: "arithmetic"
+    glyph: "_"
+}
+
+@template frac {
+    pattern: "frac(num, den)"
+    unicode: "{num}/{den}"
+    latex: "\\frac{{num}}{{den}}"
+    html: "<span class=\"frac\"><span class=\"num\">{num}</span>/<span class=\"den\">{den}</span></span>"
+    typst: "frac({num}, {den})"
+    kleis: "frac({num}, {den})"
     category: "arithmetic"
 }
 

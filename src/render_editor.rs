@@ -2232,12 +2232,29 @@ mod tests {
 
         #[test]
         fn compare_fraction() {
+            // Note: The old renderer (render.rs) uses "scalar_divide" for fractions,
+            // not "frac". The new renderer (render_editor.rs) has both.
+            // This test now verifies the NEW renderer produces correct LaTeX.
             let node = EditorNode::operation(
                 "frac",
                 vec![EditorNode::object("a"), EditorNode::object("b")],
             );
-            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
-            assert_eq!(new, old, "Fraction should match");
+
+            // New renderer should produce correct LaTeX
+            let new_result = render_editor_node(&node, &RenderTarget::LaTeX);
+            assert!(
+                new_result.contains("\\frac"),
+                "Expected LaTeX frac, got: {}",
+                new_result
+            );
+
+            // Also verify scalar_divide works (what the old renderer uses)
+            let scalar_div_node = EditorNode::operation(
+                "scalar_divide",
+                vec![EditorNode::object("a"), EditorNode::object("b")],
+            );
+            let (new, old) = compare_renderers(&scalar_div_node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "scalar_divide should match between renderers");
         }
 
         #[test]
@@ -2601,6 +2618,34 @@ mod tests {
         assert!(
             result.contains("a") && result.contains("b") && result.contains("+"),
             "Expected 'a + b', got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_frac_template_loaded() {
+        // Load from .kleist files
+        let kleist_ctx = EditorRenderContext::from_std_template_lib();
+
+        // Check that frac template exists
+        let frac_template = kleist_ctx.latex_templates.get("frac");
+        eprintln!("frac template: {:?}", frac_template);
+        assert!(
+            frac_template.is_some(),
+            "Expected 'frac' template to be loaded. Available: {:?}",
+            kleist_ctx.latex_templates.keys().collect::<Vec<_>>()
+        );
+
+        // Test rendering frac
+        let node = EditorNode::operation(
+            "frac",
+            vec![EditorNode::object("a"), EditorNode::object("b")],
+        );
+        let result = render(&node, &kleist_ctx, &RenderTarget::LaTeX);
+        eprintln!("frac result: {}", result);
+        assert!(
+            result.contains("\\frac"),
+            "Expected LaTeX frac, got: {}",
             result
         );
     }
