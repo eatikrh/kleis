@@ -207,40 +207,75 @@ class KleisDoc:
         Looks for patterns like:
             define meta_title = "..."
             define meta_author = "..."
+            define meta_author = Author(name = "...", email = "...", ...)
             define meta_committee_members = List("A", "B", "C")
         
         This is format-agnostic - extracts ALL meta_* definitions.
         """
         metadata = {}
         
-        # Find all: define meta_xxx = "string value"
-        for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*"([^"]*)"', content):
+        # Find all: define meta_xxx = Author(...)
+        author_pattern = r'define\s+meta_(\w+)\s*=\s*Author\(\s*name\s*=\s*"([^"]*)"(?:,\s*email\s*=\s*"([^"]*)")?(?:,\s*affiliation\s*=\s*"([^"]*)")?(?:,\s*role\s*=\s*"([^"]*)")?\s*\)'
+        for match in re.finditer(author_pattern, content):
             key = match.group(1)
-            value = match.group(2)
-            metadata[key] = value
+            metadata[key] = Author(
+                name=match.group(2) or "",
+                email=match.group(3) or "",
+                affiliation=match.group(4) or "",
+                role=match.group(5) or "primary"
+            )
         
-        # Find all: define meta_xxx = List("a", "b", ...)
-        for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*List\((.*?)\)', content):
+        # Find all: define meta_xxx = List(Author(...), Author(...))
+        # Match List of Authors - each Author ends with ), so match until final )
+        list_author_pattern = r'define\s+meta_(\w+)\s*=\s*List\(((?:[^)]*Author[^)]*\)[,\s]*)+)\)'
+        for match in re.finditer(list_author_pattern, content, re.DOTALL):
             key = match.group(1)
             list_content = match.group(2)
-            # Parse list items
-            items = re.findall(r'"([^"]*)"', list_content)
-            metadata[key] = items
+            authors = []
+            # Find each Author(...) in the list
+            for author_match in re.finditer(r'Author\(\s*name\s*=\s*"([^"]*)"(?:,\s*email\s*=\s*"([^"]*)")?(?:,\s*affiliation\s*=\s*"([^"]*)")?(?:,\s*role\s*=\s*"([^"]*)")?\s*\)', list_content):
+                authors.append(Author(
+                    name=author_match.group(1) or "",
+                    email=author_match.group(2) or "",
+                    affiliation=author_match.group(3) or "",
+                    role=author_match.group(4) or "primary"
+                ))
+            if authors:
+                metadata[key] = authors
+        
+        # Find all: define meta_xxx = "string value" (but not if already matched as Author)
+        for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*"([^"]*)"', content):
+            key = match.group(1)
+            if key not in metadata:  # Don't overwrite Author objects
+                value = match.group(2)
+                metadata[key] = value
+        
+        # Find all: define meta_xxx = List("a", "b", ...) (simple string lists, not Author lists)
+        for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*List\(([^)]*)\)', content):
+            key = match.group(1)
+            if key not in metadata:  # Don't overwrite Author lists
+                list_content = match.group(2)
+                if 'Author(' not in list_content:  # Skip if it contains Author
+                    items = re.findall(r'"([^"]*)"', list_content)
+                    if items:
+                        metadata[key] = items
         
         # Find all: define meta_xxx = true/false
         for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*(true|false)', content):
             key = match.group(1)
-            value = match.group(2) == "true"
-            metadata[key] = value
+            if key not in metadata:
+                value = match.group(2) == "true"
+                metadata[key] = value
         
         # Find all: define meta_xxx = number
         for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*(\d+(?:\.\d+)?)\s*$', content, re.MULTILINE):
             key = match.group(1)
-            value_str = match.group(2)
-            if '.' in value_str:
-                metadata[key] = float(value_str)
-            else:
-                metadata[key] = int(value_str)
+            if key not in metadata:
+                value_str = match.group(2)
+                if '.' in value_str:
+                    metadata[key] = float(value_str)
+                else:
+                    metadata[key] = int(value_str)
         
         # Also check for template import
         template_match = re.search(r'import\s+"([^"]+\.kleis)"', content)
@@ -526,11 +561,15 @@ class KleisDoc:
     
     def _extract_sections(self, content: str, equations: Dict[str, Equation], 
                           figures: Dict[str, Figure]) -> List[Section]:
-        """Extract sections from Kleis file content."""
-        sections = []
+        """Extract sections from Kleis file content and reconstruct hierarchy.
         
-        # Find section definitions: define section_N = Section(...)
-        pattern = r'define\s+(section_\d+)\s*=\s*Section\((.*?)\n\)'
+        Sections are saved with their level, and on load we reconstruct
+        the parent-child relationships based on those levels.
+        """
+        flat_sections = []
+        
+        # Find section definitions: define section_N = Section(...) or define section_N_subM = Section(...)
+        pattern = r'define\s+(section_[\w]+)\s*=\s*Section\((.*?)\n\)'
         for match in re.finditer(pattern, content, re.DOTALL):
             var_name = match.group(1)
             sec_body = match.group(2)
@@ -565,9 +604,40 @@ class KleisDoc:
                     if fig_label in figures:
                         section.content.append(figures[fig_label])
             
-            sections.append(section)
+            flat_sections.append(section)
         
-        return sections
+        # Reconstruct hierarchy: subsections become children of parent sections
+        return self._build_section_hierarchy(flat_sections)
+    
+    def _build_section_hierarchy(self, flat_sections: List[Section]) -> List[Section]:
+        """Build nested section hierarchy from flat list based on levels.
+        
+        Level 1 sections are top-level. Level 2 sections become children
+        of the preceding level 1 section, etc.
+        """
+        if not flat_sections:
+            return []
+        
+        root_sections = []
+        stack = []  # Stack of (level, section) to track current path
+        
+        for section in flat_sections:
+            # Pop sections from stack that are at same or deeper level
+            while stack and stack[-1][0] >= section.level:
+                stack.pop()
+            
+            if not stack:
+                # This is a top-level section
+                root_sections.append(section)
+            else:
+                # This is a subsection - add to parent's content
+                parent = stack[-1][1]
+                parent.content.append(section)
+            
+            # Push current section onto stack
+            stack.append((section.level, section))
+        
+        return root_sections
     
     def _find_kleis_binary(self) -> Optional[str]:
         """Find the kleis binary path."""
@@ -1379,9 +1449,25 @@ example "render_plot"
             safe_key = key.replace("-", "_").replace(":", "_").replace(" ", "_")
             if isinstance(value, str):
                 lines.append(f'define meta_{safe_key} = {self._to_kleis_string(value)}')
+            elif isinstance(value, Author):
+                # Save Author as structured data
+                lines.append(f'define meta_{safe_key} = Author(')
+                lines.append(f'    name = {self._to_kleis_string(value.name)},')
+                lines.append(f'    email = {self._to_kleis_string(value.email)},')
+                lines.append(f'    affiliation = {self._to_kleis_string(value.affiliation)},')
+                lines.append(f'    role = {self._to_kleis_string(value.role)}')
+                lines.append(f')')
             elif isinstance(value, list):
-                items = ", ".join(self._to_kleis_string(str(item)) for item in value)
-                lines.append(f'define meta_{safe_key} = List({items})')
+                # Check if it's a list of Authors
+                if value and isinstance(value[0], Author):
+                    lines.append(f'define meta_{safe_key} = List(')
+                    for i, author in enumerate(value):
+                        comma = "," if i < len(value) - 1 else ""
+                        lines.append(f'    Author(name = {self._to_kleis_string(author.name)}, email = {self._to_kleis_string(author.email)}, affiliation = {self._to_kleis_string(author.affiliation)}, role = {self._to_kleis_string(author.role)}){comma}')
+                    lines.append(f')')
+                else:
+                    items = ", ".join(self._to_kleis_string(str(item)) for item in value)
+                    lines.append(f'define meta_{safe_key} = List({items})')
             elif isinstance(value, bool):
                 lines.append(f'define meta_{safe_key} = {str(value).lower()}')
             elif isinstance(value, (int, float)):
@@ -1590,7 +1676,11 @@ example "render_plot"
         return "None"
     
     def _section_to_kleis(self, section: Section, var_name: str) -> str:
-        """Convert a section to Kleis code."""
+        """Convert a section to Kleis code, including nested subsections.
+        
+        Parent sections are output BEFORE their subsections so that
+        hierarchy reconstruction works correctly on load.
+        """
         lines = []
         lines.append(f"define {var_name} = Section(")
         lines.append(f"    level = {section.level},")
@@ -1598,6 +1688,9 @@ example "render_plot"
         
         # Build content list
         content_items = []
+        subsection_defs = []  # Store subsection definitions to emit AFTER this section
+        subsection_counter = [0]
+        
         for item in section.content:
             if isinstance(item, str):
                 content_items.append(f'Text({self._to_kleis_string(item)})')
@@ -1606,8 +1699,13 @@ example "render_plot"
             elif isinstance(item, Figure):
                 content_items.append(f'FigRef({self._to_kleis_string(item.label)})')
             elif isinstance(item, Section):
-                # Nested sections - inline them
-                content_items.append(f'SubSection({item.level}, {self._to_kleis_string(item.title)})')
+                # Nested sections - save with full content
+                sub_var = f'{var_name}_sub{subsection_counter[0]}'
+                subsection_counter[0] += 1
+                # Recursively get the subsection definition
+                sub_def = self._section_to_kleis(item, sub_var)
+                subsection_defs.append(sub_def)
+                content_items.append(f'SectionRef({self._to_kleis_string(sub_var)})')
         
         if content_items:
             lines.append(f"    content = List({', '.join(content_items)})")
@@ -1615,7 +1713,12 @@ example "render_plot"
             lines.append("    content = List()")
         
         lines.append(")")
-        return "\n".join(lines)
+        
+        # Parent section FIRST, then subsection definitions
+        result = "\n".join(lines)
+        if subsection_defs:
+            result = result + '\n\n' + '\n\n'.join(subsection_defs)
+        return result
     
     # =========================================================================
     # Display (for Jupyter)
