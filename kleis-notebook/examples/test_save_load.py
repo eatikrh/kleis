@@ -46,7 +46,9 @@ assert save_path.exists(), "Save file should exist"
 with open(save_path) as f:
     content = f.read()
 assert 'import "examples/documents/kleisdoc_types.kleis"' in content, "Should import kleisdoc_types"
-assert 'define doc_metadata = Metadata(' in content, "Should have metadata definition"
+# New agnostic format uses: define meta_xxx = "value" for each metadata field
+assert 'define meta_title = ' in content, "Should have title metadata"
+assert 'define meta_author = ' in content, "Should have author metadata"
 print("   ✓ File saved and is valid Kleis code")
 
 # Load it back

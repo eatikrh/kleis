@@ -171,8 +171,12 @@ class KleisDoc:
         with open(path, "r") as f:
             content = f.read()
         
-        # Parse metadata
+        # Parse metadata (format-agnostic)
         doc.metadata = doc._extract_metadata(content)
+        
+        # Restore template_path if it was saved
+        if "_template_path" in doc.metadata:
+            doc.template_path = doc.metadata.pop("_template_path")
         
         # Parse equations
         doc.equations = doc._extract_equations(content)
@@ -180,34 +184,69 @@ class KleisDoc:
         # Parse figures
         doc.figures = doc._extract_figures(content)
         
+        # Parse content blocks
+        doc.content_blocks = doc._extract_content_blocks(content)
+        
+        # Parse tables
+        doc.tables = doc._extract_tables(content)
+        
+        # Parse theorems
+        doc.theorems = doc._extract_theorems(content)
+        
+        # Parse algorithms
+        doc.algorithms = doc._extract_algorithms(content)
+        
         # Parse sections
         doc.sections = doc._extract_sections(content, doc.equations, doc.figures)
         
         return doc
     
     def _extract_metadata(self, content: str) -> Dict[str, Any]:
-        """Extract metadata from Kleis file content."""
+        """Extract metadata from Kleis file content.
+        
+        Looks for patterns like:
+            define meta_title = "..."
+            define meta_author = "..."
+            define meta_committee_members = List("A", "B", "C")
+        
+        This is format-agnostic - extracts ALL meta_* definitions.
+        """
         metadata = {}
         
-        # Look for: title = "..."
-        match = re.search(r'title\s*=\s*"([^"]*)"', content)
-        if match:
-            metadata["title"] = match.group(1)
+        # Find all: define meta_xxx = "string value"
+        for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*"([^"]*)"', content):
+            key = match.group(1)
+            value = match.group(2)
+            metadata[key] = value
         
-        # Look for: author = "..."
-        match = re.search(r'author\s*=\s*"([^"]*)"', content)
-        if match:
-            metadata["author"] = match.group(1)
+        # Find all: define meta_xxx = List("a", "b", ...)
+        for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*List\((.*?)\)', content):
+            key = match.group(1)
+            list_content = match.group(2)
+            # Parse list items
+            items = re.findall(r'"([^"]*)"', list_content)
+            metadata[key] = items
         
-        # Look for: date = "..."
-        match = re.search(r'date\s*=\s*"([^"]*)"', content)
-        if match and match.group(1):
-            metadata["date"] = match.group(1)
+        # Find all: define meta_xxx = true/false
+        for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*(true|false)', content):
+            key = match.group(1)
+            value = match.group(2) == "true"
+            metadata[key] = value
         
-        # Look for: abstract_text = "..."
-        match = re.search(r'abstract_text\s*=\s*"([^"]*)"', content)
-        if match and match.group(1):
-            metadata["abstract"] = match.group(1)
+        # Find all: define meta_xxx = number
+        for match in re.finditer(r'define\s+meta_(\w+)\s*=\s*(\d+(?:\.\d+)?)\s*$', content, re.MULTILINE):
+            key = match.group(1)
+            value_str = match.group(2)
+            if '.' in value_str:
+                metadata[key] = float(value_str)
+            else:
+                metadata[key] = int(value_str)
+        
+        # Also check for template import
+        template_match = re.search(r'import\s+"([^"]+\.kleis)"', content)
+        if template_match:
+            # Store as special metadata so we can restore template_path
+            metadata["_template_path"] = template_match.group(1)
         
         return metadata
     
@@ -377,6 +416,113 @@ class KleisDoc:
                 )
         
         return figures
+    
+    def _extract_content_blocks(self, content: str) -> Dict[str, Any]:
+        """Extract content blocks from Kleis file content.
+        
+        Looks for patterns like:
+            define content_xxx = "string value"
+            define content_xxx = List("a", "b")
+        """
+        blocks = {}
+        
+        # Find string content blocks
+        for match in re.finditer(r'define\s+content_(\w+)\s*=\s*"([^"]*)"', content):
+            key = match.group(1)
+            value = match.group(2)
+            blocks[key] = value
+        
+        # Find list content blocks
+        for match in re.finditer(r'define\s+content_(\w+)\s*=\s*List\((.*?)\)', content):
+            key = match.group(1)
+            list_content = match.group(2)
+            items = re.findall(r'"([^"]*)"', list_content)
+            blocks[key] = items
+        
+        return blocks
+    
+    def _extract_tables(self, content: str) -> Dict[str, Any]:
+        """Extract tables from Kleis file content."""
+        tables = {}
+        
+        # Find table definitions: define xxx = Table(...)
+        pattern = r'define\s+(\w+)\s*=\s*Table\((.*?)\n\)'
+        for match in re.finditer(pattern, content, re.DOTALL):
+            var_name = match.group(1)
+            table_body = match.group(2)
+            
+            label_match = re.search(r'label\s*=\s*"([^"]*)"', table_body)
+            caption_match = re.search(r'caption\s*=\s*"([^"]*)"', table_body)
+            headers_match = re.search(r'headers\s*=\s*List\((.*?)\)', table_body)
+            
+            if label_match:
+                label = label_match.group(1)
+                headers = []
+                if headers_match:
+                    headers = re.findall(r'"([^"]*)"', headers_match.group(1))
+                
+                tables[label] = {
+                    "label": label,
+                    "headers": headers,
+                    "rows": [],  # Rows not currently saved in full
+                    "caption": caption_match.group(1) if caption_match else "",
+                }
+        
+        return tables
+    
+    def _extract_theorems(self, content: str) -> Dict[str, Any]:
+        """Extract theorems from Kleis file content."""
+        theorems = {}
+        
+        # Find theorem definitions: define xxx = Theorem(...)
+        pattern = r'define\s+(\w+)\s*=\s*Theorem\((.*?)\n\)'
+        for match in re.finditer(pattern, content, re.DOTALL):
+            var_name = match.group(1)
+            thm_body = match.group(2)
+            
+            label_match = re.search(r'label\s*=\s*"([^"]*)"', thm_body)
+            kind_match = re.search(r'kind\s*=\s*"([^"]*)"', thm_body)
+            statement_match = re.search(r'statement\s*=\s*"([^"]*)"', thm_body)
+            proof_match = re.search(r'proof\s*=\s*"([^"]*)"', thm_body)
+            name_match = re.search(r'name\s*=\s*"([^"]*)"', thm_body)
+            
+            if label_match:
+                label = label_match.group(1)
+                theorems[label] = {
+                    "label": label,
+                    "kind": kind_match.group(1) if kind_match else "theorem",
+                    "statement": statement_match.group(1) if statement_match else "",
+                    "proof": proof_match.group(1) if proof_match else None,
+                    "name": name_match.group(1) if name_match else None,
+                }
+        
+        return theorems
+    
+    def _extract_algorithms(self, content: str) -> Dict[str, Any]:
+        """Extract algorithms from Kleis file content."""
+        algorithms = {}
+        
+        # Find algorithm definitions: define xxx = Algorithm(...)
+        pattern = r'define\s+(\w+)\s*=\s*Algorithm\((.*?)\n\)'
+        for match in re.finditer(pattern, content, re.DOTALL):
+            var_name = match.group(1)
+            alg_body = match.group(2)
+            
+            label_match = re.search(r'label\s*=\s*"([^"]*)"', alg_body)
+            name_match = re.search(r'name\s*=\s*"([^"]*)"', alg_body)
+            pseudocode_match = re.search(r'pseudocode\s*=\s*"([^"]*)"', alg_body)
+            caption_match = re.search(r'caption\s*=\s*"([^"]*)"', alg_body)
+            
+            if label_match:
+                label = label_match.group(1)
+                algorithms[label] = {
+                    "label": label,
+                    "name": name_match.group(1) if name_match else "",
+                    "pseudocode": pseudocode_match.group(1) if pseudocode_match else "",
+                    "caption": caption_match.group(1) if caption_match else "",
+                }
+        
+        return algorithms
     
     def _extract_sections(self, content: str, equations: Dict[str, Equation], 
                           figures: Dict[str, Figure]) -> List[Section]:
@@ -1109,17 +1255,36 @@ example "render_plot"
         lines.append('import "examples/documents/kleisdoc_types.kleis"')
         lines.append("")
         
-        # Metadata
+        # Template (if specified)
+        if self.template_path:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Template")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            lines.append(f'import {self._to_kleis_string(self.template_path)}')
+            lines.append("")
+        
+        # Metadata (save ALL fields, not just hardcoded ones)
         lines.append("// ----------------------------------------------------------------------------")
         lines.append("// Document Metadata")
         lines.append("// ----------------------------------------------------------------------------")
         lines.append("")
-        lines.append("define doc_metadata = Metadata(")
-        lines.append(f'    title = {self._to_kleis_string(self.metadata.get("title", ""))},')
-        lines.append(f'    author = {self._to_kleis_string(self.metadata.get("author", ""))},')
-        lines.append(f'    date = {self._to_kleis_string(self.metadata.get("date", ""))},')
-        lines.append(f'    abstract_text = {self._to_kleis_string(self.metadata.get("abstract", ""))}')
-        lines.append(")")
+        
+        # Save each metadata field as a separate definition (format-agnostic)
+        for key, value in self.metadata.items():
+            safe_key = key.replace("-", "_").replace(":", "_").replace(" ", "_")
+            if isinstance(value, str):
+                lines.append(f'define meta_{safe_key} = {self._to_kleis_string(value)}')
+            elif isinstance(value, list):
+                items = ", ".join(self._to_kleis_string(str(item)) for item in value)
+                lines.append(f'define meta_{safe_key} = List({items})')
+            elif isinstance(value, bool):
+                lines.append(f'define meta_{safe_key} = {str(value).lower()}')
+            elif isinstance(value, (int, float)):
+                lines.append(f'define meta_{safe_key} = {value}')
+            else:
+                # For complex objects, convert to string
+                lines.append(f'define meta_{safe_key} = {self._to_kleis_string(str(value))}')
         lines.append("")
         
         # Equations

@@ -13,12 +13,10 @@ import "examples/documents/kleisdoc_types.kleis"
 // Document Metadata
 // ----------------------------------------------------------------------------
 
-define doc_metadata = Metadata(
-    title = "Test Document for Save/Load",
-    author = "Test Author",
-    date = "2026-01-03",
-    abstract_text = ""
-)
+define meta_title = "Test Document for Save/Load"
+define meta_author = "Test Author"
+define meta_date = "2026-01-03"
+define meta_keywords = List("test", "kleisdoc", "save", "load")
 
 // ----------------------------------------------------------------------------
 // Document Assembly

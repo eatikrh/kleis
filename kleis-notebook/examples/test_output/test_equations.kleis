@@ -13,12 +13,7 @@ import "examples/documents/kleisdoc_types.kleis"
 // Document Metadata
 // ----------------------------------------------------------------------------
 
-define doc_metadata = Metadata(
-    title = "Equation Test",
-    author = "",
-    date = "",
-    abstract_text = ""
-)
+define meta_title = "Equation Test"
 
 // ----------------------------------------------------------------------------
 // Equations (with EditorNode AST for re-editing)

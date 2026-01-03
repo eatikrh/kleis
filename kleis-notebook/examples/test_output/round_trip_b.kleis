@@ -10,15 +10,18 @@
 import "examples/documents/kleisdoc_types.kleis"
 
 // ----------------------------------------------------------------------------
+// Template
+// ----------------------------------------------------------------------------
+
+import "examples/documents/kleisdoc_types.kleis"
+
+// ----------------------------------------------------------------------------
 // Document Metadata
 // ----------------------------------------------------------------------------
 
-define doc_metadata = Metadata(
-    title = "Full Round-Trip Test",
-    author = "Test Author",
-    date = "",
-    abstract_text = "This is a test abstract."
-)
+define meta_title = "Full Round-Trip Test"
+define meta_author = "Test Author"
+define meta_abstract = "This is a test abstract."
 
 // ----------------------------------------------------------------------------
 // Equations (with EditorNode AST for re-editing)

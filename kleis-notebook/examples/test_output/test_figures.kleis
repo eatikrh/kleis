@@ -13,12 +13,7 @@ import "examples/documents/kleisdoc_types.kleis"
 // Document Metadata
 // ----------------------------------------------------------------------------
 
-define doc_metadata = Metadata(
-    title = "Figure Test",
-    author = "",
-    date = "",
-    abstract_text = ""
-)
+define meta_title = "Figure Test"
 
 // ----------------------------------------------------------------------------
 // Figures (with Kleis code for regeneration)
