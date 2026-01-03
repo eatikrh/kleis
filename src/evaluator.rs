@@ -2727,6 +2727,35 @@ impl Evaluator {
                     Ok(None)
                 }
             }
+            "intToStr" | "int_to_str" | "fromInt" | "intToString" | "builtin_intToStr" => {
+                // intToStr(42) → "42"
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(n) = self.as_integer(&args[0]) {
+                    Ok(Some(Expression::String(format!("{}", n))))
+                } else if let Some(f) = self.as_number(&args[0]) {
+                    // Handle floats by converting to integer first
+                    Ok(Some(Expression::String(format!("{}", f as i64))))
+                } else {
+                    Ok(None)
+                }
+            }
+            "strToInt" | "str_to_int" | "toInt" | "builtin_strToInt" => {
+                // strToInt("42") → 42
+                // strToInt("abc") → -1 (invalid)
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    match s.trim().parse::<i64>() {
+                        Ok(n) => Ok(Some(Expression::Const(format!("{}", n)))),
+                        Err(_) => Ok(Some(Expression::Const("-1".to_string()))),
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
 
             // === List operations ===
             "Cons" | "cons" => {

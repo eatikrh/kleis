@@ -50,7 +50,7 @@
 ### Blocking Issues
 
 - `render_editor_node` needs to be exposed as Kleis builtin (currently Rust-only)
-- `intToStr` not implemented in evaluator (using local `num_to_str` workaround)
+- ~~`intToStr` not implemented in evaluator~~ ✅ FIXED (Jan 3, 2026)
 
 ---
 
