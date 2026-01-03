@@ -307,18 +307,25 @@ plot(x, y, {
 2. Map Kleis option names to Lilaq parameter names
 3. Generate appropriate Typst code with options
 
-### Phase 3: Function Plotting
+### Phase 3: Function Plotting ✅ COMPLETE
 
-| Function | Status | Description |
-|----------|--------|-------------|
-| `fplot(f, x_min, x_max)` | ⏳ | Plot function with auto-sampling |
-| `fplot([f, g], x_min, x_max)` | ⏳ | Multiple functions |
-| `fplot(f, domain)` | ⏳ | Domain syntax: `0..2*pi` |
+**Already implemented via existing primitives:**
 
-**Implementation notes:**
-- Need to evaluate Kleis function at sample points
-- Sample count configurable (default: 100)
-- Handle singularities/discontinuities
+```kleis
+// Plot sin(x) from 0 to 2π
+let xs = linspace(0, 6.28, 100) in
+let ys = list_map(λ x . sin(x), xs) in
+diagram(plot(xs, ys))
+
+// Plot multiple functions
+let xs = linspace(0, 6.28, 100) in
+diagram(
+    plot(xs, list_map(λ x . sin(x), xs)),
+    plot(xs, list_map(λ x . cos(x), xs))
+)
+```
+
+No special `fplot` function needed - Kleis already has `linspace`, `list_map`, and `plot`.
 
 ### Phase 4: Additional Plot Types
 

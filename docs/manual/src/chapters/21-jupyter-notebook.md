@@ -723,13 +723,6 @@ Available scales:
 - `"log"` - Logarithmic scale (base 10)
 - `"symlog"` - Symmetric log (linear near 0, log elsewhere; handles negative values)
 
-### Future Enhancements
-
-See the [Plotting Roadmap](../../../PLOTTING_ROADMAP.md) for planned features:
-- Function plotting (`fplot`)
-- 3D surface plots
-- Polar plots
-
 ## Next Steps
 
 - Explore the [REPL chapter](./12-repl.md) for more interactive features
