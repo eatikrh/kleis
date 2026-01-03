@@ -664,6 +664,94 @@ Medium - Important for publication-quality documents, but workarounds exist.
 
 ---
 
+## 🔧 FUTURE: Code Organization & Technical Debt
+
+### Overview
+
+The codebase has grown significantly and needs modularization. Key issues:
+
+1. **`evaluator.rs` is 9,325 lines** — needs splitting into modules
+2. **Hardcoded types in Rust** — violates ADR-016 (types should come from stdlib)
+3. **57 TODOs/FIXMEs across src/** — need systematic resolution
+4. **Deprecated/duplicate code** — `src/dap.rs` marked deprecated
+
+### Priority 1: Modularize `evaluator.rs`
+
+**Current:** Single 9,325-line file with 178 methods
+
+**Proposed structure:**
+```
+src/evaluator/
+├── mod.rs           # Re-exports, Evaluator struct (~200 lines)
+├── core.rs          # Loading, bindings, basic operations (~400 lines)
+├── eval.rs          # Main evaluation logic (~400 lines)
+├── substitution.rs  # substitute(), pattern matching (~150 lines)
+├── lambda.rs        # β-reduction, α-conversion, free vars (~800 lines)
+├── examples.rs      # Example blocks, assert, Z3 verification (~400 lines)
+├── concrete.rs      # Concrete evaluation (~200 lines)
+└── builtins/
+    ├── mod.rs       # apply_builtin dispatch (~200 lines)
+    ├── arithmetic.rs # +, -, *, /, pow, etc. (~600 lines)
+    ├── string.rs    # String operations (~300 lines)
+    ├── list.rs      # List operations (~400 lines)
+    ├── plotting.rs  # diagram, plot, bar, etc. (~1500 lines!)
+    ├── typst.rs     # export_typst, render_to_typst (~600 lines)
+    └── matrix.rs    # Matrix operations (~400 lines)
+```
+
+**Benefit:** No file over 1500 lines. Clear separation of concerns.
+
+### Priority 2: Remove Hardcoded Types (ADR-016)
+
+| Hardcoded in Rust | Should Be in stdlib |
+|-------------------|---------------------|
+| `Type::matrix()`, `Type::pmatrix()`, etc. | `stdlib/types.kleis` |
+| `"Scalar"`, `"Vector"`, `"Complex"` literals | Data registry lookups |
+| Matrix dimension checking in Rust | Structure axioms in Kleis |
+
+**Files affected:**
+- `src/type_inference.rs` (35 occurrences of Scalar/Matrix/Vector)
+- `src/type_context.rs` (8 occurrences)
+
+**Target:** Type inference queries registry, doesn't hardcode type names.
+
+### Priority 3: Clean Up TODOs
+
+| File | TODOs | Notable Issues |
+|------|-------|----------------|
+| `src/math_layout/mod.rs` | 11 | Layout system incomplete |
+| `src/render.rs` | 8 | Rendering edge cases |
+| `src/type_inference.rs` | 7 | ADR-016 migration notes |
+| `src/math_layout/typst_adapter.rs` | 7 | Typst integration |
+| `src/bin/server.rs` | 4 | Server cleanup |
+
+**Total:** 57 TODOs across 19 files
+
+### Priority 4: Remove Deprecated Code
+
+| File | Status | Action |
+|------|--------|--------|
+| `src/dap.rs` | Marked `#[deprecated]` | Delete after confirming `kleis server` works |
+| `src/bin/debug.rs` vs `src/bin/commands/debug.rs` | Duplicate? | Consolidate |
+
+### Estimated Effort
+
+| Task | Sessions |
+|------|----------|
+| Modularize evaluator.rs | 2-3 |
+| Remove hardcoded types | 1-2 |
+| Clean up TODOs | 1-2 |
+| Remove deprecated code | 0.5 |
+| **Total** | **5-8 sessions** |
+
+### Related ADRs
+
+- **ADR-016:** Operations in Structures (types from stdlib, not Rust)
+- **ADR-014:** Hindley-Milner Type System
+- **ADR-021:** Data types (future)
+
+---
+
 ## 🎯 NEXT: Transcendental Functions (sin, cos, log, exp, etc.)
 
 ### The Gap
