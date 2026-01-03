@@ -3,7 +3,8 @@
   author: "Test Author",
 )
 
-#set page(paper: "us-letter", margin: 1in)
+// No template specified - using minimal defaults
+#set page(margin: 1in)
 #set text(size: 11pt)
 
 #align(center)[

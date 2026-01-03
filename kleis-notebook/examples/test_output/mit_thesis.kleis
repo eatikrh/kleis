@@ -13,12 +13,10 @@ import "examples/documents/kleisdoc_types.kleis"
 // Document Metadata
 // ----------------------------------------------------------------------------
 
-define doc_metadata = Metadata(
-    title = "Formal Verification of Knowledge Production Systems",
-    author = "Jane Smith",
-    date = "May 2025",
-    abstract_text = "This thesis presents a unified framework for formal verification of knowledge production systems. We introduce Kleis, a language that treats notation, verification, and document structure as first-class concepts."
-)
+define meta_title = "Formal Verification of Knowledge Production Systems"
+define meta_author = "Jane Smith"
+define meta_date = "May 2025"
+define meta_abstract = "This thesis presents a unified framework for formal verification of knowledge production systems. We introduce Kleis, a language that treats notation, verification, and document structure as first-class concepts."
 
 // ----------------------------------------------------------------------------
 // Equations (with EditorNode AST for re-editing)

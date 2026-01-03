@@ -13,12 +13,10 @@ import "examples/documents/kleisdoc_types.kleis"
 // Document Metadata
 // ----------------------------------------------------------------------------
 
-define doc_metadata = Metadata(
-    title = "Kleis: A Unified Framework for Knowledge Production",
-    author = "Jane Smith, Alice Chen",
-    date = "January 2025",
-    abstract_text = "We present Kleis, a domain-specific language for knowledge production that unifies notation, verification, and document generation. Our approach is based on dependent type theory and enables both symbolic computation and formal verification within a single framework."
-)
+define meta_title = "Kleis: A Unified Framework for Knowledge Production"
+define meta_author = "Jane Smith, Alice Chen"
+define meta_date = "January 2025"
+define meta_abstract = "We present Kleis, a domain-specific language for knowledge production that unifies notation, verification, and document generation. Our approach is based on dependent type theory and enables both symbolic computation and formal verification within a single framework."
 
 // ----------------------------------------------------------------------------
 // Equations (with EditorNode AST for re-editing)
