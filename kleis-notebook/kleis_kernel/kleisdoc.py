@@ -73,6 +73,55 @@ class Section:
     content: List[Any] = field(default_factory=list)  # Text, equations, figures, subsections
 
 
+@dataclass
+class BibEntry:
+    """A bibliography entry."""
+    key: str  # Citation key (e.g., "einstein1905")
+    entry_type: str  # article, book, inproceedings, etc.
+    title: str
+    authors: str  # Author string (e.g., "Einstein, A. and Bohr, N.")
+    year: str = ""
+    journal: str = ""
+    volume: str = ""
+    pages: str = ""
+    publisher: str = ""
+    doi: str = ""
+    url: str = ""
+    note: str = ""
+    
+    def to_bibtex(self) -> str:
+        """Convert to BibTeX format."""
+        lines = [f"@{self.entry_type}{{{self.key},"]
+        lines.append(f'  author = {{{self.authors}}},')
+        lines.append(f'  title = {{{self.title}}},')
+        if self.year:
+            lines.append(f'  year = {{{self.year}}},')
+        if self.journal:
+            lines.append(f'  journal = {{{self.journal}}},')
+        if self.volume:
+            lines.append(f'  volume = {{{self.volume}}},')
+        if self.pages:
+            lines.append(f'  pages = {{{self.pages}}},')
+        if self.publisher:
+            lines.append(f'  publisher = {{{self.publisher}}},')
+        if self.doi:
+            lines.append(f'  doi = {{{self.doi}}},')
+        if self.url:
+            lines.append(f'  url = {{{self.url}}},')
+        if self.note:
+            lines.append(f'  note = {{{self.note}}},')
+        lines.append("}")
+        return "\n".join(lines)
+
+
+@dataclass 
+class CrossRef:
+    """A cross-reference to another element in the document."""
+    ref_type: str  # "eq", "fig", "sec", "tab", "thm", "bib"
+    target: str    # Label of the target element
+    text: Optional[str] = None  # Custom display text (optional)
+
+
 class KleisDoc:
     """
     A generic Kleis document with structured content.
@@ -101,7 +150,8 @@ class KleisDoc:
         self.sections: List[Section] = []
         self.equations: Dict[str, Equation] = {}
         self.figures: Dict[str, Figure] = {}
-        self.bibliography: List[Dict[str, str]] = []
+        self.bibliography: Dict[str, BibEntry] = {}  # Keyed by citation key
+        self.cross_refs: List[CrossRef] = []  # Track cross-references for validation
         
         # Extensible content blocks for format-specific needs
         # Examples:
@@ -195,6 +245,12 @@ class KleisDoc:
         
         # Parse algorithms
         doc.algorithms = doc._extract_algorithms(content)
+        
+        # Parse bibliography
+        doc.bibliography = doc._extract_bibliography(content)
+        
+        # Parse cross-references
+        doc.cross_refs = doc._extract_cross_refs(content)
         
         # Parse sections
         doc.sections = doc._extract_sections(content, doc.equations, doc.figures)
@@ -558,6 +614,69 @@ class KleisDoc:
                 }
         
         return algorithms
+    
+    def _extract_bibliography(self, content: str) -> Dict[str, BibEntry]:
+        """Extract bibliography entries from Kleis file content."""
+        bibliography = {}
+        
+        # Find BibEntry definitions: define bib_xxx = BibEntry(...)
+        pattern = r'define\s+bib_(\w+)\s*=\s*BibEntry\((.*?)\n\)'
+        for match in re.finditer(pattern, content, re.DOTALL):
+            bib_body = match.group(2)
+            
+            key_match = re.search(r'key\s*=\s*"([^"]*)"', bib_body)
+            type_match = re.search(r'entry_type\s*=\s*"([^"]*)"', bib_body)
+            title_match = re.search(r'title\s*=\s*"([^"]*)"', bib_body)
+            authors_match = re.search(r'authors\s*=\s*"([^"]*)"', bib_body)
+            year_match = re.search(r'year\s*=\s*"([^"]*)"', bib_body)
+            journal_match = re.search(r'journal\s*=\s*"([^"]*)"', bib_body)
+            volume_match = re.search(r'volume\s*=\s*"([^"]*)"', bib_body)
+            pages_match = re.search(r'pages\s*=\s*"([^"]*)"', bib_body)
+            publisher_match = re.search(r'publisher\s*=\s*"([^"]*)"', bib_body)
+            doi_match = re.search(r'doi\s*=\s*"([^"]*)"', bib_body)
+            url_match = re.search(r'url\s*=\s*"([^"]*)"', bib_body)
+            note_match = re.search(r'note\s*=\s*"([^"]*)"', bib_body)
+            
+            if key_match:
+                key = key_match.group(1)
+                bibliography[key] = BibEntry(
+                    key=key,
+                    entry_type=type_match.group(1) if type_match else "article",
+                    title=title_match.group(1) if title_match else "",
+                    authors=authors_match.group(1) if authors_match else "",
+                    year=year_match.group(1) if year_match else "",
+                    journal=journal_match.group(1) if journal_match else "",
+                    volume=volume_match.group(1) if volume_match else "",
+                    pages=pages_match.group(1) if pages_match else "",
+                    publisher=publisher_match.group(1) if publisher_match else "",
+                    doi=doi_match.group(1) if doi_match else "",
+                    url=url_match.group(1) if url_match else "",
+                    note=note_match.group(1) if note_match else ""
+                )
+        
+        return bibliography
+    
+    def _extract_cross_refs(self, content: str) -> List[CrossRef]:
+        """Extract cross-references from Kleis file content."""
+        cross_refs = []
+        
+        # Find CrossRef definitions: define crossref_N = CrossRef(...)
+        pattern = r'define\s+crossref_\d+\s*=\s*CrossRef\((.*?)\n\)'
+        for match in re.finditer(pattern, content, re.DOTALL):
+            ref_body = match.group(1)
+            
+            type_match = re.search(r'ref_type\s*=\s*"([^"]*)"', ref_body)
+            target_match = re.search(r'target\s*=\s*"([^"]*)"', ref_body)
+            text_match = re.search(r'text\s*=\s*"([^"]*)"', ref_body)
+            
+            if type_match and target_match:
+                cross_refs.append(CrossRef(
+                    ref_type=type_match.group(1),
+                    target=target_match.group(1),
+                    text=text_match.group(1) if text_match else None
+                ))
+        
+        return cross_refs
     
     def _extract_sections(self, content: str, equations: Dict[str, Equation], 
                           figures: Dict[str, Figure]) -> List[Section]:
@@ -1134,6 +1253,129 @@ example "render_plot"
         return alg
     
     # =========================================================================
+    # Bibliography
+    # =========================================================================
+    
+    def add_bib_entry(self, key: str, entry_type: str, title: str, authors: str,
+                      year: str = "", journal: str = "", volume: str = "",
+                      pages: str = "", publisher: str = "", doi: str = "",
+                      url: str = "", note: str = "") -> BibEntry:
+        """Add a bibliography entry.
+        
+        Args:
+            key: Citation key (e.g., "einstein1905")
+            entry_type: Type (article, book, inproceedings, thesis, etc.)
+            title: Work title
+            authors: Author string (e.g., "Einstein, A.")
+            year: Publication year
+            journal: Journal name (for articles)
+            volume: Volume number
+            pages: Page range
+            publisher: Publisher (for books)
+            doi: Digital Object Identifier
+            url: URL
+            note: Additional notes
+        
+        Returns:
+            The created BibEntry
+        """
+        entry = BibEntry(
+            key=key,
+            entry_type=entry_type,
+            title=title,
+            authors=authors,
+            year=year,
+            journal=journal,
+            volume=volume,
+            pages=pages,
+            publisher=publisher,
+            doi=doi,
+            url=url,
+            note=note
+        )
+        self.bibliography[key] = entry
+        return entry
+    
+    def cite(self, key: str, text: str = None) -> CrossRef:
+        """Create a citation cross-reference.
+        
+        Args:
+            key: Citation key (must exist in bibliography)
+            text: Optional custom citation text
+        
+        Returns:
+            CrossRef object for the citation
+        """
+        ref = CrossRef(ref_type="bib", target=key, text=text)
+        self.cross_refs.append(ref)
+        return ref
+    
+    def ref_equation(self, label: str, text: str = None) -> CrossRef:
+        """Create a cross-reference to an equation."""
+        ref = CrossRef(ref_type="eq", target=label, text=text)
+        self.cross_refs.append(ref)
+        return ref
+    
+    def ref_figure(self, label: str, text: str = None) -> CrossRef:
+        """Create a cross-reference to a figure."""
+        ref = CrossRef(ref_type="fig", target=label, text=text)
+        self.cross_refs.append(ref)
+        return ref
+    
+    def ref_section(self, label: str, text: str = None) -> CrossRef:
+        """Create a cross-reference to a section."""
+        ref = CrossRef(ref_type="sec", target=label, text=text)
+        self.cross_refs.append(ref)
+        return ref
+    
+    def ref_table(self, label: str, text: str = None) -> CrossRef:
+        """Create a cross-reference to a table."""
+        ref = CrossRef(ref_type="tab", target=label, text=text)
+        self.cross_refs.append(ref)
+        return ref
+    
+    def ref_theorem(self, label: str, text: str = None) -> CrossRef:
+        """Create a cross-reference to a theorem."""
+        ref = CrossRef(ref_type="thm", target=label, text=text)
+        self.cross_refs.append(ref)
+        return ref
+    
+    def export_bibtex(self, path: str = None) -> str:
+        """Export bibliography to BibTeX format.
+        
+        Args:
+            path: Optional file path to save to
+        
+        Returns:
+            BibTeX string
+        """
+        bibtex = "\n\n".join(entry.to_bibtex() for entry in self.bibliography.values())
+        if path:
+            with open(path, "w") as f:
+                f.write(bibtex)
+        return bibtex
+    
+    def validate_cross_refs(self) -> List[str]:
+        """Validate all cross-references have valid targets.
+        
+        Returns:
+            List of error messages (empty if all valid)
+        """
+        errors = []
+        for ref in self.cross_refs:
+            if ref.ref_type == "bib" and ref.target not in self.bibliography:
+                errors.append(f"Missing bibliography entry: {ref.target}")
+            elif ref.ref_type == "eq" and ref.target not in self.equations:
+                errors.append(f"Missing equation: {ref.target}")
+            elif ref.ref_type == "fig" and ref.target not in self.figures:
+                errors.append(f"Missing figure: {ref.target}")
+            elif ref.ref_type == "tab" and ref.target not in self.tables:
+                errors.append(f"Missing table: {ref.target}")
+            elif ref.ref_type == "thm" and ref.target not in self.theorems:
+                errors.append(f"Missing theorem: {ref.target}")
+        return errors
+    
+    # =========================================================================
     # Export
     # =========================================================================
     
@@ -1588,6 +1830,46 @@ example "render_plot"
                 lines.append(f'    name = {self._to_kleis_string(alg.get("name", ""))},')
                 lines.append(f'    pseudocode = {self._to_kleis_string(alg.get("pseudocode", ""))},')
                 lines.append(f'    caption = {self._to_kleis_string(alg.get("caption", ""))}')
+                lines.append(")")
+                lines.append("")
+        
+        # Bibliography
+        if self.bibliography:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Bibliography")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            
+            for key, entry in self.bibliography.items():
+                safe_name = f"bib_{key}".replace(":", "_").replace("-", "_")
+                lines.append(f"define {safe_name} = BibEntry(")
+                lines.append(f'    key = {self._to_kleis_string(entry.key)},')
+                lines.append(f'    entry_type = {self._to_kleis_string(entry.entry_type)},')
+                lines.append(f'    title = {self._to_kleis_string(entry.title)},')
+                lines.append(f'    authors = {self._to_kleis_string(entry.authors)},')
+                lines.append(f'    year = {self._to_kleis_string(entry.year)},')
+                lines.append(f'    journal = {self._to_kleis_string(entry.journal)},')
+                lines.append(f'    volume = {self._to_kleis_string(entry.volume)},')
+                lines.append(f'    pages = {self._to_kleis_string(entry.pages)},')
+                lines.append(f'    publisher = {self._to_kleis_string(entry.publisher)},')
+                lines.append(f'    doi = {self._to_kleis_string(entry.doi)},')
+                lines.append(f'    url = {self._to_kleis_string(entry.url)},')
+                lines.append(f'    note = {self._to_kleis_string(entry.note)}')
+                lines.append(")")
+                lines.append("")
+        
+        # Cross-references
+        if self.cross_refs:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Cross-References")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            
+            for i, ref in enumerate(self.cross_refs):
+                lines.append(f"define crossref_{i} = CrossRef(")
+                lines.append(f'    ref_type = {self._to_kleis_string(ref.ref_type)},')
+                lines.append(f'    target = {self._to_kleis_string(ref.target)},')
+                lines.append(f'    text = {self._to_kleis_string(ref.text) if ref.text else "None"}')
                 lines.append(")")
                 lines.append("")
         
