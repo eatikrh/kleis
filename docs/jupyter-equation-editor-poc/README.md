@@ -700,6 +700,75 @@ This architecture mirrors the working LISP interpreter exactly!
 
 ---
 
+## 11. Comprehensive KleisDoc Format
+
+**See:** `docs/jupyter-equation-editor-poc/KLEISDOC_DESIGN.md` for full design.
+
+### What KleisDoc Must Capture
+
+Designing a persistent document format is complex because it must handle:
+
+| Category | Requirements |
+|----------|--------------|
+| **Identity** | UUID, title, authors, version, timestamps, template reference |
+| **Authors** | Multiple authors with roles (primary, advisor, contributor), affiliations, ORCID |
+| **Content** | Text, equations, figures, tables, code blocks, theorems, definitions |
+| **Provenance** | Is content regenerable (from Kleis code) or static (imported)? |
+| **Equations** | Multiple representations: LaTeX, Kleis text, EditorNode AST |
+| **Figures** | Kleis code, cached SVG, placement hints, accessibility |
+| **Structure** | Chapters → Sections → Subsections with nesting |
+| **Cross-refs** | Internal (fig, eq, sec) and bibliography citations |
+| **Validation** | Which axioms apply, what passed/failed, timestamps |
+| **Compilation** | Cached outputs (PDF, Typst), what needs regeneration |
+| **Jupyter** | Cell-to-chunk mappings for notebook integration |
+| **Collaboration** | Version history, comments, conflict resolution |
+
+### Kleis Data Types
+
+**File:** `examples/documents/kleisdoc_types.kleis`
+
+Defines **39 data types** covering:
+
+```kleis
+// Content source tracking
+data ContentSource = Regenerable(...) | Static | Computed(...) | Imported(...)
+
+// Equation with multiple representations
+data Equation = Equation(id, label, numbered, format, typst_code, validation)
+
+// Figure with provenance and caching
+data Figure = Figure(id, label, caption, alt_text, source, typst_fragment, svg_cache, ...)
+
+// The universal chunk type
+data Chunk = CText(...) | CEq(...) | CFig(...) | CTab(...) | CCode(...) | CThm(...) | ...
+
+// Complete document
+data KleisDoc = KleisDoc(metadata, front_matter, main_sections, back_matter, ...)
+```
+
+### Key Design Decisions
+
+1. **Provenance is mandatory** - Every chunk tracks how it was created
+2. **Multiple representations** - Equations store LaTeX + Kleis + EditorNode AST
+3. **Validation is per-element** - Track what's been checked
+4. **Caching is explicit** - Know what needs regeneration
+5. **Structure is hierarchical** - Sections can nest arbitrarily
+
+### Open Questions
+
+1. **Binary assets** - Store paths externally or embed base64?
+2. **AST format** - Serialize EditorNode as JSON? S-expression?
+3. **Conflict resolution** - Lock chunks or three-way merge?
+4. **Validation blocking** - Must errors be fixed before compile?
+
+---
+
+## Roadmap
+
+**See:** `docs/jupyter-equation-editor-poc/ROADMAP.md` for detailed phases.
+
+---
+
 ## 10. References
 
 - [Lilaq Documentation](https://github.com/lilaq-project/lilaq)
