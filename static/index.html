@@ -916,6 +916,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="resetStructuralEditor()">Clear</button>
                         <button style="padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="verifyWithZ3()" title="Verify validity (always true?)">✓ Verify</button>
                         <button style="padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="checkSatisfiable()" title="Check satisfiability (can be true?)">∃ Sat?</button>
+                        <button id="jupyterSendBtn" style="display: none; padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="sendToJupyter()" title="Send equation to Jupyter notebook">📤 Send to Jupyter</button>
                     </div>
                     <!-- Type Indicator (NEW!) -->
                     <div id="type-indicator" style="margin-top: 10px; padding: 12px; background: #f5f5f5; border-radius: 6px; border-left: 4px solid #999; display: none; font-family: monospace; font-size: 13px;">
@@ -1220,6 +1221,62 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
         let editorMode = 'text';
         let currentAST = null;
         let nextPlaceholderId = 0;
+        
+        // ========== JUPYTER MODE INTEGRATION ==========
+        // Detect if running in Jupyter iframe via URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const isJupyterMode = urlParams.get('mode') === 'jupyter';
+        
+        // Send current equation AST to Jupyter parent window
+        function sendToJupyter() {
+            if (!currentAST) {
+                showStatus('❌ No equation to send. Build an equation first!', 'error');
+                return;
+            }
+            
+            if (!isJupyterMode) {
+                showStatus('⚠️ Not in Jupyter mode. Use ?mode=jupyter in URL.', 'warning');
+                return;
+            }
+            
+            // Send AST to parent window (Jupyter notebook)
+            window.parent.postMessage({
+                type: 'kleisEquation',
+                payload: {
+                    ast: currentAST,
+                    timestamp: new Date().toISOString()
+                }
+            }, '*');
+            
+            showStatus('✅ Equation sent to Jupyter notebook!', 'success');
+            console.log('Sent equation to Jupyter:', currentAST);
+        }
+        
+        // Listen for initial AST from Jupyter (for re-editing)
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'kleisInitialData') {
+                console.log('Received initial AST from Jupyter:', event.data.payload);
+                
+                if (event.data.payload) {
+                    currentAST = event.data.payload;
+                    
+                    // Switch to structural mode to show the equation
+                    if (editorMode !== 'structural') {
+                        setEditorMode('structural');
+                    }
+                    
+                    renderStructuralEditor();
+                    showStatus('✅ Equation loaded from Jupyter!', 'success');
+                }
+            }
+        });
+        
+        // Tell Jupyter we're ready to receive initial data
+        if (isJupyterMode) {
+            console.log('🟢 Kleis Editor running in Jupyter mode');
+            window.parent.postMessage({ type: 'kleisRequestInitial' }, '*');
+        }
+        // ========== END JUPYTER MODE INTEGRATION ==========
         
         // FEATURE FLAG: Coordinate system preference
         // Set to 'semantic' to prefer semantic bounding boxes (better for complex layouts)
@@ -3401,6 +3458,17 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             } else {
                 console.log('✅ All templates loaded correctly');
                 console.log('sqrt template:', astTemplates.sqrt);
+            }
+            
+            // Show Jupyter integration button if in Jupyter mode
+            if (isJupyterMode) {
+                const jupyterBtn = document.getElementById('jupyterSendBtn');
+                if (jupyterBtn) {
+                    jupyterBtn.style.display = 'inline-block';
+                }
+                // Auto-switch to structural mode in Jupyter
+                setEditorMode('structural');
+                console.log('🟢 Jupyter mode: Send button enabled, structural mode activated');
             }
         };
         
