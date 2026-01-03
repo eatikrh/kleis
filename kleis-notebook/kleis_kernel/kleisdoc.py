@@ -1349,9 +1349,16 @@ example "render_plot" {{
             ... )
         """
         # Store the code with optional title
+        # The title must be INSIDE the function call, not after it
+        # e.g., plot([1,2], [3,4], title = "My Plot")
         if title:
-            # Add title to the plot code for translation
-            full_code = f'{plot_code}, title = "{title}"'
+            # Insert title as the last argument inside the function call
+            # Find the last ) and insert before it
+            if plot_code.rstrip().endswith(')'):
+                full_code = plot_code.rstrip()[:-1] + f', title = "{title}")'
+            else:
+                # Fallback: append (shouldn't happen for well-formed code)
+                full_code = f'{plot_code}, title = "{title}"'
         else:
             full_code = plot_code
         
@@ -2018,15 +2025,17 @@ example "render_plot" {{
     def _kleis_plot_to_lilaq(self, kleis_code: str) -> str:
         """Translate Kleis plot code to Lilaq/Typst syntax.
         
-        Converts: plot([1,2,3], [10,20,15])
-        To:       lq.diagram(lq.plot((1, 2, 3), (10, 20, 15)))
+        Converts: plot([1,2,3], [10,20,15], title = "My Plot")
+        To:       lq.diagram(lq.plot((1, 2, 3), (10, 20, 15), title: "My Plot"))
         
         This method is AGNOSTIC of plot types. Any Kleis function call
-        is translated to the corresponding Lilaq function using the convention:
+        is translated to the corresponding Lilaq function using conventions:
         - func_name → lq.func-name (underscores become hyphens for Typst)
         - [1,2,3] → (1, 2, 3) (list syntax conversion)
+        - name = value → name: value (Typst named argument syntax)
+        - xlabel → x-label, ylabel → y-label (Lilaq conventions)
         
-        New plot types added to Kleis will automatically work here.
+        New plot types and options added to Kleis will automatically work here.
         """
         code = kleis_code.strip()
         
@@ -2041,11 +2050,11 @@ example "render_plot" {{
                 func_name = match.group(1)
                 args_str = match.group(2)
                 
-                # Convention: underscores → hyphens for Typst/Lilaq
+                # Convention: underscores → hyphens for Typst/Lilaq function names
                 lilaq_func = f'lq.{func_name.replace("_", "-")}'
                 
-                # Convert list syntax: [1,2,3] -> (1, 2, 3)
-                converted_args = args_str.replace('[', '(').replace(']', ')')
+                # Convert arguments to Typst syntax
+                converted_args = self._convert_args_to_typst(args_str)
                 
                 lilaq_elements.append(f'{lilaq_func}({converted_args})')
             else:
@@ -2056,6 +2065,41 @@ example "render_plot" {{
             return f'lq.diagram({lilaq_elements[0]})'
         else:
             return f'lq.diagram({", ".join(lilaq_elements)})'
+    
+    def _convert_args_to_typst(self, args_str: str) -> str:
+        """Convert Kleis argument syntax to Typst syntax.
+        
+        Handles:
+        - [1,2,3] → (1, 2, 3)  (list to tuple)
+        - name = value → name: value  (named args)
+        - xlabel → x-label, ylabel → y-label  (Lilaq conventions)
+        - mark_size → mark-size  (underscore to hyphen in option names)
+        """
+        result = args_str
+        
+        # 1. Convert list syntax: [1,2,3] -> (1, 2, 3)
+        result = result.replace('[', '(').replace(']', ')')
+        
+        # 2. Convert named arguments: name = value → name: value
+        # This regex handles: identifier = value (respecting strings and nested parens)
+        result = re.sub(r'(\w+)\s*=\s*', r'\1: ', result)
+        
+        # 3. Convert option names with underscores to hyphens (Typst convention)
+        # Also handle common Lilaq-specific translations
+        # 
+        # All underscore options become hyphens: mark_size → mark-size
+        # This is done generically so new options work automatically.
+        #
+        # Special cases for axis labels: xlabel → x-label
+        result = re.sub(r'(\w+)_(\w+):', lambda m: f'{m.group(1)}-{m.group(2)}:', result)
+        
+        # Handle xlabel/ylabel/xlim/ylim/xscale/yscale → x-label/y-label etc.
+        # These are single words that need the hyphen inserted
+        for axis in ['x', 'y']:
+            for suffix in ['label', 'lim', 'scale', 'axis', 'ticks']:
+                result = result.replace(f'{axis}{suffix}:', f'{axis}-{suffix}:')
+        
+        return result
     
     def _split_plot_elements(self, code: str) -> List[str]:
         """Split comma-separated plot elements respecting parentheses."""
