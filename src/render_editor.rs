@@ -1464,8 +1464,44 @@ fn render_operation(
         return render_tensor(op, &rendered_args, target);
     }
 
+    // Handle variadic binary operations by folding them
+    // e.g., times(a, b, c) becomes times(times(a, b), c)
+    if let Some(folded) = fold_variadic_binary_op(&op.name, &rendered_args, ctx, target) {
+        return folded;
+    }
+
     // For all other operations: use template-based rendering
     render_with_template(&op.name, &rendered_args, ctx, target)
+}
+
+/// Fold variadic binary operations left-to-right
+///
+/// For associative operations like times, plus, multiply:
+/// - times(a, b, c) → times(times(a, b), c) → "a b c" (with implied multiplication)
+///
+/// Returns Some(rendered_string) if folding was applied, None otherwise.
+fn fold_variadic_binary_op(
+    name: &str,
+    rendered_args: &[String],
+    ctx: &EditorRenderContext,
+    target: &RenderTarget,
+) -> Option<String> {
+    // List of binary operations that can be variadic
+    let variadic_binary_ops = ["times", "scalar_multiply", "multiply", "plus", "minus"];
+
+    // Only fold if it's a variadic binary op with more than 2 args
+    if !variadic_binary_ops.contains(&name) || rendered_args.len() <= 2 {
+        return None;
+    }
+
+    // Fold left-to-right: times(a, b, c) → render(times(a, b)), then times(result, c)
+    let mut result = rendered_args[0].clone();
+    for arg in &rendered_args[1..] {
+        // Render the nested binary operation
+        result = render_with_template(name, &[result, arg.clone()], ctx, target);
+    }
+
+    Some(result)
 }
 
 // =============================================================================
