@@ -15,7 +15,7 @@ Usage:
     doc.export_pdf("output.pdf")
 
     # Load a template for structure guidance
-    doc = KleisDoc.from_template("stdlib/templates/mit_thesis.kleis")
+    doc = KleisDoc.from_template("stdlib/templates/article.kleis")
 """
 
 import json
@@ -119,7 +119,7 @@ class KleisDoc:
         
         Args:
             template_path: Path to a .kleis template file
-                          (e.g., "stdlib/templates/mit_thesis.kleis")
+                          (e.g., "stdlib/templates/article.kleis")
         
         Returns:
             A new KleisDoc with template loaded
@@ -549,10 +549,11 @@ example "render_plot"
         - abstract: Document abstract
         - keywords: List of keywords
         
-        Template-specific fields (examples):
-        - department, degree, supervisor (thesis)
-        - journal, volume, issue (paper)
+        Template-specific fields vary by document type:
+        - journal, volume, issue (journal article)
         - publisher, isbn (book)
+        - conference, location (proceedings)
+        - institution, department (report)
         """
         self.metadata.update(kwargs)
     
@@ -805,10 +806,15 @@ example "render_plot"
         raise NotImplementedError("HTML export not yet implemented")
     
     def _generate_typst(self, template: str = None) -> str:
-        """Generate Typst code for the document."""
+        """Generate Typst code for the document.
+        
+        This method generates minimal, format-agnostic Typst code.
+        Document-specific formatting (paper size, margins, abstract styling)
+        should be defined in templates.
+        """
         lines = []
         
-        # Document metadata
+        # Document metadata (standard Typst)
         lines.append('#set document(')
         if "title" in self.metadata:
             lines.append(f'  title: "{self.metadata["title"]}",')
@@ -821,19 +827,25 @@ example "render_plot"
         lines.append(')')
         lines.append('')
         
-        # Basic page setup (can be overridden by template)
-        lines.append('#set page(paper: "us-letter", margin: 1in)')
-        lines.append('#set text(size: 11pt)')
-        lines.append('')
+        # If template provided, include it (template controls page setup, styling)
+        if template:
+            lines.append(f'#import "{template}"')
+            lines.append('')
+        else:
+            # Minimal defaults only when no template - user can customize
+            lines.append('// No template specified - using minimal defaults')
+            lines.append('#set page(margin: 1in)')
+            lines.append('#set text(size: 11pt)')
+            lines.append('')
         
-        # Title
+        # Title (if present)
         if "title" in self.metadata:
             lines.append(f'#align(center)[')
             lines.append(f'  #text(size: 20pt, weight: "bold")[{self.metadata["title"]}]')
             lines.append(f']')
             lines.append('')
         
-        # Author(s)
+        # Author(s) (if present)
         if "author" in self.metadata:
             author = self.metadata["author"]
             if isinstance(author, str):
@@ -842,9 +854,8 @@ example "render_plot"
                 lines.append(f'#align(center)[{author.name}]')
             lines.append('')
         
-        # Abstract
+        # Abstract (if present) - rendered as text, not hardcoded heading
         if "abstract" in self.metadata:
-            lines.append('#heading(level: 1)[Abstract]')
             lines.append(self.metadata["abstract"])
             lines.append('')
         
