@@ -616,6 +616,90 @@ These working examples validate the core design:
 
 ---
 
+## 10. The Document = Program Insight
+
+**Key Realization:** Compiling a thesis is structurally identical to parsing and executing a LISP program.
+
+### The Isomorphism
+
+| LISP Interpreter | Thesis Compiler |
+|------------------|-----------------|
+| Source: `"(+ 2 3)"` | Source: Jupyter cells |
+| Parse → `SList(...)` | Parse → `ThesisDoc(...)` |
+| Validate (type check) | Validate (axiom check) |
+| Evaluate → `VNum(5)` | Compile → PDF |
+| Environment: `Env(bindings)` | Style: Template + Axioms |
+
+### Why LISP Works in Kleis
+
+The LISP interpreter (`examples/meta-programming/lisp_parser.kleis`) successfully:
+- Parses `"(+ 2 3)"` → `SList(SAtom("+"), SAtom("2"), SAtom("3"))`
+- Evaluates → `VNum(5)` (concrete tagged value!)
+- Handles recursion: `(fact 5)` → `VNum(120)`
+
+**9/9 examples pass** including recursive factorial!
+
+The key is **tagged return values**:
+
+```kleis
+// Every function returns a tagged concrete value
+VNum(x + y)           // Not just a number - tagged as VNum
+CTypst("#title[...]") // Not just a string - tagged as Typst code
+CError("msg")         // Explicit error handling
+```
+
+### The Thesis Compiler Pattern
+
+```kleis
+// Document AST (like SExpr)
+data DocExpr =
+    DTitle(text: String)
+  | DChapter(num: ℕ, title: String, sections: List(DocExpr))
+  | DEquation(latex: String, label: String)
+  | DFigure(num: String, caption: String, path: String)
+
+// Compile result (like LispVal)
+data CompileResult =
+    CTypst(code: String)    // Typst code fragment
+  | CError(message: String) // Validation failure
+  | CValid                  // Structure OK
+
+// Compile function (like eval_lisp)
+define compile_doc(expr: DocExpr, style: DocStyle) : CompileResult =
+    match expr {
+        DTitle(text) => 
+            CTypst(concat("#align(center)[", concat(text, "]")))
+      | DEquation(latex, label) =>
+            CTypst(concat("$ ", concat(latex, " $")))
+      | DChapter(num, title, sections) =>
+            merge_typst(compile_header(num, title), compile_all(sections, style))
+      | _ => CTypst("")
+    }
+```
+
+### The Complete Pipeline
+
+```
+Jupyter Cells → DocExpr AST → Validate(axioms) → Compile(style) → PDF
+     ↑              ↑              ↑                 ↑            ↑
+   Input         Parse          Check            Transform     Output
+   (like         (like          (like            (like         (like
+   LISP src)     parse_sexpr)   type check)      eval_lisp)    VNum)
+```
+
+### Implementation Path
+
+1. **Define DocExpr** - Document AST (done conceptually)
+2. **Define CompileResult** - Tagged output types
+3. **Write compile_doc** - Pattern matching → Typst fragments
+4. **Write validate_doc** - Check against style axioms
+5. **Write run_thesis** - Full pipeline: validate → compile
+6. **Integrate with Jupyter** - Parse cells → DocExpr → PDF display
+
+This architecture mirrors the working LISP interpreter exactly!
+
+---
+
 ## 10. References
 
 - [Lilaq Documentation](https://github.com/lilaq-project/lilaq)
