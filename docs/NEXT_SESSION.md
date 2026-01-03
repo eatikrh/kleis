@@ -1,12 +1,43 @@
 # Next Session Notes
 
-**Last Updated:** January 2, 2026 (late evening)
+**Last Updated:** January 3, 2026
 
 ---
 
-## 🚀 CURRENT WORK: KleisDoc Document System (Jan 2, 2026)
+## 📚 MANUAL REFERENCE
 
-### Branch: `feature/jupyter-equation-editor-poc`
+**The Kleis Manual:** https://kleis.io/docs/manual/book/
+
+| Chapter | Title | URL |
+|---------|-------|-----|
+| 14 | **Document Generation** | https://kleis.io/docs/manual/book/chapters/23-document-generation.html |
+
+This is the dissertation/thesis writing chapter. It covers KleisDoc, templates (MIT, UofM, arXiv), equations, figures, tables, bibliography, and PDF export.
+
+---
+
+## 🚀 CURRENT WORK: Equation Editor Jupyter Integration (Jan 3, 2026)
+
+### Branch: `feature/equation-editor-jupyter-integration`
+
+**Status:** ✅ Complete, ready to merge
+
+### What Was Built
+
+| Feature | Status |
+|---------|--------|
+| Jupyter mode detection (`?mode=jupyter`) | ✅ |
+| "📤 Send to Jupyter" button | ✅ |
+| Auto-switch to structural mode | ✅ |
+| `kleisInitialData` listener (for re-editing) | ✅ |
+| `add_equation_from_ast()` helper | ✅ |
+| Documentation updated | ✅ |
+
+---
+
+## 📦 Previous Work: KleisDoc Document System (Jan 2, 2026)
+
+### Branch: `main` (merged)
 
 ### START HERE: KleisDoc Design Documents
 
