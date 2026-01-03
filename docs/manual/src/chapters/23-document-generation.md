@@ -747,30 +747,6 @@ print("Saved!")
 5. **Validate before export** — Run `doc.validate_cross_refs()`
 6. **Version control** — `.kleis` files are text, perfect for git
 
-## Future: Jupyter Magic Commands
-
-*Coming soon:* Magic commands for a more streamlined notebook experience:
-
-```python
-%%kleisdoc init "My Thesis"
-template: stdlib/templates/mit_thesis.kleis
-author: Jane Smith
-```
-
-```python
-%%kleisdoc section "Introduction"
-This is the introduction text with inline math $E = mc^2$.
-```
-
-```python
-%%kleisdoc equation "main_result"
-# Opens Equation Editor in iframe
-```
-
-```python
-%kleisdoc export thesis.pdf
-```
-
 ## Troubleshooting
 
 ### "Kleis server not running"
