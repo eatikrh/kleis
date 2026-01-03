@@ -135,7 +135,7 @@ define compile_abstract(title: String, author: String, text: String, supervisor:
 define compile_chapter(num: ℕ, title: String, content: String) : CompileResult =
     CTypst(concat5(
         "= Chapter ", 
-        int_to_str(num),
+        num_to_str(num),
         ": ",
         title,
         concat3("\n\n", content, "\n\n")
@@ -180,19 +180,15 @@ define compile_sequence_acc(elements: List(DocExpr), style: DocStyle, acc: Strin
 // DOCUMENT BUILDER HELPERS
 // ============================================================================
 
-// Helper to convert int to string
-define int_to_str(n: ℕ) : String =
-    if eq(n, 0) then "0"
-    else if eq(n, 1) then "1"
-    else if eq(n, 2) then "2"
-    else if eq(n, 3) then "3"
-    else if eq(n, 4) then "4"
-    else if eq(n, 5) then "5"
-    else if eq(n, 6) then "6"
-    else if eq(n, 7) then "7"
-    else if eq(n, 8) then "8"
+// Convert single-digit number to string
+// TODO: Replace with proper intToStr builtin when implemented
+define num_to_str(n: ℕ) : String =
+    if eq(n, 0) then "0" else if eq(n, 1) then "1" else if eq(n, 2) then "2"
+    else if eq(n, 3) then "3" else if eq(n, 4) then "4" else if eq(n, 5) then "5"
+    else if eq(n, 6) then "6" else if eq(n, 7) then "7" else if eq(n, 8) then "8"
     else if eq(n, 9) then "9"
-    else "N"
+    else if eq(n, 10) then "10" else if eq(n, 11) then "11" else if eq(n, 12) then "12"
+    else "N"  // For chapters > 12, extend as needed
 
 // ============================================================================
 // TYPST PREAMBLE
