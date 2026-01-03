@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-849b4dc9.js";
+            window.path_to_searchindex_js = "searchindex-a0b1a2e2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -3394,13 +3394,54 @@ doc.add_equation(
 </code></pre>
 <h3 id="using-the-equation-editor"><a class="header" href="#using-the-equation-editor">Using the Equation Editor</a></h3>
 <p>The Kleis Equation Editor provides a visual way to build equations:</p>
+<h4 id="in-jupyter-notebooks"><a class="header" href="#in-jupyter-notebooks">In Jupyter Notebooks</a></h4>
+<pre><code class="language-python">from kleis_kernel.equation_editor import equation_editor
+
+# Open the visual equation editor in an iframe
+equation_editor()
+</code></pre>
+<p>The editor opens with:</p>
+<ul>
+<li><strong>Structural Mode</strong> for building equations visually</li>
+<li><strong>Symbol Palette</strong> with math symbols, Greek letters, and templates</li>
+<li><strong>“📤 Send to Jupyter”</strong> button to send the equation back</li>
+</ul>
+<h4 id="workflow"><a class="header" href="#workflow">Workflow</a></h4>
 <ol>
-<li><strong>Start Kleis server:</strong> <code>kleis server --port 8080</code></li>
-<li><strong>Open the editor:</strong> Navigate to <code>http://localhost:8080/</code></li>
-<li><strong>Build your equation</strong> using the palette</li>
-<li><strong>Export:</strong> Click “Export” → “JSON AST” to get the AST</li>
-<li><strong>Paste into Python:</strong> Use the AST in <code>doc.add_equation()</code></li>
+<li>
+<p><strong>Open the editor:</strong></p>
+<pre><code class="language-python">equation_editor()
+</code></pre>
+</li>
+<li>
+<p><strong>Build your equation</strong> using the palette buttons</p>
+</li>
+<li>
+<p><strong>Click “📤 Send to Jupyter”</strong> when done</p>
+</li>
+<li>
+<p><strong>Retrieve the AST and add to document:</strong></p>
+<pre><code class="language-python"># After clicking "Send to Jupyter", the AST is stored
+# Add to your document:
+doc.add_equation_from_ast("eq:main", equation_ast)
+</code></pre>
+</li>
 </ol>
+<h4 id="re-editing-existing-equations"><a class="header" href="#re-editing-existing-equations">Re-editing Existing Equations</a></h4>
+<pre><code class="language-python"># Load an existing equation's AST into the editor
+eq = doc.get_equation("eq:main")
+equation_editor(initial=eq.ast)  # Pre-populates the editor!
+</code></pre>
+<h4 id="standalone-mode"><a class="header" href="#standalone-mode">Standalone Mode</a></h4>
+<p>For standalone use (outside Jupyter):</p>
+<ol>
+<li><strong>Start Kleis server:</strong> <code>kleis server --port 3000</code></li>
+<li><strong>Open in browser:</strong> <code>http://localhost:3000/</code></li>
+<li><strong>Use Debug AST</strong> to copy the JSON AST</li>
+<li><strong>Paste into Python:</strong> <code>doc.add_equation("label", ast=...)</code></li>
+</ol>
+<p>For Jupyter mode, the URL <code>http://localhost:3000/?mode=jupyter</code> enables
+the “Send to Jupyter” button and auto-switches to structural mode</p>
 <h2 id="figures-and-plots"><a class="header" href="#figures-and-plots">Figures and Plots</a></h2>
 <h3 id="kleis-plots-regenerable"><a class="header" href="#kleis-plots-regenerable">Kleis Plots (Regenerable)</a></h3>
 <pre><code class="language-python"># Store the Kleis code - plot will be regenerated on export
