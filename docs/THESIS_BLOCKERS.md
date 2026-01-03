@@ -6,21 +6,23 @@ What's preventing PhD students from writing their thesis in Kleis today?
 
 ---
 
-## Critical Blockers
+## ✅ RESOLVED: Edit Existing Content
 
-### 1. Edit Existing Content
+**Status:** Implemented (2026-01-03)
 
-**What:** `doc.update_equation()`, `doc.update_section()`, `doc.remove_section()`
+Students can now update and remove content:
 
-**Why:** PhD thesis writing is iterative. Students revise equations after advisor feedback, 
-rewrite sections multiple times, and reorganize chapters. Without edit/delete, they must:
-- Manually edit the `.kleis` file (breaks abstraction)
-- Delete and re-add content (loses history, error-prone)
+```python
+doc.update_equation("loss", latex=r"\mathcal{L}_{new} = ...")
+doc.update_section("Introduction", content="Revised text...")
+doc.update_figure("fig1", caption="New caption")
+doc.update_table("tab1", rows=[[1,2,3]])
 
-**Challenge this:** "Can't they just edit the .kleis file directly?"
-- Yes, but that defeats the purpose of the Python API
-- The .kleis format is for persistence, not human editing
-- AST structures for equations are complex to edit by hand
+doc.remove_equation("old_eq")
+doc.remove_section("Draft Notes")
+doc.remove_figure("old_fig")
+doc.remove_table("old_tab")
+```
 
 ---
 
