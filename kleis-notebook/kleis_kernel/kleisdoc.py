@@ -1036,6 +1036,97 @@ example "render_plot"
                 section = self.add_section("Content")
         section.content.append(text)
     
+    def get_section(self, title: str) -> Optional[Section]:
+        """Find a section by title.
+        
+        Args:
+            title: Section title to find
+        
+        Returns:
+            Section object, or None if not found
+        """
+        for section in self.sections:
+            if section.title == title:
+                return section
+            # Check subsections recursively
+            found = self._find_section_by_title(section, title)
+            if found:
+                return found
+        return None
+    
+    def _find_section_by_title(self, section: Section, title: str) -> Optional[Section]:
+        """Recursively find section by title."""
+        for item in section.content:
+            if isinstance(item, Section):
+                if item.title == title:
+                    return item
+                found = self._find_section_by_title(item, title)
+                if found:
+                    return found
+        return None
+    
+    def update_section(self, title: str, new_title: str = None, 
+                       content: str = None, label: str = None) -> Optional[Section]:
+        """Update an existing section.
+        
+        Args:
+            title: Title of section to update
+            new_title: New title (optional)
+            content: Replace all content with this text (optional)
+            label: New label (optional)
+        
+        Returns:
+            Updated Section object, or None if not found
+        """
+        section = self.get_section(title)
+        if section:
+            if new_title is not None:
+                section.title = new_title
+            if content is not None:
+                # Replace content but keep non-string items
+                new_content = [content]
+                for item in section.content:
+                    if not isinstance(item, str):
+                        new_content.append(item)
+                section.content = new_content
+            if label is not None:
+                section.label = label
+            return section
+        return None
+    
+    def remove_section(self, title: str) -> bool:
+        """Remove a section from the document.
+        
+        Args:
+            title: Title of section to remove
+        
+        Returns:
+            True if removed, False if not found
+        """
+        # Check top-level sections
+        for i, section in enumerate(self.sections):
+            if section.title == title:
+                self.sections.pop(i)
+                return True
+        
+        # Check nested sections
+        for section in self.sections:
+            if self._remove_nested_section(section, title):
+                return True
+        
+        return False
+    
+    def _remove_nested_section(self, parent: Section, title: str) -> bool:
+        """Recursively remove a nested section."""
+        for i, item in enumerate(parent.content):
+            if isinstance(item, Section):
+                if item.title == title:
+                    parent.content.pop(i)
+                    return True
+                if self._remove_nested_section(item, title):
+                    return True
+        return False
+    
     # =========================================================================
     # Equation Management
     # =========================================================================
@@ -1079,16 +1170,53 @@ example "render_plot"
         return self.equations.get(label)
     
     def update_equation(self, label: str, latex: str = None, 
-                        ast: Dict = None) -> Optional[Equation]:
-        """Update an existing equation."""
+                        ast: Dict = None, numbered: bool = None) -> Optional[Equation]:
+        """Update an existing equation.
+        
+        Args:
+            label: Label of equation to update
+            latex: New LaTeX representation
+            ast: New EditorNode AST
+            numbered: Whether equation is numbered
+        
+        Returns:
+            Updated Equation object, or None if not found
+        """
         if label in self.equations:
             eq = self.equations[label]
             if latex is not None:
                 eq.latex = latex
             if ast is not None:
                 eq.ast = ast
+            if numbered is not None:
+                eq.numbered = numbered
             return eq
         return None
+    
+    def remove_equation(self, label: str) -> bool:
+        """Remove an equation from the document.
+        
+        Args:
+            label: Label of equation to remove
+        
+        Returns:
+            True if removed, False if not found
+        """
+        if label in self.equations:
+            eq = self.equations[label]
+            del self.equations[label]
+            # Also remove from any section content
+            for section in self.sections:
+                self._remove_from_section_content(section, eq)
+            return True
+        return False
+    
+    def _remove_from_section_content(self, section: Section, item) -> None:
+        """Recursively remove an item from section content."""
+        if item in section.content:
+            section.content.remove(item)
+        for child in section.subsections:
+            self._remove_from_section_content(child, item)
     
     # =========================================================================
     # Figure Management
@@ -1135,6 +1263,48 @@ example "render_plot"
     def get_figure(self, label: str) -> Optional[Figure]:
         """Get a figure by label."""
         return self.figures.get(label)
+    
+    def update_figure(self, label: str, caption: str = None,
+                      kleis_code: str = None, image_path: str = None) -> Optional[Figure]:
+        """Update an existing figure.
+        
+        Args:
+            label: Label of figure to update
+            caption: New caption
+            kleis_code: New Kleis plotting code
+            image_path: New image path
+        
+        Returns:
+            Updated Figure object, or None if not found
+        """
+        if label in self.figures:
+            fig = self.figures[label]
+            if caption is not None:
+                fig.caption = caption
+            if kleis_code is not None:
+                fig.kleis_code = kleis_code
+                fig.typst_fragment = None  # Clear cache
+            if image_path is not None:
+                fig.image_path = image_path
+            return fig
+        return None
+    
+    def remove_figure(self, label: str) -> bool:
+        """Remove a figure from the document.
+        
+        Args:
+            label: Label of figure to remove
+        
+        Returns:
+            True if removed, False if not found
+        """
+        if label in self.figures:
+            fig = self.figures[label]
+            del self.figures[label]
+            for section in self.sections:
+                self._remove_from_section_content(section, fig)
+            return True
+        return False
     
     def regenerate_figure(self, label: str) -> bool:
         """Regenerate a figure from its Kleis code.
@@ -1226,6 +1396,48 @@ example "render_plot"
         }
         self.tables[label] = table
         return table
+    
+    def get_table(self, label: str) -> Optional[Dict]:
+        """Get a table by label."""
+        return self.tables.get(label)
+    
+    def update_table(self, label: str, headers: List[str] = None,
+                     rows: List[List[Any]] = None, caption: str = None) -> Optional[Dict]:
+        """Update an existing table.
+        
+        Args:
+            label: Label of table to update
+            headers: New column headers
+            rows: New table data
+            caption: New caption
+        
+        Returns:
+            Updated table dict, or None if not found
+        """
+        if label in self.tables:
+            table = self.tables[label]
+            if headers is not None:
+                table["headers"] = headers
+            if rows is not None:
+                table["rows"] = rows
+            if caption is not None:
+                table["caption"] = caption
+            return table
+        return None
+    
+    def remove_table(self, label: str) -> bool:
+        """Remove a table from the document.
+        
+        Args:
+            label: Label of table to remove
+        
+        Returns:
+            True if removed, False if not found
+        """
+        if label in self.tables:
+            del self.tables[label]
+            return True
+        return False
     
     def add_theorem(self, label: str, kind: str, statement: str,
                     proof: str = None, name: str = None) -> Dict:

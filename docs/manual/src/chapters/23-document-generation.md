@@ -510,6 +510,55 @@ doc.add_section("New Chapter", level=1)
 doc.save("my_thesis.kleis")
 ```
 
+### Revising Content
+
+Thesis writing is iterative. Use these methods to revise existing content:
+
+**Update equations:**
+```python
+# Change the LaTeX
+doc.update_equation("loss", latex=r"\mathcal{L}_{revised} = \frac{1}{n}\sum(y - \hat{y})^2")
+
+# Or update the AST for Equation Editor compatibility
+doc.update_equation("einstein", ast=new_ast_dict)
+```
+
+**Update sections:**
+```python
+# Change section content
+doc.update_section("Introduction", content="This thesis explores quantum computing...")
+
+# Rename a section
+doc.update_section("Intro", new_title="Chapter 1: Introduction")
+
+# Add a label for cross-referencing
+doc.update_section("Methods", label="sec:methods")
+```
+
+**Update figures and tables:**
+```python
+doc.update_figure("fig1", caption="Updated architecture diagram")
+doc.update_table("tab1", rows=[[1, 2, 3], [4, 5, 6]])
+```
+
+**Remove content:**
+```python
+# Clean up before submission
+doc.remove_section("Draft Notes")
+doc.remove_equation("old_eq")
+doc.remove_figure("placeholder_fig")
+doc.remove_table("temp_data")
+```
+
+**Find content:**
+```python
+# Get specific items
+eq = doc.get_equation("loss")
+section = doc.get_section("Methods")
+fig = doc.get_figure("architecture")
+table = doc.get_table("results")
+```
+
 ### Multi-Session Workflow
 
 ```
