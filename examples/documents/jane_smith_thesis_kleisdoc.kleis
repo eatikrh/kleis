@@ -14,9 +14,9 @@
 //
 // ============================================================================
 
-import "stdlib/prelude.kleis"
-import "examples/documents/kleisdoc_types.kleis"
-import "examples/documents/kleisdoc_builders.kleis"
+import "../../stdlib/prelude.kleis"
+import "kleisdoc_types.kleis"
+import "kleisdoc_builders.kleis"
 
 // ============================================================================
 // CHAPTER 1: INTRODUCTION
@@ -172,7 +172,7 @@ define chapter_system : DocSection =
 define eq_gaussian_ast : EditorNode =
     binop("equals",
         integral(num("0"), sym("∞"), 
-            EOp("exp", [binop("negate", sup(sym("x"), num("2")))], "", NoMeta),
+            EOp("exp", [EOp("negate", [sup(sym("x"), num("2"))], "", NoMeta)], "", NoMeta),
             sym("x")),
         frac(sqrt(pi_sym), num("2")))
 
@@ -422,6 +422,152 @@ define compile_eq_chunk(eq: Equation) : String =
               | _ => typst
             }
     }
+
+// ============================================================================
+// COMPILE CHUNKS TO TYPST
+// ============================================================================
+
+define compile_chunk(chunk: Chunk) : String =
+    match chunk {
+        CText(TextChunk(_, _, content, _)) => concat(content, "\n\n")
+      | CEq(eq) => compile_eq_chunk(eq)
+      | CFig(Figure(_, label, caption, _, source, _, _, _, _)) =>
+            match source {
+                Regenerable(code, _) =>
+                    concat5("#figure(\n  // Generated from: ", code, "\n  rect(width: 80%, height: 4cm, fill: luma(240))[Plot placeholder],\n  caption: [", caption, concat("]\n) <", concat(label, ">\n\n")))
+              | _ => concat3("#figure([], caption: [", caption, "])\n\n")
+            }
+      | CThm(Thm(_, ttype, _, name, stmt, proof)) =>
+            let thm_name = match ttype {
+                ThmTheorem => "Theorem"
+              | ThmLemma => "Lemma"
+              | ThmProposition => "Proposition"
+              | _ => "Theorem"
+            } in
+            let named = if str_eq(name, "") then "" else concat3(" (", name, ")") in
+            let proof_text = if str_eq(proof, "") then "" else concat3("\n\n_Proof._ ", proof, " □") in
+            concat5("#block(fill: luma(245), inset: 8pt, radius: 4pt)[\n  *", thm_name, named, concat3(":* ", stmt, proof_text), "\n]\n\n")
+      | CDef(Definition(_, term, defn)) =>
+            concat5("#block(inset: (left: 1em))[\n  *Definition* (", term, "): ", defn, "\n]\n\n")
+      | _ => ""
+    }
+
+define compile_chunks(chunks: List(Chunk)) : String =
+    match chunks {
+        Nil => ""
+      | Cons(h, t) => concat(compile_chunk(h), compile_chunks(t))
+    }
+
+// ============================================================================
+// COMPILE SECTIONS TO TYPST
+// ============================================================================
+
+define compile_doc_section(sec: DocSection) : String =
+    match sec {
+        DocSection(_, level, num, title, chunks, subs) =>
+            let heading = match level {
+                Chapter => concat4("= Chapter ", num, ": ", title)
+              | Section => concat3("== ", num, concat(" ", title))
+              | Subsection => concat3("=== ", num, concat(" ", title))
+              | _ => concat("==== ", title)
+            } in
+            concat4(heading, "\n\n", compile_chunks(chunks), compile_sections(subs))
+    }
+
+define compile_sections(sections: List(DocSection)) : String =
+    match sections {
+        Nil => ""
+      | Cons(h, t) => concat(compile_doc_section(h), compile_sections(t))
+    }
+
+// ============================================================================
+// COMPILE FRONT MATTER
+// ============================================================================
+
+define compile_front_matter(fm: FrontMatter) : String =
+    match fm {
+        TitlePage(title, authors, date, degree, dept) =>
+            let author_name = match authors {
+                Cons(Author(_, name, _, _, _, _), _) => name
+              | _ => "Author"
+            } in
+            concat5(
+                "#align(center)[\n  #v(3cm)\n  #text(size: 24pt, weight: \"bold\")[",
+                title,
+                "]\n  #v(1cm)\n  #text(size: 14pt)[",
+                author_name,
+                concat5("]\n  #v(0.5cm)\n  Submitted to the ", dept, "\n  in partial fulfillment of the requirements for the degree of\n  #v(0.3cm)\n  #text(style: \"italic\")[", degree, concat("]\n  #v(0.5cm)\n  ", concat(date, "\n]\n#pagebreak()\n\n")))
+            )
+      | Abstract(text, supervisor) =>
+            concat5(
+                "#align(center)[#text(size: 16pt, weight: \"bold\")[Abstract]]\n\n",
+                text,
+                "\n\n#text(weight: \"bold\")[Thesis Supervisor:] ",
+                supervisor,
+                "\n\n#pagebreak()\n\n"
+            )
+      | Acknowledgments(text) =>
+            concat3("#heading(level: 1, numbering: none)[Acknowledgments]\n\n", text, "\n\n#pagebreak()\n\n")
+      | _ => ""
+    }
+
+define compile_front_matters(fms: List(FrontMatter)) : String =
+    match fms {
+        Nil => ""
+      | Cons(h, t) => concat(compile_front_matter(h), compile_front_matters(t))
+    }
+
+// ============================================================================
+// COMPILE BACK MATTER
+// ============================================================================
+
+define compile_bib_entry(entry: BibEntry) : String =
+    match entry {
+        BibEntry(key, _, title, authors, venue, year, _, _, _) =>
+            concat5("[", key, "] ", authors, concat5(". _", title, "_. ", venue, concat(", ", concat(year, ".\n\n"))))
+    }
+
+define compile_bib_entries(entries: List(BibEntry)) : String =
+    match entries {
+        Nil => ""
+      | Cons(h, t) => concat(compile_bib_entry(h), compile_bib_entries(t))
+    }
+
+define compile_back_matter(bm: BackMatter) : String =
+    match bm {
+        Bibliography(entries) =>
+            concat("= References\n\n", compile_bib_entries(entries))
+      | _ => ""
+    }
+
+define compile_back_matters(bms: List(BackMatter)) : String =
+    match bms {
+        Nil => ""
+      | Cons(h, t) => concat(compile_back_matter(h), compile_back_matters(t))
+    }
+
+// ============================================================================
+// COMPILE FULL KLEISDOC TO TYPST
+// ============================================================================
+
+define compile_kleisdoc_to_typst(doc: KleisDoc) : String =
+    match doc {
+        KleisDoc(meta, front, main, back, _, _, _, _, _) =>
+            concat4(
+                thesis_preamble,
+                compile_front_matters(front),
+                concat(compile_sections(main), compile_back_matters(back))
+            )
+    }
+
+// ============================================================================
+// GENERATE PDF EXAMPLE
+// ============================================================================
+
+example "generate_typst" {
+    let typst_code = compile_kleisdoc_to_typst(jane_smith_thesis)
+    out(typst_code)
+}
 
 // ============================================================================
 // EXAMPLE OUTPUT

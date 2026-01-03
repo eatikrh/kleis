@@ -18,8 +18,8 @@
 //
 // ============================================================================
 
-import "stdlib/prelude.kleis"
-import "examples/documents/kleisdoc_types.kleis"
+import "../../stdlib/prelude.kleis"
+import "kleisdoc_types.kleis"
 
 // ============================================================================
 // ID GENERATION (simple counter-based for now)
