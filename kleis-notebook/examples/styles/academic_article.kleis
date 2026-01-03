@@ -1,0 +1,98 @@
+// ============================================================================
+// Academic Article Style
+// ============================================================================
+//
+// A clean, professional style for academic papers and articles.
+// Import this file in your document to apply this styling.
+//
+// Usage: import "styles/academic_article.kleis"
+//
+// ============================================================================
+
+define template_name = "Academic Article"
+define template_version = "1.0"
+
+// ----------------------------------------------------------------------------
+// Page and Text Setup
+// ----------------------------------------------------------------------------
+
+define typst_preamble = """
+#set page(
+  paper: "us-letter",
+  margin: (x: 1.25in, y: 1in),
+  numbering: "1",
+  number-align: center,
+)
+
+#set text(
+  font: "New Computer Modern",
+  size: 11pt,
+)
+
+#set par(
+  justify: true,
+  leading: 0.65em,
+)
+
+#set heading(numbering: "1.1")
+
+#show heading.where(level: 1): it => {
+  pagebreak(weak: true)
+  v(1em)
+  text(size: 16pt, weight: "bold", it)
+  v(0.5em)
+}
+
+#show heading.where(level: 2): it => {
+  v(0.8em)
+  text(size: 13pt, weight: "bold", it)
+  v(0.4em)
+}
+
+#show figure: it => {
+  v(1em)
+  it
+  v(1em)
+}
+"""
+
+// ----------------------------------------------------------------------------
+// Title Page
+// ----------------------------------------------------------------------------
+
+define typst_title_page = """
+#align(center)[
+  #v(2em)
+  #text(size: 24pt, weight: "bold")[TITLE]
+  #v(1em)
+  #text(size: 14pt)[by]
+  #v(0.5em)
+  #text(size: 16pt)[AUTHOR]
+  #v(0.5em)
+  #text(size: 12pt, style: "italic")[DEPARTMENT]
+  #v(0.5em)
+  #text(size: 12pt)[INSTITUTION]
+  #v(1em)
+  #text(size: 12pt)[DATE]
+  #v(2em)
+]
+"""
+
+// ----------------------------------------------------------------------------
+// Abstract Box
+// ----------------------------------------------------------------------------
+
+define typst_abstract_box = """
+#block(
+  width: 100%,
+  inset: 1em,
+  stroke: (left: 3pt + rgb("#2563eb")),
+  fill: rgb("#f8fafc"),
+)[
+  #text(weight: "bold", size: 11pt)[Abstract]
+  #v(0.5em)
+  ABSTRACT
+]
+#v(1em)
+"""
+

@@ -225,13 +225,24 @@ class KleisDoc:
         
         # Read the file to extract data using pattern matching
         # (We parse the Kleis code structure directly since we generated it)
+        file_path = Path(path)
         with open(path, "r") as f:
             content = f.read()
         
         # Parse metadata (format-agnostic)
         doc.metadata = doc._extract_metadata(content)
         
-        # Restore template_path if it was saved
+        # Check for style imports: import "styles/xxx.kleis" and load the template
+        for import_match in re.finditer(r'import\s+"([^"]+\.kleis)"', content):
+            import_path = import_match.group(1)
+            # Resolve relative to the document's directory
+            style_file = file_path.parent / import_path
+            if style_file.exists():
+                doc.template_path = str(style_file)
+                doc._load_template(str(style_file))
+                break  # Use first style import found
+        
+        # Restore template_path if it was saved (overrides import)
         if "_template_path" in doc.metadata:
             doc.template_path = doc.metadata.pop("_template_path")
         
@@ -495,13 +506,15 @@ class KleisDoc:
             kleis_code = None
             image_path = None
             if "Regenerable(" in fig_body:
-                code_match = re.search(r'Regenerable\("([^"]*)"', fig_body)
+                # Match string with escaped quotes: "...(can contain \")..."
+                code_match = re.search(r'Regenerable\("((?:[^"\\]|\\.)*)"\s*,', fig_body)
                 if code_match:
-                    kleis_code = code_match.group(1)
+                    # Unescape the string
+                    kleis_code = code_match.group(1).replace('\\"', '"').replace('\\\\', '\\')
             elif "Imported(" in fig_body:
-                path_match = re.search(r'Imported\("([^"]*)"', fig_body)
+                path_match = re.search(r'Imported\("((?:[^"\\]|\\.)*)"\s*,', fig_body)
                 if path_match:
-                    image_path = path_match.group(1)
+                    image_path = path_match.group(1).replace('\\"', '"').replace('\\\\', '\\')
             
             if label_match:
                 label = label_match.group(1)
@@ -1878,10 +1891,45 @@ example "render_plot" {{
                 lines.append(typst_defs["typst_heading_setup"])
             lines.append('')
         else:
-            # Minimal defaults when no template
-            lines.append('// No template - using minimal defaults')
-            lines.append('#set page(margin: 1in)')
-            lines.append('#set text(size: 11pt)')
+            # Professional defaults when no template
+            lines.append('// Professional defaults (no template loaded)')
+            lines.append('#set page(')
+            lines.append('  paper: "us-letter",')
+            lines.append('  margin: (x: 1.25in, y: 1in),')
+            lines.append('  numbering: "1",')
+            lines.append('  number-align: center,')
+            lines.append(')')
+            lines.append('')
+            lines.append('#set text(')
+            lines.append('  font: "New Computer Modern",')
+            lines.append('  size: 11pt,')
+            lines.append(')')
+            lines.append('')
+            lines.append('#set par(')
+            lines.append('  justify: true,')
+            lines.append('  leading: 0.65em,')
+            lines.append(')')
+            lines.append('')
+            lines.append('#set heading(numbering: "1.1")')
+            lines.append('')
+            lines.append('#show heading.where(level: 1): it => {')
+            lines.append('  pagebreak(weak: true)')
+            lines.append('  v(1em)')
+            lines.append('  text(size: 16pt, weight: "bold", it)')
+            lines.append('  v(0.5em)')
+            lines.append('}')
+            lines.append('')
+            lines.append('#show heading.where(level: 2): it => {')
+            lines.append('  v(0.8em)')
+            lines.append('  text(size: 13pt, weight: "bold", it)')
+            lines.append('  v(0.4em)')
+            lines.append('}')
+            lines.append('')
+            lines.append('#show figure: it => {')
+            lines.append('  v(1em)')
+            lines.append('  it')
+            lines.append('  v(1em)')
+            lines.append('}')
             lines.append('')
         
         # Document metadata (standard Typst)
