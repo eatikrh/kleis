@@ -377,3 +377,48 @@ structure TensorCalculus extends Calculus {
 3. **Palette/UI info** - How to specify glyphs, shortcuts, categories?
 4. **Tool builders** - How to define interactive tools (matrix builder)?
 
+---
+
+## Future Research: Kleis → WASM
+
+**Status:** Exploratory idea, not planned
+
+### Motivation
+
+1. **Browser-native Kleis** - Run evaluator in browser without server
+2. **Performance** - WASM can be faster than interpreted evaluation
+3. **Embedded Kleis** - Run in any WASM host (Node, Deno, edge functions)
+4. **JupyterLite** - Kleis kernel entirely client-side
+
+### Approaches
+
+| Approach | Effort | Result |
+|----------|--------|--------|
+| Compile Rust evaluator to WASM | Medium | Existing evaluator, WASM target |
+| Kleis → WASM compiler | High | New compiler backend, native speed |
+| Hybrid (hot paths in WASM) | Medium | Selective compilation |
+
+### Prior Art
+
+- **AssemblyScript**: TypeScript subset → WASM
+- **Grain**: Functional language → WASM
+- **MoonBit**: WASM-first language design
+- **wasmtime**: Rust WASM runtime
+
+### When to Explore
+
+- After core language is stable
+- If performance becomes a bottleneck
+- If browser-native Kleis is needed (tool builders, offline mode)
+
+### Note on Tool Builders
+
+Currently: JS handles UI, Kleis handles math, boundary at EditorNode JSON.
+
+With WASM Kleis:
+- Tools COULD be written in Kleis
+- Kleis UI toolkit could exist
+- But this is a major undertaking
+
+**Pragmatic boundary for now:** JS for UI, Kleis for math.
+
