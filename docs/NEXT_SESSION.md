@@ -1,12 +1,60 @@
 # Next Session Notes
 
-**Last Updated:** January 2, 2026 (evening)
+**Last Updated:** January 2, 2026 (late evening)
 
 ---
 
-## 🚀 CURRENT WORK: Jupyter + Equation Editor POC (Jan 2, 2026)
+## 🚀 CURRENT WORK: KleisDoc Document System (Jan 2, 2026)
 
 ### Branch: `feature/jupyter-equation-editor-poc`
+
+### START HERE: KleisDoc Design Documents
+
+**READ THESE FIRST** when implementing the document system:
+
+| Document | Purpose |
+|----------|---------|
+| [`KLEISDOC_WORKFLOW.md`](./jupyter-equation-editor-poc/KLEISDOC_WORKFLOW.md) | **User journey: CREATE → AUTHOR → VERIFY → PREVIEW → ITERATE → PUBLISH** |
+| [`KLEISDOC_DESIGN.md`](./jupyter-equation-editor-poc/KLEISDOC_DESIGN.md) | Requirements analysis (12 categories) |
+| [`TEMPLATE_ARCHITECTURE.md`](./jupyter-equation-editor-poc/TEMPLATE_ARCHITECTURE.md) | Template system unification plan |
+| [`ROADMAP.md`](./jupyter-equation-editor-poc/ROADMAP.md) | Implementation phases |
+| [`README.md`](./jupyter-equation-editor-poc/README.md) | Full POC documentation |
+
+### Working Examples
+
+| File | Purpose |
+|------|---------|
+| [`jane_smith_thesis_kleisdoc.kleis`](../examples/documents/jane_smith_thesis_kleisdoc.kleis) | **Complete PhD thesis in KleisDoc format with EditorNode equations** |
+| [`kleisdoc_types.kleis`](../examples/documents/kleisdoc_types.kleis) | 44 data types for KleisDoc format |
+| [`kleisdoc_builders.kleis`](../examples/documents/kleisdoc_builders.kleis) | 53 builder functions (reduce verbosity) |
+| [`thesis_compiler.kleis`](../examples/documents/thesis_compiler.kleis) | Document → Typst compiler (Document = Program pattern) |
+| [`lisp_parser.kleis`](../examples/meta-programming/lisp_parser.kleis) | LISP interpreter (proof of Document = Program concept) |
+
+### Key Architecture Decisions
+
+1. **Documents are Examples** - A document in Kleis is an `example` block that validates and compiles
+2. **Document = Program** - Same pattern as LISP: parse AST → evaluate/compile → output
+3. **EditorNode AST** - Equations stored as AST for re-editing, not just Typst code
+4. **Pure Kleis Format** - `.kleisdoc` is just `.kleis` code with builder functions
+5. **Template Unification** - `.kleist` files → `.kleis` structures (delete old system)
+6. **Tools Stay in JS** - Matrix Builder etc. remain JavaScript, produce EditorNode JSON
+
+### Implementation Priorities
+
+1. **Phase 1: Core Workflow** - `KleisDoc` Python class, save/load, PDF export
+2. **Phase 2: Jupyter Integration** - Magic commands, Equation Editor iframe
+3. **Phase 3: Verification** - Template axioms, cross-refs, Z3 math verification
+4. **Phase 4: Polish** - Live preview, watch mode
+5. **Phase 5: Export Formats** - LaTeX (arXiv), HTML, EPUB
+
+### Blocking Issues
+
+- `render_editor_node` needs to be exposed as Kleis builtin (currently Rust-only)
+- `intToStr` not implemented in evaluator (using local `num_to_str` workaround)
+
+---
+
+## Previous: Jupyter + Equation Editor POC (Jan 2, 2026)
 
 See full documentation: [`docs/jupyter-equation-editor-poc/README.md`](./jupyter-equation-editor-poc/README.md)
 
