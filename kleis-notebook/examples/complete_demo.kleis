@@ -11,7 +11,7 @@ import "styles/academic_article.kleis"
 // ----------------------------------------------------------------------------
 
 define meta_title = "A Complete Guide to Scientific Computing"
-define meta_author = Author(name = "Dr. Jane Smith", email = "jane.smith@mit.edu", affiliation = "MIT")
+define meta_author = "Dr. Jane Smith"
 define meta_department = "Department of Applied Mathematics"
 define meta_institution = "MIT"
 define meta_date = "January 2026"
@@ -69,7 +69,7 @@ define fig_performance = Figure(
     id = "fig-1",
     label = "fig:performance",
     caption = "Algorithm performance comparison across different input sizes",
-    source = Regenerable("plot([10, 50, 100, 500, 1000], [0.01, 0.05, 0.12, 0.58, 1.21], color = \"blue\", label = \"Algorithm A\"), plot([10, 50, 100, 500, 1000], [0.02, 0.08, 0.18, 0.85, 1.95], color = \"red\", label = \"Algorithm B\"), title = \"Runtime Comparison\", xlabel = \"Input Size (n)\", ylabel = \"Time (seconds)\", legend = \"top-left\"", List()),
+    source = Regenerable("plot([10, 50, 100, 500, 1000], [0.01, 0.05, 0.12, 0.58, 1.21], color = \"blue\"), plot([10, 50, 100, 500, 1000], [0.02, 0.08, 0.18, 0.85, 1.95], color = \"red\"), title = \"Runtime Comparison\", xlabel = \"Input Size (n)\", ylabel = \"Time (seconds)\"", List()),
     typst_fragment = "",
     svg_cache = ""
 )
@@ -78,7 +78,7 @@ define fig_distribution = Figure(
     id = "fig-2",
     label = "fig:distribution",
     caption = "Normal distribution with different parameters",
-    source = Regenerable("plot([1, 2, 3, 4, 5, 6, 7, 8, 9], [0.01, 0.05, 0.24, 0.60, 1.0, 0.60, 0.24, 0.05, 0.01], color = \"purple\", label = \"sigma=1\"), plot([1, 2, 3, 4, 5, 6, 7, 8, 9], [0.03, 0.12, 0.32, 0.80, 1.0, 0.80, 0.32, 0.12, 0.03], color = \"green\", label = \"sigma=0.5\"), title = \"Gaussian Distributions\", xlabel = \"x\", ylabel = \"f(x)\", legend = \"top-right\"", List()),
+    source = Regenerable("plot([1, 2, 3, 4, 5, 6, 7, 8, 9], [0.01, 0.05, 0.24, 0.60, 1.0, 0.60, 0.24, 0.05, 0.01], color = \"purple\"), plot([1, 2, 3, 4, 5, 6, 7, 8, 9], [0.03, 0.12, 0.32, 0.80, 1.0, 0.80, 0.32, 0.12, 0.03], color = \"green\"), title = \"Gaussian Distributions\", xlabel = \"x\", ylabel = \"f(x)\"", List()),
     typst_fragment = "",
     svg_cache = ""
 )

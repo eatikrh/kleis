@@ -2010,26 +2010,24 @@ example "render_plot" {{
     def _equation_to_typst(self, eq: Equation) -> str:
         """Convert an equation to Typst code.
         
-        If the equation has an EditorNode AST, renders it via the server.
-        Otherwise falls back to the LaTeX representation.
+        Priority order:
+        1. Use eq.typst if available (already in Typst format)
+        2. Render from AST via server
+        3. Convert from LaTeX as fallback
         """
         typst_content = None
         
-        # Try to render from AST if available
-        if eq.ast:
-            # Check if we already have cached Typst
-            if eq.typst:
-                typst_content = eq.typst
-            else:
-                # Try to render via server
-                rendered = self.render_ast(eq.ast, format="typst")
-                if rendered:
-                    eq.typst = rendered  # Cache for future use
-                    typst_content = rendered
-        
-        # Fall back to LaTeX if no Typst available
-        if typst_content is None and eq.latex:
-            # Convert LaTeX to Typst math syntax
+        # First check if we already have Typst content
+        if eq.typst:
+            typst_content = eq.typst
+        # Then try to render from AST if available
+        elif eq.ast:
+            rendered = self.render_ast(eq.ast, format="typst")
+            if rendered:
+                eq.typst = rendered  # Cache for future use
+                typst_content = rendered
+        # Fall back to LaTeX conversion
+        elif eq.latex:
             typst_content = self._latex_to_typst(eq.latex)
         
         if typst_content:
