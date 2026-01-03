@@ -170,6 +170,21 @@ Our study examines...
 We conclude that...
 ```
 
+### Typst Export Builtins: Status Summary
+
+| Builtin | Purpose | Status | Notes |
+|---------|---------|--------|-------|
+| `export_typst(...)` | Export **plots** as complete Typst | ✅ Implemented | With preamble, ready to compile |
+| `export_typst_fragment(...)` | Export **plots** for embedding | ✅ Implemented | Just `lq.diagram(...)` call |
+| `render_to_typst(node)` | Export **equations** (EditorNode AST) | ❌ **TODO** | Exists in Rust only |
+
+**Blocking issue for KleisDoc:** The `render_to_typst()` builtin is needed to compile 
+EditorNode equation ASTs from Kleis code. Currently this logic exists only in Rust 
+(`src/render_editor.rs::render_editor_node`).
+
+**Action needed:** Expose `render_editor_node` as a Kleis builtin so that 
+`jane_smith_thesis_kleisdoc.kleis` can fully compile equations without shell workarounds.
+
 ---
 
 ## 3. LaTeX/arXiv Considerations
