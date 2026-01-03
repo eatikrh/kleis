@@ -1464,8 +1464,57 @@ fn render_operation(
         return render_tensor(op, &rendered_args, target);
     }
 
+    // Handle variadic binary operations by folding them
+    // e.g., times(a, b, c) becomes times(times(a, b), c)
+    if let Some(folded) = fold_variadic_binary_op(&op.name, &rendered_args, ctx, target) {
+        return folded;
+    }
+
     // For all other operations: use template-based rendering
     render_with_template(&op.name, &rendered_args, ctx, target)
+}
+
+/// Fold variadic binary operations left-to-right
+///
+/// For associative operations like times, plus, multiply:
+/// - times(a, b, c) → times(times(a, b), c) → "a b c" (with implied multiplication)
+///
+/// Returns Some(rendered_string) if folding was applied, None otherwise.
+///
+/// NOTE: This is defensive code. The Equation Editor creates properly nested
+/// binary operations. If this function triggers, it means AST was created
+/// programmatically with incorrect structure. A warning is logged to help
+/// trace the source of malformed ASTs.
+fn fold_variadic_binary_op(
+    name: &str,
+    rendered_args: &[String],
+    ctx: &EditorRenderContext,
+    target: &RenderTarget,
+) -> Option<String> {
+    // List of binary operations that can be variadic
+    let variadic_binary_ops = ["times", "scalar_multiply", "multiply", "plus", "minus"];
+
+    // Only fold if it's a variadic binary op with more than 2 args
+    if !variadic_binary_ops.contains(&name) || rendered_args.len() <= 2 {
+        return None;
+    }
+
+    // Warn: This shouldn't happen with properly constructed ASTs
+    eprintln!(
+        "⚠️  Warning: Variadic '{}' operation with {} args (expected 2). \
+         AST should use nested binary operations. Auto-folding to fix.",
+        name,
+        rendered_args.len()
+    );
+
+    // Fold left-to-right: times(a, b, c) → render(times(a, b)), then times(result, c)
+    let mut result = rendered_args[0].clone();
+    for arg in &rendered_args[1..] {
+        // Render the nested binary operation
+        result = render_with_template(name, &[result, arg.clone()], ctx, target);
+    }
+
+    Some(result)
 }
 
 // =============================================================================
@@ -2232,12 +2281,29 @@ mod tests {
 
         #[test]
         fn compare_fraction() {
+            // Note: The old renderer (render.rs) uses "scalar_divide" for fractions,
+            // not "frac". The new renderer (render_editor.rs) has both.
+            // This test now verifies the NEW renderer produces correct LaTeX.
             let node = EditorNode::operation(
                 "frac",
                 vec![EditorNode::object("a"), EditorNode::object("b")],
             );
-            let (new, old) = compare_renderers(&node, &RenderTarget::LaTeX);
-            assert_eq!(new, old, "Fraction should match");
+
+            // New renderer should produce correct LaTeX
+            let new_result = render_editor_node(&node, &RenderTarget::LaTeX);
+            assert!(
+                new_result.contains("\\frac"),
+                "Expected LaTeX frac, got: {}",
+                new_result
+            );
+
+            // Also verify scalar_divide works (what the old renderer uses)
+            let scalar_div_node = EditorNode::operation(
+                "scalar_divide",
+                vec![EditorNode::object("a"), EditorNode::object("b")],
+            );
+            let (new, old) = compare_renderers(&scalar_div_node, &RenderTarget::LaTeX);
+            assert_eq!(new, old, "scalar_divide should match between renderers");
         }
 
         #[test]
@@ -2601,6 +2667,34 @@ mod tests {
         assert!(
             result.contains("a") && result.contains("b") && result.contains("+"),
             "Expected 'a + b', got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_frac_template_loaded() {
+        // Load from .kleist files
+        let kleist_ctx = EditorRenderContext::from_std_template_lib();
+
+        // Check that frac template exists
+        let frac_template = kleist_ctx.latex_templates.get("frac");
+        eprintln!("frac template: {:?}", frac_template);
+        assert!(
+            frac_template.is_some(),
+            "Expected 'frac' template to be loaded. Available: {:?}",
+            kleist_ctx.latex_templates.keys().collect::<Vec<_>>()
+        );
+
+        // Test rendering frac
+        let node = EditorNode::operation(
+            "frac",
+            vec![EditorNode::object("a"), EditorNode::object("b")],
+        );
+        let result = render(&node, &kleist_ctx, &RenderTarget::LaTeX);
+        eprintln!("frac result: {}", result);
+        assert!(
+            result.contains("\\frac"),
+            "Expected LaTeX frac, got: {}",
             result
         );
     }

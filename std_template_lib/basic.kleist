@@ -37,12 +37,32 @@
     category: "arithmetic"
 }
 
+@template plus_minus {
+    pattern: "plus_minus(left, right)"
+    unicode: "{left} ± {right}"
+    latex: "{left} \\pm {right}"
+    html: "{left} ± {right}"
+    typst: "{left} plus.minus {right}"
+    kleis: "plus_minus({left}, {right})"
+    category: "arithmetic"
+}
+
+@template negate {
+    pattern: "negate(arg)"
+    unicode: "-{arg}"
+    latex: "-{arg}"
+    html: "-{arg}"
+    typst: "-{arg}"
+    kleis: "negate({arg})"
+    category: "arithmetic"
+}
+
 @template scalar_multiply {
     pattern: "scalar_multiply(left, right)"
-    unicode: "{left} × {right}"
-    latex: "{left} \\times {right}"
-    html: "{left} × {right}"
-    typst: "{left} times {right}"
+    unicode: "{left}{right}"
+    latex: "{left} {right}"
+    html: "{left}{right}"
+    typst: "{left} {right}"
     kleis: "times({left}, {right})"
     category: "arithmetic"
 }
@@ -70,7 +90,7 @@
 @template scalar_divide {
     pattern: "scalar_divide(num, den)"
     unicode: "{num}/{den}"
-    latex: "\\frac{{{num}}}{{{den}}}"
+    latex: "\\frac{{num}}{{den}}"
     html: "{num}/{den}"
     typst: "frac({num}, {den})"
     kleis: "divide({num}, {den})"
@@ -84,6 +104,50 @@
     html: "{base}<sup>{exponent}</sup>"
     typst: "{base}^({exponent})"
     kleis: "power({base}, {exponent})"
+    category: "arithmetic"
+}
+
+// Aliases for common operation names (from EditorNode builders)
+
+@template times {
+    pattern: "times(left, right)"
+    unicode: "{left}{right}"
+    latex: "{left} {right}"
+    html: "{left}{right}"
+    typst: "{left} {right}"
+    kleis: "times({left}, {right})"
+    category: "arithmetic"
+}
+
+@template superscript {
+    pattern: "superscript(base, exponent)"
+    unicode: "{base}^{exponent}"
+    latex: "{base}^{{{exponent}}}"
+    html: "{base}<sup>{exponent}</sup>"
+    typst: "{base}^({exponent})"
+    kleis: "superscript({base}, {exponent})"
+    category: "arithmetic"
+    glyph: "^"
+}
+
+@template subscript {
+    pattern: "subscript(base, sub)"
+    unicode: "{base}_{sub}"
+    latex: "{base}_{{{sub}}}"
+    html: "{base}<sub>{sub}</sub>"
+    typst: "{base}_({sub})"
+    kleis: "subscript({base}, {sub})"
+    category: "arithmetic"
+    glyph: "_"
+}
+
+@template frac {
+    pattern: "frac(num, den)"
+    unicode: "{num}/{den}"
+    latex: "\\frac{{num}}{{den}}"
+    html: "<span class=\"frac\"><span class=\"num\">{num}</span>/<span class=\"den\">{den}</span></span>"
+    typst: "frac({num}, {den})"
+    kleis: "frac({num}, {den})"
     category: "arithmetic"
 }
 

@@ -2458,6 +2458,9 @@ impl Evaluator {
             "export_typst" => self.builtin_export_typst(args),
             "export_typst_fragment" => self.builtin_export_typst_fragment(args),
 
+            // Render EditorNode AST to Typst (for equations in documents)
+            "render_to_typst" => self.builtin_render_to_typst(args),
+
             "lighten" => {
                 // lighten(color, amount) → "color.lighten(amount)"
                 // For Typst color manipulation
@@ -5617,6 +5620,199 @@ impl Evaluator {
         let typst_code = export_diagram_typst_fragment(&elements, &options);
 
         Ok(Some(Expression::String(typst_code)))
+    }
+
+    /// Render an EditorNode AST to Typst code
+    ///
+    /// Usage: render_to_typst(ast)
+    /// Usage: render_to_typst(ast, "typst")  // or "latex", "unicode"
+    /// Returns: String containing Typst (or other format) code
+    ///
+    /// The ast should be a Kleis EditorNode expression, e.g.:
+    ///   binop("equals", sym("E"), binop("times", sym("m"), sup(sym("c"), num("2"))))
+    fn builtin_render_to_typst(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::render::RenderTarget;
+        use crate::render_editor::render_editor_node;
+
+        if args.is_empty() {
+            return Err("render_to_typst() requires an EditorNode argument".to_string());
+        }
+
+        // First argument is the EditorNode AST
+        let ast_expr = self.eval_concrete(&args[0])?;
+
+        // Optional second argument: render target (default: Typst)
+        let target = if args.len() > 1 {
+            let target_str = self.extract_string(&args[1])?;
+            match target_str.to_lowercase().as_str() {
+                "typst" => RenderTarget::Typst,
+                "latex" => RenderTarget::LaTeX,
+                "unicode" => RenderTarget::Unicode,
+                "html" => RenderTarget::HTML,
+                "kleis" => RenderTarget::Kleis,
+                _ => {
+                    return Err(format!(
+                        "Unknown render target: '{}'. Use 'typst', 'latex', 'unicode', 'html', or 'kleis'",
+                        target_str
+                    ))
+                }
+            }
+        } else {
+            RenderTarget::Typst
+        };
+
+        // Convert Kleis Expression to Rust EditorNode
+        let editor_node = self.expression_to_editor_node(&ast_expr)?;
+
+        // Render to the target format
+        let output = render_editor_node(&editor_node, &target);
+
+        Ok(Some(Expression::String(output)))
+    }
+
+    /// Convert a Kleis EditorNode expression to a Rust EditorNode struct
+    ///
+    /// Mapping:
+    ///   EObject(symbol)           -> EditorNode::Object { object: symbol }
+    ///   EConst(value)             -> EditorNode::Const { value }
+    ///   EOp(name, args, kind, _)  -> EditorNode::Operation { ... }
+    ///   EList(nodes)              -> EditorNode::List { list }
+    ///   EPlaceholder(data)        -> EditorNode::Placeholder { ... }
+    fn expression_to_editor_node(
+        &self,
+        expr: &Expression,
+    ) -> Result<crate::editor_ast::EditorNode, String> {
+        use crate::editor_ast::{EditorNode, OperationData, PlaceholderData};
+
+        match expr {
+            // EObject(symbol) -> Object { object: symbol }
+            Expression::Operation { name, args, .. } if name == "EObject" => {
+                if args.len() != 1 {
+                    return Err("EObject expects 1 argument".to_string());
+                }
+                let symbol = self.extract_string(&args[0])?;
+                Ok(EditorNode::Object { object: symbol })
+            }
+
+            // EConst(value) -> Const { value }
+            Expression::Operation { name, args, .. } if name == "EConst" => {
+                if args.len() != 1 {
+                    return Err("EConst expects 1 argument".to_string());
+                }
+                let value = self.extract_string(&args[0])?;
+                Ok(EditorNode::Const { value })
+            }
+
+            // EPlaceholder(data) -> Placeholder { placeholder }
+            Expression::Operation { name, args, .. } if name == "EPlaceholder" => {
+                // For now, create a simple placeholder with id 0
+                let id = if !args.is_empty() {
+                    if let Expression::Const(s) = &args[0] {
+                        s.parse::<usize>().unwrap_or(0)
+                    } else {
+                        0
+                    }
+                } else {
+                    0
+                };
+                Ok(EditorNode::Placeholder {
+                    placeholder: PlaceholderData { id, hint: None },
+                })
+            }
+
+            // EOp(name, args, kind, meta) -> Operation { operation: OperationData }
+            Expression::Operation { name, args, .. } if name == "EOp" => {
+                if args.len() < 2 {
+                    return Err("EOp expects at least 2 arguments (name, args)".to_string());
+                }
+
+                let op_name = self.extract_string(&args[0])?;
+
+                // Convert args list
+                let op_args = self.extract_editor_node_list(&args[1])?;
+
+                // Optional kind (3rd arg)
+                let kind = if args.len() > 2 {
+                    let k = self.extract_string(&args[2]).unwrap_or_default();
+                    if k.is_empty() || k == "NoMeta" {
+                        None
+                    } else {
+                        Some(k)
+                    }
+                } else {
+                    None
+                };
+
+                // Metadata (4th arg) - for now, ignore complex metadata
+                // TODO: Parse TensorMeta, MatrixMeta if needed
+
+                Ok(EditorNode::Operation {
+                    operation: OperationData {
+                        name: op_name,
+                        args: op_args,
+                        kind,
+                        metadata: None,
+                    },
+                })
+            }
+
+            // EList(nodes) -> List { list }
+            Expression::Operation { name, args, .. } if name == "EList" => {
+                if args.len() != 1 {
+                    return Err("EList expects 1 argument (list of nodes)".to_string());
+                }
+                let nodes = self.extract_editor_node_list(&args[0])?;
+                Ok(EditorNode::List { list: nodes })
+            }
+
+            // Handle raw Object as a symbol (for convenience)
+            Expression::Object(s) => Ok(EditorNode::Object { object: s.clone() }),
+
+            // Handle raw Const as a constant
+            Expression::Const(s) => Ok(EditorNode::Const { value: s.clone() }),
+
+            // Handle raw String as a constant
+            Expression::String(s) => Ok(EditorNode::Const { value: s.clone() }),
+
+            _ => Err(format!(
+                "Cannot convert expression to EditorNode: {:?}",
+                expr
+            )),
+        }
+    }
+
+    /// Extract a list of EditorNodes from a Kleis List expression
+    fn extract_editor_node_list(
+        &self,
+        expr: &Expression,
+    ) -> Result<Vec<crate::editor_ast::EditorNode>, String> {
+        match expr {
+            Expression::List(items) => {
+                let mut result = Vec::new();
+                for item in items {
+                    result.push(self.expression_to_editor_node(item)?);
+                }
+                Ok(result)
+            }
+
+            // Handle Cons/Nil list representation
+            Expression::Operation { name, args, .. } if name == "Cons" => {
+                if args.len() != 2 {
+                    return Err("Cons expects 2 arguments".to_string());
+                }
+                let head = self.expression_to_editor_node(&args[0])?;
+                let mut tail = self.extract_editor_node_list(&args[1])?;
+                let mut result = vec![head];
+                result.append(&mut tail);
+                Ok(result)
+            }
+
+            Expression::Operation { name, .. } if name == "Nil" => Ok(vec![]),
+
+            Expression::Object(s) if s == "Nil" => Ok(vec![]),
+
+            _ => Err(format!("Expected list of EditorNodes, got: {:?}", expr)),
+        }
     }
 
     /// Parse diagram options from a record expression
