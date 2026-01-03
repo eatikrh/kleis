@@ -37,12 +37,32 @@
     category: "arithmetic"
 }
 
+@template plus_minus {
+    pattern: "plus_minus(left, right)"
+    unicode: "{left} ± {right}"
+    latex: "{left} \\pm {right}"
+    html: "{left} ± {right}"
+    typst: "{left} plus.minus {right}"
+    kleis: "plus_minus({left}, {right})"
+    category: "arithmetic"
+}
+
+@template negate {
+    pattern: "negate(arg)"
+    unicode: "-{arg}"
+    latex: "-{arg}"
+    html: "-{arg}"
+    typst: "-{arg}"
+    kleis: "negate({arg})"
+    category: "arithmetic"
+}
+
 @template scalar_multiply {
     pattern: "scalar_multiply(left, right)"
-    unicode: "{left} × {right}"
-    latex: "{left} \\times {right}"
-    html: "{left} × {right}"
-    typst: "{left} times {right}"
+    unicode: "{left}{right}"
+    latex: "{left} {right}"
+    html: "{left}{right}"
+    typst: "{left} {right}"
     kleis: "times({left}, {right})"
     category: "arithmetic"
 }
@@ -91,10 +111,10 @@
 
 @template times {
     pattern: "times(left, right)"
-    unicode: "{left} × {right}"
-    latex: "{left} \\times {right}"
-    html: "{left} × {right}"
-    typst: "{left} times {right}"
+    unicode: "{left}{right}"
+    latex: "{left} {right}"
+    html: "{left}{right}"
+    typst: "{left} {right}"
     kleis: "times({left}, {right})"
     category: "arithmetic"
 }
