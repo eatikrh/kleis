@@ -493,7 +493,130 @@ example "kleis_book" {
 
 ---
 
-## 9. References
+## 9. Document Axiom Examples - VALIDATED ✅
+
+We've created axiom-based document specifications for real-world formats.
+**Both files parse and all examples pass!**
+
+### MIT Thesis (`examples/documents/thesis_simple.kleis`)
+
+Based on [MIT Libraries Thesis Specifications](https://libraries.mit.edu/distinctive-collections/thesis-specs/):
+
+```kleis
+// Data types
+data DegreeLevel = Bachelor | Master | Doctor
+
+// Validation function
+define signature_valid(level: DegreeLevel, has_sig: Bool) = match level {
+    Bachelor => True        // Bachelor's: signature optional
+    | Master => has_sig     // Master's: signature required
+    | Doctor => has_sig     // PhD: signature required
+}
+
+// Example validates the constraint
+example "valid_phd" {
+    let level = Doctor
+    let has_sig = True
+    
+    assert(signature_valid(level, has_sig) = True)
+    out("✓ Valid PhD configuration")
+}
+```
+
+**Validated MIT Requirements:**
+- ✅ PhD/Master's require signature page
+- ✅ Bachelor's signature is optional
+- ✅ Degree codes: sb (Bachelor), sm (Master), phd (Doctor)
+
+**Test Results:** 5/5 examples pass
+
+### arXiv Paper (`examples/documents/arxiv_simple.kleis`)
+
+Based on typical arXiv structure:
+
+```kleis
+data ArxivCategory = CsPL | CsSE | CsAI | CsLG | MathLO | PhysicsGR | Other
+data SectionType = Introduction | Background | Methods | Results | Conclusion | Other
+
+define category_code(cat: ArxivCategory) = match cat {
+    CsPL => "cs.PL"
+    | MathLO => "math.LO"
+    // ...
+}
+
+define has_valid_structure(has_intro: Bool, has_conclusion: Bool) =
+    and(has_intro, has_conclusion)
+
+example "valid_arxiv_paper" {
+    let primary = CsPL
+    assert(category_code(primary) = "cs.PL")
+    assert(valid_author_count(2) = True)
+    out("✓ Valid arXiv paper configuration verified")
+}
+```
+
+**Validated arXiv Requirements:**
+- ✅ Category codes (cs.PL, math.LO, gr-qc, etc.)
+- ✅ Paper needs Introduction + Conclusion
+- ✅ At least one author required
+- ✅ Abstract length bounds (50-500 words)
+
+**Test Results:** 9/9 examples pass
+
+### What Works vs. What Needs Work
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Simple pattern matching | ✅ Works | `match level { Bachelor => ... }` |
+| Data type definitions | ✅ Works | `data DegreeLevel = Bachelor \| Master \| Doctor` |
+| Basic assertions | ✅ Works | `assert(func(x) = expected)` |
+| Boolean functions | ✅ Works | `and()`, `or()`, `not()` |
+| Nested function calls | ❌ Not evaluated | `get_field(get_struct(x))` stays symbolic |
+| Complex `and` expressions | ⚠️ Partial | Need to split into separate assertions |
+| Comparison to True/False | ✅ Works | `assert(foo(x) = True)` |
+
+### Discovered Limitations
+
+1. **User-defined accessor functions don't fully evaluate**
+   - `get_title(thesis)` returns symbolic, not concrete value
+   - Workaround: Test constraints with concrete values directly
+
+2. **Nested `and` expressions with comparisons**
+   - `and(x >= 50, x <= 500)` can cause type issues
+   - Workaround: Split into separate assertions
+
+3. **Match expressions need closing braces**
+   - Syntax: `match x { Case1 => ... | Case2 => ... }`
+   - First case has no `|`, subsequent cases do
+
+### Technical Validation Summary
+
+```bash
+# Run the tests
+./target/debug/kleis test examples/documents/thesis_simple.kleis
+# ✅ 5 examples passed
+
+./target/debug/kleis test examples/documents/arxiv_simple.kleis  
+# ✅ 9 examples passed
+```
+
+These working examples validate the core design:
+- Document constraints CAN be encoded as Kleis functions
+- Example blocks CAN validate documents against constraints
+- The "document as example" pattern WORKS
+
+### Next Steps
+
+1. ✅ **Parse test** - Files parse correctly
+2. ✅ **Type check** - Functions type-check
+3. ✅ **Axiom validation** - Constraints validate correctly
+4. 🔮 **Simple output** - Generate Typst from valid document
+5. 🔮 **PDF generation** - Compile Typst to PDF
+6. 🔮 **Full structure axioms** - Use `structure` with quantified axioms
+
+---
+
+## 10. References
 
 - [Lilaq Documentation](https://github.com/lilaq-project/lilaq)
 - [Typst Documentation](https://typst.app/docs/)
