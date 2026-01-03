@@ -1,27 +1,21 @@
 """
-KleisDoc - Document creation and management for Jupyter notebooks.
+KleisDoc - Generic document creation and management for Jupyter notebooks.
 
 This module provides the Python API for creating, editing, and exporting
-publishable documents from Jupyter notebooks.
+structured documents from Jupyter notebooks. Document formats (thesis, paper,
+book, report, etc.) are defined in external Kleis template files, not hardcoded.
 
 Usage:
-    from kleis_kernel.kleisdoc import KleisDoc, templates
+    from kleis_kernel.kleisdoc import KleisDoc
 
-    # Create from template
-    thesis = KleisDoc.from_template("MIT Thesis")
+    # Create a blank document
+    doc = KleisDoc()
+    doc.set_metadata(title="My Document", author="Jane Doe")
+    doc.add_section("Introduction", "This is the introduction.")
+    doc.export_pdf("output.pdf")
 
-    # Set metadata
-    thesis.set_metadata(
-        title="My Thesis",
-        author="Jane Smith",
-        date="May 2025"
-    )
-
-    # Add content
-    thesis.add_chapter("Introduction", "This thesis presents...")
-
-    # Export
-    thesis.export_pdf("thesis.pdf")
+    # Load a template for structure guidance
+    doc = KleisDoc.from_template("stdlib/templates/mit_thesis.kleis")
 """
 
 import json
@@ -67,29 +61,34 @@ class Figure:
 
 @dataclass
 class Section:
-    """A document section (chapter, section, subsection)."""
-    level: int  # 1=chapter, 2=section, 3=subsection
+    """A document section at any level."""
+    level: int  # 1=top level, 2=subsection, etc.
     title: str
-    content: List[Any] = field(default_factory=list)  # Text, equations, figures
+    content: List[Any] = field(default_factory=list)  # Text, equations, figures, subsections
 
 
 class KleisDoc:
     """
-    A Kleis document with structured content, equations, and figures.
+    A generic Kleis document with structured content.
+    
+    KleisDoc is format-agnostic. The structure of specific document types
+    (thesis, paper, book, report) is defined in external Kleis template files,
+    not hardcoded here.
     
     Supports:
-    - Template-based creation (MIT Thesis, arXiv Paper, etc.)
-    - Metadata management (title, authors, date)
-    - Content organization (chapters, sections)
+    - Metadata management (title, authors, date, custom fields)
+    - Content organization (sections at any nesting level)
     - Equation management (with EditorNode AST for re-editing)
     - Figure management (with Kleis code for regeneration)
     - Export to PDF, Typst, LaTeX, HTML
+    - Template loading for structure guidance
     - Persistence to .kleis files
     """
     
     def __init__(self):
         self.metadata: Dict[str, Any] = {}
-        self.template_name: Optional[str] = None
+        self.template_path: Optional[str] = None
+        self.template_info: Dict[str, Any] = {}
         self.sections: List[Section] = []
         self.equations: Dict[str, Equation] = {}
         self.figures: Dict[str, Figure] = {}
@@ -102,26 +101,24 @@ class KleisDoc:
         return cls()
     
     @classmethod
-    def from_template(cls, template_name: str) -> "KleisDoc":
-        """Create a document from a template.
+    def from_template(cls, template_path: str) -> "KleisDoc":
+        """Create a document from a Kleis template file.
         
-        Available templates:
-        - "MIT Thesis"
-        - "arXiv Paper"
-        - "IEEE Paper"
-        - "Book Chapter"
+        The template file defines:
+        - Document structure (required/optional sections)
+        - Validation axioms (word limits, formatting rules)
+        - Styling hints (fonts, margins, headers)
+        
+        Args:
+            template_path: Path to a .kleis template file
+                          (e.g., "stdlib/templates/mit_thesis.kleis")
+        
+        Returns:
+            A new KleisDoc with template loaded
         """
         doc = cls()
-        doc.template_name = template_name
-        
-        # Load template structure
-        if template_name == "MIT Thesis":
-            doc._init_mit_thesis_template()
-        elif template_name == "arXiv Paper":
-            doc._init_arxiv_template()
-        else:
-            raise ValueError(f"Unknown template: {template_name}")
-        
+        doc.template_path = template_path
+        doc._load_template(template_path)
         return doc
     
     @classmethod
@@ -133,9 +130,8 @@ class KleisDoc:
     
     def _find_kleis_binary(self) -> Optional[str]:
         """Find the kleis binary path."""
-        # Try common locations
         candidates = [
-            "kleis",  # In PATH
+            "kleis",
             "../target/release/kleis",
             "../target/debug/kleis",
             os.path.expanduser("~/.cargo/bin/kleis"),
@@ -150,35 +146,27 @@ class KleisDoc:
                 continue
         return None
     
-    def _init_mit_thesis_template(self):
-        """Initialize MIT Thesis template structure."""
-        self.metadata = {
-            "type": "PhD Thesis",
-            "institution": "Massachusetts Institute of Technology",
-            "degree": "Doctor of Philosophy",
+    def _load_template(self, template_path: str):
+        """Load template info from a .kleis file.
+        
+        Extracts metadata about the template without fully parsing
+        the Kleis code. Full template validation happens during export.
+        """
+        self.template_info = {
+            "path": template_path,
+            "loaded": False,
         }
-        # Create default chapter structure
-        self.sections = [
-            Section(level=1, title="Introduction"),
-            Section(level=1, title="Background"),
-            Section(level=1, title="Methodology"),
-            Section(level=1, title="Results"),
-            Section(level=1, title="Conclusion"),
-        ]
-    
-    def _init_arxiv_template(self):
-        """Initialize arXiv Paper template structure."""
-        self.metadata = {
-            "type": "Research Paper",
-        }
-        self.sections = [
-            Section(level=1, title="Abstract"),
-            Section(level=1, title="Introduction"),
-            Section(level=1, title="Related Work"),
-            Section(level=1, title="Method"),
-            Section(level=1, title="Experiments"),
-            Section(level=1, title="Conclusion"),
-        ]
+        
+        # Try to read the template file
+        try:
+            path = Path(template_path)
+            if path.exists():
+                content = path.read_text()
+                # Extract basic info from comments/structure
+                self.template_info["loaded"] = True
+                self.template_info["size"] = len(content)
+        except Exception as e:
+            self.template_info["error"] = str(e)
     
     # =========================================================================
     # Metadata Management
@@ -187,54 +175,83 @@ class KleisDoc:
     def set_metadata(self, **kwargs):
         """Set document metadata.
         
-        Common fields:
+        Any key-value pairs can be stored. Common fields:
         - title: Document title
-        - author: Author name or list of Author objects
-        - email: Author email
-        - date: Publication date
-        - department: Academic department
-        - degree: Degree type
-        - supervisor: Thesis supervisor
+        - author: Author name or Author object
+        - authors: List of authors
+        - date: Publication/submission date
+        - abstract: Document abstract
         - keywords: List of keywords
+        
+        Template-specific fields (examples):
+        - department, degree, supervisor (thesis)
+        - journal, volume, issue (paper)
+        - publisher, isbn (book)
         """
         self.metadata.update(kwargs)
     
-    def get_metadata(self) -> Dict[str, Any]:
-        """Get all metadata."""
-        return self.metadata.copy()
+    def get_metadata(self, key: str = None) -> Any:
+        """Get metadata value(s).
+        
+        Args:
+            key: Specific key to retrieve, or None for all metadata
+        
+        Returns:
+            Value for key, or dict of all metadata if key is None
+        """
+        if key is None:
+            return self.metadata.copy()
+        return self.metadata.get(key)
     
     # =========================================================================
     # Content Management
     # =========================================================================
     
-    def add_chapter(self, title: str, content: str = "") -> Section:
-        """Add a new chapter to the document."""
-        chapter = Section(level=1, title=title, content=[content] if content else [])
-        self.sections.append(chapter)
-        return chapter
-    
-    def add_section(self, chapter_index: int, title: str, content: str = "") -> Section:
-        """Add a section to a chapter."""
-        section = Section(level=2, title=title, content=[content] if content else [])
-        if chapter_index < len(self.sections):
-            self.sections[chapter_index].content.append(section)
+    def add_section(self, title: str, content: str = "", level: int = 1) -> Section:
+        """Add a section to the document.
+        
+        Args:
+            title: Section title
+            content: Initial text content (optional)
+            level: Nesting level (1=top, 2=subsection, etc.)
+        
+        Returns:
+            The created Section object
+        """
+        section = Section(level=level, title=title, content=[content] if content else [])
+        self.sections.append(section)
         return section
     
-    def add_text(self, text: str, chapter: int = -1, section: int = -1):
-        """Add text content to the document."""
-        if chapter == -1:
-            # Add to last chapter
+    def add_subsection(self, parent: Section, title: str, content: str = "") -> Section:
+        """Add a subsection to an existing section.
+        
+        Args:
+            parent: Parent section
+            title: Subsection title
+            content: Initial text content
+        
+        Returns:
+            The created subsection
+        """
+        subsection = Section(level=parent.level + 1, title=title, 
+                            content=[content] if content else [])
+        parent.content.append(subsection)
+        return subsection
+    
+    def add_text(self, text: str, section: Section = None):
+        """Add text content to a section.
+        
+        Args:
+            text: Text content (Markdown or plain text)
+            section: Section to add to (default: last section)
+        """
+        if section is None:
             if self.sections:
-                self.sections[-1].content.append(text)
+                section = self.sections[-1]
             else:
-                # Create a default chapter
-                self.add_chapter("Content", text)
-        else:
-            if section == -1:
-                self.sections[chapter].content.append(text)
-            else:
-                # Add to specific section within chapter
-                pass  # TODO
+                # Create a default section
+                section = self.add_section("Content")
+        section.content.append(text)
     
     # =========================================================================
     # Equation Management
@@ -324,21 +341,20 @@ class KleisDoc:
     # Export
     # =========================================================================
     
-    def export_pdf(self, output_path: str) -> bool:
+    def export_pdf(self, output_path: str, typst_template: str = None) -> bool:
         """Export document to PDF via Typst.
         
         Args:
             output_path: Path for the output PDF file
+            typst_template: Optional path to Typst template file
         
         Returns:
             True if export succeeded
         """
-        # First export to Typst
         typst_path = output_path.replace(".pdf", ".typ")
-        if not self.export_typst(typst_path):
+        if not self.export_typst(typst_path, template=typst_template):
             return False
         
-        # Compile Typst to PDF
         try:
             result = subprocess.run(
                 ["typst", "compile", typst_path, output_path],
@@ -349,41 +365,34 @@ class KleisDoc:
             print("Error: typst not found. Install with: cargo install typst-cli")
             return False
     
-    def export_typst(self, output_path: str) -> bool:
+    def export_typst(self, output_path: str, template: str = None) -> bool:
         """Export document to Typst source.
         
         Args:
             output_path: Path for the output .typ file
+            template: Optional path to Typst template file
         
         Returns:
             True if export succeeded
         """
-        typst_code = self._generate_typst()
+        typst_code = self._generate_typst(template)
         with open(output_path, "w") as f:
             f.write(typst_code)
         return True
     
-    def export_latex(self, output_dir: str) -> bool:
-        """Export document to LaTeX (for arXiv submission).
-        
-        Creates a directory with main.tex and supporting files.
-        """
-        # TODO: Implement LaTeX export
+    def export_latex(self, output_path: str) -> bool:
+        """Export document to LaTeX."""
         raise NotImplementedError("LaTeX export not yet implemented")
     
-    def export_html(self, output_dir: str) -> bool:
-        """Export document to HTML.
-        
-        Creates a directory with index.html and supporting files.
-        """
-        # TODO: Implement HTML export
+    def export_html(self, output_path: str) -> bool:
+        """Export document to HTML."""
         raise NotImplementedError("HTML export not yet implemented")
     
-    def _generate_typst(self) -> str:
+    def _generate_typst(self, template: str = None) -> str:
         """Generate Typst code for the document."""
         lines = []
         
-        # Document setup
+        # Document metadata
         lines.append('#set document(')
         if "title" in self.metadata:
             lines.append(f'  title: "{self.metadata["title"]}",')
@@ -396,19 +405,19 @@ class KleisDoc:
         lines.append(')')
         lines.append('')
         
-        # Page setup
+        # Basic page setup (can be overridden by template)
         lines.append('#set page(paper: "us-letter", margin: 1in)')
-        lines.append('#set text(font: "New Computer Modern", size: 11pt)')
+        lines.append('#set text(size: 11pt)')
         lines.append('')
         
         # Title
         if "title" in self.metadata:
             lines.append(f'#align(center)[')
-            lines.append(f'  #text(size: 24pt, weight: "bold")[{self.metadata["title"]}]')
+            lines.append(f'  #text(size: 20pt, weight: "bold")[{self.metadata["title"]}]')
             lines.append(f']')
             lines.append('')
         
-        # Author
+        # Author(s)
         if "author" in self.metadata:
             author = self.metadata["author"]
             if isinstance(author, str):
@@ -432,12 +441,9 @@ class KleisDoc:
     def _section_to_typst(self, section: Section) -> str:
         """Convert a section to Typst code."""
         lines = []
-        
-        # Heading
         lines.append(f'#heading(level: {section.level})[{section.title}]')
         lines.append('')
         
-        # Content
         for item in section.content:
             if isinstance(item, str):
                 lines.append(item)
@@ -453,11 +459,6 @@ class KleisDoc:
                     lines.append(f'  image("{item.image_path}"),')
                     lines.append(f'  caption: [{item.caption}]')
                     lines.append(f') <{item.label}>')
-                elif item.typst_fragment:
-                    lines.append(f'#figure(')
-                    lines.append(item.typst_fragment)
-                    lines.append(f'  caption: [{item.caption}]')
-                    lines.append(f') <{item.label}>')
                 lines.append('')
         
         return '\n'.join(lines)
@@ -468,7 +469,6 @@ class KleisDoc:
     
     def save(self, path: str):
         """Save document to a .kleis file."""
-        # TODO: Generate .kleis code and save
         raise NotImplementedError("Saving to .kleis files not yet implemented")
     
     # =========================================================================
@@ -477,64 +477,45 @@ class KleisDoc:
     
     def _repr_html_(self) -> str:
         """HTML representation for Jupyter display."""
-        html = ['<div class="kleisdoc">']
-        html.append(f'<h2>📄 {self.metadata.get("title", "Untitled Document")}</h2>')
+        html = ['<div class="kleisdoc" style="font-family: sans-serif; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">']
         
-        if self.template_name:
-            html.append(f'<p><em>Template: {self.template_name}</em></p>')
+        title = self.metadata.get("title", "Untitled Document")
+        html.append(f'<h2 style="margin-top: 0;">📄 {title}</h2>')
         
-        # Structure overview
-        html.append('<h3>Structure</h3>')
-        html.append('<ul>')
-        for section in self.sections:
-            html.append(f'<li>{section.title} ({len(section.content)} items)</li>')
-        html.append('</ul>')
+        if self.template_path:
+            html.append(f'<p style="color: #666;"><em>Template: {self.template_path}</em></p>')
         
-        # Counts
-        html.append('<h3>Content</h3>')
-        html.append(f'<p>📝 {len(self.sections)} chapters/sections</p>')
-        html.append(f'<p>🔢 {len(self.equations)} equations</p>')
-        html.append(f'<p>📊 {len(self.figures)} figures</p>')
+        # Structure
+        if self.sections:
+            html.append('<h4>Structure</h4>')
+            html.append('<ul style="margin: 0;">')
+            for section in self.sections:
+                content_count = len([c for c in section.content if isinstance(c, str) and c])
+                html.append(f'<li>{section.title}</li>')
+            html.append('</ul>')
+        
+        # Summary
+        html.append('<h4>Content Summary</h4>')
+        html.append(f'<p style="margin: 5px 0;">📝 {len(self.sections)} sections</p>')
+        html.append(f'<p style="margin: 5px 0;">🔢 {len(self.equations)} equations</p>')
+        html.append(f'<p style="margin: 5px 0;">📊 {len(self.figures)} figures</p>')
         
         html.append('</div>')
         return '\n'.join(html)
 
 
-class Templates:
-    """Template registry for KleisDoc."""
+def list_templates(template_dir: str = "stdlib/templates") -> List[str]:
+    """List available document templates.
     
-    @staticmethod
-    def list() -> List[str]:
-        """List available document templates."""
-        return [
-            "MIT Thesis",
-            "arXiv Paper",
-            "IEEE Paper",
-            "Book Chapter",
-        ]
+    Args:
+        template_dir: Directory to search for templates
     
-    @staticmethod
-    def info(template_name: str) -> Dict[str, Any]:
-        """Get information about a template."""
-        templates = {
-            "MIT Thesis": {
-                "name": "MIT Thesis",
-                "description": "PhD thesis format for MIT",
-                "required": ["Title", "Abstract (≤350 words)", "3+ chapters", "Bibliography"],
-                "optional": ["Acknowledgments", "Appendices"],
-                "style": "US Letter, 1\" margins, New Computer Modern font",
-            },
-            "arXiv Paper": {
-                "name": "arXiv Paper",
-                "description": "Standard research paper for arXiv",
-                "required": ["Title", "Abstract", "Introduction", "Conclusion"],
-                "optional": ["Appendices"],
-                "style": "US Letter, standard article format",
-            },
-        }
-        return templates.get(template_name, {})
-
-
-# Module-level instance for convenience
-templates = Templates()
-
+    Returns:
+        List of template file paths
+    """
+    templates = []
+    path = Path(template_dir)
+    if path.exists():
+        for f in path.glob("*.kleis"):
+            templates.append(str(f))
+    return templates

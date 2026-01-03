@@ -20,14 +20,14 @@ __version__ = "0.1.0"
 
 from .kernel import KleisKernel
 from .numeric_kernel import KleisNumericKernel
-from .kleisdoc import KleisDoc, templates
+from .kleisdoc import KleisDoc, list_templates
 from .equation_editor import equation_editor, EquationEditorWidget
 
 __all__ = [
     "KleisKernel", 
     "KleisNumericKernel", 
-    "KleisDoc", 
-    "templates",
+    "KleisDoc",
+    "list_templates",
     "equation_editor",
     "EquationEditorWidget",
     "__version__"
