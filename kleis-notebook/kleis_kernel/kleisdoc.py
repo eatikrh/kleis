@@ -226,15 +226,46 @@ class KleisDoc:
     def render_plot(self, kleis_code: str) -> Optional[str]:
         """Render Kleis plotting code to Typst fragment.
         
-        Uses the Kleis server to evaluate the plot code and return Typst.
+        Uses the Kleis binary to evaluate the plot code and return Typst.
         
         Args:
-            kleis_code: Kleis code that produces a plot/diagram
+            kleis_code: Kleis code that produces a plot/diagram.
+                       Should use export_typst_fragment() to return Typst code.
         
         Returns:
             Typst code fragment, or None if unavailable
+        
+        Example:
+            kleis_code = '''
+            import "stdlib/plotting.kleis"
+            let data = line([1, 2, 3, 4], [10, 20, 15, 25])
+            export_typst_fragment(data, title = "My Plot")
+            '''
         """
-        # TODO: Implement when server has endpoint for this
+        if not self._kleis_path:
+            return None
+        
+        # Wrap in example block to evaluate and output
+        wrapped_code = f'''
+import "stdlib/prelude.kleis"
+
+example "render_plot"
+    let result = {kleis_code}
+    out result
+'''
+        
+        try:
+            result = subprocess.run(
+                [self._kleis_path, "eval", "-c", wrapped_code],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+        
         return None
     
     # =========================================================================
@@ -382,6 +413,7 @@ class KleisDoc:
     
     def add_figure(self, label: str, caption: str, 
                    kleis_code: str = None, image_path: str = None,
+                   typst_fragment: str = None,
                    section: Section = None) -> Figure:
         """Add a figure to the document.
         
@@ -390,6 +422,7 @@ class KleisDoc:
             caption: Figure caption
             kleis_code: Kleis plotting code (for regenerable figures)
             image_path: Path to static image file
+            typst_fragment: Pre-rendered Typst code for the figure
             section: Section to add figure to (default: last section)
         
         Returns:
@@ -403,6 +436,8 @@ class KleisDoc:
             kleis_code=kleis_code,
             image_path=image_path
         )
+        if typst_fragment:
+            fig.typst_fragment = typst_fragment
         self.figures[label] = fig
         
         # Add to section if specified
@@ -419,12 +454,38 @@ class KleisDoc:
         return self.figures.get(label)
     
     def regenerate_figure(self, label: str) -> bool:
-        """Regenerate a figure from its Kleis code."""
+        """Regenerate a figure from its Kleis code.
+        
+        Args:
+            label: Figure label to regenerate
+        
+        Returns:
+            True if regeneration succeeded
+        """
         fig = self.figures.get(label)
         if fig and fig.kleis_code:
-            # TODO: Call kleis to generate SVG/Typst
-            return True
+            # Wrap kleis_code with export_typst_fragment if not already
+            code = fig.kleis_code.strip()
+            if not code.startswith("export_typst"):
+                code = f"export_typst_fragment({code})"
+            
+            typst_fragment = self.render_plot(code)
+            if typst_fragment:
+                fig.typst_fragment = typst_fragment
+                return True
         return False
+    
+    def regenerate_all_figures(self) -> Dict[str, bool]:
+        """Regenerate all figures with Kleis code.
+        
+        Returns:
+            Dict mapping figure labels to success status
+        """
+        results = {}
+        for label, fig in self.figures.items():
+            if fig.kleis_code:
+                results[label] = self.regenerate_figure(label)
+        return results
     
     # =========================================================================
     # Export
