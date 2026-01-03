@@ -135,7 +135,7 @@ define typst_title_page = """
     #text(size: 14pt)[AUTHOR]
     
     #v(1in)
-    Submitted to the DEPARTMENT \\
+    Submitted to the DEPARTMENT #linebreak()
     in partial fulfillment of the requirements for the degree of
     #v(0.3in)
     #text(style: "italic")[DEGREE_NAME]
@@ -168,15 +168,15 @@ define typst_abstract_page = """
   by AUTHOR
   
   #v(0.2in)
-  Submitted to the DEPARTMENT \\
-  on DATE in partial fulfillment of the \\
+  Submitted to the DEPARTMENT #linebreak()
+  on DATE in partial fulfillment of the #linebreak()
   requirements for the degree of DEGREE_NAME
   
   #v(0.3in)
   ABSTRACT_TEXT
   
   #v(0.5in)
-  #text(weight: "bold")[Thesis Supervisor:] SUPERVISOR \\
+  #text(weight: "bold")[Thesis Supervisor:] SUPERVISOR #linebreak()
   #text(weight: "bold")[Title:] Professor
 ]
 """

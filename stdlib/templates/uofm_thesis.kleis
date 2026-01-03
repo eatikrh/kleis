@@ -120,11 +120,11 @@ define typst_title_page = """
     AUTHOR
     
     #v(1in)
-    A dissertation submitted in partial fulfillment \\
-    of the requirements for the degree of \\
-    DEGREE \\
-    (PROGRAM) \\
-    in The University of Michigan \\
+    A dissertation submitted in partial fulfillment #linebreak()
+    of the requirements for the degree of #linebreak()
+    DEGREE #linebreak()
+    (PROGRAM) #linebreak()
+    in The University of Michigan #linebreak()
     YEAR
   ]
   
@@ -134,7 +134,7 @@ define typst_title_page = """
     Doctoral Committee:
     #v(0.1in)
     #pad(left: 0.5in)[
-      COMMITTEE_CHAIR, Chair \\
+      COMMITTEE_CHAIR, Chair #linebreak()
       COMMITTEE_MEMBERS
     ]
   ]

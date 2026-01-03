@@ -50,11 +50,11 @@
     Emily Chen
     
     #v(1in)
-    A dissertation submitted in partial fulfillment \\
-    of the requirements for the degree of \\
-    Doctor of Philosophy \\
-    (Physics) \\
-    in The University of Michigan \\
+    A dissertation submitted in partial fulfillment #linebreak()
+    of the requirements for the degree of #linebreak()
+    Doctor of Philosophy #linebreak()
+    (Physics) #linebreak()
+    in The University of Michigan #linebreak()
     2025
   ]
   
@@ -64,7 +64,7 @@
     Doctoral Committee:
     #v(0.1in)
     #pad(left: 0.5in)[
-      Professor Robert Williams, Chair \\
+      Professor Robert Williams, Chair #linebreak()
       Professor Sarah Miller \\
       Professor David Brown
     ]
@@ -72,16 +72,8 @@
 ]
 
 
-This dissertation presents novel approaches to quantum error correction in noisy intermediate-scale quantum devices.
+This dissertation presents novel approaches to quantum error correction.
 
 #heading(level: 1)[Introduction]
 
-Quantum computing promises exponential speedups for certain problems.
-
-#heading(level: 1)[Methods]
-
-We propose a new class of stabilizer codes.
-
-#heading(level: 1)[Conclusion]
-
-We have demonstrated practical quantum error correction.
+Quantum computing promises exponential speedups...

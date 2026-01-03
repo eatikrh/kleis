@@ -34,28 +34,20 @@
 
 
 #set document(
-  title: "Efficient Transformers for Long-Range Dependencies",
+  title: "Efficient Transformers",
 )
 
 #align(center)[
-  #text(size: 20pt, weight: "bold")[Efficient Transformers for Long-Range Dependencies]
+  #text(size: 20pt, weight: "bold")[Efficient Transformers]
 ]
 
 
 #block(fill: luma(245), inset: 10pt, radius: 4pt, width: 100%)[
   #text(weight: "bold")[Abstract.]
-  A novel attention mechanism that scales linearly with sequence length.
+  A novel attention mechanism.
 ]
 
 
 #heading(level: 1)[Introduction]
 
 Transformers have revolutionized NLP.
-
-#heading(level: 1)[Method]
-
-Our approach combines local and global attention.
-
-#heading(level: 1)[Conclusion]
-
-Efficient transformer architecture demonstrated.

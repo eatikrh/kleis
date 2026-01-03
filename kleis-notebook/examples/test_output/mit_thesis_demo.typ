@@ -51,7 +51,7 @@
     #text(size: 14pt)[James Park]
     
     #v(1in)
-    Submitted to the EECS \\
+    Submitted to the EECS #linebreak()
     in partial fulfillment of the requirements for the degree of
     #v(0.3in)
     #text(style: "italic")[Doctor]
@@ -76,11 +76,3 @@ Novel ML algorithms for autonomous vehicle navigation.
 #heading(level: 1)[Introduction]
 
 Autonomous vehicles require robust perception.
-
-#heading(level: 1)[Methods]
-
-We develop a hybrid neural-symbolic approach.
-
-#heading(level: 1)[Conclusion]
-
-State-of-the-art performance achieved.
