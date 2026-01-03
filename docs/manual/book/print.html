@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ff35e818.js";
+            window.path_to_searchindex_js = "searchindex-66136f84.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-44239f67.js"></script>
@@ -2807,6 +2807,23 @@ cargo install --path . --features numerical
 <li>Z3 timeout on complex verification</li>
 <li>Memory issues with large matrices</li>
 </ul>
+<h3 id="imports-fail-stdlib-not-found"><a class="header" href="#imports-fail-stdlib-not-found">Imports fail (stdlib not found)</a></h3>
+<p>When running Jupyter from a directory other than the Kleis project root, stdlib imports may fail:</p>
+<pre><code>Error: Cannot find file: stdlib/prelude.kleis
+</code></pre>
+<p><strong>Solution:</strong> Set the <code>KLEIS_ROOT</code> environment variable to point to your Kleis installation:</p>
+<pre><code class="language-bash">export KLEIS_ROOT=/path/to/kleis
+jupyter lab
+</code></pre>
+<p>Or add it to your shell profile (<code>~/.bashrc</code>, <code>~/.zshrc</code>):</p>
+<pre><code class="language-bash">export KLEIS_ROOT="$HOME/git/cee/kleis"
+</code></pre>
+<p>The Kleis kernel automatically searches for stdlib in:</p>
+<ol>
+<li><code>$KLEIS_ROOT/stdlib/</code> (if KLEIS_ROOT is set)</li>
+<li>Current working directory</li>
+<li>Parent directories (up to 10 levels)</li>
+</ol>
 <h3 id="unicode-input"><a class="header" href="#unicode-input">Unicode input</a></h3>
 <p>Use standard Kleis Unicode shortcuts:</p>
 <ul>
