@@ -1320,21 +1320,30 @@ example "render_plot" {{
         return fig
     
     def add_plot(self, label: str, caption: str,
-                 plot_code: str, title: str = None,
+                 plot_code: str, 
+                 title: str = None,
+                 xlabel: str = None,
+                 ylabel: str = None,
+                 legend: str = None,
                  section: Section = None) -> Figure:
         """Add a plot to the document from Kleis plotting code.
         
-        The plot code is stored and translated to Lilaq/Typst at export time.
-        This doesn't require the Kleis binary - the translation is done in Python.
+        The plot code is evaluated by the Kleis binary using export_typst_fragment()
+        to get the Typst code. This follows Kleis philosophy: Kleis code is
+        evaluated by Kleis, not translated by Python.
         
         Args:
             label: Unique label (e.g., "fig:performance")
             caption: Figure caption
-            plot_code: Kleis plotting code WITHOUT diagram() wrapper.
+            plot_code: Kleis plotting code (one or more plot elements).
+                       Element-level options (color, label, mark) go here.
                        Examples: 
-                       - 'plot([1,2,3], [10,20,15])'
-                       - 'plot(xs, ys), scatter(xs2, ys2)'  # multiple elements
-            title: Optional plot title (shown in the plot itself)
+                       - 'plot([1,2,3], [10,20,15], color = "blue")'
+                       - 'plot(xs, ys), scatter(xs2, ys2, color = "red")'
+            title: Diagram-level title (shown in the plot)
+            xlabel: Diagram-level x-axis label
+            ylabel: Diagram-level y-axis label
+            legend: Legend position (e.g., "top-right", "bottom-left")
             section: Section to add figure to (default: last section)
         
         Returns:
@@ -1344,21 +1353,42 @@ example "render_plot" {{
             >>> doc.add_plot(
             ...     "fig:results",
             ...     "Experimental results over time",
-            ...     "plot([0,1,2,3,4], [10,25,18,30,22])",
-            ...     title="Performance Metrics"
+            ...     "plot([0,1,2,3,4], [10,25,18,30,22], color = 'blue')",
+            ...     title="Performance Metrics",
+            ...     xlabel="Time (s)",
+            ...     ylabel="Value"
+            ... )
+            
+        Note on option levels:
+            - ELEMENT options (color, label, mark, etc.) → pass to plot()
+            - DIAGRAM options (title, xlabel, ylabel, legend) → pass here
+            
+            Example with multiple series:
+            >>> doc.add_plot(
+            ...     "fig:comparison",
+            ...     "Comparison of algorithms",
+            ...     '''plot([1,2,3], [10,20,15], color = "blue", label = "Algo A"),
+            ...        scatter([1,2,3], [5,12,8], color = "red", label = "Algo B")''',
+            ...     title="Performance",
+            ...     legend="top-right"
             ... )
         """
-        # Store the code with optional title
-        # The title must be INSIDE the function call, not after it
-        # e.g., plot([1,2], [3,4], title = "My Plot")
+        # Build the full Kleis code including diagram-level options
+        # Format: export_typst_fragment(plot_elements, title = "...", xlabel = "...")
+        diagram_opts = []
         if title:
-            # Insert title as the last argument inside the function call
-            # Find the last ) and insert before it
-            if plot_code.rstrip().endswith(')'):
-                full_code = plot_code.rstrip()[:-1] + f', title = "{title}")'
-            else:
-                # Fallback: append (shouldn't happen for well-formed code)
-                full_code = f'{plot_code}, title = "{title}"'
+            diagram_opts.append(f'title = "{title}"')
+        if xlabel:
+            diagram_opts.append(f'xlabel = "{xlabel}"')
+        if ylabel:
+            diagram_opts.append(f'ylabel = "{ylabel}"')
+        if legend:
+            diagram_opts.append(f'legend = "{legend}"')
+        
+        # The kleis_code stored is what gets passed to export_typst_fragment()
+        # Format: "plot(...), scatter(...), title = ..., xlabel = ..."
+        if diagram_opts:
+            full_code = f'{plot_code}, {", ".join(diagram_opts)}'
         else:
             full_code = plot_code
         
@@ -1992,9 +2022,17 @@ example "render_plot" {{
     def _figure_to_typst(self, fig: Figure) -> str:
         """Convert a figure to Typst code.
         
-        If the figure has Kleis code, translates it to Lilaq/Typst.
-        If it has a Typst fragment, uses that directly.
+        If the figure has Kleis code, uses the Kleis binary to evaluate
+        export_typst_fragment() and get proper Typst code.
+        
+        If it has a pre-rendered Typst fragment, uses that directly.
         Otherwise uses a static image path.
+        
+        This follows Kleis philosophy: Kleis code is evaluated by Kleis,
+        not translated by Python. Python cannot translate Kleis code because:
+        - Kleis code may have imports
+        - Kleis code may use user-defined functions
+        - Only the Kleis evaluator can resolve dependencies
         """
         lines = []
         
@@ -2005,13 +2043,25 @@ example "render_plot" {{
             lines.append(f'  caption: [{fig.caption}]')
             lines.append(f') <{fig.label}>')
         elif fig.kleis_code:
-            # Translate Kleis plot code to Lilaq/Typst
-            lilaq_code = self._kleis_plot_to_lilaq(fig.kleis_code)
-            lines.append('#import "@preview/lilaq:0.3.0" as lq')
-            lines.append('#figure(')
-            lines.append(f'  {lilaq_code},')
-            lines.append(f'  caption: [{fig.caption}]')
-            lines.append(f') <{fig.label}>')
+            # Use Kleis binary to get Typst code - Kleis evaluates Kleis!
+            typst_fragment = self._eval_kleis_to_typst(fig.kleis_code)
+            if typst_fragment:
+                # The fragment already includes lq.diagram()
+                lines.append('#import "@preview/lilaq:0.5.0" as lq')
+                lines.append('#figure(')
+                lines.append(f'  {typst_fragment},')
+                lines.append(f'  caption: [{fig.caption}]')
+                lines.append(f') <{fig.label}>')
+            else:
+                # Cannot render without Kleis binary - leave a clear error
+                lines.append(f'// ERROR: Figure {fig.label} could not be rendered.')
+                lines.append(f'// The Kleis binary is required to evaluate plot code.')
+                lines.append(f'// Install Kleis: cargo install --path /path/to/kleis')
+                lines.append(f'// Or set KLEIS_ROOT environment variable.')
+                lines.append('#figure(')
+                lines.append(f'  [*Plot code:* `{fig.kleis_code[:50]}{"..." if len(fig.kleis_code) > 50 else ""}`],')
+                lines.append(f'  caption: [{fig.caption}]')
+                lines.append(f') <{fig.label}>')
         elif fig.image_path:
             lines.append('#figure(')
             lines.append(f'  image("{fig.image_path}"),')
@@ -2022,108 +2072,45 @@ example "render_plot" {{
         
         return '\n'.join(lines)
     
-    def _kleis_plot_to_lilaq(self, kleis_code: str) -> str:
-        """Translate Kleis plot code to Lilaq/Typst syntax.
+    def _eval_kleis_to_typst(self, kleis_code: str) -> Optional[str]:
+        """Evaluate Kleis code via the Kleis binary to get Typst output.
         
-        Converts: plot([1,2,3], [10,20,15], title = "My Plot")
-        To:       lq.diagram(lq.plot((1, 2, 3), (10, 20, 15), title: "My Plot"))
+        Uses export_typst_fragment() to get just the lq.diagram(...) code.
         
-        This method is AGNOSTIC of plot types. Any Kleis function call
-        is translated to the corresponding Lilaq function using conventions:
-        - func_name → lq.func-name (underscores become hyphens for Typst)
-        - [1,2,3] → (1, 2, 3) (list syntax conversion)
-        - name = value → name: value (Typst named argument syntax)
-        - xlabel → x-label, ylabel → y-label (Lilaq conventions)
+        This is the proper way to convert Kleis plots to Typst - letting
+        the Kleis evaluator handle it, not Python.
         
-        New plot types and options added to Kleis will automatically work here.
+        Args:
+            kleis_code: Kleis plotting code (e.g., 'plot([1,2,3], [10,20,15])')
+        
+        Returns:
+            Typst code string, or None if Kleis binary unavailable
         """
-        code = kleis_code.strip()
+        if not self._kleis_path:
+            return None
         
-        # Handle multiple elements (comma-separated at top level)
-        elements = self._split_plot_elements(code)
+        # Wrap the code with export_typst_fragment
+        wrapped_code = f'export_typst_fragment({kleis_code})'
         
-        lilaq_elements = []
-        for elem in elements:
-            # Match function call pattern: name(args)
-            match = re.match(r'(\w+)\s*\((.*)\)', elem.strip(), re.DOTALL)
-            if match:
-                func_name = match.group(1)
-                args_str = match.group(2)
-                
-                # Convention: underscores → hyphens for Typst/Lilaq function names
-                lilaq_func = f'lq.{func_name.replace("_", "-")}'
-                
-                # Convert arguments to Typst syntax
-                converted_args = self._convert_args_to_typst(args_str)
-                
-                lilaq_elements.append(f'{lilaq_func}({converted_args})')
-            else:
-                # Fallback: use as-is
-                lilaq_elements.append(elem)
+        try:
+            result = subprocess.run(
+                [self._kleis_path, "eval", wrapped_code],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode == 0:
+                output = result.stdout.strip()
+                # The output is a quoted string, so we need to parse it
+                # Example: "lq.diagram(...)"
+                if output.startswith('"') and output.endswith('"'):
+                    # Remove outer quotes and unescape
+                    return output[1:-1].replace('\\n', '\n')
+                return output
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+            print(f"Warning: Could not evaluate Kleis code: {e}")
         
-        if len(lilaq_elements) == 1:
-            return f'lq.diagram({lilaq_elements[0]})'
-        else:
-            return f'lq.diagram({", ".join(lilaq_elements)})'
-    
-    def _convert_args_to_typst(self, args_str: str) -> str:
-        """Convert Kleis argument syntax to Typst syntax.
-        
-        Handles:
-        - [1,2,3] → (1, 2, 3)  (list to tuple)
-        - name = value → name: value  (named args)
-        - xlabel → x-label, ylabel → y-label  (Lilaq conventions)
-        - mark_size → mark-size  (underscore to hyphen in option names)
-        """
-        result = args_str
-        
-        # 1. Convert list syntax: [1,2,3] -> (1, 2, 3)
-        result = result.replace('[', '(').replace(']', ')')
-        
-        # 2. Convert named arguments: name = value → name: value
-        # This regex handles: identifier = value (respecting strings and nested parens)
-        result = re.sub(r'(\w+)\s*=\s*', r'\1: ', result)
-        
-        # 3. Convert option names with underscores to hyphens (Typst convention)
-        # Also handle common Lilaq-specific translations
-        # 
-        # All underscore options become hyphens: mark_size → mark-size
-        # This is done generically so new options work automatically.
-        #
-        # Special cases for axis labels: xlabel → x-label
-        result = re.sub(r'(\w+)_(\w+):', lambda m: f'{m.group(1)}-{m.group(2)}:', result)
-        
-        # Handle xlabel/ylabel/xlim/ylim/xscale/yscale → x-label/y-label etc.
-        # These are single words that need the hyphen inserted
-        for axis in ['x', 'y']:
-            for suffix in ['label', 'lim', 'scale', 'axis', 'ticks']:
-                result = result.replace(f'{axis}{suffix}:', f'{axis}-{suffix}:')
-        
-        return result
-    
-    def _split_plot_elements(self, code: str) -> List[str]:
-        """Split comma-separated plot elements respecting parentheses."""
-        elements = []
-        current = []
-        depth = 0
-        
-        for char in code:
-            if char in '([{':
-                depth += 1
-                current.append(char)
-            elif char in ')]}':
-                depth -= 1
-                current.append(char)
-            elif char == ',' and depth == 0:
-                elements.append(''.join(current).strip())
-                current = []
-            else:
-                current.append(char)
-        
-        if current:
-            elements.append(''.join(current).strip())
-        
-        return elements
+        return None
     
     # =========================================================================
     # Persistence
