@@ -88,8 +88,8 @@ This directory contains all Architecture Decision Records for the Kleis project.
 
 ### ADR-012: Document Authoring
 **File:** `adr-012-document-authoring.md`  
-**Status:** Accepted  
-**Summary:** Full document authoring capabilities
+**Status:** Implemented (Jan 2026)  
+**Summary:** Documents as Kleis programs with templates in `stdlib/templates/`
 
 ### ADR-017: Vite + PatternFly Frontend
 **File:** `adr-017-vite-patternfly-frontend.md`  
@@ -173,5 +173,5 @@ When creating a new ADR:
 ---
 
 **Total ADRs:** 22  
-**Last Updated:** December 9, 2025
+**Last Updated:** January 3, 2026
 

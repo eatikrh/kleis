@@ -1,108 +1,411 @@
 // ============================================================================
-// JANE SMITH'S PHD THESIS
+// JANE SMITH'S PHD THESIS - MIT Compliant Version
 // ============================================================================
 //
-// A PhD thesis using the MIT thesis template.
-// The student just focuses on CONTENT, the template handles FORMATTING.
+// A PhD thesis using the full MIT thesis template.
+// Includes all MIT-required sections:
+// - Title page, Signature page, Abstract
+// - Acknowledgments, Dedication
+// - Table of Contents, List of Figures, List of Tables
+// - Chapters with equations, tables, diagrams
+// - Appendices
+// - References
 //
 // ============================================================================
 
 import "stdlib/templates/mit_thesis.kleis"
 
 // ============================================================================
-// THESIS CONTENT
+// EQUATIONS (Typst math syntax)
 // ============================================================================
 
-// Chapter 1: Introduction
-define chapter_intro : MITDocExpr =
-    MITChapter(1, "Introduction",
-        "Knowledge production in science and mathematics relies on precise notation and rigorous verification. Traditional approaches separate these concerns, leading to errors and inconsistencies. This thesis presents a unified framework that treats notation, verification, and document structure as first-class concepts."
-    )
+// The main verification condition
+define eq_verify = MITEquation("eq:verify",
+    "forall phi . op(\"axiom\")(phi) => op(\"valid\")(phi)",
+    true
+)
 
-// Chapter 2: Background  
-define chapter_background : MITDocExpr =
-    MITChapter(2, "Background",
-        "We build on prior work in formal verification, type theory, and scientific computing. SMT solvers like Z3 provide decidable procedures for many useful theories. Typst offers a modern approach to document typesetting."
-    )
+// Type inference rule (Hindley-Milner application rule)
+define eq_typing = MITEquation("eq:typing",
+    "frac(Gamma tack.r e_1 : tau_1 -> tau_2 quad Gamma tack.r e_2 : tau_1, Gamma tack.r e_1 space e_2 : tau_2)",
+    true
+)
 
-// Chapter 3: The Kleis System
-define chapter_kleis : MITDocExpr =
-    MITChapter(3, "The Kleis System",
-        "Kleis is built on three key abstractions: structures for mathematical domains, axioms for verification rules, and templates for notation. This combination enables domain-specific languages for any field with formal notation."
-    )
+// SMT satisfiability definition
+define eq_sat = MITEquation("eq:sat",
+    "op(\"SAT\")(phi) <=> exists sigma . sigma tack.double phi",
+    true
+)
 
-// Chapter 4: Evaluation
-define chapter_eval : MITDocExpr =
-    MITChapter(4, "Evaluation",
-        "We evaluate Kleis on several case studies including tensor calculus for general relativity, counterpoint rules for music theory, and protocol verification for network security."
-    )
+// Soundness theorem
+define eq_soundness = MITEquation("eq:soundness",
+    "forall e, tau . tack.r e : tau => tack.r.double e : tau",
+    true
+)
 
-// Chapter 5: Conclusion
-define chapter_conclusion : MITDocExpr =
-    MITChapter(5, "Conclusion",
-        "We have presented Kleis, a substrate for formal knowledge production. Future work includes extending the solver abstraction layer, building domain-specific libraries, and integrating with Jupyter notebooks for interactive research."
-    )
+// Einstein field equations (showing domain-specific notation)
+define eq_einstein = MITEquation("eq:einstein",
+    "R_(mu nu) - 1/2 g_(mu nu) R + Lambda g_(mu nu) = (8 pi G) / c^4 T_(mu nu)",
+    true
+)
 
-// References
-define ref_z3 : MITDocExpr =
-    MITReference("demoura2008", "de Moura, L. and Bjørner, N. Z3: An Efficient SMT Solver. TACAS 2008.")
-
-define ref_typst : MITDocExpr =
-    MITReference("typst2023", "Mädje, M. and Haug, L. Typst: A New Markup-based Typesetting System. 2023.")
-
-// ============================================================================
-// ASSEMBLE THE THESIS
-// ============================================================================
-
-define my_chapters : List(MITDocExpr) =
-    Cons(chapter_intro,
-    Cons(chapter_background,
-    Cons(chapter_kleis,
-    Cons(chapter_eval,
-    Cons(chapter_conclusion,
-    Cons(ref_z3,
-    Cons(ref_typst, Nil)))))))
-
-define my_thesis : MITThesisDoc =
-    mit_thesis(
-        "Formal Verification of Knowledge Production Systems",
-        "Jane Smith",
-        "Department of Electrical Engineering and Computer Science",
-        "May 2025",
-        Doctor,
-        "This thesis presents Kleis, a formal verification system designed as a universal substrate for knowledge production. We demonstrate that mathematical notation, verification rules, and document structure can be treated as first-class concepts that are axiomatized and validated. Our approach enables researchers to define domain-specific notations while maintaining rigorous verification through SMT solvers like Z3.",
-        "Prof. Alice Chen",
-        my_chapters
-    )
+// Complexity bound
+define eq_complexity = MITEquation("eq:complexity",
+    "T(n) = O(n^2 log n)",
+    true
+)
 
 // ============================================================================
-// EXAMPLES
+// TABLES (Pure Typst table syntax)
+// ============================================================================
+
+// Performance comparison table
+define table_performance = MITTable("tab:performance",
+    "Performance comparison of verification backends",
+    "table(
+    columns: (auto, auto, auto, auto),
+    align: (left, center, center, center),
+    table.header([*Backend*], [*Time (ms)*], [*Memory (MB)*], [*Completeness*]),
+    [Z3], [42], [128], [Complete],
+    [CVC5], [38], [156], [Complete],
+    [Yices], [51], [98], [Incomplete],
+    [MiniSat], [12], [32], [Incomplete],
+  )"
+)
+
+// Feature comparison table  
+define table_features = MITTable("tab:features",
+    "Feature comparison with existing systems",
+    "table(
+    columns: (auto, auto, auto, auto, auto),
+    align: (left, center, center, center, center),
+    table.header([*Feature*], [*Kleis*], [*Lean*], [*Coq*], [*Isabelle*]),
+    [SMT Integration], [Y], [Y], [-], [-],
+    [Custom Notation], [Y], [-], [Y], [Y],
+    [Document Export], [Y], [-], [-], [-],
+    [Jupyter Support], [Y], [-], [-], [-],
+    [Self-Hosting], [Y], [Y], [Y], [Y],
+  )"
+)
+
+// Benchmark results table
+define table_benchmarks = MITTable("tab:benchmarks",
+    "Benchmark results across different domains",
+    "table(
+    columns: (auto, auto, auto, auto),
+    align: (left, center, center, center),
+    table.header([*Domain*], [*Axioms*], [*Verification Time*], [*Memory*]),
+    [Tensor Calculus], [47], [1.2s], [256 MB],
+    [Music Theory], [23], [0.4s], [128 MB],
+    [Network Protocols], [31], [0.8s], [192 MB],
+    [Financial Models], [18], [0.3s], [96 MB],
+  )"
+)
+
+// ============================================================================
+// DIAGRAMS - Using Lilaq code strings embedded in MITDiagram elements
+// ============================================================================
+
+// Performance chart - verification time vs domain size
+define fig_performance = MITDiagram("fig:performance",
+    "Verification time comparison between Z3 and CVC5 backends",
+    "{
+      import \"@preview/lilaq:0.5.0\" as lq
+      lq.diagram(
+        width: 10cm,
+        title: [Verification Time vs Domain Size],
+        xlabel: [Domain Size (x1000)],
+        ylabel: [Time (ms)],
+        legend: (position: left + top),
+        lq.plot((1, 2, 3, 4, 5), (10, 25, 45, 80, 120), mark: \"o\", label: [Z3]),
+        lq.plot((1, 2, 3, 4, 5), (8, 20, 38, 65, 95), mark: \"x\", label: [CVC5]),
+      )
+    }"
+)
+
+// Bar chart comparing system features
+define fig_comparison = MITDiagram("fig:comparison",
+    "Feature comparison between Kleis and Lean across key categories",
+    "{
+      import \"@preview/lilaq:0.5.0\" as lq
+      lq.diagram(
+        width: 10cm,
+        title: [System Feature Comparison],
+        xlabel: [Feature Category],
+        ylabel: [Score (1-5)],
+        legend: (position: right + top),
+        xaxis: (ticks: ((0, [SMT]), (1, [Notation]), (2, [Docs]), (3, [Proofs]))),
+        lq.bar((0, 1, 2, 3), (5, 5, 5, 4), offset: -0.2, width: 0.35, label: [Kleis]),
+        lq.bar((0, 1, 2, 3), (4, 3, 2, 5), offset: 0.2, width: 0.35, label: [Lean]),
+      )
+    }"
+)
+
+// Scatter plot showing type inference performance  
+define fig_inference = MITDiagram("fig:inference",
+    "Type inference time scales linearly with program size on log-log axes",
+    "{
+      import \"@preview/lilaq:0.5.0\" as lq
+      lq.diagram(
+        width: 10cm,
+        title: [Type Inference Performance],
+        xlabel: [Expression Count],
+        ylabel: [Inference Time (ms)],
+        xaxis: (scale: \"log\"),
+        yaxis: (scale: \"log\"),
+        lq.scatter((100, 200, 500, 1000, 2000, 5000), (1.2, 2.1, 4.8, 9.5, 18.3, 42.1), mark: \"o\", label: [Measurements]),
+      )
+    }"
+)
+
+// Architecture box diagram
+define fig_architecture = MITFigure("fig:architecture",
+    "Kleis system architecture showing the three-layer design",
+    "box(stroke: 1pt, inset: 1em)[
+      #grid(
+        columns: 1,
+        row-gutter: 1em,
+        align(center)[*User Document* \\\\ (.kleis file)],
+        align(center)[#sym.arrow.b],
+        align(center)[*Kleis Core* \\\\ Parser | Type Checker | Evaluator],
+        align(center)[#sym.arrow.b],
+        grid(
+          columns: 3,
+          column-gutter: 2em,
+          align(center)[Z3 Backend \\\\ (verification)],
+          align(center)[Type Registry \\\\ (inference)],
+          align(center)[Typst Renderer \\\\ (output)]
+        )
+      )
+    ]"
+)
+
+// ============================================================================
+// THESIS CHAPTERS
+// ============================================================================
+
+define chapter_intro = MITChapter(1, "Introduction",
+    "Knowledge production in science and mathematics relies on precise notation and rigorous verification. Traditional approaches separate these concerns, leading to errors and inconsistencies. This thesis presents a unified framework that treats notation, verification, and document structure as first-class concepts.
+
+We introduce Kleis, a system where mathematical statements are simultaneously:
+- Notation that renders beautifully (via Typst)
+- Assertions that can be verified (via SMT solvers)
+- Structured data that can be queried and transformed
+
+The key insight is captured by our main theorem:"
+)
+
+define section_motivation = MITSection("Motivation",
+    "The gap between mathematical notation and formal verification has long plagued scientific computing. Researchers must maintain separate representations: one for publication and one for verification. This leads to errors when the two diverge.
+
+Kleis addresses this by treating the document itself as the source of truth. Every equation, every axiom, every theorem is both rendered and verified from the same source.")
+
+define section_contributions = MITSection("Contributions",
+    "This thesis makes the following contributions:
+
+1. A unified representation for notation, verification, and document structure
+2. Integration with SMT solvers for automated verification
+3. High-quality document output via Typst
+4. Jupyter notebook integration for interactive research
+5. Self-hosting capability where Kleis types are defined in Kleis")
+
+define chapter_background = MITChapter(2, "Background",
+    "We build on prior work in formal verification, type theory, and scientific computing. SMT solvers like Z3 provide decidable procedures for many useful theories. Typst offers a modern approach to document typesetting.
+
+Our type system follows Hindley-Milner inference with the following application rule:
+
+Previous work has focused on either verification OR document generation, but not both. We bridge this gap with a unified approach."
+)
+
+define chapter_system = MITChapter(3, "The Kleis System",
+    "Kleis is built on three key abstractions: structures for mathematical domains, axioms for verification rules, and templates for notation.
+
+The overall architecture is shown below. User documents import domain-specific libraries which define structures, axioms, and notation. The Kleis core dispatches to appropriate backends for type checking, verification, and rendering.
+
+The satisfiability condition that drives verification is:
+
+This combination enables domain-specific languages for any field with formal notation."
+)
+
+define section_parser = MITSection("Parser Architecture",
+    "The Kleis parser is implemented as a recursive descent parser in Rust. It supports Unicode identifiers, allowing mathematical notation like Greek letters directly in source code. The parser produces an Abstract Syntax Tree (AST) that preserves source location information for error reporting.")
+
+define section_type_system = MITSection("Type System",
+    "Kleis employs a Hindley-Milner type system with constraint-based inference. Types are inferred automatically, though explicit annotations are supported. The system handles polymorphic functions and can express complex mathematical structures.")
+
+define chapter_eval = MITChapter(4, "Evaluation",
+    "We evaluate Kleis on several case studies including tensor calculus for general relativity, counterpoint rules for music theory, and protocol verification for network security.
+
+Our performance measurements are summarized in the following table. The verification time scales polynomially with domain size.
+
+We also compare Kleis features against existing theorem provers in our feature comparison table."
+)
+
+define section_case_tensors = MITSection("Case Study: Tensor Calculus",
+    "General relativity requires complex tensor manipulations with strict symmetry rules. We implemented Einstein notation with automatic index contraction and verified the Bianchi identity. The complexity bound for our verification algorithm is:")
+
+define section_case_music = MITSection("Case Study: Music Theory",
+    "Renaissance counterpoint has strict rules about voice leading. We encoded Fux's rules as Kleis axioms and verified counterpoint exercises automatically. This demonstrates Kleis's applicability beyond traditional mathematics.")
+
+define chapter_conclusion = MITChapter(5, "Conclusion",
+    "We have presented Kleis, a substrate for formal knowledge production. Our main contributions are:
+
+1. A unified representation for notation, verification, and document structure
+2. Integration with SMT solvers for automated verification  
+3. High-quality document output via Typst
+4. Jupyter notebook integration for interactive research
+
+The soundness of our approach is captured by the theorem:
+
+Future work includes extending the solver abstraction layer, building domain-specific libraries, and integrating with additional theorem provers."
+)
+
+// ============================================================================
+// APPENDICES
+// ============================================================================
+
+define appendix_grammar = MITAppendix("A", "Kleis Grammar",
+    "This appendix presents the complete EBNF grammar for the Kleis language.
+
+The grammar is organized into the following sections:
+- Top-level declarations (imports, structures, definitions)
+- Expressions (function application, operators, literals)
+- Types (base types, function types, parameterized types)
+- Patterns (for match expressions)
+
+The full grammar specification is available in the project repository at `docs/grammar/kleis_grammar_v05.ebnf`."
+)
+
+define appendix_proofs = MITAppendix("B", "Soundness Proofs",
+    "This appendix contains the formal proofs of type soundness for the Kleis type system.
+
+*Theorem (Progress)*: If $e : tau$ then either $e$ is a value or there exists $e'$ such that $e -> e'$.
+
+*Theorem (Preservation)*: If $e : tau$ and $e -> e'$ then $e' : tau$.
+
+The proofs follow standard techniques for Hindley-Milner type systems and are mechanized in Z3."
+)
+
+// ============================================================================
+// REFERENCES
+// ============================================================================
+
+define ref_z3 = MITReference("demoura2008", 
+    "de Moura, L. and Bjorner, N. Z3: An Efficient SMT Solver. In *Proceedings of TACAS 2008*, pp. 337-340.")
+
+define ref_typst = MITReference("typst2023", 
+    "Madje, M. and Haug, L. Typst: A New Markup-based Typesetting System. 2023. https://typst.app/")
+
+define ref_hindley = MITReference("hindley1969",
+    "Hindley, R. The Principal Type-Scheme of an Object in Combinatory Logic. *Transactions of the American Mathematical Society*, 146:29-60, 1969.")
+
+define ref_milner = MITReference("milner1978",
+    "Milner, R. A Theory of Type Polymorphism in Programming. *Journal of Computer and System Sciences*, 17(3):348-375, 1978.")
+
+define ref_einstein = MITReference("einstein1915",
+    "Einstein, A. Die Feldgleichungen der Gravitation. *Sitzungsberichte der Preussischen Akademie der Wissenschaften*, pp. 844-847, 1915.")
+
+define ref_fux = MITReference("fux1725",
+    "Fux, J.J. Gradus ad Parnassum. Vienna, 1725. Translated by A. Mann as *The Study of Counterpoint*, W.W. Norton, 1965.")
+
+// ============================================================================
+// ASSEMBLE THE THESIS - All Elements in MIT-Required Order
+// ============================================================================
+
+// Body elements (chapters, sections, equations, figures, tables)
+define all_elements = 
+    Cons(chapter_intro, 
+    Cons(section_motivation,
+    Cons(section_contributions,
+    Cons(eq_verify,
+    Cons(chapter_background, 
+    Cons(eq_typing,
+    Cons(chapter_system, 
+    Cons(section_parser,
+    Cons(section_type_system,
+    Cons(fig_architecture, 
+    Cons(eq_sat,
+    Cons(chapter_eval, 
+    Cons(table_performance, 
+    Cons(fig_performance,
+    Cons(table_features,
+    Cons(fig_comparison,
+    Cons(fig_inference,
+    Cons(section_case_tensors,
+    Cons(eq_complexity,
+    Cons(table_benchmarks,
+    Cons(section_case_music,
+    Cons(chapter_conclusion, 
+    Cons(eq_soundness, 
+    Cons(eq_einstein,
+    // Appendices
+    Cons(appendix_grammar,
+    Cons(appendix_proofs,
+    // References
+    Cons(ref_z3, 
+    Cons(ref_typst, 
+    Cons(ref_hindley, 
+    Cons(ref_milner,
+    Cons(ref_einstein,
+    Cons(ref_fux, 
+    Nil))))))))))))))))))))))))))))))))
+
+// ============================================================================
+// THESIS METADATA
+// ============================================================================
+
+define acknowledgments_text = "I would like to express my deepest gratitude to my advisor, Prof. Alice Chen, for her unwavering support, insightful guidance, and endless patience throughout this research journey. Her expertise in formal methods and passion for rigorous thinking have profoundly shaped my approach to computer science.
+
+I am grateful to my thesis committee members for their valuable feedback and thought-provoking questions that helped refine this work.
+
+Special thanks to my colleagues in the Programming Languages group for countless discussions, debugging sessions, and coffee breaks. The collaborative environment at MIT has been instrumental in developing these ideas.
+
+Finally, I thank my family for their love and encouragement. This thesis would not have been possible without their support."
+
+define dedication_text = "To my parents, who taught me to question everything and never stop learning."
+
+define my_thesis = mit_thesis_full(
+    "Formal Verification of Knowledge Production Systems",
+    "Jane Smith",
+    "Department of Electrical Engineering and Computer Science",
+    "May 2025",
+    Doctor,
+    "This thesis presents Kleis, a formal verification system designed as a universal substrate for knowledge production. We demonstrate that mathematical notation, verification rules, and document structure can be treated as first-class concepts that are axiomatized and validated. Our system integrates SMT solvers like Z3 for automated verification, Typst for high-quality document rendering, and Jupyter notebooks for interactive research. We evaluate our approach on case studies in tensor calculus, music theory, and network security, showing that domain-specific notations can be defined while maintaining rigorous verification. The key insight is that knowledge production follows a universal pattern: notation plus rules plus verification plus output. Kleis provides the substrate for this pattern across any domain with formal notation.",
+    "Prof. Alice Chen",
+    "Professor of Computer Science",
+    acknowledgments_text,
+    dedication_text,
+    all_elements
+)
+
+// ============================================================================
+// EXAMPLES - Run with `kleis test jane_smith_thesis.kleis`
 // ============================================================================
 
 example "validate_thesis" {
-    // Check that the thesis meets MIT requirements
     assert(valid_mit_thesis(my_thesis) = True)
-    out("✓ Thesis is valid per MIT requirements")
+    out("Thesis is valid per MIT requirements")
 }
 
 example "check_signature" {
-    // PhD requires signature
     assert(signature_required(Doctor) = True)
-    
-    // Bachelor's doesn't
     assert(signature_required(Bachelor) = False)
-    
-    out("✓ Signature requirements validated")
+    out("Signature requirements validated")
 }
 
 example "compile_thesis" {
-    // Compile to Typst
     let result = compile_mit_thesis(my_thesis)
     out(result)
 }
 
-example "degree_info" {
-    out(degree_name(Doctor))
-    out(degree_abbrev(Doctor))
+example "test_diagram" {
+    // Test the native Kleis plotting
+    let perf = diagram(
+        plot([1.0, 2.0, 3.0], [10.0, 20.0, 30.0], label = "Test", mark = "o"),
+        title = "Test Plot", 
+        xlabel = "X", 
+        ylabel = "Y"
+    )
+    out("Diagram generated successfully")
+    out(perf)
 }
-

@@ -12,7 +12,7 @@
 |---------|-------|-----|
 | 14 | **Document Generation** | https://kleis.io/docs/manual/book/chapters/23-document-generation.html |
 
-This is the dissertation/thesis writing chapter. It covers KleisDoc, templates (MIT, UofM, arXiv), equations, figures, tables, bibliography, and PDF export.
+This is the dissertation/thesis writing chapter. It covers templates (MIT, UofM, arXiv), equations, figures, tables, bibliography, and PDF export. **Documents are pure Kleis programs.**
 
 ---
 
@@ -35,53 +35,96 @@ This is the dissertation/thesis writing chapter. It covers KleisDoc, templates (
 
 ---
 
-## 📦 Previous Work: KleisDoc Document System (Jan 2, 2026)
+## 📦 Previous Work: University Templates Complete (Jan 3, 2026)
 
-### Branch: `main` (merged)
+### Branch: `main`
 
-### START HERE: KleisDoc Design Documents
+### What Was Built
 
-**READ THESE FIRST** when implementing the document system:
+| Template | Status | Example Document |
+|----------|--------|------------------|
+| **MIT Thesis** (`stdlib/templates/mit_thesis.kleis`) | ✅ Complete | `examples/documents/jane_smith_thesis.kleis` |
+| **UofM Rackham** (`stdlib/templates/uofm_thesis.kleis`) | ✅ Complete | `examples/documents/alex_chen_dissertation.kleis` |
+| **arXiv Preprint** (`stdlib/templates/arxiv_paper.kleis`) | ✅ Complete | `examples/documents/sample_arxiv_paper.kleis` |
 
-| Document | Purpose |
-|----------|---------|
-| [`KLEISDOC_WORKFLOW.md`](./jupyter-equation-editor-poc/KLEISDOC_WORKFLOW.md) | **User journey: CREATE → AUTHOR → VERIFY → PREVIEW → ITERATE → PUBLISH** |
-| [`KLEISDOC_DESIGN.md`](./jupyter-equation-editor-poc/KLEISDOC_DESIGN.md) | Requirements analysis (12 categories) |
-| [`TEMPLATE_ARCHITECTURE.md`](./jupyter-equation-editor-poc/TEMPLATE_ARCHITECTURE.md) | Template system unification plan |
-| [`ROADMAP.md`](./jupyter-equation-editor-poc/ROADMAP.md) | Implementation phases |
-| [`README.md`](./jupyter-equation-editor-poc/README.md) | Full POC documentation |
+### MIT Thesis Features
+- Title page, signature page, abstract
+- Acknowledgments, dedication
+- Table of Contents, List of Figures, List of Tables
+- Chapters, sections, subsections
+- Equations (numbered), figures, tables, diagrams (Lilaq)
+- Appendices, bibliography
+- Bachelor/Master/Doctor degree types
 
-### Working Examples
+### UofM Rackham Features  
+- Rackham-compliant formatting (1" margins, Times 12pt, double-spaced)
+- Title page with full committee listing
+- Identifier/Copyright page with ORCID
+- Dedication, acknowledgments, preface
+- TOC, List of Tables, List of Figures, List of Appendices
+- Abstract (required)
+- Chapters with 2" top margin
+- Appendices, bibliography
+- PhD/DMA/DNP/DrPH/EdD/DArch degree types
+- Roman numerals for front matter, Arabic for body
+
+### arXiv Preprint Features
+- Based on [arxiv-style](https://github.com/kourgeorge/arxiv-style) (NeurIPS aesthetic)
+- Single-column, 11pt New Computer Modern font
+- Multiple authors with numbered affiliations
+- Abstract with optional keywords
+- Sections, subsections, subsubsections
+- Equations, figures, tables, diagrams (Lilaq)
+- Algorithms with pseudocode
+- Optional acknowledgments section
+- References section
+- Optional appendix
+- Preprint header on each page
+
+### Known Limitation: Inline Math
+
+Inline math in text (e.g., "function f: R^n → R^m") is NOT supported.
+Equations must be separate `MITEquation` or `UMichEquation` elements.
+See "FUTURE: Inline Math in Document Text" section below.
+
+---
+
+## 📦 Previous Work: Document System Cleanup (Jan 3, 2026)
+
+### What Changed
+
+**DELETED the old Python-heavy `KleisDoc` class** (3000+ lines) in favor of:
+- Pure Kleis documents (`.kleis` files)
+- Templates in `stdlib/templates/`
+- Thin Python shell (`kleisdoc_shell.py`, 227 lines)
+
+### Old Design Docs (SUPERSEDED)
+
+The following design docs in `docs/jupyter-equation-editor-poc/` are **historical only**:
+- `KLEISDOC_WORKFLOW.md` - Old Python API workflow
+- `KLEISDOC_DESIGN.md` - Old requirements analysis  
+- `TEMPLATE_ARCHITECTURE.md` - Superseded by current templates
+- `ROADMAP.md` - Implementation phases (mostly complete)
+- `README.md` - POC documentation
+
+**Current approach:** See [Chapter 23: Document Generation](https://kleis.io/docs/manual/book/chapters/23-document-generation.html)
+
+### Current Examples
 
 | File | Purpose |
 |------|---------|
-| [`jane_smith_thesis_kleisdoc.kleis`](../examples/documents/jane_smith_thesis_kleisdoc.kleis) | **Complete PhD thesis in KleisDoc format with EditorNode equations** |
-| [`kleisdoc_types.kleis`](../examples/documents/kleisdoc_types.kleis) | 44 data types for KleisDoc format |
-| [`kleisdoc_builders.kleis`](../examples/documents/kleisdoc_builders.kleis) | 53 builder functions (reduce verbosity) |
-| [`thesis_compiler.kleis`](../examples/documents/thesis_compiler.kleis) | Document → Typst compiler (Document = Program pattern) |
-| [`lisp_parser.kleis`](../examples/meta-programming/lisp_parser.kleis) | LISP interpreter (proof of Document = Program concept) |
+| [`jane_smith_thesis.kleis`](../examples/documents/jane_smith_thesis.kleis) | MIT PhD thesis example |
+| [`alex_chen_dissertation.kleis`](../examples/documents/alex_chen_dissertation.kleis) | UofM Rackham dissertation |
+| [`sample_arxiv_paper.kleis`](../examples/documents/sample_arxiv_paper.kleis) | arXiv paper example |
+| [`lisp_parser.kleis`](../examples/meta-programming/lisp_parser.kleis) | LISP interpreter (proof of Document = Program) |
 
-### Key Architecture Decisions
+### Key Architecture (Final)
 
-1. **Documents are Examples** - A document in Kleis is an `example` block that validates and compiles
-2. **Document = Program** - Same pattern as LISP: parse AST → evaluate/compile → output
-3. **EditorNode AST** - Equations stored as AST for re-editing, not just Typst code
-4. **Pure Kleis Format** - `.kleisdoc` is just `.kleis` code with builder functions
-5. **Template Unification** - `.kleist` files → `.kleis` structures (delete old system)
-6. **Tools Stay in JS** - Matrix Builder etc. remain JavaScript, produce EditorNode JSON
-
-### Implementation Priorities
-
-1. **Phase 1: Core Workflow** - `KleisDoc` Python class, save/load, PDF export
-2. **Phase 2: Jupyter Integration** - Magic commands, Equation Editor iframe
-3. **Phase 3: Verification** - Template axioms, cross-refs, Z3 math verification
-4. **Phase 4: Polish** - Live preview, watch mode
-5. **Phase 5: Export Formats** - LaTeX (arXiv), HTML, EPUB
-
-### Blocking Issues
-
-- `render_editor_node` needs to be exposed as Kleis builtin (currently Rust-only)
-- ~~`intToStr` not implemented in evaluator~~ ✅ FIXED (Jan 3, 2026)
+1. **Documents are Kleis Programs** - Not Python objects
+2. **Templates are Kleis Files** - `stdlib/templates/*.kleis`
+3. **Python is a Thin Shell** - Just calls `kleis test` and `typst compile`
+4. **No EditorNode in Documents** - Equations are Typst strings (simpler)
+5. **Compile via Example Blocks** - `example "compile" { out(compile_mit_thesis(thesis)) }`
 
 ---
 
@@ -559,6 +602,65 @@ Just like we documented the Solver Abstraction Layer by **reading the code first
 - `src/render_editor.rs` — EditorNode rendering
 
 **See also:** Section 9 (Jupyter + Equation Editor Integration)
+
+---
+
+## 🎯 FUTURE: Inline Math in Document Text
+
+### The Problem
+
+Currently, document text content is plain strings. Equations are separate `MITEquation` or `UMichEquation` elements. There's no way to embed math inline within prose:
+
+```kleis
+// DOESN'T WORK - the f: R^n → R^m is not rendered as math
+define sec = UMichSection("Background",
+    "A neural network is a function f: R^n → R^m that maps inputs to outputs.")
+```
+
+### What's Needed
+
+Support for inline math within text content, similar to LaTeX `$...$` or Typst `$...$`:
+
+```kleis
+// DESIRED - inline math rendered properly
+define sec = UMichSection("Background",
+    "A neural network is a function $f: RR^n -> RR^m$ that maps inputs to outputs.")
+```
+
+### Implementation Options
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **String interpolation** - Parse `$...$` in strings | Familiar LaTeX syntax | Requires string parsing in evaluator |
+| **Rich text data type** - `RichText = Plain(String) \| Math(String) \| Concat(RichText, RichText)` | Type-safe, composable | Verbose for simple cases |
+| **Typst passthrough** - Let users write raw Typst | No new syntax needed | Leaks Typst into Kleis |
+
+### Typst Context
+
+Typst already supports inline math with `$...$`:
+```typst
+A neural network is a function $f: RR^n -> RR^m$ that maps inputs.
+```
+
+The challenge is getting the `$` delimiters into the Typst output correctly when they appear in Kleis string content.
+
+### Workaround (Current)
+
+Write prose without inline math symbols, or use plain text approximations:
+```kleis
+// OK - no special symbols
+"A neural network maps n-dimensional inputs to m-dimensional outputs."
+```
+
+### Priority
+
+Medium - Important for publication-quality documents, but workarounds exist.
+
+### Files to Modify (When Implementing)
+
+- `src/evaluator.rs` - String processing for `$...$` detection
+- `stdlib/templates/*.kleis` - Template text handling
+- `examples/documents/*.kleis` - Update examples
 
 ---
 

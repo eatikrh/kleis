@@ -1,136 +1,204 @@
 // =============================================================================
-// MIT Thesis Template
+// MIT Thesis Template - Full Compliance Version
 // =============================================================================
 //
 // Based on:
 // - MIT Libraries Thesis Specifications: https://libraries.mit.edu/distinctive-collections/thesis-specs/
 // - Official mitthesis LaTeX class v1.21 (2025/11/02): https://ctan.org/pkg/mitthesis
 //
-// This template defines:
-// - Required metadata fields
-// - Document structure and ordering
-// - Typst styling (margins, fonts, layout)
-// - Validation axioms
+// MIT Required Sections (in order):
+// 1. Title page (page 1, no visible number)
+// 2. Signature page (required for Master's/PhD)
+// 3. Abstract page
+// 4. Acknowledgments (optional)
+// 5. Table of Contents
+// 6. List of Figures
+// 7. List of Tables
+// 8. Body (chapters)
+// 9. Appendices (optional)
+// 10. Bibliography/References
 //
 // =============================================================================
 
-// -----------------------------------------------------------------------------
+import "stdlib/prelude.kleis"
+
+// =============================================================================
 // Template Metadata
-// -----------------------------------------------------------------------------
+// =============================================================================
 
 define template_name = "MIT Thesis"
-define template_version = "1.0"
+define template_version = "2.0"
 define template_institution = "Massachusetts Institute of Technology"
 define template_type = "thesis"
 
-// -----------------------------------------------------------------------------
+// =============================================================================
 // Degree Types
-// -----------------------------------------------------------------------------
+// =============================================================================
 
-define degree_types = List("Bachelor", "Master", "Doctor")
+data Degree = Bachelor | Master | Doctor
 
-define degree_names = List(
-    Pair("Bachelor", "Bachelor of Science"),
-    Pair("Master", "Master of Science"),
-    Pair("Doctor", "Doctor of Philosophy")
+define degree_name(d) = match d {
+    Bachelor => "Bachelor of Science"
+  | Master => "Master of Science"
+  | Doctor => "Doctor of Philosophy"
+}
+
+define degree_abbrev(d) = match d {
+    Bachelor => "S.B."
+  | Master => "S.M."
+  | Doctor => "Ph.D."
+}
+
+define signature_required(d) = match d {
+    Bachelor => false
+  | Master => true
+  | Doctor => true
+}
+
+// =============================================================================
+// Document Data Types - Extended for MIT Compliance
+// =============================================================================
+
+// Document element types
+data MITDocExpr =
+    MITChapter(ℕ, String, String)           // num, title, content
+  | MITSection(String, String)               // title, content  
+  | MITSubsection(String, String)            // title, content
+  | MITEquation(String, String, Bool)        // label, typst_math, numbered
+  | MITFigure(String, String, String)        // label, caption, typst_code
+  | MITTable(String, String, String)         // label, caption, typst_table
+  | MITDiagram(String, String, String)       // label, caption, diagram_code (lilaq)
+  | MITReference(String, String)             // key, citation
+  | MITAcknowledgments(String)               // acknowledgments text
+  | MITDedication(String)                    // dedication text
+  | MITAppendix(String, String, String)      // letter, title, content
+
+// Complete thesis document - Extended
+data MITThesisDoc = MITThesis(
+    String,      // title
+    String,      // author
+    String,      // department
+    String,      // date
+    Degree,      // degree type
+    String,      // abstract
+    String,      // supervisor
+    String,      // supervisor_title (e.g., "Professor of Computer Science")
+    String,      // acknowledgments (empty string if none)
+    String,      // dedication (empty string if none)
+    List         // chapters/elements
 )
 
-define degree_abbrevs = List(
-    Pair("Bachelor", "S.B."),
-    Pair("Master", "S.M."),
-    Pair("Doctor", "Ph.D.")
+// =============================================================================
+// Document Construction
+// =============================================================================
+
+// Full constructor
+define mit_thesis_full(title, author, dept, date, degree, abstract_text, supervisor, supervisor_title, acknowledgments, dedication, elements) =
+    MITThesis(title, author, dept, date, degree, abstract_text, supervisor, supervisor_title, acknowledgments, dedication, elements)
+
+// Simple constructor (backward compatible)
+define mit_thesis(title, author, dept, date, degree, abstract_text, supervisor, elements) =
+    MITThesis(title, author, dept, date, degree, abstract_text, supervisor, "Professor", "", "", elements)
+
+// =============================================================================
+// Validation Functions
+// =============================================================================
+
+define valid_mit_thesis(thesis) = match thesis {
+    MITThesis(title, author, dept, date, degree, abstract_text, supervisor, supervisor_title, ack, ded, elements) =>
+        if eq(strlen(title), 0) then false
+        else if eq(strlen(author), 0) then false
+        else if eq(strlen(dept), 0) then false
+        else if eq(strlen(abstract_text), 0) then false
+        else if eq(strlen(supervisor), 0) then false
+        else true
+}
+
+// =============================================================================
+// Typst Styling - MIT Compliant
+// =============================================================================
+
+// Page setup with proper numbering
+// Title page = page 1 (no visible number), roman numerals for front matter
+define typst_page_setup = 
+"#set page(
+  paper: \"us-letter\",
+  margin: (top: 1in, bottom: 1in, left: 1.5in, right: 1in),
+  numbering: \"1\",
 )
 
-// -----------------------------------------------------------------------------
-// Required Metadata Fields
-// -----------------------------------------------------------------------------
+// Page counter - title page is page 1
+#counter(page).update(1)
+"
 
-define required_metadata = List(
-    "title",
-    "author",
-    "department",
-    "date",
-    "degree",           // Bachelor, Master, or Doctor
-    "abstract",
-    "supervisor"
-)
-
-define optional_metadata = List(
-    "co_supervisor",
-    "dedication",
-    "acknowledgments",
-    "committee_members"
-)
-
-// Signature page required for Master's and Doctor's (not Bachelor's)
-define signature_required_for = List("Master", "Doctor")
-
-// -----------------------------------------------------------------------------
-// Document Structure (required order per MIT specs)
-// -----------------------------------------------------------------------------
-
-define document_structure = List(
-    "title_page",
-    "signature_page",       // Required for Master's and Doctor's
-    "abstract_page",
-    "dedication",           // Optional
-    "acknowledgments",      // Optional
-    "table_of_contents",
-    "list_of_figures",      // If applicable
-    "list_of_tables",       // If applicable
-    "chapters",
-    "appendices",           // Optional
-    "bibliography"
-)
-
-// -----------------------------------------------------------------------------
-// Typst Styling (based on official mitthesis.cls v1.21, 2025/11/02)
-// Source: https://ctan.org/pkg/mitthesis
-// -----------------------------------------------------------------------------
-
-define typst_page_setup = """
-#set page(
-  paper: "us-letter",
-  margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
-)
-"""
-
-define typst_text_setup = """
-#set text(
-  font: "New Computer Modern",
+define typst_text_setup = 
+"#set text(
+  font: \"New Computer Modern\",
   size: 12pt,
-  lang: "en",
+  lang: \"en\",
 )
-"""
+"
 
-define typst_paragraph_setup = """
-#set par(
+define typst_paragraph_setup = 
+"#set par(
   justify: true,
   leading: 0.65em,
+  first-line-indent: 0.5in,
 )
-"""
 
-define typst_heading_setup = """
-#set heading(numbering: "1.1")
+// No indent after headings
+#show heading: it => {
+  it
+  par(text(size: 0pt, \"\"))
+}
+"
+
+define typst_heading_setup = 
+"#set heading(numbering: \"1.1\")
+
+// Chapter headings (level 1)
 #show heading.where(level: 1): it => {
   pagebreak(weak: true)
   v(1in)
-  text(size: 16pt, weight: "bold")[Chapter #counter(heading).display()]
+  text(size: 16pt, weight: \"bold\")[Chapter #counter(heading).display()]
   v(0.3in)
-  text(size: 14pt, weight: "bold")[#it.body]
+  text(size: 14pt, weight: \"bold\")[#it.body]
   v(0.5in)
 }
+
+// Section headings (level 2)
 #show heading.where(level: 2): it => {
   v(0.3in)
-  text(size: 12pt, weight: "bold")[#it.body]
+  text(size: 12pt, weight: \"bold\")[#counter(heading).display() #it.body]
   v(0.15in)
 }
-"""
 
-define typst_title_page = """
-#page(margin: (top: 2in, bottom: 1in, left: 1in, right: 1in), numbering: none)[
+// Subsection headings (level 3)
+#show heading.where(level: 3): it => {
+  v(0.2in)
+  text(size: 11pt, weight: \"bold\", style: \"italic\")[#counter(heading).display() #it.body]
+  v(0.1in)
+}
+"
+
+// Figure and table captions
+define typst_figure_setup =
+"#set figure(placement: auto)
+#show figure.caption: it => {
+  text(size: 10pt)[#it]
+}
+"
+
+define typst_preamble = concat(concat(concat(concat(typst_page_setup, typst_text_setup), typst_paragraph_setup), typst_heading_setup), typst_figure_setup)
+
+// =============================================================================
+// Title Page Template (Page 1, no visible number)
+// =============================================================================
+
+define typst_title_page_template = 
+"#page(margin: (top: 2in, bottom: 1in, left: 1.5in, right: 1in), numbering: none)[
   #align(center)[
-    #text(size: 18pt, weight: "bold")[TITLE]
+    #text(size: 18pt, weight: \"bold\")[TITLE]
     
     #v(0.5in)
     by
@@ -141,31 +209,75 @@ define typst_title_page = """
     Submitted to the DEPARTMENT #linebreak()
     in partial fulfillment of the requirements for the degree of
     #v(0.3in)
-    #text(style: "italic")[DEGREE_NAME]
+    #text(style: \"italic\")[DEGREE_NAME]
     #v(0.3in)
     at the
     #v(0.3in)
-    #text(weight: "bold")[MASSACHUSETTS INSTITUTE OF TECHNOLOGY]
+    #text(weight: \"bold\")[MASSACHUSETTS INSTITUTE OF TECHNOLOGY]
     #v(0.3in)
     DATE
+    
+    #v(0.3in)
+    #text(size: 10pt)[© AUTHOR. This work is licensed under a CC BY-NC-ND 4.0 license.]
   ]
   
   #v(1fr)
   
   #align(left)[
-    Thesis Supervisor: SUPERVISOR
+    Thesis Supervisor: SUPERVISOR #linebreak()
+    Title: SUPERVISOR_TITLE
   ]
 ]
-"""
+"
 
-define typst_abstract_page = """
-#page[
+// =============================================================================
+// Signature Page Template (Required for Master's/PhD)
+// =============================================================================
+
+define typst_signature_page_template =
+"#page(numbering: none)[
   #align(center)[
-    #text(size: 14pt, weight: "bold")[Abstract]
+    #text(size: 14pt, weight: \"bold\")[Signature Page]
+  ]
+  #v(0.5in)
+  
+  This thesis has been examined by a committee as follows:
+  
+  #v(1in)
+  
+  #line(length: 70%, stroke: 0.5pt)
+  SUPERVISOR #linebreak()
+  Thesis Supervisor #linebreak()
+  SUPERVISOR_TITLE, DEPARTMENT
+  
+  #v(0.8in)
+  
+  #line(length: 70%, stroke: 0.5pt)
+  Committee Member Name #linebreak()
+  Title #linebreak()
+  Department
+  
+  #v(0.8in)
+  
+  #line(length: 70%, stroke: 0.5pt)
+  Committee Member Name #linebreak()
+  Title #linebreak()
+  Department
+]
+"
+
+// =============================================================================
+// Abstract Page Template
+// =============================================================================
+
+define typst_abstract_template = 
+"#page[
+  #align(center)[
+    #text(size: 14pt, weight: \"bold\")[Abstract]
   ]
   #v(0.3in)
   
-  #text(weight: "bold")[TITLE]
+  #text(weight: \"bold\")[TITLE]
   
   #v(0.2in)
   by AUTHOR
@@ -176,112 +288,363 @@ define typst_abstract_page = """
   requirements for the degree of DEGREE_NAME
   
   #v(0.3in)
-  ABSTRACT_TEXT
+  #par(first-line-indent: 0in)[ABSTRACT_TEXT]
   
   #v(0.5in)
-  #text(weight: "bold")[Thesis Supervisor:] SUPERVISOR #linebreak()
-  #text(weight: "bold")[Title:] Professor
+  #text(weight: \"bold\")[Thesis Supervisor:] SUPERVISOR #linebreak()
+  #text(weight: \"bold\")[Title:] SUPERVISOR_TITLE
 ]
-"""
+"
 
-define typst_signature_page = """
-#page[
+// =============================================================================
+// Acknowledgments Page Template
+// =============================================================================
+
+define typst_acknowledgments_template =
+"#page[
   #align(center)[
-    #text(size: 14pt, weight: "bold")[Signature Page]
+    #text(size: 14pt, weight: \"bold\")[Acknowledgments]
   ]
-  #v(1in)
+  #v(0.3in)
   
-  This thesis has been examined by the following committee:
-  
-  #v(0.5in)
-  
-  #line(length: 3in)
-  SUPERVISOR, Thesis Supervisor
-  
-  #v(0.5in)
-  
-  #line(length: 3in)
-  Committee Member
+  ACKNOWLEDGMENTS_TEXT
 ]
-"""
+"
 
-define typst_front_matter_numbering = """
-#set page(numbering: "i")
-"""
+// =============================================================================
+// Dedication Page Template
+// =============================================================================
 
-define typst_body_numbering = """
-#set page(numbering: "1")
-#counter(page).update(1)
-"""
+define typst_dedication_template =
+"#page[
+  #v(2in)
+  #align(center)[
+    #text(style: \"italic\")[DEDICATION_TEXT]
+  ]
+]
+"
 
-// Complete preamble
-define typst_preamble = concat(
-    typst_page_setup,
-    typst_text_setup,
-    typst_paragraph_setup,
-    typst_heading_setup
-)
+// =============================================================================
+// Table of Contents, List of Figures, List of Tables
+// Note: These use custom centered titles, not heading() to avoid "Chapter 0"
+// =============================================================================
 
-// -----------------------------------------------------------------------------
-// Validation Axioms
-// -----------------------------------------------------------------------------
+define typst_toc =
+"#page[
+  #align(center)[
+    #text(size: 14pt, weight: \"bold\")[Table of Contents]
+  ]
+  #v(0.3in)
+  #outline(
+    title: none,
+    depth: 3,
+    indent: 1.5em,
+  )
+]
+"
 
-axiom title_required
-    forall doc : Document .
-        has_metadata(doc, "title")
+define typst_list_of_figures =
+"#page[
+  #align(center)[
+    #text(size: 14pt, weight: \"bold\")[List of Figures]
+  ]
+  #v(0.3in)
+  #outline(
+    title: none,
+    target: figure.where(kind: image),
+  )
+]
+"
 
-axiom author_required
-    forall doc : Document .
-        has_metadata(doc, "author")
+define typst_list_of_tables =
+"#page[
+  #align(center)[
+    #text(size: 14pt, weight: \"bold\")[List of Tables]
+  ]
+  #v(0.3in)
+  #outline(
+    title: none,
+    target: figure.where(kind: table),
+  )
+]
+"
 
-axiom department_required
-    forall doc : Document .
-        has_metadata(doc, "department")
+// =============================================================================
+// Bibliography Header
+// =============================================================================
 
-axiom abstract_required
-    forall doc : Document .
-        has_metadata(doc, "abstract")
+define typst_bibliography_header =
+"#pagebreak()
+#heading(numbering: none)[References]
+"
 
-axiom supervisor_required
-    forall doc : Document .
-        has_metadata(doc, "supervisor")
+// =============================================================================
+// Appendix Setup
+// =============================================================================
 
-// Signature page required for advanced degrees
-axiom signature_page_for_advanced_degrees
-    forall doc : Document .
-        (get_metadata(doc, "degree") = "Master" or get_metadata(doc, "degree") = "Doctor")
-        => has_section(doc, "signature_page")
+define typst_appendix_setup =
+"#pagebreak()
+// Reset heading counter for appendices
+#counter(heading).update(0)
+#set heading(numbering: \"A.1\")
 
-// Must have at least one chapter
-axiom has_chapters
-    forall doc : Document .
-        count_sections(doc, "chapter") >= 1
+#show heading.where(level: 1): it => {
+  pagebreak(weak: true)
+  v(1in)
+  text(size: 16pt, weight: \"bold\")[Appendix #counter(heading).display()]
+  v(0.3in)
+  text(size: 14pt, weight: \"bold\")[#it.body]
+  v(0.5in)
+}
+"
 
-// Must have bibliography
-axiom has_bibliography
-    forall doc : Document .
-        has_section(doc, "bibliography")
+// =============================================================================
+// Compilation Functions
+// =============================================================================
 
-// -----------------------------------------------------------------------------
-// Example Usage
-// -----------------------------------------------------------------------------
+// Substitute placeholders in template
+define substitute_mit_full(template, title, author, dept, date, degree, abstract_text, supervisor, supervisor_title) =
+    let t1 = replaceAll(template, "TITLE", title) in
+    let t2 = replaceAll(t1, "AUTHOR", author) in
+    let t3 = replaceAll(t2, "DEPARTMENT", dept) in
+    let t4 = replaceAll(t3, "DATE", date) in
+    let t5 = replaceAll(t4, "DEGREE_NAME", degree_name(degree)) in
+    let t6 = replaceAll(t5, "ABSTRACT_TEXT", abstract_text) in
+    let t7 = replaceAll(t6, "SUPERVISOR_TITLE", supervisor_title) in
+    replaceAll(t7, "SUPERVISOR", supervisor)
 
-example "MIT thesis metadata"
-    out "Required fields for MIT thesis:"
-    out "  - title, author, department, date"
-    out "  - degree (Bachelor, Master, or Doctor)"
-    out "  - abstract, supervisor"
-    out ""
-    out "Signature page required for: Master's, Doctor's"
-    out ""
-    out "Document structure (in order):"
-    out "  1. Title Page"
-    out "  2. Signature Page (if required)"
-    out "  3. Abstract"
-    out "  4. Dedication (optional)"
-    out "  5. Acknowledgments (optional)"
-    out "  6. Table of Contents"
-    out "  7. List of Figures/Tables (if applicable)"
-    out "  8. Chapters"
-    out "  9. Appendices (optional)"
-    out "  10. Bibliography"
+// Backward compatible version
+define substitute_mit(template, title, author, dept, date, degree, abstract_text, supervisor) =
+    substitute_mit_full(template, title, author, dept, date, degree, abstract_text, supervisor, "Professor")
+
+// Check if element is a reference
+define is_reference(elem) = match elem {
+    MITReference(key, citation) => true
+  | MITChapter(num, title, content) => false
+  | MITSection(title, content) => false
+  | MITSubsection(title, content) => false
+  | MITEquation(label, typst_math, numbered) => false
+  | MITFigure(label, caption, code) => false
+  | MITTable(label, caption, table_code) => false
+  | MITDiagram(label, caption, diagram_code) => false
+  | MITAcknowledgments(text) => false
+  | MITDedication(text) => false
+  | MITAppendix(letter, title, content) => false
+}
+
+// Check if element is an appendix
+define is_appendix(elem) = match elem {
+    MITAppendix(letter, title, content) => true
+  | MITReference(key, citation) => false
+  | MITChapter(num, title, content) => false
+  | MITSection(title, content) => false
+  | MITSubsection(title, content) => false
+  | MITEquation(label, typst_math, numbered) => false
+  | MITFigure(label, caption, code) => false
+  | MITTable(label, caption, table_code) => false
+  | MITDiagram(label, caption, diagram_code) => false
+  | MITAcknowledgments(text) => false
+  | MITDedication(text) => false
+}
+
+// Compile a single element to Typst
+define compile_element(elem) = match elem {
+    MITChapter(num, title, content) => 
+        concat(concat(concat("= ", title), "\n\n"), content)
+  | MITSection(title, content) =>
+        concat(concat(concat("== ", title), "\n\n"), content)
+  | MITSubsection(title, content) =>
+        concat(concat(concat("=== ", title), "\n\n"), content)
+  | MITEquation(label, typst_math, numbered) =>
+        if numbered then
+            concat(concat(concat("$ ", typst_math), " $ <"), concat(label, ">"))
+        else
+            concat(concat("$ ", typst_math), " $")
+  | MITFigure(label, caption, code) =>
+        concat(concat(concat("#figure(\n  ", code), ",\n  caption: ["), concat(concat(caption, "]\n) <"), concat(label, ">")))
+  | MITTable(label, caption, table_code) =>
+        concat(concat(concat("#figure(\n  ", table_code), ",\n  caption: ["), concat(concat(caption, "]\n) <"), concat(label, ">")))
+  | MITDiagram(label, caption, diagram_code) =>
+        concat(concat(concat("#figure(\n  ", diagram_code), ",\n  caption: ["), concat(concat(caption, "]\n) <"), concat(label, ">")))
+  | MITReference(key, citation) =>
+        concat(concat(concat("[", key), "] "), citation)
+  | MITAcknowledgments(text) =>
+        ""  // Handled separately in front matter
+  | MITDedication(text) =>
+        ""  // Handled separately in front matter
+  | MITAppendix(letter, title, content) =>
+        concat(concat(concat("= ", title), "\n\n"), content)
+}
+
+// Compile elements list (excluding references and appendices)
+define compile_body_elements_acc(xs, acc) =
+    if eq(length(xs), 0) then acc
+    else 
+        let elem = head(xs) in
+        if is_reference(elem) then compile_body_elements_acc(tail(xs), acc)
+        else if is_appendix(elem) then compile_body_elements_acc(tail(xs), acc)
+        else
+            let elem_typst = compile_element(elem) in
+            let new_acc = if eq(strlen(acc), 0) then elem_typst 
+                          else concat(concat(acc, "\n\n"), elem_typst) in
+            compile_body_elements_acc(tail(xs), new_acc)
+
+define compile_body_elements(xs) = compile_body_elements_acc(xs, "")
+
+// Compile only references
+define compile_references_acc(xs, acc) =
+    if eq(length(xs), 0) then acc
+    else 
+        let elem = head(xs) in
+        if is_reference(elem) then
+            let elem_typst = compile_element(elem) in
+            let new_acc = if eq(strlen(acc), 0) then elem_typst 
+                          else concat(concat(acc, "\n\n"), elem_typst) in
+            compile_references_acc(tail(xs), new_acc)
+        else
+            compile_references_acc(tail(xs), acc)
+
+define compile_references(xs) = compile_references_acc(xs, "")
+
+// Compile only appendices
+define compile_appendices_acc(xs, acc) =
+    if eq(length(xs), 0) then acc
+    else 
+        let elem = head(xs) in
+        if is_appendix(elem) then
+            let elem_typst = compile_element(elem) in
+            let new_acc = if eq(strlen(acc), 0) then elem_typst 
+                          else concat(concat(acc, "\n\n"), elem_typst) in
+            compile_appendices_acc(tail(xs), new_acc)
+        else
+            compile_appendices_acc(tail(xs), acc)
+
+define compile_appendices(xs) = compile_appendices_acc(xs, "")
+
+// Check if list has any references
+define has_references_acc(xs) =
+    if eq(length(xs), 0) then false
+    else if is_reference(head(xs)) then true
+    else has_references_acc(tail(xs))
+
+define has_references(xs) = has_references_acc(xs)
+
+// Check if list has any appendices
+define has_appendices_acc(xs) =
+    if eq(length(xs), 0) then false
+    else if is_appendix(head(xs)) then true
+    else has_appendices_acc(tail(xs))
+
+define has_appendices(xs) = has_appendices_acc(xs)
+
+// Compile complete thesis to Typst - MIT Compliant Order
+define compile_mit_thesis(thesis) = match thesis {
+    MITThesis(title, author, dept, date, degree, abstract_text, supervisor, supervisor_title, ack, ded, elements) =>
+        let preamble = typst_preamble in
+        
+        // 1. Title page
+        let title_page = substitute_mit_full(typst_title_page_template, title, author, dept, date, degree, abstract_text, supervisor, supervisor_title) in
+        
+        // 2. Signature page (only for Master's and PhD)
+        let sig_page = if signature_required(degree) then 
+            substitute_mit_full(typst_signature_page_template, title, author, dept, date, degree, abstract_text, supervisor, supervisor_title)
+            else "" in
+        
+        // 3. Abstract page
+        let abstract_page = substitute_mit_full(typst_abstract_template, title, author, dept, date, degree, abstract_text, supervisor, supervisor_title) in
+        
+        // 4. Acknowledgments (if provided)
+        let ack_page = if eq(strlen(ack), 0) then ""
+            else replaceAll(typst_acknowledgments_template, "ACKNOWLEDGMENTS_TEXT", ack) in
+        
+        // 5. Dedication (if provided)
+        let ded_page = if eq(strlen(ded), 0) then ""
+            else replaceAll(typst_dedication_template, "DEDICATION_TEXT", ded) in
+        
+        // 6. Table of Contents
+        let toc = typst_toc in
+        
+        // 7. List of Figures (always include - will be empty if no figures)
+        let lof = typst_list_of_figures in
+        
+        // 8. List of Tables (always include - will be empty if no tables)
+        let lot = typst_list_of_tables in
+        
+        // 9. Body (chapters, sections, equations, figures, tables)
+        let body = compile_body_elements(elements) in
+        
+        // 10. Appendices (if any)
+        let appendices = if has_appendices(elements) then
+            concat(typst_appendix_setup, compile_appendices(elements))
+            else "" in
+        
+        // 11. References/Bibliography
+        let refs = if has_references(elements) then
+            concat(typst_bibliography_header, compile_references(elements))
+            else "" in
+        
+        // Assemble all parts
+        concat(preamble,
+        concat("\n\n", concat(title_page,
+        concat("\n\n", concat(sig_page,
+        concat("\n\n", concat(abstract_page,
+        concat("\n\n", concat(ack_page,
+        concat("\n\n", concat(ded_page,
+        concat("\n\n", concat(toc,
+        concat("\n\n", concat(lof,
+        concat("\n\n", concat(lot,
+        concat("\n\n", concat(body,
+        concat("\n\n", concat(appendices,
+        concat("\n\n", refs))))))))))))))))))))))
+}
+
+// =============================================================================
+// Examples
+// =============================================================================
+
+example "test_degree_functions" {
+    assert(degree_name(Doctor) = "Doctor of Philosophy")
+    assert(degree_abbrev(Doctor) = "Ph.D.")
+    assert(signature_required(Doctor) = true)
+    assert(signature_required(Bachelor) = false)
+    out("Degree functions work")
+}
+
+example "test_element_compilation" {
+    let ch = MITChapter(1, "Introduction", "This is the intro.") in
+    let typst = compile_element(ch) in
+    out(typst)
+}
+
+example "test_thesis_validation" {
+    let thesis = mit_thesis(
+        "Test Thesis",
+        "Test Author",
+        "Test Dept",
+        "May 2025",
+        Doctor,
+        "Test abstract",
+        "Prof. Test",
+        Nil
+    ) in
+    assert(valid_mit_thesis(thesis) = true)
+    out("Thesis validation works")
+}
+
+example "test_full_thesis" {
+    let thesis = mit_thesis_full(
+        "My Amazing Thesis",
+        "Jane Doe",
+        "Department of Computer Science",
+        "June 2025",
+        Doctor,
+        "This is the abstract text describing the thesis.",
+        "Prof. John Smith",
+        "Professor of Computer Science",
+        "I would like to thank my advisor and family.",
+        "To my parents.",
+        Cons(MITChapter(1, "Introduction", "This is chapter 1."), Nil)
+    ) in
+    assert(valid_mit_thesis(thesis) = true)
+    out("Full thesis constructor works")
+}

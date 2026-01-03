@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a0b1a2e2.js";
+            window.path_to_searchindex_js = "searchindex-6bc585af.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -3126,13 +3126,6 @@ diagram(
 <li><code>"log"</code> - Logarithmic scale (base 10)</li>
 <li><code>"symlog"</code> - Symmetric log (linear near 0, log elsewhere; handles negative values)</li>
 </ul>
-<h3 id="future-enhancements"><a class="header" href="#future-enhancements">Future Enhancements</a></h3>
-<p>See the <a href="../../PLOTTING_ROADMAP.html">Plotting Roadmap</a> for planned features:</p>
-<ul>
-<li>Function plotting (<code>fplot</code>)</li>
-<li>3D surface plots</li>
-<li>Polar plots</li>
-</ul>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
 <li>Explore the <a href="#the-repl-1">REPL chapter</a> for more interactive features</li>
@@ -3140,751 +3133,627 @@ diagram(
 <li>Check <a href="#z3-verification">Z3 Verification</a> for formal proofs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="document-generation-with-kleisdoc"><a class="header" href="#document-generation-with-kleisdoc">Document Generation with KleisDoc</a></h1>
-<p>Kleis provides a complete document generation system for creating publication-quality documents like PhD theses, conference papers, and journal articles. This chapter covers everything you need to write your thesis using Kleis and Jupyter notebooks.</p>
-<h2 id="why-kleisdoc"><a class="header" href="#why-kleisdoc">Why KleisDoc?</a></h2>
+<h1 id="creating-documents-with-kleis"><a class="header" href="#creating-documents-with-kleis">Creating Documents with Kleis</a></h1>
+<p>Kleis provides a complete document generation system for creating publication-quality theses, dissertations, and papers. Unlike traditional approaches where documents are separate from code, in Kleis <strong>your document IS a program</strong>.</p>
+<h2 id="the-philosophy-document--program"><a class="header" href="#the-philosophy-document--program">The Philosophy: Document = Program</a></h2>
 <p>Traditional academic writing separates:</p>
 <ul>
 <li><strong>Code</strong> (Jupyter notebooks, Python scripts)</li>
-<li><strong>Equations</strong> (LaTeX, copy-pasted into Word)</li>
+<li><strong>Equations</strong> (LaTeX, copy-pasted)</li>
 <li><strong>Plots</strong> (matplotlib, exported as images)</li>
 <li><strong>Document</strong> (Word, LaTeX, Google Docs)</li>
 </ul>
-<p>This separation leads to:</p>
+<p>This separation causes problems:</p>
 <ul>
 <li>Copy-paste errors between code and paper</li>
 <li>Equations that can’t be re-edited</li>
 <li>Plots that can’t be regenerated</li>
 <li>No verification of mathematical claims</li>
 </ul>
-<p><strong>KleisDoc unifies everything:</strong></p>
+<p><strong>Kleis unifies everything into a single program:</strong></p>
 <pre><code>┌─────────────────────────────────────────────────────────────┐
-│                    KleisDoc (.kleis)                        │
+│               Your Document (.kleis file)                   │
 ├─────────────────────────────────────────────────────────────┤
-│  Metadata      │ Title, authors, date, abstract             │
-│  Equations     │ Stored as AST (re-editable!)               │
-│  Plots         │ Kleis code (regenerable!)                  │
-│  Tables        │ Structured data                            │
-│  Text          │ Markdown-like sections                     │
-│  Bibliography  │ BibTeX entries                             │
-│  Cross-refs    │ Validated references                       │
+│  Template Import   │ import "stdlib/templates/mit_thesis"   │
+│  Metadata          │ Title, author, date, abstract          │
+│  Equations         │ MITEquation("label", "$ E = mc^2 $")   │
+│  Diagrams          │ MITDiagram("fig1", "caption", code)    │
+│  Tables            │ MITTable("tab1", "caption", typst)     │
+│  Chapters          │ MITChapter(1, "Introduction", "...")   │
+│  Compile Function  │ compile_mit_thesis(my_thesis)          │
 └─────────────────────────────────────────────────────────────┘
-                          ↓
-              Template-driven export
-                          ↓
-    ┌─────────┬─────────┬─────────┬─────────┐
-    │ MIT     │ arXiv   │ UofM    │ Custom  │
-    │ Thesis  │ Paper   │ Thesis  │ Journal │
-    └─────────┴─────────┴─────────┴─────────┘
-                          ↓
-                   PDF / LaTeX
+                              ↓
+                   kleis test my_thesis.kleis
+                              ↓
+                        Typst Output
+                              ↓
+                   typst compile → PDF
 </code></pre>
 <h2 id="quick-start-1"><a class="header" href="#quick-start-1">Quick Start</a></h2>
 <h3 id="prerequisites-1"><a class="header" href="#prerequisites-1">Prerequisites</a></h3>
 <ol>
-<li><strong>Python 3.8+</strong> with Jupyter</li>
 <li><strong>Kleis</strong> compiled and in PATH</li>
 <li><strong>Typst</strong> for PDF generation: <code>brew install typst</code></li>
-<li><strong>Kleis server</strong> running (for equation rendering)</li>
 </ol>
-<h3 id="minimal-example"><a class="header" href="#minimal-example">Minimal Example</a></h3>
-<pre><code class="language-python">from kleis_kernel.kleisdoc import KleisDoc, Author
+<h3 id="your-first-document-5-minutes"><a class="header" href="#your-first-document-5-minutes">Your First Document (5 minutes)</a></h3>
+<p>Create a file <code>my_paper.kleis</code>:</p>
+<pre><code class="language-kleis">import "stdlib/templates/arxiv_paper.kleis"
 
-# Create a document
-doc = KleisDoc()
-doc.set_metadata(
-    title="My PhD Thesis",
-    authors=[Author(name="Jane Smith", affiliation="MIT")],
-    date="2026",
-    abstract="This thesis explores..."
+// Define your paper
+define my_paper = arxiv_paper(
+    "My Amazing Research",                    // title
+    ["Alice Smith", "Bob Jones"],             // authors
+    ["MIT", "Stanford"],                      // affiliations
+    "We present groundbreaking results...",   // abstract
+    ["machine learning", "verification"],     // keywords
+    [
+        ArxivSection("Introduction", "We begin by..."),
+        ArxivEquation("eq:main", "$ f(x) = x^2 + 1 $"),
+        ArxivSection("Methods", "Our approach uses..."),
+        ArxivSection("Conclusion", "We have shown...")
+    ]
 )
 
-# Add content
-doc.add_section("Introduction", level=1)
-doc.add_text("This thesis presents novel results in...")
+// Compile and output
+example "compile" {
+    let typst = compile_arxiv_paper(my_paper)
+    out(typst)
+}
+</code></pre>
+<p>Generate PDF:</p>
+<pre><code class="language-bash">kleis test my_paper.kleis &gt; my_paper.typ
+typst compile my_paper.typ my_paper.pdf
+open my_paper.pdf
+</code></pre>
+<p><strong>That’s it!</strong> Your document is a Kleis program.</p>
+<h2 id="available-templates"><a class="header" href="#available-templates">Available Templates</a></h2>
+<p>Kleis includes three professionally-styled templates:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Template</th><th>File</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>MIT Thesis</strong></td><td><code>stdlib/templates/mit_thesis.kleis</code></td><td>MIT PhD dissertations</td></tr>
+<tr><td><strong>UofM Rackham</strong></td><td><code>stdlib/templates/uofm_thesis.kleis</code></td><td>University of Michigan dissertations</td></tr>
+<tr><td><strong>arXiv Paper</strong></td><td><code>stdlib/templates/arxiv_paper.kleis</code></td><td>arXiv preprints, conference papers</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each template includes:</p>
+<ul>
+<li>Proper page margins and fonts per institution guidelines</li>
+<li>Title page, abstract, table of contents</li>
+<li>Chapter/section formatting</li>
+<li>Figure, table, and equation support</li>
+<li>Bibliography formatting</li>
+<li>Appendices</li>
+</ul>
+<h3 id="template-gallery"><a class="header" href="#template-gallery">Template Gallery</a></h3>
+<p><strong>MIT Thesis:</strong></p>
+<p><img src="images/mit_thesis_title.png" alt="MIT Thesis Title Page"></p>
+<p><strong>University of Michigan Dissertation:</strong></p>
+<p><img src="images/uofm_thesis_title.png" alt="UofM Dissertation Title Page"></p>
+<p><strong>arXiv Paper:</strong></p>
+<p><img src="images/arxiv_paper_title.png" alt="arXiv Paper"></p>
+<h2 id="mit-thesis-template"><a class="header" href="#mit-thesis-template">MIT Thesis Template</a></h2>
+<p>The MIT thesis template follows the official <a href="https://libraries.mit.edu/distinctive-collections/thesis-specs/">MIT Libraries thesis specifications</a>.</p>
+<h3 id="document-structure"><a class="header" href="#document-structure">Document Structure</a></h3>
+<pre><code class="language-kleis">import "stdlib/templates/mit_thesis.kleis"
 
-# Add an equation
-doc.add_equation("quadratic", r"x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}")
-
-# Export to PDF
-doc.export_pdf(
-    "thesis.pdf",
-    template_path="stdlib/templates/mit_thesis.kleis"
+// Define thesis metadata
+define my_thesis = mit_thesis(
+    "Formal Verification of Knowledge Production Systems",  // title
+    "Jane Smith",                                            // author
+    "Department of EECS",                                    // department
+    "May 2026",                                              // date
+    PhD,                                                     // degree: SB, SM, or PhD
+    "This thesis presents Kleis, a formal verification...", // abstract
+    "Prof. Alice Chen",                                      // supervisor
+    "Professor of Computer Science",                         // supervisor title
+    "I thank my advisor...",                                 // acknowledgments
+    "To my family...",                                       // dedication
+    all_elements                                             // document content
 )
 </code></pre>
-<h2 id="installation-1"><a class="header" href="#installation-1">Installation</a></h2>
-<h3 id="1-install-kleis"><a class="header" href="#1-install-kleis">1. Install Kleis</a></h3>
-<pre><code class="language-bash">cd /path/to/kleis
-export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h
-cargo install --path . --features numerical
+<h3 id="content-elements"><a class="header" href="#content-elements">Content Elements</a></h3>
+<pre><code class="language-kleis">// Chapters
+define ch1 = MITChapter(1, "Introduction", "Knowledge production relies on...")
+
+// Sections within chapters
+define sec1 = MITSection("Motivation", "The need for formal verification...")
+
+// Subsections
+define subsec1 = MITSubsection("Historical Context", "Early work in...")
+
+// Equations
+define eq_einstein = MITEquation("eq:einstein", "$ E = m c^2 $")
+
+// Figures (with Typst code)
+define fig_arch = MITFigure("fig:arch", "System architecture",
+    "#rect(width: 80%, height: 3cm, fill: luma(240))[Architecture diagram]")
+
+// Diagrams (using Lilaq plotting library)
+define fig_perf = MITDiagram("fig:perf", "Performance comparison", "
+import \"@preview/lilaq:0.5.0\" as lq
+lq.diagram(
+    lq.plot((1, 2, 3, 4, 5), (10, 25, 40, 55, 70)),
+    xlabel: \"Iterations\",
+    ylabel: \"Accuracy (%)\"
+)")
+
+// Tables
+define tab_results = MITTable("tab:results", "Experimental results", "
+#table(
+    columns: 3,
+    [Method], [Accuracy], [Runtime],
+    [Baseline], [72%], [1.2s],
+    [Ours], [89%], [0.8s]
+)")
+
+// References
+define ref1 = MITReference("demoura2008", 
+    "de Moura, L. Z3: An Efficient SMT Solver. TACAS 2008.")
+
+// Appendices
+define app_a = MITAppendix("Proofs", "Detailed proofs of theorems...")
+
+// Acknowledgments and dedication
+define ack = MITAcknowledgments("I thank my advisor...")
+define ded = MITDedication("To my family...")
 </code></pre>
-<h3 id="2-install-typst"><a class="header" href="#2-install-typst">2. Install Typst</a></h3>
+<h3 id="complete-mit-thesis-example"><a class="header" href="#complete-mit-thesis-example">Complete MIT Thesis Example</a></h3>
+<p>See the full working example: <code>examples/documents/jane_smith_thesis.kleis</code></p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+import "stdlib/templates/mit_thesis.kleis"
+
+// ============================================================================
+// JANE SMITH'S PHD THESIS
+// ============================================================================
+
+// Chapter 1: Introduction
+define ch1 = MITChapter(1, "Introduction", 
+    "Knowledge production in science relies on precise notation and rigorous 
+    verification. Traditional approaches separate these concerns...")
+
+// Key equation
+define eq_einstein = MITEquation("eq:einstein", "$ E = m c^2 $")
+
+// Performance diagram using Lilaq
+define fig_performance = MITDiagram("fig:perf", "Type inference performance", "
+import \"@preview/lilaq:0.5.0\" as lq
+lq.diagram(
+    lq.plot((100, 500, 1000, 5000, 10000), (0.1, 0.3, 0.5, 1.2, 2.1), 
+            mark: \"o\", stroke: blue),
+    lq.plot((100, 500, 1000, 5000, 10000), (0.2, 0.8, 2.0, 12.0, 45.0), 
+            mark: \"x\", stroke: red),
+    xlabel: \"Lines of Code\",
+    ylabel: \"Time (seconds)\"
+)")
+
+// Results table
+define table_features = MITTable("tab:features", "Feature comparison", "
+#table(
+    columns: 4,
+    [Feature], [Kleis], [Lean], [Coq],
+    [SMT Integration], [✓], [Partial], [✗],
+    [Type Inference], [✓], [✓], [✓],
+    [Typst Export], [✓], [✗], [✗]
+)")
+
+// Assemble all elements in order
+define all_elements = [
+    ack,           // Acknowledgments (front matter)
+    ded,           // Dedication (front matter)
+    ch1,           // Chapter 1
+    eq_einstein,
+    fig_performance,
+    ch2,           // Chapter 2
+    table_features,
+    ch3,           // Chapter 3
+    ref1, ref2,    // References
+    app_a          // Appendix
+]
+
+// Create the thesis
+define my_thesis = mit_thesis_full(
+    "Formal Verification of Knowledge Production Systems",
+    "Jane Smith",
+    "Department of Electrical Engineering and Computer Science",
+    "May 2026",
+    PhD,
+    "This thesis presents Kleis, a formal verification system...",
+    "Prof. Alice Chen",
+    "Professor of Computer Science",
+    "I thank my advisor Prof. Chen for her guidance...",
+    "To my parents, who taught me to question everything.",
+    all_elements
+)
+
+// Compile to Typst
+example "compile" {
+    let typst = compile_mit_thesis(my_thesis)
+    out(typst)
+}
+</code></pre>
+<h3 id="what-the-mit-template-produces"><a class="header" href="#what-the-mit-template-produces">What the MIT Template Produces</a></h3>
+<p>The compiled thesis includes:</p>
+<ol>
+<li><strong>Title Page</strong> - Centered title, author, department, degree, date</li>
+<li><strong>Signature Page</strong> - For PhD: supervisor signature block</li>
+<li><strong>Abstract</strong> - Formatted per MIT specifications</li>
+<li><strong>Acknowledgments</strong> - Optional dedication to advisors, family</li>
+<li><strong>Dedication</strong> - Optional short dedication</li>
+<li><strong>Table of Contents</strong> - Auto-generated from chapters</li>
+<li><strong>List of Figures</strong> - Auto-generated from figures</li>
+<li><strong>List of Tables</strong> - Auto-generated from tables</li>
+<li><strong>Chapters</strong> - Numbered chapters with sections</li>
+<li><strong>References</strong> - Bibliography section</li>
+<li><strong>Appendices</strong> - Lettered appendices (A, B, C…)</li>
+</ol>
+<p><strong>Table of Contents (auto-generated):</strong></p>
+<p><img src="images/mit_thesis_toc.png" alt="MIT Thesis Table of Contents"></p>
+<p><strong>Chapter Content with Equations and Diagrams:</strong></p>
+<p><img src="images/mit_thesis_chapter.png" alt="MIT Thesis Chapter"></p>
+<h2 id="university-of-michigan-rackham-template"><a class="header" href="#university-of-michigan-rackham-template">University of Michigan Rackham Template</a></h2>
+<p>The UofM template follows <a href="https://rackham.umich.edu/navigating-your-degree/formatting-guidelines/">Rackham Graduate School formatting guidelines</a>.</p>
+<h3 id="document-structure-1"><a class="header" href="#document-structure-1">Document Structure</a></h3>
+<pre><code class="language-kleis">import "stdlib/templates/uofm_thesis.kleis"
+
+// Committee members
+define committee = [
+    committee_member("Prof. Alice Chen", "Computer Science"),
+    committee_member("Prof. Bob Smith", "Mathematics"),
+    committee_member("Prof. Carol Davis", "Statistics")
+]
+
+// Define dissertation
+define my_dissertation = umich_dissertation(
+    "Deep Learning Theory and Applications",      // title
+    "Alex Chen",                                  // author
+    "Computer Science and Engineering",           // program
+    "2026",                                       // year
+    PhD,                                          // degree
+    "This dissertation investigates...",          // abstract
+    "Prof. Alice Chen",                           // committee chair
+    "Computer Science and Engineering",           // chair affiliation
+    committee,                                    // committee list
+    "achen@umich.edu",                           // email
+    "0000-0001-2345-6789",                       // ORCID
+    "I thank the Rackham Graduate School...",    // acknowledgments
+    "To my mentors...",                          // dedication
+    "This work began as...",                     // preface
+    all_elements                                 // content
+)
+</code></pre>
+<h3 id="uofm-specific-features"><a class="header" href="#uofm-specific-features">UofM-Specific Features</a></h3>
+<ul>
+<li><strong>Double spacing</strong> throughout (Rackham requirement)</li>
+<li><strong>Identifier page</strong> with ORCID and email</li>
+<li><strong>Committee page</strong> with full committee list</li>
+<li><strong>Preface</strong> section (optional)</li>
+<li><strong>2-inch top margin</strong> on chapter openings</li>
+<li><strong>Roman numerals</strong> for front matter pages</li>
+</ul>
+<h3 id="complete-uofm-example"><a class="header" href="#complete-uofm-example">Complete UofM Example</a></h3>
+<p>See: <code>examples/documents/alex_chen_dissertation.kleis</code></p>
+<h2 id="arxiv-paper-template"><a class="header" href="#arxiv-paper-template">arXiv Paper Template</a></h2>
+<p>The arXiv template follows common academic paper conventions for preprints.</p>
+<h3 id="document-structure-2"><a class="header" href="#document-structure-2">Document Structure</a></h3>
+<pre><code class="language-kleis">import "stdlib/templates/arxiv_paper.kleis"
+
+define my_paper = arxiv_paper_full(
+    "Attention Is All You Need",                          // title
+    ["Ashish Vaswani", "Noam Shazeer", "Niki Parmar"],   // authors
+    ["Google Brain", "Google Brain", "Google Research"], // affiliations
+    "The dominant sequence transduction models...",       // abstract
+    ["transformers", "attention", "neural networks"],    // keywords
+    all_elements                                          // content
+)
+</code></pre>
+<h3 id="arxiv-content-elements"><a class="header" href="#arxiv-content-elements">arXiv Content Elements</a></h3>
+<pre><code class="language-kleis">// Sections (no chapters in papers)
+ArxivSection("Introduction", "Recent advances in...")
+ArxivSection("Related Work", "Prior work includes...")
+
+// Equations
+ArxivEquation("eq:attention", "$ \\text{Attention}(Q, K, V) = \\text{softmax}(QK^T / \\sqrt{d_k})V $")
+
+// Algorithms (using Typst's algo package)
+ArxivAlgorithm("alg:train", "Training procedure", "
+#import \"@preview/algorithmic:0.1.0\"
+#algorithmic.algorithm({
+  algorithmic.For(cond: [epoch in 1..N])[
+    algorithmic.For(cond: [batch in data])[
+      Compute loss and update
+    ]
+  ]
+})
+")
+
+// Figures, tables, diagrams (same as MIT)
+ArxivFigure("fig:model", "Model architecture", "...")
+ArxivTable("tab:results", "Experimental results", "...")
+ArxivDiagram("fig:loss", "Training loss", "...")
+
+// Acknowledgments
+ArxivAcknowledgments("We thank the Google Brain team...")
+
+// References
+ArxivReference("vaswani2017", "Vaswani et al. Attention Is All You Need. NeurIPS 2017.")
+
+// Appendices
+ArxivAppendix("Implementation Details", "We used PyTorch...")
+</code></pre>
+<h3 id="complete-arxiv-example"><a class="header" href="#complete-arxiv-example">Complete arXiv Example</a></h3>
+<p>See: <code>examples/documents/sample_arxiv_paper.kleis</code></p>
+<h2 id="diagrams-and-plots"><a class="header" href="#diagrams-and-plots">Diagrams and Plots</a></h2>
+<p>Kleis integrates with the <a href="https://typst.app/universe/package/lilaq">Lilaq</a> plotting library for creating beautiful diagrams directly in your document.</p>
+<h3 id="line-plots"><a class="header" href="#line-plots">Line Plots</a></h3>
+<pre><code class="language-kleis">define fig_line = MITDiagram("fig:line", "Training curves", "
+import \"@preview/lilaq:0.5.0\" as lq
+lq.diagram(
+    lq.plot((1, 2, 3, 4, 5), (10, 25, 45, 70, 90), 
+            stroke: blue, mark: \"o\"),
+    xlabel: \"Epoch\",
+    ylabel: \"Accuracy (%)\",
+    title: \"Model Performance\"
+)")
+</code></pre>
+<h3 id="scatter-plots"><a class="header" href="#scatter-plots">Scatter Plots</a></h3>
+<pre><code class="language-kleis">define fig_scatter = MITDiagram("fig:scatter", "Data distribution", "
+import \"@preview/lilaq:0.5.0\" as lq
+lq.diagram(
+    lq.scatter((1, 2, 3, 4, 5), (2.1, 3.9, 6.2, 7.8, 10.1), 
+               mark: \"o\", stroke: red),
+    xlabel: \"x\",
+    ylabel: \"y\"
+)")
+</code></pre>
+<h3 id="bar-charts"><a class="header" href="#bar-charts">Bar Charts</a></h3>
+<pre><code class="language-kleis">define fig_bars = MITDiagram("fig:bars", "Method comparison", "
+import \"@preview/lilaq:0.5.0\" as lq
+lq.diagram(
+    lq.bar((\"A\", \"B\", \"C\"), (45, 72, 89)),
+    ylabel: \"Score\"
+)")
+</code></pre>
+<h3 id="multiple-series"><a class="header" href="#multiple-series">Multiple Series</a></h3>
+<pre><code class="language-kleis">define fig_multi = MITDiagram("fig:multi", "Comparison", "
+import \"@preview/lilaq:0.5.0\" as lq
+lq.diagram(
+    lq.plot((1, 2, 3, 4), (10, 20, 35, 50), stroke: blue, mark: \"o\"),
+    lq.plot((1, 2, 3, 4), (15, 30, 42, 55), stroke: red, mark: \"x\"),
+    lq.plot((1, 2, 3, 4), (8, 18, 28, 40), stroke: green, mark: \"triangle\"),
+    xlabel: \"Iteration\",
+    ylabel: \"Value\",
+    legend: (\"Method A\", \"Method B\", \"Method C\")
+)")
+</code></pre>
+<h2 id="tables"><a class="header" href="#tables">Tables</a></h2>
+<p>Tables use Typst’s native table syntax:</p>
+<h3 id="simple-table"><a class="header" href="#simple-table">Simple Table</a></h3>
+<pre><code class="language-kleis">define tab_simple = MITTable("tab:simple", "Basic results", "
+#table(
+    columns: 3,
+    [Method], [Accuracy], [F1],
+    [Baseline], [72.3%], [0.71],
+    [Ours], [89.7%], [0.88],
+    [SOTA], [87.1%], [0.86]
+)")
+</code></pre>
+<h3 id="styled-table"><a class="header" href="#styled-table">Styled Table</a></h3>
+<pre><code class="language-kleis">define tab_styled = MITTable("tab:styled", "Comparison matrix", "
+#table(
+    columns: 4,
+    stroke: 0.5pt,
+    fill: (col, row) =&gt; if row == 0 { luma(230) },
+    [Feature], [Kleis], [Lean], [Coq],
+    [SMT], [✓], [Partial], [✗],
+    [Types], [HM], [Dependent], [Dependent],
+    [Export], [Typst], [LaTeX], [LaTeX]
+)")
+</code></pre>
+<h2 id="equations"><a class="header" href="#equations">Equations</a></h2>
+<p>Equations use Typst math syntax (similar to LaTeX):</p>
+<pre><code class="language-kleis">// Simple equation
+MITEquation("eq:simple", "$ x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} $")
+
+// Multi-line equation
+MITEquation("eq:multi", "$
+\\nabla \\cdot E &amp;= \\frac{\\rho}{\\epsilon_0} \\
+\\nabla \\cdot B &amp;= 0 \\
+\\nabla \\times E &amp;= -\\frac{\\partial B}{\\partial t} \\
+\\nabla \\times B &amp;= \\mu_0 J + \\mu_0 \\epsilon_0 \\frac{\\partial E}{\\partial t}
+$")
+
+// Inline math in text (future feature)
+// For now, use separate equation blocks
+</code></pre>
+<h3 id="common-math-symbols"><a class="header" href="#common-math-symbols">Common Math Symbols</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Symbol</th><th>Typst</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td>Fraction</td><td><code>frac(a, b)</code></td><td>$ \frac{a}{b} $</td></tr>
+<tr><td>Square root</td><td><code>sqrt(x)</code></td><td>$ \sqrt{x} $</td></tr>
+<tr><td>Summation</td><td><code>sum_(i=0)^n</code></td><td>$ \sum_{i=0}^n $</td></tr>
+<tr><td>Integral</td><td><code>integral_a^b</code></td><td>$ \int_a^b $</td></tr>
+<tr><td>Greek</td><td><code>alpha, beta, gamma</code></td><td>α, β, γ</td></tr>
+<tr><td>Subscript</td><td><code>x_i</code></td><td>$ x_i $</td></tr>
+<tr><td>Superscript</td><td><code>x^2</code></td><td>$ x^2 $</td></tr>
+<tr><td>Partial</td><td><code>partial</code></td><td>∂</td></tr>
+<tr><td>Nabla</td><td><code>nabla</code></td><td>∇</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="generating-pdfs"><a class="header" href="#generating-pdfs">Generating PDFs</a></h2>
+<h3 id="command-line"><a class="header" href="#command-line">Command Line</a></h3>
+<pre><code class="language-bash"># Compile Kleis to Typst
+kleis test my_thesis.kleis &gt; my_thesis.typ
+
+# Compile Typst to PDF  
+typst compile my_thesis.typ my_thesis.pdf
+
+# Open PDF (macOS)
+open my_thesis.pdf
+</code></pre>
+<h3 id="one-liner"><a class="header" href="#one-liner">One-liner</a></h3>
+<pre><code class="language-bash">kleis test my_thesis.kleis &gt; my_thesis.typ &amp;&amp; typst compile my_thesis.typ &amp;&amp; open my_thesis.pdf
+</code></pre>
+<h3 id="from-jupyter"><a class="header" href="#from-jupyter">From Jupyter</a></h3>
+<p>Jupyter is the recommended environment for writing your thesis. Here’s a complete workflow:</p>
+<h4 id="cell-1-setup-and-check-templates"><a class="header" href="#cell-1-setup-and-check-templates">Cell 1: Setup and check templates</a></h4>
+<pre><code class="language-python">from kleis_kernel import compile_to_pdf, compile_to_typst, list_templates, validate
+
+# See available templates
+print("Available templates:", list_templates())
+# Output: ['mit_thesis', 'uofm_thesis', 'arxiv_paper']
+</code></pre>
+<h4 id="cell-2-validate-your-document"><a class="header" href="#cell-2-validate-your-document">Cell 2: Validate your document</a></h4>
+<pre><code class="language-python"># Check for parse errors before compiling
+validate("my_thesis.kleis")
+# Output: ✓ my_thesis.kleis is valid
+</code></pre>
+<h4 id="cell-3-generate-pdf"><a class="header" href="#cell-3-generate-pdf">Cell 3: Generate PDF</a></h4>
+<pre><code class="language-python"># Compile Kleis → Typst → PDF
+compile_to_pdf("my_thesis.kleis", "my_thesis.pdf")
+# Output: ✓ PDF created: my_thesis.pdf
+</code></pre>
+<h4 id="cell-4-display-in-notebook"><a class="header" href="#cell-4-display-in-notebook">Cell 4: Display in notebook</a></h4>
+<pre><code class="language-python">from IPython.display import IFrame
+IFrame("my_thesis.pdf", width=800, height=600)
+</code></pre>
+<h4 id="alternative-view-typst-output"><a class="header" href="#alternative-view-typst-output">Alternative: View Typst output</a></h4>
+<pre><code class="language-python"># See the generated Typst code (useful for debugging)
+typst_code = compile_to_typst("my_thesis.kleis")
+print(typst_code[:500])  # First 500 chars
+</code></pre>
+<h3 id="complete-jupyter-workflow-example"><a class="header" href="#complete-jupyter-workflow-example">Complete Jupyter Workflow Example</a></h3>
+<pre><code class="language-python"># ============================================================
+# Thesis Writing Workflow in Jupyter
+# ============================================================
+
+from kleis_kernel import compile_to_pdf, validate
+from IPython.display import IFrame
+import os
+
+# 1. Your thesis file (edit this in VS Code or any text editor)
+THESIS_FILE = "my_thesis.kleis"
+
+# 2. Validate before compiling
+if validate(THESIS_FILE):
+    
+    # 3. Generate PDF
+    compile_to_pdf(THESIS_FILE, "thesis_draft.pdf")
+    
+    # 4. Display inline
+    display(IFrame("thesis_draft.pdf", width=800, height=600))
+    
+else:
+    print("Fix the errors above, then re-run this cell")
+</code></pre>
+<h3 id="tips-for-jupyter-users"><a class="header" href="#tips-for-jupyter-users">Tips for Jupyter Users</a></h3>
+<ol>
+<li><strong>Edit <code>.kleis</code> files externally</strong> - Use VS Code with syntax highlighting</li>
+<li><strong>Use Jupyter for compilation</strong> - Quick feedback loop</li>
+<li><strong>Version control</strong> - Git works great with <code>.kleis</code> files (they’re plain text)</li>
+<li><strong>Hot reload</strong> - Re-run the cell after editing your <code>.kleis</code> file</li>
+</ol>
+<h2 id="creating-custom-templates"><a class="header" href="#creating-custom-templates">Creating Custom Templates</a></h2>
+<p>To create a new template (e.g., for IEEE or Nature), create a <code>.kleis</code> file:</p>
+<pre><code class="language-kleis">// stdlib/templates/ieee_paper.kleis
+
+import "stdlib/prelude.kleis"
+
+// Template metadata
+define template_name = "IEEE Paper"
+define template_version = "1.0"
+define template_type = "paper"
+
+// Data types for document elements
+data IEEEDocExpr = 
+    IEEESection(title: String, content: String)
+  | IEEEEquation(label: String, typst_code: String)
+  | IEEEFigure(label: String, caption: String, typst_code: String)
+  | IEEETable(label: String, caption: String, typst_code: String)
+  | IEEEReference(key: String, citation: String)
+
+// Document container
+data IEEEPaper = IEEEPaper(
+    title: String,
+    authors: List(String),
+    affiliations: List(String),
+    abstract_text: String,
+    keywords: List(String),
+    elements: List(IEEEDocExpr)
+)
+
+// Typst styling
+define typst_ieee_page_setup = "#set page(
+    paper: \"us-letter\",
+    margin: (top: 0.75in, bottom: 1in, left: 0.625in, right: 0.625in),
+    columns: 2
+)"
+
+define typst_ieee_text_setup = "#set text(
+    font: \"Times New Roman\",
+    size: 10pt
+)"
+
+// ... more styling definitions ...
+
+// Compile function
+define compile_ieee_paper(paper) = 
+    match paper {
+        IEEEPaper(title, authors, affiliations, abstract_text, keywords, elements) =&gt;
+            concat(typst_ieee_page_setup,
+            concat(typst_ieee_text_setup,
+            // ... assemble document ...
+            ))
+    }
+</code></pre>
+<p><strong>No Rust code changes needed!</strong> Just add the template file.</p>
+<h2 id="tips-for-thesis-writing"><a class="header" href="#tips-for-thesis-writing">Tips for Thesis Writing</a></h2>
+<ol>
+<li><strong>Save frequently</strong> — Your <code>.kleis</code> file is the source of truth</li>
+<li><strong>Use version control</strong> — <code>.kleis</code> files are text, perfect for git</li>
+<li><strong>Label everything</strong> — Use meaningful labels for cross-references</li>
+<li><strong>Test incrementally</strong> — Compile often to catch errors early</li>
+<li><strong>Use Lilaq for plots</strong> — Regenerable, not static images</li>
+<li><strong>Store in one file</strong> — Keep related content together</li>
+</ol>
+<h2 id="troubleshooting-1"><a class="header" href="#troubleshooting-1">Troubleshooting</a></h2>
+<h3 id="typst-not-found"><a class="header" href="#typst-not-found">“Typst not found”</a></h3>
 <pre><code class="language-bash"># macOS
 brew install typst
 
 # Linux
 curl -fsSL https://typst.app/install.sh | sh
-
-# Windows
-winget install typst
 </code></pre>
-<h3 id="3-install-kleisdoc-python-package"><a class="header" href="#3-install-kleisdoc-python-package">3. Install KleisDoc Python Package</a></h3>
-<pre><code class="language-bash">cd kleis-notebook
-pip install -e .
-</code></pre>
-<h3 id="4-start-kleis-server-for-equation-rendering"><a class="header" href="#4-start-kleis-server-for-equation-rendering">4. Start Kleis Server (for equation rendering)</a></h3>
-<pre><code class="language-bash">kleis server --port 8080
-</code></pre>
-<h2 id="document-styles"><a class="header" href="#document-styles">Document Styles</a></h2>
-<p>KleisDoc uses template files to define document styling. Each template is a <code>.kleis</code> file that specifies:</p>
+<h3 id="parse-error-in-kleis-file"><a class="header" href="#parse-error-in-kleis-file">“Parse error in .kleis file”</a></h3>
+<p>Check for:</p>
 <ul>
-<li>Page margins and size</li>
-<li>Fonts and sizes</li>
-<li>Title page layout</li>
-<li>Heading styles</li>
-<li>Bibliography format</li>
+<li>Unescaped quotes in strings (use <code>\"</code>)</li>
+<li>Missing commas in lists</li>
+<li>Unclosed parentheses</li>
 </ul>
-<h3 id="available-templates"><a class="header" href="#available-templates">Available Templates</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Template</th><th>Path</th><th>Use Case</th></tr>
-</thead>
-<tbody>
-<tr><td><strong>MIT Thesis</strong></td><td><code>stdlib/templates/mit_thesis.kleis</code></td><td>MIT PhD dissertations</td></tr>
-<tr><td><strong>UofM Thesis</strong></td><td><code>stdlib/templates/uofm_thesis.kleis</code></td><td>University of Michigan Rackham theses</td></tr>
-<tr><td><strong>arXiv Paper</strong></td><td><code>stdlib/templates/arxiv_paper.kleis</code></td><td>arXiv preprints, conference papers</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="creating-custom-templates"><a class="header" href="#creating-custom-templates">Creating Custom Templates</a></h3>
-<p>To add a new style (e.g., IEEE, Nature), create a <code>.kleis</code> file:</p>
-<pre><code class="language-kleis">// stdlib/templates/ieee_paper.kleis
-
-define template_name = "IEEE Paper"
-define template_type = "paper"
-
-// Page setup
-define typst_page_setup = "#set page(paper: \"us-letter\", margin: (top: 0.75in, bottom: 1in, left: 0.625in, right: 0.625in), columns: 2)"
-
-// Font setup
-define typst_text_setup = "#set text(font: \"Times New Roman\", size: 10pt)"
-
-// Title block
-define typst_title_block = "
-#align(center)[
-  #text(size: 24pt, weight: \"bold\")[TITLE]
-  #v(0.5em)
-  #text(size: 11pt)[AUTHOR]
-  #v(0.25em)
-  #text(size: 10pt, style: \"italic\")[AFFILIATION]
-]
-"
-
-// ... more definitions
+<h3 id="figure-not-rendering"><a class="header" href="#figure-not-rendering">“Figure not rendering”</a></h3>
+<p>Ensure Lilaq import is correct in your diagram code:</p>
+<pre><code class="language-typst">import "@preview/lilaq:0.5.0" as lq
 </code></pre>
-<p><strong>No Python or Rust code changes needed</strong> — just add the template file!</p>
-<h2 id="creating-a-document"><a class="header" href="#creating-a-document">Creating a Document</a></h2>
-<h3 id="setting-metadata"><a class="header" href="#setting-metadata">Setting Metadata</a></h3>
-<pre><code class="language-python">from kleis_kernel.kleisdoc import KleisDoc, Author
-
-doc = KleisDoc()
-
-# Single author
-doc.set_metadata(
-    title="Quantum Entanglement in Topological Systems",
-    authors=[Author(
-        name="Jane Smith",
-        affiliation="MIT Department of Physics",
-        email="jane@mit.edu",
-        orcid="0000-0001-2345-6789"
-    )],
-    date="January 2026",
-    abstract="""
-    We investigate quantum entanglement properties in topological phases
-    of matter. Our results show that...
-    """
-)
-
-# Multiple authors
-doc.set_metadata(
-    title="Collaborative Research",
-    authors=[
-        Author(name="Alice", affiliation="MIT"),
-        Author(name="Bob", affiliation="Stanford"),
-        Author(name="Carol", affiliation="Berkeley")
-    ],
-    date="2026"
-)
-</code></pre>
-<h3 id="adding-sections"><a class="header" href="#adding-sections">Adding Sections</a></h3>
-<pre><code class="language-python"># Top-level section (Chapter in thesis, Section in paper)
-intro = doc.add_section("Introduction", level=1)
-
-# Subsection
-motivation = doc.add_section("Motivation", level=2, parent=intro)
-
-# Sub-subsection
-doc.add_section("Historical Context", level=3, parent=motivation)
-</code></pre>
-<h3 id="adding-text"><a class="header" href="#adding-text">Adding Text</a></h3>
-<pre><code class="language-python">doc.add_text("""
-The study of quantum entanglement has revolutionized our understanding
-of quantum mechanics. In this work, we present new results that extend
-previous findings by Smith et al.
-""")
-
-# Text in a specific section
-doc.add_text("This section covers the basics.", section=intro)
-</code></pre>
-<h2 id="equations"><a class="header" href="#equations">Equations</a></h2>
-<h3 id="simple-latex-equations"><a class="header" href="#simple-latex-equations">Simple LaTeX Equations</a></h3>
-<pre><code class="language-python">doc.add_equation(
-    label="schrodinger",
-    latex=r"i\hbar\frac{\partial}{\partial t}\Psi = \hat{H}\Psi"
-)
-</code></pre>
-<h3 id="re-editable-equations-with-ast"><a class="header" href="#re-editable-equations-with-ast">Re-editable Equations with AST</a></h3>
-<p>For equations you want to edit later, store the AST:</p>
-<pre><code class="language-python"># Quadratic formula with full AST
-quadratic_ast = {
-    "Operation": {
-        "name": "equals",
-        "args": [
-            {"Object": "x"},
-            {
-                "Operation": {
-                    "name": "frac",
-                    "args": [
-                        {
-                            "Operation": {
-                                "name": "plus_minus",
-                                "args": [
-                                    {"Operation": {"name": "negate", "args": [{"Object": "b"}]}},
-                                    {
-                                        "Operation": {
-                                            "name": "sqrt",
-                                            "args": [{
-                                                "Operation": {
-                                                    "name": "minus",
-                                                    "args": [
-                                                        {"Operation": {"name": "power", "args": [{"Object": "b"}, {"Const": "2"}]}},
-                                                        {"Operation": {"name": "times", "args": [{"Const": "4"}, {"Object": "a"}, {"Object": "c"}]}}
-                                                    ]
-                                                }
-                                            }]
-                                        }
-                                    }
-                                ]
-                            }
-                        },
-                        {"Operation": {"name": "times", "args": [{"Const": "2"}, {"Object": "a"}]}}
-                    ]
-                }
-            }
-        ]
-    }
-}
-
-doc.add_equation(
-    label="quadratic",
-    latex=None,  # Will be rendered from AST
-    ast=quadratic_ast
-)
-</code></pre>
-<h3 id="using-the-equation-editor"><a class="header" href="#using-the-equation-editor">Using the Equation Editor</a></h3>
-<p>The Kleis Equation Editor provides a visual way to build equations:</p>
-<h4 id="in-jupyter-notebooks"><a class="header" href="#in-jupyter-notebooks">In Jupyter Notebooks</a></h4>
-<pre><code class="language-python">from kleis_kernel.equation_editor import equation_editor
-
-# Open the visual equation editor in an iframe
-equation_editor()
-</code></pre>
-<p>The editor opens with:</p>
-<ul>
-<li><strong>Structural Mode</strong> for building equations visually</li>
-<li><strong>Symbol Palette</strong> with math symbols, Greek letters, and templates</li>
-<li><strong>“📤 Send to Jupyter”</strong> button to send the equation back</li>
-</ul>
-<h4 id="workflow"><a class="header" href="#workflow">Workflow</a></h4>
-<ol>
-<li>
-<p><strong>Open the editor:</strong></p>
-<pre><code class="language-python">equation_editor()
-</code></pre>
-</li>
-<li>
-<p><strong>Build your equation</strong> using the palette buttons</p>
-</li>
-<li>
-<p><strong>Click “📤 Send to Jupyter”</strong> when done</p>
-</li>
-<li>
-<p><strong>Retrieve the AST and add to document:</strong></p>
-<pre><code class="language-python"># After clicking "Send to Jupyter", the AST is stored
-# Add to your document:
-doc.add_equation_from_ast("eq:main", equation_ast)
-</code></pre>
-</li>
-</ol>
-<h4 id="re-editing-existing-equations"><a class="header" href="#re-editing-existing-equations">Re-editing Existing Equations</a></h4>
-<pre><code class="language-python"># Load an existing equation's AST into the editor
-eq = doc.get_equation("eq:main")
-equation_editor(initial=eq.ast)  # Pre-populates the editor!
-</code></pre>
-<h4 id="standalone-mode"><a class="header" href="#standalone-mode">Standalone Mode</a></h4>
-<p>For standalone use (outside Jupyter):</p>
-<ol>
-<li><strong>Start Kleis server:</strong> <code>kleis server --port 3000</code></li>
-<li><strong>Open in browser:</strong> <code>http://localhost:3000/</code></li>
-<li><strong>Use Debug AST</strong> to copy the JSON AST</li>
-<li><strong>Paste into Python:</strong> <code>doc.add_equation("label", ast=...)</code></li>
-</ol>
-<p>For Jupyter mode, the URL <code>http://localhost:3000/?mode=jupyter</code> enables
-the “Send to Jupyter” button and auto-switches to structural mode</p>
-<h2 id="figures-and-plots"><a class="header" href="#figures-and-plots">Figures and Plots</a></h2>
-<h3 id="kleis-plots-regenerable"><a class="header" href="#kleis-plots-regenerable">Kleis Plots (Regenerable)</a></h3>
-<pre><code class="language-python"># Store the Kleis code - plot will be regenerated on export
-doc.add_figure(
-    label="fig:sine",
-    caption="A sine wave demonstrating periodic behavior",
-    kleis_code="""
-let xs = linspace(0, 6.28, 100)
-let ys = list_map(lambda x . sin(x), xs)
-diagram(
-    plot(xs, ys, color = "blue", stroke = "2pt"),
-    title = "Sine Wave",
-    xlabel = "x",
-    ylabel = "sin(x)"
-)
-"""
-)
-</code></pre>
-<h3 id="static-images"><a class="header" href="#static-images">Static Images</a></h3>
-<pre><code class="language-python">doc.add_figure(
-    label="fig:experiment",
-    caption="Experimental apparatus",
-    image_path="images/apparatus.png",
-    width="80%"
-)
-</code></pre>
-<h2 id="tables"><a class="header" href="#tables">Tables</a></h2>
-<pre><code class="language-python">doc.add_table(
-    label="tab:results",
-    caption="Experimental results comparing methods",
-    headers=["Method", "Accuracy", "Runtime"],
-    rows=[
-        ["Baseline", "72.3%", "1.2s"],
-        ["Our Method", "89.7%", "0.8s"],
-        ["State-of-art", "87.1%", "2.4s"]
-    ]
-)
-</code></pre>
-<h3 id="computed-tables"><a class="header" href="#computed-tables">Computed Tables</a></h3>
-<pre><code class="language-python"># Table generated from Kleis computation
-doc.add_table(
-    label="tab:eigenvalues",
-    caption="Eigenvalues of test matrices",
-    headers=["Matrix", "λ₁", "λ₂"],
-    kleis_code="""
-let A = [[1, 2], [3, 4]]
-let B = [[2, 1], [1, 2]]
-let eig_A = eigenvalues(A)
-let eig_B = eigenvalues(B)
-// Returns table data
-"""
-)
-</code></pre>
-<h2 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h2>
-<h3 id="referencing-equations"><a class="header" href="#referencing-equations">Referencing Equations</a></h3>
-<pre><code class="language-python">doc.add_equation("maxwell", r"\nabla \cdot \mathbf{E} = \frac{\rho}{\epsilon_0}")
-
-doc.add_text("""
-As shown in Equation @eq:maxwell, the divergence of the electric field
-is proportional to the charge density.
-""")
-
-# Or programmatically
-ref = doc.ref_equation("maxwell")  # Returns CrossRef object
-</code></pre>
-<h3 id="referencing-figures-and-tables"><a class="header" href="#referencing-figures-and-tables">Referencing Figures and Tables</a></h3>
-<pre><code class="language-python">doc.add_text("See Figure @fig:sine for the sine wave plot.")
-doc.add_text("Results are summarized in Table @tab:results.")
-
-# Programmatic references
-doc.ref_figure("sine")
-doc.ref_table("results")
-</code></pre>
-<h3 id="referencing-sections"><a class="header" href="#referencing-sections">Referencing Sections</a></h3>
-<pre><code class="language-python">intro = doc.add_section("Introduction", level=1, label="sec:intro")
-
-doc.add_text("As discussed in Section @sec:intro, we begin with...")
-
-# Programmatic
-doc.ref_section("intro")
-</code></pre>
-<h3 id="validating-cross-references"><a class="header" href="#validating-cross-references">Validating Cross-References</a></h3>
-<pre><code class="language-python">errors = doc.validate_cross_refs()
-if errors:
-    print("Cross-reference errors:")
-    for error in errors:
-        print(f"  - {error}")
-else:
-    print("All cross-references valid!")
-</code></pre>
-<h2 id="bibliography"><a class="header" href="#bibliography">Bibliography</a></h2>
-<h3 id="adding-citations"><a class="header" href="#adding-citations">Adding Citations</a></h3>
-<pre><code class="language-python"># Add bibliography entries
-doc.add_bib_entry(
-    key="einstein1905",
-    entry_type="article",
-    title="On the Electrodynamics of Moving Bodies",
-    author="Albert Einstein",
-    journal="Annalen der Physik",
-    year="1905",
-    volume="17",
-    pages="891-921"
-)
-
-doc.add_bib_entry(
-    key="dirac1928",
-    entry_type="article",
-    title="The Quantum Theory of the Electron",
-    author="P. A. M. Dirac",
-    journal="Proceedings of the Royal Society A",
-    year="1928"
-)
-
-# Cite in text
-doc.add_text("""
-The theory of special relativity @cite:einstein1905 revolutionized physics.
-Later, Dirac's equation @cite:dirac1928 unified quantum mechanics with
-special relativity.
-""")
-</code></pre>
-<h3 id="export-bibliography"><a class="header" href="#export-bibliography">Export Bibliography</a></h3>
-<pre><code class="language-python"># Export BibTeX file
-doc.export_bibtex("references.bib")
-</code></pre>
-<h2 id="saving-and-loading"><a class="header" href="#saving-and-loading">Saving and Loading</a></h2>
-<h3 id="saving-your-document"><a class="header" href="#saving-your-document">Saving Your Document</a></h3>
-<p>KleisDoc saves to <code>.kleis</code> files (pure Kleis code):</p>
-<pre><code class="language-python">doc.save("my_thesis.kleis")
-</code></pre>
-<p>The saved file looks like:</p>
-<pre><code class="language-kleis">// KleisDoc: My PhD Thesis
-// Generated: 2026-01-03
-
-define meta_title = "My PhD Thesis"
-define meta_date = "2026"
-define meta_abstract = "This thesis explores..."
-
-define author_0 = Author(
-    name = "Jane Smith",
-    affiliation = "MIT",
-    email = "jane@mit.edu"
-)
-define doc_authors = List(author_0)
-
-define equation_quadratic = Equation(
-    label = "quadratic",
-    latex = "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}",
-    ast = { ... }  // Full AST preserved!
-)
-
-define section_0 = Section(
-    level = 1,
-    title = "Introduction",
-    label = "sec:intro",
-    content = List(...)
-)
-
-// ... rest of document
-</code></pre>
-<h3 id="loading-a-document"><a class="header" href="#loading-a-document">Loading a Document</a></h3>
-<pre><code class="language-python"># Load for continued editing
-doc = KleisDoc.load("my_thesis.kleis")
-
-# Continue editing
-doc.add_section("New Chapter", level=1)
-doc.save("my_thesis.kleis")
-</code></pre>
-<h3 id="revising-content"><a class="header" href="#revising-content">Revising Content</a></h3>
-<p>Thesis writing is iterative. Use these methods to revise existing content:</p>
-<p><strong>Update equations:</strong></p>
-<pre><code class="language-python"># Change the LaTeX
-doc.update_equation("loss", latex=r"\mathcal{L}_{revised} = \frac{1}{n}\sum(y - \hat{y})^2")
-
-# Or update the AST for Equation Editor compatibility
-doc.update_equation("einstein", ast=new_ast_dict)
-</code></pre>
-<p><strong>Update sections:</strong></p>
-<pre><code class="language-python"># Change section content
-doc.update_section("Introduction", content="This thesis explores quantum computing...")
-
-# Rename a section
-doc.update_section("Intro", new_title="Chapter 1: Introduction")
-
-# Add a label for cross-referencing
-doc.update_section("Methods", label="sec:methods")
-</code></pre>
-<p><strong>Update figures and tables:</strong></p>
-<pre><code class="language-python">doc.update_figure("fig1", caption="Updated architecture diagram")
-doc.update_table("tab1", rows=[[1, 2, 3], [4, 5, 6]])
-</code></pre>
-<p><strong>Remove content:</strong></p>
-<pre><code class="language-python"># Clean up before submission
-doc.remove_section("Draft Notes")
-doc.remove_equation("old_eq")
-doc.remove_figure("placeholder_fig")
-doc.remove_table("temp_data")
-</code></pre>
-<p><strong>Find content:</strong></p>
-<pre><code class="language-python"># Get specific items
-eq = doc.get_equation("loss")
-section = doc.get_section("Methods")
-fig = doc.get_figure("architecture")
-table = doc.get_table("results")
-</code></pre>
-<h3 id="multi-session-workflow"><a class="header" href="#multi-session-workflow">Multi-Session Workflow</a></h3>
-<pre><code>Session 1 (Monday):
-  → Create document
-  → Write Chapter 1
-  → Save to my_thesis.kleis
-
-Session 2 (Tuesday):
-  → Load my_thesis.kleis
-  → Edit equations (AST preserved!)
-  → Write Chapter 2
-  → Save
-
-Session 3 (Friday):
-  → Load my_thesis.kleis
-  → Regenerate plots (code preserved!)
-  → Final edits
-  → Export to PDF
-</code></pre>
-<h2 id="exporting-to-pdf"><a class="header" href="#exporting-to-pdf">Exporting to PDF</a></h2>
-<h3 id="basic-export"><a class="header" href="#basic-export">Basic Export</a></h3>
-<pre><code class="language-python">doc.export_pdf("thesis.pdf")
-</code></pre>
-<h3 id="with-template"><a class="header" href="#with-template">With Template</a></h3>
-<pre><code class="language-python"># MIT Thesis format
-doc.export_pdf(
-    "thesis.pdf",
-    template_path="stdlib/templates/mit_thesis.kleis"
-)
-
-# arXiv paper format
-doc.export_pdf(
-    "paper.pdf", 
-    template_path="stdlib/templates/arxiv_paper.kleis"
-)
-</code></pre>
-<h3 id="what-happens-during-export"><a class="header" href="#what-happens-during-export">What Happens During Export</a></h3>
-<ol>
-<li><strong>Load template</strong> — Read styling from <code>.kleis</code> template</li>
-<li><strong>Render equations</strong> — Convert ASTs to Typst math</li>
-<li><strong>Execute plot code</strong> — Regenerate all figures</li>
-<li><strong>Generate Typst</strong> — Create <code>.typ</code> file with content</li>
-<li><strong>Compile PDF</strong> — Run <code>typst compile</code></li>
-</ol>
-<h2 id="complete-example-phd-thesis"><a class="header" href="#complete-example-phd-thesis">Complete Example: PhD Thesis</a></h2>
-<p>Here’s a complete example of creating a thesis:</p>
-<pre><code class="language-python">from kleis_kernel.kleisdoc import KleisDoc, Author
-
-# Initialize
-doc = KleisDoc()
-
-# Metadata
-doc.set_metadata(
-    title="Quantum Entanglement in Topological Phases of Matter",
-    authors=[Author(
-        name="Jane Smith",
-        affiliation="MIT Department of Physics",
-        email="jsmith@mit.edu",
-        orcid="0000-0001-2345-6789"
-    )],
-    date="January 2026",
-    abstract="""
-    This thesis investigates quantum entanglement properties in topological
-    phases of matter. We develop new theoretical tools for characterizing
-    entanglement in systems with topological order and apply these methods
-    to study several model systems. Our main results include...
-    """
-)
-
-# Set content blocks for thesis-specific fields
-doc.set_content_block("degree", "Doctor of Philosophy")
-doc.set_content_block("department", "Department of Physics")
-doc.set_content_block("supervisor", "Prof. John Doe")
-
-# Chapter 1: Introduction
-ch1 = doc.add_section("Introduction", level=1, label="sec:intro")
-doc.add_text("""
-Quantum entanglement is one of the most profound features of quantum
-mechanics. First recognized by Einstein, Podolsky, and Rosen in 1935,
-entanglement has since become central to our understanding of quantum
-information and condensed matter physics.
-""")
-
-# Subsection
-doc.add_section("Motivation", level=2, parent=ch1)
-doc.add_text("""
-The study of topological phases has revealed new paradigms for
-understanding quantum matter. In this thesis, we explore the
-intersection of topology and entanglement.
-""")
-
-# Chapter 2: Background
-ch2 = doc.add_section("Theoretical Background", level=1, label="sec:background")
-
-# Add equation
-doc.add_equation(
-    label="entanglement_entropy",
-    latex=r"S_A = -\text{Tr}(\rho_A \log \rho_A)"
-)
-
-doc.add_text("""
-The entanglement entropy, defined in Equation @eq:entanglement_entropy,
-quantifies the quantum correlations between subsystem A and its complement.
-""")
-
-# Chapter 3: Methods
-ch3 = doc.add_section("Methods", level=1, label="sec:methods")
-
-# Add a figure
-doc.add_figure(
-    label="fig:phase_diagram",
-    caption="Phase diagram showing topological and trivial regions",
-    kleis_code="""
-let xs = linspace(0, 2, 50)
-let ys = linspace(0, 2, 50)
-// Phase boundary computation
-diagram(
-    contour(phase_data),
-    title = "Phase Diagram",
-    xlabel = "Parameter g",
-    ylabel = "Parameter h"
-)
-"""
-)
-
-# Chapter 4: Results
-ch4 = doc.add_section("Results", level=1, label="sec:results")
-
-# Add results table
-doc.add_table(
-    label="tab:entanglement_scaling",
-    caption="Entanglement entropy scaling coefficients",
-    headers=["System", "Area Law", "Logarithmic", "Topological"],
-    rows=[
-        ["Trivial Insulator", "Yes", "No", "γ = 0"],
-        ["Topological Insulator", "Yes", "No", "γ = ln(2)"],
-        ["Critical Point", "Yes", "Yes", "—"]
-    ]
-)
-
-# Chapter 5: Conclusion
-ch5 = doc.add_section("Conclusion", level=1, label="sec:conclusion")
-doc.add_text("""
-In this thesis, we have developed new methods for characterizing
-entanglement in topological phases. Our main contributions include...
-""")
-
-# Bibliography
-doc.add_bib_entry(
-    key="kitaev2006",
-    entry_type="article",
-    title="Topological Entanglement Entropy",
-    author="Kitaev, Alexei and Preskill, John",
-    journal="Physical Review Letters",
-    year="2006",
-    volume="96"
-)
-
-# Save document (for multi-session editing)
-doc.save("quantum_thesis.kleis")
-
-# Export to PDF
-doc.export_pdf(
-    "quantum_thesis.pdf",
-    template_path="stdlib/templates/mit_thesis.kleis"
-)
-
-print("Thesis exported successfully!")
-</code></pre>
-<h2 id="jupyter-notebook-workflow"><a class="header" href="#jupyter-notebook-workflow">Jupyter Notebook Workflow</a></h2>
-<h3 id="recommended-workflow"><a class="header" href="#recommended-workflow">Recommended Workflow</a></h3>
-<p><strong>Cell 1: Setup and load</strong></p>
-<pre><code class="language-python">from kleis_kernel.kleisdoc import KleisDoc, Author
-
-# Create new or load existing
-doc = KleisDoc()
-# OR: doc = KleisDoc.load("my_thesis.kleis")
-</code></pre>
-<p><strong>Cell 2: Set metadata</strong></p>
-<pre><code class="language-python">doc.set_metadata(
-    title="My Thesis",
-    authors=[Author(name="Jane Smith", affiliation="MIT")],
-    date="2026",
-    abstract="..."
-)
-</code></pre>
-<p><strong>Cell 3-N: Add content</strong></p>
-<pre><code class="language-python"># Add sections, equations, figures as you work
-doc.add_section("Introduction", level=1)
-doc.add_text("...")
-</code></pre>
-<p><strong>Cell N+1: Preview (optional)</strong></p>
-<pre><code class="language-python"># Generate preview PDF
-doc.export_pdf("preview.pdf", template_path="stdlib/templates/mit_thesis.kleis")
-
-# Display in notebook (if using ipywidgets)
-from IPython.display import IFrame
-IFrame("preview.pdf", width=800, height=600)
-</code></pre>
-<p><strong>Cell N+2: Save progress</strong></p>
-<pre><code class="language-python">doc.save("my_thesis.kleis")
-print("Saved!")
-</code></pre>
-<h3 id="tips-for-thesis-writing"><a class="header" href="#tips-for-thesis-writing">Tips for Thesis Writing</a></h3>
-<ol>
-<li><strong>Save frequently</strong> — Use <code>doc.save()</code> after significant changes</li>
-<li><strong>Use labels</strong> — Label all equations, figures, tables for cross-referencing</li>
-<li><strong>Store ASTs</strong> — For equations you’ll edit, store the AST not just LaTeX</li>
-<li><strong>Use Kleis code for plots</strong> — They’ll regenerate automatically</li>
-<li><strong>Validate before export</strong> — Run <code>doc.validate_cross_refs()</code></li>
-<li><strong>Version control</strong> — <code>.kleis</code> files are text, perfect for git</li>
-</ol>
-<h2 id="troubleshooting-1"><a class="header" href="#troubleshooting-1">Troubleshooting</a></h2>
-<h3 id="kleis-server-not-running"><a class="header" href="#kleis-server-not-running">“Kleis server not running”</a></h3>
-<p>Start the server:</p>
-<pre><code class="language-bash">kleis server --port 8080
-</code></pre>
-<h3 id="typst-not-found"><a class="header" href="#typst-not-found">“Typst not found”</a></h3>
-<p>Install Typst:</p>
-<pre><code class="language-bash">brew install typst  # macOS
-</code></pre>
-<h3 id="template-not-found"><a class="header" href="#template-not-found">“Template not found”</a></h3>
-<p>Ensure template path is relative to Kleis root or absolute:</p>
-<pre><code class="language-python"># Relative to KLEIS_ROOT
-doc.export_pdf("out.pdf", template_path="stdlib/templates/mit_thesis.kleis")
-
-# Absolute path
-doc.export_pdf("out.pdf", template_path="/path/to/kleis/stdlib/templates/mit_thesis.kleis")
-</code></pre>
-<h3 id="cross-reference-errors"><a class="header" href="#cross-reference-errors">Cross-reference errors</a></h3>
-<pre><code class="language-python">errors = doc.validate_cross_refs()
-for e in errors:
-    print(e)
-# Fix missing labels, then re-export
+<h3 id="cross-reference-not-found"><a class="header" href="#cross-reference-not-found">“Cross-reference not found”</a></h3>
+<p>Labels must match exactly:</p>
+<pre><code class="language-kleis">MITEquation("eq:main", "...")  // Define
+"See Equation @eq:main"         // Reference
 </code></pre>
 <h2 id="next-steps-1"><a class="header" href="#next-steps-1">Next Steps</a></h2>
 <ul>
-<li><a href="#jupyter-notebook">Chapter 21: Jupyter Notebook</a> — Interactive Kleis</li>
-<li><a href="#z3-verification">Chapter 11: Z3 Verification</a> — Verify your math</li>
-<li><a href="#standard-library-types">Standard Library</a> — Available functions</li>
+<li>See full examples in <code>examples/documents/</code></li>
+<li>Explore Typst documentation: <a href="https://typst.app/docs">typst.app/docs</a></li>
+<li>Learn Lilaq plotting: <a href="https://typst.app/universe/package/lilaq">Lilaq on Typst Universe</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="applications"><a class="header" href="#applications">Applications</a></h1>

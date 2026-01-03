@@ -5460,7 +5460,7 @@ impl Evaluator {
                     return Err(format!(
                         "diagram() expects PlotElement, got: {}(). Use plot(), bar(), scatter(), etc.",
                         name
-                    ));
+            ));
                 }
             } else {
                 return Err(format!(
