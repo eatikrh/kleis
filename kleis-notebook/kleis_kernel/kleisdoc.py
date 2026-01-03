@@ -92,13 +92,35 @@ class KleisDoc:
     """
     
     def __init__(self, server_url: str = DEFAULT_KLEIS_SERVER):
+        # Core document data
         self.metadata: Dict[str, Any] = {}
         self.template_path: Optional[str] = None
         self.template_info: Dict[str, Any] = {}
+        
+        # Standard content types (common across most formats)
         self.sections: List[Section] = []
         self.equations: Dict[str, Equation] = {}
         self.figures: Dict[str, Figure] = {}
         self.bibliography: List[Dict[str, str]] = []
+        
+        # Extensible content blocks for format-specific needs
+        # Examples:
+        #   arXiv: {"pacs": [...], "msc_codes": [...], "supplementary": [...]}
+        #   IEEE: {"keywords": [...], "index_terms": [...]}
+        #   Nature: {"methods": "...", "data_availability": "...", "competing_interests": "..."}
+        #   Legal: {"case_citations": [...], "statutes": [...]}
+        self.content_blocks: Dict[str, Any] = {}
+        
+        # Tables (separate from figures for semantic clarity)
+        self.tables: Dict[str, Any] = {}
+        
+        # Algorithms/pseudocode (common in CS papers)
+        self.algorithms: Dict[str, Any] = {}
+        
+        # Theorems, lemmas, proofs (common in math papers)
+        self.theorems: Dict[str, Any] = {}
+        
+        # Server configuration
         self.server_url = server_url
         self._kleis_path = self._find_kleis_binary()
         self._server_available: Optional[bool] = None
@@ -755,6 +777,109 @@ example "render_plot"
         return results
     
     # =========================================================================
+    # Extensible Content Blocks
+    # =========================================================================
+    
+    def set_content_block(self, name: str, content: Any):
+        """Set a format-specific content block.
+        
+        Use this for content types not covered by the standard types
+        (sections, equations, figures). Templates define what blocks
+        they expect.
+        
+        Args:
+            name: Block name (e.g., "acknowledgments", "data_availability")
+            content: Block content (string, list, dict, etc.)
+        
+        Examples:
+            # arXiv paper
+            doc.set_content_block("pacs_numbers", ["03.65.-w", "02.10.Yn"])
+            doc.set_content_block("msc_codes", ["81P05", "03G12"])
+            
+            # Nature paper
+            doc.set_content_block("data_availability", "Data available at...")
+            doc.set_content_block("competing_interests", "None declared.")
+            
+            # IEEE paper
+            doc.set_content_block("keywords", ["machine learning", "neural networks"])
+        """
+        self.content_blocks[name] = content
+    
+    def get_content_block(self, name: str) -> Optional[Any]:
+        """Get a content block by name."""
+        return self.content_blocks.get(name)
+    
+    def add_table(self, label: str, headers: List[str], rows: List[List[Any]],
+                  caption: str = "", kleis_code: str = None) -> Dict:
+        """Add a table to the document.
+        
+        Args:
+            label: Unique label (e.g., "tab:results")
+            headers: Column headers
+            rows: Table data rows
+            caption: Table caption
+            kleis_code: Optional Kleis code for computed tables
+        
+        Returns:
+            The table dict
+        """
+        table = {
+            "label": label,
+            "headers": headers,
+            "rows": rows,
+            "caption": caption,
+            "kleis_code": kleis_code,
+        }
+        self.tables[label] = table
+        return table
+    
+    def add_theorem(self, label: str, kind: str, statement: str,
+                    proof: str = None, name: str = None) -> Dict:
+        """Add a theorem, lemma, proposition, or similar to the document.
+        
+        Args:
+            label: Unique label (e.g., "thm:main")
+            kind: Type ("theorem", "lemma", "proposition", "corollary", "definition")
+            statement: The statement text
+            proof: Optional proof text
+            name: Optional theorem name (e.g., "Fermat's Last Theorem")
+        
+        Returns:
+            The theorem dict
+        """
+        thm = {
+            "label": label,
+            "kind": kind,
+            "statement": statement,
+            "proof": proof,
+            "name": name,
+        }
+        self.theorems[label] = thm
+        return thm
+    
+    def add_algorithm(self, label: str, name: str, pseudocode: str,
+                      caption: str = "") -> Dict:
+        """Add an algorithm/pseudocode block to the document.
+        
+        Args:
+            label: Unique label (e.g., "alg:sort")
+            name: Algorithm name
+            pseudocode: The pseudocode text
+            caption: Algorithm caption
+        
+        Returns:
+            The algorithm dict
+        """
+        alg = {
+            "label": label,
+            "name": name,
+            "pseudocode": pseudocode,
+            "caption": caption,
+        }
+        self.algorithms[label] = alg
+        return alg
+    
+    # =========================================================================
     # Export
     # =========================================================================
     
@@ -1038,6 +1163,76 @@ example "render_plot"
                     lines.append('    source = Static,')
                 lines.append(f'    typst_fragment = {self._to_kleis_string(fig.typst_fragment or "")},')
                 lines.append(f'    svg_cache = {self._to_kleis_string(fig.svg_cache or "")}')
+                lines.append(")")
+                lines.append("")
+        
+        # Content blocks (extensible format-specific content)
+        if self.content_blocks:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Content Blocks (format-specific)")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            
+            for name, content in self.content_blocks.items():
+                safe_name = name.replace("-", "_").replace(":", "_")
+                if isinstance(content, str):
+                    lines.append(f'define content_{safe_name} = {self._to_kleis_string(content)}')
+                elif isinstance(content, list):
+                    items = ", ".join(self._to_kleis_string(str(item)) for item in content)
+                    lines.append(f'define content_{safe_name} = List({items})')
+                else:
+                    lines.append(f'define content_{safe_name} = {self._to_kleis_string(str(content))}')
+                lines.append("")
+        
+        # Tables
+        if self.tables:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Tables")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            
+            for label, table in self.tables.items():
+                safe_name = label.replace(":", "_").replace("-", "_")
+                lines.append(f"define {safe_name} = Table(")
+                lines.append(f'    label = {self._to_kleis_string(table["label"])},')
+                headers = ", ".join(self._to_kleis_string(h) for h in table.get("headers", []))
+                lines.append(f'    headers = List({headers}),')
+                lines.append(f'    caption = {self._to_kleis_string(table.get("caption", ""))}')
+                lines.append(")")
+                lines.append("")
+        
+        # Theorems
+        if self.theorems:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Theorems and Proofs")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            
+            for label, thm in self.theorems.items():
+                safe_name = label.replace(":", "_").replace("-", "_")
+                lines.append(f"define {safe_name} = Theorem(")
+                lines.append(f'    label = {self._to_kleis_string(thm["label"])},')
+                lines.append(f'    kind = {self._to_kleis_string(thm.get("kind", "theorem"))},')
+                lines.append(f'    statement = {self._to_kleis_string(thm.get("statement", ""))},')
+                lines.append(f'    proof = {self._to_kleis_string(thm.get("proof") or "")},')
+                lines.append(f'    name = {self._to_kleis_string(thm.get("name") or "")}')
+                lines.append(")")
+                lines.append("")
+        
+        # Algorithms
+        if self.algorithms:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Algorithms")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            
+            for label, alg in self.algorithms.items():
+                safe_name = label.replace(":", "_").replace("-", "_")
+                lines.append(f"define {safe_name} = Algorithm(")
+                lines.append(f'    label = {self._to_kleis_string(alg["label"])},')
+                lines.append(f'    name = {self._to_kleis_string(alg.get("name", ""))},')
+                lines.append(f'    pseudocode = {self._to_kleis_string(alg.get("pseudocode", ""))},')
+                lines.append(f'    caption = {self._to_kleis_string(alg.get("caption", ""))}')
                 lines.append(")")
                 lines.append("")
         
