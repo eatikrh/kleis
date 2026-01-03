@@ -264,3 +264,51 @@ To use the Equation Editor, start the kleis server:
 
 Then call equation_editor() again.
 """
+
+
+def equation_editor_workflow_example() -> str:
+    """Return an example of the complete equation editing workflow."""
+    return '''
+# Complete Equation Editing Workflow with KleisDoc
+# ================================================
+
+# 1. Start the Kleis server (in terminal):
+#    cargo run --bin kleis -- server --port 3000
+
+# 2. Open the equation editor in a cell:
+from kleis_kernel.equation_editor import equation_editor
+equation_editor()
+
+# 3. Build your equation in the visual editor
+#    - Click template buttons (fraction, integral, etc.)
+#    - Type symbols and variables
+#    - See live preview
+
+# 4. Click "📤 Send to Jupyter" button in the editor
+
+# 5. The AST is now stored in window.kleisEquationData
+#    To retrieve it and add to your document, use JavaScript:
+#    (Run this in a cell after clicking "Send to Jupyter")
+
+%%javascript
+// Get the equation AST from the editor
+if (window.kleisEquationData) {
+    const widgetIds = Object.keys(window.kleisEquationData);
+    const latestId = widgetIds[widgetIds.length - 1];
+    const ast = window.kleisEquationData[latestId].ast;
+    
+    // Store in Python namespace via IPython
+    IPython.notebook.kernel.execute(
+        'equation_ast = ' + JSON.stringify(ast)
+    );
+    console.log('Equation AST stored in Python variable: equation_ast');
+}
+
+# 6. Now in Python, add the equation to your document:
+# doc.add_equation_from_ast("eq:main", equation_ast)
+
+# 7. To RE-EDIT an existing equation:
+from kleis_kernel.equation_editor import equation_editor
+eq = doc.get_equation("eq:main")
+equation_editor(initial=eq.ast)  # Pre-populates the editor!
+'''

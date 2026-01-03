@@ -1218,6 +1218,40 @@ example "render_plot"
         for child in section.subsections:
             self._remove_from_section_content(child, item)
     
+    def add_equation_from_ast(self, label: str, ast: Dict, 
+                              numbered: bool = True,
+                              section: Section = None) -> Equation:
+        """Add an equation from an EditorNode AST (from Equation Editor).
+        
+        This is the preferred method when working with the visual Equation Editor.
+        The AST is preserved for re-editing, and LaTeX is derived from the server.
+        
+        Args:
+            label: Unique label (e.g., "eq:einstein")
+            ast: EditorNode AST from the Equation Editor
+            numbered: Whether equation is numbered
+            section: Section to add equation to (default: last section)
+        
+        Returns:
+            The created Equation object
+        
+        Example:
+            # After user creates equation in Equation Editor
+            eq = doc.add_equation_from_ast("eq:main", ast_from_editor)
+        """
+        # Try to get LaTeX from server if available
+        latex = ""
+        try:
+            rendered = self.render_ast(ast, "latex")
+            if rendered:
+                latex = rendered
+        except Exception as e:
+            print(f"Warning: Could not render AST to LaTeX: {e}")
+            # Fall back to storing just the AST
+        
+        return self.add_equation(label, latex=latex, ast=ast, 
+                                 numbered=numbered, section=section)
+    
     # =========================================================================
     # Figure Management
     # =========================================================================

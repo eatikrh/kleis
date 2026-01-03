@@ -293,11 +293,57 @@ doc.add_equation(
 
 The Kleis Equation Editor provides a visual way to build equations:
 
-1. **Start Kleis server:** `kleis server --port 8080`
-2. **Open the editor:** Navigate to `http://localhost:8080/`
-3. **Build your equation** using the palette
-4. **Export:** Click "Export" → "JSON AST" to get the AST
-5. **Paste into Python:** Use the AST in `doc.add_equation()`
+#### In Jupyter Notebooks
+
+```python
+from kleis_kernel.equation_editor import equation_editor
+
+# Open the visual equation editor in an iframe
+equation_editor()
+```
+
+The editor opens with:
+- **Structural Mode** for building equations visually
+- **Symbol Palette** with math symbols, Greek letters, and templates
+- **"📤 Send to Jupyter"** button to send the equation back
+
+#### Workflow
+
+1. **Open the editor:**
+   ```python
+   equation_editor()
+   ```
+
+2. **Build your equation** using the palette buttons
+
+3. **Click "📤 Send to Jupyter"** when done
+
+4. **Retrieve the AST and add to document:**
+   ```python
+   # After clicking "Send to Jupyter", the AST is stored
+   # Add to your document:
+   doc.add_equation_from_ast("eq:main", equation_ast)
+   ```
+
+#### Re-editing Existing Equations
+
+```python
+# Load an existing equation's AST into the editor
+eq = doc.get_equation("eq:main")
+equation_editor(initial=eq.ast)  # Pre-populates the editor!
+```
+
+#### Standalone Mode
+
+For standalone use (outside Jupyter):
+
+1. **Start Kleis server:** `kleis server --port 3000`
+2. **Open in browser:** `http://localhost:3000/`
+3. **Use Debug AST** to copy the JSON AST
+4. **Paste into Python:** `doc.add_equation("label", ast=...)`
+
+For Jupyter mode, the URL `http://localhost:3000/?mode=jupyter` enables
+the "Send to Jupyter" button and auto-switches to structural mode
 
 ## Figures and Plots
 
