@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7bdc2fbd.js";
+            window.path_to_searchindex_js = "searchindex-849b4dc9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -3567,6 +3567,43 @@ doc = KleisDoc.load("my_thesis.kleis")
 # Continue editing
 doc.add_section("New Chapter", level=1)
 doc.save("my_thesis.kleis")
+</code></pre>
+<h3 id="revising-content"><a class="header" href="#revising-content">Revising Content</a></h3>
+<p>Thesis writing is iterative. Use these methods to revise existing content:</p>
+<p><strong>Update equations:</strong></p>
+<pre><code class="language-python"># Change the LaTeX
+doc.update_equation("loss", latex=r"\mathcal{L}_{revised} = \frac{1}{n}\sum(y - \hat{y})^2")
+
+# Or update the AST for Equation Editor compatibility
+doc.update_equation("einstein", ast=new_ast_dict)
+</code></pre>
+<p><strong>Update sections:</strong></p>
+<pre><code class="language-python"># Change section content
+doc.update_section("Introduction", content="This thesis explores quantum computing...")
+
+# Rename a section
+doc.update_section("Intro", new_title="Chapter 1: Introduction")
+
+# Add a label for cross-referencing
+doc.update_section("Methods", label="sec:methods")
+</code></pre>
+<p><strong>Update figures and tables:</strong></p>
+<pre><code class="language-python">doc.update_figure("fig1", caption="Updated architecture diagram")
+doc.update_table("tab1", rows=[[1, 2, 3], [4, 5, 6]])
+</code></pre>
+<p><strong>Remove content:</strong></p>
+<pre><code class="language-python"># Clean up before submission
+doc.remove_section("Draft Notes")
+doc.remove_equation("old_eq")
+doc.remove_figure("placeholder_fig")
+doc.remove_table("temp_data")
+</code></pre>
+<p><strong>Find content:</strong></p>
+<pre><code class="language-python"># Get specific items
+eq = doc.get_equation("loss")
+section = doc.get_section("Methods")
+fig = doc.get_figure("architecture")
+table = doc.get_table("results")
 </code></pre>
 <h3 id="multi-session-workflow"><a class="header" href="#multi-session-workflow">Multi-Session Workflow</a></h3>
 <pre><code>Session 1 (Monday):
