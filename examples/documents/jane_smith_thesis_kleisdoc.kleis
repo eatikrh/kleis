@@ -317,6 +317,23 @@ define jane_smith_thesis : KleisDoc =
 // ============================================================================
 // COMPILE TO TYPST
 // ============================================================================
+//
+// NOTE: The compile_editor_node function below is a simplified Kleis implementation.
+// The FULL implementation exists in Rust at src/render_editor.rs:
+//
+//   use kleis::render_editor::{render_editor_node, RenderTarget};
+//   let typst = render_editor_node(&node, &RenderTarget::Typst);
+//
+// This Rust renderer handles:
+// - All 54+ mathematical templates
+// - Tensor index structures (contravariant/covariant)
+// - Proper Unicode/LaTeX to Typst symbol conversion
+// - Matrix layouts, integrals, special functions
+//
+// FUTURE: Add builtin `render_to_typst(node: EditorNode) : String` that calls
+// the Rust renderer, giving Kleis code full access to the rendering engine.
+//
+// ============================================================================
 
 // Typst preamble
 define thesis_preamble : String =
