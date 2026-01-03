@@ -130,10 +130,92 @@ class KleisDoc:
     
     @classmethod
     def load(cls, path: str) -> "KleisDoc":
-        """Load a document from a .kleis file."""
+        """Load a document from a .kleisdoc (JSON) file.
+        
+        Args:
+            path: Path to the .kleisdoc file
+        
+        Returns:
+            A KleisDoc instance populated with the saved data
+        """
         doc = cls()
-        # TODO: Parse .kleis file and populate doc
-        raise NotImplementedError("Loading from .kleis files not yet implemented")
+        
+        with open(path, "r") as f:
+            data = json.load(f)
+        
+        # Version check
+        format_version = data.get("_kleisdoc_version", "1.0")
+        if not format_version.startswith("1."):
+            raise ValueError(f"Unsupported KleisDoc format version: {format_version}")
+        
+        # Load metadata
+        doc.metadata = data.get("metadata", {})
+        doc.template_path = data.get("template_path")
+        doc.template_info = data.get("template_info", {})
+        
+        # Load equations
+        for eq_data in data.get("equations", []):
+            eq = Equation(
+                id=eq_data["id"],
+                label=eq_data["label"],
+                latex=eq_data.get("latex", ""),
+                typst=eq_data.get("typst", ""),
+                ast=eq_data.get("ast"),
+                numbered=eq_data.get("numbered", True),
+                verified=eq_data.get("verified", False)
+            )
+            doc.equations[eq.label] = eq
+        
+        # Load figures
+        for fig_data in data.get("figures", []):
+            fig = Figure(
+                id=fig_data["id"],
+                label=fig_data["label"],
+                caption=fig_data.get("caption", ""),
+                kleis_code=fig_data.get("kleis_code"),
+                svg_cache=fig_data.get("svg_cache"),
+                typst_fragment=fig_data.get("typst_fragment"),
+                image_path=fig_data.get("image_path")
+            )
+            doc.figures[fig.label] = fig
+        
+        # Load sections (recursive)
+        for section_data in data.get("sections", []):
+            section = doc._load_section(section_data)
+            doc.sections.append(section)
+        
+        # Load bibliography
+        doc.bibliography = data.get("bibliography", [])
+        
+        return doc
+    
+    def _load_section(self, section_data: dict) -> Section:
+        """Recursively load a section from saved data."""
+        section = Section(
+            level=section_data["level"],
+            title=section_data["title"],
+            content=[]
+        )
+        
+        for item in section_data.get("content", []):
+            if isinstance(item, str):
+                section.content.append(item)
+            elif isinstance(item, dict):
+                item_type = item.get("_type")
+                if item_type == "section":
+                    section.content.append(self._load_section(item))
+                elif item_type == "equation":
+                    # Reference to equation by label
+                    eq_label = item.get("label")
+                    if eq_label in self.equations:
+                        section.content.append(self.equations[eq_label])
+                elif item_type == "figure":
+                    # Reference to figure by label
+                    fig_label = item.get("label")
+                    if fig_label in self.figures:
+                        section.content.append(self.figures[fig_label])
+        
+        return section
     
     def _find_kleis_binary(self) -> Optional[str]:
         """Find the kleis binary path."""
@@ -679,8 +761,89 @@ example "render_plot"
     # =========================================================================
     
     def save(self, path: str):
-        """Save document to a .kleis file."""
-        raise NotImplementedError("Saving to .kleis files not yet implemented")
+        """Save document to a .kleisdoc (JSON) file.
+        
+        The saved file contains:
+        - Document metadata (title, author, etc.)
+        - All equations with their EditorNode ASTs (for re-editing)
+        - All figures with their Kleis code (for regeneration)
+        - Document structure (sections, content order)
+        - Bibliography
+        
+        Args:
+            path: Path for the output file (recommended: .kleisdoc extension)
+        """
+        data = {
+            "_kleisdoc_version": "1.0",
+            "_created_by": "KleisDoc Python API",
+            "metadata": self.metadata,
+            "template_path": self.template_path,
+            "template_info": self.template_info,
+            "equations": [],
+            "figures": [],
+            "sections": [],
+            "bibliography": self.bibliography,
+        }
+        
+        # Save equations
+        for label, eq in self.equations.items():
+            data["equations"].append({
+                "id": eq.id,
+                "label": eq.label,
+                "latex": eq.latex,
+                "typst": eq.typst,
+                "ast": eq.ast,  # EditorNode AST preserved!
+                "numbered": eq.numbered,
+                "verified": eq.verified,
+            })
+        
+        # Save figures
+        for label, fig in self.figures.items():
+            data["figures"].append({
+                "id": fig.id,
+                "label": fig.label,
+                "caption": fig.caption,
+                "kleis_code": fig.kleis_code,  # For regeneration
+                "svg_cache": fig.svg_cache,
+                "typst_fragment": fig.typst_fragment,
+                "image_path": fig.image_path,
+            })
+        
+        # Save sections (recursive)
+        for section in self.sections:
+            data["sections"].append(self._section_to_dict(section))
+        
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2)
+    
+    def _section_to_dict(self, section: Section) -> dict:
+        """Convert a section to a dict for saving."""
+        result = {
+            "_type": "section",
+            "level": section.level,
+            "title": section.title,
+            "content": [],
+        }
+        
+        for item in section.content:
+            if isinstance(item, str):
+                result["content"].append(item)
+            elif isinstance(item, Section):
+                result["content"].append(self._section_to_dict(item))
+            elif isinstance(item, Equation):
+                # Save reference to equation
+                result["content"].append({
+                    "_type": "equation",
+                    "label": item.label,
+                })
+            elif isinstance(item, Figure):
+                # Save reference to figure
+                result["content"].append({
+                    "_type": "figure",
+                    "label": item.label,
+                })
+        
+        return result
     
     # =========================================================================
     # Display (for Jupyter)

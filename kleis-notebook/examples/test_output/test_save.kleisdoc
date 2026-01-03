@@ -1,0 +1,21 @@
+{
+  "_kleisdoc_version": "1.0",
+  "_created_by": "KleisDoc Python API",
+  "metadata": {
+    "title": "Test Document for Save/Load",
+    "author": "Test Author",
+    "date": "2026-01-03",
+    "keywords": [
+      "test",
+      "kleisdoc",
+      "save",
+      "load"
+    ]
+  },
+  "template_path": null,
+  "template_info": {},
+  "equations": [],
+  "figures": [],
+  "sections": [],
+  "bibliography": []
+}
