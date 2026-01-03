@@ -3,7 +3,8 @@
   author: "Kleis",
 )
 
-#set page(paper: "us-letter", margin: 1in)
+// No template specified - using minimal defaults
+#set page(margin: 1in)
 #set text(size: 11pt)
 
 #align(center)[
@@ -16,16 +17,16 @@
 
 Testing mathematical formulas.
 
-$ E = m c^(2) $ <eq:emc2>
+// Equation eq:emc2: no content available
 
-$ x = frac(-b plus.minus sqrt(b^(2) - 4 a c), 2 a) $ <eq:quadratic>
+// Equation eq:quadratic: no content available
 
 #heading(level: 1)[Famous Equations]
 
-$ E = m c^(2) $ <eq:emc2>
+// Equation eq:emc2: no content available
 
 Einstein's mass-energy equivalence.
 
-$ x = frac(-b plus.minus sqrt(b^(2) - 4 a c), 2 a) $ <eq:quadratic>
+// Equation eq:quadratic: no content available
 
 The quadratic formula for solving ax² + bx + c = 0.
