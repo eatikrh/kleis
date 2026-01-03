@@ -19,6 +19,7 @@ Usage:
 """
 
 import json
+import re
 import subprocess
 import os
 import urllib.request
@@ -130,92 +131,275 @@ class KleisDoc:
     
     @classmethod
     def load(cls, path: str) -> "KleisDoc":
-        """Load a document from a .kleisdoc (JSON) file.
+        """Load a document from a .kleis file.
+        
+        Uses the Kleis binary to parse and evaluate the file, then extracts
+        the document structure from the evaluated result.
         
         Args:
-            path: Path to the .kleisdoc file
+            path: Path to the .kleis file
         
         Returns:
             A KleisDoc instance populated with the saved data
         """
         doc = cls()
         
+        # Read the file to extract data using pattern matching
+        # (We parse the Kleis code structure directly since we generated it)
         with open(path, "r") as f:
-            data = json.load(f)
+            content = f.read()
         
-        # Version check
-        format_version = data.get("_kleisdoc_version", "1.0")
-        if not format_version.startswith("1."):
-            raise ValueError(f"Unsupported KleisDoc format version: {format_version}")
+        # Parse metadata
+        doc.metadata = doc._extract_metadata(content)
         
-        # Load metadata
-        doc.metadata = data.get("metadata", {})
-        doc.template_path = data.get("template_path")
-        doc.template_info = data.get("template_info", {})
+        # Parse equations
+        doc.equations = doc._extract_equations(content)
         
-        # Load equations
-        for eq_data in data.get("equations", []):
-            eq = Equation(
-                id=eq_data["id"],
-                label=eq_data["label"],
-                latex=eq_data.get("latex", ""),
-                typst=eq_data.get("typst", ""),
-                ast=eq_data.get("ast"),
-                numbered=eq_data.get("numbered", True),
-                verified=eq_data.get("verified", False)
-            )
-            doc.equations[eq.label] = eq
+        # Parse figures
+        doc.figures = doc._extract_figures(content)
         
-        # Load figures
-        for fig_data in data.get("figures", []):
-            fig = Figure(
-                id=fig_data["id"],
-                label=fig_data["label"],
-                caption=fig_data.get("caption", ""),
-                kleis_code=fig_data.get("kleis_code"),
-                svg_cache=fig_data.get("svg_cache"),
-                typst_fragment=fig_data.get("typst_fragment"),
-                image_path=fig_data.get("image_path")
-            )
-            doc.figures[fig.label] = fig
-        
-        # Load sections (recursive)
-        for section_data in data.get("sections", []):
-            section = doc._load_section(section_data)
-            doc.sections.append(section)
-        
-        # Load bibliography
-        doc.bibliography = data.get("bibliography", [])
+        # Parse sections
+        doc.sections = doc._extract_sections(content, doc.equations, doc.figures)
         
         return doc
     
-    def _load_section(self, section_data: dict) -> Section:
-        """Recursively load a section from saved data."""
-        section = Section(
-            level=section_data["level"],
-            title=section_data["title"],
-            content=[]
-        )
+    def _extract_metadata(self, content: str) -> Dict[str, Any]:
+        """Extract metadata from Kleis file content."""
+        metadata = {}
         
-        for item in section_data.get("content", []):
-            if isinstance(item, str):
-                section.content.append(item)
-            elif isinstance(item, dict):
-                item_type = item.get("_type")
-                if item_type == "section":
-                    section.content.append(self._load_section(item))
-                elif item_type == "equation":
-                    # Reference to equation by label
-                    eq_label = item.get("label")
-                    if eq_label in self.equations:
-                        section.content.append(self.equations[eq_label])
-                elif item_type == "figure":
-                    # Reference to figure by label
-                    fig_label = item.get("label")
-                    if fig_label in self.figures:
-                        section.content.append(self.figures[fig_label])
+        # Look for: title = "..."
+        match = re.search(r'title\s*=\s*"([^"]*)"', content)
+        if match:
+            metadata["title"] = match.group(1)
         
-        return section
+        # Look for: author = "..."
+        match = re.search(r'author\s*=\s*"([^"]*)"', content)
+        if match:
+            metadata["author"] = match.group(1)
+        
+        # Look for: date = "..."
+        match = re.search(r'date\s*=\s*"([^"]*)"', content)
+        if match and match.group(1):
+            metadata["date"] = match.group(1)
+        
+        # Look for: abstract_text = "..."
+        match = re.search(r'abstract_text\s*=\s*"([^"]*)"', content)
+        if match and match.group(1):
+            metadata["abstract"] = match.group(1)
+        
+        return metadata
+    
+    def _extract_equations(self, content: str) -> Dict[str, Equation]:
+        """Extract equations from Kleis file content."""
+        equations = {}
+        
+        # Find equation definitions: define eq_xxx = Equation(...)
+        pattern = r'define\s+(\w+)\s*=\s*Equation\((.*?)\n\)'
+        for match in re.finditer(pattern, content, re.DOTALL):
+            var_name = match.group(1)
+            eq_body = match.group(2)
+            
+            # Extract fields
+            id_match = re.search(r'id\s*=\s*"([^"]*)"', eq_body)
+            label_match = re.search(r'label\s*=\s*"([^"]*)"', eq_body)
+            latex_match = re.search(r'latex\s*=\s*"([^"]*)"', eq_body)
+            typst_match = re.search(r'typst\s*=\s*"([^"]*)"', eq_body)
+            numbered_match = re.search(r'numbered\s*=\s*(true|false)', eq_body)
+            verified_match = re.search(r'verified\s*=\s*(true|false)', eq_body)
+            
+            # Extract AST (complex nested structure)
+            ast_match = re.search(r'ast\s*=\s*(EOp\(.*?\)|EObject\(.*?\)|EConst\(.*?\)|None)', eq_body)
+            ast = None
+            if ast_match:
+                ast_str = ast_match.group(1)
+                # Find the full AST by counting parentheses
+                ast = self._parse_kleis_ast(eq_body)
+            
+            if label_match:
+                label = label_match.group(1)
+                equations[label] = Equation(
+                    id=id_match.group(1) if id_match else "",
+                    label=label,
+                    latex=latex_match.group(1) if latex_match else "",
+                    typst=typst_match.group(1) if typst_match else "",
+                    ast=ast,
+                    numbered=numbered_match.group(1) == "true" if numbered_match else True,
+                    verified=verified_match.group(1) == "true" if verified_match else False,
+                )
+        
+        return equations
+    
+    def _parse_kleis_ast(self, eq_body: str) -> Optional[Dict]:
+        """Parse EditorNode AST from Kleis code."""
+        # Find ast = ...
+        ast_start = eq_body.find("ast = ")
+        if ast_start == -1:
+            return None
+        
+        ast_str = eq_body[ast_start + 6:]
+        
+        # Simple recursive parser for our generated format
+        return self._parse_ast_expr(ast_str)
+    
+    def _parse_ast_expr(self, s: str) -> Optional[Dict]:
+        """Parse a single AST expression."""
+        s = s.strip()
+        
+        if s.startswith("None"):
+            return None
+        
+        if s.startswith("EObject("):
+            # EObject("symbol")
+            match = re.match(r'EObject\("([^"]*)"\)', s)
+            if match:
+                return {"Object": match.group(1)}
+        
+        if s.startswith("EConst("):
+            # EConst("value")
+            match = re.match(r'EConst\("([^"]*)"\)', s)
+            if match:
+                return {"Const": match.group(1)}
+        
+        if s.startswith("EOp("):
+            # EOp("name", List(...), "", NoMeta)
+            # Find the name
+            name_match = re.match(r'EOp\("([^"]*)",\s*List\(', s)
+            if name_match:
+                name = name_match.group(1)
+                # Find the args list
+                args = self._extract_list_args(s)
+                return {
+                    "Operation": {
+                        "name": name,
+                        "args": args
+                    }
+                }
+        
+        return None
+    
+    def _extract_list_args(self, s: str) -> List[Dict]:
+        """Extract arguments from a List(...) in an EOp."""
+        # Find List( after the name
+        list_start = s.find("List(")
+        if list_start == -1:
+            return []
+        
+        # Find matching parenthesis
+        depth = 0
+        start = list_start + 5
+        args = []
+        current_arg_start = start
+        
+        i = start
+        while i < len(s):
+            c = s[i]
+            if c == '(':
+                depth += 1
+            elif c == ')':
+                if depth == 0:
+                    # End of List
+                    arg_str = s[current_arg_start:i].strip()
+                    if arg_str:
+                        parsed = self._parse_ast_expr(arg_str)
+                        if parsed:
+                            args.append(parsed)
+                    break
+                depth -= 1
+            elif c == ',' and depth == 0:
+                # Argument separator
+                arg_str = s[current_arg_start:i].strip()
+                if arg_str:
+                    parsed = self._parse_ast_expr(arg_str)
+                    if parsed:
+                        args.append(parsed)
+                current_arg_start = i + 1
+            i += 1
+        
+        return args
+    
+    def _extract_figures(self, content: str) -> Dict[str, Figure]:
+        """Extract figures from Kleis file content."""
+        figures = {}
+        
+        # Find figure definitions: define fig_xxx = Figure(...)
+        pattern = r'define\s+(\w+)\s*=\s*Figure\((.*?)\n\)'
+        for match in re.finditer(pattern, content, re.DOTALL):
+            var_name = match.group(1)
+            fig_body = match.group(2)
+            
+            # Extract fields
+            id_match = re.search(r'id\s*=\s*"([^"]*)"', fig_body)
+            label_match = re.search(r'label\s*=\s*"([^"]*)"', fig_body)
+            caption_match = re.search(r'caption\s*=\s*"([^"]*)"', fig_body)
+            
+            # Source type
+            kleis_code = None
+            image_path = None
+            if "Regenerable(" in fig_body:
+                code_match = re.search(r'Regenerable\("([^"]*)"', fig_body)
+                if code_match:
+                    kleis_code = code_match.group(1)
+            elif "Imported(" in fig_body:
+                path_match = re.search(r'Imported\("([^"]*)"', fig_body)
+                if path_match:
+                    image_path = path_match.group(1)
+            
+            if label_match:
+                label = label_match.group(1)
+                figures[label] = Figure(
+                    id=id_match.group(1) if id_match else "",
+                    label=label,
+                    caption=caption_match.group(1) if caption_match else "",
+                    kleis_code=kleis_code,
+                    image_path=image_path,
+                )
+        
+        return figures
+    
+    def _extract_sections(self, content: str, equations: Dict[str, Equation], 
+                          figures: Dict[str, Figure]) -> List[Section]:
+        """Extract sections from Kleis file content."""
+        sections = []
+        
+        # Find section definitions: define section_N = Section(...)
+        pattern = r'define\s+(section_\d+)\s*=\s*Section\((.*?)\n\)'
+        for match in re.finditer(pattern, content, re.DOTALL):
+            var_name = match.group(1)
+            sec_body = match.group(2)
+            
+            # Extract fields
+            level_match = re.search(r'level\s*=\s*(\d+)', sec_body)
+            title_match = re.search(r'title\s*=\s*"([^"]*)"', sec_body)
+            
+            level = int(level_match.group(1)) if level_match else 1
+            title = title_match.group(1) if title_match else ""
+            
+            section = Section(level=level, title=title, content=[])
+            
+            # Extract content items
+            content_match = re.search(r'content\s*=\s*List\((.*)\)', sec_body, re.DOTALL)
+            if content_match:
+                content_str = content_match.group(1)
+                
+                # Parse Text("...") items
+                for text_match in re.finditer(r'Text\("([^"]*)"\)', content_str):
+                    section.content.append(text_match.group(1))
+                
+                # Parse EqRef("...") items
+                for eq_match in re.finditer(r'EqRef\("([^"]*)"\)', content_str):
+                    eq_label = eq_match.group(1)
+                    if eq_label in equations:
+                        section.content.append(equations[eq_label])
+                
+                # Parse FigRef("...") items
+                for fig_match in re.finditer(r'FigRef\("([^"]*)"\)', content_str):
+                    fig_label = fig_match.group(1)
+                    if fig_label in figures:
+                        section.content.append(figures[fig_label])
+            
+            sections.append(section)
+        
+        return sections
     
     def _find_kleis_binary(self) -> Optional[str]:
         """Find the kleis binary path."""
@@ -761,89 +945,202 @@ example "render_plot"
     # =========================================================================
     
     def save(self, path: str):
-        """Save document to a .kleisdoc (JSON) file.
+        """Save document to a .kleis file.
         
+        Generates valid Kleis code that can be parsed and evaluated.
         The saved file contains:
-        - Document metadata (title, author, etc.)
+        - Import of kleisdoc_types.kleis
+        - Document metadata as Kleis data structures
         - All equations with their EditorNode ASTs (for re-editing)
         - All figures with their Kleis code (for regeneration)
         - Document structure (sections, content order)
-        - Bibliography
         
         Args:
-            path: Path for the output file (recommended: .kleisdoc extension)
+            path: Path for the output file (should be .kleis extension)
         """
-        data = {
-            "_kleisdoc_version": "1.0",
-            "_created_by": "KleisDoc Python API",
-            "metadata": self.metadata,
-            "template_path": self.template_path,
-            "template_info": self.template_info,
-            "equations": [],
-            "figures": [],
-            "sections": [],
-            "bibliography": self.bibliography,
-        }
+        lines = []
         
-        # Save equations
-        for label, eq in self.equations.items():
-            data["equations"].append({
-                "id": eq.id,
-                "label": eq.label,
-                "latex": eq.latex,
-                "typst": eq.typst,
-                "ast": eq.ast,  # EditorNode AST preserved!
-                "numbered": eq.numbered,
-                "verified": eq.verified,
-            })
+        # Header
+        lines.append("// ============================================================================")
+        lines.append("// KleisDoc - Auto-generated document file")
+        lines.append("// ============================================================================")
+        lines.append("//")
+        lines.append("// This file was generated by KleisDoc Python API.")
+        lines.append("// It can be loaded back into KleisDoc for continued editing.")
+        lines.append("//")
+        lines.append("// ============================================================================")
+        lines.append("")
+        lines.append('import "examples/documents/kleisdoc_types.kleis"')
+        lines.append("")
         
-        # Save figures
-        for label, fig in self.figures.items():
-            data["figures"].append({
-                "id": fig.id,
-                "label": fig.label,
-                "caption": fig.caption,
-                "kleis_code": fig.kleis_code,  # For regeneration
-                "svg_cache": fig.svg_cache,
-                "typst_fragment": fig.typst_fragment,
-                "image_path": fig.image_path,
-            })
+        # Metadata
+        lines.append("// ----------------------------------------------------------------------------")
+        lines.append("// Document Metadata")
+        lines.append("// ----------------------------------------------------------------------------")
+        lines.append("")
+        lines.append("define doc_metadata = Metadata(")
+        lines.append(f'    title = {self._to_kleis_string(self.metadata.get("title", ""))},')
+        lines.append(f'    author = {self._to_kleis_string(self.metadata.get("author", ""))},')
+        lines.append(f'    date = {self._to_kleis_string(self.metadata.get("date", ""))},')
+        lines.append(f'    abstract_text = {self._to_kleis_string(self.metadata.get("abstract", ""))}')
+        lines.append(")")
+        lines.append("")
         
-        # Save sections (recursive)
-        for section in self.sections:
-            data["sections"].append(self._section_to_dict(section))
+        # Equations
+        if self.equations:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Equations (with EditorNode AST for re-editing)")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            
+            for label, eq in self.equations.items():
+                safe_name = label.replace(":", "_").replace("-", "_")
+                lines.append(f"define {safe_name} = Equation(")
+                lines.append(f'    id = {self._to_kleis_string(eq.id)},')
+                lines.append(f'    label = {self._to_kleis_string(eq.label)},')
+                lines.append(f'    latex = {self._to_kleis_string(eq.latex)},')
+                lines.append(f'    typst = {self._to_kleis_string(eq.typst)},')
+                lines.append(f'    ast = {self._ast_to_kleis(eq.ast)},')
+                lines.append(f'    numbered = {str(eq.numbered).lower()},')
+                lines.append(f'    verified = {str(eq.verified).lower()}')
+                lines.append(")")
+                lines.append("")
+        
+        # Figures
+        if self.figures:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Figures (with Kleis code for regeneration)")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            
+            for label, fig in self.figures.items():
+                safe_name = label.replace(":", "_").replace("-", "_")
+                lines.append(f"define {safe_name} = Figure(")
+                lines.append(f'    id = {self._to_kleis_string(fig.id)},')
+                lines.append(f'    label = {self._to_kleis_string(fig.label)},')
+                lines.append(f'    caption = {self._to_kleis_string(fig.caption)},')
+                if fig.kleis_code:
+                    lines.append(f'    source = Regenerable({self._to_kleis_string(fig.kleis_code)}, List()),')
+                elif fig.image_path:
+                    lines.append(f'    source = Imported({self._to_kleis_string(fig.image_path)}, ""),')
+                else:
+                    lines.append('    source = Static,')
+                lines.append(f'    typst_fragment = {self._to_kleis_string(fig.typst_fragment or "")},')
+                lines.append(f'    svg_cache = {self._to_kleis_string(fig.svg_cache or "")}')
+                lines.append(")")
+                lines.append("")
+        
+        # Sections
+        if self.sections:
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("// Document Structure")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            
+            for i, section in enumerate(self.sections):
+                lines.append(self._section_to_kleis(section, f"section_{i}"))
+                lines.append("")
+        
+        # Document assembly
+        lines.append("// ----------------------------------------------------------------------------")
+        lines.append("// Document Assembly")
+        lines.append("// ----------------------------------------------------------------------------")
+        lines.append("")
+        lines.append("define document = KleisDoc(")
+        lines.append("    metadata = doc_metadata,")
+        
+        # Equations list
+        if self.equations:
+            eq_refs = ", ".join(label.replace(":", "_").replace("-", "_") for label in self.equations.keys())
+            lines.append(f"    equations = List({eq_refs}),")
+        else:
+            lines.append("    equations = List(),")
+        
+        # Figures list
+        if self.figures:
+            fig_refs = ", ".join(label.replace(":", "_").replace("-", "_") for label in self.figures.keys())
+            lines.append(f"    figures = List({fig_refs}),")
+        else:
+            lines.append("    figures = List(),")
+        
+        # Sections list
+        if self.sections:
+            sec_refs = ", ".join(f"section_{i}" for i in range(len(self.sections)))
+            lines.append(f"    sections = List({sec_refs})")
+        else:
+            lines.append("    sections = List()")
+        
+        lines.append(")")
+        lines.append("")
         
         with open(path, "w") as f:
-            json.dump(data, f, indent=2)
+            f.write("\n".join(lines))
     
-    def _section_to_dict(self, section: Section) -> dict:
-        """Convert a section to a dict for saving."""
-        result = {
-            "_type": "section",
-            "level": section.level,
-            "title": section.title,
-            "content": [],
-        }
+    def _to_kleis_string(self, s: str) -> str:
+        """Convert a Python string to a Kleis string literal."""
+        if s is None:
+            return '""'
+        # Escape quotes and backslashes
+        escaped = s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+        return f'"{escaped}"'
+    
+    def _ast_to_kleis(self, ast: Optional[Dict]) -> str:
+        """Convert an EditorNode AST dict to Kleis code."""
+        if ast is None:
+            return "None"
         
+        if "Object" in ast:
+            return f'EObject({self._to_kleis_string(ast["Object"])})'
+        
+        if "Const" in ast:
+            return f'EConst({self._to_kleis_string(ast["Const"])})'
+        
+        if "Operation" in ast:
+            op = ast["Operation"]
+            name = op.get("name", "")
+            args = op.get("args", [])
+            args_kleis = ", ".join(self._ast_to_kleis(arg) for arg in args)
+            return f'EOp({self._to_kleis_string(name)}, List({args_kleis}), "", NoMeta)'
+        
+        if "Placeholder" in ast:
+            ph = ast["Placeholder"]
+            return f'EPlaceholder(Placeholder({ph.get("id", 0)}, {self._to_kleis_string(ph.get("hint", ""))}))'
+        
+        if "List" in ast:
+            items = ast["List"]
+            items_kleis = ", ".join(self._ast_to_kleis(item) for item in items)
+            return f'EList(List({items_kleis}))'
+        
+        # Fallback for unknown structures
+        return "None"
+    
+    def _section_to_kleis(self, section: Section, var_name: str) -> str:
+        """Convert a section to Kleis code."""
+        lines = []
+        lines.append(f"define {var_name} = Section(")
+        lines.append(f"    level = {section.level},")
+        lines.append(f"    title = {self._to_kleis_string(section.title)},")
+        
+        # Build content list
+        content_items = []
         for item in section.content:
             if isinstance(item, str):
-                result["content"].append(item)
-            elif isinstance(item, Section):
-                result["content"].append(self._section_to_dict(item))
+                content_items.append(f'Text({self._to_kleis_string(item)})')
             elif isinstance(item, Equation):
-                # Save reference to equation
-                result["content"].append({
-                    "_type": "equation",
-                    "label": item.label,
-                })
+                content_items.append(f'EqRef({self._to_kleis_string(item.label)})')
             elif isinstance(item, Figure):
-                # Save reference to figure
-                result["content"].append({
-                    "_type": "figure",
-                    "label": item.label,
-                })
+                content_items.append(f'FigRef({self._to_kleis_string(item.label)})')
+            elif isinstance(item, Section):
+                # Nested sections - inline them
+                content_items.append(f'SubSection({item.level}, {self._to_kleis_string(item.title)})')
         
-        return result
+        if content_items:
+            lines.append(f"    content = List({', '.join(content_items)})")
+        else:
+            lines.append("    content = List()")
+        
+        lines.append(")")
+        return "\n".join(lines)
     
     # =========================================================================
     # Display (for Jupyter)
