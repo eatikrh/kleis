@@ -2453,6 +2453,11 @@ impl Evaluator {
             "yaxis" | "secondary_yaxis" => self.builtin_yaxis_element(args),
             "xaxis" | "secondary_xaxis" => self.builtin_xaxis_element(args),
             "path" => self.builtin_path_element(args),
+
+            // Export Typst code (for embedding in documents)
+            "export_typst" => self.builtin_export_typst(args),
+            "export_typst_fragment" => self.builtin_export_typst_fragment(args),
+
             "lighten" => {
                 // lighten(color, amount) → "color.lighten(amount)"
                 // For Typst color manipulation
@@ -5451,6 +5456,167 @@ impl Evaluator {
             }
             Err(e) => Err(format!("diagram() failed: {}", e)),
         }
+    }
+
+    /// Export a diagram as Typst code (without compiling to SVG)
+    ///
+    /// Usage: export_typst(plot(...), bar(...), title = "My Plot")
+    /// Returns: String containing complete Typst code
+    fn builtin_export_typst(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::plotting::{export_diagram_typst, DiagramOptions, PlotElement};
+
+        if args.is_empty() {
+            return Err("export_typst() requires at least one plot element".to_string());
+        }
+
+        let mut options = DiagramOptions::default();
+        let mut elements: Vec<PlotElement> = Vec::new();
+
+        // Parse arguments (same logic as builtin_diagram)
+        let mut start_idx = 0;
+        let mut end_idx = args.len();
+
+        // Check first arg for options record
+        if let Some(Expression::Operation {
+            name, args: opts, ..
+        }) = args.first()
+        {
+            if name == "record" {
+                self.parse_diagram_options(opts, &mut options)?;
+                start_idx = 1;
+            }
+        }
+
+        // Check last arg for options record (v0.96 named arguments)
+        if end_idx > start_idx {
+            if let Some(Expression::Operation {
+                name, args: opts, ..
+            }) = args.last()
+            {
+                if name == "record" {
+                    self.parse_diagram_options(opts, &mut options)?;
+                    end_idx = args.len() - 1;
+                }
+            }
+        }
+
+        // Collect plot elements
+        for arg in &args[start_idx..end_idx] {
+            let evaluated = self.eval_concrete(arg)?;
+
+            if let Expression::List(list_elements) = &evaluated {
+                for list_elem in list_elements {
+                    if let Expression::Operation { name, .. } = list_elem {
+                        if name == "PlotElement" {
+                            let element = self.decode_plot_element(list_elem)?;
+                            elements.push(element);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            if let Expression::Operation { name, .. } = &evaluated {
+                if name == "PlotElement" {
+                    let element = self.decode_plot_element(&evaluated)?;
+                    elements.push(element);
+                } else if name == "record" {
+                    continue;
+                } else {
+                    return Err(format!(
+                        "export_typst() expects PlotElement, got: {}()",
+                        name
+                    ));
+                }
+            }
+        }
+
+        if elements.is_empty() {
+            return Err("export_typst() requires at least one plot element".to_string());
+        }
+
+        // Generate Typst code (without compiling)
+        let typst_code = export_diagram_typst(&elements, &options);
+
+        // Return as string
+        Ok(Some(Expression::String(typst_code)))
+    }
+
+    /// Export just the lq.diagram(...) fragment (without preamble)
+    ///
+    /// Useful for embedding in existing Typst documents
+    fn builtin_export_typst_fragment(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
+        use crate::plotting::{export_diagram_typst_fragment, DiagramOptions, PlotElement};
+
+        if args.is_empty() {
+            return Err("export_typst_fragment() requires at least one plot element".to_string());
+        }
+
+        let mut options = DiagramOptions::default();
+        let mut elements: Vec<PlotElement> = Vec::new();
+
+        // Parse arguments (same logic as builtin_diagram)
+        let mut start_idx = 0;
+        let mut end_idx = args.len();
+
+        if let Some(Expression::Operation {
+            name, args: opts, ..
+        }) = args.first()
+        {
+            if name == "record" {
+                self.parse_diagram_options(opts, &mut options)?;
+                start_idx = 1;
+            }
+        }
+
+        if end_idx > start_idx {
+            if let Some(Expression::Operation {
+                name, args: opts, ..
+            }) = args.last()
+            {
+                if name == "record" {
+                    self.parse_diagram_options(opts, &mut options)?;
+                    end_idx = args.len() - 1;
+                }
+            }
+        }
+
+        for arg in &args[start_idx..end_idx] {
+            let evaluated = self.eval_concrete(arg)?;
+
+            if let Expression::List(list_elements) = &evaluated {
+                for list_elem in list_elements {
+                    if let Expression::Operation { name, .. } = list_elem {
+                        if name == "PlotElement" {
+                            let element = self.decode_plot_element(list_elem)?;
+                            elements.push(element);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            if let Expression::Operation { name, .. } = &evaluated {
+                if name == "PlotElement" {
+                    let element = self.decode_plot_element(&evaluated)?;
+                    elements.push(element);
+                } else if name == "record" {
+                    continue;
+                }
+            }
+        }
+
+        if elements.is_empty() {
+            return Err("export_typst_fragment() requires at least one plot element".to_string());
+        }
+
+        // Generate Typst fragment (without preamble)
+        let typst_code = export_diagram_typst_fragment(&elements, &options);
+
+        Ok(Some(Expression::String(typst_code)))
     }
 
     /// Parse diagram options from a record expression
