@@ -2225,7 +2225,7 @@ example "render_plot"
         typst = re.sub(r'\\mathbf\{([^}]+)\}', r'bold(\1)', typst)
         typst = re.sub(r'\\mathrm\{([^}]+)\}', r'upright(\1)', typst)
         typst = re.sub(r'\\mathit\{([^}]+)\}', r'italic(\1)', typst)
-        typst = re.sub(r'\\text\{([^}]+)\}', r'text(\1)', typst)
+        typst = re.sub(r'\\text\{([^}]+)\}', r'"\1"', typst)  # Text becomes quoted string
         
         # Fractions
         typst = re.sub(r'\\frac\{([^}]+)\}\{([^}]+)\}', r'(\1)/(\2)', typst)
@@ -2264,14 +2264,34 @@ example "render_plot"
             '\\rightarrow': '->', '\\leftarrow': '<-', '\\Rightarrow': '=>',
             '\\hbar': 'planck.reduce',
             '\\ldots': '...', '\\cdots': 'dots.c',
+            # Bra-ket notation (use Unicode directly for reliability)
+            '\\langle': ' ⟨ ', '\\rangle': ' ⟩ ',
+            '\\vert': ' | ', '\\|': ' ‖ ',
+            # Additional common symbols
+            '\\dagger': ' dagger ', '\\otimes': ' times.circle ',
+            '\\oplus': ' plus.circle ',
         }
         for latex_cmd, typst_cmd in operators.items():
             typst = typst.replace(latex_cmd, typst_cmd)
         
-        # Subscripts and superscripts (simple cases)
-        # LaTeX: x^{2} → Typst: x^2, x_{i} → x_i
-        typst = re.sub(r'\^\{([^}]+)\}', r'^(\1)', typst)
-        typst = re.sub(r'_\{([^}]+)\}', r'_(\1)', typst)
+        # Subscripts and superscripts
+        # For multi-letter subscripts/superscripts, quote them as text
+        def quote_if_multichar(match):
+            content = match.group(1)
+            # If single char or contains operators/numbers, keep as-is
+            if len(content) == 1 or any(c in content for c in '+-*/=0123456789'):
+                return f'^({content})'
+            # Multi-letter text needs quotes
+            return f'^("{content}")'
+        
+        def quote_if_multichar_sub(match):
+            content = match.group(1)
+            if len(content) == 1 or any(c in content for c in '+-*/=0123456789'):
+                return f'_({content})'
+            return f'_("{content}")'
+        
+        typst = re.sub(r'\^\{([^}]+)\}', quote_if_multichar, typst)
+        typst = re.sub(r'_\{([^}]+)\}', quote_if_multichar_sub, typst)
         
         # Hat and other accents
         typst = re.sub(r'\\hat\{([^}]+)\}', r'hat(\1)', typst)
