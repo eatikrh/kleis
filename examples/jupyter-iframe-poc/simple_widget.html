@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Widget POC</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .palette {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .palette button {
+            font-size: 24px;
+            padding: 10px 15px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+        }
+        .palette button:hover {
+            background: #e0e0e0;
+        }
+        #output {
+            font-size: 32px;
+            padding: 20px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-height: 50px;
+        }
+        #send-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #send-btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h3>Simple Symbol Palette</h3>
+    
+    <div class="palette">
+        <button onclick="addSymbol('∑')">∑</button>
+        <button onclick="addSymbol('∫')">∫</button>
+        <button onclick="addSymbol('√')">√</button>
+        <button onclick="addSymbol('∀')">∀</button>
+        <button onclick="addSymbol('∃')">∃</button>
+        <button onclick="addSymbol('π')">π</button>
+        <button onclick="addSymbol('∞')">∞</button>
+        <button onclick="clearOutput()">Clear</button>
+    </div>
+    
+    <div id="output"></div>
+    
+    <button id="send-btn" onclick="sendToJupyter()">Send to Jupyter</button>
+    
+    <script>
+        let content = '';
+        
+        function addSymbol(symbol) {
+            content += symbol;
+            document.getElementById('output').textContent = content;
+        }
+        
+        function clearOutput() {
+            content = '';
+            document.getElementById('output').textContent = '';
+        }
+        
+        function sendToJupyter() {
+            // Send message to parent (Jupyter notebook)
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'widget-result',
+                    content: content
+                }, '*');
+                console.log('Sent to parent:', content);
+            } else {
+                alert('Result: ' + content + '\n\n(Not in iframe - would send to Jupyter)');
+            }
+        }
+    </script>
+</body>
+</html>
+
