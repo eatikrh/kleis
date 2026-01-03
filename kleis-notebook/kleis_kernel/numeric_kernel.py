@@ -13,13 +13,18 @@ this kernel maintains a persistent REPL session that can:
 
 import os
 import re
-import shutil
 import subprocess
 import threading
 import queue
 from typing import Any, Dict, Optional, Tuple
 
 from ipykernel.kernelbase import Kernel
+
+# Import kleis_binary module - handle both package and direct import
+try:
+    from .kleis_binary import find_kleis_binary
+except ImportError:
+    from kleis_binary import find_kleis_binary
 
 
 class KleisNumericKernel(Kernel):
@@ -59,30 +64,12 @@ Jupyter Commands:
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._kleis_binary = self._find_kleis_binary()
+        # Use shared discovery module for consistent behavior across all Python code
+        self._kleis_binary = find_kleis_binary()
         self._repl_process = None
         self._output_queue = queue.Queue()
         self._reader_thread = None
         self._start_repl()
-
-    def _find_kleis_binary(self) -> Optional[str]:
-        """Find the kleis binary in PATH or common locations."""
-        kleis_path = shutil.which("kleis")
-        if kleis_path:
-            return kleis_path
-
-        home = os.path.expanduser("~")
-        candidates = [
-            os.path.join(home, ".cargo", "bin", "kleis"),
-            "/usr/local/bin/kleis",
-            "/usr/bin/kleis",
-        ]
-
-        for path in candidates:
-            if os.path.isfile(path) and os.access(path, os.X_OK):
-                return path
-
-        return None
 
     def _start_repl(self):
         """Start the Kleis REPL subprocess."""

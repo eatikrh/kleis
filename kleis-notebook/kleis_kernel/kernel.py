@@ -7,12 +7,17 @@ Kleis binary and returning the results to Jupyter.
 
 import os
 import re
-import shutil
 import subprocess
 import tempfile
 from typing import Any, Dict, Optional, Tuple
 
 from ipykernel.kernelbase import Kernel
+
+# Import kleis_binary module - handle both package and direct import
+try:
+    from .kleis_binary import find_kleis_binary, find_kleis_root
+except ImportError:
+    from kleis_binary import find_kleis_binary, find_kleis_root
 
 
 class KleisKernel(Kernel):
@@ -59,79 +64,10 @@ Jupyter Commands:
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._kleis_binary = self._find_kleis_binary()
-        self._kleis_root = self._find_kleis_root()
+        # Use shared discovery module for consistent behavior across all Python code
+        self._kleis_binary = find_kleis_binary()
+        self._kleis_root = find_kleis_root()
         self._session_context: list = []  # Accumulated definitions
-
-    def _find_kleis_binary(self) -> Optional[str]:
-        """Find the kleis binary in PATH or common locations."""
-        # Check PATH first
-        kleis_path = shutil.which("kleis")
-        if kleis_path:
-            return kleis_path
-
-        # Check common installation locations
-        home = os.path.expanduser("~")
-        candidates = [
-            os.path.join(home, ".cargo", "bin", "kleis"),
-            "/usr/local/bin/kleis",
-            "/usr/bin/kleis",
-        ]
-
-        for path in candidates:
-            if os.path.isfile(path) and os.access(path, os.X_OK):
-                return path
-
-        return None
-
-    def _find_kleis_root(self) -> Optional[str]:
-        """Find the Kleis project root directory (where stdlib/ is located).
-        
-        This is needed so that imports like 'stdlib/prelude.kleis' work correctly.
-        Search order:
-        1. KLEIS_ROOT environment variable
-        2. Directory containing the kleis binary (if installed in project)
-        3. Common project locations
-        4. Current working directory if it has stdlib/
-        """
-        # Check environment variable first
-        env_root = os.environ.get("KLEIS_ROOT")
-        if env_root and os.path.isdir(os.path.join(env_root, "stdlib")):
-            return env_root
-        
-        # Check if kleis binary is in a project directory
-        if self._kleis_binary:
-            # kleis binary might be in ~/.cargo/bin, so we can't use its location directly
-            # But we can check if KLEIS_ROOT was set during install
-            pass
-        
-        # Check common project locations
-        home = os.path.expanduser("~")
-        candidates = [
-            os.path.join(home, "git", "cee", "kleis"),
-            os.path.join(home, "projects", "kleis"),
-            os.path.join(home, "kleis"),
-            "/opt/kleis",
-            "/usr/local/share/kleis",
-        ]
-        
-        for path in candidates:
-            if os.path.isdir(os.path.join(path, "stdlib")):
-                return path
-        
-        # Check current working directory
-        cwd = os.getcwd()
-        if os.path.isdir(os.path.join(cwd, "stdlib")):
-            return cwd
-        
-        # Check parent directories (in case we're in a subdirectory)
-        parent = os.path.dirname(cwd)
-        for _ in range(3):  # Check up to 3 levels up
-            if os.path.isdir(os.path.join(parent, "stdlib")):
-                return parent
-            parent = os.path.dirname(parent)
-        
-        return None
 
     def _run_kleis(self, code: str, mode: str = "auto") -> Tuple[int, str, str]:
         """Run kleis binary with the given code.
