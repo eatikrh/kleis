@@ -691,9 +691,21 @@ impl KleisUnifiedServer {
 }
 
 /// Resolve an import path relative to the importing file
+///
+/// For stdlib imports, checks in order:
+/// 1. KLEIS_ROOT environment variable
+/// 2. Walk up from importing file to find stdlib/
 fn resolve_import_path(import_path: &str, from_file: &Path) -> Option<PathBuf> {
     // Handle stdlib imports
     if import_path.starts_with("stdlib/") {
+        // First, check KLEIS_ROOT environment variable
+        if let Ok(kleis_root) = std::env::var("KLEIS_ROOT") {
+            let candidate = PathBuf::from(&kleis_root).join(import_path);
+            if candidate.exists() {
+                return candidate.canonicalize().ok();
+            }
+        }
+
         // Try relative to project root (walk up from current file)
         if let Some(parent) = from_file.parent() {
             let mut dir = parent.to_path_buf();

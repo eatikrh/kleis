@@ -62,21 +62,22 @@ graph("line", linspace(0, 10, 100), ...)  // ❌ Future phase
 
 **Root cause:** Lists must be written explicitly. We lack programmatic list generation.
 
-#### 2. Jupyter Kernel: KLEIS_ROOT Environment Variable
+#### 2. Jupyter Kernel: KLEIS_ROOT Environment Variable ✅ RESOLVED
 
 **Problem:** When Jupyter runs from arbitrary directories, `import "stdlib/prelude.kleis"` fails.
 
-**Current workaround:** The kernel searches upward for `stdlib/prelude.kleis`.
-
-**Better solution needed:** Set `KLEIS_ROOT` environment variable:
+**Solution:** The `KLEIS_ROOT` environment variable is now supported in all import resolution:
 ```bash
 export KLEIS_ROOT=/path/to/kleis
 ```
 
-**TODO:** 
-1. Document KLEIS_ROOT in manual
-2. Make kernel check KLEIS_ROOT first
-3. Consider auto-detection via `kleis --root` command
+**Implementation (Jan 2, 2026):**
+1. ✅ All `resolve_import_path` functions check `KLEIS_ROOT` first
+2. ✅ Documented in manual Chapter 21 (Jupyter Notebook) Troubleshooting section
+3. ✅ Kernel already checks KLEIS_ROOT (was implemented previously)
+
+**Files updated:** `src/bin/kleis.rs`, `src/main.rs`, `src/repl.rs`, `src/context.rs`, 
+`src/lsp/server.rs`, `src/bin/lsp.rs`, `src/bin/server.rs`
 
 #### 3. Plotting API Design ✅ RESOLVED
 
