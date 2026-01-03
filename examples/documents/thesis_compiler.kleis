@@ -1,0 +1,299 @@
+// ============================================================================
+// MIT THESIS COMPILER - Following the LISP Interpreter Pattern
+// ============================================================================
+//
+// This compiles a thesis document to Typst code, following the same
+// architecture as lisp_parser.kleis:
+//
+//   LISP:   parse(src) → SExpr → eval_lisp(expr, env) → LispVal
+//   Thesis: build_doc() → DocExpr → compile_doc(expr, style) → CompileResult
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ============================================================================
+// DOCUMENT AST (like SExpr)
+// ============================================================================
+
+// Document elements
+data DocExpr =
+    DTitle(text: String)
+  | DAuthor(name: String, dept: String, date: String)
+  | DAbstract(title: String, author: String, text: String, supervisor: String)
+  | DChapter(num: ℕ, title: String, content: String)
+  | DSection(title: String, content: String)
+  | DEquation(latex: String, label: String)
+  | DFigure(num: String, caption: String)
+  | DReference(key: String, citation: String)
+  | DSequence(elements: List(DocExpr))
+
+// Degree type
+data Degree = Bachelor | Master | Doctor
+
+// ============================================================================
+// COMPILE RESULT (like LispVal)
+// ============================================================================
+
+data CompileResult =
+    CTypst(code: String)        // Typst code fragment
+  | CError(message: String)     // Validation/compilation error
+
+// ============================================================================
+// STYLE / TEMPLATE (like Env)
+// ============================================================================
+
+data DocStyle = 
+    MITThesis(degree: Degree)
+  | ArxivPaper
+  | IEEEPaper
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+define degree_name(d: Degree) : String = match d {
+    Bachelor => "Bachelor of Science"
+  | Master => "Master of Science"
+  | Doctor => "Doctor of Philosophy"
+}
+
+define degree_abbrev(d: Degree) : String = match d {
+    Bachelor => "S.B."
+  | Master => "S.M."
+  | Doctor => "Ph.D."
+}
+
+// Concatenate multiple strings
+define concat3(a: String, b: String, c: String) : String =
+    concat(a, concat(b, c))
+
+define concat4(a: String, b: String, c: String, d: String) : String =
+    concat(a, concat(b, concat(c, d)))
+
+define concat5(a: String, b: String, c: String, d: String, e: String) : String =
+    concat(a, concat(b, concat(c, concat(d, e))))
+
+// ============================================================================
+// COMPILE FUNCTIONS (like eval_lisp)
+// ============================================================================
+
+// Main compile function
+define compile_doc(expr: DocExpr, style: DocStyle) : CompileResult =
+    match expr {
+        DTitle(text) => compile_title(text, style)
+      | DAuthor(name, dept, date) => compile_author(name, dept, date, style)
+      | DAbstract(title, author, text, supervisor) => compile_abstract(title, author, text, supervisor)
+      | DChapter(num, title, content) => compile_chapter(num, title, content)
+      | DSection(title, content) => compile_section(title, content)
+      | DEquation(latex, label) => compile_equation(latex, label)
+      | DFigure(num, caption) => compile_figure(num, caption)
+      | DReference(key, citation) => compile_reference(key, citation)
+      | DSequence(elements) => compile_sequence(elements, style)
+    }
+
+// Compile title page
+define compile_title(text: String, style: DocStyle) : CompileResult =
+    match style {
+        MITThesis(degree) =>
+            CTypst(concat5(
+                "#align(center)[\n  #v(2cm)\n  #text(size: 24pt, weight: \"bold\")[",
+                text,
+                "]\n]\n",
+                "",
+                ""
+            ))
+      | ArxivPaper => CTypst(concat3("#align(center)[#text(size: 18pt)[", text, "]]\n"))
+      | IEEEPaper => CTypst(concat3("#align(center)[#text(size: 18pt)[", text, "]]\n"))
+    }
+
+// Compile author info
+define compile_author(name: String, dept: String, date: String, style: DocStyle) : CompileResult =
+    match style {
+        MITThesis(degree) =>
+            CTypst(concat5(
+                "#align(center)[\n",
+                concat3("  #text(size: 14pt)[", name, "]\n"),
+                concat3("  #v(0.5cm)\n  Submitted to the ", dept, "\n"),
+                concat3("  in partial fulfillment of the requirements for the degree of\n  #v(0.3cm)\n  #text(style: \"italic\")[", degree_name(degree), "]\n"),
+                concat3("  #v(0.5cm)\n  ", date, "\n]\n#pagebreak()\n")
+            ))
+      | _ => CTypst(concat3("#text[", name, "]\n"))
+    }
+
+// Compile abstract
+define compile_abstract(title: String, author: String, text: String, supervisor: String) : CompileResult =
+    CTypst(concat5(
+        "#align(center)[#text(size: 16pt, weight: \"bold\")[Abstract]]\n\n",
+        concat3("#text(weight: \"bold\")[", title, "]\n\n"),
+        concat3("by ", author, "\n\n"),
+        concat3("Submitted to the Department on the date shown\nin partial fulfillment of the requirements for the degree.\n\n", text, "\n\n"),
+        concat3("#text(weight: \"bold\")[Thesis Supervisor:] ", supervisor, "\n#pagebreak()\n")
+    ))
+
+// Compile chapter
+define compile_chapter(num: ℕ, title: String, content: String) : CompileResult =
+    CTypst(concat5(
+        "= Chapter ", 
+        int_to_str(num),
+        ": ",
+        title,
+        concat3("\n\n", content, "\n\n")
+    ))
+
+// Compile section
+define compile_section(title: String, content: String) : CompileResult =
+    CTypst(concat4("== ", title, "\n\n", concat(content, "\n\n")))
+
+// Compile equation
+define compile_equation(latex: String, label: String) : CompileResult =
+    CTypst(concat4("$ ", latex, " $ <", concat(label, ">\n\n")))
+
+// Compile figure
+define compile_figure(num: String, caption: String) : CompileResult =
+    CTypst(concat4(
+        "#figure(\n  rect(width: 80%, height: 3cm, fill: luma(240))[#align(center + horizon)[Figure ", 
+        num,
+        " placeholder]],\n  caption: [",
+        concat(caption, "]\n)\n\n")
+    ))
+
+// Compile reference
+define compile_reference(key: String, citation: String) : CompileResult =
+    CTypst(concat4("[", key, "] ", concat(citation, "\n\n")))
+
+// Compile sequence of elements
+define compile_sequence(elements: List(DocExpr), style: DocStyle) : CompileResult =
+    compile_sequence_acc(elements, style, "")
+
+define compile_sequence_acc(elements: List(DocExpr), style: DocStyle, acc: String) : CompileResult =
+    match elements {
+        Nil => CTypst(acc)
+      | Cons(elem, rest) =>
+            match compile_doc(elem, style) {
+                CTypst(code) => compile_sequence_acc(rest, style, concat(acc, code))
+              | CError(msg) => CError(msg)
+            }
+    }
+
+// ============================================================================
+// DOCUMENT BUILDER HELPERS
+// ============================================================================
+
+// Helper to convert int to string
+define int_to_str(n: ℕ) : String =
+    if eq(n, 0) then "0"
+    else if eq(n, 1) then "1"
+    else if eq(n, 2) then "2"
+    else if eq(n, 3) then "3"
+    else if eq(n, 4) then "4"
+    else if eq(n, 5) then "5"
+    else if eq(n, 6) then "6"
+    else if eq(n, 7) then "7"
+    else if eq(n, 8) then "8"
+    else if eq(n, 9) then "9"
+    else "N"
+
+// ============================================================================
+// TYPST PREAMBLE
+// ============================================================================
+
+define mit_preamble : String =
+    "#set page(paper: \"us-letter\", margin: 1in)\n#set text(font: \"New Computer Modern\", size: 12pt)\n#set par(justify: true, leading: 0.65em)\n#set heading(numbering: \"1.1\")\n\n"
+
+// ============================================================================
+// BUILD A COMPLETE THESIS
+// ============================================================================
+
+define build_thesis(
+    title: String,
+    author: String,
+    dept: String,
+    date: String,
+    degree: Degree,
+    abstract_text: String,
+    supervisor: String,
+    chapters: List(DocExpr)
+) : DocExpr =
+    DSequence(Cons(
+        DTitle(title),
+        Cons(DAuthor(author, dept, date),
+        Cons(DAbstract(title, author, abstract_text, supervisor),
+        chapters))))
+
+// ============================================================================
+// COMPILE FULL THESIS TO TYPST
+// ============================================================================
+
+define compile_thesis(doc: DocExpr, degree: Degree) : CompileResult =
+    match compile_doc(doc, MITThesis(degree)) {
+        CTypst(body) => CTypst(concat(mit_preamble, body))
+      | CError(msg) => CError(msg)
+    }
+
+// ============================================================================
+// EXAMPLES
+// ============================================================================
+
+example "compile_title" {
+    let result = compile_doc(DTitle("My PhD Thesis"), MITThesis(Doctor))
+    out(result)
+}
+
+example "compile_chapter" {
+    let result = compile_doc(
+        DChapter(1, "Introduction", "This thesis presents a novel approach..."),
+        MITThesis(Doctor)
+    )
+    out(result)
+}
+
+example "compile_equation" {
+    let result = compile_doc(
+        DEquation("E = m c^2", "eq:einstein"),
+        MITThesis(Doctor)
+    )
+    out(result)
+}
+
+example "compile_sequence" {
+    let ch1 = DChapter(1, "Introduction", "We begin with...")
+    let ch2 = DChapter(2, "Background", "Previous work includes...")
+    let doc = DSequence(Cons(ch1, Cons(ch2, Nil)))
+    let result = compile_doc(doc, MITThesis(Doctor))
+    out(result)
+}
+
+example "compile_full_thesis" {
+    // Build chapters using Cons/Nil (list literals don't fully evaluate in this context)
+    let ch1 = DChapter(1, "Introduction", "Knowledge production relies on precise notation and rigorous verification.")
+    let ch2 = DChapter(2, "Background", "We build on prior work in formal verification and type theory.")
+    let ch3 = DChapter(3, "The Kleis System", "Kleis is built on structures, axioms, and templates.")
+    let ch4 = DChapter(4, "Evaluation", "We evaluate Kleis on tensor calculus and protocol verification.")
+    let ch5 = DChapter(5, "Conclusion", "We have presented Kleis, a substrate for formal knowledge production.")
+    let ref1 = DReference("demoura2008", "de Moura, L. Z3: An Efficient SMT Solver. TACAS 2008.")
+    
+    let chapters = Cons(ch1, Cons(ch2, Cons(ch3, Cons(ch4, Cons(ch5, Cons(ref1, Nil))))))
+    
+    let thesis = build_thesis(
+        "Formal Verification of Knowledge Production Systems",
+        "Jane Smith",
+        "Department of EECS",
+        "May 2025",
+        Doctor,
+        "This thesis presents Kleis, a formal verification system for knowledge production.",
+        "Prof. Alice Chen",
+        chapters
+    )
+    
+    let result = compile_thesis(thesis, Doctor)
+    out(result)
+}
+
+example "degree_names" {
+    out(degree_name(Bachelor))
+    out(degree_name(Master))
+    out(degree_name(Doctor))
+    out(degree_abbrev(Doctor))
+}
+
