@@ -1,0 +1,103 @@
+// MIT Thesis Document - Simplified Working Version
+// Tests what currently works with the evaluator
+
+import "stdlib/prelude.kleis"
+
+// ============================================================================
+// DATA TYPES
+// ============================================================================
+
+data DegreeLevel = Bachelor | Master | Doctor
+
+// ============================================================================
+// VALIDATION FUNCTIONS (work with current evaluator)
+// ============================================================================
+
+// Degree code conversion (this works!)
+define degree_code(level: DegreeLevel) = match level {
+    Bachelor => "sb"
+    | Master => "sm"
+    | Doctor => "phd"
+}
+
+// Check if degree requires signature
+define needs_signature(level: DegreeLevel) = match level {
+    Bachelor => False
+    | Master => True
+    | Doctor => True
+}
+
+// Check if signature is valid for degree
+define signature_valid(level: DegreeLevel, has_sig: Bool) = match level {
+    Bachelor => True
+    | Master => has_sig
+    | Doctor => has_sig
+}
+
+// ============================================================================
+// EXAMPLES THAT WORK
+// ============================================================================
+
+example "degree_codes" {
+    assert(degree_code(Bachelor) = "sb")
+    assert(degree_code(Master) = "sm")
+    assert(degree_code(Doctor) = "phd")
+    out("✓ Degree codes verified")
+}
+
+example "signature_requirements" {
+    // Bachelor's doesn't need signature
+    assert(needs_signature(Bachelor) = False)
+    assert(needs_signature(Master) = True)
+    assert(needs_signature(Doctor) = True)
+    out("✓ Signature requirements verified")
+}
+
+example "signature_validation" {
+    // Bachelor's valid without signature
+    assert(signature_valid(Bachelor, False) = True)
+    assert(signature_valid(Bachelor, True) = True)
+    
+    // Master's needs signature
+    assert(signature_valid(Master, False) = False)
+    assert(signature_valid(Master, True) = True)
+    
+    // PhD needs signature
+    assert(signature_valid(Doctor, False) = False)
+    assert(signature_valid(Doctor, True) = True)
+    
+    out("✓ Signature validation verified")
+}
+
+example "valid_phd" {
+    let level = Doctor
+    let has_sig = True
+    
+    assert(degree_code(level) = "phd")
+    assert(signature_valid(level, has_sig) = True)
+    
+    out("✓ Valid PhD configuration")
+}
+
+example "invalid_phd_no_signature" {
+    let level = Doctor
+    let has_sig = False
+    
+    // PhD without signature should fail validation
+    assert(signature_valid(level, has_sig) = False)
+    
+    out("✓ Correctly detected invalid PhD (no signature)")
+}
+
+// ============================================================================
+// WHAT THIS VALIDATES
+// ============================================================================
+// 
+// From MIT Thesis Specs (https://libraries.mit.edu/distinctive-collections/thesis-specs/):
+// 
+// 1. Graduate theses (Master's, PhD) require signature page
+// 2. Bachelor's thesis signature is optional
+// 3. Degree codes: sb (Bachelor), sm (Master), phd (Doctor)
+//
+// These axioms are successfully validated by Kleis!
+

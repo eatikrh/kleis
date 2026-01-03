@@ -556,3 +556,53 @@ define run(code: String) : LispVal =
 // Run with an environment (for multiple expressions)
 define run_with_env(code: String, env: Env) : LispVal =
     eval_lisp(parse(code), env)
+
+// ============================================================================
+// EXAMPLES - Test the LISP Interpreter
+// ============================================================================
+
+example "parse_atom" {
+    let result = parse("hello")
+    out(result)
+}
+
+example "parse_list" {
+    let result = parse("(+ 2 3)")
+    out(result)
+}
+
+example "arithmetic" {
+    out(run("(+ 2 3)"))
+    out(run("(* 4 5)"))
+    out(run("(- 10 3)"))
+}
+
+example "comparison" {
+    out(run("(< 2 5)"))
+    out(run("(> 10 3)"))
+}
+
+example "conditional" {
+    out(run("(if (< 2 5) 100 200)"))
+    out(run("(if (> 2 5) 100 200)"))
+}
+
+example "let_binding" {
+    out(run("(let ((x 5)) x)"))
+    out(run("(let ((x 5) (y 3)) (+ x y))"))
+}
+
+example "list_operations" {
+    out(run("(car (list 1 2 3))"))
+    out(run("(cdr (list 1 2 3))"))
+}
+
+example "lambda" {
+    out(run("((lambda (x) (+ x 1)) 5)"))
+}
+
+example "recursive_factorial" {
+    // Factorial using letrec for recursion
+    let factorial = "(letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5))"
+    out(run(factorial))
+}

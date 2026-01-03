@@ -1,0 +1,326 @@
+// ============================================================================
+// .kleisdoc FORMAT - Persistent Document Storage
+// ============================================================================
+//
+// This defines the format for storing document artifacts between sessions.
+// It bridges Jupyter Notebook work and the thesis compiler.
+//
+// Key design: 
+//   - Artifacts can be REGENERATED from Kleis code (plots, computed tables)
+//   - OR stored as STATIC content (imported images, hand-written text)
+//   - Equations store their AST for re-editing
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ============================================================================
+// CONTENT SOURCE - How was this artifact created?
+// ============================================================================
+
+data ContentSource =
+    // Regenerable: Can be recreated by running Kleis code
+    Regenerable(kleis_code: String)
+    
+    // Static: Imported or manually created, cannot regenerate
+  | Static
+  
+    // Computed: Result of Kleis evaluation (cached)
+  | Computed(kleis_code: String, result: String)
+
+// ============================================================================
+// CHUNK TYPES - Different kinds of document content
+// ============================================================================
+
+data ChunkType =
+    TextChunk           // Prose, paragraphs
+  | EquationChunk       // Math equation
+  | FigureChunk         // Plot, diagram, image
+  | TableChunk          // Data table
+  | CodeChunk           // Code listing
+  | ReferenceChunk      // Bibliography entry
+
+// ============================================================================
+// DOCUMENT CHUNK - A piece of content with metadata
+// ============================================================================
+
+data DocChunk = Chunk(
+    id: String,              // Stable ID: "ch1-fig1", "eq-einstein"
+    chunk_type: ChunkType,
+    source: ContentSource,
+    typst_code: String,      // Rendered Typst code
+    caption: String,         // For figures/tables
+    label: String            // For cross-references
+)
+
+// ============================================================================
+// DOCUMENT SECTION - Maps to thesis structure
+// ============================================================================
+
+data DocSection = 
+    TitleSection(title: String)
+  | AbstractSection(text: String, supervisor: String)
+  | ChapterSection(num: ℕ, title: String, chunks: List(DocChunk))
+  | AppendixSection(letter: String, title: String, chunks: List(DocChunk))
+  | ReferencesSection(refs: List(DocChunk))
+
+// ============================================================================
+// KLEISDOC - The complete persistent document
+// ============================================================================
+
+data KleisDoc = Doc(
+    id: String,                    // Document ID
+    title: String,
+    author: String,
+    degree: String,                // "phd", "masters", "bachelors"
+    department: String,
+    date: String,
+    sections: List(DocSection),
+    
+    // Metadata for multi-session editing
+    created: String,               // ISO timestamp
+    modified: String,              // ISO timestamp
+    version: ℕ                     // Increment on each save
+)
+
+// ============================================================================
+// CHUNK BUILDERS - Create chunks from Jupyter output
+// ============================================================================
+
+// Create a figure chunk from a plot
+define make_figure_chunk(
+    id: String,
+    kleis_code: String,
+    typst_output: String,
+    caption: String
+) : DocChunk =
+    Chunk(
+        id,
+        FigureChunk,
+        Regenerable(kleis_code),
+        typst_output,
+        caption,
+        id
+    )
+
+// Create an equation chunk
+define make_equation_chunk(
+    id: String,
+    latex: String,
+    label: String
+) : DocChunk =
+    Chunk(
+        id,
+        EquationChunk,
+        Static,  // Equations are edited, not regenerated from code
+        concat4("$ ", latex, " $ <", concat(label, ">")),
+        "",
+        label
+    )
+
+// Create a text chunk
+define make_text_chunk(
+    id: String,
+    content: String
+) : DocChunk =
+    Chunk(
+        id,
+        TextChunk,
+        Static,
+        content,
+        "",
+        ""
+    )
+
+// Create a code listing chunk
+define make_code_chunk(
+    id: String,
+    code: String,
+    language: String
+) : DocChunk =
+    Chunk(
+        id,
+        CodeChunk,
+        Static,
+        concat5("```", language, "\n", code, "\n```"),
+        "",
+        id
+    )
+
+// ============================================================================
+// COMPILE CHUNK TO TYPST
+// ============================================================================
+
+define compile_chunk(chunk: DocChunk) : String =
+    match chunk {
+        Chunk(id, chunk_type, source, typst_code, caption, label) =>
+            match chunk_type {
+                FigureChunk => 
+                    concat5(
+                        "#figure(\n  ",
+                        typst_code,
+                        ",\n  caption: [",
+                        caption,
+                        concat3("]\n) <", label, ">\n\n")
+                    )
+              | EquationChunk => concat(typst_code, "\n\n")
+              | TextChunk => concat(typst_code, "\n\n")
+              | TableChunk => concat(typst_code, "\n\n")
+              | CodeChunk => concat(typst_code, "\n\n")
+              | ReferenceChunk => concat(typst_code, "\n\n")
+            }
+    }
+
+// ============================================================================
+// COMPILE SECTION TO TYPST
+// ============================================================================
+
+define compile_section(section: DocSection) : String =
+    match section {
+        TitleSection(title) =>
+            concat3(
+                "#align(center)[#text(size: 24pt, weight: \"bold\")[",
+                title,
+                "]]\n#pagebreak()\n\n"
+            )
+      | AbstractSection(text, supervisor) =>
+            concat5(
+                "#align(center)[#text(size: 16pt, weight: \"bold\")[Abstract]]\n\n",
+                text,
+                "\n\n#text(weight: \"bold\")[Thesis Supervisor:] ",
+                supervisor,
+                "\n#pagebreak()\n\n"
+            )
+      | ChapterSection(num, title, chunks) =>
+            concat4(
+                "= Chapter ",
+                num_to_str(num),
+                concat3(": ", title, "\n\n"),
+                compile_chunks(chunks)
+            )
+      | AppendixSection(letter, title, chunks) =>
+            concat4(
+                "= Appendix ",
+                letter,
+                concat3(": ", title, "\n\n"),
+                compile_chunks(chunks)
+            )
+      | ReferencesSection(refs) =>
+            concat("= References\n\n", compile_chunks(refs))
+    }
+
+define compile_chunks(chunks: List(DocChunk)) : String =
+    compile_chunks_acc(chunks, "")
+
+define compile_chunks_acc(chunks: List(DocChunk), acc: String) : String =
+    match chunks {
+        Nil => acc
+      | Cons(chunk, rest) => compile_chunks_acc(rest, concat(acc, compile_chunk(chunk)))
+    }
+
+// Convert single-digit number to string
+// TODO: Replace with proper intToStr builtin when implemented
+define num_to_str(n: ℕ) : String =
+    if eq(n, 0) then "0" else if eq(n, 1) then "1" else if eq(n, 2) then "2"
+    else if eq(n, 3) then "3" else if eq(n, 4) then "4" else if eq(n, 5) then "5"
+    else if eq(n, 6) then "6" else if eq(n, 7) then "7" else if eq(n, 8) then "8"
+    else if eq(n, 9) then "9"
+    else if eq(n, 10) then "10" else if eq(n, 11) then "11" else if eq(n, 12) then "12"
+    else "N"  // For chapters > 12, extend as needed
+
+// ============================================================================
+// COMPILE FULL DOCUMENT
+// ============================================================================
+
+define compile_kleisdoc(doc: KleisDoc) : String =
+    match doc {
+        Doc(id, title, author, degree, dept, date, sections, _, _, _) =>
+            concat(
+                mit_preamble,
+                compile_sections(sections)
+            )
+    }
+
+define compile_sections(sections: List(DocSection)) : String =
+    compile_sections_acc(sections, "")
+
+define compile_sections_acc(sections: List(DocSection), acc: String) : String =
+    match sections {
+        Nil => acc
+      | Cons(sec, rest) => compile_sections_acc(rest, concat(acc, compile_section(sec)))
+    }
+
+define mit_preamble : String =
+    "#set page(paper: \"us-letter\", margin: 1in)\n#set text(font: \"New Computer Modern\", size: 12pt)\n#set par(justify: true)\n\n"
+
+// ============================================================================
+// EXAMPLES
+// ============================================================================
+
+example "create_figure_chunk" {
+    let fig = make_figure_chunk(
+        "ch1-fig1",
+        "xs = range(0, 10); ys = list_map(xs, fn(x) x*x); diagram(plot(xs, ys))",
+        "image(\"figures/ch1-fig1.svg\")",
+        "Quadratic function showing x squared"
+    )
+    out(compile_chunk(fig))
+}
+
+example "create_equation_chunk" {
+    let eq = make_equation_chunk(
+        "eq-einstein",
+        "E = m c^2",
+        "eq:einstein"
+    )
+    out(compile_chunk(eq))
+}
+
+example "create_chapter" {
+    let text1 = make_text_chunk("ch1-intro", "This chapter introduces the main concepts.")
+    let eq1 = make_equation_chunk("ch1-eq1", "f(x) = x^2", "eq:quadratic")
+    let fig1 = make_figure_chunk(
+        "ch1-fig1",
+        "plot code here",
+        "image(\"ch1-fig1.svg\")",
+        "Example plot"
+    )
+    
+    let chapter = ChapterSection(1, "Introduction", Cons(text1, Cons(eq1, Cons(fig1, Nil))))
+    out(compile_section(chapter))
+}
+
+example "full_kleisdoc" {
+    // Build a minimal thesis
+    let title = TitleSection("Formal Verification of Knowledge Production")
+    let abstract = AbstractSection(
+        "This thesis presents Kleis, a system for formal knowledge production.",
+        "Prof. Alice Chen"
+    )
+    
+    let ch1_text = make_text_chunk("ch1-p1", "Knowledge production requires formal methods.")
+    let ch1_eq = make_equation_chunk("ch1-eq1", "forall x. P(x) => Q(x)", "eq:logic")
+    let ch1 = ChapterSection(1, "Introduction", Cons(ch1_text, Cons(ch1_eq, Nil)))
+    
+    let ch2_text = make_text_chunk("ch2-p1", "We build on prior work in verification.")
+    let ch2 = ChapterSection(2, "Background", Cons(ch2_text, Nil))
+    
+    let ref1 = Chunk("ref-z3", ReferenceChunk, Static, "[1] de Moura, L. Z3: An SMT Solver.", "", "ref:z3")
+    let refs = ReferencesSection(Cons(ref1, Nil))
+    
+    let doc = Doc(
+        "thesis-2025",
+        "Formal Verification of Knowledge Production",
+        "Jane Smith",
+        "phd",
+        "EECS",
+        "May 2025",
+        Cons(title, Cons(abstract, Cons(ch1, Cons(ch2, Cons(refs, Nil))))),
+        "2025-01-02T00:00:00Z",
+        "2025-01-02T20:00:00Z",
+        1
+    )
+    
+    out(compile_kleisdoc(doc))
+}
+

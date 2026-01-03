@@ -1820,6 +1820,43 @@ pub fn compile_diagram(
     compile_to_svg(&code)
 }
 
+/// Export a diagram as Typst code (without compiling to SVG)
+///
+/// Returns the raw Typst/Lilaq code that can be embedded in a .typ document
+/// or used with `typst compile` directly.
+///
+/// # Example output
+/// ```typst
+/// #import "@preview/lilaq:0.5.0" as lq
+/// #set page(width: auto, height: auto, margin: 0.5em)
+/// #lq.diagram(
+///   lq.plot((0, 1, 2, 3), (1, 4, 9, 16)),
+///   title: [Quadratic Growth],
+/// )
+/// ```
+pub fn export_diagram_typst(elements: &[PlotElement], options: &DiagramOptions) -> String {
+    generate_diagram_code(elements, options)
+}
+
+/// Export just the lq.diagram(...) call without preamble
+///
+/// Useful for embedding in an existing Typst document that already
+/// has the Lilaq import.
+pub fn export_diagram_typst_fragment(elements: &[PlotElement], options: &DiagramOptions) -> String {
+    let full_code = generate_diagram_code(elements, options);
+
+    // Find the start of lq.diagram and return from there
+    if let Some(pos) = full_code.find("#lq.diagram(") {
+        // Return from #lq.diagram onwards, removing the leading #
+        full_code[pos + 1..].to_string()
+    } else if let Some(pos) = full_code.find("lq.diagram(") {
+        full_code[pos..].to_string()
+    } else {
+        // Fallback: return full code
+        full_code
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
