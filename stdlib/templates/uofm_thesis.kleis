@@ -112,20 +112,20 @@ define typst_heading_setup = """
 define typst_title_page = """
 #page(margin: (top: 2in, bottom: 1in, left: 1in, right: 1in), numbering: none)[
   #align(center)[
-    #text(weight: "bold")[#upper(TITLE)]
+    #text(weight: "bold")[TITLE]
     
     #v(0.5in)
     by
     #v(0.3in)
-    #text[AUTHOR]
+    AUTHOR
     
     #v(1in)
     A dissertation submitted in partial fulfillment \\
     of the requirements for the degree of \\
-    #text[DEGREE] \\
-    (#text[PROGRAM]) \\
+    DEGREE \\
+    (PROGRAM) \\
     in The University of Michigan \\
-    #text[YEAR]
+    YEAR
   ]
   
   #v(1fr)
@@ -145,13 +145,13 @@ define typst_identifier_page = """
 #page(numbering: none)[
   #align(center)[
     #v(1fr)
-    #text[AUTHOR_LEGAL]
+    AUTHOR
     #v(0.2in)
-    #text[EMAIL]
+    EMAIL
     #v(0.2in)
-    ORCID iD: #text[ORCID]
+    ORCID iD: ORCID
     #v(0.5in)
-    © #text[AUTHOR] #text[COPYRIGHT_YEAR]
+    © AUTHOR COPYRIGHT_YEAR
     #v(1fr)
   ]
 ]

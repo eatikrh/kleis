@@ -590,22 +590,60 @@ class KleisDoc:
     def _load_template(self, template_path: str):
         """Load template info from a .kleis file.
         
-        Extracts metadata about the template without fully parsing
-        the Kleis code. Full template validation happens during export.
+        Extracts Typst styling definitions from the template so they can
+        be used during export. This is what makes new styles work without
+        code changes - all styling comes from the .kleis template file.
         """
         self.template_info = {
             "path": template_path,
             "loaded": False,
+            "typst": {},  # Will hold all typst_* definitions
         }
         
-        # Try to read the template file
+        # Try to read and parse the template file
         try:
             path = Path(template_path)
+            if not path.exists():
+                # Try relative to project root
+                for base in [Path.cwd(), Path(__file__).parent.parent.parent]:
+                    candidate = base / template_path
+                    if candidate.exists():
+                        path = candidate
+                        break
+            
             if path.exists():
                 content = path.read_text()
-                # Extract basic info from comments/structure
                 self.template_info["loaded"] = True
                 self.template_info["size"] = len(content)
+                
+                # Extract typst_* definitions using regex
+                # Pattern matches: define typst_xxx = """...""" or define typst_xxx = "..."
+                
+                # Multi-line strings with triple quotes
+                for match in re.finditer(
+                    r'define\s+(typst_\w+)\s*=\s*"""(.*?)"""',
+                    content, re.DOTALL
+                ):
+                    name = match.group(1)
+                    value = match.group(2)
+                    self.template_info["typst"][name] = value
+                
+                # Single-line strings (for simple definitions)
+                for match in re.finditer(
+                    r'define\s+(typst_\w+)\s*=\s*"([^"]*)"',
+                    content
+                ):
+                    name = match.group(1)
+                    value = match.group(2)
+                    # Don't overwrite if already found as multi-line
+                    if name not in self.template_info["typst"]:
+                        self.template_info["typst"][name] = value
+                
+                # Also extract template_name for display
+                name_match = re.search(r'define\s+template_name\s*=\s*"([^"]*)"', content)
+                if name_match:
+                    self.template_info["name"] = name_match.group(1)
+                    
         except Exception as e:
             self.template_info["error"] = str(e)
     
@@ -1079,11 +1117,38 @@ example "render_plot"
     def _generate_typst(self, template: str = None) -> str:
         """Generate Typst code for the document.
         
-        This method generates minimal, format-agnostic Typst code.
-        Document-specific formatting (paper size, margins, abstract styling)
-        should be defined in templates.
+        If a template is loaded, uses the typst_* definitions from the template.
+        This is what makes new document styles work WITHOUT code changes -
+        all styling comes from the .kleis template file.
         """
         lines = []
+        
+        # Get Typst definitions from template (if loaded)
+        typst_defs = self.template_info.get("typst", {}) if self.template_info else {}
+        
+        # Use template preamble if available, otherwise minimal defaults
+        if "typst_preamble" in typst_defs:
+            lines.append("// Styling from template: " + self.template_info.get("name", self.template_path or "unknown"))
+            lines.append(typst_defs["typst_preamble"])
+            lines.append('')
+        elif "typst_page_setup" in typst_defs:
+            # Individual setup definitions
+            lines.append("// Styling from template")
+            if "typst_page_setup" in typst_defs:
+                lines.append(typst_defs["typst_page_setup"])
+            if "typst_text_setup" in typst_defs:
+                lines.append(typst_defs["typst_text_setup"])
+            if "typst_paragraph_setup" in typst_defs:
+                lines.append(typst_defs["typst_paragraph_setup"])
+            if "typst_heading_setup" in typst_defs:
+                lines.append(typst_defs["typst_heading_setup"])
+            lines.append('')
+        else:
+            # Minimal defaults when no template
+            lines.append('// No template - using minimal defaults')
+            lines.append('#set page(margin: 1in)')
+            lines.append('#set text(size: 11pt)')
+            lines.append('')
         
         # Document metadata (standard Typst)
         lines.append('#set document(')
@@ -1098,36 +1163,54 @@ example "render_plot"
         lines.append(')')
         lines.append('')
         
-        # If template provided, include it (template controls page setup, styling)
-        if template:
-            lines.append(f'#import "{template}"')
+        # Title page from template or default
+        if "typst_title_page" in typst_defs:
+            # Substitute placeholders in title page template
+            title_page = typst_defs["typst_title_page"]
+            title_page = title_page.replace("TITLE", self.metadata.get("title", ""))
+            title_page = title_page.replace("AUTHOR", self.metadata.get("author", ""))
+            title_page = title_page.replace("DATE", self.metadata.get("date", ""))
+            title_page = title_page.replace("DEGREE_NAME", self.metadata.get("degree", ""))
+            title_page = title_page.replace("DEGREE", self.metadata.get("degree", ""))
+            title_page = title_page.replace("DEPARTMENT", self.metadata.get("department", ""))
+            title_page = title_page.replace("PROGRAM", self.metadata.get("program", ""))
+            title_page = title_page.replace("YEAR", self.metadata.get("year", ""))
+            title_page = title_page.replace("SUPERVISOR", self.metadata.get("supervisor", ""))
+            title_page = title_page.replace("COMMITTEE_CHAIR", self.metadata.get("committee_chair", ""))
+            
+            # Handle committee members list
+            committee = self.metadata.get("committee_members", [])
+            if isinstance(committee, list):
+                title_page = title_page.replace("COMMITTEE_MEMBERS", " \\\\\n      ".join(committee))
+            else:
+                title_page = title_page.replace("COMMITTEE_MEMBERS", str(committee))
+            
+            lines.append(title_page)
             lines.append('')
         else:
-            # Minimal defaults only when no template - user can customize
-            lines.append('// No template specified - using minimal defaults')
-            lines.append('#set page(margin: 1in)')
-            lines.append('#set text(size: 11pt)')
-            lines.append('')
+            # Default title rendering
+            if "title" in self.metadata:
+                lines.append(f'#align(center)[')
+                lines.append(f'  #text(size: 20pt, weight: "bold")[{self.metadata["title"]}]')
+                lines.append(f']')
+                lines.append('')
+            
+            if "author" in self.metadata:
+                author = self.metadata["author"]
+                if isinstance(author, str):
+                    lines.append(f'#align(center)[{author}]')
+                elif isinstance(author, Author):
+                    lines.append(f'#align(center)[{author.name}]')
+                lines.append('')
         
-        # Title (if present)
-        if "title" in self.metadata:
-            lines.append(f'#align(center)[')
-            lines.append(f'  #text(size: 20pt, weight: "bold")[{self.metadata["title"]}]')
-            lines.append(f']')
-            lines.append('')
-        
-        # Author(s) (if present)
-        if "author" in self.metadata:
-            author = self.metadata["author"]
-            if isinstance(author, str):
-                lines.append(f'#align(center)[{author}]')
-            elif isinstance(author, Author):
-                lines.append(f'#align(center)[{author.name}]')
-            lines.append('')
-        
-        # Abstract (if present) - rendered as text, not hardcoded heading
+        # Abstract from template or default
         if "abstract" in self.metadata:
-            lines.append(self.metadata["abstract"])
+            if "typst_abstract_box" in typst_defs:
+                abstract_box = typst_defs["typst_abstract_box"]
+                abstract_box = abstract_box.replace("ABSTRACT_TEXT", self.metadata["abstract"])
+                lines.append(abstract_box)
+            else:
+                lines.append(self.metadata["abstract"])
             lines.append('')
         
         # Sections
