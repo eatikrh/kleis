@@ -28,6 +28,12 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any, Union
 from dataclasses import dataclass, field
 
+# Import kleis_binary module - handle both package and direct import
+try:
+    from .kleis_binary import find_kleis_binary, find_kleis_root
+except ImportError:
+    from kleis_binary import find_kleis_binary, find_kleis_root
+
 # Default Kleis server URL
 DEFAULT_KLEIS_SERVER = "http://localhost:3000"
 
@@ -173,7 +179,7 @@ class KleisDoc:
         
         # Server configuration
         self.server_url = server_url
-        self._kleis_path = self._find_kleis_binary()
+        self._kleis_path = find_kleis_binary()  # Use shared discovery module
         self._server_available: Optional[bool] = None
     
     @classmethod
@@ -773,39 +779,6 @@ class KleisDoc:
             stack.append((section.level, section))
         
         return root_sections
-    
-    def _find_kleis_binary(self) -> Optional[str]:
-        """Find the kleis binary path."""
-        # Get the directory containing this file to build relative paths
-        this_dir = Path(__file__).parent.resolve()
-        kleis_root = this_dir.parent.parent  # kleis-notebook/kleis_kernel -> kleis/
-        
-        candidates = [
-            "kleis",  # In PATH
-            str(kleis_root / "target" / "release" / "kleis"),
-            str(kleis_root / "target" / "debug" / "kleis"),
-            "../target/release/kleis",
-            "../target/debug/kleis",
-            "../../target/release/kleis",
-            "../../target/debug/kleis",
-            os.path.expanduser("~/.cargo/bin/kleis"),
-        ]
-        
-        # Also check KLEIS_ROOT env var
-        kleis_root_env = os.environ.get("KLEIS_ROOT")
-        if kleis_root_env:
-            candidates.insert(0, os.path.join(kleis_root_env, "target", "release", "kleis"))
-            candidates.insert(1, os.path.join(kleis_root_env, "target", "debug", "kleis"))
-        
-        for candidate in candidates:
-            try:
-                result = subprocess.run([candidate, "--version"], 
-                                       capture_output=True, text=True)
-                if result.returncode == 0:
-                    return candidate
-            except FileNotFoundError:
-                continue
-        return None
     
     def _load_template(self, template_path: str):
         """Load template info from a .kleis file.
