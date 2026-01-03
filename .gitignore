@@ -43,3 +43,4 @@ venv/
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 Untitled*.ipynb
+kleis-notebook/examples/demo_output/

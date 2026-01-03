@@ -373,8 +373,8 @@ class KleisDoc:
                 equations[label] = Equation(
                     id=id_match.group(1) if id_match else "",
                     label=label,
-                    latex=latex_match.group(1) if latex_match else "",
-                    typst=typst_match.group(1) if typst_match else "",
+                latex=self._unescape_kleis_string(latex_match.group(1)) if latex_match else "",
+                typst=self._unescape_kleis_string(typst_match.group(1)) if typst_match else "",
                     ast=ast,
                     numbered=numbered_match.group(1) == "true" if numbered_match else True,
                     verified=verified_match.group(1) == "true" if verified_match else False,
@@ -1639,8 +1639,8 @@ example "render_plot"
         
         # Fall back to LaTeX if no Typst available
         if typst_content is None and eq.latex:
-            # Embed LaTeX in Typst math mode
-            typst_content = eq.latex
+            # Convert LaTeX to Typst math syntax
+            typst_content = self._latex_to_typst(eq.latex)
         
         if typst_content:
             if eq.numbered:
@@ -1981,6 +1981,99 @@ example "render_plot"
         # Escape quotes and backslashes
         escaped = s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
         return f'"{escaped}"'
+    
+    def _unescape_kleis_string(self, s: str) -> str:
+        """Unescape a Kleis string literal back to Python string."""
+        if s is None:
+            return ""
+        # Must unescape backslashes FIRST, then other escapes
+        # Otherwise \\n becomes newline instead of \n
+        result = s.replace("\\\\", "\x00")  # Placeholder for escaped backslash
+        result = result.replace("\\n", "\n")
+        result = result.replace('\\"', '"')
+        result = result.replace("\x00", "\\")  # Restore backslashes
+        return result
+    
+    def _latex_to_typst(self, latex: str) -> str:
+        """Convert LaTeX math to Typst math syntax.
+        
+        Handles common LaTeX commands used in academic papers.
+        For complex equations, consider using the Equation Editor to generate
+        proper Typst via AST rendering.
+        """
+        if not latex:
+            return ""
+        
+        typst = latex
+        
+        # Common LaTeX to Typst conversions
+        # Calligraphic/script fonts
+        typst = re.sub(r'\\mathcal\{([^}]+)\}', r'cal(\1)', typst)
+        typst = re.sub(r'\\mathbb\{([^}]+)\}', r'bb(\1)', typst)
+        typst = re.sub(r'\\mathbf\{([^}]+)\}', r'bold(\1)', typst)
+        typst = re.sub(r'\\mathrm\{([^}]+)\}', r'upright(\1)', typst)
+        typst = re.sub(r'\\mathit\{([^}]+)\}', r'italic(\1)', typst)
+        typst = re.sub(r'\\text\{([^}]+)\}', r'text(\1)', typst)
+        
+        # Fractions
+        typst = re.sub(r'\\frac\{([^}]+)\}\{([^}]+)\}', r'(\1)/(\2)', typst)
+        
+        # Square root
+        typst = re.sub(r'\\sqrt\{([^}]+)\}', r'sqrt(\1)', typst)
+        typst = re.sub(r'\\sqrt\[([^\]]+)\]\{([^}]+)\}', r'root(\1, \2)', typst)
+        
+        # Greek letters (common ones)
+        greek = {
+            '\\alpha': 'alpha', '\\beta': 'beta', '\\gamma': 'gamma', '\\delta': 'delta',
+            '\\epsilon': 'epsilon', '\\varepsilon': 'epsilon.alt', '\\zeta': 'zeta',
+            '\\eta': 'eta', '\\theta': 'theta', '\\iota': 'iota', '\\kappa': 'kappa',
+            '\\lambda': 'lambda', '\\mu': 'mu', '\\nu': 'nu', '\\xi': 'xi',
+            '\\pi': 'pi', '\\rho': 'rho', '\\sigma': 'sigma', '\\tau': 'tau',
+            '\\upsilon': 'upsilon', '\\phi': 'phi', '\\varphi': 'phi.alt',
+            '\\chi': 'chi', '\\psi': 'psi', '\\omega': 'omega',
+            '\\Gamma': 'Gamma', '\\Delta': 'Delta', '\\Theta': 'Theta',
+            '\\Lambda': 'Lambda', '\\Xi': 'Xi', '\\Pi': 'Pi', '\\Sigma': 'Sigma',
+            '\\Phi': 'Phi', '\\Psi': 'Psi', '\\Omega': 'Omega',
+        }
+        for latex_cmd, typst_cmd in greek.items():
+            typst = typst.replace(latex_cmd, typst_cmd)
+        
+        # Common operators and symbols
+        operators = {
+            '\\sum': 'sum', '\\prod': 'product', '\\int': 'integral',
+            '\\infty': 'infinity', '\\partial': 'diff',
+            '\\nabla': 'nabla', '\\cdot': 'dot', '\\times': 'times',
+            '\\pm': 'plus.minus', '\\mp': 'minus.plus',
+            '\\leq': '<=', '\\geq': '>=', '\\neq': '!=',
+            '\\approx': 'approx', '\\equiv': 'equiv',
+            '\\in': 'in', '\\notin': 'in.not', '\\subset': 'subset',
+            '\\cup': 'union', '\\cap': 'sect',
+            '\\forall': 'forall', '\\exists': 'exists',
+            '\\rightarrow': '->', '\\leftarrow': '<-', '\\Rightarrow': '=>',
+            '\\hbar': 'planck.reduce',
+            '\\ldots': '...', '\\cdots': 'dots.c',
+        }
+        for latex_cmd, typst_cmd in operators.items():
+            typst = typst.replace(latex_cmd, typst_cmd)
+        
+        # Subscripts and superscripts (simple cases)
+        # LaTeX: x^{2} → Typst: x^2, x_{i} → x_i
+        typst = re.sub(r'\^\{([^}]+)\}', r'^(\1)', typst)
+        typst = re.sub(r'_\{([^}]+)\}', r'_(\1)', typst)
+        
+        # Hat and other accents
+        typst = re.sub(r'\\hat\{([^}]+)\}', r'hat(\1)', typst)
+        typst = re.sub(r'\\bar\{([^}]+)\}', r'overline(\1)', typst)
+        typst = re.sub(r'\\tilde\{([^}]+)\}', r'tilde(\1)', typst)
+        typst = re.sub(r'\\vec\{([^}]+)\}', r'arrow(\1)', typst)
+        
+        # Remove remaining backslashes from unknown commands (best effort)
+        # This converts \unknown{x} to unknown(x)
+        typst = re.sub(r'\\([a-zA-Z]+)\{([^}]*)\}', r'\1(\2)', typst)
+        # And \command to just command
+        typst = re.sub(r'\\([a-zA-Z]+)', r'\1', typst)
+        
+        return typst
     
     def _ast_to_kleis(self, ast: Optional[Dict]) -> str:
         """Convert an EditorNode AST dict to Kleis code."""
