@@ -1,8 +1,21 @@
-# Template Architecture: Hybrid Approach
+# Template Architecture: Unified in Kleis
 
 **Date:** January 2, 2026  
 **Status:** Design  
-**Principle:** "Templates SHOULD be definable in Kleis"
+**Principle:** "Everything is a structure. Templates are structures."
+
+---
+
+## Decision: Unify .kleist into .kleis
+
+**The current .kleist system is unused and can be replaced.**
+
+Instead of maintaining two formats:
+- `.kleist` - Templates (separate parser, no verification)
+- `.kleis` - Language (full parser, axioms, types)
+
+We unify into ONE format:
+- `.kleis` - Templates ARE structures with axioms
 
 ---
 
@@ -218,25 +231,149 @@ structure Physics extends MathCore {
 
 ---
 
-## Relation to .kleist Files
+## Unified Design: Templates as Structures
 
-The existing `.kleist` file format is a stepping stone:
+### Before (.kleist - DEPRECATED)
 
-| Aspect | .kleist Files | Kleis Templates |
-|--------|---------------|-----------------|
-| Parser | Custom (kleist_parser.rs) | Kleis parser |
-| First-class | No (separate format) | Yes (structures) |
-| Verification | No | Yes (axioms) |
-| Extensibility | Limited | Full Kleis |
+```kleist
+@template christoffel {
+    pattern: "christoffel(base, up, lo1, lo2)"
+    unicode: "Γ^{up}_{lo1 lo2}"
+    latex: "\\Gamma^{{up}}_{{{lo1}{lo2}}}"
+    typst: "Γ^({up})_({lo1} {lo2})"
+    category: "tensors"
+}
+```
 
-**Migration path:** Templates in .kleist files can be expressed as Kleis structures. Eventually, Kleis structures become the primary way to define templates.
+### After (.kleis - UNIFIED)
+
+```kleis
+structure TensorTemplates {
+    // Operations with types
+    operation christoffel(base: Symbol, up: Index, lo1: Index, lo2: Index) : Tensor
+    
+    // Multi-target rendering
+    template christoffel {
+        unicode = "{base}^{up}_{lo1 lo2}"
+        latex = "{base}^{{{up}}}_{{{lo1}{lo2}}}"
+        typst = "{base}^({up})_({lo1} {lo2})"
+    }
+    
+    // Axioms for verification!
+    axiom symmetry_lower : ∀ base up lo1 lo2 . 
+        christoffel(base, up, lo1, lo2) = christoffel(base, up, lo2, lo1)
+}
+```
+
+---
+
+## Migration Plan
+
+### Phase 1: Define Template Syntax in Kleis Grammar
+
+Add to `kleis_grammar.ebnf`:
+
+```ebnf
+template_def = "template" identifier "{" template_body "}" ;
+template_body = (target_def)+ ;
+target_def = ("unicode" | "latex" | "typst" | "html") "=" string ;
+```
+
+### Phase 2: Migrate std_template_lib/ to stdlib/templates/
+
+| Old (.kleist) | New (.kleis) |
+|---------------|--------------|
+| `std_template_lib/basic.kleist` | `stdlib/templates/basic.kleis` |
+| `std_template_lib/tensors.kleist` | `stdlib/templates/tensors.kleis` |
+| `std_template_lib/calculus.kleist` | `stdlib/templates/calculus.kleis` |
+| ... | ... |
+
+### Phase 3: Update Renderer to Query Structures
+
+```rust
+// Old: Load .kleist files
+let templates = kleist_parser::parse_kleist_file("tensors.kleist")?;
+
+// New: Query loaded Kleis structures
+let templates = evaluator.get_structure_templates("TensorTemplates")?;
+```
+
+### Phase 4: Deprecate kleist_parser.rs
+
+- Remove `src/kleist_parser.rs` (900+ lines)
+- Remove `.kleist` grammar
+- All templates defined in `.kleis` files
+
+---
+
+## Benefits of Unification
+
+| Feature | .kleist (Old) | .kleis (New) |
+|---------|---------------|--------------|
+| Parser | Separate | Unified |
+| Types | No | Yes |
+| Axioms | No | Yes |
+| Verification | No | Z3 |
+| Imports | Limited | Full |
+| Extensibility | Manual | Inheritance |
+| Version Control | Yes | Yes |
+| Documentation | Manual | Self-documenting |
+
+---
+
+## Example: Complete Math Library
+
+```kleis
+// stdlib/templates/math.kleis
+
+structure BasicMath {
+    operation plus(a: Expr, b: Expr) : Expr
+    operation minus(a: Expr, b: Expr) : Expr
+    operation times(a: Expr, b: Expr) : Expr
+    operation frac(num: Expr, denom: Expr) : Expr
+    
+    template plus { typst = "{a} + {b}" }
+    template minus { typst = "{a} - {b}" }
+    template times { typst = "{a} {b}" }
+    template frac { typst = "({num})/({denom})" }
+    
+    axiom plus_commutative : ∀ a b . plus(a, b) = plus(b, a)
+    axiom times_commutative : ∀ a b . times(a, b) = times(b, a)
+}
+
+structure Calculus extends BasicMath {
+    operation integral(lower: Expr, upper: Expr, body: Expr, var: Symbol) : Expr
+    operation derivative(f: Expr, var: Symbol) : Expr
+    
+    template integral { 
+        typst = "integral_{lower}^{upper} {body} d {var}" 
+        latex = "\\int_{{lower}}^{{upper}} {body} \\, d{var}"
+    }
+    
+    axiom fundamental_theorem : ∀ f a b . 
+        integral(a, b, derivative(f, x), x) = minus(f(b), f(a))
+}
+
+structure TensorCalculus extends Calculus {
+    operation christoffel(base: Symbol, up: Index, lo1: Index, lo2: Index) : Tensor
+    operation riemann(base: Symbol, up: Index, lo1: Index, lo2: Index, lo3: Index) : Tensor
+    
+    template christoffel { typst = "{base}^({up})_({lo1} {lo2})" }
+    template riemann { typst = "{base}^({up})_({lo1} {lo2} {lo3})" }
+    
+    axiom bianchi_identity : ∀ R μ ν ρ σ .
+        plus(plus(covariant_derivative(R, ρ, μ, ν, σ), 
+                  covariant_derivative(R, σ, μ, ν, ρ)),
+             covariant_derivative(R, ν, μ, σ, ρ)) = 0
+}
+```
 
 ---
 
 ## Open Questions
 
-1. **Template syntax** - How to express multi-target templates cleanly?
-2. **Argument binding** - `${0}` vs `${name}` vs pattern matching?
-3. **Conditional templates** - Different output for different argument types?
-4. **Template composition** - Can templates call other templates?
+1. **Template syntax in grammar** - Exact syntax for multi-target templates?
+2. **Argument binding** - `{a}` vs `${a}` vs pattern matching?
+3. **Palette/UI info** - How to specify glyphs, shortcuts, categories?
+4. **Tool builders** - How to define interactive tools (matrix builder)?
 
