@@ -54,7 +54,7 @@
     Submitted to the EECS #linebreak()
     in partial fulfillment of the requirements for the degree of
     #v(0.3in)
-    #text(style: "italic")[Doctor]
+    #text(style: "italic")[DEGREE_NAME]
     #v(0.3in)
     at the
     #v(0.3in)
@@ -75,4 +75,4 @@ Novel ML algorithms for autonomous vehicle navigation.
 
 #heading(level: 1)[Introduction]
 
-Autonomous vehicles require robust perception.
+This is the introduction.

@@ -65,7 +65,7 @@
     #v(0.1in)
     #pad(left: 0.5in)[
       Professor Robert Williams, Chair #linebreak()
-      Professor Sarah Miller \\
+      Professor Sarah Miller #linebreak()
       Professor David Brown
     ]
   ]
@@ -76,4 +76,4 @@ This dissertation presents novel approaches to quantum error correction.
 
 #heading(level: 1)[Introduction]
 
-Quantum computing promises exponential speedups...
+This is the introduction.

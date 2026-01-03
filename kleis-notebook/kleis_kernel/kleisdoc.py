@@ -1114,6 +1114,46 @@ example "render_plot"
         """Export document to HTML."""
         raise NotImplementedError("HTML export not yet implemented")
     
+    def _substitute_placeholders(self, template_str: str) -> str:
+        """Substitute ALL placeholders in a template string generically.
+        
+        Placeholders are UPPERCASE words like TITLE, AUTHOR, JOURNAL_NAME, etc.
+        This method makes the system truly extensible - any new template can use
+        any placeholder names without Python code changes.
+        
+        Lookup order:
+        1. self.metadata (for document properties)
+        2. self.content_blocks (for custom content)
+        
+        Lists are joined with line breaks for Typst.
+        """
+        result = template_str
+        
+        # Find all UPPERCASE placeholders (words of 2+ uppercase letters/underscores)
+        placeholder_pattern = re.compile(r'\b([A-Z][A-Z0-9_]+)\b')
+        
+        for match in placeholder_pattern.finditer(template_str):
+            placeholder = match.group(1)
+            key = placeholder.lower().replace("_", "-")  # DEGREE_NAME -> degree-name
+            key_underscore = placeholder.lower()  # DEGREE_NAME -> degree_name
+            
+            # Try multiple key formats
+            value = (self.metadata.get(key) or 
+                     self.metadata.get(key_underscore) or
+                     self.metadata.get(placeholder) or
+                     self.content_blocks.get(key) or
+                     self.content_blocks.get(key_underscore) or
+                     self.content_blocks.get(placeholder))
+            
+            if value is not None:
+                if isinstance(value, list):
+                    # Join lists with Typst line breaks
+                    result = result.replace(placeholder, " #linebreak()\n      ".join(str(v) for v in value))
+                else:
+                    result = result.replace(placeholder, str(value))
+        
+        return result
+    
     def _generate_typst(self, template: str = None) -> str:
         """Generate Typst code for the document.
         
@@ -1165,26 +1205,8 @@ example "render_plot"
         
         # Title page from template or default
         if "typst_title_page" in typst_defs:
-            # Substitute placeholders in title page template
-            title_page = typst_defs["typst_title_page"]
-            title_page = title_page.replace("TITLE", self.metadata.get("title", ""))
-            title_page = title_page.replace("AUTHOR", self.metadata.get("author", ""))
-            title_page = title_page.replace("DATE", self.metadata.get("date", ""))
-            title_page = title_page.replace("DEGREE_NAME", self.metadata.get("degree", ""))
-            title_page = title_page.replace("DEGREE", self.metadata.get("degree", ""))
-            title_page = title_page.replace("DEPARTMENT", self.metadata.get("department", ""))
-            title_page = title_page.replace("PROGRAM", self.metadata.get("program", ""))
-            title_page = title_page.replace("YEAR", self.metadata.get("year", ""))
-            title_page = title_page.replace("SUPERVISOR", self.metadata.get("supervisor", ""))
-            title_page = title_page.replace("COMMITTEE_CHAIR", self.metadata.get("committee_chair", ""))
-            
-            # Handle committee members list
-            committee = self.metadata.get("committee_members", [])
-            if isinstance(committee, list):
-                title_page = title_page.replace("COMMITTEE_MEMBERS", " \\\\\n      ".join(committee))
-            else:
-                title_page = title_page.replace("COMMITTEE_MEMBERS", str(committee))
-            
+            # Substitute ALL placeholders generically
+            title_page = self._substitute_placeholders(typst_defs["typst_title_page"])
             lines.append(title_page)
             lines.append('')
         else:
@@ -1206,9 +1228,8 @@ example "render_plot"
         # Abstract from template or default
         if "abstract" in self.metadata:
             if "typst_abstract_box" in typst_defs:
-                abstract_box = typst_defs["typst_abstract_box"]
-                abstract_box = abstract_box.replace("ABSTRACT_TEXT", self.metadata["abstract"])
-                lines.append(abstract_box)
+                # Use generic substitution for abstract box
+                lines.append(self._substitute_placeholders(typst_defs["typst_abstract_box"]))
             else:
                 lines.append(self.metadata["abstract"])
             lines.append('')
