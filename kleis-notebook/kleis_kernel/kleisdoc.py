@@ -776,12 +776,27 @@ class KleisDoc:
     
     def _find_kleis_binary(self) -> Optional[str]:
         """Find the kleis binary path."""
+        # Get the directory containing this file to build relative paths
+        this_dir = Path(__file__).parent.resolve()
+        kleis_root = this_dir.parent.parent  # kleis-notebook/kleis_kernel -> kleis/
+        
         candidates = [
-            "kleis",
+            "kleis",  # In PATH
+            str(kleis_root / "target" / "release" / "kleis"),
+            str(kleis_root / "target" / "debug" / "kleis"),
             "../target/release/kleis",
             "../target/debug/kleis",
+            "../../target/release/kleis",
+            "../../target/debug/kleis",
             os.path.expanduser("~/.cargo/bin/kleis"),
         ]
+        
+        # Also check KLEIS_ROOT env var
+        kleis_root_env = os.environ.get("KLEIS_ROOT")
+        if kleis_root_env:
+            candidates.insert(0, os.path.join(kleis_root_env, "target", "release", "kleis"))
+            candidates.insert(1, os.path.join(kleis_root_env, "target", "debug", "kleis"))
+        
         for candidate in candidates:
             try:
                 result = subprocess.run([candidate, "--version"], 
@@ -922,25 +937,35 @@ class KleisDoc:
         if not self._kleis_path:
             return None
         
+        import tempfile
+        
         # Wrap in example block to evaluate and output
-        wrapped_code = f'''
-import "stdlib/prelude.kleis"
+        wrapped_code = f'''import "stdlib/prelude.kleis"
 
-example "render_plot"
+example "render_plot" {{
     let result = {kleis_code}
     out result
+}}
 '''
         
         try:
-            result = subprocess.run(
-                [self._kleis_path, "eval", "-c", wrapped_code],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # Write to temp file and evaluate
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.kleis', delete=False) as f:
+                f.write(wrapped_code)
+                temp_path = f.name
+            
+            try:
+                result = subprocess.run(
+                    [self._kleis_path, "eval", "--file", temp_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout.strip()
+            finally:
+                os.unlink(temp_path)
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
         
         return None
@@ -1293,6 +1318,67 @@ example "render_plot"
             self.sections[-1].content.append(fig)
         
         return fig
+    
+    def add_plot(self, label: str, caption: str,
+                 plot_code: str, title: str = None,
+                 section: Section = None) -> Figure:
+        """Add a plot to the document from Kleis plotting code.
+        
+        The plot code is stored and translated to Lilaq/Typst at export time.
+        This doesn't require the Kleis binary - the translation is done in Python.
+        
+        Args:
+            label: Unique label (e.g., "fig:performance")
+            caption: Figure caption
+            plot_code: Kleis plotting code WITHOUT diagram() wrapper.
+                       Examples: 
+                       - 'plot([1,2,3], [10,20,15])'
+                       - 'plot(xs, ys), scatter(xs2, ys2)'  # multiple elements
+            title: Optional plot title (shown in the plot itself)
+            section: Section to add figure to (default: last section)
+        
+        Returns:
+            The created Figure object
+        
+        Example:
+            >>> doc.add_plot(
+            ...     "fig:results",
+            ...     "Experimental results over time",
+            ...     "plot([0,1,2,3,4], [10,25,18,30,22])",
+            ...     title="Performance Metrics"
+            ... )
+        """
+        # Store the code with optional title
+        if title:
+            # Add title to the plot code for translation
+            full_code = f'{plot_code}, title = "{title}"'
+        else:
+            full_code = plot_code
+        
+        return self.add_figure(
+            label=label,
+            caption=caption,
+            kleis_code=full_code,
+            section=section
+        )
+    
+    def regenerate_figures(self) -> int:
+        """Regenerate all figures that have Kleis code but no Typst fragment.
+        
+        Useful when loading a document and preparing for export.
+        
+        Returns:
+            Number of figures successfully regenerated
+        """
+        count = 0
+        for label, fig in self.figures.items():
+            if fig.kleis_code and not fig.typst_fragment:
+                full_code = f'export_typst_fragment({fig.kleis_code})'
+                typst_fragment = self.render_plot(full_code)
+                if typst_fragment:
+                    fig.typst_fragment = typst_fragment
+                    count += 1
+        return count
     
     def get_figure(self, label: str) -> Optional[Figure]:
         """Get a figure by label."""
@@ -1899,25 +1985,26 @@ example "render_plot"
     def _figure_to_typst(self, fig: Figure) -> str:
         """Convert a figure to Typst code.
         
-        If the figure has Kleis code, attempts to render it.
+        If the figure has Kleis code, translates it to Lilaq/Typst.
+        If it has a Typst fragment, uses that directly.
         Otherwise uses a static image path.
         """
         lines = []
         
-        if fig.kleis_code:
-            # Try to get Typst fragment from cached value or render
-            if fig.typst_fragment:
-                lines.append('#figure(')
-                lines.append(f'  [{fig.typst_fragment}],')
-                lines.append(f'  caption: [{fig.caption}]')
-                lines.append(f') <{fig.label}>')
-            else:
-                # Placeholder for regenerable figures
-                lines.append('#figure(')
-                lines.append(f'  // Kleis code: {fig.kleis_code[:50]}...')
-                lines.append(f'  box(width: 100%, height: 150pt, fill: luma(240))[Plot placeholder],')
-                lines.append(f'  caption: [{fig.caption}]')
-                lines.append(f') <{fig.label}>')
+        if fig.typst_fragment:
+            # Use pre-rendered Typst fragment directly
+            lines.append('#figure(')
+            lines.append(f'  [{fig.typst_fragment}],')
+            lines.append(f'  caption: [{fig.caption}]')
+            lines.append(f') <{fig.label}>')
+        elif fig.kleis_code:
+            # Translate Kleis plot code to Lilaq/Typst
+            lilaq_code = self._kleis_plot_to_lilaq(fig.kleis_code)
+            lines.append('#import "@preview/lilaq:0.3.0" as lq')
+            lines.append('#figure(')
+            lines.append(f'  {lilaq_code},')
+            lines.append(f'  caption: [{fig.caption}]')
+            lines.append(f') <{fig.label}>')
         elif fig.image_path:
             lines.append('#figure(')
             lines.append(f'  image("{fig.image_path}"),')
@@ -1927,6 +2014,72 @@ example "render_plot"
             lines.append(f'// Figure {fig.label}: no content available')
         
         return '\n'.join(lines)
+    
+    def _kleis_plot_to_lilaq(self, kleis_code: str) -> str:
+        """Translate Kleis plot code to Lilaq/Typst syntax.
+        
+        Converts: plot([1,2,3], [10,20,15])
+        To:       lq.diagram(lq.plot((1, 2, 3), (10, 20, 15)))
+        
+        This method is AGNOSTIC of plot types. Any Kleis function call
+        is translated to the corresponding Lilaq function using the convention:
+        - func_name → lq.func-name (underscores become hyphens for Typst)
+        - [1,2,3] → (1, 2, 3) (list syntax conversion)
+        
+        New plot types added to Kleis will automatically work here.
+        """
+        code = kleis_code.strip()
+        
+        # Handle multiple elements (comma-separated at top level)
+        elements = self._split_plot_elements(code)
+        
+        lilaq_elements = []
+        for elem in elements:
+            # Match function call pattern: name(args)
+            match = re.match(r'(\w+)\s*\((.*)\)', elem.strip(), re.DOTALL)
+            if match:
+                func_name = match.group(1)
+                args_str = match.group(2)
+                
+                # Convention: underscores → hyphens for Typst/Lilaq
+                lilaq_func = f'lq.{func_name.replace("_", "-")}'
+                
+                # Convert list syntax: [1,2,3] -> (1, 2, 3)
+                converted_args = args_str.replace('[', '(').replace(']', ')')
+                
+                lilaq_elements.append(f'{lilaq_func}({converted_args})')
+            else:
+                # Fallback: use as-is
+                lilaq_elements.append(elem)
+        
+        if len(lilaq_elements) == 1:
+            return f'lq.diagram({lilaq_elements[0]})'
+        else:
+            return f'lq.diagram({", ".join(lilaq_elements)})'
+    
+    def _split_plot_elements(self, code: str) -> List[str]:
+        """Split comma-separated plot elements respecting parentheses."""
+        elements = []
+        current = []
+        depth = 0
+        
+        for char in code:
+            if char in '([{':
+                depth += 1
+                current.append(char)
+            elif char in ')]}':
+                depth -= 1
+                current.append(char)
+            elif char == ',' and depth == 0:
+                elements.append(''.join(current).strip())
+                current = []
+            else:
+                current.append(char)
+        
+        if current:
+            elements.append(''.join(current).strip())
+        
+        return elements
     
     # =========================================================================
     # Persistence

@@ -96,6 +96,45 @@ def test_equations_and_figures():
     print("  ✓ Equations and figures test passed")
     print()
 
+def test_add_plot():
+    """Test adding plots from Kleis code."""
+    print("Testing add_plot()...")
+    
+    doc = KleisDoc()
+    doc.add_section("Results", level=1)
+    
+    # Add a plot using the new add_plot() method
+    fig = doc.add_plot(
+        label="fig:sine",
+        caption="Sine wave from 0 to 2π",
+        plot_code="plot([0, 1.57, 3.14, 4.71, 6.28], [0, 1, 0, -1, 0])",
+        title="Sine Function"
+    )
+    print(f"  Added plot: {fig.label}")
+    
+    # The kleis_code should be stored
+    assert fig.kleis_code is not None
+    print(f"  Kleis code stored: {fig.kleis_code[:50]}...")
+    
+    # Test the translation to Lilaq
+    lilaq = doc._kleis_plot_to_lilaq(fig.kleis_code)
+    print(f"  Lilaq translation: {lilaq[:80]}...")
+    assert 'lq.diagram' in lilaq
+    assert 'lq.plot' in lilaq
+    
+    # Test multiple plot elements
+    fig2 = doc.add_plot(
+        label="fig:multi",
+        caption="Multiple series",
+        plot_code="plot([1,2,3], [1,4,9]), scatter([1,2,3], [2,3,5])"
+    )
+    lilaq2 = doc._kleis_plot_to_lilaq(fig2.kleis_code)
+    print(f"  Multi-element Lilaq: {lilaq2[:80]}...")
+    assert 'lq.scatter' in lilaq2
+    
+    print("  ✓ add_plot() test passed")
+    print()
+
 def test_export():
     """Test Typst export."""
     print("Testing Typst export...")
@@ -169,6 +208,7 @@ if __name__ == "__main__":
     
     test_basic_document()
     test_equations_and_figures()
+    test_add_plot()
     test_export()
     test_template_loading()
     test_html_repr()
