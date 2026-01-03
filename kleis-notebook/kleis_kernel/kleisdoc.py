@@ -21,9 +21,14 @@ Usage:
 import json
 import subprocess
 import os
+import urllib.request
+import urllib.error
 from pathlib import Path
 from typing import Optional, Dict, List, Any, Union
 from dataclasses import dataclass, field
+
+# Default Kleis server URL
+DEFAULT_KLEIS_SERVER = "http://localhost:3000"
 
 
 @dataclass
@@ -85,7 +90,7 @@ class KleisDoc:
     - Persistence to .kleis files
     """
     
-    def __init__(self):
+    def __init__(self, server_url: str = DEFAULT_KLEIS_SERVER):
         self.metadata: Dict[str, Any] = {}
         self.template_path: Optional[str] = None
         self.template_info: Dict[str, Any] = {}
@@ -93,7 +98,9 @@ class KleisDoc:
         self.equations: Dict[str, Equation] = {}
         self.figures: Dict[str, Figure] = {}
         self.bibliography: List[Dict[str, str]] = []
+        self.server_url = server_url
         self._kleis_path = self._find_kleis_binary()
+        self._server_available: Optional[bool] = None
     
     @classmethod
     def new(cls) -> "KleisDoc":
@@ -167,6 +174,68 @@ class KleisDoc:
                 self.template_info["size"] = len(content)
         except Exception as e:
             self.template_info["error"] = str(e)
+    
+    # =========================================================================
+    # Kleis Server Integration
+    # =========================================================================
+    
+    def _check_server(self) -> bool:
+        """Check if Kleis server is available."""
+        if self._server_available is not None:
+            return self._server_available
+        
+        try:
+            req = urllib.request.Request(f"{self.server_url}/health")
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                self._server_available = resp.status == 200
+        except (urllib.error.URLError, TimeoutError):
+            self._server_available = False
+        
+        return self._server_available
+    
+    def render_ast(self, ast: Dict[str, Any], format: str = "typst") -> Optional[str]:
+        """Render an EditorNode AST to the specified format.
+        
+        Uses the Kleis server API if available, otherwise returns None.
+        
+        Args:
+            ast: EditorNode AST as a Python dict
+            format: Output format - "typst", "latex", "unicode", "html", "kleis"
+        
+        Returns:
+            Rendered string, or None if server unavailable
+        """
+        if not self._check_server():
+            return None
+        
+        try:
+            data = json.dumps({"ast": ast, "format": format}).encode('utf-8')
+            req = urllib.request.Request(
+                f"{self.server_url}/api/render_ast",
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result = json.loads(resp.read().decode('utf-8'))
+                return result.get("output")
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+            print(f"Warning: Failed to render AST via server: {e}")
+            return None
+    
+    def render_plot(self, kleis_code: str) -> Optional[str]:
+        """Render Kleis plotting code to Typst fragment.
+        
+        Uses the Kleis server to evaluate the plot code and return Typst.
+        
+        Args:
+            kleis_code: Kleis code that produces a plot/diagram
+        
+        Returns:
+            Typst code fragment, or None if unavailable
+        """
+        # TODO: Implement when server has endpoint for this
+        return None
     
     # =========================================================================
     # Metadata Management
@@ -258,7 +327,8 @@ class KleisDoc:
     # =========================================================================
     
     def add_equation(self, label: str, latex: str = "", 
-                     ast: Optional[Dict] = None, numbered: bool = True) -> Equation:
+                     ast: Optional[Dict] = None, numbered: bool = True,
+                     section: Section = None) -> Equation:
         """Add an equation to the document.
         
         Args:
@@ -266,6 +336,7 @@ class KleisDoc:
             latex: LaTeX representation
             ast: EditorNode AST (for re-editing in Equation Editor)
             numbered: Whether equation is numbered
+            section: Section to add equation to (default: last section)
         
         Returns:
             The created Equation object
@@ -279,6 +350,14 @@ class KleisDoc:
             numbered=numbered
         )
         self.equations[label] = eq
+        
+        # Add to section if specified
+        if section is not None:
+            section.content.append(eq)
+        elif self.sections:
+            # Add to last section by default
+            self.sections[-1].content.append(eq)
+        
         return eq
     
     def get_equation(self, label: str) -> Optional[Equation]:
@@ -302,7 +381,8 @@ class KleisDoc:
     # =========================================================================
     
     def add_figure(self, label: str, caption: str, 
-                   kleis_code: str = None, image_path: str = None) -> Figure:
+                   kleis_code: str = None, image_path: str = None,
+                   section: Section = None) -> Figure:
         """Add a figure to the document.
         
         Args:
@@ -310,6 +390,7 @@ class KleisDoc:
             caption: Figure caption
             kleis_code: Kleis plotting code (for regenerable figures)
             image_path: Path to static image file
+            section: Section to add figure to (default: last section)
         
         Returns:
             The created Figure object
@@ -323,6 +404,14 @@ class KleisDoc:
             image_path=image_path
         )
         self.figures[label] = fig
+        
+        # Add to section if specified
+        if section is not None:
+            section.content.append(fig)
+        elif self.sections:
+            # Add to last section by default
+            self.sections[-1].content.append(fig)
+        
         return fig
     
     def get_figure(self, label: str) -> Optional[Figure]:
@@ -451,15 +540,76 @@ class KleisDoc:
             elif isinstance(item, Section):
                 lines.append(self._section_to_typst(item))
             elif isinstance(item, Equation):
-                lines.append(f'$ {item.latex} $ <{item.label}>')
+                lines.append(self._equation_to_typst(item))
                 lines.append('')
             elif isinstance(item, Figure):
-                if item.image_path:
-                    lines.append(f'#figure(')
-                    lines.append(f'  image("{item.image_path}"),')
-                    lines.append(f'  caption: [{item.caption}]')
-                    lines.append(f') <{item.label}>')
+                lines.append(self._figure_to_typst(item))
                 lines.append('')
+        
+        return '\n'.join(lines)
+    
+    def _equation_to_typst(self, eq: Equation) -> str:
+        """Convert an equation to Typst code.
+        
+        If the equation has an EditorNode AST, renders it via the server.
+        Otherwise falls back to the LaTeX representation.
+        """
+        typst_content = None
+        
+        # Try to render from AST if available
+        if eq.ast:
+            # Check if we already have cached Typst
+            if eq.typst:
+                typst_content = eq.typst
+            else:
+                # Try to render via server
+                rendered = self.render_ast(eq.ast, format="typst")
+                if rendered:
+                    eq.typst = rendered  # Cache for future use
+                    typst_content = rendered
+        
+        # Fall back to LaTeX if no Typst available
+        if typst_content is None and eq.latex:
+            # Embed LaTeX in Typst math mode
+            typst_content = eq.latex
+        
+        if typst_content:
+            if eq.numbered:
+                return f'$ {typst_content} $ <{eq.label}>'
+            else:
+                return f'$ {typst_content} $'
+        
+        return f'// Equation {eq.label}: no content available'
+    
+    def _figure_to_typst(self, fig: Figure) -> str:
+        """Convert a figure to Typst code.
+        
+        If the figure has Kleis code, attempts to render it.
+        Otherwise uses a static image path.
+        """
+        lines = []
+        
+        if fig.kleis_code:
+            # Try to get Typst fragment from cached value or render
+            if fig.typst_fragment:
+                lines.append('#figure(')
+                lines.append(f'  [{fig.typst_fragment}],')
+                lines.append(f'  caption: [{fig.caption}]')
+                lines.append(f') <{fig.label}>')
+            else:
+                # Placeholder for regenerable figures
+                lines.append('#figure(')
+                lines.append(f'  // Kleis code: {fig.kleis_code[:50]}...')
+                lines.append(f'  box(width: 100%, height: 150pt, fill: luma(240))[Plot placeholder],')
+                lines.append(f'  caption: [{fig.caption}]')
+                lines.append(f') <{fig.label}>')
+        elif fig.image_path:
+            lines.append('#figure(')
+            lines.append(f'  image("{fig.image_path}"),')
+            lines.append(f'  caption: [{fig.caption}]')
+            lines.append(f') <{fig.label}>')
+        else:
+            lines.append(f'// Figure {fig.label}: no content available')
         
         return '\n'.join(lines)
     
