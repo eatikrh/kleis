@@ -524,6 +524,34 @@ $")
 | Partial | `partial` | ∂ |
 | Nabla | `nabla` | ∇ |
 
+### 💡 Tip: Use the Equation Editor
+
+**You don't have to type Typst syntax manually!**
+
+The Kleis Equation Editor is a visual, WYSIWYG tool for building equations. Instead of memorizing `frac(a, b)` or `mat(delim: "[", ...)`, you:
+
+1. **Build visually** — Click buttons to create fractions, matrices, integrals
+2. **See live preview** — The equation renders as you build (powered by Typst)
+3. **Copy and paste** — Click "📋 Copy Typst" and paste into your thesis
+
+![Equation Editor with matrix multiplication](../images/equation_editor_matrices.png)
+
+*The Equation Editor showing a type-checked matrix multiplication with rotation matrix. The type indicator confirms: Matrix(2, 2, Scalar).*
+
+**The workflow:**
+```
+Visual Editor → 📋 Copy Typst → Paste into thesis.kleis → PDF
+```
+
+**Example:** Building `let A = [1 2 3; 4 5 6] × R_z(θ) × [1 0; 2 1; 2 1]` takes seconds visually — versus minutes of typing and debugging Typst syntax.
+
+> **Note:** The Equation Editor requires `kleis server` running:
+> ```bash
+> kleis server
+> # Server running at http://localhost:3000
+> ```
+> Then open [http://localhost:3000](http://localhost:3000) in your browser. Full documentation coming in a future chapter.
+
 ## Generating PDFs
 
 ### Command Line

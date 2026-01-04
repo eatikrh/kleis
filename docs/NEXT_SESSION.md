@@ -16,13 +16,29 @@ This is the dissertation/thesis writing chapter. It covers templates (MIT, UofM,
 
 ---
 
-## 🚀 CURRENT WORK: Equation Editor Jupyter Integration (Jan 3, 2026)
+## 🚀 CURRENT WORK: Equation Editor Enhancements (Jan 3-4, 2026)
 
-### Branch: `feature/equation-editor-jupyter-integration`
+### Branch: `feature/copy-typst-button`
 
-**Status:** ✅ Complete, ready to merge
+**Status:** ✅ Implemented, ready to merge
 
-### What Was Built
+### What Was Built (Jan 4)
+
+| Feature | Status |
+|---------|--------|
+| **"📋 Copy Typst" button** | ✅ |
+| `/api/export_typst` endpoint | ✅ |
+| PhD candidate workflow: visual → copy → paste into thesis | ✅ |
+
+**The workflow:**
+1. Build equation visually in Equation Editor (WYSIWYG, Typst-rendered)
+2. Click "📋 Copy Typst"
+3. Paste into `thesis.kleis` document
+4. Compile to PDF
+
+No Typst syntax knowledge needed — the editor generates it!
+
+### Previous Work (Jan 3): Jupyter Integration
 
 | Feature | Status |
 |---------|--------|
@@ -31,7 +47,22 @@ This is the dissertation/thesis writing chapter. It covers templates (MIT, UofM,
 | Auto-switch to structural mode | ✅ |
 | `kleisInitialData` listener (for re-editing) | ✅ |
 | `add_equation_from_ast()` helper | ✅ |
-| Documentation updated | ✅ |
+
+### ⏳ BLOCKERS: Before Documenting in Manual
+
+The Equation Editor works but has two blockers before adding a manual chapter:
+
+| Blocker | Issue | Solution Ideas |
+|---------|-------|----------------|
+| **Server dependency** | Requires `kleis server` running separately | Auto-start? WASM Typst? |
+| **Jupyter display** | Need to embed editor inline in notebook cells | IFrame widget? Full integration? |
+
+**Why these matter:**
+- Users shouldn't need to manually start a server
+- Jupyter is becoming the default interface — editor should live there
+- Documentation should show a seamless workflow, not "first start server in terminal..."
+
+**See also:** Section 9 (Jupyter + Equation Editor Integration) for architecture options
 
 ---
 
