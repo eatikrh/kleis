@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6bc585af.js";
+            window.path_to_searchindex_js = "searchindex-4cca472c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -3589,6 +3589,27 @@ $")
 </tbody>
 </table>
 </div>
+<h3 id="-tip-use-the-equation-editor"><a class="header" href="#-tip-use-the-equation-editor">💡 Tip: Use the Equation Editor</a></h3>
+<p><strong>You don’t have to type Typst syntax manually!</strong></p>
+<p>The Kleis Equation Editor is a visual, WYSIWYG tool for building equations. Instead of memorizing <code>frac(a, b)</code> or <code>mat(delim: "[", ...)</code>, you:</p>
+<ol>
+<li><strong>Build visually</strong> — Click buttons to create fractions, matrices, integrals</li>
+<li><strong>See live preview</strong> — The equation renders as you build (powered by Typst)</li>
+<li><strong>Copy and paste</strong> — Click “📋 Copy Typst” and paste into your thesis</li>
+</ol>
+<p><img src="images/equation_editor_matrices.png" alt="Equation Editor with matrix multiplication"></p>
+<p><em>The Equation Editor showing a type-checked matrix multiplication with rotation matrix. The type indicator confirms: Matrix(2, 2, Scalar).</em></p>
+<p><strong>The workflow:</strong></p>
+<pre><code>Visual Editor → 📋 Copy Typst → Paste into thesis.kleis → PDF
+</code></pre>
+<p><strong>Example:</strong> Building <code>let A = [1 2 3; 4 5 6] × R_z(θ) × [1 0; 2 1; 2 1]</code> takes seconds visually — versus minutes of typing and debugging Typst syntax.</p>
+<blockquote>
+<p><strong>Note:</strong> The Equation Editor requires <code>kleis server</code> running:</p>
+<pre><code class="language-bash">kleis server
+# Server running at http://localhost:3000
+</code></pre>
+<p>Then open <a href="http://localhost:3000">http://localhost:3000</a> in your browser. Full documentation coming in a future chapter.</p>
+</blockquote>
 <h2 id="generating-pdfs"><a class="header" href="#generating-pdfs">Generating PDFs</a></h2>
 <h3 id="command-line"><a class="header" href="#command-line">Command Line</a></h3>
 <pre><code class="language-bash"># Compile Kleis to Typst
