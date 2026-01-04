@@ -236,7 +236,10 @@ define typst_umich_figure_setup =
 }
 "
 
-define typst_umich_preamble = concat(concat(concat(concat(typst_umich_page_setup, typst_umich_text_setup), typst_umich_paragraph_setup), typst_umich_heading_setup), typst_umich_figure_setup)
+// Lilaq import for native Kleis diagrams
+define typst_lilaq_import = "#import \"@preview/lilaq:0.5.0\" as lq\n"
+
+define typst_umich_preamble = concat(typst_lilaq_import, concat(concat(concat(concat(typst_umich_page_setup, typst_umich_text_setup), typst_umich_paragraph_setup), typst_umich_heading_setup), typst_umich_figure_setup))
 
 // =============================================================================
 // Title Page Template (No page number, not counted)
