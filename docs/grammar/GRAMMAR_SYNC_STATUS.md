@@ -20,7 +20,7 @@ diagram(
 // Parser transforms to: record(field("color", "blue"), ...)
 ```
 
-See [ADR-023](../architecture/ADR-023-Named-Arguments-Parser-Sugar.md) for details.
+See [ADR-027](../adr/ADR-027-Named-Arguments-Parser-Sugar.md) for details.
 
 ### What's New in v0.95
 

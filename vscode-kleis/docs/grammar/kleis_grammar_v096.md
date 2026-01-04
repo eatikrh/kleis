@@ -154,7 +154,7 @@ For now, v0.96 provides a clean, focused solution for the plotting use case with
 
 ## Related Documents
 
-- `ADR-023-Named-Arguments-Parser-Sugar.md` - Architectural decision record
+- `ADR-027-Named-Arguments-Parser-Sugar.md` - Architectural decision record
 - `kleis_grammar_v095.ebnf` - Previous version (big operators)
 - `PLOTTING_ROADMAP.md` - Plotting feature planning
 

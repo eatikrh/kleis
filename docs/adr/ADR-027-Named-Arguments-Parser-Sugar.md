@@ -1,4 +1,4 @@
-# ADR-023: Named Arguments as Parser-Level Sugar
+# ADR-027: Named Arguments as Parser-Level Sugar
 
 **Status:** Implemented  
 **Date:** 2026-01-01  
