@@ -85,34 +85,36 @@ define subsec_verification = ArxivSubsection("Verification",
 define sec_experiments = ArxivSection("Evaluation",
 "We evaluate Kleis on three dimensions: verification performance, expressiveness, and usability. Our experiments cover examples from linear algebra, differential geometry, and formal language theory.")
 
-// Results table
+// Results table - Native Kleis Data with table_typst()
+define results_headers = ["Example", "Axioms", "Assertions", "Time (ms)"]
+define results_rows = [
+    ["Commutativity", "3", "5", "12"],
+    ["Matrix Algebra", "8", "12", "45"],
+    ["Tensor Identities", "15", "8", "120"],
+    ["Bianchi Identity", "12", "3", "89"],
+    ["Counterpoint Rules", "20", "15", "340"]
+]
+
 define table_results = ArxivTable("tab:results",
     "Verification times for representative examples",
-    "table(
-      columns: (auto, auto, auto, auto),
-      inset: 8pt,
-      align: center,
-      [*Example*], [*Axioms*], [*Assertions*], [*Time (ms)*],
-      [Commutativity], [3], [5], [12],
-      [Matrix Algebra], [8], [12], [45],
-      [Tensor Identities], [15], [8], [120],
-      [Bianchi Identity], [12], [3], [89],
-      [Counterpoint Rules], [20], [15], [340],
-    )")
+    table_typst(results_headers, results_rows)
+)
 
-// Performance diagram
+// Performance diagram - Native Kleis Data with export_typst_fragment()
+define axiom_counts = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0]
+define verification_times = [15.0, 35.0, 80.0, 150.0, 280.0, 450.0]
+
+define perf_plot = plot(axiom_counts, verification_times, mark = "o")
+define perf_typst = export_typst_fragment(perf_plot,
+    title = "Verification Time vs Axiom Count",
+    xlabel = "Number of Axioms",
+    ylabel = "Time (ms)"
+)
+
 define fig_performance = ArxivDiagram("fig:performance",
     "Verification time scaling with problem size",
-    "{
-      import \"@preview/lilaq:0.5.0\" as lq
-      lq.diagram(
-        width: 10cm,
-        title: [Verification Time vs Axiom Count],
-        xlabel: [Number of Axioms],
-        ylabel: [Time (ms)],
-        lq.plot((5, 10, 15, 20, 25, 30), (15, 35, 80, 150, 280, 450), mark: \"o\"),
-      )
-    }")
+    perf_typst
+)
 
 // =============================================================================
 // Section 5: Case Studies

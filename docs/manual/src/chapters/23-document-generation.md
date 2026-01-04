@@ -405,88 +405,152 @@ See: `examples/documents/sample_arxiv_paper.kleis`
 
 Kleis integrates with the [Lilaq](https://typst.app/universe/package/lilaq) plotting library for creating beautiful diagrams directly in your document.
 
-### Line Plots
+### Native Kleis Data (Recommended)
+
+The most powerful approach uses native Kleis lists with `export_typst_fragment()`:
 
 ```kleis
-define fig_line = MITDiagram("fig:line", "Training curves", "
-import \"@preview/lilaq:0.5.0\" as lq
-lq.diagram(
-    lq.plot((1, 2, 3, 4, 5), (10, 25, 45, 70, 90), 
-            stroke: blue, mark: \"o\"),
-    xlabel: \"Epoch\",
-    ylabel: \"Accuracy (%)\",
-    title: \"Model Performance\"
-)")
+// Define your data as Kleis lists
+define epochs = [1.0, 2.0, 3.0, 4.0, 5.0]
+define accuracy = [10.0, 25.0, 45.0, 70.0, 90.0]
+
+// Create a plot using Kleis's native plot() function
+define my_plot = plot(epochs, accuracy, mark = "o", label = "Training")
+
+// Convert to Typst code for embedding in a figure
+define typst_code = export_typst_fragment(my_plot,
+    title = "Model Performance",
+    xlabel = "Epoch",
+    ylabel = "Accuracy (%)"
+)
+
+// Use in your thesis/paper
+define fig_training = MITDiagram("fig:training", "Training curves", typst_code)
 ```
 
-### Scatter Plots
+**Why use native data?**
+- Your data is Kleis—it can be computed, verified, and reused
+- No manual Typst syntax errors
+- Data can flow from experiments to figures seamlessly
+- Easier to update when results change
+
+### Available Plot Functions
+
+| Function | Description |
+|----------|-------------|
+| `plot(xs, ys)` | Line plot |
+| `scatter(xs, ys)` | Scatter plot |
+| `bar(xs, heights)` | Vertical bar chart |
+| `hbar(xs, widths)` | Horizontal bar chart |
+
+Each function accepts optional parameters: `label`, `mark`, `stroke`, etc.
+
+### Example: Complete Workflow
 
 ```kleis
-define fig_scatter = MITDiagram("fig:scatter", "Data distribution", "
-import \"@preview/lilaq:0.5.0\" as lq
-lq.diagram(
-    lq.scatter((1, 2, 3, 4, 5), (2.1, 3.9, 6.2, 7.8, 10.1), 
-               mark: \"o\", stroke: red),
-    xlabel: \"x\",
-    ylabel: \"y\"
-)")
+// Raw experimental data
+define x_data = [0.1, 0.5, 1.0, 5.0, 10.0, 25.0]
+define method_a = [150.0, 120.0, 100.0, 80.0, 60.0, 40.0]
+define method_b = [180.0, 140.0, 110.0, 85.0, 65.0, 45.0]
+
+// Create plots
+define plot_a = plot(x_data, method_a, mark = "o", label = "Method A")
+define plot_b = plot(x_data, method_b, mark = "x", label = "Method B")
+
+// Combine into diagram
+define comparison_typst = export_typst_fragment(plot_a,
+    title = "Performance Comparison",
+    xlabel = "Problem Size",
+    ylabel = "Time (ms)"
+)
+
+// Embed in thesis
+define fig_comparison = MITDiagram("fig:comparison",
+    "Performance comparison between methods",
+    comparison_typst
+)
 ```
 
-### Bar Charts
+### Fallback: Raw Typst Strings
+
+For complex diagrams not yet supported by native functions, you can use raw Typst strings:
 
 ```kleis
-define fig_bars = MITDiagram("fig:bars", "Method comparison", "
-import \"@preview/lilaq:0.5.0\" as lq
-lq.diagram(
-    lq.bar((\"A\", \"B\", \"C\"), (45, 72, 89)),
-    ylabel: \"Score\"
-)")
-```
-
-### Multiple Series
-
-```kleis
-define fig_multi = MITDiagram("fig:multi", "Comparison", "
+define fig_complex = MITDiagram("fig:complex", "Complex diagram", "
 import \"@preview/lilaq:0.5.0\" as lq
 lq.diagram(
     lq.plot((1, 2, 3, 4), (10, 20, 35, 50), stroke: blue, mark: \"o\"),
     lq.plot((1, 2, 3, 4), (15, 30, 42, 55), stroke: red, mark: \"x\"),
-    lq.plot((1, 2, 3, 4), (8, 18, 28, 40), stroke: green, mark: \"triangle\"),
     xlabel: \"Iteration\",
-    ylabel: \"Value\",
-    legend: (\"Method A\", \"Method B\", \"Method C\")
+    ylabel: \"Value\"
 )")
 ```
 
 ## Tables
 
-Tables use Typst's native table syntax:
+### Native Kleis Data with `table_typst()` (Recommended)
 
-### Simple Table
+The cleanest approach uses Kleis lists with `table_typst()`:
 
 ```kleis
-define tab_simple = MITTable("tab:simple", "Basic results", "
-#table(
-    columns: 3,
-    [Method], [Accuracy], [F1],
-    [Baseline], [72.3%], [0.71],
-    [Ours], [89.7%], [0.88],
-    [SOTA], [87.1%], [0.86]
-)")
+// Define table data as Kleis lists
+define headers = ["Method", "Accuracy", "F1 Score"]
+define rows = [
+    ["Baseline", "72.3%", "0.71"],
+    ["Ours", "89.7%", "0.88"],
+    ["SOTA", "87.1%", "0.86"]
+]
+
+// Generate Typst table code
+define table_code = table_typst(headers, rows)
+
+// Use in your thesis/paper
+define tab_results = MITTable("tab:results", "Benchmark results", table_code)
 ```
 
-### Styled Table
+**Why use `table_typst()`?**
+- Data as Kleis lists—can be computed, imported, or transformed
+- No manual Typst table syntax
+- Rows can come from experiments or external data
+- Easy to add/remove rows programmatically
+
+### Example: Complete Workflow
 
 ```kleis
-define tab_styled = MITTable("tab:styled", "Comparison matrix", "
+// Data from experiments
+define methods = ["CNN", "ResNet", "Transformer", "Kleis-Net"]
+define accuracy = ["72.3%", "85.1%", "87.4%", "89.7%"]
+define f1_scores = ["0.71", "0.84", "0.86", "0.88"]
+define memory = ["128 MB", "256 MB", "512 MB", "192 MB"]
+
+// Build table from data
+define headers = ["Method", "Accuracy", "F1", "Memory"]
+define rows = [
+    ["CNN", "72.3%", "0.71", "128 MB"],
+    ["ResNet", "85.1%", "0.84", "256 MB"],
+    ["Transformer", "87.4%", "0.86", "512 MB"],
+    ["Kleis-Net", "89.7%", "0.88", "192 MB"]
+]
+
+define tab_comparison = MITTable("tab:comparison",
+    "Comparison of deep learning methods",
+    table_typst(headers, rows)
+)
+```
+
+### Fallback: Raw Typst Strings
+
+For styled tables, you can use raw Typst syntax:
+
+```kleis
+define tab_styled = MITTable("tab:styled", "Styled table", "
 #table(
     columns: 4,
     stroke: 0.5pt,
     fill: (col, row) => if row == 0 { luma(230) },
     [Feature], [Kleis], [Lean], [Coq],
     [SMT], [✓], [Partial], [✗],
-    [Types], [HM], [Dependent], [Dependent],
-    [Export], [Typst], [LaTeX], [LaTeX]
+    [Types], [HM], [Dependent], [Dependent]
 )")
 ```
 

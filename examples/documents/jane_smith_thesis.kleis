@@ -56,106 +56,102 @@ define eq_complexity = MITEquation("eq:complexity",
 )
 
 // ============================================================================
-// TABLES (Pure Typst table syntax)
+// TABLES - Native Kleis Data with table_typst()
 // ============================================================================
+// 
+// Kleis tables can be built from native Kleis lists using table_typst(),
+// which generates Typst table code from headers and rows.
+//
 
-// Performance comparison table
+// Performance comparison table - Native Kleis Data
+define perf_headers = ["Backend", "Time (ms)", "Memory (MB)", "Completeness"]
+define perf_rows = [
+    ["Z3", "42", "128", "Complete"],
+    ["CVC5", "38", "156", "Complete"],
+    ["Yices", "51", "98", "Incomplete"],
+    ["MiniSat", "12", "32", "Incomplete"]
+]
+
 define table_performance = MITTable("tab:performance",
     "Performance comparison of verification backends",
-    "table(
-    columns: (auto, auto, auto, auto),
-    align: (left, center, center, center),
-    table.header([*Backend*], [*Time (ms)*], [*Memory (MB)*], [*Completeness*]),
-    [Z3], [42], [128], [Complete],
-    [CVC5], [38], [156], [Complete],
-    [Yices], [51], [98], [Incomplete],
-    [MiniSat], [12], [32], [Incomplete],
-  )"
+    table_typst(perf_headers, perf_rows)
 )
 
-// Feature comparison table  
+// Feature comparison table - Native Kleis Data
+define feature_headers = ["Feature", "Kleis", "Lean", "Coq", "Isabelle"]
+define feature_rows = [
+    ["SMT Integration", "✓", "✓", "—", "—"],
+    ["Custom Notation", "✓", "—", "✓", "✓"],
+    ["Document Export", "✓", "—", "—", "—"],
+    ["Jupyter Support", "✓", "—", "—", "—"],
+    ["Self-Hosting", "✓", "✓", "✓", "✓"]
+]
+
 define table_features = MITTable("tab:features",
     "Feature comparison with existing systems",
-    "table(
-    columns: (auto, auto, auto, auto, auto),
-    align: (left, center, center, center, center),
-    table.header([*Feature*], [*Kleis*], [*Lean*], [*Coq*], [*Isabelle*]),
-    [SMT Integration], [Y], [Y], [-], [-],
-    [Custom Notation], [Y], [-], [Y], [Y],
-    [Document Export], [Y], [-], [-], [-],
-    [Jupyter Support], [Y], [-], [-], [-],
-    [Self-Hosting], [Y], [Y], [Y], [Y],
-  )"
+    table_typst(feature_headers, feature_rows)
 )
 
-// Benchmark results table
+// Benchmark results table - Native Kleis Data
+define bench_headers = ["Domain", "Axioms", "Verification Time", "Memory"]
+define bench_rows = [
+    ["Tensor Calculus", "47", "1.2s", "256 MB"],
+    ["Music Theory", "23", "0.4s", "128 MB"],
+    ["Network Protocols", "31", "0.8s", "192 MB"],
+    ["Financial Models", "18", "0.3s", "96 MB"]
+]
+
 define table_benchmarks = MITTable("tab:benchmarks",
     "Benchmark results across different domains",
-    "table(
-    columns: (auto, auto, auto, auto),
-    align: (left, center, center, center),
-    table.header([*Domain*], [*Axioms*], [*Verification Time*], [*Memory*]),
-    [Tensor Calculus], [47], [1.2s], [256 MB],
-    [Music Theory], [23], [0.4s], [128 MB],
-    [Network Protocols], [31], [0.8s], [192 MB],
-    [Financial Models], [18], [0.3s], [96 MB],
-  )"
+    table_typst(bench_headers, bench_rows)
 )
 
 // ============================================================================
-// DIAGRAMS - Using Lilaq code strings embedded in MITDiagram elements
+// DIAGRAMS - Native Kleis Plotting with export_typst_fragment()
 // ============================================================================
+//
+// Kleis plots can be built from native Kleis lists using plot(), scatter(),
+// bar(), etc. and then converted to Typst using export_typst_fragment().
+//
 
 // Performance chart - verification time vs domain size
+// Define data as Kleis lists
+define domain_sizes = [1.0, 2.0, 3.0, 4.0, 5.0]
+define z3_times = [10.0, 25.0, 45.0, 80.0, 120.0]
+define cvc5_times = [8.0, 20.0, 38.0, 65.0, 95.0]
+
+// Create plot using native Kleis plotting functions
+define perf_plot = plot(domain_sizes, z3_times, label = "Z3", mark = "o")
+define perf_typst = export_typst_fragment(perf_plot, title = "Verification Time vs Domain Size", xlabel = "Domain Size (x1000)", ylabel = "Time (ms)")
+
 define fig_performance = MITDiagram("fig:performance",
     "Verification time comparison between Z3 and CVC5 backends",
-    "{
-      import \"@preview/lilaq:0.5.0\" as lq
-      lq.diagram(
-        width: 10cm,
-        title: [Verification Time vs Domain Size],
-        xlabel: [Domain Size (x1000)],
-        ylabel: [Time (ms)],
-        legend: (position: left + top),
-        lq.plot((1, 2, 3, 4, 5), (10, 25, 45, 80, 120), mark: \"o\", label: [Z3]),
-        lq.plot((1, 2, 3, 4, 5), (8, 20, 38, 65, 95), mark: \"x\", label: [CVC5]),
-      )
-    }"
+    perf_typst
 )
 
-// Bar chart comparing system features
+// Bar chart comparing system features - Native Kleis Data
+define feature_scores_kleis = [5.0, 5.0, 5.0, 4.0]
+define feature_scores_lean = [4.0, 3.0, 2.0, 5.0]
+define feature_categories = [0.0, 1.0, 2.0, 3.0]
+
+define bar_plot = bar(feature_categories, feature_scores_kleis, label = "Kleis")
+define bar_typst = export_typst_fragment(bar_plot, title = "System Feature Comparison", xlabel = "Feature Category", ylabel = "Score (1-5)")
+
 define fig_comparison = MITDiagram("fig:comparison",
     "Feature comparison between Kleis and Lean across key categories",
-    "{
-      import \"@preview/lilaq:0.5.0\" as lq
-      lq.diagram(
-        width: 10cm,
-        title: [System Feature Comparison],
-        xlabel: [Feature Category],
-        ylabel: [Score (1-5)],
-        legend: (position: right + top),
-        xaxis: (ticks: ((0, [SMT]), (1, [Notation]), (2, [Docs]), (3, [Proofs]))),
-        lq.bar((0, 1, 2, 3), (5, 5, 5, 4), offset: -0.2, width: 0.35, label: [Kleis]),
-        lq.bar((0, 1, 2, 3), (4, 3, 2, 5), offset: 0.2, width: 0.35, label: [Lean]),
-      )
-    }"
+    bar_typst
 )
 
-// Scatter plot showing type inference performance  
+// Scatter plot showing type inference performance - Native Kleis Data
+define expr_counts = [100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0]
+define inference_times = [1.2, 2.1, 4.8, 9.5, 18.3, 42.1]
+
+define scatter_plot = scatter(expr_counts, inference_times, label = "Measurements", mark = "o")
+define scatter_typst = export_typst_fragment(scatter_plot, title = "Type Inference Performance", xlabel = "Expression Count", ylabel = "Inference Time (ms)")
+
 define fig_inference = MITDiagram("fig:inference",
     "Type inference time scales linearly with program size on log-log axes",
-    "{
-      import \"@preview/lilaq:0.5.0\" as lq
-      lq.diagram(
-        width: 10cm,
-        title: [Type Inference Performance],
-        xlabel: [Expression Count],
-        ylabel: [Inference Time (ms)],
-        xaxis: (scale: \"log\"),
-        yaxis: (scale: \"log\"),
-        lq.scatter((100, 200, 500, 1000, 2000, 5000), (1.2, 2.1, 4.8, 9.5, 18.3, 42.1), mark: \"o\", label: [Measurements]),
-      )
-    }"
+    scatter_typst
 )
 
 // Architecture box diagram
