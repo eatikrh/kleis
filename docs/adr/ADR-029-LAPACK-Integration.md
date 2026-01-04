@@ -1,6 +1,9 @@
-# LAPACK Integration Investigation
+# ADR-029: LAPACK Integration
 
-## Overview
+**Status:** Accepted & Implemented  
+**Date:** 2024
+
+## Context
 
 This document investigates options for integrating LAPACK-level linear algebra 
 capabilities into Kleis for high-performance numerical computation.

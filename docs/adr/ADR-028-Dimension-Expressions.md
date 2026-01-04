@@ -1,6 +1,9 @@
-# Dimension Expressions in Kleis (v0.92)
+# ADR-028: Dimension Expressions
 
-## Overview
+**Status:** Accepted  
+**Date:** 2024 (Grammar v0.92)
+
+## Context
 
 Grammar v0.92 introduces **type-level dimension expressions** for expressing 
 relationships between matrix dimensions:

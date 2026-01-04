@@ -1,8 +1,16 @@
 # Kleis: A Structural Mathematics Editor and Verification Engine
 
 **Version:** 0.1.0  
-**Date:** December 2025  
+**Date:** December 2025 (Updated January 2026)  
 **Author:** Kleis Development Team
+
+> **Note:** This overview was written in Dec 2025. Some details have evolved:
+> - Template count: Now 157 (was 54)
+> - Type system: Now fully implemented (ADR-014)
+> - Document authoring: Now implemented (ADR-012)
+> - Jupyter Kernel: Now working
+>
+> For current status, see [NEXT_SESSION.md](../NEXT_SESSION.md).
 
 ---
 

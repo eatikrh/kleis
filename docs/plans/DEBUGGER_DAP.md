@@ -1,5 +1,12 @@
 # Kleis Debugger — DAP Implementation Plan
 
+> **Status: ✅ IMPLEMENTED** (Dec 2024)  
+> The DAP debugger is fully working: breakpoints, step in/out/over, variables, cross-file debugging, and Z3 assert verification.
+> See `src/bin/kleis.rs` (unified binary) and `src/debug.rs` for implementation.
+> This document serves as architectural reference.
+
+---
+
 ## Overview
 
 Implement a Debug Adapter Protocol (DAP) server for Kleis, enabling step-through debugging in VS Code and other DAP-compatible editors.

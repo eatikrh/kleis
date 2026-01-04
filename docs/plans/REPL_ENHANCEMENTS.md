@@ -1,5 +1,13 @@
 # REPL Enhancements Plan
 
+> **Status: ✅ IMPLEMENTED** (Jan 2026)  
+> - ✅ Phase 1-5: Provenance, unload/reload, export, dependency tracking, IDE integration
+> - ✅ Phase 6: Debugging - fully working (DAP, breakpoints, step in/out, variables)
+> - ⚠️ Phase 6.5: Expression-level spans - partial (executable nodes only)
+> - ✅ REPL Panel - implemented in VS Code
+
+---
+
 ## Session Notes (Dec 23, 2024)
 
 This document captures ideas discussed for enhancing the Kleis REPL toward a full IDE experience.
@@ -153,7 +161,7 @@ definitions_by_file: HashMap<PathBuf, DefinitionSet>
 - [x] Connect to kleis-lsp
 - [x] Add file change notifications
 
-### Phase 6: Debugging (In Progress)
+### Phase 6: Debugging ✅ DONE
 - [x] Create `kleis-debug` binary (standalone)
 - [x] Implement DAP protocol basics
 - [x] Add tracing to evaluator (DebugHook trait)
@@ -162,7 +170,7 @@ definitions_by_file: HashMap<PathBuf, DefinitionSet>
 - [x] Create unified `kleis` binary (LSP + DAP)
 - [x] DAP via dynamic TCP port
 - [x] VS Code integration with unified server
-- [ ] Test end-to-end debugging session
+- [x] Test end-to-end debugging session ✅ (Dec 26, 2024)
 
 ### Phase 6.5: Expression-Level Spans (Planned — see `EXPRESSION_SPANS.md`)
 

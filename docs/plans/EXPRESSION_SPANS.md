@@ -1,6 +1,12 @@
 # Expression-Level Source Spans
 
-**Status:** Planned  
+> **Status: ✅ IMPLEMENTED (by design)** (Dec 2024)  
+> Spans are implemented for `Operation` type expressions only - this is a **deliberate design decision**.
+> Debugger steps on executable expressions, not literals/atoms.
+> LSP diagnostics and DAP breakpoints work correctly with this design.
+> Full spans on ALL variants was considered unnecessary overhead.
+
+**Original Status:** Planned  
 **Priority:** High (Infrastructure)  
 **Estimated Effort:** 3-5 days  
 **Date:** December 2024
