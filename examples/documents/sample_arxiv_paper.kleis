@@ -17,18 +17,18 @@ import "stdlib/templates/arxiv_paper.kleis"
 define paper_title = "Kleis: A Unified Substrate for Verified Knowledge Production"
 
 // Authors with affiliation numbers
-define paper_authors = Cons(
+define paper_authors = [
     Author("Jane Smith", "1"),
-    Cons(Author("Alex Chen", "2"),
-    Cons(Author("Maria Garcia", "1,3"),
-    Nil)))
+    Author("Alex Chen", "2"),
+    Author("Maria Garcia", "1,3")
+]
 
 // Affiliations
-define paper_affiliations = Cons(
+define paper_affiliations = [
     Affiliation(1, "Massachusetts Institute of Technology", "Cambridge, MA"),
-    Cons(Affiliation(2, "University of Michigan", "Ann Arbor, MI"),
-    Cons(Affiliation(3, "Stanford University", "Stanford, CA"),
-    Nil)))
+    Affiliation(2, "University of Michigan", "Ann Arbor, MI"),
+    Affiliation(3, "Stanford University", "Stanford, CA")
+]
 
 // Abstract
 define paper_abstract = "We present Kleis, a novel knowledge production substrate that unifies notation, rules, verification, and output generation across arbitrary domains. Unlike traditional proof assistants that target specific mathematical foundations, Kleis provides a domain-agnostic framework where users define their own structures, axioms, and verification conditions. We demonstrate that this approach enables formal verification in domains ranging from tensor calculus to music theory, while maintaining soundness guarantees through integration with SMT solvers. Our evaluation shows that Kleis can verify complex mathematical identities in milliseconds and generate publication-quality documents directly from verified specifications. We release Kleis as open-source software with comprehensive documentation and examples."
@@ -181,30 +181,25 @@ Expressions include:
 // Assemble Document Elements
 // =============================================================================
 
-define all_elements = Cons(sec_intro,
-    Cons(sec_related,
-    Cons(subsec_proof_assistants,
-    Cons(subsec_smt,
-    Cons(sec_arch,
-    Cons(eq_formula,
-    Cons(subsec_structures,
-    Cons(subsec_verification,
-    Cons(sec_experiments,
-    Cons(table_results,
-    Cons(fig_performance,
-    Cons(sec_cases,
-    Cons(subsec_tensors,
-    Cons(eq_einstein,
-    Cons(subsec_music,
-    Cons(sec_conclusion,
-    Cons(ack,
-    Cons(ref1,
-    Cons(ref2,
-    Cons(ref3,
-    Cons(ref4,
-    Cons(ref5,
-    Cons(appendix_grammar,
-    Nil)))))))))))))))))))))))
+define all_elements = [
+    // Introduction and Related Work
+    sec_intro, sec_related, subsec_proof_assistants, subsec_smt,
+    
+    // Architecture
+    sec_arch, eq_formula, subsec_structures, subsec_verification,
+    
+    // Experiments
+    sec_experiments, table_results, fig_performance,
+    
+    // Case Studies
+    sec_cases, subsec_tensors, eq_einstein, subsec_music,
+    
+    // Conclusion
+    sec_conclusion, ack,
+    
+    // References and Appendix
+    ref1, ref2, ref3, ref4, ref5, appendix_grammar
+]
 
 // =============================================================================
 // Create the Paper

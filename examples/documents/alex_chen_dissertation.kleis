@@ -28,11 +28,11 @@ define dissertation_orcid = "0000-0002-1234-5678"
 define committee_chair = "Professor Sarah Martinez"
 define committee_chair_affiliation = "Professor of Computer Science and Engineering"
 
-define committee_members = Cons(
+define committee_members = [
     Member("Professor James Liu", "Associate Professor of Electrical Engineering"),
-    Cons(Member("Professor Emily Watson", "Associate Professor of Robotics"),
-    Cons(Member("Dr. Michael Park", "Research Scientist, Google DeepMind"),
-    Nil)))
+    Member("Professor Emily Watson", "Associate Professor of Robotics"),
+    Member("Dr. Michael Park", "Research Scientist, Google DeepMind")
+]
 
 // =============================================================================
 // Abstract
@@ -306,39 +306,20 @@ define ref4 = UMichReference("huang2020", "Huang, X., Kwiatkowska, M., Wang, S.,
 define ref5 = UMichReference("singh2019", "Singh, G., Gehr, T., Püschel, M., & Vechev, M. (2019). An abstract domain for certifying neural networks. POPL 2019.")
 
 // =============================================================================
-// Assemble Document Elements
+// Assemble Document Elements - Using list syntax
 // =============================================================================
 
-define all_elements = Cons(ch1, 
-    Cons(sec1_1,
-    Cons(sec1_2,
-    Cons(ch2,
-    Cons(sec2_1,
-    Cons(sec2_2,
-    Cons(ch3,
-    Cons(eq_abstraction,
-    Cons(eq_refinement,
-    Cons(eq_soundness,
-    Cons(table_benchmarks,
-    Cons(fig_architecture,
-    Cons(fig_speedup,
-    Cons(table_results,
-    Cons(ch4,
-    Cons(eq_composition,
-    Cons(eq_interface,
-    Cons(fig_pipeline,
-    Cons(ch5,
-    Cons(eq_monitor,
-    Cons(fig_monitor_overhead,
-    Cons(ch6,
-    Cons(appendix_a,
-    Cons(appendix_b,
-    Cons(ref1,
-    Cons(ref2,
-    Cons(ref3,
-    Cons(ref4,
-    Cons(ref5,
-    Nil)))))))))))))))))))))))))))))
+define all_elements = [
+    ch1, sec1_1, sec1_2,
+    ch2, sec2_1, sec2_2,
+    ch3, eq_abstraction, eq_refinement, eq_soundness,
+    table_benchmarks, fig_architecture, fig_speedup, table_results,
+    ch4, eq_composition, eq_interface, fig_pipeline,
+    ch5, eq_monitor, fig_monitor_overhead,
+    ch6,
+    appendix_a, appendix_b,
+    ref1, ref2, ref3, ref4, ref5
+]
 
 // =============================================================================
 // Create the Dissertation

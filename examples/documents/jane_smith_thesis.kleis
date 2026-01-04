@@ -309,42 +309,33 @@ define ref_fux = MITReference("fux1725",
 // ============================================================================
 
 // Body elements (chapters, sections, equations, figures, tables)
-define all_elements = 
-    Cons(chapter_intro, 
-    Cons(section_motivation,
-    Cons(section_contributions,
-    Cons(eq_verify,
-    Cons(chapter_background, 
-    Cons(eq_typing,
-    Cons(chapter_system, 
-    Cons(section_parser,
-    Cons(section_type_system,
-    Cons(fig_architecture, 
-    Cons(eq_sat,
-    Cons(chapter_eval, 
-    Cons(table_performance, 
-    Cons(fig_performance,
-    Cons(table_features,
-    Cons(fig_comparison,
-    Cons(fig_inference,
-    Cons(section_case_tensors,
-    Cons(eq_complexity,
-    Cons(table_benchmarks,
-    Cons(section_case_music,
-    Cons(chapter_conclusion, 
-    Cons(eq_soundness, 
-    Cons(eq_einstein,
+// Using list syntax instead of nested Cons
+define all_elements = [
+    // Chapter 1: Introduction
+    chapter_intro, section_motivation, section_contributions, eq_verify,
+    
+    // Chapter 2: Background
+    chapter_background, eq_typing,
+    
+    // Chapter 3: System
+    chapter_system, section_parser, section_type_system,
+    fig_architecture, eq_sat,
+    
+    // Chapter 4: Evaluation
+    chapter_eval, table_performance, fig_performance,
+    table_features, fig_comparison, fig_inference,
+    section_case_tensors, eq_complexity, table_benchmarks,
+    section_case_music,
+    
+    // Chapter 5: Conclusion
+    chapter_conclusion, eq_soundness, eq_einstein,
+    
     // Appendices
-    Cons(appendix_grammar,
-    Cons(appendix_proofs,
+    appendix_grammar, appendix_proofs,
+    
     // References
-    Cons(ref_z3, 
-    Cons(ref_typst, 
-    Cons(ref_hindley, 
-    Cons(ref_milner,
-    Cons(ref_einstein,
-    Cons(ref_fux, 
-    Nil))))))))))))))))))))))))))))))))
+    ref_z3, ref_typst, ref_hindley, ref_milner, ref_einstein, ref_fux
+]
 
 // ============================================================================
 // THESIS METADATA
