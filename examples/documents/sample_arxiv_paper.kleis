@@ -17,18 +17,18 @@ import "stdlib/templates/arxiv_paper.kleis"
 define paper_title = "Kleis: A Unified Substrate for Verified Knowledge Production"
 
 // Authors with affiliation numbers
-define paper_authors = Cons(
+define paper_authors = [
     Author("Jane Smith", "1"),
-    Cons(Author("Alex Chen", "2"),
-    Cons(Author("Maria Garcia", "1,3"),
-    Nil)))
+    Author("Alex Chen", "2"),
+    Author("Maria Garcia", "1,3")
+]
 
 // Affiliations
-define paper_affiliations = Cons(
+define paper_affiliations = [
     Affiliation(1, "Massachusetts Institute of Technology", "Cambridge, MA"),
-    Cons(Affiliation(2, "University of Michigan", "Ann Arbor, MI"),
-    Cons(Affiliation(3, "Stanford University", "Stanford, CA"),
-    Nil)))
+    Affiliation(2, "University of Michigan", "Ann Arbor, MI"),
+    Affiliation(3, "Stanford University", "Stanford, CA")
+]
 
 // Abstract
 define paper_abstract = "We present Kleis, a novel knowledge production substrate that unifies notation, rules, verification, and output generation across arbitrary domains. Unlike traditional proof assistants that target specific mathematical foundations, Kleis provides a domain-agnostic framework where users define their own structures, axioms, and verification conditions. We demonstrate that this approach enables formal verification in domains ranging from tensor calculus to music theory, while maintaining soundness guarantees through integration with SMT solvers. Our evaluation shows that Kleis can verify complex mathematical identities in milliseconds and generate publication-quality documents directly from verified specifications. We release Kleis as open-source software with comprehensive documentation and examples."
@@ -85,34 +85,36 @@ define subsec_verification = ArxivSubsection("Verification",
 define sec_experiments = ArxivSection("Evaluation",
 "We evaluate Kleis on three dimensions: verification performance, expressiveness, and usability. Our experiments cover examples from linear algebra, differential geometry, and formal language theory.")
 
-// Results table
+// Results table - Native Kleis Data with table_typst()
+define results_headers = ["Example", "Axioms", "Assertions", "Time (ms)"]
+define results_rows = [
+    ["Commutativity", "3", "5", "12"],
+    ["Matrix Algebra", "8", "12", "45"],
+    ["Tensor Identities", "15", "8", "120"],
+    ["Bianchi Identity", "12", "3", "89"],
+    ["Counterpoint Rules", "20", "15", "340"]
+]
+
 define table_results = ArxivTable("tab:results",
     "Verification times for representative examples",
-    "table(
-      columns: (auto, auto, auto, auto),
-      inset: 8pt,
-      align: center,
-      [*Example*], [*Axioms*], [*Assertions*], [*Time (ms)*],
-      [Commutativity], [3], [5], [12],
-      [Matrix Algebra], [8], [12], [45],
-      [Tensor Identities], [15], [8], [120],
-      [Bianchi Identity], [12], [3], [89],
-      [Counterpoint Rules], [20], [15], [340],
-    )")
+    table_typst(results_headers, results_rows)
+)
 
-// Performance diagram
+// Performance diagram - Native Kleis Data with export_typst_fragment()
+define axiom_counts = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0]
+define verification_times = [15.0, 35.0, 80.0, 150.0, 280.0, 450.0]
+
+define perf_plot = plot(axiom_counts, verification_times, mark = "o")
+define perf_typst = export_typst_fragment(perf_plot,
+    title = "Verification Time vs Axiom Count",
+    xlabel = "Number of Axioms",
+    ylabel = "Time (ms)"
+)
+
 define fig_performance = ArxivDiagram("fig:performance",
     "Verification time scaling with problem size",
-    "{
-      import \"@preview/lilaq:0.5.0\" as lq
-      lq.diagram(
-        width: 10cm,
-        title: [Verification Time vs Axiom Count],
-        xlabel: [Number of Axioms],
-        ylabel: [Time (ms)],
-        lq.plot((5, 10, 15, 20, 25, 30), (15, 35, 80, 150, 280, 450), mark: \"o\"),
-      )
-    }")
+    perf_typst
+)
 
 // =============================================================================
 // Section 5: Case Studies
@@ -179,30 +181,25 @@ Expressions include:
 // Assemble Document Elements
 // =============================================================================
 
-define all_elements = Cons(sec_intro,
-    Cons(sec_related,
-    Cons(subsec_proof_assistants,
-    Cons(subsec_smt,
-    Cons(sec_arch,
-    Cons(eq_formula,
-    Cons(subsec_structures,
-    Cons(subsec_verification,
-    Cons(sec_experiments,
-    Cons(table_results,
-    Cons(fig_performance,
-    Cons(sec_cases,
-    Cons(subsec_tensors,
-    Cons(eq_einstein,
-    Cons(subsec_music,
-    Cons(sec_conclusion,
-    Cons(ack,
-    Cons(ref1,
-    Cons(ref2,
-    Cons(ref3,
-    Cons(ref4,
-    Cons(ref5,
-    Cons(appendix_grammar,
-    Nil)))))))))))))))))))))))
+define all_elements = [
+    // Introduction and Related Work
+    sec_intro, sec_related, subsec_proof_assistants, subsec_smt,
+    
+    // Architecture
+    sec_arch, eq_formula, subsec_structures, subsec_verification,
+    
+    // Experiments
+    sec_experiments, table_results, fig_performance,
+    
+    // Case Studies
+    sec_cases, subsec_tensors, eq_einstein, subsec_music,
+    
+    // Conclusion
+    sec_conclusion, ack,
+    
+    // References and Appendix
+    ref1, ref2, ref3, ref4, ref5, appendix_grammar
+]
 
 // =============================================================================
 // Create the Paper

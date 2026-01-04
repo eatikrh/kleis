@@ -28,11 +28,11 @@ define dissertation_orcid = "0000-0002-1234-5678"
 define committee_chair = "Professor Sarah Martinez"
 define committee_chair_affiliation = "Professor of Computer Science and Engineering"
 
-define committee_members = Cons(
+define committee_members = [
     Member("Professor James Liu", "Associate Professor of Electrical Engineering"),
-    Cons(Member("Professor Emily Watson", "Associate Professor of Robotics"),
-    Cons(Member("Dr. Michael Park", "Research Scientist, Google DeepMind"),
-    Nil)))
+    Member("Professor Emily Watson", "Associate Professor of Robotics"),
+    Member("Dr. Michael Park", "Research Scientist, Google DeepMind")
+]
 
 // =============================================================================
 // Abstract
@@ -131,34 +131,36 @@ define eq_soundness = UMichEquation("eq:soundness",
     true)
 
 // =============================================================================
-// Chapter 3 Tables
+// Chapter 3 Tables - Native Kleis Data with table_typst()
 // =============================================================================
+
+// Benchmark networks - data as Kleis lists
+define bench_headers = ["Network", "Layers", "Parameters", "Domain"]
+define bench_rows = [
+    ["ACAS Xu", "6", "300", "Collision Avoidance"],
+    ["MNIST-FC", "4", "100K", "Digit Classification"],
+    ["ImageNet-CNN", "50", "25M", "Object Detection"],
+    ["DriveNet", "34", "12M", "Autonomous Driving"]
+]
 
 define table_benchmarks = UMichTable("tab:benchmarks",
     "Benchmark neural networks used in evaluation",
-    "table(
-      columns: (auto, auto, auto, auto),
-      inset: 8pt,
-      align: center,
-      [*Network*], [*Layers*], [*Parameters*], [*Domain*],
-      [ACAS Xu], [6], [300], [Collision Avoidance],
-      [MNIST-FC], [4], [100K], [Digit Classification],
-      [ImageNet-CNN], [50], [25M], [Object Detection],
-      [DriveNet], [34], [12M], [Autonomous Driving],
-    )")
+    table_typst(bench_headers, bench_rows)
+)
+
+// Verification results - data as Kleis lists
+define results_headers = ["Benchmark", "Baseline", "Our Method", "Speedup"]
+define results_rows = [
+    ["ACAS Property 1", "1,240", "12", "103x"],
+    ["ACAS Property 2", "3,600", "45", "80x"],
+    ["MNIST Robustness", "timeout", "890", ">4x"],
+    ["DriveNet Safety", "timeout", "2,340", ">1.5x"]
+]
 
 define table_results = UMichTable("tab:results",
     "Verification times (seconds) comparing baseline and our approach",
-    "table(
-      columns: (auto, auto, auto, auto),
-      inset: 8pt,
-      align: center,
-      [*Benchmark*], [*Baseline*], [*Our Method*], [*Speedup*],
-      [ACAS Property 1], [1,240], [12], [103x],
-      [ACAS Property 2], [3,600], [45], [80x],
-      [MNIST Robustness], [timeout], [890], [>4x],
-      [DriveNet Safety], [timeout], [2,340], [>1.5x],
-    )")
+    table_typst(results_headers, results_rows)
+)
 
 // =============================================================================
 // Chapter 3 Figures
@@ -184,18 +186,21 @@ define fig_architecture = UMichFigure("fig:architecture",
       ]
     ]")
 
+// Speedup diagram - Native Kleis data
+define network_sizes = [0.1, 0.5, 1.0, 5.0, 10.0, 25.0]
+define speedup_values = [150.0, 120.0, 100.0, 80.0, 60.0, 40.0]
+
+define speedup_plot = plot(network_sizes, speedup_values, mark = "o")
+define speedup_typst = export_typst_fragment(speedup_plot, 
+    title = "Verification Speedup vs Network Size",
+    xlabel = "Network Parameters (millions)",
+    ylabel = "Speedup (x)"
+)
+
 define fig_speedup = UMichDiagram("fig:speedup",
     "Verification speedup across different network sizes",
-    "{
-      import \"@preview/lilaq:0.5.0\" as lq
-      lq.diagram(
-        width: 10cm,
-        title: [Verification Speedup vs Network Size],
-        xlabel: [Network Parameters (millions)],
-        ylabel: [Speedup (x)],
-        lq.plot((0.1, 0.5, 1, 5, 10, 25), (150, 120, 100, 80, 60, 40), mark: \"o\"),
-      )
-    }")
+    speedup_typst
+)
 
 // =============================================================================
 // Chapter 4: Compositional Verification
@@ -213,18 +218,21 @@ define eq_interface = UMichEquation("eq:interface",
     "Q_i = P_(i+1) quad \"(interface contracts)\"",
     true)
 
+// Pipeline diagram - Native Kleis data
+define component_ids = [1.0, 2.0, 3.0, 4.0, 5.0]
+define component_times = [120.0, 340.0, 89.0, 456.0, 234.0]
+
+define pipeline_bar = bar(component_ids, component_times)
+define pipeline_typst = export_typst_fragment(pipeline_bar,
+    title = "Component Verification Times",
+    xlabel = "Component",
+    ylabel = "Time (seconds)"
+)
+
 define fig_pipeline = UMichDiagram("fig:pipeline",
     "Component verification times for an autonomous driving pipeline",
-    "{
-      import \"@preview/lilaq:0.5.0\" as lq
-      lq.diagram(
-        width: 10cm,
-        title: [Component Verification Times],
-        xlabel: [Component],
-        ylabel: [Time (seconds)],
-        lq.bar((1, 2, 3, 4, 5), (120, 340, 89, 456, 234)),
-      )
-    }")
+    pipeline_typst
+)
 
 // =============================================================================
 // Chapter 5: Runtime Monitoring
@@ -238,20 +246,22 @@ define eq_monitor = UMichEquation("eq:monitor",
     "M(x) = cases(\"safe\" &\"if\" x in V, \"check\" &\"if\" x in.not V)",
     true)
 
+// Monitor overhead diagram - Native Kleis data
+define input_dims = [100.0, 500.0, 1000.0, 5000.0, 10000.0]
+define our_overhead = [0.1, 0.3, 0.5, 1.2, 2.1]
+define baseline_overhead = [1.5, 4.2, 8.9, 45.0, 120.0]
+
+define monitor_plot = plot(input_dims, our_overhead, mark = "o", label = "Our Method")
+define monitor_typst = export_typst_fragment(monitor_plot,
+    title = "Monitoring Overhead",
+    xlabel = "Input Dimension",
+    ylabel = "Overhead (ms)"
+)
+
 define fig_monitor_overhead = UMichDiagram("fig:monitor",
     "Runtime monitoring overhead across different input sizes",
-    "{
-      import \"@preview/lilaq:0.5.0\" as lq
-      lq.diagram(
-        width: 10cm,
-        title: [Monitoring Overhead],
-        xlabel: [Input Dimension],
-        ylabel: [Overhead (ms)],
-        legend: (position: right + top),
-        lq.plot((100, 500, 1000, 5000, 10000), (0.1, 0.3, 0.5, 1.2, 2.1), mark: \"o\", label: [Our Method]),
-        lq.plot((100, 500, 1000, 5000, 10000), (1.5, 4.2, 8.9, 45, 120), mark: \"x\", label: [Baseline]),
-      )
-    }")
+    monitor_typst
+)
 
 // =============================================================================
 // Chapter 6: Conclusion
@@ -296,39 +306,20 @@ define ref4 = UMichReference("huang2020", "Huang, X., Kwiatkowska, M., Wang, S.,
 define ref5 = UMichReference("singh2019", "Singh, G., Gehr, T., Püschel, M., & Vechev, M. (2019). An abstract domain for certifying neural networks. POPL 2019.")
 
 // =============================================================================
-// Assemble Document Elements
+// Assemble Document Elements - Using list syntax
 // =============================================================================
 
-define all_elements = Cons(ch1, 
-    Cons(sec1_1,
-    Cons(sec1_2,
-    Cons(ch2,
-    Cons(sec2_1,
-    Cons(sec2_2,
-    Cons(ch3,
-    Cons(eq_abstraction,
-    Cons(eq_refinement,
-    Cons(eq_soundness,
-    Cons(table_benchmarks,
-    Cons(fig_architecture,
-    Cons(fig_speedup,
-    Cons(table_results,
-    Cons(ch4,
-    Cons(eq_composition,
-    Cons(eq_interface,
-    Cons(fig_pipeline,
-    Cons(ch5,
-    Cons(eq_monitor,
-    Cons(fig_monitor_overhead,
-    Cons(ch6,
-    Cons(appendix_a,
-    Cons(appendix_b,
-    Cons(ref1,
-    Cons(ref2,
-    Cons(ref3,
-    Cons(ref4,
-    Cons(ref5,
-    Nil)))))))))))))))))))))))))))))
+define all_elements = [
+    ch1, sec1_1, sec1_2,
+    ch2, sec2_1, sec2_2,
+    ch3, eq_abstraction, eq_refinement, eq_soundness,
+    table_benchmarks, fig_architecture, fig_speedup, table_results,
+    ch4, eq_composition, eq_interface, fig_pipeline,
+    ch5, eq_monitor, fig_monitor_overhead,
+    ch6,
+    appendix_a, appendix_b,
+    ref1, ref2, ref3, ref4, ref5
+]
 
 // =============================================================================
 // Create the Dissertation
