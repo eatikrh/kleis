@@ -545,7 +545,12 @@ Visual Editor → 📋 Copy Typst → Paste into thesis.kleis → PDF
 
 **Example:** Building `let A = [1 2 3; 4 5 6] × R_z(θ) × [1 0; 2 1; 2 1]` takes seconds visually — versus minutes of typing and debugging Typst syntax.
 
-> **Note:** The Equation Editor requires `kleis server` running. Full documentation coming in a future chapter.
+> **Note:** The Equation Editor requires `kleis server` running:
+> ```bash
+> kleis server
+> # Server running at http://localhost:3000
+> ```
+> Then open [http://localhost:3000](http://localhost:3000) in your browser. Full documentation coming in a future chapter.
 
 ## Generating PDFs
 

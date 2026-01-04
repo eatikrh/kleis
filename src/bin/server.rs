@@ -1554,10 +1554,8 @@ async fn export_typst_handler(
     };
 
     // Render to Typst syntax using render_editor module
-    let typst_output = kleis::render_editor::render_editor_node(
-        &node,
-        &kleis::render::RenderTarget::Typst,
-    );
+    let typst_output =
+        kleis::render_editor::render_editor_node(&node, &kleis::render::RenderTarget::Typst);
 
     Json(ExportTypstResponse {
         typst: typst_output,
