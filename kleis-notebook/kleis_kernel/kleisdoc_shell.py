@@ -79,43 +79,48 @@ def compile_to_typst(kleis_file: str) -> Optional[str]:
             return None
         
         # Extract Typst from output
-        # The output contains quoted strings, one per example
-        # We want the one that contains Typst code (#set page, etc.)
-        output = result.stdout
+        # Kleis prints strings with surrounding quotes and some escaping
+        # Format: "content with \"escaped quotes\" and \\n for newlines"
+        output = result.stdout.strip()
         
-        # Split output by lines and find quoted blocks containing Typst
-        lines = output.split('\n')
-        best_typst = None
-        current_block = []
-        in_quote = False
+        # Find the start and end of the Typst content
+        # Look for content that starts with #import or #set (Typst preamble)
+        typst_start = None
+        for marker in ['#import', '"#import', '"#set']:
+            idx = output.find(marker)
+            if idx != -1:
+                typst_start = idx
+                break
         
-        for line in lines:
-            if line.startswith('"') and not in_quote:
-                in_quote = True
-                current_block = [line[1:]]  # Remove leading quote
-            elif in_quote:
-                if line.endswith('"') and not line.endswith('\\"'):
-                    current_block.append(line[:-1])  # Remove trailing quote
-                    in_quote = False
-                    
-                    # Check if this block is Typst code
-                    block_text = '\n'.join(current_block)
-                    if '#set page' in block_text or '#set text' in block_text:
-                        # This is Typst - unescape and save
-                        typst = block_text.replace('\\n', '\n')
-                        typst = typst.replace('\\"', '"')
-                        typst = typst.replace('\\\\', '\\')
-                        best_typst = typst
-                    
-                    current_block = []
-                else:
-                    current_block.append(line)
+        if typst_start is None:
+            return output  # No Typst found, return raw
         
-        if best_typst:
-            return best_typst
+        # Extract from the marker to the end
+        # Remove leading quote if present
+        content = output[typst_start:]
+        if content.startswith('"'):
+            content = content[1:]
         
-        # Fallback: return raw output if no Typst found
-        return output
+        # Find the closing quote - look for ✅ which marks end of example output
+        # Or look for a standalone " at the end
+        end_markers = ['\n✅', '"\n✅', '"✅']
+        for marker in end_markers:
+            idx = content.find(marker)
+            if idx != -1:
+                content = content[:idx]
+                break
+        
+        # Remove trailing quote if present
+        content = content.rstrip()
+        if content.endswith('"'):
+            content = content[:-1]
+        
+        # Unescape the content
+        typst = content.replace('\\n', '\n')
+        typst = typst.replace('\\"', '"')
+        typst = typst.replace('\\\\', '\\')
+        
+        return typst
         
     except subprocess.TimeoutExpired:
         print("Kleis compilation timed out")

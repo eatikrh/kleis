@@ -5707,9 +5707,9 @@ impl Evaluator {
                 ),
             };
 
-        // Build Typst table code
+        // Build Typst table code (no # prefix - for embedding in figures)
         let num_cols = headers.len();
-        let mut code = format!("#table(\n  columns: {},\n", num_cols);
+        let mut code = format!("table(\n  columns: {},\n", num_cols);
 
         // Add headers
         for (i, header) in headers.iter().enumerate() {
