@@ -200,7 +200,7 @@ Basic `\left` and `\right` work, but `\middle` is not supported.
 - Floor function: `\lfloor x \rfloor` (4 tests)
 - Ceiling function: `\lceil x \rceil` (2 tests)
 
-**📖 See [TEST_GUIDE.md](docs/guides/TEST_GUIDE.md) for complete commands and verified counts**
+**📖 See [TEST_GUIDE.md](docs/development/TEST_GUIDE.md) for complete commands and verified counts**
 
 ### Test Coverage
 ```rust

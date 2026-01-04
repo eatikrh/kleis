@@ -1,5 +1,30 @@
 # The Hard Problems That Remain
 
+> **🏛️ HISTORICALLY SIGNIFICANT DOCUMENT** (Dec 2025)
+> 
+> **This document marks where Kleis crystallized as a language.**
+>
+> Written after the structural editor was complete, this is where we confronted
+> what Kleis *really* needed to become: not just an equation editor, but a
+> complete language with type inference, extensibility, and verification.
+>
+> The problems listed here became the roadmap. The timeline estimates were
+> sobering but honest. And then - remarkably - most were solved:
+>
+> - ✅ **Type System** - IMPLEMENTED (ADR-014 Hindley-Milner)
+> - ✅ **Evaluation Engine** - IMPLEMENTED
+> - ✅ **Context Management** - IMPLEMENTED  
+> - ✅ **Notebook Shell** - IMPLEMENTED (Jupyter Kernel)
+> - ✅ **Document Authoring** - IMPLEMENTED (ADR-012)
+> - ⚠️ **User Extensibility** - PARTIAL (structures, .kleist templates)
+>
+> **What was estimated at "4-5 years remaining" was largely completed in months.**
+>
+> This document is preserved as a testament to honest assessment followed by
+> determined execution.
+
+---
+
 ## Reality Check
 
 Yes, the structural editor (v2.2) is a huge accomplishment. But calling the remaining work "easy" was wrong. Here's what's actually ahead:

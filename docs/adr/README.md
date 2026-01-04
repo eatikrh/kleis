@@ -57,6 +57,16 @@ This directory contains all Architecture Decision Records for the Kleis project.
 **Status:** Accepted & Implemented  
 **Summary:** User-defined data types with pattern matching
 
+### ADR-022: Z3 Integration for Axiom Verification
+**File:** `adr-022-z3-integration-for-axiom-verification.md`  
+**Status:** Accepted & Implemented  
+**Summary:** Using Z3 SMT solver for verifying axioms in structures
+
+### ADR-028: Dimension Expressions
+**File:** `ADR-028-Dimension-Expressions.md`  
+**Status:** Accepted  
+**Summary:** Type-level dimension expressions (e.g., `Matrix(2*n, 2*n)`) for expressing relationships between matrix dimensions
+
 ---
 
 ## User Interface & Editing
@@ -96,6 +106,21 @@ This directory contains all Architecture Decision Records for the Kleis project.
 **Status:** Accepted  
 **Summary:** Modern web frontend technology choices
 
+### ADR-023: Template Externalization with .kleist Files
+**File:** `ADR-023-kleist-template-externalization.md`  
+**Status:** Accepted  
+**Summary:** Equation editor templates externalized to `.kleist` files for extensibility
+
+### ADR-024: Kleis Notebook Monaco Editor
+**File:** `adr-024-kleis-notebook-monaco-editor.md`  
+**Status:** Accepted  
+**Summary:** Using Monaco editor in Jupyter notebook for Kleis editing
+
+### ADR-025: Debugger Shared Context
+**File:** `adr-025-debugger-shared-context.md`  
+**Status:** Accepted & Implemented  
+**Summary:** Sharing evaluation context between REPL and debugger
+
 ---
 
 ## Grammar & Parsing
@@ -115,6 +140,11 @@ This directory contains all Architecture Decision Records for the Kleis project.
 **Status:** Accepted  
 **Summary:** Defining what's in vs out of bootstrap grammar
 
+### ADR-027: Named Arguments as Parser-Level Sugar
+**File:** `ADR-027-Named-Arguments-Parser-Sugar.md`  
+**Status:** Implemented  
+**Summary:** Named/keyword arguments for plotting functions without complicating the type system
+
 ---
 
 ## Formalism & Theory
@@ -128,6 +158,16 @@ This directory contains all Architecture Decision Records for the Kleis project.
 **File:** `adr-018-universal-formalism.md`  
 **Status:** Proposed  
 **Summary:** Unified formalism for mathematics across domains
+
+### ADR-026: Self-Hosted Differential Forms
+**File:** `adr-026-self-hosted-differential-forms.md`  
+**Status:** Proposed  
+**Summary:** Defining differential forms and exterior algebra in Kleis
+
+### ADR-029: LAPACK Integration
+**File:** `ADR-029-LAPACK-Integration.md`  
+**Status:** Accepted & Implemented  
+**Summary:** LAPACK-level linear algebra via ndarray-linalg with platform-specific backends (Apple Accelerate on macOS, OpenBLAS on Linux/Windows)
 
 ---
 
@@ -172,6 +212,6 @@ When creating a new ADR:
 
 ---
 
-**Total ADRs:** 22  
-**Last Updated:** January 3, 2026
+**Total ADRs:** 30  
+**Last Updated:** January 4, 2026
 

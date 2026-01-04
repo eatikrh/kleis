@@ -1,5 +1,15 @@
 # IDE Integration Plan
 
+> **Status: ✅ MOSTLY IMPLEMENTED** (Jan 2026)  
+> - ✅ **LSP Server**: Fully featured (~3800 lines) - diagnostics, hover, go-to-def, completions, etc.
+> - ✅ **VS Code Extension**: Syntax highlighting, LSP client, file watcher
+> - ✅ **DAP Debugger**: Fully working, integrated with unified `kleis server`
+> - ✅ **REPL Panel**: Implemented in VS Code
+> - ❌ **Preview Panel**: Not implemented (rich math rendering in VS Code)
+> - ✅ **Notebook Mode**: Jupyter kernel exists (`kleis-notebook/`)
+
+---
+
 ## Current State (Dec 23, 2024)
 
 ### What We Have

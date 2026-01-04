@@ -1,4 +1,13 @@
-Here’s one end-to-end option that will work with your current architecture (parser → AST → evaluator → debug hook), while matching your debugger goal: locations only for executable expressions.
+# Expression Spans Implementation Guide
+
+> **Status: ✅ IMPLEMENTED (by design)** (Dec 2024)  
+> `Operation` expressions have spans - this is the **deliberate design decision** for VS Code debugging.
+> Atoms (`Const`, `Object`, `String`) do NOT have spans by design - debugger shouldn't stop on literals.
+> This document captures the implementation approach that was followed.
+
+---
+
+Here's one end-to-end option that will work with your current architecture (parser → AST → evaluator → debug hook), while matching your debugger goal: locations only for executable expressions.
 
 I’ll describe it as a complete pipeline you can implement step-by-step, with concrete shapes and minimal churn.
 

@@ -1,6 +1,10 @@
 # Operator Overloading Implementation Plan
 
-**Status**: Planned  
+> **Status: ✅ IMPLEMENTED** (Dec 2024)  
+> Type-directed semantic lowering is working. Natural syntax like `3 + 4*i` evaluates correctly.
+> 17 integration tests pass. See `src/lowering.rs` for implementation.
+
+**Original Status**: Planned  
 **Priority**: High  
 **Estimated Effort**: 4-5 sessions  
 **Created**: December 2024  

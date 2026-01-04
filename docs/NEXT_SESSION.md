@@ -138,16 +138,12 @@ No parser changes needed — Typst handles it natively.
 - Templates in `stdlib/templates/`
 - Thin Python shell (`kleisdoc_shell.py`, 227 lines)
 
-### Old Design Docs (SUPERSEDED)
+### Old Design Docs (DELETED)
 
-The following design docs in `docs/jupyter-equation-editor-poc/` are **historical only**:
-- `KLEISDOC_WORKFLOW.md` - Old Python API workflow
-- `KLEISDOC_DESIGN.md` - Old requirements analysis  
-- `TEMPLATE_ARCHITECTURE.md` - Superseded by current templates
-- `ROADMAP.md` - Implementation phases (mostly complete)
-- `README.md` - POC documentation
+The `docs/jupyter-equation-editor-poc/` directory was deleted (Jan 4, 2026).
+It contained early POC documents that were superseded by the current implementation.
 
-**Current approach:** See [Chapter 23: Document Generation](https://kleis.io/docs/manual/book/chapters/23-document-generation.html)
+**Current documentation:** See [Chapter 23: Document Generation](https://kleis.io/docs/manual/book/chapters/23-document-generation.html)
 
 ### Current Examples
 
@@ -170,14 +166,13 @@ The following design docs in `docs/jupyter-equation-editor-poc/` are **historica
 
 ## Previous: Jupyter + Equation Editor POC (Jan 2, 2026)
 
-See full documentation: [`docs/jupyter-equation-editor-poc/README.md`](./jupyter-equation-editor-poc/README.md)
+*(POC documentation deleted Jan 4, 2026 - key findings preserved below)*
 
 ### Summary
 
 1. **Iframe Embedding POC** ✅
    - Tested embedding HTML widgets in Jupyter via iframe
    - Three methods work: Direct IFrame, Toggle Button, Message Passing
-   - Files: `examples/jupyter-iframe-poc/`
 
 2. **Export Typst Functions** ✅
    - `export_typst(...)` - Returns complete Typst code with preamble
@@ -765,6 +760,72 @@ src/evaluator/
 - **ADR-016:** Operations in Structures (types from stdlib, not Rust)
 - **ADR-014:** Hindley-Milner Type System
 - **ADR-021:** Data types (future)
+
+---
+
+## 🐛 Known Issue: Exponentiation Operator (^) for Complex Numbers
+
+**Discovered:** December 19, 2024  
+**Status:** Open - workaround available
+
+### The Problem
+
+The `^` operator for exponentiation crashes or misbehaves with complex numbers in Z3:
+
+```
+λ> :sat ∃(z : ℂ). z^2 = -1
+thread 'main' panicked at vendor/z3/src/func_decl.rs:224:18
+```
+
+**Also:** Superscript notation `z²` is parsed as a variable name, not `power(z, 2)`.
+
+### Root Cause
+
+- `translate_power` in `src/solvers/z3/translators/arithmetic.rs` only handles `Int^Int`
+- For all other types, it falls back to uninterpreted function
+- **No `complex_power` implementation exists** (unlike `complex_add`, `complex_mul`, etc.)
+- `power` is NOT in `DISPATCHABLE_OPS` in `type_mapping.rs`
+
+### Workaround
+
+Use explicit multiplication:
+```kleis
+:sat ∃(z : ℂ). z * z = complex(-1, 0)
+✅ Satisfiable: z = -i
+```
+
+### Fix Options
+
+**Option 1: Add `complex_power` to Z3 backend**
+- For integer exponents, expand to repeated multiplication: `z^3 = z * z * z`
+- Add to `translate_operation` dispatch in `backend.rs`
+
+**Option 2: Axiomatic definition** (preferred, aligns with Kleis philosophy)
+```kleis
+structure Power(T) over Monoid(T) {
+    operation power : T × ℕ → T
+    axiom power_zero : ∀(x : T). power(x, 0) = e
+    axiom power_succ : ∀(x : T)(n : ℕ). power(x, n + 1) = x * power(x, n)
+}
+
+implements Power(ℂ) {
+    operation power = complex_power  // Rust builtin
+}
+```
+
+**Option 3: Parser enhancement**
+- Lex `z²` (superscript) as `power(z, 2)`
+- Desugar `x^n` to `power(x, n)` before type inference
+
+### Priority
+
+**Medium** - workaround exists (`z * z`), but syntax should work eventually.
+
+### Files to Modify
+
+- `src/solvers/z3/backend.rs` - Add `complex_power` case
+- `src/solvers/z3/translators/arithmetic.rs` - Update `translate_power`
+- `src/solvers/z3/type_mapping.rs` - Add `power` to `DISPATCHABLE_OPS` if using type dispatch
 
 ---
 

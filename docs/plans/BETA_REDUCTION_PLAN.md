@@ -1,5 +1,11 @@
 # Beta Reduction Implementation Plan
 
+> **Status: ✅ IMPLEMENTED** (Dec 2024)  
+> Beta reduction, partial application, alpha conversion, and termination safety are all working.
+> This document serves as technical reference for the implementation.
+
+---
+
 ## Overview
 
 Beta reduction (β-reduction) is the core computational step in lambda calculus, representing function application. This document outlines the implementation plan for adding beta reduction to Kleis lambdas.

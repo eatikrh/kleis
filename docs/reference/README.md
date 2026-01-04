@@ -6,7 +6,7 @@ Comprehensive reference materials for Kleis.
 
 ## Overview & Introduction
 
-### KLEIS_OVERVIEW.md (479 lines) ⭐
+### KLEIS_OVERVIEW.md ⭐
 **Complete project overview**
 
 Contents:
@@ -20,44 +20,14 @@ Contents:
 
 ---
 
-## Technical References
+## Technical Analysis
 
-### TECHNICAL_REFERENCE.md (366 lines)
-**Technical specifications and API reference**
-
-Contents:
-- Expression system
-- Operations catalog (56 operations)
-- Rendering formats (Unicode, LaTeX)
-- Server API overview
-- Technical architecture
-
-**For developers working with Kleis internals.**
-
----
-
-### COMPLETE_TEMPLATE_REFERENCE.md (233 lines)
-**Structural editor template system**
-
-Contents:
-- All index/tensor templates
-- Subscript/superscript handling
-- Template editability
-- Palette organization
-- Template patterns
-
-**For UI developers and template creators.**
-
----
-
-## Analysis & Planning
-
-### COMPUTATIONAL_COMPLEXITY_ANALYSIS.md (825 lines)
+### COMPUTATIONAL_COMPLEXITY_ANALYSIS.md
 **Performance analysis of Kleis implementation**
 
 Contents:
 - Algorithm complexity analysis
-- Type inference performance
+- Type inference performance (O(n²) typical)
 - Pattern matching complexity
 - Unification algorithm analysis
 - Optimization opportunities
@@ -65,23 +35,19 @@ Contents:
 
 **For performance optimization work.**
 
-Date: December 8, 2025  
-Context: Post ADR-021 (self-hosting type system)
-
 ---
 
-### HARD_PROBLEMS_AHEAD.md (473 lines)
-**Future challenges and open problems**
+### HARD_PROBLEMS_AHEAD.md ⭐
 
-Contents:
-- Remaining technical challenges
-- Self-hosting roadmap issues
-- Type system limitations
-- Parser extensibility challenges
-- Performance considerations
-- Research questions
+> **🏛️ HISTORICALLY SIGNIFICANT** (Dec 2025)
+>
+> **This is where Kleis crystallized as a language.**
+>
+> After the structural editor was complete, this document confronted what
+> Kleis *really* needed to become. The problems listed became the roadmap.
+> Most have now been solved - what was estimated at "4-5 years" took months.
 
-**Reality check on what's hard, not easy.**
+**A testament to honest assessment followed by determined execution.**
 
 ---
 
@@ -90,7 +56,8 @@ Contents:
 **Parent:** [docs/README.md](../README.md)  
 **Related:**
 - [ADRs](../adr/README.md) - Architecture decisions
-- [Guides](../guides/) - Implementation guides
+- [Equation Editor](../equation-editor/) - Editor-specific docs (templates, API)
+- [Development](../development/) - Developer guides
 - [Type System](../type-system/) - Type system docs
 
 ---
@@ -100,12 +67,16 @@ Contents:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | KLEIS_OVERVIEW.md | Project introduction | Everyone |
-| TECHNICAL_REFERENCE.md | API & specs | Developers |
-| COMPLETE_TEMPLATE_REFERENCE.md | Template system | UI developers |
-| COMPUTATIONAL_COMPLEXITY_ANALYSIS.md | Performance | Optimizers |
-| HARD_PROBLEMS_AHEAD.md | Future challenges | Planners |
+| COMPUTATIONAL_COMPLEXITY_ANALYSIS.md | Performance analysis | Optimizers |
+| HARD_PROBLEMS_AHEAD.md ⭐ | **The crystallization moment** | Everyone |
 
 ---
 
-**Last Updated:** December 9, 2025
+**Equation Editor docs moved to:** [docs/equation-editor/](../equation-editor/)
+- TECHNICAL_REFERENCE.md
+- COMPLETE_TEMPLATE_REFERENCE.md
+
+---
+
+**Last Updated:** January 2026
 

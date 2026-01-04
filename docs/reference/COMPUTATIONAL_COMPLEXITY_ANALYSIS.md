@@ -743,7 +743,7 @@ User types one character → Re-check one cell → ~5ms
 
 **Impact:** 10× faster template matching  
 **Effort:** 2-3 days  
-**When:** After template externalization (ADR-027)
+**When:** After template externalization (ADR-023)
 
 ### **Priority 3: Incremental Type Checking**
 

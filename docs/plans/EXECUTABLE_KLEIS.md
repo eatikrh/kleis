@@ -1,5 +1,12 @@
 # Executable Kleis: Examples and REPL Debugging
 
+> **Status: ✅ IMPLEMENTED** (Dec 2024, Grammar v0.93)  
+> Example blocks, `assert()` statements, and REPL `:debug` command are all working.
+> Assert uses Z3 for symbolic verification. See `kleis test` command.
+> This document serves as the design rationale.
+
+---
+
 ## Problem Statement
 
 Kleis files are **declarative** - they contain structures, axioms, and function definitions.
