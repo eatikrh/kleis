@@ -506,8 +506,11 @@ MITEquation("eq:multi", "$
 \\nabla \\times B &= \\mu_0 J + \\mu_0 \\epsilon_0 \\frac{\\partial E}{\\partial t}
 $")
 
-// Inline math in text (future feature)
-// For now, use separate equation blocks
+// Inline math in text - just use $...$
+MITSection("Methods", "A function $f: RR^n -> RR^m$ maps inputs to outputs.")
+
+// Literal dollar sign - use \$
+MITSection("Cost", "The price is \\$100 per unit.")
 ```
 
 ### Common Math Symbols

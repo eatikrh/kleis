@@ -112,11 +112,20 @@ The Equation Editor works but has two blockers before adding a manual chapter:
 - Optional appendix
 - Preprint header on each page
 
-### Known Limitation: Inline Math
+### ✅ Inline Math Works!
 
-Inline math in text (e.g., "function f: R^n → R^m") is NOT supported.
-Equations must be separate `MITEquation` or `UMichEquation` elements.
-See "FUTURE: Inline Math in Document Text" section below.
+Inline math in text works using Typst's `$...$` syntax:
+
+```kleis
+MITSection("Methods", "A function $f: RR^n -> RR^m$ maps inputs to outputs.")
+```
+
+For literal dollar signs, use `\$`:
+```kleis
+"The cost is \$100 per unit."
+```
+
+No parser changes needed — Typst handles it natively.
 
 ---
 
@@ -636,62 +645,38 @@ Just like we documented the Solver Abstraction Layer by **reading the code first
 
 ---
 
-## 🎯 FUTURE: Inline Math in Document Text
+## ✅ DONE: Inline Math in Document Text (Jan 4, 2026)
 
-### The Problem
+**It already works!** Typst's `$...$` syntax passes through Kleis strings correctly.
 
-Currently, document text content is plain strings. Equations are separate `MITEquation` or `UMichEquation` elements. There's no way to embed math inline within prose:
+### The Solution
 
-```kleis
-// DOESN'T WORK - the f: R^n → R^m is not rendered as math
-define sec = UMichSection("Background",
-    "A neural network is a function f: R^n → R^m that maps inputs to outputs.")
-```
-
-### What's Needed
-
-Support for inline math within text content, similar to LaTeX `$...$` or Typst `$...$`:
+Just use Typst inline math syntax in your strings:
 
 ```kleis
-// DESIRED - inline math rendered properly
+// ✅ WORKS - inline math rendered properly
 define sec = UMichSection("Background",
     "A neural network is a function $f: RR^n -> RR^m$ that maps inputs to outputs.")
+
+// ✅ Literal dollar sign - use backslash
+define cost = MITSection("Cost", "The price is \\$100 per unit.")
 ```
 
-### Implementation Options
+### Why It Works
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **String interpolation** - Parse `$...$` in strings | Familiar LaTeX syntax | Requires string parsing in evaluator |
-| **Rich text data type** - `RichText = Plain(String) \| Math(String) \| Concat(RichText, RichText)` | Type-safe, composable | Verbose for simple cases |
-| **Typst passthrough** - Let users write raw Typst | No new syntax needed | Leaks Typst into Kleis |
+Kleis strings pass through to Typst unchanged. Typst interprets `$...$` as math mode.
 
-### Typst Context
+No parser changes, no evaluator changes, no special handling needed.
 
-Typst already supports inline math with `$...$`:
-```typst
-A neural network is a function $f: RR^n -> RR^m$ that maps inputs.
-```
+### Syntax Reference
 
-The challenge is getting the `$` delimiters into the Typst output correctly when they appear in Kleis string content.
+| What You Want | Syntax | Result |
+|---------------|--------|--------|
+| Inline math | `$f: RR^n -> RR^m$` | *f*: ℝⁿ → ℝᵐ |
+| Block math | `$ E = m c^2 $` (spaces) | Centered equation |
+| Literal $ | `\\$100` | $100 |
 
-### Workaround (Current)
-
-Write prose without inline math symbols, or use plain text approximations:
-```kleis
-// OK - no special symbols
-"A neural network maps n-dimensional inputs to m-dimensional outputs."
-```
-
-### Priority
-
-Medium - Important for publication-quality documents, but workarounds exist.
-
-### Files to Modify (When Implementing)
-
-- `src/evaluator.rs` - String processing for `$...$` detection
-- `stdlib/templates/*.kleis` - Template text handling
-- `examples/documents/*.kleis` - Update examples
+**Tested and verified: Jan 4, 2026**
 
 ---
 
