@@ -916,6 +916,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="secondary" style="padding: 6px 12px; font-size: 12px;" onclick="resetStructuralEditor()">Clear</button>
                         <button style="padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="verifyWithZ3()" title="Verify validity (always true?)">✓ Verify</button>
                         <button style="padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="checkSatisfiable()" title="Check satisfiability (can be true?)">∃ Sat?</button>
+                        <button style="padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="copyTypstToClipboard()" title="Copy Typst code for thesis documents">📋 Copy Typst</button>
                         <button id="jupyterSendBtn" style="display: none; padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="sendToJupyter()" title="Send equation to Jupyter notebook">📤 Send to Jupyter</button>
                     </div>
                     <!-- Type Indicator (NEW!) -->
@@ -1717,6 +1718,36 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                 console.error('Failed to copy:', err);
                 showStatus('❌ Failed to copy', 'error');
             });
+        }
+        
+        // Copy Typst code to clipboard (for PhD candidates to paste into thesis documents)
+        async function copyTypstToClipboard() {
+            if (!currentAST) {
+                showStatus('⚠️ No equation to export', 'warning');
+                return;
+            }
+            
+            try {
+                showStatus('🔄 Generating Typst code...', 'info');
+                
+                const response = await fetch(`${API_BASE}/export_typst`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ast: currentAST })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.typst) {
+                    await navigator.clipboard.writeText(result.typst);
+                    showStatus(`✅ Typst copied! Paste into your thesis: "${result.typst.substring(0, 50)}${result.typst.length > 50 ? '...' : ''}"`, 'success');
+                } else {
+                    showStatus('❌ Failed to generate Typst: ' + (result.error || 'Unknown error'), 'error');
+                }
+            } catch (err) {
+                console.error('Failed to export Typst:', err);
+                showStatus('❌ Failed to export Typst: ' + err.message, 'error');
+            }
         }
         
         function downloadAST() {

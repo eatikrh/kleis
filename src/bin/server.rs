@@ -246,6 +246,20 @@ struct RenderKleisResponse {
     error: Option<String>,
 }
 
+// Typst code export request/response (for PhD candidates to copy/paste)
+#[derive(Debug, Deserialize)]
+struct ExportTypstRequest {
+    ast: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+struct ExportTypstResponse {
+    typst: String,
+    success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
 // Z3 verification request/response
 #[derive(Debug, Deserialize)]
 struct VerifyRequest {
@@ -321,6 +335,7 @@ async fn main() {
         .route("/api/parse", post(parse_handler))
         .route("/api/type_check", post(type_check_handler))
         .route("/api/render_kleis", post(render_kleis_handler))
+        .route("/api/export_typst", post(export_typst_handler))
         .route("/api/verify", post(verify_handler))
         .route("/api/check_sat", post(check_sat_handler))
         .route("/api/operations", get(operations_handler))
@@ -1516,6 +1531,36 @@ async fn render_kleis_handler(
 
     Json(RenderKleisResponse {
         kleis: kleis_output,
+        success: true,
+        error: None,
+    })
+}
+
+// Export AST to Typst code (for PhD candidates to copy/paste into thesis documents)
+async fn export_typst_handler(
+    State(_state): State<Arc<AppState>>,
+    Json(req): Json<ExportTypstRequest>,
+) -> impl IntoResponse {
+    // Parse AST from JSON as EditorNode
+    let node = match json_to_editor_node(&req.ast) {
+        Ok(n) => n,
+        Err(e) => {
+            return Json(ExportTypstResponse {
+                typst: String::new(),
+                success: false,
+                error: Some(format!("Failed to parse AST: {}", e)),
+            });
+        }
+    };
+
+    // Render to Typst syntax using render_editor module
+    let typst_output = kleis::render_editor::render_editor_node(
+        &node,
+        &kleis::render::RenderTarget::Typst,
+    );
+
+    Json(ExportTypstResponse {
+        typst: typst_output,
         success: true,
         error: None,
     })
