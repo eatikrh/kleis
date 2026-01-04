@@ -2458,6 +2458,9 @@ impl Evaluator {
             "export_typst" => self.builtin_export_typst(args),
             "export_typst_fragment" => self.builtin_export_typst_fragment(args),
 
+            // Generate Typst table from Kleis data
+            "table_typst" => self.builtin_table_typst(args),
+
             // Render EditorNode AST to Typst (for equations in documents)
             "render_to_typst" => self.builtin_render_to_typst(args),
 
@@ -5649,6 +5652,89 @@ impl Evaluator {
         let typst_code = export_diagram_typst_fragment(&elements, &options);
 
         Ok(Some(Expression::String(typst_code)))
+    }
+
+    /// Generate Typst table code from Kleis data
+    ///
+    /// Usage: table_typst(headers, rows)
+    /// - headers: List of column header strings ["Name", "Age", "Score"]
+    /// - rows: List of rows, each row is a list [[a, b, c], [d, e, f]]
+    ///
+    /// Returns: String containing Typst table code
+    fn builtin_table_typst(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() < 2 {
+            return Err(
+                "table_typst() requires 2 arguments: headers (list), rows (list of lists)"
+                    .to_string(),
+            );
+        }
+
+        // Extract headers
+        let headers_expr = self.eval_concrete(&args[0])?;
+        let headers: Vec<String> = match headers_expr {
+            Expression::List(items) => items
+                .iter()
+                .map(|item| match item {
+                    Expression::String(s) => s.clone(),
+                    Expression::Const(s) => s.clone(),
+                    other => format!("{:?}", other),
+                })
+                .collect(),
+            _ => return Err("table_typst(): first argument must be a list of headers".to_string()),
+        };
+
+        // Extract rows
+        let rows_expr = self.eval_concrete(&args[1])?;
+        let rows: Vec<Vec<String>> =
+            match rows_expr {
+                Expression::List(row_items) => row_items
+                    .iter()
+                    .map(|row| match row {
+                        Expression::List(cells) => cells
+                            .iter()
+                            .map(|cell| match cell {
+                                Expression::String(s) => s.clone(),
+                                Expression::Const(s) => s.clone(),
+                                other => format!("{:?}", other),
+                            })
+                            .collect(),
+                        _ => vec![format!("{:?}", row)],
+                    })
+                    .collect(),
+                _ => return Err(
+                    "table_typst(): second argument must be a list of rows (each row is a list)"
+                        .to_string(),
+                ),
+            };
+
+        // Build Typst table code
+        let num_cols = headers.len();
+        let mut code = format!("#table(\n  columns: {},\n", num_cols);
+
+        // Add headers
+        for (i, header) in headers.iter().enumerate() {
+            code.push_str(&format!("  [{}]", header));
+            if i < num_cols - 1 {
+                code.push_str(", ");
+            }
+        }
+        code.push_str(",\n");
+
+        // Add rows
+        for row in &rows {
+            code.push_str("  ");
+            for (i, cell) in row.iter().enumerate() {
+                code.push_str(&format!("[{}]", cell));
+                if i < row.len() - 1 {
+                    code.push_str(", ");
+                }
+            }
+            code.push_str(",\n");
+        }
+
+        code.push(')');
+
+        Ok(Some(Expression::String(code)))
     }
 
     /// Render an EditorNode AST to Typst code
