@@ -138,16 +138,12 @@ No parser changes needed — Typst handles it natively.
 - Templates in `stdlib/templates/`
 - Thin Python shell (`kleisdoc_shell.py`, 227 lines)
 
-### Old Design Docs (SUPERSEDED)
+### Old Design Docs (DELETED)
 
-The following design docs in `docs/jupyter-equation-editor-poc/` are **historical only**:
-- `KLEISDOC_WORKFLOW.md` - Old Python API workflow
-- `KLEISDOC_DESIGN.md` - Old requirements analysis  
-- `TEMPLATE_ARCHITECTURE.md` - Superseded by current templates
-- `ROADMAP.md` - Implementation phases (mostly complete)
-- `README.md` - POC documentation
+The `docs/jupyter-equation-editor-poc/` directory was deleted (Jan 4, 2026).
+It contained early POC documents that were superseded by the current implementation.
 
-**Current approach:** See [Chapter 23: Document Generation](https://kleis.io/docs/manual/book/chapters/23-document-generation.html)
+**Current documentation:** See [Chapter 23: Document Generation](https://kleis.io/docs/manual/book/chapters/23-document-generation.html)
 
 ### Current Examples
 
@@ -170,14 +166,13 @@ The following design docs in `docs/jupyter-equation-editor-poc/` are **historica
 
 ## Previous: Jupyter + Equation Editor POC (Jan 2, 2026)
 
-See full documentation: [`docs/jupyter-equation-editor-poc/README.md`](./jupyter-equation-editor-poc/README.md)
+*(POC documentation deleted Jan 4, 2026 - key findings preserved below)*
 
 ### Summary
 
 1. **Iframe Embedding POC** ✅
    - Tested embedding HTML widgets in Jupyter via iframe
    - Three methods work: Direct IFrame, Toggle Button, Message Passing
-   - Files: `examples/jupyter-iframe-poc/`
 
 2. **Export Typst Functions** ✅
    - `export_typst(...)` - Returns complete Typst code with preamble
