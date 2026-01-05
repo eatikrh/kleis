@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-299a4847.js";
+            window.path_to_searchindex_js = "searchindex-59afe2c0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -3273,23 +3273,18 @@ define eq_einstein = MITEquation("eq:einstein", "$ E = m c^2 $")
 define fig_arch = MITFigure("fig:arch", "System architecture",
     "#rect(width: 80%, height: 3cm, fill: luma(240))[Architecture diagram]")
 
-// Diagrams (using Lilaq plotting library)
-define fig_perf = MITDiagram("fig:perf", "Performance comparison", "
-import \"@preview/lilaq:0.5.0\" as lq
-lq.diagram(
-    lq.plot((1, 2, 3, 4, 5), (10, 25, 40, 55, 70)),
-    xlabel: \"Iterations\",
-    ylabel: \"Accuracy (%)\"
-)")
+// Diagrams using NATIVE KLEIS data
+define iterations = [1.0, 2.0, 3.0, 4.0, 5.0]
+define accuracy = [10.0, 25.0, 40.0, 55.0, 70.0]
+define fig_perf = MITDiagram("fig:perf", "Performance comparison",
+    export_typst_fragment(plot(iterations, accuracy, mark = "o"),
+        xlabel = "Iterations", ylabel = "Accuracy (%)"))
 
-// Tables
-define tab_results = MITTable("tab:results", "Experimental results", "
-#table(
-    columns: 3,
-    [Method], [Accuracy], [Runtime],
-    [Baseline], [72%], [1.2s],
-    [Ours], [89%], [0.8s]
-)")
+// Tables using NATIVE KLEIS data
+define headers = ["Method", "Accuracy", "Runtime"]
+define rows = [["Baseline", "72%", "1.2s"], ["Ours", "89%", "0.8s"]]
+define tab_results = MITTable("tab:results", "Experimental results",
+    table_typst(headers, rows))
 
 // References
 define ref1 = MITReference("demoura2008", 
@@ -3319,27 +3314,24 @@ define ch1 = MITChapter(1, "Introduction",
 // Key equation
 define eq_einstein = MITEquation("eq:einstein", "$ E = m c^2 $")
 
-// Performance diagram using Lilaq
-define fig_performance = MITDiagram("fig:perf", "Type inference performance", "
-import \"@preview/lilaq:0.5.0\" as lq
-lq.diagram(
-    lq.plot((100, 500, 1000, 5000, 10000), (0.1, 0.3, 0.5, 1.2, 2.1), 
-            mark: \"o\", stroke: blue),
-    lq.plot((100, 500, 1000, 5000, 10000), (0.2, 0.8, 2.0, 12.0, 45.0), 
-            mark: \"x\", stroke: red),
-    xlabel: \"Lines of Code\",
-    ylabel: \"Time (seconds)\"
-)")
+// Performance diagram using NATIVE KLEIS data
+define loc = [100.0, 500.0, 1000.0, 5000.0, 10000.0]
+define kleis_time = [0.1, 0.3, 0.5, 1.2, 2.1]
+define other_time = [0.2, 0.8, 2.0, 12.0, 45.0]
 
-// Results table
-define table_features = MITTable("tab:features", "Feature comparison", "
-#table(
-    columns: 4,
-    [Feature], [Kleis], [Lean], [Coq],
-    [SMT Integration], [✓], [Partial], [✗],
-    [Type Inference], [✓], [✓], [✓],
-    [Typst Export], [✓], [✗], [✗]
-)")
+define fig_performance = MITDiagram("fig:perf", "Type inference performance",
+    export_typst_fragment(plot(loc, kleis_time, mark = "o", label = "Kleis"),
+        xlabel = "Lines of Code", ylabel = "Time (seconds)"))
+
+// Results table using NATIVE KLEIS data
+define feature_headers = ["Feature", "Kleis", "Lean", "Coq"]
+define feature_rows = [
+    ["SMT Integration", "✓", "Partial", "✗"],
+    ["Type Inference", "✓", "✓", "✓"],
+    ["Typst Export", "✓", "✗", "✗"]
+]
+define table_features = MITTable("tab:features", "Feature comparison",
+    table_typst(feature_headers, feature_rows))
 
 // Assemble all elements in order
 define all_elements = [
