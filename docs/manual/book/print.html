@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-cb355032.js";
+            window.path_to_searchindex_js = "searchindex-3ba625b3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -3968,6 +3968,120 @@ example "Non-zero is reachable via ADD" {
 </tbody>
 </table>
 </div>
+<h2 id="aiml-verification"><a class="header" href="#aiml-verification">AI/ML Verification</a></h2>
+<p>Kleis aligns with the research agenda outlined in <strong>“Toward Verified Artificial Intelligence”</strong> (Seshia et al., Communications of the ACM, 2022) — a seminal paper from UC Berkeley on using formal methods to verify AI systems.</p>
+<h3 id="the-verified-ai-challenge"><a class="header" href="#the-verified-ai-challenge">The Verified AI Challenge</a></h3>
+<p>The paper identifies five key challenges for AI verification:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Challenge</th><th>Description</th><th>Kleis Approach</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Environment Modeling</strong></td><td>Formally specify the world</td><td><code>structure</code> with <code>axiom</code>s</td></tr>
+<tr><td><strong>Specification</strong></td><td>Define “correct” behavior</td><td>First-order logic assertions</td></tr>
+<tr><td><strong>Computational Engines</strong></td><td>SAT/SMT solving</td><td>Z3 backend</td></tr>
+<tr><td><strong>Correct-by-Construction</strong></td><td>Build verified from start</td><td>Axiom-first development</td></tr>
+<tr><td><strong>Compositional Reasoning</strong></td><td>Modular proofs</td><td><code>implements</code> contracts</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="neural-network-properties"><a class="header" href="#neural-network-properties">Neural Network Properties</a></h3>
+<p>Kleis can express and verify properties of neural networks:</p>
+<pre><code class="language-kleis">// Robustness: Small input changes → small output changes
+structure RobustnessProperty {
+    axiom local_robustness: ∀ x : Input . ∀ δ : Input .
+        norm(δ) &lt; ε → 
+        abs(network(x + δ) - network(x)) &lt; bound
+}
+
+// Monotonicity: Larger input → larger output (for certain features)
+structure MonotonicityProperty {
+    axiom monotonic_feature: ∀ x1 : Input . ∀ x2 : Input .
+        x1.feature ≤ x2.feature → 
+        network(x1) ≤ network(x2)
+}
+
+// Safety envelope: Output always in safe region
+structure SafetyProperty {
+    axiom output_bounded: ∀ x : Input .
+        valid_input(x) → 
+        min_safe ≤ network(x) ∧ network(x) ≤ max_safe
+}
+</code></pre>
+<h3 id="safe-reinforcement-learning"><a class="header" href="#safe-reinforcement-learning">Safe Reinforcement Learning</a></h3>
+<pre><code class="language-kleis">// Safety envelope for learning-based controllers
+structure SafeController(state_dim: Nat, action_dim: Nat) {
+    // Pre-computed safety region
+    element safe_set : Set(State)
+    
+    // Learned policy
+    operation policy : State → Action
+    
+    // Safety invariant: policy never leaves safe set
+    axiom safety_invariant: ∀ s : State .
+        s ∈ safe_set → 
+        next_state(s, policy(s)) ∈ safe_set
+    
+    // Backup controller for edge cases
+    operation backup : State → Action
+    
+    axiom backup_safe: ∀ s : State .
+        next_state(s, backup(s)) ∈ safe_set
+}
+</code></pre>
+<h3 id="compositional-verification"><a class="header" href="#compositional-verification">Compositional Verification</a></h3>
+<p>The paper emphasizes <strong>assume-guarantee reasoning</strong> — exactly what Kleis structures provide:</p>
+<pre><code class="language-kleis">// Perception module contract
+structure PerceptionContract {
+    operation detect : Image → List(BoundingBox)
+    
+    // Guarantee: no false negatives within sensor range
+    axiom no_miss_close: ∀ img : Image . ∀ obj : Object .
+        distance(obj) &lt; sensor_range ∧ visible(obj, img) →
+        ∃ box : BoundingBox . box ∈ detect(img) ∧ contains(box, obj)
+}
+
+// Planning module contract
+structure PlanningContract {
+    // Assume: perception is correct within range
+    // Guarantee: plan avoids all detected obstacles
+    axiom collision_free: ∀ boxes : List(BoundingBox) . ∀ plan : Trajectory .
+        plan = plan_path(boxes) →
+        ∀ t : Time . ∀ box : BoundingBox . 
+            box ∈ boxes → ¬intersects(plan(t), box)
+}
+
+// System-level property emerges from composition
+structure SystemSafety {
+    axiom no_collision: ∀ img : Image .
+        let boxes = PerceptionContract.detect(img) in
+        let plan = PlanningContract.plan_path(boxes) in
+        collision_free(plan)
+}
+</code></pre>
+<h3 id="why-kleis-for-ai-verification"><a class="header" href="#why-kleis-for-ai-verification">Why Kleis for AI Verification?</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Approach</th><th>Limitation</th><th>Kleis Advantage</th></tr>
+</thead>
+<tbody>
+<tr><td>Testing</td><td>Samples finite cases</td><td>Proves ∀ inputs</td></tr>
+<tr><td>Fuzzing</td><td>Random, no guarantees</td><td>Exhaustive (for decidable)</td></tr>
+<tr><td>Static analysis</td><td>Over-approximates</td><td>Precise via Z3</td></tr>
+<tr><td>Runtime monitoring</td><td>Reactive only</td><td>Proactive verification</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="further-reading"><a class="header" href="#further-reading">Further Reading</a></h3>
+<ul>
+<li><strong>Paper</strong>: <a href="https://cacm.acm.org/research/toward-verified-artificial-intelligence/">Toward Verified Artificial Intelligence</a> (CACM 2022)</li>
+<li><strong>VerifAI</strong>: Toolkit for formal AI verification (same authors)</li>
+<li><strong>Scenic</strong>: Domain-specific language for scenario specification</li>
+</ul>
+<p>Kleis provides a <strong>general-purpose substrate</strong> for expressing the same verification concepts in a unified, mathematically rigorous framework.</p>
+<hr>
 <h2 id="business-process-modeling"><a class="header" href="#business-process-modeling">Business Process Modeling</a></h2>
 <p>Model and verify business workflows with formal guarantees:</p>
 <pre><code class="language-kleis">// Order-to-Cash (O2C) Business Process

@@ -16,6 +16,19 @@ This is the dissertation/thesis writing chapter. It covers templates (MIT, UofM,
 
 ---
 
+## 📖 KEY ACADEMIC REFERENCES
+
+Papers that validate and align with the Kleis approach:
+
+| Paper | Authors | Relevance |
+|-------|---------|-----------|
+| **[Toward Verified Artificial Intelligence](https://cacm.acm.org/research/toward-verified-artificial-intelligence/)** | Seshia et al. (CACM 2022) | Formal methods for AI verification using SAT/SMT (Z3). Kleis implements the same verification paradigm. |
+| **IEEE 1800.2-2020 (UVM)** | IEEE | Universal Verification Methodology for hardware. Kleis provides formal proofs where UVM provides simulation. |
+
+**Added:** January 5, 2026 — Section in manual `13-applications.md` on AI/ML Verification citing the CACM paper.
+
+---
+
 ## 🚀 CURRENT WORK: Equation Editor Enhancements (Jan 3-4, 2026)
 
 ### Branch: `feature/copy-typst-button`
