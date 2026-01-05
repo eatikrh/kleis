@@ -1,0 +1,62 @@
+// ================================================================
+// SIMPLE ALU - Minimal Formal Verification Example
+// ================================================================
+// A concise example showing how Kleis formally verifies
+// hardware properties using Z3's bitvector theory.
+//
+// All properties are PROVEN for ALL possible inputs.
+// No simulation, no random sampling - mathematical proof.
+// ================================================================
+
+import "stdlib/prelude.kleis"
+
+// ================================================================
+// BITVECTOR OPERATIONS
+// ================================================================
+
+operation bvand : BitVec8 × BitVec8 → BitVec8
+operation bvor : BitVec8 × BitVec8 → BitVec8
+operation bvxor : BitVec8 × BitVec8 → BitVec8
+operation bvadd : BitVec8 × BitVec8 → BitVec8
+operation bvsub : BitVec8 × BitVec8 → BitVec8
+operation bvneg : BitVec8 → BitVec8
+operation bv_zero : BitVec8
+
+// ================================================================
+// PROPERTY PROOFS
+// Z3 proves these for ALL 2^16 possible 8-bit input pairs
+// ================================================================
+
+example "ADD is commutative" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . bvadd(a, b) = bvadd(b, a))
+}
+
+example "AND is commutative" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . bvand(a, b) = bvand(b, a))
+}
+
+example "XOR self is zero" {
+    assert(∀ a : BitVec8 . bvxor(a, a) = bv_zero)
+}
+
+example "SUB inverts ADD" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . 
+           bvsub(bvadd(a, b), b) = a)
+}
+
+example "Additive inverse" {
+    assert(∀ a : BitVec8 . bvadd(a, bvneg(a)) = bv_zero)
+}
+
+// ================================================================
+// REACHABILITY CHECKS
+// Z3 finds witnesses (proves existence)
+// ================================================================
+
+example "Can produce zero from ADD" {
+    assert(∃ a : BitVec8 . ∃ b : BitVec8 . bvadd(a, b) = bv_zero)
+}
+
+example "Can produce non-zero from ADD" {
+    assert(∃ a : BitVec8 . ∃ b : BitVec8 . bvadd(a, b) ≠ bv_zero)
+}

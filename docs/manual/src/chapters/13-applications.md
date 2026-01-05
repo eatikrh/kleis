@@ -2,6 +2,130 @@
 
 Kleis is designed for mathematical verification, but its power extends far beyond pure mathematics. This chapter showcases applications across multiple domains.
 
+## Hardware Verification
+
+Kleis can formally verify hardware designs using Z3's bitvector theory. This section explains how Kleis compares to the industry-standard **Universal Verification Methodology (UVM)** defined in IEEE 1800.2-2020.
+
+### Kleis vs UVM: Different Approaches to the Same Goal
+
+| Aspect | UVM (IEEE 1800.2) | Kleis |
+|--------|-------------------|-------|
+| **Verification method** | Simulation (random sampling) | Formal proof (Z3) |
+| **Coverage** | Statistical: "did we test this?" | Exhaustive: "is this state reachable?" |
+| **Assertions** | SVA (temporal, simulation-checked) | First-order logic (mathematically proven) |
+| **Language** | SystemVerilog class library | Native Kleis |
+| **Cost** | Requires commercial simulators | Open source |
+
+### What Kleis Proves
+
+Kleis can **formally prove** properties for ALL possible inputs:
+
+```kleis
+// Bitvector operations (maps to SystemVerilog bit[7:0])
+operation bvadd : BitVec8 × BitVec8 → BitVec8
+operation bvxor : BitVec8 × BitVec8 → BitVec8
+operation bv_zero : BitVec8
+
+// PROVE: Addition is commutative for ALL 2^16 input pairs
+example "ADD is commutative" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . bvadd(a, b) = bvadd(b, a))
+}
+
+// PROVE: XOR of same value always yields zero
+example "XOR self is zero" {
+    assert(∀ a : BitVec8 . bvxor(a, a) = bv_zero)
+}
+
+// PROVE: Subtraction inverts addition
+example "SUB inverts ADD" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . bvsub(bvadd(a, b), b) = a)
+}
+```
+
+A UVM testbench would run random tests and **hope** to find bugs. Kleis **proves** correctness mathematically.
+
+### Reachability Analysis (Related to Coverage)
+
+UVM coverage answers: "Did our tests exercise this state?"
+
+Kleis reachability answers: "Is this state possible at all?"
+
+```kleis
+// Can ADD ever produce zero? (Yes: 0+0, or 128+128 with overflow)
+example "Zero is reachable via ADD" {
+    assert(∃ a : BitVec8 . ∃ b : BitVec8 . bvadd(a, b) = bv_zero)
+}
+
+// Can ADD produce non-zero? (Yes: 1+0, etc.)
+example "Non-zero is reachable via ADD" {
+    assert(∃ a : BitVec8 . ∃ b : BitVec8 . bvadd(a, b) ≠ bv_zero)
+}
+```
+
+### Kleis Complements UVM, Not Replaces It
+
+Kleis and UVM solve **related but different problems**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    VERIFICATION WORKFLOW                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   KLEIS (Pre-RTL)              UVM (With RTL)               │
+│   ┌────────────────┐           ┌────────────────┐           │
+│   │ Define ALU     │           │ Verilog ALU    │           │
+│   │ specification  │    →      │ implementation │           │
+│   └────────────────┘           └────────────────┘           │
+│          ↓                            ↓                     │
+│   ┌────────────────┐           ┌────────────────┐           │
+│   │ PROVE correct  │           │ SIMULATE with  │           │
+│   │ for ALL inputs │           │ random tests   │           │
+│   └────────────────┘           └────────────────┘           │
+│          ↓                            ↓                     │
+│   Mathematical                 "Probably correct"           │
+│   certainty                    (statistical)                │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Use Kleis FIRST:** Prove your algorithm is correct before writing HDL.
+
+**Use UVM AFTER:** Validate your Verilog/VHDL implements the algorithm correctly.
+
+### What UVM Has That Kleis Doesn't
+
+| UVM Feature | Kleis Status | Notes |
+|-------------|--------------|-------|
+| DUT connection | Not applicable | Kleis doesn't connect to HDL |
+| Timing/clocks | Different paradigm | Model time explicitly if needed |
+| Sequences over time | Not needed | Kleis proves for all states |
+| Transaction-level modeling | Can model | Use `data` types |
+| Waveform output | Not applicable | No simulation |
+
+### Example: ALU Verification
+
+See `examples/hardware/alu_verification.kleis` for a complete example that proves:
+
+- ADD/AND/OR/XOR commutativity
+- Addition associativity  
+- Subtraction inverts addition
+- AND idempotence
+- XOR self produces zero
+- Additive inverse
+- Reachability of zero and non-zero results
+
+All properties are proven for **all 65,536 possible 8-bit input pairs** — not sampled, but exhaustively verified.
+
+### When to Use Kleis for Hardware
+
+| Use Case | Kleis? | Why |
+|----------|--------|-----|
+| Algorithm correctness before RTL | Yes | Prove before you code |
+| Property verification | Yes | Mathematical proof |
+| Bug hunting in existing RTL | No | Use UVM/formal tools |
+| Coverage closure | Partial | Reachability, not statistical |
+| Integration with HDL flow | No | Standalone verification |
+
 ## Business Process Modeling
 
 Model and verify business workflows with formal guarantees:
