@@ -210,6 +210,60 @@ It contained early POC documents that were superseded by the current implementat
 
 ---
 
+## 🔧 FUTURE: `and`/`or` as General Logical Operators (Grammar v0.97)
+
+**Added:** January 5, 2026
+
+### Current State
+
+`and` and `or` are parsed only within `let` binding values, NOT as general infix operators:
+
+```kleis
+// ✅ Works - inside let binding
+let x = a and b in ...
+
+// ❌ Fails - general expression
+assert(P and Q)  // Parse error!
+assert(P ∧ Q)    // Must use Unicode
+```
+
+### Proposed Enhancement
+
+Make `and`/`or` work everywhere `∧`/`∨` work:
+
+```kleis
+// Both should work identically:
+assert(P and Q)   // ASCII
+assert(P ∧ Q)     // Unicode
+
+structure Test {
+    axiom a1: forall x : Bool . x or (not x)  // ASCII
+    axiom a2: forall x : Bool . x ∨ (¬ x)     // Unicode
+}
+```
+
+### Implementation
+
+1. **Grammar v0.97**: Add `and`/`or` to general `binaryOp` production
+2. **Parser**: Update `try_parse_infix_operator()`:
+   ```rust
+   "and" => Some("and".to_string()),  // maps to ∧
+   "or" => Some("or".to_string()),    // maps to ∨
+   ```
+3. **Precedence**: Same as `∧`/`∨` (level 3-4)
+4. **Tests**: Add to `tests/test_operators.kleis`
+5. **Documentation**: Update `grammar.md`
+
+### Why This Matters
+
+Users coming from other languages expect `and`/`or` to work. Currently they must use Unicode `∧`/`∨`, which is a barrier for beginners.
+
+### Effort Estimate
+
+~30 minutes: Simple parser addition, well-defined semantics.
+
+---
+
 ## 🔧 FUTURE: Set Operators as Infix Syntax (Grammar v0.97)
 
 **Added:** January 5, 2026
