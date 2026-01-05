@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-09f97533.js";
+            window.path_to_searchindex_js = "../searchindex-15f063a6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -535,9 +535,9 @@ blockComment ::= "/*" { any character } "*/"
 <tr><td><code>∀</code></td><td><code>forall</code></td><td>Universal quantifier</td></tr>
 <tr><td><code>∃</code></td><td><code>exists</code></td><td>Existential quantifier</td></tr>
 <tr><td><code>→</code></td><td><code>-&gt;</code></td><td>Function type / implies</td></tr>
-<tr><td><code>×</code></td><td><code>*</code></td><td>Product type / multiplication</td></tr>
-<tr><td><code>∧</code></td><td><code>and</code></td><td>Logical and</td></tr>
-<tr><td><code>∨</code></td><td><code>or</code></td><td>Logical or</td></tr>
+<tr><td><code>×</code></td><td>—</td><td>Product type (Unicode only; <code>*</code> is multiplication)</td></tr>
+<tr><td><code>∧</code></td><td>—</td><td>Logical and (Unicode only)</td></tr>
+<tr><td><code>∨</code></td><td>—</td><td>Logical or (Unicode only)</td></tr>
 <tr><td><code>¬</code></td><td>—</td><td>Logical not (Unicode only)</td></tr>
 <tr><td><code>≤</code></td><td><code>&lt;=</code></td><td>Less or equal</td></tr>
 <tr><td><code>≥</code></td><td><code>&gt;=</code></td><td>Greater or equal</td></tr>
@@ -551,6 +551,9 @@ blockComment ::= "/*" { any character } "*/"
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Note:</strong> <code>*</code> is the multiplication operator in expressions, not an ASCII equivalent for <code>×</code> in product types. Use Unicode <code>×</code> for product types like <code>Int × Int → Int</code>.</p>
+</blockquote>
 <blockquote>
 <p><strong>Note:</strong> Greek letters like <code>π</code>, <code>α</code>, <code>β</code> are valid identifiers. Use <code>import "stdlib/prelude.kleis"</code> for common constants like <code>pi</code>.</p>
 </blockquote>

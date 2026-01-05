@@ -447,9 +447,9 @@ blockComment ::= "/*" { any character } "*/"
 | `∀` | `forall` | Universal quantifier |
 | `∃` | `exists` | Existential quantifier |
 | `→` | `->` | Function type / implies |
-| `×` | `*` | Product type / multiplication |
-| `∧` | `and` | Logical and |
-| `∨` | `or` | Logical or |
+| `×` | — | Product type (Unicode only; `*` is multiplication) |
+| `∧` | — | Logical and (Unicode only) |
+| `∨` | — | Logical or (Unicode only) |
 | `¬` | — | Logical not (Unicode only) |
 | `≤` | `<=` | Less or equal |
 | `≥` | `>=` | Greater or equal |
@@ -460,6 +460,8 @@ blockComment ::= "/*" { any character } "*/"
 | `ℝ` | `Real` | Real numbers |
 | `ℂ` | `Complex` | Complex numbers |
 | `λ` | `lambda` | Lambda |
+
+> **Note:** `*` is the multiplication operator in expressions, not an ASCII equivalent for `×` in product types. Use Unicode `×` for product types like `Int × Int → Int`.
 
 > **Note:** Greek letters like `π`, `α`, `β` are valid identifiers. Use `import "stdlib/prelude.kleis"` for common constants like `pi`.
 
