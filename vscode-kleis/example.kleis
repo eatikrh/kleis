@@ -154,6 +154,35 @@ structure BooleanAlgebra(B) {
         ∀(p q : B). p ⊻ q = q ⊻ p
 }
 
+// --- v0.97: ASCII logical operators (and, or, not) ---
+// These work identically to Unicode ∧, ∨, ¬
+structure LogicLaws {
+    // De Morgan's laws using ASCII keywords
+    axiom de_morgan_1:
+        ∀(P Q : Bool). not (P and Q) = (not P) or (not Q)
+    
+    axiom de_morgan_2:
+        ∀(P Q : Bool). not (P or Q) = (not P) and (not Q)
+    
+    // Excluded middle
+    axiom excluded_middle:
+        ∀(P : Bool). P or (not P) = True
+    
+    // Double negation
+    axiom double_negation:
+        ∀(P : Bool). not (not P) = P
+    
+    // ASCII and Unicode are equivalent
+    axiom and_equiv:
+        ∀(P Q : Bool). (P and Q) = (P ∧ Q)
+    
+    axiom or_equiv:
+        ∀(P Q : Bool). (P or Q) = (P ∨ Q)
+    
+    axiom not_equiv:
+        ∀(P : Bool). (not P) = (¬P)
+}
+
 // --- Composition operators ---
 define compose(f: A → B, g: B → C) : A → C =
     λ(x : A). g(f(x))
