@@ -6943,7 +6943,7 @@ declaration ::= importDecl              // v0.8: Module imports
 <pre><code class="language-ebnf">importDecl ::= "import" string
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-text">import "stdlib/prelude.kleis"
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
 import "stdlib/complex.kleis"
 </code></pre>
 <h2 id="annotations"><a class="header" href="#annotations">Annotations</a></h2>
@@ -6951,7 +6951,7 @@ import "stdlib/complex.kleis"
 versionAnnotation ::= "@version" "(" string ")"
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-text">@library("stdlib/algebra")
+<pre><code class="language-kleis">@library("stdlib/algebra")
 @version("0.7")
 </code></pre>
 <h2 id="data-type-definitions"><a class="header" href="#data-type-definitions">Data Type Definitions</a></h2>
@@ -6964,7 +6964,7 @@ dataField ::= identifier ":" type    // Named field
             | type                   // Positional field
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">data Bool {
+<pre><code class="language-kleis">data Bool {
     True
     False
 }
@@ -6990,7 +6990,7 @@ tuplePattern ::= "()"                            // Unit
                | "(" pattern "," pattern { "," pattern } ")"  // Pair, Tuple3, etc.
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">match x { True =&gt; 1 | False =&gt; 0 }
+<pre><code class="language-kleis">match x { True =&gt; 1 | False =&gt; 0 }
 match opt { None =&gt; 0 | Some(x) =&gt; x }
 match result { Ok(Some(x)) =&gt; x | Ok(None) =&gt; 0 | Err(_) =&gt; -1 }
 
@@ -7015,7 +7015,7 @@ structureMember ::= operationDecl
                   | functionDef
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-text">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
+<pre><code class="language-kleis">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
     operation (·) : F × V → V
     
     axiom scalar_distributive : ∀(a : F)(b : F)(v : V).
@@ -7033,7 +7033,7 @@ operationImpl ::= "operation" operatorSymbol "=" implementation
                 | "operation" operatorSymbol "(" params ")" "=" expression
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-text">implements Ring(ℝ) {
+<pre><code class="language-kleis">implements Ring(ℝ) {
     operation add = builtin_add
     operation mul = builtin_mul
     element zero = 0
@@ -7047,7 +7047,7 @@ operationImpl ::= "operation" operatorSymbol "=" implementation
 param ::= identifier [ ":" type ]
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">define pi = 3.14159
+<pre><code class="language-kleis">define pi = 3.14159
 define square(x) = x * x
 define add(x: ℝ, y: ℝ) : ℝ = x + y
 </code></pre>
@@ -7070,7 +7070,7 @@ functionType ::= type "→" type | type "-&gt;" type
 typeAlias ::= "type" identifier "=" type
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">ℝ                    // Real numbers
+<pre><code class="language-kleis">ℝ                    // Real numbers
 Vector(3)            // Parameterized type
 ℝ → ℝ               // Function type
 (ℝ → ℝ) → ℝ         // Higher-order function
@@ -7100,7 +7100,7 @@ placeholder ::= "□"
          | "lambda" params "." expression
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">λ x . x + 1              // Simple lambda
+<pre><code class="language-kleis">λ x . x + 1              // Simple lambda
 λ x y . x * y            // Multiple parameters
 λ (x : ℝ) . x^2          // With type annotation
 lambda x . x             // Using keyword
@@ -7110,7 +7110,7 @@ lambda x . x             // Using keyword
 // Note: typeAnnotation only valid when pattern is a simple Variable
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">let x = 5 in x + x
+<pre><code class="language-kleis">let x = 5 in x + x
 let x : ℝ = 3.14 in x * 2
 let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
 
@@ -7123,7 +7123,7 @@ let Cons(h, _) = list in h
 <pre><code class="language-ebnf">conditional ::= "if" expression "then" expression "else" expression
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-text">if x &gt; 0 then x else -x
+<pre><code class="language-kleis">if x &gt; 0 then x else -x
 </code></pre>
 <h2 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h2>
 <pre><code class="language-ebnf">forAllProp ::= ("∀" | "forall") variables [ whereClause ] "." proposition
@@ -7136,14 +7136,14 @@ varDecl ::= identifier [ ":" type ]
 whereClause ::= "where" expression
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">∀(x : ℝ). x + 0 = x
+<pre><code class="language-kleis">∀(x : ℝ). x + 0 = x
 ∃(x : ℤ). x * x = 4
 ∀(a : ℝ)(b : ℝ) where a ≠ 0 . a * (1/a) = 1
 </code></pre>
 <h2 id="v09-enhancements"><a class="header" href="#v09-enhancements">v0.9 Enhancements</a></h2>
 <h3 id="nested-quantifiers-in-expressions"><a class="header" href="#nested-quantifiers-in-expressions">Nested Quantifiers in Expressions</a></h3>
 <p>Quantifiers can now appear as operands in logical expressions:</p>
-<pre><code class="language-text">// v0.9: Quantifier inside conjunction
+<pre><code class="language-kleis">// v0.9: Quantifier inside conjunction
 axiom nested: (x &gt; 0) ∧ (∀(y : ℝ). y &gt; 0)
 
 // Epsilon-delta limit definition
@@ -7152,7 +7152,7 @@ axiom epsilon_delta: ∀(ε : ℝ). ε &gt; 0 →
 </code></pre>
 <h3 id="function-types-in-type-annotations"><a class="header" href="#function-types-in-type-annotations">Function Types in Type Annotations</a></h3>
 <p>Function types are now allowed in quantifier variable declarations:</p>
-<pre><code class="language-text">// Function from reals to reals
+<pre><code class="language-kleis">// Function from reals to reals
 axiom func: ∀(f : ℝ → ℝ). f(0) = f(0)
 
 // Higher-order function
@@ -7171,32 +7171,32 @@ axiom continuity: ∀(f : X → Y, V : Set(Y)).
             | ("Σ" | "Π" | "∫") primaryExpr      // prefix form
 </code></pre>
 <h3 id="summation-σ"><a class="header" href="#summation-σ">Summation: Σ</a></h3>
-<pre><code class="language-text">// Sum of f(i) from 1 to n
+<pre><code class="language-kleis">// Sum of f(i) from 1 to n
 Σ(1, n, λ i . f(i))
 
 // Parsed as: sum_bounds(λ i . f(i), 1, n)
 </code></pre>
 <h3 id="product-π"><a class="header" href="#product-π">Product: Π</a></h3>
-<pre><code class="language-text">// Product of g(i) from 1 to n
+<pre><code class="language-kleis">// Product of g(i) from 1 to n
 Π(1, n, λ i . g(i))
 
 // Parsed as: prod_bounds(λ i . g(i), 1, n)
 </code></pre>
 <h3 id="integral-"><a class="header" href="#integral-">Integral: ∫</a></h3>
-<pre><code class="language-text">// Integral of x² from 0 to 1
+<pre><code class="language-kleis">// Integral of x² from 0 to 1
 ∫(0, 1, λ x . x * x, x)
 
 // Parsed as: int_bounds(λ x . x * x, 0, 1, x)
 </code></pre>
 <h3 id="limit-lim"><a class="header" href="#limit-lim">Limit: lim</a></h3>
-<pre><code class="language-text">// Limit of sin(x)/x as x approaches 0
+<pre><code class="language-kleis">// Limit of sin(x)/x as x approaches 0
 lim(x, 0, sin(x) / x)
 
 // Parsed as: lim(sin(x) / x, x, 0)
 </code></pre>
 <h3 id="prefix-forms"><a class="header" href="#prefix-forms">Prefix Forms</a></h3>
 <p>Simple prefix forms are also supported:</p>
-<pre><code class="language-text">Σf        // Parsed as: Sum(f)
+<pre><code class="language-kleis">Σf        // Parsed as: Sum(f)
 ∫g        // Parsed as: Integrate(g)
 </code></pre>
 <h2 id="calculus-notation-v07"><a class="header" href="#calculus-notation-v07">Calculus Notation (v0.7)</a></h2>
