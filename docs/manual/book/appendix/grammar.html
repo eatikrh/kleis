@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-15f063a6.js";
+            window.path_to_searchindex_js = "../searchindex-d2afab19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -490,11 +490,17 @@ Limit(f, x, a)            // lim_{x→a} f
 <p>Note: Legacy notation like <code>∂f/∂x</code> and <code>df/dx</code> is deprecated. Use <code>D(f, x)</code> and <code>Dt(f, x)</code> instead.</p>
 <h2 id="operators"><a class="header" href="#operators">Operators</a></h2>
 <h3 id="prefix-operators"><a class="header" href="#prefix-operators">Prefix Operators</a></h3>
-<pre><code class="language-ebnf">prefixOp ::= "-" | "¬" | "∇" | "√" | "∫" | "∬" | "∭" | "∮" | "∯"
+<pre><code class="language-ebnf">prefixOp ::= "-" | "¬" | "∇" | "∫" | "∬" | "∭" | "∮" | "∯"
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> <code>√</code> is NOT a prefix operator. Use <code>sqrt(x)</code> function instead.</p>
+</blockquote>
 <h3 id="postfix-operators"><a class="header" href="#postfix-operators">Postfix Operators</a></h3>
-<pre><code class="language-ebnf">postfixOp ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
+<pre><code class="language-ebnf">postfixOp ::= "!" | "ᵀ" | "^T" | "†"
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> <code>*</code> (conjugate) and <code>^†</code> are NOT implemented as postfix operators.</p>
+</blockquote>
 <h3 id="infix-operators-by-precedence-low-to-high"><a class="header" href="#infix-operators-by-precedence-low-to-high">Infix Operators (by precedence, low to high)</a></h3>
 <div class="table-wrapper">
 <table>
@@ -504,20 +510,21 @@ Limit(f, x, a)            // lim_{x→a} f
 <tbody>
 <tr><td>1</td><td><code>↔</code> <code>⇔</code> <code>⟺</code> (biconditional)</td><td>Left</td></tr>
 <tr><td>2</td><td><code>→</code> <code>⇒</code> <code>⟹</code> (implication)</td><td>Right</td></tr>
-<tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
-<tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
-<tr><td>5</td><td><code>¬</code> <code>not</code> (prefix)</td><td>Prefix</td></tr>
-<tr><td>6</td><td><code>=</code> <code>==</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-assoc</td></tr>
+<tr><td>3</td><td><code>∨</code> (logical or)</td><td>Left</td></tr>
+<tr><td>4</td><td><code>∧</code> (logical and)</td><td>Left</td></tr>
+<tr><td>5</td><td><code>¬</code> (prefix not)</td><td>Prefix</td></tr>
+<tr><td>6</td><td><code>=</code> <code>==</code> <code>≠</code> <code>!=</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>&lt;=</code> <code>≥</code> <code>&gt;=</code></td><td>Non-assoc</td></tr>
 <tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
 <tr><td>8</td><td><code>*</code> <code>×</code> <code>/</code> <code>·</code></td><td>Left</td></tr>
 <tr><td>9</td><td><code>^</code></td><td>Right</td></tr>
 <tr><td>10</td><td><code>-</code> (unary)</td><td>Prefix</td></tr>
-<tr><td>11</td><td>Postfix (<code>!</code>, <code>ᵀ</code>, <code>†</code>)</td><td>Postfix</td></tr>
+<tr><td>11</td><td>Postfix (<code>!</code>, <code>ᵀ</code>, <code>^T</code>, <code>†</code>)</td><td>Postfix</td></tr>
 <tr><td>12</td><td>Function application</td><td>Left</td></tr>
 </tbody>
 </table>
 </div>
 <blockquote>
+<p><strong>Note:</strong> <code>and</code> and <code>or</code> do NOT work as ASCII equivalents for <code>∧</code> and <code>∨</code> in general expressions. Use Unicode symbols.</p>
 <p><strong>Note:</strong> Set operators (<code>∈</code>, <code>∉</code>, <code>⊆</code>, <code>≈</code>, <code>≡</code>) are not implemented. Use function-call syntax instead.</p>
 </blockquote>
 <h2 id="comments"><a class="header" href="#comments">Comments</a></h2>

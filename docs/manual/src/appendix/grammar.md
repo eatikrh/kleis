@@ -403,14 +403,18 @@ Note: Legacy notation like `∂f/∂x` and `df/dx` is deprecated. Use `D(f, x)` 
 ### Prefix Operators
 
 ```ebnf
-prefixOp ::= "-" | "¬" | "∇" | "√" | "∫" | "∬" | "∭" | "∮" | "∯"
+prefixOp ::= "-" | "¬" | "∇" | "∫" | "∬" | "∭" | "∮" | "∯"
 ```
+
+> **Note:** `√` is NOT a prefix operator. Use `sqrt(x)` function instead.
 
 ### Postfix Operators
 
 ```ebnf
-postfixOp ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
+postfixOp ::= "!" | "ᵀ" | "^T" | "†"
 ```
+
+> **Note:** `*` (conjugate) and `^†` are NOT implemented as postfix operators.
 
 ### Infix Operators (by precedence, low to high)
 
@@ -418,17 +422,19 @@ postfixOp ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
 |------------|-----------|---------------|
 | 1 | `↔` `⇔` `⟺` (biconditional) | Left |
 | 2 | `→` `⇒` `⟹` (implication) | Right |
-| 3 | `∨` `or` | Left |
-| 4 | `∧` `and` | Left |
-| 5 | `¬` `not` (prefix) | Prefix |
-| 6 | `=` `==` `≠` `<` `>` `≤` `≥` | Non-assoc |
+| 3 | `∨` (logical or) | Left |
+| 4 | `∧` (logical and) | Left |
+| 5 | `¬` (prefix not) | Prefix |
+| 6 | `=` `==` `≠` `!=` `<` `>` `≤` `<=` `≥` `>=` | Non-assoc |
 | 7 | `+` `-` | Left |
 | 8 | `*` `×` `/` `·` | Left |
 | 9 | `^` | Right |
 | 10 | `-` (unary) | Prefix |
-| 11 | Postfix (`!`, `ᵀ`, `†`) | Postfix |
+| 11 | Postfix (`!`, `ᵀ`, `^T`, `†`) | Postfix |
 | 12 | Function application | Left |
 
+> **Note:** `and` and `or` do NOT work as ASCII equivalents for `∧` and `∨` in general expressions. Use Unicode symbols.
+>
 > **Note:** Set operators (`∈`, `∉`, `⊆`, `≈`, `≡`) are not implemented. Use function-call syntax instead.
 
 ## Comments
