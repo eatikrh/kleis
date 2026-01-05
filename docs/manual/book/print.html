@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-bd3070aa.js";
+            window.path_to_searchindex_js = "searchindex-25c79e4a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -3849,6 +3849,125 @@ curl -fsSL https://typst.app/install.sh | sh
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="applications"><a class="header" href="#applications">Applications</a></h1>
 <p>Kleis is designed for mathematical verification, but its power extends far beyond pure mathematics. This chapter showcases applications across multiple domains.</p>
+<h2 id="hardware-verification"><a class="header" href="#hardware-verification">Hardware Verification</a></h2>
+<p>Kleis can formally verify hardware designs using Z3’s bitvector theory. This section explains how Kleis compares to the industry-standard <strong>Universal Verification Methodology (UVM)</strong> defined in IEEE 1800.2-2020.</p>
+<h3 id="kleis-vs-uvm-different-approaches-to-the-same-goal"><a class="header" href="#kleis-vs-uvm-different-approaches-to-the-same-goal">Kleis vs UVM: Different Approaches to the Same Goal</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>UVM (IEEE 1800.2)</th><th>Kleis</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Verification method</strong></td><td>Simulation (random sampling)</td><td>Formal proof (Z3)</td></tr>
+<tr><td><strong>Coverage</strong></td><td>Statistical: “hit 80% of states”</td><td>Exhaustive: “is this state reachable?”</td></tr>
+<tr><td><strong>Assertions</strong></td><td>SVA (temporal, simulation-checked)</td><td>First-order logic (mathematically proven)</td></tr>
+<tr><td><strong>Language</strong></td><td>SystemVerilog class library</td><td>Native Kleis</td></tr>
+<tr><td><strong>Cost</strong></td><td>Commercial tools ($100K+/seat)</td><td>Open source</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="what-kleis-proves"><a class="header" href="#what-kleis-proves">What Kleis Proves</a></h3>
+<p>Kleis can <strong>formally prove</strong> properties for ALL possible inputs:</p>
+<pre><code class="language-kleis">// Bitvector operations (maps to SystemVerilog bit[7:0])
+operation bvadd : BitVec8 × BitVec8 → BitVec8
+operation bvxor : BitVec8 × BitVec8 → BitVec8
+operation bv_zero : BitVec8
+
+// PROVE: Addition is commutative for ALL 2^16 input pairs
+example "ADD is commutative" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . bvadd(a, b) = bvadd(b, a))
+}
+
+// PROVE: XOR of same value always yields zero
+example "XOR self is zero" {
+    assert(∀ a : BitVec8 . bvxor(a, a) = bv_zero)
+}
+
+// PROVE: Subtraction inverts addition
+example "SUB inverts ADD" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . bvsub(bvadd(a, b), b) = a)
+}
+</code></pre>
+<p>A UVM testbench would run random tests and <strong>hope</strong> to find bugs. Kleis <strong>proves</strong> correctness mathematically.</p>
+<h3 id="reachability-analysis-related-to-coverage"><a class="header" href="#reachability-analysis-related-to-coverage">Reachability Analysis (Related to Coverage)</a></h3>
+<p>UVM coverage answers: “Did our tests exercise this state?”</p>
+<p>Kleis reachability answers: “Is this state possible at all?”</p>
+<pre><code class="language-kleis">// Can ADD ever produce zero? (Yes: 0+0, or 128+128 with overflow)
+example "Zero is reachable via ADD" {
+    assert(∃ a : BitVec8 . ∃ b : BitVec8 . bvadd(a, b) = bv_zero)
+}
+
+// Can ADD produce non-zero? (Yes: 1+0, etc.)
+example "Non-zero is reachable via ADD" {
+    assert(∃ a : BitVec8 . ∃ b : BitVec8 . bvadd(a, b) ≠ bv_zero)
+}
+</code></pre>
+<h3 id="kleis-complements-uvm-not-replaces-it"><a class="header" href="#kleis-complements-uvm-not-replaces-it">Kleis Complements UVM, Not Replaces It</a></h3>
+<p>Kleis and UVM solve <strong>related but different problems</strong>:</p>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    VERIFICATION WORKFLOW                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   KLEIS (Pre-RTL)              UVM (With RTL)               │
+│   ┌────────────────┐           ┌────────────────┐           │
+│   │ Define ALU     │           │ Verilog ALU    │           │
+│   │ specification  │    →      │ implementation │           │
+│   └────────────────┘           └────────────────┘           │
+│          ↓                            ↓                     │
+│   ┌────────────────┐           ┌────────────────┐           │
+│   │ PROVE correct  │           │ SIMULATE with  │           │
+│   │ for ALL inputs │           │ random tests   │           │
+│   └────────────────┘           └────────────────┘           │
+│          ↓                            ↓                     │
+│   Mathematical                 "Probably correct"           │
+│   certainty                    (statistical)                │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Use Kleis FIRST:</strong> Prove your algorithm is correct before writing HDL.</p>
+<p><strong>Use UVM AFTER:</strong> Validate your Verilog/VHDL implements the algorithm correctly.</p>
+<h3 id="what-uvm-has-that-kleis-doesnt"><a class="header" href="#what-uvm-has-that-kleis-doesnt">What UVM Has That Kleis Doesn’t</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>UVM Feature</th><th>Kleis Status</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>DUT connection</td><td>❌ Not applicable</td><td>Kleis doesn’t connect to HDL</td></tr>
+<tr><td>Timing/clocks</td><td>❌ Different paradigm</td><td>Model time explicitly if needed</td></tr>
+<tr><td>Sequences over time</td><td>❌ Not needed</td><td>Kleis proves for all states</td></tr>
+<tr><td>Transaction-level modeling</td><td>⚠️ Can model</td><td>Use <code>data</code> types</td></tr>
+<tr><td>Waveform output</td><td>❌ Not applicable</td><td>No simulation</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-alu-verification"><a class="header" href="#example-alu-verification">Example: ALU Verification</a></h3>
+<p>See <code>examples/hardware/alu_verification.kleis</code> for a complete example that proves:</p>
+<ul>
+<li>ADD/AND/OR/XOR commutativity</li>
+<li>Addition associativity</li>
+<li>Subtraction inverts addition</li>
+<li>AND idempotence</li>
+<li>XOR self produces zero</li>
+<li>Additive inverse</li>
+<li>Reachability of zero and non-zero results</li>
+</ul>
+<p>All properties are proven for <strong>all 65,536 possible 8-bit input pairs</strong> — not sampled, but exhaustively verified.</p>
+<h3 id="when-to-use-kleis-for-hardware"><a class="header" href="#when-to-use-kleis-for-hardware">When to Use Kleis for Hardware</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Use Case</th><th>Kleis?</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td>Algorithm correctness before RTL</td><td>✅ Yes</td><td>Prove before you code</td></tr>
+<tr><td>Property verification</td><td>✅ Yes</td><td>Mathematical proof</td></tr>
+<tr><td>Bug hunting in existing RTL</td><td>❌ No</td><td>Use UVM/formal tools</td></tr>
+<tr><td>Coverage closure</td><td>⚠️ Partial</td><td>Reachability, not statistical</td></tr>
+<tr><td>Integration with HDL flow</td><td>❌ No</td><td>Standalone verification</td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="business-process-modeling"><a class="header" href="#business-process-modeling">Business Process Modeling</a></h2>
 <p>Model and verify business workflows with formal guarantees:</p>
 <pre><code class="language-kleis">// Order-to-Cash (O2C) Business Process

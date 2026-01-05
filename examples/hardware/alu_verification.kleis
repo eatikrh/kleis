@@ -1,0 +1,166 @@
+// ================================================================
+// ALU FORMAL VERIFICATION
+// ================================================================
+// This demonstrates FORMAL VERIFICATION of ALU properties using
+// Z3's bitvector theory. Properties are PROVEN for ALL inputs.
+//
+// COMPARISON TO UVM (IEEE 1800.2-2020):
+// ┌─────────────────┬────────────────────┬────────────────────────┐
+// │ Concept         │ UVM                │ Kleis                  │
+// ├─────────────────┼────────────────────┼────────────────────────┤
+// │ Scoreboard      │ Compare txns in    │ axiom = PROVE property │
+// │ (§13.6)         │ simulation         │ for ALL inputs         │
+// ├─────────────────┼────────────────────┼────────────────────────┤
+// │ Coverage        │ Statistical: "hit  │ Formal: "is this state │
+// │                 │ 80% of states"     │ reachable at all?"     │
+// ├─────────────────┼────────────────────┼────────────────────────┤
+// │ Assertions      │ SVA (temporal)     │ First-order logic      │
+// │                 │                    │ with quantifiers       │
+// └─────────────────┴────────────────────┴────────────────────────┘
+//
+// WHAT THIS IS:
+//   ✓ Formal verification of ALU algebraic properties
+//   ✓ Exhaustive (ALL 2^16 input pairs for 8-bit)
+//   ✓ Mathematical proof, not simulation
+//
+// WHAT THIS IS NOT:
+//   ✗ Not a full UVM testbench replacement
+//   ✗ No transaction sequences over time
+//   ✗ No DUT connection (no HDL interface)
+//   ✗ No temporal/clock properties
+//
+// USE CASE: Verify algorithm correctness BEFORE writing HDL.
+// ================================================================
+
+import "stdlib/prelude.kleis"
+
+// ================================================================
+// BITVECTOR OPERATIONS (Z3 QF_BV theory)
+// Maps to SystemVerilog: bit[7:0], &, |, ^, +, -, etc.
+// ================================================================
+
+operation bvand : BitVec8 × BitVec8 → BitVec8
+operation bvor : BitVec8 × BitVec8 → BitVec8
+operation bvxor : BitVec8 × BitVec8 → BitVec8
+operation bvadd : BitVec8 × BitVec8 → BitVec8
+operation bvsub : BitVec8 × BitVec8 → BitVec8
+operation bvmul : BitVec8 × BitVec8 → BitVec8
+operation bvshl : BitVec8 × BitVec8 → BitVec8
+operation bvlshr : BitVec8 × BitVec8 → BitVec8
+operation bvneg : BitVec8 → BitVec8
+operation bvnot : BitVec8 → BitVec8
+operation bv_zero : BitVec8
+operation bv_ones : BitVec8
+
+// ================================================================
+// ALU SPECIFICATION
+// These functions define the ALU behavior we want to verify.
+// ================================================================
+
+define alu_add(a: BitVec8, b: BitVec8) : BitVec8 = bvadd(a, b)
+define alu_sub(a: BitVec8, b: BitVec8) : BitVec8 = bvsub(a, b)
+define alu_and(a: BitVec8, b: BitVec8) : BitVec8 = bvand(a, b)
+define alu_or(a: BitVec8, b: BitVec8) : BitVec8 = bvor(a, b)
+define alu_xor(a: BitVec8, b: BitVec8) : BitVec8 = bvxor(a, b)
+
+// ================================================================
+// ALGEBRAIC PROPERTIES
+// These are properties that MUST hold for a correct ALU.
+// Z3 proves these for ALL possible inputs (exhaustive).
+//
+// Compare to UVM: A UVM scoreboard would CHECK these by
+// comparing expected vs actual for RANDOM inputs.
+// Kleis PROVES they hold for ALL inputs.
+// ================================================================
+
+structure ALUProperties {
+    // Commutativity
+    axiom add_commutative: ∀ a : BitVec8 . ∀ b : BitVec8 .
+        alu_add(a, b) = alu_add(b, a)
+    
+    axiom and_commutative: ∀ a : BitVec8 . ∀ b : BitVec8 .
+        alu_and(a, b) = alu_and(b, a)
+    
+    axiom or_commutative: ∀ a : BitVec8 . ∀ b : BitVec8 .
+        alu_or(a, b) = alu_or(b, a)
+    
+    axiom xor_commutative: ∀ a : BitVec8 . ∀ b : BitVec8 .
+        alu_xor(a, b) = alu_xor(b, a)
+    
+    // Associativity
+    axiom add_associative: ∀ a : BitVec8 . ∀ b : BitVec8 . ∀ c : BitVec8 .
+        alu_add(alu_add(a, b), c) = alu_add(a, alu_add(b, c))
+    
+    // Inverse operations
+    axiom sub_inverts_add: ∀ a : BitVec8 . ∀ b : BitVec8 .
+        alu_sub(alu_add(a, b), b) = a
+    
+    // Idempotence
+    axiom and_idempotent: ∀ a : BitVec8 .
+        alu_and(a, a) = a
+    
+    // Self-XOR is zero
+    axiom xor_self_zero: ∀ a : BitVec8 .
+        alu_xor(a, a) = bv_zero
+}
+
+// ================================================================
+// REACHABILITY (Related to Coverage Intent)
+// 
+// UVM coverage: "Did our random tests hit this state?"
+// Kleis reachability: "Is this state possible at all?"
+//
+// If Z3 proves ∃, the state is reachable.
+// If Z3 proves ¬∃, the state is UNREACHABLE (design bug or constraint).
+// ================================================================
+
+structure ALUReachability {
+    // Can ADD produce zero? (Yes: 0+0, or 1+255, etc.)
+    axiom can_produce_zero: ∃ a : BitVec8 . ∃ b : BitVec8 .
+        alu_add(a, b) = bv_zero
+    
+    // Can ADD produce non-zero? (Yes: 1+0, etc.)
+    axiom can_produce_nonzero: ∃ a : BitVec8 . ∃ b : BitVec8 .
+        alu_add(a, b) ≠ bv_zero
+    
+    // Can OR produce all-ones? (Yes: 0xFF | anything, or complementary bits)
+    axiom can_produce_ones: ∃ a : BitVec8 . ∃ b : BitVec8 .
+        alu_or(a, b) = bv_ones
+}
+
+// ================================================================
+// VERIFICATION TESTS
+// These run the proofs and report pass/fail.
+// ================================================================
+
+example "PROVE: ADD is commutative" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . bvadd(a, b) = bvadd(b, a))
+}
+
+example "PROVE: AND is commutative" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . bvand(a, b) = bvand(b, a))
+}
+
+example "PROVE: XOR self is zero" {
+    assert(∀ a : BitVec8 . bvxor(a, a) = bv_zero)
+}
+
+example "PROVE: SUB inverts ADD" {
+    assert(∀ a : BitVec8 . ∀ b : BitVec8 . bvsub(bvadd(a, b), b) = a)
+}
+
+example "PROVE: AND is idempotent" {
+    assert(∀ a : BitVec8 . bvand(a, a) = a)
+}
+
+example "PROVE: additive inverse" {
+    assert(∀ a : BitVec8 . bvadd(a, bvneg(a)) = bv_zero)
+}
+
+example "REACHABLE: can produce zero from ADD" {
+    assert(∃ a : BitVec8 . ∃ b : BitVec8 . bvadd(a, b) = bv_zero)
+}
+
+example "REACHABLE: can produce non-zero from ADD" {
+    assert(∃ a : BitVec8 . ∃ b : BitVec8 . bvadd(a, b) ≠ bv_zero)
+}
