@@ -126,6 +126,126 @@ All properties are proven for **all 65,536 possible 8-bit input pairs** — not 
 | Coverage closure | Partial | Reachability, not statistical |
 | Integration with HDL flow | No | Standalone verification |
 
+## AI/ML Verification
+
+Kleis aligns with the research agenda outlined in **"Toward Verified Artificial Intelligence"** (Seshia et al., Communications of the ACM, 2022) — a seminal paper from UC Berkeley on using formal methods to verify AI systems.
+
+### The Verified AI Challenge
+
+The paper identifies five key challenges for AI verification:
+
+| Challenge | Description | Kleis Approach |
+|-----------|-------------|----------------|
+| **Environment Modeling** | Formally specify the world | `structure` with `axiom`s |
+| **Specification** | Define "correct" behavior | First-order logic assertions |
+| **Computational Engines** | SAT/SMT solving | Z3 backend |
+| **Correct-by-Construction** | Build verified from start | Axiom-first development |
+| **Compositional Reasoning** | Modular proofs | `implements` contracts |
+
+### Neural Network Properties
+
+Kleis can express and verify properties of neural networks:
+
+```kleis
+// Robustness: Small input changes → small output changes
+structure RobustnessProperty {
+    axiom local_robustness: ∀ x : Input . ∀ δ : Input .
+        norm(δ) < ε → 
+        abs(network(x + δ) - network(x)) < bound
+}
+
+// Monotonicity: Larger input → larger output (for certain features)
+structure MonotonicityProperty {
+    axiom monotonic_feature: ∀ x1 : Input . ∀ x2 : Input .
+        x1.feature ≤ x2.feature → 
+        network(x1) ≤ network(x2)
+}
+
+// Safety envelope: Output always in safe region
+structure SafetyProperty {
+    axiom output_bounded: ∀ x : Input .
+        valid_input(x) → 
+        min_safe ≤ network(x) ∧ network(x) ≤ max_safe
+}
+```
+
+### Safe Reinforcement Learning
+
+```kleis
+// Safety envelope for learning-based controllers
+structure SafeController(state_dim: Nat, action_dim: Nat) {
+    // Pre-computed safety region
+    element safe_set : Set(State)
+    
+    // Learned policy
+    operation policy : State → Action
+    
+    // Safety invariant: policy never leaves safe set
+    axiom safety_invariant: ∀ s : State .
+        s ∈ safe_set → 
+        next_state(s, policy(s)) ∈ safe_set
+    
+    // Backup controller for edge cases
+    operation backup : State → Action
+    
+    axiom backup_safe: ∀ s : State .
+        next_state(s, backup(s)) ∈ safe_set
+}
+```
+
+### Compositional Verification
+
+The paper emphasizes **assume-guarantee reasoning** — exactly what Kleis structures provide:
+
+```kleis
+// Perception module contract
+structure PerceptionContract {
+    operation detect : Image → List(BoundingBox)
+    
+    // Guarantee: no false negatives within sensor range
+    axiom no_miss_close: ∀ img : Image . ∀ obj : Object .
+        distance(obj) < sensor_range ∧ visible(obj, img) →
+        ∃ box : BoundingBox . box ∈ detect(img) ∧ contains(box, obj)
+}
+
+// Planning module contract
+structure PlanningContract {
+    // Assume: perception is correct within range
+    // Guarantee: plan avoids all detected obstacles
+    axiom collision_free: ∀ boxes : List(BoundingBox) . ∀ plan : Trajectory .
+        plan = plan_path(boxes) →
+        ∀ t : Time . ∀ box : BoundingBox . 
+            box ∈ boxes → ¬intersects(plan(t), box)
+}
+
+// System-level property emerges from composition
+structure SystemSafety {
+    axiom no_collision: ∀ img : Image .
+        let boxes = PerceptionContract.detect(img) in
+        let plan = PlanningContract.plan_path(boxes) in
+        collision_free(plan)
+}
+```
+
+### Why Kleis for AI Verification?
+
+| Approach | Limitation | Kleis Advantage |
+|----------|------------|-----------------|
+| Testing | Samples finite cases | Proves ∀ inputs |
+| Fuzzing | Random, no guarantees | Exhaustive (for decidable) |
+| Static analysis | Over-approximates | Precise via Z3 |
+| Runtime monitoring | Reactive only | Proactive verification |
+
+### Further Reading
+
+- **Paper**: [Toward Verified Artificial Intelligence](https://cacm.acm.org/research/toward-verified-artificial-intelligence/) (CACM 2022)
+- **VerifAI**: Toolkit for formal AI verification (same authors)
+- **Scenic**: Domain-specific language for scenario specification
+
+Kleis provides a **general-purpose substrate** for expressing the same verification concepts in a unified, mathematically rigorous framework.
+
+---
+
 ## Business Process Modeling
 
 Model and verify business workflows with formal guarantees:
