@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-2454c3c4.js";
+            window.path_to_searchindex_js = "../searchindex-269b9715.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -352,12 +352,11 @@ type RealFunc = ℝ → ℝ  // Type alias
              | letBinding
              | conditional
 
-primary ::= identifier | number | string | symbolicConstant
-          | "(" expression ")" | placeholder
+primary ::= identifier | number | string
+          | "(" expression ")"
 
-symbolicConstant ::= "π" | "e" | "i" | "ℏ" | "c" | "φ" | "∞" | "∅"
-
-placeholder ::= "□"
+// Note: Greek letters (π, φ, etc.) are valid identifiers, not special constants.
+// Use import "stdlib/prelude.kleis" for predefined constants like pi, e, i.
 </code></pre>
 <h2 id="lambda-expressions"><a class="header" href="#lambda-expressions">Lambda Expressions</a></h2>
 <pre><code class="language-ebnf">lambda ::= "λ" params "." expression
@@ -394,8 +393,9 @@ let Cons(h, _) = list in h
 existsProp ::= ("∃" | "exists") variables [ whereClause ] "." proposition
 
 varDecl ::= identifier [ ":" type ]
-          | identifier "∈" type
           | "(" identifier { identifier } ":" type ")"
+
+// Note: "x ∈ type" syntax is NOT implemented. Use "x : type" instead.
 
 whereClause ::= "where" expression
 </code></pre>

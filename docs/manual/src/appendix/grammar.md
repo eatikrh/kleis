@@ -207,12 +207,11 @@ expression ::= primary
              | letBinding
              | conditional
 
-primary ::= identifier | number | string | symbolicConstant
-          | "(" expression ")" | placeholder
+primary ::= identifier | number | string
+          | "(" expression ")"
 
-symbolicConstant ::= "π" | "e" | "i" | "ℏ" | "c" | "φ" | "∞" | "∅"
-
-placeholder ::= "□"
+// Note: Greek letters (π, φ, etc.) are valid identifiers, not special constants.
+// Use import "stdlib/prelude.kleis" for predefined constants like pi, e, i.
 ```
 
 ## Lambda Expressions
@@ -267,8 +266,9 @@ forAllProp ::= ("∀" | "forall") variables [ whereClause ] "." proposition
 existsProp ::= ("∃" | "exists") variables [ whereClause ] "." proposition
 
 varDecl ::= identifier [ ":" type ]
-          | identifier "∈" type
           | "(" identifier { identifier } ":" type ")"
+
+// Note: "x ∈ type" syntax is NOT implemented. Use "x : type" instead.
 
 whereClause ::= "where" expression
 ```
