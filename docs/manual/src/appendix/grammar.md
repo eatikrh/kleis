@@ -430,7 +430,12 @@ postfixOp ::= "!" | "ᵀ" | "^T" | "†"
 
 > **Note:** `and` and `or` do NOT work as ASCII equivalents for `∧` and `∨` in general expressions. Use Unicode symbols.
 >
-> **Note:** Set operators (`∈`, `∉`, `⊆`, `≈`, `≡`) are not implemented. Use function-call syntax instead.
+> **Note:** Set operators use function-call syntax:
+> - `x ∈ S` → `in_set(x, S)`
+> - `x ∉ S` → `¬in_set(x, S)`
+> - `A ⊆ B` → `subset(A, B)`
+> - `A ⊂ B` → `proper_subset(A, B)`
+> - `≈` and `≡` are not implemented
 
 ## Comments
 

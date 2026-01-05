@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-283f88b6.js";
+            window.path_to_searchindex_js = "searchindex-2454c3c4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -7251,7 +7251,14 @@ Limit(f, x, a)            // lim_{x→a} f
 </div>
 <blockquote>
 <p><strong>Note:</strong> <code>and</code> and <code>or</code> do NOT work as ASCII equivalents for <code>∧</code> and <code>∨</code> in general expressions. Use Unicode symbols.</p>
-<p><strong>Note:</strong> Set operators (<code>∈</code>, <code>∉</code>, <code>⊆</code>, <code>≈</code>, <code>≡</code>) are not implemented. Use function-call syntax instead.</p>
+<p><strong>Note:</strong> Set operators use function-call syntax:</p>
+<ul>
+<li><code>x ∈ S</code> → <code>in_set(x, S)</code></li>
+<li><code>x ∉ S</code> → <code>¬in_set(x, S)</code></li>
+<li><code>A ⊆ B</code> → <code>subset(A, B)</code></li>
+<li><code>A ⊂ B</code> → <code>proper_subset(A, B)</code></li>
+<li><code>≈</code> and <code>≡</code> are not implemented</li>
+</ul>
 </blockquote>
 <h2 id="comments-1"><a class="header" href="#comments-1">Comments</a></h2>
 <pre><code class="language-ebnf">lineComment ::= "//" { any character except newline } newline
