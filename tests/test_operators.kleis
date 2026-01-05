@@ -1,22 +1,30 @@
-// Test file: Verify all operators from grammar documentation (v0.96)
+// Test file: Verify all operators from grammar documentation (v0.97)
 // This file tests which documented operators actually parse
 //
 // LEGEND:
 //   ✅ = Implemented and working
 //   ❌ = Documented but NOT implemented
+//
+// v0.97 ADDITIONS:
+//   - 'and' keyword = ∧ (logical and)
+//   - 'or' keyword = ∨ (logical or)
+//   - 'not' keyword = ¬ (logical not)
 
 import "stdlib/prelude.kleis"
 
 // ============================================================
 // PREFIX OPERATORS
-// Documented: "-" | "¬" | "∇" | "√" | "∫" | "∬" | "∭" | "∮" | "∯"
+// Documented: "-" | "¬" | "not" | "∇" | "√" | "∫" | "∬" | "∭" | "∮" | "∯"
 // ============================================================
 
 // ✅ Negation (-)
 define test_negate(x: Real) : Real = -x
 
 // ✅ Logical not (¬)
-define test_not(p: Bool) : Bool = ¬p
+define test_not_unicode(p: Bool) : Bool = ¬p
+
+// ✅ Logical not (not) - v0.97
+define test_not_keyword(p: Bool) : Bool = not p
 
 // ✅ Gradient (∇)
 operation gradient : (Real -> Real) -> (Real -> Real)
@@ -90,20 +98,24 @@ structure TestImplication {
 
 // ============================================================
 // INFIX OPERATORS - Precedence 3: Logical or ✅
-// ∨ (Unicode only - "or" doesn't work in general expressions)
+// ∨ or "or" (v0.97: keyword works everywhere)
 // ============================================================
 
 structure TestLogicalOr {
-    axiom test_or: ∀ p : Bool . ∀ q : Bool . (p ∨ q) = (q ∨ p)
+    axiom test_or_unicode: ∀ p : Bool . ∀ q : Bool . (p ∨ q) = (q ∨ p)
+    axiom test_or_keyword: ∀ p : Bool . ∀ q : Bool . (p or q) = (q or p)
+    axiom test_or_equiv: ∀ p : Bool . ∀ q : Bool . (p ∨ q) = (p or q)
 }
 
 // ============================================================
 // INFIX OPERATORS - Precedence 4: Logical and ✅
-// ∧ (Unicode only - "and" doesn't work in general expressions)
+// ∧ or "and" (v0.97: keyword works everywhere)
 // ============================================================
 
 structure TestLogicalAnd {
-    axiom test_and: ∀ p : Bool . ∀ q : Bool . (p ∧ q) = (q ∧ p)
+    axiom test_and_unicode: ∀ p : Bool . ∀ q : Bool . (p ∧ q) = (q ∧ p)
+    axiom test_and_keyword: ∀ p : Bool . ∀ q : Bool . (p and q) = (q and p)
+    axiom test_and_equiv: ∀ p : Bool . ∀ q : Bool . (p ∧ q) = (p and q)
 }
 
 // ============================================================

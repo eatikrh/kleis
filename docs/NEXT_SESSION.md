@@ -210,57 +210,46 @@ It contained early POC documents that were superseded by the current implementat
 
 ---
 
-## 🔧 FUTURE: `and`/`or` as General Logical Operators (Grammar v0.97)
+## ✅ DONE: `and`/`or`/`not` as General Logical Operators (Grammar v0.97)
 
-**Added:** January 5, 2026
+**Added:** January 5, 2026  
+**Implemented:** January 5, 2026
 
-### Current State
+### What Was Implemented
 
-`and` and `or` are parsed only within `let` binding values, NOT as general infix operators:
-
-```kleis
-// ✅ Works - inside let binding
-let x = a and b in ...
-
-// ❌ Fails - general expression
-assert(P and Q)  // Parse error!
-assert(P ∧ Q)    // Must use Unicode
-```
-
-### Proposed Enhancement
-
-Make `and`/`or` work everywhere `∧`/`∨` work:
+`and`, `or`, and `not` now work as general operators in all contexts:
 
 ```kleis
-// Both should work identically:
+// Both work identically:
 assert(P and Q)   // ASCII
 assert(P ∧ Q)     // Unicode
 
-structure Test {
-    axiom a1: forall x : Bool . x or (not x)  // ASCII
-    axiom a2: forall x : Bool . x ∨ (¬ x)     // Unicode
+structure DeMorgan {
+    axiom law1: forall P : Bool . forall Q : Bool .
+        not (P and Q) = (not P) or (not Q)
+}
+
+example "test" {
+    assert(True and False = False)
+    assert(True or False = True)
+    assert(not False = True)
 }
 ```
 
-### Implementation
+### Files Changed
 
-1. **Grammar v0.97**: Add `and`/`or` to general `binaryOp` production
-2. **Parser**: Update `try_parse_infix_operator()`:
-   ```rust
-   "and" => Some("and".to_string()),  // maps to ∧
-   "or" => Some("or".to_string()),    // maps to ∨
-   ```
-3. **Precedence**: Same as `∧`/`∨` (level 3-4)
-4. **Tests**: Add to `tests/test_operators.kleis`
-5. **Documentation**: Update `grammar.md`
+| File | Change |
+|------|--------|
+| `vscode-kleis/docs/grammar/kleis_grammar_v097.ebnf` | New grammar version |
+| `vscode-kleis/docs/grammar/kleis_grammar_v097.md` | Documentation |
+| `src/kleis_parser.rs` | Updated `parse_conjunction`, `parse_disjunction`, `parse_primary` |
+| `tests/grammar_v097_and_or_test.rs` | 20 Rust tests |
+| `tests/test_and_or_operators.kleis` | Kleis test file |
+| `tests/test_operators.kleis` | Updated with v0.97 operators |
 
-### Why This Matters
+### Branch
 
-Users coming from other languages expect `and`/`or` to work. Currently they must use Unicode `∧`/`∨`, which is a barrier for beginners.
-
-### Effort Estimate
-
-~30 minutes: Simple parser addition, well-defined semantics.
+`grammar-v097-and-or`
 
 ---
 
