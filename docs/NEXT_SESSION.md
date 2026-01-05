@@ -210,6 +210,109 @@ It contained early POC documents that were superseded by the current implementat
 
 ---
 
+## 🔧 FUTURE: `and`/`or` as General Logical Operators (Grammar v0.97)
+
+**Added:** January 5, 2026
+
+### Current State
+
+`and` and `or` are parsed only within `let` binding values, NOT as general infix operators:
+
+```kleis
+// ✅ Works - inside let binding
+let x = a and b in ...
+
+// ❌ Fails - general expression
+assert(P and Q)  // Parse error!
+assert(P ∧ Q)    // Must use Unicode
+```
+
+### Proposed Enhancement
+
+Make `and`/`or` work everywhere `∧`/`∨` work:
+
+```kleis
+// Both should work identically:
+assert(P and Q)   // ASCII
+assert(P ∧ Q)     // Unicode
+
+structure Test {
+    axiom a1: forall x : Bool . x or (not x)  // ASCII
+    axiom a2: forall x : Bool . x ∨ (¬ x)     // Unicode
+}
+```
+
+### Implementation
+
+1. **Grammar v0.97**: Add `and`/`or` to general `binaryOp` production
+2. **Parser**: Update `try_parse_infix_operator()`:
+   ```rust
+   "and" => Some("and".to_string()),  // maps to ∧
+   "or" => Some("or".to_string()),    // maps to ∨
+   ```
+3. **Precedence**: Same as `∧`/`∨` (level 3-4)
+4. **Tests**: Add to `tests/test_operators.kleis`
+5. **Documentation**: Update `grammar.md`
+
+### Why This Matters
+
+Users coming from other languages expect `and`/`or` to work. Currently they must use Unicode `∧`/`∨`, which is a barrier for beginners.
+
+### Effort Estimate
+
+~30 minutes: Simple parser addition, well-defined semantics.
+
+---
+
+## 🔧 FUTURE: Set Operators as Infix Syntax (Grammar v0.97)
+
+**Added:** January 5, 2026
+
+### Current State
+
+Set operators require function-call syntax:
+```kleis
+in_set(x, S)        // instead of x ∈ S
+subset(A, B)        // instead of A ⊆ B
+proper_subset(A, B) // instead of A ⊂ B
+```
+
+### Proposed Enhancement
+
+Add infix operators to the grammar:
+
+```ebnf
+binaryOp ::= ... existing operators ...
+           | "∈" | "∉" | "⊆" | "⊂"  // NEW: Set operators
+```
+
+### Implementation
+
+1. **Grammar v0.97**: Add set operators to `binaryOp` production
+2. **Parser**: Add to `try_parse_infix_operator()`:
+   ```rust
+   '∈' => Some("in_set".to_string()),
+   '∉' => Some("not_in_set".to_string()),
+   '⊆' => Some("subset".to_string()),
+   '⊂' => Some("proper_subset".to_string()),
+   ```
+3. **Precedence**: Same as comparison operators (level 6)
+4. **Tests**: Add to `tests/test_operators.kleis`
+5. **Documentation**: Update `grammar.md`
+
+### Why This Was Removed
+
+Set operators existed in grammar v03-v08 but were removed. Possibly:
+- Z3 set theory was added later than the grammar
+- Function-call syntax was simpler for initial implementation
+- No pressing need at the time
+
+### Effort Estimate
+
+~1 hour: Simple parser addition, well-defined semantics, existing function implementations.
+
+---
+
 ## Previous: Unified Plotting API Complete! (Jan 1, 2026)
 
 ### What's Done

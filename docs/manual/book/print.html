@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-59afe2c0.js";
+            window.path_to_searchindex_js = "searchindex-269b9715.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -6943,7 +6943,7 @@ declaration ::= importDecl              // v0.8: Module imports
 <pre><code class="language-ebnf">importDecl ::= "import" string
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-text">import "stdlib/prelude.kleis"
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
 import "stdlib/complex.kleis"
 </code></pre>
 <h2 id="annotations"><a class="header" href="#annotations">Annotations</a></h2>
@@ -6951,7 +6951,7 @@ import "stdlib/complex.kleis"
 versionAnnotation ::= "@version" "(" string ")"
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-text">@library("stdlib/algebra")
+<pre><code class="language-kleis">@library("stdlib/algebra")
 @version("0.7")
 </code></pre>
 <h2 id="data-type-definitions"><a class="header" href="#data-type-definitions">Data Type Definitions</a></h2>
@@ -6964,14 +6964,9 @@ dataField ::= identifier ":" type    // Named field
             | type                   // Positional field
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">data Bool {
-    True
-    False
-}
-data Option(T) {
-    None
-    Some(value : T)
-}
+<pre><code class="language-kleis">data Bool = True | False
+
+data Option(T) = None | Some(value : T)
 </code></pre>
 <h2 id="pattern-matching-1"><a class="header" href="#pattern-matching-1">Pattern Matching</a></h2>
 <pre><code class="language-ebnf">matchExpr ::= "match" expression "{" matchCases "}"
@@ -6990,7 +6985,7 @@ tuplePattern ::= "()"                            // Unit
                | "(" pattern "," pattern { "," pattern } ")"  // Pair, Tuple3, etc.
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">match x { True =&gt; 1 | False =&gt; 0 }
+<pre><code class="language-kleis">match x { True =&gt; 1 | False =&gt; 0 }
 match opt { None =&gt; 0 | Some(x) =&gt; x }
 match result { Ok(Some(x)) =&gt; x | Ok(None) =&gt; 0 | Err(_) =&gt; -1 }
 
@@ -7014,8 +7009,8 @@ structureMember ::= operationDecl
                   | nestedStructure
                   | functionDef
 </code></pre>
-<p>Example:</p>
-<pre><code class="language-text">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
+<p>Example (aspirational - <code>over</code> and <code>extends</code> not yet implemented):</p>
+<pre><code class="language-kleis example">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
     operation (·) : F × V → V
     
     axiom scalar_distributive : ∀(a : F)(b : F)(v : V).
@@ -7033,7 +7028,7 @@ operationImpl ::= "operation" operatorSymbol "=" implementation
                 | "operation" operatorSymbol "(" params ")" "=" expression
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-text">implements Ring(ℝ) {
+<pre><code class="language-kleis">implements Ring(ℝ) {
     operation add = builtin_add
     operation mul = builtin_mul
     element zero = 0
@@ -7047,7 +7042,7 @@ operationImpl ::= "operation" operatorSymbol "=" implementation
 param ::= identifier [ ":" type ]
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">define pi = 3.14159
+<pre><code class="language-kleis">define pi = 3.14159
 define square(x) = x * x
 define add(x: ℝ, y: ℝ) : ℝ = x + y
 </code></pre>
@@ -7070,7 +7065,7 @@ functionType ::= type "→" type | type "-&gt;" type
 typeAlias ::= "type" identifier "=" type
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">ℝ                    // Real numbers
+<pre><code class="language-kleis">ℝ                    // Real numbers
 Vector(3)            // Parameterized type
 ℝ → ℝ               // Function type
 (ℝ → ℝ) → ℝ         // Higher-order function
@@ -7088,19 +7083,18 @@ type RealFunc = ℝ → ℝ  // Type alias
              | letBinding
              | conditional
 
-primary ::= identifier | number | string | symbolicConstant
-          | "(" expression ")" | placeholder
+primary ::= identifier | number | string
+          | "(" expression ")"
 
-symbolicConstant ::= "π" | "e" | "i" | "ℏ" | "c" | "φ" | "∞" | "∅"
-
-placeholder ::= "□"
+// Note: Greek letters (π, φ, etc.) are valid identifiers, not special constants.
+// Use import "stdlib/prelude.kleis" for predefined constants like pi, e, i.
 </code></pre>
 <h2 id="lambda-expressions-1"><a class="header" href="#lambda-expressions-1">Lambda Expressions</a></h2>
 <pre><code class="language-ebnf">lambda ::= "λ" params "." expression
          | "lambda" params "." expression
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">λ x . x + 1              // Simple lambda
+<pre><code class="language-kleis">λ x . x + 1              // Simple lambda
 λ x y . x * y            // Multiple parameters
 λ (x : ℝ) . x^2          // With type annotation
 lambda x . x             // Using keyword
@@ -7110,7 +7104,7 @@ lambda x . x             // Using keyword
 // Note: typeAnnotation only valid when pattern is a simple Variable
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">let x = 5 in x + x
+<pre><code class="language-kleis">let x = 5 in x + x
 let x : ℝ = 3.14 in x * 2
 let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
 
@@ -7123,27 +7117,28 @@ let Cons(h, _) = list in h
 <pre><code class="language-ebnf">conditional ::= "if" expression "then" expression "else" expression
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-text">if x &gt; 0 then x else -x
+<pre><code class="language-kleis">if x &gt; 0 then x else -x
 </code></pre>
 <h2 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h2>
 <pre><code class="language-ebnf">forAllProp ::= ("∀" | "forall") variables [ whereClause ] "." proposition
 existsProp ::= ("∃" | "exists") variables [ whereClause ] "." proposition
 
 varDecl ::= identifier [ ":" type ]
-          | identifier "∈" type
           | "(" identifier { identifier } ":" type ")"
+
+// Note: "x ∈ type" syntax is NOT implemented. Use "x : type" instead.
 
 whereClause ::= "where" expression
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-text">∀(x : ℝ). x + 0 = x
+<pre><code class="language-kleis">∀(x : ℝ). x + 0 = x
 ∃(x : ℤ). x * x = 4
 ∀(a : ℝ)(b : ℝ) where a ≠ 0 . a * (1/a) = 1
 </code></pre>
 <h2 id="v09-enhancements"><a class="header" href="#v09-enhancements">v0.9 Enhancements</a></h2>
 <h3 id="nested-quantifiers-in-expressions"><a class="header" href="#nested-quantifiers-in-expressions">Nested Quantifiers in Expressions</a></h3>
 <p>Quantifiers can now appear as operands in logical expressions:</p>
-<pre><code class="language-text">// v0.9: Quantifier inside conjunction
+<pre><code class="language-kleis">// v0.9: Quantifier inside conjunction
 axiom nested: (x &gt; 0) ∧ (∀(y : ℝ). y &gt; 0)
 
 // Epsilon-delta limit definition
@@ -7152,7 +7147,7 @@ axiom epsilon_delta: ∀(ε : ℝ). ε &gt; 0 →
 </code></pre>
 <h3 id="function-types-in-type-annotations"><a class="header" href="#function-types-in-type-annotations">Function Types in Type Annotations</a></h3>
 <p>Function types are now allowed in quantifier variable declarations:</p>
-<pre><code class="language-text">// Function from reals to reals
+<pre><code class="language-kleis">// Function from reals to reals
 axiom func: ∀(f : ℝ → ℝ). f(0) = f(0)
 
 // Higher-order function
@@ -7171,32 +7166,32 @@ axiom continuity: ∀(f : X → Y, V : Set(Y)).
             | ("Σ" | "Π" | "∫") primaryExpr      // prefix form
 </code></pre>
 <h3 id="summation-σ"><a class="header" href="#summation-σ">Summation: Σ</a></h3>
-<pre><code class="language-text">// Sum of f(i) from 1 to n
+<pre><code class="language-kleis">// Sum of f(i) from 1 to n
 Σ(1, n, λ i . f(i))
 
 // Parsed as: sum_bounds(λ i . f(i), 1, n)
 </code></pre>
 <h3 id="product-π"><a class="header" href="#product-π">Product: Π</a></h3>
-<pre><code class="language-text">// Product of g(i) from 1 to n
+<pre><code class="language-kleis">// Product of g(i) from 1 to n
 Π(1, n, λ i . g(i))
 
 // Parsed as: prod_bounds(λ i . g(i), 1, n)
 </code></pre>
 <h3 id="integral-"><a class="header" href="#integral-">Integral: ∫</a></h3>
-<pre><code class="language-text">// Integral of x² from 0 to 1
+<pre><code class="language-kleis">// Integral of x² from 0 to 1
 ∫(0, 1, λ x . x * x, x)
 
 // Parsed as: int_bounds(λ x . x * x, 0, 1, x)
 </code></pre>
 <h3 id="limit-lim"><a class="header" href="#limit-lim">Limit: lim</a></h3>
-<pre><code class="language-text">// Limit of sin(x)/x as x approaches 0
+<pre><code class="language-kleis">// Limit of sin(x)/x as x approaches 0
 lim(x, 0, sin(x) / x)
 
 // Parsed as: lim(sin(x) / x, x, 0)
 </code></pre>
 <h3 id="prefix-forms"><a class="header" href="#prefix-forms">Prefix Forms</a></h3>
 <p>Simple prefix forms are also supported:</p>
-<pre><code class="language-text">Σf        // Parsed as: Sum(f)
+<pre><code class="language-kleis">Σf        // Parsed as: Sum(f)
 ∫g        // Parsed as: Integrate(g)
 </code></pre>
 <h2 id="calculus-notation-v07"><a class="header" href="#calculus-notation-v07">Calculus Notation (v0.7)</a></h2>
@@ -7218,14 +7213,20 @@ Product(expr, i, 1, n)    // Πᵢ₌₁ⁿ expr
 // Limits
 Limit(f, x, a)            // lim_{x→a} f
 </code></pre>
-<p>Note: Legacy notation like <code>∂f/∂x</code> and <code>df/dx</code> is deprecated. Use <code>D(f, x)</code> and <code>Dt(f, x)</code> instead.</p>
+<p>Derivatives use function call syntax: <code>D(f, x)</code> for partial derivatives and <code>Dt(f, x)</code> for total derivatives.</p>
 <h2 id="operators"><a class="header" href="#operators">Operators</a></h2>
 <h3 id="prefix-operators"><a class="header" href="#prefix-operators">Prefix Operators</a></h3>
-<pre><code class="language-ebnf">prefixOp ::= "-" | "¬" | "∇" | "√" | "∫" | "∬" | "∭" | "∮" | "∯"
+<pre><code class="language-ebnf">prefixOp ::= "-" | "¬" | "∇" | "∫" | "∬" | "∭" | "∮" | "∯"
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> <code>√</code> is NOT a prefix operator. Use <code>sqrt(x)</code> function instead.</p>
+</blockquote>
 <h3 id="postfix-operators"><a class="header" href="#postfix-operators">Postfix Operators</a></h3>
-<pre><code class="language-ebnf">postfixOp ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
+<pre><code class="language-ebnf">postfixOp ::= "!" | "ᵀ" | "^T" | "†"
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> <code>*</code> (conjugate) and <code>^†</code> are NOT implemented as postfix operators.</p>
+</blockquote>
 <h3 id="infix-operators-by-precedence-low-to-high"><a class="header" href="#infix-operators-by-precedence-low-to-high">Infix Operators (by precedence, low to high)</a></h3>
 <div class="table-wrapper">
 <table>
@@ -7235,28 +7236,36 @@ Limit(f, x, a)            // lim_{x→a} f
 <tbody>
 <tr><td>1</td><td><code>↔</code> <code>⇔</code> <code>⟺</code> (biconditional)</td><td>Left</td></tr>
 <tr><td>2</td><td><code>→</code> <code>⇒</code> <code>⟹</code> (implication)</td><td>Right</td></tr>
-<tr><td>3</td><td><code>∨</code> <code>or</code></td><td>Left</td></tr>
-<tr><td>4</td><td><code>∧</code> <code>and</code></td><td>Left</td></tr>
-<tr><td>5</td><td><code>¬</code> <code>not</code> (prefix)</td><td>Prefix</td></tr>
-<tr><td>6</td><td><code>=</code> <code>==</code> <code>≠</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>≥</code></td><td>Non-assoc</td></tr>
+<tr><td>3</td><td><code>∨</code> (logical or)</td><td>Left</td></tr>
+<tr><td>4</td><td><code>∧</code> (logical and)</td><td>Left</td></tr>
+<tr><td>5</td><td><code>¬</code> (prefix not)</td><td>Prefix</td></tr>
+<tr><td>6</td><td><code>=</code> <code>==</code> <code>≠</code> <code>!=</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>&lt;=</code> <code>≥</code> <code>&gt;=</code></td><td>Non-assoc</td></tr>
 <tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
 <tr><td>8</td><td><code>*</code> <code>×</code> <code>/</code> <code>·</code></td><td>Left</td></tr>
 <tr><td>9</td><td><code>^</code></td><td>Right</td></tr>
 <tr><td>10</td><td><code>-</code> (unary)</td><td>Prefix</td></tr>
-<tr><td>11</td><td>Postfix (<code>!</code>, <code>ᵀ</code>, <code>†</code>)</td><td>Postfix</td></tr>
+<tr><td>11</td><td>Postfix (<code>!</code>, <code>ᵀ</code>, <code>^T</code>, <code>†</code>)</td><td>Postfix</td></tr>
 <tr><td>12</td><td>Function application</td><td>Left</td></tr>
 </tbody>
 </table>
 </div>
 <blockquote>
-<p><strong>Note:</strong> Set operators (<code>∈</code>, <code>∉</code>, <code>⊆</code>, <code>≈</code>, <code>≡</code>) are not implemented. Use function-call syntax instead.</p>
+<p><strong>Note:</strong> <code>and</code> and <code>or</code> do NOT work as ASCII equivalents for <code>∧</code> and <code>∨</code> in general expressions. Use Unicode symbols.</p>
+<p><strong>Note:</strong> Set operators use function-call syntax:</p>
+<ul>
+<li><code>x ∈ S</code> → <code>in_set(x, S)</code></li>
+<li><code>x ∉ S</code> → <code>¬in_set(x, S)</code></li>
+<li><code>A ⊆ B</code> → <code>subset(A, B)</code></li>
+<li><code>A ⊂ B</code> → <code>proper_subset(A, B)</code></li>
+<li><code>≈</code> and <code>≡</code> are not implemented</li>
+</ul>
 </blockquote>
 <h2 id="comments-1"><a class="header" href="#comments-1">Comments</a></h2>
 <pre><code class="language-ebnf">lineComment ::= "//" { any character except newline } newline
 blockComment ::= "/*" { any character } "*/"
 </code></pre>
 <p><strong>Note:</strong> Kleis uses C-style comments (<code>//</code> and <code>/* */</code>), not Haskell-style (<code>--</code> and <code>{- -}</code>).</p>
-<h2 id="unicode-equivalents"><a class="header" href="#unicode-equivalents">Unicode Equivalents</a></h2>
+<h2 id="unicode-and-ascii-equivalents"><a class="header" href="#unicode-and-ascii-equivalents">Unicode and ASCII Equivalents</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -7266,24 +7275,28 @@ blockComment ::= "/*" { any character } "*/"
 <tr><td><code>∀</code></td><td><code>forall</code></td><td>Universal quantifier</td></tr>
 <tr><td><code>∃</code></td><td><code>exists</code></td><td>Existential quantifier</td></tr>
 <tr><td><code>→</code></td><td><code>-&gt;</code></td><td>Function type / implies</td></tr>
-<tr><td><code>×</code></td><td><code>*</code></td><td>Product type / multiplication</td></tr>
-<tr><td><code>∧</code></td><td><code>and</code>, <code>/\</code></td><td>Logical and</td></tr>
-<tr><td><code>∨</code></td><td><code>or</code>, <code>\/</code></td><td>Logical or</td></tr>
-<tr><td><code>¬</code></td><td><code>not</code>, <code>~</code></td><td>Logical not</td></tr>
+<tr><td><code>×</code></td><td>—</td><td>Product type (Unicode only; <code>*</code> is multiplication)</td></tr>
+<tr><td><code>∧</code></td><td>—</td><td>Logical and (Unicode only)</td></tr>
+<tr><td><code>∨</code></td><td>—</td><td>Logical or (Unicode only)</td></tr>
+<tr><td><code>¬</code></td><td>—</td><td>Logical not (Unicode only)</td></tr>
 <tr><td><code>≤</code></td><td><code>&lt;=</code></td><td>Less or equal</td></tr>
 <tr><td><code>≥</code></td><td><code>&gt;=</code></td><td>Greater or equal</td></tr>
-<tr><td><code>≠</code></td><td><code>!=</code>, <code>/=</code></td><td>Not equal</td></tr>
+<tr><td><code>≠</code></td><td><code>!=</code></td><td>Not equal</td></tr>
 <tr><td><code>ℕ</code></td><td><code>Nat</code></td><td>Natural numbers</td></tr>
 <tr><td><code>ℤ</code></td><td><code>Int</code></td><td>Integers</td></tr>
 <tr><td><code>ℚ</code></td><td><code>Rational</code></td><td>Rational numbers</td></tr>
 <tr><td><code>ℝ</code></td><td><code>Real</code></td><td>Real numbers</td></tr>
 <tr><td><code>ℂ</code></td><td><code>Complex</code></td><td>Complex numbers</td></tr>
 <tr><td><code>λ</code></td><td><code>lambda</code></td><td>Lambda</td></tr>
-<tr><td><code>π</code></td><td><code>pi</code></td><td>Pi constant</td></tr>
-<tr><td><code>∞</code></td><td><code>infinity</code></td><td>Infinity</td></tr>
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Note:</strong> <code>*</code> is the multiplication operator in expressions, not an ASCII equivalent for <code>×</code> in product types. Use Unicode <code>×</code> for product types like <code>Int × Int → Int</code>.</p>
+</blockquote>
+<blockquote>
+<p><strong>Note:</strong> Greek letters like <code>π</code>, <code>α</code>, <code>β</code> are valid identifiers. Use <code>import "stdlib/prelude.kleis"</code> for common constants like <code>pi</code>.</p>
+</blockquote>
 <h2 id="lexical-elements"><a class="header" href="#lexical-elements">Lexical Elements</a></h2>
 <pre><code class="language-ebnf">identifier ::= letter { letter | digit | "_" }
 

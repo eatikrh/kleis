@@ -1,0 +1,191 @@
+// Test file: Verify all operators from grammar documentation (v0.96)
+// This file tests which documented operators actually parse
+//
+// LEGEND:
+//   ✅ = Implemented and working
+//   ❌ = Documented but NOT implemented
+
+import "stdlib/prelude.kleis"
+
+// ============================================================
+// PREFIX OPERATORS
+// Documented: "-" | "¬" | "∇" | "√" | "∫" | "∬" | "∭" | "∮" | "∯"
+// ============================================================
+
+// ✅ Negation (-)
+define test_negate(x: Real) : Real = -x
+
+// ✅ Logical not (¬)
+define test_not(p: Bool) : Bool = ¬p
+
+// ✅ Gradient (∇)
+operation gradient : (Real -> Real) -> (Real -> Real)
+define test_gradient(f: Real -> Real) = ∇f
+
+// ❌ Square root (√) - NOT IMPLEMENTED as prefix, use sqrt() function
+
+// ✅ Integral (∫)
+operation integral : (Real -> Real) -> Real
+define test_integral(f: Real -> Real) = ∫f
+
+// ✅ Double integral (∬)
+operation double_integral : (Real -> Real) -> Real
+define test_double_integral(f: Real -> Real) = ∬f
+
+// ✅ Triple integral (∭)
+operation triple_integral : (Real -> Real) -> Real
+define test_triple_integral(f: Real -> Real) = ∭f
+
+// ✅ Contour integral (∮)
+operation contour_integral : (Real -> Real) -> Real
+define test_contour_integral(f: Real -> Real) = ∮f
+
+// ✅ Surface integral (∯)
+operation surface_integral : (Real -> Real) -> Real
+define test_surface_integral(f: Real -> Real) = ∯f
+
+// ============================================================
+// POSTFIX OPERATORS
+// Documented: "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
+// ============================================================
+
+// ✅ Factorial (!)
+define test_factorial(n: Nat) : Nat = n!
+
+// ✅ Transpose (ᵀ)
+type Matrix = Real
+define test_transpose_unicode(A: Matrix) : Matrix = Aᵀ
+
+// ✅ Transpose (^T)
+define test_transpose_ascii(B: Matrix) : Matrix = B^T
+
+// ✅ Adjoint/dagger (†)
+define test_adjoint_unicode(C: Matrix) : Matrix = C†
+
+// ❌ Adjoint (^†) - NOT IMPLEMENTED
+
+// ❌ Postfix * (conjugate/Kleene star) - NOT IMPLEMENTED
+
+// ============================================================
+// INFIX OPERATORS - Precedence 1: Biconditional ✅
+// ↔ ⇔ ⟺
+// ============================================================
+
+structure TestBiconditional {
+    axiom test_iff1: ∀ p : Bool . ∀ q : Bool . (p ↔ q) = (q ↔ p)
+    axiom test_iff2: ∀ p : Bool . ∀ q : Bool . (p ⇔ q) = (q ⇔ p)
+    axiom test_iff3: ∀ p : Bool . ∀ q : Bool . (p ⟺ q) = (q ⟺ p)
+}
+
+// ============================================================
+// INFIX OPERATORS - Precedence 2: Implication ✅
+// → ⇒ ⟹ (right associative)
+// ============================================================
+
+structure TestImplication {
+    axiom test_implies1: ∀ p : Bool . ∀ q : Bool . (p → q) ∨ (¬p) ∨ q
+    axiom test_implies2: ∀ p : Bool . ∀ q : Bool . (p ⇒ q) ∨ (¬p) ∨ q
+    axiom test_implies3: ∀ p : Bool . ∀ q : Bool . (p ⟹ q) ∨ (¬p) ∨ q
+}
+
+// ============================================================
+// INFIX OPERATORS - Precedence 3: Logical or ✅
+// ∨ (Unicode only - "or" doesn't work in general expressions)
+// ============================================================
+
+structure TestLogicalOr {
+    axiom test_or: ∀ p : Bool . ∀ q : Bool . (p ∨ q) = (q ∨ p)
+}
+
+// ============================================================
+// INFIX OPERATORS - Precedence 4: Logical and ✅
+// ∧ (Unicode only - "and" doesn't work in general expressions)
+// ============================================================
+
+structure TestLogicalAnd {
+    axiom test_and: ∀ p : Bool . ∀ q : Bool . (p ∧ q) = (q ∧ p)
+}
+
+// ============================================================
+// INFIX OPERATORS - Precedence 6: Comparison ✅
+// = == ≠ != < > ≤ <= ≥ >=
+// ============================================================
+
+structure TestComparison {
+    axiom test_eq: ∀ x : Int . x = x
+    axiom test_eq2: ∀ x : Int . x == x
+    axiom test_neq: ∀ x : Int . ∀ y : Int . (x ≠ y) ∨ (x = y)
+    axiom test_neq_ascii: ∀ x : Int . ∀ y : Int . (x != y) ∨ (x = y)
+    axiom test_lt: ∀ x : Int . ∀ y : Int . (x < y) ∨ (x = y) ∨ (x > y)
+    axiom test_gt: ∀ x : Int . ∀ y : Int . (x > y) ∨ (x = y) ∨ (x < y)
+    axiom test_leq: ∀ x : Int . x ≤ x
+    axiom test_leq_ascii: ∀ x : Int . x <= x
+    axiom test_geq: ∀ x : Int . x ≥ x
+    axiom test_geq_ascii: ∀ x : Int . x >= x
+}
+
+// ============================================================
+// INFIX OPERATORS - Precedence 7: Addition/Subtraction ✅
+// + -
+// ============================================================
+
+define test_add(a: Int, b: Int) : Int = a + b
+define test_sub(a: Int, b: Int) : Int = a - b
+
+// ============================================================
+// INFIX OPERATORS - Precedence 8: Multiplication/Division ✅
+// * × / ·
+// ============================================================
+
+define test_mul_star(a: Int, b: Int) : Int = a * b
+define test_mul_times(a: Real, b: Real) : Real = a × b
+define test_div(a: Real, b: Real) : Real = a / b
+define test_mul_dot(a: Real, b: Real) : Real = a · b
+
+// ============================================================
+// INFIX OPERATORS - Precedence 9: Exponentiation ✅
+// ^ (right associative)
+// ============================================================
+
+define test_power(a: Real, b: Real) : Real = a ^ b
+
+// ============================================================
+// Function application (highest precedence) ✅
+// ============================================================
+
+define test_func_app(f: Int -> Int, x: Int) : Int = f(x)
+
+// ============================================================
+// COMPLETE SUMMARY
+// ============================================================
+//
+// PREFIX OPERATORS:
+//   ✅ - (negate)
+//   ✅ ¬ (logical not)
+//   ✅ ∇ (gradient)
+//   ✅ ∫ ∬ ∭ ∮ ∯ (integrals)
+//   ❌ √ (NOT IMPLEMENTED - use sqrt() function)
+//
+// POSTFIX OPERATORS:
+//   ✅ ! (factorial)
+//   ✅ ᵀ (transpose Unicode)
+//   ✅ ^T (transpose ASCII)
+//   ✅ † (adjoint/dagger Unicode)
+//   ❌ ^† (adjoint ASCII - NOT IMPLEMENTED)
+//   ❌ * (postfix conjugate/Kleene - NOT IMPLEMENTED)
+//
+// INFIX OPERATORS:
+//   ✅ ↔ ⇔ ⟺ (biconditional)
+//   ✅ → ⇒ ⟹ (implication)
+//   ✅ ∨ (logical or - Unicode only)
+//   ✅ ∧ (logical and - Unicode only)
+//   ✅ = == ≠ != < > ≤ <= ≥ >= (comparison)
+//   ✅ + - (additive)
+//   ✅ * × / · (multiplicative)
+//   ✅ ^ (power)
+//
+// NOT IMPLEMENTED (documented but don't parse):
+//   ❌ √ as prefix (use sqrt() function)
+//   ❌ ^† as postfix (use † instead)
+//   ❌ * as postfix conjugate
+//   ❌ "and" / "or" as infix (only in let bindings, use ∧ ∨)

@@ -28,7 +28,7 @@ importDecl ::= "import" string
 ```
 
 Example:
-```text
+```kleis
 import "stdlib/prelude.kleis"
 import "stdlib/complex.kleis"
 ```
@@ -41,7 +41,7 @@ versionAnnotation ::= "@version" "(" string ")"
 ```
 
 Example:
-```text
+```kleis
 @library("stdlib/algebra")
 @version("0.7")
 ```
@@ -59,15 +59,10 @@ dataField ::= identifier ":" type    // Named field
 ```
 
 Examples:
-```text
-data Bool {
-    True
-    False
-}
-data Option(T) {
-    None
-    Some(value : T)
-}
+```kleis
+data Bool = True | False
+
+data Option(T) = None | Some(value : T)
 ```
 
 ## Pattern Matching
@@ -90,7 +85,7 @@ tuplePattern ::= "()"                            // Unit
 ```
 
 Examples:
-```text
+```kleis
 match x { True => 1 | False => 0 }
 match opt { None => 0 | Some(x) => x }
 match result { Ok(Some(x)) => x | Ok(None) => 0 | Err(_) => -1 }
@@ -119,8 +114,8 @@ structureMember ::= operationDecl
                   | functionDef
 ```
 
-Example:
-```text
+Example (aspirational - `over` and `extends` not yet implemented):
+```kleis example
 structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
     operation (·) : F × V → V
     
@@ -143,7 +138,7 @@ operationImpl ::= "operation" operatorSymbol "=" implementation
 ```
 
 Example:
-```text
+```kleis
 implements Ring(ℝ) {
     operation add = builtin_add
     operation mul = builtin_mul
@@ -162,7 +157,7 @@ param ::= identifier [ ":" type ]
 ```
 
 Examples:
-```text
+```kleis
 define pi = 3.14159
 define square(x) = x * x
 define add(x: ℝ, y: ℝ) : ℝ = x + y
@@ -190,7 +185,7 @@ typeAlias ::= "type" identifier "=" type
 ```
 
 Examples:
-```text
+```kleis
 ℝ                    // Real numbers
 Vector(3)            // Parameterized type
 ℝ → ℝ               // Function type
@@ -212,12 +207,11 @@ expression ::= primary
              | letBinding
              | conditional
 
-primary ::= identifier | number | string | symbolicConstant
-          | "(" expression ")" | placeholder
+primary ::= identifier | number | string
+          | "(" expression ")"
 
-symbolicConstant ::= "π" | "e" | "i" | "ℏ" | "c" | "φ" | "∞" | "∅"
-
-placeholder ::= "□"
+// Note: Greek letters (π, φ, etc.) are valid identifiers, not special constants.
+// Use import "stdlib/prelude.kleis" for predefined constants like pi, e, i.
 ```
 
 ## Lambda Expressions
@@ -228,7 +222,7 @@ lambda ::= "λ" params "." expression
 ```
 
 Examples:
-```text
+```kleis
 λ x . x + 1              // Simple lambda
 λ x y . x * y            // Multiple parameters
 λ (x : ℝ) . x^2          // With type annotation
@@ -243,7 +237,7 @@ letBinding ::= "let" pattern [ typeAnnotation ] "=" expression "in" expression
 ```
 
 Examples:
-```text
+```kleis
 let x = 5 in x + x
 let x : ℝ = 3.14 in x * 2
 let s = (a + b + c) / 2 in sqrt(s * (s-a) * (s-b) * (s-c))
@@ -261,7 +255,7 @@ conditional ::= "if" expression "then" expression "else" expression
 ```
 
 Example:
-```text
+```kleis
 if x > 0 then x else -x
 ```
 
@@ -272,14 +266,15 @@ forAllProp ::= ("∀" | "forall") variables [ whereClause ] "." proposition
 existsProp ::= ("∃" | "exists") variables [ whereClause ] "." proposition
 
 varDecl ::= identifier [ ":" type ]
-          | identifier "∈" type
           | "(" identifier { identifier } ":" type ")"
+
+// Note: "x ∈ type" syntax is NOT implemented. Use "x : type" instead.
 
 whereClause ::= "where" expression
 ```
 
 Examples:
-```text
+```kleis
 ∀(x : ℝ). x + 0 = x
 ∃(x : ℤ). x * x = 4
 ∀(a : ℝ)(b : ℝ) where a ≠ 0 . a * (1/a) = 1
@@ -291,7 +286,7 @@ Examples:
 
 Quantifiers can now appear as operands in logical expressions:
 
-```text
+```kleis
 // v0.9: Quantifier inside conjunction
 axiom nested: (x > 0) ∧ (∀(y : ℝ). y > 0)
 
@@ -304,7 +299,7 @@ axiom epsilon_delta: ∀(ε : ℝ). ε > 0 →
 
 Function types are now allowed in quantifier variable declarations:
 
-```text
+```kleis
 // Function from reals to reals
 axiom func: ∀(f : ℝ → ℝ). f(0) = f(0)
 
@@ -330,7 +325,7 @@ bigOpExpr ::= "Σ" "(" expr "," expr "," expr ")"
 
 ### Summation: Σ
 
-```text
+```kleis
 // Sum of f(i) from 1 to n
 Σ(1, n, λ i . f(i))
 
@@ -339,7 +334,7 @@ bigOpExpr ::= "Σ" "(" expr "," expr "," expr ")"
 
 ### Product: Π
 
-```text
+```kleis
 // Product of g(i) from 1 to n
 Π(1, n, λ i . g(i))
 
@@ -348,7 +343,7 @@ bigOpExpr ::= "Σ" "(" expr "," expr "," expr ")"
 
 ### Integral: ∫
 
-```text
+```kleis
 // Integral of x² from 0 to 1
 ∫(0, 1, λ x . x * x, x)
 
@@ -357,7 +352,7 @@ bigOpExpr ::= "Σ" "(" expr "," expr "," expr ")"
 
 ### Limit: lim
 
-```text
+```kleis
 // Limit of sin(x)/x as x approaches 0
 lim(x, 0, sin(x) / x)
 
@@ -368,7 +363,7 @@ lim(x, 0, sin(x) / x)
 
 Simple prefix forms are also supported:
 
-```text
+```kleis
 Σf        // Parsed as: Sum(f)
 ∫g        // Parsed as: Integrate(g)
 ```
@@ -396,21 +391,25 @@ Product(expr, i, 1, n)    // Πᵢ₌₁ⁿ expr
 Limit(f, x, a)            // lim_{x→a} f
 ```
 
-Note: Legacy notation like `∂f/∂x` and `df/dx` is deprecated. Use `D(f, x)` and `Dt(f, x)` instead.
+Derivatives use function call syntax: `D(f, x)` for partial derivatives and `Dt(f, x)` for total derivatives.
 
 ## Operators
 
 ### Prefix Operators
 
 ```ebnf
-prefixOp ::= "-" | "¬" | "∇" | "√" | "∫" | "∬" | "∭" | "∮" | "∯"
+prefixOp ::= "-" | "¬" | "∇" | "∫" | "∬" | "∭" | "∮" | "∯"
 ```
+
+> **Note:** `√` is NOT a prefix operator. Use `sqrt(x)` function instead.
 
 ### Postfix Operators
 
 ```ebnf
-postfixOp ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
+postfixOp ::= "!" | "ᵀ" | "^T" | "†"
 ```
+
+> **Note:** `*` (conjugate) and `^†` are NOT implemented as postfix operators.
 
 ### Infix Operators (by precedence, low to high)
 
@@ -418,18 +417,25 @@ postfixOp ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
 |------------|-----------|---------------|
 | 1 | `↔` `⇔` `⟺` (biconditional) | Left |
 | 2 | `→` `⇒` `⟹` (implication) | Right |
-| 3 | `∨` `or` | Left |
-| 4 | `∧` `and` | Left |
-| 5 | `¬` `not` (prefix) | Prefix |
-| 6 | `=` `==` `≠` `<` `>` `≤` `≥` | Non-assoc |
+| 3 | `∨` (logical or) | Left |
+| 4 | `∧` (logical and) | Left |
+| 5 | `¬` (prefix not) | Prefix |
+| 6 | `=` `==` `≠` `!=` `<` `>` `≤` `<=` `≥` `>=` | Non-assoc |
 | 7 | `+` `-` | Left |
 | 8 | `*` `×` `/` `·` | Left |
 | 9 | `^` | Right |
 | 10 | `-` (unary) | Prefix |
-| 11 | Postfix (`!`, `ᵀ`, `†`) | Postfix |
+| 11 | Postfix (`!`, `ᵀ`, `^T`, `†`) | Postfix |
 | 12 | Function application | Left |
 
-> **Note:** Set operators (`∈`, `∉`, `⊆`, `≈`, `≡`) are not implemented. Use function-call syntax instead.
+> **Note:** `and` and `or` do NOT work as ASCII equivalents for `∧` and `∨` in general expressions. Use Unicode symbols.
+>
+> **Note:** Set operators use function-call syntax:
+> - `x ∈ S` → `in_set(x, S)`
+> - `x ∉ S` → `¬in_set(x, S)`
+> - `A ⊆ B` → `subset(A, B)`
+> - `A ⊂ B` → `proper_subset(A, B)`
+> - `≈` and `≡` are not implemented
 
 ## Comments
 
@@ -440,28 +446,30 @@ blockComment ::= "/*" { any character } "*/"
 
 **Note:** Kleis uses C-style comments (`//` and `/* */`), not Haskell-style (`--` and `{- -}`).
 
-## Unicode Equivalents
+## Unicode and ASCII Equivalents
 
 | Unicode | ASCII | Description |
 |---------|-------|-------------|
 | `∀` | `forall` | Universal quantifier |
 | `∃` | `exists` | Existential quantifier |
 | `→` | `->` | Function type / implies |
-| `×` | `*` | Product type / multiplication |
-| `∧` | `and`, `/\` | Logical and |
-| `∨` | `or`, `\/` | Logical or |
-| `¬` | `not`, `~` | Logical not |
+| `×` | — | Product type (Unicode only; `*` is multiplication) |
+| `∧` | — | Logical and (Unicode only) |
+| `∨` | — | Logical or (Unicode only) |
+| `¬` | — | Logical not (Unicode only) |
 | `≤` | `<=` | Less or equal |
 | `≥` | `>=` | Greater or equal |
-| `≠` | `!=`, `/=` | Not equal |
+| `≠` | `!=` | Not equal |
 | `ℕ` | `Nat` | Natural numbers |
 | `ℤ` | `Int` | Integers |
 | `ℚ` | `Rational` | Rational numbers |
 | `ℝ` | `Real` | Real numbers |
 | `ℂ` | `Complex` | Complex numbers |
 | `λ` | `lambda` | Lambda |
-| `π` | `pi` | Pi constant |
-| `∞` | `infinity` | Infinity |
+
+> **Note:** `*` is the multiplication operator in expressions, not an ASCII equivalent for `×` in product types. Use Unicode `×` for product types like `Int × Int → Int`.
+
+> **Note:** Greek letters like `π`, `α`, `β` are valid identifiers. Use `import "stdlib/prelude.kleis"` for common constants like `pi`.
 
 ## Lexical Elements
 
