@@ -440,7 +440,7 @@ blockComment ::= "/*" { any character } "*/"
 
 **Note:** Kleis uses C-style comments (`//` and `/* */`), not Haskell-style (`--` and `{- -}`).
 
-## Unicode Equivalents
+## Unicode and ASCII Equivalents
 
 | Unicode | ASCII | Description |
 |---------|-------|-------------|
@@ -448,20 +448,20 @@ blockComment ::= "/*" { any character } "*/"
 | `∃` | `exists` | Existential quantifier |
 | `→` | `->` | Function type / implies |
 | `×` | `*` | Product type / multiplication |
-| `∧` | `and`, `/\` | Logical and |
-| `∨` | `or`, `\/` | Logical or |
-| `¬` | `not`, `~` | Logical not |
+| `∧` | `and` | Logical and |
+| `∨` | `or` | Logical or |
+| `¬` | — | Logical not (Unicode only) |
 | `≤` | `<=` | Less or equal |
 | `≥` | `>=` | Greater or equal |
-| `≠` | `!=`, `/=` | Not equal |
+| `≠` | `!=` | Not equal |
 | `ℕ` | `Nat` | Natural numbers |
 | `ℤ` | `Int` | Integers |
 | `ℚ` | `Rational` | Rational numbers |
 | `ℝ` | `Real` | Real numbers |
 | `ℂ` | `Complex` | Complex numbers |
 | `λ` | `lambda` | Lambda |
-| `π` | `pi` | Pi constant |
-| `∞` | `infinity` | Infinity |
+
+> **Note:** Greek letters like `π`, `α`, `β` are valid identifiers. Use `import "stdlib/prelude.kleis"` for common constants like `pi`.
 
 ## Lexical Elements
 
