@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-d2afab19.js";
+            window.path_to_searchindex_js = "../searchindex-a0a8f226.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -233,14 +233,9 @@ dataField ::= identifier ":" type    // Named field
             | type                   // Positional field
 </code></pre>
 <p>Examples:</p>
-<pre><code class="language-kleis">data Bool {
-    True
-    False
-}
-data Option(T) {
-    None
-    Some(value : T)
-}
+<pre><code class="language-kleis">data Bool = True | False
+
+data Option(T) = None | Some(value : T)
 </code></pre>
 <h2 id="pattern-matching"><a class="header" href="#pattern-matching">Pattern Matching</a></h2>
 <pre><code class="language-ebnf">matchExpr ::= "match" expression "{" matchCases "}"
@@ -283,8 +278,8 @@ structureMember ::= operationDecl
                   | nestedStructure
                   | functionDef
 </code></pre>
-<p>Example:</p>
-<pre><code class="language-kleis">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
+<p>Example (aspirational - <code>over</code> and <code>extends</code> not yet implemented):</p>
+<pre><code class="language-kleis example">structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
     operation (·) : F × V → V
     
     axiom scalar_distributive : ∀(a : F)(b : F)(v : V).

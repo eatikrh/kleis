@@ -60,14 +60,9 @@ dataField ::= identifier ":" type    // Named field
 
 Examples:
 ```kleis
-data Bool {
-    True
-    False
-}
-data Option(T) {
-    None
-    Some(value : T)
-}
+data Bool = True | False
+
+data Option(T) = None | Some(value : T)
 ```
 
 ## Pattern Matching
@@ -119,8 +114,8 @@ structureMember ::= operationDecl
                   | functionDef
 ```
 
-Example:
-```kleis
+Example (aspirational - `over` and `extends` not yet implemented):
+```kleis example
 structure VectorSpace(V) over Field(F) extends AbelianGroup(V) {
     operation (·) : F × V → V
     
