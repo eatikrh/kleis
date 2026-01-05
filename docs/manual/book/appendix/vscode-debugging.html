@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-269b9715.js";
+            window.path_to_searchindex_js = "../searchindex-222b6159.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -203,13 +203,42 @@
 </li>
 </ol>
 <h2 id="extension-setup"><a class="header" href="#extension-setup">Extension Setup</a></h2>
-<p>The Kleis VS Code extension is located in <code>kleis-vscode/</code>. Install it:</p>
-<pre><code class="language-bash">cd kleis-vscode
+<p>The Kleis VS Code extension is located in <code>vscode-kleis/</code>. Install it:</p>
+<pre><code class="language-bash">cd vscode-kleis
 npm install
 npm run compile
-code --install-extension kleis-0.1.0.vsix
+code --install-extension kleis-*.vsix
 </code></pre>
 <p>Or for development, open the extension folder in VS Code and press F5 to launch an Extension Development Host.</p>
+<h2 id="workspace-settings"><a class="header" href="#workspace-settings">Workspace Settings</a></h2>
+<p>Create <code>.vscode/settings.json</code> in your project to configure the extension:</p>
+<pre><code class="language-json">{
+  "kleis.serverPath": "${workspaceFolder}/target/release/kleis",
+  "kleis.replPath": "${workspaceFolder}/target/release/repl",
+  "kleis.trace.server": "off"
+}
+</code></pre>
+<h3 id="settings-reference"><a class="header" href="#settings-reference">Settings Reference</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>kleis.serverPath</code></td><td>Path to the <code>kleis</code> binary (used for LSP and DAP)</td></tr>
+<tr><td><code>kleis.replPath</code></td><td>Path to the <code>repl</code> binary (used for REPL panel)</td></tr>
+<tr><td><code>kleis.trace.server</code></td><td>Logging level: <code>"off"</code>, <code>"messages"</code>, or <code>"verbose"</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Note:</strong> Use absolute paths for reliability. Example for a typical setup:</p>
+<pre><code class="language-json">{
+  "kleis.serverPath": "/Users/yourname/git/kleis/target/release/kleis",
+  "kleis.replPath": "/Users/yourname/git/kleis/target/release/repl",
+  "kleis.trace.server": "off"
+}
+</code></pre>
+<p>Set <code>"kleis.trace.server": "verbose"</code> when debugging extension issues.</p>
 <h2 id="launch-configuration"><a class="header" href="#launch-configuration">Launch Configuration</a></h2>
 <p>Create <code>.vscode/launch.json</code> in your project:</p>
 <pre><code class="language-json">{

@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-269b9715.js";
+            window.path_to_searchindex_js = "searchindex-222b6159.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -6921,9 +6921,10 @@ det(sI - A + LC) = s² + (3 + l₁)s + (2 + l₂)</p>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
-<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.95).</p>
+<p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.97).</p>
 <blockquote>
-<p><strong>Complete Grammar:</strong> See <code>docs/grammar/kleis_grammar_v095.md</code> for the full specification.</p>
+<p><strong>Complete Grammar:</strong> See <code>vscode-kleis/docs/grammar/kleis_grammar_v097.md</code> for the full specification.</p>
+<p><strong>v0.97 (Jan 2026):</strong> Added <code>and</code>, <code>or</code>, <code>not</code> as ASCII equivalents for <code>∧</code>, <code>∨</code>, <code>¬</code>.</p>
 </blockquote>
 <h2 id="program-structure"><a class="header" href="#program-structure">Program Structure</a></h2>
 <pre><code class="language-ebnf">program ::= { declaration }
@@ -7236,9 +7237,9 @@ Limit(f, x, a)            // lim_{x→a} f
 <tbody>
 <tr><td>1</td><td><code>↔</code> <code>⇔</code> <code>⟺</code> (biconditional)</td><td>Left</td></tr>
 <tr><td>2</td><td><code>→</code> <code>⇒</code> <code>⟹</code> (implication)</td><td>Right</td></tr>
-<tr><td>3</td><td><code>∨</code> (logical or)</td><td>Left</td></tr>
-<tr><td>4</td><td><code>∧</code> (logical and)</td><td>Left</td></tr>
-<tr><td>5</td><td><code>¬</code> (prefix not)</td><td>Prefix</td></tr>
+<tr><td>3</td><td><code>∨</code> or <code>or</code> (logical or)</td><td>Left</td></tr>
+<tr><td>4</td><td><code>∧</code> or <code>and</code> (logical and)</td><td>Left</td></tr>
+<tr><td>5</td><td><code>¬</code> or <code>not</code> (prefix not)</td><td>Prefix</td></tr>
 <tr><td>6</td><td><code>=</code> <code>==</code> <code>≠</code> <code>!=</code> <code>&lt;</code> <code>&gt;</code> <code>≤</code> <code>&lt;=</code> <code>≥</code> <code>&gt;=</code></td><td>Non-assoc</td></tr>
 <tr><td>7</td><td><code>+</code> <code>-</code></td><td>Left</td></tr>
 <tr><td>8</td><td><code>*</code> <code>×</code> <code>/</code> <code>·</code></td><td>Left</td></tr>
@@ -7250,7 +7251,7 @@ Limit(f, x, a)            // lim_{x→a} f
 </table>
 </div>
 <blockquote>
-<p><strong>Note:</strong> <code>and</code> and <code>or</code> do NOT work as ASCII equivalents for <code>∧</code> and <code>∨</code> in general expressions. Use Unicode symbols.</p>
+<p><strong>Note (v0.97):</strong> <code>and</code>, <code>or</code>, <code>not</code> now work as ASCII equivalents for <code>∧</code>, <code>∨</code>, <code>¬</code> in all expression contexts.</p>
 <p><strong>Note:</strong> Set operators use function-call syntax:</p>
 <ul>
 <li><code>x ∈ S</code> → <code>in_set(x, S)</code></li>
@@ -7276,9 +7277,9 @@ blockComment ::= "/*" { any character } "*/"
 <tr><td><code>∃</code></td><td><code>exists</code></td><td>Existential quantifier</td></tr>
 <tr><td><code>→</code></td><td><code>-&gt;</code></td><td>Function type / implies</td></tr>
 <tr><td><code>×</code></td><td>—</td><td>Product type (Unicode only; <code>*</code> is multiplication)</td></tr>
-<tr><td><code>∧</code></td><td>—</td><td>Logical and (Unicode only)</td></tr>
-<tr><td><code>∨</code></td><td>—</td><td>Logical or (Unicode only)</td></tr>
-<tr><td><code>¬</code></td><td>—</td><td>Logical not (Unicode only)</td></tr>
+<tr><td><code>∧</code></td><td><code>and</code></td><td>Logical and (<strong>v0.97</strong>: <code>and</code> works everywhere)</td></tr>
+<tr><td><code>∨</code></td><td><code>or</code></td><td>Logical or (<strong>v0.97</strong>: <code>or</code> works everywhere)</td></tr>
+<tr><td><code>¬</code></td><td><code>not</code></td><td>Logical not (<strong>v0.97</strong>: <code>not</code> works everywhere)</td></tr>
 <tr><td><code>≤</code></td><td><code>&lt;=</code></td><td>Less or equal</td></tr>
 <tr><td><code>≥</code></td><td><code>&gt;=</code></td><td>Greater or equal</td></tr>
 <tr><td><code>≠</code></td><td><code>!=</code></td><td>Not equal</td></tr>
@@ -7296,6 +7297,9 @@ blockComment ::= "/*" { any character } "*/"
 </blockquote>
 <blockquote>
 <p><strong>Note:</strong> Greek letters like <code>π</code>, <code>α</code>, <code>β</code> are valid identifiers. Use <code>import "stdlib/prelude.kleis"</code> for common constants like <code>pi</code>.</p>
+</blockquote>
+<blockquote>
+<p><strong>Note (v0.97):</strong> <code>and</code>, <code>or</code>, <code>not</code> are now reserved keywords and work in all expression contexts, including axioms, assertions, and function bodies.</p>
 </blockquote>
 <h2 id="lexical-elements"><a class="header" href="#lexical-elements">Lexical Elements</a></h2>
 <pre><code class="language-ebnf">identifier ::= letter { letter | digit | "_" }
@@ -8887,13 +8891,42 @@ define run_with_env(code: String, env: Env) : LispVal =
 </li>
 </ol>
 <h2 id="extension-setup"><a class="header" href="#extension-setup">Extension Setup</a></h2>
-<p>The Kleis VS Code extension is located in <code>kleis-vscode/</code>. Install it:</p>
-<pre><code class="language-bash">cd kleis-vscode
+<p>The Kleis VS Code extension is located in <code>vscode-kleis/</code>. Install it:</p>
+<pre><code class="language-bash">cd vscode-kleis
 npm install
 npm run compile
-code --install-extension kleis-0.1.0.vsix
+code --install-extension kleis-*.vsix
 </code></pre>
 <p>Or for development, open the extension folder in VS Code and press F5 to launch an Extension Development Host.</p>
+<h2 id="workspace-settings"><a class="header" href="#workspace-settings">Workspace Settings</a></h2>
+<p>Create <code>.vscode/settings.json</code> in your project to configure the extension:</p>
+<pre><code class="language-json">{
+  "kleis.serverPath": "${workspaceFolder}/target/release/kleis",
+  "kleis.replPath": "${workspaceFolder}/target/release/repl",
+  "kleis.trace.server": "off"
+}
+</code></pre>
+<h3 id="settings-reference"><a class="header" href="#settings-reference">Settings Reference</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>kleis.serverPath</code></td><td>Path to the <code>kleis</code> binary (used for LSP and DAP)</td></tr>
+<tr><td><code>kleis.replPath</code></td><td>Path to the <code>repl</code> binary (used for REPL panel)</td></tr>
+<tr><td><code>kleis.trace.server</code></td><td>Logging level: <code>"off"</code>, <code>"messages"</code>, or <code>"verbose"</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Note:</strong> Use absolute paths for reliability. Example for a typical setup:</p>
+<pre><code class="language-json">{
+  "kleis.serverPath": "/Users/yourname/git/kleis/target/release/kleis",
+  "kleis.replPath": "/Users/yourname/git/kleis/target/release/repl",
+  "kleis.trace.server": "off"
+}
+</code></pre>
+<p>Set <code>"kleis.trace.server": "verbose"</code> when debugging extension issues.</p>
 <h2 id="launch-configuration"><a class="header" href="#launch-configuration">Launch Configuration</a></h2>
 <p>Create <code>.vscode/launch.json</code> in your project:</p>
 <pre><code class="language-json">{
