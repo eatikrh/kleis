@@ -391,7 +391,7 @@ Product(expr, i, 1, n)    // Πᵢ₌₁ⁿ expr
 Limit(f, x, a)            // lim_{x→a} f
 ```
 
-Note: Legacy notation like `∂f/∂x` and `df/dx` is deprecated. Use `D(f, x)` and `Dt(f, x)` instead.
+Derivatives use function call syntax: `D(f, x)` for partial derivatives and `Dt(f, x)` for total derivatives.
 
 ## Operators
 
