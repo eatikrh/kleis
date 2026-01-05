@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-25c79e4a.js";
+            window.path_to_searchindex_js = "../searchindex-cb355032.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -201,10 +201,10 @@
 </thead>
 <tbody>
 <tr><td><strong>Verification method</strong></td><td>Simulation (random sampling)</td><td>Formal proof (Z3)</td></tr>
-<tr><td><strong>Coverage</strong></td><td>Statistical: “hit 80% of states”</td><td>Exhaustive: “is this state reachable?”</td></tr>
+<tr><td><strong>Coverage</strong></td><td>Statistical: “did we test this?”</td><td>Exhaustive: “is this state reachable?”</td></tr>
 <tr><td><strong>Assertions</strong></td><td>SVA (temporal, simulation-checked)</td><td>First-order logic (mathematically proven)</td></tr>
 <tr><td><strong>Language</strong></td><td>SystemVerilog class library</td><td>Native Kleis</td></tr>
-<tr><td><strong>Cost</strong></td><td>Commercial tools ($100K+/seat)</td><td>Open source</td></tr>
+<tr><td><strong>Cost</strong></td><td>Requires commercial simulators</td><td>Open source</td></tr>
 </tbody>
 </table>
 </div>
@@ -247,9 +247,9 @@ example "Non-zero is reachable via ADD" {
 <h3 id="kleis-complements-uvm-not-replaces-it"><a class="header" href="#kleis-complements-uvm-not-replaces-it">Kleis Complements UVM, Not Replaces It</a></h3>
 <p>Kleis and UVM solve <strong>related but different problems</strong>:</p>
 <pre><code>┌─────────────────────────────────────────────────────────────┐
-│                    VERIFICATION WORKFLOW                     │
+│                    VERIFICATION WORKFLOW                    │
 ├─────────────────────────────────────────────────────────────┤
-│                                                              │
+│                                                             │
 │   KLEIS (Pre-RTL)              UVM (With RTL)               │
 │   ┌────────────────┐           ┌────────────────┐           │
 │   │ Define ALU     │           │ Verilog ALU    │           │
@@ -263,7 +263,7 @@ example "Non-zero is reachable via ADD" {
 │          ↓                            ↓                     │
 │   Mathematical                 "Probably correct"           │
 │   certainty                    (statistical)                │
-│                                                              │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 </code></pre>
 <p><strong>Use Kleis FIRST:</strong> Prove your algorithm is correct before writing HDL.</p>
@@ -275,11 +275,11 @@ example "Non-zero is reachable via ADD" {
 <tr><th>UVM Feature</th><th>Kleis Status</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td>DUT connection</td><td>❌ Not applicable</td><td>Kleis doesn’t connect to HDL</td></tr>
-<tr><td>Timing/clocks</td><td>❌ Different paradigm</td><td>Model time explicitly if needed</td></tr>
-<tr><td>Sequences over time</td><td>❌ Not needed</td><td>Kleis proves for all states</td></tr>
-<tr><td>Transaction-level modeling</td><td>⚠️ Can model</td><td>Use <code>data</code> types</td></tr>
-<tr><td>Waveform output</td><td>❌ Not applicable</td><td>No simulation</td></tr>
+<tr><td>DUT connection</td><td>Not applicable</td><td>Kleis doesn’t connect to HDL</td></tr>
+<tr><td>Timing/clocks</td><td>Different paradigm</td><td>Model time explicitly if needed</td></tr>
+<tr><td>Sequences over time</td><td>Not needed</td><td>Kleis proves for all states</td></tr>
+<tr><td>Transaction-level modeling</td><td>Can model</td><td>Use <code>data</code> types</td></tr>
+<tr><td>Waveform output</td><td>Not applicable</td><td>No simulation</td></tr>
 </tbody>
 </table>
 </div>
@@ -302,11 +302,11 @@ example "Non-zero is reachable via ADD" {
 <tr><th>Use Case</th><th>Kleis?</th><th>Why</th></tr>
 </thead>
 <tbody>
-<tr><td>Algorithm correctness before RTL</td><td>✅ Yes</td><td>Prove before you code</td></tr>
-<tr><td>Property verification</td><td>✅ Yes</td><td>Mathematical proof</td></tr>
-<tr><td>Bug hunting in existing RTL</td><td>❌ No</td><td>Use UVM/formal tools</td></tr>
-<tr><td>Coverage closure</td><td>⚠️ Partial</td><td>Reachability, not statistical</td></tr>
-<tr><td>Integration with HDL flow</td><td>❌ No</td><td>Standalone verification</td></tr>
+<tr><td>Algorithm correctness before RTL</td><td>Yes</td><td>Prove before you code</td></tr>
+<tr><td>Property verification</td><td>Yes</td><td>Mathematical proof</td></tr>
+<tr><td>Bug hunting in existing RTL</td><td>No</td><td>Use UVM/formal tools</td></tr>
+<tr><td>Coverage closure</td><td>Partial</td><td>Reachability, not statistical</td></tr>
+<tr><td>Integration with HDL flow</td><td>No</td><td>Standalone verification</td></tr>
 </tbody>
 </table>
 </div>
