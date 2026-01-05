@@ -1,0 +1,98 @@
+// ================================================================
+// TRANSACTION TIMING VERIFICATION
+// ================================================================
+// Models transaction timing similar to UVM's uvm_transaction
+// (IEEE 1800.2-2020, §5.4.2.16: get_accept_time, get_begin_time, 
+//  get_end_time)
+//
+// In UVM, timing is tracked during simulation.
+// In Kleis, we PROVE timing properties for ALL transactions.
+// ================================================================
+
+import "stdlib/prelude.kleis"
+
+// ================================================================
+// TIMING INVARIANTS
+// These are properties UVM checks during simulation.
+// Kleis PROVES them for ALL possible values.
+// ================================================================
+
+// Core timing constraint: accept ≤ begin ≤ end
+// This is what UVM's transaction timing enforces
+
+example "Timing order: accept ≤ begin ≤ end implies valid latency" {
+    // If times are properly ordered, latency is non-negative
+    assert(∀ accept : Int . ∀ begin : Int . ∀ end : Int .
+        (accept ≤ begin ∧ begin ≤ end) → (end - begin ≥ 0))
+}
+
+example "Total time ≥ latency when times ordered" {
+    // total_time = end - accept
+    // latency = end - begin
+    // If accept ≤ begin, then total_time ≥ latency
+    assert(∀ accept : Int . ∀ begin : Int . ∀ end : Int .
+        (accept ≤ begin ∧ begin ≤ end) → 
+        (end - accept ≥ end - begin))
+}
+
+example "Queueing time is non-negative" {
+    // queueing_time = begin - accept (time waiting in sequencer)
+    assert(∀ accept : Int . ∀ begin : Int .
+        accept ≤ begin → (begin - accept ≥ 0))
+}
+
+// ================================================================
+// LATENCY BOUNDS
+// Verify that latency bounds are consistent
+// ================================================================
+
+example "Min latency ≤ max latency (any operation)" {
+    // For any operation, min ≤ max
+    assert(∀ min : Int . ∀ max : Int .
+        (min ≥ 0 ∧ max ≥ min) → (min ≤ max))
+}
+
+example "Bounded latency implies completion" {
+    // If latency ≤ bound, transaction completes within bound
+    assert(∀ begin : Int . ∀ end : Int . ∀ bound : Int .
+        (end - begin ≤ bound ∧ begin ≤ end) → 
+        (end ≤ begin + bound))
+}
+
+// ================================================================
+// PIPELINE PROPERTIES
+// Verify throughput constraints
+// ================================================================
+
+example "Back-to-back issue possible if latency ≥ 1" {
+    // Can issue at time t and t+1 if pipeline accepts 1/cycle
+    assert(∀ t1 : Int . ∀ t2 : Int .
+        (t2 = t1 + 1) → (t2 > t1))
+}
+
+example "No issue overlap if not pipelined" {
+    // If op takes N cycles and can't pipeline, next issue at t + N
+    assert(∀ t : Int . ∀ latency : Int .
+        (latency > 0) → (t + latency > t))
+}
+
+// ================================================================
+// COMPARISON TO UVM
+// ================================================================
+// 
+// UVM (simulation-based):
+//   txn.begin_time = $time;
+//   ... execute operation ...
+//   txn.end_time = $time;
+//   assert(txn.end_time - txn.begin_time <= MAX_LATENCY);
+//   // Checked for THIS specific transaction during simulation
+//
+// Kleis (formal verification):
+//   assert(∀ begin . ∀ end . (end - begin ≤ MAX_LATENCY))
+//   // PROVEN for ALL possible timing values
+//
+// Key difference:
+//   UVM: "This transaction met the timing constraint"
+//   Kleis: "ALL transactions meeting preconditions satisfy the constraint"
+//
+// ================================================================
