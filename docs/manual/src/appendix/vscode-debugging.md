@@ -17,16 +17,48 @@ This appendix explains how to set up and use the VS Code debugger with Kleis.
 
 ## Extension Setup
 
-The Kleis VS Code extension is located in `kleis-vscode/`. Install it:
+The Kleis VS Code extension is located in `vscode-kleis/`. Install it:
 
 ```bash
-cd kleis-vscode
+cd vscode-kleis
 npm install
 npm run compile
-code --install-extension kleis-0.1.0.vsix
+code --install-extension kleis-*.vsix
 ```
 
 Or for development, open the extension folder in VS Code and press F5 to launch an Extension Development Host.
+
+## Workspace Settings
+
+Create `.vscode/settings.json` in your project to configure the extension:
+
+```json
+{
+  "kleis.serverPath": "${workspaceFolder}/target/release/kleis",
+  "kleis.replPath": "${workspaceFolder}/target/release/repl",
+  "kleis.trace.server": "off"
+}
+```
+
+### Settings Reference
+
+| Setting | Description |
+|---------|-------------|
+| `kleis.serverPath` | Path to the `kleis` binary (used for LSP and DAP) |
+| `kleis.replPath` | Path to the `repl` binary (used for REPL panel) |
+| `kleis.trace.server` | Logging level: `"off"`, `"messages"`, or `"verbose"` |
+
+**Note:** Use absolute paths for reliability. Example for a typical setup:
+
+```json
+{
+  "kleis.serverPath": "/Users/yourname/git/kleis/target/release/kleis",
+  "kleis.replPath": "/Users/yourname/git/kleis/target/release/repl",
+  "kleis.trace.server": "off"
+}
+```
+
+Set `"kleis.trace.server": "verbose"` when debugging extension issues.
 
 ## Launch Configuration
 

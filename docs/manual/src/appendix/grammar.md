@@ -1,8 +1,10 @@
 # Appendix A: Grammar Reference
 
-This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.95).
+This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.97).
 
-> **Complete Grammar:** See `docs/grammar/kleis_grammar_v095.md` for the full specification.
+> **Complete Grammar:** See `vscode-kleis/docs/grammar/kleis_grammar_v097.md` for the full specification.
+>
+> **v0.97 (Jan 2026):** Added `and`, `or`, `not` as ASCII equivalents for `∧`, `∨`, `¬`.
 
 ## Program Structure
 
@@ -417,9 +419,9 @@ postfixOp ::= "!" | "ᵀ" | "^T" | "†"
 |------------|-----------|---------------|
 | 1 | `↔` `⇔` `⟺` (biconditional) | Left |
 | 2 | `→` `⇒` `⟹` (implication) | Right |
-| 3 | `∨` (logical or) | Left |
-| 4 | `∧` (logical and) | Left |
-| 5 | `¬` (prefix not) | Prefix |
+| 3 | `∨` or `or` (logical or) | Left |
+| 4 | `∧` or `and` (logical and) | Left |
+| 5 | `¬` or `not` (prefix not) | Prefix |
 | 6 | `=` `==` `≠` `!=` `<` `>` `≤` `<=` `≥` `>=` | Non-assoc |
 | 7 | `+` `-` | Left |
 | 8 | `*` `×` `/` `·` | Left |
@@ -428,7 +430,7 @@ postfixOp ::= "!" | "ᵀ" | "^T" | "†"
 | 11 | Postfix (`!`, `ᵀ`, `^T`, `†`) | Postfix |
 | 12 | Function application | Left |
 
-> **Note:** `and` and `or` do NOT work as ASCII equivalents for `∧` and `∨` in general expressions. Use Unicode symbols.
+> **Note (v0.97):** `and`, `or`, `not` now work as ASCII equivalents for `∧`, `∨`, `¬` in all expression contexts.
 >
 > **Note:** Set operators use function-call syntax:
 > - `x ∈ S` → `in_set(x, S)`
@@ -454,9 +456,9 @@ blockComment ::= "/*" { any character } "*/"
 | `∃` | `exists` | Existential quantifier |
 | `→` | `->` | Function type / implies |
 | `×` | — | Product type (Unicode only; `*` is multiplication) |
-| `∧` | — | Logical and (Unicode only) |
-| `∨` | — | Logical or (Unicode only) |
-| `¬` | — | Logical not (Unicode only) |
+| `∧` | `and` | Logical and (**v0.97**: `and` works everywhere) |
+| `∨` | `or` | Logical or (**v0.97**: `or` works everywhere) |
+| `¬` | `not` | Logical not (**v0.97**: `not` works everywhere) |
 | `≤` | `<=` | Less or equal |
 | `≥` | `>=` | Greater or equal |
 | `≠` | `!=` | Not equal |
@@ -470,6 +472,8 @@ blockComment ::= "/*" { any character } "*/"
 > **Note:** `*` is the multiplication operator in expressions, not an ASCII equivalent for `×` in product types. Use Unicode `×` for product types like `Int × Int → Int`.
 
 > **Note:** Greek letters like `π`, `α`, `β` are valid identifiers. Use `import "stdlib/prelude.kleis"` for common constants like `pi`.
+
+> **Note (v0.97):** `and`, `or`, `not` are now reserved keywords and work in all expression contexts, including axioms, assertions, and function bodies.
 
 ## Lexical Elements
 

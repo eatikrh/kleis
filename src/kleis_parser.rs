@@ -490,8 +490,18 @@ impl KleisParser {
         }
 
         // Negation: ¬A or not A (prefix operator)
+        // v0.97: Added support for 'not' keyword
         if self.peek() == Some('¬') {
             self.advance(); // consume ¬
+            let arg = self.parse_primary()?;
+            return Ok(Expression::Operation {
+                name: "logical_not".to_string(),
+                args: vec![arg],
+                span: Some(self.current_span()),
+            });
+        }
+        if self.peek_word("not") {
+            self.consume_word("not");
             let arg = self.parse_primary()?;
             return Ok(Expression::Operation {
                 name: "logical_not".to_string(),
@@ -1040,20 +1050,29 @@ impl KleisParser {
         Ok(left)
     }
 
-    /// Parse disjunction: A ∨ B (logical or)
+    /// Parse disjunction: A ∨ B or A or B (logical or)
+    /// v0.97: Added support for 'or' keyword
     fn parse_disjunction(&mut self) -> Result<Expression, KleisParseError> {
         let start_span = self.current_span();
         let mut left = self.parse_conjunction()?;
 
         loop {
             self.skip_whitespace();
-            let is_or = self.peek() == Some('∨');
 
-            if !is_or {
+            // v0.97: Check for '∨' OR 'or' keyword
+            let is_unicode_or = self.peek() == Some('∨');
+            let is_keyword_or = self.peek_word("or");
+
+            if !is_unicode_or && !is_keyword_or {
                 break;
             }
 
-            self.advance(); // consume ∨
+            if is_unicode_or {
+                self.advance(); // consume ∨
+            } else {
+                self.consume_word("or"); // consume 'or'
+            }
+
             let right = self.parse_conjunction()?;
             let expr_span = left
                 .get_span()
@@ -1069,20 +1088,29 @@ impl KleisParser {
         Ok(left)
     }
 
-    /// Parse conjunction: A ∧ B (logical and)
+    /// Parse conjunction: A ∧ B or A and B (logical and)
+    /// v0.97: Added support for 'and' keyword
     fn parse_conjunction(&mut self) -> Result<Expression, KleisParseError> {
         let start_span = self.current_span();
         let mut left = self.parse_comparison()?;
 
         loop {
             self.skip_whitespace();
-            let is_and = self.peek() == Some('∧');
 
-            if !is_and {
+            // v0.97: Check for '∧' OR 'and' keyword
+            let is_unicode_and = self.peek() == Some('∧');
+            let is_keyword_and = self.peek_word("and");
+
+            if !is_unicode_and && !is_keyword_and {
                 break;
             }
 
-            self.advance(); // consume ∧
+            if is_unicode_and {
+                self.advance(); // consume ∧
+            } else {
+                self.consume_word("and"); // consume 'and'
+            }
+
             let right = self.parse_comparison()?;
             let expr_span = left
                 .get_span()
