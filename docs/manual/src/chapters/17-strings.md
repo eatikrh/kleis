@@ -277,3 +277,9 @@ structure StringBuilder {
 
 See `src/solvers/z3/capabilities.toml` for the complete list of supported string operations.
 
+## What's Next?
+
+Explore set theory operations and Z3's set reasoning:
+
+→ [Sets](18-sets.md)
+

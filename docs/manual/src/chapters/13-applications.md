@@ -2,6 +2,8 @@
 
 Kleis is designed for mathematical verification, but its power extends far beyond pure mathematics. This chapter showcases applications across multiple domains.
 
+> **Note:** Many examples in this chapter use `example` blocks with `assert` statements for testing and verification. See [Example Blocks](20-example-blocks.md) for details on this syntax.
+
 ## AI/ML Verification
 
 Kleis aligns with the research agenda outlined in **"Toward Verified Artificial Intelligence"** (Seshia et al., Communications of the ACM, 2022) — a seminal paper from UC Berkeley on using formal methods to verify AI systems.

@@ -321,3 +321,9 @@ structure BitManipulation {
 
 See `stdlib/bitvector.kleis` for the complete axiom set.
 
+## What's Next?
+
+Learn about string operations and Z3's string theory:
+
+→ [Strings](17-strings.md)
+

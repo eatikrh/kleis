@@ -270,6 +270,10 @@ letBinding      ::= "let" identifier [":" type] "=" expression
 
 ## What's Next?
 
+Explore the functions and structures available in the standard library:
+
+→ [Standard Library](22-standard-library.md)
+
 Learn how to set up VS Code for debugging:
 
 → [Appendix: VS Code Debugging](../appendix/vscode-debugging.md)
