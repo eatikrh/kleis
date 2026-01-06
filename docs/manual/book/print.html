@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-222b6159.js";
+            window.path_to_searchindex_js = "searchindex-e094ca5c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -3841,6 +3841,9 @@ curl -fsSL https://typst.app/install.sh | sh
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="applications"><a class="header" href="#applications">Applications</a></h1>
 <p>Kleis is designed for mathematical verification, but its power extends far beyond pure mathematics. This chapter showcases applications across multiple domains.</p>
+<blockquote>
+<p><strong>Note:</strong> Many examples in this chapter use <code>example</code> blocks with <code>assert</code> statements for testing and verification. See <a href="#example-blocks-v093">Example Blocks</a> for details on this syntax.</p>
+</blockquote>
 <h2 id="aiml-verification"><a class="header" href="#aiml-verification">AI/ML Verification</a></h2>
 <p>Kleis aligns with the research agenda outlined in <strong>“Toward Verified Artificial Intelligence”</strong> (Seshia et al., Communications of the ACM, 2022) — a seminal paper from UC Berkeley on using formal methods to verify AI systems.</p>
 <h3 id="the-verified-ai-challenge"><a class="header" href="#the-verified-ai-challenge">The Verified AI Challenge</a></h3>
@@ -4695,6 +4698,8 @@ assertStatement ::= "assert" "(" expression ")"
 letBinding      ::= "let" identifier [":" type] "=" expression
 </code></pre>
 <h2 id="whats-next-13"><a class="header" href="#whats-next-13">What’s Next?</a></h2>
+<p>Explore the functions and structures available in the standard library:</p>
+<p>→ <a href="#standard-library-types">Standard Library</a></p>
 <p>Learn how to set up VS Code for debugging:</p>
 <p>→ <a href="#vs-code-debugging">Appendix: VS Code Debugging</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -5543,7 +5548,8 @@ structure ComplexTest {
 <li>Control theory (transfer functions)</li>
 <li>Complex analysis (contour integrals)</li>
 </ul>
-<p>→ <a href="#appendix-a-grammar-reference">Next: Grammar Reference</a></p>
+<p>Continue exploring Kleis’s number systems:</p>
+<p>→ <a href="#rational-numbers">Rational Numbers</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="rational-numbers"><a class="header" href="#rational-numbers">Rational Numbers</a></h1>
 <p>Kleis provides complete support for <strong>rational numbers</strong> (ℚ), the field of fractions p/q where p and q are integers and q ≠ 0. Rational arithmetic in Kleis is <strong>exact</strong>—no floating-point approximation errors.</p>
@@ -5773,6 +5779,9 @@ define quot : ℚ = rational(1, 2) / rational(1, 4)
 </table>
 </div>
 <p>See <code>stdlib/rational.kleis</code> for the complete axiom set.</p>
+<h2 id="whats-next-16"><a class="header" href="#whats-next-16">What’s Next?</a></h2>
+<p>Explore fixed-width binary arithmetic for hardware and low-level verification:</p>
+<p>→ <a href="#bit-vectors">Bit Vectors</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="bit-vectors"><a class="header" href="#bit-vectors">Bit-Vectors</a></h1>
 <p>Kleis provides support for <strong>bit-vectors</strong>—fixed-width sequences of bits. Bit-vectors are essential for hardware verification, cryptography, and low-level systems programming.</p>
@@ -6064,6 +6073,9 @@ define qword : BitVec(64) = bvzero(64)
 </table>
 </div>
 <p>See <code>stdlib/bitvector.kleis</code> for the complete axiom set.</p>
+<h2 id="whats-next-17"><a class="header" href="#whats-next-17">What’s Next?</a></h2>
+<p>Learn about string operations and Z3’s string theory:</p>
+<p>→ <a href="#strings">Strings</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="strings"><a class="header" href="#strings">Strings</a></h1>
 <p>Kleis provides comprehensive support for <strong>string operations</strong> via Z3’s QF_SLIA (Quantifier-Free Strings and Linear Integer Arithmetic) theory. This enables formal verification of string-manipulating programs.</p>
@@ -6289,6 +6301,9 @@ define empty : String = ""
 </table>
 </div>
 <p>See <code>src/solvers/z3/capabilities.toml</code> for the complete list of supported string operations.</p>
+<h2 id="whats-next-18"><a class="header" href="#whats-next-18">What’s Next?</a></h2>
+<p>Explore set theory operations and Z3’s set reasoning:</p>
+<p>→ <a href="#set-theory">Sets</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="set-theory"><a class="header" href="#set-theory">Set Theory</a></h1>
 <p>Kleis provides native set theory support backed by Z3’s set theory solver. This enables rigorous mathematical reasoning about collections, membership, and set operations.</p>
@@ -6452,6 +6467,9 @@ structure MeasureSpace(X) {
 </tbody>
 </table>
 </div>
+<h2 id="whats-next-19"><a class="header" href="#whats-next-19">What’s Next?</a></h2>
+<p>Learn about matrix and vector operations for linear algebra:</p>
+<p>→ <a href="#matrices">Matrices</a></p>
 <h2 id="see-also"><a class="header" href="#see-also">See Also</a></h2>
 <ul>
 <li><a href="#types-and-values">Types and Values</a> — <code>Set(T)</code> type documentation</li>
