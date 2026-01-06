@@ -193,6 +193,12 @@ Currently, you must use function-style syntax. Future versions will support:
 | `A ∩ B` | `intersect(A, B)` |
 | `A \ B` | `difference(A, B)` |
 
+## What's Next?
+
+Learn about matrix and vector operations for linear algebra:
+
+→ [Matrices](19-matrices.md)
+
 ## See Also
 
 - [Types and Values](./02-types.md) — `Set(T)` type documentation
