@@ -815,6 +815,7 @@ MITEquation("eq:main", "...")  // Define
 
 ## Next Steps
 
+- See how documents combine with verification: [Applications](13-applications.md)
 - See full examples in `examples/documents/`
 - Explore Typst documentation: [typst.app/docs](https://typst.app/docs)
 - Learn Lilaq plotting: [Lilaq on Typst Universe](https://typst.app/universe/package/lilaq)

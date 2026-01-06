@@ -725,7 +725,8 @@ Available scales:
 
 ## Next Steps
 
-- Explore the [REPL chapter](./12-repl.md) for more interactive features
-- See [Matrices](./19-matrices.md) for symbolic matrix operations
-- Check [Z3 Verification](./11-z3-verification.md) for formal proofs
+- Learn to create PDFs, theses, and papers: [Document Generation](23-document-generation.md)
+- Explore the [REPL chapter](12-repl.md) for more interactive features
+- See [Matrices](19-matrices.md) for symbolic matrix operations
+- Check [Z3 Verification](11-z3-verification.md) for formal proofs
 
