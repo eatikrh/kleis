@@ -287,3 +287,9 @@ structure CommonFractions {
 
 See `stdlib/rational.kleis` for the complete axiom set.
 
+## What's Next?
+
+Explore fixed-width binary arithmetic for hardware and low-level verification:
+
+→ [Bit Vectors](16-bit-vectors.md)
+
