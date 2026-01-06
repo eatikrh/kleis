@@ -350,21 +350,179 @@ data Type =
 
 ---
 
-### **2. Unification in Kleis**
+### **2. Self-Hosted Type Unification in Kleis**
+
+The type unification algorithm (currently ~140 lines of Rust in `src/type_inference.rs`) 
+can be fully expressed in Kleis once the prerequisite features are in place.
+
+#### **Step 1: Define Type as a Kleis ADT**
 
 ```kleis
-operation unify : Type → Type → Option(Substitution)
+data Type = 
+    Scalar
+  | Bool
+  | Unit
+  | Nat
+  | String
+  | Var(TypeVar)
+  | Function(Type, Type)
+  | Product(List(Type))
+  | Data(String, String, List(Type))   // type_name, constructor, args
+  | ForAll(TypeVar, Type)
 
-define unify(t1, t2) = match (t1, t2) {
-  (Scalar, Scalar) => Some(empty_subst)
-  (Vector(n1), Vector(n2)) if n1 == n2 => Some(empty_subst)
-  (Matrix(m1,n1), Matrix(m2,n2)) if m1==m2 && n1==n2 => Some(empty_subst)
-  (Var(id), t) => Some(singleton(id, t))
-  (t, Var(id)) => Some(singleton(id, t))
-  (Function(a1,b1), Function(a2,b2)) => ...
-  _ => None
-}
+data TypeVar = TypeVar(Int)  // Fresh variable ID
 ```
+
+#### **Step 2: Define Substitution (maps type variables → types)**
+
+```kleis
+// Using a list of pairs as a simple map
+data Substitution = Subst(List((TypeVar, Type)))
+
+define empty_subst : Substitution = Subst([])
+
+define singleton(v : TypeVar, t : Type) : Substitution = 
+    Subst([(v, t)])
+```
+
+#### **Step 3: Define apply (substitute variables)**
+
+```kleis
+define apply(subst : Substitution, ty : Type) : Type = 
+    match ty {
+        Var(v) => lookup(subst, v) ?? ty
+        Function(a, b) => Function(apply(subst, a), apply(subst, b))
+        Product(types) => Product(map(λt. apply(subst, t), types))
+        Data(name, ctor, args) => Data(name, ctor, map(λt. apply(subst, t), args))
+        ForAll(v, t) => ForAll(v, apply(subst, t))
+        _ => ty  // Scalar, Bool, etc. unchanged
+    }
+
+define lookup(Subst(pairs) : Substitution, v : TypeVar) : Option(Type) =
+    match pairs {
+        [] => None
+        ((var, ty) :: rest) => 
+            if var = v then Some(apply(Subst(rest), ty))  // chain!
+            else lookup(Subst(rest), v)
+    }
+```
+
+#### **Step 4: Define compose (combine substitutions)**
+
+```kleis
+define compose(s1 : Substitution, s2 : Substitution) : Substitution =
+    match s2 {
+        Subst(pairs) => 
+            let applied = map(λ(v, t). (v, apply(s1, t)), pairs)
+            in merge(s1, Subst(applied))
+    }
+```
+
+#### **Step 5: Define occurs check (prevent infinite types)**
+
+```kleis
+define occurs(v : TypeVar, ty : Type) : Bool =
+    match ty {
+        Var(v2) => v = v2
+        Function(a, b) => occurs(v, a) ∨ occurs(v, b)
+        Product(types) => any(λt. occurs(v, t), types)
+        Data(_, _, args) => any(λt. occurs(v, t), args)
+        ForAll(_, t) => occurs(v, t)
+        _ => false
+    }
+```
+
+#### **Step 6: Define unify (the core algorithm)**
+
+```kleis
+data UnifyResult = Ok(Substitution) | Err(String)
+
+define unify(t1 : Type, t2 : Type) : UnifyResult =
+    match (t1, t2) {
+        // Same base types
+        (Scalar, Scalar) => Ok(empty_subst)
+        (Bool, Bool) => Ok(empty_subst)
+        (Unit, Unit) => Ok(empty_subst)
+        (Nat, Nat) => Ok(empty_subst)
+        (String, String) => Ok(empty_subst)
+        
+        // Same type variable
+        (Var(v1), Var(v2)) if v1 = v2 => Ok(empty_subst)
+        
+        // Type variable unifies with anything (if no occurs)
+        (Var(v), t) => 
+            if occurs(v, t) 
+            then Err("Occurs check failed")
+            else Ok(singleton(v, t))
+        (t, Var(v)) => 
+            if occurs(v, t) 
+            then Err("Occurs check failed")
+            else Ok(singleton(v, t))
+        
+        // Function types
+        (Function(a1, b1), Function(a2, b2)) =>
+            match unify(a1, a2) {
+                Err(e) => Err(e)
+                Ok(s1) => 
+                    match unify(apply(s1, b1), apply(s1, b2)) {
+                        Err(e) => Err(e)
+                        Ok(s2) => Ok(compose(s1, s2))
+                    }
+            }
+        
+        // Product types (same length)
+        (Product(ts1), Product(ts2)) =>
+            unify_list(ts1, ts2, empty_subst)
+        
+        // Data types (same parent ADT)
+        (Data(n1, _, args1), Data(n2, _, args2)) if n1 = n2 =>
+            unify_list(args1, args2, empty_subst)
+        
+        // Failure
+        _ => Err("Cannot unify " ++ show(t1) ++ " with " ++ show(t2))
+    }
+
+define unify_list(ts1 : List(Type), ts2 : List(Type), acc : Substitution) : UnifyResult =
+    match (ts1, ts2) {
+        ([], []) => Ok(acc)
+        (t1 :: rest1, t2 :: rest2) =>
+            match unify(apply(acc, t1), apply(acc, t2)) {
+                Err(e) => Err(e)
+                Ok(s) => unify_list(rest1, rest2, compose(acc, s))
+            }
+        _ => Err("Length mismatch")
+    }
+```
+
+#### **Prerequisites (What's Missing)**
+
+| Feature | Status | Needed For |
+|---------|--------|------------|
+| `data` with multiple constructors | ✅ Implemented | Define `Type` ADT |
+| Pattern matching on ADTs | ✅ Implemented | `match ty { Var(v) => ... }` |
+| Guard clauses (`if` in match) | ❌ Not implemented | `(Var(v1), Var(v2)) if v1 = v2` |
+| `Option` / `Result` types | ✅ In stdlib | Error handling |
+| Recursive functions | ✅ Implemented | `unify` calls itself |
+| Higher-order functions | ✅ Implemented | `map`, `any`, `λ` |
+| String concatenation (`++`) | ⚠️ Partial | Error messages |
+
+#### **The Bootstrap Problem & Solution**
+
+There's a chicken-and-egg: to type-check Kleis code we need `unify()`, 
+but to run `unify()` in Kleis we need to type-check it first.
+
+**Solution:** Keep the Rust `unify` as the bootstrap, but allow users to 
+*extend* it with Kleis rules for custom types. The Rust implementation 
+remains the "Level 0" bootstrap while users can define additional 
+unification rules at "Level 1".
+
+#### **Benefits When Implemented**
+
+1. **Transparent** - Users can read how type inference works
+2. **Extensible** - Add unification rules for new types in Kleis
+3. **Verifiable** - Z3 can prove properties of the type system itself
+4. **Educational** - The manual can show actual running code
+5. **Meta-circular** - Kleis's type system defined *in* Kleis
 
 **Unification algorithm in Kleis, not Rust!**
 
