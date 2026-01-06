@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-222b6159.js";
+            window.path_to_searchindex_js = "searchindex-e6920373.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -2467,8 +2467,10 @@ Goodbye! 👋
 <li>Use <code>:help &lt;topic&gt;</code> for detailed help (e.g., <code>:help quantifiers</code>)</li>
 </ol>
 <h2 id="whats-next-11"><a class="header" href="#whats-next-11">What’s Next?</a></h2>
-<p>See practical applications!</p>
-<p>→ <a href="#applications">Next: Applications</a></p>
+<p>For a richer interactive experience with plots and visualizations:</p>
+<p>→ <a href="#jupyter-notebook">Jupyter Notebook</a></p>
+<p>Or explore practical applications:</p>
+<p>→ <a href="#applications">Applications</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="jupyter-notebook"><a class="header" href="#jupyter-notebook">Jupyter Notebook</a></h1>
 <p>Kleis provides Jupyter kernel support, allowing you to write and execute Kleis code in Jupyter notebooks. This is ideal for:</p>
@@ -3128,6 +3130,7 @@ diagram(
 </ul>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <ul>
+<li>Learn to create PDFs, theses, and papers: <a href="#creating-documents-with-kleis">Document Generation</a></li>
 <li>Explore the <a href="#the-repl-1">REPL chapter</a> for more interactive features</li>
 <li>See <a href="#matrices">Matrices</a> for symbolic matrix operations</li>
 <li>Check <a href="#z3-verification">Z3 Verification</a> for formal proofs</li>
@@ -3834,12 +3837,18 @@ curl -fsSL https://typst.app/install.sh | sh
 </code></pre>
 <h2 id="next-steps-1"><a class="header" href="#next-steps-1">Next Steps</a></h2>
 <ul>
+<li>See how documents combine with verification: <a href="#applications">Applications</a></li>
 <li>See full examples in <code>examples/documents/</code></li>
 <li>Explore Typst documentation: <a href="https://typst.app/docs">typst.app/docs</a></li>
 <li>Learn Lilaq plotting: <a href="https://typst.app/universe/package/lilaq">Lilaq on Typst Universe</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="applications"><a class="header" href="#applications">Applications</a></h1>
+<blockquote>
+<p><strong>Note:</strong> Many examples in this chapter use <code>example</code> blocks with <code>assert</code>
+statements for testing and verification. See <a href="#example-blocks-v093">Example Blocks</a>
+for details on this syntax.</p>
+</blockquote>
 <p>Kleis is designed for mathematical verification, but its power extends far beyond pure mathematics. This chapter showcases applications across multiple domains.</p>
 <h2 id="aiml-verification"><a class="header" href="#aiml-verification">AI/ML Verification</a></h2>
 <p>Kleis aligns with the research agenda outlined in <strong>“Toward Verified Artificial Intelligence”</strong> (Seshia et al., Communications of the ACM, 2022) — a seminal paper from UC Berkeley on using formal methods to verify AI systems.</p>
@@ -4695,6 +4704,8 @@ assertStatement ::= "assert" "(" expression ")"
 letBinding      ::= "let" identifier [":" type] "=" expression
 </code></pre>
 <h2 id="whats-next-13"><a class="header" href="#whats-next-13">What’s Next?</a></h2>
+<p>Explore the functions and structures available in the standard library:</p>
+<p>→ <a href="#standard-library-types">Standard Library</a></p>
 <p>Learn how to set up VS Code for debugging:</p>
 <p>→ <a href="#vs-code-debugging">Appendix: VS Code Debugging</a></p>
 <div style="break-before: page; page-break-before: always;"></div>

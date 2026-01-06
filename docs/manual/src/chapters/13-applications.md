@@ -1,5 +1,9 @@
 # Applications
 
+> **Note:** Many examples in this chapter use `example` blocks with `assert` 
+> statements for testing and verification. See [Example Blocks](20-example-blocks.md) 
+> for details on this syntax.
+
 Kleis is designed for mathematical verification, but its power extends far beyond pure mathematics. This chapter showcases applications across multiple domains.
 
 ## AI/ML Verification

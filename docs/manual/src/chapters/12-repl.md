@@ -341,6 +341,10 @@ Goodbye! 👋
 
 ## What's Next?
 
-See practical applications!
+For a richer interactive experience with plots and visualizations:
 
-→ [Next: Applications](./13-applications.md)
+→ [Jupyter Notebook](21-jupyter-notebook.md)
+
+Or explore practical applications:
+
+→ [Applications](13-applications.md)

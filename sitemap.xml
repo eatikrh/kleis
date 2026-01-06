@@ -2,167 +2,167 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://kleis.io/</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/index.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/introduction.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/01-starting-out.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/02-types.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/03-functions.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/04-algebraic-types.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/05-pattern-matching.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/06-let-bindings.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/07-quantifiers-logic.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/08-conditionals.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/09-structures.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/10-implements.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/11-z3-verification.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/12-repl.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/21-jupyter-notebook.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/23-document-generation.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/13-applications.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/20-example-blocks.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/22-standard-library.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/14-complex-numbers.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/15-rational-numbers.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/16-bit-vectors.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/17-strings.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/18-sets.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/chapters/19-matrices.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/appendix/grammar.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/appendix/operators.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/appendix/builtin-functions.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/appendix/lapack.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/appendix/stdlib.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/appendix/lisp-interpreter.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://kleis.io/docs/manual/book/appendix/vscode-debugging.html</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-06</lastmod>
     <priority>1.0</priority>
   </url>
 </urlset>
