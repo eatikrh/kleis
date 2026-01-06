@@ -1882,17 +1882,31 @@ impl LanguageServer for KleisLanguageServer {
 
         // ASCII to Unicode conversions
         let ascii_to_unicode_replacements = [
+            // Quantifiers & Logic
             ("forall", "∀", "Convert 'forall' to ∀"),
             ("exists", "∃", "Convert 'exists' to ∃"),
             ("lambda", "λ", "Convert 'lambda' to λ"),
+            ("and", "∧", "Convert 'and' to ∧"),
+            ("or", "∨", "Convert 'or' to ∨"),
+            ("not", "¬", "Convert 'not' to ¬"),
+            // Arrows
             ("->", "→", "Convert '->' to →"),
             ("<-", "←", "Convert '<-' to ←"),
             ("=>", "⇒", "Convert '=>' to ⇒"),
+            // Comparison
             ("<=", "≤", "Convert '<=' to ≤"),
             (">=", "≥", "Convert '>=' to ≥"),
             ("!=", "≠", "Convert '!=' to ≠"),
             ("/\\", "∧", "Convert '/\\' to ∧"),
             ("\\/", "∨", "Convert '\\/' to ∨"),
+            // Calculus
+            ("nabla", "∇", "Convert 'nabla' to ∇"),
+            ("partial", "∂", "Convert 'partial' to ∂"),
+            ("infinity", "∞", "Convert 'infinity' to ∞"),
+            // Products
+            ("times", "×", "Convert 'times' to ×"),
+            ("tensor", "⊗", "Convert 'tensor' to ⊗"),
+            // Number Sets
             ("Real", "ℝ", "Use Unicode ℝ for Real"),
             ("Complex", "ℂ", "Use Unicode ℂ for Complex"),
             ("Integer", "ℤ", "Use Unicode ℤ for Integer"),
@@ -1954,14 +1968,24 @@ impl LanguageServer for KleisLanguageServer {
         // Convert all ASCII to Unicode in selection
         if !text_in_range.is_empty() && range.start != range.end {
             let mut converted = text_in_range.clone();
+            // Quantifiers & Logic
             converted = converted.replace("forall", "∀");
             converted = converted.replace("exists", "∃");
             converted = converted.replace("lambda", "λ");
+            converted = converted.replace(" and ", " ∧ ");
+            converted = converted.replace(" or ", " ∨ ");
+            converted = converted.replace("not(", "¬(");
+            // Arrows
             converted = converted.replace("->", "→");
             converted = converted.replace("=>", "⇒");
+            // Comparison
             converted = converted.replace("<=", "≤");
             converted = converted.replace(">=", "≥");
             converted = converted.replace("!=", "≠");
+            // Calculus
+            converted = converted.replace("nabla", "∇");
+            converted = converted.replace("partial", "∂");
+            converted = converted.replace("infinity", "∞");
 
             if converted != text_in_range {
                 actions.push(CodeActionOrCommand::CodeAction(CodeAction {
