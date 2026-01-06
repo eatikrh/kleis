@@ -780,6 +780,68 @@ No parser changes, no evaluator changes, no special handling needed.
 
 ---
 
+## 🔧 FUTURE: Externalize Configuration (Ports, Timeouts)
+
+**Added:** January 5, 2026
+
+### Current State
+
+Several configuration values are hardcoded in Rust:
+
+| Setting | Current Value | Location |
+|---------|---------------|----------|
+| Z3 solver timeout | 30 seconds | `src/solvers/z3/backend.rs` |
+| LSP server port | stdio | `src/bin/kleis.rs` |
+| DAP server port | dynamic | `src/bin/kleis.rs` |
+| Equation Editor server port | 3000 | `src/bin/server.rs` |
+
+### Proposed Solution
+
+1. **Configuration file** (e.g., `kleis.toml` or `.kleisrc`):
+   ```toml
+   [solver]
+   backend = "z3"           # future: "cvc5", "lean", etc.
+   timeout_seconds = 30
+   
+   [server]
+   port = 3000
+   
+   [lsp]
+   trace = "off"            # "off", "messages", "verbose"
+   ```
+
+2. **Environment variable overrides**:
+   ```bash
+   KLEIS_Z3_TIMEOUT=60 kleis test file.kleis
+   KLEIS_SERVER_PORT=8080 kleis server
+   ```
+
+3. **Command-line flags**:
+   ```bash
+   kleis test --timeout 60 file.kleis
+   kleis server --port 8080
+   ```
+
+### Why This Matters
+
+- **Z3 timeout**: Some proofs need more time; users can't adjust
+- **Ports**: Docker/Kubernetes deployments may require specific ports
+- **Future solvers**: When adding CVC5, Lean, etc., need backend selection
+- **Development vs Production**: Different settings for different environments
+
+### Implementation Plan
+
+1. Add `kleis.toml` parser (use `toml` crate)
+2. Check env vars with `std::env::var()`
+3. CLI flags via `clap` (already used)
+4. Priority: CLI > env > config file > defaults
+
+### Effort Estimate
+
+~2-3 hours for basic implementation.
+
+---
+
 ## 🔧 FUTURE: Code Organization & Technical Debt
 
 ### Overview

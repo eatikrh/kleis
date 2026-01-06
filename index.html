@@ -73,9 +73,10 @@
             border-radius: 10px;
             background: #f8f9fa;
         }
-        .feature h3 {
+        .feature h2 {
             color: #667eea;
             margin-bottom: 10px;
+            font-size: 1.25rem;
         }
         .buttons {
             display: flex;
@@ -132,8 +133,9 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>
+    <main class="container">
+        <header>
+            <h1>
             <svg class="key-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 459.0 433.0">
                 <defs>
                     <linearGradient id="keyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -146,6 +148,7 @@
             Kleis
         </h1>
         <p class="tagline">Universal Verification Platform for Mathematics, Business Rules, and Beyond</p>
+        </header>
         
         <div class="stats">
             <div class="stat">
@@ -164,29 +167,29 @@
         
         <div class="features">
             <div class="feature">
-                <h3>🔬 Type System</h3>
+                <h2>🔬 Type System</h2>
                 <p>Hindley-Milner type inference with complete algebraic foundations</p>
             </div>
             <div class="feature">
-                <h3>🎯 Verification</h3>
+                <h2>🎯 Verification</h2>
                 <p>Z3 theorem prover integration for axiom verification</p>
             </div>
             <div class="feature">
-                <h3>🌐 Universal</h3>
+                <h2>🌐 Universal</h2>
                 <p>Mathematics, business rules, network protocols, and more</p>
             </div>
             <div class="feature">
-                <h3>📝 Self-Hosting</h3>
+                <h2>📝 Self-Hosting</h2>
                 <p>Language defined in itself - portable and extensible</p>
             </div>
         </div>
         
-        <div class="buttons">
+        <nav class="buttons" aria-label="Main navigation">
             <a href="/docs/manual/book/" class="btn btn-primary">📚 Learn Kleis</a>
             <a href="https://github.com/eatikrh/kleis" class="btn btn-secondary">View on GitHub</a>
             <a href="https://github.com/eatikrh/kleis#readme" class="btn btn-secondary">API Docs</a>
-        </div>
-    </div>
+        </nav>
+    </main>
 </body>
 </html>
 <!-- Updated: Dec 17, 2024 -->
