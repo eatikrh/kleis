@@ -2574,7 +2574,7 @@ impl Evaluator {
                     _ => Ok(None),
                 }
             }
-            "not" | "¬" => {
+            "not" | "¬" | "logical_not" => {
                 if args.len() != 1 {
                     return Ok(None);
                 }
