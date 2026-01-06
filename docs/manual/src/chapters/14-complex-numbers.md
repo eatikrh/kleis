@@ -625,5 +625,7 @@ Complex numbers enable reasoning about:
 - Control theory (transfer functions)
 - Complex analysis (contour integrals)
 
-→ [Next: Grammar Reference](../appendix/grammar.md)
+Continue exploring Kleis's number systems:
+
+→ [Rational Numbers](15-rational-numbers.md)
 
