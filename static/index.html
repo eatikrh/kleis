@@ -17,7 +17,7 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #e0e5ec 0%, #d0d5dc 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -27,12 +27,12 @@
             margin: 0 auto;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             overflow: hidden;
         }
         
         header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             color: white;
             padding: 30px;
             text-align: center;
@@ -68,7 +68,7 @@
         
         .mode-btn.active {
             background: white;
-            color: #667eea;
+            color: #2c3e50;
             border-color: white;
         }
         
@@ -90,7 +90,7 @@
         }
         
         .structural-editor:focus-within {
-            border-color: #667eea;
+            border-color: #2c3e50;
         }
         
         .structural-editor svg {
@@ -145,7 +145,7 @@
         }
         .placeholder-overlay {
             fill: rgba(102, 126, 234, 0.1);
-            stroke: #667eea;
+            stroke: #2c3e50;
             stroke-width: 1.5px;
             stroke-dasharray: 4,2;
             rx: 2px;
@@ -185,7 +185,7 @@
         
         .panel h2 {
             margin-bottom: 15px;
-            color: #667eea;
+            color: #2c3e50;
             font-size: 1.3em;
         }
         
@@ -202,7 +202,7 @@
         
         textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #2c3e50;
         }
         
         .preview-box {
@@ -225,7 +225,7 @@
         
         button {
             padding: 12px 24px;
-            background: #667eea;
+            background: #2c3e50;
             color: white;
             border: none;
             border-radius: 6px;
@@ -272,7 +272,7 @@
         }
         
         .gallery-item:hover {
-            border-color: #667eea;
+            border-color: #2c3e50;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
@@ -341,7 +341,7 @@
         }
         
         .palette-tab.active {
-            background: #667eea;
+            background: #2c3e50;
             color: white;
         }
         
@@ -369,9 +369,9 @@
         }
         
         .symbol-btn:hover {
-            background: #667eea;
+            background: #2c3e50;
             color: white;
-            border-color: #667eea;
+            border-color: #2c3e50;
             transform: scale(1.05);
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
@@ -394,9 +394,9 @@
         }
         
         .template-btn:hover {
-            background: #667eea;
+            background: #2c3e50;
             color: white;
-            border-color: #667eea;
+            border-color: #2c3e50;
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
         
@@ -643,13 +643,13 @@
         }
         
         .matrix-grid-cell.hover {
-            background: #667eea;
-            border-color: #667eea;
+            background: #2c3e50;
+            border-color: #2c3e50;
         }
         
         .matrix-size-display {
             text-align: center;
-            color: #667eea;
+            color: #2c3e50;
             font-weight: 600;
             margin-top: 8px;
             font-size: 14px;
@@ -683,7 +683,7 @@
         
         .matrix-input-group input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #2c3e50;
         }
         
         .matrix-delimiter-group {
@@ -719,13 +719,13 @@
         }
         
         .matrix-delimiter-btn:hover {
-            border-color: #667eea;
+            border-color: #2c3e50;
             background: #f0f0ff;
         }
         
         .matrix-delimiter-btn.selected {
-            border-color: #667eea;
-            background: #667eea;
+            border-color: #2c3e50;
+            background: #2c3e50;
             color: white;
         }
         
@@ -933,7 +933,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                     <!-- Debug Panel -->
                     <div id="debugPanel" style="display:none; margin-top: 15px; padding: 15px; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow: auto;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <strong style="font-family: sans-serif; color: #667eea;">🐛 AST Debug View</strong>
+                            <strong style="font-family: sans-serif; color: #2c3e50;">🐛 AST Debug View</strong>
                             <div>
                                 <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="copyASTToClipboard()">📋 Copy</button>
                                 <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="downloadAST()">💾 Download</button>
@@ -2966,7 +2966,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                                     rectY -= superscriptShift;
                                     rectHeight = Math.max(6, rectHeight + superscriptShift);
                                 }
-                                const color = slot.is_placeholder ? '#667eea' : '#28a745';
+                                const color = slot.is_placeholder ? '#2c3e50' : '#28a745';
                                 const fillColor = slot.is_placeholder ? 'rgba(240, 244, 255, 0.3)' : 'rgba(40, 167, 69, 0.2)';
                                 
                                 const pathStr = JSON.stringify(slot.path).replace(/"/g, '&quot;');
