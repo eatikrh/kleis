@@ -101,6 +101,58 @@ define f(x : ℝ) : ℝ = x * x
 define sum_typed(a, b) = (a + b) : ℝ
 ```
 
+## Type Aliases
+
+Type aliases give a new name to an existing type, making your code more readable and self-documenting.
+
+### The `type` Keyword
+
+```kleis
+type Probability = ℝ
+type Temperature = ℝ
+type Velocity = ℝ
+```
+
+Now you can use `Probability` instead of `ℝ` to make your intent clear:
+
+```kleis
+define coin_flip : Probability = 0.5
+define boiling_point : Temperature = 100.0
+```
+
+### Why Use Type Aliases?
+
+1. **Readability** — `Probability` is clearer than `ℝ`
+2. **Documentation** — the type name explains what the value represents
+3. **Refactoring** — change the underlying type in one place
+
+### Function Type Aliases
+
+Type aliases are especially useful for complex function types:
+
+```kleis
+type RealFunction = ℝ → ℝ
+type BinaryOp = ℝ → ℝ → ℝ
+type Predicate = ℝ → Bool
+```
+
+Now instead of writing `(ℝ → ℝ) → ℝ`, you can write:
+
+```kleis
+type Integrator = RealFunction → ℝ
+```
+
+### Parameterized Type Aliases
+
+Type aliases can have parameters:
+
+```kleis
+type Pair(T) = T → T → T
+type Endomorphism(T) = T → T
+```
+
+> **Note:** Type aliases create a synonym — `Probability` and `ℝ` are interchangeable. They don't create a distinct new type.
+
 ## Function Types
 
 Functions have types too! The notation `A → B` means "a function from A to B":

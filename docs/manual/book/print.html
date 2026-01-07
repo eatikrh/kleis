@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-294908cb.js";
+            window.path_to_searchindex_js = "searchindex-8f513d77.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -498,6 +498,40 @@ define f(x : ℝ) : ℝ = x * x
 // Expression-level annotation (ascription)
 define sum_typed(a, b) = (a + b) : ℝ
 </code></pre>
+<h2 id="type-aliases"><a class="header" href="#type-aliases">Type Aliases</a></h2>
+<p>Type aliases give a new name to an existing type, making your code more readable and self-documenting.</p>
+<h3 id="the-type-keyword"><a class="header" href="#the-type-keyword">The <code>type</code> Keyword</a></h3>
+<pre><code class="language-kleis">type Probability = ℝ
+type Temperature = ℝ
+type Velocity = ℝ
+</code></pre>
+<p>Now you can use <code>Probability</code> instead of <code>ℝ</code> to make your intent clear:</p>
+<pre><code class="language-kleis">define coin_flip : Probability = 0.5
+define boiling_point : Temperature = 100.0
+</code></pre>
+<h3 id="why-use-type-aliases"><a class="header" href="#why-use-type-aliases">Why Use Type Aliases?</a></h3>
+<ol>
+<li><strong>Readability</strong> — <code>Probability</code> is clearer than <code>ℝ</code></li>
+<li><strong>Documentation</strong> — the type name explains what the value represents</li>
+<li><strong>Refactoring</strong> — change the underlying type in one place</li>
+</ol>
+<h3 id="function-type-aliases"><a class="header" href="#function-type-aliases">Function Type Aliases</a></h3>
+<p>Type aliases are especially useful for complex function types:</p>
+<pre><code class="language-kleis">type RealFunction = ℝ → ℝ
+type BinaryOp = ℝ → ℝ → ℝ
+type Predicate = ℝ → Bool
+</code></pre>
+<p>Now instead of writing <code>(ℝ → ℝ) → ℝ</code>, you can write:</p>
+<pre><code class="language-kleis">type Integrator = RealFunction → ℝ
+</code></pre>
+<h3 id="parameterized-type-aliases"><a class="header" href="#parameterized-type-aliases">Parameterized Type Aliases</a></h3>
+<p>Type aliases can have parameters:</p>
+<pre><code class="language-kleis">type Pair(T) = T → T → T
+type Endomorphism(T) = T → T
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> Type aliases create a synonym — <code>Probability</code> and <code>ℝ</code> are interchangeable. They don’t create a distinct new type.</p>
+</blockquote>
 <h2 id="function-types"><a class="header" href="#function-types">Function Types</a></h2>
 <p>Functions have types too! The notation <code>A → B</code> means “a function from A to B”:</p>
 <pre><code class="language-kleis">// square takes a Real and returns a Real
