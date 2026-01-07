@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f2d81e77.js";
+            window.path_to_searchindex_js = "../searchindex-bc7f1322.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -306,22 +306,61 @@
 lim(x, 0, sin(x)/x)
 </code></pre>
 <h2 id="custom-mathematical-operators"><a class="header" href="#custom-mathematical-operators">Custom Mathematical Operators</a></h2>
-<p>Kleis recognizes many Unicode mathematical symbols as custom binary operators:</p>
+<p>Kleis recognizes many Unicode mathematical symbols as <strong>infix binary operators</strong>. These can be used directly in expressions like <code>a • b</code>.</p>
+<h3 id="complete-operator-table"><a class="header" href="#complete-operator-table">Complete Operator Table</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Category</th><th>Operators</th></tr>
+<tr><th>Operator</th><th>Unicode Name</th><th>Common Use</th><th>Example</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Products</strong></td><td><code>•</code> (bullet), <code>∘</code> (composition), <code>⊗</code> (tensor), <code>⊙</code> (Hadamard)</td></tr>
-<tr><td><strong>Sums</strong></td><td><code>⊕</code> (direct sum), <code>⊞</code> (squared plus), <code>⨁</code> (n-ary)</td></tr>
-<tr><td><strong>Set-like</strong></td><td><code>∪</code> (union), <code>∩</code> (intersection), <code>⊔</code> (join), <code>⊓</code> (meet)</td></tr>
-<tr><td><strong>Other</strong></td><td><code>⊛</code>, <code>⊘</code>, <code>⊚</code>, <code>⊝</code>, <code>⊟</code>, <code>⊠</code>, <code>⊡</code>, <code>△</code>, <code>▽</code></td></tr>
+<tr><td><code>•</code></td><td>Bullet</td><td>Dot/inner product</td><td><code>u • v</code></td></tr>
+<tr><td><code>∘</code></td><td>Ring operator</td><td>Function composition</td><td><code>f ∘ g</code></td></tr>
+<tr><td><code>⊗</code></td><td>Circled times</td><td>Tensor product</td><td><code>A ⊗ B</code></td></tr>
+<tr><td><code>⊕</code></td><td>Circled plus</td><td>Direct sum</td><td><code>V ⊕ W</code></td></tr>
+<tr><td><code>⊙</code></td><td>Circled dot</td><td>Hadamard product</td><td><code>A ⊙ B</code></td></tr>
+<tr><td><code>⊛</code></td><td>Circled asterisk</td><td>Convolution</td><td><code>f ⊛ g</code></td></tr>
+<tr><td><code>⊘</code></td><td>Circled slash</td><td>Division operator</td><td><code>a ⊘ b</code></td></tr>
+<tr><td><code>⊚</code></td><td>Circled ring</td><td>Ring composition</td><td><code>a ⊚ b</code></td></tr>
+<tr><td><code>⊝</code></td><td>Circled minus</td><td>Symmetric difference</td><td><code>A ⊝ B</code></td></tr>
+<tr><td><code>⊞</code></td><td>Squared plus</td><td>Box plus</td><td><code>a ⊞ b</code></td></tr>
+<tr><td><code>⊟</code></td><td>Squared minus</td><td>Box minus</td><td><code>a ⊟ b</code></td></tr>
+<tr><td><code>⊠</code></td><td>Squared times</td><td>Box times</td><td><code>a ⊠ b</code></td></tr>
+<tr><td><code>⊡</code></td><td>Squared dot</td><td>Box dot</td><td><code>a ⊡ b</code></td></tr>
+<tr><td><code>∪</code></td><td>Union</td><td>Set union</td><td><code>A ∪ B</code></td></tr>
+<tr><td><code>∩</code></td><td>Intersection</td><td>Set intersection</td><td><code>A ∩ B</code></td></tr>
+<tr><td><code>⊔</code></td><td>Square cup</td><td>Join (lattice)</td><td><code>a ⊔ b</code></td></tr>
+<tr><td><code>⊓</code></td><td>Square cap</td><td>Meet (lattice)</td><td><code>a ⊓ b</code></td></tr>
+<tr><td><code>△</code></td><td>Triangle</td><td>Symmetric difference</td><td><code>A △ B</code></td></tr>
+<tr><td><code>▽</code></td><td>Nabla/Down triangle</td><td>Co-gradient</td><td><code>a ▽ b</code></td></tr>
 </tbody>
 </table>
 </div>
+<h3 id="usage"><a class="header" href="#usage">Usage</a></h3>
+<p>These operators are parsed as binary infix expressions:</p>
+<pre><code class="language-kleis">// Tensor product of matrices
+define tensor_example = A ⊗ B
+
+// Hadamard (element-wise) product
+define hadamard_example = A ⊙ B
+
+// Function composition
+define composed = f ∘ g
+
+// Set operations
+define union_example = set1 ∪ set2
+define intersection_example = set1 ∩ set2
+</code></pre>
+<h3 id="defining-semantics"><a class="header" href="#defining-semantics">Defining Semantics</a></h3>
+<p>These operators are syntactic — their meaning depends on how you define them. Use structures to give them precise semantics:</p>
+<pre><code class="language-kleis">structure VectorSpace(V) {
+    operation dot : V × V → ℝ
+    
+    axiom symmetric : ∀(u : V)(v : V). u • v = v • u
+}
+</code></pre>
 <blockquote>
-<p><strong>Note:</strong> These are parsed as operators but their semantics depend on context. Define their behavior in structures.</p>
+<p><strong>Note:</strong> The operator <code>•</code> in expressions like <code>u • v</code> is parsed but not automatically connected to your <code>dot</code> operation. Use function calls like <code>dot(u, v)</code> for verified operations, or define the operator’s meaning in an <code>implements</code> block.</p>
 </blockquote>
 <h2 id="type-operators"><a class="header" href="#type-operators">Type Operators</a></h2>
 <div class="table-wrapper">

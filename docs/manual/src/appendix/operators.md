@@ -91,16 +91,64 @@ lim(x, 0, sin(x)/x)
 
 ## Custom Mathematical Operators
 
-Kleis recognizes many Unicode mathematical symbols as custom binary operators:
+Kleis recognizes many Unicode mathematical symbols as **infix binary operators**. These can be used directly in expressions like `a • b`.
 
-| Category | Operators |
-|----------|-----------|
-| **Products** | `•` (bullet), `∘` (composition), `⊗` (tensor), `⊙` (Hadamard) |
-| **Sums** | `⊕` (direct sum), `⊞` (squared plus), `⨁` (n-ary) |
-| **Set-like** | `∪` (union), `∩` (intersection), `⊔` (join), `⊓` (meet) |
-| **Other** | `⊛`, `⊘`, `⊚`, `⊝`, `⊟`, `⊠`, `⊡`, `△`, `▽` |
+### Complete Operator Table
 
-> **Note:** These are parsed as operators but their semantics depend on context. Define their behavior in structures.
+| Operator | Unicode Name | Common Use | Example |
+|----------|--------------|------------|---------|
+| `•` | Bullet | Dot/inner product | `u • v` |
+| `∘` | Ring operator | Function composition | `f ∘ g` |
+| `⊗` | Circled times | Tensor product | `A ⊗ B` |
+| `⊕` | Circled plus | Direct sum | `V ⊕ W` |
+| `⊙` | Circled dot | Hadamard product | `A ⊙ B` |
+| `⊛` | Circled asterisk | Convolution | `f ⊛ g` |
+| `⊘` | Circled slash | Division operator | `a ⊘ b` |
+| `⊚` | Circled ring | Ring composition | `a ⊚ b` |
+| `⊝` | Circled minus | Symmetric difference | `A ⊝ B` |
+| `⊞` | Squared plus | Box plus | `a ⊞ b` |
+| `⊟` | Squared minus | Box minus | `a ⊟ b` |
+| `⊠` | Squared times | Box times | `a ⊠ b` |
+| `⊡` | Squared dot | Box dot | `a ⊡ b` |
+| `∪` | Union | Set union | `A ∪ B` |
+| `∩` | Intersection | Set intersection | `A ∩ B` |
+| `⊔` | Square cup | Join (lattice) | `a ⊔ b` |
+| `⊓` | Square cap | Meet (lattice) | `a ⊓ b` |
+| `△` | Triangle | Symmetric difference | `A △ B` |
+| `▽` | Nabla/Down triangle | Co-gradient | `a ▽ b` |
+
+### Usage
+
+These operators are parsed as binary infix expressions:
+
+```kleis
+// Tensor product of matrices
+define tensor_example = A ⊗ B
+
+// Hadamard (element-wise) product
+define hadamard_example = A ⊙ B
+
+// Function composition
+define composed = f ∘ g
+
+// Set operations
+define union_example = set1 ∪ set2
+define intersection_example = set1 ∩ set2
+```
+
+### Defining Semantics
+
+These operators are syntactic — their meaning depends on how you define them. Use structures to give them precise semantics:
+
+```kleis
+structure VectorSpace(V) {
+    operation dot : V × V → ℝ
+    
+    axiom symmetric : ∀(u : V)(v : V). u • v = v • u
+}
+```
+
+> **Note:** The operator `•` in expressions like `u • v` is parsed but not automatically connected to your `dot` operation. Use function calls like `dot(u, v)` for verified operations, or define the operator's meaning in an `implements` block.
 
 ## Type Operators
 
