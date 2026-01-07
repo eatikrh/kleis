@@ -1,0 +1,190 @@
+# Isabelle/HOL Backend Capabilities
+# 
+# This file describes what the Isabelle solver backend can do,
+# what theories are available, and connection parameters.
+
+[backend]
+name = "isabelle"
+display_name = "Isabelle/HOL"
+version = "2025-1"
+description = "Interactive theorem prover with full induction and higher-order logic"
+
+# What Kleis can delegate to this backend
+[capabilities]
+# Core verification capabilities
+induction = true
+termination = true
+higher_order = true
+quantifier_elimination = true
+interactive_proofs = true
+
+# Comparison with Z3
+[capabilities.vs_z3]
+advantages = [
+    "Induction over natural numbers and datatypes",
+    "Termination proofs for recursive definitions",
+    "Higher-order unification",
+    "Access to AFP library (800+ formalized theories)",
+    "Proof objects (can extract certified code)",
+]
+disadvantages = [
+    "Slower for decidable theories (SAT/SMT)",
+    "Requires more user guidance",
+    "Steeper learning curve",
+]
+
+# When to use Isabelle vs Z3
+[capabilities.use_when]
+isabelle = [
+    "Z3 returns 'unknown' or times out",
+    "Proof requires induction",
+    "Proof requires termination argument",
+    "Need to use AFP library",
+    "Need certified code extraction",
+]
+z3 = [
+    "Ground arithmetic",
+    "Bounded quantification",
+    "Quick satisfiability check",
+    "Default for most axioms",
+]
+
+# Server connection settings
+[server]
+default_host = "127.0.0.1"
+default_port = 0
+timeout_session_start = 120
+timeout_use_theories = 300
+timeout_default = 30
+
+# How to find/start Isabelle
+[server.discovery]
+search_paths = [
+    "/Applications/Isabelle2025-1.app/bin/isabelle",
+    "/Applications/Isabelle2025.app/bin/isabelle",
+    "/usr/local/bin/isabelle",
+    "~/.local/bin/isabelle",
+]
+env_var = "ISABELLE_HOME"
+
+# Available base logics/sessions
+[sessions]
+default = "HOL"
+
+[sessions.available.Pure]
+description = "Minimal logic framework"
+use_for = ["meta-theory"]
+
+[sessions.available.HOL]
+description = "Higher-Order Logic (standard)"
+use_for = ["most proofs", "AFP"]
+
+[sessions.available."HOL-Analysis"]
+description = "Real analysis, topology"
+use_for = ["calculus", "limits"]
+
+[sessions.available."HOL-Algebra"]
+description = "Abstract algebra"
+use_for = ["groups", "rings", "fields"]
+
+[sessions.available."HOL-Number_Theory"]
+description = "Number theory"
+use_for = ["primes", "divisibility"]
+
+[sessions.available."HOL-Library"]
+description = "Extended standard library"
+use_for = ["general"]
+
+# AFP (Archive of Formal Proofs) sessions
+[afp]
+description = "Archive of Formal Proofs - 800+ peer-reviewed formalizations"
+url = "https://www.isa-afp.org/"
+
+# AFP entries relevant to Kleis
+[afp.entries.Neural_Networks]
+description = "Formalized feed-forward neural networks with TensorFlow.js import"
+url = "https://www.isa-afp.org/entries/Neural_Networks.html"
+use_for = ["AI/ML verification", "Lipschitz bounds", "activation functions"]
+authors = ["Achim D. Brucker", "Amy Stell"]
+
+[afp.entries.Petri_Nets]
+description = "Petri net formalization"
+url = "https://www.isa-afp.org/entries/Petri_Nets.html"
+use_for = ["state machines", "mutual exclusion", "deadlock freedom"]
+
+[afp.entries.Graph_Theory]
+description = "Graph theory fundamentals"
+url = "https://www.isa-afp.org/entries/Graph_Theory.html"
+use_for = ["graphs", "paths", "connectivity"]
+
+[afp.entries.Jordan_Normal_Form]
+description = "Matrices and Jordan normal form"
+url = "https://www.isa-afp.org/entries/Jordan_Normal_Form.html"
+use_for = ["linear algebra", "eigenvalues", "matrix theory"]
+
+[afp.entries.Interval_Analysis]
+description = "Interval arithmetic"
+url = "https://www.isa-afp.org/entries/Interval_Arithmetic_Word32.html"
+use_for = ["numerical bounds", "floating point"]
+
+# Translation rules: Kleis → Isar
+[translation.types]
+"ℕ" = "nat"
+"ℤ" = "int"
+"ℝ" = "real"
+"Bool" = "bool"
+"List(T)" = "'a list"
+"Option(T)" = "'a option"
+
+[translation.constructs]
+structure = "locale"
+axiom = "assumes"
+define = "definition"
+data = "datatype"
+"∀" = "∀"
+"∃" = "∃"
+"→" = "⟹"
+"×" = "×"
+"λ" = "λ"
+
+[translation.operations]
+"+" = "(+)"
+"-" = "(-)"
+"*" = "(*)"
+"/" = "(/)"
+"=" = "(=)"
+"≠" = "(≠)"
+"<" = "(<)"
+">" = "(>)"
+"≤" = "(≤)"
+"≥" = "(≥)"
+"∧" = "(∧)"
+"∨" = "(∨)"
+"¬" = "(¬)"
+
+# Commands supported
+[commands]
+verify = "use_theories"
+build = "session_build"
+check = "use_theories"
+
+# Example usage from Kleis
+[examples]
+basic = '''
+// Kleis
+verify my_axiom with isabelle
+
+// Translates to Isabelle server call:
+// session_start {"session": "HOL"}
+// use_theories {"theories": ["MyTheory"], "master_dir": "/tmp/kleis_isabelle/"}
+'''
+
+with_afp = '''
+// Kleis
+verify nn_property with isabelle using Neural_Networks
+
+// Translates to:
+// session_build {"session": "Neural_Networks", ...}
+// session_start {"session": "Neural_Networks"}  
+// use_theories {"theories": ["MyNNProof"]}
+'''

@@ -61,6 +61,10 @@ pub mod result_converter;
 #[cfg(feature = "axiom-verification")]
 pub mod z3;
 
+// Isabelle/HOL backend (induction, termination, AFP library)
+// Note: Always compiled, but requires Isabelle2025+ installed to use
+pub mod isabelle;
+
 // Re-exports for convenience
 pub use backend::{SolverBackend, SolverStats, VerificationResult};
 pub use capabilities::{
@@ -73,25 +77,85 @@ pub use z3::Z3Backend;
 
 /// Solver discovery and comparison utilities
 ///
-/// Future: Will list available solvers, compare capabilities, etc.
+/// Lists available solvers and checks their availability.
 pub mod discovery {
     /// List all available solver backends
     ///
-    /// Future: Will scan for installed solvers (Z3, CVC5, etc.)
+    /// Returns compiled-in solvers. Note that Isabelle requires
+    /// external installation (Isabelle2025+) to actually function.
     pub fn list_solvers() -> Vec<String> {
+        let mut solvers = vec![];
+        
         #[cfg(feature = "axiom-verification")]
-        {
-            vec!["Z3".to_string()]
-        }
-        #[cfg(not(feature = "axiom-verification"))]
-        {
-            vec![]
-        }
+        solvers.push("Z3".to_string());
+        
+        // Isabelle is always listed but requires external installation
+        solvers.push("Isabelle".to_string());
+        
+        solvers
     }
 
     /// Check if a specific solver is available
     pub fn is_available(solver_name: &str) -> bool {
-        list_solvers().contains(&solver_name.to_string())
+        list_solvers().iter().any(|s| s.eq_ignore_ascii_case(solver_name))
+    }
+    
+    /// Check if Isabelle is installed on this system
+    ///
+    /// Searches common installation paths for the `isabelle` executable.
+    pub fn is_isabelle_installed() -> bool {
+        use std::path::Path;
+        
+        let search_paths = [
+            "/Applications/Isabelle2025-1.app/bin/isabelle",
+            "/Applications/Isabelle2025.app/bin/isabelle",
+            "/usr/local/bin/isabelle",
+        ];
+        
+        // Check ISABELLE_HOME env var first
+        if let Ok(home) = std::env::var("ISABELLE_HOME") {
+            let path = Path::new(&home).join("bin/isabelle");
+            if path.exists() {
+                return true;
+            }
+        }
+        
+        // Check common paths
+        for path in search_paths {
+            if Path::new(path).exists() {
+                return true;
+            }
+        }
+        
+        false
+    }
+    
+    /// Get the path to the Isabelle executable, if found
+    pub fn find_isabelle() -> Option<String> {
+        use std::path::Path;
+        
+        let search_paths = [
+            "/Applications/Isabelle2025-1.app/bin/isabelle",
+            "/Applications/Isabelle2025.app/bin/isabelle",
+            "/usr/local/bin/isabelle",
+        ];
+        
+        // Check ISABELLE_HOME env var first
+        if let Ok(home) = std::env::var("ISABELLE_HOME") {
+            let path = Path::new(&home).join("bin/isabelle");
+            if path.exists() {
+                return Some(path.to_string_lossy().to_string());
+            }
+        }
+        
+        // Check common paths
+        for path in search_paths {
+            if Path::new(path).exists() {
+                return Some(path.to_string());
+            }
+        }
+        
+        None
     }
 }
 
@@ -101,8 +165,12 @@ mod tests {
     fn test_solver_discovery() {
         use super::discovery;
         let solvers = discovery::list_solvers();
+        
         #[cfg(feature = "axiom-verification")]
         assert!(solvers.contains(&"Z3".to_string()));
+        
+        // Isabelle is always in the list (even if not installed)
+        assert!(solvers.contains(&"Isabelle".to_string()));
     }
 
     #[test]
@@ -111,7 +179,26 @@ mod tests {
 
         #[cfg(feature = "axiom-verification")]
         assert!(discovery::is_available("Z3"));
+        
+        // Case-insensitive check
+        assert!(discovery::is_available("isabelle"));
+        assert!(discovery::is_available("Isabelle"));
+        assert!(discovery::is_available("ISABELLE"));
 
         assert!(!discovery::is_available("NonexistentSolver"));
+    }
+    
+    #[test]
+    fn test_isabelle_discovery() {
+        use super::discovery;
+        
+        // This test documents the discovery API, not whether Isabelle is installed
+        let _installed = discovery::is_isabelle_installed();
+        let _path = discovery::find_isabelle();
+        
+        // If path is found, it should exist
+        if let Some(path) = discovery::find_isabelle() {
+            assert!(std::path::Path::new(&path).exists());
+        }
     }
 }
