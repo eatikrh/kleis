@@ -21,17 +21,78 @@ structure Vector(n : ℕ) {
 
 ```kleis
 structure Name(parameters) {
-    // Fields (data) - no "field" keyword needed
-    field1 : Type1
-    field2 : Type2
+    // Elements (constants)
+    element1 : Type1
     
-    // Operations (functions)
+    // Operations (functions)  
     operation op1 : InputType → OutputType
     
     // Axioms (properties)
     axiom property : logical_statement
 }
 ```
+
+## Structure Members
+
+Structures contain three kinds of members:
+
+### The `operation` Keyword
+
+The `operation` keyword declares a function that the structure provides:
+
+```kleis
+structure Group(G) {
+    operation mul : G × G → G      // Binary operation
+    operation inv : G → G          // Unary operation
+}
+```
+
+Operations declare the *signature* (types), not the implementation. The implementation is provided in an `implements` block (see Chapter 10).
+
+### The `element` Keyword
+
+The `element` keyword declares a distinguished constant of the structure:
+
+```kleis
+structure Monoid(M) {
+    element e : M           // Identity element
+    operation mul : M × M → M
+    
+    axiom identity : ∀(x : M). mul(e, x) = x
+}
+
+structure Field(F) {
+    element zero : F        // Additive identity
+    element one : F         // Multiplicative identity
+}
+```
+
+Elements are constants that satisfy the structure's axioms. You can also write elements without the `element` keyword:
+
+```kleis
+structure Ring(R) {
+    zero : R    // Same as "element zero : R"
+    one : R
+}
+```
+
+### The `axiom` Keyword
+
+The `axiom` keyword declares a property that must hold:
+
+```kleis
+structure Group(G) {
+    element e : M
+    operation mul : G × G → G
+    operation inv : G → G
+    
+    axiom identity : ∀(x : G). mul(e, x) = x ∧ mul(x, e) = x
+    axiom inverse : ∀(x : G). mul(x, inv(x)) = e
+    axiom associative : ∀(x : G)(y : G)(z : G). mul(mul(x, y), z) = mul(x, mul(y, z))
+}
+```
+
+Axioms are verified by Z3 when you use `implements` blocks or run `kleis verify`.
 
 ## Example: Complex Numbers
 

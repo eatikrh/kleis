@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-625ffb5c.js";
+            window.path_to_searchindex_js = "searchindex-87c7ada9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -1622,17 +1622,59 @@ define check_ratio(x, y) =
 </code></pre>
 <h2 id="structure-syntax"><a class="header" href="#structure-syntax">Structure Syntax</a></h2>
 <pre><code class="language-kleis">structure Name(parameters) {
-    // Fields (data) - no "field" keyword needed
-    field1 : Type1
-    field2 : Type2
+    // Elements (constants)
+    element1 : Type1
     
-    // Operations (functions)
+    // Operations (functions)  
     operation op1 : InputType → OutputType
     
     // Axioms (properties)
     axiom property : logical_statement
 }
 </code></pre>
+<h2 id="structure-members"><a class="header" href="#structure-members">Structure Members</a></h2>
+<p>Structures contain three kinds of members:</p>
+<h3 id="the-operation-keyword"><a class="header" href="#the-operation-keyword">The <code>operation</code> Keyword</a></h3>
+<p>The <code>operation</code> keyword declares a function that the structure provides:</p>
+<pre><code class="language-kleis">structure Group(G) {
+    operation mul : G × G → G      // Binary operation
+    operation inv : G → G          // Unary operation
+}
+</code></pre>
+<p>Operations declare the <em>signature</em> (types), not the implementation. The implementation is provided in an <code>implements</code> block (see Chapter 10).</p>
+<h3 id="the-element-keyword"><a class="header" href="#the-element-keyword">The <code>element</code> Keyword</a></h3>
+<p>The <code>element</code> keyword declares a distinguished constant of the structure:</p>
+<pre><code class="language-kleis">structure Monoid(M) {
+    element e : M           // Identity element
+    operation mul : M × M → M
+    
+    axiom identity : ∀(x : M). mul(e, x) = x
+}
+
+structure Field(F) {
+    element zero : F        // Additive identity
+    element one : F         // Multiplicative identity
+}
+</code></pre>
+<p>Elements are constants that satisfy the structure’s axioms. You can also write elements without the <code>element</code> keyword:</p>
+<pre><code class="language-kleis">structure Ring(R) {
+    zero : R    // Same as "element zero : R"
+    one : R
+}
+</code></pre>
+<h3 id="the-axiom-keyword"><a class="header" href="#the-axiom-keyword">The <code>axiom</code> Keyword</a></h3>
+<p>The <code>axiom</code> keyword declares a property that must hold:</p>
+<pre><code class="language-kleis">structure Group(G) {
+    element e : M
+    operation mul : G × G → G
+    operation inv : G → G
+    
+    axiom identity : ∀(x : G). mul(e, x) = x ∧ mul(x, e) = x
+    axiom inverse : ∀(x : G). mul(x, inv(x)) = e
+    axiom associative : ∀(x : G)(y : G)(z : G). mul(mul(x, y), z) = mul(x, mul(y, z))
+}
+</code></pre>
+<p>Axioms are verified by Z3 when you use <code>implements</code> blocks or run <code>kleis verify</code>.</p>
 <h2 id="example-complex-numbers"><a class="header" href="#example-complex-numbers">Example: Complex Numbers</a></h2>
 <pre><code class="language-kleis">structure Complex {
     re : ℝ  // real part
@@ -2277,6 +2319,27 @@ sin(divide(π, 2))
 λ&gt; :load examples/authorization/zanzibar.kleis
 ✅ Loaded: 1 files, 13 functions, 0 structures, 0 data types, 0 type aliases
 </code></pre>
+<h2 id="the-import-keyword"><a class="header" href="#the-import-keyword">The <code>import</code> Keyword</a></h2>
+<p>In Kleis source files, use <code>import</code> to include definitions from other files:</p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+import "stdlib/matrices.kleis"
+
+// Now you can use definitions from those files
+define my_matrix = identity(3)
+</code></pre>
+<p><strong>Import syntax:</strong></p>
+<ul>
+<li><code>import "path/to/file.kleis"</code> — includes all definitions from that file</li>
+</ul>
+<p>Imports are processed at parse time. The path is relative to the current file’s directory.</p>
+<p><strong>Common imports:</strong></p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"     // Basic types and operations
+import "stdlib/matrices.kleis"    // Matrix operations
+import "stdlib/complex.kleis"     // Complex number support
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> In the REPL, use <code>:load</code> instead of <code>import</code>. The <code>:load</code> command loads a file interactively, while <code>import</code> is for use inside <code>.kleis</code> source files.</p>
+</blockquote>
 <h2 id="verification-with-z3-1"><a class="header" href="#verification-with-z3-1">Verification with Z3</a></h2>
 <p>Run verifications interactively with <code>:verify</code>:</p>
 <pre><code>λ&gt; :verify x + y = y + x

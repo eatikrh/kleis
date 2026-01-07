@@ -57,6 +57,33 @@ More examples to load:
 ✅ Loaded: 1 files, 13 functions, 0 structures, 0 data types, 0 type aliases
 ```
 
+## The `import` Keyword
+
+In Kleis source files, use `import` to include definitions from other files:
+
+```kleis
+import "stdlib/prelude.kleis"
+import "stdlib/matrices.kleis"
+
+// Now you can use definitions from those files
+define my_matrix = identity(3)
+```
+
+**Import syntax:**
+- `import "path/to/file.kleis"` — includes all definitions from that file
+
+Imports are processed at parse time. The path is relative to the current file's directory.
+
+**Common imports:**
+
+```kleis
+import "stdlib/prelude.kleis"     // Basic types and operations
+import "stdlib/matrices.kleis"    // Matrix operations
+import "stdlib/complex.kleis"     // Complex number support
+```
+
+> **Note:** In the REPL, use `:load` instead of `import`. The `:load` command loads a file interactively, while `import` is for use inside `.kleis` source files.
+
 ## Verification with Z3
 
 Run verifications interactively with `:verify`:
