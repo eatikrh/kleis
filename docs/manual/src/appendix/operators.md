@@ -95,62 +95,72 @@ Kleis recognizes many Unicode mathematical symbols as **infix binary operators**
 
 ### Complete Operator Table
 
-These operators are **syntactic only** — they are parsed as infix operators but remain symbolic (not computed to concrete values). Use them for notation; define their meaning in structures.
+These operators are **syntactic only** — they are parsed as infix operators but have **no built-in semantics**. They remain symbolic: `2 • 3` evaluates to `•(2, 3)`, not a number.
 
-| Operator | Unicode Name | Common Use | Example |
-|----------|--------------|------------|---------|
-| `•` | Bullet | Dot/inner product | `u • v` |
-| `∘` | Ring operator | Function composition | `f ∘ g` |
-| `⊗` | Circled times | Tensor product | `A ⊗ B` |
-| `⊕` | Circled plus | Direct sum | `V ⊕ W` |
-| `⊙` | Circled dot | Hadamard product | `A ⊙ B` |
-| `⊛` | Circled asterisk | Convolution | `f ⊛ g` |
-| `⊘` | Circled slash | Division operator | `a ⊘ b` |
-| `⊚` | Circled ring | Ring composition | `a ⊚ b` |
-| `⊝` | Circled minus | Symmetric difference | `A ⊝ B` |
-| `⊞` | Squared plus | Box plus | `a ⊞ b` |
-| `⊟` | Squared minus | Box minus | `a ⊟ b` |
-| `⊠` | Squared times | Box times | `a ⊠ b` |
-| `⊡` | Squared dot | Box dot | `a ⊡ b` |
-| `∪` | Union | Set union | `A ∪ B` |
-| `∩` | Intersection | Set intersection | `A ∩ B` |
-| `⊔` | Square cup | Join (lattice) | `a ⊔ b` |
-| `⊓` | Square cap | Meet (lattice) | `a ⊓ b` |
-| `△` | Triangle up | Symmetric difference | `A △ B` |
-| `▽` | Triangle down | User-defined | `a ▽ b` |
+Use them for mathematical notation in symbolic expressions and axioms.
 
-### Usage
+| Operator | Unicode | Name | Typical Mathematical Use |
+|----------|---------|------|--------------------------|
+| `•` | U+2022 | Bullet | Inner/dot product notation |
+| `∘` | U+2218 | Ring operator | Function composition notation |
+| `⊗` | U+2297 | Circled times | Tensor product notation |
+| `⊕` | U+2295 | Circled plus | Direct sum notation |
+| `⊙` | U+2299 | Circled dot | Hadamard product notation |
+| `⊛` | U+229B | Circled asterisk | Convolution notation |
+| `⊘` | U+2298 | Circled slash | (user-defined) |
+| `⊚` | U+229A | Circled ring | (user-defined) |
+| `⊝` | U+229D | Circled minus | (user-defined) |
+| `⊞` | U+229E | Squared plus | (user-defined) |
+| `⊟` | U+229F | Squared minus | (user-defined) |
+| `⊠` | U+22A0 | Squared times | (user-defined) |
+| `⊡` | U+22A1 | Squared dot | (user-defined) |
+| `∪` | U+222A | Union | Set union notation |
+| `∩` | U+2229 | Intersection | Set intersection notation |
+| `⊔` | U+2294 | Square cup | Join/supremum notation |
+| `⊓` | U+2293 | Square cap | Meet/infimum notation |
+| `△` | U+25B3 | Triangle up | Symmetric difference notation |
+| `▽` | U+25BD | Triangle down | (user-defined) |
 
-These operators are parsed as binary infix expressions:
+> **Important:** These operators do NOT compute values. `2 • 3` returns `•(2, 3)` symbolically. To give them meaning, define functions and use those instead.
 
-```kleis
-// Tensor product of matrices
-define tensor_example = A ⊗ B
+### What They Actually Do
 
-// Hadamard (element-wise) product
-define hadamard_example = A ⊙ B
+These operators are parsed but **stay symbolic**:
 
-// Function composition
-define composed = f ∘ g
+```
+λ> :eval 2 • 3
+✅ •(2, 3)      ← NOT computed to 6!
 
-// Set operations
-define union_example = set1 ∪ set2
-define intersection_example = set1 ∩ set2
+λ> :eval A ⊗ B
+✅ ⊗(A, B)      ← stays symbolic
 ```
 
-### Defining Semantics
+### When to Use Them
 
-These operators are syntactic — their meaning depends on how you define them. Use structures to give them precise semantics:
+Use these operators in **axioms and symbolic expressions** where you want readable mathematical notation:
 
 ```kleis
 structure VectorSpace(V) {
-    operation dot : V × V → ℝ
-    
+    // Use • for notation in axioms
     axiom symmetric : ∀(u : V)(v : V). u • v = v • u
+    axiom bilinear : ∀(a : ℝ)(u : V)(v : V). (a * u) • v = a * (u • v)
 }
 ```
 
-> **Note:** The operator `•` in expressions like `u • v` is parsed but not automatically connected to your `dot` operation. Use function calls like `dot(u, v)` for verified operations, or define the operator's meaning in an `implements` block.
+### For Actual Computation
+
+If you need operators that **compute values**, use:
+1. Built-in operators: `+`, `-`, `*`, `/`, `^`
+2. Function calls: `dot(u, v)`, `tensor(A, B)`, `union(s1, s2)`
+
+```kleis
+// These compute actual values:
+define sum = 2 + 3           // → 5
+define product = times(4, 5)  // → 20
+
+// These stay symbolic (for axioms):
+define symbolic = a • b      // → •(a, b)
+```
 
 ## Type Operators
 
