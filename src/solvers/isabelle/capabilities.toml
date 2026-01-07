@@ -9,31 +9,13 @@ display_name = "Isabelle/HOL"
 version = "2025-1"
 description = "Interactive theorem prover with full induction and higher-order logic"
 
-# What Kleis can delegate to this backend
+# Feature flags - backend will query these to determine what it supports
 [capabilities]
-# Core verification capabilities
 induction = true
 termination = true
 higher_order = true
 quantifier_elimination = true
 interactive_proofs = true
-
-# What this backend is good at (self-contained, no reference to other backends)
-[capabilities.strengths]
-strengths = [
-    "Induction over natural numbers and datatypes",
-    "Termination proofs for recursive definitions",
-    "Higher-order unification",
-    "Access to AFP library (800+ formalized theories)",
-    "Proof objects (can extract certified code)",
-]
-
-# What this backend is slower at
-[capabilities.limitations]
-limitations = [
-    "Decidable theories (SAT/SMT)",
-    "Requires more user guidance for complex proofs",
-]
 
 # Server connection settings
 [server]
