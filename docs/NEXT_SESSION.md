@@ -302,60 +302,44 @@ Set operators existed in grammar v03-v08 but were removed. Possibly:
 
 ---
 
-## 🔧 FUTURE: User-Implementable Unicode Operators
+## 🔧 FUTURE: User-Implementable Unicode Operators (Low Priority)
 
 **Added:** January 7, 2026
 
-### Current Limitation
+### Actually, These Work Fine for Axioms!
 
-Unicode operators like `•`, `⊗`, `⊕`, `∘` are **syntactic only**:
-- They parse as infix: `a • b` → `•(a, b)`
-- But they **cannot be computed** — they stay symbolic forever
-- Users cannot define implementations for them
+Unicode operators like `•`, `⊗`, `⊕`, `∘` are used extensively in axioms:
 
-### Why Users Can't Implement Them
-
-| Approach | Result |
-|----------|--------|
-| `define •(a, b) = a * b` | ❌ Parse error — `•` not a valid identifier |
-| `operation • : T × T → T` in structure | ❌ Parse error — same reason |
-| Define `dot` and hope `•` uses it | ❌ No connection — `•` stays symbolic |
-
-### Proposed Solutions
-
-**Option 1: Add Built-in Aliases**
-
-Add common operators to `evaluator.rs`:
-```rust
-"•" | "dot" | "inner" => self.builtin_dot_product(args),
-"∘" | "compose" => self.builtin_compose(args),
-"⊗" | "tensor" => self.builtin_tensor_product(args),
-```
-
-**Option 2: Operator Mapping in Structures**
-
-Allow structures to map operators to implementations:
 ```kleis
-structure VectorSpace(V) {
-    operation dot : V × V → ℝ
-    infix • = dot   // NEW: operator alias
-}
+// From vscode-kleis/example.kleis - these WORK
+axiom inner_conjugate: ∀(ψ φ : H). ψ • φ = conj(φ • ψ)
+axiom associative: ∀(u v w : V). (u ⊕ v) ⊕ w = u ⊕ (v ⊕ w)
+axiom union_commutative: ∀(A B : Set(T)). A ∪ B = B ∪ A
 ```
 
-**Option 3: Parser-Level Rewriting**
+**Why this works:**
+- In axioms, operators stay **symbolic** (intended behavior)
+- Z3 treats them as **uninterpreted functions**
+- Verification checks **satisfiability**, not computation
 
-Make parser rewrite `a • b` → `dot(a, b)` based on registered mappings.
+### The Only Limitation
 
-### Current Documentation
+Users cannot make these operators **compute concrete values**:
+- `2 • 3` → `•(2, 3)` (symbolic, not `6`)
+- Must use named functions like `dot(2, 3)` for computation
 
-The operators appendix now correctly states these limitations. See:
-`docs/manual/src/appendix/operators.md` — "Custom Mathematical Operators" section.
+### Priority: Low
 
-### Effort Estimate
+Since the primary use case (axioms) works correctly, making these computable is a nice-to-have, not critical.
 
-- Option 1: ~2 hours (add builtins, implement semantics)
-- Option 2: ~4 hours (parser + evaluator changes)
-- Option 3: ~6 hours (complex parser rewriting)
+### If Ever Needed
+
+Add operator aliases to `evaluator.rs`:
+```rust
+"•" | "dot" => self.builtin_dot_product(args),
+```
+
+Effort: ~2 hours per operator
 
 ---
 
