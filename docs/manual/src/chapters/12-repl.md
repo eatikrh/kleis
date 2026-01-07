@@ -72,7 +72,7 @@ define my_matrix = identity(3)
 **Import syntax:**
 - `import "path/to/file.kleis"` — includes all definitions from that file
 
-Imports are processed at parse time. The path is relative to the current file's directory.
+Imports are processed at parse time. Relative paths are resolved from the importing file's directory.
 
 **Common imports:**
 
@@ -81,6 +81,29 @@ import "stdlib/prelude.kleis"     // Basic types and operations
 import "stdlib/matrices.kleis"    // Matrix operations
 import "stdlib/complex.kleis"     // Complex number support
 ```
+
+### Standard Library Resolution
+
+Imports starting with `stdlib/` are handled specially:
+
+1. **`KLEIS_ROOT` environment variable** — If set, Kleis looks for `$KLEIS_ROOT/stdlib/...` first
+2. **Project directory** — Kleis walks up from the current file looking for a `stdlib/` folder
+3. **Current working directory** — Falls back to `./stdlib/...`
+
+**Setting `KLEIS_ROOT`:**
+
+```bash
+# Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
+export KLEIS_ROOT=/path/to/kleis
+
+# Now stdlib imports work from anywhere
+kleis run my_project/main.kleis
+```
+
+This is useful when:
+- Working on projects outside the Kleis repository
+- Running Kleis from arbitrary directories
+- Sharing code that uses the standard library
 
 > **Note:** In the REPL, use `:load` instead of `import`. The `:load` command loads a file interactively, while `import` is for use inside `.kleis` source files.
 
