@@ -116,8 +116,8 @@ These operators are **syntactic only** — they are parsed as infix operators bu
 | `∩` | Intersection | Set intersection | `A ∩ B` |
 | `⊔` | Square cup | Join (lattice) | `a ⊔ b` |
 | `⊓` | Square cap | Meet (lattice) | `a ⊓ b` |
-| `△` | Triangle | Symmetric difference | `A △ B` |
-| `▽` | Nabla/Down triangle | Co-gradient | `a ▽ b` |
+| `△` | Triangle up | Symmetric difference | `A △ B` |
+| `▽` | Triangle down | User-defined | `a ▽ b` |
 
 ### Usage
 
