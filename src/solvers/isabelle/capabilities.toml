@@ -18,35 +18,21 @@ higher_order = true
 quantifier_elimination = true
 interactive_proofs = true
 
-# Comparison with Z3
-[capabilities.vs_z3]
-advantages = [
+# What this backend is good at (self-contained, no reference to other backends)
+[capabilities.strengths]
+strengths = [
     "Induction over natural numbers and datatypes",
     "Termination proofs for recursive definitions",
     "Higher-order unification",
     "Access to AFP library (800+ formalized theories)",
     "Proof objects (can extract certified code)",
 ]
-disadvantages = [
-    "Slower for decidable theories (SAT/SMT)",
-    "Requires more user guidance",
-    "Steeper learning curve",
-]
 
-# When to use Isabelle vs Z3
-[capabilities.use_when]
-isabelle = [
-    "Z3 returns 'unknown' or times out",
-    "Proof requires induction",
-    "Proof requires termination argument",
-    "Need to use AFP library",
-    "Need certified code extraction",
-]
-z3 = [
-    "Ground arithmetic",
-    "Bounded quantification",
-    "Quick satisfiability check",
-    "Default for most axioms",
+# What this backend is slower at
+[capabilities.limitations]
+limitations = [
+    "Decidable theories (SAT/SMT)",
+    "Requires more user guidance for complex proofs",
 ]
 
 # Server connection settings
