@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-e5441326.js";
+            window.path_to_searchindex_js = "searchindex-5eed74a3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -7641,7 +7641,7 @@ lim(x, 0, sin(x)/x)
 <p>Kleis recognizes many Unicode mathematical symbols as <strong>infix binary operators</strong>. These can be used directly in expressions like <code>a • b</code>.</p>
 <h3 id="complete-operator-table"><a class="header" href="#complete-operator-table">Complete Operator Table</a></h3>
 <p>These operators are <strong>syntactic only</strong> — they are parsed as infix operators but have <strong>no built-in semantics</strong>. They remain symbolic: <code>2 • 3</code> evaluates to <code>•(2, 3)</code>, not a number.</p>
-<p>Use them for mathematical notation in symbolic expressions and axioms.</p>
+<p>Use them for mathematical notation in symbolic expressions and axioms. To actually compute, define a function and call it with parentheses (e.g., <code>dot(u, v)</code> instead of <code>u • v</code>).</p>
 <div class="table-wrapper">
 <table>
 <thead>
