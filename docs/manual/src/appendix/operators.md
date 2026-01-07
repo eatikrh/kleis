@@ -95,6 +95,8 @@ Kleis recognizes many Unicode mathematical symbols as **infix binary operators**
 
 ### Complete Operator Table
 
+These operators are **syntactic only** — they are parsed as infix operators but remain symbolic (not computed to concrete values). Use them for notation; define their meaning in structures.
+
 | Operator | Unicode Name | Common Use | Example |
 |----------|--------------|------------|---------|
 | `•` | Bullet | Dot/inner product | `u • v` |
