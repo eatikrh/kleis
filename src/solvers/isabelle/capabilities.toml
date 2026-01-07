@@ -168,23 +168,27 @@ verify = "use_theories"
 build = "session_build"
 check = "use_theories"
 
-# Example usage from Kleis
-[examples]
-basic = '''
-// Kleis
-verify my_axiom with isabelle
+# Backend selection (NOT grammar - via CLI/config)
+# 
+# Same Kleis code works with any backend:
+#   kleis --check file.kleis                  # Default: Z3
+#   kleis --check --solver=isabelle file.kleis # Use Isabelle
+#   KLEIS_SOLVER=isabelle kleis --check file.kleis
+#
+# The SolverBackend trait handles translation internally.
+# No grammar changes required.
 
-// Translates to Isabelle server call:
-// session_start {"session": "HOL"}
-// use_theories {"theories": ["MyTheory"], "master_dir": "/tmp/kleis_isabelle/"}
-'''
+[cli]
+flag = "--solver=isabelle"
+env_var = "KLEIS_SOLVER"
+config_key = "solver.backend"
 
-with_afp = '''
-// Kleis
-verify nn_property with isabelle using Neural_Networks
-
-// Translates to:
-// session_build {"session": "Neural_Networks", ...}
-// session_start {"session": "Neural_Networks"}  
-// use_theories {"theories": ["MyNNProof"]}
-'''
+# Internal translation (handled by IsabelleBackend, not user-facing)
+[internal.workflow]
+steps = [
+    "1. Kleis parses file normally (no special syntax)",
+    "2. IsabelleBackend selected via CLI/config",
+    "3. Backend translates Kleis AST → Isar theory file",
+    "4. Backend calls Isabelle server with use_theories",
+    "5. Backend interprets result → VerificationResult",
+]

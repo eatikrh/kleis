@@ -29,6 +29,71 @@ Papers that validate and align with the Kleis approach:
 
 ---
 
+## 🔬 NEW: Isabelle/HOL Backend Integration (Jan 7, 2026)
+
+### Branch: `feature/isabelle-backend`
+
+### Architecture: Use Existing Solver Abstraction
+
+**Key insight:** We already have a solver abstraction layer (`SolverBackend` trait). Isabelle is just another backend — no grammar changes needed.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ kleis --check file.kleis                                     │ ← Same Kleis code
+│ kleis --check --solver=isabelle file.kleis                   │ ← Different backend
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ SolverBackend trait (src/solvers/backend.rs)                 │
+│   ├─ Z3Backend (default)                                     │
+│   └─ IsabelleBackend (new)                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Selection via CLI/config, NOT grammar:**
+- `--solver=isabelle` flag
+- `KLEIS_SOLVER=isabelle` environment variable
+- Config file setting
+
+### Implementation Plan (Revised)
+
+| Phase | Task | Status |
+|-------|------|--------|
+| 1 | Module structure + capabilities.toml | ✅ Done |
+| 2 | `IsabelleBackend` implements `SolverBackend` trait | ⏳ Next |
+| 3 | Kleis AST → Isar translation (in backend) | ⏳ |
+| 4 | `--solver` CLI flag | ⏳ |
+| 5 | Server lifecycle management | ⏳ |
+
+### Why Isabelle?
+
+| Feature | Z3 | Isabelle |
+|---------|-----|----------|
+| **Induction** | ❌ Limited | ✅ Full |
+| **Termination proofs** | ❌ | ✅ |
+| **AFP library** (800+ theories) | ❌ | ✅ |
+| **Speed for SAT/SMT** | ✅ Fast | ⚠️ Slower |
+| **Default for most axioms** | ✅ | ❌ |
+
+**Use Isabelle when:** Z3 returns "unknown", proof needs induction, or need AFP theories.
+
+### Files Created
+
+- `src/solvers/isabelle/mod.rs` — Module with backend stub
+- `src/solvers/isabelle/capabilities.toml` — Backend metadata and translation rules
+- `src/solvers/mod.rs` — Updated with discovery functions
+
+### ⚠️ LESSON: No Grammar Pollution
+
+**DO NOT add syntax like:**
+```
+verify axiom with isabelle  ← WRONG! Grammar pollution
+```
+
+**The solver abstraction exists for this reason.** Backend selection is operational (CLI/config), not semantic (grammar).
+
+---
+
 ## 🚀 CURRENT WORK: Equation Editor Enhancements (Jan 3-4, 2026)
 
 ### Branch: `feature/copy-typst-button`
