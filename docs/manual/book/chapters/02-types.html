@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f513d77.js";
+            window.path_to_searchindex_js = "../searchindex-625ffb5c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -319,6 +319,24 @@ type Predicate = ℝ → Bool
 <p>Type aliases can have parameters:</p>
 <pre><code class="language-kleis">type Pair(T) = T → T → T
 type Endomorphism(T) = T → T
+</code></pre>
+<h3 id="aliases-for-data-types-and-structures"><a class="header" href="#aliases-for-data-types-and-structures">Aliases for Data Types and Structures</a></h3>
+<p>Type aliases work with user-defined types too:</p>
+<pre><code class="language-kleis">// Alias for a data type (sum type)
+data Option(T) = Some(value : T) | None
+type MaybeInt = Option(ℤ)
+type MaybeString = Option(String)
+
+// Alias for a structure (product type)
+structure Point {
+    x : ℝ
+    y : ℝ
+}
+type Coordinate = Point
+
+// Alias for nested ADTs
+data Result(T, E) = Ok(value : T) | Err(error : E)
+type IntResult = Result(ℤ, String)
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> Type aliases create a synonym — <code>Probability</code> and <code>ℝ</code> are interchangeable. They don’t create a distinct new type.</p>

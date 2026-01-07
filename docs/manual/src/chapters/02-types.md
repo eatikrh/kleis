@@ -151,6 +151,28 @@ type Pair(T) = T → T → T
 type Endomorphism(T) = T → T
 ```
 
+### Aliases for Data Types and Structures
+
+Type aliases work with user-defined types too:
+
+```kleis
+// Alias for a data type (sum type)
+data Option(T) = Some(value : T) | None
+type MaybeInt = Option(ℤ)
+type MaybeString = Option(String)
+
+// Alias for a structure (product type)
+structure Point {
+    x : ℝ
+    y : ℝ
+}
+type Coordinate = Point
+
+// Alias for nested ADTs
+data Result(T, E) = Ok(value : T) | Err(error : E)
+type IntResult = Result(ℤ, String)
+```
+
 > **Note:** Type aliases create a synonym — `Probability` and `ℝ` are interchangeable. They don't create a distinct new type.
 
 ## Function Types
