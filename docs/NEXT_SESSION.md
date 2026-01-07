@@ -302,6 +302,63 @@ Set operators existed in grammar v03-v08 but were removed. Possibly:
 
 ---
 
+## 🔧 FUTURE: User-Implementable Unicode Operators
+
+**Added:** January 7, 2026
+
+### Current Limitation
+
+Unicode operators like `•`, `⊗`, `⊕`, `∘` are **syntactic only**:
+- They parse as infix: `a • b` → `•(a, b)`
+- But they **cannot be computed** — they stay symbolic forever
+- Users cannot define implementations for them
+
+### Why Users Can't Implement Them
+
+| Approach | Result |
+|----------|--------|
+| `define •(a, b) = a * b` | ❌ Parse error — `•` not a valid identifier |
+| `operation • : T × T → T` in structure | ❌ Parse error — same reason |
+| Define `dot` and hope `•` uses it | ❌ No connection — `•` stays symbolic |
+
+### Proposed Solutions
+
+**Option 1: Add Built-in Aliases**
+
+Add common operators to `evaluator.rs`:
+```rust
+"•" | "dot" | "inner" => self.builtin_dot_product(args),
+"∘" | "compose" => self.builtin_compose(args),
+"⊗" | "tensor" => self.builtin_tensor_product(args),
+```
+
+**Option 2: Operator Mapping in Structures**
+
+Allow structures to map operators to implementations:
+```kleis
+structure VectorSpace(V) {
+    operation dot : V × V → ℝ
+    infix • = dot   // NEW: operator alias
+}
+```
+
+**Option 3: Parser-Level Rewriting**
+
+Make parser rewrite `a • b` → `dot(a, b)` based on registered mappings.
+
+### Current Documentation
+
+The operators appendix now correctly states these limitations. See:
+`docs/manual/src/appendix/operators.md` — "Custom Mathematical Operators" section.
+
+### Effort Estimate
+
+- Option 1: ~2 hours (add builtins, implement semantics)
+- Option 2: ~4 hours (parser + evaluator changes)
+- Option 3: ~6 hours (complex parser rewriting)
+
+---
+
 ## Previous: Unified Plotting API Complete! (Jan 1, 2026)
 
 ### What's Done
