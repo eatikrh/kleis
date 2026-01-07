@@ -83,6 +83,36 @@ axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
 axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
 ```
 
+## The `where` Clause
+
+Add conditions to quantified variables using the `where` keyword:
+
+```kleis
+structure Field(F) {
+    element zero : F
+    element one : F
+    operation inverse : F → F
+    
+    // Multiplicative inverse only for non-zero elements
+    axiom multiplicative_inverse:
+        ∀(x : F) where x ≠ zero. inverse(x) * x = one
+}
+```
+
+The `where` clause restricts the domain before the quantified body is evaluated. This is essential for axioms that don't apply universally.
+
+**More examples:**
+
+```kleis
+structure Analysis {
+    // Division only defined for non-zero denominator
+    axiom division: ∀(a : ℝ)(b : ℝ) where b ≠ 0. a / b * b = a
+    
+    // Logarithm only for positive numbers
+    axiom log_exp: ∀(x : ℝ) where x > 0. exp(log(x)) = x
+}
+```
+
 ## Using Quantifiers in Axioms
 
 Quantifiers are essential in structure axioms:

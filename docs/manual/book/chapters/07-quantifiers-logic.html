@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3c7ef52c.js";
+            window.path_to_searchindex_js = "../searchindex-f2d81e77.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -238,6 +238,28 @@ define not_true = ¬True          // False
 <p>Restrict the domain:</p>
 <pre><code class="language-kleis example">axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
 axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
+</code></pre>
+<h2 id="the-where-clause"><a class="header" href="#the-where-clause">The <code>where</code> Clause</a></h2>
+<p>Add conditions to quantified variables using the <code>where</code> keyword:</p>
+<pre><code class="language-kleis">structure Field(F) {
+    element zero : F
+    element one : F
+    operation inverse : F → F
+    
+    // Multiplicative inverse only for non-zero elements
+    axiom multiplicative_inverse:
+        ∀(x : F) where x ≠ zero. inverse(x) * x = one
+}
+</code></pre>
+<p>The <code>where</code> clause restricts the domain before the quantified body is evaluated. This is essential for axioms that don’t apply universally.</p>
+<p><strong>More examples:</strong></p>
+<pre><code class="language-kleis">structure Analysis {
+    // Division only defined for non-zero denominator
+    axiom division: ∀(a : ℝ)(b : ℝ) where b ≠ 0. a / b * b = a
+    
+    // Logarithm only for positive numbers
+    axiom log_exp: ∀(x : ℝ) where x &gt; 0. exp(log(x)) = x
+}
 </code></pre>
 <h2 id="using-quantifiers-in-axioms"><a class="header" href="#using-quantifiers-in-axioms">Using Quantifiers in Axioms</a></h2>
 <p>Quantifiers are essential in structure axioms:</p>
