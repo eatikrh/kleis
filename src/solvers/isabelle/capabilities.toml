@@ -1,31 +1,60 @@
 # Isabelle/HOL Backend Capabilities
 # 
-# This file describes what the Isabelle solver backend can do,
-# what theories are available, and connection parameters.
+# Follows the common solver schema (see capabilities_schema.md)
 
-[backend]
-name = "isabelle"
-display_name = "Isabelle/HOL"
+[solver]
+name = "Isabelle"
 version = "2025-1"
-description = "Interactive theorem prover with full induction and higher-order logic"
+type = "theorem_prover"
+description = "Interactive theorem prover with higher-order logic and induction"
 
-# Feature flags - backend will query these to determine what it supports
 [capabilities]
-induction = true
-termination = true
-higher_order = true
-quantifier_elimination = true
-interactive_proofs = true
+# Supported theories
+theories = [
+    "HOL",
+    "Pure",
+    "arithmetic",
+    "boolean",
+    "induction",
+    "higher_order",
+    "sets",
+    "lists",
+    "naturals",
+    "integers",
+    "reals"
+]
 
-# Server connection settings
+# Operations (minimal for now - Isabelle handles most symbolically)
+[capabilities.operations]
+plus = { arity = 2, theory = "arithmetic", native = true }
+minus = { arity = 2, theory = "arithmetic", native = true }
+times = { arity = 2, theory = "arithmetic", native = true }
+equals = { arity = 2, theory = "equality", native = true }
+and = { arity = 2, theory = "boolean", native = true }
+or = { arity = 2, theory = "boolean", native = true }
+not = { arity = 1, theory = "boolean", native = true }
+implies = { arity = 2, theory = "boolean", native = true }
+
+[capabilities.features]
+quantifiers = true
+uninterpreted_functions = true
+recursive_functions = true
+evaluation = false
+simplification = true
+proof_generation = true
+
+[capabilities.performance]
+max_axioms = 1000
+timeout_ms = 30000
+
+# ============================================
+# BACKEND-SPECIFIC: Isabelle configuration
+# ============================================
+
 [server]
 default_host = "127.0.0.1"
 default_port = 0
-timeout_session_start = 120
-timeout_use_theories = 300
-timeout_default = 30
 
-# How to find/start Isabelle
 [server.discovery]
 search_paths = [
     "/Applications/Isabelle2025-1.app/bin/isabelle",
@@ -35,67 +64,43 @@ search_paths = [
 ]
 env_var = "ISABELLE_HOME"
 
-# Available base logics/sessions
 [sessions]
 default = "HOL"
 
 [sessions.available.Pure]
 description = "Minimal logic framework"
-use_for = ["meta-theory"]
 
 [sessions.available.HOL]
 description = "Higher-Order Logic (standard)"
-use_for = ["most proofs", "AFP"]
 
 [sessions.available."HOL-Analysis"]
 description = "Real analysis, topology"
-use_for = ["calculus", "limits"]
 
 [sessions.available."HOL-Algebra"]
 description = "Abstract algebra"
-use_for = ["groups", "rings", "fields"]
 
 [sessions.available."HOL-Number_Theory"]
 description = "Number theory"
-use_for = ["primes", "divisibility"]
 
 [sessions.available."HOL-Library"]
 description = "Extended standard library"
-use_for = ["general"]
 
-# AFP (Archive of Formal Proofs) sessions
 [afp]
 description = "Archive of Formal Proofs - 800+ peer-reviewed formalizations"
 url = "https://www.isa-afp.org/"
 
-# AFP entries relevant to Kleis
 [afp.entries.Neural_Networks]
-description = "Formalized feed-forward neural networks with TensorFlow.js import"
+description = "Formalized feed-forward neural networks"
 url = "https://www.isa-afp.org/entries/Neural_Networks.html"
-use_for = ["AI/ML verification", "Lipschitz bounds", "activation functions"]
-authors = ["Achim D. Brucker", "Amy Stell"]
 
 [afp.entries.Petri_Nets]
 description = "Petri net formalization"
 url = "https://www.isa-afp.org/entries/Petri_Nets.html"
-use_for = ["state machines", "mutual exclusion", "deadlock freedom"]
 
 [afp.entries.Graph_Theory]
 description = "Graph theory fundamentals"
 url = "https://www.isa-afp.org/entries/Graph_Theory.html"
-use_for = ["graphs", "paths", "connectivity"]
 
-[afp.entries.Jordan_Normal_Form]
-description = "Matrices and Jordan normal form"
-url = "https://www.isa-afp.org/entries/Jordan_Normal_Form.html"
-use_for = ["linear algebra", "eigenvalues", "matrix theory"]
-
-[afp.entries.Interval_Analysis]
-description = "Interval arithmetic"
-url = "https://www.isa-afp.org/entries/Interval_Arithmetic_Word32.html"
-use_for = ["numerical bounds", "floating point"]
-
-# Translation rules: Kleis → Isar
 [translation.types]
 "ℕ" = "nat"
 "ℤ" = "int"
@@ -109,11 +114,6 @@ structure = "locale"
 axiom = "assumes"
 define = "definition"
 data = "datatype"
-"∀" = "∀"
-"∃" = "∃"
-"→" = "⟹"
-"×" = "×"
-"λ" = "λ"
 
 [translation.operations]
 "+" = "(+)"
@@ -121,42 +121,6 @@ data = "datatype"
 "*" = "(*)"
 "/" = "(/)"
 "=" = "(=)"
-"≠" = "(≠)"
-"<" = "(<)"
-">" = "(>)"
-"≤" = "(≤)"
-"≥" = "(≥)"
 "∧" = "(∧)"
 "∨" = "(∨)"
 "¬" = "(¬)"
-
-# Commands supported
-[commands]
-verify = "use_theories"
-build = "session_build"
-check = "use_theories"
-
-# Backend selection (NOT grammar - via CLI/config)
-# 
-# Same Kleis code works with any backend:
-#   kleis --check file.kleis                  # Default: Z3
-#   kleis --check --solver=isabelle file.kleis # Use Isabelle
-#   KLEIS_SOLVER=isabelle kleis --check file.kleis
-#
-# The SolverBackend trait handles translation internally.
-# No grammar changes required.
-
-[cli]
-flag = "--solver=isabelle"
-env_var = "KLEIS_SOLVER"
-config_key = "solver.backend"
-
-# Internal translation (handled by IsabelleBackend, not user-facing)
-[internal.workflow]
-steps = [
-    "1. Kleis parses file normally (no special syntax)",
-    "2. IsabelleBackend selected via CLI/config",
-    "3. Backend translates Kleis AST → Isar theory file",
-    "4. Backend calls Isabelle server with use_theories",
-    "5. Backend interprets result → VerificationResult",
-]

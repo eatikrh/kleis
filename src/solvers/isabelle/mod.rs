@@ -90,11 +90,11 @@ mod tests {
     #[test]
     fn test_capabilities_toml_loads() {
         // Verify the TOML is valid
-        let parsed: toml::Value = toml::from_str(CAPABILITIES_TOML)
-            .expect("capabilities.toml should be valid TOML");
-        
-        // Check key sections exist
-        assert!(parsed.get("backend").is_some());
+        let parsed: toml::Value =
+            toml::from_str(CAPABILITIES_TOML).expect("capabilities.toml should be valid TOML");
+
+        // Check key sections exist (using unified [solver] schema)
+        assert!(parsed.get("solver").is_some());
         assert!(parsed.get("capabilities").is_some());
         assert!(parsed.get("server").is_some());
         assert!(parsed.get("sessions").is_some());
@@ -103,10 +103,10 @@ mod tests {
     }
 
     #[test]
-    fn test_backend_name() {
+    fn test_solver_name() {
         let parsed: toml::Value = toml::from_str(CAPABILITIES_TOML).unwrap();
-        let name = parsed["backend"]["name"].as_str().unwrap();
-        assert_eq!(name, "isabelle");
+        let name = parsed["solver"]["name"].as_str().unwrap();
+        assert_eq!(name, "Isabelle");
     }
 
     #[test]
@@ -124,4 +124,3 @@ mod tests {
         assert!(nn.get("url").is_some());
     }
 }
-
