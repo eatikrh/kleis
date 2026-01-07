@@ -97,7 +97,9 @@ Kleis recognizes many Unicode mathematical symbols as **infix binary operators**
 
 These operators are **syntactic only** — they are parsed as infix operators but have **no built-in semantics**. They remain symbolic: `2 • 3` evaluates to `•(2, 3)`, not a number.
 
-Use them for mathematical notation in symbolic expressions and axioms. To actually compute, define a function and call it with parentheses (e.g., `dot(u, v)` instead of `u • v`).
+**These operators cannot be used for computation.** Kleis does not connect `•` to any function — `u • v` will always stay symbolic as `•(u, v)`.
+
+To compute, use a named function instead: define `dot(u, v)` and call it directly. The `•` operator is only useful for notation in axioms.
 
 | Operator | Unicode | Name | Typical Mathematical Use |
 |----------|---------|------|--------------------------|
