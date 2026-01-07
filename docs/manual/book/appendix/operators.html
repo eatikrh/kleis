@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0ae1fc88.js";
+            window.path_to_searchindex_js = "../searchindex-8c4f4d5a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -306,23 +306,71 @@
 lim(x, 0, sin(x)/x)
 </code></pre>
 <h2 id="custom-mathematical-operators"><a class="header" href="#custom-mathematical-operators">Custom Mathematical Operators</a></h2>
-<p>Kleis recognizes many Unicode mathematical symbols as custom binary operators:</p>
+<p>Kleis recognizes many Unicode mathematical symbols as <strong>infix binary operators</strong>. These can be used directly in expressions like <code>a • b</code>.</p>
+<h3 id="complete-operator-table"><a class="header" href="#complete-operator-table">Complete Operator Table</a></h3>
+<p>These operators are <strong>syntactic only</strong> — they are parsed as infix operators but have <strong>no built-in semantics</strong>. They remain symbolic: <code>2 • 3</code> evaluates to <code>•(2, 3)</code>, not a number.</p>
+<p><strong>These operators cannot be used for computation.</strong> Kleis does not connect <code>•</code> to any function — <code>u • v</code> will always stay symbolic as <code>•(u, v)</code>.</p>
+<p>To compute, use a named function instead: define <code>dot(u, v)</code> and call it directly. The <code>•</code> operator is only useful for notation in axioms.</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Category</th><th>Operators</th></tr>
+<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Typical Mathematical Use</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Products</strong></td><td><code>•</code> (bullet), <code>∘</code> (composition), <code>⊗</code> (tensor), <code>⊙</code> (Hadamard)</td></tr>
-<tr><td><strong>Sums</strong></td><td><code>⊕</code> (direct sum), <code>⊞</code> (squared plus), <code>⨁</code> (n-ary)</td></tr>
-<tr><td><strong>Set-like</strong></td><td><code>∪</code> (union), <code>∩</code> (intersection), <code>⊔</code> (join), <code>⊓</code> (meet)</td></tr>
-<tr><td><strong>Other</strong></td><td><code>⊛</code>, <code>⊘</code>, <code>⊚</code>, <code>⊝</code>, <code>⊟</code>, <code>⊠</code>, <code>⊡</code>, <code>△</code>, <code>▽</code></td></tr>
+<tr><td><code>•</code></td><td>U+2022</td><td>Bullet</td><td>Inner/dot product notation</td></tr>
+<tr><td><code>∘</code></td><td>U+2218</td><td>Ring operator</td><td>Function composition notation</td></tr>
+<tr><td><code>⊗</code></td><td>U+2297</td><td>Circled times</td><td>Tensor product notation</td></tr>
+<tr><td><code>⊕</code></td><td>U+2295</td><td>Circled plus</td><td>Direct sum notation</td></tr>
+<tr><td><code>⊙</code></td><td>U+2299</td><td>Circled dot</td><td>Hadamard product notation</td></tr>
+<tr><td><code>⊛</code></td><td>U+229B</td><td>Circled asterisk</td><td>Convolution notation</td></tr>
+<tr><td><code>⊘</code></td><td>U+2298</td><td>Circled slash</td><td>(user-defined)</td></tr>
+<tr><td><code>⊚</code></td><td>U+229A</td><td>Circled ring</td><td>(user-defined)</td></tr>
+<tr><td><code>⊝</code></td><td>U+229D</td><td>Circled minus</td><td>(user-defined)</td></tr>
+<tr><td><code>⊞</code></td><td>U+229E</td><td>Squared plus</td><td>(user-defined)</td></tr>
+<tr><td><code>⊟</code></td><td>U+229F</td><td>Squared minus</td><td>(user-defined)</td></tr>
+<tr><td><code>⊠</code></td><td>U+22A0</td><td>Squared times</td><td>(user-defined)</td></tr>
+<tr><td><code>⊡</code></td><td>U+22A1</td><td>Squared dot</td><td>(user-defined)</td></tr>
+<tr><td><code>∪</code></td><td>U+222A</td><td>Union</td><td>Set union notation</td></tr>
+<tr><td><code>∩</code></td><td>U+2229</td><td>Intersection</td><td>Set intersection notation</td></tr>
+<tr><td><code>⊔</code></td><td>U+2294</td><td>Square cup</td><td>Join/supremum notation</td></tr>
+<tr><td><code>⊓</code></td><td>U+2293</td><td>Square cap</td><td>Meet/infimum notation</td></tr>
+<tr><td><code>△</code></td><td>U+25B3</td><td>Triangle up</td><td>Symmetric difference notation</td></tr>
+<tr><td><code>▽</code></td><td>U+25BD</td><td>Triangle down</td><td>(user-defined)</td></tr>
 </tbody>
 </table>
 </div>
 <blockquote>
-<p><strong>Note:</strong> These are parsed as operators but their semantics depend on context. Define their behavior in structures.</p>
+<p><strong>Important:</strong> These operators do NOT compute values. <code>2 • 3</code> returns <code>•(2, 3)</code> symbolically. To give them meaning, define functions and use those instead.</p>
 </blockquote>
+<h3 id="what-they-actually-do"><a class="header" href="#what-they-actually-do">What They Actually Do</a></h3>
+<p>These operators are parsed but <strong>stay symbolic</strong>:</p>
+<pre><code>λ&gt; :eval 2 • 3
+✅ •(2, 3)      ← NOT computed to 6!
+
+λ&gt; :eval A ⊗ B
+✅ ⊗(A, B)      ← stays symbolic
+</code></pre>
+<h3 id="when-to-use-them"><a class="header" href="#when-to-use-them">When to Use Them</a></h3>
+<p>Use these operators in <strong>axioms and symbolic expressions</strong> where you want readable mathematical notation:</p>
+<pre><code class="language-kleis">structure VectorSpace(V) {
+    // Use • for notation in axioms
+    axiom symmetric : ∀(u : V)(v : V). u • v = v • u
+    axiom bilinear : ∀(a : ℝ)(u : V)(v : V). (a * u) • v = a * (u • v)
+}
+</code></pre>
+<h3 id="for-actual-computation"><a class="header" href="#for-actual-computation">For Actual Computation</a></h3>
+<p>If you need operators that <strong>compute values</strong>, use:</p>
+<ol>
+<li>Built-in operators: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>^</code></li>
+<li>Function calls: <code>dot(u, v)</code>, <code>tensor(A, B)</code>, <code>union(s1, s2)</code></li>
+</ol>
+<pre><code class="language-kleis">// These compute actual values:
+define sum = 2 + 3           // → 5
+define product = times(4, 5)  // → 20
+
+// These stay symbolic (for axioms):
+define symbolic = a • b      // → •(a, b)
+</code></pre>
 <h2 id="type-operators"><a class="header" href="#type-operators">Type Operators</a></h2>
 <div class="table-wrapper">
 <table>

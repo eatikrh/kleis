@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0ae1fc88.js";
+            window.path_to_searchindex_js = "../searchindex-8c4f4d5a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -211,7 +211,30 @@ structure Person {
 }
 </code></pre>
 <h2 id="sum-types-variants"><a class="header" href="#sum-types-variants">Sum Types (Variants)</a></h2>
-<p>A sum type represents alternatives:</p>
+<p>A sum type represents alternatives — a value that can be <em>one of</em> several different forms.</p>
+<h3 id="the-data-keyword"><a class="header" href="#the-data-keyword">The <code>data</code> Keyword</a></h3>
+<p>In Kleis, you define sum types using the <code>data</code> keyword:</p>
+<pre><code class="language-kleis">data TypeName = Constructor1 | Constructor2 | Constructor3
+</code></pre>
+<p><strong>Syntax breakdown:</strong></p>
+<ul>
+<li><code>data</code> — keyword that introduces a new type definition</li>
+<li><code>TypeName</code> — the name of your new type (starts with uppercase)</li>
+<li><code>=</code> — separates the type name from its constructors</li>
+<li><code>Constructor1</code>, <code>Constructor2</code>, etc. — the possible variants (each starts with uppercase)</li>
+<li><code>|</code> — read as “or” — separates the alternatives</li>
+</ul>
+<h3 id="constructors-with-data"><a class="header" href="#constructors-with-data">Constructors with Data</a></h3>
+<p>Constructors can carry data (fields):</p>
+<pre><code class="language-kleis">data TypeName = Constructor1(field1 : Type1) | Constructor2(field2 : Type2, field3 : Type3)
+</code></pre>
+<p>Each constructor acts like a function that creates a value of the type.</p>
+<h3 id="parameterized-types-generics"><a class="header" href="#parameterized-types-generics">Parameterized Types (Generics)</a></h3>
+<p>Types can have parameters, making them work with any type:</p>
+<pre><code class="language-kleis">data Option(T) = Some(value : T) | None
+</code></pre>
+<p>Here <code>T</code> is a <em>type parameter</em>. You can use <code>Option(ℕ)</code> for optional natural numbers, <code>Option(String)</code> for optional strings, etc. The type is <em>generic</em> — it works for any <code>T</code>.</p>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-kleis">// A shape is a Circle OR a Rectangle OR a Triangle
 data Shape = Circle(radius : ℝ) | Rectangle(width : ℝ, height : ℝ) | Triangle(a : ℝ, b : ℝ, c : ℝ)
 

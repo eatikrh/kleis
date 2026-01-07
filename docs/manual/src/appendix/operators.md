@@ -91,16 +91,78 @@ lim(x, 0, sin(x)/x)
 
 ## Custom Mathematical Operators
 
-Kleis recognizes many Unicode mathematical symbols as custom binary operators:
+Kleis recognizes many Unicode mathematical symbols as **infix binary operators**. These can be used directly in expressions like `a • b`.
 
-| Category | Operators |
-|----------|-----------|
-| **Products** | `•` (bullet), `∘` (composition), `⊗` (tensor), `⊙` (Hadamard) |
-| **Sums** | `⊕` (direct sum), `⊞` (squared plus), `⨁` (n-ary) |
-| **Set-like** | `∪` (union), `∩` (intersection), `⊔` (join), `⊓` (meet) |
-| **Other** | `⊛`, `⊘`, `⊚`, `⊝`, `⊟`, `⊠`, `⊡`, `△`, `▽` |
+### Complete Operator Table
 
-> **Note:** These are parsed as operators but their semantics depend on context. Define their behavior in structures.
+These operators are **syntactic only** — they are parsed as infix operators but have **no built-in semantics**. They remain symbolic: `2 • 3` evaluates to `•(2, 3)`, not a number.
+
+**These operators cannot be used for computation.** Kleis does not connect `•` to any function — `u • v` will always stay symbolic as `•(u, v)`.
+
+To compute, use a named function instead: define `dot(u, v)` and call it directly. The `•` operator is only useful for notation in axioms.
+
+| Operator | Unicode | Name | Typical Mathematical Use |
+|----------|---------|------|--------------------------|
+| `•` | U+2022 | Bullet | Inner/dot product notation |
+| `∘` | U+2218 | Ring operator | Function composition notation |
+| `⊗` | U+2297 | Circled times | Tensor product notation |
+| `⊕` | U+2295 | Circled plus | Direct sum notation |
+| `⊙` | U+2299 | Circled dot | Hadamard product notation |
+| `⊛` | U+229B | Circled asterisk | Convolution notation |
+| `⊘` | U+2298 | Circled slash | (user-defined) |
+| `⊚` | U+229A | Circled ring | (user-defined) |
+| `⊝` | U+229D | Circled minus | (user-defined) |
+| `⊞` | U+229E | Squared plus | (user-defined) |
+| `⊟` | U+229F | Squared minus | (user-defined) |
+| `⊠` | U+22A0 | Squared times | (user-defined) |
+| `⊡` | U+22A1 | Squared dot | (user-defined) |
+| `∪` | U+222A | Union | Set union notation |
+| `∩` | U+2229 | Intersection | Set intersection notation |
+| `⊔` | U+2294 | Square cup | Join/supremum notation |
+| `⊓` | U+2293 | Square cap | Meet/infimum notation |
+| `△` | U+25B3 | Triangle up | Symmetric difference notation |
+| `▽` | U+25BD | Triangle down | (user-defined) |
+
+> **Important:** These operators do NOT compute values. `2 • 3` returns `•(2, 3)` symbolically. To give them meaning, define functions and use those instead.
+
+### What They Actually Do
+
+These operators are parsed but **stay symbolic**:
+
+```
+λ> :eval 2 • 3
+✅ •(2, 3)      ← NOT computed to 6!
+
+λ> :eval A ⊗ B
+✅ ⊗(A, B)      ← stays symbolic
+```
+
+### When to Use Them
+
+Use these operators in **axioms and symbolic expressions** where you want readable mathematical notation:
+
+```kleis
+structure VectorSpace(V) {
+    // Use • for notation in axioms
+    axiom symmetric : ∀(u : V)(v : V). u • v = v • u
+    axiom bilinear : ∀(a : ℝ)(u : V)(v : V). (a * u) • v = a * (u • v)
+}
+```
+
+### For Actual Computation
+
+If you need operators that **compute values**, use:
+1. Built-in operators: `+`, `-`, `*`, `/`, `^`
+2. Function calls: `dot(u, v)`, `tensor(A, B)`, `union(s1, s2)`
+
+```kleis
+// These compute actual values:
+define sum = 2 + 3           // → 5
+define product = times(4, 5)  // → 20
+
+// These stay symbolic (for axioms):
+define symbolic = a • b      // → •(a, b)
+```
 
 ## Type Operators
 

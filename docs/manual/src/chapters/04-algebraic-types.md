@@ -27,7 +27,44 @@ structure Person {
 
 ## Sum Types (Variants)
 
-A sum type represents alternatives:
+A sum type represents alternatives — a value that can be *one of* several different forms.
+
+### The `data` Keyword
+
+In Kleis, you define sum types using the `data` keyword:
+
+```kleis
+data TypeName = Constructor1 | Constructor2 | Constructor3
+```
+
+**Syntax breakdown:**
+- `data` — keyword that introduces a new type definition
+- `TypeName` — the name of your new type (starts with uppercase)
+- `=` — separates the type name from its constructors
+- `Constructor1`, `Constructor2`, etc. — the possible variants (each starts with uppercase)
+- `|` — read as "or" — separates the alternatives
+
+### Constructors with Data
+
+Constructors can carry data (fields):
+
+```kleis
+data TypeName = Constructor1(field1 : Type1) | Constructor2(field2 : Type2, field3 : Type3)
+```
+
+Each constructor acts like a function that creates a value of the type.
+
+### Parameterized Types (Generics)
+
+Types can have parameters, making them work with any type:
+
+```kleis
+data Option(T) = Some(value : T) | None
+```
+
+Here `T` is a *type parameter*. You can use `Option(ℕ)` for optional natural numbers, `Option(String)` for optional strings, etc. The type is *generic* — it works for any `T`.
+
+### Examples
 
 ```kleis
 // A shape is a Circle OR a Rectangle OR a Triangle
