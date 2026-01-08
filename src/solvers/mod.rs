@@ -84,6 +84,7 @@ pub mod discovery {
     ///
     /// Returns compiled-in solvers. Note that Isabelle requires
     /// external installation (Isabelle2025+) to actually function.
+    #[allow(clippy::vec_init_then_push)]
     pub fn list_solvers() -> Vec<String> {
         let mut solvers = vec![];
 

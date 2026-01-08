@@ -1077,7 +1077,7 @@ impl IsabelleBackend {
         // Handle function types: ℝ → Bool -> real ⇒ bool
         if ty.contains(" → ") || ty.contains("→") {
             // Split on arrow and translate each part
-            let parts: Vec<&str> = ty.split(|c| c == '→').collect();
+            let parts: Vec<&str> = ty.split('→').collect();
             if parts.len() >= 2 {
                 return parts
                     .iter()
@@ -1750,7 +1750,7 @@ impl SolverBackend for IsabelleBackend {
 
         // Build theory with loaded axioms as context
         // Use 'assumes' to make them available for proof
-        let (axiom_context, simp_rules) = if self.loaded_axioms.is_empty() {
+        let (axiom_context, _simp_rules) = if self.loaded_axioms.is_empty() {
             (String::new(), String::new())
         } else {
             let axiom_names: Vec<String> = (0..self.loaded_axioms.len())
