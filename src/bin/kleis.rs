@@ -25,8 +25,38 @@
 //! kleis repl --load stdlib/prelude.kleis
 //! ```
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::{Path, PathBuf};
+
+/// Solver backend choice
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+pub enum SolverChoice {
+    /// Z3 SMT solver (default) - fast for SAT/SMT, no induction
+    #[default]
+    Z3,
+    /// Isabelle/HOL theorem prover - supports induction, termination, AFP library
+    Isabelle,
+}
+
+impl std::fmt::Display for SolverChoice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SolverChoice::Z3 => write!(f, "z3"),
+            SolverChoice::Isabelle => write!(f, "isabelle"),
+        }
+    }
+}
+
+/// Get the solver from environment variable KLEIS_SOLVER if set
+fn solver_from_env() -> Option<SolverChoice> {
+    std::env::var("KLEIS_SOLVER")
+        .ok()
+        .and_then(|s| match s.to_lowercase().as_str() {
+            "z3" => Some(SolverChoice::Z3),
+            "isabelle" => Some(SolverChoice::Isabelle),
+            _ => None,
+        })
+}
 
 /// Kleis - A symbolic mathematics language
 #[derive(Parser)]
@@ -60,6 +90,32 @@ enum Commands {
     Check {
         /// File to check
         file: PathBuf,
+
+        /// Solver backend for axiom verification (z3 or isabelle)
+        #[arg(long, value_enum)]
+        solver: Option<SolverChoice>,
+
+        /// Enable verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+
+    /// Verify axioms in a file using theorem prover
+    Verify {
+        /// File containing axioms to verify
+        file: PathBuf,
+
+        /// Solver backend (z3 or isabelle)
+        #[arg(long, value_enum, default_value = "z3")]
+        solver: SolverChoice,
+
+        /// Verify only axioms matching this name
+        #[arg(short, long)]
+        axiom: Option<String>,
+
+        /// Show detailed verification output
+        #[arg(short, long)]
+        verbose: bool,
     },
 
     /// Run example blocks as tests (v0.93)
@@ -105,8 +161,22 @@ async fn main() {
         Commands::Eval { expression, file } => {
             run_eval(expression, file);
         }
-        Commands::Check { file } => {
-            run_check(file);
+        Commands::Check {
+            file,
+            solver,
+            verbose,
+        } => {
+            // Determine solver: CLI flag > env var > default
+            let solver = solver.or_else(solver_from_env).unwrap_or_default();
+            run_check(file, solver, verbose);
+        }
+        Commands::Verify {
+            file,
+            solver,
+            axiom,
+            verbose,
+        } => {
+            run_verify(file, solver, axiom, verbose);
         }
         Commands::Test {
             file,
@@ -239,9 +309,13 @@ fn format_result(expr: &kleis::ast::Expression) -> String {
 }
 
 /// Check a file for errors
-fn run_check(file: PathBuf) {
+fn run_check(file: PathBuf, solver: SolverChoice, verbose: bool) {
     use kleis::evaluator::Evaluator;
     use kleis::kleis_parser::parse_kleis_program;
+
+    if verbose {
+        println!("Checking {} with solver: {}", file.display(), solver);
+    }
 
     match std::fs::read_to_string(&file) {
         Ok(source) => match parse_kleis_program(&source) {
@@ -270,6 +344,372 @@ fn run_check(file: PathBuf) {
             eprintln!("{}: {}", file.display(), e);
             std::process::exit(1);
         }
+    }
+}
+
+/// Axiom info extracted from StructureMember::Axiom
+struct AxiomInfo {
+    name: String,
+    proposition: kleis::ast::Expression,
+}
+
+/// Verify axioms in a file using the specified solver
+fn run_verify(file: PathBuf, solver: SolverChoice, axiom_filter: Option<String>, verbose: bool) {
+    use kleis::kleis_ast::{StructureMember, TopLevel};
+    use kleis::kleis_parser::parse_kleis_program;
+
+    println!("Verifying {} with solver: {}", file.display(), solver);
+
+    // Read and parse file
+    let source = match std::fs::read_to_string(&file) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("{}: {}", file.display(), e);
+            std::process::exit(1);
+        }
+    };
+
+    let program = match parse_kleis_program(&source) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{}: parse error: {}", file.display(), e);
+            std::process::exit(1);
+        }
+    };
+
+    // Collect axioms from structures
+    let mut axioms: Vec<AxiomInfo> = Vec::new();
+    for item in &program.items {
+        if let TopLevel::StructureDef(s) = item {
+            for member in &s.members {
+                if let StructureMember::Axiom { name, proposition } = member {
+                    // Apply filter if specified
+                    if axiom_filter
+                        .as_ref()
+                        .map(|f| name.contains(f))
+                        .unwrap_or(true)
+                    {
+                        axioms.push(AxiomInfo {
+                            name: name.clone(),
+                            proposition: proposition.clone(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    if axioms.is_empty() {
+        println!("No axioms found to verify");
+        return;
+    }
+
+    println!("Found {} axiom(s) to verify\n", axioms.len());
+
+    // For Isabelle, we need ALL axioms for context (definitions), but only verify filtered ones
+    // Collect all axioms first (unfiltered) for context
+    let mut all_axioms: Vec<AxiomInfo> = Vec::new();
+    for item in &program.items {
+        if let TopLevel::StructureDef(s) = item {
+            for member in &s.members {
+                if let StructureMember::Axiom { name, proposition } = member {
+                    all_axioms.push(AxiomInfo {
+                        name: name.clone(),
+                        proposition: proposition.clone(),
+                    });
+                }
+            }
+        }
+    }
+
+    // Collect import paths (for companion theory loading)
+    let mut import_paths: Vec<PathBuf> = Vec::new();
+    let file_dir = file.parent().unwrap_or(std::path::Path::new("."));
+    for item in &program.items {
+        if let TopLevel::Import(import_str) = item {
+            // Resolve relative to the source file's directory
+            let import_path = file_dir.join(import_str);
+            if import_path.exists() {
+                import_paths.push(import_path);
+            }
+        }
+    }
+
+    // Verify based on solver choice
+    match solver {
+        SolverChoice::Z3 => {
+            #[cfg(feature = "axiom-verification")]
+            {
+                verify_with_z3(&program, &axioms, verbose);
+            }
+            #[cfg(not(feature = "axiom-verification"))]
+            {
+                eprintln!("Z3 solver not available (compile with --features axiom-verification)");
+                std::process::exit(1);
+            }
+        }
+        SolverChoice::Isabelle => {
+            // Pass all axioms for context, but only verify the filtered subset
+            // Also pass import paths for companion theory loading
+            verify_with_isabelle(&file, &import_paths, &all_axioms, &axioms, verbose);
+        }
+    }
+}
+
+/// Verify axioms using Z3
+#[cfg(feature = "axiom-verification")]
+fn verify_with_z3(program: &kleis::kleis_ast::Program, axioms: &[AxiomInfo], verbose: bool) {
+    use kleis::axiom_verifier::AxiomVerifier;
+    use kleis::evaluator::Evaluator;
+    use kleis::structure_registry::StructureRegistry;
+
+    // Load program into evaluator (properly processes all definitions)
+    let mut evaluator = Evaluator::new();
+    if let Err(e) = evaluator.load_program(program) {
+        eprintln!("Failed to load program: {}", e);
+        std::process::exit(1);
+    }
+
+    // Build structure registry from evaluator
+    // This populates: structures, implements blocks, data types, type aliases, operations
+    let mut registry = StructureRegistry::new();
+    evaluator.build_registry(&mut registry);
+
+    // Create verifier
+    let mut verifier = match AxiomVerifier::new(&registry) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Failed to create Z3 verifier: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    // Load ADT constructors for proper type handling
+    verifier.load_adt_constructors(evaluator.get_adt_constructors().iter());
+
+    // Load user-defined functions for verification
+    if let Err(e) = verifier.load_program_functions(program) {
+        if verbose {
+            eprintln!("Warning: Failed to load some functions: {}", e);
+        }
+    }
+
+    let mut passed = 0;
+    let mut failed = 0;
+
+    for axiom in axioms {
+        if verbose {
+            println!("Verifying: {} ...", axiom.name);
+        }
+
+        match verifier.verify_axiom(&axiom.proposition) {
+            Ok(result) => {
+                use kleis::axiom_verifier::VerificationResult;
+                match result {
+                    VerificationResult::Valid => {
+                        println!("✅ {}", axiom.name);
+                        passed += 1;
+                    }
+                    VerificationResult::Invalid { counterexample } => {
+                        println!("❌ {} - INVALID", axiom.name);
+                        if verbose {
+                            println!("   Counterexample: {}", counterexample);
+                        }
+                        failed += 1;
+                    }
+                    VerificationResult::Unknown => {
+                        println!("⚠️  {} - UNKNOWN", axiom.name);
+                        failed += 1;
+                    }
+                    VerificationResult::Disabled => {
+                        println!("⏭️  {} - SKIPPED (verification disabled)", axiom.name);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("❌ {} - ERROR: {}", axiom.name, e);
+                failed += 1;
+            }
+        }
+    }
+
+    println!();
+    if failed == 0 {
+        println!("✅ All {} axiom(s) verified", passed);
+    } else {
+        println!(
+            "❌ {}/{} axiom(s) verified ({} failed)",
+            passed,
+            passed + failed,
+            failed
+        );
+        std::process::exit(1);
+    }
+}
+
+/// Verify axioms using Isabelle
+fn verify_with_isabelle(
+    source_file: &std::path::Path,
+    import_paths: &[PathBuf],
+    all_axioms: &[AxiomInfo],
+    axioms_to_verify: &[AxiomInfo],
+    verbose: bool,
+) {
+    use kleis::solvers::{IsabelleBackend, SolverBackend, VerificationResult};
+
+    // Create Isabelle backend
+    let mut backend = match IsabelleBackend::new() {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("Failed to create Isabelle backend: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    // Check for companion .thy files for imports (loaded first)
+    for import_path in import_paths {
+        backend.add_import_companion(import_path);
+    }
+
+    // Check for companion .thy file for main source
+    backend.set_companion_theory(source_file);
+
+    // Check for environment variables to connect to existing server
+    let port = std::env::var("ISABELLE_PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok());
+    let password = std::env::var("ISABELLE_PASSWORD").ok();
+
+    if let (Some(port), Some(password)) = (port, password) {
+        // Connect to existing server
+        println!("Connecting to existing Isabelle server on port {}...", port);
+        if let Err(e) = backend.connect("127.0.0.1", port, &password) {
+            eprintln!("Failed to connect to Isabelle server: {}", e);
+            std::process::exit(1);
+        }
+    } else {
+        // Check if Isabelle is installed
+        if !kleis::solvers::discovery::is_isabelle_installed() {
+            eprintln!("❌ Isabelle not found");
+            eprintln!();
+            eprintln!("To use the Isabelle solver:");
+            eprintln!("  1. Download Isabelle from https://isabelle.in.tum.de/");
+            eprintln!("  2. Install to /Applications (macOS) or set ISABELLE_HOME");
+            eprintln!();
+            eprintln!("Or connect to an existing server:");
+            eprintln!(
+                "  ISABELLE_PORT=51617 ISABELLE_PASSWORD=xxx kleis verify --solver=isabelle ..."
+            );
+            eprintln!();
+            eprintln!("Or use Z3 (default): kleis verify --solver=z3 <file>");
+            std::process::exit(1);
+        }
+
+        // Start server
+        println!("Starting Isabelle server...");
+        if let Err(e) = backend.start_server() {
+            eprintln!("Failed to start Isabelle server: {}", e);
+            eprintln!("You can also start the server manually:");
+            eprintln!("  isabelle server");
+            eprintln!("Then connect with: ISABELLE_PORT=<port> ISABELLE_PASSWORD=<pwd> kleis verify --solver=isabelle ...");
+            std::process::exit(1);
+        }
+    }
+
+    // Start HOL-Library session (includes real numbers)
+    println!("Starting HOL-Library session (this may take a moment)...");
+    if let Err(e) = backend.start_session("HOL-Library") {
+        eprintln!("Failed to start HOL-Library session: {}", e);
+        std::process::exit(1);
+    }
+
+    // Load companion theory if present (verifies it and extracts proven lemmas)
+    if let Err(e) = backend.load_companion_theory() {
+        eprintln!("Warning: Failed to load companion theory: {}", e);
+    }
+
+    // Load ALL axioms as context (definitions) - not just the ones being verified
+    // This allows axioms like "has_limit ↔ ..." to define has_limit for other axioms
+    println!(
+        "Loading {} axiom(s) as context definitions...",
+        all_axioms.len()
+    );
+    for axiom in all_axioms {
+        if let Err(e) = backend.add_context_axiom(&axiom.proposition) {
+            if verbose {
+                eprintln!(
+                    "Warning: Failed to load axiom '{}' as context: {}",
+                    axiom.name, e
+                );
+            }
+        }
+    }
+
+    println!();
+
+    // Use axioms_to_verify for the actual verification loop
+    let axioms = axioms_to_verify;
+
+    let mut passed = 0;
+    let mut failed = 0;
+    let mut companion_proven = 0;
+
+    for axiom in axioms {
+        // Check if this axiom is proven by the companion theory
+        if backend.is_proven_by_companion(&axiom.name) {
+            println!("✅ {} (companion theory)", axiom.name);
+            passed += 1;
+            companion_proven += 1;
+            continue;
+        }
+
+        if verbose {
+            println!("Verifying: {} ...", axiom.name);
+        }
+
+        match backend.verify_axiom(&axiom.proposition) {
+            Ok(result) => match result {
+                VerificationResult::Valid => {
+                    println!("✅ {}", axiom.name);
+                    passed += 1;
+                }
+                VerificationResult::Invalid { counterexample } => {
+                    println!("❌ {} - INVALID", axiom.name);
+                    if verbose {
+                        println!("   Counterexample: {}", counterexample);
+                    }
+                    failed += 1;
+                }
+                VerificationResult::Unknown => {
+                    println!("⚠️  {} - UNKNOWN (may need tactics)", axiom.name);
+                    failed += 1;
+                }
+            },
+            Err(e) => {
+                println!("❌ {} - ERROR: {}", axiom.name, e);
+                failed += 1;
+            }
+        }
+    }
+
+    if companion_proven > 0 {
+        println!(
+            "\n({} axiom(s) proven by companion .thy file)",
+            companion_proven
+        );
+    }
+
+    println!();
+    if failed == 0 {
+        println!("✅ All {} axiom(s) verified with Isabelle", passed);
+    } else {
+        println!(
+            "❌ {}/{} axiom(s) verified ({} failed)",
+            passed,
+            passed + failed,
+            failed
+        );
+        std::process::exit(1);
     }
 }
 

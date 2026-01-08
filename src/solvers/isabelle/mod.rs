@@ -51,11 +51,13 @@
 //! Based on Isabelle System Manual, Chapter 4:
 //! <https://isabelle.in.tum.de/dist/Isabelle2025-1/doc/system.pdf>
 
-// TODO: Implement these modules
-// mod backend;
-// mod connection;
-// mod translator;
-// mod parser;
+// Submodules
+mod backend;
+mod connection;
+
+// Re-exports
+pub use backend::{IsabelleBackend, IsabelleConfig};
+pub use connection::{CommandResult, IsabelleConnection, ServerInfo};
 
 /// Capabilities configuration loaded from capabilities.toml
 pub const CAPABILITIES_TOML: &str = include_str!("capabilities.toml");
@@ -68,20 +70,6 @@ pub const SESSION_START_TIMEOUT: u64 = 120;
 
 /// Timeout for use_theories (complex proofs take time)
 pub const USE_THEORIES_TIMEOUT: u64 = 300;
-
-// TODO: IsabelleBackend struct
-// pub struct IsabelleBackend {
-//     host: String,
-//     port: u16,
-//     password: String,
-//     session_id: Option<String>,
-// }
-
-// TODO: Implement SolverBackend trait
-// impl SolverBackend for IsabelleBackend {
-//     fn verify_axiom(&self, axiom: &Axiom) -> Result<VerificationResult>;
-//     fn name(&self) -> &str { "isabelle" }
-// }
 
 #[cfg(test)]
 mod tests {

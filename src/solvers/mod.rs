@@ -70,6 +70,7 @@ pub use backend::{SolverBackend, SolverStats, VerificationResult};
 pub use capabilities::{
     Capabilities, FeatureFlags, OperationSpec, PerformanceHints, SolverCapabilities, SolverMetadata,
 };
+pub use isabelle::{IsabelleBackend, IsabelleConfig};
 pub use result_converter::ResultConverter;
 
 #[cfg(feature = "axiom-verification")]

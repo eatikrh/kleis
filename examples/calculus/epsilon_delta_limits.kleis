@@ -1,0 +1,184 @@
+// Epsilon-Delta Limit Definitions
+// ================================
+// Classic analysis definitions that can be verified with Isabelle.
+//
+// Usage:
+//   kleis verify --solver=isabelle examples/calculus/epsilon_delta_limits.kleis
+//
+// Or with an existing Isabelle server:
+//   ISABELLE_PORT=<port> ISABELLE_PASSWORD=<pwd> kleis verify --solver=isabelle ...
+
+// --------------------------------------------
+// Basic Limit Properties (Verifiable)
+// --------------------------------------------
+
+structure LimitBasics {
+    // Reflexivity: any value equals itself as a limit
+    axiom limit_reflexive: ∀(L : ℝ). L = L
+    
+    // Positivity is transitive
+    axiom positive_transitive: ∀(a b : ℝ). a > 0 ∧ b > a → b > 0
+    
+    // Existence of smaller positive
+    axiom smaller_positive: ∀(ε : ℝ). ε > 0 → ε / 2 > 0
+    
+    // Triangle inequality for absolute value
+    axiom triangle_abs: ∀(x y : ℝ). abs(x + y) ≤ abs(x) + abs(y)
+    
+    // Absolute value non-negative
+    axiom abs_nonneg: ∀(x : ℝ). abs(x) ≥ 0
+    
+    // Zero absolute value
+    axiom abs_zero: ∀(x : ℝ). abs(x) = 0 ↔ x = 0
+}
+
+// --------------------------------------------
+// Epsilon-Delta Limit Definition
+// --------------------------------------------
+
+structure EpsilonDeltaLimit {
+    // The classic ε-δ definition of a limit
+    //
+    // lim(x→a) f(x) = L means:
+    //   ∀ε > 0, ∃δ > 0 such that |x - a| < δ implies |f(x) - L| < ε
+    
+    axiom limit_definition: ∀(f : ℝ → ℝ, L a : ℝ).
+        has_limit(f, a, L) ↔ 
+        (∀(ε : ℝ). ε > 0 → (∃(δ : ℝ). δ > 0 ∧ 
+            (∀(x : ℝ). abs(x - a) < δ ∧ x ≠ a → abs(f(x) - L) < ε)))
+    
+    // Limit uniqueness: if a limit exists, it is unique
+    axiom limit_unique: ∀(f : ℝ → ℝ, L1 L2 a : ℝ).
+        has_limit(f, a, L1) ∧ has_limit(f, a, L2) → L1 = L2
+}
+
+// --------------------------------------------
+// Continuity via Epsilon-Delta
+// --------------------------------------------
+
+structure Continuity {
+    // A function is continuous at a if lim(x→a) f(x) = f(a)
+    // Equivalently: ∀ε > 0, ∃δ > 0 such that |x - a| < δ implies |f(x) - f(a)| < ε
+    
+    axiom continuous_at_def: ∀(f : ℝ → ℝ, a : ℝ).
+        continuous_at(f, a) ↔ 
+        (∀(ε : ℝ). ε > 0 → (∃(δ : ℝ). δ > 0 ∧ 
+            (∀(x : ℝ). abs(x - a) < δ → abs(f(x) - f(a)) < ε)))
+    
+    // Uniform continuity: δ depends only on ε, not on the point
+    axiom uniform_continuous_def: ∀(f : ℝ → ℝ).
+        uniformly_continuous(f) ↔ 
+        (∀(ε : ℝ). ε > 0 → (∃(δ : ℝ). δ > 0 ∧ 
+            (∀(x y : ℝ). abs(x - y) < δ → abs(f(x) - f(y)) < ε)))
+    
+    // Continuous functions preserve limits
+    axiom continuous_preserves_limit: ∀(f : ℝ → ℝ, a : ℝ).
+        continuous_at(f, a) → has_limit(f, a, f(a))
+}
+
+// --------------------------------------------
+// Sequence Convergence
+// --------------------------------------------
+
+structure SequenceLimit {
+    // A sequence (aₙ) converges to L if:
+    //   ∀ε > 0, ∃N such that n > N implies |aₙ - L| < ε
+    
+    axiom sequence_converges_def: ∀(a : ℕ → ℝ, L : ℝ).
+        converges_to(a, L) ↔ 
+        (∀(ε : ℝ). ε > 0 → (∃(N : ℕ). ∀(n : ℕ). n > N → abs(a(n) - L) < ε))
+    
+    // Cauchy criterion: a sequence converges iff it is Cauchy
+    axiom cauchy_def: ∀(a : ℕ → ℝ).
+        is_cauchy(a) ↔ 
+        (∀(ε : ℝ). ε > 0 → (∃(N : ℕ). ∀(m n : ℕ). m > N ∧ n > N → abs(a(m) - a(n)) < ε))
+    
+    // Completeness of ℝ: every Cauchy sequence converges
+    axiom completeness: ∀(a : ℕ → ℝ).
+        is_cauchy(a) → (∃(L : ℝ). converges_to(a, L))
+}
+
+// --------------------------------------------
+// Simple Verifiable Properties
+// --------------------------------------------
+
+structure SimpleProperties {
+    // These are tautologies that Isabelle can verify easily
+    
+    axiom implication_reflexive: ∀(P : Bool). P → P
+    
+    axiom and_commutative: ∀(P Q : Bool). (P ∧ Q) ↔ (Q ∧ P)
+    
+    axiom or_commutative: ∀(P Q : Bool). (P ∨ Q) ↔ (Q ∨ P)
+    
+    axiom double_negation: ∀(P : Bool). ¬(¬P) ↔ P
+    
+    axiom de_morgan_and: ∀(P Q : Bool). ¬(P ∧ Q) ↔ (¬P ∨ ¬Q)
+    
+    axiom de_morgan_or: ∀(P Q : Bool). ¬(P ∨ Q) ↔ (¬P ∧ ¬Q)
+    
+    // Quantifier properties
+    axiom forall_and: ∀(P Q : ℝ → Bool). 
+        (∀(x : ℝ). P(x) ∧ Q(x)) ↔ ((∀(x : ℝ). P(x)) ∧ (∀(x : ℝ). Q(x)))
+    
+    axiom exists_or: ∀(P Q : ℝ → Bool).
+        (∃(x : ℝ). P(x) ∨ Q(x)) ↔ ((∃(x : ℝ). P(x)) ∨ (∃(x : ℝ). Q(x)))
+}
+
+// --------------------------------------------
+// Example: Limit of a Constant Function
+// --------------------------------------------
+
+structure ConstantLimit {
+    // For a constant function f(x) = c, lim(x→a) f(x) = c
+    // This is trivial: for any ε > 0, any δ > 0 works since |c - c| = 0 < ε
+    
+    axiom constant_has_limit: ∀(c a : ℝ).
+        has_limit(λ x . c, a, c)
+    
+    // Constant functions are continuous everywhere
+    axiom constant_continuous: ∀(c a : ℝ).
+        continuous_at(λ x . c, a)
+}
+
+// --------------------------------------------
+// Example: Limit of Identity Function
+// --------------------------------------------
+
+structure IdentityLimit {
+    // For the identity function f(x) = x, lim(x→a) f(x) = a
+    // Proof: for any ε > 0, take δ = ε. Then |x - a| < δ implies |x - a| < ε
+    
+    axiom identity_has_limit: ∀(a : ℝ).
+        has_limit(λ x . x, a, a)
+    
+    // Identity function is continuous everywhere
+    axiom identity_continuous: ∀(a : ℝ).
+        continuous_at(λ x . x, a)
+}
+
+// --------------------------------------------
+// Limit Arithmetic
+// --------------------------------------------
+
+structure LimitArithmetic {
+    // Sum of limits
+    axiom limit_sum: ∀(f g : ℝ → ℝ, L M a : ℝ).
+        has_limit(f, a, L) ∧ has_limit(g, a, M) → 
+        has_limit(λ x . f(x) + g(x), a, L + M)
+    
+    // Product of limits
+    axiom limit_product: ∀(f g : ℝ → ℝ, L M a : ℝ).
+        has_limit(f, a, L) ∧ has_limit(g, a, M) → 
+        has_limit(λ x . f(x) * g(x), a, L * M)
+    
+    // Scalar multiple
+    axiom limit_scalar: ∀(f : ℝ → ℝ, c L a : ℝ).
+        has_limit(f, a, L) → has_limit(λ x . c * f(x), a, c * L)
+    
+    // Quotient of limits (when denominator limit is non-zero)
+    axiom limit_quotient: ∀(f g : ℝ → ℝ, L M a : ℝ).
+        has_limit(f, a, L) ∧ has_limit(g, a, M) ∧ M ≠ 0 → 
+        has_limit(λ x . f(x) / g(x), a, L / M)
+}
+
