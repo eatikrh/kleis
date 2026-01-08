@@ -417,20 +417,22 @@ impl IsabelleBackend {
                     if let Some(id) = finished.get("session_id").and_then(|v| v.as_str()) {
                         self.session_id = Some(id.to_string());
                     } else {
-                        return Err("session_start completed but no session_id returned".to_string());
+                        return Err(
+                            "session_start completed but no session_id returned".to_string()
+                        );
                     }
                 } else if let Some(id) = response.get("session_id").and_then(|v| v.as_str()) {
                     // Direct response with session_id
                     self.session_id = Some(id.to_string());
                 } else {
-                    return Err("session_start response missing both task and session_id".to_string());
+                    return Err(
+                        "session_start response missing both task and session_id".to_string()
+                    );
                 }
                 self.cached_session_name = Some(session.to_string());
                 Ok(())
             }
-            CommandResult::Ok(None) => {
-                Err("session_start returned empty response".to_string())
-            }
+            CommandResult::Ok(None) => Err("session_start returned empty response".to_string()),
             CommandResult::Error(msg) => Err(format!("Failed to start session: {}", msg)),
             CommandResult::Running { task_id } => {
                 // Async session start via Running response
@@ -490,7 +492,11 @@ impl IsabelleBackend {
             match conn.read_next_message() {
                 Ok(Some((kind, json))) => {
                     if std::env::var("KLEIS_DEBUG").is_ok() {
-                        eprintln!("  << {} {}", kind, serde_json::to_string(&json).unwrap_or_default());
+                        eprintln!(
+                            "  << {} {}",
+                            kind,
+                            serde_json::to_string(&json).unwrap_or_default()
+                        );
                     }
 
                     // Check if this message is for our task
@@ -513,7 +519,9 @@ impl IsabelleBackend {
                             return Ok(result);
                         }
                         "FAILED" => {
-                            let msg = json.get("message").and_then(|v| v.as_str())
+                            let msg = json
+                                .get("message")
+                                .and_then(|v| v.as_str())
                                 .unwrap_or("Task failed");
                             return Err(msg.to_string());
                         }
@@ -550,7 +558,10 @@ impl IsabelleBackend {
     }
 
     /// Parse use_theories result to determine if proof succeeded
-    fn parse_use_theories_result(&self, response: &serde_json::Value) -> Result<VerificationResult, String> {
+    fn parse_use_theories_result(
+        &self,
+        response: &serde_json::Value,
+    ) -> Result<VerificationResult, String> {
         // Check for proof error we detected
         if let Some(err) = response.get("_proof_error").and_then(|v| v.as_str()) {
             return Ok(VerificationResult::Invalid {
@@ -564,7 +575,7 @@ impl IsabelleBackend {
                 // Check node status
                 if let Some(status) = node.get("status") {
                     let status_obj = status.as_object();
-                    
+
                     // Check for failed/unfinished status
                     if let Some(obj) = status_obj {
                         if obj.get("failed").and_then(|v| v.as_bool()).unwrap_or(false) {
@@ -573,14 +584,23 @@ impl IsabelleBackend {
                             });
                         }
                         // Check if proof is complete
-                        let finished = obj.get("finished").and_then(|v| v.as_bool()).unwrap_or(false);
+                        let finished = obj
+                            .get("finished")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
                         let ok = obj.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
-                        let consolidated = obj.get("consolidated").and_then(|v| v.as_bool()).unwrap_or(false);
-                        
+                        let consolidated = obj
+                            .get("consolidated")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+
                         if std::env::var("KLEIS_DEBUG").is_ok() {
-                            eprintln!("  Node status: finished={}, ok={}, consolidated={}", finished, ok, consolidated);
+                            eprintln!(
+                                "  Node status: finished={}, ok={}, consolidated={}",
+                                finished, ok, consolidated
+                            );
                         }
-                        
+
                         if !finished && !consolidated {
                             return Ok(VerificationResult::Invalid {
                                 counterexample: "Proof incomplete".to_string(),
@@ -588,14 +608,15 @@ impl IsabelleBackend {
                         }
                     }
                 }
-                
+
                 // Check messages for errors
                 if let Some(messages) = node.get("messages").and_then(|v| v.as_array()) {
                     for msg in messages {
                         if let Some(kind) = msg.get("kind").and_then(|v| v.as_str()) {
                             if kind == "error" {
                                 // Try "message" first, then "body"
-                                let error_text = msg.get("message")
+                                let error_text = msg
+                                    .get("message")
                                     .and_then(|v| v.as_str())
                                     .or_else(|| msg.get("body").and_then(|v| v.as_str()))
                                     .unwrap_or("Unknown error");
@@ -607,7 +628,7 @@ impl IsabelleBackend {
                     }
                 }
             }
-            
+
             // All nodes look good
             return Ok(VerificationResult::Valid);
         }
@@ -615,11 +636,14 @@ impl IsabelleBackend {
         // Check errors field
         if let Some(errors) = response.get("errors").and_then(|v| v.as_array()) {
             if !errors.is_empty() {
-                let msg = errors.iter()
+                let msg = errors
+                    .iter()
                     .filter_map(|e| e.get("message").and_then(|v| v.as_str()))
                     .collect::<Vec<_>>()
                     .join("; ");
-                return Ok(VerificationResult::Invalid { counterexample: msg });
+                return Ok(VerificationResult::Invalid {
+                    counterexample: msg,
+                });
             }
         }
 
@@ -627,7 +651,7 @@ impl IsabelleBackend {
         if std::env::var("KLEIS_DEBUG").is_ok() {
             eprintln!("  WARNING: No node status found in response");
         }
-        
+
         // Assume success if we got FINISHED without errors
         Ok(VerificationResult::Valid)
     }
@@ -1181,14 +1205,20 @@ impl IsabelleBackend {
 
         if std::env::var("KLEIS_DEBUG").is_ok() {
             eprintln!("=== SENDING use_theories ===");
-            eprintln!("args: {}", serde_json::to_string_pretty(&args).unwrap_or_default());
+            eprintln!(
+                "args: {}",
+                serde_json::to_string_pretty(&args).unwrap_or_default()
+            );
         }
 
         let result = match conn.send_command("use_theories", &args)? {
             CommandResult::Ok(Some(response)) => {
                 if std::env::var("KLEIS_DEBUG").is_ok() {
                     eprintln!("=== RESPONSE (Ok) ===");
-                    eprintln!("{}", serde_json::to_string_pretty(&response).unwrap_or_default());
+                    eprintln!(
+                        "{}",
+                        serde_json::to_string_pretty(&response).unwrap_or_default()
+                    );
                 }
                 // Check if this is actually an async task response
                 if let Some(task_id) = response.get("task").and_then(|v| v.as_str()) {
@@ -1201,7 +1231,11 @@ impl IsabelleBackend {
                         Ok(finished_response) => {
                             if std::env::var("KLEIS_DEBUG").is_ok() {
                                 eprintln!("=== USE_THEORIES FINISHED ===");
-                                eprintln!("{}", serde_json::to_string_pretty(&finished_response).unwrap_or_default());
+                                eprintln!(
+                                    "{}",
+                                    serde_json::to_string_pretty(&finished_response)
+                                        .unwrap_or_default()
+                                );
                             }
                             self.parse_use_theories_result(&finished_response)
                         }
@@ -1242,7 +1276,10 @@ impl IsabelleBackend {
                     Ok(response) => {
                         if std::env::var("KLEIS_DEBUG").is_ok() {
                             eprintln!("=== TASK FINISHED ===");
-                            eprintln!("{}", serde_json::to_string_pretty(&response).unwrap_or_default());
+                            eprintln!(
+                                "{}",
+                                serde_json::to_string_pretty(&response).unwrap_or_default()
+                            );
                         }
                         self.parse_use_theories_result(&response)
                     }
@@ -1490,9 +1527,7 @@ impl IsabelleBackend {
             .ok_or("Invalid theory file name")?
             .to_string();
 
-        let master_dir = thy_file
-            .parent()
-            .ok_or("Invalid theory file path")?;
+        let master_dir = thy_file.parent().ok_or("Invalid theory file path")?;
 
         let conn = self.connection.as_mut().ok_or("Connection lost")?;
         conn.set_timeout(std::time::Duration::from_secs(180))?; // 3 minutes for companion
@@ -1571,7 +1606,8 @@ impl IsabelleBackend {
                 || line_trimmed.starts_with("by ")
                 || line_trimmed.contains(" by ")
                 || line_trimmed == "done"
-                || line_trimmed == "oops"  // abandoned proof
+                || line_trimmed == "oops"
+            // abandoned proof
             {
                 if let Some(ref name) = current_lemma {
                     // Only add to proven if not using sorry
@@ -1596,7 +1632,11 @@ impl IsabelleBackend {
             println!(
                 "Companion proves {} axiom(s): {}",
                 self.companion_proven.len(),
-                self.companion_proven.iter().cloned().collect::<Vec<_>>().join(", ")
+                self.companion_proven
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ")
             );
         }
 
@@ -1685,7 +1725,7 @@ impl SolverBackend for IsabelleBackend {
         &self.capabilities
     }
 
-        fn verify_axiom(&mut self, axiom: &Expression) -> Result<VerificationResult, String> {
+    fn verify_axiom(&mut self, axiom: &Expression) -> Result<VerificationResult, String> {
         // Check connection, auto-start session if needed
         if !self.is_connected() {
             return Err("Not connected to Isabelle server. Call connect() first.".to_string());

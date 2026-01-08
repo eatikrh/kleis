@@ -315,7 +315,10 @@ impl IsabelleConnection {
     }
 
     /// Parse a message line into (kind, json)
-    fn parse_message_line(&self, line: &str) -> Result<Option<(String, serde_json::Value)>, String> {
+    fn parse_message_line(
+        &self,
+        line: &str,
+    ) -> Result<Option<(String, serde_json::Value)>, String> {
         for prefix in &["OK", "NOTE", "FINISHED", "FAILED", "ERROR", "RUNNING"] {
             if line.starts_with(prefix) {
                 let json_part = line.strip_prefix(prefix).unwrap_or("").trim();
