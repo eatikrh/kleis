@@ -6,13 +6,38 @@
 ///! Test that dimension constraints are enforced via signatures
 ///! This is the TRUE ADR-016 vision: constraints in signatures, not code!
 use kleis::data_registry::DataTypeRegistry;
+use kleis::kleis_ast::{DataDef, DataVariant, TypeParam};
 use kleis::kleis_parser::parse_kleis_program;
 use kleis::signature_interpreter::SignatureInterpreter;
 use kleis::structure_registry::StructureRegistry;
 use kleis::type_inference::Type;
 
+/// Helper: Create Matrix(m: Nat, n: Nat, T: Type) data type
+fn make_matrix_type() -> DataDef {
+    DataDef {
+        name: "Matrix".to_string(),
+        type_params: vec![
+            TypeParam {
+                name: "m".to_string(),
+                kind: Some("Nat".to_string()),
+            },
+            TypeParam {
+                name: "n".to_string(),
+                kind: Some("Nat".to_string()),
+            },
+            TypeParam {
+                name: "T".to_string(),
+                kind: Some("Type".to_string()),
+            },
+        ],
+        variants: vec![DataVariant {
+            name: "Matrix".to_string(),
+            fields: vec![],
+        }],
+    }
+}
+
 #[test]
-#[ignore = "TODO: Update for new Matrix data type format - uses old Type::matrix() helper"]
 fn test_add_dimension_constraint_via_signature() {
     // Structure says: add : Matrix(m, n, T) → Matrix(m, n, T) → Matrix(m, n, T)
     // Both args must have SAME (m, n)!
@@ -27,7 +52,8 @@ fn test_add_dimension_constraint_via_signature() {
     let structure = program.structures()[0];
 
     // Test 1: Same dimensions - should work
-    let registry = DataTypeRegistry::new();
+    let mut registry = DataTypeRegistry::new();
+    registry.register(make_matrix_type()).unwrap();
     let structure_registry = StructureRegistry::new();
     let mut interp1 = SignatureInterpreter::new(registry, structure_registry);
     let args1 = vec![
@@ -49,7 +75,8 @@ fn test_add_dimension_constraint_via_signature() {
     }
 
     // Test 2: Different dimensions - should fail
-    let registry2 = DataTypeRegistry::new();
+    let mut registry2 = DataTypeRegistry::new();
+    registry2.register(make_matrix_type()).unwrap();
     let structure_registry2 = StructureRegistry::new();
     let mut interp2 = SignatureInterpreter::new(registry2, structure_registry2);
     let args2 = vec![
@@ -73,10 +100,14 @@ fn test_add_dimension_constraint_via_signature() {
 }
 
 #[test]
-#[ignore = "TODO: Update for new Matrix data type format - uses old Type::matrix() helper"]
+#[ignore = "Test design issue: structure only defines return type, not full function signature with input types. SignatureInterpreter can't infer dimension relationships from return type alone."]
 fn test_multiply_dimension_constraint_via_signature() {
     // multiply : Matrix(m, n, T) → Matrix(n, p, T) → Matrix(m, p, T)
     // Inner dimension n must match!
+    //
+    // NOTE: This test fails because the structure definition only specifies
+    // the return type (Matrix(m, p, T)), not the input types. The interpreter
+    // can't infer that the inner dimensions should match from just the return type.
 
     let code = r#"
         structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
@@ -88,7 +119,8 @@ fn test_multiply_dimension_constraint_via_signature() {
     let structure = program.structures()[0];
 
     // Test: Compatible dimensions (2×3 × 3×4)
-    let registry = DataTypeRegistry::new();
+    let mut registry = DataTypeRegistry::new();
+    registry.register(make_matrix_type()).unwrap();
     let structure_registry = StructureRegistry::new();
     let mut interp = SignatureInterpreter::new(registry, structure_registry);
     let args = vec![
