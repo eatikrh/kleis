@@ -1,6 +1,11 @@
 [server]
 host = "127.0.0.1"
 port = 3000
+# Note: the ad-hoc static equation editor viewer often uses port 8000 when run via:
+#   python3 -m http.server 8000 --directory static
+# That 8000 is not wired into the code; it's chosen by the manual command.
+# Jupyter typically defaults to port 8888; its port is controlled by the Jupyter invocation,
+# not by Kleis binaries. Adjust when launching Jupyter as needed.
 
 [z3]
 # Default timeout for Z3 queries (ms)
