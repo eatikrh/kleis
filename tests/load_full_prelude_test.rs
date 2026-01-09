@@ -11,7 +11,6 @@ use kleis::kleis_parser::KleisParser;
 use kleis::type_checker::TypeChecker;
 
 #[test]
-#[ignore] // TODO: Requires top-level operation declarations (operation dot : ∀(n : ℕ). Vector(n) → ℝ)
 fn test_parse_full_prelude() {
     println!("\n🔍 Attempting to parse full prelude.kleis...\n");
 
@@ -86,7 +85,6 @@ fn test_parse_full_prelude() {
 }
 
 #[test]
-#[ignore] // TODO: Requires top-level operation declarations and define statements
 fn test_load_prelude_into_typechecker() {
     println!("\n🔍 Attempting to load prelude.kleis into TypeChecker...\n");
 

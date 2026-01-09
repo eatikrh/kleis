@@ -117,6 +117,10 @@ fn index_pair(base: Expression, idx1: Expression, idx2: Expression) -> Expressio
     op("index_pair", vec![base, idx1, idx2])
 }
 #[allow(dead_code)]
+fn tensor_lower_pair(base: Expression, idx1: Expression, idx2: Expression) -> Expression {
+    op("tensor_lower_pair", vec![base, idx1, idx2])
+}
+#[allow(dead_code)]
 fn partial_apply(arg: Expression, sub: Expression) -> Expression {
     op("partial_apply", vec![arg, sub])
 }
@@ -2368,7 +2372,7 @@ pub fn build_default_context() -> GlyphContext {
     unicode_templates.insert("partial_apply".to_string(), "∂_{sub} {arg}".to_string());
     unicode_templates.insert(
         "index_mixed".to_string(),
-        "{base}^{idx1}_{idx2}".to_string(),
+        "{base}^{upper}_{lower}".to_string(),
     );
     unicode_templates.insert(
         "subsup".to_string(),
@@ -2759,7 +2763,7 @@ pub fn build_default_context() -> GlyphContext {
     );
     latex_templates.insert(
         "index_mixed".to_string(),
-        "{base}^{{{idx1}}}_{{{idx2}}}".to_string(),
+        "{base}^{{{upper}}}_{{{lower}}}".to_string(),
     );
     latex_templates.insert(
         "subsup".to_string(),
@@ -2820,6 +2824,10 @@ pub fn build_default_context() -> GlyphContext {
     );
     latex_templates.insert(
         "outer".to_string(),
+        "|{left}\\rangle\\langle{right}|".to_string(),
+    );
+    latex_templates.insert(
+        "outer_product".to_string(),
         "|{left}\\rangle\\langle{right}|".to_string(),
     );
     latex_templates.insert(
@@ -3130,7 +3138,8 @@ pub fn build_default_context() -> GlyphContext {
     );
     html_templates.insert(
         "index_mixed".to_string(),
-        r#"{base}<sup class="math-sup">{idx1}</sup><sub class="math-sub">{idx2}</sub>"#.to_string(),
+        r#"{base}<sup class="math-sup">{upper}</sup><sub class="math-sub">{lower}</sub>"#
+            .to_string(),
     );
     html_templates.insert(
         "subsup".to_string(),
@@ -4526,12 +4535,12 @@ mod tests {
     // These may need updates to match current renderer output
 
     #[test]
-    #[ignore = "TODO: Fix inner product LaTeX rendering - outdated expectations"]
     fn renders_inner_product_latex() {
+        // Inner product uses Dirac notation: ⟨u|v⟩
         let ctx = build_default_context();
         let expr = inner_e(o("u"), o("v"));
         let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
-        assert_eq!(out, "\\langle u, v \\rangle");
+        assert_eq!(out, "\\langle u|v \\rangle");
     }
 
     #[test]
@@ -4578,18 +4587,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TODO: Update EFE LaTeX expectations - renderer output changed"]
     fn renders_efe_core_latex() {
         // G_{\mu\nu} + \Lambda g_{\mu\nu} = \kappa T_{\mu\nu}
+        // Uses tensor_lower_pair for subscript index pairs (covariant tensors)
         let ctx = build_default_context();
         let mu = o("μ");
         let nu = o("ν");
         let g_t = o("g");
-        let g_mn = index_pair(g_t, mu.clone(), nu.clone());
+        let g_mn = tensor_lower_pair(g_t, mu.clone(), nu.clone());
         let gEin = o("G");
-        let G_mn = index_pair(gEin, mu.clone(), nu.clone());
+        let G_mn = tensor_lower_pair(gEin, mu.clone(), nu.clone());
         let Tsym = o("T");
-        let T_mn = index_pair(Tsym, mu.clone(), nu.clone());
+        let T_mn = tensor_lower_pair(Tsym, mu.clone(), nu.clone());
         let left_sum = plus(G_mn, times(o("Λ"), g_mn));
         let rhs = times(o("κ"), T_mn);
         let efe = equals(left_sum, rhs);
@@ -4597,12 +4606,11 @@ mod tests {
         let out = render_expression(&efe, &ctx, &RenderTarget::LaTeX);
         assert_eq!(
             out,
-            r"G_{{\mu\nu}} + \Lambda \, g_{{\mu\nu}} = \kappa \, T_{{\mu\nu}}"
+            r"G_{{\mu \nu}} + \Lambda \, g_{{\mu \nu}} = \kappa \, T_{{\mu \nu}}"
         );
     }
 
     #[test]
-    #[ignore = "TODO: Fix tensor rendering - outdated expectations"]
     fn renders_f_tensor_from_potential() {
         // F^{\mu}_{\nu} = \partial_{\mu} A_{\nu} - \partial_{\nu} A_{\mu}
         let ctx = build_default_context();
@@ -4887,7 +4895,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TODO: Fix outer product rendering - outdated expectations"]
     fn renders_outer_product() {
         let ctx = build_default_context();
         let outer = outer_product(o("\\psi"), o("\\phi"));
