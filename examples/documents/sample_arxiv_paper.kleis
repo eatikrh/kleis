@@ -85,7 +85,7 @@ define subsec_verification = ArxivSubsection("Verification",
 define sec_experiments = ArxivSection("Evaluation",
 "We evaluate Kleis on three dimensions: verification performance, expressiveness, and usability. Our experiments cover examples from linear algebra, differential geometry, and formal language theory.")
 
-// Results table - Native Kleis Data with table_typst()
+// Results table - Native Kleis Data with table_typst_raw()
 define results_headers = ["Example", "Axioms", "Assertions", "Time (ms)"]
 define results_rows = [
     ["Commutativity", "3", "5", "12"],
@@ -97,7 +97,7 @@ define results_rows = [
 
 define table_results = ArxivTable("tab:results",
     "Verification times for representative examples",
-    table_typst(results_headers, results_rows)
+    table_typst_raw(results_headers, results_rows)
 )
 
 // Performance diagram - Native Kleis Data with export_typst_fragment()
@@ -220,7 +220,7 @@ define my_paper = arxiv_paper(
 
 example "compile_paper" {
     let typst_output = compile_arxiv_paper(my_paper) in
-    out(typst_output)
+    out(typst_raw(typst_output))
 }
 
 example "validate_paper" {

@@ -188,9 +188,9 @@ Currently NOT supported:
 
 | Document | Template | Purpose |
 |----------|----------|---------|
-| `examples/documents/jane_smith_thesis.kleis` | MIT | Complete PhD thesis |
-| `examples/documents/alex_chen_dissertation.kleis` | UofM | Rackham dissertation |
-| `examples/documents/sample_arxiv_paper.kleis` | arXiv | Research paper |
+| `examples/documents/jane_smith_thesis.kleis` | MIT | Complete PhD thesis (`kleis test <file> > thesis.typ`) |
+| `examples/documents/alex_chen_dissertation.kleis` | UofM | Rackham dissertation (`kleis test <file> > dissertation.typ`) |
+| `examples/documents/sample_arxiv_paper.kleis` | arXiv | Research paper (`kleis test <file> > paper.typ`) |
 
 ---
 

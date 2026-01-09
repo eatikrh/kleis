@@ -155,6 +155,30 @@ impl Evaluator {
         }
     }
 
+    /// Basic unescape for common sequences (\n, \t, \", \\)
+    fn unescape_basic(&self, s: &str) -> String {
+        let mut out = String::with_capacity(s.len());
+        let mut chars = s.chars().peekable();
+        while let Some(c) = chars.next() {
+            if c == '\\' {
+                match chars.next() {
+                    Some('n') => out.push('\n'),
+                    Some('t') => out.push('\t'),
+                    Some('\\') => out.push('\\'),
+                    Some('"') => out.push('"'),
+                    Some(other) => {
+                        out.push('\\');
+                        out.push(other);
+                    }
+                    None => out.push('\\'),
+                }
+            } else {
+                out.push(c);
+            }
+        }
+        out
+    }
+
     // === REPL Value Bindings ===
 
     /// Set a variable binding (used by :let command)
@@ -2295,6 +2319,26 @@ impl Evaluator {
                     args.iter().map(|a| self.eval_concrete(a)).collect();
                 let eval_args = eval_args?;
 
+                // Fast-path for raw Typst helpers to ensure they always collapse
+                if name == "typst_raw" {
+                    return self.builtin_typst_raw(&eval_args).map(|res| {
+                        res.unwrap_or(Expression::Operation {
+                            name: name.clone(),
+                            args: eval_args.clone(),
+                            span: None,
+                        })
+                    });
+                }
+                if name == "concat" {
+                    return self.builtin_concat(&eval_args).map(|res| {
+                        res.unwrap_or(Expression::Operation {
+                            name: name.clone(),
+                            args: eval_args.clone(),
+                            span: None,
+                        })
+                    });
+                }
+
                 // Check if this is a data constructor (e.g., Atom, List, Cons, Some)
                 // Constructors are values - return them with evaluated args
                 if self.all_constructors.contains(name) || self.is_constructor_name(name) {
@@ -2460,6 +2504,9 @@ impl Evaluator {
 
             // Generate Typst table from Kleis data
             "table_typst" => self.builtin_table_typst(args),
+            "table_typst_raw" => self.builtin_table_typst_raw(args),
+            "typst_raw" => self.builtin_typst_raw(args),
+            "concat" => self.builtin_concat(args),
 
             // Render EditorNode AST to Typst (for equations in documents)
             "render_to_typst" => self.builtin_render_to_typst(args),
@@ -2587,17 +2634,6 @@ impl Evaluator {
                 }
             }
 
-            // === String operations ===
-            "concat" => {
-                if args.len() != 2 {
-                    return Ok(None);
-                }
-                if let (Some(a), Some(b)) = (self.as_string(&args[0]), self.as_string(&args[1])) {
-                    Ok(Some(Expression::String(format!("{}{}", a, b))))
-                } else {
-                    Ok(None)
-                }
-            }
             "strlen" => {
                 if args.len() != 1 {
                     return Ok(None);
@@ -5477,18 +5513,15 @@ impl Evaluator {
             return Err("diagram() requires at least one plot element".to_string());
         }
 
-        // Compile to SVG
+        // Compile to SVG (do not print raw SVG to stdout to avoid polluting Typst output)
         match compile_diagram(&elements, &options) {
-            Ok(output) => {
-                println!("PLOT_SVG:{}", output.svg);
-                Ok(Some(Expression::operation(
-                    "PlotSVG",
-                    vec![
-                        Expression::Const(format!("{:.0}", output.width)),
-                        Expression::Const(format!("{:.0}", output.height)),
-                    ],
-                )))
-            }
+            Ok(output) => Ok(Some(Expression::operation(
+                "PlotSVG",
+                vec![
+                    Expression::Const(format!("{:.0}", output.width)),
+                    Expression::Const(format!("{:.0}", output.height)),
+                ],
+            ))),
             Err(e) => Err(format!("diagram() failed: {}", e)),
         }
     }
@@ -5735,6 +5768,145 @@ impl Evaluator {
         code.push(')');
 
         Ok(Some(Expression::String(code)))
+    }
+
+    /// Generate Typst table code (raw Object) from Kleis data (no quotes, no '#')
+    ///
+    /// Usage: table_typst_raw(headers, rows)
+    /// - headers: List of column header strings ["Name", "Age", "Score"]
+    /// - rows: List of rows, each row is a list [[a, b, c], [d, e, f]]
+    ///
+    /// Returns: Object containing Typst table code (no string quotes, no #)
+    fn builtin_table_typst_raw(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() < 2 {
+            return Err(
+                "table_typst_raw() requires 2 arguments: headers (list), rows (list of lists)"
+                    .to_string(),
+            );
+        }
+
+        // Extract headers as strict strings
+        let headers_expr = self.eval_concrete(&args[0])?;
+        let headers: Vec<String> = match headers_expr {
+            Expression::List(items) => items
+                .iter()
+                .map(|item| self.extract_string(item))
+                .collect::<Result<_, _>>()
+                .map_err(|e| format!("table_typst_raw headers: {}", e))?,
+            _ => {
+                return Err(
+                    "table_typst_raw(): first argument must be a list of headers".to_string(),
+                )
+            }
+        };
+
+        // Extract rows as list of list of strings
+        let rows_expr = self.eval_concrete(&args[1])?;
+        let rows: Vec<Vec<String>> = match rows_expr {
+            Expression::List(row_items) => row_items
+                .iter()
+                .map(|row| match row {
+                    Expression::List(cells) => cells
+                        .iter()
+                        .map(|cell| self.extract_string(cell))
+                        .collect::<Result<_, _>>()
+                        .map_err(|e| format!("table_typst_raw row: {}", e)),
+                    _ => Err("Each row must be a list".to_string()),
+                })
+                .collect::<Result<_, _>>()?,
+            _ => {
+                return Err("table_typst_raw(): second argument must be list of rows (list)".into())
+            }
+        };
+
+        let num_cols = headers.len();
+        let mut code = format!("table(\n  columns: {},\n", num_cols);
+
+        // Headers
+        for (i, header) in headers.iter().enumerate() {
+            code.push_str(&format!("  [{}]", header));
+            if i < num_cols - 1 {
+                code.push_str(", ");
+            } else {
+                code.push_str(",\n");
+            }
+        }
+
+        // Rows
+        for row in &rows {
+            code.push_str("  [");
+            for (i, cell) in row.iter().enumerate() {
+                code.push_str(&format!("[{}]", cell));
+                if i < num_cols - 1 {
+                    code.push_str(", ");
+                }
+            }
+            code.push_str("],\n");
+        }
+
+        code.push(')');
+
+        Ok(Some(Expression::Object(code)))
+    }
+
+    /// Convert a Typst string to a raw object (no quotes/escapes)
+    ///
+    /// Usage: typst_raw(text_string)
+    /// Returns: Object containing the text verbatim
+    fn builtin_typst_raw(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() != 1 {
+            return Ok(None);
+        }
+        let v = self.eval_concrete(&args[0])?;
+        match v {
+            Expression::String(s) | Expression::Const(s) | Expression::Object(s) => {
+                Ok(Some(Expression::Object(self.unescape_basic(&s))))
+            }
+            other => Err(format!(
+                "typst_raw(): expected string/object, got {:?}",
+                other
+            )),
+        }
+    }
+
+    /// Concatenate strings/objects into a single string/object
+    ///
+    /// Usage: concat(a, b, c, ...)
+    /// - Accepts String, Const, or Object
+    /// - If any arg is Object, result is Object; otherwise String
+    fn builtin_concat(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.is_empty() {
+            return Ok(None);
+        }
+
+        let mut parts = Vec::with_capacity(args.len());
+        let mut has_object = false;
+
+        for a in args {
+            let v = self.eval_concrete(a)?;
+            match v {
+                Expression::String(s) | Expression::Const(s) => {
+                    parts.push(self.unescape_basic(&s));
+                }
+                Expression::Object(s) => {
+                    has_object = true;
+                    parts.push(self.unescape_basic(&s));
+                }
+                other => {
+                    return Err(format!(
+                        "concat(): unsupported argument type {:?}, expected string/object",
+                        other
+                    ))
+                }
+            }
+        }
+
+        let joined = parts.join("");
+        if has_object {
+            Ok(Some(Expression::Object(joined)))
+        } else {
+            Ok(Some(Expression::String(joined)))
+        }
     }
 
     /// Render an EditorNode AST to Typst code
@@ -7117,13 +7289,7 @@ impl Evaluator {
     fn pretty_print_value(&self, expr: &Expression) -> String {
         match expr {
             Expression::Const(s) => s.clone(),
-            Expression::String(s) => {
-                if std::env::var("KLEIS_PRINT_RAW_STRINGS").is_ok() {
-                    s.clone()
-                } else {
-                    format!("\"{}\"", s)
-                }
-            }
+            Expression::String(s) => format!("\"{}\"", s),
             Expression::Object(s) => s.clone(),
             Expression::List(elements) => {
                 // Check if this is a matrix (list of lists)
@@ -7141,6 +7307,36 @@ impl Evaluator {
                 }
             }
             Expression::Operation { name, args, .. } => {
+                // Special-case raw Typst helpers so we don't emit wrapper syntax
+                if name == "typst_raw" && args.len() == 1 {
+                    if let Ok(
+                        Expression::String(s) | Expression::Const(s) | Expression::Object(s),
+                    ) = self.eval_concrete(&args[0])
+                    {
+                        return s;
+                    }
+                    if let Ok(s) = self.extract_string(&args[0]) {
+                        return s;
+                    }
+                }
+                if name == "concat" {
+                    let mut parts = Vec::with_capacity(args.len());
+                    let mut all_ok = true;
+                    for a in args {
+                        match self.eval_concrete(a) {
+                            Ok(Expression::String(s))
+                            | Ok(Expression::Const(s))
+                            | Ok(Expression::Object(s)) => parts.push(s),
+                            _ => {
+                                all_ok = false;
+                                break;
+                            }
+                        }
+                    }
+                    if all_ok {
+                        return parts.join("");
+                    }
+                }
                 // Handle Matrix(rows, cols, [elements]) format
                 if (name == "Matrix" || name == "matrix") && args.len() == 3 {
                     if let (Some(rows), Some(cols)) =
@@ -8726,6 +8922,51 @@ mod tests {
         // Should complete within fuel limit
         let result = eval.reduce_with_fuel(&expr, 10);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_typst_raw_unescape_concat() {
+        let mut eval = Evaluator::new();
+        let expr = Expression::Operation {
+            name: "typst_raw".to_string(),
+            args: vec![Expression::Operation {
+                name: "concat".to_string(),
+                args: vec![
+                    Expression::String("a\\n".to_string()),
+                    Expression::String("b\\\"c".to_string()),
+                ],
+                span: None,
+            }],
+            span: None,
+        };
+        let result = eval.eval_concrete(&expr).unwrap();
+        match result {
+            Expression::Object(s) => assert_eq!(s, "a\nb\"c"),
+            other => panic!("Expected Object, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_typst_raw_accepts_const_and_object() {
+        let mut eval = Evaluator::new();
+
+        // Const input
+        let const_expr = Expression::Operation {
+            name: "typst_raw".to_string(),
+            args: vec![Expression::Const("foo".to_string())],
+            span: None,
+        };
+        let const_result = eval.eval_concrete(&const_expr).unwrap();
+        assert!(matches!(const_result, Expression::Object(ref s) if s == "foo"));
+
+        // Object input
+        let obj_expr = Expression::Operation {
+            name: "typst_raw".to_string(),
+            args: vec![Expression::Object("bar".to_string())],
+            span: None,
+        };
+        let obj_result = eval.eval_concrete(&obj_expr).unwrap();
+        assert!(matches!(obj_result, Expression::Object(ref s) if s == "bar"));
     }
 
     // =========================================================================

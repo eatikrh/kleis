@@ -70,19 +70,27 @@ define my_paper = arxiv_paper(
 // Compile and output
 example "compile" {
     let typst = compile_arxiv_paper(my_paper)
-    out(typst)
+    // Wrap with typst_raw so the Typst stream is not quoted/escaped
+    out(typst_raw(typst))
 }
 ```
 
 Generate PDF:
 
 ```bash
-kleis test my_paper.kleis > my_paper.typ
+kleis test --raw-output --example compile my_paper.kleis > my_paper.typ
 typst compile my_paper.typ my_paper.pdf
 open my_paper.pdf
 ```
 
 **That's it!** Your document is a Kleis program.
+
+### Emit clean Typst (no quotes, no banners)
+
+- Wrap your compiled document in `typst_raw(...)` before calling `out(...)`.
+- Use `table_typst_raw(...)` for tables so Typst code is emitted directly (no ASCII boxes).
+- Run `kleis test --raw-output --example <compile_example> your_doc.kleis` to suppress test banners and keep the Typst stream clean.
+- Then pipe to `typst compile`.
 
 ## Available Templates
 
@@ -171,7 +179,7 @@ define fig_perf = MITDiagram("fig:perf", "Performance comparison",
 define headers = ["Method", "Accuracy", "Runtime"]
 define rows = [["Baseline", "72%", "1.2s"], ["Ours", "89%", "0.8s"]]
 define tab_results = MITTable("tab:results", "Experimental results",
-    table_typst(headers, rows))
+    table_typst_raw(headers, rows))
 
 // References
 define ref1 = MITReference("demoura2008", 
@@ -222,7 +230,7 @@ define feature_rows = [
     ["Typst Export", "✓", "✗", "✗"]
 ]
 define table_features = MITTable("tab:features", "Feature comparison",
-    table_typst(feature_headers, feature_rows))
+    table_typst_raw(feature_headers, feature_rows))
 
 // Assemble all elements in order
 define all_elements = [
@@ -254,10 +262,19 @@ define my_thesis = mit_thesis_full(
 )
 
 // Compile to Typst
-example "compile" {
+example "compile_thesis" {
     let typst = compile_mit_thesis(my_thesis)
-    out(typst)
+    // Emit raw Typst so there are no quotes/escapes
+    out(typst_raw(typst))
 }
+```
+
+**Running the example without banners/quotes:** use the raw output mode so the Typst
+stream is clean and can be piped directly to `typst compile`:
+
+```bash
+./target/release/kleis test examples/documents/jane_smith_thesis.kleis > /tmp/mit_thesis.typ
+typst compile /tmp/mit_thesis.typ /tmp/mit_thesis.pdf
 ```
 
 ### What the MIT Template Produces
@@ -333,6 +350,13 @@ define my_dissertation = umich_dissertation(
 
 See: `examples/documents/alex_chen_dissertation.kleis`
 
+Run the provided compile block with raw output to get Typst ready for `typst compile`:
+
+```bash
+./target/release/kleis test examples/documents/alex_chen_dissertation.kleis > /tmp/umich.typ
+typst compile /tmp/umich.typ /tmp/umich.pdf
+```
+
 ## arXiv Paper Template
 
 The arXiv template follows common academic paper conventions for preprints.
@@ -376,7 +400,10 @@ ArxivAlgorithm("alg:train", "Training procedure", "
 
 // Figures, tables, diagrams (same as MIT)
 ArxivFigure("fig:model", "Model architecture", "...")
-ArxivTable("tab:results", "Experimental results", "...")
+define result_headers = ["Method", "Accuracy", "Runtime"]
+define result_rows = [["Baseline", "72%", "1.2s"], ["Ours", "89%", "0.8s"]]
+ArxivTable("tab:results", "Experimental results",
+    table_typst_raw(result_headers, result_rows))
 ArxivDiagram("fig:loss", "Training loss", "...")
 
 // Acknowledgments
@@ -418,6 +445,14 @@ define typst_code = export_typst_fragment(my_plot,
 
 // Use in your thesis/paper
 define fig_training = MITDiagram("fig:training", "Training curves", typst_code)
+```
+
+**Note:** When piping to `typst`, use `--raw-output` and target only the compile
+example to avoid extra banners:
+
+```bash
+./target/release/kleis test examples/documents/sample_arxiv_paper.kleis > /tmp/paper.typ
+typst compile /tmp/paper.typ /tmp/paper.pdf
 ```
 
 **Why use native data?**
@@ -480,9 +515,9 @@ lq.diagram(
 
 ## Tables
 
-### Native Kleis Data with `table_typst()` (Recommended)
+### Native Kleis Data with `table_typst_raw()` (Recommended)
 
-The cleanest approach uses Kleis lists with `table_typst()`:
+The cleanest approach uses Kleis lists with `table_typst_raw()`, which emits Typst directly (no quotes, no ASCII boxes):
 
 ```kleis
 // Define table data as Kleis lists
@@ -493,18 +528,19 @@ define rows = [
     ["SOTA", "87.1%", "0.86"]
 ]
 
-// Generate Typst table code
-define table_code = table_typst(headers, rows)
+// Generate Typst table code (raw Typst)
+define table_code = table_typst_raw(headers, rows)
 
 // Use in your thesis/paper
 define tab_results = MITTable("tab:results", "Benchmark results", table_code)
 ```
 
-**Why use `table_typst()`?**
+**Why use `table_typst_raw()`?**
 - Data as Kleis lists—can be computed, imported, or transformed
 - No manual Typst table syntax
 - Rows can come from experiments or external data
 - Easy to add/remove rows programmatically
+- Produces clean Typst for piping to `typst compile`
 
 ### Example: Complete Workflow
 
@@ -526,7 +562,7 @@ define rows = [
 
 define tab_comparison = MITTable("tab:comparison",
     "Comparison of deep learning methods",
-    table_typst(headers, rows)
+    table_typst_raw(headers, rows)
 )
 ```
 
@@ -616,7 +652,7 @@ Visual Editor → 📋 Copy Typst → Paste into thesis.kleis → PDF
 ### Command Line
 
 ```bash
-# Compile Kleis to Typst
+# Compile Kleis to Typst (target your compile example, emit raw Typst)
 kleis test my_thesis.kleis > my_thesis.typ
 
 # Compile Typst to PDF  
