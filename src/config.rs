@@ -54,6 +54,7 @@ impl Default for KleisConfig {
 /// 2. `$HOME/.config/kleis/config.toml`
 /// 3. `config/kleis.toml` relative to CWD
 /// 4. Defaults
+///
 /// Env overrides for common fields are applied last:
 ///   - KLEIS_SERVER_HOST / KLEIS_SERVER_PORT
 ///   - KLEIS_Z3_TIMEOUT_MS
