@@ -89,7 +89,6 @@ fn build_matrix_equation() -> Expression {
 ///    ```
 /// 3. Load axioms via: backend.assert_axioms_from_registry()
 #[test]
-#[ignore]
 fn test_z3_solves_matrix_linear_system() {
     let registry = StructureRegistry::default();
     let mut backend = Z3Backend::new(&registry).expect("Failed to create Z3 backend");
@@ -166,10 +165,7 @@ fn build_matrix_equation_with_natural_constraints() -> Expression {
     }
 }
 
-/// IGNORED: Requires list indexing for matrix operations
-/// TO ENABLE: See test_z3_solves_matrix_linear_system for required axioms
 #[test]
-#[ignore]
 fn test_z3_solves_with_natural_number_constraint() {
     let registry = StructureRegistry::default();
     let mut backend = Z3Backend::new(&registry).expect("Failed to create Z3 backend");
@@ -267,10 +263,7 @@ fn build_no_integer_solution_equation() -> Expression {
     }
 }
 
-/// IGNORED: Requires list indexing for matrix operations
-/// TO ENABLE: See test_z3_solves_matrix_linear_system for required axioms
 #[test]
-#[ignore]
 fn test_z3_no_integer_solution() {
     let registry = StructureRegistry::default();
     let mut backend = Z3Backend::new(&registry).expect("Failed to create Z3 backend");
@@ -307,8 +300,15 @@ fn test_z3_no_integer_solution() {
     }
 }
 
-/// IGNORED: Requires list indexing for matrix operations
-/// TO ENABLE: See test_z3_solves_matrix_linear_system for required axioms
+/// IGNORED: Z3 verification returns Invalid for a known-correct solution.
+///
+/// The equation [[5],[11]] = [[1,2],[3,4]] × [[1],[2]] IS mathematically correct,
+/// but Z3 returns Invalid with a counterexample. This suggests either:
+/// 1. The matrix multiplication axioms are not properly loaded
+/// 2. The verification query is incorrectly formulated
+/// 3. Z3's uninterpreted function semantics don't match matrix semantics
+///
+/// TODO: Debug why verification fails for correct matrix equations.
 #[test]
 #[ignore]
 fn test_z3_verifies_correct_solution() {

@@ -821,7 +821,6 @@ mod golden_ellipsis {
 
     /// Inverse diagonal dots (Note: \iddots requires mathdots package, not standard LaTeX)
     #[test]
-    #[ignore] // Commented out in gallery for standard LaTeX compatibility
     fn iddots_notation() {
         let samples = kleis::render::collect_samples_for_gallery();
 
