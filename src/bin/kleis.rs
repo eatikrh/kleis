@@ -74,6 +74,10 @@ enum Commands {
         /// Show detailed output for each example
         #[arg(short, long)]
         verbose: bool,
+
+        /// Emit raw output (no summary banners, strings unquoted)
+        #[arg(long)]
+        raw_output: bool,
     },
 
     /// Start an interactive REPL
@@ -112,8 +116,9 @@ async fn main() {
             file,
             example,
             verbose,
+            raw_output,
         } => {
-            run_test(file, example, verbose);
+            run_test(file, example, verbose, raw_output);
         }
         Commands::Repl { load } => {
             run_repl(load);
@@ -274,11 +279,16 @@ fn run_check(file: PathBuf) {
 }
 
 /// Run example blocks as tests (v0.93)
-fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool) {
+fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool, raw_output: bool) {
     use kleis::evaluator::Evaluator;
     use kleis::kleis_ast::TopLevel;
     use kleis::kleis_parser::parse_kleis_program_with_file;
     use std::collections::HashSet;
+
+    // Raw output mode: unquoted strings and no summary banners
+    if raw_output {
+        std::env::set_var("KLEIS_PRINT_RAW_STRINGS", "1");
+    }
 
     // Canonicalize the file path
     let canonical = file.canonicalize().unwrap_or_else(|_| file.clone());
@@ -347,7 +357,7 @@ fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool) {
         if let Some(ref filter) = example_filter {
             if !example.name.contains(filter.as_str()) {
                 skipped += 1;
-                if verbose {
+                if verbose && !raw_output {
                     println!("⏭️  {} (skipped)", example.name);
                 }
                 continue;
@@ -358,40 +368,49 @@ fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool) {
 
         if result.passed {
             passed += 1;
-            if verbose {
-                println!(
-                    "✅ {}: passed ({}/{} assertions)",
-                    result.name, result.assertions_passed, result.assertions_total
-                );
-            } else {
-                println!("✅ {}", result.name);
+            if !raw_output {
+                if verbose {
+                    println!(
+                        "✅ {}: passed ({}/{} assertions)",
+                        result.name, result.assertions_passed, result.assertions_total
+                    );
+                } else {
+                    println!("✅ {}", result.name);
+                }
             }
         } else {
             failed += 1;
-            println!("❌ {}", result.name);
-            if let Some(error) = &result.error {
-                println!("   {}", error);
+            if !raw_output {
+                println!("❌ {}", result.name);
+                if let Some(error) = &result.error {
+                    println!("   {}", error);
+                }
             }
         }
     }
 
     // Print summary
-    println!();
-    let total = passed + failed;
-    if failed == 0 {
-        println!(
-            "✅ {} example{} passed",
-            total,
-            if total == 1 { "" } else { "s" }
-        );
-        if skipped > 0 {
-            println!("   ({} skipped by filter)", skipped);
+    if !raw_output {
+        println!();
+        let total = passed + failed;
+        if failed == 0 {
+            println!(
+                "✅ {} example{} passed",
+                total,
+                if total == 1 { "" } else { "s" }
+            );
+            if skipped > 0 {
+                println!("   ({} skipped by filter)", skipped);
+            }
+        } else {
+            println!(
+                "❌ {}/{} examples passed ({} failed)",
+                passed, total, failed
+            );
+            std::process::exit(1);
         }
-    } else {
-        println!(
-            "❌ {}/{} examples passed ({} failed)",
-            passed, total, failed
-        );
+    } else if failed > 0 {
+        // In raw mode, still propagate failure via exit code
         std::process::exit(1);
     }
 }

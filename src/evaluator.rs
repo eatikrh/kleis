@@ -7117,7 +7117,13 @@ impl Evaluator {
     fn pretty_print_value(&self, expr: &Expression) -> String {
         match expr {
             Expression::Const(s) => s.clone(),
-            Expression::String(s) => format!("\"{}\"", s),
+            Expression::String(s) => {
+                if std::env::var("KLEIS_PRINT_RAW_STRINGS").is_ok() {
+                    s.clone()
+                } else {
+                    format!("\"{}\"", s)
+                }
+            }
             Expression::Object(s) => s.clone(),
             Expression::List(elements) => {
                 // Check if this is a matrix (list of lists)
