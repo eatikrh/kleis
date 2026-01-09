@@ -70,7 +70,8 @@ define my_paper = arxiv_paper(
 // Compile and output
 example "compile" {
     let typst = compile_arxiv_paper(my_paper)
-    // Wrap with typst_raw so the Typst stream is not quoted/escaped
+    // REQUIRED: typst_raw() makes output unquoted (no "..." around strings)
+    // Without it, Typst would see quoted strings and fail to parse
     out(typst_raw(typst))
 }
 ```
@@ -78,6 +79,7 @@ example "compile" {
 Generate PDF:
 
 ```bash
+# --raw-output suppresses banners (✅/❌), typst_raw() in code produces unquoted output
 kleis test --raw-output --example compile my_paper.kleis > my_paper.typ
 typst compile my_paper.typ my_paper.pdf
 open my_paper.pdf
@@ -87,10 +89,25 @@ open my_paper.pdf
 
 ### Emit clean Typst (no quotes, no banners)
 
-- Wrap your compiled document in `typst_raw(...)` before calling `out(...)`.
+- **Required:** Wrap your compiled document in `typst_raw(...)` before calling `out(...)`. This is what makes the output unquoted - without it, strings are printed with quotes (`"..."`) which breaks Typst parsing.
 - Use `table_typst_raw(...)` for tables so Typst code is emitted directly (no ASCII boxes).
-- Run `kleis test --raw-output --example <compile_example> your_doc.kleis` to suppress test banners and keep the Typst stream clean.
+- Run `kleis test --raw-output --example <compile_example> your_doc.kleis` to suppress test banners (`✅`/`❌`) and summary lines.
 - Then pipe to `typst compile`.
+
+**Important:** The `--raw-output` flag only suppresses banners. The `typst_raw()` wrapper is what produces unquoted output suitable for Typst.
+
+### What `--raw-output` Suppresses
+
+The `--raw-output` flag suppresses all test framework output:
+
+- Per-example status lines (passed/failed/skipped)
+- Error messages after failed examples
+- The summary line ("N examples passed" or "N/M examples passed")
+
+It does **not** suppress:
+
+- Output from `out()` calls in your example blocks (this is what you want to capture)
+- Exit code 1 on failure (so CI pipelines still detect errors)
 
 ## Available Templates
 
@@ -447,11 +464,13 @@ define typst_code = export_typst_fragment(my_plot,
 define fig_training = MITDiagram("fig:training", "Training curves", typst_code)
 ```
 
-**Note:** When piping to `typst`, use `--raw-output` and target only the compile
-example to avoid extra banners:
+**Note:** When piping to `typst`:
+1. Use `--raw-output` to suppress test banners (`✅`/`❌`)
+2. Use `--example compile` to run only the compile example
+3. Ensure your example uses `out(typst_raw(...))` for unquoted output
 
 ```bash
-./target/release/kleis test examples/documents/sample_arxiv_paper.kleis > /tmp/paper.typ
+./target/release/kleis test --raw-output --example compile examples/documents/sample_arxiv_paper.kleis > /tmp/paper.typ
 typst compile /tmp/paper.typ /tmp/paper.pdf
 ```
 
@@ -652,8 +671,11 @@ Visual Editor → 📋 Copy Typst → Paste into thesis.kleis → PDF
 ### Command Line
 
 ```bash
-# Compile Kleis to Typst (target your compile example, emit raw Typst)
-kleis test my_thesis.kleis > my_thesis.typ
+# Compile Kleis to Typst
+# --raw-output: suppresses ✅/❌ banners
+# --example compile: runs only the "compile" example block
+# Your example must use out(typst_raw(...)) for unquoted output
+kleis test --raw-output --example compile my_thesis.kleis > my_thesis.typ
 
 # Compile Typst to PDF  
 typst compile my_thesis.typ my_thesis.pdf
@@ -665,7 +687,7 @@ open my_thesis.pdf
 ### One-liner
 
 ```bash
-kleis test my_thesis.kleis > my_thesis.typ && typst compile my_thesis.typ && open my_thesis.pdf
+kleis test --raw-output --example compile my_thesis.kleis > my_thesis.typ && typst compile my_thesis.typ && open my_thesis.pdf
 ```
 
 ### From Jupyter
