@@ -22,8 +22,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="favicon-de23e50b.svg">
-        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="icon" href="favicon-71ffb63a.svg">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
         <link rel="stylesheet" href="css/general-2459343d.css">
         <link rel="stylesheet" href="css/chrome-ae938929.css">
@@ -45,7 +44,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0ae1fc88.js";
+            window.path_to_searchindex_js = "searchindex-8c4f4d5a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f4ee74aa.js"></script>
@@ -498,6 +497,58 @@ define f(x : ℝ) : ℝ = x * x
 // Expression-level annotation (ascription)
 define sum_typed(a, b) = (a + b) : ℝ
 </code></pre>
+<h2 id="type-aliases"><a class="header" href="#type-aliases">Type Aliases</a></h2>
+<p>Type aliases give a new name to an existing type, making your code more readable and self-documenting.</p>
+<h3 id="the-type-keyword"><a class="header" href="#the-type-keyword">The <code>type</code> Keyword</a></h3>
+<pre><code class="language-kleis">type Probability = ℝ
+type Temperature = ℝ
+type Velocity = ℝ
+</code></pre>
+<p>Now you can use <code>Probability</code> instead of <code>ℝ</code> to make your intent clear:</p>
+<pre><code class="language-kleis">define coin_flip : Probability = 0.5
+define boiling_point : Temperature = 100.0
+</code></pre>
+<h3 id="why-use-type-aliases"><a class="header" href="#why-use-type-aliases">Why Use Type Aliases?</a></h3>
+<ol>
+<li><strong>Readability</strong> — <code>Probability</code> is clearer than <code>ℝ</code></li>
+<li><strong>Documentation</strong> — the type name explains what the value represents</li>
+<li><strong>Refactoring</strong> — change the underlying type in one place</li>
+</ol>
+<h3 id="function-type-aliases"><a class="header" href="#function-type-aliases">Function Type Aliases</a></h3>
+<p>Type aliases are especially useful for complex function types:</p>
+<pre><code class="language-kleis">type RealFunction = ℝ → ℝ
+type BinaryOp = ℝ → ℝ → ℝ
+type Predicate = ℝ → Bool
+</code></pre>
+<p>Now instead of writing <code>(ℝ → ℝ) → ℝ</code>, you can write:</p>
+<pre><code class="language-kleis">type Integrator = RealFunction → ℝ
+</code></pre>
+<h3 id="parameterized-type-aliases"><a class="header" href="#parameterized-type-aliases">Parameterized Type Aliases</a></h3>
+<p>Type aliases can have parameters:</p>
+<pre><code class="language-kleis">type Pair(T) = T → T → T
+type Endomorphism(T) = T → T
+</code></pre>
+<h3 id="aliases-for-data-types-and-structures"><a class="header" href="#aliases-for-data-types-and-structures">Aliases for Data Types and Structures</a></h3>
+<p>Type aliases work with user-defined types too:</p>
+<pre><code class="language-kleis">// Alias for a data type (sum type)
+data Option(T) = Some(value : T) | None
+type MaybeInt = Option(ℤ)
+type MaybeString = Option(String)
+
+// Alias for a structure (product type)
+structure Point {
+    x : ℝ
+    y : ℝ
+}
+type Coordinate = Point
+
+// Alias for nested ADTs
+data Result(T, E) = Ok(value : T) | Err(error : E)
+type IntResult = Result(ℤ, String)
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> Type aliases create a synonym — <code>Probability</code> and <code>ℝ</code> are interchangeable. They don’t create a distinct new type.</p>
+</blockquote>
 <h2 id="function-types"><a class="header" href="#function-types">Function Types</a></h2>
 <p>Functions have types too! The notation <code>A → B</code> means “a function from A to B”:</p>
 <pre><code class="language-kleis">// square takes a Real and returns a Real
@@ -1024,7 +1075,30 @@ structure Person {
 }
 </code></pre>
 <h2 id="sum-types-variants"><a class="header" href="#sum-types-variants">Sum Types (Variants)</a></h2>
-<p>A sum type represents alternatives:</p>
+<p>A sum type represents alternatives — a value that can be <em>one of</em> several different forms.</p>
+<h3 id="the-data-keyword"><a class="header" href="#the-data-keyword">The <code>data</code> Keyword</a></h3>
+<p>In Kleis, you define sum types using the <code>data</code> keyword:</p>
+<pre><code class="language-kleis">data TypeName = Constructor1 | Constructor2 | Constructor3
+</code></pre>
+<p><strong>Syntax breakdown:</strong></p>
+<ul>
+<li><code>data</code> — keyword that introduces a new type definition</li>
+<li><code>TypeName</code> — the name of your new type (starts with uppercase)</li>
+<li><code>=</code> — separates the type name from its constructors</li>
+<li><code>Constructor1</code>, <code>Constructor2</code>, etc. — the possible variants (each starts with uppercase)</li>
+<li><code>|</code> — read as “or” — separates the alternatives</li>
+</ul>
+<h3 id="constructors-with-data"><a class="header" href="#constructors-with-data">Constructors with Data</a></h3>
+<p>Constructors can carry data (fields):</p>
+<pre><code class="language-kleis">data TypeName = Constructor1(field1 : Type1) | Constructor2(field2 : Type2, field3 : Type3)
+</code></pre>
+<p>Each constructor acts like a function that creates a value of the type.</p>
+<h3 id="parameterized-types-generics"><a class="header" href="#parameterized-types-generics">Parameterized Types (Generics)</a></h3>
+<p>Types can have parameters, making them work with any type:</p>
+<pre><code class="language-kleis">data Option(T) = Some(value : T) | None
+</code></pre>
+<p>Here <code>T</code> is a <em>type parameter</em>. You can use <code>Option(ℕ)</code> for optional natural numbers, <code>Option(String)</code> for optional strings, etc. The type is <em>generic</em> — it works for any <code>T</code>.</p>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-kleis">// A shape is a Circle OR a Rectangle OR a Triangle
 data Shape = Circle(radius : ℝ) | Rectangle(width : ℝ, height : ℝ) | Triangle(a : ℝ, b : ℝ, c : ℝ)
 
@@ -1355,6 +1429,28 @@ define not_true = ¬True          // False
 <pre><code class="language-kleis example">axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
 axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
 </code></pre>
+<h2 id="the-where-clause"><a class="header" href="#the-where-clause">The <code>where</code> Clause</a></h2>
+<p>Add conditions to quantified variables using the <code>where</code> keyword:</p>
+<pre><code class="language-kleis">structure Field(F) {
+    element zero : F
+    element one : F
+    operation inverse : F → F
+    
+    // Multiplicative inverse only for non-zero elements
+    axiom multiplicative_inverse:
+        ∀(x : F) where x ≠ zero. inverse(x) * x = one
+}
+</code></pre>
+<p>The <code>where</code> clause restricts the domain before the quantified body is evaluated. This is essential for axioms that don’t apply universally.</p>
+<p><strong>More examples:</strong></p>
+<pre><code class="language-kleis">structure Analysis {
+    // Division only defined for non-zero denominator
+    axiom division: ∀(a : ℝ)(b : ℝ) where b ≠ 0. a / b * b = a
+    
+    // Logarithm only for positive numbers
+    axiom log_exp: ∀(x : ℝ) where x &gt; 0. exp(log(x)) = x
+}
+</code></pre>
 <h2 id="using-quantifiers-in-axioms"><a class="header" href="#using-quantifiers-in-axioms">Using Quantifiers in Axioms</a></h2>
 <p>Quantifiers are essential in structure axioms:</p>
 <pre><code class="language-kleis">structure Group(G) {
@@ -1547,17 +1643,59 @@ define check_ratio(x, y) =
 </code></pre>
 <h2 id="structure-syntax"><a class="header" href="#structure-syntax">Structure Syntax</a></h2>
 <pre><code class="language-kleis">structure Name(parameters) {
-    // Fields (data) - no "field" keyword needed
-    field1 : Type1
-    field2 : Type2
+    // Elements (constants)
+    element1 : Type1
     
-    // Operations (functions)
+    // Operations (functions)  
     operation op1 : InputType → OutputType
     
     // Axioms (properties)
     axiom property : logical_statement
 }
 </code></pre>
+<h2 id="structure-members"><a class="header" href="#structure-members">Structure Members</a></h2>
+<p>Structures contain three kinds of members:</p>
+<h3 id="the-operation-keyword"><a class="header" href="#the-operation-keyword">The <code>operation</code> Keyword</a></h3>
+<p>The <code>operation</code> keyword declares a function that the structure provides:</p>
+<pre><code class="language-kleis">structure Group(G) {
+    operation mul : G × G → G      // Binary operation
+    operation inv : G → G          // Unary operation
+}
+</code></pre>
+<p>Operations declare the <em>signature</em> (types), not the implementation. The implementation is provided in an <code>implements</code> block (see Chapter 10).</p>
+<h3 id="the-element-keyword"><a class="header" href="#the-element-keyword">The <code>element</code> Keyword</a></h3>
+<p>The <code>element</code> keyword declares a distinguished constant of the structure:</p>
+<pre><code class="language-kleis">structure Monoid(M) {
+    element e : M           // Identity element
+    operation mul : M × M → M
+    
+    axiom identity : ∀(x : M). mul(e, x) = x
+}
+
+structure Field(F) {
+    element zero : F        // Additive identity
+    element one : F         // Multiplicative identity
+}
+</code></pre>
+<p>Elements are constants that satisfy the structure’s axioms. You can also write elements without the <code>element</code> keyword:</p>
+<pre><code class="language-kleis">structure Ring(R) {
+    zero : R    // Same as "element zero : R"
+    one : R
+}
+</code></pre>
+<h3 id="the-axiom-keyword"><a class="header" href="#the-axiom-keyword">The <code>axiom</code> Keyword</a></h3>
+<p>The <code>axiom</code> keyword declares a property that must hold:</p>
+<pre><code class="language-kleis">structure Group(G) {
+    element e : M
+    operation mul : G × G → G
+    operation inv : G → G
+    
+    axiom identity : ∀(x : G). mul(e, x) = x ∧ mul(x, e) = x
+    axiom inverse : ∀(x : G). mul(x, inv(x)) = e
+    axiom associative : ∀(x : G)(y : G)(z : G). mul(mul(x, y), z) = mul(x, mul(y, z))
+}
+</code></pre>
+<p>Axioms are verified by Z3 when you use <code>implements</code> blocks or run <code>kleis verify</code>.</p>
 <h2 id="example-complex-numbers"><a class="header" href="#example-complex-numbers">Example: Complex Numbers</a></h2>
 <pre><code class="language-kleis">structure Complex {
     re : ℝ  // real part
@@ -2202,6 +2340,47 @@ sin(divide(π, 2))
 λ&gt; :load examples/authorization/zanzibar.kleis
 ✅ Loaded: 1 files, 13 functions, 0 structures, 0 data types, 0 type aliases
 </code></pre>
+<h2 id="the-import-keyword"><a class="header" href="#the-import-keyword">The <code>import</code> Keyword</a></h2>
+<p>In Kleis source files, use <code>import</code> to include definitions from other files:</p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+import "stdlib/matrices.kleis"
+
+// Now you can use definitions from those files
+define my_matrix = identity(3)
+</code></pre>
+<p><strong>Import syntax:</strong></p>
+<ul>
+<li><code>import "path/to/file.kleis"</code> — includes all definitions from that file</li>
+</ul>
+<p>Imports are processed at parse time. Relative paths are resolved from the importing file’s directory.</p>
+<p><strong>Common imports:</strong></p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"     // Basic types and operations
+import "stdlib/matrices.kleis"    // Matrix operations
+import "stdlib/complex.kleis"     // Complex number support
+</code></pre>
+<h3 id="standard-library-resolution"><a class="header" href="#standard-library-resolution">Standard Library Resolution</a></h3>
+<p>Imports starting with <code>stdlib/</code> are handled specially:</p>
+<ol>
+<li><strong><code>KLEIS_ROOT</code> environment variable</strong> — If set, Kleis looks for <code>$KLEIS_ROOT/stdlib/...</code> first</li>
+<li><strong>Project directory</strong> — Kleis walks up from the current file looking for a <code>stdlib/</code> folder</li>
+<li><strong>Current working directory</strong> — Falls back to <code>./stdlib/...</code></li>
+</ol>
+<p><strong>Setting <code>KLEIS_ROOT</code>:</strong></p>
+<pre><code class="language-bash"># Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
+export KLEIS_ROOT=/path/to/kleis
+
+# Now stdlib imports work from anywhere
+kleis run my_project/main.kleis
+</code></pre>
+<p>This is useful when:</p>
+<ul>
+<li>Working on projects outside the Kleis repository</li>
+<li>Running Kleis from arbitrary directories</li>
+<li>Sharing code that uses the standard library</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> In the REPL, use <code>:load</code> instead of <code>import</code>. The <code>:load</code> command loads a file interactively, while <code>import</code> is for use inside <code>.kleis</code> source files.</p>
+</blockquote>
 <h2 id="verification-with-z3-1"><a class="header" href="#verification-with-z3-1">Verification with Z3</a></h2>
 <p>Run verifications interactively with <code>:verify</code>:</p>
 <pre><code>λ&gt; :verify x + y = y + x
@@ -7444,7 +7623,7 @@ greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
 </tbody>
 </table>
 </div>
-<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<h3 id="examples-1"><a class="header" href="#examples-1">Examples</a></h3>
 <pre><code class="language-kleis">// Sum from i=1 to n
 Σ(1, n, i^2)
 
@@ -7458,23 +7637,71 @@ greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
 lim(x, 0, sin(x)/x)
 </code></pre>
 <h2 id="custom-mathematical-operators"><a class="header" href="#custom-mathematical-operators">Custom Mathematical Operators</a></h2>
-<p>Kleis recognizes many Unicode mathematical symbols as custom binary operators:</p>
+<p>Kleis recognizes many Unicode mathematical symbols as <strong>infix binary operators</strong>. These can be used directly in expressions like <code>a • b</code>.</p>
+<h3 id="complete-operator-table"><a class="header" href="#complete-operator-table">Complete Operator Table</a></h3>
+<p>These operators are <strong>syntactic only</strong> — they are parsed as infix operators but have <strong>no built-in semantics</strong>. They remain symbolic: <code>2 • 3</code> evaluates to <code>•(2, 3)</code>, not a number.</p>
+<p><strong>These operators cannot be used for computation.</strong> Kleis does not connect <code>•</code> to any function — <code>u • v</code> will always stay symbolic as <code>•(u, v)</code>.</p>
+<p>To compute, use a named function instead: define <code>dot(u, v)</code> and call it directly. The <code>•</code> operator is only useful for notation in axioms.</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Category</th><th>Operators</th></tr>
+<tr><th>Operator</th><th>Unicode</th><th>Name</th><th>Typical Mathematical Use</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Products</strong></td><td><code>•</code> (bullet), <code>∘</code> (composition), <code>⊗</code> (tensor), <code>⊙</code> (Hadamard)</td></tr>
-<tr><td><strong>Sums</strong></td><td><code>⊕</code> (direct sum), <code>⊞</code> (squared plus), <code>⨁</code> (n-ary)</td></tr>
-<tr><td><strong>Set-like</strong></td><td><code>∪</code> (union), <code>∩</code> (intersection), <code>⊔</code> (join), <code>⊓</code> (meet)</td></tr>
-<tr><td><strong>Other</strong></td><td><code>⊛</code>, <code>⊘</code>, <code>⊚</code>, <code>⊝</code>, <code>⊟</code>, <code>⊠</code>, <code>⊡</code>, <code>△</code>, <code>▽</code></td></tr>
+<tr><td><code>•</code></td><td>U+2022</td><td>Bullet</td><td>Inner/dot product notation</td></tr>
+<tr><td><code>∘</code></td><td>U+2218</td><td>Ring operator</td><td>Function composition notation</td></tr>
+<tr><td><code>⊗</code></td><td>U+2297</td><td>Circled times</td><td>Tensor product notation</td></tr>
+<tr><td><code>⊕</code></td><td>U+2295</td><td>Circled plus</td><td>Direct sum notation</td></tr>
+<tr><td><code>⊙</code></td><td>U+2299</td><td>Circled dot</td><td>Hadamard product notation</td></tr>
+<tr><td><code>⊛</code></td><td>U+229B</td><td>Circled asterisk</td><td>Convolution notation</td></tr>
+<tr><td><code>⊘</code></td><td>U+2298</td><td>Circled slash</td><td>(user-defined)</td></tr>
+<tr><td><code>⊚</code></td><td>U+229A</td><td>Circled ring</td><td>(user-defined)</td></tr>
+<tr><td><code>⊝</code></td><td>U+229D</td><td>Circled minus</td><td>(user-defined)</td></tr>
+<tr><td><code>⊞</code></td><td>U+229E</td><td>Squared plus</td><td>(user-defined)</td></tr>
+<tr><td><code>⊟</code></td><td>U+229F</td><td>Squared minus</td><td>(user-defined)</td></tr>
+<tr><td><code>⊠</code></td><td>U+22A0</td><td>Squared times</td><td>(user-defined)</td></tr>
+<tr><td><code>⊡</code></td><td>U+22A1</td><td>Squared dot</td><td>(user-defined)</td></tr>
+<tr><td><code>∪</code></td><td>U+222A</td><td>Union</td><td>Set union notation</td></tr>
+<tr><td><code>∩</code></td><td>U+2229</td><td>Intersection</td><td>Set intersection notation</td></tr>
+<tr><td><code>⊔</code></td><td>U+2294</td><td>Square cup</td><td>Join/supremum notation</td></tr>
+<tr><td><code>⊓</code></td><td>U+2293</td><td>Square cap</td><td>Meet/infimum notation</td></tr>
+<tr><td><code>△</code></td><td>U+25B3</td><td>Triangle up</td><td>Symmetric difference notation</td></tr>
+<tr><td><code>▽</code></td><td>U+25BD</td><td>Triangle down</td><td>(user-defined)</td></tr>
 </tbody>
 </table>
 </div>
 <blockquote>
-<p><strong>Note:</strong> These are parsed as operators but their semantics depend on context. Define their behavior in structures.</p>
+<p><strong>Important:</strong> These operators do NOT compute values. <code>2 • 3</code> returns <code>•(2, 3)</code> symbolically. To give them meaning, define functions and use those instead.</p>
 </blockquote>
+<h3 id="what-they-actually-do"><a class="header" href="#what-they-actually-do">What They Actually Do</a></h3>
+<p>These operators are parsed but <strong>stay symbolic</strong>:</p>
+<pre><code>λ&gt; :eval 2 • 3
+✅ •(2, 3)      ← NOT computed to 6!
+
+λ&gt; :eval A ⊗ B
+✅ ⊗(A, B)      ← stays symbolic
+</code></pre>
+<h3 id="when-to-use-them"><a class="header" href="#when-to-use-them">When to Use Them</a></h3>
+<p>Use these operators in <strong>axioms and symbolic expressions</strong> where you want readable mathematical notation:</p>
+<pre><code class="language-kleis">structure VectorSpace(V) {
+    // Use • for notation in axioms
+    axiom symmetric : ∀(u : V)(v : V). u • v = v • u
+    axiom bilinear : ∀(a : ℝ)(u : V)(v : V). (a * u) • v = a * (u • v)
+}
+</code></pre>
+<h3 id="for-actual-computation"><a class="header" href="#for-actual-computation">For Actual Computation</a></h3>
+<p>If you need operators that <strong>compute values</strong>, use:</p>
+<ol>
+<li>Built-in operators: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>^</code></li>
+<li>Function calls: <code>dot(u, v)</code>, <code>tensor(A, B)</code>, <code>union(s1, s2)</code></li>
+</ol>
+<pre><code class="language-kleis">// These compute actual values:
+define sum = 2 + 3           // → 5
+define product = times(4, 5)  // → 20
+
+// These stay symbolic (for axioms):
+define symbolic = a • b      // → •(a, b)
+</code></pre>
 <h2 id="type-operators"><a class="header" href="#type-operators">Type Operators</a></h2>
 <div class="table-wrapper">
 <table>
@@ -7511,7 +7738,7 @@ lim(x, 0, sin(x)/x)
 </tbody>
 </table>
 </div>
-<h2 id="examples-1"><a class="header" href="#examples-1">Examples</a></h2>
+<h2 id="examples-1-1"><a class="header" href="#examples-1-1">Examples</a></h2>
 <h3 id="arithmetic-precedence"><a class="header" href="#arithmetic-precedence">Arithmetic Precedence</a></h3>
 <pre><code class="language-kleis">define ex1 = 2 + 3 * 4        // 14 (not 20)
 define ex2 = (2 + 3) * 4      // 20

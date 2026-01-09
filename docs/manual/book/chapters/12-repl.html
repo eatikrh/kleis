@@ -21,8 +21,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="../favicon-de23e50b.svg">
-        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="icon" href="../favicon-71ffb63a.svg">
         <link rel="stylesheet" href="../css/variables-8adf115d.css">
         <link rel="stylesheet" href="../css/general-2459343d.css">
         <link rel="stylesheet" href="../css/chrome-ae938929.css">
@@ -44,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0ae1fc88.js";
+            window.path_to_searchindex_js = "../searchindex-8c4f4d5a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -233,6 +232,47 @@ sin(divide(π, 2))
 λ&gt; :load examples/authorization/zanzibar.kleis
 ✅ Loaded: 1 files, 13 functions, 0 structures, 0 data types, 0 type aliases
 </code></pre>
+<h2 id="the-import-keyword"><a class="header" href="#the-import-keyword">The <code>import</code> Keyword</a></h2>
+<p>In Kleis source files, use <code>import</code> to include definitions from other files:</p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+import "stdlib/matrices.kleis"
+
+// Now you can use definitions from those files
+define my_matrix = identity(3)
+</code></pre>
+<p><strong>Import syntax:</strong></p>
+<ul>
+<li><code>import "path/to/file.kleis"</code> — includes all definitions from that file</li>
+</ul>
+<p>Imports are processed at parse time. Relative paths are resolved from the importing file’s directory.</p>
+<p><strong>Common imports:</strong></p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"     // Basic types and operations
+import "stdlib/matrices.kleis"    // Matrix operations
+import "stdlib/complex.kleis"     // Complex number support
+</code></pre>
+<h3 id="standard-library-resolution"><a class="header" href="#standard-library-resolution">Standard Library Resolution</a></h3>
+<p>Imports starting with <code>stdlib/</code> are handled specially:</p>
+<ol>
+<li><strong><code>KLEIS_ROOT</code> environment variable</strong> — If set, Kleis looks for <code>$KLEIS_ROOT/stdlib/...</code> first</li>
+<li><strong>Project directory</strong> — Kleis walks up from the current file looking for a <code>stdlib/</code> folder</li>
+<li><strong>Current working directory</strong> — Falls back to <code>./stdlib/...</code></li>
+</ol>
+<p><strong>Setting <code>KLEIS_ROOT</code>:</strong></p>
+<pre><code class="language-bash"># Add to your shell profile (~/.bashrc, ~/.zshrc, etc.)
+export KLEIS_ROOT=/path/to/kleis
+
+# Now stdlib imports work from anywhere
+kleis run my_project/main.kleis
+</code></pre>
+<p>This is useful when:</p>
+<ul>
+<li>Working on projects outside the Kleis repository</li>
+<li>Running Kleis from arbitrary directories</li>
+<li>Sharing code that uses the standard library</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> In the REPL, use <code>:load</code> instead of <code>import</code>. The <code>:load</code> command loads a file interactively, while <code>import</code> is for use inside <code>.kleis</code> source files.</p>
+</blockquote>
 <h2 id="verification-with-z3"><a class="header" href="#verification-with-z3">Verification with Z3</a></h2>
 <p>Run verifications interactively with <code>:verify</code>:</p>
 <pre><code>λ&gt; :verify x + y = y + x
