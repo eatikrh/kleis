@@ -888,21 +888,22 @@ fn test_concrete_index_lower_minkowski() {
 
 /// Test index lowering and raising separately for concrete tensors
 ///
-/// IGNORED: lower_index is an UNINTERPRETED function in Z3.
+/// IGNORED: This test misuses Z3 for numerical computation.
 ///
-/// **Root cause:** `lower_index` is defined as `builtin_lower_index` in stdlib/tensors.kleis,
-/// but there's no actual concrete implementation in the Z3 backend. When Z3 evaluates
-/// `lower_index(g, V)`, it treats it as an uninterpreted function and picks any value
-/// that satisfies the model (14 in this case).
+/// **Architecture insight:**
+/// - Z3's role: Type safety and constraint verification (e.g., "can't add scalar to tensor")
+/// - Evaluator's role: Numerical computation (e.g., `lower_index(g, V) = [6, 12]`)
 ///
-/// **To fix:** Implement concrete computation for `lower_index` in either:
-/// 1. The Kleis evaluator (src/evaluator.rs) as a builtin
-/// 2. The Z3 backend with proper axiom grounding
-/// 3. Using Z3's sequence/array theory instead of uninterpreted functions
+/// This test tries to get Z3 to compute concrete values, but Z3 treats `lower_index`
+/// as an uninterpreted function and returns arbitrary values (14) that satisfy the model.
 ///
-/// With g = diag(2,3) and V = [3,4], expected: [6, 12] but Z3 returns [14, 0].
+/// **Correct approach:**
+/// - For concrete tensor math: Use the Evaluator with `builtin_lower_index`
+/// - For Z3: Test type constraints (dimension matching, index compatibility)
+///
+/// See concrete_matrix_test.rs for examples of using the Evaluator for numeric computation.
 #[test]
-#[ignore]
+#[ignore = "Test misuses Z3 for numerical computation - use Evaluator instead"]
 fn test_concrete_raise_lower_separate() {
     println!("\n=== Test: Raise/Lower Operations (Concrete) ===");
 
