@@ -347,11 +347,7 @@ mod tests {
         assert_eq!(ctx.placeholder_positions.len(), 0);
     }
 
-    // TODO(2024-12-06): Placeholder conversion tests failing - needs typst_adapter refactor
-    // These tests have outdated expectations for placeholder markers
-
     #[test]
-    #[ignore = "TODO: Fix placeholder conversion - outdated expectations"]
     fn test_convert_placeholder() {
         let expr = Expression::Placeholder {
             id: 5,
@@ -360,18 +356,17 @@ mod tests {
         let mut ctx = ConversionContext::new();
         let markup = expression_to_typst(&expr, &mut ctx);
 
-        // Should produce marker
-        assert_eq!(markup, "⟨⟨PH5⟩⟩");
+        // Should produce Typst's native square symbol
+        assert_eq!(markup, "square.stroked");
 
         // Should track the placeholder
         assert_eq!(ctx.placeholder_positions.len(), 1);
         assert_eq!(ctx.placeholder_positions[0].id, 5);
         assert_eq!(ctx.placeholder_positions[0].hint, "test");
-        assert_eq!(ctx.placeholder_positions[0].marker, "⟨⟨PH5⟩⟩");
+        assert_eq!(ctx.placeholder_positions[0].marker, "square.stroked_5");
     }
 
     #[test]
-    #[ignore = "TODO: Fix fraction with placeholder - outdated expectations"]
     fn test_convert_fraction_with_placeholder() {
         let expr = Expression::Operation {
             name: "scalar_divide".to_string(),
@@ -387,8 +382,8 @@ mod tests {
         let mut ctx = ConversionContext::new();
         let markup = expression_to_typst(&expr, &mut ctx);
 
-        // Should produce Typst fraction syntax with placeholder marker
-        assert_eq!(markup, "(⟨⟨PH1⟩⟩)/(2)");
+        // Should produce Typst fraction syntax with square symbol
+        assert_eq!(markup, "(square.stroked)/(2)");
 
         // Should track placeholder in numerator
         assert_eq!(ctx.placeholder_positions.len(), 1);
@@ -414,7 +409,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "TODO: Fix nested placeholders - outdated expectations"]
     fn test_convert_nested_with_multiple_placeholders() {
         // Test: (□ + x)/□
         let expr = Expression::Operation {
@@ -446,8 +440,7 @@ mod tests {
         assert_eq!(ctx.placeholder_positions[0].id, 1);
         assert_eq!(ctx.placeholder_positions[1].id, 2);
 
-        // Should produce valid Typst markup
-        assert!(markup.contains("⟨⟨PH1⟩⟩"));
-        assert!(markup.contains("⟨⟨PH2⟩⟩"));
+        // Should produce valid Typst markup with square symbols
+        assert!(markup.contains("square.stroked"));
     }
 }
