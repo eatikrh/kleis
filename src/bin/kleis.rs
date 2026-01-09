@@ -287,11 +287,6 @@ fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool, raw_ou
     use kleis::kleis_parser::parse_kleis_program_with_file;
     use std::collections::HashSet;
 
-    // Raw output mode: unquoted strings and no summary banners
-    if raw_output {
-        std::env::set_var("KLEIS_PRINT_RAW_STRINGS", "1");
-    }
-
     // Canonicalize the file path
     let canonical = file.canonicalize().unwrap_or_else(|_| file.clone());
     let file_path_str = canonical.to_string_lossy().to_string();
