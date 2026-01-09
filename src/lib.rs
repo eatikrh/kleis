@@ -2,6 +2,7 @@
 
 pub mod ast;
 pub mod axiom_verifier; // Z3 integration for axiom verification
+pub mod config; // Shared configuration loader
 pub mod context; // Shared context for LSP/REPL/Debugger
 pub mod dap; // Debug Adapter Protocol implementation
 pub mod data_registry;

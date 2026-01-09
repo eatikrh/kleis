@@ -299,6 +299,8 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
+    let config = kleis::config::load();
+
     // Initialize TypeChecker with stdlib (includes minimal_prelude + matrices + tensors + quantum)
     let type_checker = match kleis::type_checker::TypeChecker::with_stdlib() {
         Ok(checker) => {
@@ -345,14 +347,15 @@ async fn main() {
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+    let bind_addr = format!("{}:{}", config.server.host, config.server.port);
+    let listener = tokio::net::TcpListener::bind(&bind_addr)
         .await
-        .expect("Failed to bind to port 3000");
+        .unwrap_or_else(|_| panic!("Failed to bind to {}", bind_addr));
 
     println!("🚀 Kleis Server starting...");
-    println!("📡 Server running at: http://localhost:3000");
-    println!("📚 Gallery available at: http://localhost:3000/api/gallery");
-    println!("🧪 Health check: http://localhost:3000/health");
+    println!("📡 Server running at: http://{}", bind_addr);
+    println!("📚 Gallery available at: http://{}/api/gallery", bind_addr);
+    println!("🧪 Health check: http://{}/health", bind_addr);
     println!();
     println!("Press Ctrl+C to stop");
 

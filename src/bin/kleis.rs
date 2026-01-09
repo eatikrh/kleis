@@ -96,11 +96,13 @@ async fn main() {
     // Initialize file-based logging (avoids stdio interference with DAP/LSP)
     kleis::logging::init_default_logging();
 
+    let config = std::sync::Arc::new(kleis::config::load());
+
     let cli = Cli::parse();
 
     match cli.command {
         Commands::Server { verbose } => {
-            run_server(verbose).await;
+            run_server(verbose, config.clone()).await;
         }
         Commands::Eval { expression, file } => {
             run_eval(expression, file);
@@ -125,7 +127,7 @@ async fn main() {
 }
 
 /// Run the unified server (LSP + DAP)
-async fn run_server(verbose: bool) {
+async fn run_server(verbose: bool, _config: std::sync::Arc<kleis::config::KleisConfig>) {
     if verbose {
         eprintln!("[kleis] Starting unified server (LSP + DAP)");
     }
