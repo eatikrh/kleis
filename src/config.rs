@@ -21,11 +21,14 @@ pub struct Z3Config {
 
 #[derive(Debug, Clone)]
 pub struct TimeoutConfig {
-    /// Short IPC timeout for quick polls (ms)
+    /// Short IPC timeout for quick polls (ms).
+    /// Used for an immediate “did we stop yet?” check right after spawning the eval thread.
     pub ipc_short_ms: u64,
-    /// Medium IPC timeout (ms)
+    /// Medium IPC timeout (ms).
+    /// Used for stepping (`next`/`stepIn`/`stepOut`) where we expect a fast stop event.
     pub ipc_medium_ms: u64,
-    /// Long IPC timeout (ms)
+    /// Long IPC timeout (ms).
+    /// Used for long-running `continue` waits where the user might hit a breakpoint or complete.
     pub ipc_long_ms: u64,
 }
 
