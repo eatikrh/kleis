@@ -100,18 +100,16 @@ fn test_add_dimension_constraint_via_signature() {
 }
 
 #[test]
-#[ignore = "Test design issue: structure only defines return type, not full function signature with input types. SignatureInterpreter can't infer dimension relationships from return type alone."]
 fn test_multiply_dimension_constraint_via_signature() {
     // multiply : Matrix(m, n, T) → Matrix(n, p, T) → Matrix(m, p, T)
     // Inner dimension n must match!
     //
-    // NOTE: This test fails because the structure definition only specifies
-    // the return type (Matrix(m, p, T)), not the input types. The interpreter
-    // can't infer that the inner dimensions should match from just the return type.
+    // The structure must define the FULL function signature including input types,
+    // so the interpreter can properly bind dimensions from arguments.
 
     let code = r#"
         structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
-            operation multiply : Matrix(m, p, T)
+            operation multiply : Matrix(m, n, T) → Matrix(n, p, T) → Matrix(m, p, T)
         }
     "#;
 
