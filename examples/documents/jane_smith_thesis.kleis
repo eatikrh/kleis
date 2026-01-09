@@ -56,10 +56,10 @@ define eq_complexity = MITEquation("eq:complexity",
 )
 
 // ============================================================================
-// TABLES - Native Kleis Data with table_typst()
+// TABLES - Native Kleis Data with table_typst_raw()
 // ============================================================================
 // 
-// Kleis tables can be built from native Kleis lists using table_typst(),
+// Kleis tables can be built from native Kleis lists using table_typst_raw(),
 // which generates Typst table code from headers and rows.
 //
 
@@ -74,7 +74,7 @@ define perf_rows = [
 
 define table_performance = MITTable("tab:performance",
     "Performance comparison of verification backends",
-    table_typst(perf_headers, perf_rows)
+    table_typst_raw(perf_headers, perf_rows)
 )
 
 // Feature comparison table - Native Kleis Data
@@ -89,7 +89,7 @@ define feature_rows = [
 
 define table_features = MITTable("tab:features",
     "Feature comparison with existing systems",
-    table_typst(feature_headers, feature_rows)
+    table_typst_raw(feature_headers, feature_rows)
 )
 
 // Benchmark results table - Native Kleis Data
@@ -103,7 +103,7 @@ define bench_rows = [
 
 define table_benchmarks = MITTable("tab:benchmarks",
     "Benchmark results across different domains",
-    table_typst(bench_headers, bench_rows)
+    table_typst_raw(bench_headers, bench_rows)
 )
 
 // ============================================================================
@@ -382,7 +382,7 @@ example "check_signature" {
 
 example "compile_thesis" {
     let result = compile_mit_thesis(my_thesis)
-    out(result)
+    out(typst_raw(result))
 }
 
 example "test_diagram" {

@@ -1,0 +1,11 @@
+target/
+kleis-notebook/venv/
+vscode-kleis/node_modules/
+.git/
+.idea/
+.vscode/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+

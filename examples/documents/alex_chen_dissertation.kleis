@@ -131,7 +131,7 @@ define eq_soundness = UMichEquation("eq:soundness",
     true)
 
 // =============================================================================
-// Chapter 3 Tables - Native Kleis Data with table_typst()
+// Chapter 3 Tables - Native Kleis Data with table_typst_raw()
 // =============================================================================
 
 // Benchmark networks - data as Kleis lists
@@ -145,7 +145,7 @@ define bench_rows = [
 
 define table_benchmarks = UMichTable("tab:benchmarks",
     "Benchmark neural networks used in evaluation",
-    table_typst(bench_headers, bench_rows)
+    table_typst_raw(bench_headers, bench_rows)
 )
 
 // Verification results - data as Kleis lists
@@ -159,7 +159,7 @@ define results_rows = [
 
 define table_results = UMichTable("tab:results",
     "Verification times (seconds) comparing baseline and our approach",
-    table_typst(results_headers, results_rows)
+    table_typst_raw(results_headers, results_rows)
 )
 
 // =============================================================================
@@ -349,7 +349,7 @@ define my_dissertation = umich_dissertation(
 
 example "compile_dissertation" {
     let typst_output = compile_umich_dissertation(my_dissertation) in
-    out(typst_output)
+    out(typst_raw(typst_output))
 }
 
 example "validate_dissertation" {
