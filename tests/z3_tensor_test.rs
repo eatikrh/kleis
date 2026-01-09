@@ -643,22 +643,8 @@ fn test_z3_raise_lower_tensor_index() {
 
 /// Test concrete Tensor2 creation and component access
 ///
-/// IGNORED: Universal quantifier axioms cause Z3 to hang during evaluation.
-///
-/// **Why it fails:**
-/// Axioms like `∀ x . ∀ xs . nth(cons(x,xs), 0) = x` create forall constraints.
-/// When evaluating `nth(cons(1, cons(2, nil)), 0)`, Z3 must pattern-match and
-/// instantiate the quantifiers. This triggers E-matching which can explore
-/// infinite instantiations, causing Z3 to hang.
-///
-/// **Solutions:**
-/// 1. Use Z3's built-in sequence/array theory (no quantifiers)
-/// 2. Ground instantiation: pre-instantiate axioms for specific values
-/// 3. Inline expansion in backend (what we removed per ADR-015)
-///
-/// For now, axioms work for VERIFICATION (sat/unsat) but not EVALUATION.
+/// Tests that component(T, i, j) correctly accesses tensor elements.
 #[test]
-#[ignore]
 fn test_concrete_tensor2_component() {
     println!("\n=== Test: Concrete Tensor2 Component Access ===");
 
@@ -716,14 +702,8 @@ fn test_concrete_tensor2_component() {
 
 /// Test tensor trace (sum of diagonal)
 ///
-/// IGNORED: Requires list indexing + recursive summation
-/// trace(Tensor2(2, [1,0,0,1])) = 2 needs evaluating list[0] + list[3]
-///
-/// TO ENABLE: Same as test_concrete_tensor2_component, plus:
-/// - Add recursive sum axiom: sum_diag(T, n+1) = sum_diag(T, n) + component(T, n, n)
-/// - See stdlib/tensors_concrete.kleis for axiom templates
+/// Tests that trace([[5,2],[3,7]]) = 5 + 7 = 12.
 #[test]
-#[ignore]
 fn test_concrete_tensor_trace() {
     println!("\n=== Test: Concrete Tensor Trace ===");
 
@@ -756,24 +736,22 @@ fn test_concrete_tensor_trace() {
     println!("   trace([[5,2],[3,7]]) = {:?}", result);
     assert!(result.is_ok());
 
-    // Verify it equals 12
-    let expected = Expression::Const("12".to_string());
-    let are_equal = backend.are_equivalent(&trace_expr, &expected);
-    println!("   trace = 12? {:?}", are_equal);
-    assert!(are_equal.unwrap_or(false));
+    // Verify the evaluated result equals 12
+    // Note: are_equivalent() compares symbolic expressions, but evaluate() returns
+    // the computed value. We should compare the evaluated result directly.
+    if let Ok(Expression::Const(s)) = &result {
+        assert_eq!(s, "12", "Expected trace to be 12, got {}", s);
+    } else {
+        panic!("Expected Const result, got {:?}", result);
+    }
 
     println!("   ✅ Tensor trace correctly computed");
 }
 
 /// Test tensor contraction (matrix multiplication style)
 ///
-/// IGNORED: Requires list indexing + nested summation for C_ij = Σ_k A_ik * B_kj
-///
-/// TO ENABLE: Same as test_concrete_tensor2_component, plus:
-/// - Add contraction axiom with recursive sum over contracted index
-/// - See stdlib/tensors_concrete.kleis: contract_definition, sum_product_rec
+/// Tests that contract(I, B) = B for identity matrix I.
 #[test]
-#[ignore]
 fn test_concrete_tensor_contraction() {
     println!("\n=== Test: Concrete Tensor Contraction ===");
 
@@ -831,13 +809,12 @@ fn test_concrete_tensor_contraction() {
 
 /// Test index lowering with Minkowski metric
 ///
-/// IGNORED: Requires list indexing for W_μ = g_μν V^ν contraction
-///
-/// TO ENABLE: Same as test_concrete_tensor2_component, plus:
-/// - Load MinkowskiMetric axioms from stdlib/tensors_concrete.kleis
-/// - Add vector contraction axiom: contract_vec(g, V, i, dim)
+/// Tests that lower_index(η, u^μ) evaluates successfully.
+/// Note: lower_index is currently an uninterpreted function in Z3,
+/// so this test only verifies the operation doesn't error - it does NOT
+/// verify the computed values are correct. See test_concrete_raise_lower_separate
+/// for the known issue with concrete value computation.
 #[test]
-#[ignore]
 fn test_concrete_index_lower_minkowski() {
     println!("\n=== Test: Index Lowering with Minkowski Metric ===");
 
@@ -911,10 +888,19 @@ fn test_concrete_index_lower_minkowski() {
 
 /// Test index lowering and raising separately for concrete tensors
 ///
-/// IGNORED: Requires list indexing for metric contraction computations
+/// IGNORED: lower_index is an UNINTERPRETED function in Z3.
 ///
-/// TO ENABLE: Same as test_concrete_index_lower_minkowski
-/// Uses lower_index and raise_index which need contract_vec axiom
+/// **Root cause:** `lower_index` is defined as `builtin_lower_index` in stdlib/tensors.kleis,
+/// but there's no actual concrete implementation in the Z3 backend. When Z3 evaluates
+/// `lower_index(g, V)`, it treats it as an uninterpreted function and picks any value
+/// that satisfies the model (14 in this case).
+///
+/// **To fix:** Implement concrete computation for `lower_index` in either:
+/// 1. The Kleis evaluator (src/evaluator.rs) as a builtin
+/// 2. The Z3 backend with proper axiom grounding
+/// 3. Using Z3's sequence/array theory instead of uninterpreted functions
+///
+/// With g = diag(2,3) and V = [3,4], expected: [6, 12] but Z3 returns [14, 0].
 #[test]
 #[ignore]
 fn test_concrete_raise_lower_separate() {
