@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a7c85e66.js";
+            window.path_to_searchindex_js = "../searchindex-ece698e2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f4ee74aa.js"></script>
@@ -252,22 +252,37 @@ define my_paper = arxiv_paper(
 // Compile and output
 example "compile" {
     let typst = compile_arxiv_paper(my_paper)
-    // Wrap with typst_raw so the Typst stream is not quoted/escaped
+    // REQUIRED: typst_raw() makes output unquoted (no "..." around strings)
+    // Without it, Typst would see quoted strings and fail to parse
     out(typst_raw(typst))
 }
 </code></pre>
 <p>Generate PDF:</p>
-<pre><code class="language-bash">kleis test --raw-output --example compile my_paper.kleis &gt; my_paper.typ
+<pre><code class="language-bash"># --raw-output suppresses banners (✅/❌), typst_raw() in code produces unquoted output
+kleis test --raw-output --example compile my_paper.kleis &gt; my_paper.typ
 typst compile my_paper.typ my_paper.pdf
 open my_paper.pdf
 </code></pre>
 <p><strong>That’s it!</strong> Your document is a Kleis program.</p>
 <h3 id="emit-clean-typst-no-quotes-no-banners"><a class="header" href="#emit-clean-typst-no-quotes-no-banners">Emit clean Typst (no quotes, no banners)</a></h3>
 <ul>
-<li>Wrap your compiled document in <code>typst_raw(...)</code> before calling <code>out(...)</code>.</li>
+<li><strong>Required:</strong> Wrap your compiled document in <code>typst_raw(...)</code> before calling <code>out(...)</code>. This is what makes the output unquoted - without it, strings are printed with quotes (<code>"..."</code>) which breaks Typst parsing.</li>
 <li>Use <code>table_typst_raw(...)</code> for tables so Typst code is emitted directly (no ASCII boxes).</li>
-<li>Run <code>kleis test --raw-output --example &lt;compile_example&gt; your_doc.kleis</code> to suppress test banners and keep the Typst stream clean.</li>
+<li>Run <code>kleis test --raw-output --example &lt;compile_example&gt; your_doc.kleis</code> to suppress test banners (<code>✅</code>/<code>❌</code>) and summary lines.</li>
 <li>Then pipe to <code>typst compile</code>.</li>
+</ul>
+<p><strong>Important:</strong> The <code>--raw-output</code> flag only suppresses banners. The <code>typst_raw()</code> wrapper is what produces unquoted output suitable for Typst.</p>
+<h3 id="what---raw-output-suppresses"><a class="header" href="#what---raw-output-suppresses">What <code>--raw-output</code> Suppresses</a></h3>
+<p>The <code>--raw-output</code> flag suppresses all test framework output:</p>
+<ul>
+<li>Per-example status lines (passed/failed/skipped)</li>
+<li>Error messages after failed examples</li>
+<li>The summary line (“N examples passed” or “N/M examples passed”)</li>
+</ul>
+<p>It does <strong>not</strong> suppress:</p>
+<ul>
+<li>Output from <code>out()</code> calls in your example blocks (this is what you want to capture)</li>
+<li>Exit code 1 on failure (so CI pipelines still detect errors)</li>
 </ul>
 <h2 id="available-templates"><a class="header" href="#available-templates">Available Templates</a></h2>
 <p>Kleis includes three professionally-styled templates:</p>
@@ -576,9 +591,13 @@ define typst_code = export_typst_fragment(my_plot,
 // Use in your thesis/paper
 define fig_training = MITDiagram("fig:training", "Training curves", typst_code)
 </code></pre>
-<p><strong>Note:</strong> When piping to <code>typst</code>, use <code>--raw-output</code> and target only the compile
-example to avoid extra banners:</p>
-<pre><code class="language-bash">./target/release/kleis test examples/documents/sample_arxiv_paper.kleis &gt; /tmp/paper.typ
+<p><strong>Note:</strong> When piping to <code>typst</code>:</p>
+<ol>
+<li>Use <code>--raw-output</code> to suppress test banners (<code>✅</code>/<code>❌</code>)</li>
+<li>Use <code>--example compile</code> to run only the compile example</li>
+<li>Ensure your example uses <code>out(typst_raw(...))</code> for unquoted output</li>
+</ol>
+<pre><code class="language-bash">./target/release/kleis test --raw-output --example compile examples/documents/sample_arxiv_paper.kleis &gt; /tmp/paper.typ
 typst compile /tmp/paper.typ /tmp/paper.pdf
 </code></pre>
 <p><strong>Why use native data?</strong></p>
@@ -756,8 +775,11 @@ MITSection("Cost", "The price is \\$100 per unit.")
 </blockquote>
 <h2 id="generating-pdfs"><a class="header" href="#generating-pdfs">Generating PDFs</a></h2>
 <h3 id="command-line"><a class="header" href="#command-line">Command Line</a></h3>
-<pre><code class="language-bash"># Compile Kleis to Typst (target your compile example, emit raw Typst)
-kleis test my_thesis.kleis &gt; my_thesis.typ
+<pre><code class="language-bash"># Compile Kleis to Typst
+# --raw-output: suppresses ✅/❌ banners
+# --example compile: runs only the "compile" example block
+# Your example must use out(typst_raw(...)) for unquoted output
+kleis test --raw-output --example compile my_thesis.kleis &gt; my_thesis.typ
 
 # Compile Typst to PDF  
 typst compile my_thesis.typ my_thesis.pdf
@@ -766,7 +788,7 @@ typst compile my_thesis.typ my_thesis.pdf
 open my_thesis.pdf
 </code></pre>
 <h3 id="one-liner"><a class="header" href="#one-liner">One-liner</a></h3>
-<pre><code class="language-bash">kleis test my_thesis.kleis &gt; my_thesis.typ &amp;&amp; typst compile my_thesis.typ &amp;&amp; open my_thesis.pdf
+<pre><code class="language-bash">kleis test --raw-output --example compile my_thesis.kleis &gt; my_thesis.typ &amp;&amp; typst compile my_thesis.typ &amp;&amp; open my_thesis.pdf
 </code></pre>
 <h3 id="from-jupyter"><a class="header" href="#from-jupyter">From Jupyter</a></h3>
 <p>Jupyter is the recommended environment for writing your thesis. Here’s a complete workflow:</p>
