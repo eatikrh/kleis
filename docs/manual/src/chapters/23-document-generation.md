@@ -96,6 +96,19 @@ open my_paper.pdf
 
 **Important:** The `--raw-output` flag only suppresses banners. The `typst_raw()` wrapper is what produces unquoted output suitable for Typst.
 
+### What `--raw-output` Suppresses
+
+The `--raw-output` flag suppresses all test framework output:
+
+- Per-example status lines (passed/failed/skipped)
+- Error messages after failed examples
+- The summary line ("N examples passed" or "N/M examples passed")
+
+It does **not** suppress:
+
+- Output from `out()` calls in your example blocks (this is what you want to capture)
+- Exit code 1 on failure (so CI pipelines still detect errors)
+
 ## Available Templates
 
 Kleis includes three professionally-styled templates:
