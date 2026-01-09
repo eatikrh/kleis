@@ -7,6 +7,8 @@
 //!        kleis repl   (via unified binary)
 
 fn main() {
+    let _config = kleis::config::load();
+
     if let Err(e) = kleis::repl::run_repl() {
         eprintln!("Error: {}", e);
         std::process::exit(1);
