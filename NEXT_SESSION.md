@@ -241,11 +241,34 @@ Added metric inverse and index raising/lowering axioms:
 
 | Component | Status | Blocker |
 |-----------|--------|---------|
-| Christoffel from metric | ❌ | Complex axiom: Γ^λ_μν = ½g^λσ(∂_μg_νσ + ∂_νg_μσ - ∂_σg_μν) |
-| Riemann from Christoffel | ❌ | Complex axiom with Γ products |
-| Full covariant derivative | ❌ | Needs component-wise tensor calculus |
+| Christoffel axioms | ❌ | Parser limitation (see below) |
+| Riemann axioms | ❌ | Parser limitation (see below) |
+| Ricci/Einstein axioms | ❌ | Parser limitation (see below) |
 
-**Note:** `D(f,x)` and `Dt(f,x)` ARE already implemented in `stdlib/calculus.kleis` with full axioms (sum rule, product rule, chain rule, Schwarz theorem, etc.). The Z3 backend handles them. The remaining work is encoding the **tensor-specific** derivative formulas (Christoffel, Riemann) which involve summations over indices - challenging for Z3's first-order logic.
+### Parser Limitation Discovered
+
+The Kleis parser **does not support parametric types in axiom quantifiers**:
+
+```kleis
+// ❌ FAILS TO PARSE
+axiom ricci_symmetric : ∀ Ric : Tensor(0, 2, dim, ℝ) .
+    component(Ric, μ, ν) = component(Ric, ν, μ)
+
+// ✅ WORKS
+axiom christoffel_symmetric : ∀ λ : Nat . ∀ μ : Nat . ∀ ν : Nat .
+    gamma(λ, μ, ν) = gamma(λ, ν, μ)
+```
+
+**Workaround tried:** Using component-based axioms (quantify over indices, not tensors). This works for simple properties but loses the tensor type information.
+
+**Proper fix needed:** Extend the Kleis parser to support parametric types like `Tensor(0, 2, dim, ℝ)` in `∀` quantifier type annotations.
+
+### What Already Works
+
+- `D(f,x)` and `Dt(f,x)` - Full calculus support in `stdlib/calculus.kleis`
+- Matrix axioms (using uninterpreted functions)
+- Tensor component axioms (symmetry, Bianchi, etc.)
+- Einstein field equations (component form)
 
 ---
 

@@ -347,32 +347,29 @@ structure EnergyMomentumConservation(dim: Nat) {
         covariant_divergence(T, ν) = 0
 }
 
-/* Einstein Field Equations - Full Axiomatization
- * 
- * The complete Einstein field equations with cosmological constant:
- *   G_μν + Λ g_μν = κ T_μν
- * 
- * where κ = 8πG/c⁴
- * 
- * This structure provides the axiom that relates geometry to matter.
- */
+// Einstein Field Equations: G_μν + Λg_μν = κT_μν
 structure EinsteinFieldEquationsAxiom(dim: Nat) {
-    // Field equation in component form
-    axiom field_equation_components : ∀ g : Tensor(0, 2, dim, ℝ) .
-        ∀ G : Tensor(0, 2, dim, ℝ) .
-        ∀ T : Tensor(0, 2, dim, ℝ) .
-        ∀ Lambda : ℝ .
-        ∀ kappa : ℝ .
-        ∀ μ : Nat . ∀ ν : Nat .
-        plus(component(G, μ, ν), times(Lambda, component(g, μ, ν))) = 
-            times(kappa, component(T, μ, ν))
+    // Component accessors for g, G, T tensors
+    operation g_comp : Nat → Nat → ℝ
+    operation G_comp : Nat → Nat → ℝ
+    operation T_comp : Nat → Nat → ℝ
     
-    // Vacuum field equation (no matter)
-    axiom vacuum_field_equation : ∀ g : Tensor(0, 2, dim, ℝ) .
-        ∀ G : Tensor(0, 2, dim, ℝ) .
-        ∀ Lambda : ℝ .
+    // Field equation in component form
+    axiom field_equation_components : ∀ Lambda : ℝ . ∀ kappa : ℝ .
         ∀ μ : Nat . ∀ ν : Nat .
-        component(G, μ, ν) = negate(times(Lambda, component(g, μ, ν)))
+        plus(G_comp(μ, ν), times(Lambda, g_comp(μ, ν))) = 
+            times(kappa, T_comp(μ, ν))
+    
+    // Vacuum field equation (T = 0)
+    axiom vacuum_field_equation : ∀ Lambda : ℝ .
+        ∀ μ : Nat . ∀ ν : Nat .
+        G_comp(μ, ν) = negate(times(Lambda, g_comp(μ, ν)))
+}
+
+implements EinsteinFieldEquationsAxiom(dim) {
+    operation g_comp = builtin_metric_component
+    operation G_comp = builtin_einstein_component
+    operation T_comp = builtin_stress_energy_component
 }
 
 // ============================================
