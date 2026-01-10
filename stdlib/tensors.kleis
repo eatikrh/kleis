@@ -375,6 +375,85 @@ structure EinsteinFieldEquationsAxiom(dim: Nat) {
         component(G, μ, ν) = negate(times(Lambda, component(g, μ, ν)))
 }
 
+// ============================================
+// Metric Inverse and Index Operations
+// ============================================
+
+/* Metric Inverse Identity
+ * 
+ * The fundamental relation between metric and its inverse:
+ *   g^{μρ} g_{ρν} = δ^μ_ν
+ * 
+ * This is the defining property of the inverse metric.
+ */
+structure MetricInverse(dim: Nat) {
+    // Inverse operation on metric
+    operation metric_inv : Tensor(0, 2, dim, ℝ) → Tensor(2, 0, dim, ℝ)
+    
+    // Contraction of metric with inverse gives identity
+    axiom metric_inverse_identity : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ μ : Nat . ∀ ν : Nat .
+        contract2(metric_inv(g), g) = delta(μ, ν)
+    
+    // Inverse is symmetric (because metric is symmetric)
+    axiom metric_inv_symmetric : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ μ : Nat . ∀ ν : Nat .
+        component(metric_inv(g), μ, ν) = component(metric_inv(g), ν, μ)
+    
+    // Double inverse gives back original
+    axiom metric_inv_involutive : ∀ g : Tensor(0, 2, dim, ℝ) .
+        metric_inv(metric_inv(g)) = g
+}
+
+implements MetricInverse(dim) {
+    operation metric_inv = builtin_metric_inverse
+}
+
+/* Index Raising and Lowering
+ * 
+ * In GR, indices are raised/lowered using the metric:
+ *   T^μ = g^{μν} T_ν  (raising)
+ *   T_μ = g_{μν} T^ν  (lowering)
+ * 
+ * This is fundamental for tensor calculus.
+ */
+structure IndexRaiseLower(dim: Nat) {
+    // Raise a covariant index using inverse metric
+    operation raise_vec : Tensor(0, 1, dim, ℝ) → Tensor(2, 0, dim, ℝ) → Tensor(1, 0, dim, ℝ)
+    
+    // Lower a contravariant index using metric
+    operation lower_vec : Tensor(1, 0, dim, ℝ) → Tensor(0, 2, dim, ℝ) → Tensor(0, 1, dim, ℝ)
+    
+    // Raising then lowering gives identity
+    axiom raise_lower_identity : ∀ T : Tensor(0, 1, dim, ℝ) .
+        ∀ g : Tensor(0, 2, dim, ℝ) .
+        lower_vec(raise_vec(T, metric_inv(g)), g) = T
+    
+    // Lowering then raising gives identity
+    axiom lower_raise_identity : ∀ T : Tensor(1, 0, dim, ℝ) .
+        ∀ g : Tensor(0, 2, dim, ℝ) .
+        raise_vec(lower_vec(T, g), metric_inv(g)) = T
+}
+
+implements IndexRaiseLower(dim) {
+    operation raise_vec = builtin_raise_vector
+    operation lower_vec = builtin_lower_vector
+}
+
+/* Metric Trace Identity
+ * 
+ * The trace of the metric with its inverse equals the dimension:
+ *   g^{μν} g_{μν} = dim
+ * 
+ * In 4D spacetime: g^{μν} g_{μν} = 4
+ */
+structure MetricTrace(dim: Nat) {
+    // Metric contracted with inverse gives dimension
+    // Note: We express this as a property, not a computable value
+    axiom metric_trace_is_dim : ∀ g : Tensor(0, 2, dim, ℝ) .
+        contract2(metric_inv(g), g) = dim
+}
+
 /* Tensor Index Notation - Display Operations
  * 
  * These operations create indexed tensor notation for display.

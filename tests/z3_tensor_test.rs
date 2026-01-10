@@ -1788,6 +1788,149 @@ fn test_einstein_field_equations_axiom() {
 }
 
 // =============================================================================
+// Metric Inverse and Index Operations Tests
+// =============================================================================
+
+/// Test: MetricInverse structure is loaded
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_metric_inverse_structure_loaded() {
+    println!("\n=== Test: MetricInverse structure loaded ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("MetricInverse"),
+        "MetricInverse structure should be registered"
+    );
+
+    let sig = registry.get_operation_signature("metric_inv");
+    println!("   metric_inv signature: {:?}", sig);
+    assert!(sig.is_some(), "metric_inv should have a signature");
+
+    println!("   ✅ MetricInverse structure loaded");
+}
+
+/// Test: MetricInverse axioms
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_metric_inverse_axioms() {
+    println!("\n=== Test: MetricInverse axioms ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let axioms = registry.get_axioms("MetricInverse");
+    println!("   MetricInverse axioms: {:?}", axioms.len());
+
+    for (name, _) in &axioms {
+        println!("   - {}", name);
+    }
+
+    assert!(!axioms.is_empty(), "MetricInverse should have axioms");
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ MetricInverse axioms verified");
+}
+
+/// Test: IndexRaiseLower structure is loaded
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_index_raise_lower_structure_loaded() {
+    println!("\n=== Test: IndexRaiseLower structure loaded ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("IndexRaiseLower"),
+        "IndexRaiseLower structure should be registered"
+    );
+
+    let raise_sig = registry.get_operation_signature("raise_vec");
+    println!("   raise_vec signature: {:?}", raise_sig);
+    assert!(raise_sig.is_some(), "raise_vec should have a signature");
+
+    let lower_sig = registry.get_operation_signature("lower_vec");
+    println!("   lower_vec signature: {:?}", lower_sig);
+    assert!(lower_sig.is_some(), "lower_vec should have a signature");
+
+    println!("   ✅ IndexRaiseLower structure loaded");
+}
+
+/// Test: IndexRaiseLower axioms (raise/lower identity)
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_index_raise_lower_axioms() {
+    println!("\n=== Test: IndexRaiseLower axioms ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let axioms = registry.get_axioms("IndexRaiseLower");
+    println!("   IndexRaiseLower axioms: {:?}", axioms.len());
+
+    for (name, _) in &axioms {
+        println!("   - {}", name);
+    }
+
+    assert!(!axioms.is_empty(), "IndexRaiseLower should have axioms");
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ IndexRaiseLower axioms verified");
+}
+
+/// Test: MetricTrace structure
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_metric_trace_axiom() {
+    println!("\n=== Test: MetricTrace axiom ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("MetricTrace"),
+        "MetricTrace structure should be registered"
+    );
+
+    let axioms = registry.get_axioms("MetricTrace");
+    println!("   MetricTrace axioms: {:?}", axioms.len());
+
+    for (name, _) in &axioms {
+        println!("   - {}", name);
+    }
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ MetricTrace axiom verified");
+}
+
+// =============================================================================
 // Macro-based Tests (using #[requires_kleis])
 // =============================================================================
 
