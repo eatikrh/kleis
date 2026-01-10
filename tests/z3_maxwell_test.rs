@@ -28,7 +28,10 @@ fn test_maxwell_field_tensor_structure_loaded() {
 
     let axioms = registry.get_axioms("FieldTensorProperties");
     println!("   FieldTensorProperties has {} axioms", axioms.len());
-    assert!(axioms.len() >= 2, "Should have F_antisymmetric and F_diagonal_zero axioms");
+    assert!(
+        axioms.len() >= 2,
+        "Should have F_antisymmetric and F_diagonal_zero axioms"
+    );
 }
 
 #[test]
@@ -47,7 +50,10 @@ fn test_maxwell_f_antisymmetric_axiom() {
             let mut verifier = AxiomVerifier::new(&registry).unwrap();
             let result = verifier.verify_axiom(expr);
             println!("   Verification result: {:?}", result);
-            assert!(result.is_ok(), "F antisymmetry axiom verification should not error");
+            assert!(
+                result.is_ok(),
+                "F antisymmetry axiom verification should not error"
+            );
         }
     }
 }
@@ -68,7 +74,10 @@ fn test_maxwell_f_diagonal_zero_axiom() {
             let mut verifier = AxiomVerifier::new(&registry).unwrap();
             let result = verifier.verify_axiom(expr);
             println!("   Verification result: {:?}", result);
-            assert!(result.is_ok(), "F diagonal zero axiom verification should not error");
+            assert!(
+                result.is_ok(),
+                "F diagonal zero axiom verification should not error"
+            );
         }
     }
 }
@@ -87,7 +96,10 @@ fn test_maxwell_inhomogeneous_structure_loaded() {
 
     let axioms = registry.get_axioms("MaxwellInhomogeneous");
     println!("   MaxwellInhomogeneous has {} axioms", axioms.len());
-    assert!(!axioms.is_empty(), "Should have maxwell_inhomogeneous axiom");
+    assert!(
+        !axioms.is_empty(),
+        "Should have maxwell_inhomogeneous axiom"
+    );
 }
 
 #[test]
@@ -105,7 +117,10 @@ fn test_maxwell_gauss_ampere_axiom() {
         println!("   Verifying: {}", name);
         let result = verifier.verify_axiom(expr);
         println!("   Result: {:?}", result);
-        assert!(result.is_ok(), "Maxwell inhomogeneous axiom should not error");
+        assert!(
+            result.is_ok(),
+            "Maxwell inhomogeneous axiom should not error"
+        );
     }
 }
 
@@ -159,7 +174,10 @@ fn test_einstein_maxwell_structure_loaded() {
 
     let axioms = registry.get_axioms("EinsteinMaxwell");
     println!("   EinsteinMaxwell has {} axioms", axioms.len());
-    assert!(axioms.len() >= 5, "Should have field equations and symmetry axioms");
+    assert!(
+        axioms.len() >= 5,
+        "Should have field equations and symmetry axioms"
+    );
 }
 
 #[test]
@@ -177,7 +195,10 @@ fn test_einstein_maxwell_field_equations() {
         println!("   Verifying: {}", name);
         let result = verifier.verify_axiom(expr);
         println!("   Result: {:?}", result);
-        assert!(result.is_ok(), "Einstein-Maxwell axiom verification should not error");
+        assert!(
+            result.is_ok(),
+            "Einstein-Maxwell axiom verification should not error"
+        );
     }
 }
 
@@ -201,4 +222,3 @@ fn test_einstein_maxwell_em_stress_symmetric() {
         }
     }
 }
-

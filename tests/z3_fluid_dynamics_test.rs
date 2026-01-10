@@ -280,7 +280,10 @@ fn test_bernoulli_equation_structure_loaded() {
 
     let axioms = registry.get_axioms("BernoulliEquation");
     println!("   BernoulliEquation has {} axioms", axioms.len());
-    assert!(axioms.len() >= 3, "Should have B1_def, B2_def, bernoulli_conservation axioms");
+    assert!(
+        axioms.len() >= 3,
+        "Should have B1_def, B2_def, bernoulli_conservation axioms"
+    );
 }
 
 #[test]
@@ -373,4 +376,3 @@ fn test_ideal_gas_axiom() {
         assert!(result.is_ok(), "Ideal gas EOS should verify");
     }
 }
-

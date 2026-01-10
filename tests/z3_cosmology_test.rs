@@ -27,7 +27,10 @@ fn test_minkowski_structure_loaded() {
 
     let axioms = registry.get_axioms("MinkowskiSpacetime");
     println!("   MinkowskiSpacetime has {} axioms", axioms.len());
-    assert!(axioms.len() >= 3, "Should have curvature vanishing and symmetry axioms");
+    assert!(
+        axioms.len() >= 3,
+        "Should have curvature vanishing and symmetry axioms"
+    );
 }
 
 #[test]
@@ -63,7 +66,10 @@ fn test_desitter_structure_loaded() {
 
     let axioms = registry.get_axioms("DeSitterSpacetime");
     println!("   DeSitterSpacetime has {} axioms", axioms.len());
-    assert!(axioms.len() >= 3, "Should have positive_lambda, desitter_einstein, symmetry axioms");
+    assert!(
+        axioms.len() >= 3,
+        "Should have positive_lambda, desitter_einstein, symmetry axioms"
+    );
 }
 
 #[test]
@@ -99,7 +105,10 @@ fn test_anti_desitter_structure_loaded() {
 
     let axioms = registry.get_axioms("AntiDeSitterSpacetime");
     println!("   AntiDeSitterSpacetime has {} axioms", axioms.len());
-    assert!(axioms.len() >= 4, "Should have negative_lambda, ads_einstein, ads_ricci, ads_ricci_scalar axioms");
+    assert!(
+        axioms.len() >= 4,
+        "Should have negative_lambda, ads_einstein, ads_ricci, ads_ricci_scalar axioms"
+    );
 }
 
 #[test]
@@ -135,7 +144,10 @@ fn test_flrw_structure_loaded() {
 
     let axioms = registry.get_axioms("FLRWCosmology");
     println!("   FLRWCosmology has {} axioms", axioms.len());
-    assert!(axioms.len() >= 3, "Should have symmetry and field equation axioms");
+    assert!(
+        axioms.len() >= 3,
+        "Should have symmetry and field equation axioms"
+    );
 }
 
 #[test]
@@ -242,4 +254,3 @@ fn test_schwarzschild_vs_minkowski() {
     assert!(mink_vacuum >= 2, "Minkowski should have vacuum axioms");
     assert!(schw_vacuum >= 2, "Schwarzschild should have vacuum axioms");
 }
-
