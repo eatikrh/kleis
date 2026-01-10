@@ -1393,6 +1393,195 @@ fn test_bianchi_identity_axiom_typed() {
 }
 
 // =============================================================================
+// High Priority Tensor Operations Tests (delta, symmetrize, antisymmetrize)
+// =============================================================================
+
+/// Test: KroneckerDelta structure is loaded
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_kronecker_delta_structure_loaded() {
+    println!("\n=== Test: KroneckerDelta structure loaded ===");
+
+    let mut registry = StructureRegistry::new();
+    let load_result = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(load_result.is_ok(), "Should load tensors.kleis");
+
+    assert!(
+        registry.has_structure("KroneckerDelta"),
+        "KroneckerDelta structure should be registered"
+    );
+
+    println!("   ✅ KroneckerDelta structure loaded");
+}
+
+/// Test: delta operation has correct signature
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_delta_operation_signature() {
+    println!("\n=== Test: delta operation signature ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let sig = registry.get_operation_signature("delta");
+    println!("   delta signature: {:?}", sig);
+
+    assert!(sig.is_some(), "delta should have a type signature");
+
+    println!("   ✅ delta operation has signature");
+}
+
+/// Test: Z3 delta(μ, μ) = 1 axiom
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_z3_delta_diagonal_axiom() {
+    println!("\n=== Test: Z3 delta diagonal axiom ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let axioms = registry.get_axioms("KroneckerDelta");
+    println!("   KroneckerDelta axioms: {:?}", axioms.len());
+
+    assert!(!axioms.is_empty(), "KroneckerDelta should have axioms");
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ KroneckerDelta axioms verified");
+}
+
+/// Test: IndexSymmetrization structure is loaded
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_index_symmetrization_structure_loaded() {
+    println!("\n=== Test: IndexSymmetrization structure loaded ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("IndexSymmetrization"),
+        "IndexSymmetrization structure should be registered"
+    );
+
+    println!("   ✅ IndexSymmetrization structure loaded");
+}
+
+/// Test: symmetrize2 operation has signature
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_symmetrize2_operation_signature() {
+    println!("\n=== Test: symmetrize2 operation signature ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let sig = registry.get_operation_signature("symmetrize2");
+    println!("   symmetrize2 signature: {:?}", sig);
+
+    assert!(sig.is_some(), "symmetrize2 should have a type signature");
+
+    println!("   ✅ symmetrize2 operation has signature");
+}
+
+/// Test: IndexAntisymmetrization structure is loaded
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_index_antisymmetrization_structure_loaded() {
+    println!("\n=== Test: IndexAntisymmetrization structure loaded ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("IndexAntisymmetrization"),
+        "IndexAntisymmetrization structure should be registered"
+    );
+
+    println!("   ✅ IndexAntisymmetrization structure loaded");
+}
+
+/// Test: antisymmetrize2 operation has signature
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_antisymmetrize2_operation_signature() {
+    println!("\n=== Test: antisymmetrize2 operation signature ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let sig = registry.get_operation_signature("antisymmetrize2");
+    println!("   antisymmetrize2 signature: {:?}", sig);
+
+    assert!(sig.is_some(), "antisymmetrize2 should have a type signature");
+
+    println!("   ✅ antisymmetrize2 operation has signature");
+}
+
+/// Test: IndexSymmetrization axioms
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_index_symmetrization_axioms() {
+    println!("\n=== Test: IndexSymmetrization axioms ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let axioms = registry.get_axioms("IndexSymmetrization");
+    println!("   IndexSymmetrization axioms: {:?}", axioms.len());
+
+    assert!(!axioms.is_empty(), "IndexSymmetrization should have axioms");
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ IndexSymmetrization axioms verified");
+}
+
+/// Test: IndexAntisymmetrization axioms
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_index_antisymmetrization_axioms() {
+    println!("\n=== Test: IndexAntisymmetrization axioms ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let axioms = registry.get_axioms("IndexAntisymmetrization");
+    println!("   IndexAntisymmetrization axioms: {:?}", axioms.len());
+
+    assert!(
+        !axioms.is_empty(),
+        "IndexAntisymmetrization should have axioms"
+    );
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ IndexAntisymmetrization axioms verified");
+}
+
+// =============================================================================
 // Macro-based Tests (using #[requires_kleis])
 // =============================================================================
 

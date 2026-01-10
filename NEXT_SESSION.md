@@ -146,3 +146,59 @@ structure TensorComponents(dim: Nat) {
 - `riemann_antisym_34` axiom  
 - `riemann_bianchi_1` axiom (First Bianchi identity)
 - `christoffel_symmetric` axiom
+
+---
+
+## Missing Tensor Operations (Priority Order)
+
+### HIGH Priority - Core Index Algebra
+
+| Operation | Signature | Why Needed |
+|-----------|-----------|------------|
+| `delta` | `Nat → Nat → ℝ` | Kronecker delta: `g^{μρ} g_{ρν} = δ^μ_ν` |
+| `symmetrize` | `Tensor → List(Nat) → Tensor` | `g_{(μν)} = g_{μν}`, Young tableaux |
+| `antisymmetrize` | `Tensor → List(Nat) → Tensor` | `R_{[μνρσ]}`, differential forms |
+
+**Axioms enabled:**
+```kleis
+// Metric inverse identity
+axiom metric_inverse_identity : ∀ g : Tensor(0, 2, dim, ℝ) .
+    ∀ μ : Nat . ∀ ν : Nat .
+    sum_over(λ ρ . times(component(inverse(g), μ, ρ), component(g, ρ, ν)), 0, dim) = delta(μ, ν)
+
+// Metric symmetry via symmetrize
+axiom metric_is_symmetric : ∀ g : Tensor(0, 2, dim, ℝ) .
+    symmetrize(g, [0, 1]) = g
+
+// Riemann first pair antisymmetry
+axiom riemann_antisym_12 : ∀ R : Tensor(0, 4, dim, ℝ) .
+    antisymmetrize(R, [0, 1]) = R
+```
+
+### MEDIUM Priority - Covariant Calculus
+
+| Operation | Signature | Why Needed |
+|-----------|-----------|------------|
+| `nabla_component` | `Tensor(1,3) → Nat → ... → ℝ` | Second Bianchi: `∇_{[λ} R_{ρσ]μν} = 0` |
+| `levi_civita` | `Nat → Nat → Nat → Nat → ℝ` | ε-tensor for volume, duality |
+| `contract_indices` | `Tensor → Nat → Nat → Tensor` | Specific index pair contraction |
+
+### LOW Priority - Convenience
+
+| Operation | Signature | Why Needed |
+|-----------|-----------|------------|
+| `permute_indices` | `Tensor → List(Nat) → Tensor` | Index reordering |
+| `trace_free` | `Tensor → Tensor` | Weyl tensor construction |
+| `dual` | `Tensor → Tensor` | Hodge dual for tensors |
+
+---
+
+## Implementation Status
+
+- [x] `component`, `component3`, `component4` - ✅ DONE
+- [x] `delta` - ✅ DONE (KroneckerDelta structure)
+- [x] `symmetrize2` - ✅ DONE (IndexSymmetrization structure)
+- [x] `antisymmetrize2` - ✅ DONE (IndexAntisymmetrization structure)
+- [x] `is_symmetric`, `is_antisymmetric` - ✅ DONE (predicate operations)
+- [ ] `nabla_component` - PENDING (Medium priority)
+- [ ] `levi_civita` - PENDING (Medium priority)

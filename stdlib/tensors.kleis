@@ -580,6 +580,139 @@ implements TensorComponents(dim) {
     operation component4 = builtin_tensor_component4
 }
 
+/* Kronecker Delta
+ * 
+ * The Kronecker delta δ^μ_ν is the identity tensor:
+ *   δ^μ_ν = 1 if μ = ν, 0 otherwise
+ * 
+ * Essential properties:
+ *   - g^{μρ} g_{ρν} = δ^μ_ν (metric inverse identity)
+ *   - T^μ δ^ν_μ = T^ν (index substitution)
+ *   - δ^μ_μ = dim (trace equals dimension)
+ * 
+ * In Z3, delta is an uninterpreted function constrained by axioms.
+ */
+structure KroneckerDelta(dim: Nat) {
+    // Kronecker delta: δ(μ, ν) = 1 if μ=ν, else 0
+    operation delta : Nat → Nat → ℝ
+    
+    // Diagonal is 1
+    axiom delta_diagonal : ∀ μ : Nat .
+        delta(μ, μ) = 1
+    
+    // Off-diagonal is 0 (for distinct indices)
+    axiom delta_off_diagonal : ∀ μ : Nat . ∀ ν : Nat .
+        (μ ≠ ν) → (delta(μ, ν) = 0)
+}
+
+implements KroneckerDelta(dim) {
+    operation delta = builtin_kronecker_delta
+}
+
+/* Index Symmetrization
+ * 
+ * Symmetrize a tensor over specified indices:
+ *   T_{(μν)} = (1/2)(T_{μν} + T_{νμ})
+ * 
+ * For n indices: sum over all permutations, divide by n!
+ * 
+ * Properties:
+ *   - Idempotent: symmetrize(symmetrize(T)) = symmetrize(T)
+ *   - Symmetric tensors are fixed points
+ *   - Symmetric tensor: T_{μν} = T_{νμ}
+ */
+structure IndexSymmetrization(dim: Nat) {
+    // Symmetrize over two indices
+    operation symmetrize2 : Tensor(0, 2, dim, ℝ) → Tensor(0, 2, dim, ℝ)
+    
+    // Check if tensor is symmetric
+    operation is_symmetric : Tensor(0, 2, dim, ℝ) → Bool
+    
+    // Symmetric tensor definition: T_{μν} = T_{νμ}
+    axiom symmetric_def : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(T) → (∀ μ : Nat . ∀ ν : Nat .
+            component(T, μ, ν) = component(T, ν, μ))
+    
+    // Idempotence: symmetrizing twice = symmetrizing once
+    axiom symmetrize2_idempotent : ∀ T : Tensor(0, 2, dim, ℝ) .
+        symmetrize2(symmetrize2(T)) = symmetrize2(T)
+    
+    // Symmetric tensor is fixed point
+    axiom symmetric_fixed_point : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(T) → (symmetrize2(T) = T)
+    
+    // Result of symmetrization is symmetric
+    axiom symmetrize2_is_symmetric : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(symmetrize2(T))
+}
+
+implements IndexSymmetrization(dim) {
+    operation symmetrize2 = builtin_symmetrize2
+    operation is_symmetric = builtin_is_symmetric
+}
+
+/* Index Antisymmetrization
+ * 
+ * Antisymmetrize a tensor over specified indices:
+ *   T_{[μν]} = (1/2)(T_{μν} - T_{νμ})
+ * 
+ * For n indices: sum over all permutations with sign, divide by n!
+ * 
+ * Properties:
+ *   - Idempotent: antisymmetrize(antisymmetrize(T)) = antisymmetrize(T)
+ *   - T_{[μν]} = -T_{[νμ]} (antisymmetry)
+ *   - Antisymmetric tensors are fixed points
+ *   - Forms (ω ∧ η) are antisymmetric
+ */
+structure IndexAntisymmetrization(dim: Nat) {
+    // Antisymmetrize over two indices
+    operation antisymmetrize2 : Tensor(0, 2, dim, ℝ) → Tensor(0, 2, dim, ℝ)
+    
+    // Check if tensor is antisymmetric
+    operation is_antisymmetric : Tensor(0, 2, dim, ℝ) → Bool
+    
+    // Antisymmetric tensor definition: T_{μν} = -T_{νμ}
+    axiom antisymmetric_def : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_antisymmetric(T) → (∀ μ : Nat . ∀ ν : Nat .
+            component(T, μ, ν) = negate(component(T, ν, μ)))
+    
+    // Antisymmetric diagonal is zero: T_{μμ} = 0
+    axiom antisymmetric_diagonal_zero : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_antisymmetric(T) → (∀ μ : Nat . component(T, μ, μ) = 0)
+    
+    // Result is antisymmetric
+    axiom antisymmetrize2_antisym : ∀ T : Tensor(0, 2, dim, ℝ) .
+        ∀ μ : Nat . ∀ ν : Nat .
+        component(antisymmetrize2(T), μ, ν) = 
+            negate(component(antisymmetrize2(T), ν, μ))
+    
+    // Idempotence
+    axiom antisymmetrize2_idempotent : ∀ T : Tensor(0, 2, dim, ℝ) .
+        antisymmetrize2(antisymmetrize2(T)) = antisymmetrize2(T)
+    
+    // Antisymmetric tensor is fixed point
+    axiom antisymmetric_fixed_point : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_antisymmetric(T) → (antisymmetrize2(T) = T)
+    
+    // Result of antisymmetrization is antisymmetric
+    axiom antisymmetrize2_is_antisymmetric : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_antisymmetric(antisymmetrize2(T))
+}
+
+implements IndexAntisymmetrization(dim) {
+    operation antisymmetrize2 = builtin_antisymmetrize2
+    operation is_antisymmetric = builtin_is_antisymmetric
+}
+
+/* Metric Symmetry via is_symmetric predicate
+ * 
+ * The metric tensor is symmetric by definition.
+ */
+structure MetricSymmetryPredicate(dim: Nat) {
+    axiom metric_is_symmetric : ∀ g : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(g)
+}
+
 /* Metric Tensor Symmetry
  * 
  * The metric tensor is symmetric: g_μν = g_νμ
