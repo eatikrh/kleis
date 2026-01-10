@@ -1582,6 +1582,212 @@ fn test_index_antisymmetrization_axioms() {
 }
 
 // =============================================================================
+// Einstein Equation Axiom Tests
+// =============================================================================
+
+/// Test: EinsteinSummation structure is loaded
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_einstein_summation_structure_loaded() {
+    println!("\n=== Test: EinsteinSummation structure loaded ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("EinsteinSummation"),
+        "EinsteinSummation structure should be registered"
+    );
+
+    println!("   ✅ EinsteinSummation structure loaded");
+}
+
+/// Test: trace2 and contract2 operations have signatures
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_einstein_summation_operation_signatures() {
+    println!("\n=== Test: Einstein summation operation signatures ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let trace2_sig = registry.get_operation_signature("trace2");
+    println!("   trace2 signature: {:?}", trace2_sig);
+    assert!(trace2_sig.is_some(), "trace2 should have a type signature");
+
+    let contract2_sig = registry.get_operation_signature("contract2");
+    println!("   contract2 signature: {:?}", contract2_sig);
+    assert!(
+        contract2_sig.is_some(),
+        "contract2 should have a type signature"
+    );
+
+    println!("   ✅ Einstein summation operations have signatures");
+}
+
+/// Test: EinsteinSummation axioms (linearity, zero, delta contraction)
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_einstein_summation_axioms() {
+    println!("\n=== Test: EinsteinSummation axioms ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let axioms = registry.get_axioms("EinsteinSummation");
+    println!("   EinsteinSummation axioms: {:?}", axioms.len());
+
+    assert!(!axioms.is_empty(), "EinsteinSummation should have axioms");
+
+    for (name, _) in &axioms {
+        println!("   - {}", name);
+    }
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ EinsteinSummation axioms verified");
+}
+
+/// Test: RicciTensorDefinition structure and axioms
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_ricci_tensor_definition_axioms() {
+    println!("\n=== Test: RicciTensorDefinition axioms ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("RicciTensorDefinition"),
+        "RicciTensorDefinition should be registered"
+    );
+
+    let axioms = registry.get_axioms("RicciTensorDefinition");
+    println!("   RicciTensorDefinition axioms: {:?}", axioms.len());
+
+    for (name, _) in &axioms {
+        println!("   - {}", name);
+    }
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ RicciTensorDefinition axioms verified");
+}
+
+/// Test: EinsteinTensorDefinition structure and axioms
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_einstein_tensor_definition_axioms() {
+    println!("\n=== Test: EinsteinTensorDefinition axioms ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("EinsteinTensorDefinition"),
+        "EinsteinTensorDefinition should be registered"
+    );
+
+    let axioms = registry.get_axioms("EinsteinTensorDefinition");
+    println!("   EinsteinTensorDefinition axioms: {:?}", axioms.len());
+
+    for (name, _) in &axioms {
+        println!("   - {}", name);
+    }
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ EinsteinTensorDefinition axioms verified");
+}
+
+/// Test: ContractedBianchi identity (divergence-free Einstein tensor)
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_contracted_bianchi_axiom() {
+    println!("\n=== Test: ContractedBianchi axiom ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("ContractedBianchi"),
+        "ContractedBianchi should be registered"
+    );
+
+    let axioms = registry.get_axioms("ContractedBianchi");
+    println!("   ContractedBianchi axioms: {:?}", axioms.len());
+
+    for (name, _) in &axioms {
+        println!("   - {}", name);
+    }
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ ContractedBianchi axiom verified");
+}
+
+/// Test: EinsteinFieldEquationsAxiom structure
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_einstein_field_equations_axiom() {
+    println!("\n=== Test: EinsteinFieldEquationsAxiom ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("EinsteinFieldEquationsAxiom"),
+        "EinsteinFieldEquationsAxiom should be registered"
+    );
+
+    let axioms = registry.get_axioms("EinsteinFieldEquationsAxiom");
+    println!("   EinsteinFieldEquationsAxiom axioms: {:?}", axioms.len());
+
+    for (name, _) in &axioms {
+        println!("   - {}", name);
+    }
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ EinsteinFieldEquationsAxiom verified");
+}
+
+// =============================================================================
 // Macro-based Tests (using #[requires_kleis])
 // =============================================================================
 

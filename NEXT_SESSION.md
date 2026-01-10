@@ -200,5 +200,45 @@ axiom riemann_antisym_12 : ∀ R : Tensor(0, 4, dim, ℝ) .
 - [x] `symmetrize2` - ✅ DONE (IndexSymmetrization structure)
 - [x] `antisymmetrize2` - ✅ DONE (IndexAntisymmetrization structure)
 - [x] `is_symmetric`, `is_antisymmetric` - ✅ DONE (predicate operations)
+- [x] `trace2`, `contract2` - ✅ DONE (EinsteinSummation structure)
+- [x] `covariant_divergence` - ✅ DONE (ContractedBianchi structure)
 - [ ] `nabla_component` - PENDING (Medium priority)
 - [ ] `levi_civita` - PENDING (Medium priority)
+
+---
+
+## Progress: Einstein Equation Axioms ✅ DONE
+
+Added dimension-agnostic axiomatization of Einstein's field equations:
+
+### EinsteinSummation(dim)
+Abstractly models index contraction without explicit sums (Z3 doesn't handle higher-order functions):
+- `trace2 : Tensor(1,1,dim,ℝ) → ℝ` - trace operation
+- `contract2 : Tensor(0,2,dim,ℝ) → Tensor(2,0,dim,ℝ) → ℝ` - metric contraction
+- Axioms: `trace_additive`, `delta_self_contract`, `trace_zero`
+
+### RicciTensorDefinition(dim)
+- `ricci_symmetric` - R_μν = R_νμ
+- `ricci_from_flat` - flat Riemann → zero Ricci
+
+### RicciScalarDefinition(dim)
+- `ricci_scalar_flat` - flat space has R = 0
+
+### EinsteinTensorDefinition(dim)
+- `einstein_symmetric` - G_μν is symmetric
+- `einstein_flat` - flat space has G_μν = 0
+
+### ContractedBianchi(dim)
+The key identity that guarantees energy-momentum conservation:
+- `covariant_divergence : Tensor(0,2,dim,ℝ) → Nat → ℝ`
+- `einstein_divergence_free` - ∇^μ G_μν = 0
+
+### EinsteinFieldEquationsAxiom(dim)
+The field equations themselves:
+- `field_equation_components` - G_μν + Λg_μν = κT_μν
+- `vacuum_field_equation` - T_μν = 0 → G_μν = -Λg_μν
+
+### EnergyMomentumConservation(dim)
+- `stress_energy_conserved` - ∇^μ T_μν = 0
+
+**Total new tests:** 7 tests for Einstein equation structures

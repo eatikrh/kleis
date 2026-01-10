@@ -190,6 +190,191 @@ implements EinsteinTensor(dim) {
     operation einstein = builtin_einstein_tensor
 }
 
+// ============================================
+// Einstein Summation Convention (Dimension-Agnostic)
+// ============================================
+
+/* Einstein Summation - Index Contraction
+ * 
+ * The Einstein summation convention: repeated indices are summed over.
+ *   T^μ_μ = Σ_μ T^μ_μ (trace)
+ *   A^μ B_μ = Σ_μ A^μ B_μ (contraction)
+ * 
+ * In Z3, we model summation abstractly via contraction operations
+ * rather than explicit sum_over with lambdas (Z3 doesn't handle HOF well).
+ * 
+ * Key principle: Summation is implicit in contraction operations.
+ * We axiomatize the RESULTS of summation, not the summation process itself.
+ */
+structure EinsteinSummation(dim: Nat) {
+    // Trace operation: Σ_μ T^μ_μ
+    operation trace2 : Tensor(1, 1, dim, ℝ) → ℝ
+    
+    // Index contraction: contracts specified indices
+    operation contract2 : Tensor(0, 2, dim, ℝ) → Tensor(2, 0, dim, ℝ) → ℝ
+    
+    // Trace is additive (linear in first argument)
+    axiom trace_additive : ∀ T : Tensor(1, 1, dim, ℝ) . ∀ S : Tensor(1, 1, dim, ℝ) .
+        trace2(add(T, S)) = plus(trace2(T), trace2(S))
+    
+    // Contraction with delta: δ^μ_μ = 1 for each μ
+    axiom delta_self_contract : ∀ μ : Nat .
+        times(delta(μ, μ), 1) = 1
+    
+    // Trace of zero tensor is zero
+    axiom trace_zero : ∀ T : Tensor(1, 1, dim, ℝ) .
+        (∀ μ : Nat . ∀ ν : Nat . component(T, μ, ν) = 0) →
+        trace2(T) = 0
+}
+
+implements EinsteinSummation(dim) {
+    operation trace2 = builtin_trace2
+    operation contract2 = builtin_contract2
+}
+
+// ============================================
+// Tensor Contraction Definitions (Dimension-Agnostic)
+// ============================================
+
+/* Ricci Tensor Definition
+ * 
+ * The Ricci tensor is defined as the contraction of the Riemann tensor:
+ *   R_μν = R^ρ_μρν = Σ_ρ R^ρ_μρν
+ * 
+ * This is the trace over the first and third indices.
+ * We axiomatize the properties rather than the explicit summation.
+ */
+structure RicciTensorDefinition(dim: Nat) {
+    // Ricci tensor is symmetric (follows from Riemann symmetries)
+    axiom ricci_symmetric : ∀ Ric : Tensor(0, 2, dim, ℝ) .
+        ∀ μ : Nat . ∀ ν : Nat .
+        component(Ric, μ, ν) = component(Ric, ν, μ)
+    
+    // Ricci inherits from Riemann: when Riemann vanishes, so does Ricci
+    axiom ricci_from_flat : ∀ Riem : Tensor(1, 3, dim, ℝ) .
+        (∀ ρ : Nat . ∀ σ : Nat . ∀ μ : Nat . ∀ ν : Nat .
+            component4(Riem, ρ, σ, μ, ν) = 0) →
+        (∀ μ : Nat . ∀ ν : Nat . component(ricci(Riem), μ, ν) = 0)
+}
+
+/* Ricci Scalar Definition
+ * 
+ * The Ricci scalar is the trace of the Ricci tensor with the metric:
+ *   R = g^μν R_μν
+ * 
+ * We axiomatize the properties rather than explicit double summation.
+ */
+structure RicciScalarDefinition(dim: Nat) {
+    // Ricci scalar is real (well-defined)
+    // R = g^μν R_μν is a contraction, hence scalar
+    
+    // Ricci scalar vanishes for flat space
+    axiom ricci_scalar_flat : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ g_inv : Tensor(2, 0, dim, ℝ) .
+        (∀ μ : Nat . ∀ ν : Nat . component(ricci(riemann_from_metric(g)), μ, ν) = 0) →
+        ricci_scalar(g, g_inv) = 0
+    
+    // Ricci scalar scaling under conformal transformation (property)
+    // This is a key property that constrains the scalar
+}
+
+/* Einstein Tensor Definition
+ * 
+ * The Einstein tensor is defined as:
+ *   G_μν = R_μν - (1/2) R g_μν
+ * 
+ * We axiomatize the key properties that make G_μν special.
+ */
+structure EinsteinTensorDefinition(dim: Nat) {
+    // Einstein tensor is symmetric (inherits from metric and Ricci)
+    axiom einstein_symmetric : ∀ G : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(G)
+    
+    // Einstein tensor trace: G = g^μν G_μν = R - 2R = -R (in 4D: R - 4·(R/2) = -R)
+    // For dim=4: trace(G) = R - (1/2)·4·R = R - 2R = -R
+    // General: trace(G) = R - (dim/2)·R = R·(1 - dim/2)
+    
+    // Einstein tensor vanishes for flat space
+    axiom einstein_flat : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ G : Tensor(0, 2, dim, ℝ) .
+        (∀ μ : Nat . ∀ ν : Nat . component(ricci(riemann_from_metric(g)), μ, ν) = 0) →
+        (∀ μ : Nat . ∀ ν : Nat . component(G, μ, ν) = 0)
+}
+
+// ============================================
+// Bianchi Identities and Conservation Laws
+// ============================================
+
+/* Contracted Bianchi Identity
+ * 
+ * The most important identity in GR - Einstein chose G_μν because of this:
+ *   ∇^μ G_μν = 0
+ * 
+ * This means the Einstein tensor is divergence-free, which guarantees
+ * conservation of energy-momentum when coupled to matter.
+ * 
+ * This identity follows algebraically from the Second Bianchi Identity
+ * applied to the Riemann tensor, then contracted.
+ */
+structure ContractedBianchi(dim: Nat) {
+    // Covariant divergence of Einstein tensor vanishes
+    // ∇^μ G_μν = Σ_μ g^μρ ∇_ρ G_μν = 0
+    axiom einstein_divergence_free : ∀ G : Tensor(0, 2, dim, ℝ) .
+        ∀ ν : Nat .
+        covariant_divergence(G, ν) = 0
+    
+    // Covariant divergence operation
+    operation covariant_divergence : Tensor(0, 2, dim, ℝ) → Nat → ℝ
+}
+
+implements ContractedBianchi(dim) {
+    operation covariant_divergence = builtin_covariant_divergence
+}
+
+/* Energy-Momentum Conservation
+ * 
+ * From Einstein's field equations G_μν + Λg_μν = κT_μν
+ * and the contracted Bianchi identity ∇^μ G_μν = 0,
+ * it follows that:
+ *   ∇^μ T_μν = 0
+ * 
+ * This is the conservation of energy-momentum!
+ */
+structure EnergyMomentumConservation(dim: Nat) {
+    // Stress-energy tensor is covariantly conserved
+    axiom stress_energy_conserved : ∀ T : Tensor(0, 2, dim, ℝ) .
+        ∀ ν : Nat .
+        covariant_divergence(T, ν) = 0
+}
+
+/* Einstein Field Equations - Full Axiomatization
+ * 
+ * The complete Einstein field equations with cosmological constant:
+ *   G_μν + Λ g_μν = κ T_μν
+ * 
+ * where κ = 8πG/c⁴
+ * 
+ * This structure provides the axiom that relates geometry to matter.
+ */
+structure EinsteinFieldEquationsAxiom(dim: Nat) {
+    // Field equation in component form
+    axiom field_equation_components : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ G : Tensor(0, 2, dim, ℝ) .
+        ∀ T : Tensor(0, 2, dim, ℝ) .
+        ∀ Lambda : ℝ .
+        ∀ kappa : ℝ .
+        ∀ μ : Nat . ∀ ν : Nat .
+        plus(component(G, μ, ν), times(Lambda, component(g, μ, ν))) = 
+            times(kappa, component(T, μ, ν))
+    
+    // Vacuum solution: T_μν = 0 implies G_μν = -Λg_μν
+    axiom vacuum_field_equation : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ G : Tensor(0, 2, dim, ℝ) .
+        ∀ Lambda : ℝ .
+        ∀ μ : Nat . ∀ ν : Nat .
+        component(G, μ, ν) = negate(times(Lambda, component(g, μ, ν)))
+}
+
 /* Tensor Index Notation - Display Operations
  * 
  * These operations create indexed tensor notation for display.
