@@ -241,12 +241,11 @@ Added metric inverse and index raising/lowering axioms:
 
 | Component | Status | Blocker |
 |-----------|--------|---------|
-| Partial derivatives | ❌ | Needs D(f,x) grammar integration |
-| Christoffel from metric | ❌ | Needs partial derivative support |
-| Riemann from Christoffel | ❌ | Needs partial derivative support |
-| Full covariant derivative | ❌ | Needs Christoffel + partial |
+| Christoffel from metric | ❌ | Complex axiom: Γ^λ_μν = ½g^λσ(∂_μg_νσ + ∂_νg_μσ - ∂_σg_μν) |
+| Riemann from Christoffel | ❌ | Complex axiom with Γ products |
+| Full covariant derivative | ❌ | Needs component-wise tensor calculus |
 
-**Note:** Kleis grammar v0.96 uses `D(f, x)` for partial and `Dt(f, x)` for total derivatives. The stdlib has `operation partial : F → F` which conflicts with our tensor partial derivative naming.
+**Note:** `D(f,x)` and `Dt(f,x)` ARE already implemented in `stdlib/calculus.kleis` with full axioms (sum rule, product rule, chain rule, Schwarz theorem, etc.). The Z3 backend handles them. The remaining work is encoding the **tensor-specific** derivative formulas (Christoffel, Riemann) which involve summations over indices - challenging for Z3's first-order logic.
 
 ---
 
