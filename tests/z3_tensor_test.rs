@@ -1931,6 +1931,61 @@ fn test_metric_trace_axiom() {
 }
 
 // =============================================================================
+// Levi-Civita Tensor Tests
+// =============================================================================
+
+/// Test: LeviCivita structure is loaded
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_levi_civita_structure_loaded() {
+    println!("\n=== Test: LeviCivita structure loaded ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    assert!(
+        registry.has_structure("LeviCivita"),
+        "LeviCivita structure should be registered"
+    );
+
+    let sig = registry.get_operation_signature("epsilon4");
+    println!("   epsilon4 signature: {:?}", sig);
+    assert!(sig.is_some(), "epsilon4 should have a signature");
+
+    println!("   ✅ LeviCivita structure loaded");
+}
+
+/// Test: LeviCivita antisymmetry axioms
+#[test]
+#[cfg(feature = "axiom-verification")]
+fn test_levi_civita_axioms() {
+    println!("\n=== Test: LeviCivita axioms ===");
+
+    let mut registry = StructureRegistry::new();
+    let _ = registry.load_from_file("stdlib/tensors.kleis");
+
+    let axioms = registry.get_axioms("LeviCivita");
+    println!("   LeviCivita axioms: {:?}", axioms.len());
+
+    for (name, _) in &axioms {
+        println!("   - {}", name);
+    }
+
+    assert!(!axioms.is_empty(), "LeviCivita should have axioms");
+
+    let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+    for (name, expr) in &axioms {
+        println!("   Verifying: {}", name);
+        let result = verifier.verify_axiom(expr);
+        println!("   Result: {:?}", result);
+        assert!(result.is_ok(), "Axiom verification should not error");
+    }
+
+    println!("   ✅ LeviCivita axioms verified");
+}
+
+// =============================================================================
 // Macro-based Tests (using #[requires_kleis])
 // =============================================================================
 

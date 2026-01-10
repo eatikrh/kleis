@@ -367,12 +367,50 @@ structure EinsteinFieldEquationsAxiom(dim: Nat) {
         plus(component(G, μ, ν), times(Lambda, component(g, μ, ν))) = 
             times(kappa, component(T, μ, ν))
     
-    // Vacuum solution: T_μν = 0 implies G_μν = -Λg_μν
+    // Vacuum field equation (no matter)
     axiom vacuum_field_equation : ∀ g : Tensor(0, 2, dim, ℝ) .
         ∀ G : Tensor(0, 2, dim, ℝ) .
         ∀ Lambda : ℝ .
         ∀ μ : Nat . ∀ ν : Nat .
         component(G, μ, ν) = negate(times(Lambda, component(g, μ, ν)))
+}
+
+// ============================================
+// Levi-Civita Tensor
+// ============================================
+
+/* Levi-Civita Tensor (Totally Antisymmetric)
+ * 
+ * The Levi-Civita tensor ε_μνρσ is the totally antisymmetric tensor.
+ * In 4D: ε_0123 = +1, and permutations give ±1 or 0.
+ * 
+ * Uses:
+ *   - Volume forms
+ *   - Hodge duality
+ *   - Cross products (generalized)
+ *   - Determinants
+ */
+structure LeviCivita(dim: Nat) {
+    // Levi-Civita symbol (4 indices for 4D spacetime)
+    operation epsilon4 : Nat → Nat → Nat → Nat → ℝ
+    
+    // Totally antisymmetric: swapping any two indices negates
+    axiom epsilon_antisym_01 : ∀ μ : Nat . ∀ ν : Nat . ∀ ρ : Nat . ∀ σ : Nat .
+        epsilon4(ν, μ, ρ, σ) = negate(epsilon4(μ, ν, ρ, σ))
+    
+    axiom epsilon_antisym_12 : ∀ μ : Nat . ∀ ν : Nat . ∀ ρ : Nat . ∀ σ : Nat .
+        epsilon4(μ, ρ, ν, σ) = negate(epsilon4(μ, ν, ρ, σ))
+    
+    axiom epsilon_antisym_23 : ∀ μ : Nat . ∀ ν : Nat . ∀ ρ : Nat . ∀ σ : Nat .
+        epsilon4(μ, ν, σ, ρ) = negate(epsilon4(μ, ν, ρ, σ))
+    
+    // Repeated index gives zero
+    axiom epsilon_repeated_zero : ∀ μ : Nat . ∀ ν : Nat . ∀ ρ : Nat .
+        epsilon4(μ, μ, ν, ρ) = 0
+}
+
+implements LeviCivita(dim) {
+    operation epsilon4 = builtin_levi_civita_4
 }
 
 // ============================================

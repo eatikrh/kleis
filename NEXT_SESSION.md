@@ -202,8 +202,51 @@ axiom riemann_antisym_12 : ∀ R : Tensor(0, 4, dim, ℝ) .
 - [x] `is_symmetric`, `is_antisymmetric` - ✅ DONE (predicate operations)
 - [x] `trace2`, `contract2` - ✅ DONE (EinsteinSummation structure)
 - [x] `covariant_divergence` - ✅ DONE (ContractedBianchi structure)
-- [ ] `nabla_component` - PENDING (Medium priority)
-- [ ] `levi_civita` - PENDING (Medium priority)
+- [x] `metric_inv` - ✅ DONE (MetricInverse structure)
+- [x] `raise_vec`, `lower_vec` - ✅ DONE (IndexRaiseLower structure)
+- [x] `epsilon4` - ✅ DONE (LeviCivita structure)
+- [ ] `nabla_component` - PENDING (requires D(f,x) grammar integration)
+- [ ] Partial derivatives - PENDING (uses D(f,x) / Dt(f,x) per grammar v0.96)
+
+---
+
+## Progress: Metric Inverse & Index Operations ✅ DONE
+
+Added metric inverse and index raising/lowering axioms:
+
+### MetricInverse(dim)
+- `metric_inv : Tensor(0,2,dim,ℝ) → Tensor(2,0,dim,ℝ)`
+- `metric_inverse_identity` : g^μρ g_ρν = δ^μ_ν
+- `metric_inv_symmetric` : g^μν = g^νμ
+- `metric_inv_involutive` : (g^{-1})^{-1} = g
+
+### IndexRaiseLower(dim)
+- `raise_vec`, `lower_vec` operations
+- `raise_lower_identity` : lower(raise(T)) = T
+- `lower_raise_identity` : raise(lower(T)) = T
+
+### MetricTrace(dim)
+- `metric_trace_is_dim` : g^μν g_μν = dim
+
+### LeviCivita(dim)
+- `epsilon4 : Nat → Nat → Nat → Nat → ℝ`
+- `epsilon_antisym_01`, `epsilon_antisym_12`, `epsilon_antisym_23`
+- `epsilon_repeated_zero` : ε(μ,μ,ν,ρ) = 0
+
+**Total tensor tests: 55 passed, 5 ignored**
+
+---
+
+## Remaining Gaps (Future Work)
+
+| Component | Status | Blocker |
+|-----------|--------|---------|
+| Partial derivatives | ❌ | Needs D(f,x) grammar integration |
+| Christoffel from metric | ❌ | Needs partial derivative support |
+| Riemann from Christoffel | ❌ | Needs partial derivative support |
+| Full covariant derivative | ❌ | Needs Christoffel + partial |
+
+**Note:** Kleis grammar v0.96 uses `D(f, x)` for partial and `Dt(f, x)` for total derivatives. The stdlib has `operation partial : F → F` which conflicts with our tensor partial derivative naming.
 
 ---
 
