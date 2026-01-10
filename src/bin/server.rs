@@ -1238,6 +1238,15 @@ fn editor_node_to_expression(
             hint: placeholder.hint.clone().unwrap_or_else(|| "□".to_string()),
         }),
         EditorNode::Operation { operation } => {
+            // Tensor operations are formatting-only: T^i_j is just T for verification
+            // The indices are display metadata, not mathematical operations
+            if operation.name == "tensor" || operation.kind.as_deref() == Some("tensor") {
+                // args[0] is the base symbol, args[1:] are indices (ignored for verification)
+                if let Some(base) = operation.args.first() {
+                    return editor_node_to_expression(base);
+                }
+            }
+
             let args: Result<Vec<Expression>, String> = operation
                 .args
                 .iter()

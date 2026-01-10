@@ -2213,7 +2213,12 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             factorial: { Operation: { name: 'factorial', args: [{Placeholder:{id:0,hint:'n'}}] } },
             floor: { Operation: { name: 'floor', args: [{Placeholder:{id:0,hint:'x'}}] } },
             ceiling: { Operation: { name: 'ceiling', args: [{Placeholder:{id:0,hint:'x'}}] } },
-            tensor_mixed: { Operation: { name: 'index_mixed', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower'}}] } },
+            tensor_mixed: { Operation: { 
+                name: 'tensor', 
+                kind: 'tensor',
+                args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper'}}, {Placeholder:{id:2,hint:'lower'}}],
+                metadata: { indexStructure: ['up', 'down'] }
+            } },
             equals: { Operation: { name: 'equals', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             plus: { Operation: { name: 'plus', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
             minus: { Operation: { name: 'minus', args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}] } },
@@ -2313,9 +2318,24 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
             let_simple: { Operation: { name: 'let_simple', args: [{Placeholder:{id:0,hint:'name'}}, {Placeholder:{id:1,hint:'value'}}] } },
             
             // Tensors
-            subsup: { Operation: { name: 'subsup', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'subscript'}}, {Placeholder:{id:2,hint:'superscript'}}] } },
-            tensor_upper_pair: { Operation: { name: 'index_pair', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'idx1'}}, {Placeholder:{id:2,hint:'idx2'}}] } },
-            tensor_lower_pair: { Operation: { name: 'tensor_lower_pair', args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}] } },
+            subsup: { Operation: { 
+                name: 'tensor', 
+                kind: 'tensor',
+                args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'lower'}}, {Placeholder:{id:2,hint:'upper'}}],
+                metadata: { indexStructure: ['down', 'up'] }
+            } },
+            tensor_upper_pair: { Operation: { 
+                name: 'tensor', 
+                kind: 'tensor',
+                args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'upper1'}}, {Placeholder:{id:2,hint:'upper2'}}],
+                metadata: { indexStructure: ['up', 'up'] }
+            } },
+            tensor_lower_pair: { Operation: { 
+                name: 'tensor', 
+                kind: 'tensor',
+                args: [{Placeholder:{id:0,hint:'base'}}, {Placeholder:{id:1,hint:'lower1'}}, {Placeholder:{id:2,hint:'lower2'}}],
+                metadata: { indexStructure: ['down', 'down'] }
+            } },
             // Metric tensor g_μν - uses new EditorNode format with kind/metadata
             // Tensors: args[0] = editable symbol, args[1:] = indices
             // indexStructure describes args[1:], not args[0]
