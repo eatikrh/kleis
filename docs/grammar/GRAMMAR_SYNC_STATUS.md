@@ -1,9 +1,40 @@
 # Grammar Synchronization Status
 
-**Date:** January 1, 2026  
-**Status:** 🆕 v0.96 Released (Named Arguments for Plotting)
+**Date:** January 9, 2026  
+**Status:** 🆕 v0.98 Released (Parametric Types in Quantifiers - Documentation)
 
-## Current Version: v0.96
+## Current Version: v0.98
+
+### What's New in v0.98
+
+**Parametric Types in Quantifiers** - Documents existing capability:
+
+```kleis
+// Now officially documented (always worked):
+axiom ricci_symmetric : ∀ R : Tensor(0, 2, dim, ℝ) .
+    component(R, μ, ν) = component(R, ν, μ)
+
+axiom matrix_commute : ∀ A : Matrix(m, n, ℝ) . ∀ B : Matrix(m, n, ℝ) .
+    plus(A, B) = plus(B, A)
+```
+
+This is a **documentation-only** release - the parser already supported this syntax.
+
+### What's New in v0.97
+
+**ASCII Logical Operators** - Work everywhere (not just let bindings):
+
+```kleis
+// These are now reserved keywords:
+axiom example : ∀ x : Bool . x and True = x
+axiom demorgan : not (x and y) = (not x) or (not y)
+```
+
+| Unicode | ASCII | Description |
+|---------|-------|-------------|
+| `∧` | `and` | Logical conjunction |
+| `∨` | `or` | Logical disjunction |
+| `¬` | `not` | Logical negation |
 
 ### What's New in v0.96
 
@@ -59,13 +90,16 @@ example "complex arithmetic" {
 
 | File | Version | Last Updated | Status |
 |------|---------|--------------|--------|
-| `kleis_grammar_v096.ebnf` | v0.96 | Jan 1, 2026 | ✅ Current |
-| `kleis_grammar_v096.md` | v0.96 | Jan 1, 2026 | ✅ Documented |
-| `kleis_grammar_v095.ebnf` | v0.95 | Dec 29, 2025 | ✅ Previous |
-| `kleis_grammar_v094.ebnf` | v0.94 | Dec 26, 2025 | ✅ Previous |
-| `kleis_grammar_v093.ebnf` | v0.93 | Dec 24, 2025 | ✅ Previous |
+| `kleis_grammar_v098.ebnf` | v0.98 | Jan 9, 2026 | ✅ Current |
+| `kleis_grammar_v098.md` | v0.98 | Jan 9, 2026 | ✅ Documented |
+| `kleis_grammar_v097.ebnf` | v0.97 | Jan 9, 2026 | ✅ Previous |
+| `kleis_grammar_v097.md` | v0.97 | Jan 9, 2026 | ✅ Previous |
+| `kleis_grammar_v096.ebnf` | v0.96 | Jan 1, 2026 | ✅ Previous |
+| `kleis_grammar_v096.md` | v0.96 | Jan 1, 2026 | ✅ Previous |
+| `kleis_grammar_v095.ebnf` | v0.95 | Dec 29, 2025 | ✅ Legacy |
 | `archive/kleis_grammar_v08.ebnf` | v0.8 | Dec 18, 2025 | ✅ Legacy |
-| `vscode-kleis/docs/grammar/` | v0.96 | Jan 1, 2026 | ✅ Synced |
+| `vscode-kleis/syntaxes/kleis.tmLanguage.json` | v0.98 | Jan 9, 2026 | ✅ Synced |
+| `docs/grammar/kleis.tmLanguage.json` | v0.98 | Jan 9, 2026 | ✅ Synced |
 
 ---
 
@@ -333,6 +367,23 @@ implements Ring(ℤ) {
 
 ## Version History
 
+**v0.98 (Jan 9, 2026):**
+- DOCUMENTED: Parametric types in quantifier type annotations
+- Parser already supported this; now officially documented
+- Example: `∀ T : Tensor(0, 2, dim, ℝ) . ...`
+- Essential for differential geometry axioms
+- No parser changes needed
+
+**v0.97 (Jan 9, 2026):**
+- ADDED: ASCII logical operators (`and`, `or`, `not`) as reserved keywords
+- Work in all expression contexts (not just let bindings)
+- No breaking changes from v0.96
+
+**v0.96 (Jan 1, 2026):**
+- ADDED: Named arguments in function calls
+- Example: `plot(xs, ys, color = "blue")`
+- No breaking changes from v0.95
+
 **v0.93 (Dec 24, 2025):**
 - ADDED: `example` blocks for executable documentation
 - ADDED: `assert()` statement for verification
@@ -380,5 +431,5 @@ implements Ring(ℤ) {
 
 ---
 
-**Status:** ⚠️ v0.8 EBNF complete, G4 pending sync
+**Status:** ✅ v0.98 - All grammars synchronized (Jan 9, 2026)
 

@@ -190,6 +190,305 @@ implements EinsteinTensor(dim) {
     operation einstein = builtin_einstein_tensor
 }
 
+// ============================================
+// Einstein Summation Convention (Dimension-Agnostic)
+// ============================================
+
+/* Einstein Summation - Index Contraction
+ * 
+ * The Einstein summation convention: repeated indices are summed over.
+ *   T^μ_μ = Σ_μ T^μ_μ (trace)
+ *   A^μ B_μ = Σ_μ A^μ B_μ (contraction)
+ * 
+ * In Z3, we model summation abstractly via contraction operations
+ * rather than explicit sum_over with lambdas (Z3 doesn't handle HOF well).
+ * 
+ * Key principle: Summation is implicit in contraction operations.
+ * We axiomatize the RESULTS of summation, not the summation process itself.
+ */
+structure EinsteinSummation(dim: Nat) {
+    // Trace operation: Σ_μ T^μ_μ
+    operation trace2 : Tensor(1, 1, dim, ℝ) → ℝ
+    
+    // Index contraction: contracts specified indices
+    operation contract2 : Tensor(0, 2, dim, ℝ) → Tensor(2, 0, dim, ℝ) → ℝ
+    
+    // Trace is additive (linear in first argument)
+    axiom trace_additive : ∀ T : Tensor(1, 1, dim, ℝ) . ∀ S : Tensor(1, 1, dim, ℝ) .
+        trace2(add(T, S)) = plus(trace2(T), trace2(S))
+    
+    // Contraction with delta: δ^μ_μ = 1 for each μ
+    axiom delta_self_contract : ∀ μ : Nat .
+        times(delta(μ, μ), 1) = 1
+    
+    // Trace of zero tensor is zero
+    axiom trace_zero : ∀ T : Tensor(1, 1, dim, ℝ) .
+        (∀ μ : Nat . ∀ ν : Nat . component(T, μ, ν) = 0) →
+        trace2(T) = 0
+}
+
+implements EinsteinSummation(dim) {
+    operation trace2 = builtin_trace2
+    operation contract2 = builtin_contract2
+}
+
+// ============================================
+// Tensor Contraction Definitions (Dimension-Agnostic)
+// ============================================
+
+/* Ricci Tensor Definition
+ * 
+ * The Ricci tensor is defined as the contraction of the Riemann tensor:
+ *   R_μν = R^ρ_μρν = Σ_ρ R^ρ_μρν
+ * 
+ * This is the trace over the first and third indices.
+ * We axiomatize the properties rather than the explicit summation.
+ */
+structure RicciTensorDefinition(dim: Nat) {
+    // Ricci tensor is symmetric (follows from Riemann symmetries)
+    axiom ricci_symmetric : ∀ Ric : Tensor(0, 2, dim, ℝ) .
+        ∀ μ : Nat . ∀ ν : Nat .
+        component(Ric, μ, ν) = component(Ric, ν, μ)
+    
+    // Ricci inherits from Riemann: when Riemann vanishes, so does Ricci
+    axiom ricci_from_flat : ∀ Riem : Tensor(1, 3, dim, ℝ) .
+        (∀ ρ : Nat . ∀ σ : Nat . ∀ μ : Nat . ∀ ν : Nat .
+            component4(Riem, ρ, σ, μ, ν) = 0) →
+        (∀ μ : Nat . ∀ ν : Nat . component(ricci(Riem), μ, ν) = 0)
+}
+
+/* Ricci Scalar Definition
+ * 
+ * The Ricci scalar is the trace of the Ricci tensor with the metric:
+ *   R = g^μν R_μν
+ * 
+ * We axiomatize the properties rather than explicit double summation.
+ */
+structure RicciScalarDefinition(dim: Nat) {
+    // Ricci scalar is real (well-defined)
+    // R = g^μν R_μν is a contraction, hence scalar
+    
+    // Ricci scalar vanishes for flat space
+    axiom ricci_scalar_flat : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ g_inv : Tensor(2, 0, dim, ℝ) .
+        (∀ μ : Nat . ∀ ν : Nat . component(ricci(riemann_from_metric(g)), μ, ν) = 0) →
+        ricci_scalar(g, g_inv) = 0
+    
+    // Ricci scalar scaling under conformal transformation (property)
+    // This is a key property that constrains the scalar
+}
+
+/* Einstein Tensor Definition
+ * 
+ * The Einstein tensor is defined as:
+ *   G_μν = R_μν - (1/2) R g_μν
+ * 
+ * We axiomatize the key properties that make G_μν special.
+ */
+structure EinsteinTensorDefinition(dim: Nat) {
+    // Einstein tensor is symmetric (inherits from metric and Ricci)
+    axiom einstein_symmetric : ∀ G : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(G)
+    
+    // Einstein tensor trace: G = g^μν G_μν = R - 2R = -R (in 4D: R - 4·(R/2) = -R)
+    // For dim=4: trace(G) = R - (1/2)·4·R = R - 2R = -R
+    // General: trace(G) = R - (dim/2)·R = R·(1 - dim/2)
+    
+    // Einstein tensor vanishes for flat space
+    axiom einstein_flat : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ G : Tensor(0, 2, dim, ℝ) .
+        (∀ μ : Nat . ∀ ν : Nat . component(ricci(riemann_from_metric(g)), μ, ν) = 0) →
+        (∀ μ : Nat . ∀ ν : Nat . component(G, μ, ν) = 0)
+}
+
+// ============================================
+// Bianchi Identities and Conservation Laws
+// ============================================
+
+/* Contracted Bianchi Identity
+ * 
+ * The most important identity in GR - Einstein chose G_μν because of this:
+ *   ∇^μ G_μν = 0
+ * 
+ * This means the Einstein tensor is divergence-free, which guarantees
+ * conservation of energy-momentum when coupled to matter.
+ * 
+ * This identity follows algebraically from the Second Bianchi Identity
+ * applied to the Riemann tensor, then contracted.
+ */
+structure ContractedBianchi(dim: Nat) {
+    // Covariant divergence of Einstein tensor vanishes
+    // ∇^μ G_μν = Σ_μ g^μρ ∇_ρ G_μν = 0
+    axiom einstein_divergence_free : ∀ G : Tensor(0, 2, dim, ℝ) .
+        ∀ ν : Nat .
+        covariant_divergence(G, ν) = 0
+    
+    // Covariant divergence operation
+    operation covariant_divergence : Tensor(0, 2, dim, ℝ) → Nat → ℝ
+}
+
+implements ContractedBianchi(dim) {
+    operation covariant_divergence = builtin_covariant_divergence
+}
+
+/* Energy-Momentum Conservation
+ * 
+ * From Einstein's field equations G_μν + Λg_μν = κT_μν
+ * and the contracted Bianchi identity ∇^μ G_μν = 0,
+ * it follows that:
+ *   ∇^μ T_μν = 0
+ * 
+ * This is the conservation of energy-momentum!
+ */
+structure EnergyMomentumConservation(dim: Nat) {
+    // Stress-energy tensor is covariantly conserved
+    axiom stress_energy_conserved : ∀ T : Tensor(0, 2, dim, ℝ) .
+        ∀ ν : Nat .
+        covariant_divergence(T, ν) = 0
+}
+
+// Einstein Field Equations: G_μν + Λg_μν = κT_μν
+structure EinsteinFieldEquationsAxiom(dim: Nat) {
+    // Component accessors for g, G, T tensors
+    operation g_comp : Nat → Nat → ℝ
+    operation G_comp : Nat → Nat → ℝ
+    operation T_comp : Nat → Nat → ℝ
+    
+    // Field equation in component form
+    axiom field_equation_components : ∀ Lambda : ℝ . ∀ kappa : ℝ .
+        ∀ μ : Nat . ∀ ν : Nat .
+        plus(G_comp(μ, ν), times(Lambda, g_comp(μ, ν))) = 
+            times(kappa, T_comp(μ, ν))
+    
+    // Vacuum field equation (T = 0)
+    axiom vacuum_field_equation : ∀ Lambda : ℝ .
+        ∀ μ : Nat . ∀ ν : Nat .
+        G_comp(μ, ν) = negate(times(Lambda, g_comp(μ, ν)))
+}
+
+implements EinsteinFieldEquationsAxiom(dim) {
+    operation g_comp = builtin_metric_component
+    operation G_comp = builtin_einstein_component
+    operation T_comp = builtin_stress_energy_component
+}
+
+// ============================================
+// Levi-Civita Tensor
+// ============================================
+
+/* Levi-Civita Tensor (Totally Antisymmetric)
+ * 
+ * The Levi-Civita tensor ε_μνρσ is the totally antisymmetric tensor.
+ * In 4D: ε_0123 = +1, and permutations give ±1 or 0.
+ * 
+ * Uses:
+ *   - Volume forms
+ *   - Hodge duality
+ *   - Cross products (generalized)
+ *   - Determinants
+ */
+structure LeviCivita(dim: Nat) {
+    // Levi-Civita symbol (4 indices for 4D spacetime)
+    operation epsilon4 : Nat → Nat → Nat → Nat → ℝ
+    
+    // Totally antisymmetric: swapping any two indices negates
+    axiom epsilon_antisym_01 : ∀ μ : Nat . ∀ ν : Nat . ∀ ρ : Nat . ∀ σ : Nat .
+        epsilon4(ν, μ, ρ, σ) = negate(epsilon4(μ, ν, ρ, σ))
+    
+    axiom epsilon_antisym_12 : ∀ μ : Nat . ∀ ν : Nat . ∀ ρ : Nat . ∀ σ : Nat .
+        epsilon4(μ, ρ, ν, σ) = negate(epsilon4(μ, ν, ρ, σ))
+    
+    axiom epsilon_antisym_23 : ∀ μ : Nat . ∀ ν : Nat . ∀ ρ : Nat . ∀ σ : Nat .
+        epsilon4(μ, ν, σ, ρ) = negate(epsilon4(μ, ν, ρ, σ))
+    
+    // Repeated index gives zero
+    axiom epsilon_repeated_zero : ∀ μ : Nat . ∀ ν : Nat . ∀ ρ : Nat .
+        epsilon4(μ, μ, ν, ρ) = 0
+}
+
+implements LeviCivita(dim) {
+    operation epsilon4 = builtin_levi_civita_4
+}
+
+// ============================================
+// Metric Inverse and Index Operations
+// ============================================
+
+/* Metric Inverse Identity
+ * 
+ * The fundamental relation between metric and its inverse:
+ *   g^{μρ} g_{ρν} = δ^μ_ν
+ * 
+ * This is the defining property of the inverse metric.
+ */
+structure MetricInverse(dim: Nat) {
+    // Inverse operation on metric
+    operation metric_inv : Tensor(0, 2, dim, ℝ) → Tensor(2, 0, dim, ℝ)
+    
+    // Contraction of metric with inverse gives identity
+    axiom metric_inverse_identity : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ μ : Nat . ∀ ν : Nat .
+        contract2(metric_inv(g), g) = delta(μ, ν)
+    
+    // Inverse is symmetric (because metric is symmetric)
+    axiom metric_inv_symmetric : ∀ g : Tensor(0, 2, dim, ℝ) .
+        ∀ μ : Nat . ∀ ν : Nat .
+        component(metric_inv(g), μ, ν) = component(metric_inv(g), ν, μ)
+    
+    // Double inverse gives back original
+    axiom metric_inv_involutive : ∀ g : Tensor(0, 2, dim, ℝ) .
+        metric_inv(metric_inv(g)) = g
+}
+
+implements MetricInverse(dim) {
+    operation metric_inv = builtin_metric_inverse
+}
+
+/* Index Raising and Lowering
+ * 
+ * In GR, indices are raised/lowered using the metric:
+ *   T^μ = g^{μν} T_ν  (raising)
+ *   T_μ = g_{μν} T^ν  (lowering)
+ * 
+ * This is fundamental for tensor calculus.
+ */
+structure IndexRaiseLower(dim: Nat) {
+    // Raise a covariant index using inverse metric
+    operation raise_vec : Tensor(0, 1, dim, ℝ) → Tensor(2, 0, dim, ℝ) → Tensor(1, 0, dim, ℝ)
+    
+    // Lower a contravariant index using metric
+    operation lower_vec : Tensor(1, 0, dim, ℝ) → Tensor(0, 2, dim, ℝ) → Tensor(0, 1, dim, ℝ)
+    
+    // Raising then lowering gives identity
+    axiom raise_lower_identity : ∀ T : Tensor(0, 1, dim, ℝ) .
+        ∀ g : Tensor(0, 2, dim, ℝ) .
+        lower_vec(raise_vec(T, metric_inv(g)), g) = T
+    
+    // Lowering then raising gives identity
+    axiom lower_raise_identity : ∀ T : Tensor(1, 0, dim, ℝ) .
+        ∀ g : Tensor(0, 2, dim, ℝ) .
+        raise_vec(lower_vec(T, g), metric_inv(g)) = T
+}
+
+implements IndexRaiseLower(dim) {
+    operation raise_vec = builtin_raise_vector
+    operation lower_vec = builtin_lower_vector
+}
+
+/* Metric Trace Identity
+ * 
+ * The trace of the metric with its inverse equals the dimension:
+ *   g^{μν} g_{μν} = dim
+ * 
+ * In 4D spacetime: g^{μν} g_{μν} = 4
+ */
+structure MetricTrace(dim: Nat) {
+    // Metric contracted with inverse gives dimension
+    // Note: We express this as a property, not a computable value
+    axiom metric_trace_is_dim : ∀ g : Tensor(0, 2, dim, ℝ) .
+        contract2(metric_inv(g), g) = dim
+}
+
 /* Tensor Index Notation - Display Operations
  * 
  * These operations create indexed tensor notation for display.
@@ -548,6 +847,169 @@ structure MetricIndexOps(dim: Nat) {
 implements MetricIndexOps(dim) {
     operation raise = builtin_raise_with_metric
     operation lower = builtin_lower_with_metric
+}
+
+/* Tensor Component Accessors
+ * 
+ * These operations extract individual components from tensors.
+ * They are ESSENTIAL for Z3 to verify tensor axioms correctly.
+ * 
+ * Without proper type signatures, Z3 defaults to Int → Int and
+ * cannot apply symmetry/Bianchi axioms properly.
+ * 
+ * Convention:
+ *   - component  : 2-index tensors (metric g_μν)
+ *   - component3 : 3-index tensors (Christoffel Γ^λ_μν)
+ *   - component4 : 4-index tensors (Riemann R^ρ_σμν)
+ */
+structure TensorComponents(dim: Nat) {
+    // 2-index tensor component: T_μν → T[μ][ν]
+    operation component : Tensor(0, 2, dim, ℝ) → Nat → Nat → ℝ
+    
+    // 3-index tensor component: Γ^λ_μν → Γ[λ][μ][ν]
+    operation component3 : Tensor(1, 2, dim, ℝ) → Nat → Nat → Nat → ℝ
+    
+    // 4-index tensor component: R^ρ_σμν → R[ρ][σ][μ][ν]
+    operation component4 : Tensor(1, 3, dim, ℝ) → Nat → Nat → Nat → Nat → ℝ
+}
+
+implements TensorComponents(dim) {
+    operation component = builtin_tensor_component
+    operation component3 = builtin_tensor_component3
+    operation component4 = builtin_tensor_component4
+}
+
+/* Kronecker Delta
+ * 
+ * The Kronecker delta δ^μ_ν is the identity tensor:
+ *   δ^μ_ν = 1 if μ = ν, 0 otherwise
+ * 
+ * Essential properties:
+ *   - g^{μρ} g_{ρν} = δ^μ_ν (metric inverse identity)
+ *   - T^μ δ^ν_μ = T^ν (index substitution)
+ *   - δ^μ_μ = dim (trace equals dimension)
+ * 
+ * In Z3, delta is an uninterpreted function constrained by axioms.
+ */
+structure KroneckerDelta(dim: Nat) {
+    // Kronecker delta: δ(μ, ν) = 1 if μ=ν, else 0
+    operation delta : Nat → Nat → ℝ
+    
+    // Diagonal is 1
+    axiom delta_diagonal : ∀ μ : Nat .
+        delta(μ, μ) = 1
+    
+    // Off-diagonal is 0 (for distinct indices)
+    axiom delta_off_diagonal : ∀ μ : Nat . ∀ ν : Nat .
+        (μ ≠ ν) → (delta(μ, ν) = 0)
+}
+
+implements KroneckerDelta(dim) {
+    operation delta = builtin_kronecker_delta
+}
+
+/* Index Symmetrization
+ * 
+ * Symmetrize a tensor over specified indices:
+ *   T_{(μν)} = (1/2)(T_{μν} + T_{νμ})
+ * 
+ * For n indices: sum over all permutations, divide by n!
+ * 
+ * Properties:
+ *   - Idempotent: symmetrize(symmetrize(T)) = symmetrize(T)
+ *   - Symmetric tensors are fixed points
+ *   - Symmetric tensor: T_{μν} = T_{νμ}
+ */
+structure IndexSymmetrization(dim: Nat) {
+    // Symmetrize over two indices
+    operation symmetrize2 : Tensor(0, 2, dim, ℝ) → Tensor(0, 2, dim, ℝ)
+    
+    // Check if tensor is symmetric
+    operation is_symmetric : Tensor(0, 2, dim, ℝ) → Bool
+    
+    // Symmetric tensor definition: T_{μν} = T_{νμ}
+    axiom symmetric_def : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(T) → (∀ μ : Nat . ∀ ν : Nat .
+            component(T, μ, ν) = component(T, ν, μ))
+    
+    // Idempotence: symmetrizing twice = symmetrizing once
+    axiom symmetrize2_idempotent : ∀ T : Tensor(0, 2, dim, ℝ) .
+        symmetrize2(symmetrize2(T)) = symmetrize2(T)
+    
+    // Symmetric tensor is fixed point
+    axiom symmetric_fixed_point : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(T) → (symmetrize2(T) = T)
+    
+    // Result of symmetrization is symmetric
+    axiom symmetrize2_is_symmetric : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(symmetrize2(T))
+}
+
+implements IndexSymmetrization(dim) {
+    operation symmetrize2 = builtin_symmetrize2
+    operation is_symmetric = builtin_is_symmetric
+}
+
+/* Index Antisymmetrization
+ * 
+ * Antisymmetrize a tensor over specified indices:
+ *   T_{[μν]} = (1/2)(T_{μν} - T_{νμ})
+ * 
+ * For n indices: sum over all permutations with sign, divide by n!
+ * 
+ * Properties:
+ *   - Idempotent: antisymmetrize(antisymmetrize(T)) = antisymmetrize(T)
+ *   - T_{[μν]} = -T_{[νμ]} (antisymmetry)
+ *   - Antisymmetric tensors are fixed points
+ *   - Forms (ω ∧ η) are antisymmetric
+ */
+structure IndexAntisymmetrization(dim: Nat) {
+    // Antisymmetrize over two indices
+    operation antisymmetrize2 : Tensor(0, 2, dim, ℝ) → Tensor(0, 2, dim, ℝ)
+    
+    // Check if tensor is antisymmetric
+    operation is_antisymmetric : Tensor(0, 2, dim, ℝ) → Bool
+    
+    // Antisymmetric tensor definition: T_{μν} = -T_{νμ}
+    axiom antisymmetric_def : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_antisymmetric(T) → (∀ μ : Nat . ∀ ν : Nat .
+            component(T, μ, ν) = negate(component(T, ν, μ)))
+    
+    // Antisymmetric diagonal is zero: T_{μμ} = 0
+    axiom antisymmetric_diagonal_zero : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_antisymmetric(T) → (∀ μ : Nat . component(T, μ, μ) = 0)
+    
+    // Result is antisymmetric
+    axiom antisymmetrize2_antisym : ∀ T : Tensor(0, 2, dim, ℝ) .
+        ∀ μ : Nat . ∀ ν : Nat .
+        component(antisymmetrize2(T), μ, ν) = 
+            negate(component(antisymmetrize2(T), ν, μ))
+    
+    // Idempotence
+    axiom antisymmetrize2_idempotent : ∀ T : Tensor(0, 2, dim, ℝ) .
+        antisymmetrize2(antisymmetrize2(T)) = antisymmetrize2(T)
+    
+    // Antisymmetric tensor is fixed point
+    axiom antisymmetric_fixed_point : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_antisymmetric(T) → (antisymmetrize2(T) = T)
+    
+    // Result of antisymmetrization is antisymmetric
+    axiom antisymmetrize2_is_antisymmetric : ∀ T : Tensor(0, 2, dim, ℝ) .
+        is_antisymmetric(antisymmetrize2(T))
+}
+
+implements IndexAntisymmetrization(dim) {
+    operation antisymmetrize2 = builtin_antisymmetrize2
+    operation is_antisymmetric = builtin_is_antisymmetric
+}
+
+/* Metric Symmetry via is_symmetric predicate
+ * 
+ * The metric tensor is symmetric by definition.
+ */
+structure MetricSymmetryPredicate(dim: Nat) {
+    axiom metric_is_symmetric : ∀ g : Tensor(0, 2, dim, ℝ) .
+        is_symmetric(g)
 }
 
 /* Metric Tensor Symmetry

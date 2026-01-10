@@ -5106,6 +5106,66 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_quantifier_parametric_type_no_paren() {
+        // v0.98: Parametric types in quantifiers (no-paren form)
+        let code = "∀ T : Tensor(0, 2, dim, ℝ) . T = T";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_proposition();
+        match result {
+            Ok(Expression::Quantifier { variables, .. }) => {
+                assert_eq!(variables.len(), 1);
+                assert_eq!(variables[0].name, "T");
+                assert_eq!(
+                    variables[0].type_annotation.as_deref(),
+                    Some("Tensor(0, 2, dim, ℝ)")
+                );
+            }
+            Ok(_) => panic!("Expected Quantifier expression"),
+            Err(e) => panic!("Parse failed: {} at position {}", e.message, e.position),
+        }
+    }
+
+    #[test]
+    fn test_parse_quantifier_parametric_type_with_paren() {
+        // v0.98: Parametric types in quantifiers (paren form)
+        let code = "∀(T : Tensor(0, 2, dim, ℝ)). T = T";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_proposition();
+        match result {
+            Ok(Expression::Quantifier { variables, .. }) => {
+                assert_eq!(variables.len(), 1);
+                assert_eq!(variables[0].name, "T");
+                assert_eq!(
+                    variables[0].type_annotation.as_deref(),
+                    Some("Tensor(0, 2, dim, ℝ)")
+                );
+            }
+            Ok(_) => panic!("Expected Quantifier expression"),
+            Err(e) => panic!("Parse failed: {} at position {}", e.message, e.position),
+        }
+    }
+
+    #[test]
+    fn test_parse_quantifier_matrix_type() {
+        // v0.98: Matrix type in quantifier
+        let code = "∀ A : Matrix(m, n, ℝ) . A = A";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_proposition();
+        match result {
+            Ok(Expression::Quantifier { variables, .. }) => {
+                assert_eq!(variables.len(), 1);
+                assert_eq!(variables[0].name, "A");
+                assert_eq!(
+                    variables[0].type_annotation.as_deref(),
+                    Some("Matrix(m, n, ℝ)")
+                );
+            }
+            Ok(_) => panic!("Expected Quantifier expression"),
+            Err(e) => panic!("Parse failed: {} at position {}", e.message, e.position),
+        }
+    }
+
+    #[test]
     fn test_parse_structure_simple() {
         let code = "structure Money { amount : ℝ }";
         let mut parser = KleisParser::new(code);

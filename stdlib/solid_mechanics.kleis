@@ -1,0 +1,158 @@
+// Solid Mechanics / Mechanics of Materials - Tensor Equations
+//
+// Key tensors in solid mechanics:
+// - Stress tensor σ_ij (Cauchy stress) - symmetric
+// - Strain tensor ε_ij (infinitesimal strain) - symmetric
+// - Elasticity tensor C_ijkl (stiffness) - has major and minor symmetries
+//
+// Fundamental equations:
+// 1. Hooke's Law: σ_ij = C_ijkl ε_kl
+// 2. Equilibrium: ∂σ_ij/∂x_j + f_i = 0
+// 3. Strain-displacement: ε_ij = ½(∂u_i/∂x_j + ∂u_j/∂x_i)
+
+structure StressTensorSymmetry {
+    // Cauchy stress tensor
+    operation sigma : Nat → Nat → ℝ
+    
+    // Symmetry: σ_ij = σ_ji (from angular momentum balance)
+    axiom stress_symmetric : ∀ i : Nat . ∀ j : Nat .
+        sigma(i, j) = sigma(j, i)
+}
+
+structure StrainTensorSymmetry {
+    // Infinitesimal strain tensor
+    operation epsilon : Nat → Nat → ℝ
+    
+    // Symmetry: ε_ij = ε_ji (from definition)
+    axiom strain_symmetric : ∀ i : Nat . ∀ j : Nat .
+        epsilon(i, j) = epsilon(j, i)
+}
+
+structure ElasticityTensorSymmetries {
+    // Fourth-order elasticity tensor (stiffness)
+    // σ_ij = C_ijkl ε_kl
+    operation C : Nat → Nat → Nat → Nat → ℝ
+    
+    // Major symmetry: C_ijkl = C_klij (from strain energy symmetry)
+    axiom C_major_symmetry : ∀ i : Nat . ∀ j : Nat . ∀ k : Nat . ∀ l : Nat .
+        C(i, j, k, l) = C(k, l, i, j)
+    
+    // Minor symmetry 1: C_ijkl = C_jikl (from stress symmetry)
+    axiom C_minor_symmetry_1 : ∀ i : Nat . ∀ j : Nat . ∀ k : Nat . ∀ l : Nat .
+        C(i, j, k, l) = C(j, i, k, l)
+    
+    // Minor symmetry 2: C_ijkl = C_ijlk (from strain symmetry)
+    axiom C_minor_symmetry_2 : ∀ i : Nat . ∀ j : Nat . ∀ k : Nat . ∀ l : Nat .
+        C(i, j, k, l) = C(i, j, l, k)
+}
+
+structure EquilibriumEquations {
+    // Divergence of stress tensor (∂σ_ij/∂x_j summed over j)
+    operation div_sigma : Nat → ℝ
+    
+    // Body force per unit volume
+    operation f : Nat → ℝ
+    
+    // Static equilibrium: ∂σ_ij/∂x_j + f_i = 0
+    axiom equilibrium : ∀ i : Nat .
+        plus(div_sigma(i), f(i)) = 0
+}
+
+structure PlaneStressCondition {
+    // Stress tensor
+    operation sigma : Nat → Nat → ℝ
+    
+    // Plane stress: σ_3j = 0 (thin plates)
+    // Out-of-plane stresses vanish
+    axiom plane_stress_33 : sigma(2, 2) = 0
+    axiom plane_stress_31 : sigma(2, 0) = 0
+    axiom plane_stress_32 : sigma(2, 1) = 0
+    axiom plane_stress_13 : sigma(0, 2) = 0
+    axiom plane_stress_23 : sigma(1, 2) = 0
+}
+
+structure PlaneStrainCondition {
+    // Strain tensor
+    operation epsilon : Nat → Nat → ℝ
+    
+    // Plane strain: ε_3j = 0 (long prismatic bodies)
+    // Out-of-plane strains vanish
+    axiom plane_strain_33 : epsilon(2, 2) = 0
+    axiom plane_strain_31 : epsilon(2, 0) = 0
+    axiom plane_strain_32 : epsilon(2, 1) = 0
+    axiom plane_strain_13 : epsilon(0, 2) = 0
+    axiom plane_strain_23 : epsilon(1, 2) = 0
+}
+
+structure VonMisesYieldCriterion {
+    // Principal stresses
+    element sigma1 : ℝ
+    element sigma2 : ℝ
+    element sigma3 : ℝ
+    
+    // Von Mises equivalent stress (squared, scaled by 2)
+    // 2σ_vm² = (σ₁-σ₂)² + (σ₂-σ₃)² + (σ₃-σ₁)²
+    element vm_sq_2 : ℝ
+    
+    // Yield strength
+    element sigma_y : ℝ
+    
+    // Von Mises definition
+    axiom von_mises_def : vm_sq_2 = plus(plus(
+        times(minus(sigma1, sigma2), minus(sigma1, sigma2)),
+        times(minus(sigma2, sigma3), minus(sigma2, sigma3))),
+        times(minus(sigma3, sigma1), minus(sigma3, sigma1)))
+}
+
+structure TrescaYieldCriterion {
+    // Principal stresses (ordered: σ₁ ≥ σ₂ ≥ σ₃)
+    element sigma1 : ℝ
+    element sigma2 : ℝ
+    element sigma3 : ℝ
+    
+    // Maximum shear stress
+    element tau_max : ℝ
+    
+    // Yield strength in shear
+    element tau_y : ℝ
+    
+    // Tresca: τ_max = (σ₁ - σ₃)/2
+    // Scaled: 2τ_max = σ₁ - σ₃
+    axiom tresca_def : times(2, tau_max) = minus(sigma1, sigma3)
+}
+
+structure IsotropicElasticity {
+    // Lamé parameters
+    element lambda : ℝ  // First Lamé parameter
+    element mu : ℝ      // Shear modulus (second Lamé parameter)
+    
+    // Engineering constants
+    element E : ℝ       // Young's modulus
+    element nu : ℝ      // Poisson's ratio
+    element K : ℝ       // Bulk modulus
+    
+    // Relationships (scaled to avoid division):
+    // E = μ(3λ + 2μ)/(λ + μ)  →  E(λ + μ) = μ(3λ + 2μ)
+    axiom E_from_lame : times(E, plus(lambda, mu)) = 
+        times(mu, plus(times(3, lambda), times(2, mu)))
+    
+    // ν = λ/(2(λ + μ))  →  2ν(λ + μ) = λ
+    axiom nu_from_lame : times(times(2, nu), plus(lambda, mu)) = lambda
+    
+    // K = λ + (2/3)μ  →  3K = 3λ + 2μ
+    axiom K_from_lame : times(3, K) = plus(times(3, lambda), times(2, mu))
+}
+
+structure MohrCoulombCriterion {
+    // For soils and rocks
+    element sigma_n : ℝ  // Normal stress
+    element tau : ℝ      // Shear stress
+    element c : ℝ        // Cohesion
+    element phi : ℝ      // Friction angle (as tan(φ))
+    
+    // Mohr-Coulomb: |τ| = c + σ_n tan(φ)
+    // Simplified: τ = c + σ_n * tan_phi (for positive τ)
+    element tau_critical : ℝ
+    axiom mohr_coulomb : tau_critical = plus(c, times(sigma_n, phi))
+}
+
