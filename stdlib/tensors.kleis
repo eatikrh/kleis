@@ -550,6 +550,36 @@ implements MetricIndexOps(dim) {
     operation lower = builtin_lower_with_metric
 }
 
+/* Tensor Component Accessors
+ * 
+ * These operations extract individual components from tensors.
+ * They are ESSENTIAL for Z3 to verify tensor axioms correctly.
+ * 
+ * Without proper type signatures, Z3 defaults to Int → Int and
+ * cannot apply symmetry/Bianchi axioms properly.
+ * 
+ * Convention:
+ *   - component  : 2-index tensors (metric g_μν)
+ *   - component3 : 3-index tensors (Christoffel Γ^λ_μν)
+ *   - component4 : 4-index tensors (Riemann R^ρ_σμν)
+ */
+structure TensorComponents(dim: Nat) {
+    // 2-index tensor component: T_μν → T[μ][ν]
+    operation component : Tensor(0, 2, dim, ℝ) → Nat → Nat → ℝ
+    
+    // 3-index tensor component: Γ^λ_μν → Γ[λ][μ][ν]
+    operation component3 : Tensor(1, 2, dim, ℝ) → Nat → Nat → Nat → ℝ
+    
+    // 4-index tensor component: R^ρ_σμν → R[ρ][σ][μ][ν]
+    operation component4 : Tensor(1, 3, dim, ℝ) → Nat → Nat → Nat → Nat → ℝ
+}
+
+implements TensorComponents(dim) {
+    operation component = builtin_tensor_component
+    operation component3 = builtin_tensor_component3
+    operation component4 = builtin_tensor_component4
+}
+
 /* Metric Tensor Symmetry
  * 
  * The metric tensor is symmetric: g_μν = g_νμ
