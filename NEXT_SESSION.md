@@ -19,8 +19,6 @@ operation tensor_upper_pair : (T: Tensor(n), μ: Index, ν: Index) → Tensor(n)
 
 This would allow the type checker to properly infer tensor types for indexed expressions.
 
-<<<<<<< HEAD
-=======
 ## Editor Tensor Format: Update to New Convention
 
 The Equation Editor uses an old tensor convention (`subsup`, `index_mixed`) that causes Z3 verification errors when index names collide with mathematical constants.
@@ -50,4 +48,3 @@ The new format explicitly marks indices vs base symbols, avoiding collision with
 **Files to update:**
 - `static/index.html` - Update `subsup` template to use new tensor format
 - `src/solvers/z3/backend.rs` - Add handling for `kind: 'tensor'` operations (treat as formatting-only, return base type)
->>>>>>> 9457fc6 (Add NEXT_SESSION.md with tensor type system and editor format tasks)
