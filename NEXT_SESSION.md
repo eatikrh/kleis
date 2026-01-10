@@ -19,13 +19,9 @@ operation tensor_upper_pair : (T: Tensor(n), μ: Index, ν: Index) → Tensor(n)
 
 This would allow the type checker to properly infer tensor types for indexed expressions.
 
-<<<<<<< HEAD
-## Editor Tensor Format: Update to New Convention
-=======
 ## Editor Tensor Format: Update to New Convention ✅ DONE
->>>>>>> ddfd404 (feat: migrate tensor templates to new format with indexStructure)
 
-**Status:** Completed in `feature/migrate-tensor-format` branch.
+**Status:** Completed in `feature/migrate-tensor-format` branch (merged).
 
 Migrated old tensor templates (`subsup`, `tensor_mixed`, `tensor_upper_pair`, `tensor_lower_pair`) to use the new format with `kind: 'tensor'` and `indexStructure` metadata. Updated `editor_node_to_expression` to treat tensors as formatting-only (returns base symbol for Z3).
 
@@ -43,11 +39,6 @@ But it cannot verify deep tensor semantics like:
 
 **Required for full differential geometry verification:**
 
-<<<<<<< HEAD
-**Files to update:**
-- `static/index.html` - Update `subsup` template to use new tensor format
-- `src/solvers/z3/backend.rs` - Add handling for `kind: 'tensor'` operations (treat as formatting-only, return base type)
-=======
 1. **Tensor axioms in Z3:**
    - Index structure (covariant/contravariant)
    - Metric tensor properties (symmetry, signature)
@@ -64,4 +55,72 @@ But it cannot verify deep tensor semantics like:
    - Einstein tensor definition
 
 This is a significant undertaking - essentially building a differential geometry verifier on top of Z3.
->>>>>>> ddfd404 (feat: migrate tensor templates to new format with indexStructure)
+
+---
+
+## Literature Survey: Formal Differential Geometry
+
+### Classical Sources
+
+| Source | Approach | Relevance |
+|--------|----------|-----------|
+| **Bourbaki** (Variétés différentielles) | Abstract, coordinate-free, category-theoretic | Rigorous but hard to encode in SMT |
+| **Hilbert** (Grundlagen der Geometrie) | Axiomatic foundations | Influenced all formalization |
+| **Courant & Hilbert** (Mathematical Physics) | Concrete tensor index notation | Good for computable axioms |
+| **do Carmo** (Riemannian Geometry) | Standard graduate text | Explicit formulas |
+| **Misner, Thorne, Wheeler** (Gravitation) | Physics-focused, GR axioms | Index notation reference |
+
+### Proof Assistant Formalizations
+
+#### Isabelle/HOL
+- **HOL-Analysis** - Multivariate calculus foundations
+- **Analysis-Manifolds** - Smooth manifolds (partial)
+- Limited Riemannian geometry work
+
+#### Coq
+- **CoRN** - Constructive Real Numbers (foundation)
+- **Coquelicot** - Real analysis library
+- **GeoCoq** - Tarski's geometry axioms (Euclidean, not Riemannian)
+- **UniMath** - Univalent foundations, some manifold work
+
+#### Lean (mathlib) - Most Active
+- `Mathlib.Geometry.Manifold` - Smooth manifolds
+- `Mathlib.Geometry.Manifold.TangentBundle` - Tangent spaces
+- `Mathlib.Geometry.Manifold.ContMDiff` - Smooth maps
+- Working toward: connections, curvature (as of 2024)
+
+#### Z3 / SMT Solvers
+- **Limited work on geometry**
+- Z3 has `RealArith` for real analysis
+- **GeoGebra + SMT** - Some Euclidean geometry verification
+- **MetiTarski** - Real-valued special functions
+- **No known Riemannian geometry work**
+
+### Why SMT is Challenging for Differential Geometry
+
+1. Tensors are higher-order (functions on functions)
+2. Index manipulation is symbolic, not arithmetic
+3. Covariant derivatives involve limits/continuity
+4. Coordinate transformations are diffeomorphisms (infinite-dimensional)
+
+### Kleis Engineering Approach (Z3-focused)
+
+**Key Decision:** We are NOT building a proof assistant. Isabelle/Lean/Coq require manual proof writing (Isar, tactics). Kleis takes an **engineering approach**:
+
+1. **Encode proven theorems as Z3 axioms** - pre-load established DG identities
+2. **User enters formulas** - e.g., POT Projection kernel expressions
+3. **Z3 checks automatically** - does this formula violate any axiom?
+4. **Report violations** - VALID / INVALID with counterexample
+
+**Prior Work:**
+- Isabelle solver backend exists (hibernated) - requires Isar proofs
+- Lean/Coq would have same problem
+
+**Z3 Encoding Strategy:**
+
+1. **Tensor index algebra** - tractable, pure symbolic
+2. **Metric axioms** - symmetry, inverse, signature as assertions
+3. **Curvature identities** - Bianchi, Ricci symmetry as constraints
+4. **Covariant derivative** - challenging, may need approximations
+
+**Focus on algebraic identities first** (Bianchi, symmetries) - these are decidable in Z3.
