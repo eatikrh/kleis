@@ -1,0 +1,134 @@
+// Cosmological Spacetimes and Solutions
+//
+// Various exact solutions to Einstein's field equations:
+// G_μν + Λg_μν = κT_μν
+
+// Minkowski spacetime (flat, special relativity)
+structure MinkowskiSpacetime {
+    operation g : Nat → Nat → ℝ
+    operation G : Nat → Nat → ℝ
+    operation Ric : Nat → Nat → ℝ
+    
+    element Lambda : ℝ
+    
+    // Minkowski is flat: all curvature vanishes
+    axiom minkowski_ricci_vanish : ∀ mu : Nat . ∀ nu : Nat .
+        Ric(mu, nu) = 0
+    
+    axiom minkowski_einstein_vanish : ∀ mu : Nat . ∀ nu : Nat .
+        G(mu, nu) = 0
+    
+    // Metric symmetry
+    axiom g_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        g(mu, nu) = g(nu, mu)
+    
+    // Vacuum with Λ=0: G_μν = 0
+    axiom minkowski_lambda : Lambda = 0
+}
+
+// de Sitter spacetime (positive Λ, accelerating expansion)
+structure DeSitterSpacetime {
+    operation g : Nat → Nat → ℝ
+    operation G : Nat → Nat → ℝ
+    
+    element Lambda : ℝ
+    
+    // de Sitter has positive cosmological constant
+    axiom positive_lambda : Lambda = 1  // Simplified Λ > 0
+    
+    // Vacuum solution: G_μν = -Λg_μν
+    axiom desitter_einstein : ∀ mu : Nat . ∀ nu : Nat .
+        G(mu, nu) = negate(times(Lambda, g(mu, nu)))
+    
+    // Metric symmetry
+    axiom g_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        g(mu, nu) = g(nu, mu)
+    
+    // Einstein tensor symmetry
+    axiom G_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        G(mu, nu) = G(nu, mu)
+}
+
+// Anti-de Sitter spacetime (negative Λ, AdS/CFT correspondence)
+structure AntiDeSitterSpacetime {
+    operation g : Nat → Nat → ℝ
+    operation G : Nat → Nat → ℝ
+    operation Ric : Nat → Nat → ℝ
+    
+    element Lambda : ℝ
+    element RicciScalar : ℝ
+    
+    // AdS has NEGATIVE cosmological constant
+    axiom negative_lambda : Lambda = negate(1)  // Simplified Λ < 0
+    
+    // Vacuum solution: G_μν = -Λg_μν
+    axiom ads_einstein : ∀ mu : Nat . ∀ nu : Nat .
+        G(mu, nu) = negate(times(Lambda, g(mu, nu)))
+    
+    // Ricci tensor for maximally symmetric space: Ric_μν = Λg_μν
+    axiom ads_ricci : ∀ mu : Nat . ∀ nu : Nat .
+        Ric(mu, nu) = times(Lambda, g(mu, nu))
+    
+    // Ricci scalar: R = 4Λ (in 4D)
+    axiom ads_ricci_scalar : RicciScalar = times(4, Lambda)
+    
+    // Metric symmetry
+    axiom g_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        g(mu, nu) = g(nu, mu)
+}
+
+// FLRW cosmology (homogeneous, isotropic universe)
+structure FLRWCosmology {
+    operation g : Nat → Nat → ℝ
+    operation G : Nat → Nat → ℝ
+    operation T : Nat → Nat → ℝ  // Stress-energy (perfect fluid)
+    
+    element Lambda : ℝ
+    element kappa : ℝ
+    element rho : ℝ   // Energy density
+    element p : ℝ     // Pressure
+    
+    // Metric symmetry
+    axiom g_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        g(mu, nu) = g(nu, mu)
+    
+    // Stress-energy symmetry
+    axiom T_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        T(mu, nu) = T(nu, mu)
+    
+    // Perfect fluid: T_00 = ρ (energy density)
+    axiom perfect_fluid_energy : T(0, 0) = rho
+    
+    // Off-diagonal stress-energy vanishes for perfect fluid
+    axiom T_off_diagonal : ∀ mu : Nat . ∀ nu : Nat .
+        implies(not(equals(mu, nu)), T(mu, nu) = 0)
+    
+    // Einstein field equations
+    axiom field_equations : ∀ mu : Nat . ∀ nu : Nat .
+        plus(G(mu, nu), times(Lambda, g(mu, nu))) = times(kappa, T(mu, nu))
+}
+
+// Schwarzschild spacetime (non-rotating black hole)
+structure SchwarzschildSpacetime {
+    operation g : Nat → Nat → ℝ
+    operation G : Nat → Nat → ℝ
+    
+    element Lambda : ℝ
+    element M : ℝ  // Black hole mass
+    
+    // Schwarzschild is vacuum with Λ=0
+    axiom schwarzschild_lambda : Lambda = 0
+    
+    // Vacuum: G_μν = 0 (outside the horizon)
+    axiom schwarzschild_vacuum : ∀ mu : Nat . ∀ nu : Nat .
+        G(mu, nu) = 0
+    
+    // Metric symmetry
+    axiom g_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        g(mu, nu) = g(nu, mu)
+    
+    // Einstein tensor symmetry
+    axiom G_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        G(mu, nu) = G(nu, mu)
+}
+
