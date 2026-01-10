@@ -1240,10 +1240,7 @@ fn test_z3_component_typed_correctly() {
     backend.initialize_from_registry().unwrap();
 
     // Create component(g, 0, 1) expression
-    let comp = op(
-        "component",
-        vec![obj("g"), num(0), num(1)],
-    );
+    let comp = op("component", vec![obj("g"), num(0), num(1)]);
 
     // Should translate without error
     let result = backend.simplify(&comp);
@@ -1266,10 +1263,7 @@ fn test_z3_component4_typed_correctly() {
     backend.initialize_from_registry().unwrap();
 
     // Create component4(R, 0, 1, 2, 3) expression
-    let comp4 = op(
-        "component4",
-        vec![obj("R"), num(0), num(1), num(2), num(3)],
-    );
+    let comp4 = op("component4", vec![obj("R"), num(0), num(1), num(2), num(3)]);
 
     let result = backend.simplify(&comp4);
     println!("   component4(R, 0, 1, 2, 3) = {:?}", result);
@@ -1345,10 +1339,7 @@ fn test_christoffel_symmetric_axiom_typed() {
     let axioms = registry.get_axioms("ChristoffelSymmetry");
     println!("   ChristoffelSymmetry axioms: {:?}", axioms.len());
 
-    assert!(
-        !axioms.is_empty(),
-        "ChristoffelSymmetry should have axioms"
-    );
+    assert!(!axioms.is_empty(), "ChristoffelSymmetry should have axioms");
 
     let mut verifier = AxiomVerifier::new(&registry).unwrap();
 
@@ -1374,9 +1365,7 @@ fn test_bianchi_identity_axiom_typed() {
     let axioms = registry.get_axioms("RiemannSymmetries");
 
     // Find the Bianchi identity specifically
-    let bianchi = axioms
-        .iter()
-        .find(|(name, _)| name == "riemann_bianchi_1");
+    let bianchi = axioms.iter().find(|(name, _)| name == "riemann_bianchi_1");
 
     if let Some((name, expr)) = bianchi {
         println!("   Found axiom: {}", name);
@@ -1521,7 +1510,10 @@ fn test_antisymmetrize2_operation_signature() {
     let sig = registry.get_operation_signature("antisymmetrize2");
     println!("   antisymmetrize2 signature: {:?}", sig);
 
-    assert!(sig.is_some(), "antisymmetrize2 should have a type signature");
+    assert!(
+        sig.is_some(),
+        "antisymmetrize2 should have a type signature"
+    );
 
     println!("   ✅ antisymmetrize2 operation has signature");
 }
