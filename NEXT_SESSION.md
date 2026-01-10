@@ -245,23 +245,23 @@ Added metric inverse and index raising/lowering axioms:
 | Riemann axioms | ❌ | Parser limitation (see below) |
 | Ricci/Einstein axioms | ❌ | Parser limitation (see below) |
 
-### Parser Limitation Discovered
+### Parser Support Confirmed ✅ (Grammar v0.98)
 
-The Kleis parser **does not support parametric types in axiom quantifiers**:
+**Update (2026-01-09):** The Kleis parser **already supports** parametric types in axiom quantifiers! This was discovered and documented as grammar v0.98.
 
 ```kleis
-// ❌ FAILS TO PARSE
+// ✅ NOW WORKS (always did, just undocumented)
 axiom ricci_symmetric : ∀ Ric : Tensor(0, 2, dim, ℝ) .
     component(Ric, μ, ν) = component(Ric, ν, μ)
 
-// ✅ WORKS
-axiom christoffel_symmetric : ∀ λ : Nat . ∀ μ : Nat . ∀ ν : Nat .
-    gamma(λ, μ, ν) = gamma(λ, ν, μ)
+// ✅ Also works
+axiom matrix_commute : ∀ A : Matrix(m, n, ℝ) . ∀ B : Matrix(m, n, ℝ) .
+    plus(A, B) = plus(B, A)
 ```
 
-**Workaround tried:** Using component-based axioms (quantify over indices, not tensors). This works for simple properties but loses the tensor type information.
+**Tests added to verify:** `test_parse_quantifier_parametric_type_no_paren`, `test_parse_quantifier_parametric_type_with_paren`, `test_parse_quantifier_matrix_type`
 
-**Proper fix needed:** Extend the Kleis parser to support parametric types like `Tensor(0, 2, dim, ℝ)` in `∀` quantifier type annotations.
+The parser's `parse_type_annotation_for_quantifier` function handles nested parentheses correctly.
 
 ### What Already Works
 
@@ -307,3 +307,47 @@ The field equations themselves:
 - `stress_energy_conserved` - ∇^μ T_μν = 0
 
 **Total new tests:** 7 tests for Einstein equation structures
+
+---
+
+## Physics Domains: Current vs. Future
+
+### Currently Implemented ✅
+
+| Domain | stdlib File | Tests |
+|--------|-------------|-------|
+| General Relativity | `tensors.kleis` | 60+ |
+| Electromagnetism | `maxwell.kleis` | 10 |
+| Fluid Dynamics | `fluid_dynamics.kleis` | 20 |
+| Cosmology | `cosmology.kleis` | 12 |
+| Solid Mechanics | `solid_mechanics.kleis` | 11 |
+
+**Total: 100+ physics verification tests**
+
+### Future Physics Domains 🎯
+
+| Domain | Key Equations | Difficulty | Notes |
+|--------|---------------|------------|-------|
+| **Gas Dynamics** | Rankine-Hugoniot shocks, isentropic flow, Mach relations | Easy | Extends fluid_dynamics.kleis |
+| **Kaluza-Klein** | 5D metric → gravity + EM unification | Medium | Unifies Maxwell + Einstein! |
+| **Quantum Mechanics** | Schrödinger equation, commutators [x,p]=iℏ | Medium | Requires complex numbers |
+| **Thermodynamics** | Maxwell relations, Gibbs-Duhem | Easy | Partial derivatives |
+| **Heat Transfer** | Fourier's law, heat equation | Easy | Parabolic PDE |
+| **Acoustics** | Wave equation, impedance matching | Easy | Hyperbolic PDE |
+| **Optics** | Snell's law, Fresnel equations | Easy | EM at interfaces |
+| **Elastodynamics** | Wave propagation in solids | Medium | Extends solid_mechanics.kleis |
+| **Piezoelectricity** | Coupled electro-mechanical equations | Medium | Tensor coupling |
+| **String Theory** | Polyakov action, Virasoro algebra | Hard | Conformal field theory |
+
+### Kaluza-Klein Priority
+
+Kaluza-Klein is especially interesting because it would **unify our existing Maxwell and Einstein implementations**:
+
+```
+5D metric g_AB (A,B = 0,1,2,3,5):
+├── g_μν → 4D gravity (Einstein)
+├── g_μ5 → Electromagnetism (Maxwell)  
+└── g_55 → Scalar field (dilaton)
+```
+
+This demonstrates the power of the tensor verification framework!
