@@ -124,3 +124,25 @@ This is a significant undertaking - essentially building a differential geometry
 4. **Covariant derivative** - challenging, may need approximations
 
 **Focus on algebraic identities first** (Bianchi, symmetries) - these are decidable in Z3.
+
+---
+
+## Progress: TensorComponents Structure ✅ DONE
+
+**Problem Found:** Axioms in `stdlib/tensors.kleis` use `component`, `component3`, `component4` but these were NOT declared as operations. Z3 defaulted to `Int → Int` signatures.
+
+**Fix Applied:** Added `TensorComponents(dim: Nat)` structure with proper type signatures:
+
+```kleis
+structure TensorComponents(dim: Nat) {
+    operation component  : Tensor(0, 2, dim, ℝ) → Nat → Nat → ℝ
+    operation component3 : Tensor(1, 2, dim, ℝ) → Nat → Nat → Nat → ℝ
+    operation component4 : Tensor(1, 3, dim, ℝ) → Nat → Nat → Nat → Nat → ℝ
+}
+```
+
+**Result:** Z3 can now properly type-check and apply:
+- `metric_symmetric` axiom
+- `riemann_antisym_34` axiom  
+- `riemann_bianchi_1` axiom (First Bianchi identity)
+- `christoffel_symmetric` axiom
