@@ -19,32 +19,49 @@ operation tensor_upper_pair : (T: Tensor(n), μ: Index, ν: Index) → Tensor(n)
 
 This would allow the type checker to properly infer tensor types for indexed expressions.
 
+<<<<<<< HEAD
 ## Editor Tensor Format: Update to New Convention
+=======
+## Editor Tensor Format: Update to New Convention ✅ DONE
+>>>>>>> ddfd404 (feat: migrate tensor templates to new format with indexStructure)
 
-The Equation Editor uses an old tensor convention (`subsup`, `index_mixed`) that causes Z3 verification errors when index names collide with mathematical constants.
+**Status:** Completed in `feature/migrate-tensor-format` branch.
 
-**Problem:**
-- When entering `T_j^i`, the editor creates `subsup(T, j, i)`
-- Z3 interprets `i` as the imaginary unit (Complex type), not as a tensor index
-- This causes: `Type mismatch in call to 'subsup': argument 3 has type Complex but expected Int`
+Migrated old tensor templates (`subsup`, `tensor_mixed`, `tensor_upper_pair`, `tensor_lower_pair`) to use the new format with `kind: 'tensor'` and `indexStructure` metadata. Updated `editor_node_to_expression` to treat tensors as formatting-only (returns base symbol for Z3).
 
-**Better fix:** Update the editor to use the new tensor format with `kind: 'tensor'` and `indexStructure` metadata:
+## Differential Geometry Verifier (Long-term Goal)
 
-```javascript
-// Old format (current):
-subsup: { Operation: { name: 'subsup', args: [{...}, {...}, {...}] } }
+Currently, Z3 treats tensor symbols as uninterpreted constants (scalars by default). This is sufficient for:
+- ✅ Type checking tensor expressions
+- ✅ Symbol equality verification
 
-// New format (target):
-tensor_mixed: { Operation: { 
-    name: 'tensor', 
-    kind: 'tensor',
-    args: [{Object:'T'}, {Object:'j'}, {Object:'i'}],
-    metadata: { indexStructure: ['down', 'up'] }
-} }
-```
+But it cannot verify deep tensor semantics like:
+- Einstein's field equations: `G_μν + Λg_μν = κT_μν`
+- Tensor transformation rules: `T'^μν = (∂x'^μ/∂x^α)(∂x'^ν/∂x^β)T^αβ`
+- Bianchi identity: `∇_[λ R_ρσ]μν = 0`
+- Metric contraction: `g^μρ g_ρν = δ^μ_ν`
 
-The new format explicitly marks indices vs base symbols, avoiding collision with mathematical constants like `i` (imaginary unit).
+**Required for full differential geometry verification:**
 
+<<<<<<< HEAD
 **Files to update:**
 - `static/index.html` - Update `subsup` template to use new tensor format
 - `src/solvers/z3/backend.rs` - Add handling for `kind: 'tensor'` operations (treat as formatting-only, return base type)
+=======
+1. **Tensor axioms in Z3:**
+   - Index structure (covariant/contravariant)
+   - Metric tensor properties (symmetry, signature)
+   - Contraction rules
+   - Covariant derivative semantics
+
+2. **Transformation rules:**
+   - How tensors transform under coordinate changes
+   - Christoffel symbol transformation (non-tensorial)
+
+3. **Curvature tensors:**
+   - Riemann tensor symmetries
+   - Ricci tensor as contraction
+   - Einstein tensor definition
+
+This is a significant undertaking - essentially building a differential geometry verifier on top of Z3.
+>>>>>>> ddfd404 (feat: migrate tensor templates to new format with indexStructure)
