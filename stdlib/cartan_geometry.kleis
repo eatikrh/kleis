@@ -1,0 +1,450 @@
+// ============================================
+// Kleis Standard Library - Cartan Geometry
+// Computing Curvature via Differential Forms
+// ============================================
+//
+// This module implements Élie Cartan's approach to differential geometry
+// using differential forms instead of tensor indices. This is often more
+// computationally elegant than the Christoffel symbol approach.
+//
+// Key insight: The Riemann curvature tensor IS a matrix of 2-forms!
+//
+// Cartan's Structure Equations:
+//   First:  de^a + ω^a_b ∧ e^b = T^a  (torsion, = 0 for Levi-Civita)
+//   Second: R^a_b = dω^a_b + ω^a_c ∧ ω^c_b  (curvature!)
+//
+// Workflow:
+//   1. Specify metric via tetrad (orthonormal frame)
+//   2. Solve first structure equation for connection ω (torsion-free)
+//   3. Compute curvature R^a_b = dω + ω∧ω
+//   4. Contract to get Ricci, Einstein tensors
+//
+// References:
+//   - Cartan, É. "Sur les variétés à connexion affine" (1923)
+//   - Nakahara, M. "Geometry, Topology and Physics" Ch. 7
+//   - Misner, Thorne, Wheeler "Gravitation" Ch. 14
+
+import "stdlib/differential_forms.kleis"
+
+// ============================================
+// Tetrad (Vielbein / Orthonormal Frame)
+// ============================================
+
+/* Tetrad / Vielbein
+ * 
+ * A tetrad is a set of n 1-forms {e^a} (a = 0,1,...,n-1) that form
+ * an orthonormal frame. The metric is encoded as:
+ * 
+ *   g = η_ab e^a ⊗ e^b
+ * 
+ * where η_ab is the flat metric (Minkowski for spacetime).
+ * 
+ * For Schwarzschild in spherical coords (t, r, θ, φ):
+ *   e^0 = √(1 - 2M/r) dt
+ *   e^1 = dr / √(1 - 2M/r)
+ *   e^2 = r dθ
+ *   e^3 = r sin(θ) dφ
+ * 
+ * Then: g = -(e^0)² + (e^1)² + (e^2)² + (e^3)²
+ *         = -(1-2M/r)dt² + dr²/(1-2M/r) + r²dθ² + r²sin²θ dφ²
+ */
+structure Tetrad(dim: Nat) {
+    // Tetrad 1-forms e^a, a = 0..dim-1
+    element e : List(DifferentialForm(1, dim))
+    
+    // Flat metric signature (e.g., [-1, 1, 1, 1] for Lorentzian)
+    element eta : List(Int)
+    
+    // Orthonormality: e^a and e^b are orthonormal w.r.t. η
+    // Encoded by: g_μν = Σ_a η_aa e^a_μ e^a_ν
+}
+
+// ============================================
+// Connection 1-Form
+// ============================================
+
+/* Connection 1-Form (Spin Connection)
+ * 
+ * The connection 1-form ω^a_b encodes how the tetrad rotates
+ * as you parallel transport along the manifold.
+ * 
+ * For the Levi-Civita connection (metric-compatible, torsion-free):
+ *   - Metric compatibility: ω_ab = -ω_ba (antisymmetric when lowered)
+ *   - Torsion-free: de^a + ω^a_b ∧ e^b = 0
+ * 
+ * These conditions uniquely determine ω from the tetrad!
+ */
+structure Connection(dim: Nat) {
+    // Connection 1-forms ω^a_b (dim × dim matrix of 1-forms)
+    element omega : List(List(DifferentialForm(1, dim)))
+    
+    // Antisymmetry (when indices lowered with η)
+    axiom antisymmetric : ∀ a : Nat . ∀ b : Nat .
+        omega_lowered(a, b) = negate(omega_lowered(b, a))
+}
+
+// ============================================
+// First Structure Equation (Torsion)
+// ============================================
+
+/* First Cartan Structure Equation
+ * 
+ *   de^a + ω^a_b ∧ e^b = T^a
+ * 
+ * where T^a is the torsion 2-form.
+ * 
+ * For the Levi-Civita connection, T^a = 0 (torsion-free).
+ * This equation can be SOLVED for ω given e!
+ * 
+ * Algorithm (for torsion-free):
+ *   de^a = -ω^a_b ∧ e^b
+ *   
+ * Expand de^a in the basis of e^b ∧ e^c to read off ω.
+ */
+structure TorsionEquation(dim: Nat) {
+    // Compute torsion from tetrad and connection
+    operation torsion : List(DifferentialForm(1, dim)) → 
+                        List(List(DifferentialForm(1, dim))) → 
+                        List(DifferentialForm(2, dim))
+    
+    // T^a = de^a + ω^a_b ∧ e^b
+    axiom torsion_def : ∀ e : List(DifferentialForm(1, dim)) .
+        ∀ omega : List(List(DifferentialForm(1, dim))) .
+        ∀ a : Nat .
+        nth(torsion(e, omega), a) = plus(
+            d(nth(e, a)),
+            sum_over(λ b . wedge(nth(nth(omega, a), b), nth(e, b)), 0, dim)
+        )
+}
+
+implements TorsionEquation(dim) {
+    operation torsion = compute_torsion
+}
+
+// Compute torsion 2-forms
+define compute_torsion(e, omega) =
+    map(λ a . 
+        plus(
+            d(nth(e, a)),
+            fold(λ acc . λ b . plus(acc, wedge(nth(nth(omega, a), b), nth(e, b))),
+                 zero,
+                 range(0, length(e)))
+        ),
+        range(0, length(e)))
+
+// ============================================
+// Second Structure Equation (Curvature)
+// ============================================
+
+/* Second Cartan Structure Equation
+ * 
+ *   R^a_b = dω^a_b + ω^a_c ∧ ω^c_b
+ * 
+ * This defines the curvature 2-form R^a_b directly!
+ * 
+ * The components of R^a_b encode the Riemann tensor:
+ *   R^a_b = ½ R^a_{bμν} dx^μ ∧ dx^ν
+ * 
+ * No Christoffel symbols needed! The exterior derivative d
+ * and wedge product ∧ do all the work.
+ */
+structure CurvatureForm(dim: Nat) {
+    // Curvature 2-forms R^a_b (dim × dim matrix of 2-forms)
+    operation curvature : List(List(DifferentialForm(1, dim))) → 
+                          List(List(DifferentialForm(2, dim)))
+    
+    // R^a_b = dω^a_b + ω^a_c ∧ ω^c_b
+    axiom curvature_def : ∀ omega : List(List(DifferentialForm(1, dim))) .
+        ∀ a : Nat . ∀ b : Nat .
+        nth(nth(curvature(omega), a), b) = plus(
+            d(nth(nth(omega, a), b)),
+            sum_over(λ c . wedge(nth(nth(omega, a), c), nth(nth(omega, c), b)), 0, dim)
+        )
+    
+    // Bianchi identity: dR^a_b + ω^a_c ∧ R^c_b - R^a_c ∧ ω^c_b = 0
+    axiom bianchi : ∀ omega : List(List(DifferentialForm(1, dim))) .
+        ∀ R : List(List(DifferentialForm(2, dim))) .
+        ∀ a : Nat . ∀ b : Nat .
+        plus(
+            d(nth(nth(R, a), b)),
+            plus(
+                sum_over(λ c . wedge(nth(nth(omega, a), c), nth(nth(R, c), b)), 0, dim),
+                negate(sum_over(λ c . wedge(nth(nth(R, a), c), nth(nth(omega, c), b)), 0, dim))
+            )
+        ) = zero
+}
+
+implements CurvatureForm(dim) {
+    operation curvature = compute_curvature
+}
+
+// Compute curvature 2-forms: R^a_b = dω^a_b + ω^a_c ∧ ω^c_b
+define compute_curvature(omega) =
+    let dim = length(omega) in
+    map(λ a .
+        map(λ b .
+            plus(
+                d(nth(nth(omega, a), b)),
+                fold(λ acc . λ c . plus(acc, wedge(nth(nth(omega, a), c), nth(nth(omega, c), b))),
+                     zero,
+                     range(0, dim))
+            ),
+            range(0, dim)),
+        range(0, dim))
+
+// ============================================
+// Solve for Connection (Torsion-Free)
+// ============================================
+
+/* Solving for the Levi-Civita Connection
+ * 
+ * Given tetrad e^a, solve for ω^a_b such that:
+ *   1. de^a + ω^a_b ∧ e^b = 0  (torsion-free)
+ *   2. ω_ab = -ω_ba           (metric compatible)
+ * 
+ * Method: Express de^a in the basis {e^b ∧ e^c}:
+ *   de^a = C^a_bc e^b ∧ e^c
+ * 
+ * Then: ω^a_b = ½(C^a_bc - C^b_ac + C^c_ab) e^c
+ * 
+ * These are called the "structure constants" or "anholonomy coefficients".
+ */
+structure ConnectionSolver(dim: Nat) {
+    // Compute anholonomy coefficients from tetrad
+    // C^a_bc such that de^a = C^a_bc e^b ∧ e^c
+    operation anholonomy : List(DifferentialForm(1, dim)) → 
+                           List(List(List(Expr)))
+    
+    // Solve for connection given tetrad
+    operation solve_connection : List(DifferentialForm(1, dim)) → 
+                                  List(List(DifferentialForm(1, dim)))
+    
+    // Result is torsion-free
+    axiom torsion_free : ∀ e : List(DifferentialForm(1, dim)) .
+        let omega = solve_connection(e) in
+        ∀ a : Nat . nth(torsion(e, omega), a) = zero
+}
+
+implements ConnectionSolver(dim) {
+    operation anholonomy = compute_anholonomy
+    operation solve_connection = solve_levi_civita
+}
+
+// Compute anholonomy: de^a expanded in e^b ∧ e^c basis
+define compute_anholonomy(e) =
+    let dim = length(e) in
+    map(λ a .
+        map(λ b .
+            map(λ c .
+                // Coefficient of e^b ∧ e^c in de^a
+                // This requires extracting components from the 2-form de^a
+                component_in_basis(d(nth(e, a)), nth(e, b), nth(e, c)),
+                range(0, dim)),
+            range(0, dim)),
+        range(0, dim))
+
+// Solve for Levi-Civita connection
+// ω^a_b = ½(C^a_bc - C^b_ac + C^c_ab) e^c
+define solve_levi_civita(e) =
+    let C = compute_anholonomy(e) in
+    let dim = length(e) in
+    map(λ a .
+        map(λ b .
+            // Sum over c: ½(C^a_bc - C^b_ac + C^c_ab) e^c
+            fold(λ acc . λ c .
+                let coeff = times(divide(1, 2),
+                    plus(nth(nth(nth(C, a), b), c),
+                         plus(negate(nth(nth(nth(C, b), a), c)),
+                              nth(nth(nth(C, c), a), b)))) in
+                plus(acc, scale(coeff, nth(e, c))),
+                zero,
+                range(0, dim)),
+            range(0, dim)),
+        range(0, dim))
+
+// ============================================
+// Ricci and Einstein from Curvature Forms
+// ============================================
+
+/* Ricci Tensor from Curvature 2-Form
+ * 
+ * The Ricci tensor is the trace of Riemann:
+ *   Ric_ab = R^c_acb (component form)
+ * 
+ * In Cartan formalism, we contract the curvature 2-form:
+ *   Ric = η^ac R^b_c (contracted with inverse metric)
+ * 
+ * The Ricci scalar is then: R = η^ab Ric_ab
+ */
+structure RicciFromForms(dim: Nat) {
+    // Extract Ricci 1-form from curvature 2-forms
+    // (Actually, Ricci is a symmetric 2-tensor, represented here via forms)
+    operation ricci_form : List(List(DifferentialForm(2, dim))) → 
+                           List(DifferentialForm(1, dim))
+    
+    // Ricci scalar
+    operation ricci_scalar_from_forms : List(List(DifferentialForm(2, dim))) → 
+                                        List(Int) → 
+                                        Expr
+}
+
+implements RicciFromForms(dim) {
+    operation ricci_form = compute_ricci_form
+    operation ricci_scalar_from_forms = compute_ricci_scalar
+}
+
+// Contract curvature to get Ricci
+define compute_ricci_form(R) =
+    let dim = length(R) in
+    map(λ a .
+        // Ric_a = Σ_b η^bb R^b_ab contracted appropriately
+        // This is a simplification - full implementation needs metric
+        fold(λ acc . λ b . plus(acc, interior_product_form(R, a, b)),
+             zero,
+             range(0, dim)),
+        range(0, dim))
+
+define compute_ricci_scalar(R, eta) =
+    let dim = length(R) in
+    fold(λ acc . λ a .
+        plus(acc, times(nth(eta, a), trace_curvature(R, a))),
+        Const(0),
+        range(0, dim))
+
+// ============================================
+// Complete Workflow: Metric → Curvature
+// ============================================
+
+/* Full Cartan Geometry Computation
+ * 
+ * This structure encapsulates the entire workflow:
+ * 
+ *   1. Tetrad e^a (encoding metric)
+ *   2. → Connection ω^a_b (solve torsion-free condition)
+ *   3. → Curvature R^a_b = dω + ω∧ω
+ *   4. → Ricci, Ricci scalar, Einstein tensor
+ * 
+ * All computed using just d and ∧ — no index gymnastics!
+ */
+structure CartanGeometry(dim: Nat) {
+    // Input: tetrad and signature
+    element tetrad : List(DifferentialForm(1, dim))
+    element signature : List(Int)  // e.g., [-1, 1, 1, 1] for Lorentzian
+    
+    // Computed: connection, curvature
+    element connection : List(List(DifferentialForm(1, dim)))
+    element curvature : List(List(DifferentialForm(2, dim)))
+    
+    // Full computation pipeline
+    operation compute_geometry : List(DifferentialForm(1, dim)) → 
+                                  List(Int) → 
+                                  CartanGeometryResult(dim)
+    
+    // Verify Einstein equations: G_ab + Λ g_ab = κ T_ab
+    operation verify_einstein : CartanGeometryResult(dim) → 
+                                Expr →  // Λ
+                                List(List(Expr)) →  // T_ab
+                                Bool
+}
+
+// Result type containing all computed quantities
+data CartanGeometryResult(dim: Nat) = GeometryResult(
+    tetrad : List(DifferentialForm(1, dim)),
+    connection : List(List(DifferentialForm(1, dim))),
+    curvature : List(List(DifferentialForm(2, dim))),
+    ricci_scalar : Expr
+)
+
+implements CartanGeometry(dim) {
+    operation compute_geometry = full_geometry_pipeline
+    operation verify_einstein = verify_einstein_eqs
+}
+
+// The main computation pipeline
+define full_geometry_pipeline(e, eta) =
+    let omega = solve_levi_civita(e) in
+    let R = compute_curvature(omega) in
+    let R_scalar = compute_ricci_scalar(R, eta) in
+    GeometryResult(e, omega, R, R_scalar)
+
+// Verify Einstein equations
+define verify_einstein_eqs(geom, Lambda, T) =
+    let G = compute_einstein_from_geometry(geom) in
+    let g = metric_from_tetrad(tetrad(geom), signature(geom)) in
+    // Check: G_ab + Λ g_ab = κ T_ab for all a, b
+    all(λ a . all(λ b .
+        equals(
+            plus(nth(nth(G, a), b), times(Lambda, nth(nth(g, a), b))),
+            times(kappa, nth(nth(T, a), b))
+        ),
+        range(0, length(G))),
+        range(0, length(G)))
+
+// ============================================
+// Example: Schwarzschild Tetrad
+// ============================================
+
+/* Schwarzschild Solution in Cartan Formalism
+ * 
+ * The Schwarzschild metric in standard coordinates:
+ *   ds² = -(1-2M/r)dt² + dr²/(1-2M/r) + r²dθ² + r²sin²θ dφ²
+ * 
+ * Tetrad (orthonormal frame):
+ *   e^0 = √(1-2M/r) dt
+ *   e^1 = dr / √(1-2M/r)
+ *   e^2 = r dθ
+ *   e^3 = r sin(θ) dφ
+ * 
+ * With this tetrad, compute_geometry gives:
+ *   1. Connection ω^a_b (non-zero components)
+ *   2. Curvature R^a_b (encodes Riemann)
+ *   3. Ricci = 0 (vacuum solution!)
+ */
+
+// Define Schwarzschild tetrad components using Expr
+define schwarzschild_tetrad(M) =
+    let f = Sqrt(Sub(Const(1), Div(Mul(Const(2), M), Var("r")))) in
+    [
+        scale_form(f, dt),                                    // e^0
+        scale_form(Div(Const(1), f), dr),                     // e^1  
+        scale_form(Var("r"), dtheta),                         // e^2
+        scale_form(Mul(Var("r"), Sin(Var("theta"))), dphi)    // e^3
+    ]
+
+// Lorentzian signature
+define lorentzian_signature = [-1, 1, 1, 1]
+
+// Compute Schwarzschild geometry
+define schwarzschild_geometry(M) =
+    full_geometry_pipeline(schwarzschild_tetrad(M), lorentzian_signature)
+
+// ============================================
+// Why This Approach is Better
+// ============================================
+
+/* Advantages of Cartan Formalism:
+ * 
+ * 1. NO CHRISTOFFEL SYMBOLS
+ *    The connection ω is solved directly from de^a + ω∧e = 0.
+ *    No need to compute Γ^ρ_μν = ½g^ρσ(∂g + ∂g - ∂g).
+ * 
+ * 2. EXTERIOR DERIVATIVE HANDLES PARTIALS
+ *    The d operation encodes ALL partial derivatives automatically.
+ *    d(f) = Σ (∂f/∂x^μ) dx^μ
+ * 
+ * 3. CURVATURE IS ALGEBRAIC
+ *    R = dω + ω∧ω is just differentiation and wedge products.
+ *    No 4-index Riemann tensor manipulation.
+ * 
+ * 4. BIANCHI IDENTITY IS TRIVIAL
+ *    dR + ω∧R - R∧ω = 0 follows from d² = 0.
+ * 
+ * 5. GAUGE THEORY CONNECTION
+ *    Same formalism used in Yang-Mills theory.
+ *    Connection = gauge potential, Curvature = field strength.
+ * 
+ * 6. WE ALREADY HAVE THE TOOLS
+ *    differential_forms.kleis provides d, wedge, Hodge star.
+ *    We just need to compose them correctly.
+ */
+

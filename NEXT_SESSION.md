@@ -324,7 +324,89 @@ The field equations themselves:
 
 **Total: 100+ physics verification tests**
 
-### Future Physics Domains 🎯
+### Concrete Task: Expand Summations Before Z3 ✅ DONE
+
+**Problem:** Z3 is first-order and can't handle `sum_over(λ ρ . ...)` directly. But Kleis CAN handle lambdas.
+
+**Solution:** Pre-expand summations in the Z3 backend when bounds are concrete.
+
+**Status:** ✅ Implemented in `feature/z3-tensor-contraction` branch
+
+**Implementation:** `src/solvers/z3/backend.rs` - `try_expand_sum_over()` function
+
+```rust
+fn try_expand_sum_over(
+    &mut self,
+    lambda_arg: &Expression,
+    start_arg: &Expression,
+    end_arg: &Expression,
+    vars: &HashMap<String, Dynamic>,
+) -> Result<Option<Dynamic>, String>
+```
+
+**What This Enables:**
+
+```kleis
+// sum_over(λ ρ . g(μ,ρ) * g_inv(ρ,ν), 0, 4) 
+// → g(μ,0)*g_inv(0,ν) + g(μ,1)*g_inv(1,ν) + g(μ,2)*g_inv(2,ν) + g(μ,3)*g_inv(3,ν)
+```
+
+**Features:**
+- Handles concrete integer bounds only (falls back to uninterpreted for symbolic)
+- Limits to 64 terms to prevent explosion
+- Proper variable substitution respecting shadowing (lambdas, let, quantifiers)
+
+**Tests Added:**
+- `test_sum_over_expansion_simple`: λ i . i from 0 to 4 = 6 ✅
+- `test_sum_over_expansion_with_multiplication`: λ i . 2*i ✅
+- `test_sum_over_tensor_contraction`: g(μ,ρ) * g_inv(ρ,ν) pattern ✅
+- `test_sum_over_empty_range`: empty range = 0 ✅
+- `test_einstein_field_equations_chain`: Full verification chain ✅
+  - Ricci tensor: R_μν = Σ_ρ R(ρ, μ, ρ, ν)
+  - Ricci scalar: R = Σ_μ Σ_ν g^μν R_μν
+  - Einstein tensor: G_μν = R_μν - ½ R g_μν
+  - Field equations: G_μν + Λ g_μν = κ T_μν
+  - Vacuum solution: G_μν = -Λ g_μν
+
+---
+
+## Progress: Transcendental Derivative Axioms ✅ DONE
+
+Added `TranscendentalDerivatives(F)` structure to `stdlib/calculus.kleis`:
+
+| Category | Axioms |
+|----------|--------|
+| Trigonometric | D_sin, D_cos, D_tan |
+| Inverse Trig | D_arcsin, D_arccos, D_arctan |
+| Exponential | D_exp, D_ln, D_log |
+| Power | D_power_general (f^g) |
+| Square Root | D_sqrt |
+| Hyperbolic | D_sinh, D_cosh, D_tanh |
+
+**These enable:**
+- Schwarzschild metric (1/r terms, sqrt)
+- Conformal factors (exp, ln)
+- Spherical coordinates (sin, cos)
+- FLRW cosmology (scale factor a(t))
+
+---
+
+## Progress: Manual Documentation ✅ DONE
+
+Clarified the difference between computational and axiomatic differentiation:
+
+| Function | Type | Where | What |
+|----------|------|-------|------|
+| `diff(expr, var)` | Computational | Evaluator | Pattern matches on AST, returns derivative |
+| `D(f, x)` / `Dt(f, x)` | Axiomatic | Z3 | Declares properties for verification |
+
+**Files Updated:**
+- `docs/manual/src/chapters/13-applications.md` - Full comparison section
+- `docs/manual/src/chapters/05-pattern-matching.md` - Cross-reference note
+
+---
+
+## Future Physics Domains 🎯
 
 | Domain | Key Equations | Difficulty | Notes |
 |--------|---------------|------------|-------|
@@ -351,3 +433,57 @@ Kaluza-Klein is especially interesting because it would **unify our existing Max
 ```
 
 This demonstrates the power of the tensor verification framework!
+
+---
+
+## Progress: Cartan Geometry (Computational) ✅ PARTIAL
+
+Implemented computational Cartan calculus for curvature tensor computation using tetrads and exterior algebra.
+
+### Files Created
+
+- `stdlib/symbolic_diff.kleis` - Computational symbolic differentiation (`diff` function)
+- `stdlib/cartan_geometry.kleis` - Cartan geometry structures (axiomatic)
+- `stdlib/cartan_compute.kleis` - Computational implementation
+- `tests/symbolic_diff_test.rs` - 23 tests for `diff` and `simplify`
+- `tests/cartan_compute_test.rs` - 19 passing tests, 3 ignored
+
+### What Works ✅
+
+| Feature | Status |
+|---------|--------|
+| `diff(expr, var)` - symbolic derivative | ✅ |
+| `simplify(expr)` - algebraic simplification | ✅ |
+| `d0(f)` - exterior derivative of 0-form | ✅ |
+| `d1(ω)` - exterior derivative of 1-form | ✅ |
+| `wedge(α, β)` - wedge product | ✅ |
+| `minkowski_tetrad_forms` | ✅ |
+| `schwarzschild_tetrad_forms(M)` | ✅ |
+| `d_tetrad(e)` - derivative of tetrad | ✅ |
+| `solve_levi_civita(e, de, η)` - connection 1-forms | ✅ |
+
+### What Doesn't Work Yet ❌
+
+| Feature | Problem |
+|---------|---------|
+| `compute_curvature(ω)` | Expression explosion - `R = dω + ω∧ω` creates huge ASTs |
+
+### Root Cause: Expression Explosion
+
+The curvature computation involves:
+1. `d1(ω^a_b)` - differentiates each component of connection (16 derivatives × 4 coords = 64 terms)
+2. `ω^a_c ∧ ω^c_b` - wedge products (16 × 16 = 256 terms per sum)
+3. Sum over index c - another 4× factor
+
+Total: thousands of nested `Add`, `Mul`, `Pow` nodes that the `simplify` function can't reduce fast enough.
+
+### Required Optimizations 🔧
+
+1. **Lazy Evaluation** - Don't expand until needed
+2. **Better Simplification** - Pattern-based algebraic rules
+3. **Sparse Representation** - Most tetrad/connection components are zero
+4. **Memoization** - Cache computed derivatives
+
+### Workaround (Current)
+
+For now, curvature tests are `#[ignore]`. The connection solver works correctly for both Minkowski (all zeros) and Schwarzschild (non-trivial).

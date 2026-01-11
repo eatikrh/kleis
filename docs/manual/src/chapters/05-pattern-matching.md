@@ -168,6 +168,8 @@ define diff(expr, var) =
     }
 ```
 
+> **Note:** This `diff` function **computes** derivatives by pattern matching on expression trees. Kleis also provides `D(f, x)` and `Dt(f, x)` operations in `stdlib/calculus.kleis` for **verifying** derivative properties with Z3. See [Applications: Symbolic Differentiation](./13-applications.md#symbolic-differentiation) for a detailed comparison.
+
 ## What's Next?
 
 Learn about let bindings for local definitions!

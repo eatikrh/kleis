@@ -537,6 +537,17 @@ structure EinsteinEquations {
 
 ## Symbolic Differentiation
 
+Kleis supports differentiation in two fundamentally different ways:
+
+| Approach | Function | Purpose | Runs In |
+|----------|----------|---------|---------|
+| **Computational** | `diff(expr, var)` | Actually compute derivatives | Kleis Evaluator |
+| **Axiomatic** | `D(f, x)`, `Dt(f, x)` | Verify derivative properties | Z3 Solver |
+
+### Computational Differentiation: `diff`
+
+The `diff` function **computes** derivatives by pattern matching on expression trees. It's implemented in pure Kleis and returns a new expression:
+
 ```kleis
 data Expr = Const(value : ℝ) 
           | Var(name : String) 
@@ -569,6 +580,43 @@ define diff(e, x) =
         _ => Const(0)
     }
 ```
+
+**Usage:** Call `diff(Mul(Var("x"), Var("x")), "x")` and get back `Add(Mul(Const(1), Var("x")), Mul(Var("x"), Const(1)))` (which simplifies to `2x`).
+
+### Axiomatic Differentiation: `D` and `Dt`
+
+The `D` and `Dt` operations are declared in `stdlib/calculus.kleis` with **axioms** that describe derivative properties. They don't compute anything — Z3 uses these axioms to **verify** that equations involving derivatives are consistent:
+
+```kleis
+// From stdlib/calculus.kleis
+structure Differentiable(F) {
+    operation D : F → Variable → F      // Partial derivative
+    operation Dt : F → Variable → F     // Total derivative
+    
+    axiom D_product: ∀(f g : F, x : Variable). 
+        D(f * g, x) = D(f, x) * g + f * D(g, x)
+    
+    axiom Dt_chain: ∀(f : F, x y : Variable). 
+        Dt(f, x) = D(f, x) + D(f, y) * Dt(y, x)
+}
+```
+
+**Usage:** Write `D(f * g, x) = D(f, x) * g + f * D(g, x)` and Z3 confirms it's valid (it matches the `D_product` axiom).
+
+### When to Use Each
+
+| Task | Use | Example |
+|------|-----|---------|
+| Compute ∂/∂x of x² + 2x | `diff` | Returns expression tree for 2x + 2 |
+| Verify product rule holds | `D` + Z3 | Returns ✅ SAT |
+| Check physics equation consistency | `D` + Z3 | Verifies Euler-Lagrange equations |
+| Build a symbolic algebra system | `diff` | CAS-style manipulation |
+
+**Analogy:**
+- `diff` is like a **calculator** — it gives you answers
+- `D` axioms are like **mathematical theorems** — Z3 uses them to check proofs
+
+See `examples/calculus/derivatives.kleis` for more examples of both approaches.
 
 ## Linear Algebra
 

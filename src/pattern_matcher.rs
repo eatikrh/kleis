@@ -150,9 +150,10 @@ impl PatternMatcher {
             }
 
             Pattern::Constant(pattern_value) => {
-                // Constant must match exactly
+                // Constant must match exactly (handles both Const and String literals)
                 match value {
                     Expression::Const(value_str) => value_str == pattern_value,
+                    Expression::String(value_str) => value_str == pattern_value,
                     _ => false,
                 }
             }
@@ -1423,5 +1424,75 @@ mod tests {
         let result = matcher.eval_match(&scrutinee, &cases).unwrap();
         // Result should be the original scrutinee since body is 'whole'
         assert_eq!(result, scrutinee);
+    }
+
+    #[test]
+    fn test_string_pattern_matching() {
+        // Test that string literals can be matched in patterns
+        // This was a bug fix: Pattern::Constant only matched Expression::Const,
+        // not Expression::String
+        let matcher = PatternMatcher::new();
+
+        // Match "hello" against pattern "hello"
+        let value = Expression::String("hello".to_string());
+        let pattern = Pattern::Constant("hello".to_string());
+
+        let bindings = matcher.match_pattern(&value, &pattern);
+        assert!(
+            bindings.is_some(),
+            "String 'hello' should match pattern 'hello'"
+        );
+
+        // Match "hello" against pattern "world" (should fail)
+        let pattern_world = Pattern::Constant("world".to_string());
+        let bindings_fail = matcher.match_pattern(&value, &pattern_world);
+        assert!(
+            bindings_fail.is_none(),
+            "String 'hello' should NOT match pattern 'world'"
+        );
+    }
+
+    #[test]
+    fn test_string_pattern_in_match_expression() {
+        // Test string patterns in a full match expression
+        let matcher = PatternMatcher::new();
+
+        let scrutinee = Expression::String("t".to_string());
+        let cases = vec![
+            MatchCase::new(
+                Pattern::Constant("t".to_string()),
+                Expression::Const("1".to_string()),
+            ),
+            MatchCase::new(
+                Pattern::Constant("r".to_string()),
+                Expression::Const("2".to_string()),
+            ),
+            MatchCase::new(Pattern::Wildcard, Expression::Const("0".to_string())),
+        ];
+
+        let result = matcher.eval_match(&scrutinee, &cases).unwrap();
+        assert_eq!(
+            result,
+            Expression::Const("1".to_string()),
+            "String 't' should match pattern 't' and return 1"
+        );
+
+        // Test with "r"
+        let scrutinee_r = Expression::String("r".to_string());
+        let result_r = matcher.eval_match(&scrutinee_r, &cases).unwrap();
+        assert_eq!(
+            result_r,
+            Expression::Const("2".to_string()),
+            "String 'r' should match pattern 'r' and return 2"
+        );
+
+        // Test with "x" (should fall through to wildcard)
+        let scrutinee_x = Expression::String("x".to_string());
+        let result_x = matcher.eval_match(&scrutinee_x, &cases).unwrap();
+        assert_eq!(
+            result_x,
+            Expression::Const("0".to_string()),
+            "String 'x' should fall through to wildcard and return 0"
+        );
     }
 }

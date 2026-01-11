@@ -52,4 +52,5 @@
 - [Standard Library](./appendix/stdlib.md)
 - [LISP Interpreter](./appendix/lisp-interpreter.md)
 - [VS Code Debugging](./appendix/vscode-debugging.md)
+- [Cartan Geometry](./appendix/cartan-geometry.md)
 

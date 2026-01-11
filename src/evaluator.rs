@@ -460,10 +460,26 @@ impl Evaluator {
             }
 
             Expression::Operation { name, args, span } => {
-                // Recursively substitute in arguments, preserving span
+                // Recursively substitute in arguments
+                let substituted_args: Vec<Expression> =
+                    args.iter().map(|arg| self.substitute(arg, subst)).collect();
+
+                // Check if the operation name is a bound variable (higher-order function)
+                // If f is bound to "my_func", then f(x) becomes my_func(x)
+                let resolved_name = if let Some(bound_value) = subst.get(name) {
+                    match bound_value {
+                        // If bound to an Object, use that name as the function
+                        Expression::Object(func_name) => func_name.clone(),
+                        // Otherwise keep original name (can't call a non-function)
+                        _ => name.clone(),
+                    }
+                } else {
+                    name.clone()
+                };
+
                 Expression::Operation {
-                    name: name.clone(),
-                    args: args.iter().map(|arg| self.substitute(arg, subst)).collect(),
+                    name: resolved_name,
+                    args: substituted_args,
                     span: span.clone(),
                 }
             }
@@ -8426,6 +8442,75 @@ mod tests {
             }
             _ => panic!("Expected Operation"),
         }
+    }
+
+    #[test]
+    fn test_higher_order_function_basic() {
+        // Test that functions can be passed as arguments and called
+        let mut eval = Evaluator::new();
+
+        let code = r#"
+            define double(x) = x + x
+            define apply_fn(f, x) = f(x)
+            define test = apply_fn(double, 5)
+        "#;
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        let result = eval.eval_concrete(&Expression::Object("test".to_string()));
+        assert!(result.is_ok(), "HOF should work: {:?}", result);
+
+        // Result should be double(5) = 5 + 5 = 10
+        let expr = result.unwrap();
+        assert_eq!(expr, Expression::Const("10".to_string()));
+    }
+
+    #[test]
+    fn test_higher_order_function_apply_twice() {
+        // Test nested HOF calls: apply_twice(f, x) = f(f(x))
+        let mut eval = Evaluator::new();
+
+        let code = r#"
+            define inc(x) = x + 1
+            define apply_twice(f, x) = f(f(x))
+            define test = apply_twice(inc, 10)
+        "#;
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        let result = eval.eval_concrete(&Expression::Object("test".to_string()));
+        assert!(result.is_ok(), "Nested HOF should work: {:?}", result);
+    }
+
+    #[test]
+    fn test_higher_order_function_with_pattern_match() {
+        // Test HOF with pattern matching (the original use case for is_t/is_r)
+        let mut eval = Evaluator::new();
+
+        let code = r#"
+            define is_one(x) = match x { 1 => 1 | _ => 0 }
+            define check(f, x) = f(x)
+            define test1 = check(is_one, 1)
+            define test2 = check(is_one, 2)
+        "#;
+        let program = parse_kleis_program(code).unwrap();
+        eval.load_program(&program).unwrap();
+
+        let result1 = eval.eval_concrete(&Expression::Object("test1".to_string()));
+        assert!(result1.is_ok());
+        assert_eq!(
+            result1.unwrap(),
+            Expression::Const("1".to_string()),
+            "is_one(1) should be 1"
+        );
+
+        let result2 = eval.eval_concrete(&Expression::Object("test2".to_string()));
+        assert!(result2.is_ok());
+        assert_eq!(
+            result2.unwrap(),
+            Expression::Const("0".to_string()),
+            "is_one(2) should be 0"
+        );
     }
 
     #[test]
