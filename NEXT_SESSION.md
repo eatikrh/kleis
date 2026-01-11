@@ -324,7 +324,47 @@ The field equations themselves:
 
 **Total: 100+ physics verification tests**
 
-### Future Physics Domains 🎯
+### Concrete Task: Expand Summations Before Z3 ✅ DONE
+
+**Problem:** Z3 is first-order and can't handle `sum_over(λ ρ . ...)` directly. But Kleis CAN handle lambdas.
+
+**Solution:** Pre-expand summations in the Z3 backend when bounds are concrete.
+
+**Status:** ✅ Implemented in `feature/z3-tensor-contraction` branch
+
+**Implementation:** `src/solvers/z3/backend.rs` - `try_expand_sum_over()` function
+
+```rust
+fn try_expand_sum_over(
+    &mut self,
+    lambda_arg: &Expression,
+    start_arg: &Expression,
+    end_arg: &Expression,
+    vars: &HashMap<String, Dynamic>,
+) -> Result<Option<Dynamic>, String>
+```
+
+**What This Enables:**
+
+```kleis
+// sum_over(λ ρ . g(μ,ρ) * g_inv(ρ,ν), 0, 4) 
+// → g(μ,0)*g_inv(0,ν) + g(μ,1)*g_inv(1,ν) + g(μ,2)*g_inv(2,ν) + g(μ,3)*g_inv(3,ν)
+```
+
+**Features:**
+- Handles concrete integer bounds only (falls back to uninterpreted for symbolic)
+- Limits to 64 terms to prevent explosion
+- Proper variable substitution respecting shadowing (lambdas, let, quantifiers)
+
+**Tests Added:**
+- `test_sum_over_expansion_simple`: λ i . i from 0 to 4 = 6 ✅
+- `test_sum_over_expansion_with_multiplication`: λ i . 2*i ✅
+- `test_sum_over_tensor_contraction`: g(μ,ρ) * g_inv(ρ,ν) pattern ✅
+- `test_sum_over_empty_range`: empty range = 0 ✅
+
+---
+
+## Future Physics Domains 🎯
 
 | Domain | Key Equations | Difficulty | Notes |
 |--------|---------------|------------|-------|
