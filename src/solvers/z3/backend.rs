@@ -316,6 +316,205 @@ impl<'r> Z3Backend<'r> {
         types.get("root").cloned()
     }
 
+    /// Try to expand sum_over with concrete bounds
+    ///
+    /// Expands `sum_over(λ i . body, start, end)` into:
+    /// `body[i=start] + body[i=start+1] + ... + body[i=end-1]`
+    ///
+    /// This enables Einstein summation / tensor contraction in Z3.
+    ///
+    /// Returns:
+    /// - `Ok(Some(result))` if expansion succeeded
+    /// - `Ok(None)` if bounds are not concrete (fall through to uninterpreted)
+    /// - `Err(msg)` if there's an error in translation
+    fn try_expand_sum_over(
+        &mut self,
+        lambda_arg: &Expression,
+        start_arg: &Expression,
+        end_arg: &Expression,
+        vars: &HashMap<String, Dynamic>,
+    ) -> Result<Option<Dynamic>, String> {
+        // Extract the lambda
+        let (param_name, body) = match lambda_arg {
+            Expression::Lambda { params, body, .. } if params.len() == 1 => {
+                (params[0].name.clone(), body.as_ref())
+            }
+            _ => return Ok(None), // Not a single-parameter lambda, fall through
+        };
+
+        // Extract concrete bounds
+        let start = match start_arg {
+            Expression::Const(s) => s.parse::<i64>().ok(),
+            _ => None,
+        };
+        let end = match end_arg {
+            Expression::Const(s) => s.parse::<i64>().ok(),
+            _ => None,
+        };
+
+        let (start, end) = match (start, end) {
+            (Some(s), Some(e)) => (s, e),
+            _ => return Ok(None), // Bounds not concrete, fall through to uninterpreted
+        };
+
+        // Validate bounds
+        if end <= start {
+            // Empty sum = 0
+            return Ok(Some(Int::from_i64(0).into()));
+        }
+        if end - start > 64 {
+            // Too many terms, fall back to uninterpreted to avoid explosion
+            self.warnings.push(format!(
+                "sum_over: range [{}, {}) has {} terms, falling back to uninterpreted",
+                start, end, end - start
+            ));
+            return Ok(None);
+        }
+
+        // Expand the sum
+        let mut terms: Vec<Dynamic> = Vec::new();
+        for i in start..end {
+            // Substitute the loop variable with the concrete index
+            let index_expr = Expression::Const(i.to_string());
+            let substituted_body = self.substitute_in_expr(body, &param_name, &index_expr);
+
+            // Translate the substituted body to Z3
+            let term = self.kleis_to_z3(&substituted_body, vars)?;
+            terms.push(term);
+        }
+
+        // Sum all terms
+        if terms.is_empty() {
+            return Ok(Some(Int::from_i64(0).into()));
+        }
+
+        let mut result = terms[0].clone();
+        for term in &terms[1..] {
+            result = arithmetic::translate_plus(&result, term)?;
+        }
+
+        Ok(Some(result))
+    }
+
+    /// Substitute a variable in an expression with another expression
+    fn substitute_in_expr(
+        &self,
+        expr: &Expression,
+        var_name: &str,
+        replacement: &Expression,
+    ) -> Expression {
+        match expr {
+            Expression::Object(name) if name == var_name => replacement.clone(),
+            Expression::Object(_) => expr.clone(),
+            Expression::Const(_) => expr.clone(),
+            Expression::String(_) => expr.clone(),
+            Expression::Placeholder { .. } => expr.clone(),
+
+            Expression::Operation { name, args, span } => Expression::Operation {
+                name: name.clone(),
+                args: args
+                    .iter()
+                    .map(|a| self.substitute_in_expr(a, var_name, replacement))
+                    .collect(),
+                span: span.clone(),
+            },
+
+            Expression::Lambda { params, body, span } => {
+                // Don't substitute if the variable is shadowed by a lambda param
+                if params.iter().any(|p| p.name == var_name) {
+                    expr.clone()
+                } else {
+                    Expression::Lambda {
+                        params: params.clone(),
+                        body: Box::new(self.substitute_in_expr(body, var_name, replacement)),
+                        span: span.clone(),
+                    }
+                }
+            }
+
+            Expression::Let { pattern, type_annotation, value, body, span } => {
+                // Check if the variable is shadowed by the pattern
+                let shadowed = if let Pattern::Variable(ref pname) = pattern {
+                    pname == var_name
+                } else {
+                    false
+                };
+
+                if shadowed {
+                    expr.clone()
+                } else {
+                    Expression::Let {
+                        pattern: pattern.clone(),
+                        type_annotation: type_annotation.clone(),
+                        value: Box::new(self.substitute_in_expr(value, var_name, replacement)),
+                        body: Box::new(self.substitute_in_expr(body, var_name, replacement)),
+                        span: span.clone(),
+                    }
+                }
+            }
+
+            Expression::Quantifier {
+                quantifier,
+                variables,
+                where_clause,
+                body,
+            } => {
+                // Check if the variable is bound by the quantifier
+                let shadowed = variables.iter().any(|v| v.name == var_name);
+                if shadowed {
+                    expr.clone()
+                } else {
+                    Expression::Quantifier {
+                        quantifier: quantifier.clone(),
+                        variables: variables.clone(),
+                        where_clause: where_clause
+                            .as_ref()
+                            .map(|wc| Box::new(self.substitute_in_expr(wc, var_name, replacement))),
+                        body: Box::new(self.substitute_in_expr(body, var_name, replacement)),
+                    }
+                }
+            }
+
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+                span,
+            } => Expression::Conditional {
+                condition: Box::new(self.substitute_in_expr(condition, var_name, replacement)),
+                then_branch: Box::new(self.substitute_in_expr(then_branch, var_name, replacement)),
+                else_branch: Box::new(self.substitute_in_expr(else_branch, var_name, replacement)),
+                span: span.clone(),
+            },
+
+            Expression::Match { scrutinee, cases, span } => Expression::Match {
+                scrutinee: Box::new(self.substitute_in_expr(scrutinee, var_name, replacement)),
+                cases: cases
+                    .iter()
+                    .map(|c| MatchCase {
+                        pattern: c.pattern.clone(),
+                        guard: c.guard.as_ref().map(|g| self.substitute_in_expr(g, var_name, replacement)),
+                        body: self.substitute_in_expr(&c.body, var_name, replacement),
+                    })
+                    .collect(),
+                span: span.clone(),
+            },
+
+            Expression::List(items) => Expression::List(
+                items
+                    .iter()
+                    .map(|item| self.substitute_in_expr(item, var_name, replacement))
+                    .collect(),
+            ),
+
+            // Ascription: substitute in inner expression
+            Expression::Ascription { expr: inner, type_annotation } => Expression::Ascription {
+                expr: Box::new(self.substitute_in_expr(inner, var_name, replacement)),
+                type_annotation: type_annotation.clone(),
+            },
+        }
+    }
+
     /// Get Z3 sort for a Kleis type
     ///
     /// Uses type_mapping for the mapping logic. Handles:
@@ -1390,6 +1589,15 @@ impl<'r> Z3Backend<'r> {
                     self.try_type_dispatched_operation(name, args, vars)?
                 {
                     return Ok(dispatched_result);
+                }
+
+                // Special case: sum_over with concrete bounds
+                // Expands sum_over(λ i . body, start, end) into body[i=start] + body[i=start+1] + ... + body[i=end-1]
+                // This enables tensor contraction/Einstein summation in Z3
+                if name == "sum_over" && args.len() == 3 {
+                    if let Some(expanded) = self.try_expand_sum_over(&args[0], &args[1], &args[2], vars)? {
+                        return Ok(expanded);
+                    }
                 }
 
                 // Standard path: translate arguments first

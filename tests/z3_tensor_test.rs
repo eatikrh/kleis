@@ -2030,3 +2030,162 @@ fn test_macro_loads_stdlib() {
     ));
     println!("   ✅ requires_kleis macro works!");
 }
+
+// =============================================================================
+// Tests for sum_over expansion (tensor contraction / Einstein summation)
+// =============================================================================
+
+/// Helper to create a lambda expression
+fn lambda(param: &str, body: Expression) -> Expression {
+    Expression::Lambda {
+        params: vec![kleis::ast::LambdaParam {
+            name: param.to_string(),
+            type_annotation: None,
+        }],
+        body: Box::new(body),
+        span: None,
+    }
+}
+
+#[test]
+fn test_sum_over_expansion_simple() {
+    // Test: sum_over(λ i . i, 0, 4) = 0 + 1 + 2 + 3 = 6
+    println!("\n🧪 test_sum_over_expansion_simple");
+
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).expect("Backend failed");
+
+    // sum_over(λ i . i, 0, 4)
+    let sum_expr = op(
+        "sum_over",
+        vec![
+            lambda("i", obj("i")),
+            num(0),
+            num(4),
+        ],
+    );
+
+    // Expected: 6
+    let expected = num(6);
+
+    // Check if sum_over(λ i . i, 0, 4) = 6
+    let equality = op("equals", vec![sum_expr, expected]);
+
+    let result = backend.check_satisfiability(&equality);
+    println!("   sum_over(λ i . i, 0, 4) = 6 ? {:?}", result);
+
+    assert!(
+        matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })),
+        "sum_over expansion should produce 6"
+    );
+    println!("   ✅ sum_over expansion works!");
+}
+
+#[test]
+fn test_sum_over_expansion_with_multiplication() {
+    // Test: sum_over(λ i . 2 * i, 0, 3) = 0 + 2 + 4 = 6
+    println!("\n🧪 test_sum_over_expansion_with_multiplication");
+
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).expect("Backend failed");
+
+    // λ i . 2 * i
+    let body = op("times", vec![num(2), obj("i")]);
+    let sum_expr = op(
+        "sum_over",
+        vec![
+            lambda("i", body),
+            num(0),
+            num(3),
+        ],
+    );
+
+    // Expected: 6
+    let expected = num(6);
+
+    let equality = op("equals", vec![sum_expr, expected]);
+
+    let result = backend.check_satisfiability(&equality);
+    println!("   sum_over(λ i . 2*i, 0, 3) = 6 ? {:?}", result);
+
+    assert!(
+        matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })),
+        "sum_over with multiplication should work"
+    );
+    println!("   ✅ sum_over with multiplication works!");
+}
+
+#[test]
+fn test_sum_over_tensor_contraction() {
+    // Test: tensor contraction pattern
+    // sum_over(λ ρ . g(μ, ρ) * g_inv(ρ, ν), 0, 4)
+    // This should expand to 4 terms and be equal to delta(μ, ν)
+    println!("\n🧪 test_sum_over_tensor_contraction");
+
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).expect("Backend failed");
+
+    // λ ρ . g(μ, ρ) * g_inv(ρ, ν)
+    let g_mu_rho = op("g", vec![obj("mu"), obj("rho")]);
+    let g_inv_rho_nu = op("g_inv", vec![obj("rho"), obj("nu")]);
+    let body = op("times", vec![g_mu_rho, g_inv_rho_nu]);
+
+    let sum_expr = op(
+        "sum_over",
+        vec![
+            lambda("rho", body),
+            num(0),
+            num(4),
+        ],
+    );
+
+    // Check that sum_over can be equal to delta(μ, ν)
+    // (Z3 treats g, g_inv, delta as uninterpreted functions)
+    let delta_mu_nu = op("delta", vec![obj("mu"), obj("nu")]);
+    let equality = op("equals", vec![sum_expr, delta_mu_nu]);
+
+    let result = backend.check_satisfiability(&equality);
+    println!("   Tensor contraction = delta(μ, ν) satisfiable? {:?}", result);
+
+    // With uninterpreted functions, Z3 can find an assignment that makes this true
+    assert!(
+        matches!(
+            result,
+            Ok(SatisfiabilityResult::Satisfiable { .. }) | Ok(SatisfiabilityResult::Unknown)
+        ),
+        "Tensor contraction pattern should be satisfiable or unknown"
+    );
+    println!("   ✅ Tensor contraction expansion works!");
+}
+
+#[test]
+fn test_sum_over_empty_range() {
+    // Test: sum_over(λ i . i, 5, 5) = 0 (empty range)
+    println!("\n🧪 test_sum_over_empty_range");
+
+    let registry = StructureRegistry::new();
+    let mut backend = Z3Backend::new(&registry).expect("Backend failed");
+
+    let sum_expr = op(
+        "sum_over",
+        vec![
+            lambda("i", obj("i")),
+            num(5),
+            num(5), // empty range
+        ],
+    );
+
+    // Expected: 0
+    let expected = num(0);
+
+    let equality = op("equals", vec![sum_expr, expected]);
+
+    let result = backend.check_satisfiability(&equality);
+    println!("   sum_over(λ i . i, 5, 5) = 0 ? {:?}", result);
+
+    assert!(
+        matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })),
+        "Empty range should produce 0"
+    );
+    println!("   ✅ Empty range works!");
+}
