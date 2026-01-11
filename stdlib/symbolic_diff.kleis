@@ -49,15 +49,52 @@ data Expr =
 //   - Power rule: d/dx(f^n) = n · f^(n-1) · f'
 //   - Chain rule: d/dx(sin(f)) = cos(f) · f', etc.
 
+// Coordinate-specific derivative helpers
+// These avoid conditionals by knowing which variable they're differentiating
+define diff_wrt_t(e) = diff_core(e, "t", is_t)
+define diff_wrt_r(e) = diff_core(e, "r", is_r)
+define diff_wrt_theta(e) = diff_core(e, "theta", is_theta)
+define diff_wrt_phi(e) = diff_core(e, "phi", is_phi)
+
+// Check if a variable name matches a coordinate (returns Expr: Const(1) or Const(0))
+define is_t(name) = match name { "t" => Const(1) | _ => Const(0) }
+define is_r(name) = match name { "r" => Const(1) | _ => Const(0) }
+define is_theta(name) = match name { "theta" => Const(1) | _ => Const(0) }
+define is_phi(name) = match name { "phi" => Const(1) | _ => Const(0) }
+
+// Generic variable checker (fallback - may create conditionals)
+define is_var(name, x) = if name = x then Const(1) else Const(0)
+
+// Core diff with variable checker function
+define diff_core(e, x, var_check) =
+    match e {
+        Const(_) => Const(0)
+        Var(name) => var_check(name)
+        Neg(f) => Neg(diff_core(f, x, var_check))
+        Add(f, g) => Add(diff_core(f, x, var_check), diff_core(g, x, var_check))
+        Sub(f, g) => Sub(diff_core(f, x, var_check), diff_core(g, x, var_check))
+        Mul(f, g) => Add(Mul(diff_core(f, x, var_check), g), Mul(f, diff_core(g, x, var_check)))
+        Div(f, g) => Div(Sub(Mul(diff_core(f, x, var_check), g), Mul(f, diff_core(g, x, var_check))), Pow(g, Const(2)))
+        Pow(f, Const(n)) => Mul(Mul(Const(n), Pow(f, Const(n - 1))), diff_core(f, x, var_check))
+        Pow(f, g) => Mul(Pow(f, g), Add(Mul(diff_core(g, x, var_check), Ln(f)), Mul(g, Div(diff_core(f, x, var_check), f))))
+        Sin(f) => Mul(Cos(f), diff_core(f, x, var_check))
+        Cos(f) => Mul(Neg(Sin(f)), diff_core(f, x, var_check))
+        Tan(f) => Mul(Div(Const(1), Pow(Cos(f), Const(2))), diff_core(f, x, var_check))
+        Exp(f) => Mul(Exp(f), diff_core(f, x, var_check))
+        Ln(f) => Mul(Div(Const(1), f), diff_core(f, x, var_check))
+        Sqrt(f) => Div(diff_core(f, x, var_check), Mul(Const(2), Sqrt(f)))
+        _ => Const(0)
+    }
+
+// Original diff function (may create conditionals for arbitrary variable names)
 define diff(e, x) =
     match e {
         // Constants have zero derivative
         Const(_) => Const(0)
         
         // Variable: 1 if same as x, 0 otherwise
-        Var(name) => 
-            if name = x then Const(1) 
-            else Const(0)
+        // Note: This creates a conditional for non-standard variables
+        Var(name) => is_var(name, x)
         
         // Negation: d/dx(-f) = -f'
         Neg(f) => Neg(diff(f, x))
@@ -118,65 +155,119 @@ define diff(e, x) =
     }
 
 // =============================================================================
-// Expression Simplification (basic)
+// Expression Simplification (pattern-matching only, no conditionals)
 // =============================================================================
 
-// simplify(e) - Apply basic algebraic simplifications
+// simplify(e) - Apply algebraic simplifications using ONLY pattern matching
 //
-// This is a simple simplifier. For production use, you'd want
-// more sophisticated normalization.
+// IMPORTANT: We avoid `if a = b then ...` conditionals because Kleis evaluates
+// them symbolically, creating conditional expressions instead of simplifying!
+// Pattern matching works structurally and correctly reduces expressions.
 
-define simplify(e) =
+// Helper: simplify once, then check if more simplification is possible
+define simplify(e) = simplify_once(simplify_children(e))
+
+// First, recursively simplify children
+define simplify_children(e) =
     match e {
-        // 0 + x = x, x + 0 = x
-        Add(Const(0), f) => simplify(f)
-        Add(f, Const(0)) => simplify(f)
+        Const(v) => Const(v)
+        Var(n) => Var(n)
+        Add(f, g) => Add(simplify(f), simplify(g))
+        Sub(f, g) => Sub(simplify(f), simplify(g))
+        Mul(f, g) => Mul(simplify(f), simplify(g))
+        Div(f, g) => Div(simplify(f), simplify(g))
+        Pow(f, g) => Pow(simplify(f), simplify(g))
+        Neg(f) => Neg(simplify(f))
+        Sin(f) => Sin(simplify(f))
+        Cos(f) => Cos(simplify(f))
+        Tan(f) => Tan(simplify(f))
+        Exp(f) => Exp(simplify(f))
+        Ln(f) => Ln(simplify(f))
+        Sqrt(f) => Sqrt(simplify(f))
+        _ => e
+    }
+
+// Then apply simplification rules at the top level
+define simplify_once(e) =
+    match e {
+        // ===== Addition rules =====
+        Add(Const(0), f) => f
+        Add(f, Const(0)) => f
+        Add(Const(a), Const(b)) => Const(a + b)
+        // x + (-y) = x - y
+        Add(f, Neg(g)) => Sub(f, g)
+        // (-x) + y = y - x  
+        Add(Neg(f), g) => Sub(g, f)
+        // x + x = 2x
+        // Add(f, g) if f = g => Mul(Const(2), f)  -- can't use guards with =
         
-        // 0 - x = -x, x - 0 = x
-        Sub(Const(0), f) => Neg(simplify(f))
-        Sub(f, Const(0)) => simplify(f)
+        // ===== Subtraction rules =====
+        Sub(f, Const(0)) => f
+        Sub(Const(0), f) => Neg(f)
+        Sub(Const(a), Const(b)) => Const(a - b)
+        // x - (-y) = x + y
+        Sub(f, Neg(g)) => Add(f, g)
+        // x - x = 0 (can't check equality, skip)
         
-        // 0 * x = 0, x * 0 = 0
+        // ===== Multiplication rules =====
         Mul(Const(0), _) => Const(0)
         Mul(_, Const(0)) => Const(0)
-        
-        // 1 * x = x, x * 1 = x
-        Mul(Const(1), f) => simplify(f)
-        Mul(f, Const(1)) => simplify(f)
-        
-        // x^0 = 1, x^1 = x
-        Pow(_, Const(0)) => Const(1)
-        Pow(f, Const(1)) => simplify(f)
-        
-        // --x = x
-        Neg(Neg(f)) => simplify(f)
-        
-        // Constant folding for addition
-        Add(Const(a), Const(b)) => Const(a + b)
-        
-        // Constant folding for multiplication
+        Mul(Const(1), f) => f
+        Mul(f, Const(1)) => f
+        // Note: Const(-1) pattern doesn't parse; handle via Neg(Const(1)) instead
+        Mul(Neg(Const(1)), f) => Neg(f)
+        Mul(f, Neg(Const(1))) => Neg(f)
         Mul(Const(a), Const(b)) => Const(a * b)
+        // (-x) * y = -(x * y)
+        Mul(Neg(f), g) => Neg(Mul(f, g))
+        // x * (-y) = -(x * y)
+        Mul(f, Neg(g)) => Neg(Mul(f, g))
+        // x * x = x²
+        // Mul(f, g) if f = g => Pow(f, Const(2))  -- can't use guards
         
-        // Recursive simplification
-        Add(f, g) => 
-            let sf = simplify(f) in
-            let sg = simplify(g) in
-            if sf = Const(0) then sg
-            else if sg = Const(0) then sf
-            else Add(sf, sg)
+        // ===== Division rules =====
+        Div(Const(0), _) => Const(0)
+        Div(f, Const(1)) => f
+        Div(Const(a), Const(b)) => Const(a / b)
+        // x / (-y) = -(x / y)
+        Div(f, Neg(g)) => Neg(Div(f, g))
+        // (-x) / y = -(x / y)
+        Div(Neg(f), g) => Neg(Div(f, g))
         
-        Mul(f, g) =>
-            let sf = simplify(f) in
-            let sg = simplify(g) in
-            if sf = Const(0) then Const(0)
-            else if sg = Const(0) then Const(0)
-            else if sf = Const(1) then sg
-            else if sg = Const(1) then sf
-            else Mul(sf, sg)
+        // ===== Power rules =====
+        Pow(_, Const(0)) => Const(1)
+        Pow(f, Const(1)) => f
+        Pow(Const(0), _) => Const(0)
+        Pow(Const(1), _) => Const(1)
+        // √x² = x (for positive x, which we assume)
+        Pow(Sqrt(f), Const(2)) => f
+        // (x²)^(1/2) = x
+        Sqrt(Pow(f, Const(2))) => f
         
-        Neg(f) => Neg(simplify(f))
+        // ===== Negation rules =====
+        Neg(Const(0)) => Const(0)
+        Neg(Neg(f)) => f
+        Neg(Const(a)) => Const(0 - a)
         
-        // Pass through other expressions
+        // ===== Trig identities =====
+        Sin(Const(0)) => Const(0)
+        Cos(Const(0)) => Const(1)
+        
+        // ===== Exp/Log identities =====
+        Exp(Const(0)) => Const(1)
+        Ln(Const(1)) => Const(0)
+        // e^(ln(x)) = x
+        Exp(Ln(f)) => f
+        // ln(e^x) = x
+        Ln(Exp(f)) => f
+        
+        // ===== Sqrt identities =====
+        Sqrt(Const(0)) => Const(0)
+        Sqrt(Const(1)) => Const(1)
+        // √(x²) = x (assuming positive)
+        Sqrt(Pow(f, Const(2))) => f
+        
+        // No rule matched - return as-is
         _ => e
     }
 

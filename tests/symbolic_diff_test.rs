@@ -14,14 +14,14 @@ use kleis::pretty_print::PrettyPrinter;
 fn create_evaluator_with_diff() -> Evaluator {
     let source = std::fs::read_to_string("stdlib/symbolic_diff.kleis")
         .expect("Failed to read stdlib/symbolic_diff.kleis");
-    
-    let program = parse_kleis_program(&source)
-        .expect("Failed to parse stdlib/symbolic_diff.kleis");
-    
+
+    let program = parse_kleis_program(&source).expect("Failed to parse stdlib/symbolic_diff.kleis");
+
     let mut evaluator = Evaluator::new();
-    evaluator.load_program(&program)
+    evaluator
+        .load_program(&program)
         .expect("Failed to load program into evaluator");
-    
+
     evaluator
 }
 
@@ -321,9 +321,11 @@ fn test_simplify_one_mul() {
 fn test_d_simplified() {
     // D_simplified differentiates and simplifies
     let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "D_simplified(Mul(Var(\"x\"), Var(\"x\")), \"x\")");
+    let result = eval(
+        &evaluator,
+        "D_simplified(Mul(Var(\"x\"), Var(\"x\")), \"x\")",
+    );
     println!("D_simplified(x*x, x) = {:?}", result);
     assert!(result.is_ok());
     // Should get a simplified form of 2x
 }
-

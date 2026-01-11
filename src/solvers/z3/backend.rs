@@ -366,7 +366,9 @@ impl<'r> Z3Backend<'r> {
             // Too many terms, fall back to uninterpreted to avoid explosion
             self.warnings.push(format!(
                 "sum_over: range [{}, {}) has {} terms, falling back to uninterpreted",
-                start, end, end - start
+                start,
+                end,
+                end - start
             ));
             return Ok(None);
         }
@@ -432,7 +434,13 @@ impl<'r> Z3Backend<'r> {
                 }
             }
 
-            Expression::Let { pattern, type_annotation, value, body, span } => {
+            Expression::Let {
+                pattern,
+                type_annotation,
+                value,
+                body,
+                span,
+            } => {
                 // Check if the variable is shadowed by the pattern
                 let shadowed = if let Pattern::Variable(ref pname) = pattern {
                     pname == var_name
@@ -487,13 +495,20 @@ impl<'r> Z3Backend<'r> {
                 span: span.clone(),
             },
 
-            Expression::Match { scrutinee, cases, span } => Expression::Match {
+            Expression::Match {
+                scrutinee,
+                cases,
+                span,
+            } => Expression::Match {
                 scrutinee: Box::new(self.substitute_in_expr(scrutinee, var_name, replacement)),
                 cases: cases
                     .iter()
                     .map(|c| MatchCase {
                         pattern: c.pattern.clone(),
-                        guard: c.guard.as_ref().map(|g| self.substitute_in_expr(g, var_name, replacement)),
+                        guard: c
+                            .guard
+                            .as_ref()
+                            .map(|g| self.substitute_in_expr(g, var_name, replacement)),
                         body: self.substitute_in_expr(&c.body, var_name, replacement),
                     })
                     .collect(),
@@ -508,7 +523,10 @@ impl<'r> Z3Backend<'r> {
             ),
 
             // Ascription: substitute in inner expression
-            Expression::Ascription { expr: inner, type_annotation } => Expression::Ascription {
+            Expression::Ascription {
+                expr: inner,
+                type_annotation,
+            } => Expression::Ascription {
                 expr: Box::new(self.substitute_in_expr(inner, var_name, replacement)),
                 type_annotation: type_annotation.clone(),
             },
@@ -1595,7 +1613,9 @@ impl<'r> Z3Backend<'r> {
                 // Expands sum_over(λ i . body, start, end) into body[i=start] + body[i=start+1] + ... + body[i=end-1]
                 // This enables tensor contraction/Einstein summation in Z3
                 if name == "sum_over" && args.len() == 3 {
-                    if let Some(expanded) = self.try_expand_sum_over(&args[0], &args[1], &args[2], vars)? {
+                    if let Some(expanded) =
+                        self.try_expand_sum_over(&args[0], &args[1], &args[2], vars)?
+                    {
                         return Ok(expanded);
                     }
                 }

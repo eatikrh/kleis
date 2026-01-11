@@ -2056,14 +2056,7 @@ fn test_sum_over_expansion_simple() {
     let mut backend = Z3Backend::new(&registry).expect("Backend failed");
 
     // sum_over(λ i . i, 0, 4)
-    let sum_expr = op(
-        "sum_over",
-        vec![
-            lambda("i", obj("i")),
-            num(0),
-            num(4),
-        ],
-    );
+    let sum_expr = op("sum_over", vec![lambda("i", obj("i")), num(0), num(4)]);
 
     // Expected: 6
     let expected = num(6);
@@ -2091,14 +2084,7 @@ fn test_sum_over_expansion_with_multiplication() {
 
     // λ i . 2 * i
     let body = op("times", vec![num(2), obj("i")]);
-    let sum_expr = op(
-        "sum_over",
-        vec![
-            lambda("i", body),
-            num(0),
-            num(3),
-        ],
-    );
+    let sum_expr = op("sum_over", vec![lambda("i", body), num(0), num(3)]);
 
     // Expected: 6
     let expected = num(6);
@@ -2130,14 +2116,7 @@ fn test_sum_over_tensor_contraction() {
     let g_inv_rho_nu = op("g_inv", vec![obj("rho"), obj("nu")]);
     let body = op("times", vec![g_mu_rho, g_inv_rho_nu]);
 
-    let sum_expr = op(
-        "sum_over",
-        vec![
-            lambda("rho", body),
-            num(0),
-            num(4),
-        ],
-    );
+    let sum_expr = op("sum_over", vec![lambda("rho", body), num(0), num(4)]);
 
     // Check that sum_over can be equal to delta(μ, ν)
     // (Z3 treats g, g_inv, delta as uninterpreted functions)
@@ -2145,7 +2124,10 @@ fn test_sum_over_tensor_contraction() {
     let equality = op("equals", vec![sum_expr, delta_mu_nu]);
 
     let result = backend.check_satisfiability(&equality);
-    println!("   Tensor contraction = delta(μ, ν) satisfiable? {:?}", result);
+    println!(
+        "   Tensor contraction = delta(μ, ν) satisfiable? {:?}",
+        result
+    );
 
     // With uninterpreted functions, Z3 can find an assignment that makes this true
     assert!(
@@ -2210,7 +2192,7 @@ fn test_einstein_field_equations_chain() {
     // Step 1: Ricci tensor from Riemann contraction
     // R_μν = Σ_ρ R^ρ_μρν
     println!("\n   Step 1: Ricci tensor R_μν = Σ_ρ R(ρ, μ, ρ, ν)");
-    
+
     // For specific indices μ=0, ν=1
     let ricci_01 = op(
         "sum_over",
@@ -2220,100 +2202,140 @@ fn test_einstein_field_equations_chain() {
             num(dim),
         ],
     );
-    
+
     // This should expand to: R(0,0,0,1) + R(1,0,1,1) + R(2,0,2,1) + R(3,0,3,1)
     // Check it equals some Ricci(0,1) value
     let ricci_func_01 = op("Ricci", vec![num(0), num(1)]);
     let ricci_equality = op("equals", vec![ricci_01, ricci_func_01]);
-    
+
     let result = backend.check_satisfiability(&ricci_equality);
-    println!("      Ricci(0,1) = Σ_ρ R(ρ,0,ρ,1) satisfiable? {:?}", 
-             if result.is_ok() { "✅" } else { "❌" });
-    assert!(matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })));
+    println!(
+        "      Ricci(0,1) = Σ_ρ R(ρ,0,ρ,1) satisfiable? {:?}",
+        if result.is_ok() { "✅" } else { "❌" }
+    );
+    assert!(matches!(
+        result,
+        Ok(SatisfiabilityResult::Satisfiable { .. })
+    ));
 
     // Step 2: Ricci scalar from double contraction
     // R = Σ_μ Σ_ν g^μν R_μν
     println!("\n   Step 2: Ricci scalar R = Σ_μ Σ_ν g^μν R_μν");
-    
+
     // Inner sum: Σ_ν g^μν R_μν for fixed μ
     // Outer sum: Σ_μ (inner sum)
     let ricci_scalar = op(
         "sum_over",
         vec![
-            lambda("mu", op(
-                "sum_over",
-                vec![
-                    lambda("nu", op("times", vec![
-                        op("g_inv", vec![obj("mu"), obj("nu")]),
-                        op("Ricci", vec![obj("mu"), obj("nu")]),
-                    ])),
-                    num(0),
-                    num(dim),
-                ],
-            )),
+            lambda(
+                "mu",
+                op(
+                    "sum_over",
+                    vec![
+                        lambda(
+                            "nu",
+                            op(
+                                "times",
+                                vec![
+                                    op("g_inv", vec![obj("mu"), obj("nu")]),
+                                    op("Ricci", vec![obj("mu"), obj("nu")]),
+                                ],
+                            ),
+                        ),
+                        num(0),
+                        num(dim),
+                    ],
+                ),
+            ),
             num(0),
             num(dim),
         ],
     );
-    
+
     // Check R = some scalar value RicciScalar
     let ricci_scalar_sym = obj("RicciScalar");
     let scalar_equality = op("equals", vec![ricci_scalar, ricci_scalar_sym]);
-    
+
     let result = backend.check_satisfiability(&scalar_equality);
-    println!("      RicciScalar = Σ_μ Σ_ν g^μν R_μν satisfiable? {:?}",
-             if result.is_ok() { "✅" } else { "❌" });
-    assert!(matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })));
+    println!(
+        "      RicciScalar = Σ_μ Σ_ν g^μν R_μν satisfiable? {:?}",
+        if result.is_ok() { "✅" } else { "❌" }
+    );
+    assert!(matches!(
+        result,
+        Ok(SatisfiabilityResult::Satisfiable { .. })
+    ));
 
     // Step 3: Einstein tensor
     // G_μν = R_μν - (1/2) R g_μν
     println!("\n   Step 3: Einstein tensor G_μν = R_μν - (1/2) R g_μν");
-    
+
     // For indices 0,0
     let ricci_00 = op("Ricci", vec![num(0), num(0)]);
     let g_00 = op("g", vec![num(0), num(0)]);
-    let half_R_g = op("times", vec![
-        op("times", vec![obj("half"), obj("RicciScalar")]),
-        g_00.clone(),
-    ]);
-    let einstein_00 = op("minus", vec![ricci_00.clone(), half_R_g]);
-    
+    let half_r_g = op(
+        "times",
+        vec![
+            op("times", vec![obj("half"), obj("RicciScalar")]),
+            g_00.clone(),
+        ],
+    );
+    let einstein_00 = op("minus", vec![ricci_00.clone(), half_r_g]);
+
     let einstein_func_00 = op("G", vec![num(0), num(0)]);
     let einstein_equality = op("equals", vec![einstein_00, einstein_func_00]);
-    
+
     let result = backend.check_satisfiability(&einstein_equality);
-    println!("      G(0,0) = R(0,0) - ½R g(0,0) satisfiable? {:?}",
-             if result.is_ok() { "✅" } else { "❌" });
-    assert!(matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })));
+    println!(
+        "      G(0,0) = R(0,0) - ½R g(0,0) satisfiable? {:?}",
+        if result.is_ok() { "✅" } else { "❌" }
+    );
+    assert!(matches!(
+        result,
+        Ok(SatisfiabilityResult::Satisfiable { .. })
+    ));
 
     // Step 4: Einstein Field Equations
     // G_μν + Λ g_μν = κ T_μν
     println!("\n   Step 4: Field equations G_μν + Λ g_μν = κ T_μν");
-    
+
     let lambda_term = op("times", vec![obj("Lambda"), g_00.clone()]);
     let lhs = op("plus", vec![op("G", vec![num(0), num(0)]), lambda_term]);
-    
+
     let t_00 = op("T", vec![num(0), num(0)]);
     let rhs = op("times", vec![obj("kappa"), t_00]);
-    
+
     let field_eq = op("equals", vec![lhs, rhs]);
-    
+
     let result = backend.check_satisfiability(&field_eq);
-    println!("      G(0,0) + Λ g(0,0) = κ T(0,0) satisfiable? {:?}",
-             if result.is_ok() { "✅" } else { "❌" });
-    assert!(matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })));
+    println!(
+        "      G(0,0) + Λ g(0,0) = κ T(0,0) satisfiable? {:?}",
+        if result.is_ok() { "✅" } else { "❌" }
+    );
+    assert!(matches!(
+        result,
+        Ok(SatisfiabilityResult::Satisfiable { .. })
+    ));
 
     // Step 5: Verify vacuum solution (T_μν = 0)
     // In vacuum: G_μν + Λ g_μν = 0
     println!("\n   Step 5: Vacuum field equations G_μν = -Λ g_μν");
-    
-    let neg_lambda_g = op("negate", vec![op("times", vec![obj("Lambda"), g_00.clone()])]);
+
+    let neg_lambda_g = op(
+        "negate",
+        vec![op("times", vec![obj("Lambda"), g_00.clone()])],
+    );
     let vacuum_eq = op("equals", vec![op("G", vec![num(0), num(0)]), neg_lambda_g]);
-    
+
     let result = backend.check_satisfiability(&vacuum_eq);
-    println!("      Vacuum: G(0,0) = -Λ g(0,0) satisfiable? {:?}",
-             if result.is_ok() { "✅" } else { "❌" });
-    assert!(matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })));
+    println!(
+        "      Vacuum: G(0,0) = -Λ g(0,0) satisfiable? {:?}",
+        if result.is_ok() { "✅" } else { "❌" }
+    );
+    assert!(matches!(
+        result,
+        Ok(SatisfiabilityResult::Satisfiable { .. })
+    ));
 
     println!("\n   🎉 Einstein Field Equations chain verified!");
     println!("   ✅ Riemann → Ricci contraction (sum_over)");
@@ -2338,23 +2360,29 @@ fn test_metric_inverse_identity_computed() {
     let contraction_00 = op(
         "sum_over",
         vec![
-            lambda("rho", op("times", vec![
-                op("g_inv", vec![num(0), obj("rho")]),
-                op("g", vec![obj("rho"), num(0)]),
-            ])),
+            lambda(
+                "rho",
+                op(
+                    "times",
+                    vec![
+                        op("g_inv", vec![num(0), obj("rho")]),
+                        op("g", vec![obj("rho"), num(0)]),
+                    ],
+                ),
+            ),
             num(0),
             num(dim),
         ],
     );
-    
+
     // This expands to: g_inv(0,0)*g(0,0) + g_inv(0,1)*g(1,0) + g_inv(0,2)*g(2,0) + g_inv(0,3)*g(3,0)
     // Which should equal δ(0,0) = 1 for the inverse to be correct
     let delta_00 = op("delta", vec![num(0), num(0)]);
     let identity_eq = op("equals", vec![contraction_00, delta_00]);
-    
+
     let result = backend.check_satisfiability(&identity_eq);
     println!("   Σ_ρ g^0ρ g_ρ0 = δ(0,0) satisfiable? {:?}", result);
-    
+
     assert!(
         matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })),
         "Metric inverse identity should be satisfiable"
@@ -2364,21 +2392,27 @@ fn test_metric_inverse_identity_computed() {
     let contraction_01 = op(
         "sum_over",
         vec![
-            lambda("rho", op("times", vec![
-                op("g_inv", vec![num(0), obj("rho")]),
-                op("g", vec![obj("rho"), num(1)]),
-            ])),
+            lambda(
+                "rho",
+                op(
+                    "times",
+                    vec![
+                        op("g_inv", vec![num(0), obj("rho")]),
+                        op("g", vec![obj("rho"), num(1)]),
+                    ],
+                ),
+            ),
             num(0),
             num(dim),
         ],
     );
-    
+
     let delta_01 = op("delta", vec![num(0), num(1)]);
     let off_diag_eq = op("equals", vec![contraction_01, delta_01]);
-    
+
     let result = backend.check_satisfiability(&off_diag_eq);
     println!("   Σ_ρ g^0ρ g_ρ1 = δ(0,1) satisfiable? {:?}", result);
-    
+
     assert!(
         matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })),
         "Metric inverse off-diagonal should be satisfiable"
@@ -2400,22 +2434,28 @@ fn test_bianchi_identity_divergence() {
     let dim = 4;
 
     // Divergence of Einstein tensor for ν=0
-    // div_G_0 = Σ_μ ∇^μ G_μ0
-    let div_G_0 = op(
+    // div_g_0 = Σ_μ ∇^μ G_μ0
+    let div_g_0 = op(
         "sum_over",
         vec![
-            lambda("mu", op("nabla_up", vec![obj("mu"), op("G", vec![obj("mu"), num(0)])])),
+            lambda(
+                "mu",
+                op(
+                    "nabla_up",
+                    vec![obj("mu"), op("G", vec![obj("mu"), num(0)])],
+                ),
+            ),
             num(0),
             num(dim),
         ],
     );
-    
+
     // Should equal 0
-    let div_eq = op("equals", vec![div_G_0, num(0)]);
-    
+    let div_eq = op("equals", vec![div_g_0, num(0)]);
+
     let result = backend.check_satisfiability(&div_eq);
     println!("   Σ_μ ∇^μ G_μ0 = 0 satisfiable? {:?}", result);
-    
+
     assert!(
         matches!(result, Ok(SatisfiabilityResult::Satisfiable { .. })),
         "Einstein divergence-free should be satisfiable"

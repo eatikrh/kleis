@@ -98,13 +98,14 @@ define add2(a, b) = [
  *
  * d(f) = Σ_μ (∂f/∂x^μ) dx^μ = [∂f/∂t, ∂f/∂r, ∂f/∂θ, ∂f/∂φ]
  *
- * This uses our diff function from symbolic_diff.kleis!
+ * We use coordinate-specific diff functions from symbolic_diff.kleis
+ * that avoid conditional explosion by pattern matching on variable names.
  */
 define d0(f) = [
-    simplify(diff(f, "t")),
-    simplify(diff(f, "r")),
-    simplify(diff(f, "theta")),
-    simplify(diff(f, "phi"))
+    simplify(diff_wrt_t(f)),
+    simplify(diff_wrt_r(f)),
+    simplify(diff_wrt_theta(f)),
+    simplify(diff_wrt_phi(f))
 ]
 
 /* Exterior Derivative of 1-form
@@ -112,6 +113,8 @@ define d0(f) = [
  * d(ω) = d(ω_μ dx^μ)
  * 
  * (d(ω))_μν = ∂ω_ν/∂x^μ - ∂ω_μ/∂x^ν  (antisymmetric!)
+ *
+ * Uses coordinate-specific diff functions to avoid conditional explosion.
  */
 define d1(omega) = 
     let w0 = nth(omega, 0) in
@@ -119,25 +122,25 @@ define d1(omega) =
     let w2 = nth(omega, 2) in
     let w3 = nth(omega, 3) in
     [
-        // Row 0
+        // Row 0: d/dt derivatives
         [Const(0),
-         simplify(Sub(diff(w1, "t"), diff(w0, "r"))),
-         simplify(Sub(diff(w2, "t"), diff(w0, "theta"))),
-         simplify(Sub(diff(w3, "t"), diff(w0, "phi")))],
-        // Row 1
-        [simplify(Sub(diff(w0, "r"), diff(w1, "t"))),
+         simplify(Sub(diff_wrt_t(w1), diff_wrt_r(w0))),
+         simplify(Sub(diff_wrt_t(w2), diff_wrt_theta(w0))),
+         simplify(Sub(diff_wrt_t(w3), diff_wrt_phi(w0)))],
+        // Row 1: d/dr derivatives
+        [simplify(Sub(diff_wrt_r(w0), diff_wrt_t(w1))),
          Const(0),
-         simplify(Sub(diff(w2, "r"), diff(w1, "theta"))),
-         simplify(Sub(diff(w3, "r"), diff(w1, "phi")))],
-        // Row 2
-        [simplify(Sub(diff(w0, "theta"), diff(w2, "t"))),
-         simplify(Sub(diff(w1, "theta"), diff(w2, "r"))),
+         simplify(Sub(diff_wrt_r(w2), diff_wrt_theta(w1))),
+         simplify(Sub(diff_wrt_r(w3), diff_wrt_phi(w1)))],
+        // Row 2: d/dθ derivatives
+        [simplify(Sub(diff_wrt_theta(w0), diff_wrt_t(w2))),
+         simplify(Sub(diff_wrt_theta(w1), diff_wrt_r(w2))),
          Const(0),
-         simplify(Sub(diff(w3, "theta"), diff(w2, "phi")))],
-        // Row 3
-        [simplify(Sub(diff(w0, "phi"), diff(w3, "t"))),
-         simplify(Sub(diff(w1, "phi"), diff(w3, "r"))),
-         simplify(Sub(diff(w2, "phi"), diff(w3, "theta"))),
+         simplify(Sub(diff_wrt_theta(w3), diff_wrt_phi(w2)))],
+        // Row 3: d/dφ derivatives
+        [simplify(Sub(diff_wrt_phi(w0), diff_wrt_t(w3))),
+         simplify(Sub(diff_wrt_phi(w1), diff_wrt_r(w3))),
+         simplify(Sub(diff_wrt_phi(w2), diff_wrt_theta(w3))),
          Const(0)]
     ]
 

@@ -3007,6 +3007,12 @@ impl KleisParser {
             return self.parse_tuple_pattern();
         }
 
+        // List pattern: [a, b, c] - desugars to Cons(a, Cons(b, Cons(c, Nil)))
+        // Grammar v0.98: listPattern ::= "[" [ pattern { "," pattern } ] "]"
+        if self.peek() == Some('[') {
+            return self.parse_list_pattern();
+        }
+
         // Wildcard: _
         if self.peek() == Some('_') {
             let start_pos = self.pos;
@@ -3173,6 +3179,56 @@ impl KleisParser {
         };
 
         Ok(Pattern::constructor(constructor_name, elements))
+    }
+
+    /// Parse list pattern: [a, b, c]
+    ///
+    /// Grammar v0.98: listPattern ::= "[" [ pattern { "," pattern } ] "]"
+    ///
+    /// Desugars to nested Cons constructors:
+    /// - [] → Nil
+    /// - [x] → Cons(x, Nil)
+    /// - [x, y] → Cons(x, Cons(y, Nil))
+    /// - [x, y, z] → Cons(x, Cons(y, Cons(z, Nil)))
+    fn parse_list_pattern(&mut self) -> Result<Pattern, KleisParseError> {
+        self.expect_char('[')?;
+        self.skip_whitespace();
+
+        // Empty list: []
+        if self.peek() == Some(']') {
+            self.advance();
+            return Ok(Pattern::constructor("Nil", vec![]));
+        }
+
+        // Parse first pattern
+        let first = self.parse_pattern()?;
+        self.skip_whitespace();
+
+        // Collect all elements
+        let mut elements = vec![first];
+        while self.peek() == Some(',') {
+            self.advance(); // consume comma
+            self.skip_whitespace();
+
+            // Allow trailing comma
+            if self.peek() == Some(']') {
+                break;
+            }
+
+            let elem = self.parse_pattern()?;
+            elements.push(elem);
+            self.skip_whitespace();
+        }
+
+        self.expect_char(']')?;
+
+        // Desugar to nested Cons: [a, b, c] → Cons(a, Cons(b, Cons(c, Nil)))
+        let mut result = Pattern::constructor("Nil", vec![]);
+        for elem in elements.into_iter().rev() {
+            result = Pattern::constructor("Cons", vec![elem, result]);
+        }
+
+        Ok(result)
     }
 
     /// Parse nested structure definition
@@ -5645,6 +5701,71 @@ mod tests {
                         Pattern::Variable("y".to_string())
                     ]
                 }]
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_pattern_list_empty() {
+        let mut parser = KleisParser::new("[]");
+        let result = parser.parse_pattern().unwrap();
+        assert_eq!(
+            result,
+            Pattern::Constructor {
+                name: "Nil".to_string(),
+                args: vec![]
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_pattern_list_single() {
+        let mut parser = KleisParser::new("[x]");
+        let result = parser.parse_pattern().unwrap();
+        // [x] desugars to Cons(x, Nil)
+        assert_eq!(
+            result,
+            Pattern::Constructor {
+                name: "Cons".to_string(),
+                args: vec![
+                    Pattern::Variable("x".to_string()),
+                    Pattern::Constructor {
+                        name: "Nil".to_string(),
+                        args: vec![]
+                    }
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_pattern_list_multiple() {
+        let mut parser = KleisParser::new("[a, b, c]");
+        let result = parser.parse_pattern().unwrap();
+        // [a, b, c] desugars to Cons(a, Cons(b, Cons(c, Nil)))
+        assert_eq!(
+            result,
+            Pattern::Constructor {
+                name: "Cons".to_string(),
+                args: vec![
+                    Pattern::Variable("a".to_string()),
+                    Pattern::Constructor {
+                        name: "Cons".to_string(),
+                        args: vec![
+                            Pattern::Variable("b".to_string()),
+                            Pattern::Constructor {
+                                name: "Cons".to_string(),
+                                args: vec![
+                                    Pattern::Variable("c".to_string()),
+                                    Pattern::Constructor {
+                                        name: "Nil".to_string(),
+                                        args: vec![]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
             }
         );
     }
