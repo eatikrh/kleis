@@ -361,6 +361,48 @@ fn try_expand_sum_over(
 - `test_sum_over_expansion_with_multiplication`: λ i . 2*i ✅
 - `test_sum_over_tensor_contraction`: g(μ,ρ) * g_inv(ρ,ν) pattern ✅
 - `test_sum_over_empty_range`: empty range = 0 ✅
+- `test_einstein_field_equations_chain`: Full verification chain ✅
+  - Ricci tensor: R_μν = Σ_ρ R(ρ, μ, ρ, ν)
+  - Ricci scalar: R = Σ_μ Σ_ν g^μν R_μν
+  - Einstein tensor: G_μν = R_μν - ½ R g_μν
+  - Field equations: G_μν + Λ g_μν = κ T_μν
+  - Vacuum solution: G_μν = -Λ g_μν
+
+---
+
+## Progress: Transcendental Derivative Axioms ✅ DONE
+
+Added `TranscendentalDerivatives(F)` structure to `stdlib/calculus.kleis`:
+
+| Category | Axioms |
+|----------|--------|
+| Trigonometric | D_sin, D_cos, D_tan |
+| Inverse Trig | D_arcsin, D_arccos, D_arctan |
+| Exponential | D_exp, D_ln, D_log |
+| Power | D_power_general (f^g) |
+| Square Root | D_sqrt |
+| Hyperbolic | D_sinh, D_cosh, D_tanh |
+
+**These enable:**
+- Schwarzschild metric (1/r terms, sqrt)
+- Conformal factors (exp, ln)
+- Spherical coordinates (sin, cos)
+- FLRW cosmology (scale factor a(t))
+
+---
+
+## Progress: Manual Documentation ✅ DONE
+
+Clarified the difference between computational and axiomatic differentiation:
+
+| Function | Type | Where | What |
+|----------|------|-------|------|
+| `diff(expr, var)` | Computational | Evaluator | Pattern matches on AST, returns derivative |
+| `D(f, x)` / `Dt(f, x)` | Axiomatic | Z3 | Declares properties for verification |
+
+**Files Updated:**
+- `docs/manual/src/chapters/13-applications.md` - Full comparison section
+- `docs/manual/src/chapters/05-pattern-matching.md` - Cross-reference note
 
 ---
 
