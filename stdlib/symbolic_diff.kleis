@@ -1,0 +1,222 @@
+// Symbolic Differentiation in Pure Kleis
+// =======================================
+//
+// This module implements computational symbolic differentiation using
+// pattern matching on expression trees. Unlike the axiomatic D(f,x) in
+// calculus.kleis (which declares properties for Z3 verification), this
+// module COMPUTES actual derivatives.
+//
+// Usage:
+//   let expr = Mul(Var("x"), Var("x")) in  // x²
+//   diff(expr, "x")                         // → Add(Mul(Const(1), Var("x")), Mul(Var("x"), Const(1)))
+//                                           //   which simplifies to 2x
+//
+// See also: stdlib/calculus.kleis for D(f,x) axioms used in Z3 verification
+
+// =============================================================================
+// Expression AST
+// =============================================================================
+
+data Expr = 
+    Const(value : ℝ)
+  | Var(name : String)
+  | Add(left : Expr, right : Expr)
+  | Sub(left : Expr, right : Expr)
+  | Mul(left : Expr, right : Expr)
+  | Div(numer : Expr, denom : Expr)
+  | Pow(base : Expr, exp : Expr)
+  | Neg(arg : Expr)
+  | Sin(arg : Expr)
+  | Cos(arg : Expr)
+  | Tan(arg : Expr)
+  | Exp(arg : Expr)
+  | Ln(arg : Expr)
+  | Sqrt(arg : Expr)
+
+// =============================================================================
+// Symbolic Differentiation
+// =============================================================================
+
+// diff(e, x) - Compute the derivative of expression e with respect to variable x
+//
+// Implements standard derivative rules:
+//   - Constant rule: d/dx(c) = 0
+//   - Variable rule: d/dx(x) = 1, d/dx(y) = 0 if y ≠ x
+//   - Sum rule: d/dx(f + g) = f' + g'
+//   - Difference rule: d/dx(f - g) = f' - g'
+//   - Product rule: d/dx(f · g) = f' · g + f · g'
+//   - Quotient rule: d/dx(f / g) = (f' · g - f · g') / g²
+//   - Power rule: d/dx(f^n) = n · f^(n-1) · f'
+//   - Chain rule: d/dx(sin(f)) = cos(f) · f', etc.
+
+define diff(e, x) =
+    match e {
+        // Constants have zero derivative
+        Const(_) => Const(0)
+        
+        // Variable: 1 if same as x, 0 otherwise
+        Var(name) => 
+            if name = x then Const(1) 
+            else Const(0)
+        
+        // Negation: d/dx(-f) = -f'
+        Neg(f) => Neg(diff(f, x))
+        
+        // Sum rule: d/dx(f + g) = f' + g'
+        Add(f, g) => Add(diff(f, x), diff(g, x))
+        
+        // Difference rule: d/dx(f - g) = f' - g'
+        Sub(f, g) => Sub(diff(f, x), diff(g, x))
+        
+        // Product rule: d/dx(f · g) = f' · g + f · g'
+        Mul(f, g) => 
+            Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
+        
+        // Quotient rule: d/dx(f/g) = (f'g - fg') / g²
+        Div(f, g) =>
+            Div(
+                Sub(Mul(diff(f, x), g), Mul(f, diff(g, x))),
+                Pow(g, Const(2))
+            )
+        
+        // Power rule: d/dx(f^n) = n · f^(n-1) · f'
+        // Note: This handles f^(constant) case
+        Pow(f, Const(n)) =>
+            Mul(
+                Mul(Const(n), Pow(f, Const(n - 1))),
+                diff(f, x)
+            )
+        
+        // General power rule: d/dx(f^g) = f^g · (g' · ln(f) + g · f'/f)
+        // For non-constant exponents
+        Pow(f, g) =>
+            Mul(
+                Pow(f, g),
+                Add(
+                    Mul(diff(g, x), Ln(f)),
+                    Mul(g, Div(diff(f, x), f))
+                )
+            )
+        
+        // Trigonometric derivatives (chain rule applied)
+        Sin(f) => Mul(Cos(f), diff(f, x))
+        Cos(f) => Mul(Neg(Sin(f)), diff(f, x))
+        Tan(f) => Mul(Div(Const(1), Pow(Cos(f), Const(2))), diff(f, x))
+        
+        // Exponential and logarithm
+        Exp(f) => Mul(Exp(f), diff(f, x))
+        Ln(f) => Mul(Div(Const(1), f), diff(f, x))
+        
+        // Square root: √f = f^(1/2), so d/dx(√f) = (1/2) * f^(-1/2) * f' = f'/(2√f)
+        // This is a special case of the power rule, but we keep it for clarity
+        // and because Sqrt is a separate constructor in our AST.
+        // If you represent √x as Pow(x, Const(0.5)), the power rule handles it.
+        Sqrt(f) => Div(diff(f, x), Mul(Const(2), Sqrt(f)))
+        
+        // Fallback for unhandled cases
+        _ => Const(0)
+    }
+
+// =============================================================================
+// Expression Simplification (basic)
+// =============================================================================
+
+// simplify(e) - Apply basic algebraic simplifications
+//
+// This is a simple simplifier. For production use, you'd want
+// more sophisticated normalization.
+
+define simplify(e) =
+    match e {
+        // 0 + x = x, x + 0 = x
+        Add(Const(0), f) => simplify(f)
+        Add(f, Const(0)) => simplify(f)
+        
+        // 0 - x = -x, x - 0 = x
+        Sub(Const(0), f) => Neg(simplify(f))
+        Sub(f, Const(0)) => simplify(f)
+        
+        // 0 * x = 0, x * 0 = 0
+        Mul(Const(0), _) => Const(0)
+        Mul(_, Const(0)) => Const(0)
+        
+        // 1 * x = x, x * 1 = x
+        Mul(Const(1), f) => simplify(f)
+        Mul(f, Const(1)) => simplify(f)
+        
+        // x^0 = 1, x^1 = x
+        Pow(_, Const(0)) => Const(1)
+        Pow(f, Const(1)) => simplify(f)
+        
+        // --x = x
+        Neg(Neg(f)) => simplify(f)
+        
+        // Constant folding for addition
+        Add(Const(a), Const(b)) => Const(a + b)
+        
+        // Constant folding for multiplication
+        Mul(Const(a), Const(b)) => Const(a * b)
+        
+        // Recursive simplification
+        Add(f, g) => 
+            let sf = simplify(f) in
+            let sg = simplify(g) in
+            if sf = Const(0) then sg
+            else if sg = Const(0) then sf
+            else Add(sf, sg)
+        
+        Mul(f, g) =>
+            let sf = simplify(f) in
+            let sg = simplify(g) in
+            if sf = Const(0) then Const(0)
+            else if sg = Const(0) then Const(0)
+            else if sf = Const(1) then sg
+            else if sg = Const(1) then sf
+            else Mul(sf, sg)
+        
+        Neg(f) => Neg(simplify(f))
+        
+        // Pass through other expressions
+        _ => e
+    }
+
+// =============================================================================
+// Convenience: differentiate and simplify
+// =============================================================================
+
+define D_simplified(e, x) = simplify(diff(e, x))
+
+// =============================================================================
+// Example Expressions
+// =============================================================================
+
+// x² 
+define x_squared = Pow(Var("x"), Const(2))
+
+// x³
+define x_cubed = Pow(Var("x"), Const(3))
+
+// sin(x)
+define sin_x = Sin(Var("x"))
+
+// e^x
+define exp_x = Exp(Var("x"))
+
+// x² + 2x + 1
+define quadratic = Add(Add(Pow(Var("x"), Const(2)), Mul(Const(2), Var("x"))), Const(1))
+
+// sin(x²)
+define sin_x_squared = Sin(Pow(Var("x"), Const(2)))
+
+// e^(x²)
+define exp_x_squared = Exp(Pow(Var("x"), Const(2)))
+
+// ln(x)
+define ln_x = Ln(Var("x"))
+
+// √x
+define sqrt_x = Sqrt(Var("x"))
+
+// x/y
+define x_over_y = Div(Var("x"), Var("y"))
+
