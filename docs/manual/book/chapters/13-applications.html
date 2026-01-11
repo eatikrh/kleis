@@ -43,10 +43,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ece698e2.js";
+            window.path_to_searchindex_js = "../searchindex-ed4d9a85.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-f4ee74aa.js"></script>
+        <script src="../toc-5619aea8.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -680,6 +680,20 @@ structure EinsteinEquations {
 }
 </code></pre>
 <h2 id="symbolic-differentiation"><a class="header" href="#symbolic-differentiation">Symbolic Differentiation</a></h2>
+<p>Kleis supports differentiation in two fundamentally different ways:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Approach</th><th>Function</th><th>Purpose</th><th>Runs In</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Computational</strong></td><td><code>diff(expr, var)</code></td><td>Actually compute derivatives</td><td>Kleis Evaluator</td></tr>
+<tr><td><strong>Axiomatic</strong></td><td><code>D(f, x)</code>, <code>Dt(f, x)</code></td><td>Verify derivative properties</td><td>Z3 Solver</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="computational-differentiation-diff"><a class="header" href="#computational-differentiation-diff">Computational Differentiation: <code>diff</code></a></h3>
+<p>The <code>diff</code> function <strong>computes</strong> derivatives by pattern matching on expression trees. It’s implemented in pure Kleis and returns a new expression:</p>
 <pre><code class="language-kleis">data Expr = Const(value : ℝ) 
           | Var(name : String) 
           | Add(left : Expr, right : Expr) 
@@ -711,6 +725,42 @@ define diff(e, x) =
         _ =&gt; Const(0)
     }
 </code></pre>
+<p><strong>Usage:</strong> Call <code>diff(Mul(Var("x"), Var("x")), "x")</code> and get back <code>Add(Mul(Const(1), Var("x")), Mul(Var("x"), Const(1)))</code> (which simplifies to <code>2x</code>).</p>
+<h3 id="axiomatic-differentiation-d-and-dt"><a class="header" href="#axiomatic-differentiation-d-and-dt">Axiomatic Differentiation: <code>D</code> and <code>Dt</code></a></h3>
+<p>The <code>D</code> and <code>Dt</code> operations are declared in <code>stdlib/calculus.kleis</code> with <strong>axioms</strong> that describe derivative properties. They don’t compute anything — Z3 uses these axioms to <strong>verify</strong> that equations involving derivatives are consistent:</p>
+<pre><code class="language-kleis">// From stdlib/calculus.kleis
+structure Differentiable(F) {
+    operation D : F → Variable → F      // Partial derivative
+    operation Dt : F → Variable → F     // Total derivative
+    
+    axiom D_product: ∀(f g : F, x : Variable). 
+        D(f * g, x) = D(f, x) * g + f * D(g, x)
+    
+    axiom Dt_chain: ∀(f : F, x y : Variable). 
+        Dt(f, x) = D(f, x) + D(f, y) * Dt(y, x)
+}
+</code></pre>
+<p><strong>Usage:</strong> Write <code>D(f * g, x) = D(f, x) * g + f * D(g, x)</code> and Z3 confirms it’s valid (it matches the <code>D_product</code> axiom).</p>
+<h3 id="when-to-use-each"><a class="header" href="#when-to-use-each">When to Use Each</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Task</th><th>Use</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td>Compute ∂/∂x of x² + 2x</td><td><code>diff</code></td><td>Returns expression tree for 2x + 2</td></tr>
+<tr><td>Verify product rule holds</td><td><code>D</code> + Z3</td><td>Returns ✅ SAT</td></tr>
+<tr><td>Check physics equation consistency</td><td><code>D</code> + Z3</td><td>Verifies Euler-Lagrange equations</td></tr>
+<tr><td>Build a symbolic algebra system</td><td><code>diff</code></td><td>CAS-style manipulation</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Analogy:</strong></p>
+<ul>
+<li><code>diff</code> is like a <strong>calculator</strong> — it gives you answers</li>
+<li><code>D</code> axioms are like <strong>mathematical theorems</strong> — Z3 uses them to check proofs</li>
+</ul>
+<p>See <code>examples/calculus/derivatives.kleis</code> for more examples of both approaches.</p>
 <h2 id="linear-algebra"><a class="header" href="#linear-algebra">Linear Algebra</a></h2>
 <pre><code class="language-kleis">structure LinearSystem(n : ℕ) {
     operation solve : Matrix(n, n, ℝ) × Vector(n, ℝ) → Vector(n, ℝ)

@@ -43,10 +43,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ece698e2.js";
+            window.path_to_searchindex_js = "../searchindex-ed4d9a85.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-f4ee74aa.js"></script>
+        <script src="../toc-5619aea8.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -309,6 +309,9 @@ define complete(opt) =
             Neg(diff(f, var))
     }
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> This <code>diff</code> function <strong>computes</strong> derivatives by pattern matching on expression trees. Kleis also provides <code>D(f, x)</code> and <code>Dt(f, x)</code> operations in <code>stdlib/calculus.kleis</code> for <strong>verifying</strong> derivative properties with Z3. See <a href="./13-applications.html#symbolic-differentiation">Applications: Symbolic Differentiation</a> for a detailed comparison.</p>
+</blockquote>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
 <p>Learn about let bindings for local definitions!</p>
 <p>→ <a href="./06-let-bindings.html">Next: Let Bindings</a></p>

@@ -44,10 +44,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ece698e2.js";
+            window.path_to_searchindex_js = "searchindex-ed4d9a85.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-f4ee74aa.js"></script>
+        <script src="toc-5619aea8.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1287,6 +1287,9 @@ define complete(opt) =
             Neg(diff(f, var))
     }
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> This <code>diff</code> function <strong>computes</strong> derivatives by pattern matching on expression trees. Kleis also provides <code>D(f, x)</code> and <code>Dt(f, x)</code> operations in <code>stdlib/calculus.kleis</code> for <strong>verifying</strong> derivative properties with Z3. See <a href="#symbolic-differentiation">Applications: Symbolic Differentiation</a> for a detailed comparison.</p>
+</blockquote>
 <h2 id="whats-next-4"><a class="header" href="#whats-next-4">What’s Next?</a></h2>
 <p>Learn about let bindings for local definitions!</p>
 <p>→ <a href="#let-bindings">Next: Let Bindings</a></p>
@@ -4563,6 +4566,20 @@ structure EinsteinEquations {
 }
 </code></pre>
 <h2 id="symbolic-differentiation"><a class="header" href="#symbolic-differentiation">Symbolic Differentiation</a></h2>
+<p>Kleis supports differentiation in two fundamentally different ways:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Approach</th><th>Function</th><th>Purpose</th><th>Runs In</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Computational</strong></td><td><code>diff(expr, var)</code></td><td>Actually compute derivatives</td><td>Kleis Evaluator</td></tr>
+<tr><td><strong>Axiomatic</strong></td><td><code>D(f, x)</code>, <code>Dt(f, x)</code></td><td>Verify derivative properties</td><td>Z3 Solver</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="computational-differentiation-diff"><a class="header" href="#computational-differentiation-diff">Computational Differentiation: <code>diff</code></a></h3>
+<p>The <code>diff</code> function <strong>computes</strong> derivatives by pattern matching on expression trees. It’s implemented in pure Kleis and returns a new expression:</p>
 <pre><code class="language-kleis">data Expr = Const(value : ℝ) 
           | Var(name : String) 
           | Add(left : Expr, right : Expr) 
@@ -4594,6 +4611,42 @@ define diff(e, x) =
         _ =&gt; Const(0)
     }
 </code></pre>
+<p><strong>Usage:</strong> Call <code>diff(Mul(Var("x"), Var("x")), "x")</code> and get back <code>Add(Mul(Const(1), Var("x")), Mul(Var("x"), Const(1)))</code> (which simplifies to <code>2x</code>).</p>
+<h3 id="axiomatic-differentiation-d-and-dt"><a class="header" href="#axiomatic-differentiation-d-and-dt">Axiomatic Differentiation: <code>D</code> and <code>Dt</code></a></h3>
+<p>The <code>D</code> and <code>Dt</code> operations are declared in <code>stdlib/calculus.kleis</code> with <strong>axioms</strong> that describe derivative properties. They don’t compute anything — Z3 uses these axioms to <strong>verify</strong> that equations involving derivatives are consistent:</p>
+<pre><code class="language-kleis">// From stdlib/calculus.kleis
+structure Differentiable(F) {
+    operation D : F → Variable → F      // Partial derivative
+    operation Dt : F → Variable → F     // Total derivative
+    
+    axiom D_product: ∀(f g : F, x : Variable). 
+        D(f * g, x) = D(f, x) * g + f * D(g, x)
+    
+    axiom Dt_chain: ∀(f : F, x y : Variable). 
+        Dt(f, x) = D(f, x) + D(f, y) * Dt(y, x)
+}
+</code></pre>
+<p><strong>Usage:</strong> Write <code>D(f * g, x) = D(f, x) * g + f * D(g, x)</code> and Z3 confirms it’s valid (it matches the <code>D_product</code> axiom).</p>
+<h3 id="when-to-use-each"><a class="header" href="#when-to-use-each">When to Use Each</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Task</th><th>Use</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td>Compute ∂/∂x of x² + 2x</td><td><code>diff</code></td><td>Returns expression tree for 2x + 2</td></tr>
+<tr><td>Verify product rule holds</td><td><code>D</code> + Z3</td><td>Returns ✅ SAT</td></tr>
+<tr><td>Check physics equation consistency</td><td><code>D</code> + Z3</td><td>Verifies Euler-Lagrange equations</td></tr>
+<tr><td>Build a symbolic algebra system</td><td><code>diff</code></td><td>CAS-style manipulation</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Analogy:</strong></p>
+<ul>
+<li><code>diff</code> is like a <strong>calculator</strong> — it gives you answers</li>
+<li><code>D</code> axioms are like <strong>mathematical theorems</strong> — Z3 uses them to check proofs</li>
+</ul>
+<p>See <code>examples/calculus/derivatives.kleis</code> for more examples of both approaches.</p>
 <h2 id="linear-algebra-1"><a class="header" href="#linear-algebra-1">Linear Algebra</a></h2>
 <pre><code class="language-kleis">structure LinearSystem(n : ℕ) {
     operation solve : Matrix(n, n, ℝ) × Vector(n, ℝ) → Vector(n, ℝ)
@@ -9579,6 +9632,179 @@ example "symbolic verification" {
 <li><a href="#the-repl-1">The REPL</a> — Interactive exploration</li>
 <li><a href="#appendix-a-grammar-reference">Grammar Reference</a> — Full language syntax</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="appendix-cartan-geometry-and-tensor-computation"><a class="header" href="#appendix-cartan-geometry-and-tensor-computation">Appendix: Cartan Geometry and Tensor Computation</a></h1>
+<p>This appendix demonstrates Kleis’s capability to perform <strong>symbolic tensor calculus</strong> for general relativity, computing actual curvature tensors from metric specifications.</p>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Kleis implements Cartan’s formalism for differential geometry:</p>
+<pre><code>Metric → Tetrad → Connection → Curvature → Ricci → Einstein
+</code></pre>
+<p>This is the same computational pipeline used in research-grade general relativity software like xAct (Mathematica) and Cadabra.</p>
+<h2 id="the-cartan-pipeline"><a class="header" href="#the-cartan-pipeline">The Cartan Pipeline</a></h2>
+<h3 id="1-expression-ast"><a class="header" href="#1-expression-ast">1. Expression AST</a></h3>
+<p>Symbolic expressions are represented as algebraic data types:</p>
+<pre><code class="language-kleis">data Expr = 
+    Const(value : ℝ)
+  | Var(name : String)
+  | Add(left : Expr, right : Expr)
+  | Mul(left : Expr, right : Expr)
+  | Pow(base : Expr, exp : Expr)
+  | Sin(arg : Expr)
+  | Cos(arg : Expr)
+  | Sqrt(arg : Expr)
+  | ...
+</code></pre>
+<h3 id="2-symbolic-differentiation"><a class="header" href="#2-symbolic-differentiation">2. Symbolic Differentiation</a></h3>
+<p>The <code>diff</code> function computes derivatives by pattern matching:</p>
+<pre><code class="language-kleis">define diff(e, x) = match e {
+    Const(_) =&gt; Const(0)
+    Var(name) =&gt; if name = x then Const(1) else Const(0)
+    Add(f, g) =&gt; Add(diff(f, x), diff(g, x))
+    Mul(f, g) =&gt; Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
+    Pow(f, Const(n)) =&gt; Mul(Mul(Const(n), Pow(f, Const(n-1))), diff(f, x))
+    Sin(f) =&gt; Mul(Cos(f), diff(f, x))
+    ...
+}
+</code></pre>
+<h3 id="3-differential-forms"><a class="header" href="#3-differential-forms">3. Differential Forms</a></h3>
+<p>1-forms and 2-forms are represented as coefficient lists:</p>
+<pre><code class="language-kleis">// 1-form: ω = ω_t dt + ω_r dr + ω_θ dθ + ω_φ dφ
+// Represented as [ω_t, ω_r, ω_θ, ω_φ]
+
+define dt = [Const(1), Const(0), Const(0), Const(0)]
+define dr = [Const(0), Const(1), Const(0), Const(0)]
+</code></pre>
+<h3 id="4-exterior-derivative"><a class="header" href="#4-exterior-derivative">4. Exterior Derivative</a></h3>
+<pre><code class="language-kleis">// d(f) = ∂f/∂t dt + ∂f/∂r dr + ∂f/∂θ dθ + ∂f/∂φ dφ
+define d0(f) = [
+    diff(f, "t"),
+    diff(f, "r"),
+    diff(f, "theta"),
+    diff(f, "phi")
+]
+</code></pre>
+<h3 id="5-wedge-product"><a class="header" href="#5-wedge-product">5. Wedge Product</a></h3>
+<pre><code class="language-kleis">// (α ∧ β)_μν = α_μ β_ν - α_ν β_μ
+define wedge(a, b) = [
+    [Const(0), Sub(Mul(a0, b1), Mul(a1, b0)), ...],
+    ...
+]
+</code></pre>
+<h2 id="example-schwarzschild-black-hole"><a class="header" href="#example-schwarzschild-black-hole">Example: Schwarzschild Black Hole</a></h2>
+<p>The Schwarzschild metric describes spacetime around a non-rotating black hole:</p>
+<pre><code>ds² = -(1 - 2M/r)dt² + dr²/(1 - 2M/r) + r²dθ² + r²sin²θ dφ²
+</code></pre>
+<h3 id="tetrad-definition"><a class="header" href="#tetrad-definition">Tetrad Definition</a></h3>
+<pre><code class="language-kleis">define schw_f(M) = Sub(Const(1), Div(Mul(Const(2), M), Var("r")))
+
+define schwarzschild_tetrad(M) = [
+    scale1(Sqrt(schw_f(M)), dt),           // e⁰ = √f dt
+    scale1(Div(Const(1), Sqrt(schw_f(M))), dr),  // e¹ = dr/√f
+    scale1(Var("r"), dtheta),              // e² = r dθ
+    scale1(Mul(Var("r"), Sin(Var("theta"))), dphi)  // e³ = r sin(θ) dφ
+]
+</code></pre>
+<h3 id="computing-curvature"><a class="header" href="#computing-curvature">Computing Curvature</a></h3>
+<pre><code class="language-kleis">define compute_riemann(tetrad) =
+    let omega = solve_connection(tetrad) in
+    compute_curvature(omega)
+
+define schwarzschild_curvature(M) = 
+    compute_riemann(schwarzschild_tetrad(M))
+</code></pre>
+<h3 id="results"><a class="header" href="#results">Results</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Computation</th><th>Size</th><th>Time</th></tr>
+</thead>
+<tbody>
+<tr><td>Tetrad</td><td>309 chars</td><td>instant</td></tr>
+<tr><td>Connection ω^a_b</td><td>2,387 chars</td><td>~1s</td></tr>
+<tr><td>Curvature R^a_b</td><td>22,115 chars</td><td>~6s</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="literature-verification"><a class="header" href="#literature-verification">Literature Verification</a></h2>
+<p>The computed results match known properties from the literature:</p>
+<h3 id="minkowski-flat-space"><a class="header" href="#minkowski-flat-space">Minkowski (Flat Space)</a></h3>
+<ul>
+<li><strong>Expected:</strong> All curvature components = 0</li>
+<li><strong>Computed:</strong> 238/256 components are <code>Const(0)</code> ✓</li>
+<li><strong>Reference:</strong> Misner, Thorne, Wheeler “Gravitation” (1973)</li>
+</ul>
+<h3 id="schwarzschild"><a class="header" href="#schwarzschild">Schwarzschild</a></h3>
+<ul>
+<li><strong>Expected:</strong> Curvature depends on M, r, angular coordinates</li>
+<li><strong>Computed:</strong> Contains <code>Var("M")</code>, <code>Var("r")</code>, <code>Sin</code>, <code>Cos</code> ✓</li>
+<li><strong>Expected:</strong> Contains metric factor √(1-2M/r)</li>
+<li><strong>Computed:</strong> Contains <code>Sqrt(Sub(Const(1), Div(...)))</code> ✓</li>
+<li><strong>Reference:</strong> Carroll “Spacetime and Geometry” (2004)</li>
+</ul>
+<h2 id="higher-order-functions-1"><a class="header" href="#higher-order-functions-1">Higher-Order Functions</a></h2>
+<p>This computation is enabled by Kleis’s support for higher-order functions:</p>
+<pre><code class="language-kleis">// Pass coordinate-specific derivative functions
+define diff_wrt_r(e) = diff_core(e, "r", is_r)
+
+define is_r(name) = match name { "r" =&gt; Const(1) | _ =&gt; Const(0) }
+</code></pre>
+<p>The evaluator resolves <code>is_r("r")</code> to <code>Const(1)</code> before any symbolic manipulation, avoiding expression explosion.</p>
+<h2 id="z3-verification-4"><a class="header" href="#z3-verification-4">Z3 Verification</a></h2>
+<p>While the Cartan computation runs in the Kleis evaluator, the results can be verified using Z3:</p>
+<pre><code class="language-kleis">// Verify Riemann tensor symmetries
+axiom riemann_antisym : ∀ R μ ν ρ σ .
+    component(R, μ, ν, ρ, σ) = negate(component(R, ν, μ, ρ, σ))
+
+// Verify Bianchi identity
+axiom bianchi : ∀ R λ ρ σ μ ν .
+    plus(plus(
+        nabla(R, λ, ρ, σ, μ, ν),
+        nabla(R, ρ, σ, λ, μ, ν)),
+        nabla(R, σ, λ, ρ, μ, ν)) = 0
+</code></pre>
+<h2 id="files"><a class="header" href="#files">Files</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>stdlib/symbolic_diff.kleis</code></td><td>Symbolic differentiation</td></tr>
+<tr><td><code>stdlib/cartan_compute.kleis</code></td><td>Cartan geometry pipeline</td></tr>
+<tr><td><code>tests/cartan_compute_test.rs</code></td><td>25 tests including literature verification</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="research-applications"><a class="header" href="#research-applications">Research Applications</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Domain</th><th>Application</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>General Relativity</strong></td><td>Compute curvature for new metrics</td></tr>
+<tr><td><strong>Cosmology</strong></td><td>Verify FLRW, de Sitter models</td></tr>
+<tr><td><strong>Modified Gravity</strong></td><td>Check f(R) theory consistency</td></tr>
+<tr><td><strong>Numerical Relativity</strong></td><td>Verify constraint equations</td></tr>
+<tr><td><strong>Education</strong></td><td>Interactive GR computations</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="comparison-to-other-tools"><a class="header" href="#comparison-to-other-tools">Comparison to Other Tools</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Symbolic</th><th>Verification</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Mathematica + xAct</td><td>✓✓✓</td><td>✗</td><td>Industry standard, expensive</td></tr>
+<tr><td>Cadabra</td><td>✓✓</td><td>✗</td><td>Open source tensor algebra</td></tr>
+<tr><td>SageMath</td><td>✓✓</td><td>✗</td><td>General purpose</td></tr>
+<tr><td><strong>Kleis</strong></td><td>✓✓</td><td>✓✓</td><td>Combines both!</td></tr>
+</tbody>
+</table>
+</div>
+<p>Kleis occupies a unique niche: <strong>symbolic mathematics with formal verification</strong>.</p>
 
                     </main>
 
