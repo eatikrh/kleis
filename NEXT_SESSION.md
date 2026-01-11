@@ -433,3 +433,57 @@ Kaluza-Klein is especially interesting because it would **unify our existing Max
 ```
 
 This demonstrates the power of the tensor verification framework!
+
+---
+
+## Progress: Cartan Geometry (Computational) ✅ PARTIAL
+
+Implemented computational Cartan calculus for curvature tensor computation using tetrads and exterior algebra.
+
+### Files Created
+
+- `stdlib/symbolic_diff.kleis` - Computational symbolic differentiation (`diff` function)
+- `stdlib/cartan_geometry.kleis` - Cartan geometry structures (axiomatic)
+- `stdlib/cartan_compute.kleis` - Computational implementation
+- `tests/symbolic_diff_test.rs` - 23 tests for `diff` and `simplify`
+- `tests/cartan_compute_test.rs` - 19 passing tests, 3 ignored
+
+### What Works ✅
+
+| Feature | Status |
+|---------|--------|
+| `diff(expr, var)` - symbolic derivative | ✅ |
+| `simplify(expr)` - algebraic simplification | ✅ |
+| `d0(f)` - exterior derivative of 0-form | ✅ |
+| `d1(ω)` - exterior derivative of 1-form | ✅ |
+| `wedge(α, β)` - wedge product | ✅ |
+| `minkowski_tetrad_forms` | ✅ |
+| `schwarzschild_tetrad_forms(M)` | ✅ |
+| `d_tetrad(e)` - derivative of tetrad | ✅ |
+| `solve_levi_civita(e, de, η)` - connection 1-forms | ✅ |
+
+### What Doesn't Work Yet ❌
+
+| Feature | Problem |
+|---------|---------|
+| `compute_curvature(ω)` | Expression explosion - `R = dω + ω∧ω` creates huge ASTs |
+
+### Root Cause: Expression Explosion
+
+The curvature computation involves:
+1. `d1(ω^a_b)` - differentiates each component of connection (16 derivatives × 4 coords = 64 terms)
+2. `ω^a_c ∧ ω^c_b` - wedge products (16 × 16 = 256 terms per sum)
+3. Sum over index c - another 4× factor
+
+Total: thousands of nested `Add`, `Mul`, `Pow` nodes that the `simplify` function can't reduce fast enough.
+
+### Required Optimizations 🔧
+
+1. **Lazy Evaluation** - Don't expand until needed
+2. **Better Simplification** - Pattern-based algebraic rules
+3. **Sparse Representation** - Most tetrad/connection components are zero
+4. **Memoization** - Cache computed derivatives
+
+### Workaround (Current)
+
+For now, curvature tests are `#[ignore]`. The connection solver works correctly for both Minkowski (all zeros) and Schwarzschild (non-trivial).

@@ -295,6 +295,103 @@ define test_d_sin_theta = d0(Sin(Var("theta")))
 define test_wedge_dt_dr = wedge(dt, dr)
 
 // ============================================
+// Connection Solver (Torsion-Free)
+// ============================================
+
+/* Solve for Levi-Civita Connection
+ *
+ * Given tetrad e^a, the torsion-free condition de^a + ω^a_b ∧ e^b = 0
+ * has an explicit solution:
+ *
+ *   ω^a_b = ½(C^a_bc - C^b_ac + C^c_ab) e^c
+ *
+ * where C^a_bc are the anholonomy coefficients:
+ *   de^a = ½ C^a_bc e^b ∧ e^c
+ *
+ * For our coordinate basis representation, C^a_bc = (de^a)_bc
+ */
+
+// Extract anholonomy coefficient C^a_bc from de^a
+// de^a is stored as a 4x4 matrix, C^a_bc = (de^a)[b][c]
+define get_C(de, a, b, c) = nth(nth(nth(de, a), b), c)
+
+// Compute connection component ω^a_b
+// ω^a_b = Σ_c ½(C^a_bc - C^b_ac + C^c_ab) e^c
+define connection_ab(de, tetrad, a, b) =
+    // Sum over c = 0,1,2,3
+    let c0_coeff = simplify(Mul(Div(Const(1), Const(2)), 
+        Add(get_C(de, a, b, 0), Sub(get_C(de, 0, a, b), get_C(de, b, a, 0))))) in
+    let c1_coeff = simplify(Mul(Div(Const(1), Const(2)),
+        Add(get_C(de, a, b, 1), Sub(get_C(de, 1, a, b), get_C(de, b, a, 1))))) in
+    let c2_coeff = simplify(Mul(Div(Const(1), Const(2)),
+        Add(get_C(de, a, b, 2), Sub(get_C(de, 2, a, b), get_C(de, b, a, 2))))) in
+    let c3_coeff = simplify(Mul(Div(Const(1), Const(2)),
+        Add(get_C(de, a, b, 3), Sub(get_C(de, 3, a, b), get_C(de, b, a, 3))))) in
+    // ω^a_b = c0 * e^0 + c1 * e^1 + c2 * e^2 + c3 * e^3
+    add1(add1(
+        scale1(c0_coeff, nth(tetrad, 0)),
+        scale1(c1_coeff, nth(tetrad, 1))),
+        add1(
+        scale1(c2_coeff, nth(tetrad, 2)),
+        scale1(c3_coeff, nth(tetrad, 3))))
+
+// Full connection matrix ω^a_b (4x4 matrix of 1-forms)
+define solve_connection(tetrad) =
+    let de = d_tetrad(tetrad) in
+    [
+        [connection_ab(de, tetrad, 0, 0), connection_ab(de, tetrad, 0, 1),
+         connection_ab(de, tetrad, 0, 2), connection_ab(de, tetrad, 0, 3)],
+        [connection_ab(de, tetrad, 1, 0), connection_ab(de, tetrad, 1, 1),
+         connection_ab(de, tetrad, 1, 2), connection_ab(de, tetrad, 1, 3)],
+        [connection_ab(de, tetrad, 2, 0), connection_ab(de, tetrad, 2, 1),
+         connection_ab(de, tetrad, 2, 2), connection_ab(de, tetrad, 2, 3)],
+        [connection_ab(de, tetrad, 3, 0), connection_ab(de, tetrad, 3, 1),
+         connection_ab(de, tetrad, 3, 2), connection_ab(de, tetrad, 3, 3)]
+    ]
+
+// ============================================
+// Full Curvature Computation
+// ============================================
+
+// Compute curvature R^a_b = dω^a_b + Σ_c ω^a_c ∧ ω^c_b
+define curvature_ab(omega, a, b) =
+    let omega_ab = nth(nth(omega, a), b) in
+    let d_omega = d1(omega_ab) in
+    // Add wedge products
+    let w0 = wedge(nth(nth(omega, a), 0), nth(nth(omega, 0), b)) in
+    let w1 = wedge(nth(nth(omega, a), 1), nth(nth(omega, 1), b)) in
+    let w2 = wedge(nth(nth(omega, a), 2), nth(nth(omega, 2), b)) in
+    let w3 = wedge(nth(nth(omega, a), 3), nth(nth(omega, 3), b)) in
+    add2(d_omega, add2(add2(w0, w1), add2(w2, w3)))
+
+// Full curvature matrix R^a_b (4x4 matrix of 2-forms)
+define compute_curvature(omega) = [
+    [curvature_ab(omega, 0, 0), curvature_ab(omega, 0, 1),
+     curvature_ab(omega, 0, 2), curvature_ab(omega, 0, 3)],
+    [curvature_ab(omega, 1, 0), curvature_ab(omega, 1, 1),
+     curvature_ab(omega, 1, 2), curvature_ab(omega, 1, 3)],
+    [curvature_ab(omega, 2, 0), curvature_ab(omega, 2, 1),
+     curvature_ab(omega, 2, 2), curvature_ab(omega, 2, 3)],
+    [curvature_ab(omega, 3, 0), curvature_ab(omega, 3, 1),
+     curvature_ab(omega, 3, 2), curvature_ab(omega, 3, 3)]
+]
+
+// ============================================
+// Complete Pipeline: Tetrad → Riemann
+// ============================================
+
+// Given a tetrad, compute the full Riemann curvature!
+define compute_riemann(tetrad) =
+    let omega = solve_connection(tetrad) in
+    compute_curvature(omega)
+
+// Test: Minkowski should have zero curvature
+define minkowski_curvature = compute_riemann(minkowski_tetrad)
+
+// Test: Schwarzschild curvature (the actual Riemann tensor!)
+define schwarzschild_curvature(M) = compute_riemann(schwarzschild_tetrad(M))
+
+// ============================================
 // Summary
 // ============================================
 
