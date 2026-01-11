@@ -74,6 +74,63 @@ structure SmoothFunction(F) extends Differentiable(F) {
 }
 
 // ============================================
+// TRANSCENDENTAL FUNCTIONS (Trig, Exp, Log)
+// ============================================
+
+structure TranscendentalDerivatives(F) extends Differentiable(F) {
+    // --- Trigonometric ---
+    axiom D_sin:
+        ∀(f : F)(x : Variable). D(sin(f), x) = cos(f) × D(f, x)
+    
+    axiom D_cos:
+        ∀(f : F)(x : Variable). D(cos(f), x) = negate(sin(f)) × D(f, x)
+    
+    axiom D_tan:
+        ∀(f : F)(x : Variable). D(tan(f), x) = D(f, x) / (cos(f) × cos(f))
+    
+    // --- Inverse Trigonometric ---
+    axiom D_arcsin:
+        ∀(f : F)(x : Variable). D(arcsin(f), x) = D(f, x) / sqrt(1 - f × f)
+    
+    axiom D_arccos:
+        ∀(f : F)(x : Variable). D(arccos(f), x) = negate(D(f, x)) / sqrt(1 - f × f)
+    
+    axiom D_arctan:
+        ∀(f : F)(x : Variable). D(arctan(f), x) = D(f, x) / (1 + f × f)
+    
+    // --- Exponential and Logarithm ---
+    axiom D_exp:
+        ∀(f : F)(x : Variable). D(exp(f), x) = exp(f) × D(f, x)
+    
+    axiom D_ln:
+        ∀(f : F)(x : Variable). f > 0 ⟹ D(ln(f), x) = D(f, x) / f
+    
+    axiom D_log:
+        ∀(f : F)(x : Variable)(b : ℝ). f > 0 ∧ b > 0 ∧ b ≠ 1 ⟹ 
+            D(log(f, b), x) = D(f, x) / (f × ln(b))
+    
+    // --- Power with variable exponent ---
+    axiom D_power_general:
+        ∀(f g : F)(x : Variable). f > 0 ⟹
+            D(f^g, x) = f^g × (D(g, x) × ln(f) + g × D(f, x) / f)
+    
+    // --- Square Root ---
+    axiom D_sqrt:
+        ∀(f : F)(x : Variable). f > 0 ⟹ 
+            D(sqrt(f), x) = D(f, x) / (2 × sqrt(f))
+    
+    // --- Hyperbolic Functions ---
+    axiom D_sinh:
+        ∀(f : F)(x : Variable). D(sinh(f), x) = cosh(f) × D(f, x)
+    
+    axiom D_cosh:
+        ∀(f : F)(x : Variable). D(cosh(f), x) = sinh(f) × D(f, x)
+    
+    axiom D_tanh:
+        ∀(f : F)(x : Variable). D(tanh(f), x) = D(f, x) / (cosh(f) × cosh(f))
+}
+
+// ============================================
 // INTEGRATION
 // ============================================
 //
