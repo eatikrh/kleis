@@ -513,20 +513,39 @@ impl Evaluator {
                     args.iter().map(|arg| self.substitute(arg, subst)).collect();
 
                 // Check if the operation name is a bound variable (higher-order function)
-                // If f is bound to "my_func", then f(x) becomes my_func(x)
-                let resolved_name = if let Some(bound_value) = subst.get(name) {
+                if let Some(bound_value) = subst.get(name) {
                     match bound_value {
                         // If bound to an Object, use that name as the function
-                        Expression::Object(func_name) => func_name.clone(),
-                        // Otherwise keep original name (can't call a non-function)
-                        _ => name.clone(),
+                        Expression::Object(func_name) => {
+                            return Expression::Operation {
+                                name: func_name.clone(),
+                                args: substituted_args,
+                                span: span.clone(),
+                            };
+                        }
+                        // If bound to a Lambda, create a let-binding that applies it
+                        // f(x, y) where f = lambda a b . body becomes:
+                        // let __f = lambda a b . body in __f(x, y)
+                        // This defers evaluation to the evaluator's let handling
+                        Expression::Lambda { .. } => {
+                            // Create: (let __anon = lambda in __anon(args))
+                            // Actually simpler: just inline the lambda application
+                            // using a special "apply_lambda" operation
+                            return Expression::Operation {
+                                name: "apply_lambda".to_string(),
+                                args: std::iter::once(bound_value.clone())
+                                    .chain(substituted_args)
+                                    .collect(),
+                                span: span.clone(),
+                            };
+                        }
+                        // Otherwise keep original name
+                        _ => {}
                     }
-                } else {
-                    name.clone()
-                };
+                }
 
                 Expression::Operation {
-                    name: resolved_name,
+                    name: name.clone(),
                     args: substituted_args,
                     span: span.clone(),
                 }
@@ -853,11 +872,21 @@ impl Evaluator {
             // Lambda - return as a value (closures are values)
             Expression::Lambda { .. } => Ok(expr.clone()),
 
-            // Atoms - return as-is
-            Expression::Const(_)
-            | Expression::String(_)
-            | Expression::Object(_)
-            | Expression::Placeholder { .. } => Ok(expr.clone()),
+            // Atoms - return as-is (except Object which may need binding lookup)
+            Expression::Const(_) | Expression::String(_) | Expression::Placeholder { .. } => {
+                Ok(expr.clone())
+            }
+
+            Expression::Object(name) => {
+                // Check bindings first (from example blocks / let statements)
+                if let Some(bound) = self.bindings.get(name) {
+                    // Recursively evaluate the bound value
+                    self.eval_internal(bound, depth + 1)
+                } else {
+                    // Not bound, return as symbolic object
+                    Ok(expr.clone())
+                }
+            }
         };
 
         // Call debug hook after evaluation
@@ -2950,8 +2979,8 @@ impl Evaluator {
                     _ => Ok(None),
                 }
             }
-            "nth" => {
-                // nth(list, index) → element at index
+            "nth" | "index" => {
+                // nth(list, index) → element at index (alias: index)
                 if args.len() != 2 {
                     return Ok(None);
                 }
@@ -2979,6 +3008,24 @@ impl Evaluator {
                     ),
                     _ => Ok(None),
                 }
+            }
+            "apply_lambda" => {
+                // apply_lambda(lambda, arg1, arg2, ...) → result of applying lambda to args
+                // This is used internally when a let-bound lambda is called
+                if args.is_empty() {
+                    return Ok(None);
+                }
+                let lambda = &args[0];
+                let call_args = &args[1..];
+                
+                // Apply the lambda using beta reduction
+                if let Expression::Lambda { .. } = lambda {
+                    let reduced = self.beta_reduce_multi(lambda, call_args)?;
+                    // Evaluate the result
+                    let result = self.eval_concrete(&reduced)?;
+                    return Ok(Some(result));
+                }
+                Ok(None)
             }
             "list_map" => {
                 // list_map(f, [a, b, c]) → [f(a), f(b), f(c)]
@@ -5060,6 +5107,12 @@ impl Evaluator {
             "schur" | "schur_decomp" => self.lapack_schur(args),
 
             #[cfg(feature = "numerical")]
+            "care" | "riccati" => self.lapack_care(args),
+
+            #[cfg(feature = "numerical")]
+            "lqr" => self.lapack_lqr(args),
+
+            #[cfg(feature = "numerical")]
             "expm" | "matrix_exp" => {
                 // Matrix exponential exp(A)
                 if args.len() != 1 {
@@ -5584,15 +5637,19 @@ impl Evaluator {
             return Err("diagram() requires at least one plot element".to_string());
         }
 
-        // Compile to SVG (do not print raw SVG to stdout to avoid polluting Typst output)
+        // Compile to SVG and print with PLOT_SVG prefix for Jupyter kernel to detect
         match compile_diagram(&elements, &options) {
-            Ok(output) => Ok(Some(Expression::operation(
-                "PlotSVG",
-                vec![
-                    Expression::Const(format!("{:.0}", output.width)),
-                    Expression::Const(format!("{:.0}", output.height)),
-                ],
-            ))),
+            Ok(output) => {
+                // Print SVG with marker for Jupyter kernel
+                println!("PLOT_SVG:{}", output.svg);
+                Ok(Some(Expression::operation(
+                    "PlotSVG",
+                    vec![
+                        Expression::Const(format!("{:.0}", output.width)),
+                        Expression::Const(format!("{:.0}", output.height)),
+                    ],
+                )))
+            }
             Err(e) => Err(format!("diagram() failed: {}", e)),
         }
     }
@@ -6075,8 +6132,15 @@ impl Evaluator {
         let dim = y0.len();
         let f_clone = f_lambda.clone();
 
+        // We need the evaluator to properly evaluate complex lambda bodies.
+        // Use a raw pointer to self - this is safe because:
+        // 1. The closure is only called during integrate_dopri5
+        // 2. self is valid for the entire duration of this function
+        // 3. The closure doesn't escape builtin_ode45
+        let eval_ptr = self as *const Evaluator;
+
         // Create dynamics function that calls the lambda
-        let dynamics = |t: f64, y: &[f64]| -> Vec<f64> {
+        let dynamics = move |t: f64, y: &[f64]| -> Vec<f64> {
             // Build: f(t, [y0, y1, ...])
             let t_expr = Expression::Const(format!("{}", t));
             let y_expr = Expression::List(
@@ -6085,17 +6149,23 @@ impl Evaluator {
                     .collect(),
             );
 
-            // Apply lambda: substitute params with args and evaluate body
-            if let Expression::Lambda { params, body, .. } = &f_clone {
+            // Apply lambda using the evaluator
+            if let Expression::Lambda { params, .. } = &f_clone {
                 if params.len() >= 2 {
-                    let mut subst = std::collections::HashMap::new();
-                    subst.insert(params[0].name.clone(), t_expr);
-                    subst.insert(params[1].name.clone(), y_expr);
-
-                    // Substitute and evaluate
-                    let substituted = Self::substitute_simple(body, &subst);
-                    if let Some(result) = Self::eval_numeric_expr(&substituted) {
-                        return result;
+                    // SAFETY: eval_ptr points to self which is valid for this function's duration
+                    let evaluator = unsafe { &*eval_ptr };
+                    
+                    // Use beta reduction to apply lambda: (λ t y . body)(t_val, y_val)
+                    if let Ok(reduced) = evaluator.beta_reduce_multi(&f_clone, &[t_expr, y_expr]) {
+                        // Evaluate the reduced expression
+                        if let Ok(result) = evaluator.eval_concrete(&reduced) {
+                            if let Expression::List(elems) = result {
+                                let nums: Option<Vec<f64>> = elems.iter().map(eval_numeric).collect();
+                                if let Some(v) = nums {
+                                    return v;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -8566,6 +8636,153 @@ impl Evaluator {
             Expression::List(eigenvalues),
         ])))
     }
+
+    /// Solve the Continuous Algebraic Riccati Equation (CARE):
+    ///   A'P + PA - PBR⁻¹B'P + Q = 0
+    ///
+    /// Uses the Hamiltonian method with ordered Schur decomposition.
+    ///
+    /// Arguments: care(A, B, Q, R) where A is n×n, B is n×m, Q is n×n, R is m×m
+    /// Returns: P (the stabilizing solution, n×n)
+    #[cfg(feature = "numerical")]
+    fn lapack_care(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 4 {
+            return Err("care(A, B, Q, R) requires 4 matrix arguments".to_string());
+        }
+
+        // Extract matrices
+        let (na, ma, a_elems) = self.extract_matrix(&args[0])
+            .ok_or("care: A must be a matrix")?;
+        let (nb, mb, b_elems) = self.extract_matrix(&args[1])
+            .ok_or("care: B must be a matrix")?;
+        let (nq, mq, q_elems) = self.extract_matrix(&args[2])
+            .ok_or("care: Q must be a matrix")?;
+        let (nr, mr, r_elems) = self.extract_matrix(&args[3])
+            .ok_or("care: R must be a matrix")?;
+
+        // Dimension checks
+        let n = na;
+        let m = mb;
+        if na != ma {
+            return Err(format!("care: A must be square, got {}×{}", na, ma));
+        }
+        if nb != n {
+            return Err(format!("care: B must have {} rows, got {}", n, nb));
+        }
+        if nq != n || mq != n {
+            return Err(format!("care: Q must be {}×{}, got {}×{}", n, n, nq, mq));
+        }
+        if nr != m || mr != m {
+            return Err(format!("care: R must be {}×{}, got {}×{}", m, m, nr, mr));
+        }
+
+        // Convert to f64 vectors (column-major)
+        let a: Vec<f64> = a_elems.iter()
+            .map(|e| self.as_number(e).ok_or("care: A must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let b: Vec<f64> = b_elems.iter()
+            .map(|e| self.as_number(e).ok_or("care: B must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let q: Vec<f64> = q_elems.iter()
+            .map(|e| self.as_number(e).ok_or("care: Q must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let r: Vec<f64> = r_elems.iter()
+            .map(|e| self.as_number(e).ok_or("care: R must be numeric"))
+            .collect::<Result<_, _>>()?;
+
+        // Solve CARE using numerical module
+        let p = numerical::care(&a, &b, &q, &r, n, m).map_err(|e| e.to_string())?;
+
+        // Return P as matrix
+        let p_exprs: Vec<Expression> = p.iter()
+            .map(|&x| Expression::Const(format!("{}", x)))
+            .collect();
+        Ok(Some(self.make_matrix(n, n, p_exprs)))
+    }
+
+    /// LQR controller design: compute optimal state feedback gain K
+    ///
+    /// Minimizes J = ∫(x'Qx + u'Ru)dt subject to ẋ = Ax + Bu
+    ///
+    /// Arguments: lqr(A, B, Q, R)
+    /// Returns: [K, P] where K = R⁻¹B'P is the feedback gain and P solves CARE
+    #[cfg(feature = "numerical")]
+    fn lapack_lqr(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 4 {
+            return Err("lqr(A, B, Q, R) requires 4 matrix arguments".to_string());
+        }
+
+        // Extract matrices (same as care)
+        let (na, ma, a_elems) = self.extract_matrix(&args[0])
+            .ok_or("lqr: A must be a matrix")?;
+        let (nb, mb, b_elems) = self.extract_matrix(&args[1])
+            .ok_or("lqr: B must be a matrix")?;
+        let (nq, mq, q_elems) = self.extract_matrix(&args[2])
+            .ok_or("lqr: Q must be a matrix")?;
+        let (nr, mr, r_elems) = self.extract_matrix(&args[3])
+            .ok_or("lqr: R must be a matrix")?;
+
+        let n = na;
+        let m = mb;
+        if na != ma {
+            return Err(format!("lqr: A must be square, got {}×{}", na, ma));
+        }
+        if nb != n {
+            return Err(format!("lqr: B must have {} rows, got {}", n, nb));
+        }
+        if nq != n || mq != n {
+            return Err(format!("lqr: Q must be {}×{}, got {}×{}", n, n, nq, mq));
+        }
+        if nr != m || mr != m {
+            return Err(format!("lqr: R must be {}×{}, got {}×{}", m, m, nr, mr));
+        }
+
+        let a: Vec<f64> = a_elems.iter()
+            .map(|e| self.as_number(e).ok_or("lqr: A must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let b: Vec<f64> = b_elems.iter()
+            .map(|e| self.as_number(e).ok_or("lqr: B must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let q: Vec<f64> = q_elems.iter()
+            .map(|e| self.as_number(e).ok_or("lqr: Q must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let r: Vec<f64> = r_elems.iter()
+            .map(|e| self.as_number(e).ok_or("lqr: R must be numeric"))
+            .collect::<Result<_, _>>()?;
+
+        // Solve CARE to get P
+        let p = numerical::care(&a, &b, &q, &r, n, m).map_err(|e| e.to_string())?;
+
+        // Compute K = R⁻¹ B' P
+        let k = numerical::lqr_gain(&b, &r, &p, n, m).map_err(|e| e.to_string())?;
+
+        // Return [K, P] as nested lists (not Matrix) so nth() works
+        // K is m×n, P is n×n (row-major order)
+        let mut k_rows: Vec<Expression> = Vec::new();
+        for i in 0..m {
+            let row: Vec<Expression> = (0..n)
+                .map(|j| Expression::Const(format!("{}", k[i * n + j])))
+                .collect();
+            k_rows.push(Expression::List(row));
+        }
+        
+        let mut p_rows: Vec<Expression> = Vec::new();
+        for i in 0..n {
+            let row: Vec<Expression> = (0..n)
+                .map(|j| Expression::Const(format!("{}", p[i * n + j])))
+                .collect();
+            p_rows.push(Expression::List(row));
+        }
+
+        Ok(Some(Expression::List(vec![
+            Expression::List(k_rows),
+            Expression::List(p_rows),
+        ])))
+    }
 }
 
 impl Default for Evaluator {
@@ -9953,5 +10170,68 @@ mod tests {
         assert!(results[1].passed);
         assert_eq!(results[0].name, "test one");
         assert_eq!(results[1].name, "test two");
+    }
+
+    #[test]
+    fn test_object_resolves_from_bindings() {
+        // Test that Expression::Object looks up values from self.bindings
+        // This is critical for example blocks where let-bound variables
+        // must be accessible when evaluating expressions containing Object references
+        let mut eval = Evaluator::new();
+
+        // Set a binding
+        eval.set_binding("x".to_string(), Expression::Const("42".to_string()));
+
+        // Evaluate an Object that references the binding
+        let result = eval.eval(&Expression::Object("x".to_string())).unwrap();
+
+        // Should resolve to the bound value
+        assert_eq!(result, Expression::Const("42".to_string()));
+    }
+
+    #[test]
+    fn test_bindings_used_in_operations() {
+        // Test that bindings are resolved when used inside operations
+        let mut eval = Evaluator::new();
+
+        eval.set_binding("a".to_string(), Expression::Const("10".to_string()));
+        eval.set_binding("b".to_string(), Expression::Const("5".to_string()));
+
+        // Evaluate: a + b where a=10, b=5
+        let expr = Expression::Operation {
+            name: "plus".to_string(),
+            args: vec![
+                Expression::Object("a".to_string()),
+                Expression::Object("b".to_string()),
+            ],
+            span: None,
+        };
+
+        // eval() resolves bindings, eval_concrete() also computes arithmetic
+        let result = eval.eval_concrete(&expr).unwrap();
+
+        // Should compute 10 + 5 = 15
+        assert_eq!(result, Expression::Const("15".to_string()));
+    }
+
+    #[test]
+    fn test_bindings_captured_in_lambda() {
+        // Test that lambdas can access bindings from enclosing scope
+        // This is the key fix for inverted_pendulum.kleis
+        use crate::kleis_parser::parse_kleis;
+
+        let mut eval = Evaluator::new();
+
+        // Set up a binding
+        eval.set_binding("k".to_string(), Expression::Const("2".to_string()));
+
+        // Create and evaluate: let f = lambda x . k * x in f(5)
+        // k should be captured from bindings
+        let code = "let f = lambda x . k * x in f(5)";
+        let expr = parse_kleis(code).unwrap();
+        let result = eval.eval_concrete(&expr).unwrap();
+
+        // k=2, x=5, so k*x = 10
+        assert_eq!(result, Expression::Const("10".to_string()));
     }
 }

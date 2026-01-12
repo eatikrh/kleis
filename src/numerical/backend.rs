@@ -958,6 +958,219 @@ pub fn qz_reorder(
     ))
 }
 
+// =========================================================================
+// Control Theory: CARE and LQR
+// =========================================================================
+
+/// Solve the Continuous Algebraic Riccati Equation (CARE):
+///
+/// ```text
+/// A'P + PA - PBR⁻¹B'P + Q = 0
+/// ```
+///
+/// Uses the Hamiltonian method with ordered Schur decomposition.
+///
+/// ## Algorithm
+/// 1. Form the 2n×2n Hamiltonian matrix:
+///    ```text
+///    H = [  A      -B R⁻¹ B' ]
+///        [ -Q        -A'     ]
+///    ```
+/// 2. Compute ordered real Schur decomposition of H with stable eigenvalues
+///    (negative real parts) in the upper-left n×n block
+/// 3. Partition the Schur vectors U into [U11; U21] where each is n×n
+/// 4. The stabilizing solution is P = U21 × U11⁻¹
+///
+/// ## Arguments
+/// - `a`: n×n system matrix (row-major)
+/// - `b`: n×m input matrix (row-major)
+/// - `q`: n×n state cost matrix (row-major, must be positive semi-definite)
+/// - `r`: m×m input cost matrix (row-major, must be positive definite)
+/// - `n`: state dimension
+/// - `m`: input dimension
+///
+/// ## Returns
+/// The stabilizing solution P (n×n, row-major)
+///
+/// ## Example
+/// ```ignore
+/// // Simple scalar system: ẋ = ax + bu, minimize ∫(qx² + ru²)dt
+/// let a = vec![1.0];  // unstable system
+/// let b = vec![1.0];
+/// let q = vec![1.0];
+/// let r = vec![1.0];
+/// let p = care(&a, &b, &q, &r, 1, 1).unwrap();
+/// // p[0] ≈ 1.618 (golden ratio - the stabilizing solution)
+/// ```
+pub fn care(
+    a: &[f64],
+    b: &[f64],
+    q: &[f64],
+    r: &[f64],
+    n: usize,
+    m: usize,
+) -> Result<Vec<f64>, NumericalError> {
+    // Validate dimensions
+    if a.len() != n * n {
+        return Err(NumericalError::DimensionMismatch {
+            expected: (n, n),
+            got: (a.len(), 1),
+        });
+    }
+    if b.len() != n * m {
+        return Err(NumericalError::DimensionMismatch {
+            expected: (n, m),
+            got: (b.len(), 1),
+        });
+    }
+    if q.len() != n * n {
+        return Err(NumericalError::DimensionMismatch {
+            expected: (n, n),
+            got: (q.len(), 1),
+        });
+    }
+    if r.len() != m * m {
+        return Err(NumericalError::DimensionMismatch {
+            expected: (m, m),
+            got: (r.len(), 1),
+        });
+    }
+
+    // Step 1: Compute R⁻¹
+    let r_inv = inv(r, m)?;
+
+    // Step 2: Compute B R⁻¹ B'
+    // First: R⁻¹ B' (m×n)
+    let mut r_inv_bt = vec![0.0; m * n];
+    for i in 0..m {
+        for j in 0..n {
+            for k in 0..m {
+                r_inv_bt[i * n + j] += r_inv[i * m + k] * b[j * m + k]; // B' is B transposed
+            }
+        }
+    }
+
+    // Then: B (R⁻¹ B') = B R⁻¹ B' (n×n)
+    let mut br_inv_bt = vec![0.0; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..m {
+                br_inv_bt[i * n + j] += b[i * m + k] * r_inv_bt[k * n + j];
+            }
+        }
+    }
+
+    // Step 3: Build Hamiltonian matrix H (2n × 2n)
+    // H = [  A       -B R⁻¹ B' ]
+    //     [ -Q         -A'     ]
+    let n2 = 2 * n;
+    let mut h = vec![0.0; n2 * n2];
+
+    for i in 0..n {
+        for j in 0..n {
+            // Top-left: A
+            h[i * n2 + j] = a[i * n + j];
+            // Top-right: -B R⁻¹ B'
+            h[i * n2 + (n + j)] = -br_inv_bt[i * n + j];
+            // Bottom-left: -Q
+            h[(n + i) * n2 + j] = -q[i * n + j];
+            // Bottom-right: -A'
+            h[(n + i) * n2 + (n + j)] = -a[j * n + i]; // transpose
+        }
+    }
+
+    // Step 4: Compute ordered Schur decomposition
+    let schur_result = schur_lapack(&h, n2)?;
+    let ordered = schur_reorder_stable_continuous(schur_result)?;
+
+    // Step 5: Extract U11 and U21 from the Schur vectors
+    // U is stored row-major, and we need the first n columns
+    let mut u11 = vec![0.0; n * n];
+    let mut u21 = vec![0.0; n * n];
+
+    for i in 0..n {
+        for j in 0..n {
+            u11[i * n + j] = ordered.u[i * n2 + j];
+            u21[i * n + j] = ordered.u[(n + i) * n2 + j];
+        }
+    }
+
+    // Step 6: Compute P = U21 × U11⁻¹
+    let u11_inv = inv(&u11, n)?;
+
+    let mut p = vec![0.0; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                p[i * n + j] += u21[i * n + k] * u11_inv[k * n + j];
+            }
+        }
+    }
+
+    // Make P symmetric (numerical errors can make it slightly asymmetric)
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let avg = (p[i * n + j] + p[j * n + i]) / 2.0;
+            p[i * n + j] = avg;
+            p[j * n + i] = avg;
+        }
+    }
+
+    Ok(p)
+}
+
+/// Compute LQR feedback gain K from the CARE solution P.
+///
+/// ```text
+/// K = R⁻¹ B' P
+/// ```
+///
+/// The optimal control law is u = -K x.
+///
+/// ## Arguments
+/// - `b`: n×m input matrix (row-major)
+/// - `r`: m×m input cost matrix (row-major)
+/// - `p`: n×n CARE solution (row-major)
+/// - `n`: state dimension
+/// - `m`: input dimension
+///
+/// ## Returns
+/// The feedback gain K (m×n, row-major)
+pub fn lqr_gain(
+    b: &[f64],
+    r: &[f64],
+    p: &[f64],
+    n: usize,
+    m: usize,
+) -> Result<Vec<f64>, NumericalError> {
+    // K = R⁻¹ B' P
+
+    // Step 1: R⁻¹
+    let r_inv = inv(r, m)?;
+
+    // Step 2: B' P (m×n)
+    let mut bt_p = vec![0.0; m * n];
+    for i in 0..m {
+        for j in 0..n {
+            for k in 0..n {
+                bt_p[i * n + j] += b[k * m + i] * p[k * n + j]; // B' is B transposed
+            }
+        }
+    }
+
+    // Step 3: R⁻¹ (B' P) = K (m×n)
+    let mut k = vec![0.0; m * n];
+    for i in 0..m {
+        for j in 0..n {
+            for l in 0..m {
+                k[i * n + j] += r_inv[i * m + l] * bt_p[l * n + j];
+            }
+        }
+    }
+
+    Ok(k)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1261,5 +1474,92 @@ mod tests {
         let b = vec![1.0, 0.0, 0.0, 1.0];
         let result = qz(&a, &b, 2);
         assert!(result.is_err());
+    }
+
+    // =========================================================================
+    // CARE and LQR Tests
+    // =========================================================================
+
+    #[test]
+    fn test_care_double_integrator() {
+        // Double integrator: ẋ = [[0,1],[0,0]]x + [[0],[1]]u
+        // Cost: Q = I, R = 1
+        // Expected P ≈ [[√3, 1], [1, √3]]
+        let a = vec![0.0, 1.0, 0.0, 0.0];
+        let b = vec![0.0, 1.0];
+        let q = vec![1.0, 0.0, 0.0, 1.0];
+        let r = vec![1.0];
+
+        let p = care(&a, &b, &q, &r, 2, 1).unwrap();
+
+        let sqrt3 = 3.0_f64.sqrt();
+        assert!((p[0] - sqrt3).abs() < 1e-6, "P[0,0] = {} ≠ √3", p[0]);
+        assert!((p[1] - 1.0).abs() < 1e-6, "P[0,1] = {} ≠ 1", p[1]);
+        assert!((p[2] - 1.0).abs() < 1e-6, "P[1,0] = {} ≠ 1", p[2]);
+        assert!((p[3] - sqrt3).abs() < 1e-6, "P[1,1] = {} ≠ √3", p[3]);
+    }
+
+    #[test]
+    fn test_lqr_double_integrator() {
+        // Same system, compute K = R⁻¹ B' P
+        let a = vec![0.0, 1.0, 0.0, 0.0];
+        let b = vec![0.0, 1.0];
+        let q = vec![1.0, 0.0, 0.0, 1.0];
+        let r = vec![1.0];
+
+        let p = care(&a, &b, &q, &r, 2, 1).unwrap();
+        let k = lqr_gain(&b, &r, &p, 2, 1).unwrap();
+
+        // K = [1, √3] for double integrator with Q=I, R=1
+        let sqrt3 = 3.0_f64.sqrt();
+        assert!((k[0] - 1.0).abs() < 1e-6, "K[0] = {} ≠ 1", k[0]);
+        assert!((k[1] - sqrt3).abs() < 1e-6, "K[1] = {} ≠ √3", k[1]);
+    }
+
+    #[test]
+    fn test_care_scalar() {
+        // Scalar unstable system: ẋ = x + u
+        // Cost: Q = 1, R = 1
+        // CARE: P + P - P²/1 + 1 = 0 → P² - 2P - 1 = 0 → P = 1 + √2
+        let a = vec![1.0];
+        let b = vec![1.0];
+        let q = vec![1.0];
+        let r = vec![1.0];
+
+        let p = care(&a, &b, &q, &r, 1, 1).unwrap();
+
+        let expected = 1.0 + 2.0_f64.sqrt();
+        assert!(
+            (p[0] - expected).abs() < 1e-6,
+            "P = {} ≠ 1+√2 = {}",
+            p[0],
+            expected
+        );
+    }
+
+    #[test]
+    fn test_lqr_stability() {
+        // Verify closed-loop eigenvalues are stable (negative real parts)
+        let a = vec![0.0, 1.0, 0.0, 0.0];
+        let b = vec![0.0, 1.0];
+        let q = vec![1.0, 0.0, 0.0, 1.0];
+        let r = vec![1.0];
+
+        let p = care(&a, &b, &q, &r, 2, 1).unwrap();
+        let k = lqr_gain(&b, &r, &p, 2, 1).unwrap();
+
+        // Closed-loop: A_cl = A - B*K
+        // A_cl = [[0,1],[0,0]] - [[0],[1]]*[k0,k1] = [[0,1],[-k0,-k1]]
+        let a_cl = vec![0.0, 1.0, -k[0], -k[1]];
+
+        // Check eigenvalues have negative real parts
+        let eigs = eigenvalues(&a_cl, 2).unwrap();
+        for (re, _im) in eigs {
+            assert!(
+                re < 0.0,
+                "Closed-loop eigenvalue has non-negative real part: {}",
+                re
+            );
+        }
     }
 }
