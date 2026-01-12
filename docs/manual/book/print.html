@@ -44,7 +44,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ed4d9a85.js";
+            window.path_to_searchindex_js = "searchindex-fbfd4bca.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-5619aea8.js"></script>
@@ -1147,19 +1147,29 @@ data Tree(T) {
 </ul>
 <h2 id="practical-example-expression-trees"><a class="header" href="#practical-example-expression-trees">Practical Example: Expression Trees</a></h2>
 <p>ADTs are perfect for representing mathematical expressions:</p>
-<pre><code class="language-kleis">data Expr = Const(value : ℝ) 
-          | Var(name : String) 
-          | Add(left : Expr, right : Expr) 
-          | Mul(left : Expr, right : Expr) 
-          | Neg(inner : Expr)
+<pre><code class="language-kleis">data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
 
-define eval(expr, env) =
+// Helper constructors for cleaner syntax
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_neg(a) = EOperation("neg", Cons(a, Nil))
+
+define eval_expr(expr, env) =
     match expr {
-        Const(v) =&gt; v
-        Var(name) =&gt; lookup(env, name)
-        Add(l, r) =&gt; eval(l, env) + eval(r, env)
-        Mul(l, r) =&gt; eval(l, env) * eval(r, env)
-        Neg(e) =&gt; -eval(e, env)
+        ENumber(v) =&gt; v
+        EVariable(name) =&gt; lookup(env, name)
+        EOperation("plus", Cons(l, Cons(r, Nil))) =&gt; 
+            eval_expr(l, env) + eval_expr(r, env)
+        EOperation("times", Cons(l, Cons(r, Nil))) =&gt; 
+            eval_expr(l, env) * eval_expr(r, env)
+        EOperation("neg", Cons(e, Nil)) =&gt; 
+            -eval_expr(e, env)
+        _ =&gt; 0
     }
 </code></pre>
 <h2 id="whats-next-3"><a class="header" href="#whats-next-3">What’s Next?</a></h2>
@@ -4580,38 +4590,52 @@ structure EinsteinEquations {
 </div>
 <h3 id="computational-differentiation-diff"><a class="header" href="#computational-differentiation-diff">Computational Differentiation: <code>diff</code></a></h3>
 <p>The <code>diff</code> function <strong>computes</strong> derivatives by pattern matching on expression trees. It’s implemented in pure Kleis and returns a new expression:</p>
-<pre><code class="language-kleis">data Expr = Const(value : ℝ) 
-          | Var(name : String) 
-          | Add(left : Expr, right : Expr) 
-          | Mul(left : Expr, right : Expr) 
-          | Pow(base : Expr, exp : Expr)
-          | Sin(arg : Expr)
-          | Cos(arg : Expr)
-          | Exp(arg : Expr)
-          | Ln(arg : Expr)
+<pre><code class="language-kleis">data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
 
-define diff(e, x) =
+// Helper constructors
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_pow(a, b) = EOperation("power", Cons(a, Cons(b, Nil)))
+
+define diff(e, var_name) =
     match e {
-        Const(_) =&gt; Const(0)
-        Var(y) =&gt; if y = x then Const(1) else Const(0)
-        
-        Add(f, g) =&gt; Add(diff(f, x), diff(g, x))
-        
-        Mul(f, g) =&gt;
-            Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
-            
-        Pow(f, Const(n)) =&gt;
-            Mul(Mul(Const(n), Pow(f, Const(n - 1))), diff(f, x))
-            
-        Sin(f) =&gt; Mul(Cos(f), diff(f, x))
-        Cos(f) =&gt; Mul(Mul(Const(-1), Sin(f)), diff(f, x))
-        Exp(f) =&gt; Mul(Exp(f), diff(f, x))
-        Ln(f) =&gt; Mul(Pow(f, Const(-1)), diff(f, x))
-        
-        _ =&gt; Const(0)
+        ENumber(_) =&gt; num(0)
+        EVariable(name) =&gt; if str_eq(name, var_name) then num(1) else num(0)
+        EOperation(op_name, args) =&gt; diff_op(op_name, args, var_name)
     }
+
+define diff_op(op_name, args, var_name) = match op_name {
+    "plus" =&gt; match args {
+        Cons(f, Cons(g, Nil)) =&gt; e_add(diff(f, var_name), diff(g, var_name))
+        | _ =&gt; num(0)
+    }
+    "times" =&gt; match args {
+        Cons(f, Cons(g, Nil)) =&gt; 
+            e_add(e_mul(diff(f, var_name), g), e_mul(f, diff(g, var_name)))
+        | _ =&gt; num(0)
+    }
+    "power" =&gt; match args {
+        Cons(f, Cons(ENumber(n), Nil)) =&gt; 
+            e_mul(e_mul(num(n), e_pow(f, num(n - 1))), diff(f, var_name))
+        | _ =&gt; num(0)
+    }
+    "sin" =&gt; match args {
+        Cons(f, Nil) =&gt; e_mul(e_cos(f), diff(f, var_name))
+        | _ =&gt; num(0)
+    }
+    "cos" =&gt; match args {
+        Cons(f, Nil) =&gt; e_neg(e_mul(e_sin(f), diff(f, var_name)))
+        | _ =&gt; num(0)
+    }
+    _ =&gt; num(0)
+}
 </code></pre>
-<p><strong>Usage:</strong> Call <code>diff(Mul(Var("x"), Var("x")), "x")</code> and get back <code>Add(Mul(Const(1), Var("x")), Mul(Var("x"), Const(1)))</code> (which simplifies to <code>2x</code>).</p>
+<p><strong>Usage:</strong> Call <code>diff(e_mul(var("x"), var("x")), "x")</code> and get back an expression representing <code>2x</code>.</p>
 <h3 id="axiomatic-differentiation-d-and-dt"><a class="header" href="#axiomatic-differentiation-d-and-dt">Axiomatic Differentiation: <code>D</code> and <code>Dt</code></a></h3>
 <p>The <code>D</code> and <code>Dt</code> operations are declared in <code>stdlib/calculus.kleis</code> with <strong>axioms</strong> that describe derivative properties. They don’t compute anything — Z3 uses these axioms to <strong>verify</strong> that equations involving derivatives are consistent:</p>
 <pre><code class="language-kleis">// From stdlib/calculus.kleis
@@ -9642,67 +9666,121 @@ example "symbolic verification" {
 <p>This is the same computational pipeline used in research-grade general relativity software like xAct (Mathematica) and Cadabra.</p>
 <h2 id="the-cartan-pipeline"><a class="header" href="#the-cartan-pipeline">The Cartan Pipeline</a></h2>
 <h3 id="1-expression-ast"><a class="header" href="#1-expression-ast">1. Expression AST</a></h3>
-<p>Symbolic expressions are represented as algebraic data types:</p>
-<pre><code class="language-kleis">data Expr = 
-    Const(value : ℝ)
-  | Var(name : String)
-  | Add(left : Expr, right : Expr)
-  | Mul(left : Expr, right : Expr)
-  | Pow(base : Expr, exp : Expr)
-  | Sin(arg : Expr)
-  | Cos(arg : Expr)
-  | Sqrt(arg : Expr)
-  | ...
+<p>Symbolic expressions are represented using the <code>Expression</code> algebraic data type, consistent with <code>kleis_in_kleis.kleis</code>:</p>
+<pre><code class="language-kleis">data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
+</code></pre>
+<p>This representation allows any operation to be encoded uniformly via <code>EOperation</code>. Helper constructors provide cleaner syntax:</p>
+<pre><code class="language-kleis">// Value constructors
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+
+// Operation constructors (e_ prefix avoids builtin conflicts)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_pow(a, b) = EOperation("power", Cons(a, Cons(b, Nil)))
+define e_sin(a) = EOperation("sin", Cons(a, Nil))
+define e_cos(a) = EOperation("cos", Cons(a, Nil))
+define e_sqrt(a) = EOperation("sqrt", Cons(a, Nil))
+// ... etc
 </code></pre>
 <h3 id="2-symbolic-differentiation"><a class="header" href="#2-symbolic-differentiation">2. Symbolic Differentiation</a></h3>
-<p>The <code>diff</code> function computes derivatives by pattern matching:</p>
-<pre><code class="language-kleis">define diff(e, x) = match e {
-    Const(_) =&gt; Const(0)
-    Var(name) =&gt; if name = x then Const(1) else Const(0)
-    Add(f, g) =&gt; Add(diff(f, x), diff(g, x))
-    Mul(f, g) =&gt; Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
-    Pow(f, Const(n)) =&gt; Mul(Mul(Const(n), Pow(f, Const(n-1))), diff(f, x))
-    Sin(f) =&gt; Mul(Cos(f), diff(f, x))
-    ...
+<p>The <code>diff</code> function computes derivatives by pattern matching on the <code>Expression</code> AST:</p>
+<pre><code class="language-kleis">define diff(e, var_name) = match e {
+    // Constant rule: d/dx(c) = 0
+    ENumber(_) =&gt; num(0)
+    
+    // Variable rule: d/dx(x) = 1, d/dx(y) = 0 if y ≠ x
+    // Note: str_eq() is used for concrete string comparison
+    EVariable(name) =&gt; if str_eq(name, var_name) then num(1) else num(0)
+    
+    // Operation rules - dispatch by operation name
+    EOperation(op_name, args) =&gt; diff_op(op_name, args, var_name)
+}
+
+define diff_op(op_name, args, var_name) = match op_name {
+    "plus" =&gt; match args {
+        Cons(f, Cons(g, Nil)) =&gt; e_add(diff(f, var_name), diff(g, var_name))
+        | _ =&gt; num(0)
+    }
+    "times" =&gt; match args {
+        // Product rule: d/dx(f * g) = f' * g + f * g'
+        Cons(f, Cons(g, Nil)) =&gt; 
+            e_add(e_mul(diff(f, var_name), g), e_mul(f, diff(g, var_name)))
+        | _ =&gt; num(0)
+    }
+    "power" =&gt; match args {
+        // Power rule with constant exponent
+        Cons(f, Cons(ENumber(n), Nil)) =&gt; 
+            e_mul(e_mul(num(n), e_pow(f, num(n - 1))), diff(f, var_name))
+        // General power rule
+        | _ =&gt; num(0)
+    }
+    "sin" =&gt; match args {
+        Cons(f, Nil) =&gt; e_mul(e_cos(f), diff(f, var_name))
+        | _ =&gt; num(0)
+    }
+    // ... more rules
 }
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> We use <code>str_eq(name, var_name)</code> instead of pattern matching because Kleis patterns <strong>bind</strong> variables rather than compare them. The <code>str_eq</code> builtin provides concrete string equality.</p>
+</blockquote>
 <h3 id="3-differential-forms"><a class="header" href="#3-differential-forms">3. Differential Forms</a></h3>
 <p>1-forms and 2-forms are represented as coefficient lists:</p>
 <pre><code class="language-kleis">// 1-form: ω = ω_t dt + ω_r dr + ω_θ dθ + ω_φ dφ
 // Represented as [ω_t, ω_r, ω_θ, ω_φ]
 
-define dt = [Const(1), Const(0), Const(0), Const(0)]
-define dr = [Const(0), Const(1), Const(0), Const(0)]
+define dt = [num(1), num(0), num(0), num(0)]
+define dr = [num(0), num(1), num(0), num(0)]
+define dtheta = [num(0), num(0), num(1), num(0)]
+define dphi = [num(0), num(0), num(0), num(1)]
 </code></pre>
 <h3 id="4-exterior-derivative"><a class="header" href="#4-exterior-derivative">4. Exterior Derivative</a></h3>
 <pre><code class="language-kleis">// d(f) = ∂f/∂t dt + ∂f/∂r dr + ∂f/∂θ dθ + ∂f/∂φ dφ
 define d0(f) = [
-    diff(f, "t"),
-    diff(f, "r"),
-    diff(f, "theta"),
-    diff(f, "phi")
+    simplify(diff_t(f)),
+    simplify(diff_r(f)),
+    simplify(diff_theta(f)),
+    simplify(diff_phi(f))
 ]
+
+// Coordinate-specific derivatives
+define diff_t(e) = diff(e, "t")
+define diff_r(e) = diff(e, "r")
+define diff_theta(e) = diff(e, "theta")
+define diff_phi(e) = diff(e, "phi")
 </code></pre>
 <h3 id="5-wedge-product"><a class="header" href="#5-wedge-product">5. Wedge Product</a></h3>
 <pre><code class="language-kleis">// (α ∧ β)_μν = α_μ β_ν - α_ν β_μ
-define wedge(a, b) = [
-    [Const(0), Sub(Mul(a0, b1), Mul(a1, b0)), ...],
-    ...
-]
+define wedge(a, b) =
+    let a0 = nth(a, 0) in let a1 = nth(a, 1) in
+    let a2 = nth(a, 2) in let a3 = nth(a, 3) in
+    let b0 = nth(b, 0) in let b1 = nth(b, 1) in
+    let b2 = nth(b, 2) in let b3 = nth(b, 3) in
+    [
+        [num(0),
+         simplify(e_sub(e_mul(a0, b1), e_mul(a1, b0))),
+         ...],
+        ...
+    ]
 </code></pre>
 <h2 id="example-schwarzschild-black-hole"><a class="header" href="#example-schwarzschild-black-hole">Example: Schwarzschild Black Hole</a></h2>
 <p>The Schwarzschild metric describes spacetime around a non-rotating black hole:</p>
 <pre><code>ds² = -(1 - 2M/r)dt² + dr²/(1 - 2M/r) + r²dθ² + r²sin²θ dφ²
 </code></pre>
 <h3 id="tetrad-definition"><a class="header" href="#tetrad-definition">Tetrad Definition</a></h3>
-<pre><code class="language-kleis">define schw_f(M) = Sub(Const(1), Div(Mul(Const(2), M), Var("r")))
-
-define schwarzschild_tetrad(M) = [
-    scale1(Sqrt(schw_f(M)), dt),           // e⁰ = √f dt
-    scale1(Div(Const(1), Sqrt(schw_f(M))), dr),  // e¹ = dr/√f
-    scale1(Var("r"), dtheta),              // e² = r dθ
-    scale1(Mul(Var("r"), Sin(Var("theta"))), dphi)  // e³ = r sin(θ) dφ
-]
+<pre><code class="language-kleis">define schwarzschild_tetrad(M) =
+    let f = e_sub(num(1), e_div(e_mul(num(2), M), var("r"))) in
+    let sqrt_f = e_sqrt(f) in
+    [
+        scale1(sqrt_f, dt),                              // e⁰ = √f dt
+        scale1(e_div(num(1), sqrt_f), dr),              // e¹ = dr/√f
+        scale1(var("r"), dtheta),                        // e² = r dθ
+        scale1(e_mul(var("r"), e_sin(var("theta"))), dphi)  // e³ = r sin(θ) dφ
+    ]
 </code></pre>
 <h3 id="computing-curvature"><a class="header" href="#computing-curvature">Computing Curvature</a></h3>
 <pre><code class="language-kleis">define compute_riemann(tetrad) =
@@ -9719,9 +9797,9 @@ define schwarzschild_curvature(M) =
 <tr><th>Computation</th><th>Size</th><th>Time</th></tr>
 </thead>
 <tbody>
-<tr><td>Tetrad</td><td>309 chars</td><td>instant</td></tr>
-<tr><td>Connection ω^a_b</td><td>2,387 chars</td><td>~1s</td></tr>
-<tr><td>Curvature R^a_b</td><td>22,115 chars</td><td>~6s</td></tr>
+<tr><td>Tetrad</td><td>~300 chars</td><td>instant</td></tr>
+<tr><td>Connection ω^a_b</td><td>~2,400 chars</td><td>~1s</td></tr>
+<tr><td>Curvature R^a_b</td><td>~22,000 chars</td><td>~4s</td></tr>
 </tbody>
 </table>
 </div>
@@ -9730,25 +9808,30 @@ define schwarzschild_curvature(M) =
 <h3 id="minkowski-flat-space"><a class="header" href="#minkowski-flat-space">Minkowski (Flat Space)</a></h3>
 <ul>
 <li><strong>Expected:</strong> All curvature components = 0</li>
-<li><strong>Computed:</strong> 238/256 components are <code>Const(0)</code> ✓</li>
+<li><strong>Computed:</strong> 238/256 components are <code>ENumber(0)</code> ✓</li>
 <li><strong>Reference:</strong> Misner, Thorne, Wheeler “Gravitation” (1973)</li>
 </ul>
 <h3 id="schwarzschild"><a class="header" href="#schwarzschild">Schwarzschild</a></h3>
 <ul>
 <li><strong>Expected:</strong> Curvature depends on M, r, angular coordinates</li>
-<li><strong>Computed:</strong> Contains <code>Var("M")</code>, <code>Var("r")</code>, <code>Sin</code>, <code>Cos</code> ✓</li>
+<li><strong>Computed:</strong> Contains <code>EVariable("M")</code>, <code>EVariable("r")</code>, <code>sin</code>, <code>cos</code> ✓</li>
 <li><strong>Expected:</strong> Contains metric factor √(1-2M/r)</li>
-<li><strong>Computed:</strong> Contains <code>Sqrt(Sub(Const(1), Div(...)))</code> ✓</li>
+<li><strong>Computed:</strong> Contains <code>e_sqrt(e_sub(num(1), e_div(...)))</code> ✓</li>
 <li><strong>Reference:</strong> Carroll “Spacetime and Geometry” (2004)</li>
 </ul>
-<h2 id="higher-order-functions-1"><a class="header" href="#higher-order-functions-1">Higher-Order Functions</a></h2>
-<p>This computation is enabled by Kleis’s support for higher-order functions:</p>
-<pre><code class="language-kleis">// Pass coordinate-specific derivative functions
-define diff_wrt_r(e) = diff_core(e, "r", is_r)
+<h2 id="implementation-notes"><a class="header" href="#implementation-notes">Implementation Notes</a></h2>
+<h3 id="why-e_-prefix"><a class="header" href="#why-e_-prefix">Why <code>e_*</code> Prefix?</a></h3>
+<p>Functions like <code>pow</code>, <code>add</code>, <code>mul</code> conflict with Kleis builtins. When you write <code>pow(var("x"), num(2))</code>, Kleis interprets <code>pow</code> as the built-in power operation and tries to compute <code>EVariable("x") ^ ENumber(2)</code> numerically—which fails.</p>
+<p>The <code>e_*</code> prefix (<code>e_pow</code>, <code>e_add</code>, etc.) ensures these are treated as user-defined functions that construct <code>EOperation</code> nodes.</p>
+<h3 id="why-str_eq-instead-of-pattern-matching"><a class="header" href="#why-str_eq-instead-of-pattern-matching">Why <code>str_eq</code> Instead of Pattern Matching?</a></h3>
+<p>In Kleis (and ML-family languages), pattern variables <strong>bind</strong> rather than compare:</p>
+<pre><code class="language-kleis">// This BINDS 'x' to whatever name contains, always matches!
+EVariable(name) =&gt; match name { x =&gt; num(1) | _ =&gt; num(0) }
 
-define is_r(name) = match name { "r" =&gt; Const(1) | _ =&gt; Const(0) }
+// This COMPARES name to var_name using str_eq
+EVariable(name) =&gt; if str_eq(name, var_name) then num(1) else num(0)
 </code></pre>
-<p>The evaluator resolves <code>is_r("r")</code> to <code>Const(1)</code> before any symbolic manipulation, avoiding expression explosion.</p>
+<p>The <code>str_eq</code> builtin provides concrete string equality that returns <code>true</code> or <code>false</code>.</p>
 <h2 id="z3-verification-4"><a class="header" href="#z3-verification-4">Z3 Verification</a></h2>
 <p>While the Cartan computation runs in the Kleis evaluator, the results can be verified using Z3:</p>
 <pre><code class="language-kleis">// Verify Riemann tensor symmetries
@@ -9769,12 +9852,29 @@ axiom bianchi : ∀ R λ ρ σ μ ν .
 <tr><th>File</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>stdlib/symbolic_diff.kleis</code></td><td>Symbolic differentiation</td></tr>
-<tr><td><code>stdlib/cartan_compute.kleis</code></td><td>Cartan geometry pipeline</td></tr>
-<tr><td><code>tests/cartan_compute_test.rs</code></td><td>25 tests including literature verification</td></tr>
+<tr><td><code>stdlib/symbolic_diff.kleis</code></td><td>Expression AST and symbolic differentiation</td></tr>
+<tr><td><code>stdlib/cartan_geometry.kleis</code></td><td>Axiomatic framework (structures, axioms for Z3)</td></tr>
+<tr><td><code>stdlib/cartan_compute.kleis</code></td><td>Computational implementation (actually computes)</td></tr>
+<tr><td><code>tests/symbolic_diff_test.rs</code></td><td>25 tests for differentiation</td></tr>
+<tr><td><code>tests/cartan_compute_test.rs</code></td><td>22 tests including literature verification</td></tr>
 </tbody>
 </table>
 </div>
+<h3 id="two-complementary-approaches"><a class="header" href="#two-complementary-approaches">Two Complementary Approaches</a></h3>
+<p><strong><code>cartan_geometry.kleis</code></strong> defines the <em>theory</em>:</p>
+<pre><code class="language-kleis">structure CurvatureForm(dim: Nat) {
+    operation curvature : List(List(DifferentialForm(1, dim))) → ...
+    axiom curvature_def : ∀ omega . R^a_b = dω^a_b + ω^a_c ∧ ω^c_b
+    axiom bianchi : ...  // Formal Bianchi identity for Z3
+}
+</code></pre>
+<p><strong><code>cartan_compute.kleis</code></strong> provides the <em>computation</em>:</p>
+<pre><code class="language-kleis">define compute_curvature(omega) = [
+    [curvature_ab(omega, 0, 0), curvature_ab(omega, 0, 1), ...],
+    ...  // Actually evaluates to Expression values
+]
+</code></pre>
+<p>Both now use the same <code>Expression</code> AST from <code>symbolic_diff.kleis</code>.</p>
 <h2 id="research-applications"><a class="header" href="#research-applications">Research Applications</a></h2>
 <div class="table-wrapper">
 <table>

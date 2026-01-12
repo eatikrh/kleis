@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ed4d9a85.js";
+            window.path_to_searchindex_js = "../searchindex-fbfd4bca.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-5619aea8.js"></script>
@@ -282,19 +282,29 @@ data Tree(T) {
 </ul>
 <h2 id="practical-example-expression-trees"><a class="header" href="#practical-example-expression-trees">Practical Example: Expression Trees</a></h2>
 <p>ADTs are perfect for representing mathematical expressions:</p>
-<pre><code class="language-kleis">data Expr = Const(value : ℝ) 
-          | Var(name : String) 
-          | Add(left : Expr, right : Expr) 
-          | Mul(left : Expr, right : Expr) 
-          | Neg(inner : Expr)
+<pre><code class="language-kleis">data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
 
-define eval(expr, env) =
+// Helper constructors for cleaner syntax
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_neg(a) = EOperation("neg", Cons(a, Nil))
+
+define eval_expr(expr, env) =
     match expr {
-        Const(v) =&gt; v
-        Var(name) =&gt; lookup(env, name)
-        Add(l, r) =&gt; eval(l, env) + eval(r, env)
-        Mul(l, r) =&gt; eval(l, env) * eval(r, env)
-        Neg(e) =&gt; -eval(e, env)
+        ENumber(v) =&gt; v
+        EVariable(name) =&gt; lookup(env, name)
+        EOperation("plus", Cons(l, Cons(r, Nil))) =&gt; 
+            eval_expr(l, env) + eval_expr(r, env)
+        EOperation("times", Cons(l, Cons(r, Nil))) =&gt; 
+            eval_expr(l, env) * eval_expr(r, env)
+        EOperation("neg", Cons(e, Nil)) =&gt; 
+            -eval_expr(e, env)
+        _ =&gt; 0
     }
 </code></pre>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>

@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ed4d9a85.js";
+            window.path_to_searchindex_js = "../searchindex-fbfd4bca.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-5619aea8.js"></script>
@@ -694,38 +694,52 @@ structure EinsteinEquations {
 </div>
 <h3 id="computational-differentiation-diff"><a class="header" href="#computational-differentiation-diff">Computational Differentiation: <code>diff</code></a></h3>
 <p>The <code>diff</code> function <strong>computes</strong> derivatives by pattern matching on expression trees. It’s implemented in pure Kleis and returns a new expression:</p>
-<pre><code class="language-kleis">data Expr = Const(value : ℝ) 
-          | Var(name : String) 
-          | Add(left : Expr, right : Expr) 
-          | Mul(left : Expr, right : Expr) 
-          | Pow(base : Expr, exp : Expr)
-          | Sin(arg : Expr)
-          | Cos(arg : Expr)
-          | Exp(arg : Expr)
-          | Ln(arg : Expr)
+<pre><code class="language-kleis">data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
 
-define diff(e, x) =
+// Helper constructors
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_pow(a, b) = EOperation("power", Cons(a, Cons(b, Nil)))
+
+define diff(e, var_name) =
     match e {
-        Const(_) =&gt; Const(0)
-        Var(y) =&gt; if y = x then Const(1) else Const(0)
-        
-        Add(f, g) =&gt; Add(diff(f, x), diff(g, x))
-        
-        Mul(f, g) =&gt;
-            Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
-            
-        Pow(f, Const(n)) =&gt;
-            Mul(Mul(Const(n), Pow(f, Const(n - 1))), diff(f, x))
-            
-        Sin(f) =&gt; Mul(Cos(f), diff(f, x))
-        Cos(f) =&gt; Mul(Mul(Const(-1), Sin(f)), diff(f, x))
-        Exp(f) =&gt; Mul(Exp(f), diff(f, x))
-        Ln(f) =&gt; Mul(Pow(f, Const(-1)), diff(f, x))
-        
-        _ =&gt; Const(0)
+        ENumber(_) =&gt; num(0)
+        EVariable(name) =&gt; if str_eq(name, var_name) then num(1) else num(0)
+        EOperation(op_name, args) =&gt; diff_op(op_name, args, var_name)
     }
+
+define diff_op(op_name, args, var_name) = match op_name {
+    "plus" =&gt; match args {
+        Cons(f, Cons(g, Nil)) =&gt; e_add(diff(f, var_name), diff(g, var_name))
+        | _ =&gt; num(0)
+    }
+    "times" =&gt; match args {
+        Cons(f, Cons(g, Nil)) =&gt; 
+            e_add(e_mul(diff(f, var_name), g), e_mul(f, diff(g, var_name)))
+        | _ =&gt; num(0)
+    }
+    "power" =&gt; match args {
+        Cons(f, Cons(ENumber(n), Nil)) =&gt; 
+            e_mul(e_mul(num(n), e_pow(f, num(n - 1))), diff(f, var_name))
+        | _ =&gt; num(0)
+    }
+    "sin" =&gt; match args {
+        Cons(f, Nil) =&gt; e_mul(e_cos(f), diff(f, var_name))
+        | _ =&gt; num(0)
+    }
+    "cos" =&gt; match args {
+        Cons(f, Nil) =&gt; e_neg(e_mul(e_sin(f), diff(f, var_name)))
+        | _ =&gt; num(0)
+    }
+    _ =&gt; num(0)
+}
 </code></pre>
-<p><strong>Usage:</strong> Call <code>diff(Mul(Var("x"), Var("x")), "x")</code> and get back <code>Add(Mul(Const(1), Var("x")), Mul(Var("x"), Const(1)))</code> (which simplifies to <code>2x</code>).</p>
+<p><strong>Usage:</strong> Call <code>diff(e_mul(var("x"), var("x")), "x")</code> and get back an expression representing <code>2x</code>.</p>
 <h3 id="axiomatic-differentiation-d-and-dt"><a class="header" href="#axiomatic-differentiation-d-and-dt">Axiomatic Differentiation: <code>D</code> and <code>Dt</code></a></h3>
 <p>The <code>D</code> and <code>Dt</code> operations are declared in <code>stdlib/calculus.kleis</code> with <strong>axioms</strong> that describe derivative properties. They don’t compute anything — Z3 uses these axioms to <strong>verify</strong> that equations involving derivatives are consistent:</p>
 <pre><code class="language-kleis">// From stdlib/calculus.kleis
