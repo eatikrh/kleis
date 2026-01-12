@@ -5113,6 +5113,12 @@ impl Evaluator {
             "lqr" => self.lapack_lqr(args),
 
             #[cfg(feature = "numerical")]
+            "dare" | "riccati_discrete" => self.lapack_dare(args),
+
+            #[cfg(feature = "numerical")]
+            "dlqr" => self.lapack_dlqr(args),
+
+            #[cfg(feature = "numerical")]
             "expm" | "matrix_exp" => {
                 // Matrix exponential exp(A)
                 if args.len() != 1 {
@@ -8723,6 +8729,169 @@ impl Evaluator {
 
         // Compute K = R⁻¹ B' P
         let k = numerical::lqr_gain(&b, &r, &p, n, m).map_err(|e| e.to_string())?;
+
+        // Return [K, P] as nested lists (not Matrix) so nth() works
+        // K is m×n, P is n×n (row-major order)
+        let mut k_rows: Vec<Expression> = Vec::new();
+        for i in 0..m {
+            let row: Vec<Expression> = (0..n)
+                .map(|j| Expression::Const(format!("{}", k[i * n + j])))
+                .collect();
+            k_rows.push(Expression::List(row));
+        }
+
+        let mut p_rows: Vec<Expression> = Vec::new();
+        for i in 0..n {
+            let row: Vec<Expression> = (0..n)
+                .map(|j| Expression::Const(format!("{}", p[i * n + j])))
+                .collect();
+            p_rows.push(Expression::List(row));
+        }
+
+        Ok(Some(Expression::List(vec![
+            Expression::List(k_rows),
+            Expression::List(p_rows),
+        ])))
+    }
+
+    /// Solve the Discrete-time Algebraic Riccati Equation (DARE):
+    /// A'PA - P - (A'PB)(B'PB + R)⁻¹(B'PA) + Q = 0
+    ///
+    /// Arguments: dare(A, B, Q, R) where A is n×n, B is n×m, Q is n×n, R is m×m
+    /// Returns: P (n×n solution matrix)
+    #[cfg(feature = "numerical")]
+    fn lapack_dare(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 4 {
+            return Err("dare(A, B, Q, R) requires 4 matrix arguments".to_string());
+        }
+
+        // Extract matrices (same as care)
+        let (na, ma, a_elems) = self
+            .extract_matrix(&args[0])
+            .ok_or("dare: A must be a matrix")?;
+        let (nb, mb, b_elems) = self
+            .extract_matrix(&args[1])
+            .ok_or("dare: B must be a matrix")?;
+        let (nq, mq, q_elems) = self
+            .extract_matrix(&args[2])
+            .ok_or("dare: Q must be a matrix")?;
+        let (nr, mr, r_elems) = self
+            .extract_matrix(&args[3])
+            .ok_or("dare: R must be a matrix")?;
+
+        let n = na;
+        let m = mb;
+        if na != ma {
+            return Err(format!("dare: A must be square, got {}×{}", na, ma));
+        }
+        if nb != n {
+            return Err(format!("dare: B must have {} rows, got {}", n, nb));
+        }
+        if nq != n || mq != n {
+            return Err(format!("dare: Q must be {}×{}, got {}×{}", n, n, nq, mq));
+        }
+        if nr != m || mr != m {
+            return Err(format!("dare: R must be {}×{}, got {}×{}", m, m, nr, mr));
+        }
+
+        let a: Vec<f64> = a_elems
+            .iter()
+            .map(|e| self.as_number(e).ok_or("dare: A must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let b: Vec<f64> = b_elems
+            .iter()
+            .map(|e| self.as_number(e).ok_or("dare: B must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let q: Vec<f64> = q_elems
+            .iter()
+            .map(|e| self.as_number(e).ok_or("dare: Q must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let r: Vec<f64> = r_elems
+            .iter()
+            .map(|e| self.as_number(e).ok_or("dare: R must be numeric"))
+            .collect::<Result<_, _>>()?;
+
+        let p = numerical::dare(&a, &b, &q, &r, n, m).map_err(|e| e.to_string())?;
+
+        // Build result matrix as nested list
+        let mut p_rows: Vec<Expression> = Vec::new();
+        for i in 0..n {
+            let row: Vec<Expression> = (0..n)
+                .map(|j| Expression::Const(format!("{}", p[i * n + j])))
+                .collect();
+            p_rows.push(Expression::List(row));
+        }
+
+        Ok(Some(Expression::List(p_rows)))
+    }
+
+    /// Discrete-time LQR controller design: compute optimal state feedback gain K
+    ///
+    /// Minimizes J = Σ(x'Qx + u'Ru) subject to x[k+1] = Ax[k] + Bu[k]
+    ///
+    /// Arguments: dlqr(A, B, Q, R)
+    /// Returns: [K, P] where K = (B'PB + R)⁻¹B'PA is the feedback gain and P solves DARE
+    #[cfg(feature = "numerical")]
+    fn lapack_dlqr(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        use crate::numerical;
+
+        if args.len() != 4 {
+            return Err("dlqr(A, B, Q, R) requires 4 matrix arguments".to_string());
+        }
+
+        // Extract matrices (same as care)
+        let (na, ma, a_elems) = self
+            .extract_matrix(&args[0])
+            .ok_or("dlqr: A must be a matrix")?;
+        let (nb, mb, b_elems) = self
+            .extract_matrix(&args[1])
+            .ok_or("dlqr: B must be a matrix")?;
+        let (nq, mq, q_elems) = self
+            .extract_matrix(&args[2])
+            .ok_or("dlqr: Q must be a matrix")?;
+        let (nr, mr, r_elems) = self
+            .extract_matrix(&args[3])
+            .ok_or("dlqr: R must be a matrix")?;
+
+        let n = na;
+        let m = mb;
+        if na != ma {
+            return Err(format!("dlqr: A must be square, got {}×{}", na, ma));
+        }
+        if nb != n {
+            return Err(format!("dlqr: B must have {} rows, got {}", n, nb));
+        }
+        if nq != n || mq != n {
+            return Err(format!("dlqr: Q must be {}×{}, got {}×{}", n, n, nq, mq));
+        }
+        if nr != m || mr != m {
+            return Err(format!("dlqr: R must be {}×{}, got {}×{}", m, m, nr, mr));
+        }
+
+        let a: Vec<f64> = a_elems
+            .iter()
+            .map(|e| self.as_number(e).ok_or("dlqr: A must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let b: Vec<f64> = b_elems
+            .iter()
+            .map(|e| self.as_number(e).ok_or("dlqr: B must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let q: Vec<f64> = q_elems
+            .iter()
+            .map(|e| self.as_number(e).ok_or("dlqr: Q must be numeric"))
+            .collect::<Result<_, _>>()?;
+        let r: Vec<f64> = r_elems
+            .iter()
+            .map(|e| self.as_number(e).ok_or("dlqr: R must be numeric"))
+            .collect::<Result<_, _>>()?;
+
+        // Solve DARE to get P
+        let p = numerical::dare(&a, &b, &q, &r, n, m).map_err(|e| e.to_string())?;
+
+        // Compute K = (B'PB + R)⁻¹ B' P A
+        let k = numerical::dlqr_gain(&a, &b, &r, &p, n, m).map_err(|e| e.to_string())?;
 
         // Return [K, P] as nested lists (not Matrix) so nth() works
         // K is m×n, P is n×n (row-major order)
