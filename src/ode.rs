@@ -113,8 +113,13 @@ mod tests {
     #[test]
     fn test_harmonic_oscillator() {
         // d²x/dt² = -x => [x', v'] = [v, -x]
-        let result =
-            integrate_dopri5(|_t, y| vec![y[1], -y[0]], &[1.0, 0.0], (0.0, 6.28), 0.1).unwrap();
+        let result = integrate_dopri5(
+            |_t, y| vec![y[1], -y[0]],
+            &[1.0, 0.0],
+            (0.0, std::f64::consts::TAU),
+            0.1,
+        )
+        .unwrap();
 
         // After one period, should return to initial state
         let (_, y_final) = result.last().unwrap();

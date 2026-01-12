@@ -168,7 +168,7 @@ pub fn eval_numeric(expr: &Expression) -> Option<f64> {
                         None
                     }
                 }
-                "pow" | "power" => vals.get(0).zip(vals.get(1)).map(|(a, b)| a.powf(*b)),
+                "pow" | "power" => vals.first().zip(vals.get(1)).map(|(a, b)| a.powf(*b)),
                 "sin" => vals.first().map(|v| v.sin()),
                 "cos" => vals.first().map(|v| v.cos()),
                 "tan" => vals.first().map(|v| v.tan()),
@@ -6156,13 +6156,10 @@ impl Evaluator {
                     // Use beta reduction to apply lambda: (λ t y . body)(t_val, y_val)
                     if let Ok(reduced) = evaluator.beta_reduce_multi(&f_clone, &[t_expr, y_expr]) {
                         // Evaluate the reduced expression
-                        if let Ok(result) = evaluator.eval_concrete(&reduced) {
-                            if let Expression::List(elems) = result {
-                                let nums: Option<Vec<f64>> =
-                                    elems.iter().map(eval_numeric).collect();
-                                if let Some(v) = nums {
-                                    return v;
-                                }
+                        if let Ok(Expression::List(elems)) = evaluator.eval_concrete(&reduced) {
+                            let nums: Option<Vec<f64>> = elems.iter().map(eval_numeric).collect();
+                            if let Some(v) = nums {
+                                return v;
                             }
                         }
                     }
@@ -6191,55 +6188,6 @@ impl Evaluator {
             .collect();
 
         Ok(Some(Expression::List(trajectory)))
-    }
-
-    /// Simple substitution for ODE evaluation (doesn't need full evaluator)
-    fn substitute_simple(
-        expr: &Expression,
-        subst: &std::collections::HashMap<String, Expression>,
-    ) -> Expression {
-        match expr {
-            Expression::Object(name) => subst.get(name).cloned().unwrap_or_else(|| expr.clone()),
-            Expression::Operation { name, args, span } => {
-                // Check if operation name is a variable (like indexing)
-                if name == "index" && args.len() == 2 {
-                    // Handle y[i] => get element from list
-                    let arr = Self::substitute_simple(&args[0], subst);
-                    let idx_expr = Self::substitute_simple(&args[1], subst);
-                    if let (Expression::List(elems), Expression::Const(idx_str)) = (&arr, &idx_expr)
-                    {
-                        if let Ok(idx) = idx_str.parse::<usize>() {
-                            if idx < elems.len() {
-                                return elems[idx].clone();
-                            }
-                        }
-                    }
-                }
-                Expression::Operation {
-                    name: name.clone(),
-                    args: args
-                        .iter()
-                        .map(|a| Self::substitute_simple(a, subst))
-                        .collect(),
-                    span: span.clone(),
-                }
-            }
-            Expression::List(elems) => Expression::List(
-                elems
-                    .iter()
-                    .map(|e| Self::substitute_simple(e, subst))
-                    .collect(),
-            ),
-            _ => expr.clone(),
-        }
-    }
-
-    /// Evaluate expression to numeric vector (for ODE)
-    fn eval_numeric_expr(expr: &Expression) -> Option<Vec<f64>> {
-        match expr {
-            Expression::List(elems) => elems.iter().map(eval_numeric).collect(),
-            _ => None,
-        }
     }
 
     /// Render an EditorNode AST to Typst code
