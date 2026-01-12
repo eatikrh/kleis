@@ -194,6 +194,112 @@ The LQR controller stabilizes the pendulum in approximately 2 seconds with no ov
 
 ---
 
+## Digital Control: Discrete-Time LQR with Zero-Order Hold
+
+Real controllers are typically implemented digitally with a fixed sample rate. This example shows the same inverted pendulum controlled with a discrete-time LQR designed using the Discrete Algebraic Riccati Equation (DARE).
+
+### Key Differences from Continuous Control
+
+| Aspect | Continuous | Discrete |
+|--------|------------|----------|
+| Design method | `lqr()` → CARE | `dlqr()` → DARE |
+| System matrices | A, B | Aₐ = eᴬᵀˢ, Bₐ ≈ Ts·B |
+| Control update | Continuous | Every Ts seconds (ZOH) |
+| Stability check | Re(λ) < 0 | \|λ\| < 1 |
+
+### Complete Example
+
+```kleis
+// Physical parameters  
+define ell = 0.5        // pendulum length (m)
+define grav = 9.81      // gravity (m/s²)
+define ts = 0.05        // sample time (s) - 20 Hz
+
+// Continuous-time linearized system
+define a_cont = [[0, 1], [grav / ell, 0]]
+define b_cont = [[0], [1 / ell]]
+
+// Discretize using matrix exponential
+define a_disc = expm(scalar_matrix_mul(ts, a_cont))
+define b_disc = scalar_matrix_mul(ts, b_cont)
+
+// LQR weights
+define q_matrix = [[1, 0], [0, 0.1]]
+define r_matrix = [[1]]
+
+example "Digital LQR with Zero-Order Hold" {
+  // Compute discrete LQR gains using DARE
+  let result = dlqr(a_disc, b_disc, q_matrix, r_matrix) in
+  let k_matrix = nth(result, 0) in
+  
+  out("Discrete LQR gains K:")
+  out(k_matrix)  // ≈ [[20.18, 4.59]]
+  
+  // Check closed-loop stability (eigenvalues inside unit circle)
+  let bk = matmul(b_disc, k_matrix) in
+  let a_cl = matrix_sub(a_disc, bk) in
+  out("Closed-loop eigenvalues (|λ| < 1 for stability):")
+  out(eigenvalues(a_cl))
+  
+  // Extract gains for simulation
+  let k1 = nth(nth(k_matrix, 0), 0) in
+  let k2 = nth(nth(k_matrix, 0), 1) in
+  
+  // Discrete-time simulation with Euler integration
+  let n_steps = 100 in
+  let x0 = [0.1, 0] in  // 5.7° initial tilt
+  
+  // Recursive simulation: each step applies ZOH control
+  let simulate = lambda acc i .
+    let prev = nth(acc, length(acc) - 1) in
+    let t_prev = nth(prev, 0) in
+    let x_prev = nth(prev, 1) in
+    let th = nth(x_prev, 0) in
+    let om = nth(x_prev, 1) in
+    let u = negate(k1*th + k2*om) in  // ZOH control
+    let th_ddot = (grav/ell)*sin(th) + (u/ell)*cos(th) in
+    let th_new = th + om*ts in
+    let om_new = om + th_ddot*ts in
+    list_append(acc, [[t_prev + ts, [th_new, om_new], u]])
+  in
+  
+  let init_u = negate(k1*nth(x0, 0) + k2*nth(x0, 1)) in
+  let traj = list_fold(simulate, [[0, x0, init_u]], range(0, n_steps)) in
+  
+  // Extract time series
+  let times = list_map(lambda p . nth(p, 0), traj) in
+  let thetas = list_map(lambda p . nth(nth(p, 1), 0), traj) in
+  let omegas = list_map(lambda p . nth(nth(p, 1), 1), traj) in
+  let controls = list_map(lambda p . nth(p, 2), traj) in
+  
+  // Plot with bar chart showing ZOH control action
+  diagram(
+    plot(times, thetas, color = "red", label = "theta (rad)"),
+    plot(times, omegas, color = "blue", label = "omega (rad/s)"),
+    bar(times, controls, color = "green", label = "u ZOH (m/s^2)", 
+        opacity = 0.3, width = 0.05),
+    title = "Digital Control - Zero Order Hold (20 Hz)",
+    xlabel = "Time (s)",
+    ylabel = "State / Control",
+    legend = "right + bottom",
+    width = 16,
+    height = 10
+  )
+}
+```
+
+### Result
+
+![Digital Control with ZOH](../images/inverted-pendulum-digital.png)
+
+The bar chart shows the **zero-order hold** (ZOH) nature of digital control — the control signal is constant between sample times (every 50ms). Compare to the smooth continuous control in the previous example.
+
+### Note on LQR Tuning
+
+For the inverted pendulum, the gains are relatively insensitive to Q/R weights. This is expected for unstable systems: the Riccati equation solution is dominated by stabilization requirements, leaving little room for performance tuning. For systems where Q/R significantly affects the response, consider stable plants like temperature control or mass-spring-damper systems.
+
+---
+
 ## Technical Notes
 
 ### Adaptive Step Size
@@ -215,7 +321,7 @@ ode45(dyn, [1], [0, 1], 0.1)
 
 ## See Also
 
-- [LAPACK Functions](./lapack.md) - Matrix decompositions, `lqr()`, `eigenvalues()`
+- [LAPACK Functions](./lapack.md) - Matrix decompositions, `lqr()`, `dlqr()`, `eigenvalues()`
 - [Jupyter Notebook](../chapters/21-jupyter-notebook.md) - Interactive plotting
-- [Built-in Functions](./builtin-functions.md) - `list_map`, `nth`, etc.
+- [Built-in Functions](./builtin-functions.md) - `list_map`, `nth`, `list_fold`, etc.
 

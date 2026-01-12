@@ -129,6 +129,10 @@ pub struct PlotElementOptions {
     /// Normalization: "linear", "log"
     pub norm: Option<String>,
 
+    // === Opacity ===
+    /// Opacity (0.0 to 1.0)
+    pub opacity: Option<f64>,
+
     // === stem() specific ===
     /// Base stroke style
     pub base_stroke: Option<String>,
@@ -1357,6 +1361,9 @@ fn generate_plot_element(element: &PlotElement) -> String {
     if let Some(z) = opts.z_index {
         code.push_str(&format!(",\n    z-index: {}", z));
     }
+    if let Some(opacity) = opts.opacity {
+        code.push_str(&format!(",\n    alpha: {}%", (opacity * 100.0) as i32));
+    }
 
     code.push_str("\n  ),\n");
     code
@@ -1446,6 +1453,16 @@ fn generate_bar_element(element: &PlotElement, horizontal: bool) -> String {
     }
     if let Some(z) = opts.z_index {
         code.push_str(&format!(",\n    z-index: {}", z));
+    }
+    // For bar charts, apply opacity through fill color with alpha
+    if let Some(opacity) = opts.opacity {
+        // If we have a fill color, make it transparent; otherwise use green with alpha
+        let base_color = opts.fill.as_deref().unwrap_or("green");
+        code.push_str(&format!(
+            ",\n    fill: {}.transparentize({}%)",
+            base_color,
+            ((1.0 - opacity) * 100.0) as i32
+        ));
     }
 
     code.push_str("\n  ),\n");

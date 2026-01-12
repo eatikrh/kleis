@@ -114,6 +114,104 @@ mpow(B, 3)   // → [[1, 3], [0, 1]]
 
 ---
 
+## Control Systems
+
+Functions for linear control system design using the Algebraic Riccati Equation.
+
+| Function | Description | Returns |
+|----------|-------------|---------|
+| `care(A, B, Q, R)` | Continuous Algebraic Riccati Equation | Solution matrix P |
+| `lqr(A, B, Q, R)` | Continuous-time LQR | `[K, P]` (gain and solution) |
+| `dare(A, B, Q, R)` | Discrete Algebraic Riccati Equation | Solution matrix P |
+| `dlqr(A, B, Q, R)` | Discrete-time LQR | `[K, P]` (gain and solution) |
+
+### CARE (Continuous Algebraic Riccati Equation)
+
+Solves the continuous-time equation:
+
+```
+A'P + PA - PBR⁻¹B'P + Q = 0
+```
+
+The implementation uses the **Hamiltonian method** with ordered Schur decomposition:
+
+1. Form the 2n×2n Hamiltonian matrix H
+2. Compute ordered Schur decomposition (LAPACK `dgees` + `dtrsen`)
+3. Move eigenvalues with negative real parts to top-left
+4. Extract P = Z₂₁Z₁₁⁻¹ from Schur vectors
+
+```kleis
+let A = [[0, 1], [0, 0]] in      // double integrator
+let B = [[0], [1]] in
+let Q = [[1, 0], [0, 1]] in      // state cost
+let R = [[1]] in                  // control cost
+care(A, B, Q, R)                  // → 2×2 solution matrix P
+```
+
+### DARE (Discrete Algebraic Riccati Equation)
+
+Solves the discrete-time equation:
+
+```
+A'PA - P - (A'PB)(B'PB + R)⁻¹(B'PA) + Q = 0
+```
+
+Uses the **symplectic matrix method** with ordered Schur decomposition, selecting eigenvalues inside the unit circle (|λ| < 1).
+
+```kleis
+// Discretized double integrator (Ts = 0.1s)
+let A = [[1, 0.1], [0, 1]] in
+let B = [[0.005], [0.1]] in
+let Q = [[1, 0], [0, 1]] in
+let R = [[1]] in
+dare(A, B, Q, R)                  // → 2×2 solution matrix P
+```
+
+### LQR (Continuous-time Linear Quadratic Regulator)
+
+Computes optimal state-feedback gain `K = R⁻¹B'P` where P solves CARE.
+
+Minimizes: `J = ∫(x'Qx + u'Ru)dt` subject to `ẋ = Ax + Bu`
+
+```kleis
+let A = [[0, 1], [19.62, 0]] in   // inverted pendulum
+let B = [[0], [2]] in
+let Q = [[10, 0], [0, 1]] in      // penalize angle more
+let R = [[1]] in
+
+let [K, P] = lqr(A, B, Q, R) in
+// K is the feedback gain matrix
+// Control law: u = -K·x
+K   // → [[20.12, 4.60]] for this system
+```
+
+### DLQR (Discrete-time Linear Quadratic Regulator)
+
+Computes optimal state-feedback gain `K = (B'PB + R)⁻¹B'PA` where P solves DARE.
+
+Minimizes: `J = Σ(x'Qx + u'Ru)` subject to `x[k+1] = Ax[k] + Bu[k]`
+
+```kleis
+// Digital control at 10 Hz
+let A = [[1, 0.1], [0, 1]] in
+let B = [[0.005], [0.1]] in
+let Q = [[1, 0], [0, 1]] in
+let R = [[0.1]] in
+
+let [K, P] = dlqr(A, B, Q, R) in
+// Control law: u[k] = -K·x[k]
+K
+```
+
+### Stability Guarantees
+
+- **Continuous-time**: Closed-loop `ẋ = (A - BK)x` has eigenvalues with negative real parts
+- **Discrete-time**: Closed-loop `x[k+1] = (A - BK)x[k]` has eigenvalues inside unit circle
+
+Both require the system (A, B) to be controllable.
+
+---
+
 ## Complex Matrix Operations
 
 For complex matrices, use the `cmat_*` variants:

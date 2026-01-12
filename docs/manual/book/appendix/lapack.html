@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-21bb5f9a.js";
+            window.path_to_searchindex_js = "../searchindex-f9ff6916.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-309fc3c5.js"></script>
@@ -311,6 +311,83 @@ let B = [[1, 1], [0, 1]] in
 mpow(B, 3)   // → [[1, 3], [0, 1]]
 </code></pre>
 <hr>
+<h2 id="control-systems"><a class="header" href="#control-systems">Control Systems</a></h2>
+<p>Functions for linear control system design using the Algebraic Riccati Equation.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Returns</th></tr>
+</thead>
+<tbody>
+<tr><td><code>care(A, B, Q, R)</code></td><td>Continuous Algebraic Riccati Equation</td><td>Solution matrix P</td></tr>
+<tr><td><code>lqr(A, B, Q, R)</code></td><td>Continuous-time LQR</td><td><code>[K, P]</code> (gain and solution)</td></tr>
+<tr><td><code>dare(A, B, Q, R)</code></td><td>Discrete Algebraic Riccati Equation</td><td>Solution matrix P</td></tr>
+<tr><td><code>dlqr(A, B, Q, R)</code></td><td>Discrete-time LQR</td><td><code>[K, P]</code> (gain and solution)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="care-continuous-algebraic-riccati-equation"><a class="header" href="#care-continuous-algebraic-riccati-equation">CARE (Continuous Algebraic Riccati Equation)</a></h3>
+<p>Solves the continuous-time equation:</p>
+<pre><code>A'P + PA - PBR⁻¹B'P + Q = 0
+</code></pre>
+<p>The implementation uses the <strong>Hamiltonian method</strong> with ordered Schur decomposition:</p>
+<ol>
+<li>Form the 2n×2n Hamiltonian matrix H</li>
+<li>Compute ordered Schur decomposition (LAPACK <code>dgees</code> + <code>dtrsen</code>)</li>
+<li>Move eigenvalues with negative real parts to top-left</li>
+<li>Extract P = Z₂₁Z₁₁⁻¹ from Schur vectors</li>
+</ol>
+<pre><code class="language-kleis">let A = [[0, 1], [0, 0]] in      // double integrator
+let B = [[0], [1]] in
+let Q = [[1, 0], [0, 1]] in      // state cost
+let R = [[1]] in                  // control cost
+care(A, B, Q, R)                  // → 2×2 solution matrix P
+</code></pre>
+<h3 id="dare-discrete-algebraic-riccati-equation"><a class="header" href="#dare-discrete-algebraic-riccati-equation">DARE (Discrete Algebraic Riccati Equation)</a></h3>
+<p>Solves the discrete-time equation:</p>
+<pre><code>A'PA - P - (A'PB)(B'PB + R)⁻¹(B'PA) + Q = 0
+</code></pre>
+<p>Uses the <strong>symplectic matrix method</strong> with ordered Schur decomposition, selecting eigenvalues inside the unit circle (|λ| &lt; 1).</p>
+<pre><code class="language-kleis">// Discretized double integrator (Ts = 0.1s)
+let A = [[1, 0.1], [0, 1]] in
+let B = [[0.005], [0.1]] in
+let Q = [[1, 0], [0, 1]] in
+let R = [[1]] in
+dare(A, B, Q, R)                  // → 2×2 solution matrix P
+</code></pre>
+<h3 id="lqr-continuous-time-linear-quadratic-regulator"><a class="header" href="#lqr-continuous-time-linear-quadratic-regulator">LQR (Continuous-time Linear Quadratic Regulator)</a></h3>
+<p>Computes optimal state-feedback gain <code>K = R⁻¹B'P</code> where P solves CARE.</p>
+<p>Minimizes: <code>J = ∫(x'Qx + u'Ru)dt</code> subject to <code>ẋ = Ax + Bu</code></p>
+<pre><code class="language-kleis">let A = [[0, 1], [19.62, 0]] in   // inverted pendulum
+let B = [[0], [2]] in
+let Q = [[10, 0], [0, 1]] in      // penalize angle more
+let R = [[1]] in
+
+let [K, P] = lqr(A, B, Q, R) in
+// K is the feedback gain matrix
+// Control law: u = -K·x
+K   // → [[20.12, 4.60]] for this system
+</code></pre>
+<h3 id="dlqr-discrete-time-linear-quadratic-regulator"><a class="header" href="#dlqr-discrete-time-linear-quadratic-regulator">DLQR (Discrete-time Linear Quadratic Regulator)</a></h3>
+<p>Computes optimal state-feedback gain <code>K = (B'PB + R)⁻¹B'PA</code> where P solves DARE.</p>
+<p>Minimizes: <code>J = Σ(x'Qx + u'Ru)</code> subject to <code>x[k+1] = Ax[k] + Bu[k]</code></p>
+<pre><code class="language-kleis">// Digital control at 10 Hz
+let A = [[1, 0.1], [0, 1]] in
+let B = [[0.005], [0.1]] in
+let Q = [[1, 0], [0, 1]] in
+let R = [[0.1]] in
+
+let [K, P] = dlqr(A, B, Q, R) in
+// Control law: u[k] = -K·x[k]
+K
+</code></pre>
+<h3 id="stability-guarantees"><a class="header" href="#stability-guarantees">Stability Guarantees</a></h3>
+<ul>
+<li><strong>Continuous-time</strong>: Closed-loop <code>ẋ = (A - BK)x</code> has eigenvalues with negative real parts</li>
+<li><strong>Discrete-time</strong>: Closed-loop <code>x[k+1] = (A - BK)x[k]</code> has eigenvalues inside unit circle</li>
+</ul>
+<p>Both require the system (A, B) to be controllable.</p>
+<hr>
 <h2 id="complex-matrix-operations"><a class="header" href="#complex-matrix-operations">Complex Matrix Operations</a></h2>
 <p>For complex matrices, use the <code>cmat_*</code> variants:</p>
 <h3 id="eigenvalues-and-decompositions"><a class="header" href="#eigenvalues-and-decompositions">Eigenvalues and Decompositions</a></h3>
@@ -466,6 +543,22 @@ out(inv(A))
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
 
 
         <script>

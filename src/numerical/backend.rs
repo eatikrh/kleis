@@ -1171,6 +1171,283 @@ pub fn lqr_gain(
     Ok(k)
 }
 
+/// Solve the Discrete-time Algebraic Riccati Equation (DARE):
+///
+/// ```text
+/// A'PA - P - (A'PB)(B'PB + R)⁻¹(B'PA) + Q = 0
+/// ```
+///
+/// Uses the symplectic matrix method with ordered Schur decomposition.
+///
+/// ## Algorithm
+/// 1. Form the 2n×2n symplectic matrix (assuming A is invertible):
+///    ```text
+///    M = [ A + B R⁻¹ B' A⁻ᵀ Q    -B R⁻¹ B' A⁻ᵀ ]
+///        [      -A⁻ᵀ Q                A⁻ᵀ      ]
+///    ```
+/// 2. Compute ordered real Schur decomposition of M with stable eigenvalues
+///    (|λ| < 1) in the upper-left n×n block
+/// 3. Partition the Schur vectors U into [U11; U21] where each is n×n
+/// 4. The stabilizing solution is P = U21 × U11⁻¹
+///
+/// ## Arguments
+/// - `a`: n×n system matrix (row-major, must be invertible)
+/// - `b`: n×m input matrix (row-major)
+/// - `q`: n×n state cost matrix (row-major, must be positive semi-definite)
+/// - `r`: m×m input cost matrix (row-major, must be positive definite)
+/// - `n`: state dimension
+/// - `m`: input dimension
+///
+/// ## Returns
+/// The stabilizing solution P (n×n, row-major)
+///
+/// ## Example
+/// ```ignore
+/// // Double integrator with sample time Ts=0.1
+/// // x[k+1] = A*x[k] + B*u[k]
+/// let a = vec![1.0, 0.1, 0.0, 1.0];  // discretized double integrator
+/// let b = vec![0.005, 0.1];           // B = [Ts²/2; Ts]
+/// let q = vec![1.0, 0.0, 0.0, 1.0];
+/// let r = vec![1.0];
+/// let p = dare(&a, &b, &q, &r, 2, 1).unwrap();
+/// ```
+pub fn dare(
+    a: &[f64],
+    b: &[f64],
+    q: &[f64],
+    r: &[f64],
+    n: usize,
+    m: usize,
+) -> Result<Vec<f64>, NumericalError> {
+    // Validate dimensions
+    if a.len() != n * n {
+        return Err(NumericalError::DimensionMismatch {
+            expected: (n, n),
+            got: (a.len(), 1),
+        });
+    }
+    if b.len() != n * m {
+        return Err(NumericalError::DimensionMismatch {
+            expected: (n, m),
+            got: (b.len(), 1),
+        });
+    }
+    if q.len() != n * n {
+        return Err(NumericalError::DimensionMismatch {
+            expected: (n, n),
+            got: (q.len(), 1),
+        });
+    }
+    if r.len() != m * m {
+        return Err(NumericalError::DimensionMismatch {
+            expected: (m, m),
+            got: (r.len(), 1),
+        });
+    }
+
+    // Step 1: Compute A⁻¹ and A⁻ᵀ
+    let a_inv = inv(a, n)?;
+
+    // A⁻ᵀ (transpose of A⁻¹)
+    let mut a_inv_t = vec![0.0; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            a_inv_t[i * n + j] = a_inv[j * n + i];
+        }
+    }
+
+    // Step 2: Compute R⁻¹
+    let r_inv = inv(r, m)?;
+
+    // Step 3: Compute B R⁻¹ B'
+    // First: R⁻¹ B' (m×n)
+    let mut r_inv_bt = vec![0.0; m * n];
+    for i in 0..m {
+        for j in 0..n {
+            for k in 0..m {
+                r_inv_bt[i * n + j] += r_inv[i * m + k] * b[j * m + k];
+            }
+        }
+    }
+
+    // B R⁻¹ B' (n×n)
+    let mut br_inv_bt = vec![0.0; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..m {
+                br_inv_bt[i * n + j] += b[i * m + k] * r_inv_bt[k * n + j];
+            }
+        }
+    }
+
+    // Step 4: Compute A⁻ᵀ Q (n×n)
+    let mut a_inv_t_q = vec![0.0; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                a_inv_t_q[i * n + j] += a_inv_t[i * n + k] * q[k * n + j];
+            }
+        }
+    }
+
+    // Step 5: Compute B R⁻¹ B' A⁻ᵀ (n×n)
+    let mut br_inv_bt_a_inv_t = vec![0.0; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                br_inv_bt_a_inv_t[i * n + j] += br_inv_bt[i * n + k] * a_inv_t[k * n + j];
+            }
+        }
+    }
+
+    // Step 6: Build symplectic matrix M (2n × 2n)
+    // M = [ A + BR⁻¹B'A⁻ᵀQ    -BR⁻¹B'A⁻ᵀ ]
+    //     [     -A⁻ᵀQ            A⁻ᵀ      ]
+    let n2 = 2 * n;
+    let mut sym_m = vec![0.0; n2 * n2];
+
+    // Compute A + BR⁻¹B'A⁻ᵀQ for top-left
+    let mut br_inv_bt_a_inv_t_q = vec![0.0; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                br_inv_bt_a_inv_t_q[i * n + j] += br_inv_bt_a_inv_t[i * n + k] * q[k * n + j];
+            }
+        }
+    }
+
+    for i in 0..n {
+        for j in 0..n {
+            // Top-left: A + BR⁻¹B'A⁻ᵀQ
+            sym_m[i * n2 + j] = a[i * n + j] + br_inv_bt_a_inv_t_q[i * n + j];
+            // Top-right: -BR⁻¹B'A⁻ᵀ
+            sym_m[i * n2 + (n + j)] = -br_inv_bt_a_inv_t[i * n + j];
+            // Bottom-left: -A⁻ᵀQ
+            sym_m[(n + i) * n2 + j] = -a_inv_t_q[i * n + j];
+            // Bottom-right: A⁻ᵀ
+            sym_m[(n + i) * n2 + (n + j)] = a_inv_t[i * n + j];
+        }
+    }
+
+    // Step 7: Compute ordered Schur decomposition (stable = inside unit circle)
+    let schur_result = schur_lapack(&sym_m, n2)?;
+    let ordered = schur_reorder_stable_discrete(schur_result)?;
+
+    // Step 8: Extract U11 and U21 from the Schur vectors
+    let mut u11 = vec![0.0; n * n];
+    let mut u21 = vec![0.0; n * n];
+
+    for i in 0..n {
+        for j in 0..n {
+            u11[i * n + j] = ordered.u[i * n2 + j];
+            u21[i * n + j] = ordered.u[(n + i) * n2 + j];
+        }
+    }
+
+    // Step 9: Compute P = U21 × U11⁻¹
+    let u11_inv = inv(&u11, n)?;
+
+    let mut p = vec![0.0; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                p[i * n + j] += u21[i * n + k] * u11_inv[k * n + j];
+            }
+        }
+    }
+
+    // Make P symmetric (numerical errors can make it slightly asymmetric)
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let avg = (p[i * n + j] + p[j * n + i]) / 2.0;
+            p[i * n + j] = avg;
+            p[j * n + i] = avg;
+        }
+    }
+
+    Ok(p)
+}
+
+/// Compute discrete-time LQR feedback gain K from the DARE solution P.
+///
+/// ```text
+/// K = (B'PB + R)⁻¹ B' P A
+/// ```
+///
+/// The optimal control law is u[k] = -K x[k].
+///
+/// ## Arguments
+/// - `a`: n×n system matrix (row-major)
+/// - `b`: n×m input matrix (row-major)
+/// - `r`: m×m input cost matrix (row-major)
+/// - `p`: n×n DARE solution (row-major)
+/// - `n`: state dimension
+/// - `m`: input dimension
+///
+/// ## Returns
+/// The feedback gain K (m×n, row-major)
+pub fn dlqr_gain(
+    a: &[f64],
+    b: &[f64],
+    r: &[f64],
+    p: &[f64],
+    n: usize,
+    m: usize,
+) -> Result<Vec<f64>, NumericalError> {
+    // K = (B'PB + R)⁻¹ B' P A
+
+    // Step 1: B' P (m×n)
+    let mut bt_p = vec![0.0; m * n];
+    for i in 0..m {
+        for j in 0..n {
+            for k in 0..n {
+                bt_p[i * n + j] += b[k * m + i] * p[k * n + j];
+            }
+        }
+    }
+
+    // Step 2: B' P B (m×m)
+    let mut bt_p_b = vec![0.0; m * m];
+    for i in 0..m {
+        for j in 0..m {
+            for k in 0..n {
+                bt_p_b[i * m + j] += bt_p[i * n + k] * b[k * m + j];
+            }
+        }
+    }
+
+    // Step 3: B'PB + R (m×m)
+    let mut bt_p_b_plus_r = vec![0.0; m * m];
+    for i in 0..m * m {
+        bt_p_b_plus_r[i] = bt_p_b[i] + r[i];
+    }
+
+    // Step 4: (B'PB + R)⁻¹
+    let inv_term = inv(&bt_p_b_plus_r, m)?;
+
+    // Step 5: B' P A (m×n)
+    let mut bt_p_a = vec![0.0; m * n];
+    for i in 0..m {
+        for j in 0..n {
+            for k in 0..n {
+                bt_p_a[i * n + j] += bt_p[i * n + k] * a[k * n + j];
+            }
+        }
+    }
+
+    // Step 6: (B'PB + R)⁻¹ B' P A = K (m×n)
+    let mut k = vec![0.0; m * n];
+    for i in 0..m {
+        for j in 0..n {
+            for l in 0..m {
+                k[i * n + j] += inv_term[i * m + l] * bt_p_a[l * n + j];
+            }
+        }
+    }
+
+    Ok(k)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1559,6 +1836,97 @@ mod tests {
                 re < 0.0,
                 "Closed-loop eigenvalue has non-negative real part: {}",
                 re
+            );
+        }
+    }
+
+    #[test]
+    fn test_dare_double_integrator() {
+        // Discretized double integrator with Ts = 0.1
+        // x[k+1] = [[1, 0.1], [0, 1]] x[k] + [[0.005], [0.1]] u[k]
+        let a = vec![1.0, 0.1, 0.0, 1.0];
+        let b = vec![0.005, 0.1];
+        let q = vec![1.0, 0.0, 0.0, 1.0];
+        let r = vec![1.0];
+
+        let p = dare(&a, &b, &q, &r, 2, 1).unwrap();
+
+        // P should be positive definite and symmetric
+        assert!(p[0] > 0.0, "P[0,0] should be positive, got {}", p[0]);
+        assert!(p[3] > 0.0, "P[1,1] should be positive, got {}", p[3]);
+        assert!(
+            (p[1] - p[2]).abs() < 1e-6,
+            "P should be symmetric: P[0,1]={}, P[1,0]={}",
+            p[1],
+            p[2]
+        );
+
+        // Check positive definiteness: det(P) > 0
+        let det = p[0] * p[3] - p[1] * p[2];
+        assert!(det > 0.0, "P should be positive definite, det = {}", det);
+    }
+
+    #[test]
+    fn test_dare_scalar() {
+        // Scalar system: x[k+1] = 1.1 x[k] + u[k] (unstable)
+        // Cost: Q = 1, R = 1
+        let a = vec![1.1];
+        let b = vec![1.0];
+        let q = vec![1.0];
+        let r = vec![1.0];
+
+        let p = dare(&a, &b, &q, &r, 1, 1).unwrap();
+
+        // P should be positive
+        assert!(p[0] > 0.0, "P should be positive, got {}", p[0]);
+
+        // Verify DARE equation: A'PA - P - A'PB(B'PB+R)⁻¹B'PA + Q ≈ 0
+        // For scalar: 1.1² * P - P - (1.1*P*1)²/(P+1) + 1 = 0
+        // Simplify: 1.21P - P - 1.21P²/(P+1) + 1 = 0
+        // 0.21P - 1.21P²/(P+1) + 1 = 0
+        // 0.21P(P+1) - 1.21P² + (P+1) = 0
+        // 0.21P² + 0.21P - 1.21P² + P + 1 = 0
+        // -P² + 1.21P + 1 = 0
+        // P² - 1.21P - 1 = 0
+        // P = (1.21 + sqrt(1.21² + 4)) / 2 ≈ 1.825
+        let expected = (1.21 + (1.21_f64.powi(2) + 4.0).sqrt()) / 2.0;
+        assert!(
+            (p[0] - expected).abs() < 1e-4,
+            "P = {} ≠ expected {}",
+            p[0],
+            expected
+        );
+    }
+
+    #[test]
+    fn test_dlqr_stability() {
+        // Verify closed-loop eigenvalues are inside unit circle
+        let a = vec![1.0, 0.1, 0.0, 1.0];
+        let b = vec![0.005, 0.1];
+        let q = vec![1.0, 0.0, 0.0, 1.0];
+        let r = vec![1.0];
+
+        let p = dare(&a, &b, &q, &r, 2, 1).unwrap();
+        let k = dlqr_gain(&a, &b, &r, &p, 2, 1).unwrap();
+
+        // Closed-loop: A_cl = A - B*K
+        let a_cl = vec![
+            a[0] - b[0] * k[0],
+            a[1] - b[0] * k[1],
+            a[2] - b[1] * k[0],
+            a[3] - b[1] * k[1],
+        ];
+
+        // Check eigenvalues are inside unit circle
+        let eigs = eigenvalues(&a_cl, 2).unwrap();
+        for (re, im) in eigs {
+            let magnitude = (re * re + im * im).sqrt();
+            assert!(
+                magnitude < 1.0,
+                "Closed-loop eigenvalue outside unit circle: |{} + {}i| = {}",
+                re,
+                im,
+                magnitude
             );
         }
     }
