@@ -530,3 +530,29 @@ With working HOF:
 - Axioms become cleaner: `D(sin) = cos` instead of pattern matching
 - Cartan geometry can use `D` directly on coordinate functions
 
+
+### Update: No Parser Fix Needed!
+
+`D(f, x)` and `D(f)(x)` are **isomorphic** via currying:
+
+```
+(A → B → C) ≅ (A × B → C)
+```
+
+So `D : (F → F) → F → F` used as `D(f, x)` works with current syntax.
+
+The `eval_at` workaround was unnecessary. Removed it.
+
+Current `calculus_hof.kleis`:
+```kleis
+structure Derivative(F : Field) {
+    operation D : (F → F) → F → F
+    
+    axiom D_additive: ∀(f : (F → F))(g : (F → F))(x : F). 
+        D(plus_fn(f, g), x) = D(f, x) + D(g, x)
+    // ...
+}
+```
+
+Clean, no workarounds, no parser changes needed.
+
