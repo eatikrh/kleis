@@ -2523,6 +2523,7 @@ impl Evaluator {
             "table_typst_raw" => self.builtin_table_typst_raw(args),
             "typst_raw" => self.builtin_typst_raw(args),
             "concat" => self.builtin_concat(args),
+            "str_eq" => self.builtin_str_eq(args),
 
             // Render EditorNode AST to Typst (for equations in documents)
             "render_to_typst" => self.builtin_render_to_typst(args),
@@ -5922,6 +5923,35 @@ impl Evaluator {
             Ok(Some(Expression::Object(joined)))
         } else {
             Ok(Some(Expression::String(joined)))
+        }
+    }
+
+    /// String equality comparison
+    ///
+    /// Usage: str_eq(a, b)
+    /// Returns: true if a == b (as strings), false otherwise
+    fn builtin_str_eq(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() != 2 {
+            return Err("str_eq() requires exactly 2 arguments".to_string());
+        }
+
+        let a = self.eval_concrete(&args[0])?;
+        let b = self.eval_concrete(&args[1])?;
+
+        let a_str = match &a {
+            Expression::String(s) | Expression::Const(s) | Expression::Object(s) => s.clone(),
+            _ => return Ok(None), // Can't compare non-strings
+        };
+
+        let b_str = match &b {
+            Expression::String(s) | Expression::Const(s) | Expression::Object(s) => s.clone(),
+            _ => return Ok(None), // Can't compare non-strings
+        };
+
+        if a_str == b_str {
+            Ok(Some(Expression::Object("true".to_string())))
+        } else {
+            Ok(Some(Expression::Object("false".to_string())))
         }
     }
 
