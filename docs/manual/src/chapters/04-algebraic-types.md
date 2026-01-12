@@ -127,19 +127,29 @@ The number of possible values follows algebra:
 ADTs are perfect for representing mathematical expressions:
 
 ```kleis
-data Expr = Const(value : ℝ) 
-          | Var(name : String) 
-          | Add(left : Expr, right : Expr) 
-          | Mul(left : Expr, right : Expr) 
-          | Neg(inner : Expr)
+data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
 
-define eval(expr, env) =
+// Helper constructors for cleaner syntax
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_neg(a) = EOperation("neg", Cons(a, Nil))
+
+define eval_expr(expr, env) =
     match expr {
-        Const(v) => v
-        Var(name) => lookup(env, name)
-        Add(l, r) => eval(l, env) + eval(r, env)
-        Mul(l, r) => eval(l, env) * eval(r, env)
-        Neg(e) => -eval(e, env)
+        ENumber(v) => v
+        EVariable(name) => lookup(env, name)
+        EOperation("plus", Cons(l, Cons(r, Nil))) => 
+            eval_expr(l, env) + eval_expr(r, env)
+        EOperation("times", Cons(l, Cons(r, Nil))) => 
+            eval_expr(l, env) * eval_expr(r, env)
+        EOperation("neg", Cons(e, Nil)) => 
+            -eval_expr(e, env)
+        _ => 0
     }
 ```
 
