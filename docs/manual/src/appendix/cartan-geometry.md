@@ -16,36 +16,76 @@ This is the same computational pipeline used in research-grade general relativit
 
 ### 1. Expression AST
 
-Symbolic expressions are represented as algebraic data types:
+Symbolic expressions are represented using the `Expression` algebraic data type, consistent with `kleis_in_kleis.kleis`:
 
 ```kleis
-data Expr = 
-    Const(value : ℝ)
-  | Var(name : String)
-  | Add(left : Expr, right : Expr)
-  | Mul(left : Expr, right : Expr)
-  | Pow(base : Expr, exp : Expr)
-  | Sin(arg : Expr)
-  | Cos(arg : Expr)
-  | Sqrt(arg : Expr)
-  | ...
+data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
+```
+
+This representation allows any operation to be encoded uniformly via `EOperation`. Helper constructors provide cleaner syntax:
+
+```kleis
+// Value constructors
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+
+// Operation constructors (e_ prefix avoids builtin conflicts)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_pow(a, b) = EOperation("power", Cons(a, Cons(b, Nil)))
+define e_sin(a) = EOperation("sin", Cons(a, Nil))
+define e_cos(a) = EOperation("cos", Cons(a, Nil))
+define e_sqrt(a) = EOperation("sqrt", Cons(a, Nil))
+// ... etc
 ```
 
 ### 2. Symbolic Differentiation
 
-The `diff` function computes derivatives by pattern matching:
+The `diff` function computes derivatives by pattern matching on the `Expression` AST:
 
 ```kleis
-define diff(e, x) = match e {
-    Const(_) => Const(0)
-    Var(name) => if name = x then Const(1) else Const(0)
-    Add(f, g) => Add(diff(f, x), diff(g, x))
-    Mul(f, g) => Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
-    Pow(f, Const(n)) => Mul(Mul(Const(n), Pow(f, Const(n-1))), diff(f, x))
-    Sin(f) => Mul(Cos(f), diff(f, x))
-    ...
+define diff(e, var_name) = match e {
+    // Constant rule: d/dx(c) = 0
+    ENumber(_) => num(0)
+    
+    // Variable rule: d/dx(x) = 1, d/dx(y) = 0 if y ≠ x
+    // Note: str_eq() is used for concrete string comparison
+    EVariable(name) => if str_eq(name, var_name) then num(1) else num(0)
+    
+    // Operation rules - dispatch by operation name
+    EOperation(op_name, args) => diff_op(op_name, args, var_name)
+}
+
+define diff_op(op_name, args, var_name) = match op_name {
+    "plus" => match args {
+        Cons(f, Cons(g, Nil)) => e_add(diff(f, var_name), diff(g, var_name))
+        | _ => num(0)
+    }
+    "times" => match args {
+        // Product rule: d/dx(f * g) = f' * g + f * g'
+        Cons(f, Cons(g, Nil)) => 
+            e_add(e_mul(diff(f, var_name), g), e_mul(f, diff(g, var_name)))
+        | _ => num(0)
+    }
+    "power" => match args {
+        // Power rule with constant exponent
+        Cons(f, Cons(ENumber(n), Nil)) => 
+            e_mul(e_mul(num(n), e_pow(f, num(n - 1))), diff(f, var_name))
+        // General power rule
+        | _ => num(0)
+    }
+    "sin" => match args {
+        Cons(f, Nil) => e_mul(e_cos(f), diff(f, var_name))
+        | _ => num(0)
+    }
+    // ... more rules
 }
 ```
+
+> **Note:** We use `str_eq(name, var_name)` instead of pattern matching because Kleis patterns **bind** variables rather than compare them. The `str_eq` builtin provides concrete string equality.
 
 ### 3. Differential Forms
 
@@ -55,8 +95,10 @@ define diff(e, x) = match e {
 // 1-form: ω = ω_t dt + ω_r dr + ω_θ dθ + ω_φ dφ
 // Represented as [ω_t, ω_r, ω_θ, ω_φ]
 
-define dt = [Const(1), Const(0), Const(0), Const(0)]
-define dr = [Const(0), Const(1), Const(0), Const(0)]
+define dt = [num(1), num(0), num(0), num(0)]
+define dr = [num(0), num(1), num(0), num(0)]
+define dtheta = [num(0), num(0), num(1), num(0)]
+define dphi = [num(0), num(0), num(0), num(1)]
 ```
 
 ### 4. Exterior Derivative
@@ -64,21 +106,34 @@ define dr = [Const(0), Const(1), Const(0), Const(0)]
 ```kleis
 // d(f) = ∂f/∂t dt + ∂f/∂r dr + ∂f/∂θ dθ + ∂f/∂φ dφ
 define d0(f) = [
-    diff(f, "t"),
-    diff(f, "r"),
-    diff(f, "theta"),
-    diff(f, "phi")
+    simplify(diff_t(f)),
+    simplify(diff_r(f)),
+    simplify(diff_theta(f)),
+    simplify(diff_phi(f))
 ]
+
+// Coordinate-specific derivatives
+define diff_t(e) = diff(e, "t")
+define diff_r(e) = diff(e, "r")
+define diff_theta(e) = diff(e, "theta")
+define diff_phi(e) = diff(e, "phi")
 ```
 
 ### 5. Wedge Product
 
 ```kleis
 // (α ∧ β)_μν = α_μ β_ν - α_ν β_μ
-define wedge(a, b) = [
-    [Const(0), Sub(Mul(a0, b1), Mul(a1, b0)), ...],
-    ...
-]
+define wedge(a, b) =
+    let a0 = nth(a, 0) in let a1 = nth(a, 1) in
+    let a2 = nth(a, 2) in let a3 = nth(a, 3) in
+    let b0 = nth(b, 0) in let b1 = nth(b, 1) in
+    let b2 = nth(b, 2) in let b3 = nth(b, 3) in
+    [
+        [num(0),
+         simplify(e_sub(e_mul(a0, b1), e_mul(a1, b0))),
+         ...],
+        ...
+    ]
 ```
 
 ## Example: Schwarzschild Black Hole
@@ -92,14 +147,15 @@ ds² = -(1 - 2M/r)dt² + dr²/(1 - 2M/r) + r²dθ² + r²sin²θ dφ²
 ### Tetrad Definition
 
 ```kleis
-define schw_f(M) = Sub(Const(1), Div(Mul(Const(2), M), Var("r")))
-
-define schwarzschild_tetrad(M) = [
-    scale1(Sqrt(schw_f(M)), dt),           // e⁰ = √f dt
-    scale1(Div(Const(1), Sqrt(schw_f(M))), dr),  // e¹ = dr/√f
-    scale1(Var("r"), dtheta),              // e² = r dθ
-    scale1(Mul(Var("r"), Sin(Var("theta"))), dphi)  // e³ = r sin(θ) dφ
-]
+define schwarzschild_tetrad(M) =
+    let f = e_sub(num(1), e_div(e_mul(num(2), M), var("r"))) in
+    let sqrt_f = e_sqrt(f) in
+    [
+        scale1(sqrt_f, dt),                              // e⁰ = √f dt
+        scale1(e_div(num(1), sqrt_f), dr),              // e¹ = dr/√f
+        scale1(var("r"), dtheta),                        // e² = r dθ
+        scale1(e_mul(var("r"), e_sin(var("theta"))), dphi)  // e³ = r sin(θ) dφ
+    ]
 ```
 
 ### Computing Curvature
@@ -117,9 +173,9 @@ define schwarzschild_curvature(M) =
 
 | Computation | Size | Time |
 |-------------|------|------|
-| Tetrad | 309 chars | instant |
-| Connection ω^a_b | 2,387 chars | ~1s |
-| Curvature R^a_b | 22,115 chars | ~6s |
+| Tetrad | ~300 chars | instant |
+| Connection ω^a_b | ~2,400 chars | ~1s |
+| Curvature R^a_b | ~22,000 chars | ~4s |
 
 ## Literature Verification
 
@@ -127,28 +183,37 @@ The computed results match known properties from the literature:
 
 ### Minkowski (Flat Space)
 - **Expected:** All curvature components = 0
-- **Computed:** 238/256 components are `Const(0)` ✓
+- **Computed:** 238/256 components are `ENumber(0)` ✓
 - **Reference:** Misner, Thorne, Wheeler "Gravitation" (1973)
 
 ### Schwarzschild
 - **Expected:** Curvature depends on M, r, angular coordinates
-- **Computed:** Contains `Var("M")`, `Var("r")`, `Sin`, `Cos` ✓
+- **Computed:** Contains `EVariable("M")`, `EVariable("r")`, `sin`, `cos` ✓
 - **Expected:** Contains metric factor √(1-2M/r)
-- **Computed:** Contains `Sqrt(Sub(Const(1), Div(...)))` ✓
+- **Computed:** Contains `e_sqrt(e_sub(num(1), e_div(...)))` ✓
 - **Reference:** Carroll "Spacetime and Geometry" (2004)
 
-## Higher-Order Functions
+## Implementation Notes
 
-This computation is enabled by Kleis's support for higher-order functions:
+### Why `e_*` Prefix?
+
+Functions like `pow`, `add`, `mul` conflict with Kleis builtins. When you write `pow(var("x"), num(2))`, Kleis interprets `pow` as the built-in power operation and tries to compute `EVariable("x") ^ ENumber(2)` numerically—which fails.
+
+The `e_*` prefix (`e_pow`, `e_add`, etc.) ensures these are treated as user-defined functions that construct `EOperation` nodes.
+
+### Why `str_eq` Instead of Pattern Matching?
+
+In Kleis (and ML-family languages), pattern variables **bind** rather than compare:
 
 ```kleis
-// Pass coordinate-specific derivative functions
-define diff_wrt_r(e) = diff_core(e, "r", is_r)
+// This BINDS 'x' to whatever name contains, always matches!
+EVariable(name) => match name { x => num(1) | _ => num(0) }
 
-define is_r(name) = match name { "r" => Const(1) | _ => Const(0) }
+// This COMPARES name to var_name using str_eq
+EVariable(name) => if str_eq(name, var_name) then num(1) else num(0)
 ```
 
-The evaluator resolves `is_r("r")` to `Const(1)` before any symbolic manipulation, avoiding expression explosion.
+The `str_eq` builtin provides concrete string equality that returns `true` or `false`.
 
 ## Z3 Verification
 
@@ -171,9 +236,10 @@ axiom bianchi : ∀ R λ ρ σ μ ν .
 
 | File | Description |
 |------|-------------|
-| `stdlib/symbolic_diff.kleis` | Symbolic differentiation |
+| `stdlib/symbolic_diff.kleis` | Symbolic differentiation using Expression AST |
 | `stdlib/cartan_compute.kleis` | Cartan geometry pipeline |
-| `tests/cartan_compute_test.rs` | 25 tests including literature verification |
+| `tests/symbolic_diff_test.rs` | 25 tests for differentiation |
+| `tests/cartan_compute_test.rs` | 22 tests including literature verification |
 
 ## Research Applications
 
