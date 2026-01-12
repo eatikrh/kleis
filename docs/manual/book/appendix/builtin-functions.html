@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5c8e49f7.js";
+            window.path_to_searchindex_js = "../searchindex-f9ff6916.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-309fc3c5.js"></script>
@@ -286,7 +286,7 @@
 </table>
 </div>
 <h2 id="list-operations"><a class="header" href="#list-operations">List Operations</a></h2>
-<p>Kleis uses cons-lists with <code>Cons</code> and <code>Nil</code>:</p>
+<h3 id="basic-list-functions"><a class="header" href="#basic-list-functions">Basic List Functions</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -297,15 +297,96 @@
 <tr><td><code>Nil</code></td><td><code>nil</code></td><td>Empty list</td><td><code>Nil</code></td></tr>
 <tr><td><code>head(xs)</code></td><td><code>car</code></td><td>First element</td><td><code>head([1,2,3])</code> → <code>1</code></td></tr>
 <tr><td><code>tail(xs)</code></td><td><code>cdr</code></td><td>Rest of list</td><td><code>tail([1,2,3])</code> → <code>[2,3]</code></td></tr>
-<tr><td><code>length(xs)</code></td><td></td><td>List length</td><td><code>length([1,2,3])</code> → <code>3</code></td></tr>
-<tr><td><code>nth(xs, n)</code></td><td></td><td>Get nth element</td><td><code>nth([1,2,3], 1)</code> → <code>2</code></td></tr>
+<tr><td><code>length(xs)</code></td><td><code>list_length</code></td><td>List length</td><td><code>length([1,2,3])</code> → <code>3</code></td></tr>
+<tr><td><code>nth(xs, n)</code></td><td><code>list_nth</code></td><td>Get nth element (0-indexed)</td><td><code>nth([1,2,3], 1)</code> → <code>2</code></td></tr>
 </tbody>
 </table>
 </div>
 <h3 id="list-literal-syntax"><a class="header" href="#list-literal-syntax">List Literal Syntax</a></h3>
-<pre><code class="language-kleis">[1, 2, 3]           // Shorthand for Cons(1, Cons(2, Cons(3, Nil)))
-[]                  // Empty list (Nil)
+<pre><code class="language-kleis">[1, 2, 3]           // Bracket list (preferred for numeric work)
+[]                  // Empty list
 </code></pre>
+<h3 id="list-generation"><a class="header" href="#list-generation">List Generation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>range(n)</code></td><td>Integers 0 to n-1</td><td><code>range(4)</code> → <code>[0, 1, 2, 3]</code></td></tr>
+<tr><td><code>range(start, end)</code></td><td>Integers from start to end-1</td><td><code>range(2, 5)</code> → <code>[2, 3, 4]</code></td></tr>
+<tr><td><code>linspace(start, end)</code></td><td>50 evenly spaced floats</td><td><code>linspace(0, 1)</code> → <code>[0, 0.0204..., ...]</code></td></tr>
+<tr><td><code>linspace(start, end, n)</code></td><td>n evenly spaced floats</td><td><code>linspace(0, 1, 5)</code> → <code>[0, 0.25, 0.5, 0.75, 1]</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="higher-order-list-functions"><a class="header" href="#higher-order-list-functions">Higher-Order List Functions</a></h3>
+<p>These functions take a lambda as their first argument.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>list_map(f, xs)</code></td><td></td><td>Apply f to each element</td></tr>
+<tr><td><code>list_filter(pred, xs)</code></td><td></td><td>Keep elements where pred returns true</td></tr>
+<tr><td><code>list_fold(f, init, xs)</code></td><td></td><td>Left fold with accumulator</td></tr>
+<tr><td><code>list_flatmap(f, xs)</code></td><td><code>flatmap</code>, <code>concat_map</code></td><td>Map then flatten results</td></tr>
+<tr><td><code>list_zip(xs, ys)</code></td><td></td><td>Pair corresponding elements</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="list_map"><a class="header" href="#list_map">list_map</a></h4>
+<p>Apply a function to each element:</p>
+<pre><code class="language-kleis">list_map(lambda x . x * 2, [1, 2, 3])
+// → [2, 4, 6]
+
+list_map(lambda x . x * x, range(5))
+// → [0, 1, 4, 9, 16]
+</code></pre>
+<h4 id="list_filter"><a class="header" href="#list_filter">list_filter</a></h4>
+<p>Keep elements satisfying a predicate:</p>
+<pre><code class="language-kleis">list_filter(lambda x . x &gt; 2, [1, 2, 3, 4, 5])
+// → [3, 4, 5]
+</code></pre>
+<h4 id="list_fold"><a class="header" href="#list_fold">list_fold</a></h4>
+<p>Reduce a list with an accumulator (left fold):</p>
+<pre><code class="language-kleis">// Sum: f(f(f(0, 1), 2), 3) = ((0+1)+2)+3 = 6
+list_fold(lambda acc x . acc + x, 0, [1, 2, 3])
+// → 6
+
+// Product
+list_fold(lambda acc x . acc * x, 1, [2, 3, 4])
+// → 24
+</code></pre>
+<h4 id="list_flatmap"><a class="header" href="#list_flatmap">list_flatmap</a></h4>
+<p>Map a function that returns lists, then flatten:</p>
+<pre><code class="language-kleis">list_flatmap(lambda x . [x, x*10], [1, 2, 3])
+// → [1, 10, 2, 20, 3, 30]
+</code></pre>
+<h4 id="list_zip"><a class="header" href="#list_zip">list_zip</a></h4>
+<p>Pair corresponding elements (stops at shorter list):</p>
+<pre><code class="language-kleis">list_zip([1, 2, 3], ["a", "b", "c"])
+// → [Pair(1, "a"), Pair(2, "b"), Pair(3, "c")]
+</code></pre>
+<p>Use <code>fst</code> and <code>snd</code> to extract pair components:</p>
+<pre><code class="language-kleis">let p = Pair(1, "a") in fst(p)  // → 1
+let p = Pair(1, "a") in snd(p)  // → "a"
+</code></pre>
+<h3 id="list-manipulation"><a class="header" href="#list-manipulation">List Manipulation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>list_concat(xs, ys)</code></td><td><code>list_append</code></td><td>Concatenate two lists</td><td><code>list_concat([1,2], [3,4])</code> → <code>[1,2,3,4]</code></td></tr>
+<tr><td><code>list_flatten(xss)</code></td><td><code>list_join</code></td><td>Flatten nested list</td><td><code>list_flatten([[1,2], [3,4]])</code> → <code>[1,2,3,4]</code></td></tr>
+<tr><td><code>list_slice(xs, start, end)</code></td><td></td><td>Sublist from start to end-1</td><td><code>list_slice([a,b,c,d], 1, 3)</code> → <code>[b,c]</code></td></tr>
+<tr><td><code>list_rotate(xs, n)</code></td><td></td><td>Rotate left by n positions</td><td><code>list_rotate([a,b,c], 1)</code> → <code>[b,c,a]</code></td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="string-operations"><a class="header" href="#string-operations">String Operations</a></h2>
 <div class="table-wrapper">
 <table>

@@ -8,7 +8,7 @@
 // Sample rate: 20 Hz (Ts = 0.05s)
 // Uses DARE/dlqr for discrete-time optimal control design.
 
-define ell = 0.5        // pendulum length (m)
+define ell = 2.0        // pendulum length (m) - longer = less unstable
 define grav = 9.81      // gravity (m/s^2)
 define ts = 0.05        // sample time (s) - 20 Hz
 
@@ -23,8 +23,8 @@ define b_cont = [[0], [1 / ell]]
 define a_disc = expm(scalar_matrix_mul(ts, a_cont))
 define b_disc = scalar_matrix_mul(ts, b_cont)
 
-// LQR weights (same as continuous case)
-define q_matrix = [[10, 0], [0, 1]]
+// LQR weights - tune these for different response
+define q_matrix = [[1, 0], [0, 0.1]]
 define r_matrix = [[1]]
 
 // Discrete-time simulation: x[k+1] = Ad*x[k] + Bd*u[k]
@@ -60,13 +60,24 @@ example "Digital LQR with Zero-Order Hold" {
   out("Sample time Ts =")
   out(ts)
   
+  out("Q matrix:")
+  out(q_matrix)
+  out("R matrix:")
+  out(r_matrix)
+  
   out("Discretized A matrix:")
   out(a_disc)
+  out("Discretized B matrix:")
+  out(b_disc)
   
   // Compute discrete LQR gains using DARE
+  out("Calling dlqr with these inputs...")
   let result = dlqr(a_disc, b_disc, q_matrix, r_matrix) in
   let k_matrix = nth(result, 0) in
+  let p_matrix = nth(result, 1) in
   
+  out("DARE solution P:")
+  out(p_matrix)
   out("Discrete LQR gains K:")
   out(k_matrix)
   
@@ -90,7 +101,7 @@ example "Digital LQR with Zero-Order Hold" {
   
   // Simulate for 5 seconds = 100 samples at 20 Hz
   let n_steps = 100 in
-  let x0 = [0.3, 0] in  // 17 deg initial tilt
+  let x0 = [0.1, 0] in  // 5.7 deg initial tilt
   let traj = simulate_discrete(x0, k_matrix, n_steps) in
   
   out("Initial state [theta, omega]:")
@@ -108,7 +119,7 @@ example "Digital LQR with Zero-Order Hold" {
   diagram(
     plot(times, thetas, color = "red", label = "theta (rad)"),
     plot(times, omegas, color = "blue", label = "omega (rad/s)"),
-    bar(times, controls, color = "green", label = "u ZOH (m/s^2)", opacity = 0.3),
+    bar(times, controls, color = "green", label = "u ZOH (m/s^2)", opacity = 0.3, width = 0.05),
     title = "Digital Control - Zero Order Hold (20 Hz)",
     xlabel = "Time (s)",
     ylabel = "State / Control",

@@ -7273,6 +7273,9 @@ impl Evaluator {
                                 "z_index" => {
                                     options.z_index = Some(self.extract_f64(&field_args[1])? as i32)
                                 }
+                                "opacity" | "alpha" => {
+                                    options.opacity = Some(self.extract_f64(&field_args[1])?)
+                                }
                                 // place() options
                                 "text" => options.text = Some(self.extract_string(&field_args[1])?),
                                 "align" => {

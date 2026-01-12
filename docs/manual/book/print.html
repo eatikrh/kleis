@@ -44,7 +44,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5c8e49f7.js";
+            window.path_to_searchindex_js = "searchindex-f9ff6916.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-309fc3c5.js"></script>
@@ -7990,7 +7990,7 @@ Aᵀᵀ         // (Aᵀ)ᵀ = A - transpose twice
 </table>
 </div>
 <h2 id="list-operations"><a class="header" href="#list-operations">List Operations</a></h2>
-<p>Kleis uses cons-lists with <code>Cons</code> and <code>Nil</code>:</p>
+<h3 id="basic-list-functions"><a class="header" href="#basic-list-functions">Basic List Functions</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -8001,15 +8001,96 @@ Aᵀᵀ         // (Aᵀ)ᵀ = A - transpose twice
 <tr><td><code>Nil</code></td><td><code>nil</code></td><td>Empty list</td><td><code>Nil</code></td></tr>
 <tr><td><code>head(xs)</code></td><td><code>car</code></td><td>First element</td><td><code>head([1,2,3])</code> → <code>1</code></td></tr>
 <tr><td><code>tail(xs)</code></td><td><code>cdr</code></td><td>Rest of list</td><td><code>tail([1,2,3])</code> → <code>[2,3]</code></td></tr>
-<tr><td><code>length(xs)</code></td><td></td><td>List length</td><td><code>length([1,2,3])</code> → <code>3</code></td></tr>
-<tr><td><code>nth(xs, n)</code></td><td></td><td>Get nth element</td><td><code>nth([1,2,3], 1)</code> → <code>2</code></td></tr>
+<tr><td><code>length(xs)</code></td><td><code>list_length</code></td><td>List length</td><td><code>length([1,2,3])</code> → <code>3</code></td></tr>
+<tr><td><code>nth(xs, n)</code></td><td><code>list_nth</code></td><td>Get nth element (0-indexed)</td><td><code>nth([1,2,3], 1)</code> → <code>2</code></td></tr>
 </tbody>
 </table>
 </div>
 <h3 id="list-literal-syntax"><a class="header" href="#list-literal-syntax">List Literal Syntax</a></h3>
-<pre><code class="language-kleis">[1, 2, 3]           // Shorthand for Cons(1, Cons(2, Cons(3, Nil)))
-[]                  // Empty list (Nil)
+<pre><code class="language-kleis">[1, 2, 3]           // Bracket list (preferred for numeric work)
+[]                  // Empty list
 </code></pre>
+<h3 id="list-generation"><a class="header" href="#list-generation">List Generation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>range(n)</code></td><td>Integers 0 to n-1</td><td><code>range(4)</code> → <code>[0, 1, 2, 3]</code></td></tr>
+<tr><td><code>range(start, end)</code></td><td>Integers from start to end-1</td><td><code>range(2, 5)</code> → <code>[2, 3, 4]</code></td></tr>
+<tr><td><code>linspace(start, end)</code></td><td>50 evenly spaced floats</td><td><code>linspace(0, 1)</code> → <code>[0, 0.0204..., ...]</code></td></tr>
+<tr><td><code>linspace(start, end, n)</code></td><td>n evenly spaced floats</td><td><code>linspace(0, 1, 5)</code> → <code>[0, 0.25, 0.5, 0.75, 1]</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="higher-order-list-functions"><a class="header" href="#higher-order-list-functions">Higher-Order List Functions</a></h3>
+<p>These functions take a lambda as their first argument.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>list_map(f, xs)</code></td><td></td><td>Apply f to each element</td></tr>
+<tr><td><code>list_filter(pred, xs)</code></td><td></td><td>Keep elements where pred returns true</td></tr>
+<tr><td><code>list_fold(f, init, xs)</code></td><td></td><td>Left fold with accumulator</td></tr>
+<tr><td><code>list_flatmap(f, xs)</code></td><td><code>flatmap</code>, <code>concat_map</code></td><td>Map then flatten results</td></tr>
+<tr><td><code>list_zip(xs, ys)</code></td><td></td><td>Pair corresponding elements</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="list_map"><a class="header" href="#list_map">list_map</a></h4>
+<p>Apply a function to each element:</p>
+<pre><code class="language-kleis">list_map(lambda x . x * 2, [1, 2, 3])
+// → [2, 4, 6]
+
+list_map(lambda x . x * x, range(5))
+// → [0, 1, 4, 9, 16]
+</code></pre>
+<h4 id="list_filter"><a class="header" href="#list_filter">list_filter</a></h4>
+<p>Keep elements satisfying a predicate:</p>
+<pre><code class="language-kleis">list_filter(lambda x . x &gt; 2, [1, 2, 3, 4, 5])
+// → [3, 4, 5]
+</code></pre>
+<h4 id="list_fold"><a class="header" href="#list_fold">list_fold</a></h4>
+<p>Reduce a list with an accumulator (left fold):</p>
+<pre><code class="language-kleis">// Sum: f(f(f(0, 1), 2), 3) = ((0+1)+2)+3 = 6
+list_fold(lambda acc x . acc + x, 0, [1, 2, 3])
+// → 6
+
+// Product
+list_fold(lambda acc x . acc * x, 1, [2, 3, 4])
+// → 24
+</code></pre>
+<h4 id="list_flatmap"><a class="header" href="#list_flatmap">list_flatmap</a></h4>
+<p>Map a function that returns lists, then flatten:</p>
+<pre><code class="language-kleis">list_flatmap(lambda x . [x, x*10], [1, 2, 3])
+// → [1, 10, 2, 20, 3, 30]
+</code></pre>
+<h4 id="list_zip"><a class="header" href="#list_zip">list_zip</a></h4>
+<p>Pair corresponding elements (stops at shorter list):</p>
+<pre><code class="language-kleis">list_zip([1, 2, 3], ["a", "b", "c"])
+// → [Pair(1, "a"), Pair(2, "b"), Pair(3, "c")]
+</code></pre>
+<p>Use <code>fst</code> and <code>snd</code> to extract pair components:</p>
+<pre><code class="language-kleis">let p = Pair(1, "a") in fst(p)  // → 1
+let p = Pair(1, "a") in snd(p)  // → "a"
+</code></pre>
+<h3 id="list-manipulation-1"><a class="header" href="#list-manipulation-1">List Manipulation</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Aliases</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>list_concat(xs, ys)</code></td><td><code>list_append</code></td><td>Concatenate two lists</td><td><code>list_concat([1,2], [3,4])</code> → <code>[1,2,3,4]</code></td></tr>
+<tr><td><code>list_flatten(xss)</code></td><td><code>list_join</code></td><td>Flatten nested list</td><td><code>list_flatten([[1,2], [3,4]])</code> → <code>[1,2,3,4]</code></td></tr>
+<tr><td><code>list_slice(xs, start, end)</code></td><td></td><td>Sublist from start to end-1</td><td><code>list_slice([a,b,c,d], 1, 3)</code> → <code>[b,c]</code></td></tr>
+<tr><td><code>list_rotate(xs, n)</code></td><td></td><td>Rotate left by n positions</td><td><code>list_rotate([a,b,c], 1)</code> → <code>[b,c,a]</code></td></tr>
+</tbody>
+</table>
+</div>
 <h2 id="string-operations"><a class="header" href="#string-operations">String Operations</a></h2>
 <div class="table-wrapper">
 <table>
@@ -8648,6 +8729,106 @@ example "LQR pendulum stabilization" {
 </ul>
 <p>The LQR controller stabilizes the pendulum in approximately 2 seconds with no overshoot — optimal behavior for the given Q and R weights.</p>
 <hr>
+<h2 id="digital-control-discrete-time-lqr-with-zero-order-hold"><a class="header" href="#digital-control-discrete-time-lqr-with-zero-order-hold">Digital Control: Discrete-Time LQR with Zero-Order Hold</a></h2>
+<p>Real controllers are typically implemented digitally with a fixed sample rate. This example shows the same inverted pendulum controlled with a discrete-time LQR designed using the Discrete Algebraic Riccati Equation (DARE).</p>
+<h3 id="key-differences-from-continuous-control"><a class="header" href="#key-differences-from-continuous-control">Key Differences from Continuous Control</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Continuous</th><th>Discrete</th></tr>
+</thead>
+<tbody>
+<tr><td>Design method</td><td><code>lqr()</code> → CARE</td><td><code>dlqr()</code> → DARE</td></tr>
+<tr><td>System matrices</td><td>A, B</td><td>Aₐ = eᴬᵀˢ, Bₐ ≈ Ts·B</td></tr>
+<tr><td>Control update</td><td>Continuous</td><td>Every Ts seconds (ZOH)</td></tr>
+<tr><td>Stability check</td><td>Re(λ) &lt; 0</td><td>|λ| &lt; 1</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="complete-example-1"><a class="header" href="#complete-example-1">Complete Example</a></h3>
+<pre><code class="language-kleis">// Physical parameters  
+define ell = 0.5        // pendulum length (m)
+define grav = 9.81      // gravity (m/s²)
+define ts = 0.05        // sample time (s) - 20 Hz
+
+// Continuous-time linearized system
+define a_cont = [[0, 1], [grav / ell, 0]]
+define b_cont = [[0], [1 / ell]]
+
+// Discretize using matrix exponential
+define a_disc = expm(scalar_matrix_mul(ts, a_cont))
+define b_disc = scalar_matrix_mul(ts, b_cont)
+
+// LQR weights
+define q_matrix = [[1, 0], [0, 0.1]]
+define r_matrix = [[1]]
+
+example "Digital LQR with Zero-Order Hold" {
+  // Compute discrete LQR gains using DARE
+  let result = dlqr(a_disc, b_disc, q_matrix, r_matrix) in
+  let k_matrix = nth(result, 0) in
+  
+  out("Discrete LQR gains K:")
+  out(k_matrix)  // ≈ [[20.18, 4.59]]
+  
+  // Check closed-loop stability (eigenvalues inside unit circle)
+  let bk = matmul(b_disc, k_matrix) in
+  let a_cl = matrix_sub(a_disc, bk) in
+  out("Closed-loop eigenvalues (|λ| &lt; 1 for stability):")
+  out(eigenvalues(a_cl))
+  
+  // Extract gains for simulation
+  let k1 = nth(nth(k_matrix, 0), 0) in
+  let k2 = nth(nth(k_matrix, 0), 1) in
+  
+  // Discrete-time simulation with Euler integration
+  let n_steps = 100 in
+  let x0 = [0.1, 0] in  // 5.7° initial tilt
+  
+  // Recursive simulation: each step applies ZOH control
+  let simulate = lambda acc i .
+    let prev = nth(acc, length(acc) - 1) in
+    let t_prev = nth(prev, 0) in
+    let x_prev = nth(prev, 1) in
+    let th = nth(x_prev, 0) in
+    let om = nth(x_prev, 1) in
+    let u = negate(k1*th + k2*om) in  // ZOH control
+    let th_ddot = (grav/ell)*sin(th) + (u/ell)*cos(th) in
+    let th_new = th + om*ts in
+    let om_new = om + th_ddot*ts in
+    list_append(acc, [[t_prev + ts, [th_new, om_new], u]])
+  in
+  
+  let init_u = negate(k1*nth(x0, 0) + k2*nth(x0, 1)) in
+  let traj = list_fold(simulate, [[0, x0, init_u]], range(0, n_steps)) in
+  
+  // Extract time series
+  let times = list_map(lambda p . nth(p, 0), traj) in
+  let thetas = list_map(lambda p . nth(nth(p, 1), 0), traj) in
+  let omegas = list_map(lambda p . nth(nth(p, 1), 1), traj) in
+  let controls = list_map(lambda p . nth(p, 2), traj) in
+  
+  // Plot with bar chart showing ZOH control action
+  diagram(
+    plot(times, thetas, color = "red", label = "theta (rad)"),
+    plot(times, omegas, color = "blue", label = "omega (rad/s)"),
+    bar(times, controls, color = "green", label = "u ZOH (m/s^2)", 
+        opacity = 0.3, width = 0.05),
+    title = "Digital Control - Zero Order Hold (20 Hz)",
+    xlabel = "Time (s)",
+    ylabel = "State / Control",
+    legend = "right + bottom",
+    width = 16,
+    height = 10
+  )
+}
+</code></pre>
+<h3 id="result-1"><a class="header" href="#result-1">Result</a></h3>
+<p><img src="images/inverted-pendulum-digital.png" alt="Digital Control with ZOH"></p>
+<p>The bar chart shows the <strong>zero-order hold</strong> (ZOH) nature of digital control — the control signal is constant between sample times (every 50ms). Compare to the smooth continuous control in the previous example.</p>
+<h3 id="note-on-lqr-tuning"><a class="header" href="#note-on-lqr-tuning">Note on LQR Tuning</a></h3>
+<p>For the inverted pendulum, the gains are relatively insensitive to Q/R weights. This is expected for unstable systems: the Riccati equation solution is dominated by stabilization requirements, leaving little room for performance tuning. For systems where Q/R significantly affects the response, consider stable plants like temperature control or mass-spring-damper systems.</p>
+<hr>
 <h2 id="technical-notes"><a class="header" href="#technical-notes">Technical Notes</a></h2>
 <h3 id="adaptive-step-size"><a class="header" href="#adaptive-step-size">Adaptive Step Size</a></h3>
 <p>The Dormand-Prince 5(4) method adapts its internal step size for accuracy while outputting at the requested <code>dt</code> intervals. This handles stiff transients automatically.</p>
@@ -8661,9 +8842,9 @@ ode45(dyn, [1], [0, 1], 0.1)
 <hr>
 <h2 id="see-also-5"><a class="header" href="#see-also-5">See Also</a></h2>
 <ul>
-<li><a href="#appendix-lapack-functions">LAPACK Functions</a> - Matrix decompositions, <code>lqr()</code>, <code>eigenvalues()</code></li>
+<li><a href="#appendix-lapack-functions">LAPACK Functions</a> - Matrix decompositions, <code>lqr()</code>, <code>dlqr()</code>, <code>eigenvalues()</code></li>
 <li><a href="#jupyter-notebook">Jupyter Notebook</a> - Interactive plotting</li>
-<li><a href="#appendix-built-in-functions">Built-in Functions</a> - <code>list_map</code>, <code>nth</code>, etc.</li>
+<li><a href="#appendix-built-in-functions">Built-in Functions</a> - <code>list_map</code>, <code>nth</code>, <code>list_fold</code>, etc.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-c-standard-library"><a class="header" href="#appendix-c-standard-library">Appendix C: Standard Library</a></h1>
@@ -8866,7 +9047,7 @@ define unwrap_or(opt, default) =
         None =&gt; default
     }
 </code></pre>
-<h3 id="result-1"><a class="header" href="#result-1">Result</a></h3>
+<h3 id="result-2"><a class="header" href="#result-2">Result</a></h3>
 <pre><code class="language-kleis">data Result(T, E) = Ok(value : T) | Err(error : E)
 
 // Operations

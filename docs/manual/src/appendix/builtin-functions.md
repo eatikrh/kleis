@@ -80,7 +80,7 @@ All trigonometric functions use radians, not degrees. Use `radians(deg)` to conv
 
 ## List Operations
 
-Kleis uses cons-lists with `Cons` and `Nil`:
+### Basic List Functions
 
 | Function | Aliases | Description | Example |
 |----------|---------|-------------|---------|
@@ -88,15 +88,105 @@ Kleis uses cons-lists with `Cons` and `Nil`:
 | `Nil` | `nil` | Empty list | `Nil` |
 | `head(xs)` | `car` | First element | `head([1,2,3])` → `1` |
 | `tail(xs)` | `cdr` | Rest of list | `tail([1,2,3])` → `[2,3]` |
-| `length(xs)` | | List length | `length([1,2,3])` → `3` |
-| `nth(xs, n)` | | Get nth element | `nth([1,2,3], 1)` → `2` |
+| `length(xs)` | `list_length` | List length | `length([1,2,3])` → `3` |
+| `nth(xs, n)` | `list_nth` | Get nth element (0-indexed) | `nth([1,2,3], 1)` → `2` |
 
 ### List Literal Syntax
 
 ```kleis
-[1, 2, 3]           // Shorthand for Cons(1, Cons(2, Cons(3, Nil)))
-[]                  // Empty list (Nil)
+[1, 2, 3]           // Bracket list (preferred for numeric work)
+[]                  // Empty list
 ```
+
+### List Generation
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `range(n)` | Integers 0 to n-1 | `range(4)` → `[0, 1, 2, 3]` |
+| `range(start, end)` | Integers from start to end-1 | `range(2, 5)` → `[2, 3, 4]` |
+| `linspace(start, end)` | 50 evenly spaced floats | `linspace(0, 1)` → `[0, 0.0204..., ...]` |
+| `linspace(start, end, n)` | n evenly spaced floats | `linspace(0, 1, 5)` → `[0, 0.25, 0.5, 0.75, 1]` |
+
+### Higher-Order List Functions
+
+These functions take a lambda as their first argument.
+
+| Function | Aliases | Description |
+|----------|---------|-------------|
+| `list_map(f, xs)` | | Apply f to each element |
+| `list_filter(pred, xs)` | | Keep elements where pred returns true |
+| `list_fold(f, init, xs)` | | Left fold with accumulator |
+| `list_flatmap(f, xs)` | `flatmap`, `concat_map` | Map then flatten results |
+| `list_zip(xs, ys)` | | Pair corresponding elements |
+
+#### list_map
+
+Apply a function to each element:
+
+```kleis
+list_map(lambda x . x * 2, [1, 2, 3])
+// → [2, 4, 6]
+
+list_map(lambda x . x * x, range(5))
+// → [0, 1, 4, 9, 16]
+```
+
+#### list_filter
+
+Keep elements satisfying a predicate:
+
+```kleis
+list_filter(lambda x . x > 2, [1, 2, 3, 4, 5])
+// → [3, 4, 5]
+```
+
+#### list_fold
+
+Reduce a list with an accumulator (left fold):
+
+```kleis
+// Sum: f(f(f(0, 1), 2), 3) = ((0+1)+2)+3 = 6
+list_fold(lambda acc x . acc + x, 0, [1, 2, 3])
+// → 6
+
+// Product
+list_fold(lambda acc x . acc * x, 1, [2, 3, 4])
+// → 24
+```
+
+#### list_flatmap
+
+Map a function that returns lists, then flatten:
+
+```kleis
+list_flatmap(lambda x . [x, x*10], [1, 2, 3])
+// → [1, 10, 2, 20, 3, 30]
+```
+
+#### list_zip
+
+Pair corresponding elements (stops at shorter list):
+
+```kleis
+list_zip([1, 2, 3], ["a", "b", "c"])
+// → [Pair(1, "a"), Pair(2, "b"), Pair(3, "c")]
+```
+
+Use `fst` and `snd` to extract pair components:
+
+```kleis
+let p = Pair(1, "a") in fst(p)  // → 1
+let p = Pair(1, "a") in snd(p)  // → "a"
+```
+
+### List Manipulation
+
+| Function | Aliases | Description | Example |
+|----------|---------|-------------|---------|
+| `list_concat(xs, ys)` | `list_append` | Concatenate two lists | `list_concat([1,2], [3,4])` → `[1,2,3,4]` |
+| `list_flatten(xss)` | `list_join` | Flatten nested list | `list_flatten([[1,2], [3,4]])` → `[1,2,3,4]` |
+| `list_slice(xs, start, end)` | | Sublist from start to end-1 | `list_slice([a,b,c,d], 1, 3)` → `[b,c]` |
+| `list_rotate(xs, n)` | | Rotate left by n positions | `list_rotate([a,b,c], 1)` → `[b,c,a]` |
 
 ## String Operations
 
