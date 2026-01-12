@@ -236,10 +236,32 @@ axiom bianchi : ∀ R λ ρ σ μ ν .
 
 | File | Description |
 |------|-------------|
-| `stdlib/symbolic_diff.kleis` | Symbolic differentiation using Expression AST |
-| `stdlib/cartan_compute.kleis` | Cartan geometry pipeline |
+| `stdlib/symbolic_diff.kleis` | Expression AST and symbolic differentiation |
+| `stdlib/cartan_geometry.kleis` | Axiomatic framework (structures, axioms for Z3) |
+| `stdlib/cartan_compute.kleis` | Computational implementation (actually computes) |
 | `tests/symbolic_diff_test.rs` | 25 tests for differentiation |
 | `tests/cartan_compute_test.rs` | 22 tests including literature verification |
+
+### Two Complementary Approaches
+
+**`cartan_geometry.kleis`** defines the *theory*:
+```kleis
+structure CurvatureForm(dim: Nat) {
+    operation curvature : List(List(DifferentialForm(1, dim))) → ...
+    axiom curvature_def : ∀ omega . R^a_b = dω^a_b + ω^a_c ∧ ω^c_b
+    axiom bianchi : ...  // Formal Bianchi identity for Z3
+}
+```
+
+**`cartan_compute.kleis`** provides the *computation*:
+```kleis
+define compute_curvature(omega) = [
+    [curvature_ab(omega, 0, 0), curvature_ab(omega, 0, 1), ...],
+    ...  // Actually evaluates to Expression values
+]
+```
+
+Both now use the same `Expression` AST from `symbolic_diff.kleis`.
 
 ## Research Applications
 
