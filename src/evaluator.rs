@@ -2453,15 +2453,6 @@ impl Evaluator {
                     return self.eval_concrete(&applied);
                 }
 
-                // Check if name refers to a lambda in bindings
-                if let Some(bound_value) = self.bindings.get(name) {
-                    if let Expression::Lambda { .. } = bound_value {
-                        // Apply the lambda to the arguments
-                        let reduced = self.beta_reduce_multi(bound_value, &eval_args)?;
-                        return self.eval_concrete(&reduced);
-                    }
-                }
-
                 // Unknown operation - return as-is with evaluated args
                 Ok(Expression::Operation {
                     name: name.clone(),
