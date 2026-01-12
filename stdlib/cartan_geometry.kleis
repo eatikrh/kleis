@@ -25,6 +25,7 @@
 //   - Misner, Thorne, Wheeler "Gravitation" Ch. 14
 
 import "stdlib/differential_forms.kleis"
+import "stdlib/symbolic_diff.kleis"  // For Expression AST (num, var, e_* functions)
 
 // ============================================
 // Tetrad (Vielbein / Orthonormal Frame)
@@ -308,7 +309,7 @@ define compute_ricci_scalar(R, eta) =
     let dim = length(R) in
     fold(λ acc . λ a .
         plus(acc, times(nth(eta, a), trace_curvature(R, a))),
-        Const(0),
+        num(0),
         range(0, dim))
 
 // ============================================
@@ -401,14 +402,14 @@ define verify_einstein_eqs(geom, Lambda, T) =
  *   3. Ricci = 0 (vacuum solution!)
  */
 
-// Define Schwarzschild tetrad components using Expr
+// Define Schwarzschild tetrad components using Expression AST
 define schwarzschild_tetrad(M) =
-    let f = Sqrt(Sub(Const(1), Div(Mul(Const(2), M), Var("r")))) in
+    let f = e_sqrt(e_sub(num(1), e_div(e_mul(num(2), M), var("r")))) in
     [
         scale_form(f, dt),                                    // e^0
-        scale_form(Div(Const(1), f), dr),                     // e^1  
-        scale_form(Var("r"), dtheta),                         // e^2
-        scale_form(Mul(Var("r"), Sin(Var("theta"))), dphi)    // e^3
+        scale_form(e_div(num(1), f), dr),                     // e^1  
+        scale_form(var("r"), dtheta),                         // e^2
+        scale_form(e_mul(var("r"), e_sin(var("theta"))), dphi)    // e^3
     ]
 
 // Lorentzian signature
