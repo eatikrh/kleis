@@ -487,3 +487,46 @@ Total: thousands of nested `Add`, `Mul`, `Pow` nodes that the `simplify` functio
 ### Workaround (Current)
 
 For now, curvature tests are `#[ignore]`. The connection solver works correctly for both Minkowski (all zeros) and Schwarzschild (non-trivial).
+
+## HOF Derivatives: Proper Mathematical Formulation
+
+**Branch:** `feature/hof-derivatives`
+
+**Insight:** The derivative is a **higher-order function**:
+
+```
+D : (ℝ → ℝ) → (ℝ → ℝ)
+```
+
+It takes a function and returns a function. The `Expr` AST in `symbolic_diff.kleis` was an unnecessary detour — the derivative should operate directly on Kleis lambdas.
+
+### Current Status
+
+Created `stdlib/calculus_hof.kleis` with the proper HOF formulation, but hit parser/evaluator limitations:
+
+1. **Parser doesn't support double application** `f(x)(y)`
+   - `D(lambda x. x*x)(3)` fails with "Expected identifier"
+   - Need to recognize `(expr)(args)` as function application
+
+2. **Evaluator HOF return not callable**
+   - `let f' = D(f) in f'(x)` fails
+   - `D(f)` returns something, but it's not a callable lambda
+
+### Workaround
+
+Using `eval_at(D(f), x)` as a placeholder for `D(f)(x)` in axioms.
+
+### Required Fixes
+
+1. **Parser:** Add rule for `(expr)(args)` application syntax
+2. **Evaluator:** Ensure HOF-returned lambdas are callable
+3. **Then:** Remove `eval_at` workaround, use natural `D(f)(x)` syntax
+
+### Why This Matters
+
+With working HOF:
+- No need for `Expr` AST for symbolic differentiation
+- Derivatives work on native Kleis lambdas
+- Axioms become cleaner: `D(sin) = cos` instead of pattern matching
+- Cartan geometry can use `D` directly on coordinate functions
+

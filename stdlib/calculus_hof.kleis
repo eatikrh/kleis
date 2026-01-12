@@ -1,0 +1,178 @@
+// ============================================
+// Kleis Standard Library - Calculus (HOF Version)
+// ============================================
+//
+// GOAL: Derivative as a proper higher-order function:
+//   D : (ℝ → ℝ) → (ℝ → ℝ)
+//
+// The derivative takes a function and returns a function.
+// This is the mathematically correct formulation.
+//
+// CURRENT LIMITATION:
+// The parser doesn't support double application f(x)(y),
+// which is needed for D(f)(x). We need syntax like:
+//   let f' = D(f) in f'(x)
+//
+// Grammar: v0.98
+// Version: 0.2.0-wip
+// ============================================
+
+// ============================================
+// DERIVATIVE OPERATOR (HOF)
+// ============================================
+//
+// Mathematically: D : (ℝ → ℝ) → (ℝ → ℝ)
+//
+// D takes a function f and returns its derivative f'.
+// We use eval_at(D(f), x) as a workaround for D(f)(x).
+//
+// ============================================
+
+structure DerivativeHOF {
+    // The derivative operator: returns a function
+    operation D : (ℝ → ℝ) → (ℝ → ℝ)
+    
+    // Workaround: evaluate the result of D at a point
+    // eval_at(D(f), x) means D(f)(x)
+    operation eval_at : (ℝ → ℝ) → ℝ → ℝ
+    
+    // eval_at is just function application
+    axiom eval_at_def: ∀(f : (ℝ → ℝ))(x : ℝ). eval_at(f, x) = f(x)
+    
+    // ============================================
+    // LINEARITY
+    // ============================================
+    
+    // D(f + g) = D(f) + D(g)
+    axiom D_additive: ∀(f : (ℝ → ℝ))(g : (ℝ → ℝ))(x : ℝ). 
+        eval_at(D(plus_fn(f, g)), x) = eval_at(D(f), x) + eval_at(D(g), x)
+    
+    // D(c * f) = c * D(f)
+    axiom D_scalar: ∀(c : ℝ)(f : (ℝ → ℝ))(x : ℝ). 
+        eval_at(D(scale_fn(c, f)), x) = c * eval_at(D(f), x)
+    
+    // ============================================
+    // FUNDAMENTAL DERIVATIVES
+    // ============================================
+    
+    // D(const c) = const 0
+    axiom D_const: ∀(c : ℝ)(x : ℝ). 
+        eval_at(D(const_fn(c)), x) = 0
+    
+    // D(id) = const 1
+    axiom D_id: ∀(x : ℝ).
+        eval_at(D(id_fn), x) = 1
+    
+    // ============================================
+    // PRODUCT RULE
+    // ============================================
+    
+    // D(f * g) = D(f) * g + f * D(g)
+    axiom D_product: ∀(f : (ℝ → ℝ))(g : (ℝ → ℝ))(x : ℝ). 
+        eval_at(D(times_fn(f, g)), x) = 
+            eval_at(D(f), x) * g(x) + f(x) * eval_at(D(g), x)
+    
+    // ============================================
+    // CHAIN RULE
+    // ============================================
+    
+    // D(f ∘ g) = (D(f) ∘ g) * D(g)
+    axiom D_chain: ∀(f : (ℝ → ℝ))(g : (ℝ → ℝ))(x : ℝ). 
+        eval_at(D(compose(f, g)), x) = eval_at(D(f), g(x)) * eval_at(D(g), x)
+    
+    // ============================================
+    // POWER RULE
+    // ============================================
+    
+    axiom D_power: ∀(n : ℕ)(x : ℝ). 
+        eval_at(D(power_fn(n)), x) = n * power(x, n - 1)
+}
+
+// ============================================
+// HELPER FUNCTIONS (pointwise operations)
+// ============================================
+
+// Pointwise addition: (f + g)(x) = f(x) + g(x)
+define plus_fn(f, g) = lambda x. f(x) + g(x)
+
+// Pointwise multiplication: (f * g)(x) = f(x) * g(x)
+define times_fn(f, g) = lambda x. f(x) * g(x)
+
+// Scalar multiplication: (c * f)(x) = c * f(x)
+define scale_fn(c, f) = lambda x. c * f(x)
+
+// Constant function: const(c)(x) = c
+define const_fn(c) = lambda x. c
+
+// Identity function: id(x) = x
+define id_fn = lambda x. x
+
+// Power function: power_fn(n)(x) = x^n
+define power_fn(n) = lambda x. power(x, n)
+
+// Composition: (f ∘ g)(x) = f(g(x))
+define compose(f, g) = lambda x. f(g(x))
+
+// ============================================
+// TRANSCENDENTAL DERIVATIVES
+// ============================================
+
+structure TranscendentalDerivativesHOF extends DerivativeHOF {
+    // D(sin) = cos
+    axiom D_sin: ∀(x : ℝ). eval_at(D(sin), x) = cos(x)
+    
+    // D(cos) = -sin
+    axiom D_cos: ∀(x : ℝ). eval_at(D(cos), x) = negate(sin(x))
+    
+    // D(exp) = exp
+    axiom D_exp: ∀(x : ℝ). eval_at(D(exp), x) = exp(x)
+    
+    // D(ln) = 1/x
+    axiom D_ln: ∀(x : ℝ). x > 0 → eval_at(D(ln), x) = 1 / x
+    
+    // D(sqrt) = 1/(2*sqrt)
+    axiom D_sqrt: ∀(x : ℝ). x > 0 → eval_at(D(sqrt), x) = 1 / (2 * sqrt(x))
+}
+
+// ============================================
+// INTEGRATION (Antiderivative)
+// ============================================
+
+structure IntegralHOF extends DerivativeHOF {
+    operation integrate : (ℝ → ℝ) → (ℝ → ℝ)
+    
+    // Fundamental Theorem: D(∫f) = f
+    axiom FTC: ∀(f : (ℝ → ℝ))(x : ℝ). eval_at(D(integrate(f)), x) = f(x)
+}
+
+// ============================================
+// LIMIT DEFINITION
+// ============================================
+
+structure LimitDefinitionHOF extends DerivativeHOF {
+    operation lim : (ℝ → ℝ) → ℝ → ℝ
+    
+    // D(f)(x) = lim_{h→0} (f(x+h) - f(x)) / h
+    axiom D_as_limit: ∀(f : (ℝ → ℝ))(x : ℝ).
+        eval_at(D(f), x) = lim(lambda h. (f(x + h) - f(x)) / h, 0)
+}
+
+// ============================================
+// TODO: Fix Parser/Evaluator to Support True HOF
+// ============================================
+//
+// To fully realize this design, we need:
+//
+// 1. Parser support for f(x)(y) double application
+//    - Currently fails with "Expected identifier"
+//    - Need to recognize (expr)(args) as application
+//
+// 2. Evaluator HOF return handling
+//    - D(f) should return a callable function value
+//    - let f' = D(f) in f'(x) should work
+//
+// 3. Remove eval_at workaround
+//    - Replace eval_at(D(f), x) with D(f)(x)
+//
+// See branch: feature/hof-derivatives
+// ============================================
