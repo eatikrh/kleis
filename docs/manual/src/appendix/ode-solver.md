@@ -182,7 +182,7 @@ example "LQR pendulum stabilization" {
 
 ### Result
 
-![Inverted Pendulum LQR Stabilization](../images/inverted-pendulum-lqr.svg)
+![Inverted Pendulum LQR Stabilization](../images/inverted-pendulum-lqr.png)
 
 The plot shows:
 
