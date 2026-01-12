@@ -17,14 +17,14 @@ use kleis::pretty_print::PrettyPrinter;
 fn create_evaluator() -> Evaluator {
     let source = std::fs::read_to_string("stdlib/symbolic_diff.kleis")
         .expect("Failed to read stdlib/symbolic_diff.kleis");
-    
-    let program = parse_kleis_program(&source)
-        .expect("Failed to parse stdlib/symbolic_diff.kleis");
-    
+
+    let program = parse_kleis_program(&source).expect("Failed to parse stdlib/symbolic_diff.kleis");
+
     let mut evaluator = Evaluator::new();
-    evaluator.load_program(&program)
+    evaluator
+        .load_program(&program)
         .expect("Failed to load program into evaluator");
-    
+
     evaluator
 }
 
