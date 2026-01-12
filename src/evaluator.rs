@@ -3162,7 +3162,7 @@ impl Evaluator {
                     let mut result = Vec::new();
                     for elem in elements {
                         // Apply function to element
-                        let reduced = self.beta_reduce_multi(func, &[elem.clone()])?;
+                        let reduced = self.beta_reduce_multi(func, std::slice::from_ref(elem))?;
                         let mapped = self.eval_concrete(&reduced)?;
                         // Flatten: if result is a list, extend; otherwise push
                         if let Expression::List(inner) = mapped {
