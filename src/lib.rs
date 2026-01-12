@@ -19,6 +19,7 @@ pub mod lowering;
 pub mod math_layout;
 #[cfg(feature = "numerical")]
 pub mod numerical; // BLAS/LAPACK backend for numerical linear algebra
+pub mod ode; // ODE solvers (Runge-Kutta)
 pub mod parser;
 pub mod pattern_matcher;
 pub mod plotting; // Lilaq/Typst plotting integration
